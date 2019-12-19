@@ -1,3 +1,7 @@
+mod beep;
+
+use beep::Beep;
+
 fn main() {
-    println!("Hello, Bee!");
+    let mut beep = Beep::new();
 }

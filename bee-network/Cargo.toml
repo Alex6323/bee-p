@@ -1,8 +1,8 @@
 [package]
-name = "bee-main"
+name = "bee-network"
 version = "0.1.0"
 authors = ["alexander.schmidt@iota.org"]
 edition = "2018"
 
 [dependencies]
-bee-network = { path = "../bee-network" }
+tokio = { version = "0.2.6", features = ["tcp"] }
