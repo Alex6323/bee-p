@@ -1,8 +1,9 @@
 [package]
-name = "bee-network"
+name = "network"
 version = "0.1.0"
 authors = ["alexander.schmidt@iota.org"]
 edition = "2018"
 
 [dependencies]
-tokio = { version = "0.2.6", features = ["tcp"] }
+tokio = { version = "0.2.9", features = ["tcp"] }
+bundle = { path = "../bee-bundle" }

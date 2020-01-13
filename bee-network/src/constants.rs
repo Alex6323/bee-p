@@ -1,0 +1,3 @@
+use bundle::TRANSACTION_BYTE_LEN;
+
+pub const PACKET_SIZE: usize = TRANSACTION_BYTE_LEN;

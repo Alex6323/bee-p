@@ -1,10 +1,10 @@
 [package]
-name = "main"
+name = "bundle"
 version = "0.1.0"
 authors = ["alexander.schmidt@iota.org"]
 edition = "2018"
 
 [dependencies]
-network = { path = "../bee-network" }
 common = { path = "../bee-common" }
-bundle = { path = "../bee-bundle" }
+ternary = { path = "../bee-ternary" }
+pow = { path = "../bee-pow" }

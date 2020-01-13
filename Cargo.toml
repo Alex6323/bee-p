@@ -1,5 +1,10 @@
 [workspace]
 members = [
 	"bee-main",
+	"bee-bundle",
+	"bee-common",
 	"bee-network",
+	"bee-pow",
+	"bee-tangle",
+	"bee-ternary",
 ]
