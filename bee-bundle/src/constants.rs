@@ -1,3 +1,5 @@
+use common::constants::*;
+
 pub struct Offset {
     pub start: usize,
     pub length: usize,
@@ -52,29 +54,27 @@ macro_rules! offsets_from_previous_field {
     };
 }
 
-pub const PAYLOAD: Field = offsets_from_trits!(0, 6561);
-pub const ADDRESS: Field = offsets_from_previous_field!(PAYLOAD, 243);
-pub const VALUE: Field = offsets_from_previous_field!(ADDRESS, 81);
-pub const OBSOLETE_TAG: Field = offsets_from_previous_field!(VALUE, 81);
-pub const TIMESTAMP: Field = offsets_from_previous_field!(OBSOLETE_TAG, 27);
-pub const INDEX: Field = offsets_from_previous_field!(TIMESTAMP, 27);
-pub const LAST_INDEX: Field = offsets_from_previous_field!(INDEX, 27);
-pub const BUNDLE_HASH: Field = offsets_from_previous_field!(LAST_INDEX, 243);
-pub const TRUNK_HASH: Field = offsets_from_previous_field!(BUNDLE_HASH, 243);
-pub const BRANCH_HASH: Field = offsets_from_previous_field!(TRUNK_HASH, 243);
-pub const TAG: Field = offsets_from_previous_field!(BRANCH_HASH, 81);
-pub const ATTACHMENT_TS: Field = offsets_from_previous_field!(TAG, 27);
-pub const ATTACHMENT_LBTS: Field = offsets_from_previous_field!(ATTACHMENT_TS, 27);
-pub const ATTACHMENT_UBTS: Field = offsets_from_previous_field!(ATTACHMENT_LBTS, 27);
-pub const NONCE: Field = offsets_from_previous_field!(ATTACHMENT_UBTS, 81);
-
-pub const TRANSACTION_TRIT_LEN: usize = 8019;
-pub const TRANSACTION_TRYT_LEN: usize = TRANSACTION_TRIT_LEN / 3; //2673
-pub const TRANSACTION_BYTE_LEN: usize = TRANSACTION_TRIT_LEN / 5 + 1; //1604
+pub const PAYLOAD: Field = offsets_from_trits!(0, PAYLOAD_TRIT_LEN);
+pub const ADDRESS: Field = offsets_from_previous_field!(PAYLOAD, ADDRESS_TRIT_LEN);
+pub const VALUE: Field = offsets_from_previous_field!(ADDRESS, VALUE_TRIT_LEN);
+pub const OBSOLETE_TAG: Field = offsets_from_previous_field!(VALUE, TAG_TRIT_LEN);
+pub const TIMESTAMP: Field = offsets_from_previous_field!(OBSOLETE_TAG, TIMESTAMP_TRIT_LEN);
+pub const INDEX: Field = offsets_from_previous_field!(TIMESTAMP, INDEX_TRIT_LEN);
+pub const LAST_INDEX: Field = offsets_from_previous_field!(INDEX, INDEX_TRIT_LEN);
+pub const BUNDLE_HASH: Field = offsets_from_previous_field!(LAST_INDEX, HASH_TRIT_LEN);
+pub const TRUNK_HASH: Field = offsets_from_previous_field!(BUNDLE_HASH, HASH_TRIT_LEN);
+pub const BRANCH_HASH: Field = offsets_from_previous_field!(TRUNK_HASH, HASH_TRIT_LEN);
+pub const TAG: Field = offsets_from_previous_field!(BRANCH_HASH, TAG_TRIT_LEN);
+pub const ATTACHMENT_TS: Field = offsets_from_previous_field!(TAG, TIMESTAMP_TRIT_LEN);
+pub const ATTACHMENT_LBTS: Field = offsets_from_previous_field!(ATTACHMENT_TS, TIMESTAMP_TRIT_LEN);
+pub const ATTACHMENT_UBTS: Field =
+    offsets_from_previous_field!(ATTACHMENT_LBTS, TIMESTAMP_TRIT_LEN);
+pub const NONCE: Field = offsets_from_previous_field!(ATTACHMENT_UBTS, NONCE_TRIT_LEN);
 
 #[cfg(test)]
 mod should {
     use super::*;
+    use common::constants::*;
 
     #[test]
     fn add_up_to_transaction_trit_length() {

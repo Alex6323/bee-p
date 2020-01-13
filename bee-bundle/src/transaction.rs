@@ -1,4 +1,6 @@
-use common::{Tryte, TRYTE_ZERO};
+use common::Tryte;
+use common::constants::*;
+
 use ternary::IsTryte;
 
 use crate::constants::*;

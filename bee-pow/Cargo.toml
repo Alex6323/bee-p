@@ -5,3 +5,7 @@ authors = ["alexander.schmidt@iota.org"]
 edition = "2018"
 
 [dependencies]
+common = { path = "../bee-common" }
+crypto = { path = "../bee-crypto" }
+
+num_cpus = "1.11.1"

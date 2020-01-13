@@ -3,6 +3,7 @@ members = [
 	"bee-main",
 	"bee-bundle",
 	"bee-common",
+	"bee-crypto",
 	"bee-network",
 	"bee-pow",
 	"bee-tangle",

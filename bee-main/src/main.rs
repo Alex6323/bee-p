@@ -1,6 +1,6 @@
 mod prototype;
 
-use common::{CONFIG, DEBUG, ENV_VAR};
+use common::constants::{CONFIG, DEBUG, ENV_VAR};
 
 use crate::prototype::Prototype;
 

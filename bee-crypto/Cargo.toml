@@ -1,11 +1,8 @@
 [package]
-name = "network"
+name = "crypto"
 version = "0.1.0"
 authors = ["alexander.schmidt@iota.org"]
 edition = "2018"
 
 [dependencies]
-bundle = { path = "../bee-bundle" }
 common = { path = "../bee-common" }
-
-tokio = { version = "0.2.9", features = ["tcp"] }
