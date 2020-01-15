@@ -1,8 +1,6 @@
 use common::constants::*;
 use crypto::curl::constants::*;
 
-pub const STATE_TRIT_LEN: usize = 3 * HASH_TRIT_LEN;
-
 pub const NUM_PRESTATE_DIGESTS: usize = (TRANSACTION_TRIT_LEN - HASH_TRIT_LEN) / HASH_TRIT_LEN; // 32
 
 pub const NONCE_START: usize = TRANSACTION_TRIT_LEN - NONCE_TRIT_LEN; // 7938

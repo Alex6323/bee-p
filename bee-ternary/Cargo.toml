@@ -5,3 +5,7 @@ authors = ["alexander.schmidt@iota.org"]
 edition = "2018"
 
 [dependencies]
+common = { path = "../bee-common" }
+
+lazy_static = "1.4.0"
+failure = "0.1.6"
