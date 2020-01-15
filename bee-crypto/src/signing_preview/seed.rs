@@ -1,5 +1,10 @@
+extern crate rand;
+
 // TODO Replace with bee impl when available
 use iota_crypto::Sponge;
+// TODO Remove when available in bee
+use iota_conversion::Trinary;
+use rand::Rng;
 
 // TODO Put constants in a separate file
 
@@ -7,6 +12,7 @@ use iota_crypto::Sponge;
 pub const MIN_TRIT_VALUE: i8 = -1;
 // TODO: documentation
 pub const MAX_TRIT_VALUE: i8 = 1;
+pub const TRYTE_ALPHABET: &[u8] = b"9ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 // TODO: documentation
 pub struct Seed([i8; 243]);
@@ -20,6 +26,20 @@ pub enum SeedError {
 
 // TODO: documentation
 impl Seed {
+    // TODO: documentation
+    // TODO: is this random enough ?
+    pub fn new() -> Self {
+        let mut rng = rand::thread_rng();
+        let seed: String = (0..81)
+            .map(|_| {
+                let idx = rng.gen_range(0, TRYTE_ALPHABET.len());
+                TRYTE_ALPHABET[idx] as char
+            })
+            .collect();
+
+        Self::from_bytes_unchecked(&seed.trits())
+    }
+
     // TODO: documentation
     pub fn subseed<S: Sponge + Default>(&self, index: u64) -> Self {
         let mut sponge = S::default();
@@ -78,8 +98,6 @@ impl Seed {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // TODO Remove when available in bee
-    use iota_conversion::Trinary;
     // TODO super::super ?
     use super::super::slice_eq;
     // TODO Remove when available in bee
@@ -87,6 +105,17 @@ mod tests {
 
     const SEED: &str =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
+
+    #[test]
+    fn seed_new_test() {
+        for _ in 0..10 {
+            let seed = Seed::new();
+
+            for byte in seed.to_bytes() {
+                assert_eq!(*byte == -1 || *byte == 0 || *byte == 1, true);
+            }
+        }
+    }
 
     fn seed_subseed_generic_test<S: Sponge + Default>(seed_string: &str, subseed_strings: &[&str]) {
         let seed = Seed::from_bytes(&seed_string.trits()).unwrap();
@@ -180,13 +209,11 @@ mod tests {
 
     #[test]
     fn seed_to_bytes_from_bytes_test() {
-        let seed = Seed::from_bytes(&SEED.trits()).unwrap();
+        for _ in 0..10 {
+            let seed_1 = Seed::new();
+            let seed_2 = Seed::from_bytes(seed_1.to_bytes()).unwrap();
 
-        for i in 0..10 {
-            let subseed_1 = seed.subseed::<Kerl>(i as u64);
-            let subseed_2 = Seed::from_bytes(subseed_1.to_bytes()).unwrap();
-
-            assert!(slice_eq(subseed_1.to_bytes(), subseed_2.to_bytes()));
+            assert!(slice_eq(seed_1.to_bytes(), seed_2.to_bytes()));
         }
     }
 }

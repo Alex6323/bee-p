@@ -5,6 +5,7 @@ authors = ["alexander.schmidt@iota.org"]
 edition = "2018"
 
 [dependencies]
+rand = "0.7"
 common = { path = "../bee-common" }
 
 # ONLY TEMPORARY
