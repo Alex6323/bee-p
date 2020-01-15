@@ -6,3 +6,8 @@ edition = "2018"
 
 [dependencies]
 common = { path = "../bee-common" }
+
+# ONLY TEMPORARY
+iota-constants = { path = "../iota-constants" }
+iota-conversion = { path = "../iota-conversion" }
+iota-crypto = { path = "../iota-crypto" }

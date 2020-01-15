@@ -1,4 +1,3 @@
-/*
 #![deny(unused_extern_crates)]
 #![warn(
     missing_debug_implementations,
@@ -6,7 +5,6 @@
     rust_2018_idioms,
     unreachable_pub
 )]
-*/
 
 //! Constants used throughout iota related crates
 

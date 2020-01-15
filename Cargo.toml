@@ -8,4 +8,9 @@ members = [
 	"bee-pow",
 	"bee-tangle",
 	"bee-ternary",
+
+	# ONLY TEMPORARY
+	"iota-conversion",
+	"iota-constants",
+	"iota-crypto",
 ]

@@ -5,3 +5,6 @@ authors = ["alexander.schmidt@iota.org"]
 edition = "2018"
 
 [dependencies]
+
+# ONLY TEMPORARY
+iota-constants = { path = "../iota-constants" }

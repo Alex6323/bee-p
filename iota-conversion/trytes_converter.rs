@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use failure::Error;
 
-use common::iota_constants;
+use iota_constants;
 
-use super::Result;
+use crate::Result;
 
 lazy_static! {
     static ref CHAR_TO_ASCII_MAP: HashMap<char, usize> = {

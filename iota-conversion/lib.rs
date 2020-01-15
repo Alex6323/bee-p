@@ -1,7 +1,27 @@
+#![deny(unused_extern_crates)]
+#![warn(
+    missing_debug_implementations,
+    missing_docs,
+    rust_2018_idioms,
+    unreachable_pub
+)]
+
+//! Trinary and unit conversion traits and methods
+
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate lazy_static;
+
+/// Provides useful unit definitions for Iota
 pub mod iota_units;
-pub mod trinary;
+mod trinary;
+/// Converts between strings and tryte-encoded strings
 pub mod trytes_converter;
+/// Provides converters between various unit representations of Iota
 pub mod unit_converter;
+
+pub use trinary::*;
 
 type Result<T> = ::std::result::Result<T, failure::Error>;
 

@@ -1,5 +1,5 @@
-use super::Result;
-use common::iota_constants::{TRINARY_RADIX, TRITS_PER_BYTE, TRITS_PER_TRYTE};
+use crate::Result;
+use iota_constants::{TRINARY_RADIX, TRITS_PER_BYTE, TRITS_PER_TRYTE};
 
 lazy_static! {
     /// Provides a byte to trits mapping
@@ -46,8 +46,8 @@ impl Trinary for i64 {
         while abs > 0 {
             let mut remainder = (abs % i64::from(TRINARY_RADIX as i8)) as i8;
             abs /= i64::from(TRINARY_RADIX as i8);
-            if remainder > common::iota_constants::MAX_TRIT_VALUE {
-                remainder = common::iota_constants::MIN_TRIT_VALUE;
+            if remainder > iota_constants::MAX_TRIT_VALUE {
+                remainder = iota_constants::MIN_TRIT_VALUE;
                 abs += 1;
             }
             trits.push(remainder);
@@ -101,7 +101,7 @@ impl Trinary for [Trit; 243] {
     fn trytes(&self) -> Result<Trytes> {
         ensure!(self.len() % 3 == 0, "Invalid trit length.");
 
-        self.chunks(common::iota_constants::TRITS_PER_TRYTE)
+        self.chunks(iota_constants::TRITS_PER_TRYTE)
             .map(trits_to_char)
             .collect()
     }
@@ -135,8 +135,8 @@ impl Trinary for &str {
 fn increment(trit_array: &mut [Trit], size: usize) {
     for trit in trit_array.iter_mut().take(size) {
         *trit += 1;
-        if *trit > common::iota_constants::MAX_TRIT_VALUE {
-            *trit = common::iota_constants::MIN_TRIT_VALUE;
+        if *trit > iota_constants::MAX_TRIT_VALUE {
+            *trit = iota_constants::MIN_TRIT_VALUE;
         } else {
             break;
         }
@@ -144,7 +144,7 @@ fn increment(trit_array: &mut [Trit], size: usize) {
 }
 
 fn char_to_trits(tryte: char) -> &'static [Trit] {
-    match common::iota_constants::TRYTE_ALPHABET
+    match iota_constants::TRYTE_ALPHABET
         .iter()
         .position(|&x| x == tryte)
     {
@@ -155,13 +155,13 @@ fn char_to_trits(tryte: char) -> &'static [Trit] {
 
 fn trits_to_char(trits: &[Trit]) -> Result<char> {
     ensure!(
-        trits.len() <= common::iota_constants::TRITS_PER_TRYTE,
+        trits.len() <= iota_constants::TRITS_PER_TRYTE,
         "Provided trit slice is too long: {:?}",
         trits
     );
     Ok(
         match TRYTE_TO_TRITS_MAPPINGS.iter().position(|&x| x == trits) {
-            Some(p) => common::iota_constants::TRYTE_ALPHABET[p],
+            Some(p) => iota_constants::TRYTE_ALPHABET[p],
             None => '-',
         },
     )
@@ -171,7 +171,7 @@ fn trytes(trits: &[Trit]) -> Result<Trytes> {
     ensure!(trits.len() % 3 == 0, "Invalid trit length.");
 
     trits
-        .chunks(common::iota_constants::TRITS_PER_TRYTE)
+        .chunks(iota_constants::TRITS_PER_TRYTE)
         .map(trits_to_char)
         .collect()
 }
