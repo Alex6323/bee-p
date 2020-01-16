@@ -12,7 +12,7 @@ pub struct WotsPrivateKeyGeneratorBuilder<S> {
     _sponge: PhantomData<S>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct WotsPrivateKeyGenerator<S> {
     security_level: u8,
     _sponge: PhantomData<S>,
@@ -33,22 +33,29 @@ pub struct WotsSignature<S> {
     _sponge: PhantomData<S>,
 }
 
+// TODO: documentation
+#[derive(Debug, PartialEq)]
+pub enum WotsError {
+    InvalidSecurityLevel,
+    MissingSecurityLevel,
+}
+
 impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
     pub fn security_level(&mut self, security_level: u8) -> &mut Self {
         self.security_level = Some(security_level);
         self
     }
 
-    pub fn build(&mut self) -> Result<WotsPrivateKeyGenerator<S>, String> {
+    pub fn build(&mut self) -> Result<WotsPrivateKeyGenerator<S>, WotsError> {
         match self.security_level {
             Some(security_level) => match security_level {
                 1 | 2 | 3 => Ok(WotsPrivateKeyGenerator {
                     security_level: security_level,
                     _sponge: PhantomData,
                 }),
-                _ => Err("Invalid security level, possible values are 1, 2 or 3".to_owned()),
+                _ => Err(WotsError::InvalidSecurityLevel),
             },
-            None => Err("Security level has not been set".to_owned()),
+            None => Err(WotsError::MissingSecurityLevel),
         }
     }
 }
@@ -222,30 +229,28 @@ mod tests {
 
     #[test]
     fn wots_generator_missing_security_level_test() {
-        assert_eq!(
-            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-                .build()
-                .unwrap_err(),
-            "Security level has not been set"
-        );
+        match WotsPrivateKeyGeneratorBuilder::<Kerl>::default().build() {
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
+        }
     }
 
     #[test]
     fn wots_generator_invalid_security_level_test() {
-        assert_eq!(
-            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-                .security_level(0)
-                .build()
-                .unwrap_err(),
-            "Invalid security level, possible values are 1, 2 or 3"
-        );
-        assert_eq!(
-            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-                .security_level(4)
-                .build()
-                .unwrap_err(),
-            "Invalid security level, possible values are 1, 2 or 3"
-        );
+        match WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(0)
+            .build()
+        {
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, WotsError::InvalidSecurityLevel),
+        }
+        match WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(4)
+            .build()
+        {
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, WotsError::InvalidSecurityLevel),
+        }
     }
 
     #[test]
