@@ -1,5 +1,3 @@
-extern crate rand;
-
 // TODO Replace with bee impl when available
 use iota_crypto::Sponge;
 // TODO Remove when available in bee
@@ -12,6 +10,7 @@ use rand::Rng;
 pub const MIN_TRIT_VALUE: i8 = -1;
 // TODO: documentation
 pub const MAX_TRIT_VALUE: i8 = 1;
+// TODO: documentation
 pub const TRYTE_ALPHABET: &[u8] = b"9ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 // TODO: documentation
@@ -31,10 +30,7 @@ impl Seed {
     pub fn new() -> Self {
         let mut rng = rand::thread_rng();
         let seed: String = (0..81)
-            .map(|_| {
-                let idx = rng.gen_range(0, TRYTE_ALPHABET.len());
-                TRYTE_ALPHABET[idx] as char
-            })
+            .map(|_| TRYTE_ALPHABET[rng.gen_range(0, TRYTE_ALPHABET.len())] as char)
             .collect();
 
         Self::from_bytes_unchecked(&seed.trits())
