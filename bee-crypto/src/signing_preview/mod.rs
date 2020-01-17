@@ -1,7 +1,7 @@
 // pub mod ed25519;
-pub mod mss;
+// pub mod mss;
 pub mod seed;
-pub mod wots;
+// pub mod wots;
 
 pub use seed::Seed;
 
@@ -9,6 +9,24 @@ pub use seed::Seed;
 pub trait PrivateKeyGenerator {
     type PrivateKey;
 
+    // TODO documentation
+    /// Generates and returns a private key
+    ///
+    /// # Parameters
+    ///
+    /// * `seed` - A seed to deterministically derive a private key from
+    /// * `index` - An index to deterministically derive a private key from
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// mod seed;
+    /// use seed::Seed;
+    ///
+    /// let seed = Seed::new();
+    /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build();
+    /// let private_key = private_key_generator.generate(seed, 0);
+    /// ```
     fn generate(&self, seed: &Seed, index: u64) -> Self::PrivateKey;
 }
 
