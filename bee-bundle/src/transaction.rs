@@ -1,5 +1,7 @@
 use common::Tryte;
 use common::constants::*;
+use common::Result;
+use common::Error;
 
 use ternary::IsTryte;
 
@@ -19,24 +21,40 @@ pub struct Nonce(pub(self) [Tryte; NONCE.tryte_offset.length]);
 
 #[derive(Default)]
 pub struct Transaction {
-    pub payload: Payload,
-    pub address: Address,
-    pub value: Value,
-    pub obsolete_tag: Tag,
-    pub timestamp: Timestamp,
-    pub index: Index,
-    pub last_index: Index,
-    pub bundle_hash: Hash,
-    pub trunk_hash: Hash,
-    pub branch_hash: Hash,
-    pub tag: Tag,
-    pub attachment_ts: Timestamp,
-    pub attachment_lbts: Timestamp,
-    pub attachment_ubts: Timestamp,
-    pub nonce: Nonce,
+    payload: Payload,
+    address: Address,
+    value: Value,
+    obsolete_tag: Tag,
+    timestamp: Timestamp,
+    index: Index,
+    last_index: Index,
+    bundle_hash: Hash,
+    trunk_hash: Hash,
+    branch_hash: Hash,
+    tag: Tag,
+    attachment_ts: Timestamp,
+    attachment_lbts: Timestamp,
+    attachment_ubts: Timestamp,
+    nonce: Nonce,
 }
 
-pub struct TransactionBuilder(Transaction);
+pub struct TransactionBuilder {
+    payload: Option<Payload>,
+    address: Option<Address>,
+    value: Option<Value>,
+    obsolete_tag: Option<Tag>,
+    timestamp: Option<Timestamp>,
+    index: Option<Index>,
+    last_index: Option<Index>,
+    bundle_hash: Option<Hash>,
+    trunk_hash: Option<Hash>,
+    branch_hash: Option<Hash>,
+    tag: Option<Tag>,
+    attachment_ts: Option<Timestamp>,
+    attachment_lbts: Option<Timestamp>,
+    attachment_ubts: Option<Timestamp>,
+    nonce: Option<Nonce>,
+}    
 
 impl Default for Payload {
     fn default() -> Self {
@@ -157,6 +175,70 @@ impl Transaction {
 
         unimplemented!()
     }
+    /// Create a `Transaction` from a reader object.
+    pub fn from_reader<R: std::io::Read>(reader: R) -> Result<Self> {
+        Err(Error::TransactionError)
+    }
+
+    pub fn payload(&self) -> &Payload {
+        &self.payload
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub fn value(&self) -> &Value {
+        &self.value
+    }
+
+    pub fn obsolete_tag(&self) -> &Tag {
+        &self.obsolete_tag
+    }
+
+    pub fn timestamp(&self) -> &Timestamp {
+        &self.timestamp
+    }
+
+    pub fn index(&self) -> &Index {
+        &self.index
+    }
+
+    pub fn last_index(&self) -> &Index {
+        &self.last_index
+    }
+
+    pub fn bundle_hash(&self) -> &Hash {
+        &self.bundle_hash
+    }
+
+    pub fn trunk_hash(&self) -> &Hash {
+        &self.trunk_hash
+    }
+
+    pub fn branch_hash(&self) -> &Hash {
+        &self.branch_hash
+    }
+
+    pub fn tag(&self) -> &Tag {
+        &self.tag
+    }
+
+    pub fn attachment_ts(&self) -> &Timestamp {
+        &self.attachment_ts
+    }
+
+    pub fn attachment_lbts(&self) -> &Timestamp {
+        &self.attachment_lbts
+    }
+
+    pub fn attachment_ubts(&self) -> &Timestamp {
+        &self.attachment_ubts
+    }
+
+    pub fn nonce(&self) -> &Nonce {
+        &self.nonce
+    }
 }
 
 impl std::fmt::Debug for Transaction {
@@ -176,71 +258,123 @@ impl std::fmt::Debug for Transaction {
 }
 
 impl TransactionBuilder {
+    pub fn new() -> Self {
+        Self {
+            payload: None,
+            address: None,
+            value: None, 
+            obsolete_tag: None,
+            timestamp: None, 
+            index: None, 
+            last_index: None, 
+            tag: None, 
+            bundle_hash: None, 
+            trunk_hash: None, 
+            branch_hash: None, 
+            attachment_ts: None,
+            attachment_lbts: None,
+            attachment_ubts: None,
+            nonce: None,
+        }
+    }
+
     pub fn default() -> Self {
-        Self(Transaction::default())
+        Self {
+            payload: Some(Payload::default()),
+            address: Some(Address::default()),
+            value: Some(Value::default()), 
+            obsolete_tag: Some(Tag::default()),
+            timestamp: Some(Timestamp::default()),
+            index: Some(Index::default()),
+            last_index: Some(Index::default()),
+            tag: Some(Tag::default()),
+            bundle_hash: Some(Hash::default()),
+            trunk_hash: Some(Hash::default()),
+            branch_hash: Some(Hash::default()),
+            attachment_ts: Some(Timestamp::default()),
+            attachment_lbts: Some(Timestamp::default()),
+            attachment_ubts: Some(Timestamp::default()),
+            nonce: Some(Nonce::default()),
+        }
     }
 
     pub fn payload(&mut self, payload: Payload) -> &mut Self {
-        self.0.payload = payload;
+        self.payload.replace(payload);
         self
     }
 
     pub fn address(&mut self, address: Address) -> &mut Self {
-        self.0.address = address;
+        self.address.replace(address);
         self
     }
 
     pub fn value(&mut self, value: Value) -> &mut Self {
-        self.0.value = value;
+        self.value.replace(value);
         self
     }
 
     pub fn obsolete_tag(&mut self, obsolete_tag: Tag) -> &mut Self {
-        self.0.obsolete_tag = obsolete_tag;
+        self.obsolete_tag.replace(obsolete_tag);
         self
     }
     pub fn timestamp(&mut self, timestamp: Timestamp) -> &mut Self {
-        self.0.timestamp = timestamp;
+        self.timestamp.replace(timestamp);
         self
     }
 
     pub fn index(&mut self, index: Index) -> &mut Self {
-        self.0.index = index;
+        self.index.replace(index);
         self
     }
 
     pub fn last_index(&mut self, last_index: Index) -> &mut Self {
-        self.0.last_index = last_index;
+        self.last_index.replace(last_index);
         self
     }
 
     pub fn tag(&mut self, tag: Tag) -> &mut Self {
-        self.0.tag = tag;
+        self.tag.replace(tag);
         self
     }
 
     pub fn attachment_ts(&mut self, attachment_ts: Timestamp) -> &mut Self {
-        self.0.attachment_ts = attachment_ts;
+        self.attachment_ts.replace(attachment_ts);
         self
     }
 
     pub fn attachment_lbts(&mut self, attachment_lbts: Timestamp) -> &mut Self {
-        self.0.attachment_lbts = attachment_lbts;
+        self.attachment_lbts.replace(attachment_lbts);
         self
     }
 
     pub fn attachment_ubts(&mut self, attachment_ubts: Timestamp) -> &mut Self {
-        self.0.attachment_ubts = attachment_ubts;
+        self.attachment_ubts.replace(attachment_ubts);
         self
     }
 
     pub fn nonce(&mut self, nonce: Nonce) -> &mut Self {
-        self.0.nonce = nonce;
+        self.nonce.replace(nonce);
         self
     }
 
     pub fn build(self) -> Transaction {
-        self.0
+        Transaction {
+            payload: self.payload.unwrap(),
+            address: self.address.unwrap(),
+            value: self.value.unwrap(),
+            obsolete_tag: self.obsolete_tag.unwrap(),
+            timestamp: self.timestamp.unwrap(),
+            index: self.index.unwrap(),
+            last_index: self.last_index.unwrap(),
+            tag: self.tag.unwrap(),
+            bundle_hash: self.bundle_hash.unwrap(),
+            trunk_hash: self.trunk_hash.unwrap(),
+            branch_hash: self.branch_hash.unwrap(),
+            attachment_ts: self.attachment_ts.unwrap(),
+            attachment_lbts: self.attachment_lbts.unwrap(),
+            attachment_ubts: self.attachment_ubts.unwrap(),
+            nonce: self.nonce.unwrap(),
+        }
     }
 }
 
@@ -258,12 +392,12 @@ mod should {
             .nonce(Nonce::from_str("ABCDEF"));
 
         let tx = builder.build();
-        //println!("{:?}", tx);
+        println!("{:?}", tx);
     }
 
     #[test]
     fn create_transaction_from_tryte_string() {
-        let tx = Transaction::from_tryte_str(TX_TRYTES);
+        //let tx = Transaction::from_tryte_str(TX_TRYTES);
         
     }
 

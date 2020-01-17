@@ -1,4 +1,4 @@
-use common::PrototypeResult;
+use common::Result;
 
 use network::{Peer, PeerId};
 
@@ -17,7 +17,7 @@ impl Prototype {
         }
     }
 
-    pub fn run(&mut self) -> PrototypeResult {
+    pub fn run(&mut self) -> Result<()> {
         Ok(())
     }
 }
