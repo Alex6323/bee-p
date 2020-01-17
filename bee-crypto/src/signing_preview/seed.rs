@@ -19,8 +19,8 @@ pub struct Seed([i8; 243]);
 // TODO: documentation
 #[derive(Debug, PartialEq)]
 pub enum SeedError {
-    InvalidLength,
-    InvalidTrit,
+    InvalidLength(usize),
+    InvalidTrit(i8),
 }
 
 // TODO: documentation
@@ -63,13 +63,13 @@ impl Seed {
     // TODO: documentation
     pub fn from_bytes(bytes: &[i8]) -> Result<Self, SeedError> {
         if bytes.len() != 243 {
-            return Err(SeedError::InvalidLength);
+            return Err(SeedError::InvalidLength(bytes.len()));
         }
 
         for byte in bytes {
             match byte {
                 -1 | 0 | 1 => continue,
-                _ => return Err(SeedError::InvalidTrit),
+                _ => return Err(SeedError::InvalidTrit(*byte)),
             }
         }
 
@@ -186,8 +186,8 @@ mod tests {
         let seed_bytes = [0; 42];
 
         match Seed::from_bytes(&seed_bytes) {
-            Ok(_) => unreachable!(),
-            Err(err) => assert_eq!(err, SeedError::InvalidLength),
+            Err(SeedError::InvalidLength(len)) => assert_eq!(len, 42),
+            _ => unreachable!(),
         }
     }
 
@@ -198,8 +198,8 @@ mod tests {
         seed_bytes[100] = 42;
 
         match Seed::from_bytes(&seed_bytes) {
-            Ok(_) => unreachable!(),
-            Err(err) => assert_eq!(err, SeedError::InvalidTrit),
+            Err(SeedError::InvalidTrit(byte)) => assert_eq!(byte, 42),
+            _ => unreachable!(),
         }
     }
 
