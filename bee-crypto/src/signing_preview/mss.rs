@@ -286,6 +286,50 @@ mod tests {
     use iota_crypto::{Curl, Kerl};
 
     #[test]
+    fn mss_generator_missing_depth_test() {
+        let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(1)
+            .build()
+            .unwrap();
+
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+            .generator(wots_private_key_generator)
+            .build()
+        {
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, MssError::MissingDepth),
+        }
+    }
+
+    #[test]
+    fn mss_generator_invalid_depth_test() {
+        let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(1)
+            .build()
+            .unwrap();
+
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+            .generator(wots_private_key_generator)
+            .depth(21)
+            .build()
+        {
+            Err(MssError::InvalidDepth(depth)) => assert_eq!(depth, 21),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn mss_generator_missing_generator_test() {
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+            .depth(5)
+            .build()
+        {
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, MssError::MissingGenerator),
+        }
+    }
+
+    #[test]
     fn mss_wots_kerl_sec_1_test() {
         const PUBLIC_KEY: &str =
             "ECRGOIGKMFCNJPILB9GRUN9WIFOXY9GPKLSJV9UUQINIOHWKYJRZEQ9IHTS9HMFCMQBGRNODBIWTPILGC";
