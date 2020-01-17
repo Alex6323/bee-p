@@ -7,17 +7,17 @@ use ternary::IsTryte;
 
 use crate::constants::*;
 
-pub struct Payload(pub(self) [Tryte; PAYLOAD.tryte_offset.length]);
-pub struct Address(pub(self) [Tryte; ADDRESS.tryte_offset.length]);
+pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
+pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
 #[derive(Default, Debug)]
-pub struct Value(pub(self) i64);
-pub struct Tag(pub(self) [Tryte; TAG.tryte_offset.length]);
+pub struct Value(pub i64);
+pub struct Tag(pub [Tryte; TAG.tryte_offset.length]);
 #[derive(Default, Debug)]
-pub struct Timestamp(pub(self) u64);
+pub struct Timestamp(pub u64);
 #[derive(Default, Debug)]
-pub struct Index(pub(self) usize);
-pub struct Hash(pub(self) [Tryte; BUNDLE_HASH.tryte_offset.length]);
-pub struct Nonce(pub(self) [Tryte; NONCE.tryte_offset.length]);
+pub struct Index(pub usize);
+pub struct Hash(pub [Tryte; BUNDLE_HASH.tryte_offset.length]);
+pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
 
 #[derive(Default)]
 pub struct Transaction {
@@ -38,23 +38,16 @@ pub struct Transaction {
     nonce: Nonce,
 }
 
-pub struct TransactionBuilder {
-    payload: Option<Payload>,
-    address: Option<Address>,
-    value: Option<Value>,
-    obsolete_tag: Option<Tag>,
-    timestamp: Option<Timestamp>,
-    index: Option<Index>,
-    last_index: Option<Index>,
-    bundle_hash: Option<Hash>,
-    trunk_hash: Option<Hash>,
-    branch_hash: Option<Hash>,
-    tag: Option<Tag>,
-    attachment_ts: Option<Timestamp>,
-    attachment_lbts: Option<Timestamp>,
-    attachment_ubts: Option<Timestamp>,
-    nonce: Option<Nonce>,
-}    
+/// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits, see the table below.
+/// NOTE: if this is a subset of transaction fields, then it's confusing to call it the `bundle essence` when in reality it's the essence of a transaction needed to build a bundle, or am I misunderstanding the meaning of the word 'essence'? I would like to call it the `TransactionEssence`, but that might be confusing to people used to IOTA terms.
+pub struct Essence<'a> {
+    address: &'a Address,
+    value: &'a Value,
+    obsolete_tag: &'a Tag,
+    timestamp: &'a Timestamp,
+    index: &'a Index,
+    last_index: &'a Index,
+}
 
 impl Default for Payload {
     fn default() -> Self {
@@ -239,6 +232,17 @@ impl Transaction {
     pub fn nonce(&self) -> &Nonce {
         &self.nonce
     }
+
+    pub fn essence<'a>(&'a self) -> Essence<'a> {
+        Essence {
+            address: &self.address,
+            value: &self.value,
+            obsolete_tag: &self.obsolete_tag,
+            timestamp: &self.timestamp,
+            index: &self.index,
+            last_index: &self.last_index,
+        }
+    }
 }
 
 impl std::fmt::Debug for Transaction {
@@ -257,20 +261,38 @@ impl std::fmt::Debug for Transaction {
     }
 }
 
+pub struct TransactionBuilder {
+    payload: Option<Payload>,
+    address: Option<Address>,
+    value: Option<Value>,
+    obsolete_tag: Option<Tag>,
+    timestamp: Option<Timestamp>,
+    index: Option<Index>,
+    last_index: Option<Index>,
+    bundle_hash: Option<Hash>,
+    trunk_hash: Option<Hash>,
+    branch_hash: Option<Hash>,
+    tag: Option<Tag>,
+    attachment_ts: Option<Timestamp>,
+    attachment_lbts: Option<Timestamp>,
+    attachment_ubts: Option<Timestamp>,
+    nonce: Option<Nonce>,
+}
+
 impl TransactionBuilder {
     pub fn new() -> Self {
         Self {
             payload: None,
             address: None,
-            value: None, 
+            value: None,
             obsolete_tag: None,
-            timestamp: None, 
-            index: None, 
-            last_index: None, 
-            tag: None, 
-            bundle_hash: None, 
-            trunk_hash: None, 
-            branch_hash: None, 
+            timestamp: None,
+            index: None,
+            last_index: None,
+            tag: None,
+            bundle_hash: None,
+            trunk_hash: None,
+            branch_hash: None,
             attachment_ts: None,
             attachment_lbts: None,
             attachment_ubts: None,
@@ -282,7 +304,7 @@ impl TransactionBuilder {
         Self {
             payload: Some(Payload::default()),
             address: Some(Address::default()),
-            value: Some(Value::default()), 
+            value: Some(Value::default()),
             obsolete_tag: Some(Tag::default()),
             timestamp: Some(Timestamp::default()),
             index: Some(Index::default()),
