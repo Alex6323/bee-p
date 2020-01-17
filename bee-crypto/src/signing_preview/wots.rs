@@ -47,16 +47,18 @@ impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
     }
 
     pub fn build(&mut self) -> Result<WotsPrivateKeyGenerator<S>, WotsError> {
-        match self.security_level {
+        let security_level = match self.security_level {
             Some(security_level) => match security_level {
-                1 | 2 | 3 => Ok(WotsPrivateKeyGenerator {
-                    security_level: security_level,
-                    _sponge: PhantomData,
-                }),
-                _ => Err(WotsError::InvalidSecurityLevel(security_level)),
+                1 | 2 | 3 => security_level,
+                _ => return Err(WotsError::InvalidSecurityLevel(security_level)),
             },
-            None => Err(WotsError::MissingSecurityLevel),
-        }
+            None => return Err(WotsError::MissingSecurityLevel),
+        };
+
+        Ok(WotsPrivateKeyGenerator {
+            security_level: security_level,
+            _sponge: PhantomData,
+        })
     }
 }
 
