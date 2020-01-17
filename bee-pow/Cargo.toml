@@ -9,3 +9,4 @@ common = { path = "../bee-common" }
 crypto = { path = "../bee-crypto" }
 
 num_cpus = "1.11.1"
+crossbeam = "0.7.3"

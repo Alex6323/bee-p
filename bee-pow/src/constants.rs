@@ -1,10 +1,10 @@
 use common::constants::*;
-use crypto::curl::constants::*;
 
-pub const NUM_PRESTATE_DIGESTS: usize = (TRANSACTION_TRIT_LEN - HASH_TRIT_LEN) / HASH_TRIT_LEN; // 32
+pub const NUM_FULL_CHUNKS_FOR_PRESTATE: usize =
+    (TRANSACTION_TRIT_LEN - HASH_TRIT_LEN) / HASH_TRIT_LEN; // 32
 
-pub const NONCE_START: usize = TRANSACTION_TRIT_LEN - NONCE_TRIT_LEN; // 7938
-pub const NONCE_DIGEST_START: usize = HASH_TRIT_LEN - NONCE_TRIT_LEN; // 162
+pub const TRANS_NONCE_START: usize = TRANSACTION_TRIT_LEN - NONCE_TRIT_LEN; // 7938
+pub const CHUNK_NONCE_START: usize = HASH_TRIT_LEN - NONCE_TRIT_LEN; // 162
 
 pub const BATCH_SIZE: usize = 64;
 
@@ -20,8 +20,8 @@ pub const H2: u64 = 0xFFC01FFFF803FFFF;
 pub const L3: u64 = 0xFFC0000007FFFFFF;
 pub const H3: u64 = 0x003FFFFFFFFFFFFF;
 
-pub const BASE_INCR_START: usize = HASH_TRIT_LEN - NONCE_TRIT_LEN + 4;
-pub const CORE_INCR_START: usize = BASE_INCR_START + 27;
+pub const OUTER_INCR_START: usize = HASH_TRIT_LEN - NONCE_TRIT_LEN + 4;
+pub const INNER_INCR_START: usize = OUTER_INCR_START + 27;
 
 pub const INDICES: [isize; 730] = [
     0, 364, 728, 363, 727, 362, 726, 361, 725, 360, 724, 359, 723, 358, 722, 357, 721, 356, 720,

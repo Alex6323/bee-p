@@ -1,15 +1,16 @@
 pub mod constants;
 
-use common::constants::{HASH_TRIT_LEN, NUM_HASHING_ROUNDS};
 use common::Trit;
 
-use constants::STATE_TRIT_LEN;
-use constants::TRUTH_TABLE;
+use self::constants::CURL_HASH_TRIT_LEN as HASH_LEN;
+use self::constants::CURL_P_81 as NUM_ROUNDS;
+use self::constants::CURL_STAT_TRIT_LEN as STATE_LEN;
+use self::constants::TRUTH_TABLE;
 
 pub struct Curl {
     num_rounds: usize,
-    state: [Trit; STATE_TRIT_LEN],
-    scratchpad: [Trit; STATE_TRIT_LEN],
+    state: [Trit; STATE_LEN],
+    scratchpad: [Trit; STATE_LEN],
 }
 
 impl Curl {
@@ -23,10 +24,10 @@ impl Curl {
     pub fn absorb(&mut self, trits: &[i8], mut offset: usize, mut length: usize) {
         loop {
             let chunk_length = {
-                if length < HASH_TRIT_LEN {
+                if length < HASH_LEN {
                     length
                 } else {
-                    HASH_TRIT_LEN
+                    HASH_LEN
                 }
             };
 
@@ -47,10 +48,10 @@ impl Curl {
     pub fn squeeze(&mut self, trits: &mut [i8], mut offset: usize, mut length: usize) {
         loop {
             let chunk_length = {
-                if length < HASH_TRIT_LEN {
+                if length < HASH_LEN {
                     length
                 } else {
-                    HASH_TRIT_LEN
+                    HASH_LEN
                 }
             };
 
@@ -77,7 +78,7 @@ impl Curl {
 
         for _ in 0..self.num_rounds {
             self.scratchpad.copy_from_slice(&self.state);
-            for state_index in 0..STATE_TRIT_LEN {
+            for state_index in 0..STATE_LEN {
                 let prev_scratchpad_index = scratchpad_index;
 
                 if scratchpad_index < 365 {
@@ -97,9 +98,9 @@ impl Curl {
 impl Default for Curl {
     fn default() -> Self {
         Curl {
-            num_rounds: NUM_HASHING_ROUNDS,
-            state: [0; STATE_TRIT_LEN],
-            scratchpad: [0; STATE_TRIT_LEN],
+            num_rounds: NUM_ROUNDS,
+            state: [0; STATE_LEN],
+            scratchpad: [0; STATE_LEN],
         }
     }
 }
