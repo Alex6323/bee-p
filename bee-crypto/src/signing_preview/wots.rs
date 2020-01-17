@@ -36,7 +36,7 @@ pub struct WotsSignature<S> {
 // TODO: documentation
 #[derive(Debug, PartialEq)]
 pub enum WotsError {
-    InvalidSecurityLevel,
+    InvalidSecurityLevel(u8),
     MissingSecurityLevel,
 }
 
@@ -53,7 +53,7 @@ impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
                     security_level: security_level,
                     _sponge: PhantomData,
                 }),
-                _ => Err(WotsError::InvalidSecurityLevel),
+                _ => Err(WotsError::InvalidSecurityLevel(security_level)),
             },
             None => Err(WotsError::MissingSecurityLevel),
         }
@@ -241,41 +241,30 @@ mod tests {
             .security_level(0)
             .build()
         {
-            Ok(_) => unreachable!(),
-            Err(err) => assert_eq!(err, WotsError::InvalidSecurityLevel),
+            Err(WotsError::InvalidSecurityLevel(s)) => assert_eq!(s, 0),
+            _ => unreachable!(),
         }
+
         match WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(4)
             .build()
         {
-            Ok(_) => unreachable!(),
-            Err(err) => assert_eq!(err, WotsError::InvalidSecurityLevel),
+            Err(WotsError::InvalidSecurityLevel(s)) => assert_eq!(s, 4),
+            _ => unreachable!(),
         }
     }
 
     #[test]
     fn wots_generator_valid_test() {
-        assert_eq!(
-            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-                .security_level(1)
-                .build()
-                .is_ok(),
-            true
-        );
-        assert_eq!(
-            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-                .security_level(2)
-                .build()
-                .is_ok(),
-            true
-        );
-        assert_eq!(
-            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-                .security_level(3)
-                .build()
-                .is_ok(),
-            true
-        );
+        for s in 1..4 {
+            assert_eq!(
+                WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                    .security_level(s)
+                    .build()
+                    .is_ok(),
+                true
+            );
+        }
     }
 
     fn wots_generic_complete_test<S: Sponge + Default>() {
