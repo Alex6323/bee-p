@@ -1,9 +1,9 @@
 pub mod constants;
 
-mod errors;
+mod result;
 mod types;
 
-pub use errors::*;
+pub use result::*;
 pub use types::*;
 
 // ONLY TEMPORARY
