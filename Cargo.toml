@@ -6,6 +6,7 @@ members = [
 	"bee-crypto",
 	"bee-network",
 	"bee-pow",
+	"bee-storage",
 	"bee-tangle",
 	"bee-ternary",
 

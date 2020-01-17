@@ -1,5 +1,5 @@
 #[derive(Clone)]
-pub struct Difficulty(pub(self) usize);
+pub struct Difficulty(pub usize);
 
 use common::constants::{HASH_TRIT_LEN, NETWORK_DIFFICULTY};
 

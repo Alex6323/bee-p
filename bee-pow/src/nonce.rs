@@ -1,8 +1,8 @@
-use common::constants::NONCE_TRIT_LEN;
+use common::constants::NONCE_TRIT_LEN as NONCE_LEN;
 use common::Trit;
 
 #[derive(Copy)]
-pub struct NonceTrits(pub(self) [Trit; NONCE_TRIT_LEN]);
+pub struct NonceTrits(pub(crate) [Trit; NONCE_LEN]);
 
 impl NonceTrits {
     pub fn to_vec(&self) -> Vec<i8> {
@@ -16,7 +16,7 @@ impl NonceTrits {
 
 impl Default for NonceTrits {
     fn default() -> Self {
-        Self([0i8; NONCE_TRIT_LEN])
+        Self([0i8; NONCE_LEN])
     }
 }
 
@@ -29,7 +29,7 @@ impl PartialEq for NonceTrits {
 
 impl Clone for NonceTrits {
     fn clone(&self) -> Self {
-        let mut nonce = [0_i8; NONCE_TRIT_LEN];
+        let mut nonce = [0_i8; NONCE_LEN];
         nonce.copy_from_slice(&self.0);
 
         Self(nonce)

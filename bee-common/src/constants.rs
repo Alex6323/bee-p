@@ -17,5 +17,4 @@ pub const INDEX_TRIT_LEN: usize = 27;
 pub const HASH_TRIT_LEN: usize = 243;
 pub const NONCE_TRIT_LEN: usize = 81;
 
-pub const NUM_HASHING_ROUNDS: usize = 81;
 pub const NETWORK_DIFFICULTY: usize = 14;
