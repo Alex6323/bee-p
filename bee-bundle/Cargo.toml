@@ -1,7 +1,7 @@
 [package]
 name = "bundle"
 version = "0.1.0"
-authors = ["alexander.schmidt@iota.org"]
+authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
