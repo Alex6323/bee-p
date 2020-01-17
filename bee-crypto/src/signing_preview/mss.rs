@@ -37,28 +37,47 @@ pub struct MssSignature<S> {
     _sponge: PhantomData<S>,
 }
 
+// TODO: documentation
+#[derive(Debug, PartialEq)]
+pub enum MssError {
+    InvalidDepth(u8),
+    MissingDepth,
+    MissingGenerator,
+}
+
 impl<S, G> MssPrivateKeyGeneratorBuilder<S, G>
 where
     S: Sponge + Default,
-    G: PrivateKeyGenerator,
+    G: PrivateKeyGenerator + Copy,
 {
     pub fn depth(&mut self, depth: u8) -> &mut Self {
-        self.depth.replace(depth);
+        self.depth = Some(depth);
         self
     }
 
     pub fn generator(&mut self, generator: G) -> &mut Self {
-        self.generator.replace(generator);
+        self.generator = Some(generator);
         self
     }
 
-    pub fn build(&mut self) -> MssPrivateKeyGenerator<S, G> {
-        MssPrivateKeyGenerator {
-            depth: self.depth.unwrap(),
-            // TODO: WHAT
-            generator: self.generator.take().unwrap(),
+    pub fn build(&mut self) -> Result<MssPrivateKeyGenerator<S, G>, MssError> {
+        let depth = match self.depth {
+            Some(depth) => match depth {
+                0..=20 => depth,
+                _ => return Err(MssError::InvalidDepth(depth)),
+            },
+            None => return Err(MssError::MissingDepth),
+        };
+        let generator = match self.generator {
+            Some(generator) => generator,
+            None => return Err(MssError::MissingGenerator),
+        };
+
+        Ok(MssPrivateKeyGenerator {
+            depth: depth,
+            generator: generator,
             _sponge: PhantomData,
-        }
+        })
     }
 }
 
@@ -267,7 +286,7 @@ mod tests {
     use iota_crypto::{Curl, Kerl};
 
     #[test]
-    fn mss_kerl_sec_1_test() {
+    fn mss_wots_kerl_sec_1_test() {
         const PUBLIC_KEY: &str =
             "ECRGOIGKMFCNJPILB9GRUN9WIFOXY9GPKLSJV9UUQINIOHWKYJRZEQ9IHTS9HMFCMQBGRNODBIWTPILGC";
         const MESSAGE: &str =
@@ -285,7 +304,7 @@ mod tests {
     }
 
     #[test]
-    fn mss_kerl_sec_3_test() {
+    fn mss_wots_kerl_sec_3_test() {
         const PUBLIC_KEY: &str =
             "IDSWNWLGPFLAQADAEYUINRS9MBEMCYARHXHVSBOZDOBHPIPNVYUFFTQLNYGDZKKTEBHYOQXVQVHXBGXH9";
         const MESSAGE: &str =
@@ -303,7 +322,7 @@ mod tests {
     }
 
     // #[test]
-    // fn mss_curl27_sec_1_test() {
+    // fn mss_wots_curl27_sec_1_test() {
     //     const PUBLIC_KEY: &str =
     //         "ECFTA9SVHYH9MRRKJHQCBXNQKDBNGCWWDUAVILCOF9LMJNDPZLLTRYPKNHPVLXJYGGAXGOBYHZHGLNXKE";
     //     const MESSAGE: &str =
@@ -322,7 +341,7 @@ mod tests {
     // }
     //
     // #[test]
-    // fn mss_curl27_sec_3_test() {
+    // fn mss_wots_curl27_sec_3_test() {
     //     const PUBLIC_KEY: &str =
     //         "ROLHKXFNMSN9WWAWLWYKWXJUQ9BREXTKOMCZFT99JOLWNWBPUYSCZPLSOSOPICLKXXSDRAYEYRNTTKTNI";
     //     const MESSAGE: &str =
@@ -344,7 +363,7 @@ mod tests {
     where
         S: Sponge + Default,
         G: Default,
-        G: PrivateKeyGenerator,
+        G: PrivateKeyGenerator + Copy,
         <G as PrivateKeyGenerator>::PrivateKey: PrivateKey,
         <<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey: PublicKey,
         <<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::Signature:
@@ -364,7 +383,8 @@ mod tests {
         let mss_private_key_generator = MssPrivateKeyGeneratorBuilder::<S, G>::default()
             .depth(DEPTH)
             .generator(generator)
-            .build();
+            .build()
+            .unwrap();
         let mut mss_private_key = mss_private_key_generator.generate(&seed, 0);
         let mss_public_key = mss_private_key.generate_public_key();
 
@@ -377,53 +397,45 @@ mod tests {
     }
 
     #[test]
-    fn mss_gen_kerl_kerl_test() {
+    fn mss_wots_kerl_kerl_test() {
         for s in 1..4 {
-            let wots_kerl_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_generic_gen_test::<Kerl, WotsPrivateKeyGenerator<Kerl>>(
-                wots_kerl_private_key_generator,
-            );
+            mss_generic_gen_test::<Kerl, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
         }
     }
 
     #[test]
-    fn mss_gen_curl_curl_test() {
+    fn mss_wots_curl_curl_test() {
         for s in 1..4 {
-            let wots_kerl_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Curl>::default()
+            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Curl>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_generic_gen_test::<Curl, WotsPrivateKeyGenerator<Curl>>(
-                wots_kerl_private_key_generator,
-            );
+            mss_generic_gen_test::<Curl, WotsPrivateKeyGenerator<Curl>>(wots_private_key_generator);
         }
     }
 
     #[test]
-    fn mss_gen_curl_kerl_test() {
+    fn mss_wots_curl_kerl_test() {
         for s in 1..4 {
-            let wots_kerl_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_generic_gen_test::<Curl, WotsPrivateKeyGenerator<Kerl>>(
-                wots_kerl_private_key_generator,
-            );
+            mss_generic_gen_test::<Curl, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
         }
     }
     #[test]
-    fn mss_gen_kerl_curl_test() {
+    fn mss_wots_kerl_curl_test() {
         for s in 1..4 {
-            let wots_kerl_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Curl>::default()
+            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Curl>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_generic_gen_test::<Kerl, WotsPrivateKeyGenerator<Curl>>(
-                wots_kerl_private_key_generator,
-            );
+            mss_generic_gen_test::<Kerl, WotsPrivateKeyGenerator<Curl>>(wots_private_key_generator);
         }
     }
 }

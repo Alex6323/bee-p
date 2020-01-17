@@ -12,7 +12,7 @@ pub struct WotsPrivateKeyGeneratorBuilder<S> {
     _sponge: PhantomData<S>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct WotsPrivateKeyGenerator<S> {
     security_level: u8,
     _sponge: PhantomData<S>,
