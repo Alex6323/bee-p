@@ -168,12 +168,14 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
     fn size(&self) -> usize {
         self.state.len()
     }
+
     fn from_bytes(bytes: &[i8]) -> Self {
         Self {
             state: bytes.to_vec(),
             _sponge: PhantomData,
         }
     }
+
     fn to_bytes(&self) -> &[i8] {
         &self.state
     }

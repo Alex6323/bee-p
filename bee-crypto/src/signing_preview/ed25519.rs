@@ -31,10 +31,10 @@ impl Ed25519PrivateKeyGeneratorBuilder {
     }
 }
 
-impl crate::PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
+impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
     type PrivateKey = Ed25519PrivateKey;
 
-    fn generate(&self, seed: &[i8], index: usize) -> Self::PrivateKey {
+    fn generate(&self, seed: &Seed, index: u64) -> Self::PrivateKey {
         let mut csprng = OsRng {};
         let keypair: Keypair = Keypair::generate(&mut csprng);
 
@@ -42,7 +42,7 @@ impl crate::PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
     }
 }
 
-impl crate::PrivateKey for Ed25519PrivateKey {
+impl PrivateKey for Ed25519PrivateKey {
     type PublicKey = Ed25519PublicKey;
     type Signature = Ed25519Signature;
 
@@ -63,13 +63,19 @@ impl crate::PrivateKey for Ed25519PrivateKey {
     }
 }
 
-impl crate::PublicKey for Ed25519PublicKey {
+impl PublicKey for Ed25519PublicKey {
     type Signature = Ed25519Signature;
 
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool {
         let test = unsafe { &*(message as *const _ as *const [u8]) };
 
         self.key.verify(test, &signature.signature).is_ok()
+    }
+
+    fn from_bytes(bytes: &[i8]) -> Self {
+        Self {
+            key: ed25519_dalek::PublicKey::default(),
+        }
     }
 
     fn to_bytes(&self) -> &[i8] {
@@ -87,17 +93,25 @@ impl crate::PublicKey for Ed25519PublicKey {
 // }
 
 // TODO default impl ?
-impl crate::Signature for Ed25519Signature {
+impl crate::signing_preview::Signature for Ed25519Signature {
     fn size(&self) -> usize {
         // self.state.len()
         42
     }
+
+    fn from_bytes(bytes: &[i8]) -> Self {
+        let test = unsafe { &*(bytes as *const _ as *const [u8]) };
+        Self {
+            signature: ed25519_dalek::Signature::from_bytes(test).unwrap(),
+        }
+    }
+
     fn to_bytes(&self) -> &[i8] {
         &[]
     }
 }
 
-// impl crate::RecoverableSignature for Ed25519Signature {
+// impl RecoverableSignature for Ed25519Signature {
 //     type PublicKey = Ed25519PublicKey;
 //
 //     fn recover_public_key(&self, message: &[i8]) -> Self::PublicKey {
@@ -117,15 +131,19 @@ mod tests {
         "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
     const SEED2: &str =
         "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNDNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
+    const MESSAGE: &str =
+        "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
 
-    fn ed25519_generic_test() {
+    #[test]
+    fn ed25519_test() {
         let seed_trits_1 = &SEED1.trits();
         let seed_trits_2 = &SEED2.trits();
+        let seed = Seed::from_bytes(&SEED1.trits()).unwrap();
 
         for index in 0..25 {
             let private_key_generator = Ed25519PrivateKeyGeneratorBuilder::default().build();
             // TODO mut ?
-            let mut private_key = private_key_generator.generate(&seed_trits_1, index);
+            let mut private_key = private_key_generator.generate(&seed, index);
             let public_key = private_key.generate_public_key();
             let signature_good = private_key.sign(seed_trits_1);
             let signature_bad = private_key.sign(seed_trits_2);
@@ -135,14 +153,4 @@ mod tests {
             assert!(!valid);
         }
     }
-
-    // #[test]
-    // fn ed25519_kerl_test() {
-    //     ed25519_generic_test();
-    // }
-
-    // #[test]
-    // fn ed25519_curl_test() {
-    //     ed25519_generic_test::<Curl>();
-    // }
 }
