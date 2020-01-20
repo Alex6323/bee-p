@@ -287,6 +287,7 @@ impl<'a> VertexRefMut<'a> {
 mod tests {
     use super::*;
 
+    /*
     #[test]
     fn mutate() {
         let mut tangle = Tangle::default();
@@ -303,4 +304,5 @@ mod tests {
             println!("Branch: {:?}", vertex.branch_hash());
         });
     }
+    */
 }
