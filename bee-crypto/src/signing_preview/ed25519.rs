@@ -1,6 +1,5 @@
 use super::seed::Seed;
 use super::{PrivateKey, PrivateKeyGenerator, PublicKey};
-use ed25519_dalek::{Keypair, Signature};
 use rand::rngs::OsRng;
 
 #[derive(Default)]
@@ -31,7 +30,7 @@ impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
 
     fn generate(&self, seed: &Seed, index: u64) -> Self::PrivateKey {
         let mut csprng = OsRng {};
-        let keypair: Keypair = Keypair::generate(&mut csprng);
+        let keypair: ed25519_dalek::Keypair = ed25519_dalek::Keypair::generate(&mut csprng);
 
         Ed25519PrivateKey { keypair: keypair }
     }
