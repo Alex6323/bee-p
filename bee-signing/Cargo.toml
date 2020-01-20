@@ -1,11 +1,13 @@
 [package]
-name = "crypto"
+name = "signing"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
+rand = "0.7"
 common = { path = "../bee-common" }
+ed25519-dalek = "1.0.0-pre.3"
 
 # ONLY TEMPORARY
 iota-constants = { path = "../iota-constants" }

@@ -1,5 +1,5 @@
 use super::seed::Seed;
-use super::{PrivateKey, PrivateKeyGenerator, PublicKey};
+use super::{PrivateKey, PrivateKeyGenerator, PublicKey, Signature};
 use rand::rngs::OsRng;
 
 #[derive(Default)]
@@ -87,7 +87,7 @@ impl PublicKey for Ed25519PublicKey {
 // }
 
 // TODO default impl ?
-impl crate::signing_preview::Signature for Ed25519Signature {
+impl Signature for Ed25519Signature {
     fn size(&self) -> usize {
         // self.state.len()
         42
