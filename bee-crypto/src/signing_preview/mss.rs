@@ -1,5 +1,4 @@
 use super::seed::Seed;
-use super::wots::{WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey};
 use super::{
     slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature,
 };
@@ -284,6 +283,9 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
 #[cfg(test)]
 mod tests {
 
+    use super::super::wots::{
+        WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey,
+    };
     use super::*;
     use iota_conversion::Trinary;
     use iota_crypto::{Curl, Kerl};
