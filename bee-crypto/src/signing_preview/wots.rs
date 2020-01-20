@@ -1,5 +1,7 @@
-// TODO clean use
-use super::*;
+use super::Seed;
+use super::{
+    slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature,
+};
 use iota_crypto::Sponge;
 use std::marker::PhantomData;
 

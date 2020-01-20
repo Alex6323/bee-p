@@ -1,7 +1,10 @@
-use super::*;
+use super::seed::Seed;
+use super::wots::{WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey};
+use super::{
+    slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature,
+};
 use iota_crypto::Sponge;
 use std::marker::PhantomData;
-use wots::*;
 
 #[derive(Default)]
 pub struct MssPrivateKeyGeneratorBuilder<S, G> {

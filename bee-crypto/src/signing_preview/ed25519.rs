@@ -1,12 +1,7 @@
-extern crate ed25519_dalek;
-extern crate rand;
-
-use super::*;
-use ed25519_dalek::Keypair;
-use ed25519_dalek::Signature;
-use iota_crypto::{subseed, HashMode, Sponge};
+use super::seed::Seed;
+use super::{PrivateKey, PrivateKeyGenerator, PublicKey};
+use ed25519_dalek::{Keypair, Signature};
 use rand::rngs::OsRng;
-use std::marker::PhantomData;
 
 #[derive(Default)]
 pub struct Ed25519PrivateKeyGeneratorBuilder {}
@@ -127,6 +122,7 @@ mod tests {
 
     use super::*;
     use iota_conversion::Trinary;
+
     const SEED1: &str =
         "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
     const SEED2: &str =
