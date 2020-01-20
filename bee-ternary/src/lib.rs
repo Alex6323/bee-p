@@ -1,3 +1,4 @@
+mod trits_preview;
 mod trytes;
 mod trits;
 
