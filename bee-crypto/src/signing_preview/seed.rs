@@ -108,7 +108,7 @@ mod tests {
             let seed = Seed::new();
 
             for byte in seed.to_bytes() {
-                assert_eq!(*byte == -1 || *byte == 0 || *byte == 1, true);
+                assert!(*byte == -1 || *byte == 0 || *byte == 1);
             }
         }
     }
