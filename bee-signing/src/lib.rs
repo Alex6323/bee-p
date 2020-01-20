@@ -12,7 +12,7 @@ pub trait PrivateKeyGenerator {
 
     /// Deterministically generates and returns a private key
     ///
-    /// # Parameters
+    /// # Arguments
     ///
     /// * `seed`    A seed to deterministically derive a private key from
     /// * `index`   An index to deterministically derive a private key from
@@ -59,7 +59,7 @@ pub trait PrivateKey {
 
     /// Generates and returns a signature for a given message
     ///
-    /// # Parameters
+    /// # Arguments
     ///
     /// * `message` A slice that holds a message to be signed
     ///
