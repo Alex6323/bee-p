@@ -21,21 +21,46 @@ use crate::mpmc;
 
 type Receiver<T> = mpsc::UnboundedReceiver<T>;
 
-pub async fn start(config: TcpServerConfig, mut messages_to_send: mpmc::Receiver<MessageToSend>, received_messages: mpmc::Sender<ReceivedMessage>, peers_to_add: Receiver<TcpClientConfig>, mut shutdown_server: mpmc::Receiver<()>, mut new_peers: mpmc::Sender<SocketAddr>) -> Result<(), Error> {
+pub async fn start(config: TcpServerConfig, mut messages_to_send: mpmc::Receiver<MessageToSend>, received_messages: mpmc::Sender<ReceivedMessage>, peers_to_add: Receiver<TcpClientConfig>, mut connected_peers: mpmc::Sender<SocketAddr>, mut shutdown_server: mpmc::Receiver<()>) -> Result<(), Error> {
 
     let listener = TcpListener::bind(config.address).await?;
 
-    spawn(add_peer_task(peers_to_add, messages_to_send.clone().await, received_messages.clone(), shutdown_server.clone().await, new_peers.clone()));
+    task::spawn(add_peer_task(peers_to_add, messages_to_send.clone().await, received_messages.clone(), connected_peers.clone(), shutdown_server.clone().await));
 
     let mut incoming = listener.incoming();
     while let Some(stream) = incoming.next().await {
 
-        let stream = Arc::new(stream?);
+        match stream {
 
-        spawn(read_task(Arc::clone(&stream), received_messages.clone()));
-        spawn(write_task(Arc::clone(&stream), messages_to_send.clone().await, shutdown_server.clone().await));
+            Ok(stream) => {
 
-        new_peers.send(stream.peer_addr()?).await.unwrap();
+                let stream = Arc::new(stream);
+
+                let received_messages_clone = received_messages.clone();
+                let messages_to_send_clone = messages_to_send.clone().await;
+                let shutdown_server_clone = shutdown_server.clone().await;
+
+                match stream.peer_addr() {
+                    Ok(address) => {
+                        connected_peers.send(address).await.unwrap()
+                    },
+                    Err(e) => {
+                        eprintln!("couldn't get address of peer");
+                        continue;
+                    }
+                }
+
+                spawn(read_task(Arc::clone(&stream), received_messages_clone));
+                spawn(write_task(Arc::clone(&stream), messages_to_send_clone, shutdown_server_clone));
+
+            },
+
+            Err(e) => {
+                eprintln!("couldn't connect to client");
+                continue;
+            }
+
+        }
 
     }
 
@@ -43,7 +68,7 @@ pub async fn start(config: TcpServerConfig, mut messages_to_send: mpmc::Receiver
 
 }
 
-async fn add_peer_task(mut peer_config_receiver: Receiver<TcpClientConfig>, mut messages_to_send: mpmc::Receiver<MessageToSend>, received_messages: mpmc::Sender<ReceivedMessage>, mut shutdown_server: mpmc::Receiver<()>, mut new_peers: mpmc::Sender<SocketAddr>) -> Result<(), Error> {
+async fn add_peer_task(mut peer_config_receiver: Receiver<TcpClientConfig>, mut messages_to_send: mpmc::Receiver<MessageToSend>, received_messages: mpmc::Sender<ReceivedMessage>,  mut connected_peers: mpmc::Sender<SocketAddr>, mut shutdown_server: mpmc::Receiver<()>) {
 
     loop {
 
@@ -61,16 +86,41 @@ async fn add_peer_task(mut peer_config_receiver: Receiver<TcpClientConfig>, mut 
         };
 
         let peer_config: TcpClientConfig = peer_config;
-        let stream = Arc::new(TcpStream::connect(peer_config.address).await?);
 
-        spawn(read_task(Arc::clone(&stream), received_messages.clone()));
-        spawn(write_task(Arc::clone(&stream), messages_to_send.clone().await, shutdown_server.clone().await));
+        match TcpStream::connect(peer_config.address).await {
 
-        new_peers.send(stream.peer_addr()?).await.unwrap();
+            Ok(stream) => {
+
+                let stream = Arc::new(stream);
+
+                let received_messages_clone = received_messages.clone();
+                let messages_to_send_clone = messages_to_send.clone().await;
+                let shutdown_server_clone = shutdown_server.clone().await;
+
+                match stream.peer_addr() {
+                    Ok(address) => {
+                        connected_peers.send(address).await.unwrap()
+                    },
+                    Err(e) => {
+                        eprintln!("couldn't get address of peer");
+                        continue;
+                    }
+                }
+
+                spawn(read_task(Arc::clone(&stream), received_messages_clone));
+                spawn(write_task(Arc::clone(&stream), messages_to_send_clone, shutdown_server_clone));
+
+            },
+
+            Err(e) => {
+                eprintln!("couldn't connect to client");
+                continue;
+            }
+
+        }
 
     }
 
-    Ok(())
 }
 
 async fn write_task(stream: Arc<TcpStream>, mut message_receiver: mpmc::Receiver<MessageToSend>, mut shutdown_server: mpmc::Receiver<()>) -> Result<(), Error> {

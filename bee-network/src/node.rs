@@ -57,7 +57,7 @@ impl Node {
         self.peers_to_add_sender.send(client_config).await.unwrap();
     }
 
-    pub async fn shutdown(&mut self) {
+    pub async fn shutdown(mut self) {
         self.shutdown_sender.send(()).await.unwrap();
         println!("Shutdown node...");
     }
