@@ -7,8 +7,8 @@ edition = "2018"
 [dependencies]
 bee-common = { path = "../bee-common" }
 
-failure = "0.1.6"
-lazy_static = "1.4.0"
+#lazy_static = "1.4.0"
+#failure = "0.1.6"
 
 # ONLY TEMPORARY
 iota-conversion = { path = "../iota-conversion" }
