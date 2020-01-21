@@ -34,6 +34,7 @@ impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
         let mut csprng = OsRng {};
         let private_key = ed25519_dalek::SecretKey::generate(&mut csprng);
 
+        // TODO Generic param ?
         let _subseed = seed.subseed::<Kerl>(index);
 
         Self::PrivateKey {
