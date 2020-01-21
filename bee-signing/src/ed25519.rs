@@ -7,11 +7,18 @@ pub struct Ed25519PrivateKeyGeneratorBuilder {}
 
 pub struct Ed25519PrivateKeyGenerator {}
 
-pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
+pub struct Ed25519PrivateKey {
+    private_key: ed25519_dalek::SecretKey,
+}
 
-pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
+pub struct Ed25519PublicKey {
+    public_key: ed25519_dalek::PublicKey,
+}
 
-pub struct Ed25519Signature(ed25519_dalek::Signature);
+pub struct Ed25519Signature {
+    public_key: ed25519_dalek::PublicKey,
+    signature: ed25519_dalek::Signature,
+}
 
 impl Ed25519PrivateKeyGeneratorBuilder {
     pub fn build(&mut self) -> Ed25519PrivateKeyGenerator {
@@ -26,7 +33,9 @@ impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
         let mut csprng = OsRng {};
         let private_key = ed25519_dalek::SecretKey::generate(&mut csprng);
 
-        Ed25519PrivateKey(private_key)
+        Self::PrivateKey {
+            private_key: private_key,
+        }
     }
 }
 
@@ -35,18 +44,23 @@ impl PrivateKey for Ed25519PrivateKey {
     type Signature = Ed25519Signature;
 
     fn generate_public_key(&self) -> Self::PublicKey {
-        Ed25519PublicKey((&self.0).into())
+        Self::PublicKey {
+            public_key: (&self.private_key).into(),
+        }
     }
 
     // TODO: hash ? enforce size ?
     fn sign(&mut self, message: &[i8]) -> Self::Signature {
         let test = unsafe { &*(message as *const _ as *const [u8]) };
-        let private_key = &self.0;
+        let private_key = &self.private_key;
         let public_key = self.generate_public_key();
         let expanded_private_key = ed25519_dalek::ExpandedSecretKey::from(private_key);
-        let signature = expanded_private_key.sign(test, &public_key.0);
+        let signature = expanded_private_key.sign(test, &public_key.public_key);
 
-        Ed25519Signature(signature)
+        Self::Signature {
+            public_key: public_key.public_key,
+            signature: signature,
+        }
     }
 }
 
@@ -56,11 +70,13 @@ impl PublicKey for Ed25519PublicKey {
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool {
         let test = unsafe { &*(message as *const _ as *const [u8]) };
 
-        self.0.verify(test, &signature.0).is_ok()
+        self.public_key.verify(test, &signature.signature).is_ok()
     }
 
     fn from_bytes(bytes: &[i8]) -> Self {
-        Self(ed25519_dalek::PublicKey::default())
+        Self {
+            public_key: ed25519_dalek::PublicKey::default(),
+        }
     }
 
     fn to_bytes(&self) -> &[i8] {
@@ -86,7 +102,11 @@ impl Signature for Ed25519Signature {
 
     fn from_bytes(bytes: &[i8]) -> Self {
         let test = unsafe { &*(bytes as *const _ as *const [u8]) };
-        Self(ed25519_dalek::Signature::from_bytes(test).unwrap())
+
+        Self {
+            public_key: ed25519_dalek::PublicKey::from_bytes(test).unwrap(),
+            signature: ed25519_dalek::Signature::from_bytes(test).unwrap(),
+        }
     }
 
     fn to_bytes(&self) -> &[i8] {
