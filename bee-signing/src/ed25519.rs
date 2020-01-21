@@ -7,7 +7,7 @@ pub struct Ed25519PrivateKeyGeneratorBuilder {}
 
 pub struct Ed25519PrivateKeyGenerator {}
 
-pub struct Ed25519PrivateKey(ed25519_dalek::Keypair);
+pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
 
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
 
@@ -24,10 +24,9 @@ impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
 
     fn generate(&self, seed: &Seed, index: u64) -> Self::PrivateKey {
         let mut csprng = OsRng {};
-        let keypair: ed25519_dalek::Keypair = ed25519_dalek::Keypair::generate(&mut csprng);
+        let private_key = ed25519_dalek::SecretKey::generate(&mut csprng);
 
-        // TODO SELF
-        Ed25519PrivateKey(keypair)
+        Ed25519PrivateKey(private_key)
     }
 }
 
@@ -36,13 +35,16 @@ impl PrivateKey for Ed25519PrivateKey {
     type Signature = Ed25519Signature;
 
     fn generate_public_key(&self) -> Self::PublicKey {
-        Ed25519PublicKey(self.0.public)
+        Ed25519PublicKey((&self.0).into())
     }
 
     // TODO: hash ? enforce size ?
     fn sign(&mut self, message: &[i8]) -> Self::Signature {
         let test = unsafe { &*(message as *const _ as *const [u8]) };
-        let signature = self.0.sign(test);
+        let private_key = &self.0;
+        let public_key = self.generate_public_key();
+        let expanded_private_key = ed25519_dalek::ExpandedSecretKey::from(private_key);
+        let signature = expanded_private_key.sign(test, &public_key.0);
 
         Ed25519Signature(signature)
     }
