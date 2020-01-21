@@ -4,4 +4,14 @@ version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
 
+
 [dependencies]
+async-trait = "0.1.22"
+iota-lib-rs = "0.4"
+async-std = { version = "1.4.0", features = [ "attributes" ] }
+serde = "1.0.104"
+
+[lib]
+name = "storage"
+path = "src/mod.rs"
+

@@ -1,0 +1,17 @@
+[package]
+name = "backends"
+version = "0.1.0"
+authors = ["tsvi <tsvi.sabo@iota.org>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+storage = { path = "../bee-storage" }
+sqlx = {version = "0.2.0", features = [ "postgres" ]}
+async-std = { version = "1.4.0", features = [ "attributes" ] }
+async-trait = "0.1.22"
+futures = "0.3.1"
+iota-lib-rs = "0.4"
+serde = "1.0.104"
+bincode = "1.2.1"
