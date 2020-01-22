@@ -40,6 +40,22 @@ impl TritsBuf {
         TritsMut(&mut self.0)
     }
 
+    /// Return a borrow of the inner vector wrapped by `TritsBuf`.
+    pub fn inner_ref(&self) -> &Vec<i8> {
+        &self.0
+    }
+
+    /// Return a mutable borrow of the inner vector wrapped by `TritsBuf`.
+    pub fn inner_mut(&mut self) -> &mut Vec<i8> {
+        &mut self.0
+    }
+
+    /// Return the inner vector wrapped by `TritsBuf`, dropping the `TritsBuf`.
+    pub fn into_inner(self) -> Vec<i8> {
+        self.0
+    }
+
+    /// Overwrite all elements in the `TritsBuf` with `v`.
     pub fn fill(&mut self, v: ValidTrits) {
         let v = v.into();
         self.0
@@ -165,6 +181,11 @@ impl<'a> Trits<'a> {
                 &*(v as *const _ as *const [i8])
         })
     }
+
+    /// Return a borrow of the inner slice wrapped by `Trits`.
+    pub fn inner_ref(&self) -> &[i8] {
+        self.0
+    }
 }
 
 impl<'a> TryFrom<&'a [u8]> for Trits<'a> {
@@ -211,6 +232,15 @@ impl<'a> TritsMut<'a> {
             unsafe {
                 &mut *(v as *mut _ as *mut [i8])
         })
+    }
+
+    /// Return a borrow of the inner slice wrapped by `Trits`.
+    pub fn inner_ref(&self) -> &[i8] {
+        self.0
+    }
+
+    pub fn inner_mut(&mut self) -> &mut [i8] {
+        self.0
     }
 }
 
