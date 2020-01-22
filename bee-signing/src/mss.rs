@@ -87,8 +87,8 @@ impl<S, G> PrivateKeyGenerator for MssPrivateKeyGenerator<S, G>
 where
     S: Sponge + Default,
     G: PrivateKeyGenerator,
-    <G as PrivateKeyGenerator>::PrivateKey: PrivateKey,
-    <<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey: PublicKey,
+    <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
+        RecoverableSignature,
 {
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
 
@@ -146,11 +146,7 @@ impl<S, K> PrivateKey for MssPrivateKey<S, K>
 where
     S: Sponge + Default,
     K: PrivateKey,
-    <K as PrivateKey>::PublicKey: PublicKey,
-    <K as PrivateKey>::Signature: Signature,
-    <<K as PrivateKey>::PublicKey as PublicKey>::Signature: Signature + RecoverableSignature,
-    <<<K as PrivateKey>::PublicKey as PublicKey>::Signature as RecoverableSignature>::PublicKey:
-        PublicKey,
+    <<K as PrivateKey>::PublicKey as PublicKey>::Signature: RecoverableSignature,
 {
     type PublicKey = MssPublicKey<S, K::PublicKey>;
     type Signature = MssSignature<S>;
@@ -206,8 +202,7 @@ impl<S, K> PublicKey for MssPublicKey<S, K>
 where
     S: Sponge + Default,
     K: PublicKey,
-    <K as PublicKey>::Signature: Signature + RecoverableSignature,
-    <<K as PublicKey>::Signature as RecoverableSignature>::PublicKey: PublicKey,
+    <K as PublicKey>::Signature: RecoverableSignature,
 {
     type Signature = MssSignature<S>;
 
@@ -414,13 +409,8 @@ mod tests {
         S: Sponge + Default,
         G: Default,
         G: PrivateKeyGenerator + Copy,
-        <G as PrivateKeyGenerator>::PrivateKey: PrivateKey,
-        <<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey: PublicKey,
-        <<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::Signature:
-            Signature + RecoverableSignature,
         <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
-            Signature + RecoverableSignature,
-        <<<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature as RecoverableSignature>::PublicKey: PublicKey
+            RecoverableSignature,
     {
         const SEED: &str =
             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";

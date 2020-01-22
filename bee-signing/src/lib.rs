@@ -8,7 +8,7 @@ pub use seed::Seed;
 // TODO: documentation
 pub trait PrivateKeyGenerator {
     /// The type of the generated private keys
-    type PrivateKey;
+    type PrivateKey: PrivateKey;
 
     /// Deterministically generates and returns a private key
     ///
@@ -35,9 +35,9 @@ pub trait PrivateKeyGenerator {
 // TODO: documentation
 pub trait PrivateKey {
     /// The type of the matching public key
-    type PublicKey;
+    type PublicKey: PublicKey;
     /// The type of the generated signatures
-    type Signature;
+    type Signature: Signature;
 
     /// Returns the public counterpart of a private key
     ///
@@ -85,7 +85,7 @@ pub trait PrivateKey {
 // TODO: documentation
 pub trait PublicKey {
     // TODO: documentation
-    type Signature;
+    type Signature: Signature;
 
     // TODO: documentation
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool;
@@ -110,9 +110,9 @@ pub trait Signature {
 }
 
 // TODO: documentation
-pub trait RecoverableSignature {
+pub trait RecoverableSignature: Signature {
     // TODO: documentation
-    type PublicKey;
+    type PublicKey: PublicKey;
 
     // TODO: documentation
     fn recover_public_key(&self, message: &[i8]) -> Self::PublicKey;
