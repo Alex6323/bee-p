@@ -19,7 +19,7 @@ pub async fn new(server_config: TcpServerConfig) -> NetworkAccessHandles {
     let (shutdown_sender, shutdown_receiver) = mpmc::unbounded().await;
     let (peers_sender, peers_receiver) = mpmc::unbounded().await;
 
-    task::spawn(tcp_server::start(server_config, messages_to_send_receiver, received_messages_sender, peers_to_add_receiver, peers_sender, shutdown_receiver, ));
+    task::spawn(tcp_server::start(server_config, messages_to_send_receiver, received_messages_sender, peers_to_add_receiver, peers_sender, shutdown_receiver));
 
     NetworkAccessHandles {
         messages_to_send_sender,
