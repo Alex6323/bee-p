@@ -7,10 +7,11 @@
 //!
 //! [PR #21]: https://github.com/iotaledger/bee-rfcs/pull/21
 
-#[cfg(test)]
-mod utils;
-
 mod curlp;
+mod private;
+pub(crate) mod i384;
+mod t243;
+mod utils;
 
 pub use curlp::{
     CurlP,
