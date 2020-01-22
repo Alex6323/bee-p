@@ -106,7 +106,7 @@ where
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
             keys.push(ots_private_key);
-            tree.0[tree_index * 243..(tree_index + 1) * 243]
+            tree.inner_mut()[tree_index * 243..(tree_index + 1) * 243]
                 .copy_from_slice(ots_public_key.to_bytes());
         }
 
@@ -117,16 +117,16 @@ where
                 let right_index = left_index + 1;
                 sponge
                     .absorb(&Trits::from_i8_unchecked(
-                        &tree.0[left_index * 243..(left_index + 1) * 243],
+                        &tree.inner_ref()[left_index * 243..(left_index + 1) * 243],
                     ))
                     .unwrap();
                 sponge
                     .absorb(&Trits::from_i8_unchecked(
-                        &tree.0[right_index * 243..(right_index + 1) * 243],
+                        &tree.inner_ref()[right_index * 243..(right_index + 1) * 243],
                     ))
                     .unwrap();
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
-                    &mut tree.0[index * 243..(index + 1) * 243],
+                    &mut tree.inner_mut()[index * 243..(index + 1) * 243],
                 ));
                 sponge.reset();
             }
@@ -153,7 +153,7 @@ where
 
     fn generate_public_key(&self) -> Self::PublicKey {
         // TODO return or generate ?
-        Self::PublicKey::from_bytes(&self.tree.0[0..243]).depth(self.depth)
+        Self::PublicKey::from_bytes(&self.tree.inner_ref()[0..243]).depth(self.depth)
     }
 
     fn sign(&mut self, message: &[i8]) -> Self::Signature {
@@ -177,7 +177,9 @@ where
             }
 
             state[ots_signature.size() + i * 243..ots_signature.size() + (i + 1) * 243]
-                .copy_from_slice(&self.tree.0[sibling_index * 243..(sibling_index + 1) * 243]);
+                .copy_from_slice(
+                    &self.tree.inner_ref()[sibling_index * 243..(sibling_index + 1) * 243],
+                );
             i = i + 1;
         }
 
@@ -209,16 +211,17 @@ where
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool {
         let mut sponge = S::default();
         let ots_signature = K::Signature::from_bytes(
-            &signature.state.0[0..((signature.state.0.len() / 6561) - 1) * 6561],
+            &signature.state.inner_ref()[0..((signature.state.len() / 6561) - 1) * 6561],
         );
-        let siblings = TritsBuf::from_i8_unchecked(signature.state.0.chunks(6561).last().unwrap());
+        let siblings =
+            TritsBuf::from_i8_unchecked(signature.state.inner_ref().chunks(6561).last().unwrap());
         let ots_public_key = ots_signature.recover_public_key(message);
         let mut hash = TritsBuf::with_capacity(243);
 
-        hash.0.copy_from_slice(ots_public_key.to_bytes());
+        hash.inner_mut().copy_from_slice(ots_public_key.to_bytes());
 
         let mut j = 1;
-        for (i, sibling) in siblings.0.chunks(243).enumerate() {
+        for (i, sibling) in siblings.inner_ref().chunks(243).enumerate() {
             if self.depth - 1 == i as u8 {
                 break;
             }
@@ -236,7 +239,7 @@ where
             j <<= 1;
         }
 
-        slice_eq(&hash.0, &self.state.0)
+        slice_eq(&hash.inner_ref(), &self.state.inner_ref())
     }
 
     fn from_bytes(bytes: &[i8]) -> Self {
@@ -250,7 +253,7 @@ where
     }
 
     fn to_bytes(&self) -> &[i8] {
-        &self.state.0
+        &self.state.inner_ref()
     }
 }
 
@@ -264,8 +267,9 @@ impl<S: Sponge + Default> MssSignature<S> {
 // TODO default impl ?
 impl<S: Sponge + Default> Signature for MssSignature<S> {
     fn size(&self) -> usize {
-        self.state.0.len()
+        self.state.len()
     }
+
     fn from_bytes(bytes: &[i8]) -> Self {
         Self {
             state: TritsBuf::from_i8_unchecked(bytes),
@@ -274,8 +278,9 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
             _sponge: PhantomData,
         }
     }
+
     fn to_bytes(&self) -> &[i8] {
-        &self.state.0
+        &self.state.inner_ref()
     }
 }
 

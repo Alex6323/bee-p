@@ -42,7 +42,7 @@ impl Seed {
 
         // TODO Put in trit utilities file
         for _ in 0..index {
-            for trit in subseed.0.iter_mut() {
+            for trit in subseed.inner_mut().iter_mut() {
                 *trit += 1;
                 if *trit > MAX_TRIT_VALUE {
                     *trit = MIN_TRIT_VALUE;

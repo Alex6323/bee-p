@@ -89,10 +89,10 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     fn generate_public_key(&self) -> Self::PublicKey {
         let mut sponge = S::default();
         let mut hashed_private_key = self.state.clone();
-        let mut digests = TritsBuf::with_capacity((self.state.0.len() / 6561) * 243);
+        let mut digests = TritsBuf::with_capacity((self.state.len() / 6561) * 243);
         let mut hash = TritsBuf::with_capacity(243);
 
-        for chunk in hashed_private_key.0.chunks_mut(243) {
+        for chunk in hashed_private_key.inner_mut().chunks_mut(243) {
             for _ in 0..26 {
                 sponge.absorb(&Trits::from_i8_unchecked(chunk)).unwrap();
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(chunk));
@@ -100,10 +100,10 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             }
         }
 
-        for (i, chunk) in hashed_private_key.0.chunks(6561).enumerate() {
+        for (i, chunk) in hashed_private_key.inner_ref().chunks(6561).enumerate() {
             sponge.absorb(&Trits::from_i8_unchecked(chunk)).unwrap();
             sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
-                &mut digests.0[i * 243..(i + 1) * 243],
+                &mut digests.inner_mut()[i * 243..(i + 1) * 243],
             ));
             sponge.reset();
         }
@@ -123,7 +123,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
         let mut sponge = S::default();
         let mut signature = self.state.clone();
 
-        for (i, chunk) in signature.0.chunks_mut(243).enumerate() {
+        for (i, chunk) in signature.inner_mut().chunks_mut(243).enumerate() {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(13 - val) {
@@ -148,8 +148,8 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     // TODO: enforce hash size ?
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool {
         slice_eq(
-            &signature.recover_public_key(message).state.0,
-            &self.state.0,
+            &signature.recover_public_key(message).state.inner_ref(),
+            &self.state.inner_ref(),
         )
     }
 
@@ -161,14 +161,14 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     }
 
     fn to_bytes(&self) -> &[i8] {
-        &self.state.0
+        &self.state.inner_ref()
     }
 }
 
 // TODO default impl ?
 impl<S: Sponge + Default> Signature for WotsSignature<S> {
     fn size(&self) -> usize {
-        self.state.0.len()
+        self.state.len()
     }
 
     fn from_bytes(bytes: &[i8]) -> Self {
@@ -179,7 +179,7 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
     }
 
     fn to_bytes(&self) -> &[i8] {
-        &self.state.0
+        &self.state.inner_ref()
     }
 }
 
@@ -190,10 +190,10 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
         let mut sponge = S::default();
         let mut hash = TritsBuf::with_capacity(243);
         // let mut digests = vec![0; (self.state.len() / 6561) * 243];
-        let mut digests = TritsBuf::with_capacity((self.state.0.len() / 6561) * 243);
+        let mut digests = TritsBuf::with_capacity((self.state.len() / 6561) * 243);
         let mut state = self.state.clone();
 
-        for (i, chunk) in state.0.chunks_mut(243).enumerate() {
+        for (i, chunk) in state.inner_mut().chunks_mut(243).enumerate() {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(val - -13) {
@@ -203,10 +203,10 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
             }
         }
 
-        for (i, chunk) in state.0.chunks_mut(6561).enumerate() {
+        for (i, chunk) in state.inner_ref().chunks(6561).enumerate() {
             sponge.absorb(&Trits::from_i8_unchecked(chunk)).unwrap();
             sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
-                &mut digests.0[i * 243..(i + 1) * 243],
+                &mut digests.inner_mut()[i * 243..(i + 1) * 243],
             ));
             sponge.reset();
         }
