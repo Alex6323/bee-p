@@ -115,16 +115,12 @@ where
                 let index = (1 << depth) + i - 1;
                 let left_index = index * 2 + 1;
                 let right_index = left_index + 1;
-                sponge
-                    .absorb(&Trits::from_i8_unchecked(
-                        &tree.inner_ref()[left_index * 243..(left_index + 1) * 243],
-                    ))
-                    .unwrap();
-                sponge
-                    .absorb(&Trits::from_i8_unchecked(
-                        &tree.inner_ref()[right_index * 243..(right_index + 1) * 243],
-                    ))
-                    .unwrap();
+                sponge.absorb(&Trits::from_i8_unchecked(
+                    &tree.inner_ref()[left_index * 243..(left_index + 1) * 243],
+                ));
+                sponge.absorb(&Trits::from_i8_unchecked(
+                    &tree.inner_ref()[right_index * 243..(right_index + 1) * 243],
+                ));
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
                     &mut tree.inner_mut()[index * 243..(index + 1) * 243],
                 ));
@@ -227,11 +223,11 @@ where
             }
 
             if signature.index & j != 0 {
-                sponge.absorb(&Trits::from_i8_unchecked(sibling)).unwrap();
-                sponge.absorb(&hash.as_trits()).unwrap();
+                sponge.absorb(&Trits::from_i8_unchecked(sibling));
+                sponge.absorb(&hash.as_trits());
             } else {
-                sponge.absorb(&hash.as_trits()).unwrap();
-                sponge.absorb(&Trits::from_i8_unchecked(sibling)).unwrap();
+                sponge.absorb(&hash.as_trits());
+                sponge.absorb(&Trits::from_i8_unchecked(sibling));
             }
             sponge.squeeze_into(&mut hash.as_trits_mut());
             sponge.reset();

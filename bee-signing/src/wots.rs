@@ -71,7 +71,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
         let mut sponge = S::default();
         let mut state = TritsBuf::with_capacity(self.security_level as usize * 6561);
 
-        sponge.absorb(&subseed.as_trits()).unwrap();
+        sponge.absorb(&subseed.as_trits());
         sponge.squeeze_into(&mut state.as_trits_mut());
         sponge.reset();
 
@@ -94,21 +94,21 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
         for chunk in hashed_private_key.inner_mut().chunks_mut(243) {
             for _ in 0..26 {
-                sponge.absorb(&Trits::from_i8_unchecked(chunk)).unwrap();
+                sponge.absorb(&Trits::from_i8_unchecked(chunk));
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(chunk));
                 sponge.reset();
             }
         }
 
         for (i, chunk) in hashed_private_key.inner_ref().chunks(6561).enumerate() {
-            sponge.absorb(&Trits::from_i8_unchecked(chunk)).unwrap();
+            sponge.absorb(&Trits::from_i8_unchecked(chunk));
             sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
                 &mut digests.inner_mut()[i * 243..(i + 1) * 243],
             ));
             sponge.reset();
         }
 
-        sponge.absorb(&digests.as_trits()).unwrap();
+        sponge.absorb(&digests.as_trits());
         sponge.squeeze_into(&mut hash.as_trits_mut());
         sponge.reset();
 
@@ -127,7 +127,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(13 - val) {
-                sponge.absorb(&Trits::from_i8_unchecked(chunk)).unwrap();
+                sponge.absorb(&Trits::from_i8_unchecked(chunk));
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(chunk));
                 sponge.reset();
             }
@@ -197,21 +197,21 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(val - -13) {
-                sponge.absorb(&Trits::from_i8_unchecked(chunk)).unwrap();
+                sponge.absorb(&Trits::from_i8_unchecked(chunk));
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(chunk));
                 sponge.reset();
             }
         }
 
         for (i, chunk) in state.inner_ref().chunks(6561).enumerate() {
-            sponge.absorb(&Trits::from_i8_unchecked(chunk)).unwrap();
+            sponge.absorb(&Trits::from_i8_unchecked(chunk));
             sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
                 &mut digests.inner_mut()[i * 243..(i + 1) * 243],
             ));
             sponge.reset();
         }
 
-        sponge.absorb(&digests.as_trits()).unwrap();
+        sponge.absorb(&digests.as_trits());
         sponge.squeeze_into(&mut hash.as_trits_mut());
         sponge.reset();
 
