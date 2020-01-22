@@ -1,5 +1,3 @@
-#![recursion_limit="256"]
-
 use std::io::Error;
 use std::time::Duration;
 use async_std::task;
@@ -75,5 +73,5 @@ fn hash(bytes: &[u8]) -> String {
 }
 
 async fn delay()  {
-    async_std::task::sleep(Duration::from_millis(1000u64)).await;
+    async_std::task::sleep(Duration::from_millis(3000u64)).await;
 }
