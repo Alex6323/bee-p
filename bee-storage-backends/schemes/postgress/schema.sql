@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS transactions (
   signature_or_message BYTEA NOT NULL,
   address BYTEA NOT NULL,
@@ -22,7 +21,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 
 
-CREATE TABLE IF NOT EXISTS  (
+CREATE TABLE IF NOT EXISTS  milestones (
   id INTEGER NOT NULL PRIMARY KEY,
   hash BYTEA NOT NULL UNIQUE,
   delta BYTEA

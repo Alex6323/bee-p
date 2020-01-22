@@ -6,9 +6,10 @@ pub mod errors;
 
 //TODO:
 //Create Readme
-//Tests
+//Tests - sanity and multithreaded + benchmarking
 //Support multiple sql backends via sqlx
 //Get rid of all warnings
+//Do we need `destroy_connection`
 
 
 use errors::*;
@@ -400,8 +401,3 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     }
 }
-
-
-//###createdb -U username_with_priviliges bee
-//###psql -f backends/src/sqlx_backend/schema.sql -U username_with_priviliges bee
-//
