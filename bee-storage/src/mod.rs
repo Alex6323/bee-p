@@ -79,7 +79,7 @@ pub trait StorageBackend {
     ) -> Result<MissingHashesToRCApprovers, Self::StorageError>;
 
     async fn insert_transaction(&self, tx: &Transaction) -> Result<(), Self::StorageError>;
-    async fn find_transaction(&self, tx_hash: String) -> Result<Transaction, Self::StorageError>;
+    async fn find_transaction(&self, tx_hash: &str) -> Result<Transaction, Self::StorageError>;
     async fn update_transactions_set_solid(
         &self,
         transaction_hashes: HashSet<TxHash>,

@@ -106,7 +106,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn find_transaction(&self, tx_hash: String) -> Result<Transaction, SqlxBackendError> {
+    async fn find_transaction(&self, tx_hash: &str) -> Result<Transaction, SqlxBackendError> {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
