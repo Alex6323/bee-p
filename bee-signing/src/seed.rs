@@ -1,5 +1,4 @@
-// TODO Replace with bee impl when available
-use iota_crypto::Sponge;
+use crypto::{Sponge, Trits, TritsBuf};
 // TODO Remove when available in bee
 use iota_conversion::Trinary;
 use rand::Rng;
@@ -14,7 +13,7 @@ pub const MAX_TRIT_VALUE: i8 = 1;
 pub const TRYTE_ALPHABET: &[u8] = b"9ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 // TODO: documentation
-pub struct Seed([i8; 243]);
+pub struct Seed(TritsBuf);
 
 // TODO: documentation
 #[derive(Debug, PartialEq)]
@@ -33,17 +32,17 @@ impl Seed {
             .map(|_| TRYTE_ALPHABET[rng.gen_range(0, TRYTE_ALPHABET.len())] as char)
             .collect();
 
-        Self::from_bytes_unchecked(&seed.trits())
+        Seed(TritsBuf::from_i8_unchecked(seed.trits()))
     }
 
     // TODO: documentation
     pub fn subseed<S: Sponge + Default>(&self, index: u64) -> Self {
         let mut sponge = S::default();
-        let mut subseed = self.0;
+        let mut subseed = self.0.clone();
 
         // TODO Put in trit utilities file
         for _ in 0..index {
-            for trit in subseed.iter_mut() {
+            for trit in subseed.0.iter_mut() {
                 *trit += 1;
                 if *trit > MAX_TRIT_VALUE {
                     *trit = MIN_TRIT_VALUE;
@@ -53,11 +52,12 @@ impl Seed {
             }
         }
 
-        sponge.absorb(&subseed).unwrap();
-        sponge.squeeze(&mut subseed).unwrap();
-        sponge.reset();
+        let tmp = match sponge.digest(&subseed.as_trits()) {
+            Ok(buf) => buf,
+            Err(_) => unreachable!(),
+        };
 
-        Self::from_bytes_unchecked(&subseed)
+        Seed(tmp)
     }
 
     // TODO: documentation
@@ -73,21 +73,17 @@ impl Seed {
             }
         }
 
-        Ok(Self::from_bytes_unchecked(bytes))
-    }
-
-    // TODO: documentation
-    fn from_bytes_unchecked(bytes: &[i8]) -> Self {
-        let mut seed = [0; 243];
-
-        seed.copy_from_slice(bytes);
-
-        Seed(seed)
+        Ok(Seed(TritsBuf::from_i8_unchecked(bytes)))
     }
 
     // TODO: documentation
     pub fn to_bytes(&self) -> &[i8] {
-        &self.0
+        // &self.0.to_bytes()
+        &[]
+    }
+
+    pub fn as_trits(&self) -> Trits {
+        self.0.as_trits()
     }
 }
 
@@ -96,8 +92,7 @@ mod tests {
     use super::*;
     // TODO super::super ?
     use super::super::slice_eq;
-    // TODO Remove when available in bee
-    use iota_crypto::{Curl, Kerl};
+    use crypto::{CurlP27, CurlP81};
 
     const SEED: &str =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
@@ -124,8 +119,27 @@ mod tests {
     }
 
     #[test]
+    fn seed_subseed_curl27_test() {
+        seed_subseed_generic_test::<CurlP27>(
+            SEED,
+            &[
+                "ITTFAEIWTRSFQGZGLGUMLUTHFXYSCLXTFYMGVTTDSNNWFUCKBRPSOBERNLXIYCNCEBKUV9QIXI9BDCKSM",
+                "W9YWLOQQJMENWCDBLBKYBNJJDGFKFBGYEBSIBPKUAGNIV9TJWRRAQPAEKBLIYVLGHPIIDYQYP9QNSPFTY",
+                "X9WMLHFSJYEWNLVSGTVGWMAPNUSFMXQPTMCPUML9RCMAJQVUYMTJJHKT9HO9NSNGAEMKGDBHE9KZNMBPZ",
+                "YNTUYQNJWJPK99YE9NOMGNKF9YRBJX9EH9UZWLMISXQRQLLZRKHFOPTW9PIERIPXK9ZDUPLSLZOEFUWXF",
+                "URBRFVWBAGHM9WTWSZZLRBMNGMNNRJRBGBLDEBBSZTGMWELW9JHXFSFNLRKPI9MLYELEZEDYIPKGE9CRO",
+                "XMGTGBZBINHC9ZPKRBHZFLUP9CEWULNCMVUAVVUXRDHU9OILDOORKPLRIWZQDNRFGSWMJAVYZWGDXMZNW",
+                "KFEGWPGWLAHWQXGCHKHDDVAZEISLYMGQLRRZBCJWXWKK9JIJKHXRDV9NMYIFTAGKXU9GLACAQUCXBLMH9",
+                "BMUAOOZBHPUOVHRWPX9KWUCZSXWXWPMKOMGNAZOXLDMAHBBVMDLXQ9IVPOPIOFPWHZSMRKBOBLCUEVUXX",
+                "GLVXLLOFYERJWBECYRXVPCFXK9GUDCHBEZYMTPMUDOYEQCIAPCAACKSOL9ADEGSTBQRIBJIWTCJYVUIRW",
+                "FOPHLVKCYHZLLCCOUWBPMQQAWHVRBGJBKQGPQXOTOEWTOCVZQCJXDCBLG9SEZBUVYPIIRTTP9CJPXWKKW",
+            ],
+        );
+    }
+
+    #[test]
     fn seed_subseed_curl81_test() {
-        seed_subseed_generic_test::<Curl>(
+        seed_subseed_generic_test::<CurlP81>(
             SEED,
             &[
                 "PKKJZREHPYHNIBWAPYEXHXEAFZCI99UWZNKBOCCECFTDUXG9YGYDAGRLUBJVKMYNWPRCPYENACHOYSHJO",
@@ -142,44 +156,24 @@ mod tests {
         );
     }
 
-    // TODO Will be activated when Curl27 is a proper type
     // #[test]
-    // fn seed_subseed_curl27_test() {
-    //     seed_subseed_generic_test::<Curl>(
+    // fn seed_subseed_kerl_test() {
+    //     seed_subseed_generic_test::<Kerl>(
     //         SEED,
     //         &[
-    //             "ITTFAEIWTRSFQGZGLGUMLUTHFXYSCLXTFYMGVTTDSNNWFUCKBRPSOBERNLXIYCNCEBKUV9QIXI9BDCKSM",
-    //             "W9YWLOQQJMENWCDBLBKYBNJJDGFKFBGYEBSIBPKUAGNIV9TJWRRAQPAEKBLIYVLGHPIIDYQYP9QNSPFTY",
-    //             "X9WMLHFSJYEWNLVSGTVGWMAPNUSFMXQPTMCPUML9RCMAJQVUYMTJJHKT9HO9NSNGAEMKGDBHE9KZNMBPZ",
-    //             "YNTUYQNJWJPK99YE9NOMGNKF9YRBJX9EH9UZWLMISXQRQLLZRKHFOPTW9PIERIPXK9ZDUPLSLZOEFUWXF",
-    //             "URBRFVWBAGHM9WTWSZZLRBMNGMNNRJRBGBLDEBBSZTGMWELW9JHXFSFNLRKPI9MLYELEZEDYIPKGE9CRO",
-    //             "XMGTGBZBINHC9ZPKRBHZFLUP9CEWULNCMVUAVVUXRDHU9OILDOORKPLRIWZQDNRFGSWMJAVYZWGDXMZNW",
-    //             "KFEGWPGWLAHWQXGCHKHDDVAZEISLYMGQLRRZBCJWXWKK9JIJKHXRDV9NMYIFTAGKXU9GLACAQUCXBLMH9",
-    //             "BMUAOOZBHPUOVHRWPX9KWUCZSXWXWPMKOMGNAZOXLDMAHBBVMDLXQ9IVPOPIOFPWHZSMRKBOBLCUEVUXX",
-    //             "GLVXLLOFYERJWBECYRXVPCFXK9GUDCHBEZYMTPMUDOYEQCIAPCAACKSOL9ADEGSTBQRIBJIWTCJYVUIRW",
-    //             "FOPHLVKCYHZLLCCOUWBPMQQAWHVRBGJBKQGPQXOTOEWTOCVZQCJXDCBLG9SEZBUVYPIIRTTP9CJPXWKKW",
+    //             "APSNZAPLANAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY",
+    //             "PXQMW9VMXGYTEPYPIASGPQ9CAQUQWNSUIIVHFIEAB9C9DHNNCWSNJKSBEAKYIBCYOZDDTQANEKPGJPVIY",
+    //             "ZUJWIFUVFGOGDNMTFDVZGTWVCBVIK9XQQDQEKJSKBXNGLFLLIPTVUHHPCPKNMBFMATPYJVOH9QTEVOYTW",
+    //             "OCHUZGFIX9VXXMBJXPKAPZHXIOCLAEKREMCKQIYQPXQQLRTOEUQRCZIYVSLUTJQGISGDRDSCERBOEEI9C",
+    //             "GWTMVQWHHCYFXVHGUYYZHUNXICJLMSOZVBAZOIZIWGBRAXMFDUBLP9NVIFEFFRARYIHNGPEBLNUECABKW",
+    //             "XWIYCHCVZEXOPXCQEJUGPMGVAIYBULVHWDD9YWMAZNJQEISHOBMYFHZKCBT9GWCSRQSFURKF9I9ITWEUC",
+    //             "XRBHXHE9IVEDFHQPNNMYOPXOLPXRBSYCGQNMRFKYENRJZLZAVMFLUCWWCNBFPKOSHF9UPMFFEWAWAHJP9",
+    //             "IP9DGBVAPNHHDP9CXOBYRLTYVJCQYUUWNWGNFUSDRKFIIAVPYPQDASDULPJBBEBOQATDHV9PVXYIJFQTA",
+    //             "XSGWTBAECBMTKEHXNYAVSYRPLASPJSHPIWROHRLDFUEKISEMCMXYGRZMPZCEAKZ9UKQBA9LEQFXWEMZPD",
+    //             "JXCAHDZVVCMGIGWJFFVDRFCHKBVAWTSLWIPZYGBECFXJQPDNDYJTEYCBHSRPDMPFEPWZUMDEIPIBW9SI9",
     //         ],
     //     );
     // }
-
-    #[test]
-    fn seed_subseed_kerl_test() {
-        seed_subseed_generic_test::<Kerl>(
-            SEED,
-            &[
-                "APSNZAPLANAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY",
-                "PXQMW9VMXGYTEPYPIASGPQ9CAQUQWNSUIIVHFIEAB9C9DHNNCWSNJKSBEAKYIBCYOZDDTQANEKPGJPVIY",
-                "ZUJWIFUVFGOGDNMTFDVZGTWVCBVIK9XQQDQEKJSKBXNGLFLLIPTVUHHPCPKNMBFMATPYJVOH9QTEVOYTW",
-                "OCHUZGFIX9VXXMBJXPKAPZHXIOCLAEKREMCKQIYQPXQQLRTOEUQRCZIYVSLUTJQGISGDRDSCERBOEEI9C",
-                "GWTMVQWHHCYFXVHGUYYZHUNXICJLMSOZVBAZOIZIWGBRAXMFDUBLP9NVIFEFFRARYIHNGPEBLNUECABKW",
-                "XWIYCHCVZEXOPXCQEJUGPMGVAIYBULVHWDD9YWMAZNJQEISHOBMYFHZKCBT9GWCSRQSFURKF9I9ITWEUC",
-                "XRBHXHE9IVEDFHQPNNMYOPXOLPXRBSYCGQNMRFKYENRJZLZAVMFLUCWWCNBFPKOSHF9UPMFFEWAWAHJP9",
-                "IP9DGBVAPNHHDP9CXOBYRLTYVJCQYUUWNWGNFUSDRKFIIAVPYPQDASDULPJBBEBOQATDHV9PVXYIJFQTA",
-                "XSGWTBAECBMTKEHXNYAVSYRPLASPJSHPIWROHRLDFUEKISEMCMXYGRZMPZCEAKZ9UKQBA9LEQFXWEMZPD",
-                "JXCAHDZVVCMGIGWJFFVDRFCHKBVAWTSLWIPZYGBECFXJQPDNDYJTEYCBHSRPDMPFEPWZUMDEIPIBW9SI9",
-            ],
-        );
-    }
 
     #[test]
     fn seed_from_bytes_invalid_length_test() {

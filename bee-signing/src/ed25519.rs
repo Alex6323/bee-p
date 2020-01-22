@@ -1,6 +1,6 @@
 use super::seed::Seed;
 use super::{PrivateKey, PrivateKeyGenerator, PublicKey, Signature};
-use iota_crypto::Kerl;
+// use crypto::Kerl;
 use rand::rngs::OsRng;
 
 #[derive(Default)]
@@ -35,7 +35,7 @@ impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
         let private_key = ed25519_dalek::SecretKey::generate(&mut csprng);
 
         // TODO Generic param ?
-        let _subseed = seed.subseed::<Kerl>(index);
+        // let _subseed = seed.subseed::<Kerl>(index);
 
         Self::PrivateKey {
             private_key: private_key,
