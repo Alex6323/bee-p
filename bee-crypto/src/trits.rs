@@ -30,6 +30,10 @@ impl TritsBuf {
         Self(vec![0; capacity])
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     /// Return a read-only view of the buffer in form of a `Trits`.
     pub fn as_trits(&self) -> Trits<'_> {
         Trits(&self.0)
