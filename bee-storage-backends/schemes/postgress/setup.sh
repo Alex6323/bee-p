@@ -56,8 +56,9 @@ echo export BEE_DATABASE_URL="postgres://$USER:$PASS@localhost/$DB_NAME" >> ~/.b
 
 
 echo "CREATE USER "$USER" LOGIN PASSWORD '"$PASS"';" >> setup.sql
-echo "GRANT ALL PRIVILEGES ON DATABASE "$DB_NAME" TO "$USER";" >> setup.sql
 echo "CREATE DATABASE "$DB_NAME" WITH OWNER = "$USER";" >> setup.sql
+echo "GRANT ALL PRIVILEGES ON DATABASE "$DB_NAME" TO "$USER";" >> setup.sql
+
 
 sudo -u postgres psql -f setup.sql
 sudo -u postgres psql -f $PATH_TO_SCHEMA -U $USER $DB_NAME

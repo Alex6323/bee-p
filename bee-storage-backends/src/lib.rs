@@ -9,6 +9,10 @@ pub mod sqlx_backend;
 
 
 mod tests {
+
+    const BEE_TEST_DB_USER: &str = "test_db_user";
+    const BEE_TEST_DB_NAME: &str = "test_db";
+
     use crate::sqlx_backend::SqlxBackendStorage;
     use rand::Rng;
     use storage::StorageBackend;
@@ -21,10 +25,28 @@ mod tests {
 
         let output = Command::new("schemes/postgress/setup.sh")
             .arg("schemes/postgress/schema.sql")
-            .arg("bee_test")
+            .arg(BEE_TEST_DB_USER)
             .arg("dummy_password")
+            .arg(BEE_TEST_DB_NAME)
             .output()
-            .expect("failed to execute process");
+            .expect("failed to execute setup process");
+
+        println!("status: {}", output.status);
+
+        io::stdout().write_all(&output.stdout).unwrap();
+        io::stderr().write_all(&output.stderr).unwrap();
+
+        assert!(output.status.success());
+
+    }
+
+    fn cleanup_db() ->() {
+
+        let output = Command::new("schemes/postgress/cleanup.sh")
+            .arg(BEE_TEST_DB_USER)
+            .arg(BEE_TEST_DB_NAME)
+            .output()
+            .expect("failed to execute cleanup process");
 
         println!("status: {}", output.status);
 
@@ -88,5 +110,7 @@ mod tests {
         let res = block_on(storage.find_transaction(tx.hash.as_str()));
         let found_tx = res.unwrap();
         assert_eq!(tx, found_tx);
+
+        cleanup_db();
     }
 }
