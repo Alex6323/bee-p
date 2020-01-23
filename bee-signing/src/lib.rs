@@ -1,15 +1,28 @@
-pub mod ed25519;
+// pub mod ed25519;
 pub mod mss;
-pub mod seed;
+//TODO REMOVE
+pub mod iota_seed;
 pub mod wots;
 
-pub use seed::Seed;
+// pub use seed::Seed;
 
 // TODO remove and remove associated Debug
 use std::fmt::Debug;
 
+pub trait Seed {
+    type Error;
+
+    fn new() -> Self;
+    fn subseed(&self, index: u64) -> Self;
+    fn from_bytes(bytes: &[i8]) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
+    fn to_bytes(&self) -> &[i8];
+}
+
 // TODO: documentation
 pub trait PrivateKeyGenerator {
+    type Seed: Seed;
     /// The type of the generated private keys
     type PrivateKey: PrivateKey;
     type Error: Debug;
@@ -33,7 +46,7 @@ pub trait PrivateKeyGenerator {
     /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
     /// let private_key = private_key_generator.generate(&seed, 0);
     /// ```
-    fn generate(&self, seed: &Seed, index: u64) -> Result<Self::PrivateKey, Self::Error>;
+    fn generate(&self, seed: &impl Seed, index: u64) -> Result<Self::PrivateKey, Self::Error>;
 }
 
 // TODO: documentation

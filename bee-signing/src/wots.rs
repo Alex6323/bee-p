@@ -1,6 +1,6 @@
-use super::Seed;
-use super::{
-    slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature,
+use crate::iota_seed::IotaSeed;
+use crate::{
+    slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
 };
 use crypto::{Sponge, Trits, TritsBuf, TritsMut};
 use std::marker::PhantomData;
@@ -65,15 +65,16 @@ impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
 }
 
 impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
+    type Seed = IotaSeed<S>;
     type PrivateKey = WotsPrivateKey<S>;
     type Error = WotsError;
 
-    fn generate(&self, seed: &Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
-        let subseed = seed.subseed::<S>(index);
+    fn generate(&self, seed: &impl Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
+        let subseed = seed.subseed(index);
         let mut sponge = S::default();
         let mut state = TritsBuf::with_capacity(self.security_level as usize * 6561);
 
-        sponge.absorb(&subseed.as_trits());
+        sponge.absorb(&Trits::from_i8_unchecked(subseed.to_bytes()));
         sponge.squeeze_into(&mut state.as_trits_mut());
         sponge.reset();
 
@@ -284,7 +285,7 @@ mod tests {
     // }
 
     fn wots_generic_complete_test<S: Sponge + Default>() {
-        let seed = Seed::from_bytes(&SEED.trits()).unwrap();
+        let seed = IotaSeed::<S>::from_bytes(&SEED.trits()).unwrap();
 
         for security in 1..4 {
             for index in 0..5 {

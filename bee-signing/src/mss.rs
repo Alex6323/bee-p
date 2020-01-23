@@ -1,6 +1,6 @@
-use super::seed::Seed;
-use super::{
-    slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature,
+use crate::iota_seed::IotaSeed;
+use crate::{
+    slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
 };
 use crypto::{Sponge, Trits, TritsBuf, TritsMut};
 use std::marker::PhantomData;
@@ -90,10 +90,11 @@ where
     <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
         RecoverableSignature,
 {
+    type Seed = G::Seed;
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
     type Error = MssError;
 
-    fn generate(&self, seed: &Seed, _: u64) -> Result<Self::PrivateKey, Self::Error> {
+    fn generate(&self, seed: &impl Seed, _: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut sponge = S::default();
         let mut keys = Vec::new();
         let mut tree = TritsBuf::with_capacity(((1 << self.depth) - 1) * 243);
@@ -408,13 +409,14 @@ mod tests {
     //     assert!(valid);
     // }
 
-    fn mss_generic_gen_test<S, G>(generator: G)
+    fn mss_generic_gen_test<S, G, M>(generator: G, seed: M)
     where
         S: Sponge + Default,
         G: Default,
         G: PrivateKeyGenerator + Copy,
         <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
             RecoverableSignature,
+        M: Seed,
     {
         const SEED: &str =
             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
@@ -422,7 +424,6 @@ mod tests {
             "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
         const DEPTH: u8 = 4;
 
-        let seed = Seed::from_bytes(&SEED.trits()).unwrap();
         // todo try with not recover
         let mss_private_key_generator = MssPrivateKeyGeneratorBuilder::<S, G>::default()
             .depth(DEPTH)
@@ -444,6 +445,7 @@ mod tests {
 
     // #[test]
     // fn mss_wots_kerl_kerl_test() {
+    //         let seed = IotaSeed::from_bytes(&SEED.trits()).unwrap();
     //     for s in 1..4 {
     //         let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
     //             .security_level(s)
