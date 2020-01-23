@@ -14,5 +14,4 @@ members = [
 	# ONLY TEMPORARY
 	"iota-conversion",
 	"iota-constants",
-	"iota-crypto",
 ]

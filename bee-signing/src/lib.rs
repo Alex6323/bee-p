@@ -37,7 +37,7 @@ pub trait PrivateKeyGenerator {
     /// # Example
     ///
     /// ```
-    /// use iota_crypto::Kerl;
+    /// use crypto::Kerl;
     /// use signing::PrivateKeyGenerator;
     /// use signing::seed::Seed;
     /// use signing::wots::WotsPrivateKeyGeneratorBuilder;
@@ -62,7 +62,7 @@ pub trait PrivateKey {
     /// # Example
     ///
     /// ```
-    /// # use iota_crypto::Kerl;
+    /// # use crypto::Kerl;
     /// # use signing::PrivateKeyGenerator;
     /// # use signing::seed::Seed;
     /// # use signing::wots::WotsPrivateKeyGeneratorBuilder;
@@ -84,7 +84,7 @@ pub trait PrivateKey {
     /// # Example
     ///
     /// ```
-    /// # use iota_crypto::Kerl;
+    /// # use crypto::Kerl;
     /// # use signing::PrivateKeyGenerator;
     /// # use signing::seed::Seed;
     /// # use signing::wots::WotsPrivateKeyGeneratorBuilder;
