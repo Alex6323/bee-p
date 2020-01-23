@@ -50,7 +50,7 @@ impl From<std::env::VarError> for SqlxBackendError {
 impl From<SqlxError> for SqlxBackendError {
     #[inline]
     fn from(err: SqlxError) -> Self {
-        SqlxBackendError::SqlxError(String::from(err.description()))
+        SqlxBackendError::SqlxError(String::from(err.to_string()))
     }
 }
 
@@ -58,6 +58,6 @@ impl From<SqlxError> for SqlxBackendError {
 impl From<std::boxed::Box<bincode::ErrorKind>> for SqlxBackendError {
     #[inline]
     fn from(err: std::boxed::Box<bincode::ErrorKind>) -> Self {
-        SqlxBackendError::Bincode(String::from(err.as_ref().description()))
+        SqlxBackendError::Bincode(String::from(err.as_ref().to_string()))
     }
 }

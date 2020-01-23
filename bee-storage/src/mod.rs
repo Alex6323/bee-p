@@ -33,6 +33,7 @@ impl Tx {
 /// A milestone hash. To be replaced later with whatever implementation is required.
 type MilestoneHash = String;
 
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub struct Milestone {
     pub hash: MilestoneHash,
     pub index: u32,
@@ -60,7 +61,7 @@ use async_trait::async_trait;
 pub trait Connection<Conn> {
     type StorageError;
     async fn establish_connection(&mut self) -> Result<(), Self::StorageError>;
-    fn destroy_connection(connection: Conn) -> Result<(), Self::StorageError>;
+    async fn destroy_connection(&mut self) -> Result<(), Self::StorageError>;
 }
 
 #[async_trait]
@@ -96,11 +97,11 @@ pub trait StorageBackend {
 
     async fn insert_milestone(&self, milestone: &Milestone) -> Result<(), Self::StorageError>;
 
-    async fn find_milestone(&self, milestone_hash: MilestoneHash) -> Result<Milestone, Self::StorageError>;
+    async fn find_milestone(&self, milestone_hash: &str) -> Result<Milestone, Self::StorageError>;
 
     async fn delete_milestones(
         &self,
-        milestone_hashes: HashSet<MilestoneHash>,
+        milestone_hashes: HashSet<&str>,
     ) -> Result<(), Self::StorageError>;
 
 

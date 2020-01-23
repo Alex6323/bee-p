@@ -30,7 +30,7 @@ const FIND_TRANSACTION_BY_HASH_STATEMENT : &str =         r#"
 SELECT signature_or_message, address, value, obsolete_tag, timestamp, current_index, last_index, bundle, trunk, branch, tag
         ,attachment_timestamp, attachment_timestamp_lower, attachment_timestamp_upper, nonce, hash
 FROM transactions
-WHERE hash = $1
+WHERE hash=$1
         "#;
 
 
@@ -54,12 +54,16 @@ const UPDATE_SET_SOLID_STATEMENT: &str =   r#"UPDATE transactions set snapshot_i
 
 const DELETE_TRANSACTION_STATEMENT: &str = r#"DELETE FROM  transactions WHERE hash =$1"#;
 
-const INSERT_MILESTONE_STATEMENT: &str = r#"INSERT INTO milestones (id, hash)VALUES($1,$2) RETURNING id"#;
+const INSERT_MILESTONE_STATEMENT: &str = r#"
+        INSERT INTO milestones (id, hash)
+        VALUES ($1, $2)
+        RETURNING id
+                "#;
 
 const FIND_MILESTONE_BY_HASH_STATEMENT : &str =         r#"
 SELECT id, hash
 FROM milestones
-WHERE hash = $1
+WHERE hash=$1
         "#;
 
 const DELETE_MILESTONE_BY_HASH_STATEMENT : &str = r#""DELETE FROM  milestones WHERE hash =$1"#;
