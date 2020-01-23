@@ -1,4 +1,4 @@
-// pub mod ed25519;
+pub mod ed25519;
 pub mod mss;
 //TODO REMOVE
 pub mod iota_seed;

@@ -1,8 +1,9 @@
-use super::seed::Seed;
-use super::{PrivateKey, PrivateKeyGenerator, PublicKey, Signature};
+use super::{PrivateKey, PrivateKeyGenerator, PublicKey, Seed, Signature};
 // use crypto::Kerl;
 use rand::rngs::OsRng;
 use std::convert::Infallible;
+
+pub struct Ed25519Seed([i8; 32]);
 
 #[derive(Default)]
 pub struct Ed25519PrivateKeyGeneratorBuilder {}
@@ -22,6 +23,29 @@ pub struct Ed25519Signature {
     signature: ed25519_dalek::Signature,
 }
 
+impl Seed for Ed25519Seed {
+    type Error = Infallible;
+    // TODO: documentation
+    fn new() -> Self {
+        Self([0; 32])
+    }
+
+    // TODO: documentation
+    fn subseed(&self, index: u64) -> Self {
+        Self([0; 32])
+    }
+
+    // TODO: documentation
+    fn from_bytes(bytes: &[i8]) -> Result<Self, Self::Error> {
+        Ok(Self([0; 32]))
+    }
+
+    // TODO: documentation
+    fn to_bytes(&self) -> &[i8] {
+        &self.0
+    }
+}
+
 impl Ed25519PrivateKeyGeneratorBuilder {
     pub fn build(&mut self) -> Ed25519PrivateKeyGenerator {
         Ed25519PrivateKeyGenerator {}
@@ -29,10 +53,11 @@ impl Ed25519PrivateKeyGeneratorBuilder {
 }
 
 impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
+    type Seed = Ed25519Seed;
     type PrivateKey = Ed25519PrivateKey;
     type Error = Infallible;
 
-    fn generate(&self, seed: &Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
+    fn generate(&self, seed: &impl Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut csprng = OsRng {};
         let private_key = ed25519_dalek::SecretKey::generate(&mut csprng);
 
@@ -151,7 +176,7 @@ mod tests {
     fn ed25519_test() {
         let seed_trits_1 = &SEED1.trits();
         let seed_trits_2 = &SEED2.trits();
-        let seed = Seed::from_bytes(&SEED1.trits()).unwrap();
+        let seed = Ed25519Seed::from_bytes(&SEED1.trits()).unwrap();
 
         for index in 0..25 {
             let private_key_generator = Ed25519PrivateKeyGeneratorBuilder::default().build();
