@@ -1,5 +1,22 @@
 #!/bin/bash
 
+#TODO - move to readme
+#Please edit the postgres configuration file to trust connection
+#via unix sockets:
+#edit the conf:
+#sudo nano /etc/postgresql/11/main/pg_hba.conf
+#To look like (replace peer with "trust"):
+
+## Database administrative login by Unix domain socket
+#local   all             postgres                                trust
+# ....
+# "local" is for Unix domain socket connections only
+#local   all             all                                     trust
+
+#Then restart service (replace '11' with your current version):
+#service postgresql@11-main restart
+
+
 #usage:
 #./setup.sh schema.sql username password dbname
 
@@ -32,8 +49,17 @@ if [ -z "$4" ]
     DB_NAME="$4"
 fi
 
+
+
 export BEE_DATABASE_URL="postgres://$USER:$PASS@localhost/$DB_NAME"
+echo export BEE_DATABASE_URL="postgres://$USER:$PASS@localhost/$DB_NAME" >> ~/.bashrc
 
 
-createdb -U $USER $DB_NAME
-psql -f $PATH_TO_SCHEMA -U $USER $DB_NAME
+echo "CREATE USER "$USER" LOGIN PASSWORD '"$PASS"';" >> setup.sql
+echo "GRANT ALL PRIVILEGES ON DATABASE "$DB_NAME" TO "$USER";" >> setup.sql
+echo "CREATE DATABASE "$DB_NAME" WITH OWNER = "$USER";" >> setup.sql
+
+sudo -u postgres psql -f setup.sql
+sudo -u postgres psql -f $PATH_TO_SCHEMA -U $USER $DB_NAME
+
+rm -f setup.sql

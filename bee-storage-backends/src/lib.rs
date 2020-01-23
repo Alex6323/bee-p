@@ -1,13 +1,7 @@
 #[macro_use]
 
 extern crate rand;
-
 pub mod sqlx_backend;
-
-use rand::{thread_rng, Rng};
-use rand::distributions::Alphanumeric;
-
-
 
 #[cfg(test)]
 
@@ -20,6 +14,26 @@ mod tests {
     use storage::StorageBackend;
     use futures::executor::block_on;
     use iota_lib_rs::iota_model::Transaction;
+    use std::process::Command;
+    use std::io::{self, Write};
+
+    fn setup_db() ->() {
+
+        let output = Command::new("schemes/postgress/setup.sh")
+            .arg("schemes/postgress/schema.sql")
+            .arg("bee_test")
+            .arg("dummy_password")
+            .output()
+            .expect("failed to execute process");
+
+        println!("status: {}", output.status);
+
+        io::stdout().write_all(&output.stdout).unwrap();
+        io::stderr().write_all(&output.stderr).unwrap();
+
+        assert!(output.status.success());
+
+    }
 
 
     fn rand_hash_string() -> String{
@@ -43,6 +57,8 @@ mod tests {
 
     #[test]
     fn insert_one_transaction(){
+
+        setup_db();
 
         let mut storage = SqlxBackendStorage::new();
 

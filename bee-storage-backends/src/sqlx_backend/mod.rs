@@ -239,7 +239,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         transaction_hashes: HashSet<String>,
     ) -> Result<(), SqlxBackendError> {
 
-        let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
+        let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
         transaction_hashes.iter().for_each(|hash|{
@@ -262,7 +262,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         snapshot_index: u32,
     ) -> Result<(), SqlxBackendError> {
 
-        let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
+        let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
         transaction_hashes.iter().for_each( |hash|{        sqlx::query(
@@ -281,7 +281,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     async fn delete_transactions(&self, transaction_hashes: HashSet<String>) -> Result<(), SqlxBackendError>{
 
-        let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
+        let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
         transaction_hashes.iter().for_each(|hash|{
@@ -301,7 +301,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
     }
 
     async fn insert_milestone(&self, milestone: &Milestone) -> Result<(), SqlxBackendError>{
-        let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
+        let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
 
@@ -344,7 +344,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         milestone_hashes: HashSet<String>,
     ) -> Result<(), SqlxBackendError>{
 
-        let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
+        let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
         milestone_hashes.iter().for_each(|hash|{
@@ -367,7 +367,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         state_delta: storage::StateDeltaMap,
         index: u32,
     ) -> Result<(), SqlxBackendError> {
-        let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
+        let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
         let encoded: Vec<u8> = bincode::serialize(&state_delta)?;
