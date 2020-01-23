@@ -5,10 +5,14 @@ pub mod wots;
 
 pub use seed::Seed;
 
+// TODO remove and remove associated Debug
+use std::fmt::Debug;
+
 // TODO: documentation
 pub trait PrivateKeyGenerator {
     /// The type of the generated private keys
     type PrivateKey: PrivateKey;
+    type Error: Debug;
 
     /// Deterministically generates and returns a private key
     ///
@@ -29,7 +33,7 @@ pub trait PrivateKeyGenerator {
     /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
     /// let private_key = private_key_generator.generate(&seed, 0);
     /// ```
-    fn generate(&self, seed: &Seed, index: u64) -> Self::PrivateKey;
+    fn generate(&self, seed: &Seed, index: u64) -> Result<Self::PrivateKey, Self::Error>;
 }
 
 // TODO: documentation
@@ -38,6 +42,7 @@ pub trait PrivateKey {
     type PublicKey: PublicKey;
     /// The type of the generated signatures
     type Signature: Signature;
+    type Error: Debug;
 
     /// Returns the public counterpart of a private key
     ///
@@ -55,7 +60,7 @@ pub trait PrivateKey {
     /// # let private_key = private_key_generator.generate(&seed, 0);
     /// let public_key = private_key.generate_public_key();
     /// ```
-    fn generate_public_key(&self) -> Self::PublicKey;
+    fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error>;
 
     /// Generates and returns a signature for a given message
     ///
@@ -79,16 +84,17 @@ pub trait PrivateKey {
     /// let message = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD".trits();
     /// let signature = private_key.sign(&message);
     /// ```
-    fn sign(&mut self, message: &[i8]) -> Self::Signature;
+    fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error>;
 }
 
 // TODO: documentation
 pub trait PublicKey {
     // TODO: documentation
     type Signature: Signature;
+    type Error: Debug;
 
     // TODO: documentation
-    fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool;
+    fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error>;
 
     // TODO: documentation
     fn from_bytes(bytes: &[i8]) -> Self;
@@ -113,9 +119,10 @@ pub trait Signature {
 pub trait RecoverableSignature: Signature {
     // TODO: documentation
     type PublicKey: PublicKey;
+    type Error: Debug;
 
     // TODO: documentation
-    fn recover_public_key(&self, message: &[i8]) -> Self::PublicKey;
+    fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error>;
 }
 
 // TODO: remove

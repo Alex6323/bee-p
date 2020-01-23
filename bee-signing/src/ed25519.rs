@@ -2,6 +2,7 @@ use super::seed::Seed;
 use super::{PrivateKey, PrivateKeyGenerator, PublicKey, Signature};
 // use crypto::Kerl;
 use rand::rngs::OsRng;
+use std::convert::Infallible;
 
 #[derive(Default)]
 pub struct Ed25519PrivateKeyGeneratorBuilder {}
@@ -29,52 +30,56 @@ impl Ed25519PrivateKeyGeneratorBuilder {
 
 impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
     type PrivateKey = Ed25519PrivateKey;
+    type Error = Infallible;
 
-    fn generate(&self, seed: &Seed, index: u64) -> Self::PrivateKey {
+    fn generate(&self, seed: &Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut csprng = OsRng {};
         let private_key = ed25519_dalek::SecretKey::generate(&mut csprng);
 
         // TODO Generic param ?
         // let _subseed = seed.subseed::<Kerl>(index);
 
-        Self::PrivateKey {
+        Ok(Self::PrivateKey {
             private_key: private_key,
-        }
+        })
     }
 }
 
 impl PrivateKey for Ed25519PrivateKey {
     type PublicKey = Ed25519PublicKey;
     type Signature = Ed25519Signature;
+    type Error = Infallible;
 
-    fn generate_public_key(&self) -> Self::PublicKey {
-        Self::PublicKey {
+    fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
+        Ok(Self::PublicKey {
             public_key: (&self.private_key).into(),
-        }
+        })
     }
 
     // TODO: hash ? enforce size ?
-    fn sign(&mut self, message: &[i8]) -> Self::Signature {
+    fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
         let test = unsafe { &*(message as *const _ as *const [u8]) };
         let private_key = &self.private_key;
-        let public_key = self.generate_public_key();
+        // TODO propagate
+        let public_key = self.generate_public_key()?;
         let expanded_private_key = ed25519_dalek::ExpandedSecretKey::from(private_key);
         let signature = expanded_private_key.sign(test, &public_key.public_key);
 
-        Self::Signature {
+        Ok(Self::Signature {
             public_key: public_key.public_key,
             signature: signature,
-        }
+        })
     }
 }
 
 impl PublicKey for Ed25519PublicKey {
     type Signature = Ed25519Signature;
+    type Error = Infallible;
 
-    fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool {
+    fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
         let test = unsafe { &*(message as *const _ as *const [u8]) };
 
-        self.public_key.verify(test, &signature.signature).is_ok()
+        Ok(self.public_key.verify(test, &signature.signature).is_ok())
     }
 
     fn from_bytes(bytes: &[i8]) -> Self {
@@ -151,13 +156,13 @@ mod tests {
         for index in 0..25 {
             let private_key_generator = Ed25519PrivateKeyGeneratorBuilder::default().build();
             // TODO mut ?
-            let mut private_key = private_key_generator.generate(&seed, index);
-            let public_key = private_key.generate_public_key();
-            let signature_good = private_key.sign(seed_trits_1);
-            let signature_bad = private_key.sign(seed_trits_2);
-            let mut valid = public_key.verify(seed_trits_1, &signature_good);
+            let mut private_key = private_key_generator.generate(&seed, index).unwrap();
+            let public_key = private_key.generate_public_key().unwrap();
+            let signature_good = private_key.sign(seed_trits_1).unwrap();
+            let signature_bad = private_key.sign(seed_trits_2).unwrap();
+            let mut valid = public_key.verify(seed_trits_1, &signature_good).unwrap();
             assert!(valid);
-            valid = public_key.verify(seed_trits_2, &signature_good);
+            valid = public_key.verify(seed_trits_2, &signature_good).unwrap();
             assert!(!valid);
         }
     }

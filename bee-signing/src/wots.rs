@@ -39,6 +39,7 @@ pub struct WotsSignature<S> {
 pub enum WotsError {
     InvalidSecurityLevel(u8),
     MissingSecurityLevel,
+    FailedSpongeOperation,
 }
 
 impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
@@ -65,8 +66,9 @@ impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
 
 impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
     type PrivateKey = WotsPrivateKey<S>;
+    type Error = WotsError;
 
-    fn generate(&self, seed: &Seed, index: u64) -> Self::PrivateKey {
+    fn generate(&self, seed: &Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         let subseed = seed.subseed::<S>(index);
         let mut sponge = S::default();
         let mut state = TritsBuf::with_capacity(self.security_level as usize * 6561);
@@ -75,18 +77,19 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
         sponge.squeeze_into(&mut state.as_trits_mut());
         sponge.reset();
 
-        Self::PrivateKey {
+        Ok(Self::PrivateKey {
             state: state,
             _sponge: PhantomData,
-        }
+        })
     }
 }
 
 impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     type PublicKey = WotsPublicKey<S>;
     type Signature = WotsSignature<S>;
+    type Error = WotsError;
 
-    fn generate_public_key(&self) -> Self::PublicKey {
+    fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
         let mut hashed_private_key = self.state.clone();
         let mut digests = TritsBuf::with_capacity((self.state.len() / 6561) * 243);
@@ -112,14 +115,14 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
         sponge.squeeze_into(&mut hash.as_trits_mut());
         sponge.reset();
 
-        Self::PublicKey {
+        Ok(Self::PublicKey {
             state: hash,
             _sponge: PhantomData,
-        }
+        })
     }
 
     // TODO: enforce hash size ?
-    fn sign(&mut self, message: &[i8]) -> Self::Signature {
+    fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
         let mut sponge = S::default();
         let mut signature = self.state.clone();
 
@@ -133,10 +136,10 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             }
         }
 
-        Self::Signature {
+        Ok(Self::Signature {
             state: signature,
             _sponge: PhantomData,
-        }
+        })
     }
 }
 
@@ -144,13 +147,18 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
 impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     type Signature = WotsSignature<S>;
+    type Error = WotsError;
 
     // TODO: enforce hash size ?
-    fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool {
-        slice_eq(
-            &signature.recover_public_key(message).state.inner_ref(),
+    fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
+        Ok(slice_eq(
+            &signature
+                .recover_public_key(message)
+                .unwrap()
+                .state
+                .inner_ref(),
             &self.state.inner_ref(),
-        )
+        ))
     }
 
     fn from_bytes(bytes: &[i8]) -> Self {
@@ -185,8 +193,9 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
 
 impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
     type PublicKey = WotsPublicKey<S>;
+    type Error = WotsError;
 
-    fn recover_public_key(&self, message: &[i8]) -> Self::PublicKey {
+    fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
         let mut hash = TritsBuf::with_capacity(243);
         // let mut digests = vec![0; (self.state.len() / 6561) * 243];
@@ -215,10 +224,10 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
         sponge.squeeze_into(&mut hash.as_trits_mut());
         sponge.reset();
 
-        Self::PublicKey {
+        Ok(Self::PublicKey {
             state: hash,
             _sponge: PhantomData,
-        }
+        })
     }
 }
 
@@ -284,16 +293,16 @@ mod tests {
                     .build()
                     .unwrap();
                 // TODO mut ?
-                let mut private_key = private_key_generator.generate(&seed, index);
-                let public_key = private_key.generate_public_key();
+                let mut private_key = private_key_generator.generate(&seed, index).unwrap();
+                let public_key = private_key.generate_public_key().unwrap();
                 let bytes = public_key.to_bytes();
-                let signature = private_key.sign(&MESSAGE.trits());
-                let recovered_public_key = signature.recover_public_key(&MESSAGE.trits());
+                let signature = private_key.sign(&MESSAGE.trits()).unwrap();
+                let recovered_public_key = signature.recover_public_key(&MESSAGE.trits()).unwrap();
                 assert!(slice_eq(
                     public_key.to_bytes(),
                     recovered_public_key.to_bytes()
                 ));
-                let valid = public_key.verify(&MESSAGE.trits(), &signature);
+                let valid = public_key.verify(&MESSAGE.trits(), &signature).unwrap();
                 assert!(valid);
             }
         }

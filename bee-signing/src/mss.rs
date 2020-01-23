@@ -91,8 +91,9 @@ where
         RecoverableSignature,
 {
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
+    type Error = MssError;
 
-    fn generate(&self, seed: &Seed, _: u64) -> Self::PrivateKey {
+    fn generate(&self, seed: &Seed, _: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut sponge = S::default();
         let mut keys = Vec::new();
         let mut tree = TritsBuf::with_capacity(((1 << self.depth) - 1) * 243);
@@ -101,8 +102,8 @@ where
         // TODO: reserve ?
 
         for key_index in 0..(1 << (self.depth - 1)) {
-            let ots_private_key = self.generator.generate(seed, key_index);
-            let ots_public_key = ots_private_key.generate_public_key();
+            let ots_private_key = self.generator.generate(seed, key_index).unwrap();
+            let ots_public_key = ots_private_key.generate_public_key().unwrap();
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
             keys.push(ots_private_key);
@@ -128,13 +129,13 @@ where
             }
         }
 
-        MssPrivateKey {
+        Ok(MssPrivateKey {
             depth: self.depth,
             index: 0,
             keys: keys,
             tree: tree,
             _sponge: PhantomData,
-        }
+        })
     }
 }
 
@@ -146,15 +147,16 @@ where
 {
     type PublicKey = MssPublicKey<S, K::PublicKey>;
     type Signature = MssSignature<S>;
+    type Error = MssError;
 
-    fn generate_public_key(&self) -> Self::PublicKey {
+    fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         // TODO return or generate ?
-        Self::PublicKey::from_bytes(&self.tree.inner_ref()[0..243]).depth(self.depth)
+        Ok(Self::PublicKey::from_bytes(&self.tree.inner_ref()[0..243]).depth(self.depth))
     }
 
-    fn sign(&mut self, message: &[i8]) -> Self::Signature {
+    fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
         let ots_private_key = &mut self.keys[self.index as usize];
-        let ots_signature = ots_private_key.sign(message);
+        let ots_signature = ots_private_key.sign(message).unwrap();
         let mut state = vec![0; ots_signature.size() + 6561];
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
         let mut sibling_index;
@@ -181,7 +183,7 @@ where
 
         self.index = self.index + 1;
 
-        Self::Signature::from_bytes(&state).index(self.index - 1)
+        Ok(Self::Signature::from_bytes(&state).index(self.index - 1))
     }
 }
 
@@ -203,15 +205,16 @@ where
     <K as PublicKey>::Signature: RecoverableSignature,
 {
     type Signature = MssSignature<S>;
+    type Error = MssError;
 
-    fn verify(&self, message: &[i8], signature: &Self::Signature) -> bool {
+    fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
         let mut sponge = S::default();
         let ots_signature = K::Signature::from_bytes(
             &signature.state.inner_ref()[0..((signature.state.len() / 6561) - 1) * 6561],
         );
         let siblings =
             TritsBuf::from_i8_unchecked(signature.state.inner_ref().chunks(6561).last().unwrap());
-        let ots_public_key = ots_signature.recover_public_key(message);
+        let ots_public_key = ots_signature.recover_public_key(message).unwrap();
         let mut hash = TritsBuf::with_capacity(243);
 
         hash.inner_mut().copy_from_slice(ots_public_key.to_bytes());
@@ -235,7 +238,7 @@ where
             j <<= 1;
         }
 
-        slice_eq(&hash.inner_ref(), &self.state.inner_ref())
+        Ok(slice_eq(&hash.inner_ref(), &self.state.inner_ref()))
     }
 
     fn from_bytes(bytes: &[i8]) -> Self {
@@ -426,12 +429,14 @@ mod tests {
             .generator(generator)
             .build()
             .unwrap();
-        let mut mss_private_key = mss_private_key_generator.generate(&seed, 0);
-        let mss_public_key = mss_private_key.generate_public_key();
+        let mut mss_private_key = mss_private_key_generator.generate(&seed, 0).unwrap();
+        let mss_public_key = mss_private_key.generate_public_key().unwrap();
 
         for _ in 0..(1 << DEPTH - 1) {
-            let mss_signature = mss_private_key.sign(&MESSAGE.trits());
-            let mss_valid = mss_public_key.verify(&MESSAGE.trits(), &mss_signature);
+            let mss_signature = mss_private_key.sign(&MESSAGE.trits()).unwrap();
+            let mss_valid = mss_public_key
+                .verify(&MESSAGE.trits(), &mss_signature)
+                .unwrap();
             assert!(mss_valid);
             //  TODO invalid test
         }
