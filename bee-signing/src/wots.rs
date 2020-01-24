@@ -74,9 +74,12 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
         let mut sponge = S::default();
         let mut state = TritsBuf::with_capacity(self.security_level as usize * 6561);
 
-        sponge.absorb(&Trits::from_i8_unchecked(subseed.to_bytes()));
-        sponge.squeeze_into(&mut state.as_trits_mut());
-        sponge.reset();
+        if let Err(_) = sponge.digest_into(
+            &Trits::from_i8_unchecked(subseed.to_bytes()),
+            &mut state.as_trits_mut(),
+        ) {
+            return Err(Self::Error::FailedSpongeOperation);
+        }
 
         Ok(Self::PrivateKey {
             state: state,
@@ -98,23 +101,26 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
         for chunk in hashed_private_key.inner_mut().chunks_mut(243) {
             for _ in 0..26 {
-                sponge.absorb(&Trits::from_i8_unchecked(chunk));
+                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(chunk)) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                }
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(chunk));
                 sponge.reset();
             }
         }
 
         for (i, chunk) in hashed_private_key.inner_ref().chunks(6561).enumerate() {
-            sponge.absorb(&Trits::from_i8_unchecked(chunk));
-            sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
-                &mut digests.inner_mut()[i * 243..(i + 1) * 243],
-            ));
-            sponge.reset();
+            if let Err(_) = sponge.digest_into(
+                &Trits::from_i8_unchecked(chunk),
+                &mut TritsMut::from_i8_unchecked(&mut digests.inner_mut()[i * 243..(i + 1) * 243]),
+            ) {
+                return Err(Self::Error::FailedSpongeOperation);
+            }
         }
 
-        sponge.absorb(&digests.as_trits());
-        sponge.squeeze_into(&mut hash.as_trits_mut());
-        sponge.reset();
+        if let Err(_) = sponge.digest_into(&digests.as_trits(), &mut hash.as_trits_mut()) {
+            return Err(Self::Error::FailedSpongeOperation);
+        }
 
         Ok(Self::PublicKey {
             state: hash,
@@ -131,7 +137,9 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(13 - val) {
-                sponge.absorb(&Trits::from_i8_unchecked(chunk));
+                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(chunk)) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                }
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(chunk));
                 sponge.reset();
             }
@@ -143,8 +151,6 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
         })
     }
 }
-
-/////////////////////////
 
 impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     type Signature = WotsSignature<S>;
@@ -207,23 +213,26 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(val - -13) {
-                sponge.absorb(&Trits::from_i8_unchecked(chunk));
+                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(chunk)) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                }
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(chunk));
                 sponge.reset();
             }
         }
 
         for (i, chunk) in state.inner_ref().chunks(6561).enumerate() {
-            sponge.absorb(&Trits::from_i8_unchecked(chunk));
-            sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
-                &mut digests.inner_mut()[i * 243..(i + 1) * 243],
-            ));
-            sponge.reset();
+            if let Err(_) = sponge.digest_into(
+                &Trits::from_i8_unchecked(chunk),
+                &mut TritsMut::from_i8_unchecked(&mut digests.inner_mut()[i * 243..(i + 1) * 243]),
+            ) {
+                return Err(Self::Error::FailedSpongeOperation);
+            }
         }
 
-        sponge.absorb(&digests.as_trits());
-        sponge.squeeze_into(&mut hash.as_trits_mut());
-        sponge.reset();
+        if let Err(_) = sponge.digest_into(&digests.as_trits(), &mut hash.as_trits_mut()) {
+            return Err(Self::Error::FailedSpongeOperation);
+        }
 
         Ok(Self::PublicKey {
             state: hash,
@@ -293,10 +302,8 @@ mod tests {
                     .security_level(security)
                     .build()
                     .unwrap();
-                // TODO mut ?
                 let mut private_key = private_key_generator.generate(&seed, index).unwrap();
                 let public_key = private_key.generate_public_key().unwrap();
-                let bytes = public_key.to_bytes();
                 let signature = private_key.sign(&MESSAGE.trits()).unwrap();
                 let recovered_public_key = signature.recover_public_key(&MESSAGE.trits()).unwrap();
                 assert!(slice_eq(

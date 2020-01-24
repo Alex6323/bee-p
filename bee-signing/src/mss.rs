@@ -44,6 +44,11 @@ pub enum MssError {
     InvalidDepth(u8),
     MissingDepth,
     MissingGenerator,
+    FailedUnderlyingPrivateKeyGeneration,
+    FailedUnderlyingPublicKeyGeneration,
+    FailedUnderlyingSignatureGeneration,
+    FailedUnderlyingPublicKeyRecovery,
+    FailedSpongeOperation,
 }
 
 impl<S, G> MssPrivateKeyGeneratorBuilder<S, G>
@@ -102,8 +107,14 @@ where
         // TODO: reserve ?
 
         for key_index in 0..(1 << (self.depth - 1)) {
-            let ots_private_key = self.generator.generate(seed, key_index).unwrap();
-            let ots_public_key = ots_private_key.generate_public_key().unwrap();
+            let ots_private_key = match self.generator.generate(seed, key_index) {
+                Ok(private_key) => private_key,
+                Err(_) => return Err(Self::Error::FailedUnderlyingPrivateKeyGeneration),
+            };
+            let ots_public_key = match ots_private_key.generate_public_key() {
+                Ok(public_key) => public_key,
+                Err(_) => return Err(Self::Error::FailedUnderlyingPublicKeyGeneration),
+            };
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
             keys.push(ots_private_key);
@@ -116,12 +127,16 @@ where
                 let index = (1 << depth) + i - 1;
                 let left_index = index * 2 + 1;
                 let right_index = left_index + 1;
-                sponge.absorb(&Trits::from_i8_unchecked(
+                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(
                     &tree.inner_ref()[left_index * 243..(left_index + 1) * 243],
-                ));
-                sponge.absorb(&Trits::from_i8_unchecked(
+                )) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                };
+                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(
                     &tree.inner_ref()[right_index * 243..(right_index + 1) * 243],
-                ));
+                )) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                };
                 sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
                     &mut tree.inner_mut()[index * 243..(index + 1) * 243],
                 ));
@@ -156,7 +171,10 @@ where
 
     fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
         let ots_private_key = &mut self.keys[self.index as usize];
-        let ots_signature = ots_private_key.sign(message).unwrap();
+        let ots_signature = match ots_private_key.sign(message) {
+            Ok(signature) => signature,
+            Err(_) => return Err(Self::Error::FailedUnderlyingSignatureGeneration),
+        };
         let mut state = vec![0; ots_signature.size() + 6561];
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
         let mut sibling_index;
@@ -214,7 +232,10 @@ where
         );
         let siblings =
             TritsBuf::from_i8_unchecked(signature.state.inner_ref().chunks(6561).last().unwrap());
-        let ots_public_key = ots_signature.recover_public_key(message).unwrap();
+        let ots_public_key = match ots_signature.recover_public_key(message) {
+            Ok(public_key) => public_key,
+            Err(_) => return Err(Self::Error::FailedUnderlyingPublicKeyRecovery),
+        };
         let mut hash = TritsBuf::with_capacity(243);
 
         hash.inner_mut().copy_from_slice(ots_public_key.to_bytes());
@@ -226,11 +247,19 @@ where
             }
 
             if signature.index & j != 0 {
-                sponge.absorb(&Trits::from_i8_unchecked(sibling));
-                sponge.absorb(&hash.as_trits());
+                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(sibling)) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                };
+                if let Err(_) = sponge.absorb(&hash.as_trits()) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                };
             } else {
-                sponge.absorb(&hash.as_trits());
-                sponge.absorb(&Trits::from_i8_unchecked(sibling));
+                if let Err(_) = sponge.absorb(&hash.as_trits()) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                };
+                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(sibling)) {
+                    return Err(Self::Error::FailedSpongeOperation);
+                };
             }
             sponge.squeeze_into(&mut hash.as_trits_mut());
             sponge.reset();
