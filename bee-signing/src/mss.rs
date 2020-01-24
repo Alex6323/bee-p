@@ -1,4 +1,3 @@
-use crate::iota_seed::IotaSeed;
 use crate::{
     slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
 };
@@ -287,10 +286,9 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
 #[cfg(test)]
 mod tests {
 
-    use super::super::wots::{
-        WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey,
-    };
     use super::*;
+    use crate::iota_seed::IotaSeed;
+    use crate::wots::{WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey};
     use crypto::{CurlP27, CurlP81};
     use iota_conversion::Trinary;
 

@@ -1,6 +1,6 @@
 use crypto::{Sponge, Trits, TritsBuf};
 // TODO Remove when available in bee
-use super::Seed;
+use crate::Seed;
 use iota_conversion::Trinary;
 use rand::Rng;
 use std::marker::PhantomData;
@@ -100,8 +100,7 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // TODO super::super ?
-    use super::super::slice_eq;
+    use crate::slice_eq;
     use crypto::{CurlP27, CurlP81};
 
     const IOTA_SEED: &str =
