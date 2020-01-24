@@ -13,7 +13,6 @@ pub trait Seed {
     type Error;
 
     fn new() -> Self;
-    fn subseed(&self, index: u64) -> Self;
     fn from_bytes(bytes: &[i8]) -> Result<Self, Self::Error>
     where
         Self: Sized;

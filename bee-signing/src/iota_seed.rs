@@ -44,7 +44,34 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
     }
 
     // TODO: documentation
-    fn subseed(&self, index: u64) -> Self {
+    fn from_bytes(bytes: &[i8]) -> Result<Self, Self::Error> {
+        if bytes.len() != 243 {
+            return Err(Self::Error::InvalidLength(bytes.len()));
+        }
+
+        for byte in bytes {
+            match byte {
+                -1 | 0 | 1 => continue,
+                _ => return Err(Self::Error::InvalidTrit(*byte)),
+            }
+        }
+
+        Ok(Self {
+            seed: TritsBuf::from_i8_unchecked(bytes),
+            _sponge: PhantomData,
+        })
+    }
+
+    // TODO: documentation
+    fn to_bytes(&self) -> &[i8] {
+        // &self.0.to_bytes()
+        self.seed.inner_ref()
+    }
+}
+
+impl<S: Sponge + Default> IotaSeed<S> {
+    // TODO: documentation
+    pub fn subseed(&self, index: u64) -> Self {
         let mut sponge = S::default();
         let mut subseed = self.seed.clone();
 
@@ -69,31 +96,6 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
             seed: tmp,
             _sponge: PhantomData,
         }
-    }
-
-    // TODO: documentation
-    fn from_bytes(bytes: &[i8]) -> Result<Self, Self::Error> {
-        if bytes.len() != 243 {
-            return Err(Self::Error::InvalidLength(bytes.len()));
-        }
-
-        for byte in bytes {
-            match byte {
-                -1 | 0 | 1 => continue,
-                _ => return Err(Self::Error::InvalidTrit(*byte)),
-            }
-        }
-
-        Ok(Self {
-            seed: TritsBuf::from_i8_unchecked(bytes),
-            _sponge: PhantomData,
-        })
-    }
-
-    // TODO: documentation
-    fn to_bytes(&self) -> &[i8] {
-        // &self.0.to_bytes()
-        self.seed.inner_ref()
     }
 }
 

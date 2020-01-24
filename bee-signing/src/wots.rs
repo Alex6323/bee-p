@@ -70,7 +70,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
     type Error = WotsError;
 
     fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
-        let subseed = Self::Seed::subseed(seed, index);
+        let subseed = seed.subseed(index);
         let mut sponge = S::default();
         let mut state = TritsBuf::with_capacity(self.security_level as usize * 6561);
 

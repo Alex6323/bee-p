@@ -1,5 +1,4 @@
 use super::{PrivateKey, PrivateKeyGenerator, PublicKey, Seed, Signature};
-// use crypto::Kerl;
 use rand::rngs::OsRng;
 use std::convert::Infallible;
 
@@ -31,11 +30,6 @@ impl Seed for Ed25519Seed {
     }
 
     // TODO: documentation
-    fn subseed(&self, index: u64) -> Self {
-        Self([0; 32])
-    }
-
-    // TODO: documentation
     fn from_bytes(bytes: &[i8]) -> Result<Self, Self::Error> {
         Ok(Self([0; 32]))
     }
@@ -60,9 +54,6 @@ impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
     fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut csprng = OsRng {};
         let private_key = ed25519_dalek::SecretKey::generate(&mut csprng);
-
-        // TODO Generic param ?
-        // let _subseed = seed.subseed::<Kerl>(index);
 
         Ok(Self::PrivateKey {
             private_key: private_key,
