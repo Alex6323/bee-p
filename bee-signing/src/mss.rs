@@ -98,12 +98,12 @@ where
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
     type Error = MssError;
 
-    fn generate(&self, seed: &impl Seed, _: u64) -> Result<Self::PrivateKey, Self::Error> {
+    fn generate(&self, seed: &Self::Seed, _: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut sponge = S::default();
         let mut keys = Vec::new();
         let mut tree = TritsBuf::with_capacity(((1 << self.depth) - 1) * 243);
 
-        // TODO: subseed
+        // TODO: subseed collision ?
         // TODO: reserve ?
 
         for key_index in 0..(1 << (self.depth - 1)) {
@@ -436,14 +436,13 @@ mod tests {
     //     assert!(valid);
     // }
 
-    fn mss_generic_gen_test<S, G, M>(generator: G, seed: M)
+    fn mss_generic_gen_test<S, G>(generator: G, seed: G::Seed)
     where
         S: Sponge + Default,
         G: Default,
         G: PrivateKeyGenerator + Copy,
         <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
             RecoverableSignature,
-        M: Seed,
     {
         const SEED: &str =
             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";

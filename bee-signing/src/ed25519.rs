@@ -57,7 +57,7 @@ impl PrivateKeyGenerator for Ed25519PrivateKeyGenerator {
     type PrivateKey = Ed25519PrivateKey;
     type Error = Infallible;
 
-    fn generate(&self, seed: &impl Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
+    fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut csprng = OsRng {};
         let private_key = ed25519_dalek::SecretKey::generate(&mut csprng);
 

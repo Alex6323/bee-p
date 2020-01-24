@@ -46,7 +46,7 @@ pub trait PrivateKeyGenerator {
     /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
     /// let private_key = private_key_generator.generate(&seed, 0);
     /// ```
-    fn generate(&self, seed: &impl Seed, index: u64) -> Result<Self::PrivateKey, Self::Error>;
+    fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error>;
 }
 
 // TODO: documentation
