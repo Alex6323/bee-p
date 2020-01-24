@@ -38,10 +38,10 @@ pub trait PrivateKeyGenerator {
     /// ```
     /// use crypto::Kerl;
     /// use signing::PrivateKeyGenerator;
-    /// use signing::seed::Seed;
+    /// use signing::iota_seed::IotaSeed;
     /// use signing::wots::WotsPrivateKeyGeneratorBuilder;
     ///
-    /// let seed = Seed::new();
+    /// let seed = IotaSeed::<Kerl>::new();
     /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
     /// let private_key = private_key_generator.generate(&seed, 0);
     /// ```
@@ -63,11 +63,11 @@ pub trait PrivateKey {
     /// ```
     /// # use crypto::Kerl;
     /// # use signing::PrivateKeyGenerator;
-    /// # use signing::seed::Seed;
+    /// # use signing::iota_seed::IotaSeed;
     /// # use signing::wots::WotsPrivateKeyGeneratorBuilder;
     /// use signing::PrivateKey;
     ///
-    /// # let seed = Seed::new();
+    /// # let seed = IotaSeed::<Kerl>::new();
     /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
     /// # let private_key = private_key_generator.generate(&seed, 0);
     /// let public_key = private_key.generate_public_key();
@@ -85,12 +85,12 @@ pub trait PrivateKey {
     /// ```
     /// # use crypto::Kerl;
     /// # use signing::PrivateKeyGenerator;
-    /// # use signing::seed::Seed;
+    /// # use signing::iota_seed::IotaSeed;
     /// # use signing::wots::WotsPrivateKeyGeneratorBuilder;
     /// use signing::PrivateKey;
     /// use iota_conversion::Trinary;
     ///
-    /// # let seed = Seed::new();
+    /// # let seed = IotaSeed::<Kerl>::new();
     /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
     /// # let mut private_key = private_key_generator.generate(&seed, 0);
     /// let message = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD".trits();
