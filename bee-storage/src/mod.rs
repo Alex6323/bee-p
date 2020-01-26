@@ -5,7 +5,10 @@ use std::fmt::{self, Debug, Display};
 use std::io;
 use std::{collections::HashMap,collections::HashSet, rc::Rc};
 
+pub use bundle::*;
+
 use serde::{Serialize, Deserialize};
+
 
 
 /// A transaction address. To be replaced later with whatever implementation is required.
