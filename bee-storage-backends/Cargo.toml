@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 storage = { path = "../bee-storage" }
+bundle = { path = "../bee-bundle" }
 sqlx = {version = "0.2.0", features = [ "postgres" ]}
 async-std = { version = "1.4.0", features = [ "attributes" ] }
 async-trait = "0.1.22"

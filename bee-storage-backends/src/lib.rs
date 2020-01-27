@@ -2,6 +2,7 @@
 
 extern crate rand;
 pub mod sqlx_backend;
+pub use bundle::*;
 
 #[cfg(test)]
 
@@ -28,45 +29,37 @@ mod tests {
     use std::io::{self, Write};
     use std::panic;
 
-    fn rand_hash_string() -> String{
+    fn rand_hash_string() -> bundle::Hash{
         use rand::Rng;
         const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
         const HASH_LEN: usize = 81;
         let mut rng = rand::thread_rng();
 
-        (0..HASH_LEN)
+        let hash_str : String = (0..HASH_LEN)
             .map(|_| {
                 let idx = rng.gen_range(0, CHARSET.len());
                 CHARSET[idx] as char
             })
-            .collect()
+            .collect();
+
+        let hash: bundle::Hash = hash_str.into();
+        hash
     }
 
-    fn create_random_tx() -> Transaction {
-        Transaction {
-            hash: rand_hash_string(),
-            tag: String::from("tag"),
-            bundle: String::from("bundle"),
-            address: String::from("address"),
-            trunk_transaction: rand_hash_string(),
-            branch_transaction: rand_hash_string(),
-            nonce: String::from("nonce"),
-            attachment_timestamp_lower_bound: 1,
-            attachment_timestamp_upper_bound: 10,
-            attachment_timestamp: 6,
-            signature_fragments: String::from("signature_fragment"),
-            current_index: 0,
-            last_index: 1,
-            persistence: true,
-            timestamp: 100,
-            value: -100,
-            obsolete_tag: String::from("obsolete_tag"),
-        }
+    fn create_random_tx() -> (bundle::Hash, bundle::Transaction) {
+        let mut builder = bundle::TransactionBuilder::default();
+        builder
+            .value(bundle::Value(10))
+            .address(bundle::Address::from_str("ME"))
+            .tag(bundle::Tag::from_str("HELLO"))
+            .nonce(bundle::Nonce::from_str("ABCDEF"));
+
+        (rand_hash_string() , builder.build())
     }
 
     fn create_random_milestone() -> Milestone {
         Milestone {
-            hash: rand_hash_string(),
+            hash: rand_hash_string().to_string(),
             index: 0,
         }
     }
@@ -130,12 +123,12 @@ mod tests {
             let mut storage = SqlxBackendStorage::new();
 
             block_on(storage.establish_connection());
-            let tx = create_random_tx();
-            block_on(storage.insert_transaction(&tx));
-            let res = block_on(storage.find_transaction(tx.hash.as_str()));
+            let (tx_hash, tx) = create_random_tx();
+            block_on(storage.insert_transaction(&tx_hash, &tx));
+            let res = block_on(storage.find_transaction(&tx_hash));
             let found_tx = res.unwrap();
             block_on(storage.destroy_connection());
-            assert_eq!(tx, found_tx);
+            assert_eq!(tx.nonce.0, found_tx.nonce.0);
         })
     }
 

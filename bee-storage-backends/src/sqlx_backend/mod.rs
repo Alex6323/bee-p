@@ -24,6 +24,8 @@ use futures::executor::block_on;
 use serde::{Serialize, Deserialize};
 use std::io::{self, Write};
 
+pub use bundle::*;
+
 
 std::include!("../sql/statements.rs");
 
@@ -169,7 +171,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(missing_to_approvers)
     }
     //Implement all methods here
-    async fn insert_transaction(&self, tx: &Transaction) -> Result<(), SqlxBackendError> {
+    async fn insert_transaction(&self, tx_hash: &bundle::Hash, tx: &bundle::Transaction) -> Result<(), SqlxBackendError> {
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
@@ -178,11 +180,11 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let row = sqlx::query(
             INSERT_TRANSACTION_STATEMENT
         )
-        .bind(tx.signature_fragments.as_bytes()).bind(tx.address.as_bytes()).bind(tx.value).bind(tx.obsolete_tag.as_bytes()).
-            bind(tx.timestamp).bind(tx.current_index as i32).bind(tx.last_index as i32).
-            bind(tx.bundle.as_bytes()).bind(tx.trunk_transaction.as_bytes()).bind(tx.branch_transaction.as_bytes()).
-            bind(tx.tag.as_bytes()).bind(tx.attachment_timestamp).
-            bind(tx.attachment_timestamp_lower_bound).bind(tx.attachment_timestamp_upper_bound).bind(tx.nonce.as_bytes()).bind(tx.hash.as_bytes())
+        .bind(tx.payload.to_string().as_bytes()).bind(tx.address.to_string().as_bytes()).bind(tx.value.0).bind(tx.obsolete_tag.to_string().as_bytes()).
+            bind(tx.timestamp.0 as i32).bind(tx.index.0 as i32).bind(tx.last_index.0 as i32).
+            bind(tx.bundle_hash.to_string().as_bytes()).bind(tx.trunk_hash.to_string().as_bytes()).bind(tx.branch_hash.to_string().as_bytes()).
+            bind(tx.tag.to_string().as_bytes()).bind(tx.attachment_ts.0 as i32).
+            bind(tx.attachment_lbts.0 as i32).bind(tx.attachment_ubts.0 as i32).bind(tx.nonce.to_string().as_bytes()).bind(tx_hash.to_string().as_bytes())
         .fetch_one(&mut conn_transaction)
         .await?;
 
@@ -191,7 +193,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn find_transaction(&self, tx_hash: &str) -> Result<Transaction, SqlxBackendError> {
+    async fn find_transaction(&self, tx_hash: &bundle::Hash) -> Result<bundle::Transaction, SqlxBackendError> {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
@@ -199,36 +201,34 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let user_id : i32 = 0;
         let rec = sqlx::query(
             FIND_TRANSACTION_BY_HASH_STATEMENT
-    ).bind(tx_hash.as_bytes())
+    ).bind(tx_hash.to_string().as_bytes())
             .fetch_one(&mut pool)
             .await?;
 
         let value: i64 = rec.get::<i32,_>(TRANSACTION_COL_VALUE) as i64;
-        let current_index: usize = rec.get::<i16,_>(TRANSACTION_COL_CURRENT_INDEX) as usize;
+        let index: usize = rec.get::<i16,_>(TRANSACTION_COL_CURRENT_INDEX) as usize;
         let last_index: usize = rec.get::<i16,_>(TRANSACTION_COL_LAST_INDEX) as usize;
-        let attachment_timestamp: i64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP) as i64;
-        let attachment_timestamp_lower_bound: i64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_LOWER) as i64;
-        let attachment_timestamp_upper_bound: i64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER) as i64;
-        let timestamp: i64 = rec.get::<i32,_>(TRANSACTION_COL_TIMESTAMP) as i64;
+        let attachment_ts: u64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP) as u64;
+        let attachment_lbts: u64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_LOWER) as u64;
+        let attachment_ubts: u64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER) as u64;
+        let timestamp: u64 = rec.get::<i32,_>(TRANSACTION_COL_TIMESTAMP) as u64;
 
-        let tx = Transaction {
-            hash: rec.get(TRANSACTION_COL_HASH),
-            tag: rec.get(TRANSACTION_COL_TAG),
-            bundle: rec.get(TRANSACTION_COL_BUNDLE),
-            address: rec.get(TRANSACTION_COL_ADDRESS),
-            trunk_transaction: rec.get(TRANSACTION_COL_TRUNK),
-            branch_transaction: rec.get(TRANSACTION_COL_BRANCH),
-            nonce: rec.get(TRANSACTION_COL_NONCE),
-            attachment_timestamp_lower_bound,
-            attachment_timestamp_upper_bound,
-            attachment_timestamp,
-            signature_fragments: rec.get(TRANSACTION_COL_SIG_OR_MESSAGE),
-            current_index,
-            last_index,
-            persistence: true,
-            timestamp,
-            value,
-            obsolete_tag: rec.get(TRANSACTION_COL_OBSOLETE_TAG),
+        let tx = bundle::Transaction {
+            tag : rec.get::<String, _>(TRANSACTION_COL_TAG).into(),
+            bundle_hash : rec.get::<String, _>(TRANSACTION_COL_BUNDLE).into(),
+            address: rec.get::<String, _>(TRANSACTION_COL_ADDRESS).into(),
+            trunk_hash: rec.get::<String, _>(TRANSACTION_COL_TRUNK).into(),
+            branch_hash: rec.get::<String, _>(TRANSACTION_COL_BRANCH).into(),
+            nonce: rec.get::<String, _>(TRANSACTION_COL_NONCE).into(),
+            attachment_lbts: bundle::Timestamp(attachment_lbts),
+            attachment_ubts: bundle::Timestamp(attachment_ubts),
+            attachment_ts : bundle::Timestamp(attachment_ts),
+            payload: rec.get::<String, _>(TRANSACTION_COL_SIG_OR_MESSAGE).into(),
+            index: (bundle::Index(index)),
+            last_index: (bundle::Index(last_index)),
+            timestamp : bundle::Timestamp(timestamp),
+            value: bundle::Value(value),
+            obsolete_tag: rec.get::<String, _>(TRANSACTION_COL_OBSOLETE_TAG).into(),
         };
 
 
