@@ -1,4 +1,4 @@
-use super::{PrivateKey, PrivateKeyGenerator, PublicKey, Seed, Signature};
+use crate::{PrivateKey, PrivateKeyGenerator, PublicKey, Seed, Signature};
 use rand::rngs::OsRng;
 use std::convert::Infallible;
 
