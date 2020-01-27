@@ -159,11 +159,7 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     // TODO: enforce hash size ?
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
         Ok(slice_eq(
-            &signature
-                .recover_public_key(message)
-                .unwrap()
-                .state
-                .inner_ref(),
+            &signature.recover_public_key(message)?.state.inner_ref(),
             &self.state.inner_ref(),
         ))
     }
