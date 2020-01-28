@@ -1,9 +1,10 @@
-use crypto::{Sponge, TritsBuf};
-// TODO Remove when available in bee
 use crate::Seed;
+use crypto::Sponge;
 use iota_conversion::Trinary;
 use rand::Rng;
 use std::marker::PhantomData;
+use ternary::TritsBuf;
+use ternary::TRYTE_ALPHABET;
 
 // TODO Put constants in a separate file
 
@@ -11,8 +12,6 @@ use std::marker::PhantomData;
 pub const MIN_TRIT_VALUE: i8 = -1;
 // TODO: documentation
 pub const MAX_TRIT_VALUE: i8 = 1;
-// TODO: documentation
-pub const TRYTE_ALPHABET: &[u8] = b"9ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 // TODO: documentation
 pub struct IotaSeed<S> {
