@@ -6,7 +6,30 @@ use common::Error;
 use ternary::IsTryte;
 
 use crate::constants::*;
-use std::fmt;
+
+macro_rules! implement_debug {
+    ($($t:ty),+) => {
+    $(
+        impl std::fmt::Debug for $t {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0.iter().collect::<String>())
+            }
+        }
+    )+
+    }
+}
+
+macro_rules! implement_display {
+    ($($t:ty),+) => {
+    $(
+        impl std::fmt::Display for $t {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0.iter().collect::<String>())
+            }
+        }
+    )+
+    }
+}
 
 pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
 pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
@@ -22,21 +45,21 @@ pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
 
 #[derive(Default)]
 pub struct Transaction {
-    pub payload: Payload,
-    pub address: Address,
-    pub value: Value,
-    pub obsolete_tag: Tag,
-    pub timestamp: Timestamp,
-    pub index: Index,
-    pub last_index: Index,
-    pub bundle_hash: Hash,
-    pub trunk_hash: Hash,
-    pub branch_hash: Hash,
-    pub tag: Tag,
-    pub attachment_ts: Timestamp,
-    pub attachment_lbts: Timestamp,
-    pub attachment_ubts: Timestamp,
-    pub nonce: Nonce,
+    payload: Payload,
+    address: Address,
+    value: Value,
+    obsolete_tag: Tag,
+    timestamp: Timestamp,
+    index: Index,
+    last_index: Index,
+    bundle_hash: Hash,
+    trunk_hash: Hash,
+    branch_hash: Hash,
+    tag: Tag,
+    attachment_ts: Timestamp,
+    attachment_lbts: Timestamp,
+    attachment_ubts: Timestamp,
+    nonce: Nonce,
 }
 
 /// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits, see the table below.
@@ -50,57 +73,30 @@ pub struct Essence<'a> {
     last_index: &'a Index,
 }
 
+impl Payload {
+    pub fn from_str(payload: &str) -> Self {
+        assert!(payload.len() <= PAYLOAD.tryte_offset.length);
+        assert!(payload.chars().all(|c| c.is_tryte()));
+
+        let mut trytes = [TRYTE_ZERO; PAYLOAD.tryte_offset.length];
+
+        for (i, c) in payload.chars().enumerate() {
+            trytes[i] = c;
+        }
+
+        Self(trytes)
+    }
+}
+
 impl Default for Payload {
     fn default() -> Self {
         Self([TRYTE_ZERO; PAYLOAD.tryte_offset.length])
     }
 }
 
-impl std::fmt::Debug for Payload {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
-
-impl fmt::Display for Payload {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
-
-impl From<String> for Payload {
-    fn from(item: String) -> Self {
-        let mut payload = Payload::default();
-        item.chars().map(|x| x)
-            .zip(payload.0.iter_mut()).for_each(|(b, df)| *df = b);
-        payload
-    }
-}
-
 impl Default for Address {
     fn default() -> Self {
         Self([TRYTE_ZERO; ADDRESS.tryte_offset.length])
-    }
-}
-
-impl std::fmt::Debug for Address {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
-
-impl fmt::Display for Address {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
-
-impl From<String> for Address {
-    fn from(item: String) -> Self {
-        let mut address = Address::default();
-        item.chars().map(|x| x)
-            .zip(address.0.iter_mut()).for_each(|(b, df)| *df = b);
-        address
     }
 }
 
@@ -125,27 +121,6 @@ impl Default for Tag {
     }
 }
 
-impl std::fmt::Debug for Tag {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
-
-impl From<String> for Tag {
-    fn from(item: String) -> Self {
-        let mut tag = Tag::default();
-        item.chars().map(|x| x)
-            .zip(tag.0.iter_mut()).for_each(|(b, df)| *df = b);
-        tag
-    }
-}
-
-impl fmt::Display for Tag {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
-
 impl Tag {
     pub fn from_str(tag: &str) -> Self {
         assert!(tag.len() <= TAG.tryte_offset.length);
@@ -167,52 +142,24 @@ impl Default for Hash {
     }
 }
 
-impl std::fmt::Debug for Hash {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
+impl Hash {
+    pub fn from_str(hash: &str) -> Self {
+        assert!(hash.len() <= BUNDLE_HASH.tryte_offset.length);
+        assert!(hash.chars().all(|c| c.is_tryte()));
 
-impl fmt::Display for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
+        let mut trytes = [TRYTE_ZERO; BUNDLE_HASH.tryte_offset.length];
 
-impl From<String> for Hash {
-    fn from(item: String) -> Self {
-        let mut hash = Hash::default();
-        item.chars().map(|x| x)
-            .zip(hash.0.iter_mut()).for_each(|(b, df)| *df = b);
-        hash
+        for (i, c) in hash.chars().enumerate() {
+            trytes[i] = c;
+        }
+
+        Self(trytes)
     }
 }
 
 impl Default for Nonce {
     fn default() -> Self {
         Self([TRYTE_ZERO; NONCE.tryte_offset.length])
-    }
-}
-
-impl std::fmt::Debug for Nonce {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
-
-impl fmt::Display for Nonce {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.iter().collect::<String>())
-    }
-}
-
-
-impl From<String> for Nonce {
-    fn from(item: String) -> Self {
-        let mut nonce = Nonce::default();
-        item.chars().map(|x| x)
-            .zip(nonce.0.iter_mut()).for_each(|(b, df)| *df = b);
-        nonce
     }
 }
 
@@ -230,6 +177,9 @@ impl Nonce {
         Self(trytes)
     }
 }
+
+implement_debug!(Payload, Address, Tag, Nonce, Hash);
+implement_display!(Payload, Address, Tag, Nonce, Hash);
 
 impl Transaction {
     pub fn from_tryte_str(tx_trytes: &str) -> Self {
@@ -438,6 +388,21 @@ impl TransactionBuilder {
 
     pub fn attachment_ts(&mut self, attachment_ts: Timestamp) -> &mut Self {
         self.attachment_ts.replace(attachment_ts);
+        self
+    }
+
+    pub fn bundle_hash(&mut self, bundle_hash: Hash) -> &mut Self {
+        self.bundle_hash.replace(bundle_hash);
+        self
+    }
+
+    pub fn trunk_hash(&mut self, trunk_hash: Hash) -> &mut Self {
+        self.trunk_hash.replace(trunk_hash);
+        self
+    }
+
+    pub fn branch_hash(&mut self, branch_hash: Hash) -> &mut Self {
+        self.branch_hash.replace(branch_hash);
         self
     }
 
