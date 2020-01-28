@@ -1,4 +1,4 @@
-use crypto::curl::constants::CURL_STAT_TRIT_LEN as STATE_LEN;
+use crate::constants::STATE_LEN;
 
 type WithCarry = bool;
 
