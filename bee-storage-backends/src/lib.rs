@@ -24,7 +24,6 @@ mod tests {
     use rand::Rng;
     use storage::{Milestone, StorageBackend};
     use futures::executor::block_on;
-    use iota_lib_rs::iota_model::{Transaction};
     use std::process::Command;
     use std::io::{self, Write};
     use std::panic;
@@ -129,7 +128,7 @@ mod tests {
             let res = block_on(storage.find_transaction(&tx_hash));
             let found_tx = res.unwrap();
             block_on(storage.destroy_connection());
-            assert_eq!(tx.nonce.0, found_tx.nonce.0);
+            assert_eq!(tx.nonce().0, found_tx.nonce().0);
         })
     }
 

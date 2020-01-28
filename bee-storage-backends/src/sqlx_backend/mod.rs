@@ -9,7 +9,6 @@ pub mod errors;
 //Tests - sanity and multithreaded + benchmarking
 //Support multiple sql backends via sqlx
 //Get rid of all warnings
-//Do we need `destroy_connection`
 
 
 use errors::*;
@@ -17,7 +16,6 @@ use errors::*;
 use sqlx::{Row, PgPool};
 use storage::{Connection, HashesToApprovers, MissingHashesToRCApprovers, Milestone};
 use async_trait::async_trait;
-use iota_lib_rs::iota_model::{Transaction};
 use std::{fmt, env, cmp, error::Error as StdError,  rc::Rc};
 use std::collections::{HashMap, HashSet};
 use futures::executor::block_on;
@@ -224,27 +222,23 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let attachment_ubts: u64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER) as u64;
         let timestamp: u64 = rec.get::<i32,_>(TRANSACTION_COL_TIMESTAMP) as u64;
 
-        let mut builder = bundle::TransactionBuilder::new();
-        builder
-            .payload(Payload::from_str(&rec.get::<String, _>(TRANSACTION_COL_SIG_OR_MESSAGE)))
-            .address(Address::from_str(&rec.get::<String, _>(TRANSACTION_COL_ADDRESS)))
-            .value(Value(value))
-            .obsolete_tag(Tag::from_str(&rec.get::<String, _>(TRANSACTION_COL_OBSOLETE_TAG)))
-            .timestamp(Timestamp(timestamp))
-            .index(Index(index))
-            .last_index(Index(last_index))
-            .bundle_hash(Hash::from_str(&rec.get::<String, _>(TRANSACTION_COL_BUNDLE)))
-            .trunk_hash(Hash::from_str(&rec.get::<String, _>(TRANSACTION_COL_TRUNK)))
-            .branch_hash(Hash::from_str(&rec.get::<String, _>(TRANSACTION_COL_BRANCH)))
-            .tag(Tag::from_str(&rec.get::<String, _>(TRANSACTION_COL_TAG)))
-            .attachment_ts(Timestamp(attachment_ts))
-            .attachment_lbts(Timestamp(attachment_lbts))
-            .attachment_ubts(Timestamp(attachment_ubts))
-            .nonce(Nonce::from_str(&rec.get::<String, _>(TRANSACTION_COL_NONCE)));
+        let mut builder = bundle::TransactionBuilder::default();
+        builder.
+            tag(rec.get::<String, _>(TRANSACTION_COL_TAG).into()).
+            address(rec.get::<String, _>(TRANSACTION_COL_ADDRESS).into()).
+            nonce(rec.get::<String, _>(TRANSACTION_COL_NONCE).into()).
+            attachment_lbts(bundle::Timestamp(attachment_lbts)).
+            attachment_ubts(bundle::Timestamp(attachment_ubts)).
+            attachment_ts(bundle::Timestamp(attachment_ts)).
+            payload(rec.get::<String, _>(TRANSACTION_COL_SIG_OR_MESSAGE).into()).
+            index((bundle::Index(index))).
+            last_index((bundle::Index(last_index))).
+            timestamp(bundle::Timestamp(timestamp)).
+            value(bundle::Value(value)).
+            obsolete_tag(rec.get::<String, _>(TRANSACTION_COL_OBSOLETE_TAG).into());
 
-        let tx = builder.build();
+        Ok(builder.build())
 
-        Ok(tx)
     }
 
     async fn update_transactions_set_solid(
