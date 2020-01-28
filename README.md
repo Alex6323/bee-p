@@ -11,4 +11,7 @@
 - [ ] Gossip layer
 - [ ] Node layer
 - [ ] CLI
+- [ ] API
 - [ ] Local snapshots
+- [ ] TSA
+- [ ] ZeroMQ
