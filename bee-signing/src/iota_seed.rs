@@ -3,8 +3,7 @@ use crypto::Sponge;
 use iota_conversion::Trinary;
 use rand::Rng;
 use std::marker::PhantomData;
-use ternary::TritsBuf;
-use ternary::TRYTE_ALPHABET;
+use ternary::{TritsBuf, TRYTE_ALPHABET};
 
 // TODO Put constants in a separate file
 
