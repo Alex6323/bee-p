@@ -1,6 +1,3 @@
-// TODO remove and remove associated Debug
-use std::fmt::Debug;
-
 pub trait Seed {
     type Error;
 
@@ -16,7 +13,7 @@ pub trait PrivateKeyGenerator {
     type Seed: Seed;
     /// The type of the generated private keys
     type PrivateKey: PrivateKey;
-    type Error: Debug;
+    type Error;
 
     /// Deterministically generates and returns a private key
     ///
@@ -46,7 +43,7 @@ pub trait PrivateKey {
     type PublicKey: PublicKey;
     /// The type of the generated signatures
     type Signature: Signature;
-    type Error: Debug;
+    type Error;
 
     /// Returns the public counterpart of a private key
     ///
@@ -95,7 +92,7 @@ pub trait PrivateKey {
 pub trait PublicKey {
     // TODO: documentation
     type Signature: Signature;
-    type Error: Debug;
+    type Error;
 
     // TODO: documentation
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error>;
@@ -123,7 +120,7 @@ pub trait Signature {
 pub trait RecoverableSignature: Signature {
     // TODO: documentation
     type PublicKey: PublicKey;
-    type Error: Debug;
+    type Error;
 
     // TODO: documentation
     fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error>;
