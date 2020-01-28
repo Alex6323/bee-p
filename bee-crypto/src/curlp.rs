@@ -79,10 +79,10 @@ impl CurlP {
             }
         }
 
-        let (lhs, rhs) = (&mut self.state.0, &mut self.work_state.0);
+        let (lhs, rhs) = (&mut self.state, &mut self.work_state);
 
         for _ in 0..self.rounds {
-            apply_substitution_box(lhs, rhs);
+            apply_substitution_box(lhs.inner_ref(), rhs.inner_mut());
             std::mem::swap(lhs, rhs);
         }
 
@@ -108,9 +108,9 @@ impl Sponge for CurlP {
     /// data in the internal state is then just the result of the last transformation before the
     /// data was copied, and will be reused for the next transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-        for chunk in input.0.chunks(Self::IN_LEN) {
+        for chunk in input.inner_ref().chunks(Self::IN_LEN) {
             self.state
-                .0[0..chunk.len()]
+                .inner_mut()[0..chunk.len()]
                 .copy_from_slice(chunk);
             self.transform();
         }
@@ -130,10 +130,10 @@ impl Sponge for CurlP {
     /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written
     /// into it.
     fn squeeze_into(&mut self, buf: &mut TritsMut) {
-        for chunk in buf.0.chunks_mut(Self::OUT_LEN) {
+        for chunk in buf.inner_mut().chunks_mut(Self::OUT_LEN) {
             chunk.copy_from_slice(
                 &self.state
-                    .0[0..chunk.len()]
+                    .inner_ref()[0..chunk.len()]
             );
             self.transform()
         }
@@ -208,7 +208,7 @@ forward_sponge_impl!(CurlP27, CurlP81);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::trytes_to_trits_buf;
+    use ternary::utils::trytes_to_trits_buf;
 
     const INPUT_TRITS: &[i8] = &[
         -1,  1, -1, -1,  1, -1,  1,  1,  0, -1,  0,  0,  1,  0,  1,  0,  0,  0, -1, -1, -1, -1,  0,  0,

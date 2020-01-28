@@ -1,5 +1,16 @@
 mod trytes;
 
+pub mod trits;
+pub mod utils;
+
+pub use trits::{
+    Trits,
+    TritsBuf,
+    TritsMut,
+    ValidTrits,
+}
+;
+
 pub use trytes::*;
 
 // ONLY TEMPORARY
