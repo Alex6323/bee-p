@@ -15,7 +15,7 @@ pub mod errors;
 use errors::*;
 
 use sqlx::{Row, PgPool};
-use storage::{Connection, HashesToApprovers, MissingHashesToRCApprovers, Milestone, TxHash};
+use storage::{Connection, HashesToApprovers, MissingHashesToRCApprovers, Milestone};
 use async_trait::async_trait;
 use iota_lib_rs::iota_model::{Transaction};
 use std::{fmt, env, cmp, error::Error as StdError,  rc::Rc};
@@ -107,8 +107,8 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
             for (i, row) in rows.iter().enumerate()  {
 
-                hash_to_approvers.entry(row.get(TRANSACTION_COL_BRANCH)).or_insert(HashSet::new()).insert(row.get(TRANSACTION_COL_HASH));
-                hash_to_approvers.entry(row.get(TRANSACTION_COL_TRUNK)).or_insert(HashSet::new()).insert(row.get(TRANSACTION_COL_HASH));
+                hash_to_approvers.entry(row.get::<String,_>(TRANSACTION_COL_BRANCH).into()).or_insert(HashSet::new()).insert(row.get::<String,_>(TRANSACTION_COL_HASH).into());
+                hash_to_approvers.entry(row.get::<String,_>(TRANSACTION_COL_TRUNK).into()).or_insert(HashSet::new()).insert(row.get::<String,_>(TRANSACTION_COL_HASH).into());
 
             }
 
@@ -125,7 +125,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
     }
 
     fn map_missing_transaction_hashes_to_approvers(
-        &self, all_hashes: HashSet<String>
+        &self, all_hashes: HashSet<bundle::Hash>
     ) -> Result<MissingHashesToRCApprovers, SqlxBackendError> {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
@@ -143,19 +143,19 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
             for (i, row) in rows.iter().enumerate()  {
 
-                let branch : String = row.get(TRANSACTION_COL_BRANCH);
-                let trunk : String = row.get(TRANSACTION_COL_TRUNK);
+                let branch : bundle::Hash = row.get::<String,_>(TRANSACTION_COL_BRANCH).into();
+                let trunk : bundle::Hash = row.get::<String,_>(TRANSACTION_COL_TRUNK).into();
                 let mut optional_approver_rc = None;
 
                 if !all_hashes.contains(&branch){
-                    optional_approver_rc = Some(Rc::<String>::new(row.get(TRANSACTION_COL_HASH)));
-                    missing_to_approvers.entry(row.get(TRANSACTION_COL_BRANCH)).or_insert(HashSet::new()).insert(optional_approver_rc.clone().unwrap());
+                    optional_approver_rc = Some(Rc::<bundle::Hash>::new(row.get::<String,_>(TRANSACTION_COL_HASH).into()));
+                    missing_to_approvers.entry(row.get::<String,_>(TRANSACTION_COL_BRANCH).into()).or_insert(HashSet::new()).insert(optional_approver_rc.clone().unwrap());
                 }
 
 
                 if !all_hashes.contains(&trunk){
-                    let approver_rc : Rc<String> = optional_approver_rc.map_or(Rc::new(row.get(TRANSACTION_COL_HASH)), |rc| rc.clone());
-                    missing_to_approvers.entry(row.get(TRANSACTION_COL_TRUNK)).or_insert(HashSet::new()).insert(approver_rc);
+                    let approver_rc : Rc<bundle::Hash> = optional_approver_rc.map_or(Rc::new(row.get::<String,_>(TRANSACTION_COL_HASH).into()), |rc| rc.clone());
+                    missing_to_approvers.entry(row.get::<String,_>(TRANSACTION_COL_TRUNK).into()).or_insert(HashSet::new()).insert(approver_rc);
                 }
 
             }
@@ -249,7 +249,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     async fn update_transactions_set_solid(
         &self,
-        transaction_hashes: HashSet<String>,
+        transaction_hashes: HashSet<bundle::Hash>,
     ) -> Result<(), SqlxBackendError> {
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
@@ -260,7 +260,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
             UPDATE_SET_SOLID_STATEMENT
         )
 
-            .bind(hash.as_bytes())
+            .bind(hash.to_string().as_bytes())
             .fetch_one(&mut conn_transaction);
 
         });
@@ -271,7 +271,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     async fn update_transactions_set_snapshot_index(
         &self,
-        transaction_hashes: HashSet<String>,
+        transaction_hashes: HashSet<bundle::Hash>,
         snapshot_index: u32,
     ) -> Result<(), SqlxBackendError> {
 
@@ -281,7 +281,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         transaction_hashes.iter().for_each( |hash|{        sqlx::query(
             UPDATE_SNAPSHOT_INDEX_STATEMENT
         )
-            .bind(hash.as_bytes()).bind(snapshot_index as i32)
+            .bind(hash.to_string().as_bytes()).bind(snapshot_index as i32)
             .fetch_one(&mut conn_transaction);
 
         });
@@ -292,7 +292,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn delete_transactions(&self, transaction_hashes: HashSet<String>) -> Result<(), SqlxBackendError>{
+    async fn delete_transactions(&self, transaction_hashes: HashSet<bundle::Hash>) -> Result<(), SqlxBackendError>{
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
@@ -302,7 +302,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
                 DELETE_TRANSACTION_STATEMENT
             )
 
-                .bind(hash.as_bytes())
+                .bind(hash.to_string().as_bytes())
                 .fetch_one(&mut conn_transaction);
 
         });
@@ -321,31 +321,28 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let row = sqlx::query(
             INSERT_MILESTONE_STATEMENT
         )
-            .bind(milestone.index as i32).bind(&milestone.hash.as_bytes())
+            .bind(milestone.index as i32).bind(&milestone.hash.to_string().as_bytes())
             .fetch_one(&mut conn_transaction)
             .await?;
-
-        println!("{}\n", milestone.hash);
-
 
         conn_transaction.commit().await?;
 
         Ok(())
     }
 
-    async fn find_milestone(&self, milestone_hash: &str) -> Result<Milestone, SqlxBackendError>{
+    async fn find_milestone(&self, milestone_hash: &bundle::Hash) -> Result<Milestone, SqlxBackendError>{
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
         let user_id : i32 = 0;
         let rec = sqlx::query(
             FIND_MILESTONE_BY_HASH_STATEMENT
-        ).bind(milestone_hash.as_bytes())
+        ).bind(milestone_hash.to_string().as_bytes())
             .fetch_one(&mut pool)
             .await?;
 
         let milestone = Milestone {
-            hash: rec.get::<String,_>(MILESTONE_COL_HASH),
+            hash: rec.get::<String,_>(MILESTONE_COL_HASH).into(),
             index: rec.get::<i32,_>(MILESTONE_COL_ID) as u32,
         };
 
@@ -355,7 +352,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     async fn delete_milestones(
         &self,
-        milestone_hashes: HashSet<&str>,
+        milestone_hashes: HashSet<&bundle::Hash>,
     ) -> Result<(), SqlxBackendError>{
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
@@ -366,7 +363,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
                 DELETE_MILESTONE_BY_HASH_STATEMENT
             )
 
-                .bind(hash.as_bytes())
+                .bind(hash.to_string().as_bytes())
                 .fetch_one(&mut conn_transaction);
 
         });

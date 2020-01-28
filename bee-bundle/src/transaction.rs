@@ -6,6 +6,8 @@ use common::Error;
 use ternary::IsTryte;
 
 use crate::constants::*;
+use std::hash::Hash as StdHash;
+use std::hash::Hasher as StdHasher;
 
 macro_rules! implement_debug {
     ($($t:ty),+) => {
@@ -30,6 +32,8 @@ macro_rules! implement_display {
     )+
     }
 }
+
+
 
 pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
 pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
@@ -115,6 +119,21 @@ impl Address {
     }
 }
 
+impl PartialEq for Address {
+    fn eq(&self, other: &Address) -> bool {
+        self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
+    }
+}
+
+
+impl Eq for Address {}
+
+impl StdHash for Address {
+    fn hash<H: StdHasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
 impl Default for Tag {
     fn default() -> Self {
         Self([TRYTE_ZERO; TAG.tryte_offset.length])
@@ -154,6 +173,20 @@ impl Hash {
         }
 
         Self(trytes)
+    }
+}
+
+impl PartialEq for Hash {
+    fn eq(&self, other: &Hash) -> bool {
+        self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
+    }
+}
+
+impl Eq for Hash {}
+
+impl StdHash for Hash {
+    fn hash<H: StdHasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 

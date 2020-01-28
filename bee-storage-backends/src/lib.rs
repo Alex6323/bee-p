@@ -28,6 +28,7 @@ mod tests {
     use std::process::Command;
     use std::io::{self, Write};
     use std::panic;
+    use std::borrow::Borrow;
 
     fn rand_hash_string() -> bundle::Hash{
         use rand::Rng;
@@ -59,7 +60,7 @@ mod tests {
 
     fn create_random_milestone() -> Milestone {
         Milestone {
-            hash: rand_hash_string().to_string(),
+            hash: rand_hash_string(),
             index: 0,
         }
     }
@@ -141,10 +142,10 @@ mod tests {
             let mut milestone = create_random_milestone();
             milestone.index = 1;
             block_on(storage.insert_milestone(&milestone));
-            let res = block_on(storage.find_milestone(milestone.hash.as_str()));
+            let res = block_on(storage.find_milestone(milestone.hash.borrow()));
             let found_milestone = res.unwrap();
             block_on(storage.destroy_connection());
-            assert_eq!(milestone, found_milestone);
+            assert_eq!(milestone.hash.to_string(), found_milestone.hash.to_string());
         })
     }
 }
