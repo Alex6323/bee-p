@@ -1,6 +1,7 @@
-use crypto::{Sponge, TritsBuf};
-// TODO Remove when available in bee
 use crate::Seed;
+use crypto::Sponge;
+use ternary::TritsBuf;
+// TODO Remove when available in bee
 use iota_conversion::Trinary;
 use rand::Rng;
 use std::marker::PhantomData;

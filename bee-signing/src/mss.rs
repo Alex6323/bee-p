@@ -1,8 +1,9 @@
 use crate::{
     slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
 };
-use crypto::{Sponge, Trits, TritsBuf, TritsMut};
+use crypto::Sponge;
 use std::marker::PhantomData;
+use ternary::{Trits, TritsBuf, TritsMut};
 
 #[derive(Default)]
 pub struct MssPrivateKeyGeneratorBuilder<S, G> {
