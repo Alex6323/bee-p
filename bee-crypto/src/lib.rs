@@ -17,7 +17,8 @@ pub use curlp::{
     CurlP27,
     CurlP81,
 };
-pub use ternary::{
+
+use ternary::{
     Trits,
     TritsMut,
     TritsBuf,
