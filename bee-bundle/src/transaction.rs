@@ -6,6 +6,7 @@ use common::Error;
 use ternary::IsTryte;
 
 use crate::constants::*;
+use std::fmt;
 
 pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
 pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
@@ -21,21 +22,21 @@ pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
 
 #[derive(Default)]
 pub struct Transaction {
-    payload: Payload,
-    address: Address,
-    value: Value,
-    obsolete_tag: Tag,
-    timestamp: Timestamp,
-    index: Index,
-    last_index: Index,
-    bundle_hash: Hash,
-    trunk_hash: Hash,
-    branch_hash: Hash,
-    tag: Tag,
-    attachment_ts: Timestamp,
-    attachment_lbts: Timestamp,
-    attachment_ubts: Timestamp,
-    nonce: Nonce,
+    pub payload: Payload,
+    pub address: Address,
+    pub value: Value,
+    pub obsolete_tag: Tag,
+    pub timestamp: Timestamp,
+    pub index: Index,
+    pub last_index: Index,
+    pub bundle_hash: Hash,
+    pub trunk_hash: Hash,
+    pub branch_hash: Hash,
+    pub tag: Tag,
+    pub attachment_ts: Timestamp,
+    pub attachment_lbts: Timestamp,
+    pub attachment_ubts: Timestamp,
+    pub nonce: Nonce,
 }
 
 /// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits, see the table below.
@@ -61,6 +62,21 @@ impl std::fmt::Debug for Payload {
     }
 }
 
+impl fmt::Display for Payload {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.iter().collect::<String>())
+    }
+}
+
+impl From<String> for Payload {
+    fn from(item: String) -> Self {
+        let mut payload = Payload::default();
+        item.chars().map(|x| x)
+            .zip(payload.0.iter_mut()).for_each(|(b, df)| *df = b);
+        payload
+    }
+}
+
 impl Default for Address {
     fn default() -> Self {
         Self([TRYTE_ZERO; ADDRESS.tryte_offset.length])
@@ -70,6 +86,21 @@ impl Default for Address {
 impl std::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0.iter().collect::<String>())
+    }
+}
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.iter().collect::<String>())
+    }
+}
+
+impl From<String> for Address {
+    fn from(item: String) -> Self {
+        let mut address = Address::default();
+        item.chars().map(|x| x)
+            .zip(address.0.iter_mut()).for_each(|(b, df)| *df = b);
+        address
     }
 }
 
@@ -96,6 +127,21 @@ impl Default for Tag {
 
 impl std::fmt::Debug for Tag {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.iter().collect::<String>())
+    }
+}
+
+impl From<String> for Tag {
+    fn from(item: String) -> Self {
+        let mut tag = Tag::default();
+        item.chars().map(|x| x)
+            .zip(tag.0.iter_mut()).for_each(|(b, df)| *df = b);
+        tag
+    }
+}
+
+impl fmt::Display for Tag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0.iter().collect::<String>())
     }
 }
@@ -127,6 +173,21 @@ impl std::fmt::Debug for Hash {
     }
 }
 
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.iter().collect::<String>())
+    }
+}
+
+impl From<String> for Hash {
+    fn from(item: String) -> Self {
+        let mut hash = Hash::default();
+        item.chars().map(|x| x)
+            .zip(hash.0.iter_mut()).for_each(|(b, df)| *df = b);
+        hash
+    }
+}
+
 impl Default for Nonce {
     fn default() -> Self {
         Self([TRYTE_ZERO; NONCE.tryte_offset.length])
@@ -136,6 +197,22 @@ impl Default for Nonce {
 impl std::fmt::Debug for Nonce {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0.iter().collect::<String>())
+    }
+}
+
+impl fmt::Display for Nonce {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.iter().collect::<String>())
+    }
+}
+
+
+impl From<String> for Nonce {
+    fn from(item: String) -> Self {
+        let mut nonce = Nonce::default();
+        item.chars().map(|x| x)
+            .zip(nonce.0.iter_mut()).for_each(|(b, df)| *df = b);
+        nonce
     }
 }
 

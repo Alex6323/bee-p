@@ -1,6 +1,6 @@
 mod trytes;
+mod trits;
 
-pub mod trits;
 pub mod utils;
 
 pub use trits::{
@@ -8,10 +8,12 @@ pub use trits::{
     TritsBuf,
     TritsMut,
     ValidTrits,
-}
-;
+};
 
-pub use trytes::*;
+pub use trytes::{
+    TRYTE_ALPHABET,
+    IsTryte,
+};
 
 // ONLY TEMPORARY
 // re-export iota-conversion

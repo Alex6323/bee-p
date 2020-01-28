@@ -23,6 +23,11 @@ pub const H3: u64 = 0x003FFFFFFFFFFFFF;
 pub const OUTER_INCR_START: usize = HASH_TRIT_LEN - NONCE_TRIT_LEN + 4;
 pub const INNER_INCR_START: usize = OUTER_INCR_START + 27;
 
+// WARNING: those constants are also defined elsewhere
+pub const HASH_LEN: usize = 243;
+pub const STATE_LEN: usize = 3 * HASH_LEN;
+pub const NUM_ROUNDS: usize = 81;
+
 pub const INDICES: [isize; 730] = [
     0, 364, 728, 363, 727, 362, 726, 361, 725, 360, 724, 359, 723, 358, 722, 357, 721, 356, 720,
     355, 719, 354, 718, 353, 717, 352, 716, 351, 715, 350, 714, 349, 713, 348, 712, 347, 711, 346,

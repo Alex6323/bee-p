@@ -10,6 +10,8 @@ members = [
 	"bee-storage",
 	"bee-tangle",
 	"bee-ternary",
+	"bee-storage",
+	"bee-storage-backends",
 
 	# ONLY TEMPORARY
 	"iota-conversion",
