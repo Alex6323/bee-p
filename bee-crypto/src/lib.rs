@@ -11,14 +11,13 @@
 mod utils;
 
 mod curlp;
-mod trits;
 
 pub use curlp::{
     CurlP,
     CurlP27,
     CurlP81,
 };
-pub use trits::{
+pub use ternary::{
     Trits,
     TritsMut,
     TritsBuf,
