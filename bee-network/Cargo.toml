@@ -7,5 +7,7 @@ edition = "2018"
 [dependencies]
 bundle = { path = "../bee-bundle" }
 common = { path = "../bee-common" }
-
-tokio = { version = "0.2.9", features = ["tcp"] }
+futures = "0.3.1"
+async-std = "1.4.0"
+blake2 = "0.8.1"
+hex = "0.4.0"
