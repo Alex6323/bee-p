@@ -4,7 +4,7 @@ use common::constants::NONCE_TRIT_LEN as NONCE_LEN;
 
 use crate::constants::*;
 use crate::cores::Cores;
-use crate::curl64::Curl64State;
+use crate::powcurlstate::PowCurlState;
 use crate::difficulty::Difficulty;
 use crate::input::InputTrits;
 use crate::nonce::NonceTrits;
@@ -54,7 +54,7 @@ impl PearlDiver {
                 let difficulty = self.difficulty.clone();
 
                 scope.spawn(move |_| {
-                    let mut state_tmp = Curl64State::new(BITS_1);
+                    let mut state_tmp = PowCurlState::new(BITS_1);
 
                     while *pdstate.read().unwrap() == PearlDiverState::Searching {
                         unsafe {
@@ -103,7 +103,7 @@ impl PearlDiver {
     }
 }
 
-fn outer_increment(prestate: &mut Curl64State) {
+fn outer_increment(prestate: &mut PowCurlState) {
     for i in OUTER_INCR_START..INNER_INCR_START {
         let with_carry = prestate.bit_add(i);
         if !with_carry {
@@ -112,7 +112,7 @@ fn outer_increment(prestate: &mut Curl64State) {
     }
 }
 
-fn inner_increment(prestate: &mut Curl64State) -> Exhausted {
+fn inner_increment(prestate: &mut PowCurlState) -> Exhausted {
     // we have not exhausted the search space until each add
     // operation produces a carry
     for i in INNER_INCR_START..HASH_LEN {
@@ -126,9 +126,9 @@ fn inner_increment(prestate: &mut Curl64State) -> Exhausted {
     true
 }
 
-fn make_prestate(input: &InputTrits) -> Curl64State {
-    let mut prestate = Curl64State::new(BITS_1);
-    let mut tmpstate = Curl64State::new(BITS_1);
+fn make_prestate(input: &InputTrits) -> PowCurlState {
+    let mut prestate = PowCurlState::new(BITS_1);
+    let mut tmpstate = PowCurlState::new(BITS_1);
 
     let mut offset = 0;
 
@@ -166,7 +166,7 @@ fn make_prestate(input: &InputTrits) -> Curl64State {
 
 /// NOTE: To prevent unnecessary allocations we instantiate the scratchpad (tmp) only once per core outside of
 /// this function.
-unsafe fn transform(pre: &mut Curl64State, tmp: &mut Curl64State) {
+unsafe fn transform(pre: &mut PowCurlState, tmp: &mut PowCurlState) {
     let (mut hpre, mut lpre) = pre.as_mut_ptr();
     let (mut htmp, mut ltmp) = tmp.as_mut_ptr();
 
@@ -214,7 +214,7 @@ unsafe fn transform(pre: &mut Curl64State, tmp: &mut Curl64State) {
     }
 }
 
-fn find_nonce(state: &Curl64State, difficulty: &Difficulty) -> Option<NonceTrits> {
+fn find_nonce(state: &PowCurlState, difficulty: &Difficulty) -> Option<NonceTrits> {
     let mut nonce_test = BITS_1;
 
     for i in (HASH_LEN - difficulty.0)..HASH_LEN {
@@ -237,7 +237,7 @@ fn find_nonce(state: &Curl64State, difficulty: &Difficulty) -> Option<NonceTrits
 }
 
 /// Extracts the nonce from the final Curl state and the given slot index.
-fn extract_nonce(state: &Curl64State, slot: usize) -> NonceTrits {
+fn extract_nonce(state: &PowCurlState, slot: usize) -> NonceTrits {
     let mut nonce = [0; NONCE_LEN];
     let mut offset = 0;
     let slotmask = 1 << slot;
