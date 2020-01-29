@@ -1,4 +1,4 @@
-use crate::transaction::{Transaction, TransactionBuilder};
+use crate::{Transaction, TransactionBuilder};
 
 /// A newtype to represent a number of transactions, that hides the internal data layout.
 pub struct Transactions(Vec<Transaction>);
@@ -50,4 +50,13 @@ impl TransactionBuilders {
     pub fn push(&mut self, transaction_builder: TransactionBuilder) {
         self.0.push(transaction_builder);
     }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn empty_test() {}
 }

@@ -3,4 +3,4 @@ mod constants;
 mod transaction;
 
 pub use constants::*;
-pub use transaction::*;
+pub use transaction::{Transaction, TransactionBuilder};
