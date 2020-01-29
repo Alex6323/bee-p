@@ -1,6 +1,6 @@
-pub extern crate storage;
-pub extern crate serde;
-pub extern crate bincode;
+//pub extern crate storage;
+//pub extern crate serde;
+//pub extern crate bincode;
 
 pub mod errors;
 
@@ -180,11 +180,22 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let row = sqlx::query(
             INSERT_TRANSACTION_STATEMENT
         )
-        .bind(tx.payload.to_string().as_bytes()).bind(tx.address.to_string().as_bytes()).bind(tx.value.0).bind(tx.obsolete_tag.to_string().as_bytes()).
-            bind(tx.timestamp.0 as i32).bind(tx.index.0 as i32).bind(tx.last_index.0 as i32).
-            bind(tx.bundle_hash.to_string().as_bytes()).bind(tx.trunk_hash.to_string().as_bytes()).bind(tx.branch_hash.to_string().as_bytes()).
-            bind(tx.tag.to_string().as_bytes()).bind(tx.attachment_ts.0 as i32).
-            bind(tx.attachment_lbts.0 as i32).bind(tx.attachment_ubts.0 as i32).bind(tx.nonce.to_string().as_bytes()).bind(tx_hash.to_string().as_bytes())
+        .bind(tx.payload().to_string().as_bytes())
+        .bind(tx.address().to_string().as_bytes())
+        .bind(tx.value().0)
+        .bind(tx.obsolete_tag().to_string().as_bytes())
+        .bind(tx.timestamp().0 as i32)
+        .bind(tx.index().0 as i32)
+        .bind(tx.last_index().0 as i32)
+        .bind(tx.bundle_hash().to_string().as_bytes())
+        .bind(tx.trunk_hash().to_string().as_bytes())
+        .bind(tx.branch_hash().to_string().as_bytes())
+        .bind(tx.tag().to_string().as_bytes())
+        .bind(tx.attachment_ts().0 as i32)
+        .bind(tx.attachment_lbts().0 as i32)
+        .bind(tx.attachment_ubts().0 as i32)
+        .bind(tx.nonce().to_string().as_bytes())
+        .bind(tx_hash.to_string().as_bytes())
         .fetch_one(&mut conn_transaction)
         .await?;
 
@@ -213,24 +224,25 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let attachment_ubts: u64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER) as u64;
         let timestamp: u64 = rec.get::<i32,_>(TRANSACTION_COL_TIMESTAMP) as u64;
 
-        let tx = bundle::Transaction {
-            tag : rec.get::<String, _>(TRANSACTION_COL_TAG).into(),
-            bundle_hash : rec.get::<String, _>(TRANSACTION_COL_BUNDLE).into(),
-            address: rec.get::<String, _>(TRANSACTION_COL_ADDRESS).into(),
-            trunk_hash: rec.get::<String, _>(TRANSACTION_COL_TRUNK).into(),
-            branch_hash: rec.get::<String, _>(TRANSACTION_COL_BRANCH).into(),
-            nonce: rec.get::<String, _>(TRANSACTION_COL_NONCE).into(),
-            attachment_lbts: bundle::Timestamp(attachment_lbts),
-            attachment_ubts: bundle::Timestamp(attachment_ubts),
-            attachment_ts : bundle::Timestamp(attachment_ts),
-            payload: rec.get::<String, _>(TRANSACTION_COL_SIG_OR_MESSAGE).into(),
-            index: (bundle::Index(index)),
-            last_index: (bundle::Index(last_index)),
-            timestamp : bundle::Timestamp(timestamp),
-            value: bundle::Value(value),
-            obsolete_tag: rec.get::<String, _>(TRANSACTION_COL_OBSOLETE_TAG).into(),
-        };
+        let mut builder = bundle::TransactionBuilder::new();
+        builder
+            .payload(Payload::from_str(&rec.get::<String, _>(TRANSACTION_COL_SIG_OR_MESSAGE)))
+            .address(Address::from_str(&rec.get::<String, _>(TRANSACTION_COL_ADDRESS)))
+            .value(Value(value))
+            .obsolete_tag(Tag::from_str(&rec.get::<String, _>(TRANSACTION_COL_OBSOLETE_TAG)))
+            .timestamp(Timestamp(timestamp))
+            .index(Index(index))
+            .last_index(Index(last_index))
+            .bundle_hash(Hash::from_str(&rec.get::<String, _>(TRANSACTION_COL_BUNDLE)))
+            .trunk_hash(Hash::from_str(&rec.get::<String, _>(TRANSACTION_COL_TRUNK)))
+            .branch_hash(Hash::from_str(&rec.get::<String, _>(TRANSACTION_COL_BRANCH)))
+            .tag(Tag::from_str(&rec.get::<String, _>(TRANSACTION_COL_TAG)))
+            .attachment_ts(Timestamp(attachment_ts))
+            .attachment_lbts(Timestamp(attachment_lbts))
+            .attachment_ubts(Timestamp(attachment_ubts))
+            .nonce(Nonce::from_str(&rec.get::<String, _>(TRANSACTION_COL_NONCE)));
 
+        let tx = builder.build();
 
         Ok(tx)
     }

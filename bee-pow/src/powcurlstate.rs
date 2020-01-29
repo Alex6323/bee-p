@@ -2,12 +2,12 @@ use crate::constants::STATE_LEN;
 
 type WithCarry = bool;
 
-pub(crate) struct Curl64State {
+pub(crate) struct PowCurlState {
     hi: [u64; STATE_LEN],
     lo: [u64; STATE_LEN],
 }
 
-impl Curl64State {
+impl PowCurlState {
     pub fn new(init_value: u64) -> Self {
         Self {
             hi: [init_value; STATE_LEN],
@@ -43,7 +43,7 @@ impl Curl64State {
     }
 }
 
-impl Clone for Curl64State {
+impl Clone for PowCurlState {
     fn clone(&self) -> Self {
         let mut hi = [0; STATE_LEN];
         let mut lo = [0; STATE_LEN];

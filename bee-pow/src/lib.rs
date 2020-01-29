@@ -1,9 +1,9 @@
 mod constants;
 mod cores;
-mod curl64;
 mod difficulty;
 mod input;
 mod nonce;
 mod pearldiver;
+mod powcurlstate;
 
 pub use pearldiver::*;
