@@ -52,7 +52,7 @@ const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str =   r#"UPDATE transactions set snaps
 
 const UPDATE_SET_SOLID_STATEMENT: &str =   r#"UPDATE transactions set snapshot_index =$1 WHERE hash=$2"#;
 
-const DELETE_TRANSACTION_STATEMENT: &str = r#"DELETE FROM  transactions WHERE hash =$1"#;
+const DELETE_TRANSACTION_STATEMENT: &str = r#"DELETE FROM transactions WHERE hash =$1"#;
 
 const INSERT_MILESTONE_STATEMENT: &str = r#"
         INSERT INTO milestones (id, hash)
@@ -66,7 +66,7 @@ FROM milestones
 WHERE hash=$1
         "#;
 
-const DELETE_MILESTONE_BY_HASH_STATEMENT : &str = r#""DELETE FROM  milestones WHERE hash =$1"#;
+const DELETE_MILESTONE_BY_HASH_STATEMENT : &str = r#"DELETE FROM milestones WHERE hash =$1"#;
 
 const STORE_DELTA_STATEMENT: &str = r#"UPDATE milestones SET delta =$1 WHERE id =$2"#;
 

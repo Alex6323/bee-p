@@ -28,6 +28,8 @@ mod tests {
     use std::io::{self, Write};
     use std::panic;
     use std::borrow::Borrow;
+    use bundle::Hash;
+    use std::collections::HashSet;
 
     fn rand_hash_string() -> bundle::Hash{
         use rand::Rng;
@@ -42,8 +44,7 @@ mod tests {
             })
             .collect();
 
-        let hash: bundle::Hash = hash_str.into();
-        hash
+        Hash::from_str(&hash_str)
     }
 
     fn create_random_tx() -> (bundle::Hash, bundle::Transaction) {
@@ -73,7 +74,7 @@ mod tests {
             test()
         });
 
-        teardown_db();
+        //teardown_db();
 
         assert!(result.is_ok())
 
@@ -147,4 +148,81 @@ mod tests {
             assert_eq!(milestone.hash.to_string(), found_milestone.hash.to_string());
         })
     }
-}
+
+
+        #[test]
+        fn test_delete_one_transaction() {
+            run_test(|| {
+                let mut storage = SqlxBackendStorage::new();
+
+                block_on(storage.establish_connection());
+                let (tx_hash, tx) = create_random_tx();
+                block_on(storage.insert_transaction(&tx_hash, &tx));
+                let res = block_on(storage.find_transaction(&tx_hash));
+                let found_tx = res.unwrap();
+                assert_eq!(tx.nonce().0, found_tx.nonce().0);
+                let mut transactions_to_delete = HashSet::new();
+                transactions_to_delete.insert(tx_hash);
+                let res = block_on(storage.delete_transactions(&transactions_to_delete));
+                assert!(res.is_ok());
+                let res = block_on(storage.find_transaction(&transactions_to_delete.iter().last().unwrap()));
+                block_on(storage.destroy_connection());
+                assert!(res.is_err());
+            })
+        }
+
+    #[test]
+    fn test_delete_one_milestone() {
+        run_test(|| {
+            let mut storage = SqlxBackendStorage::new();
+
+            block_on(storage.establish_connection());
+            let mut milestone = create_random_milestone();
+            milestone.index = 2;
+            block_on(storage.insert_milestone(&milestone));
+            let res = block_on(storage.find_milestone(milestone.hash.borrow()));
+            let found_milestone = res.unwrap();
+            assert_eq!(milestone.hash.to_string(), found_milestone.hash.to_string());
+            let mut milestones_to_delete = HashSet::new();
+            milestones_to_delete.insert(milestone.hash);
+            let res = block_on(storage.delete_milestones(&milestones_to_delete));
+            assert!(res.is_ok());
+            let res = block_on(storage.find_milestone(&milestones_to_delete.iter().last().unwrap()));
+            block_on(storage.destroy_connection());
+            assert!(res.is_err());
+
+        })
+    }
+
+
+    #[test]
+    fn test_transaction_multiple_delete() {
+        run_test(|| {
+            let mut storage = SqlxBackendStorage::new();
+
+            block_on(storage.establish_connection());
+
+            let mut hashes = HashSet::new();
+
+            for i in 0 .. 10 {
+                let (tx_hash, tx) = create_random_tx();
+                block_on(storage.insert_transaction(&tx_hash, &tx));
+                let res = block_on(storage.find_transaction(&tx_hash));
+                let found_tx = res.unwrap();
+                assert_eq!(tx.nonce().0, found_tx.nonce().0);
+                hashes.insert(tx_hash);
+            }
+
+            let res = block_on(storage.delete_transactions(&hashes));
+            assert!(res.is_ok());
+
+            for hash in hashes.iter() {
+                let res = block_on(storage.find_transaction(&hash));
+                assert!(res.is_err())
+            }
+
+            block_on(storage.destroy_connection());
+        })
+    }
+
+    }

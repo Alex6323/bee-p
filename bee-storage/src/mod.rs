@@ -71,7 +71,7 @@ pub trait StorageBackend {
 
     //**Operations over milestone's schema**//
 
-    async fn delete_transactions(&self, transaction_hashes: HashSet<bundle::Hash>) -> Result<(), Self::StorageError>;
+    async fn delete_transactions(&self, transaction_hashes: &HashSet<bundle::Hash>) -> Result<(), Self::StorageError>;
 
     async fn insert_milestone(&self, milestone: &Milestone) -> Result<(), Self::StorageError>;
 
@@ -79,7 +79,7 @@ pub trait StorageBackend {
 
     async fn delete_milestones(
         &self,
-        milestone_hashes: HashSet<&bundle::Hash>,
+        milestone_hashes: &HashSet<bundle::Hash>,
     ) -> Result<(), Self::StorageError>;
 
 

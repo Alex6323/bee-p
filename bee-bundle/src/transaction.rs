@@ -6,6 +6,34 @@ use common::Error;
 use ternary::IsTryte;
 
 use crate::constants::*;
+<<<<<<< HEAD
+=======
+
+macro_rules! implement_debug {
+    ($($t:ty),+) => {
+    $(
+        impl std::fmt::Debug for $t {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0.iter().collect::<String>())
+            }
+        }
+    )+
+    }
+}
+
+macro_rules! implement_display {
+    ($($t:ty),+) => {
+    $(
+        impl std::fmt::Display for $t {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0.iter().collect::<String>())
+            }
+        }
+    )+
+    }
+}
+
+>>>>>>> bee-p: storage - test deletion
 use std::hash::Hash as StdHash;
 use std::hash::Hasher as StdHasher;
 
@@ -167,11 +195,19 @@ impl Hash {
         assert!(hash.chars().all(|c| c.is_tryte()));
 
         let mut trytes = [TRYTE_ZERO; BUNDLE_HASH.tryte_offset.length];
+<<<<<<< HEAD
 
         for (i, c) in hash.chars().enumerate() {
             trytes[i] = c;
         }
 
+=======
+
+        for (i, c) in hash.chars().enumerate() {
+            trytes[i] = c;
+        }
+
+>>>>>>> bee-p: storage - test deletion
         Self(trytes)
     }
 }
