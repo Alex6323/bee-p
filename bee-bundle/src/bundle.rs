@@ -2,6 +2,7 @@ use crate::{Transaction, TransactionBuilder};
 use std::marker::PhantomData;
 
 /// A newtype to represent a number of transactions, that hides the internal data layout.
+#[derive(Default)]
 pub struct Transactions(Vec<Transaction>);
 
 /// `Bundle`s are messages on the network of one or more `Transactions`s, which in turn are setnt one at a time and are stored in a distributed ledger called the `Tangle`.
@@ -12,6 +13,10 @@ pub struct Bundle {
 }
 
 impl Transactions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn push(&mut self, transaction: Transaction) {
         self.0.push(transaction);
     }
@@ -108,8 +113,14 @@ impl StagedOutgoingBundleBuilder<Attached> {
 
 impl StagedOutgoingBundleBuilder<Validated> {
     pub fn build(self) -> Result<Bundle, BundleBuilderError> {
+        let mut transactions = Transactions::new();
+
+        for transaction_builder in self.transaction_builders.0 {
+            transactions.push(transaction_builder.build());
+        }
+
         Ok(Bundle {
-            transactions: Transactions(vec![]),
+            transactions: transactions,
         })
     }
 }
