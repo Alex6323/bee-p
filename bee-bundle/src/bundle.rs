@@ -49,6 +49,7 @@ impl IncomingBundleBuilder {
     }
 }
 
+// TODO should be in tx module ?
 impl TransactionBuilders {
     pub fn push(&mut self, transaction_builder: TransactionBuilder) {
         self.0.push(transaction_builder);
@@ -58,11 +59,13 @@ impl TransactionBuilders {
 ////////////////////
 
 #[derive(Default)]
-struct Raw {}
-struct Sealed {}
-struct Signed {}
-struct Attached {}
-struct Validated {}
+struct Raw;
+struct Sealed;
+struct Signed;
+struct Attached;
+struct Validated;
+
+//////////////////////
 
 #[derive(Default)]
 struct StagedOutgoingBundleBuilder<S> {
