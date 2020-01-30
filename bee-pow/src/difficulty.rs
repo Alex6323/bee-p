@@ -1,6 +1,8 @@
 use common::constants::{HASH_TRIT_LEN, MAINNET_DIFFICULTY, DEVNET_DIFFICULTY, SPAMNET_DIFFICULTY};
 
-#[derive(Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Difficulty(pub(self) usize);
 
 impl Difficulty {

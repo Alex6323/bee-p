@@ -1,3 +1,5 @@
+use pow::{Cores, Difficulty};
+
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 
@@ -59,6 +61,8 @@ impl std::fmt::Display for Host {
 pub struct ConfigBuilder {
     host: Option<Host>,
     peers: Peers,
+    pow_difficulty: Option<Difficulty>,
+    pow_cores: Option<Cores>,
 }
 
 impl ConfigBuilder {
@@ -72,6 +76,16 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn with_pow_difficulty(mut self, difficulty: Difficulty) -> Self {
+        self.pow_difficulty.replace(difficulty);
+        self
+    }
+
+    pub fn with_pow_cores(mut self, cores: Cores) -> Self {
+        self.pow_cores.replace(cores);
+        self
+    }
+
     pub fn try_build(self) -> common::Result<Config> {
         if self.peers.is_empty() {
             return Err(common::Error::ConfigError { key: "peers", msg: "error: you haven't configured any peers" });
@@ -80,6 +94,8 @@ impl ConfigBuilder {
         Ok(Config {
             host: self.host.ok_or(common::Error::ConfigError { key: "host", msg: "error: you haven't configured the host address"})?,
             peers: self.peers,
+            pow_difficulty: self.pow_difficulty.unwrap_or(Difficulty::mainnet()),
+            pow_cores: self.pow_cores.unwrap_or(Cores::max()),
         })
     }
 }
@@ -88,6 +104,8 @@ impl ConfigBuilder {
 pub struct Config {
     host: Host,
     peers: Peers,
+    pow_difficulty: Difficulty,
+    pow_cores: Cores,
 }
 
 impl Config {
@@ -95,6 +113,8 @@ impl Config {
         ConfigBuilder {
             host: None,
             peers: Peers::new(),
+            pow_difficulty: Some(Difficulty::mainnet()),
+            pow_cores: Some(Cores::max()),
         }
     }
 
@@ -104,6 +124,14 @@ impl Config {
 
     pub fn peers(&self) -> &Peers {
         &self.peers
+    }
+
+    pub fn pow_difficulty(&self) -> &Difficulty {
+        &self.pow_difficulty
+    }
+
+    pub fn pow_cores(&self) -> &Cores {
+        &self.pow_cores
     }
 }
 
@@ -123,6 +151,7 @@ mod should {
         assert_eq!(config.host().to_string(), "127.0.0.1:1337");
         assert_eq!(config.peers().len(), 2);
 
+        // Use 'cargo t -- --nocapture' to print the JSON
         let s = serde_json::to_string_pretty(&config).expect("error serializing to JSON");
         println!("JSON:\n{}", s);
     }

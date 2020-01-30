@@ -7,3 +7,5 @@ mod pearldiver;
 mod powcurlstate;
 
 pub use pearldiver::*;
+pub use cores::Cores;
+pub use difficulty::Difficulty;
