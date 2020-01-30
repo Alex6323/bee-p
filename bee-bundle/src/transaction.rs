@@ -34,6 +34,33 @@ macro_rules! implement_display {
     }
 }
 
+macro_rules! implement_hash {
+    ($($t:ty),+) => {
+    $(
+        impl StdHash for $t {
+            fn hash<H : StdHasher>(&self,state: &mut H) {
+                    self.0.hash(state);
+            }
+        }
+    )+
+    }
+}
+
+macro_rules! implement_eq {
+    ($($t:ty),+) => {
+    $(
+        impl PartialEq for $t {
+            fn eq(&self,other: &$t) -> bool {
+                    self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
+            }
+        }
+
+        impl Eq for $t {}
+
+    )+
+    }
+}
+
 pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
 pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
 #[derive(Default, Debug)]
@@ -118,21 +145,6 @@ impl Address {
     }
 }
 
-impl PartialEq for Address {
-    fn eq(&self, other: &Address) -> bool {
-        self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
-    }
-}
-
-
-impl Eq for Address {}
-
-impl StdHash for Address {
-    fn hash<H: StdHasher>(&self, state: &mut H) {
-        self.0.hash(state);
-    }
-}
-
 impl Default for Tag {
     fn default() -> Self {
         Self([TRYTE_ZERO; TAG.tryte_offset.length])
@@ -175,19 +187,6 @@ impl Hash {
     }
 }
 
-impl PartialEq for Hash {
-    fn eq(&self, other: &Hash) -> bool {
-        self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
-    }
-}
-
-impl Eq for Hash {}
-
-impl StdHash for Hash {
-    fn hash<H: StdHasher>(&self, state: &mut H) {
-        self.0.hash(state);
-    }
-}
 
 impl Default for Nonce {
     fn default() -> Self {
@@ -212,6 +211,8 @@ impl Nonce {
 
 implement_debug!(Payload, Address, Tag, Nonce, Hash);
 implement_display!(Payload, Address, Tag, Nonce, Hash);
+implement_hash!(Address, Hash);
+implement_eq!(Payload, Address, Tag, Hash, Nonce);
 
 impl Transaction {
     pub fn from_tryte_str(tx_trytes: &str) -> Self {
