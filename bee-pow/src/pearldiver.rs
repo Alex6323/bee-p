@@ -33,7 +33,7 @@ impl PearlDiver {
         Self {
             cores,
             difficulty,
-            ..Self::default()
+            state: Arc::new(RwLock::new(PearlDiverState::Created)),
         }
     }
 
@@ -217,7 +217,7 @@ unsafe fn transform(pre: &mut PowCurlState, tmp: &mut PowCurlState) {
 fn find_nonce(state: &PowCurlState, difficulty: &Difficulty) -> Option<NonceTrits> {
     let mut nonce_test = BITS_1;
 
-    for i in (HASH_LEN - difficulty.0)..HASH_LEN {
+    for i in (HASH_LEN - **difficulty)..HASH_LEN {
         nonce_test &= state.bit_equal(i);
 
         // If 'nonce_test' ever becomes 0, then this means that none of the current nonce candidates satisfied
@@ -258,10 +258,6 @@ fn extract_nonce(state: &PowCurlState, slot: usize) -> NonceTrits {
 
 impl Default for PearlDiver {
     fn default() -> Self {
-        Self {
-            cores: Cores::default(),
-            difficulty: Difficulty::default(),
-            state: Arc::new(RwLock::new(PearlDiverState::Created)),
-        }
+        Self::new(Cores::max(), Difficulty::mainnet())
     }
 }

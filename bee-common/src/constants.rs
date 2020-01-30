@@ -17,4 +17,6 @@ pub const INDEX_TRIT_LEN: usize = 27;
 pub const HASH_TRIT_LEN: usize = 243;
 pub const NONCE_TRIT_LEN: usize = 81;
 
-pub const NETWORK_DIFFICULTY: usize = 14;
+pub const MAINNET_DIFFICULTY: usize = 14;
+pub const DEVNET_DIFFICULTY: usize = 9;
+pub const SPAMNET_DIFFICULTY: usize = 6;

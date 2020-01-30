@@ -1,11 +1,19 @@
+use common::constants::{HASH_TRIT_LEN, MAINNET_DIFFICULTY, DEVNET_DIFFICULTY, SPAMNET_DIFFICULTY};
+
 #[derive(Clone)]
-pub struct Difficulty(pub usize);
+pub struct Difficulty(pub(self) usize);
 
-use common::constants::{HASH_TRIT_LEN, NETWORK_DIFFICULTY};
+impl Difficulty {
+    pub fn mainnet() -> Self {
+        Self(MAINNET_DIFFICULTY)
+    }
 
-impl Default for Difficulty {
-    fn default() -> Self {
-        Self(NETWORK_DIFFICULTY)
+    pub fn devnet() -> Self {
+        Self(DEVNET_DIFFICULTY)
+    }
+
+    pub fn spamnet() -> Self {
+        Self(SPAMNET_DIFFICULTY)
     }
 }
 
