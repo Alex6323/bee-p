@@ -61,6 +61,21 @@ macro_rules! implement_eq {
     }
 }
 
+macro_rules! implement_clone {
+    ($($t:ty),+) => {
+    $(
+        impl Clone for $t {
+            fn clone(&self) -> Self {
+                    let mut cloned : $t = <$t>::default();
+                    cloned.0 = self.0;
+                    cloned
+            }
+        }
+
+    )+
+    }
+}
+
 pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
 pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
 #[derive(Default, Debug)]
@@ -213,6 +228,7 @@ implement_debug!(Payload, Address, Tag, Nonce, Hash);
 implement_display!(Payload, Address, Tag, Nonce, Hash);
 implement_hash!(Address, Hash);
 implement_eq!(Payload, Address, Tag, Hash, Nonce);
+implement_clone!(Hash);
 
 impl Transaction {
     pub fn from_tryte_str(tx_trytes: &str) -> Self {

@@ -58,6 +58,20 @@ mod tests {
         (rand_hash_string() , builder.build())
     }
 
+    fn create_random_attached_tx(branch: bundle::Hash, trunk: bundle::Hash) -> (bundle::Hash, bundle::Transaction) {
+        let mut builder = bundle::TransactionBuilder::default();
+        builder
+            .branch_hash(branch)
+            .trunk_hash(trunk)
+            .value(bundle::Value(10))
+            .address(bundle::Address::from_str("ME"))
+            .tag(bundle::Tag::from_str("HELLO"))
+            .nonce(bundle::Nonce::from_str("ABCDEF"));
+
+
+        (rand_hash_string() , builder.build())
+    }
+
     fn create_random_milestone() -> Milestone {
         Milestone {
             hash: rand_hash_string(),
@@ -224,5 +238,43 @@ mod tests {
             block_on(storage.destroy_connection());
         })
     }
+
+
+    #[test]
+    fn test_map_hashes_to_approvers() {
+        run_test(|| {
+            let mut storage = SqlxBackendStorage::new();
+
+            block_on(storage.establish_connection());
+
+            let mut hash_to_approvers_expected = storage::HashesToApprovers::new();
+            let (tx_hash, tx) =  create_random_tx();
+            block_on(storage.insert_transaction(&tx_hash, &tx));
+            let res = block_on(storage.find_transaction(&tx_hash));
+            let found_tx = res.unwrap();
+            assert_eq!(tx.nonce().0, found_tx.nonce().0);
+            let mut last_tx_hash = tx_hash.clone();
+
+            for i in 0 .. 10 {
+                let (tx_hash, mut tx) = create_random_attached_tx(last_tx_hash.clone(), last_tx_hash.clone());
+                let mut approvers  = HashSet::new();
+                approvers.insert(tx_hash.clone());
+                hash_to_approvers_expected.insert(last_tx_hash.clone(), approvers);
+                block_on(storage.insert_transaction(&tx_hash, &tx));
+                let res = block_on(storage.find_transaction(&tx_hash));
+                let found_tx = res.unwrap();
+                assert_eq!(tx.nonce().0, found_tx.nonce().0);
+                last_tx_hash = tx_hash.clone();
+            }
+
+            let hash_to_approvers_observed = storage.map_existing_transaction_hashes_to_approvers().unwrap();
+
+            let maps_equal = hash_to_approvers_observed.iter().all(|(k , v)| hash_to_approvers_expected.get_key_value(&k).unwrap() == hash_to_approvers_observed.get_key_value(&k).unwrap());
+            assert!(maps_equal);
+
+            block_on(storage.destroy_connection());
+        })
+    }
+
 
     }
