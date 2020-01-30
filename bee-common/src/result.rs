@@ -1,6 +1,9 @@
 #[derive(Debug)]
 pub enum Error {
-    ConfigError,
+    ConfigError {
+        key: &'static str,
+        msg: &'static str,
+    },
     NetworkError,
     TransactionError,
 }
