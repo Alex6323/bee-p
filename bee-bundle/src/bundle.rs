@@ -1,4 +1,5 @@
 use crate::{Transaction, TransactionBuilder};
+use std::marker::PhantomData;
 
 /// A newtype to represent a number of transactions, that hides the internal data layout.
 pub struct Transactions(Vec<Transaction>);
@@ -38,17 +39,65 @@ impl IncomingBundleBuilder {
     }
 }
 
-/// Responsible for constructing a `Bundle` from scratch to be sent to the IOTA network. This includes siging its transactions, calculating the bundle hash, and setting other releveant fields depending on context.
-struct OutgoingBundleBuilder;
-struct SealedBundleBuilder;
-struct SignedBundleBuilder;
-
-struct AttachedBundleBuilder;
-struct ValidatedBundleBuilder;
-
 impl TransactionBuilders {
     pub fn push(&mut self, transaction_builder: TransactionBuilder) {
         self.0.push(transaction_builder);
+    }
+}
+
+////////////////////
+
+#[derive(Default)]
+struct Raw {}
+struct Sealed {}
+struct Signed {}
+struct Attached {}
+struct Validated {}
+
+#[derive(Default)]
+struct StagedOutgoingBundleBuilder<S> {
+    build_stage: PhantomData<S>,
+}
+
+type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Raw>;
+
+impl StagedOutgoingBundleBuilder<Raw> {
+    pub fn seal(&self) -> StagedOutgoingBundleBuilder<Sealed> {
+        StagedOutgoingBundleBuilder::<Sealed> {
+            build_stage: PhantomData,
+        }
+    }
+}
+
+impl StagedOutgoingBundleBuilder<Sealed> {
+    pub fn sign(&self) -> StagedOutgoingBundleBuilder<Signed> {
+        StagedOutgoingBundleBuilder::<Signed> {
+            build_stage: PhantomData,
+        }
+    }
+}
+
+impl StagedOutgoingBundleBuilder<Signed> {
+    pub fn attach(&self) -> StagedOutgoingBundleBuilder<Attached> {
+        StagedOutgoingBundleBuilder::<Attached> {
+            build_stage: PhantomData,
+        }
+    }
+}
+
+impl StagedOutgoingBundleBuilder<Attached> {
+    pub fn validate(&self) -> StagedOutgoingBundleBuilder<Validated> {
+        StagedOutgoingBundleBuilder::<Validated> {
+            build_stage: PhantomData,
+        }
+    }
+}
+
+impl StagedOutgoingBundleBuilder<Validated> {
+    pub fn build(&self) -> Bundle {
+        Bundle {
+            transactions: Transactions(vec![]),
+        }
     }
 }
 
@@ -58,5 +107,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty_test() {}
+    fn empty_test() {
+        let bundle = OutgoingBundleBuilder::default()
+            .seal()
+            .sign()
+            .attach()
+            .validate()
+            .build();
+    }
 }
