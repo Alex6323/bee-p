@@ -24,6 +24,7 @@ impl Bundle {
 }
 
 /// A newtype to represent a number of transactions, that hides the internal data layout.
+#[derive(Default)]
 pub struct TransactionBuilders(Vec<TransactionBuilder>);
 
 /// Concerned with constructing and verifying complete messages coming in externally.
@@ -56,6 +57,7 @@ struct Validated {}
 
 #[derive(Default)]
 struct StagedOutgoingBundleBuilder<S> {
+    transaction_builders: TransactionBuilders,
     build_stage: PhantomData<S>,
 }
 
@@ -69,39 +71,43 @@ impl StagedOutgoingBundleBuilder<Raw> {
         StagedOutgoingBundleBuilder::<Raw>::default()
     }
 
-    pub fn seal(&self) -> Result<StagedOutgoingBundleBuilder<Sealed>, BundleBuilderError> {
+    pub fn seal(self) -> Result<StagedOutgoingBundleBuilder<Sealed>, BundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<Sealed> {
+            transaction_builders: self.transaction_builders,
             build_stage: PhantomData,
         })
     }
 }
 
 impl StagedOutgoingBundleBuilder<Sealed> {
-    pub fn sign(&self) -> Result<StagedOutgoingBundleBuilder<Signed>, BundleBuilderError> {
+    pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<Signed>, BundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<Signed> {
+            transaction_builders: self.transaction_builders,
             build_stage: PhantomData,
         })
     }
 }
 
 impl StagedOutgoingBundleBuilder<Signed> {
-    pub fn attach(&self) -> Result<StagedOutgoingBundleBuilder<Attached>, BundleBuilderError> {
+    pub fn attach(self) -> Result<StagedOutgoingBundleBuilder<Attached>, BundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<Attached> {
+            transaction_builders: self.transaction_builders,
             build_stage: PhantomData,
         })
     }
 }
 
 impl StagedOutgoingBundleBuilder<Attached> {
-    pub fn validate(&self) -> Result<StagedOutgoingBundleBuilder<Validated>, BundleBuilderError> {
+    pub fn validate(self) -> Result<StagedOutgoingBundleBuilder<Validated>, BundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<Validated> {
+            transaction_builders: self.transaction_builders,
             build_stage: PhantomData,
         })
     }
 }
 
 impl StagedOutgoingBundleBuilder<Validated> {
-    pub fn build(&self) -> Result<Bundle, BundleBuilderError> {
+    pub fn build(self) -> Result<Bundle, BundleBuilderError> {
         Ok(Bundle {
             transactions: Transactions(vec![]),
         })
