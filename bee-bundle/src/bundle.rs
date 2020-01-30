@@ -62,6 +62,10 @@ struct StagedOutgoingBundleBuilder<S> {
 type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Raw>;
 
 impl StagedOutgoingBundleBuilder<Raw> {
+    pub fn new() -> StagedOutgoingBundleBuilder<Raw> {
+        StagedOutgoingBundleBuilder::<Raw>::default()
+    }
+
     pub fn seal(&self) -> StagedOutgoingBundleBuilder<Sealed> {
         StagedOutgoingBundleBuilder::<Sealed> {
             build_stage: PhantomData,
@@ -108,7 +112,7 @@ mod tests {
 
     #[test]
     fn empty_test() {
-        let bundle = OutgoingBundleBuilder::default()
+        let bundle = OutgoingBundleBuilder::new()
             .seal()
             .sign()
             .attach()
