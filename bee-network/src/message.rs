@@ -1,6 +1,9 @@
 use std::io::Error;
 use std::fmt;
 use std::io::ErrorKind;
+use std::collections::HashSet;
+
+use async_std::net::SocketAddr;
 
 pub trait Message {
     fn new(buf: Vec<u8>) -> Result<Self, Error> where Self: Sized;
@@ -48,4 +51,16 @@ impl fmt::Display for TestMessage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.data)
     }
+}
+
+#[derive(Clone)]
+pub struct MessageToSend {
+    pub to: HashSet<SocketAddr>,
+    pub msg: MessageType
+}
+
+#[derive(Clone)]
+pub struct ReceivedMessage {
+    pub from: SocketAddr,
+    pub msg: MessageType
 }

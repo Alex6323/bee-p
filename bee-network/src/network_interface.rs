@@ -1,41 +1,87 @@
-use crate::tcp_server::TcpServerConfig;
+use std::{
+    sync::Arc,
+    collections::HashMap,
+};
 
-use crate::tcp_server::MessageToSend;
-use crate::tcp_server::ReceivedMessage;
-use crate::tcp_server::TcpClientConfig;
-use crate::tcp_server;
+use futures::{channel::mpsc, lock::Mutex};
 
-use crate::mpmc;
-use futures::channel::mpsc;
+use async_std::{
+    net::SocketAddr,
+    task
+};
 
-use async_std::task;
-use async_std::net::SocketAddr;
+type Sender<T> = mpsc::UnboundedSender<T>;
+type Receiver<T> = mpsc::UnboundedReceiver<T>;
 
-pub async fn new(server_config: TcpServerConfig) -> NetworkAccessHandles {
+use crate::bind::TcpServerConfig;
+use crate::bind;
+use crate::add_peer;
+use crate::process_stream;
+use crate::read_task_broker;
+use crate::assign_message;
+use crate::write_task_broker;
+use crate::remove_peer;
 
-    let (messages_to_send_sender, messages_to_send_receiver) = mpmc::unbounded().await;
-    let (received_messages_sender, received_messages_receiver) = mpmc::unbounded().await;
-    let (peers_to_add_sender, peers_to_add_receiver) = mpsc::unbounded();
-    let (shutdown_sender, shutdown_receiver) = mpmc::unbounded().await;
-    let (peers_sender, peers_receiver) = mpmc::unbounded().await;
+use crate::message::MessageToSend;
+use crate::add_peer::TcpClientConfig;
+use crate::message::ReceivedMessage;
+use crate::graceful_shutdown;
+use std::io::Error;
 
-    task::spawn(tcp_server::start(server_config, messages_to_send_receiver, received_messages_sender, peers_to_add_receiver, peers_sender, shutdown_receiver));
+pub async fn new (
 
-    NetworkAccessHandles {
-        messages_to_send_sender,
-        received_messages_receiver,
-        peers_to_add_sender,
-        shutdown_sender,
-        peers_receiver
-    }
+    server_config: TcpServerConfig,
+    peers_to_add_receiver: Receiver<TcpClientConfig>,
+    received_messages_sender: Sender<ReceivedMessage>,
+    messages_to_send_receiver: Receiver<MessageToSend>,
+    peers_to_remove_receiver: Receiver<SocketAddr>,
+    graceful_shutdown_receiver: Receiver<()>,
+    connected_peers_sender: Sender<SocketAddr>
+
+    ) -> Result<(), Error> {
+
+    // spawn bind_task
+    let (bind_task_shutdown_sender, bind_task_shutdown_receiver) = mpsc::unbounded();
+    let (tcp_stream_sender, tcp_stream_receiver) = mpsc::unbounded();
+    let bind_task = task::spawn(bind::bind(bind_task_shutdown_receiver, server_config, tcp_stream_sender.clone()));
+
+    // spawn add_peer_task
+    let (add_peer_task_shutdown_sender, add_peer_task_shutdown_receiver) = mpsc::unbounded();
+    let add_peer_task = task::spawn(add_peer::add_peer(add_peer_task_shutdown_receiver, peers_to_add_receiver, tcp_stream_sender));
+
+    // process_stream_task
+    let (read_task_sender, read_task_receiver) = mpsc::unbounded();
+    let (write_task_sender, write_task_receiver) = mpsc::unbounded();
+    let process_stream_task = task::spawn(process_stream::process_stream(tcp_stream_receiver, read_task_sender, write_task_sender));
+
+    // start read_task broker
+    let shutdown_handles_of_read_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<()>>>> = Arc::new(Mutex::new(HashMap::new()));
+    let read_task_broker_task = task::spawn(read_task_broker::read_task_broker( read_task_receiver, received_messages_sender, Arc::clone(&shutdown_handles_of_read_tasks)));
+
+    // start assign_message
+    let (assign_message_task_shutdown_sender, assign_message_task_shutdown_receiver) = mpsc::unbounded();
+    let senders_of_write_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<MessageToSend>>>> = Arc::new(Mutex::new(HashMap::new()));
+    let assign_message_task = task::spawn(assign_message::assign_message(assign_message_task_shutdown_receiver, messages_to_send_receiver, Arc::clone(&senders_of_write_tasks)));
+
+    // start write_task broker
+    let shutdown_handles_of_write_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<()>>>> = Arc::new(Mutex::new(HashMap::new()));
+    let write_task_broker_task = task::spawn(write_task_broker::write_task_broker( write_task_receiver, Arc::clone(&senders_of_write_tasks),Arc::clone(&shutdown_handles_of_write_tasks), connected_peers_sender));
+
+    // remove_peer task
+    let (remove_peer_shutdown_sender, remove_peer_shutdown_receiver) = mpsc::unbounded();
+    let remove_peer_task = task::spawn(remove_peer::remove_peer(remove_peer_shutdown_receiver, peers_to_remove_receiver, Arc::clone(&shutdown_handles_of_read_tasks), Arc::clone(&shutdown_handles_of_write_tasks), Arc::clone(&senders_of_write_tasks)));
+
+    // graceful shutdown
+    task::spawn(graceful_shutdown::graceful_shutdown(graceful_shutdown_receiver, bind_task_shutdown_sender, add_peer_task_shutdown_sender, assign_message_task_shutdown_sender, remove_peer_shutdown_sender));
+
+    bind_task.await;
+    add_peer_task.await;
+    process_stream_task.await;
+    read_task_broker_task.await;
+    assign_message_task.await;
+    write_task_broker_task.await;
+    remove_peer_task.await;
+
+    Ok(())
 
 }
-
-pub struct NetworkAccessHandles {
-    pub messages_to_send_sender: mpmc::Sender<MessageToSend>,
-    pub received_messages_receiver: mpmc::Receiver<ReceivedMessage>,
-    pub peers_to_add_sender: mpsc::UnboundedSender<TcpClientConfig>,
-    pub shutdown_sender: mpmc::Sender<()>,
-    pub peers_receiver: mpmc::Receiver<SocketAddr>
-}
-
