@@ -72,9 +72,9 @@ pub const ATTACHMENT_UBTS: Field =
 pub const NONCE: Field = offsets_from_previous_field!(ATTACHMENT_UBTS, NONCE_TRIT_LEN);
 
 #[cfg(test)]
-mod should {
+mod tests {
+
     use super::*;
-    use common::constants::*;
 
     #[test]
     fn add_up_to_transaction_trit_length() {
