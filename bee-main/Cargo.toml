@@ -11,5 +11,5 @@ network = { path = "../bee-network" }
 
 async-std = "1.4.0"
 futures = "0.3.1"
-serde = "1.0.104"
+serde = { version = "1.0.104", features = ["derive" ] }
 serde_json = "1.0.45"

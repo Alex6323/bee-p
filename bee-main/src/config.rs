@@ -1,7 +1,9 @@
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 
-#[derive(Debug, Clone, Copy)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Peer(SocketAddr);
 
 impl Peer {
@@ -17,6 +19,7 @@ impl std::fmt::Display for Peer {
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct Peers(Vec<Peer>);
 
 impl Peers {
@@ -37,7 +40,7 @@ impl Peers {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Host(SocketAddr);
 
 impl Host {
@@ -81,6 +84,7 @@ impl ConfigBuilder {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Config {
     host: Host,
     peers: Peers,
@@ -118,5 +122,8 @@ mod should {
 
         assert_eq!(config.host().to_string(), "127.0.0.1:1337");
         assert_eq!(config.peers().len(), 2);
+
+        let s = serde_json::to_string_pretty(&config).expect("error serializing to JSON");
+        println!("JSON:\n{}", s);
     }
 }
