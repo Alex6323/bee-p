@@ -1,9 +1,12 @@
 extern crate serde;
 
-use iota_lib_rs::iota_model::Transaction;
-use std::fmt::{self, Debug, Display};
-use std::io;
-use std::{collections::HashMap,collections::HashSet, rc::Rc};
+//use iota_lib_rs::iota_model::Transaction;
+//use std::fmt::{self, Debug, Display};
+//use std::io;
+
+use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
+use std::rc::Rc;
 
 pub use bundle::*;
 
