@@ -61,8 +61,8 @@ mod tests {
     fn create_random_attached_tx(branch: bundle::Hash, trunk: bundle::Hash) -> (bundle::Hash, bundle::Transaction) {
         let mut builder = bundle::TransactionBuilder::default();
         builder
-            .branch_hash(branch)
-            .trunk_hash(trunk)
+            .branch(branch)
+            .trunk(trunk)
             .value(bundle::Value(10))
             .address(bundle::Address::from_str("ME"))
             .tag(bundle::Tag::from_str("HELLO"))
