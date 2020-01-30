@@ -26,6 +26,10 @@ impl Bundle {
     pub fn transactions(&self) -> &Transactions {
         &self.transactions
     }
+
+    pub fn len(&self) -> usize {
+        self.transactions.0.len()
+    }
 }
 
 /// A newtype to represent a number of transactions, that hides the internal data layout.
@@ -74,6 +78,10 @@ enum BundleBuilderError {}
 impl StagedOutgoingBundleBuilder<Raw> {
     pub fn new() -> StagedOutgoingBundleBuilder<Raw> {
         StagedOutgoingBundleBuilder::<Raw>::default()
+    }
+
+    pub fn push(&mut self, transaction_builder: TransactionBuilder) {
+        self.transaction_builders.push(transaction_builder);
     }
 
     pub fn seal(self) -> Result<StagedOutgoingBundleBuilder<Sealed>, BundleBuilderError> {
@@ -132,12 +140,20 @@ mod tests {
 
     #[test]
     fn empty_test() -> Result<(), BundleBuilderError> {
-        let bundle = OutgoingBundleBuilder::new()
+        let mut bundle_builder = OutgoingBundleBuilder::new();
+
+        for _ in 0..5 {
+            bundle_builder.push(TransactionBuilder::default());
+        }
+
+        let bundle = bundle_builder
             .seal()?
             .sign()?
             .attach()?
             .validate()?
             .build()?;
+
+        assert_eq!(bundle.len(), 5);
 
         Ok(())
     }
