@@ -61,47 +61,50 @@ struct StagedOutgoingBundleBuilder<S> {
 
 type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Raw>;
 
+#[derive(Debug)]
+enum BundleBuilderError {}
+
 impl StagedOutgoingBundleBuilder<Raw> {
     pub fn new() -> StagedOutgoingBundleBuilder<Raw> {
         StagedOutgoingBundleBuilder::<Raw>::default()
     }
 
-    pub fn seal(&self) -> StagedOutgoingBundleBuilder<Sealed> {
-        StagedOutgoingBundleBuilder::<Sealed> {
+    pub fn seal(&self) -> Result<StagedOutgoingBundleBuilder<Sealed>, BundleBuilderError> {
+        Ok(StagedOutgoingBundleBuilder::<Sealed> {
             build_stage: PhantomData,
-        }
+        })
     }
 }
 
 impl StagedOutgoingBundleBuilder<Sealed> {
-    pub fn sign(&self) -> StagedOutgoingBundleBuilder<Signed> {
-        StagedOutgoingBundleBuilder::<Signed> {
+    pub fn sign(&self) -> Result<StagedOutgoingBundleBuilder<Signed>, BundleBuilderError> {
+        Ok(StagedOutgoingBundleBuilder::<Signed> {
             build_stage: PhantomData,
-        }
+        })
     }
 }
 
 impl StagedOutgoingBundleBuilder<Signed> {
-    pub fn attach(&self) -> StagedOutgoingBundleBuilder<Attached> {
-        StagedOutgoingBundleBuilder::<Attached> {
+    pub fn attach(&self) -> Result<StagedOutgoingBundleBuilder<Attached>, BundleBuilderError> {
+        Ok(StagedOutgoingBundleBuilder::<Attached> {
             build_stage: PhantomData,
-        }
+        })
     }
 }
 
 impl StagedOutgoingBundleBuilder<Attached> {
-    pub fn validate(&self) -> StagedOutgoingBundleBuilder<Validated> {
-        StagedOutgoingBundleBuilder::<Validated> {
+    pub fn validate(&self) -> Result<StagedOutgoingBundleBuilder<Validated>, BundleBuilderError> {
+        Ok(StagedOutgoingBundleBuilder::<Validated> {
             build_stage: PhantomData,
-        }
+        })
     }
 }
 
 impl StagedOutgoingBundleBuilder<Validated> {
-    pub fn build(&self) -> Bundle {
-        Bundle {
+    pub fn build(&self) -> Result<Bundle, BundleBuilderError> {
+        Ok(Bundle {
             transactions: Transactions(vec![]),
-        }
+        })
     }
 }
 
@@ -111,12 +114,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty_test() {
+    fn empty_test() -> Result<(), BundleBuilderError> {
         let bundle = OutgoingBundleBuilder::new()
-            .seal()
-            .sign()
-            .attach()
-            .validate()
-            .build();
+            .seal()?
+            .sign()?
+            .attach()?
+            .validate()?
+            .build()?;
+
+        Ok(())
     }
 }
