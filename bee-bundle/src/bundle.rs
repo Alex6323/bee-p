@@ -61,7 +61,9 @@ impl TransactionBuilders {
 #[derive(Debug)]
 pub enum BundleBuilderError {}
 
-////////////////////
+///
+/// Outgoing bundles
+///
 
 #[derive(Default)]
 pub struct Raw;
@@ -82,7 +84,22 @@ pub type OutgoingBundleBuilderSponge<E, H> = StagedOutgoingBundleBuilder<E, H, R
 // TODO default to Kerl
 pub type OutgoingBundleBuilder = OutgoingBundleBuilderSponge<crypto::CurlP81, crypto::CurlP81>;
 
-//////////////////////
+// TODO constraint on S ?
+impl<E, H, S> StagedOutgoingBundleBuilder<E, H, S>
+where
+    E: Sponge + Default,
+    H: Sponge + Default,
+{
+    pub fn calculate_hash(&self) -> TritsBuf {
+        let mut sponge = E::default();
+
+        for builder in &self.builders.0 {
+            // TODO sponge.absorb(builder.essence());
+        }
+
+        sponge.squeeze()
+    }
+}
 
 impl<E, H> StagedOutgoingBundleBuilder<E, H, Raw>
 where
