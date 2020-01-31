@@ -37,13 +37,13 @@ WHERE hash=$1
 const SELECT_HASH_BRANCH_TRUNK_LIMIT_STATEMENT: &str =         r#"
 SELECT hash, branch, trunk
 FROM transactions
-LIMIT $1 OFFSET $2
+ OFFSET $1 LIMIT $2
         "#;
 
-const SELECT_HAS_LIMIT_STATEMENT: &str =         r#"
+const SELECT_HASH_LIMIT_STATEMENT: &str =         r#"
 SELECT hash
 FROM transactions
-LIMIT $1 OFFSET $2
+OFFSET $1 LIMIT $2
 RETURNING hash
         "#;
 
