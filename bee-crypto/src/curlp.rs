@@ -1,11 +1,7 @@
 use std::convert::Infallible;
 
 use crate::Sponge;
-use bee_ternary::{
-    Trit,
-    Trits,
-    TritBuf,
-};
+use bee_ternary::{Trit, Trits, TritBuf};
 
 /// The length of a hash as returned by the hash functions implemented in this RFC (in
 /// units of binary-coded, balanced trits).

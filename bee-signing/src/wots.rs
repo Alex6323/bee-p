@@ -3,9 +3,9 @@ use crate::{
     Signature,
 };
 
+use std::marker::PhantomData;
 use bee_crypto::Sponge;
 use bee_ternary::{Trits, TritBuf};
-use std::marker::PhantomData;
 
 // TODO constants
 
