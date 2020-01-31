@@ -58,17 +58,28 @@ impl TransactionBuilders {
     }
 }
 
-#[derive(Debug)]
-pub enum BundleBuilderError {}
-
 /// Outgoing bundles
+
+#[derive(Debug)]
+pub enum OutgoingBundleBuilderError {}
+
+trait OutgoingBundleBuilderStage {}
 
 #[derive(Default)]
 pub struct Raw;
+impl OutgoingBundleBuilderStage for Raw {}
+
 pub struct Sealed;
+impl OutgoingBundleBuilderStage for Sealed {}
+
 pub struct Signed;
+impl OutgoingBundleBuilderStage for Signed {}
+
 pub struct Attached;
+impl OutgoingBundleBuilderStage for Attached {}
+
 pub struct Validated;
+impl OutgoingBundleBuilderStage for Validated {}
 
 #[derive(Default)]
 pub struct StagedOutgoingBundleBuilder<E, H, S> {
@@ -82,11 +93,11 @@ pub type OutgoingBundleBuilderSponge<E, H> = StagedOutgoingBundleBuilder<E, H, R
 // TODO default to Kerl
 pub type OutgoingBundleBuilder = OutgoingBundleBuilderSponge<crypto::CurlP81, crypto::CurlP81>;
 
-// TODO constraint on S ?
 impl<E, H, S> StagedOutgoingBundleBuilder<E, H, S>
 where
     E: Sponge + Default,
     H: Sponge + Default,
+    S: OutgoingBundleBuilderStage,
 {
     pub fn calculate_hash(&self) -> TritsBuf {
         let mut sponge = E::default();
@@ -112,7 +123,9 @@ where
         self.builders.push(builder);
     }
 
-    pub fn seal(self) -> Result<StagedOutgoingBundleBuilder<E, H, Sealed>, BundleBuilderError> {
+    pub fn seal(
+        self,
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, Sealed>, OutgoingBundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<E, H, Sealed> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -127,7 +140,9 @@ where
     E: Sponge + Default,
     H: Sponge + Default,
 {
-    pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<E, H, Signed>, BundleBuilderError> {
+    pub fn sign(
+        self,
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, Signed>, OutgoingBundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<E, H, Signed> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -142,7 +157,9 @@ where
     E: Sponge + Default,
     H: Sponge + Default,
 {
-    pub fn attach(self) -> Result<StagedOutgoingBundleBuilder<E, H, Attached>, BundleBuilderError> {
+    pub fn attach(
+        self,
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, Attached>, OutgoingBundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<E, H, Attached> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -159,7 +176,7 @@ where
 {
     pub fn validate(
         self,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, Validated>, BundleBuilderError> {
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, Validated>, OutgoingBundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<E, H, Validated> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -174,7 +191,7 @@ where
     E: Sponge + Default,
     H: Sponge + Default,
 {
-    pub fn build(self) -> Result<Bundle, BundleBuilderError> {
+    pub fn build(self) -> Result<Bundle, OutgoingBundleBuilderError> {
         let mut transactions = Transactions::new();
 
         for transaction_builder in self.builders.0 {
@@ -193,7 +210,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty_test() -> Result<(), BundleBuilderError> {
+    fn empty_test() -> Result<(), OutgoingBundleBuilderError> {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
         for _ in 0..5 {
