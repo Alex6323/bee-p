@@ -59,24 +59,24 @@ impl TransactionBuilders {
 ////////////////////
 
 #[derive(Default)]
-struct Raw;
-struct Sealed;
-struct Signed;
-struct Attached;
-struct Validated;
+pub struct Raw;
+pub struct Sealed;
+pub struct Signed;
+pub struct Attached;
+pub struct Validated;
 
 //////////////////////
 
 #[derive(Default)]
-struct StagedOutgoingBundleBuilder<S> {
+pub struct StagedOutgoingBundleBuilder<S> {
     builders: TransactionBuilders,
     stage: PhantomData<S>,
 }
 
-type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Raw>;
+pub type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Raw>;
 
 #[derive(Debug)]
-enum BundleBuilderError {}
+pub enum BundleBuilderError {}
 
 impl StagedOutgoingBundleBuilder<Raw> {
     pub fn new() -> StagedOutgoingBundleBuilder<Raw> {
