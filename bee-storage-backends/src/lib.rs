@@ -334,12 +334,12 @@ mod tests {
         #[test]
         fn test_all() {
             run_test(|| {
-              /*  test_insert_one_transaction();
+                test_insert_one_transaction();
                 test_insert_one_milestone();
                 test_delete_one_transaction();
                 test_delete_one_milestone();
                 test_transaction_multiple_delete();
-                test_map_hashes_to_approvers();*/
+                test_map_hashes_to_approvers();
                 test_map_missing_transaction_hashes_to_approvers();
             })
 
