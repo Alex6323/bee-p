@@ -61,9 +61,7 @@ impl TransactionBuilders {
 #[derive(Debug)]
 pub enum BundleBuilderError {}
 
-///
 /// Outgoing bundles
-///
 
 #[derive(Default)]
 pub struct Raw;
@@ -76,7 +74,7 @@ pub struct Validated;
 pub struct StagedOutgoingBundleBuilder<E, H, S> {
     builders: TransactionBuilders,
     essence_sponge: PhantomData<E>,
-    pow_sponge: PhantomData<H>,
+    hash_sponge: PhantomData<H>,
     stage: PhantomData<S>,
 }
 
@@ -118,7 +116,7 @@ where
         Ok(StagedOutgoingBundleBuilder::<E, H, Sealed> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            pow_sponge: PhantomData,
+            hash_sponge: PhantomData,
             stage: PhantomData,
         })
     }
@@ -133,7 +131,7 @@ where
         Ok(StagedOutgoingBundleBuilder::<E, H, Signed> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            pow_sponge: PhantomData,
+            hash_sponge: PhantomData,
             stage: PhantomData,
         })
     }
@@ -148,7 +146,7 @@ where
         Ok(StagedOutgoingBundleBuilder::<E, H, Attached> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            pow_sponge: PhantomData,
+            hash_sponge: PhantomData,
             stage: PhantomData,
         })
     }
@@ -165,7 +163,7 @@ where
         Ok(StagedOutgoingBundleBuilder::<E, H, Validated> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            pow_sponge: PhantomData,
+            hash_sponge: PhantomData,
             stage: PhantomData,
         })
     }
