@@ -133,9 +133,8 @@ mod tests {
 
     }
 
-    #[test]
     fn test_insert_one_transaction() {
-        run_test(|| {
+
             let mut storage = SqlxBackendStorage::new();
 
             block_on(storage.establish_connection());
@@ -145,12 +144,9 @@ mod tests {
             let found_tx = res.unwrap();
             block_on(storage.destroy_connection());
             assert_eq!(tx.nonce().0, found_tx.nonce().0);
-        })
     }
 
-    #[test]
     fn test_insert_one_milestone() {
-        run_test(|| {
             let mut storage = SqlxBackendStorage::new();
 
             block_on(storage.establish_connection());
@@ -161,13 +157,9 @@ mod tests {
             let found_milestone = res.unwrap();
             block_on(storage.destroy_connection());
             assert_eq!(milestone.hash.to_string(), found_milestone.hash.to_string());
-        })
     }
 
-
-        #[test]
         fn test_delete_one_transaction() {
-            run_test(|| {
                 let mut storage = SqlxBackendStorage::new();
 
                 block_on(storage.establish_connection());
@@ -183,12 +175,9 @@ mod tests {
                 let res = block_on(storage.find_transaction(&transactions_to_delete.iter().last().unwrap()));
                 block_on(storage.destroy_connection());
                 assert!(res.is_err());
-            })
         }
 
-    #[test]
     fn test_delete_one_milestone() {
-        run_test(|| {
             let mut storage = SqlxBackendStorage::new();
 
             block_on(storage.establish_connection());
@@ -205,14 +194,10 @@ mod tests {
             let res = block_on(storage.find_milestone(&milestones_to_delete.iter().last().unwrap()));
             block_on(storage.destroy_connection());
             assert!(res.is_err());
-
-        })
     }
 
 
-    #[test]
     fn test_transaction_multiple_delete() {
-        run_test(|| {
             let mut storage = SqlxBackendStorage::new();
 
             block_on(storage.establish_connection());
@@ -237,13 +222,10 @@ mod tests {
             }
 
             block_on(storage.destroy_connection());
-        })
     }
 
 
-    #[test]
     fn test_map_hashes_to_approvers() {
-        run_test(|| {
             let mut storage = SqlxBackendStorage::new();
 
             block_on(storage.establish_connection());
@@ -274,12 +256,11 @@ mod tests {
             assert!(maps_equal);
 
             block_on(storage.destroy_connection());
-        })
+
     }
 
-    #[test]
     fn test_map_missing_transaction_hashes_to_approvers() {
-        run_test(|| {
+
             let mut storage = SqlxBackendStorage::new();
 
             block_on(storage.establish_connection());
@@ -327,7 +308,21 @@ mod tests {
 
             block_on(storage.destroy_connection());
             assert!(maps_are_equal);
-        })
-    }
+        }
+
+
+        #[test]
+        fn test_all() {
+            run_test(|| {
+                test_insert_one_transaction();
+                test_insert_one_milestone();
+                test_delete_one_transaction();
+                test_delete_one_milestone();
+                test_transaction_multiple_delete();
+                test_map_hashes_to_approvers();
+                test_map_missing_transaction_hashes_to_approvers();
+            })
+
+        }
 
 }
