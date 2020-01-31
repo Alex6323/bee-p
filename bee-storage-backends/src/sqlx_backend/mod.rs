@@ -100,7 +100,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         loop {
             let rows = block_on(sqlx::query(
                 SELECT_HASH_BRANCH_TRUNK_LIMIT_STATEMENT
-            ).bind(start).bind(end)
+            ).bind(start).bind(MAX_RECORDS_AT_ONCE)
                 .fetch_all(&mut pool))?;
 
             for (i, row) in rows.iter().enumerate()  {

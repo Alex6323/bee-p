@@ -30,6 +30,7 @@ mod tests {
     use std::borrow::Borrow;
     use bundle::Hash;
     use std::collections::HashSet;
+    use std::rc::Rc;
 
     fn rand_hash_string() -> bundle::Hash{
         use rand::Rng;
@@ -88,7 +89,7 @@ mod tests {
             test()
         });
 
-        //teardown_db();
+        teardown_db();
 
         assert!(result.is_ok())
 
@@ -255,7 +256,7 @@ mod tests {
             assert_eq!(tx.nonce().0, found_tx.nonce().0);
             let mut last_tx_hash = tx_hash.clone();
 
-            for i in 0 .. 10 {
+            for i in 0 .. 2000 {
                 let (tx_hash, mut tx) = create_random_attached_tx(last_tx_hash.clone(), last_tx_hash.clone());
                 let mut approvers  = HashSet::new();
                 approvers.insert(tx_hash.clone());
@@ -269,12 +270,64 @@ mod tests {
 
             let hash_to_approvers_observed = storage.map_existing_transaction_hashes_to_approvers().unwrap();
 
-            let maps_equal = hash_to_approvers_observed.iter().all(|(k , v)| hash_to_approvers_expected.get_key_value(&k).unwrap() == hash_to_approvers_observed.get_key_value(&k).unwrap());
+            let maps_equal = hash_to_approvers_expected.iter().all(|(k , v)| hash_to_approvers_expected.get_key_value(&k).unwrap() == hash_to_approvers_observed.get_key_value(&k).unwrap());
             assert!(maps_equal);
 
             block_on(storage.destroy_connection());
         })
     }
 
+    #[test]
+    fn test_map_missing_transaction_hashes_to_approvers() {
+        run_test(|| {
+            let mut storage = SqlxBackendStorage::new();
 
+            block_on(storage.establish_connection());
+
+            let mut missing_hash_to_approvers_expected = storage::MissingHashesToRCApprovers::new();
+            let (tx_hash, tx) =  create_random_tx();
+            block_on(storage.insert_transaction(&tx_hash, &tx));
+            let res = block_on(storage.find_transaction(&tx_hash));
+            let found_tx = res.unwrap();
+            assert_eq!(tx.nonce().0, found_tx.nonce().0);
+            let mut last_tx_hash = tx_hash.clone();
+            let mut all_transactions_hashes = HashSet::new();
+
+            for i in 0 .. 2000 {
+                let missing_tx_hash = rand_hash_string();
+                let (tx_hash, mut tx) = match i % 3 {
+                    0 => create_random_attached_tx( last_tx_hash.clone() , missing_tx_hash.clone()),
+                    1 => create_random_attached_tx(missing_tx_hash.clone(), last_tx_hash.clone()),
+                    2 => create_random_attached_tx(missing_tx_hash.clone(), missing_tx_hash.clone()),
+                    _ => panic!("Residual is incorrect")
+                };
+
+                let mut missing_approvers  = HashSet::new();
+
+                match i % 3 {
+                    0 => missing_approvers.insert(Rc::<bundle::Hash>::new(tx_hash.clone())),
+                    1 => missing_approvers.insert(Rc::<bundle::Hash>::new(tx_hash.clone())),
+                    2 => missing_approvers.insert(Rc::<bundle::Hash>::new(tx_hash.clone()).clone()),
+                    _ => panic!("Residual is incorrect")
+                };
+
+                missing_hash_to_approvers_expected.insert(missing_tx_hash.clone(), missing_approvers);
+                block_on(storage.insert_transaction(&tx_hash, &tx));
+                let res = block_on(storage.find_transaction(&tx_hash));
+                let found_tx = res.unwrap();
+                assert_eq!(tx.nonce().0, found_tx.nonce().0);
+                all_transactions_hashes.insert(tx_hash.clone());
+                last_tx_hash = tx_hash.clone();
+            }
+
+            let missing_hash_to_approvers_observed = storage.map_missing_transaction_hashes_to_approvers(all_transactions_hashes).unwrap();
+
+            let maps_are_equal = missing_hash_to_approvers_expected.iter().all(|(k , v)| missing_hash_to_approvers_expected.get_key_value(&k).unwrap() == missing_hash_to_approvers_observed.get_key_value(&k).unwrap());
+
+
+            block_on(storage.destroy_connection());
+            assert!(maps_are_equal);
+        })
     }
+
+}
