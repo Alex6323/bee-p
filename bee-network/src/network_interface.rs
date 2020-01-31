@@ -3,18 +3,13 @@ use std::{
     collections::HashMap,
 };
 
-use futures::{channel::mpsc, lock::Mutex};
+use futures::{channel::mpsc, select, FutureExt, SinkExt, lock::Mutex};
 
 use async_std::{
     net::SocketAddr,
     task
 };
 
-type Sender<T> = mpsc::UnboundedSender<T>;
-type Receiver<T> = mpsc::UnboundedReceiver<T>;
-
-use crate::bind::TcpServerConfig;
-use crate::bind;
 use crate::add_peer;
 use crate::process_stream;
 use crate::read_task_broker;
@@ -28,7 +23,15 @@ use crate::message::ReceivedMessage;
 use crate::graceful_shutdown;
 use std::io::Error;
 
-pub async fn new (
+type Sender<T> = mpsc::UnboundedSender<T>;
+type Receiver<T> = mpsc::UnboundedReceiver<T>;
+
+use async_std::{
+    net::TcpListener,
+    prelude::*,
+};
+
+pub async fn bind(
 
     server_config: TcpServerConfig,
     peers_to_add_receiver: Receiver<TcpClientConfig>,
@@ -40,14 +43,14 @@ pub async fn new (
 
     ) -> Result<(), Error> {
 
-    // spawn bind_task
-    let (bind_task_shutdown_sender, bind_task_shutdown_receiver) = mpsc::unbounded();
-    let (tcp_stream_sender, tcp_stream_receiver) = mpsc::unbounded();
-    let bind_task = task::spawn(bind::bind(bind_task_shutdown_receiver, server_config, tcp_stream_sender.clone()));
+    // bind server
+    let listener = TcpListener::bind(server_config.address).await?;
+    let (bind_task_shutdown_sender, mut bind_task_shutdown_receiver) = mpsc::unbounded();
+    let (mut tcp_stream_sender, tcp_stream_receiver) = mpsc::unbounded();
 
     // spawn add_peer_task
     let (add_peer_task_shutdown_sender, add_peer_task_shutdown_receiver) = mpsc::unbounded();
-    let add_peer_task = task::spawn(add_peer::add_peer(add_peer_task_shutdown_receiver, peers_to_add_receiver, tcp_stream_sender));
+    let add_peer_task = task::spawn(add_peer::add_peer(add_peer_task_shutdown_receiver, peers_to_add_receiver, tcp_stream_sender.clone()));
 
     // process_stream_task
     let (read_task_sender, read_task_receiver) = mpsc::unbounded();
@@ -74,7 +77,48 @@ pub async fn new (
     // graceful shutdown
     task::spawn(graceful_shutdown::graceful_shutdown(graceful_shutdown_receiver, bind_task_shutdown_sender, add_peer_task_shutdown_sender, assign_message_task_shutdown_sender, remove_peer_shutdown_sender));
 
-    bind_task.await;
+    // listen for incoming connections
+    let mut incoming = listener.incoming();
+
+    loop {
+
+        let stream_result = select! {
+
+            stream_option = incoming.next().fuse() => match stream_option {
+
+               Some(stream_result) => stream_result,
+
+               // The stream of connections is infinite, i.e awaiting the next connection will never result in None
+               // https://docs.rs/async-std/0.99.9/async_std/net/struct.TcpListener.html#method.incoming
+               None => {
+                    unreachable!();
+               }
+
+            },
+
+            void = bind_task_shutdown_receiver.next().fuse() => match void {
+                Some(()) => break,
+                None => break,
+            }
+
+        };
+
+        match stream_result {
+
+            Ok(stream) => {
+                tcp_stream_sender.send(stream).await.unwrap();
+            },
+
+            Err(_error) => {
+                eprintln!("can not accept client");
+            }
+
+        }
+
+    }
+
+    drop(tcp_stream_sender);
+
     add_peer_task.await;
     process_stream_task.await;
     read_task_broker_task.await;
@@ -84,4 +128,9 @@ pub async fn new (
 
     Ok(())
 
+}
+
+#[derive(Clone)]
+pub struct TcpServerConfig {
+    pub address: String,
 }
