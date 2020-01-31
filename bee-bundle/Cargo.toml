@@ -6,5 +6,6 @@ edition = "2018"
 
 [dependencies]
 common = { path = "../bee-common" }
+crypto = { path = "../bee-crypto" }
 pow = { path = "../bee-pow" }
 ternary = { path = "../bee-ternary" }

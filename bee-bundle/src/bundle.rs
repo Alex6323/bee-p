@@ -1,5 +1,7 @@
 use crate::{Transaction, TransactionBuilder};
+use crypto::Sponge;
 use std::marker::PhantomData;
+use ternary::TritsBuf;
 
 /// A newtype to represent a number of transactions, that hides the internal data layout.
 #[derive(Default)]
@@ -56,6 +58,9 @@ impl TransactionBuilders {
     }
 }
 
+#[derive(Debug)]
+pub enum BundleBuilderError {}
+
 ////////////////////
 
 #[derive(Default)]
@@ -65,64 +70,95 @@ pub struct Signed;
 pub struct Attached;
 pub struct Validated;
 
-//////////////////////
-
 #[derive(Default)]
-pub struct StagedOutgoingBundleBuilder<S> {
+pub struct StagedOutgoingBundleBuilder<E, H, S> {
     builders: TransactionBuilders,
+    essence_sponge: PhantomData<E>,
+    pow_sponge: PhantomData<H>,
     stage: PhantomData<S>,
 }
 
-pub type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Raw>;
+pub type OutgoingBundleBuilderSponge<E, H> = StagedOutgoingBundleBuilder<E, H, Raw>;
+// TODO default to Kerl
+pub type OutgoingBundleBuilder = OutgoingBundleBuilderSponge<crypto::CurlP81, crypto::CurlP81>;
 
-#[derive(Debug)]
-pub enum BundleBuilderError {}
+//////////////////////
 
-impl StagedOutgoingBundleBuilder<Raw> {
-    pub fn new() -> StagedOutgoingBundleBuilder<Raw> {
-        StagedOutgoingBundleBuilder::<Raw>::default()
+impl<E, H> StagedOutgoingBundleBuilder<E, H, Raw>
+where
+    E: Sponge + Default,
+    H: Sponge + Default,
+{
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn push(&mut self, transaction_builder: TransactionBuilder) {
-        self.builders.push(transaction_builder);
+    pub fn push(&mut self, builder: TransactionBuilder) {
+        self.builders.push(builder);
     }
 
-    pub fn seal(self) -> Result<StagedOutgoingBundleBuilder<Sealed>, BundleBuilderError> {
-        Ok(StagedOutgoingBundleBuilder::<Sealed> {
+    pub fn seal(self) -> Result<StagedOutgoingBundleBuilder<E, H, Sealed>, BundleBuilderError> {
+        Ok(StagedOutgoingBundleBuilder::<E, H, Sealed> {
             builders: self.builders,
+            essence_sponge: PhantomData,
+            pow_sponge: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl StagedOutgoingBundleBuilder<Sealed> {
-    pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<Signed>, BundleBuilderError> {
-        Ok(StagedOutgoingBundleBuilder::<Signed> {
+impl<E, H> StagedOutgoingBundleBuilder<E, H, Sealed>
+where
+    E: Sponge + Default,
+    H: Sponge + Default,
+{
+    pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<E, H, Signed>, BundleBuilderError> {
+        Ok(StagedOutgoingBundleBuilder::<E, H, Signed> {
             builders: self.builders,
+            essence_sponge: PhantomData,
+            pow_sponge: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl StagedOutgoingBundleBuilder<Signed> {
-    pub fn attach(self) -> Result<StagedOutgoingBundleBuilder<Attached>, BundleBuilderError> {
-        Ok(StagedOutgoingBundleBuilder::<Attached> {
+impl<E, H> StagedOutgoingBundleBuilder<E, H, Signed>
+where
+    E: Sponge + Default,
+    H: Sponge + Default,
+{
+    pub fn attach(self) -> Result<StagedOutgoingBundleBuilder<E, H, Attached>, BundleBuilderError> {
+        Ok(StagedOutgoingBundleBuilder::<E, H, Attached> {
             builders: self.builders,
+            essence_sponge: PhantomData,
+            pow_sponge: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl StagedOutgoingBundleBuilder<Attached> {
-    pub fn validate(self) -> Result<StagedOutgoingBundleBuilder<Validated>, BundleBuilderError> {
-        Ok(StagedOutgoingBundleBuilder::<Validated> {
+impl<E, H> StagedOutgoingBundleBuilder<E, H, Attached>
+where
+    E: Sponge + Default,
+    H: Sponge + Default,
+{
+    pub fn validate(
+        self,
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, Validated>, BundleBuilderError> {
+        Ok(StagedOutgoingBundleBuilder::<E, H, Validated> {
             builders: self.builders,
+            essence_sponge: PhantomData,
+            pow_sponge: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl StagedOutgoingBundleBuilder<Validated> {
+impl<E, H> StagedOutgoingBundleBuilder<E, H, Validated>
+where
+    E: Sponge + Default,
+    H: Sponge + Default,
+{
     pub fn build(self) -> Result<Bundle, BundleBuilderError> {
         let mut transactions = Transactions::new();
 
