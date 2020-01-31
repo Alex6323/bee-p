@@ -1,11 +1,12 @@
 use crate::{
-    slice_eq, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
+    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
 };
 
 use bee_crypto::Sponge;
 use bee_ternary::{Trits, TritsBuf, TritsMut};
 
 use std::marker::PhantomData;
+use ternary::{Trits, TritBuf};
 
 #[derive(Default)]
 pub struct MssPrivateKeyGeneratorBuilder<S, G> {
@@ -24,19 +25,19 @@ pub struct MssPrivateKey<S, K> {
     depth: u8,
     index: u64,
     keys: Vec<K>,
-    tree: TritsBuf,
+    tree: TritBuf,
     _sponge: PhantomData<S>,
 }
 
 pub struct MssPublicKey<S, K> {
-    state: TritsBuf,
+    state: TritBuf,
     depth: u8,
     _sponge: PhantomData<S>,
     _key: PhantomData<K>,
 }
 
 pub struct MssSignature<S> {
-    state: TritsBuf,
+    state: TritBuf,
     index: u64,
     _sponge: PhantomData<S>,
 }
@@ -104,7 +105,7 @@ where
     fn generate(&self, seed: &Self::Seed, _: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut sponge = S::default();
         let mut keys = Vec::new();
-        let mut tree = TritsBuf::with_capacity(((1 << self.depth) - 1) * 243);
+        let mut tree = TritBuf::zeros(((1 << self.depth) - 1) * 243);
 
         // TODO: subseed collision ?
         // TODO: reserve ?
@@ -140,9 +141,7 @@ where
                 )) {
                     return Err(Self::Error::FailedSpongeOperation);
                 };
-                sponge.squeeze_into(&mut TritsMut::from_i8_unchecked(
-                    &mut tree.inner_mut()[index * 243..(index + 1) * 243],
-                ));
+                sponge.squeeze_into(&mut tree[index * 243..(index + 1) * 243]);
                 sponge.reset();
             }
         }
@@ -234,12 +233,12 @@ where
             &signature.state.inner_ref()[0..((signature.state.len() / 6561) - 1) * 6561],
         );
         let siblings =
-            TritsBuf::from_i8_unchecked(signature.state.inner_ref().chunks(6561).last().unwrap());
+            TritBuf::from_i8_unchecked(signature.state.inner_ref().chunks(6561).last().unwrap());
         let ots_public_key = match ots_signature.recover_public_key(message) {
             Ok(public_key) => public_key,
             Err(_) => return Err(Self::Error::FailedUnderlyingPublicKeyRecovery),
         };
-        let mut hash = TritsBuf::with_capacity(243);
+        let mut hash = TritBuf::with_capacity(243);
 
         hash.inner_mut().copy_from_slice(ots_public_key.to_bytes());
 
@@ -270,12 +269,12 @@ where
             j <<= 1;
         }
 
-        Ok(slice_eq(&hash.inner_ref(), &self.state.inner_ref()))
+        Ok(&hash.inner_ref() == &self.state.inner_ref())
     }
 
     fn from_bytes(bytes: &[i8]) -> Self {
         Self {
-            state: TritsBuf::from_i8_unchecked(bytes),
+            state: TritBuf::from_i8_unchecked(bytes),
             // TODO OPTION
             depth: 0,
             _sponge: PhantomData,
@@ -303,7 +302,7 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
 
     fn from_bytes(bytes: &[i8]) -> Self {
         Self {
-            state: TritsBuf::from_i8_unchecked(bytes),
+            state: TritBuf::from_i8_unchecked(bytes),
             // TODO OPTION
             index: 0,
             _sponge: PhantomData,

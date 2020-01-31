@@ -1,6 +1,6 @@
-use crate::TritsBuf;
+use crate::TritBuf;
 
-pub fn trytes_to_trits_buf(trytes: &str) -> TritsBuf {
+pub fn trytes_to_trits_buf(trytes: &str) -> TritBuf {
     let mut trits_buf_internal = Vec::new();
     for tryte in trytes.trim().chars() {
         let trits = match tryte {
@@ -36,14 +36,14 @@ pub fn trytes_to_trits_buf(trytes: &str) -> TritsBuf {
             }
         };
         trits_buf_internal.extend_from_slice(trits);
-    }                  
-    TritsBuf::from_i8_unchecked(trits_buf_internal)
+    }
+    TritBuf::from_i8_unchecked(&trits_buf_internal)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::TritsBuf;
-    use super::trytes_to_trits_buf;
+    use super::*;
+    use crate::T1B1Buf;
 
     const TRYTES_IN: &str = "AZN9";
     const BYTES_EXPECTED: &[i8] = &[1, 0, 0, -1, 0, 0, -1, -1, -1, 0, 0, 0];
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn correct_trytes_to_trits_conversion() {
         let trits_converted = trytes_to_trits_buf(TRYTES_IN);
-        let trits_expected = TritsBuf::from_i8_unchecked(BYTES_EXPECTED);
+        let trits_expected = TritBuf::<T1B1Buf>::from_i8_unchecked(&BYTES_EXPECTED);
         assert_eq!(trits_expected, trits_converted);
     }
 }

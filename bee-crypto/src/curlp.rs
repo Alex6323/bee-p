@@ -2,10 +2,9 @@ use std::convert::Infallible;
 
 use crate::{
     Sponge,
+    Trit,
     Trits,
-    TritsMut,
-    TritsBuf,
-    ValidTrits,
+    TritBuf,
 };
 
 /// The length of a hash as returned by the hash functions implemented in this RFC (in
@@ -24,10 +23,10 @@ pub struct CurlP {
     rounds: usize,
 
     /// The internal state.
-    state: TritsBuf,
+    state: TritBuf,
 
     /// Workspace for performing transformations
-    work_state: TritsBuf,
+    work_state: TritBuf,
 }
 
 impl CurlP {
@@ -35,8 +34,8 @@ impl CurlP {
     pub fn new(rounds: usize) -> Self {
         Self {
             rounds,
-            state: TritsBuf::with_capacity(STATE_LEN),
-            work_state: TritsBuf::with_capacity(STATE_LEN),
+            state: TritBuf::zeros(STATE_LEN),
+            work_state: TritBuf::zeros(STATE_LEN),
         }
     }
 
@@ -51,38 +50,38 @@ impl CurlP {
     /// The essence of this transformation is the application of a so-called substitution box to
     /// the internal state, which happens `round` number of times.
     fn transform(&mut self) {
-        fn calculate_truth_table_index(xs: &[i8], p: usize, q: usize) -> usize {
-            let idx = xs[p] + (xs[q] << 2) + 5;
+        fn calculate_truth_table_index(xs: &Trits, p: usize, q: usize) -> usize {
+            let idx = xs.get(p).unwrap() as i8 + ((xs.get(q).unwrap() as i8) << 2) + 5;
             idx as usize
         }
 
-        fn apply_substitution_box(input: &[i8], output: &mut [i8]) {
+        fn apply_substitution_box(input: &Trits, output: &mut Trits) {
             assert!(input.len() <= STATE_LEN);
             assert!(output.len() <= STATE_LEN);
 
-            output[0] = TRUTH_TABLE[
+            output.set(0, TRUTH_TABLE[
                 calculate_truth_table_index(input, 0, HALF_STATE_LEN)
-            ];
+            ].into());
 
             for state_index in 0..HALF_STATE_LEN {
                 let left_idx = HALF_STATE_LEN - state_index;
                 let right_idx = STATE_LEN - state_index - 1;
 
-                output[2 * state_index + 1] = TRUTH_TABLE[
+                output.set(2 * state_index + 1, TRUTH_TABLE[
                     calculate_truth_table_index(input, left_idx, right_idx)
-                ];
+                ].into());
 
                 let left_idx = left_idx - 1;
-                output[2 * state_index + 2] = TRUTH_TABLE[
+                output.set(2 * state_index + 2, TRUTH_TABLE[
                     calculate_truth_table_index(input, right_idx, left_idx)
-                ];
+                ].into());
             }
         }
 
         let (lhs, rhs) = (&mut self.state, &mut self.work_state);
 
         for _ in 0..self.rounds {
-            apply_substitution_box(lhs.inner_ref(), rhs.inner_mut());
+            apply_substitution_box(&lhs, rhs);
             std::mem::swap(lhs, rhs);
         }
 
@@ -108,10 +107,8 @@ impl Sponge for CurlP {
     /// data in the internal state is then just the result of the last transformation before the
     /// data was copied, and will be reused for the next transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-        for chunk in input.inner_ref().chunks(Self::IN_LEN) {
-            self.state
-                .inner_mut()[0..chunk.len()]
-                .copy_from_slice(chunk);
+        for chunk in input.chunks(Self::IN_LEN) {
+            self.state[0..chunk.len()].copy_from(chunk);
             self.transform();
         }
         Ok(())
@@ -121,7 +118,7 @@ impl Sponge for CurlP {
     fn reset(&mut self) {
         self
             .state
-            .fill(ValidTrits::Zero);
+            .fill(Trit::Zero);
     }
 
     /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill
@@ -129,12 +126,9 @@ impl Sponge for CurlP {
     ///
     /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written
     /// into it.
-    fn squeeze_into(&mut self, buf: &mut TritsMut) {
-        for chunk in buf.inner_mut().chunks_mut(Self::OUT_LEN) {
-            chunk.copy_from_slice(
-                &self.state
-                    .inner_ref()[0..chunk.len()]
-            );
+    fn squeeze_into(&mut self, buf: &mut Trits) {
+        for chunk in buf.chunks_mut(Self::OUT_LEN) {
+            chunk.copy_from(&self.state[0..chunk.len()]);
             self.transform()
         }
     }
@@ -195,7 +189,7 @@ macro_rules! forward_sponge_impl {
                 self.0.reset()
             }
 
-            fn squeeze_into(&mut self, buf: &mut TritsMut) {
+            fn squeeze_into(&mut self, buf: &mut Trits) {
                 self.0.squeeze_into(buf);
             }
         }
@@ -208,7 +202,10 @@ forward_sponge_impl!(CurlP27, CurlP81);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bee_ternary::utils::trytes_to_trits_buf;
+    use ternary::{
+        util::trytes_to_trits_buf,
+        T1B1Buf,
+    };
 
     const INPUT_TRITS: &[i8] = &[
         -1,  1, -1, -1,  1, -1,  1,  1,  0, -1,  0,  0,  1,  0,  1,  0,  0,  0, -1, -1, -1, -1,  0,  0,
@@ -280,7 +277,7 @@ KXRVLFETGUTUWBCNCC9DWO99JQTEI9YXVOZHWELSYP9SG9KN9WCKXOVTEFHFH9EFZJKFYCZKQPPBXYSG
         let mut curlp27 = CurlP27::new();
         let input_trits = trytes_to_trits_buf(INPUT_TRYTES);
         let expected_hash = trytes_to_trits_buf(EXPECTED_CURLP27_HASH_TRYTES);
-        let calculated_hash = curlp27.digest(&input_trits.as_trits());
+        let calculated_hash = curlp27.digest(&input_trits);
         assert!(calculated_hash.is_ok(), "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail");
         assert_eq!(expected_hash, calculated_hash.unwrap());
     }
@@ -288,9 +285,9 @@ KXRVLFETGUTUWBCNCC9DWO99JQTEI9YXVOZHWELSYP9SG9KN9WCKXOVTEFHFH9EFZJKFYCZKQPPBXYSG
     #[test]
     fn verify_curlp27_hash_trits() {
         let mut curlp27 = CurlP27::new();
-        let input_trits = TritsBuf::from_i8_unchecked(INPUT_TRITS);
-        let expected_hash = TritsBuf::from_i8_unchecked(EXPECTED_CURLP27_HASH_TRITS);
-        let calculated_hash = curlp27.digest(&input_trits.as_trits());
+        let input_trits = TritBuf::<T1B1Buf>::from_i8_unchecked(INPUT_TRITS);
+        let expected_hash = TritBuf::<T1B1Buf>::from_i8_unchecked(EXPECTED_CURLP27_HASH_TRITS);
+        let calculated_hash = curlp27.digest(&input_trits);
         assert!(calculated_hash.is_ok(), "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail");
         assert_eq!(expected_hash, calculated_hash.unwrap());
     }

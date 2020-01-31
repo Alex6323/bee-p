@@ -6,6 +6,7 @@ use bee_crypto::Sponge;
 use bee_ternary::{TritsBuf, TRYTE_ALPHABET};
 
 use std::marker::PhantomData;
+use ternary::{TritBuf, TRYTE_ALPHABET};
 
 // TODO Put constants in a separate file
 
@@ -16,7 +17,7 @@ pub const MAX_TRIT_VALUE: i8 = 1;
 
 // TODO: documentation
 pub struct IotaSeed<S> {
-    seed: TritsBuf,
+    seed: TritBuf,
     _sponge: PhantomData<S>,
 }
 
@@ -38,7 +39,7 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
             .collect();
 
         Self {
-            seed: TritsBuf::from_i8_unchecked(seed.trits()),
+            seed: TritBuf::from_i8_unchecked(seed.trits()),
             _sponge: PhantomData,
         }
     }
@@ -57,7 +58,7 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
         }
 
         Ok(Self {
-            seed: TritsBuf::from_i8_unchecked(bytes),
+            seed: TritBuf::from_i8_unchecked(bytes),
             _sponge: PhantomData,
         })
     }
@@ -102,8 +103,7 @@ impl<S: Sponge + Default> IotaSeed<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::slice_eq;
-    use bee_crypto::{CurlP27, CurlP81};
+    use crypto::{CurlP27, CurlP81};
 
     const IOTA_SEED: &str =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
@@ -128,10 +128,7 @@ mod tests {
         for (i, iota_subseed_string) in iota_subseed_strings.iter().enumerate() {
             let iota_subseed = iota_seed.subseed(i as u64);
 
-            assert!(slice_eq(
-                iota_subseed.to_bytes(),
-                &iota_subseed_string.trits()
-            ));
+            assert_eq!(iota_subseed.to_bytes(), &iota_subseed_string.trits());
         }
     }
 
@@ -220,7 +217,7 @@ mod tests {
             let iota_seed_1 = IotaSeed::<CurlP27>::new();
             let iota_seed_2 = IotaSeed::<CurlP27>::from_bytes(iota_seed_1.to_bytes()).unwrap();
 
-            assert!(slice_eq(iota_seed_1.to_bytes(), iota_seed_2.to_bytes()));
+            assert_eq!(iota_seed_1.to_bytes(), iota_seed_2.to_bytes());
         }
     }
 }

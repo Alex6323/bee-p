@@ -19,11 +19,9 @@ pub use curlp::{
     CurlP81,
 };
 
-use bee_ternary::{
+use ternary::{
     Trits,
-    TritsMut,
-    TritsBuf,
-    ValidTrits,
+    TritBuf,
 };
 
 /// The common interface of cryptographic hash functions that follow the sponge construction,
@@ -45,19 +43,19 @@ pub trait Sponge {
     fn reset(&mut self);
 
     /// Squeeze the sponge into a buffer
-    fn squeeze_into(&mut self, buf: &mut TritsMut);
+    fn squeeze_into(&mut self, buf: &mut Trits);
 
     /// Convenience function using `Sponge::squeeze_into` to to return an owned
     /// version of the hash.
-    fn squeeze(&mut self) -> TritsBuf {
-        let mut output = TritsBuf::with_capacity(Self::OUT_LEN);
-        self.squeeze_into(&mut output.as_trits_mut());
+    fn squeeze(&mut self) -> TritBuf {
+        let mut output = TritBuf::zeros(Self::OUT_LEN);
+        self.squeeze_into(&mut output);
         output
     }
 
     /// Convenience function to absorb `input`, squeeze the sponge into a
     /// buffer, and reset the sponge in one go.
-    fn digest_into(&mut self, input: &Trits, buf: &mut TritsMut) -> Result<(), Self::Error> {
+    fn digest_into(&mut self, input: &Trits, buf: &mut Trits) -> Result<(), Self::Error> {
         self.absorb(input)?;
         self.squeeze_into(buf);
         self.reset();
@@ -66,7 +64,7 @@ pub trait Sponge {
 
     /// Convenience function to absorb `input`, squeeze the sponge, and reset the sponge in one go.
     /// Returns an owned versin of the hash.
-    fn digest(&mut self, input: &Trits) -> Result<TritsBuf, Self::Error> {
+    fn digest(&mut self, input: &Trits) -> Result<TritBuf, Self::Error> {
         self.absorb(input)?;
         let output = self.squeeze();
         self.reset();
