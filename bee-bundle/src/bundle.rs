@@ -38,13 +38,13 @@ pub struct TransactionBuilders(Vec<TransactionBuilder>);
 
 /// Concerned with constructing and verifying complete messages coming in externally.
 struct IncomingBundleBuilder {
-    transaction_builders: TransactionBuilders,
+    builders: TransactionBuilders,
 }
 
 impl IncomingBundleBuilder {
     /// Pushes a new transaction coming over the wire into the bundle builder.
     pub fn push(&mut self, transaction_builder: TransactionBuilder) -> &mut Self {
-        self.transaction_builders.push(transaction_builder);
+        self.builders.push(transaction_builder);
         self
     }
 }
@@ -69,8 +69,8 @@ struct Validated;
 
 #[derive(Default)]
 struct StagedOutgoingBundleBuilder<S> {
-    transaction_builders: TransactionBuilders,
-    build_stage: PhantomData<S>,
+    builders: TransactionBuilders,
+    stage: PhantomData<S>,
 }
 
 type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Raw>;
@@ -84,13 +84,13 @@ impl StagedOutgoingBundleBuilder<Raw> {
     }
 
     pub fn push(&mut self, transaction_builder: TransactionBuilder) {
-        self.transaction_builders.push(transaction_builder);
+        self.builders.push(transaction_builder);
     }
 
     pub fn seal(self) -> Result<StagedOutgoingBundleBuilder<Sealed>, BundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<Sealed> {
-            transaction_builders: self.transaction_builders,
-            build_stage: PhantomData,
+            builders: self.builders,
+            stage: PhantomData,
         })
     }
 }
@@ -98,8 +98,8 @@ impl StagedOutgoingBundleBuilder<Raw> {
 impl StagedOutgoingBundleBuilder<Sealed> {
     pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<Signed>, BundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<Signed> {
-            transaction_builders: self.transaction_builders,
-            build_stage: PhantomData,
+            builders: self.builders,
+            stage: PhantomData,
         })
     }
 }
@@ -107,8 +107,8 @@ impl StagedOutgoingBundleBuilder<Sealed> {
 impl StagedOutgoingBundleBuilder<Signed> {
     pub fn attach(self) -> Result<StagedOutgoingBundleBuilder<Attached>, BundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<Attached> {
-            transaction_builders: self.transaction_builders,
-            build_stage: PhantomData,
+            builders: self.builders,
+            stage: PhantomData,
         })
     }
 }
@@ -116,8 +116,8 @@ impl StagedOutgoingBundleBuilder<Signed> {
 impl StagedOutgoingBundleBuilder<Attached> {
     pub fn validate(self) -> Result<StagedOutgoingBundleBuilder<Validated>, BundleBuilderError> {
         Ok(StagedOutgoingBundleBuilder::<Validated> {
-            transaction_builders: self.transaction_builders,
-            build_stage: PhantomData,
+            builders: self.builders,
+            stage: PhantomData,
         })
     }
 }
@@ -126,7 +126,7 @@ impl StagedOutgoingBundleBuilder<Validated> {
     pub fn build(self) -> Result<Bundle, BundleBuilderError> {
         let mut transactions = Transactions::new();
 
-        for transaction_builder in self.transaction_builders.0 {
+        for transaction_builder in self.builders.0 {
             transactions.push(transaction_builder.build());
         }
 
