@@ -155,7 +155,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
                 if !all_hashes.contains(&trunk){
                     let approver_rc : Rc<bundle::Hash> = optional_approver_rc.map_or(Rc::new(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_HASH))), |rc| rc.clone());
-                    missing_to_approvers.entry(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_TRUNK))).or_insert(HashSet::new()).insert(approver_rc);
+                    missing_to_approvers.entry(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_TRUNK))).or_insert(HashSet::new()).insert(approver_rc.clone());
                 }
 
             }
