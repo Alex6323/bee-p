@@ -3,16 +3,8 @@ use crypto::Sponge;
 use std::marker::PhantomData;
 use ternary::TritsBuf;
 
-/// A newtype to represent a number of transactions, that hides the internal data layout.
 #[derive(Default)]
 pub struct Transactions(Vec<Transaction>);
-
-/// `Bundle`s are messages on the network of one or more `Transactions`s, which in turn are setnt one at a time and are stored in a distributed ledger called the `Tangle`.
-///
-/// For a `Bundle` to be bulidable, all required transactions have to be present when validating and building. Otherwise the build will fail.
-pub struct Bundle {
-    transactions: Transactions,
-}
 
 impl Transactions {
     pub fn new() -> Self {
@@ -22,6 +14,22 @@ impl Transactions {
     pub fn push(&mut self, transaction: Transaction) {
         self.0.push(transaction);
     }
+}
+
+#[derive(Default)]
+pub struct TransactionBuilders(Vec<TransactionBuilder>);
+
+// TODO should be in tx module ?
+impl TransactionBuilders {
+    pub fn push(&mut self, transaction_builder: TransactionBuilder) {
+        self.0.push(transaction_builder);
+    }
+}
+
+///  Bundles
+
+pub struct Bundle {
+    transactions: Transactions,
 }
 
 impl Bundle {
@@ -34,27 +42,16 @@ impl Bundle {
     }
 }
 
-/// A newtype to represent a number of transactions, that hides the internal data layout.
-#[derive(Default)]
-pub struct TransactionBuilders(Vec<TransactionBuilder>);
+/// Incoming bundles
 
-/// Concerned with constructing and verifying complete messages coming in externally.
 struct IncomingBundleBuilder {
     builders: TransactionBuilders,
 }
 
 impl IncomingBundleBuilder {
-    /// Pushes a new transaction coming over the wire into the bundle builder.
     pub fn push(&mut self, transaction_builder: TransactionBuilder) -> &mut Self {
         self.builders.push(transaction_builder);
         self
-    }
-}
-
-// TODO should be in tx module ?
-impl TransactionBuilders {
-    pub fn push(&mut self, transaction_builder: TransactionBuilder) {
-        self.0.push(transaction_builder);
     }
 }
 
@@ -126,6 +123,7 @@ where
     pub fn seal(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, Sealed>, OutgoingBundleBuilderError> {
+        // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, H, Sealed> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -143,6 +141,7 @@ where
     pub fn sign(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, Signed>, OutgoingBundleBuilderError> {
+        // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, H, Signed> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -160,6 +159,7 @@ where
     pub fn attach(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, Attached>, OutgoingBundleBuilderError> {
+        // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, H, Attached> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -177,6 +177,7 @@ where
     pub fn validate(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, Validated>, OutgoingBundleBuilderError> {
+        // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, H, Validated> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -192,6 +193,7 @@ where
     H: Sponge + Default,
 {
     pub fn build(self) -> Result<Bundle, OutgoingBundleBuilderError> {
+        // TODO Impl
         let mut transactions = Transactions::new();
 
         for transaction_builder in self.builders.0 {
