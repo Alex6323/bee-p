@@ -28,11 +28,15 @@ mod tests {
     use std::io::{self, Write};
     use std::panic;
     use std::borrow::Borrow;
-    use bundle::Hash;
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
+    use bundle::{Hash, Transaction};
     use std::rc::Rc;
+    use std::thread;
+    use futures::future::{join_all, ok, err};
+    use std::time::{Duration, Instant};
 
-    fn rand_hash_string() -> bundle::Hash{
+
+    fn rand_hash() -> bundle::Hash{
         use rand::Rng;
         const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
         const HASH_LEN: usize = 81;
@@ -56,7 +60,7 @@ mod tests {
             .tag(bundle::Tag::from_str("HELLO"))
             .nonce(bundle::Nonce::from_str("ABCDEF"));
 
-        (rand_hash_string() , builder.build())
+        (rand_hash(), builder.build())
     }
 
     fn create_random_attached_tx(branch: bundle::Hash, trunk: bundle::Hash) -> (bundle::Hash, bundle::Transaction) {
@@ -70,12 +74,12 @@ mod tests {
             .nonce(bundle::Nonce::from_str("ABCDEF"));
 
 
-        (rand_hash_string() , builder.build())
+        (rand_hash(), builder.build())
     }
 
     fn create_random_milestone() -> Milestone {
         Milestone {
-            hash: rand_hash_string(),
+            hash: rand_hash(),
             index: 0,
         }
     }
@@ -122,7 +126,7 @@ mod tests {
             .output()
             .expect("failed to execute cleanup process");
 
-        io::stdout().write_all(b"TEARING DOWN").unwrap();
+        io::stdout().write_all(b"TEARING DOWN\n").unwrap();
 
         println!("status: {}", output.status);
 
@@ -139,8 +143,8 @@ mod tests {
 
             block_on(storage.establish_connection());
             let (tx_hash, tx) = create_random_tx();
-            block_on(storage.insert_transaction(&tx_hash, &tx));
-            let res = block_on(storage.find_transaction(&tx_hash));
+            block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
+            let res = block_on(storage.find_transaction(tx_hash));
             let found_tx = res.unwrap();
             block_on(storage.destroy_connection());
             assert_eq!(tx.nonce().0, found_tx.nonce().0);
@@ -152,8 +156,8 @@ mod tests {
             block_on(storage.establish_connection());
             let mut milestone = create_random_milestone();
             milestone.index = 1;
-            block_on(storage.insert_milestone(&milestone));
-            let res = block_on(storage.find_milestone(milestone.hash.borrow()));
+            block_on(storage.insert_milestone(milestone.clone()));
+            let res = block_on(storage.find_milestone(milestone.hash.clone()));
             let found_milestone = res.unwrap();
             block_on(storage.destroy_connection());
             assert_eq!(milestone.hash.to_string(), found_milestone.hash.to_string());
@@ -164,15 +168,15 @@ mod tests {
 
                 block_on(storage.establish_connection());
                 let (tx_hash, tx) = create_random_tx();
-                block_on(storage.insert_transaction(&tx_hash, &tx));
-                let res = block_on(storage.find_transaction(&tx_hash));
+                block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
+                let res = block_on(storage.find_transaction(tx_hash.clone()));
                 let found_tx = res.unwrap();
                 assert_eq!(tx.nonce().0, found_tx.nonce().0);
                 let mut transactions_to_delete = HashSet::new();
                 transactions_to_delete.insert(tx_hash);
                 let res = block_on(storage.delete_transactions(&transactions_to_delete));
                 assert!(res.is_ok());
-                let res = block_on(storage.find_transaction(&transactions_to_delete.iter().last().unwrap()));
+                let res = block_on(storage.find_transaction(transactions_to_delete.iter().last().unwrap().clone()));
                 block_on(storage.destroy_connection());
                 assert!(res.is_err());
         }
@@ -183,15 +187,15 @@ mod tests {
             block_on(storage.establish_connection());
             let mut milestone = create_random_milestone();
             milestone.index = 2;
-            block_on(storage.insert_milestone(&milestone));
-            let res = block_on(storage.find_milestone(milestone.hash.borrow()));
+            block_on(storage.insert_milestone(milestone.clone()));
+            let res = block_on(storage.find_milestone(milestone.hash.clone()));
             let found_milestone = res.unwrap();
             assert_eq!(milestone.hash.to_string(), found_milestone.hash.to_string());
             let mut milestones_to_delete = HashSet::new();
             milestones_to_delete.insert(milestone.hash);
             let res = block_on(storage.delete_milestones(&milestones_to_delete));
             assert!(res.is_ok());
-            let res = block_on(storage.find_milestone(&milestones_to_delete.iter().last().unwrap()));
+            let res = block_on(storage.find_milestone(milestones_to_delete.iter().last().unwrap().clone()));
             block_on(storage.destroy_connection());
             assert!(res.is_err());
     }
@@ -206,8 +210,8 @@ mod tests {
 
             for i in 0 .. 10 {
                 let (tx_hash, tx) = create_random_tx();
-                block_on(storage.insert_transaction(&tx_hash, &tx));
-                let res = block_on(storage.find_transaction(&tx_hash));
+                block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
+                let res = block_on(storage.find_transaction(tx_hash.clone()));
                 let found_tx = res.unwrap();
                 assert_eq!(tx.nonce().0, found_tx.nonce().0);
                 hashes.insert(tx_hash);
@@ -217,7 +221,7 @@ mod tests {
             assert!(res.is_ok());
 
             for hash in hashes.iter() {
-                let res = block_on(storage.find_transaction(&hash));
+                let res = block_on(storage.find_transaction(hash.clone()));
                 assert!(res.is_err())
             }
 
@@ -232,8 +236,8 @@ mod tests {
 
             let mut hash_to_approvers_expected = storage::HashesToApprovers::new();
             let (tx_hash, tx) =  create_random_tx();
-            block_on(storage.insert_transaction(&tx_hash, &tx));
-            let res = block_on(storage.find_transaction(&tx_hash));
+            block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
+            let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
             assert_eq!(tx.nonce().0, found_tx.nonce().0);
             let mut last_tx_hash = tx_hash.clone();
@@ -243,8 +247,8 @@ mod tests {
                 let mut approvers  = HashSet::new();
                 approvers.insert(tx_hash.clone());
                 hash_to_approvers_expected.insert(last_tx_hash.clone(), approvers);
-                block_on(storage.insert_transaction(&tx_hash, &tx));
-                let res = block_on(storage.find_transaction(&tx_hash));
+                block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
+                let res = block_on(storage.find_transaction(tx_hash.clone()));
                 let found_tx = res.unwrap();
                 assert_eq!(tx.nonce().0, found_tx.nonce().0);
                 last_tx_hash = tx_hash.clone();
@@ -267,16 +271,16 @@ mod tests {
 
             let mut missing_hash_to_approvers_expected = storage::MissingHashesToRCApprovers::new();
             let (tx_hash, tx) =  create_random_tx();
-            block_on(storage.insert_transaction(&tx_hash, &tx));
-            let res = block_on(storage.find_transaction(&tx_hash));
+            block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
+            let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
             assert_eq!(tx.nonce().0, found_tx.nonce().0);
             let mut last_tx_hash = tx_hash.clone();
             let mut all_transactions_hashes = HashSet::new();
 
             for i in 0 .. 2000 {
-                let missing_tx_hash_trunk = rand_hash_string();
-                let missing_tx_hash_branch = rand_hash_string();
+                let missing_tx_hash_trunk = rand_hash();
+                let missing_tx_hash_branch = rand_hash();
                 let (tx_hash, mut tx) = match i % 3 {
                     0 => create_random_attached_tx( last_tx_hash.clone() , missing_tx_hash_trunk.clone()),
                     1 => create_random_attached_tx(missing_tx_hash_branch.clone(), last_tx_hash.clone()),
@@ -313,8 +317,8 @@ mod tests {
 
 
 
-                block_on(storage.insert_transaction(&tx_hash, &tx));
-                let res = block_on(storage.find_transaction(&tx_hash));
+                block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
+                let res = block_on(storage.find_transaction(tx_hash.clone()));
                 let found_tx = res.unwrap();
                 assert_eq!(tx.nonce().0, found_tx.nonce().0);
                 all_transactions_hashes.insert(tx_hash.clone());
@@ -331,6 +335,68 @@ mod tests {
         }
 
 
+    fn test_insert_transactions_concurrent() {
+
+        let mut storage = SqlxBackendStorage::new();
+        block_on(storage.establish_connection());
+        let mut hashes_transaction_seq = Vec::new();
+        let mut hashes = HashSet::new();
+        const NUM_TRANSACTIONS : usize = 4000;
+
+        let mut futures = Vec::new();
+        for i in 0..NUM_TRANSACTIONS {
+            let (tx_hash, tx) = create_random_tx();
+            hashes.insert(tx_hash.clone());
+            hashes_transaction_seq.push((tx_hash, tx));
+        }
+
+        let now = Instant::now();
+        for (hash, tx) in hashes_transaction_seq{
+
+            let f = storage.insert_transaction(hash, tx);
+            futures.push(f);
+
+        }
+
+        block_on(join_all(futures));
+        let message = format!("\ntest_insert_transactions_concurrent Elapsed: {}\n",now.elapsed().as_secs());
+        io::stdout().write_all(message.as_bytes()).unwrap();
+        for h in hashes {
+            let res = block_on(storage.find_transaction(h));
+            assert!(res.is_ok());
+        }
+        block_on(storage.destroy_connection());
+    }
+
+    fn test_insert_transactions_batch() {
+
+        let mut storage = SqlxBackendStorage::new();
+        block_on(storage.establish_connection());
+        let mut hashes_to_transactions = HashMap::new();
+        let mut hashes = HashSet::new();
+        const NUM_TRANSACTIONS : usize = 10000;
+
+        for i in 0..NUM_TRANSACTIONS {
+            let (tx_hash, tx) = create_random_tx();
+            hashes.insert(tx_hash.clone());
+            hashes_to_transactions.insert(tx_hash, tx);
+        }
+
+
+        let now = Instant::now();
+        block_on(storage.insert_transactions(hashes_to_transactions));
+        let message = format!("\ntest_insert_transactions_batch Elapsed: {}\n",now.elapsed().as_secs());
+        io::stdout().write_all(message.as_bytes()).unwrap();
+
+        for h in hashes {
+            let res = block_on(storage.find_transaction(h));
+            assert!(res.is_ok());
+        }
+
+        block_on(storage.destroy_connection());
+    }
+
+
         #[test]
         fn test_all() {
             run_test(|| {
@@ -341,6 +407,8 @@ mod tests {
                 test_transaction_multiple_delete();
                 test_map_hashes_to_approvers();
                 test_map_missing_transaction_hashes_to_approvers();
+                test_insert_transactions_concurrent();
+                test_insert_transactions_batch();
             })
 
         }

@@ -18,7 +18,7 @@ use serde::{Serialize, Deserialize};
 type TxAddress = String;
 
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Milestone {
     pub hash: bundle::Hash,
     pub index: u32,
@@ -60,8 +60,9 @@ pub trait StorageBackend {
         &self, all_hashes: HashSet<bundle::Hash>
     ) -> Result<MissingHashesToRCApprovers, Self::StorageError>;
 
-    async fn insert_transaction(&self, tx_hash: &bundle::Hash, tx: &bundle::Transaction) -> Result<(), Self::StorageError>;
-    async fn find_transaction(&self, tx_hash: &bundle::Hash) -> Result<bundle::Transaction, Self::StorageError>;
+    async fn insert_transaction(&self, tx_hash: bundle::Hash, tx: bundle::Transaction) -> Result<(), Self::StorageError>;
+    async fn insert_transactions(&self, transactions : HashMap<bundle::Hash,bundle::Transaction>) -> Result<(), Self::StorageError>;
+    async fn find_transaction(&self, tx_hash: bundle::Hash) -> Result<bundle::Transaction, Self::StorageError>;
     async fn update_transactions_set_solid(
         &self,
         transaction_hashes: HashSet<bundle::Hash>,
@@ -76,9 +77,9 @@ pub trait StorageBackend {
 
     async fn delete_transactions(&self, transaction_hashes: &HashSet<bundle::Hash>) -> Result<(), Self::StorageError>;
 
-    async fn insert_milestone(&self, milestone: &Milestone) -> Result<(), Self::StorageError>;
+    async fn insert_milestone(&self, milestone: Milestone) -> Result<(), Self::StorageError>;
 
-    async fn find_milestone(&self, milestone_hash: &bundle::Hash) -> Result<Milestone, Self::StorageError>;
+    async fn find_milestone(&self, milestone_hash: bundle::Hash) -> Result<Milestone, Self::StorageError>;
 
     async fn delete_milestones(
         &self,
@@ -98,16 +99,7 @@ pub trait StorageBackend {
 
 }
 
+#[derive(Clone, Debug)]
 pub struct Storage<Conn: Connection<Conn>> {
     pub connection: Conn,
-}
-
-
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
 }
