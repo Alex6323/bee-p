@@ -78,17 +78,17 @@ macro_rules! implement_clone {
 
 pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
 pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Value(pub i64);
 pub struct Tag(pub [Tryte; TAG.tryte_offset.length]);
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Timestamp(pub u64);
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Index(pub usize);
 pub struct Hash(pub [Tryte; BUNDLE_HASH.tryte_offset.length]);
 pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Transaction {
     payload: Payload,
     address: Address,
@@ -228,7 +228,7 @@ implement_debug!(Payload, Address, Tag, Nonce, Hash);
 implement_display!(Payload, Address, Tag, Nonce, Hash);
 implement_hash!(Address, Hash);
 implement_eq!(Payload, Address, Tag, Hash, Nonce);
-implement_clone!(Hash);
+implement_clone!(Payload, Address, Tag, Nonce, Hash);
 
 impl Transaction {
     pub fn from_tryte_str(tx_trytes: &str) -> Self {

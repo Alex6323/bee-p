@@ -1,6 +1,7 @@
 //pub extern crate storage;
 //pub extern crate serde;
 //pub extern crate bincode;
+extern crate num_cpus;
 
 pub mod errors;
 
@@ -27,6 +28,7 @@ pub use bundle::*;
 
 std::include!("../sql/statements.rs");
 
+#[derive(Clone, Debug)]
 pub struct SqlxBackendConnection {
     connection_pool: Option<PgPool>,
 }
@@ -46,17 +48,21 @@ impl storage::Connection<SqlxBackendConnection> for SqlxBackendConnection {
     type StorageError = SqlxBackendError;
 
     async fn establish_connection(&mut self) -> Result<(), SqlxBackendError> {
-        let pool = PgPool::new(&env::var("BEE_DATABASE_URL")?).await.expect(FAILED_ESTABLISHING_CONNECTION);
+        let pool = PgPool::builder()
+            .max_size(num_cpus::get() as u32)
+            .build(&env::var("BEE_DATABASE_URL")?)
+            .await.expect(FAILED_ESTABLISHING_CONNECTION);
         self.connection_pool = Some(pool);
 
         Ok(())
     }
     async fn destroy_connection(&mut self) -> Result<(), SqlxBackendError> {
-        self.connection_pool.as_ref().unwrap().close();
+        self.connection_pool.as_ref().unwrap().close().await;
         Ok(())
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct SqlxBackendStorage(storage::Storage<SqlxBackendConnection>);
 
 
@@ -171,7 +177,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(missing_to_approvers)
     }
     //Implement all methods here
-    async fn insert_transaction(&self, tx_hash: &bundle::Hash, tx: &bundle::Transaction) -> Result<(), SqlxBackendError> {
+    async fn insert_transaction(&self, tx_hash: bundle::Hash, tx: bundle::Transaction) -> Result<(), SqlxBackendError> {
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
@@ -204,7 +210,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn find_transaction(&self, tx_hash: &bundle::Hash) -> Result<bundle::Transaction, SqlxBackendError> {
+    async fn find_transaction(&self, tx_hash: bundle::Hash) -> Result<bundle::Transaction, SqlxBackendError> {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
@@ -313,7 +319,41 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     }
 
-    async fn insert_milestone(&self, milestone: &Milestone) -> Result<(), SqlxBackendError>{
+    async fn insert_transactions(&self, transactions : HashMap<bundle::Hash,bundle::Transaction>) -> Result<(), Self::StorageError> {
+        let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
+        let mut conn_transaction = pool.begin().await?;
+
+        for (tx_hash , tx) in transactions {
+
+            let row = sqlx::query(
+                INSERT_TRANSACTION_STATEMENT
+            )
+                .bind(tx.payload().to_string().as_bytes())
+                .bind(tx.address().to_string().as_bytes())
+                .bind(tx.value().0)
+                .bind(tx.obsolete_tag().to_string().as_bytes())
+                .bind(tx.timestamp().0 as i32)
+                .bind(tx.index().0 as i32)
+                .bind(tx.last_index().0 as i32)
+                .bind(tx.bundle().to_string().as_bytes())
+                .bind(tx.trunk().to_string().as_bytes())
+                .bind(tx.branch().to_string().as_bytes())
+                .bind(tx.tag().to_string().as_bytes())
+                .bind(tx.attachment_ts().0 as i32)
+                .bind(tx.attachment_lbts().0 as i32)
+                .bind(tx.attachment_ubts().0 as i32)
+                .bind(tx.nonce().to_string().as_bytes())
+                .bind(tx_hash.to_string().as_bytes())
+                .fetch_one(&mut conn_transaction)
+                .await?;
+        }
+
+        conn_transaction.commit().await?;
+
+        Ok(())
+    }
+
+    async fn insert_milestone(&self, milestone: Milestone) -> Result<(), SqlxBackendError>{
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
@@ -330,7 +370,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn find_milestone(&self, milestone_hash: &bundle::Hash) -> Result<Milestone, SqlxBackendError>{
+    async fn find_milestone(&self, milestone_hash: bundle::Hash) -> Result<Milestone, SqlxBackendError>{
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
