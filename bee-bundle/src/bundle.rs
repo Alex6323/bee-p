@@ -82,20 +82,20 @@ pub enum OutgoingBundleBuilderError {}
 trait OutgoingBundleBuilderStage {}
 
 #[derive(Default)]
-pub struct Raw;
-impl OutgoingBundleBuilderStage for Raw {}
+pub struct OutgoingRaw;
+impl OutgoingBundleBuilderStage for OutgoingRaw {}
 
-pub struct Sealed;
-impl OutgoingBundleBuilderStage for Sealed {}
+pub struct OutgoingSealed;
+impl OutgoingBundleBuilderStage for OutgoingSealed {}
 
-pub struct Signed;
-impl OutgoingBundleBuilderStage for Signed {}
+pub struct OutgoingSigned;
+impl OutgoingBundleBuilderStage for OutgoingSigned {}
 
-pub struct Attached;
-impl OutgoingBundleBuilderStage for Attached {}
+pub struct OutgoingAttached;
+impl OutgoingBundleBuilderStage for OutgoingAttached {}
 
-pub struct Validated;
-impl OutgoingBundleBuilderStage for Validated {}
+pub struct OutgoingValidated;
+impl OutgoingBundleBuilderStage for OutgoingValidated {}
 
 #[derive(Default)]
 pub struct StagedOutgoingBundleBuilder<E, H, S> {
@@ -105,7 +105,7 @@ pub struct StagedOutgoingBundleBuilder<E, H, S> {
     stage: PhantomData<S>,
 }
 
-pub type OutgoingBundleBuilderSponge<E, H> = StagedOutgoingBundleBuilder<E, H, Raw>;
+pub type OutgoingBundleBuilderSponge<E, H> = StagedOutgoingBundleBuilder<E, H, OutgoingRaw>;
 // TODO default to Kerl
 pub type OutgoingBundleBuilder = OutgoingBundleBuilderSponge<crypto::CurlP81, crypto::CurlP81>;
 
@@ -126,7 +126,7 @@ where
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, Raw>
+impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingRaw>
 where
     E: Sponge + Default,
     H: Sponge + Default,
@@ -141,9 +141,9 @@ where
 
     pub fn seal(
         self,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, Sealed>, OutgoingBundleBuilderError> {
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSealed>, OutgoingBundleBuilderError> {
         // TODO Impl
-        Ok(StagedOutgoingBundleBuilder::<E, H, Sealed> {
+        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingSealed> {
             builders: self.builders,
             essence_sponge: PhantomData,
             hash_sponge: PhantomData,
@@ -152,16 +152,16 @@ where
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, Sealed>
+impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingSealed>
 where
     E: Sponge + Default,
     H: Sponge + Default,
 {
     pub fn sign(
         self,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, Signed>, OutgoingBundleBuilderError> {
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSigned>, OutgoingBundleBuilderError> {
         // TODO Impl
-        Ok(StagedOutgoingBundleBuilder::<E, H, Signed> {
+        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
             hash_sponge: PhantomData,
@@ -170,16 +170,17 @@ where
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, Signed>
+impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingSigned>
 where
     E: Sponge + Default,
     H: Sponge + Default,
 {
     pub fn attach(
         self,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, Attached>, OutgoingBundleBuilderError> {
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
+    {
         // TODO Impl
-        Ok(StagedOutgoingBundleBuilder::<E, H, Attached> {
+        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingAttached> {
             builders: self.builders,
             essence_sponge: PhantomData,
             hash_sponge: PhantomData,
@@ -188,16 +189,17 @@ where
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, Attached>
+impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingAttached>
 where
     E: Sponge + Default,
     H: Sponge + Default,
 {
     pub fn validate(
         self,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, Validated>, OutgoingBundleBuilderError> {
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingValidated>, OutgoingBundleBuilderError>
+    {
         // TODO Impl
-        Ok(StagedOutgoingBundleBuilder::<E, H, Validated> {
+        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingValidated> {
             builders: self.builders,
             essence_sponge: PhantomData,
             hash_sponge: PhantomData,
@@ -206,7 +208,7 @@ where
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, Validated>
+impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingValidated>
 where
     E: Sponge + Default,
     H: Sponge + Default,
