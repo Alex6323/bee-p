@@ -1,7 +1,7 @@
 use crate::{Transaction, TransactionBuilder};
 use crypto::Sponge;
 use std::marker::PhantomData;
-use ternary::TritsBuf;
+use ternary::TritBuf;
 
 #[derive(Default)]
 pub struct Transactions(Vec<Transaction>);
@@ -96,7 +96,7 @@ where
     H: Sponge + Default,
     S: OutgoingBundleBuilderStage,
 {
-    pub fn calculate_hash(&self) -> TritsBuf {
+    pub fn calculate_hash(&self) -> TritBuf {
         let mut sponge = E::default();
 
         for builder in &self.builders.0 {
