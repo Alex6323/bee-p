@@ -6,5 +6,6 @@ mod transaction;
 pub use crate::bundle::{OutgoingBundleBuilder, OutgoingBundleBuilderError};
 pub use constants::*;
 pub use transaction::{
-    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder, Value,
+    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder,
+    TransactionBuilders, Transactions, Value,
 };

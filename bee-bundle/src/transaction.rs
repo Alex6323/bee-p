@@ -202,7 +202,6 @@ impl Hash {
     }
 }
 
-
 impl Default for Nonce {
     fn default() -> Self {
         Self([TRYTE_ZERO; NONCE.tryte_offset.length])
@@ -334,6 +333,23 @@ impl std::fmt::Debug for Transaction {
         self.trunk,
         self.branch,
         self.nonce)
+    }
+}
+
+#[derive(Default)]
+pub struct Transactions(Vec<Transaction>);
+
+impl Transactions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn push(&mut self, transaction: Transaction) {
+        self.0.push(transaction);
     }
 }
 
@@ -488,6 +504,15 @@ impl TransactionBuilder {
             attachment_ubts: self.attachment_ubts.unwrap(),
             nonce: self.nonce.unwrap(),
         }
+    }
+}
+
+#[derive(Default)]
+pub struct TransactionBuilders(pub(crate) Vec<TransactionBuilder>);
+
+impl TransactionBuilders {
+    pub fn push(&mut self, transaction_builder: TransactionBuilder) {
+        self.0.push(transaction_builder);
     }
 }
 

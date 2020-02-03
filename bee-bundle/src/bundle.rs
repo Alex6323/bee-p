@@ -1,30 +1,7 @@
-use crate::{Transaction, TransactionBuilder};
+use crate::{Transaction, TransactionBuilder, TransactionBuilders, Transactions};
 use crypto::Sponge;
 use std::marker::PhantomData;
 use ternary::TritBuf;
-
-#[derive(Default)]
-pub struct Transactions(Vec<Transaction>);
-
-impl Transactions {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn push(&mut self, transaction: Transaction) {
-        self.0.push(transaction);
-    }
-}
-
-#[derive(Default)]
-pub struct TransactionBuilders(Vec<TransactionBuilder>);
-
-// TODO should be in tx module ?
-impl TransactionBuilders {
-    pub fn push(&mut self, transaction_builder: TransactionBuilder) {
-        self.0.push(transaction_builder);
-    }
-}
 
 ///  Bundles
 
@@ -38,7 +15,7 @@ impl Bundle {
     }
 
     pub fn len(&self) -> usize {
-        self.transactions.0.len()
+        self.transactions.len()
     }
 }
 
