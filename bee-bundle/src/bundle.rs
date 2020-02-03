@@ -47,7 +47,7 @@ impl Bundle {
 #[derive(Debug)]
 pub enum IncomingBundleBuilderError {}
 
-trait IncomingBundleBuilderStage {}
+pub trait IncomingBundleBuilderStage {}
 
 #[derive(Default)]
 pub struct IncomingRaw;
@@ -57,7 +57,7 @@ pub struct IncomingValidated;
 impl IncomingBundleBuilderStage for IncomingValidated {}
 
 #[derive(Default)]
-struct StagedIncomingBundleBuilder<E, S> {
+pub struct StagedIncomingBundleBuilder<E, S> {
     transactions: Transactions,
     essence_sponge: PhantomData<E>,
     stage: PhantomData<S>,
@@ -100,7 +100,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 #[derive(Debug)]
 pub enum OutgoingBundleBuilderError {}
 
-trait OutgoingBundleBuilderStage {}
+pub trait OutgoingBundleBuilderStage {}
 
 #[derive(Default)]
 pub struct OutgoingRaw;
