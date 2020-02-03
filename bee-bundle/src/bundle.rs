@@ -1,6 +1,7 @@
 use crate::{Transaction, TransactionBuilder, TransactionBuilders, Transactions};
 use crypto::Sponge;
 use std::marker::PhantomData;
+use std::ops::Index;
 use ternary::TritBuf;
 
 ///  Bundles
@@ -16,6 +17,14 @@ impl Bundle {
 
     pub fn len(&self) -> usize {
         self.transactions.len()
+    }
+}
+
+impl Index<usize> for Bundle {
+    type Output = Transaction;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &(self.transactions.0[index])
     }
 }
 

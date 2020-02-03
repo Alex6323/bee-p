@@ -337,7 +337,7 @@ impl std::fmt::Debug for Transaction {
 }
 
 #[derive(Default)]
-pub struct Transactions(Vec<Transaction>);
+pub struct Transactions(pub(crate) Vec<Transaction>);
 
 impl Transactions {
     pub fn new() -> Self {
