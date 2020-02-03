@@ -13,6 +13,8 @@ impl Bee {
     }
 
     pub fn run(&mut self) -> Result<()> {
+        // TEMP: simulate some runtime
+        std::thread::sleep(std::time::Duration::from_millis(10000));
         Ok(())
     }
 }
@@ -24,7 +26,7 @@ mod should {
 
     #[test]
     fn create_bee_from_config() {
-        let _bee = Bee::from_config(Config::build()
+        let _bee = Bee::from_config(Config::builder()
             .with_host(Host::from_address("127.0.0.1:1337"))
             .with_peer(Peer::from_address("127.0.0.1:1338"))
             .try_build()

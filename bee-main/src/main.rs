@@ -1,26 +1,36 @@
 mod bee;
 mod config;
+mod screen;
+mod logger;
+
+use logger::BeeLogger;
+use screen::BeeScreen;
 
 pub use crate::bee::Bee;
 pub use crate::config::{Config, Host, Peer};
 
-use common::constants::{DEBUG, ENV_VAR};
-
-use std::env;
+use log::Level;
 
 fn main() {
-    env::set_var(ENV_VAR, DEBUG);
+    let logger = BeeLogger::new(Level::Trace);
+    logger.init();
 
-    let config = Config::build()
+    let screen = BeeScreen::new();
+    screen.init();
+
+    logger.trace("Just built.");
+    logger.info("Starting Bee.");
+    logger.error("Not implemented");
+    logger.info("This screen will will be displayed for about 10 seconds.");
+
+    let mut bee = Bee::from_config(Config::builder()
         .with_host(Host::from_address("127.0.0.1:1337"))
         .with_peer(Peer::from_address("127.0.0.1:1338"))
-        .with_peer(Peer::from_address("127.0.0.1:1339"))
         .try_build()
-        .expect("error creating config");
-
-    let mut bee = Bee::from_config(config);
+        .expect("error creating config"));
 
     assert!(bee.run().is_ok());
 
-    env::remove_var(ENV_VAR);
+    screen.exit();
+    logger.exit();
 }

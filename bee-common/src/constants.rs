@@ -1,5 +1,7 @@
-pub const ENV_VAR: &str = "BEE";
-pub const DEBUG: &str = "debug";
+pub const BEE_LOG: &str = "BEE_LOG";
+pub const BEE_DISPLAYED_NAME: &str = "Bee";
+pub const BEE_DISPLAYED_VERSION: &str = "0.0.1";
+
 pub const CONFIG: &str = "./config";
 
 pub const TRYTE_ZERO: char = '9';

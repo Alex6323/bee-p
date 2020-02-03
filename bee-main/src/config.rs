@@ -109,13 +109,21 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build() -> ConfigBuilder {
+    pub fn builder() -> ConfigBuilder {
         ConfigBuilder {
             host: None,
             peers: Peers::new(),
             pow_difficulty: Some(Difficulty::mainnet()),
             pow_cores: Some(Cores::max()),
         }
+    }
+
+    pub async fn load() -> Self {
+        unimplemented!()
+    }
+
+    pub async fn save() -> Self {
+        unimplemented!()
     }
 
     pub fn host(&self) -> &Host {
@@ -141,7 +149,7 @@ mod should {
 
     #[test]
     fn create_config_from_builder() {
-        let config = Config::build()
+        let config = Config::builder()
             .with_host(Host::from_address("127.0.0.1:1337"))
             .with_peer(Peer::from_address("127.0.0.1:1338"))
             .with_peer(Peer::from_address("127.0.0.1:1339"))
