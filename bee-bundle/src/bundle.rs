@@ -47,12 +47,24 @@ impl Bundle {
 #[derive(Debug)]
 pub enum IncomingBundleBuilderError {}
 
+trait IncomingBundleBuilderStage {}
+
 #[derive(Default)]
-struct IncomingBundleBuilder {
+pub struct IncomingRaw;
+impl IncomingBundleBuilderStage for IncomingRaw {}
+
+pub struct IncomingValidated;
+impl IncomingBundleBuilderStage for IncomingValidated {}
+
+#[derive(Default)]
+struct StagedIncomingBundleBuilder<S> {
     transactions: Transactions,
+    stage: PhantomData<S>,
 }
 
-impl IncomingBundleBuilder {
+pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<IncomingRaw>;
+
+impl StagedIncomingBundleBuilder<IncomingRaw> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -61,16 +73,21 @@ impl IncomingBundleBuilder {
         self.transactions.push(transactions);
     }
 
-    pub fn validate(&self) -> Result<(), IncomingBundleBuilderError> {
-        Ok(())
-    }
-
-    pub fn build(self) -> Result<Bundle, IncomingBundleBuilderError> {
-        self.validate()?;
-
-        Ok(Bundle {
+    pub fn validate(
+        self,
+    ) -> Result<StagedIncomingBundleBuilder<IncomingValidated>, IncomingBundleBuilderError> {
+        Ok(StagedIncomingBundleBuilder::<IncomingValidated> {
             transactions: self.transactions,
+            stage: PhantomData,
         })
+    }
+}
+
+impl StagedIncomingBundleBuilder<IncomingValidated> {
+    pub fn build(self) -> Bundle {
+        Bundle {
+            transactions: self.transactions,
+        }
     }
 }
 
@@ -240,7 +257,7 @@ mod tests {
             bundle_builder.push(Transaction::default());
         }
 
-        let bundle = bundle_builder.build()?;
+        let bundle = bundle_builder.validate()?.build();
 
         assert_eq!(bundle.len(), 5);
 
