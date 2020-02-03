@@ -57,14 +57,17 @@ pub struct IncomingValidated;
 impl IncomingBundleBuilderStage for IncomingValidated {}
 
 #[derive(Default)]
-struct StagedIncomingBundleBuilder<S> {
+struct StagedIncomingBundleBuilder<E, S> {
     transactions: Transactions,
+    essence_sponge: PhantomData<E>,
     stage: PhantomData<S>,
 }
 
-pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<IncomingRaw>;
+pub type IncomingBundleBuilderSponge<E> = StagedIncomingBundleBuilder<E, IncomingRaw>;
+// TODO default kerl
+pub type IncomingBundleBuilder = IncomingBundleBuilderSponge<crypto::CurlP81>;
 
-impl StagedIncomingBundleBuilder<IncomingRaw> {
+impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -75,15 +78,16 @@ impl StagedIncomingBundleBuilder<IncomingRaw> {
 
     pub fn validate(
         self,
-    ) -> Result<StagedIncomingBundleBuilder<IncomingValidated>, IncomingBundleBuilderError> {
-        Ok(StagedIncomingBundleBuilder::<IncomingValidated> {
+    ) -> Result<StagedIncomingBundleBuilder<E, IncomingValidated>, IncomingBundleBuilderError> {
+        Ok(StagedIncomingBundleBuilder::<E, IncomingValidated> {
             transactions: self.transactions,
+            essence_sponge: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl StagedIncomingBundleBuilder<IncomingValidated> {
+impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
     pub fn build(self) -> Bundle {
         Bundle {
             transactions: self.transactions,
