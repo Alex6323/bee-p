@@ -44,14 +44,33 @@ impl Bundle {
 
 /// Incoming bundles
 
+#[derive(Debug)]
+pub enum IncomingBundleBuilderError {}
+
+#[derive(Default)]
 struct IncomingBundleBuilder {
-    builders: TransactionBuilders,
+    transactions: Transactions,
 }
 
 impl IncomingBundleBuilder {
-    pub fn push(&mut self, transaction_builder: TransactionBuilder) -> &mut Self {
-        self.builders.push(transaction_builder);
-        self
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn push(&mut self, transactions: Transaction) {
+        self.transactions.push(transactions);
+    }
+
+    pub fn validate(&self) -> Result<(), IncomingBundleBuilderError> {
+        Ok(())
+    }
+
+    pub fn build(self) -> Result<Bundle, IncomingBundleBuilderError> {
+        self.validate()?;
+
+        Ok(Bundle {
+            transactions: self.transactions,
+        })
     }
 }
 
@@ -212,7 +231,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty_test() -> Result<(), OutgoingBundleBuilderError> {
+    fn incoming_bundle_builder_test() -> Result<(), IncomingBundleBuilderError> {
+        let mut bundle_builder = IncomingBundleBuilder::new();
+
+        for _ in 0..5 {
+            bundle_builder.push(Transaction::default());
+        }
+
+        let bundle = bundle_builder.build()?;
+
+        assert_eq!(bundle.len(), 5);
+
+        Ok(())
+    }
+
+    #[test]
+    fn outgoing_bundle_builder_test() -> Result<(), OutgoingBundleBuilderError> {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
         for _ in 0..5 {
