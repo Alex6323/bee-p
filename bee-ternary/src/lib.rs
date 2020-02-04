@@ -96,7 +96,20 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
             .step_by(chunk_len)
             .map(move |i| self.slice(i..(i + chunk_len).min(self.len())))
     }
+}
 
+impl Trits<T1B1> {
+    pub fn as_i8_slice(&self) -> &[i8] {
+        self.0.as_i8_slice()
+    }
+
+    // Unsafe because we don't want Trit to have an invalid format
+    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
+        self.0.as_i8_slice_mut()
+    }
+
+    // Q: Why isn't this method on Trits<T>?
+    // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item=&mut Self> + '_ {
         (0..self.len())
             .step_by(chunk_len)
@@ -110,26 +123,14 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
 
     // Helper
     // TODO: Make this public? Is it needed?
-    // TODO: !WARNING! Investigate whether this is unsound:
-    // - Mutable slices given out simultaneously - but encoding could mean that slices overlap!
-    // - Slice overlap means we're breaking Rust's aliasing rules
+    // Q: Why isn't this method on Trits<T>?
+    // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     fn split_at_mut<'a>(this: &mut &'a mut Self, idx: usize) -> (&'a mut Self, &'a mut Self) {
         assert!(idx < this.len());
         (
             unsafe { &mut *(this.0.slice_unchecked_mut(0..idx) as *mut _ as *mut Self) },
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
         )
-    }
-}
-
-impl Trits<T1B1> {
-    pub fn as_i8_slice(&self) -> &[i8] {
-        self.0.as_i8_slice()
-    }
-
-    // Unsafe because we don't want Trit to have an invalid format
-    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
-        self.0.as_i8_slice_mut()
     }
 }
 
