@@ -358,21 +358,21 @@ impl Transactions {
 }
 
 pub struct TransactionBuilder {
-    payload: Option<Payload>,
-    address: Option<Address>,
-    value: Option<Value>,
-    obsolete_tag: Option<Tag>,
-    timestamp: Option<Timestamp>,
-    index: Option<Index>,
-    last_index: Option<Index>,
-    bundle: Option<Hash>,
-    trunk: Option<Hash>,
-    branch: Option<Hash>,
-    tag: Option<Tag>,
-    attachment_ts: Option<Timestamp>,
-    attachment_lbts: Option<Timestamp>,
-    attachment_ubts: Option<Timestamp>,
-    nonce: Option<Nonce>,
+    pub(crate) payload: Option<Payload>,
+    pub(crate) address: Option<Address>,
+    pub(crate) value: Option<Value>,
+    pub(crate) obsolete_tag: Option<Tag>,
+    pub(crate) timestamp: Option<Timestamp>,
+    pub(crate) index: Option<Index>,
+    pub(crate) last_index: Option<Index>,
+    pub(crate) bundle: Option<Hash>,
+    pub(crate) trunk: Option<Hash>,
+    pub(crate) branch: Option<Hash>,
+    pub(crate) tag: Option<Tag>,
+    pub(crate) attachment_ts: Option<Timestamp>,
+    pub(crate) attachment_lbts: Option<Timestamp>,
+    pub(crate) attachment_ubts: Option<Timestamp>,
+    pub(crate) nonce: Option<Nonce>,
 }
 
 impl TransactionBuilder {
@@ -515,6 +515,10 @@ impl TransactionBuilder {
 pub struct TransactionBuilders(pub(crate) Vec<TransactionBuilder>);
 
 impl TransactionBuilders {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn push(&mut self, transaction_builder: TransactionBuilder) {
         self.0.push(transaction_builder);
     }
