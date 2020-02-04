@@ -11,20 +11,14 @@ pub struct Bundle {
 }
 
 impl Bundle {
+    // TODO TEST
     pub fn get(&self, index: usize) -> Option<&Transaction> {
         self.transactions.get(index)
     }
 
+    // TODO TEST
     pub fn len(&self) -> usize {
         self.transactions.len()
-    }
-}
-
-impl Index<usize> for Bundle {
-    type Output = Transaction;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &(self.transactions.0[index])
     }
 }
 
@@ -54,14 +48,17 @@ pub type IncomingBundleBuilderSponge<E> = StagedIncomingBundleBuilder<E, Incomin
 pub type IncomingBundleBuilder = IncomingBundleBuilderSponge<crypto::CurlP81>;
 
 impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
+    // TODO TEST
     pub fn new() -> Self {
         Self::default()
     }
 
+    // TODO TEST
     pub fn push(&mut self, transactions: Transaction) {
         self.transactions.push(transactions);
     }
 
+    // TODO TEST
     pub fn validate(
         self,
     ) -> Result<StagedIncomingBundleBuilder<E, IncomingValidated>, IncomingBundleBuilderError> {
@@ -74,6 +71,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
 }
 
 impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
+    // TODO TEST
     pub fn build(self) -> Bundle {
         Bundle {
             transactions: self.transactions,
@@ -122,6 +120,7 @@ where
     H: Sponge + Default,
     S: OutgoingBundleBuilderStage,
 {
+    // TODO TEST
     pub fn calculate_hash(&self) -> TritsBuf {
         let mut sponge = E::default();
 
@@ -138,14 +137,17 @@ where
     E: Sponge + Default,
     H: Sponge + Default,
 {
+    // TODO TEST
     pub fn new() -> Self {
         Self::default()
     }
 
+    // TODO TEST
     pub fn push(&mut self, builder: TransactionBuilder) {
         self.builders.push(builder);
     }
 
+    // TODO TEST
     pub fn seal(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSealed>, OutgoingBundleBuilderError> {
@@ -164,6 +166,7 @@ where
     E: Sponge + Default,
     H: Sponge + Default,
 {
+    // TODO TEST
     pub fn sign(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSigned>, OutgoingBundleBuilderError> {
@@ -182,6 +185,7 @@ where
     E: Sponge + Default,
     H: Sponge + Default,
 {
+    // TODO TEST
     pub fn attach(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
@@ -201,6 +205,7 @@ where
     E: Sponge + Default,
     H: Sponge + Default,
 {
+    // TODO TEST
     pub fn validate(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingValidated>, OutgoingBundleBuilderError>
@@ -220,6 +225,7 @@ where
     E: Sponge + Default,
     H: Sponge + Default,
 {
+    // TODO TEST
     pub fn build(self) -> Result<Bundle, OutgoingBundleBuilderError> {
         // TODO Impl
         let mut transactions = Transactions::new();
