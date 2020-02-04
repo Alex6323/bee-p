@@ -203,6 +203,21 @@ where
     H: Sponge + Default,
 {
     // TODO TEST
+    pub fn attach(
+        self,
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
+    {
+        // TODO make sure there is no transaction that needs to be signed
+        StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
+            builders: self.builders,
+            essence_sponge: PhantomData,
+            hash_sponge: PhantomData,
+            stage: PhantomData,
+        }
+        .attach()
+    }
+
+    // TODO TEST
     pub fn sign(
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSigned>, OutgoingBundleBuilderError> {
@@ -295,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn outgoing_bundle_builder_test() -> Result<(), OutgoingBundleBuilderError> {
+    fn outgoing_bundle_builder_value_test() -> Result<(), OutgoingBundleBuilderError> {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
         for _ in 0..5 {
@@ -308,6 +323,21 @@ mod tests {
             .attach()?
             .validate()?
             .build()?;
+
+        assert_eq!(bundle.len(), 5);
+
+        Ok(())
+    }
+
+    #[test]
+    fn outgoing_bundle_builder_data_test() -> Result<(), OutgoingBundleBuilderError> {
+        let mut bundle_builder = OutgoingBundleBuilder::new();
+
+        for _ in 0..5 {
+            bundle_builder.push(TransactionBuilder::default());
+        }
+
+        let bundle = bundle_builder.seal()?.attach()?.validate()?.build()?;
 
         assert_eq!(bundle.len(), 5);
 
