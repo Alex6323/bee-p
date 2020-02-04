@@ -535,7 +535,6 @@ mod tests {
             .nonce(Nonce::from_str("ABCDEF"));
 
         let tx = builder.build();
-        println!("{:?}", tx);
     }
 
     #[test]

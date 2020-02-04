@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use std::ops::Index;
 use ternary::TritsBuf;
 
-///  Bundles
+/// Bundle
 
 pub struct Bundle(Transactions);
 
@@ -49,7 +49,7 @@ impl Index<usize> for Bundle {
     }
 }
 
-/// Incoming bundles
+/// Incoming bundle builder
 
 #[derive(Debug)]
 pub enum IncomingBundleBuilderError {}
@@ -104,7 +104,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
     }
 }
 
-/// Outgoing bundles
+/// Outgoing bundle builder
 
 #[derive(Debug)]
 pub enum OutgoingBundleBuilderError {}
