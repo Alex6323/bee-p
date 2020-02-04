@@ -7,35 +7,27 @@ use crossterm::cursor::{Hide, Show, MoveTo};
 use crossterm::{execute, ExecutableCommand};
 use crossterm::style::{SetForegroundColor, SetBackgroundColor, Color, ResetColor, Print};
 
-pub struct BeeScreen { }
+pub fn init() {
+    execute!(std::io::stdout(), EnterAlternateScreen).expect("error entering alternate screen");
+    execute!(std::io::stdout(), Hide).expect("error hiding cursor");
+    execute!(std::io::stdout(), MoveTo(0, 0)).expect("error moving cursor");
 
-impl BeeScreen {
-    pub fn new() -> Self {
-        Self { }
-    }
+    header().expect("error printing logo");
 
-    pub fn init(&self) {
-        execute!(std::io::stdout(), EnterAlternateScreen).expect("error entering alternate screen");
-        execute!(std::io::stdout(), Hide).expect("error hiding cursor");
-        execute!(std::io::stdout(), MoveTo(0, 0)).expect("error moving cursor");
+    execute!(std::io::stdout(), MoveTo(0, 2)).expect("error moving cursor");
+}
 
-        self.logo().expect("error printing logo");
+pub fn exit() {
+    execute!(std::io::stdout(), LeaveAlternateScreen).expect("error leaving alternate screen");
+    execute!(std::io::stdout(), Show).expect("error showing cursor");
+}
 
-        execute!(std::io::stdout(), MoveTo(0, 2)).expect("error moving cursor");
-    }
+fn header() -> crossterm::Result<()> {
+    stdout()
+    .execute(SetForegroundColor(Color::Black))?
+    .execute(SetBackgroundColor(Color::Yellow))?
+    .execute(Print(format!("IOTA Foundation, {} Version {}", BEE_DISPLAYED_NAME, BEE_DISPLAYED_VERSION)))?
+    .execute(ResetColor)?;
 
-    pub fn exit(&self) {
-        execute!(std::io::stdout(), LeaveAlternateScreen).expect("error leaving alternate screen");
-        execute!(std::io::stdout(), Show).expect("error showing cursor");
-    }
-
-    fn logo(&self) -> crossterm::Result<()> {
-        stdout()
-        .execute(SetForegroundColor(Color::Black))?
-        .execute(SetBackgroundColor(Color::Yellow))?
-        .execute(Print(format!("IOTA Foundation, {} Version {}", BEE_DISPLAYED_NAME, BEE_DISPLAYED_VERSION)))?
-        .execute(ResetColor)?;
-
-        Ok(())
-    }
+    Ok(())
 }

@@ -1,27 +1,18 @@
 mod bee;
 mod config;
 mod screen;
-mod logger;
-
-use logger::BeeLogger;
-use screen::BeeScreen;
+mod state;
 
 pub use crate::bee::Bee;
 pub use crate::config::{Config, Host, Peer};
 
-use log::Level;
+use common::logger;
 
 fn main() {
-    let logger = BeeLogger::new(Level::Trace);
-    logger.init();
+    logger::init(log::LevelFilter::Trace);
+    screen::init();
 
-    let screen = BeeScreen::new();
-    screen.init();
-
-    logger.trace("Just built.");
-    logger.info("Starting Bee.");
-    logger.error("Not implemented");
-    logger.info("This screen will will be displayed for about 10 seconds.");
+    logger::warn("This node will destroy itself in about 10 seconds.");
 
     let mut bee = Bee::from_config(Config::builder()
         .with_host(Host::from_address("127.0.0.1:1337"))
@@ -31,6 +22,5 @@ fn main() {
 
     assert!(bee.run().is_ok());
 
-    screen.exit();
-    logger.exit();
+    screen::exit();
 }

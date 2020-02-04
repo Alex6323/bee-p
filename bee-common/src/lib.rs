@@ -1,4 +1,5 @@
 pub mod constants;
+pub mod logger;
 
 mod result;
 mod types;

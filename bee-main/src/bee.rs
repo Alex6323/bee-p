@@ -1,20 +1,30 @@
-use common::Result;
+use common::{logger, Result};
 
 use crate::config::Config;
+use crate::state::State;
 
 /// The Bee prototype.
 pub struct Bee {
+    state: State,
 }
 
 impl Bee {
     pub fn from_config(_config: Config) -> Self {
         Self {
+            state: State::BootingUp,
         }
     }
 
     pub fn run(&mut self) -> Result<()> {
         // TEMP: simulate some runtime
-        std::thread::sleep(std::time::Duration::from_millis(10000));
+        logger::info(&self.state.to_string());
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+        self.state = State::Running;
+        logger::info(&self.state.to_string());
+        std::thread::sleep(std::time::Duration::from_millis(8000));
+        self.state = State::ShuttingDown;
+        logger::info(&self.state.to_string());
+        std::thread::sleep(std::time::Duration::from_millis(1000));
         Ok(())
     }
 }
