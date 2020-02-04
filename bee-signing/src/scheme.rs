@@ -1,11 +1,12 @@
+use ternary::{Trits, TritBuf};
+
 pub trait Seed {
     type Error;
 
     fn new() -> Self;
-    fn from_bytes(bytes: &[i8]) -> Result<Self, Self::Error>
-    where
-        Self: Sized;
-    fn to_bytes(&self) -> &[i8];
+    fn from_buf(buf: TritBuf) -> Result<Self, Self::Error> where Self: Sized;
+    fn as_bytes(&self) -> &[i8];
+    fn trits(&self) -> &Trits;
 }
 
 // TODO: documentation
@@ -98,10 +99,13 @@ pub trait PublicKey {
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error>;
 
     // TODO: documentation
-    fn from_bytes(bytes: &[i8]) -> Self;
+    fn from_buf(buf: TritBuf) -> Self;
 
     // TODO: documentation
-    fn to_bytes(&self) -> &[i8];
+    // TODO: Rename to as_i8_slice?
+    fn as_bytes(&self) -> &[i8];
+
+    fn trits(&self) -> &Trits;
 }
 
 // TODO: documentation
@@ -110,10 +114,13 @@ pub trait Signature {
     fn size(&self) -> usize;
 
     // TODO: documentation
-    fn from_bytes(bytes: &[i8]) -> Self;
+    fn from_buf(buf: TritBuf) -> Self;
 
     // TODO: documentation
-    fn to_bytes(&self) -> &[i8];
+    // TODO: Rename to as_i8_slice?
+    fn as_bytes(&self) -> &[i8];
+
+    fn trits(&self) -> &Trits;
 }
 
 // TODO: documentation

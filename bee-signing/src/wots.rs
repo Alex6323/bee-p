@@ -76,11 +76,11 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
     fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         let subseed = seed.subseed(index);
         let mut sponge = S::default();
-        let mut state = TritBuf::with_capacity(self.security_level as usize * 6561);
+        let mut state = TritBuf::zeros(self.security_level as usize * 6561);
 
         if let Err(_) = sponge.digest_into(
-            &Trits::from_i8_unchecked(subseed.to_bytes()),
-            &mut state.as_trits_mut(),
+            subseed.trits(),
+            &mut state,
         ) {
             return Err(Self::Error::FailedSpongeOperation);
         }
@@ -100,12 +100,12 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
         let mut hashed_private_key = self.state.clone();
-        let mut digests = TritBuf::with_capacity((self.state.len() / 6561) * 243);
-        let mut hash = TritBuf::with_capacity(243);
+        let mut digests: TritBuf = TritBuf::zeros((self.state.len() / 6561) * 243);
+        let mut hash = TritBuf::zeros(243);
 
         for chunk in hashed_private_key.chunks_mut(243) {
             for _ in 0..26 {
-                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(chunk)) {
+                if let Err(_) = sponge.absorb(chunk) {
                     return Err(Self::Error::FailedSpongeOperation);
                 }
                 sponge.squeeze_into(chunk);
@@ -113,16 +113,16 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             }
         }
 
-        for (i, chunk) in hashed_private_key.inner_ref().chunks(6561).enumerate() {
+        for (i, chunk) in hashed_private_key.chunks(6561).enumerate() {
             if let Err(_) = sponge.digest_into(
-                &Trits::from_i8_unchecked(chunk),
+                chunk,
                 &mut digests[i * 243..(i + 1) * 243],
             ) {
                 return Err(Self::Error::FailedSpongeOperation);
             }
         }
 
-        if let Err(_) = sponge.digest_into(&digests.as_trits(), &mut hash.as_trits_mut()) {
+        if let Err(_) = sponge.digest_into(&digests, &mut hash) {
             return Err(Self::Error::FailedSpongeOperation);
         }
 
@@ -165,15 +165,19 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
         Ok(&signature.recover_public_key(message)?.state == &self.state)
     }
 
-    fn from_bytes(bytes: &[i8]) -> Self {
+    fn from_buf(state: TritBuf) -> Self {
         Self {
-            state: TritBuf::from_i8_unchecked(bytes),
+            state,
             _sponge: PhantomData,
         }
     }
 
-    fn to_bytes(&self) -> &[i8] {
-        &self.state.inner_ref()
+    fn as_bytes(&self) -> &[i8] {
+        self.state.as_i8_slice()
+    }
+
+    fn trits(&self) -> &Trits {
+        &self.state
     }
 }
 
@@ -183,15 +187,19 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
         self.state.len()
     }
 
-    fn from_bytes(bytes: &[i8]) -> Self {
+    fn from_buf(state: TritBuf) -> Self {
         Self {
-            state: TritBuf::from_i8_unchecked(bytes),
+            state,
             _sponge: PhantomData,
         }
     }
 
-    fn to_bytes(&self) -> &[i8] {
-        &self.state.inner_ref()
+    fn as_bytes(&self) -> &[i8] {
+        self.state.as_i8_slice()
+    }
+
+    fn trits(&self) -> &Trits {
+        &self.state
     }
 }
 
@@ -201,16 +209,16 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
     fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
-        let mut hash = TritBuf::with_capacity(243);
+        let mut hash = TritBuf::zeros(243);
         // let mut digests = vec![0; (self.state.len() / 6561) * 243];
-        let mut digests = TritBuf::with_capacity((self.state.len() / 6561) * 243);
+        let mut digests: TritBuf = TritBuf::zeros((self.state.len() / 6561) * 243);
         let mut state = self.state.clone();
 
         for (i, chunk) in state.chunks_mut(243).enumerate() {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(val - -13) {
-                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(chunk)) {
+                if let Err(_) = sponge.absorb(chunk) {
                     return Err(Self::Error::FailedSpongeOperation);
                 }
                 sponge.squeeze_into(chunk);
@@ -220,14 +228,14 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
         for (i, chunk) in state.chunks(6561).enumerate() {
             if let Err(_) = sponge.digest_into(
-                &Trits::from_i8_unchecked(chunk),
+                chunk,
                 &mut digests[i * 243..(i + 1) * 243],
             ) {
                 return Err(Self::Error::FailedSpongeOperation);
             }
         }
 
-        if let Err(_) = sponge.digest_into(&digests.as_trits(), &mut hash.as_trits_mut()) {
+        if let Err(_) = sponge.digest_into(&digests, &mut hash) {
             return Err(Self::Error::FailedSpongeOperation);
         }
 

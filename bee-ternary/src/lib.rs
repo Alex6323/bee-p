@@ -30,6 +30,10 @@ pub use iota_conversion;
 pub struct Trits<T: RawEncoding + ?Sized = T1B1>(T);
 
 impl<T: RawEncoding + ?Sized> Trits<T> {
+    pub fn empty() -> &'static Self {
+        unsafe { &*(T::empty() as *const _ as *const Self) }
+    }
+
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -83,6 +87,10 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         }
     }
 
+    pub fn to_buf<U: RawEncodingBuf>(&self) -> TritBuf<U> {
+        self.iter().collect()
+    }
+
     pub fn chunks(&self, chunk_len: usize) -> impl Iterator<Item=&Self> + '_ {
         (0..self.len())
             .step_by(chunk_len)
@@ -92,7 +100,7 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item=&mut Self> + '_ {
         (0..self.len())
             .step_by(chunk_len)
-            .scan(self, move |this, index| {
+            .scan(self, move |this, _| {
                 let idx = chunk_len.min(this.len());
                 let (a, b) = Trits::split_at_mut(this, idx);
                 *this = b;
@@ -102,12 +110,26 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
 
     // Helper
     // TODO: Make this public? Is it needed?
+    // TODO: !WARNING! Investigate whether this is unsound:
+    // - Mutable slices given out simultaneously - but encoding could mean that slices overlap!
+    // - Slice overlap means we're breaking Rust's aliasing rules
     fn split_at_mut<'a>(this: &mut &'a mut Self, idx: usize) -> (&'a mut Self, &'a mut Self) {
         assert!(idx < this.len());
         (
             unsafe { &mut *(this.0.slice_unchecked_mut(0..idx) as *mut _ as *mut Self) },
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
         )
+    }
+}
+
+impl Trits<T1B1> {
+    pub fn as_i8_slice(&self) -> &[i8] {
+        self.0.as_i8_slice()
+    }
+
+    // Unsafe because we don't want Trit to have an invalid format
+    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
+        self.0.as_i8_slice_mut()
     }
 }
 
@@ -147,6 +169,7 @@ impl<T: RawEncoding> IndexMut<Range<usize>> for Trits<T> {
     }
 }
 
+#[derive(Clone)]
 #[repr(transparent)]
 pub struct TritBuf<T: RawEncodingBuf = T1B1Buf>(T);
 

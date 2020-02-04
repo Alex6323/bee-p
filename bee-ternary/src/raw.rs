@@ -2,6 +2,9 @@ use std::ops::Range;
 use crate::{Trit, TritBuf};
 
 pub trait RawEncoding {
+    /// Get an empty slice of this encoding
+    fn empty() -> &'static Self;
+
     /// Get the number of trits in this buffer
     fn len(&self) -> usize;
 

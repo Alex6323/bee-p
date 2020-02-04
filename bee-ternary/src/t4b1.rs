@@ -21,6 +21,10 @@ impl T4B1 {
 }
 
 impl RawEncoding for T4B1 {
+    fn empty() -> &'static Self {
+        unsafe { &*Self::make(&[] as *const _, 0, 0) }
+    }
+
     fn len(&self) -> usize {
         self.len_offset().0
     }
@@ -47,6 +51,7 @@ impl RawEncoding for T4B1 {
     }
 }
 
+#[derive(Clone)]
 pub struct T4B1Buf(Vec<u8>, usize);
 
 impl RawEncodingBuf for T4B1Buf {

@@ -122,8 +122,8 @@ where
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
             keys.push(ots_private_key);
-            tree.inner_mut()[tree_index * 243..(tree_index + 1) * 243]
-                .copy_from_slice(ots_public_key.to_bytes());
+            tree[tree_index * 243..(tree_index + 1) * 243]
+                .copy_from(ots_public_key.trits());
         }
 
         for depth in (0..self.depth - 1).rev() {
@@ -131,14 +131,10 @@ where
                 let index = (1 << depth) + i - 1;
                 let left_index = index * 2 + 1;
                 let right_index = left_index + 1;
-                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(
-                    &tree.inner_ref()[left_index * 243..(left_index + 1) * 243],
-                )) {
+                if let Err(_) = sponge.absorb(&tree[left_index * 243..(left_index + 1) * 243]) {
                     return Err(Self::Error::FailedSpongeOperation);
                 };
-                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(
-                    &tree.inner_ref()[right_index * 243..(right_index + 1) * 243],
-                )) {
+                if let Err(_) = sponge.absorb(&tree[right_index * 243..(right_index + 1) * 243]) {
                     return Err(Self::Error::FailedSpongeOperation);
                 };
                 sponge.squeeze_into(&mut tree[index * 243..(index + 1) * 243]);
@@ -168,7 +164,7 @@ where
 
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         // TODO return or generate ?
-        Ok(Self::PublicKey::from_bytes(&self.tree.inner_ref()[0..243]).depth(self.depth))
+        Ok(Self::PublicKey::from_buf(self.tree[0..243].to_buf()).depth(self.depth))
     }
 
     fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
@@ -183,7 +179,7 @@ where
         let mut i = 0;
 
         // TODO PAD TO 6561
-        state[0..ots_signature.size()].copy_from_slice(ots_signature.to_bytes());
+        state[0..ots_signature.size()].copy_from_slice(ots_signature.trits().as_i8_slice());
 
         while tree_index != 0 {
             if tree_index % 2 != 0 {
@@ -195,15 +191,13 @@ where
             }
 
             state[ots_signature.size() + i * 243..ots_signature.size() + (i + 1) * 243]
-                .copy_from_slice(
-                    &self.tree.inner_ref()[sibling_index * 243..(sibling_index + 1) * 243],
-                );
+                .copy_from_slice(self.tree[sibling_index * 243..(sibling_index + 1) * 243].as_i8_slice());
             i = i + 1;
         }
 
         self.index = self.index + 1;
 
-        Ok(Self::Signature::from_bytes(&state).index(self.index - 1))
+        Ok(Self::Signature::from_buf(TritBuf::from_i8_unchecked(&state)).index(self.index - 1))
     }
 }
 
@@ -229,52 +223,50 @@ where
 
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
         let mut sponge = S::default();
-        let ots_signature = K::Signature::from_bytes(
-            &signature.state.inner_ref()[0..((signature.state.len() / 6561) - 1) * 6561],
-        );
-        let siblings =
-            TritBuf::from_i8_unchecked(signature.state.inner_ref().chunks(6561).last().unwrap());
+        let ots_signature = K::Signature::from_buf(signature.state[0..((signature.state.len() / 6561) - 1) * 6561].to_buf());
+        let siblings: TritBuf =
+            signature.state.chunks(6561).last().unwrap().to_buf();
         let ots_public_key = match ots_signature.recover_public_key(message) {
             Ok(public_key) => public_key,
             Err(_) => return Err(Self::Error::FailedUnderlyingPublicKeyRecovery),
         };
-        let mut hash = TritBuf::with_capacity(243);
+        let mut hash: TritBuf = TritBuf::zeros(243);
 
-        hash.inner_mut().copy_from_slice(ots_public_key.to_bytes());
+        hash.copy_from(ots_public_key.trits());
 
         let mut j = 1;
-        for (i, sibling) in siblings.inner_ref().chunks(243).enumerate() {
+        for (i, sibling) in siblings.chunks(243).enumerate() {
             if self.depth - 1 == i as u8 {
                 break;
             }
 
             if signature.index & j != 0 {
-                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(sibling)) {
+                if let Err(_) = sponge.absorb(sibling) {
                     return Err(Self::Error::FailedSpongeOperation);
                 };
-                if let Err(_) = sponge.absorb(&hash.as_trits()) {
+                if let Err(_) = sponge.absorb(&hash) {
                     return Err(Self::Error::FailedSpongeOperation);
                 };
             } else {
-                if let Err(_) = sponge.absorb(&hash.as_trits()) {
+                if let Err(_) = sponge.absorb(&hash) {
                     return Err(Self::Error::FailedSpongeOperation);
                 };
-                if let Err(_) = sponge.absorb(&Trits::from_i8_unchecked(sibling)) {
+                if let Err(_) = sponge.absorb(&sibling) {
                     return Err(Self::Error::FailedSpongeOperation);
                 };
             }
-            sponge.squeeze_into(&mut hash.as_trits_mut());
+            sponge.squeeze_into(&mut hash);
             sponge.reset();
 
             j <<= 1;
         }
 
-        Ok(&hash.inner_ref() == &self.state.inner_ref())
+        Ok(hash == self.state)
     }
 
-    fn from_bytes(bytes: &[i8]) -> Self {
+    fn from_buf(state: TritBuf) -> Self {
         Self {
-            state: TritBuf::from_i8_unchecked(bytes),
+            state,
             // TODO OPTION
             depth: 0,
             _sponge: PhantomData,
@@ -282,8 +274,12 @@ where
         }
     }
 
-    fn to_bytes(&self) -> &[i8] {
-        &self.state.inner_ref()
+    fn as_bytes(&self) -> &[i8] {
+        &self.state.as_i8_slice()
+    }
+
+    fn trits(&self) -> &Trits {
+        &self.state
     }
 }
 
@@ -300,17 +296,21 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
         self.state.len()
     }
 
-    fn from_bytes(bytes: &[i8]) -> Self {
+    fn from_buf(state: TritBuf) -> Self {
         Self {
-            state: TritBuf::from_i8_unchecked(bytes),
+            state,
             // TODO OPTION
             index: 0,
             _sponge: PhantomData,
         }
     }
 
-    fn to_bytes(&self) -> &[i8] {
-        &self.state.inner_ref()
+    fn as_bytes(&self) -> &[i8] {
+        self.state.as_i8_slice()
+    }
+
+    fn trits(&self) -> &Trits {
+        &self.state
     }
 }
 

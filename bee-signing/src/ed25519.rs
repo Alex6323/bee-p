@@ -1,6 +1,7 @@
 use crate::{PrivateKey, PrivateKeyGenerator, PublicKey, Seed, Signature};
 use rand::rngs::OsRng;
 use std::convert::Infallible;
+use ternary::{Trits, TritBuf};
 
 pub struct Ed25519Seed([i8; 32]);
 
@@ -30,13 +31,18 @@ impl Seed for Ed25519Seed {
     }
 
     // TODO: documentation
-    fn from_bytes(bytes: &[i8]) -> Result<Self, Self::Error> {
+    fn from_buf(buf: TritBuf) -> Result<Self, Self::Error> {
+        // TODO: This looks wrong
         Ok(Self([0; 32]))
     }
 
     // TODO: documentation
-    fn to_bytes(&self) -> &[i8] {
+    fn as_bytes(&self) -> &[i8] {
         &self.0
+    }
+
+    fn trits(&self) -> &Trits {
+        Trits::empty()
     }
 }
 
@@ -98,15 +104,20 @@ impl PublicKey for Ed25519PublicKey {
         Ok(self.public_key.verify(test, &signature.signature).is_ok())
     }
 
-    fn from_bytes(bytes: &[i8]) -> Self {
+    fn from_buf(buf: TritBuf) -> Self {
+        // TODO: This looks wrong
         Self {
             public_key: ed25519_dalek::PublicKey::default(),
         }
     }
 
-    fn to_bytes(&self) -> &[i8] {
+    fn as_bytes(&self) -> &[i8] {
         // &self.state
         &[]
+    }
+
+    fn trits(&self) -> &Trits {
+        Trits::empty()
     }
 }
 
@@ -125,8 +136,9 @@ impl Signature for Ed25519Signature {
         42
     }
 
-    fn from_bytes(bytes: &[i8]) -> Self {
-        let test = unsafe { &*(bytes as *const _ as *const [u8]) };
+    fn from_buf(buf: TritBuf) -> Self {
+        // TODO: This seems dangerous
+        let test = unsafe { &*(buf.as_i8_slice() as *const _ as *const [u8]) };
 
         Self {
             public_key: ed25519_dalek::PublicKey::from_bytes(test).unwrap(),
@@ -134,8 +146,12 @@ impl Signature for Ed25519Signature {
         }
     }
 
-    fn to_bytes(&self) -> &[i8] {
+    fn as_bytes(&self) -> &[i8] {
         &[]
+    }
+
+    fn trits(&self) -> &Trits {
+        Trits::empty()
     }
 }
 
