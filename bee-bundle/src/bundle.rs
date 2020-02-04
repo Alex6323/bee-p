@@ -86,6 +86,17 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
     }
 
     // TODO TEST
+    pub fn calculate_hash(&self) -> TritsBuf {
+        let mut sponge = E::default();
+
+        for builder in &self.transactions.0 {
+            // TODO sponge.absorb(builder.essence());
+        }
+
+        sponge.squeeze()
+    }
+
+    // TODO TEST
     pub fn validate(
         self,
     ) -> Result<StagedIncomingBundleBuilder<E, IncomingValidated>, IncomingBundleBuilderError> {
