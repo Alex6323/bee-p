@@ -40,6 +40,15 @@ impl<'a> IntoIterator for &'a Bundle {
     }
 }
 
+impl Index<usize> for Bundle {
+    type Output = Transaction;
+
+    // TODO TEST
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index).unwrap()
+    }
+}
+
 /// Incoming bundles
 
 #[derive(Debug)]
