@@ -122,7 +122,9 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 
 #[derive(Debug)]
 pub enum OutgoingBundleBuilderError {
+    IncompleteTransactionBuilder,
     Empty,
+    UnsignedInput,
     NonZeroSum(i64),
 }
 
@@ -215,7 +217,19 @@ where
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
     {
         // TODO Impl
-        // TODO make sure there is no transaction that needs to be signed
+
+        // TODO maybe not necessary if we check the core fields in push/seal ?
+        for builder in &self.builders.0 {
+            match &builder.value {
+                Some(value) => {
+                    if value.0 != 0 {
+                        return Err(OutgoingBundleBuilderError::UnsignedInput);
+                    }
+                }
+                None => return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder),
+            }
+        }
+
         StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -277,6 +291,7 @@ where
             return Err(OutgoingBundleBuilderError::Empty);
         }
 
+        // TODO unwrap ?
         for builder in &self.builders.0 {
             sum += builder.value.as_ref().unwrap().0;
         }
