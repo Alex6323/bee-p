@@ -344,6 +344,10 @@ impl Transactions {
         Self::default()
     }
 
+    pub fn get(&self, index: usize) -> Option<&Transaction> {
+        self.0.get(index)
+    }
+
     pub fn len(&self) -> usize {
         self.0.len()
     }

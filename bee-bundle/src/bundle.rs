@@ -11,8 +11,8 @@ pub struct Bundle {
 }
 
 impl Bundle {
-    pub fn transactions(&self) -> &Transactions {
-        &self.transactions
+    pub fn get(&self, index: usize) -> Option<&Transaction> {
+        self.transactions.get(index)
     }
 
     pub fn len(&self) -> usize {
