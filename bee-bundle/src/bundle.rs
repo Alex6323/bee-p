@@ -2,7 +2,7 @@ use crate::{Transaction, TransactionBuilder, TransactionBuilders, Transactions};
 use crypto::Sponge;
 use std::marker::PhantomData;
 use std::ops::Index;
-use ternary::TritBuf;
+use ternary::TritsBuf;
 
 ///  Bundles
 
@@ -122,7 +122,7 @@ where
     H: Sponge + Default,
     S: OutgoingBundleBuilderStage,
 {
-    pub fn calculate_hash(&self) -> TritBuf {
+    pub fn calculate_hash(&self) -> TritsBuf {
         let mut sponge = E::default();
 
         for builder in &self.builders.0 {
