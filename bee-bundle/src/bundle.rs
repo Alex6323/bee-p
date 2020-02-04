@@ -20,6 +20,26 @@ impl Bundle {
     }
 }
 
+impl IntoIterator for Bundle {
+    type Item = Transaction;
+    type IntoIter = std::vec::IntoIter<Transaction>;
+
+    // TODO TEST
+    fn into_iter(self) -> Self::IntoIter {
+        (self.0).0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Bundle {
+    type Item = &'a Transaction;
+    type IntoIter = std::slice::Iter<'a, Transaction>;
+
+    // TODO TEST
+    fn into_iter(self) -> Self::IntoIter {
+        (&(self.0).0).into_iter()
+    }
+}
+
 /// Incoming bundles
 
 #[derive(Debug)]
