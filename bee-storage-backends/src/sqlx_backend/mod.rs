@@ -11,17 +11,15 @@ pub mod errors;
 //Support multiple sql backends via sqlx
 //Get rid of all warnings
 
-
-use errors::*;
-
-use sqlx::{Row, PgPool};
-use storage::{Connection, HashesToApprovers, MissingHashesToRCApprovers, Milestone};
-use async_trait::async_trait;
-use std::{fmt, env, cmp, error::Error as StdError,  rc::Rc};
+use std::env;
+use std::rc::Rc;
 use std::collections::{HashMap, HashSet};
+
+use async_trait::async_trait;
+use errors::*;
 use futures::executor::block_on;
-use serde::{Serialize, Deserialize};
-use std::io::{self, Write};
+use sqlx::{Row, PgPool};
+use storage::{Connection, MissingHashesToRCApprovers, Milestone};
 
 pub use bundle::*;
 
@@ -76,11 +74,11 @@ impl SqlxBackendStorage {
     }
 
     pub async fn establish_connection(&mut self) -> Result<(), SqlxBackendError> {
-        let res = self.0.connection.establish_connection().await?;
+        let _res = self.0.connection.establish_connection().await?;
         Ok(())
     }
     pub async fn destroy_connection(&mut self) -> Result<(), SqlxBackendError> {
-        let res = self.0.connection.destroy_connection().await?;
+        let _res = self.0.connection.destroy_connection().await?;
         Ok(())
     }
 }
@@ -109,7 +107,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
             ).bind(start).bind(MAX_RECORDS_AT_ONCE)
                 .fetch_all(&mut pool))?;
 
-            for (i, row) in rows.iter().enumerate()  {
+            for (_, row) in rows.iter().enumerate()  {
 
                 hash_to_approvers.entry(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_BRANCH))).
                     or_insert(HashSet::new()).insert(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_HASH)));
@@ -138,7 +136,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
         const MAX_RECORDS_AT_ONCE : i32 = 1000;
         let mut start: i32 = 0;
-        let mut end: i32 = MAX_RECORDS_AT_ONCE;
+        let end: i32 = MAX_RECORDS_AT_ONCE;
 
         let mut missing_to_approvers = HashMap::new();
         loop {
@@ -147,7 +145,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
             ).bind(start).bind(end)
                 .fetch_all(&mut pool))?;
 
-            for (i, row) in rows.iter().enumerate()  {
+            for (_, row) in rows.iter().enumerate()  {
 
                 let branch = Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_BRANCH));
                 let trunk = Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_TRUNK));
@@ -183,7 +181,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let mut conn_transaction = pool.begin().await?;
 
 
-        let row = sqlx::query(
+        let _row = sqlx::query(
             INSERT_TRANSACTION_STATEMENT
         )
         .bind(tx.payload().to_string().as_bytes())
@@ -214,8 +212,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
-
-        let user_id : i32 = 0;
+        let _user_id : i32 = 0;
         let rec = sqlx::query(
             FIND_TRANSACTION_BY_HASH_STATEMENT
     ).bind(tx_hash.to_string().as_bytes())
@@ -261,14 +258,10 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-        transaction_hashes.iter().for_each(|hash|{
-            let row = sqlx::query(
-            UPDATE_SET_SOLID_STATEMENT
-        )
-
+        transaction_hashes.iter().for_each(|hash| {
+            let _ = sqlx::query(UPDATE_SET_SOLID_STATEMENT)
             .bind(hash.to_string().as_bytes())
             .fetch_one(&mut conn_transaction);
-
         });
 
         Ok(())
@@ -284,16 +277,14 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-        transaction_hashes.iter().for_each( |hash|{        sqlx::query(
-            UPDATE_SNAPSHOT_INDEX_STATEMENT
-        )
-            .bind(hash.to_string().as_bytes()).bind(snapshot_index as i32)
+        transaction_hashes.iter().for_each( |hash| {
+            let _ = sqlx::query(UPDATE_SNAPSHOT_INDEX_STATEMENT)
+            .bind(hash.to_string().as_bytes())
+            .bind(snapshot_index as i32)
             .fetch_one(&mut conn_transaction);
-
         });
 
         conn_transaction.commit().await?;
-
 
         Ok(())
     }
@@ -305,12 +296,9 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
         for hash in transaction_hashes.iter() {
 
-            let row = sqlx::query(
-                DELETE_TRANSACTION_STATEMENT
-            )
+            let _ = sqlx::query(DELETE_TRANSACTION_STATEMENT)
                 .bind(hash.to_string().as_bytes())
                 .fetch_all(&mut conn_transaction).await?;
-
         }
 
         conn_transaction.commit().await?;
@@ -325,7 +313,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
         for (tx_hash , tx) in transactions {
 
-            let row = sqlx::query(
+            let _row = sqlx::query(
                 INSERT_TRANSACTION_STATEMENT
             )
                 .bind(tx.payload().to_string().as_bytes())
@@ -357,8 +345,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-
-        let row = sqlx::query(
+        let _row = sqlx::query(
             INSERT_MILESTONE_STATEMENT
         )
             .bind(milestone.index as i32).bind(&milestone.hash.to_string().as_bytes())
@@ -374,7 +361,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
-        let user_id : i32 = 0;
+        let _user_id : i32 = 0;
         let rec = sqlx::query(
             FIND_MILESTONE_BY_HASH_STATEMENT
         ).bind(milestone_hash.to_string().as_bytes())
@@ -400,7 +387,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
         for hash in milestone_hashes.iter() {
 
-            let row = sqlx::query(
+            let _row = sqlx::query(
                 DELETE_MILESTONE_BY_HASH_STATEMENT
             )
                 .bind(hash.to_string().as_bytes())
@@ -423,7 +410,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
         let encoded: Vec<u8> = bincode::serialize(&state_delta)?;
 
-        let row = sqlx::query(
+        let _row = sqlx::query(
             STORE_DELTA_STATEMENT
         )
             .bind(encoded).bind(index as i32)

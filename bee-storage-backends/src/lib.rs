@@ -1,17 +1,10 @@
-#[macro_use]
-
 extern crate rand;
 pub mod sqlx_backend;
+
 pub use bundle::*;
 
 #[cfg(test)]
-
-
-
-
 mod tests {
-
-
     //FIXME - figure out (even when only one test with one thread):
     //psql:cleanup.sql:1: ERROR:  database "test_db" is being accessed by other users
     //DETAIL:  There is 1 other session using the database.

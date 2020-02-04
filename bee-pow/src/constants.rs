@@ -3,7 +3,7 @@ use common::constants::*;
 pub const NUM_FULL_CHUNKS_FOR_PRESTATE: usize =
     (TRANSACTION_TRIT_LEN - HASH_TRIT_LEN) / HASH_TRIT_LEN; // 32
 
-pub const TRANS_NONCE_START: usize = TRANSACTION_TRIT_LEN - NONCE_TRIT_LEN; // 7938
+//pub const TRANS_NONCE_START: usize = TRANSACTION_TRIT_LEN - NONCE_TRIT_LEN; // 7938
 pub const CHUNK_NONCE_START: usize = HASH_TRIT_LEN - NONCE_TRIT_LEN; // 162
 
 pub const BATCH_SIZE: usize = 64;

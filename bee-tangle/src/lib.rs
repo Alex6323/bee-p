@@ -1,3 +1,6 @@
+// TEMPORARY
+#![allow(dead_code, unused_variables, unused_imports)]
+
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},

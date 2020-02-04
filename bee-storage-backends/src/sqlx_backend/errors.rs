@@ -1,6 +1,10 @@
 pub extern crate bincode;
 
-use std::{fmt, env, cmp, error::Error as StdError,  rc::Rc};
+use std::{
+    error::Error as StdError,
+    fmt,
+};
+
 use sqlx::Error as SqlxError;
 
 pub const FAILED_ESTABLISHING_CONNECTION: &str = "failed to establish connection.";

@@ -8,15 +8,12 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::rc::Rc;
 
-pub use bundle::*;
+//pub use bundle::*;
 
 use serde::{Serialize, Deserialize};
 
-
-
-/// A transaction address. To be replaced later with whatever implementation is required.
-type TxAddress = String;
-
+// A transaction address. To be replaced later with whatever implementation is required.
+//type TxAddress = String;
 
 #[derive(Default, Debug, Clone)]
 pub struct Milestone {

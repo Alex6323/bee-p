@@ -1,5 +1,3 @@
-use common::logger;
-
 use std::fmt;
 
 use common::constants::BEE_DISPLAYED_NAME;
@@ -19,11 +17,5 @@ impl fmt::Display for State {
             State::Running => write!(f, "{} is running.", BEE_DISPLAYED_NAME),
             State::ShuttingDown => write!(f, "{} is shutting down.", BEE_DISPLAYED_NAME),
         }
-    }
-}
-
-impl State {
-    pub fn log(&self) {
-        logger::info(&self.to_string());
     }
 }

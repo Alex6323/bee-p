@@ -40,12 +40,15 @@ FROM transactions
  OFFSET $1 LIMIT $2
         "#;
 
+// NOTE: Currently this constant is not used, and throws a warning.
+/*
 const SELECT_HASH_LIMIT_STATEMENT: &str =         r#"
 SELECT hash
 FROM transactions
 OFFSET $1 LIMIT $2
 RETURNING hash
         "#;
+*/
 
 const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str =   r#"UPDATE transactions set snapshot_index =$1 WHERE hash hash=$2"#;
 
