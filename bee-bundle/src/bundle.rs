@@ -1,7 +1,9 @@
-use crate::{Transaction, TransactionBuilder, TransactionBuilders, Transactions};
-use crypto::Sponge;
+use crate::transaction::{Transaction, TransactionBuilder, TransactionBuilders, Transactions};
+
 use std::marker::PhantomData;
 use std::ops::Index;
+
+use crypto::Sponge;
 use ternary::TritsBuf;
 
 ///  Bundles
@@ -225,7 +227,8 @@ where
         let mut transactions = Transactions::new();
 
         for transaction_builder in self.builders.0 {
-            transactions.push(transaction_builder.build());
+            // TODO: we probably should use build()? here, and propagate possible errors
+            transactions.push(transaction_builder.build_or_default());
         }
 
         Ok(Bundle {
@@ -259,7 +262,7 @@ mod tests {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
         for _ in 0..5 {
-            bundle_builder.push(TransactionBuilder::default());
+            bundle_builder.push(TransactionBuilder::new());
         }
 
         let bundle = bundle_builder
