@@ -87,6 +87,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
 
     // TODO TEST
     pub fn calculate_hash(&self) -> TritsBuf {
+        // TODO Impl
         let mut sponge = E::default();
 
         for builder in &self.transactions.0 {
@@ -100,6 +101,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
     pub fn validate(
         self,
     ) -> Result<StagedIncomingBundleBuilder<E, IncomingValidated>, IncomingBundleBuilderError> {
+        // TODO Impl
         Ok(StagedIncomingBundleBuilder::<E, IncomingValidated> {
             transactions: self.transactions,
             essence_sponge: PhantomData,
@@ -111,6 +113,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
 impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
     // TODO TEST
     pub fn build(self) -> Bundle {
+        // TODO Impl
         Bundle(self.transactions)
     }
 }
@@ -118,7 +121,10 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 /// Outgoing bundle builder
 
 #[derive(Debug)]
-pub enum OutgoingBundleBuilderError {}
+pub enum OutgoingBundleBuilderError {
+    Empty,
+    NonZeroSum(i64),
+}
 
 pub trait OutgoingBundleBuilderStage {}
 
@@ -158,6 +164,7 @@ where
 {
     // TODO TEST
     pub fn calculate_hash(&self) -> TritsBuf {
+        // TODO Impl
         let mut sponge = E::default();
 
         for builder in &self.builders.0 {
@@ -207,6 +214,7 @@ where
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
     {
+        // TODO Impl
         // TODO make sure there is no transaction that needs to be signed
         StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
             builders: self.builders,
@@ -261,7 +269,22 @@ where
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingValidated>, OutgoingBundleBuilderError>
     {
+        // TODO should call validate() on transaction builders ?
         // TODO Impl
+        let mut sum: i64 = 0;
+
+        if self.builders.len() == 0 {
+            return Err(OutgoingBundleBuilderError::Empty);
+        }
+
+        for builder in &self.builders.0 {
+            sum += builder.value.as_ref().unwrap().0;
+        }
+
+        if sum != 0 {
+            return Err(OutgoingBundleBuilderError::NonZeroSum(sum));
+        }
+
         Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingValidated> {
             builders: self.builders,
             essence_sponge: PhantomData,
