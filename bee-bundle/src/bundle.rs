@@ -6,19 +6,17 @@ use ternary::TritsBuf;
 
 ///  Bundles
 
-pub struct Bundle {
-    transactions: Transactions,
-}
+pub struct Bundle(Transactions);
 
 impl Bundle {
     // TODO TEST
     pub fn get(&self, index: usize) -> Option<&Transaction> {
-        self.transactions.get(index)
+        self.0.get(index)
     }
 
     // TODO TEST
     pub fn len(&self) -> usize {
-        self.transactions.len()
+        self.0.len()
     }
 }
 
@@ -73,9 +71,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
 impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
     // TODO TEST
     pub fn build(self) -> Bundle {
-        Bundle {
-            transactions: self.transactions,
-        }
+        Bundle(self.transactions)
     }
 }
 
@@ -234,9 +230,7 @@ where
             transactions.push(transaction_builder.build());
         }
 
-        Ok(Bundle {
-            transactions: transactions,
-        })
+        Ok(Bundle(transactions))
     }
 }
 
