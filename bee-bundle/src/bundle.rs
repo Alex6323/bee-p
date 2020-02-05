@@ -350,6 +350,7 @@ where
 mod tests {
 
     use super::*;
+    use crate::transaction::{Address, Payload, Tag, Value};
 
     #[test]
     fn incoming_bundle_builder_test() -> Result<(), IncomingBundleBuilderError> {
@@ -366,12 +367,18 @@ mod tests {
         Ok(())
     }
 
+    // TODO Also check to attach if value ?
     #[test]
     fn outgoing_bundle_builder_value_test() -> Result<(), OutgoingBundleBuilderError> {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
-        for _ in 0..5 {
-            bundle_builder.push(TransactionBuilder::new());
+        for _ in 0..3 {
+            let transaction_builder = TransactionBuilder::new()
+                .with_payload(Payload::new())
+                .with_address(Address::new())
+                .with_value(Value::new())
+                .with_tag(Tag::new());
+            bundle_builder.push(transaction_builder);
         }
 
         let bundle = bundle_builder
@@ -381,22 +388,28 @@ mod tests {
             .validate()?
             .build()?;
 
-        assert_eq!(bundle.len(), 5);
+        assert_eq!(bundle.len(), 3);
 
         Ok(())
     }
 
+    // TODO Also check to sign if data ?
     #[test]
     fn outgoing_bundle_builder_data_test() -> Result<(), OutgoingBundleBuilderError> {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
-        for _ in 0..5 {
-            bundle_builder.push(TransactionBuilder::new());
+        for _ in 0..3 {
+            let transaction_builder = TransactionBuilder::new()
+                .with_payload(Payload::new())
+                .with_address(Address::new())
+                .with_value(Value::new())
+                .with_tag(Tag::new());
+            bundle_builder.push(transaction_builder);
         }
 
         let bundle = bundle_builder.seal()?.attach()?.validate()?.build()?;
 
-        assert_eq!(bundle.len(), 5);
+        assert_eq!(bundle.len(), 3);
 
         Ok(())
     }
