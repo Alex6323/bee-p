@@ -124,7 +124,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 
 #[derive(Debug)]
 pub enum OutgoingBundleBuilderError {
-    IncompleteTransactionBuilder(String),
+    IncompleteTransactionBuilder(&'static str),
     Empty,
     UnsignedInput,
     NonZeroSum(i64),
@@ -203,19 +203,19 @@ where
         for builder in &self.builders.0 {
             if let None = builder.payload {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
-                    "payload".to_owned(),
+                    "payload",
                 ));
             } else if let None = builder.address {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
-                    "address".to_owned(),
+                    "address",
                 ));
             } else if let None = builder.value {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
-                    "value".to_owned(),
+                    "value",
                 ));
             } else if let None = builder.tag {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
-                    "tag".to_owned(),
+                    "tag",
                 ));
             }
         }
