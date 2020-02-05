@@ -1,9 +1,8 @@
 use crate::transaction::{
-    Index as IndexField, Transaction, TransactionBuilder, TransactionBuilders, Transactions,
+    Index, Transaction, TransactionBuilder, TransactionBuilders, Transactions,
 };
 
 use std::marker::PhantomData;
-use std::ops::Index;
 
 use crypto::Sponge;
 use ternary::TritsBuf;
@@ -44,7 +43,7 @@ impl<'a> IntoIterator for &'a Bundle {
     }
 }
 
-impl Index<usize> for Bundle {
+impl std::ops::Index<usize> for Bundle {
     type Output = Transaction;
 
     // TODO TEST
@@ -223,8 +222,8 @@ where
                 ));
             }
 
-            builder.index.replace(IndexField(index));
-            builder.last_index.replace(IndexField(last_index));
+            builder.index.replace(Index(index));
+            builder.last_index.replace(Index(last_index));
 
             index = index + 1;
         }
