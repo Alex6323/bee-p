@@ -90,21 +90,21 @@ pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
 
 #[derive(Clone)]
 pub struct Transaction {
-    payload: Payload,
-    address: Address,
-    value: Value,
-    obsolete_tag: Tag,
-    timestamp: Timestamp,
-    index: Index,
-    last_index: Index,
-    bundle: Hash,
-    trunk: Hash,
-    branch: Hash,
-    tag: Tag,
-    attachment_ts: Timestamp,
-    attachment_lbts: Timestamp,
-    attachment_ubts: Timestamp,
-    nonce: Nonce,
+    pub(crate) payload: Payload,
+    pub(crate) address: Address,
+    pub(crate) value: Value,
+    pub(crate) obsolete_tag: Tag,
+    pub(crate) timestamp: Timestamp,
+    pub(crate) index: Index,
+    pub(crate) last_index: Index,
+    pub(crate) bundle: Hash,
+    pub(crate) trunk: Hash,
+    pub(crate) branch: Hash,
+    pub(crate) tag: Tag,
+    pub(crate) attachment_ts: Timestamp,
+    pub(crate) attachment_lbts: Timestamp,
+    pub(crate) attachment_ubts: Timestamp,
+    pub(crate) nonce: Nonce,
 }
 
 /// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits, see the table below.
