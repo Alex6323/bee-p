@@ -1,7 +1,9 @@
-use crate::{Transaction, TransactionBuilder, TransactionBuilders, Transactions};
-use crypto::Sponge;
+use crate::transaction::{Transaction, TransactionBuilder, TransactionBuilders, Transactions};
+
 use std::marker::PhantomData;
 use std::ops::Index;
+
+use crypto::Sponge;
 use ternary::TritsBuf;
 
 /// Bundle
@@ -320,7 +322,8 @@ where
         let mut transactions = Transactions::new();
 
         for transaction_builder in self.builders.0 {
-            transactions.push(transaction_builder.build());
+            // TODO: we probably should use build()? here, and propagate possible errors
+            transactions.push(transaction_builder.build_or_default());
         }
 
         Ok(Bundle(transactions))
@@ -337,7 +340,7 @@ mod tests {
         let mut bundle_builder = IncomingBundleBuilder::new();
 
         for _ in 0..5 {
-            bundle_builder.push(TransactionBuilder::default().build());
+            bundle_builder.push(TransactionBuilder::new().build_or_default());
         }
 
         let bundle = bundle_builder.validate()?.build();
@@ -352,7 +355,7 @@ mod tests {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
         for _ in 0..5 {
-            bundle_builder.push(TransactionBuilder::default());
+            bundle_builder.push(TransactionBuilder::new());
         }
 
         let bundle = bundle_builder
@@ -372,7 +375,7 @@ mod tests {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
         for _ in 0..5 {
-            bundle_builder.push(TransactionBuilder::default());
+            bundle_builder.push(TransactionBuilder::new());
         }
 
         let bundle = bundle_builder.seal()?.attach()?.validate()?.build()?;

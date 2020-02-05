@@ -3,14 +3,18 @@ use common::{logger, Result};
 use crate::config::Config;
 use crate::state::State;
 
+use async_std::task;
+
 /// The Bee prototype.
 pub struct Bee {
+    config: Config,
     state: State,
 }
 
 impl Bee {
-    pub fn from_config(_config: Config) -> Self {
+    pub fn from_config(config: Config) -> Self {
         Self {
+            config,
             state: State::BootingUp,
         }
     }
@@ -18,14 +22,44 @@ impl Bee {
     pub fn run(&mut self) -> Result<()> {
         // TEMP: simulate some runtime
         logger::info(&self.state.to_string());
-        std::thread::sleep(std::time::Duration::from_millis(1000));
-        self.state = State::Running;
-        logger::info(&self.state.to_string());
-        std::thread::sleep(std::time::Duration::from_millis(8000));
-        self.state = State::ShuttingDown;
-        logger::info(&self.state.to_string());
-        std::thread::sleep(std::time::Duration::from_millis(1000));
+        task::block_on(async {
+            task::sleep(std::time::Duration::from_millis(1000)).await;
+        });
+
+        self.set_state(State::Running);
+        task::block_on(async {
+            task::sleep(std::time::Duration::from_millis(8000)).await;
+        });
+
+        self.set_state(State::ShuttingDown);
+        task::block_on(async {
+            task::sleep(std::time::Duration::from_millis(1000)).await;
+        });
+
         Ok(())
+    }
+
+    pub fn shutdown(mut self) {
+        if self.state() != State::Running {
+            return;
+        }
+
+        self.set_state(State::ShuttingDown);
+
+        // send shutdown signal
+    }
+
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    pub fn state(&self) -> State {
+        self.state
+    }
+
+    fn set_state(&mut self, state: State) {
+        self.state = state;
+        logger::info(&self.state.to_string());
     }
 }
 

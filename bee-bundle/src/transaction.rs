@@ -1,5 +1,5 @@
 use common::constants::*;
-use common::Error;
+use common::Errors;
 use common::Result;
 use common::Tryte;
 
@@ -7,14 +7,15 @@ use ternary::IsTryte;
 
 use crate::constants::*;
 
+use std::fmt;
 use std::hash::Hash as StdHash;
 use std::hash::Hasher as StdHasher;
 
 macro_rules! implement_debug {
     ($($t:ty),+) => {
     $(
-        impl std::fmt::Debug for $t {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        impl fmt::Debug for $t {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "{}", self.0.iter().collect::<String>())
             }
         }
@@ -25,8 +26,8 @@ macro_rules! implement_debug {
 macro_rules! implement_display {
     ($($t:ty),+) => {
     $(
-        impl std::fmt::Display for $t {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        impl fmt::Display for $t {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "{}", self.0.iter().collect::<String>())
             }
         }
@@ -38,7 +39,7 @@ macro_rules! implement_hash {
     ($($t:ty),+) => {
     $(
         impl StdHash for $t {
-            fn hash<H : StdHasher>(&self,state: &mut H) {
+            fn hash<H : StdHasher>(&self, state: &mut H) {
                     self.0.hash(state);
             }
         }
@@ -77,48 +78,12 @@ macro_rules! implement_clone {
 }
 
 pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
-pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
-#[derive(Default, Debug, Clone)]
-pub struct Value(pub i64);
-pub struct Tag(pub [Tryte; TAG.tryte_offset.length]);
-#[derive(Default, Debug, Clone)]
-pub struct Timestamp(pub u64);
-#[derive(Default, Debug, Clone)]
-pub struct Index(pub usize);
-pub struct Hash(pub [Tryte; BUNDLE_HASH.tryte_offset.length]);
-pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
-
-#[derive(Clone)]
-pub struct Transaction {
-    pub(crate) payload: Payload,
-    pub(crate) address: Address,
-    pub(crate) value: Value,
-    pub(crate) obsolete_tag: Tag,
-    pub(crate) timestamp: Timestamp,
-    pub(crate) index: Index,
-    pub(crate) last_index: Index,
-    pub(crate) bundle: Hash,
-    pub(crate) trunk: Hash,
-    pub(crate) branch: Hash,
-    pub(crate) tag: Tag,
-    pub(crate) attachment_ts: Timestamp,
-    pub(crate) attachment_lbts: Timestamp,
-    pub(crate) attachment_ubts: Timestamp,
-    pub(crate) nonce: Nonce,
-}
-
-/// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits, see the table below.
-/// NOTE: if this is a subset of transaction fields, then it's confusing to call it the `bundle essence` when in reality it's the essence of a transaction needed to build a bundle, or am I misunderstanding the meaning of the word 'essence'? I would like to call it the `TransactionEssence`, but that might be confusing to people used to IOTA terms.
-pub struct Essence<'a> {
-    address: &'a Address,
-    value: &'a Value,
-    obsolete_tag: &'a Tag,
-    timestamp: &'a Timestamp,
-    index: &'a Index,
-    last_index: &'a Index,
-}
 
 impl Payload {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn from_str(payload: &str) -> Self {
         assert!(payload.len() <= PAYLOAD.tryte_offset.length);
         assert!(payload.chars().all(|c| c.is_tryte()));
@@ -139,13 +104,13 @@ impl Default for Payload {
     }
 }
 
-impl Default for Address {
-    fn default() -> Self {
-        Self([TRYTE_ZERO; ADDRESS.tryte_offset.length])
-    }
-}
+pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
 
 impl Address {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn from_str(address: &str) -> Self {
         assert!(address.len() <= ADDRESS.tryte_offset.length);
         assert!(address.chars().all(|c| c.is_tryte()));
@@ -160,13 +125,28 @@ impl Address {
     }
 }
 
-impl Default for Tag {
+impl Default for Address {
     fn default() -> Self {
-        Self([TRYTE_ZERO; TAG.tryte_offset.length])
+        Self([TRYTE_ZERO; ADDRESS.tryte_offset.length])
     }
 }
 
+#[derive(Default, Debug, Clone)]
+pub struct Value(pub i64);
+
+impl Value {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+pub struct Tag(pub [Tryte; TAG.tryte_offset.length]);
+
 impl Tag {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn from_str(tag: &str) -> Self {
         assert!(tag.len() <= TAG.tryte_offset.length);
         assert!(tag.chars().all(|c| c.is_tryte()));
@@ -181,13 +161,37 @@ impl Tag {
     }
 }
 
-impl Default for Hash {
+impl Default for Tag {
     fn default() -> Self {
-        Self([TRYTE_ZERO; BUNDLE_HASH.tryte_offset.length])
+        Self([TRYTE_ZERO; TAG.tryte_offset.length])
     }
 }
 
+#[derive(Default, Debug, Clone)]
+pub struct Timestamp(pub u64);
+
+impl Timestamp {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct Index(pub usize);
+
+impl Index {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+pub struct Hash(pub [Tryte; BUNDLE_HASH.tryte_offset.length]);
+
 impl Hash {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn from_str(hash: &str) -> Self {
         assert!(hash.len() <= BUNDLE_HASH.tryte_offset.length);
         assert!(hash.chars().all(|c| c.is_tryte()));
@@ -202,13 +206,19 @@ impl Hash {
     }
 }
 
-impl Default for Nonce {
+impl Default for Hash {
     fn default() -> Self {
-        Self([TRYTE_ZERO; NONCE.tryte_offset.length])
+        Self([TRYTE_ZERO; BUNDLE_HASH.tryte_offset.length])
     }
 }
 
+pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
+
 impl Nonce {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn from_str(nonce: &str) -> Self {
         assert!(nonce.len() <= NONCE.tryte_offset.length);
         assert!(nonce.chars().all(|c| c.is_tryte()));
@@ -223,29 +233,57 @@ impl Nonce {
     }
 }
 
+impl Default for Nonce {
+    fn default() -> Self {
+        Self([TRYTE_ZERO; NONCE.tryte_offset.length])
+    }
+}
+
 implement_debug!(Payload, Address, Tag, Nonce, Hash);
 implement_display!(Payload, Address, Tag, Nonce, Hash);
 implement_hash!(Address, Hash);
 implement_eq!(Payload, Address, Tag, Hash, Nonce);
 implement_clone!(Payload, Address, Tag, Nonce, Hash);
 
+/// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits.
+pub struct Essence<'a> {
+    address: &'a Address,
+    value: &'a Value,
+    obsolete_tag: &'a Tag,
+    timestamp: &'a Timestamp,
+    index: &'a Index,
+    last_index: &'a Index,
+}
+
+#[derive(Clone)]
+pub struct Transaction {
+    pub(crate) payload: Payload,
+    pub(crate) address: Address,
+    pub(crate) value: Value,
+    pub(crate) obsolete_tag: Tag,
+    pub(crate) timestamp: Timestamp,
+    pub(crate) index: Index,
+    pub(crate) last_index: Index,
+    pub(crate) bundle: Hash,
+    pub(crate) trunk: Hash,
+    pub(crate) branch: Hash,
+    pub(crate) tag: Tag,
+    pub(crate) attachment_ts: Timestamp,
+    pub(crate) attachment_lbts: Timestamp,
+    pub(crate) attachment_ubts: Timestamp,
+    pub(crate) nonce: Nonce,
+}
+
 impl Transaction {
-    pub fn from_tryte_str(tx_trytes: &str) -> Self {
-        assert_eq!(TRANSACTION_TRYT_LEN, tx_trytes.len());
-
-        /*
-        let payload = Payload::from_tx_tryte_str(tx_trytes, PAYLOAD.tryte_offset);
-
-        Self {
-            payload,
+    pub fn from_tryte_str(tx_trytes: &str) -> Result<Self> {
+        if tx_trytes.len() != TRANSACTION_TRYT_LEN {
+            return Err(Errors::TransactionDeserializationError);
         }
-        */
-
         unimplemented!()
     }
     /// Create a `Transaction` from a reader object.
     pub fn from_reader<R: std::io::Read>(reader: R) -> Result<Self> {
-        Err(Error::TransactionError)
+        unimplemented!()
     }
 
     pub fn payload(&self) -> &Payload {
@@ -308,6 +346,7 @@ impl Transaction {
         &self.nonce
     }
 
+    /// Returns the (bundle) essence of that transaction.
     pub fn essence<'a>(&'a self) -> Essence<'a> {
         Essence {
             address: &self.address,
@@ -318,10 +357,14 @@ impl Transaction {
             last_index: &self.last_index,
         }
     }
+
+    pub fn builder() -> TransactionBuilder {
+        TransactionBuilder::new()
+    }
 }
 
-impl std::fmt::Debug for Transaction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Transaction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "address={:?}\nvalue={:?}\ntimestamp={:?}\nindex={:?}\nlast_index={:?}\ntag={:?}\nbundle={:?}\ntrunk={:?}\nbranch={:?}\nnonce={:?}",
         self.address,
         self.value,
@@ -396,117 +439,138 @@ impl TransactionBuilder {
         }
     }
 
-    pub fn default() -> Self {
-        Self {
-            payload: Some(Payload::default()),
-            address: Some(Address::default()),
-            value: Some(Value::default()),
-            obsolete_tag: Some(Tag::default()),
-            timestamp: Some(Timestamp::default()),
-            index: Some(Index::default()),
-            last_index: Some(Index::default()),
-            tag: Some(Tag::default()),
-            bundle: Some(Hash::default()),
-            trunk: Some(Hash::default()),
-            branch: Some(Hash::default()),
-            attachment_ts: Some(Timestamp::default()),
-            attachment_lbts: Some(Timestamp::default()),
-            attachment_ubts: Some(Timestamp::default()),
-            nonce: Some(Nonce::default()),
-        }
-    }
-
-    pub fn payload(&mut self, payload: Payload) -> &mut Self {
+    pub fn with_payload(mut self, payload: Payload) -> Self {
         self.payload.replace(payload);
         self
     }
 
-    pub fn address(&mut self, address: Address) -> &mut Self {
+    pub fn with_address(mut self, address: Address) -> Self {
         self.address.replace(address);
         self
     }
 
-    pub fn value(&mut self, value: Value) -> &mut Self {
+    pub fn with_value(mut self, value: Value) -> Self {
         self.value.replace(value);
         self
     }
 
-    pub fn obsolete_tag(&mut self, obsolete_tag: Tag) -> &mut Self {
+    pub fn with_obsolete_tag(mut self, obsolete_tag: Tag) -> Self {
         self.obsolete_tag.replace(obsolete_tag);
         self
     }
-    pub fn timestamp(&mut self, timestamp: Timestamp) -> &mut Self {
+    pub fn with_timestamp(mut self, timestamp: Timestamp) -> Self {
         self.timestamp.replace(timestamp);
         self
     }
 
-    pub fn index(&mut self, index: Index) -> &mut Self {
+    pub fn with_index(mut self, index: Index) -> Self {
         self.index.replace(index);
         self
     }
 
-    pub fn last_index(&mut self, last_index: Index) -> &mut Self {
+    pub fn with_last_index(mut self, last_index: Index) -> Self {
         self.last_index.replace(last_index);
         self
     }
 
-    pub fn tag(&mut self, tag: Tag) -> &mut Self {
+    pub fn with_tag(mut self, tag: Tag) -> Self {
         self.tag.replace(tag);
         self
     }
 
-    pub fn attachment_ts(&mut self, attachment_ts: Timestamp) -> &mut Self {
+    pub fn with_attachment_ts(mut self, attachment_ts: Timestamp) -> Self {
         self.attachment_ts.replace(attachment_ts);
         self
     }
 
-    pub fn bundle(&mut self, bundle: Hash) -> &mut Self {
+    pub fn with_bundle(mut self, bundle: Hash) -> Self {
         self.bundle.replace(bundle);
         self
     }
 
-    pub fn trunk(&mut self, trunk: Hash) -> &mut Self {
+    pub fn with_trunk(mut self, trunk: Hash) -> Self {
         self.trunk.replace(trunk);
         self
     }
 
-    pub fn branch(&mut self, branch: Hash) -> &mut Self {
+    pub fn with_branch(mut self, branch: Hash) -> Self {
         self.branch.replace(branch);
         self
     }
 
-    pub fn attachment_lbts(&mut self, attachment_lbts: Timestamp) -> &mut Self {
+    pub fn with_attachment_lbts(mut self, attachment_lbts: Timestamp) -> Self {
         self.attachment_lbts.replace(attachment_lbts);
         self
     }
 
-    pub fn attachment_ubts(&mut self, attachment_ubts: Timestamp) -> &mut Self {
+    pub fn with_attachment_ubts(mut self, attachment_ubts: Timestamp) -> Self {
         self.attachment_ubts.replace(attachment_ubts);
         self
     }
 
-    pub fn nonce(&mut self, nonce: Nonce) -> &mut Self {
+    pub fn with_nonce(mut self, nonce: Nonce) -> Self {
         self.nonce.replace(nonce);
         self
     }
 
-    pub fn build(self) -> Transaction {
+    /// Tries to build a transaction from the current state of the builder. If mandatory fields have not
+    /// been set, this method will return a `TransactionBuilderError` describing which field has not been set.
+    pub fn try_build(self) -> Result<Transaction> {
+        Ok(Transaction {
+            payload: self.payload.unwrap_or(Payload::new()),
+            address: self.address.unwrap_or(Address::new()),
+            value: self.value.unwrap_or(Value::new()),
+            obsolete_tag: self.obsolete_tag.unwrap_or(Tag::new()),
+            timestamp: self
+                .timestamp
+                .ok_or(Errors::TransactionBuilderError("timestamp not set"))?,
+            index: self.index.unwrap_or(Index::new()),
+            last_index: self.last_index.unwrap_or(Index::new()),
+            tag: self.tag.unwrap_or(Tag::new()),
+            bundle: self
+                .bundle
+                .ok_or(Errors::TransactionBuilderError("bundle hash not set"))?,
+            trunk: self
+                .trunk
+                .ok_or(Errors::TransactionBuilderError("trunk hash not set"))?,
+            branch: self
+                .branch
+                .ok_or(Errors::TransactionBuilderError("branch hash not set"))?,
+            attachment_ts: self.attachment_ts.ok_or(Errors::TransactionBuilderError(
+                "attachment timestamp not set",
+            ))?,
+            attachment_lbts: self.attachment_lbts.ok_or(Errors::TransactionBuilderError(
+                "attachment lower bound timestamp not set",
+            ))?,
+            attachment_ubts: self.attachment_ubts.ok_or(Errors::TransactionBuilderError(
+                "attachment upper bound timestamp not set",
+            ))?,
+            nonce: self
+                .nonce
+                .ok_or(Errors::TransactionBuilderError("nonce not set"))?,
+        })
+    }
+
+    /// Builds a transaction from the current state of the builder. Even mandatory fields will be set to some
+    /// default, hence this operation will always succeed even if the built transaction is certain to get rejected by
+    /// the network.
+    pub fn build_or_default(self) -> Transaction {
         Transaction {
-            payload: self.payload.unwrap(),
-            address: self.address.unwrap(),
-            value: self.value.unwrap(),
-            obsolete_tag: self.obsolete_tag.unwrap(),
-            timestamp: self.timestamp.unwrap(),
-            index: self.index.unwrap(),
-            last_index: self.last_index.unwrap(),
-            tag: self.tag.unwrap(),
-            bundle: self.bundle.unwrap(),
-            trunk: self.trunk.unwrap(),
-            branch: self.branch.unwrap(),
-            attachment_ts: self.attachment_ts.unwrap(),
-            attachment_lbts: self.attachment_lbts.unwrap(),
-            attachment_ubts: self.attachment_ubts.unwrap(),
-            nonce: self.nonce.unwrap(),
+            payload: self.payload.unwrap_or(Payload::new()),
+            address: self.address.unwrap_or(Address::new()),
+            value: self.value.unwrap_or(Value::new()),
+            obsolete_tag: self.obsolete_tag.unwrap_or(Tag::new()),
+            timestamp: self.timestamp.unwrap_or(Timestamp::new()),
+            index: self.index.unwrap_or(Index::new()),
+            last_index: self.last_index.unwrap_or(Index::new()),
+            tag: self.tag.unwrap_or(Tag::new()),
+            bundle: self.bundle.unwrap_or(Hash::new()),
+            trunk: self.trunk.unwrap_or(Hash::new()),
+            branch: self.branch.unwrap_or(Hash::new()),
+            attachment_ts: self.attachment_ts.unwrap_or(Timestamp::new()),
+            attachment_lbts: self.attachment_lbts.unwrap_or(Timestamp::new()),
+            attachment_ubts: self.attachment_ubts.unwrap_or(Timestamp::new()),
+            nonce: self.nonce.unwrap_or(Nonce::new()),
         }
     }
 }
@@ -526,19 +590,16 @@ impl TransactionBuilders {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
     fn create_transaction_from_builder() {
-        let mut builder = TransactionBuilder::default();
-        builder
-            .value(Value(10))
-            .address(Address::from_str("ME"))
-            .tag(Tag::from_str("HELLO"))
-            .nonce(Nonce::from_str("ABCDEF"));
-
-        let tx = builder.build();
+        let tx = Transaction::builder()
+            .with_value(Value(10))
+            .with_address(Address::from_str("ME"))
+            .with_tag(Tag::from_str("HELLO"))
+            .with_nonce(Nonce::from_str("ABCDEF"))
+            .build_or_default();
     }
 
     #[test]

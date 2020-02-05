@@ -3,7 +3,7 @@ use std::fmt;
 use common::constants::BEE_DISPLAYED_NAME;
 
 #[repr(u8)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum State {
     BootingUp,
     Running,
