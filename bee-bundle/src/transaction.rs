@@ -255,7 +255,7 @@ pub struct Essence<'a> {
     last_index: &'a Index,
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct Transaction {
     payload: Payload,
     address: Address,

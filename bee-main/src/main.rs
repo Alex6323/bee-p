@@ -9,7 +9,7 @@ pub use crate::config::{Config, Host, Peer};
 use common::logger;
 
 fn main() {
-    logger::init(log::LevelFilter::Trace);
+    logger::init(log::LevelFilter::Info);
     screen::init();
 
     logger::warn("This node will destroy itself in about 10 seconds.");
