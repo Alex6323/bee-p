@@ -1,11 +1,11 @@
 [package]
-name = "bundle"
+name = "bee-bundle"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
-common = { path = "../bee-common" }
-crypto = { path = "../bee-crypto" }
-pow = { path = "../bee-pow" }
-ternary = { path = "../bee-ternary" }
+bee-common = { path = "../bee-common" }
+bee-crypto = { path = "../bee-crypto" }
+bee-pow = { path = "../bee-pow" }
+bee-ternary = { path = "../bee-ternary" }

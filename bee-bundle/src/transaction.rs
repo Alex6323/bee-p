@@ -1,9 +1,8 @@
-use common::constants::*;
-use common::Error;
-use common::Result;
-use common::Tryte;
-
-use ternary::IsTryte;
+use bee_common::constants::*;
+use bee_common::Error;
+use bee_common::Result;
+use bee_common::Tryte;
+use bee_ternary::IsTryte;
 
 use crate::constants::*;
 

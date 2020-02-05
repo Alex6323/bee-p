@@ -1,8 +1,6 @@
 extern crate rand;
 pub mod sqlx_backend;
 
-pub use bundle::*;
-
 #[cfg(test)]
 mod tests {
     //FIXME - figure out (even when only one test with one thread):

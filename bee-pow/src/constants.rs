@@ -1,4 +1,4 @@
-use common::constants::*;
+use bee_common::constants::*;
 
 pub const NUM_FULL_CHUNKS_FOR_PRESTATE: usize =
     (TRANSACTION_TRIT_LEN - HASH_TRIT_LEN) / HASH_TRIT_LEN; // 32

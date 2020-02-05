@@ -1,6 +1,6 @@
 use crate::constants::{HASH_LEN, STATE_LEN, NUM_ROUNDS};
 
-use common::constants::NONCE_TRIT_LEN as NONCE_LEN;
+use bee_common::constants::NONCE_TRIT_LEN as NONCE_LEN;
 
 use crate::constants::*;
 use crate::cores::Cores;

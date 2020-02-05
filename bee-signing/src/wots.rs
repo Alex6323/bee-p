@@ -2,9 +2,11 @@ use crate::{
     slice_eq, IotaSeed, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed,
     Signature,
 };
-use crypto::Sponge;
+
+use bee_crypto::Sponge;
+use bee_ternary::{Trits, TritsBuf, TritsMut};
+
 use std::marker::PhantomData;
-use ternary::{Trits, TritsBuf, TritsMut};
 
 // TODO constants
 

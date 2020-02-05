@@ -19,7 +19,7 @@ pub use curlp::{
     CurlP81,
 };
 
-use ternary::{
+use bee_ternary::{
     Trits,
     TritsMut,
     TritsBuf,

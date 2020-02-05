@@ -1,14 +1,14 @@
 [package]
-name = "ternary"
+name = "bee-ternary"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
-common = { path = "../bee-common" }
+bee-common = { path = "../bee-common" }
 
-lazy_static = "1.4.0"
 failure = "0.1.6"
+lazy_static = "1.4.0"
 
 # ONLY TEMPORARY
 iota-conversion = { path = "../iota-conversion" }

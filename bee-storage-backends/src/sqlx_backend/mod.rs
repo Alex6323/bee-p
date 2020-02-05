@@ -1,8 +1,3 @@
-//pub extern crate storage;
-//pub extern crate serde;
-//pub extern crate bincode;
-extern crate num_cpus;
-
 pub mod errors;
 
 //TODO:
@@ -10,6 +5,9 @@ pub mod errors;
 //Tests - sanity and multithreaded + benchmarking
 //Support multiple sql backends via sqlx
 //Get rid of all warnings
+
+use bee_bundle::*;
+use bee_storage::{Connection, MissingHashesToRCApprovers, Milestone};
 
 use std::env;
 use std::rc::Rc;
@@ -19,10 +17,6 @@ use async_trait::async_trait;
 use errors::*;
 use futures::executor::block_on;
 use sqlx::{Row, PgPool};
-use storage::{Connection, MissingHashesToRCApprovers, Milestone};
-
-pub use bundle::*;
-
 
 std::include!("../sql/statements.rs");
 
@@ -41,7 +35,7 @@ impl SqlxBackendConnection {
 
 
 #[async_trait]
-impl storage::Connection<SqlxBackendConnection> for SqlxBackendConnection {
+impl bee_storage::Connection<SqlxBackendConnection> for SqlxBackendConnection {
 
     type StorageError = SqlxBackendError;
 
@@ -61,13 +55,13 @@ impl storage::Connection<SqlxBackendConnection> for SqlxBackendConnection {
 }
 
 #[derive(Clone, Debug)]
-pub struct SqlxBackendStorage(storage::Storage<SqlxBackendConnection>);
+pub struct SqlxBackendStorage(bee_storage::Storage<SqlxBackendConnection>);
 
 
 impl SqlxBackendStorage {
 
     pub fn new() -> Self {
-        let stor = storage::Storage {
+        let stor = bee_storage::Storage {
             connection: SqlxBackendConnection::new(),
         };
         SqlxBackendStorage(stor)
@@ -85,13 +79,13 @@ impl SqlxBackendStorage {
 
 //TODO - handle errors
 #[async_trait]
-impl storage::StorageBackend for SqlxBackendStorage {
+impl bee_storage::StorageBackend for SqlxBackendStorage {
 
     type StorageError = SqlxBackendError;
 
     fn map_existing_transaction_hashes_to_approvers(
         &self,
-    ) -> Result<storage::HashesToApprovers, SqlxBackendError> {
+    ) -> Result<bee_storage::HashesToApprovers, SqlxBackendError> {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
@@ -129,7 +123,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
     }
 
     fn map_missing_transaction_hashes_to_approvers(
-        &self, all_hashes: HashSet<bundle::Hash>
+        &self, all_hashes: HashSet<bee_bundle::Hash>
     ) -> Result<MissingHashesToRCApprovers, SqlxBackendError> {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
@@ -152,13 +146,13 @@ impl storage::StorageBackend for SqlxBackendStorage {
                 let mut optional_approver_rc = None;
 
                 if !all_hashes.contains(&branch){
-                    optional_approver_rc = Some(Rc::<bundle::Hash>::new(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_HASH))));
+                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_HASH))));
                     missing_to_approvers.entry(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_BRANCH))).or_insert(HashSet::new()).insert(optional_approver_rc.clone().unwrap());
                 }
 
 
                 if !all_hashes.contains(&trunk){
-                    let approver_rc : Rc<bundle::Hash> = optional_approver_rc.map_or(Rc::new(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_HASH))), |rc| rc.clone());
+                    let approver_rc : Rc<bee_bundle::Hash> = optional_approver_rc.map_or(Rc::new(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_HASH))), |rc| rc.clone());
                     missing_to_approvers.entry(Hash::from_str(&row.get::<String,_>(TRANSACTION_COL_TRUNK))).or_insert(HashSet::new()).insert(approver_rc.clone());
                 }
 
@@ -175,7 +169,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(missing_to_approvers)
     }
     //Implement all methods here
-    async fn insert_transaction(&self, tx_hash: bundle::Hash, tx: bundle::Transaction) -> Result<(), SqlxBackendError> {
+    async fn insert_transaction(&self, tx_hash: bee_bundle::Hash, tx: bee_bundle::Transaction) -> Result<(), SqlxBackendError> {
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
@@ -208,7 +202,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn find_transaction(&self, tx_hash: bundle::Hash) -> Result<bundle::Transaction, SqlxBackendError> {
+    async fn find_transaction(&self, tx_hash: bee_bundle::Hash) -> Result<bee_bundle::Transaction, SqlxBackendError> {
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
@@ -227,7 +221,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         let attachment_ubts: u64 = rec.get::<i32,_>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER) as u64;
         let timestamp: u64 = rec.get::<i32,_>(TRANSACTION_COL_TIMESTAMP) as u64;
 
-        let mut builder = bundle::TransactionBuilder::new();
+        let mut builder = bee_bundle::TransactionBuilder::new();
         builder
             .payload(Payload::from_str(&rec.get::<String, _>(TRANSACTION_COL_SIG_OR_MESSAGE)))
             .address(Address::from_str(&rec.get::<String, _>(TRANSACTION_COL_ADDRESS)))
@@ -252,7 +246,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     async fn update_transactions_set_solid(
         &self,
-        transaction_hashes: HashSet<bundle::Hash>,
+        transaction_hashes: HashSet<bee_bundle::Hash>,
     ) -> Result<(), SqlxBackendError> {
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
@@ -270,7 +264,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     async fn update_transactions_set_snapshot_index(
         &self,
-        transaction_hashes: HashSet<bundle::Hash>,
+        transaction_hashes: HashSet<bee_bundle::Hash>,
         snapshot_index: u32,
     ) -> Result<(), SqlxBackendError> {
 
@@ -289,7 +283,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn delete_transactions(&self, transaction_hashes: &HashSet<bundle::Hash>) -> Result<(), SqlxBackendError>{
+    async fn delete_transactions(&self, transaction_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), SqlxBackendError>{
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
@@ -307,7 +301,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     }
 
-    async fn insert_transactions(&self, transactions : HashMap<bundle::Hash,bundle::Transaction>) -> Result<(), Self::StorageError> {
+    async fn insert_transactions(&self, transactions : HashMap<bee_bundle::Hash, bee_bundle::Transaction>) -> Result<(), Self::StorageError> {
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
@@ -357,7 +351,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn find_milestone(&self, milestone_hash: bundle::Hash) -> Result<Milestone, SqlxBackendError>{
+    async fn find_milestone(&self, milestone_hash: bee_bundle::Hash) -> Result<Milestone, SqlxBackendError>{
 
         let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
@@ -379,7 +373,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     async fn delete_milestones(
         &self,
-        milestone_hashes: &HashSet<bundle::Hash>,
+        milestone_hashes: &HashSet<bee_bundle::Hash>,
     ) -> Result<(), SqlxBackendError>{
 
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
@@ -402,7 +396,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
 
     async fn insert_state_delta(
         &self,
-        state_delta: storage::StateDeltaMap,
+        state_delta: bee_storage::StateDeltaMap,
         index: u32,
     ) -> Result<(), SqlxBackendError> {
         let pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
@@ -422,7 +416,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn load_state_delta(&self, index: u32) -> Result<storage::StateDeltaMap, SqlxBackendError> {
+    async fn load_state_delta(&self, index: u32) -> Result<bee_storage::StateDeltaMap, SqlxBackendError> {
 
     let mut pool = self.0.connection.connection_pool.as_ref().expect(CONNECTION_NOT_INITIALIZED);
 
@@ -433,7 +427,7 @@ impl storage::StorageBackend for SqlxBackendStorage {
     .await?;
 
     let delta = rec.get::<String, _>(MILESTONE_COL_DELTA);
-    let decoded: storage::StateDeltaMap = bincode::deserialize(&delta.as_bytes())?;
+    let decoded: bee_storage::StateDeltaMap = bincode::deserialize(&delta.as_bytes())?;
 
     Ok(decoded)
 

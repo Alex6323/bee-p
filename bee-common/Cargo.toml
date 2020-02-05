@@ -1,5 +1,5 @@
 [package]
-name = "common"
+name = "bee-common"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"

@@ -1,5 +1,5 @@
-use common::constants::NONCE_TRIT_LEN as NONCE_LEN;
-use common::Trit;
+use bee_common::constants::NONCE_TRIT_LEN as NONCE_LEN;
+use bee_common::Trit;
 
 #[derive(Copy)]
 pub struct NonceTrits(pub(crate) [Trit; NONCE_LEN]);

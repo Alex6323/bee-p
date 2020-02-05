@@ -1,14 +1,14 @@
 [package]
-name = "main"
+name = "bee-main"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
-bundle = { path = "../bee-bundle" }
-common = { path = "../bee-common" }
-network = { path = "../bee-network" }
-pow = { path = "../bee-pow" }
+bee-bundle = { path = "../bee-bundle" }
+bee-common = { path = "../bee-common" }
+bee-network = { path = "../bee-network" }
+bee-pow = { path = "../bee-pow" }
 
 async-std = "1.4.0"
 crossterm = "0.15.0"
