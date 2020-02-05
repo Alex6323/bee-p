@@ -124,7 +124,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 
 #[derive(Debug)]
 pub enum OutgoingBundleBuilderError {
-    IncompleteTransactionBuilder,
+    IncompleteTransactionBuilder(String),
     Empty,
     UnsignedInput,
     NonZeroSum(i64),
@@ -199,6 +199,27 @@ where
         self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSealed>, OutgoingBundleBuilderError> {
         // TODO Impl
+
+        for builder in &self.builders.0 {
+            if let None = builder.payload {
+                return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
+                    "payload".to_owned(),
+                ));
+            } else if let None = builder.address {
+                return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
+                    "address".to_owned(),
+                ));
+            } else if let None = builder.value {
+                return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
+                    "value".to_owned(),
+                ));
+            } else if let None = builder.tag {
+                return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
+                    "tag".to_owned(),
+                ));
+            }
+        }
+
         Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingSealed> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -220,15 +241,10 @@ where
     {
         // TODO Impl
 
-        // TODO maybe not necessary if we check the core fields in push/seal ?
         for builder in &self.builders.0 {
-            match &builder.value {
-                Some(value) => {
-                    if value.0 < 0 {
-                        return Err(OutgoingBundleBuilderError::UnsignedInput);
-                    }
-                }
-                None => return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder),
+            // Safe to unwrap because we made sure it's not None in `seal`
+            if builder.value.as_ref().unwrap().0 < 0 {
+                return Err(OutgoingBundleBuilderError::UnsignedInput);
             }
         }
 
