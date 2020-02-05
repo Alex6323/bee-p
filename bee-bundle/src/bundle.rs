@@ -169,7 +169,7 @@ where
     S: OutgoingBundleBuilderStage,
 {
     // TODO TEST
-    pub fn calculate_hash(&self) -> TritsBuf {
+    fn calculate_hash(&self) -> TritsBuf {
         // TODO Impl
         let mut sponge = E::default();
 
