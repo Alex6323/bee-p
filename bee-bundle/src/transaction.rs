@@ -88,7 +88,7 @@ pub struct Index(pub usize);
 pub struct Hash(pub [Tryte; BUNDLE_HASH.tryte_offset.length]);
 pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct Transaction {
     payload: Payload,
     address: Address,

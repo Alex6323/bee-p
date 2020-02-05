@@ -337,7 +337,7 @@ mod tests {
         let mut bundle_builder = IncomingBundleBuilder::new();
 
         for _ in 0..5 {
-            bundle_builder.push(Transaction::default());
+            bundle_builder.push(TransactionBuilder::default().build());
         }
 
         let bundle = bundle_builder.validate()?.build();
