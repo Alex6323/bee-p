@@ -222,7 +222,7 @@ where
         for builder in &self.builders.0 {
             match &builder.value {
                 Some(value) => {
-                    if value.0 != 0 {
+                    if value.0 < 0 {
                         return Err(OutgoingBundleBuilderError::UnsignedInput);
                     }
                 }
