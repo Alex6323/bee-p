@@ -1,5 +1,5 @@
 use crate::transaction::{
-    Index, Transaction, TransactionBuilder, TransactionBuilders, Transactions,
+    Hash, Index, Transaction, TransactionBuilder, TransactionBuilders, Transactions,
 };
 
 use std::marker::PhantomData;
@@ -245,6 +245,8 @@ where
     // TODO TEST
     pub fn attach(
         self,
+        trunk: Hash,
+        branch: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
     {
         // TODO Impl
@@ -262,7 +264,7 @@ where
             hash_sponge: PhantomData,
             stage: PhantomData,
         }
-        .attach()
+        .attach(trunk, branch)
     }
 
     // TODO TEST
@@ -287,6 +289,8 @@ where
     // TODO TEST
     pub fn attach(
         self,
+        trunk: Hash,
+        branch: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
     {
         // TODO Impl
@@ -392,7 +396,7 @@ mod tests {
         let bundle = bundle_builder
             .seal()?
             .sign()?
-            .attach()?
+            .attach(Hash::zeros(), Hash::zeros())?
             .validate()?
             .build()?;
 
@@ -415,7 +419,11 @@ mod tests {
             bundle_builder.push(transaction_builder);
         }
 
-        let bundle = bundle_builder.seal()?.attach()?.validate()?.build()?;
+        let bundle = bundle_builder
+            .seal()?
+            .attach(Hash::zeros(), Hash::zeros())?
+            .validate()?
+            .build()?;
 
         assert_eq!(bundle.len(), 3);
 
