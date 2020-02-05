@@ -1,6 +1,3 @@
-// TEMPORARY
-#![allow(dead_code, unused_variables, unused_imports)]
-
 mod ed25519;
 mod iota_seed;
 mod mss;
