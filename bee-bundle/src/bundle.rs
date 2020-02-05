@@ -374,10 +374,10 @@ mod tests {
 
         for _ in 0..3 {
             let transaction_builder = TransactionBuilder::new()
-                .with_payload(Payload::new())
-                .with_address(Address::new())
-                .with_value(Value::new())
-                .with_tag(Tag::new());
+                .with_payload(Payload::zeros())
+                .with_address(Address::zeros())
+                .with_value(Value(0))
+                .with_tag(Tag::zeros());
             bundle_builder.push(transaction_builder);
         }
 
@@ -400,10 +400,10 @@ mod tests {
 
         for _ in 0..3 {
             let transaction_builder = TransactionBuilder::new()
-                .with_payload(Payload::new())
-                .with_address(Address::new())
-                .with_value(Value::new())
-                .with_tag(Tag::new());
+                .with_payload(Payload::zeros())
+                .with_address(Address::zeros())
+                .with_value(Value(0))
+                .with_tag(Tag::zeros());
             bundle_builder.push(transaction_builder);
         }
 

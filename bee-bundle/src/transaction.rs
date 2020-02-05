@@ -67,9 +67,7 @@ macro_rules! implement_clone {
     $(
         impl Clone for $t {
             fn clone(&self) -> Self {
-                    let mut cloned : $t = <$t>::default();
-                    cloned.0 = self.0;
-                    cloned
+                    Self(self.0)
             }
         }
 
@@ -80,8 +78,8 @@ macro_rules! implement_clone {
 pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
 
 impl Payload {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn zeros() -> Self {
+        Self([TRYTE_ZERO; PAYLOAD.tryte_offset.length])
     }
 
     pub fn from_str(payload: &str) -> Self {
@@ -98,17 +96,11 @@ impl Payload {
     }
 }
 
-impl Default for Payload {
-    fn default() -> Self {
-        Self([TRYTE_ZERO; PAYLOAD.tryte_offset.length])
-    }
-}
-
 pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
 
 impl Address {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn zeros() -> Self {
+        Self([TRYTE_ZERO; ADDRESS.tryte_offset.length])
     }
 
     pub fn from_str(address: &str) -> Self {
@@ -125,26 +117,14 @@ impl Address {
     }
 }
 
-impl Default for Address {
-    fn default() -> Self {
-        Self([TRYTE_ZERO; ADDRESS.tryte_offset.length])
-    }
-}
-
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Value(pub i64);
-
-impl Value {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
 
 pub struct Tag(pub [Tryte; TAG.tryte_offset.length]);
 
 impl Tag {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn zeros() -> Self {
+        Self([TRYTE_ZERO; TAG.tryte_offset.length])
     }
 
     pub fn from_str(tag: &str) -> Self {
@@ -161,35 +141,17 @@ impl Tag {
     }
 }
 
-impl Default for Tag {
-    fn default() -> Self {
-        Self([TRYTE_ZERO; TAG.tryte_offset.length])
-    }
-}
-
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Timestamp(pub u64);
 
-impl Timestamp {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Index(pub usize);
-
-impl Index {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
 
 pub struct Hash(pub [Tryte; BUNDLE_HASH.tryte_offset.length]);
 
 impl Hash {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn zeros() -> Self {
+        Self([TRYTE_ZERO; BUNDLE_HASH.tryte_offset.length])
     }
 
     pub fn from_str(hash: &str) -> Self {
@@ -206,17 +168,11 @@ impl Hash {
     }
 }
 
-impl Default for Hash {
-    fn default() -> Self {
-        Self([TRYTE_ZERO; BUNDLE_HASH.tryte_offset.length])
-    }
-}
-
 pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
 
 impl Nonce {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn zeros() -> Self {
+        Self([TRYTE_ZERO; NONCE.tryte_offset.length])
     }
 
     pub fn from_str(nonce: &str) -> Self {
@@ -230,12 +186,6 @@ impl Nonce {
         }
 
         Self(trytes)
-    }
-}
-
-impl Default for Nonce {
-    fn default() -> Self {
-        Self([TRYTE_ZERO; NONCE.tryte_offset.length])
     }
 }
 
@@ -504,16 +454,16 @@ impl TransactionBuilder {
     /// been set, this method will return a `TransactionBuilderError` describing which field has not been set.
     pub fn try_build(self) -> Result<Transaction> {
         Ok(Transaction {
-            payload: self.payload.unwrap_or(Payload::new()),
-            address: self.address.unwrap_or(Address::new()),
-            value: self.value.unwrap_or(Value::new()),
-            obsolete_tag: self.obsolete_tag.unwrap_or(Tag::new()),
+            payload: self.payload.unwrap_or(Payload::zeros()),
+            address: self.address.unwrap_or(Address::zeros()),
+            value: self.value.unwrap_or(Value(0)),
+            obsolete_tag: self.obsolete_tag.unwrap_or(Tag::zeros()),
             timestamp: self
                 .timestamp
                 .ok_or(Errors::TransactionBuilderError("timestamp not set"))?,
-            index: self.index.unwrap_or(Index::new()),
-            last_index: self.last_index.unwrap_or(Index::new()),
-            tag: self.tag.unwrap_or(Tag::new()),
+            index: self.index.unwrap_or(Index(0)),
+            last_index: self.last_index.unwrap_or(Index(0)),
+            tag: self.tag.unwrap_or(Tag::zeros()),
             bundle: self
                 .bundle
                 .ok_or(Errors::TransactionBuilderError("bundle hash not set"))?,
@@ -543,21 +493,21 @@ impl TransactionBuilder {
     /// the network.
     pub fn build_or_default(self) -> Transaction {
         Transaction {
-            payload: self.payload.unwrap_or(Payload::new()),
-            address: self.address.unwrap_or(Address::new()),
-            value: self.value.unwrap_or(Value::new()),
-            obsolete_tag: self.obsolete_tag.unwrap_or(Tag::new()),
-            timestamp: self.timestamp.unwrap_or(Timestamp::new()),
-            index: self.index.unwrap_or(Index::new()),
-            last_index: self.last_index.unwrap_or(Index::new()),
-            tag: self.tag.unwrap_or(Tag::new()),
-            bundle: self.bundle.unwrap_or(Hash::new()),
-            trunk: self.trunk.unwrap_or(Hash::new()),
-            branch: self.branch.unwrap_or(Hash::new()),
-            attachment_ts: self.attachment_ts.unwrap_or(Timestamp::new()),
-            attachment_lbts: self.attachment_lbts.unwrap_or(Timestamp::new()),
-            attachment_ubts: self.attachment_ubts.unwrap_or(Timestamp::new()),
-            nonce: self.nonce.unwrap_or(Nonce::new()),
+            payload: self.payload.unwrap_or(Payload::zeros()),
+            address: self.address.unwrap_or(Address::zeros()),
+            value: self.value.unwrap_or(Value(0)),
+            obsolete_tag: self.obsolete_tag.unwrap_or(Tag::zeros()),
+            timestamp: self.timestamp.unwrap_or(Timestamp(0)),
+            index: self.index.unwrap_or(Index(0)),
+            last_index: self.last_index.unwrap_or(Index(0)),
+            tag: self.tag.unwrap_or(Tag::zeros()),
+            bundle: self.bundle.unwrap_or(Hash::zeros()),
+            trunk: self.trunk.unwrap_or(Hash::zeros()),
+            branch: self.branch.unwrap_or(Hash::zeros()),
+            attachment_ts: self.attachment_ts.unwrap_or(Timestamp(0)),
+            attachment_lbts: self.attachment_lbts.unwrap_or(Timestamp(0)),
+            attachment_ubts: self.attachment_ubts.unwrap_or(Timestamp(0)),
+            nonce: self.nonce.unwrap_or(Nonce::zeros()),
         }
     }
 }
