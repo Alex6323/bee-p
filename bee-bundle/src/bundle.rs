@@ -1,4 +1,6 @@
-use crate::transaction::{Transaction, TransactionBuilder, TransactionBuilders, Transactions};
+use crate::transaction::{
+    Index as IndexField, Transaction, TransactionBuilder, TransactionBuilders, Transactions,
+};
 
 use std::marker::PhantomData;
 use std::ops::Index;
@@ -196,11 +198,13 @@ where
 
     // TODO TEST
     pub fn seal(
-        self,
+        mut self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSealed>, OutgoingBundleBuilderError> {
         // TODO Impl
+        let mut index = 0;
+        let last_index = self.builders.len() - 1;
 
-        for builder in &self.builders.0 {
+        for builder in &mut self.builders.0 {
             if let None = builder.payload {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
                     "payload",
@@ -218,6 +222,11 @@ where
                     "tag",
                 ));
             }
+
+            builder.index.replace(IndexField(index));
+            builder.last_index.replace(IndexField(last_index));
+
+            index = index + 1;
         }
 
         Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingSealed> {
