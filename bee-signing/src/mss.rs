@@ -321,7 +321,7 @@ mod tests {
     use super::*;
     use crate::iota_seed::IotaSeed;
     use crate::wots::{WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey};
-    use crypto::{CurlP27, CurlP81};
+    use bee_crypto::{CurlP27, CurlP81};
     use iota_conversion::Trinary;
 
     // #[test]

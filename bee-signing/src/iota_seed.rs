@@ -103,7 +103,7 @@ impl<S: Sponge + Default> IotaSeed<S> {
 mod tests {
     use super::*;
     use crate::slice_eq;
-    use crypto::{CurlP27, CurlP81};
+    use bee_crypto::{CurlP27, CurlP81};
 
     const IOTA_SEED: &str =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
