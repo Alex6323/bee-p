@@ -1,5 +1,6 @@
 use crate::transaction::{
-    Hash, Index, Transaction, TransactionBuilder, TransactionBuilders, Transactions,
+    Hash, Index, Transaction, TransactionBuilder, TransactionBuilderError, TransactionBuilders,
+    Transactions,
 };
 
 use std::marker::PhantomData;
@@ -125,10 +126,11 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 
 #[derive(Debug)]
 pub enum OutgoingBundleBuilderError {
-    IncompleteTransactionBuilder(&'static str),
     Empty,
     UnsignedInput,
     NonZeroSum(i64),
+    IncompleteTransactionBuilder(&'static str),
+    FailedTransactionBuild(TransactionBuilderError),
 }
 
 pub trait OutgoingBundleBuilderStage {}
@@ -350,8 +352,11 @@ where
         let mut transactions = Transactions::new();
 
         for transaction_builder in self.builders.0 {
-            // TODO: we probably should use build()? here, and propagate possible errors
-            transactions.push(transaction_builder.build_or_default());
+            transactions.push(
+                transaction_builder
+                    .build()
+                    .map_err(|e| OutgoingBundleBuilderError::FailedTransactionBuild(e))?,
+            );
         }
 
         Ok(Bundle(transactions))
@@ -362,14 +367,33 @@ where
 mod tests {
 
     use super::*;
-    use crate::transaction::{Address, Payload, Tag, Value};
+    use crate::transaction::{Address, Nonce, Payload, Tag, Timestamp, Value};
+
+    fn default_transaction_builder() -> TransactionBuilder {
+        TransactionBuilder::new()
+            .with_payload(Payload::zeros())
+            .with_address(Address::zeros())
+            .with_value(Value(0))
+            .with_obsolete_tag(Tag::zeros())
+            .with_timestamp(Timestamp(0))
+            .with_index(Index(0))
+            .with_last_index(Index(0))
+            .with_tag(Tag::zeros())
+            .with_attachment_ts(Timestamp(0))
+            .with_bundle(Hash::zeros())
+            .with_trunk(Hash::zeros())
+            .with_branch(Hash::zeros())
+            .with_attachment_lbts(Timestamp(0))
+            .with_attachment_ubts(Timestamp(0))
+            .with_nonce(Nonce::zeros())
+    }
 
     #[test]
     fn incoming_bundle_builder_test() -> Result<(), IncomingBundleBuilderError> {
         let mut bundle_builder = IncomingBundleBuilder::new();
 
         for _ in 0..5 {
-            bundle_builder.push(TransactionBuilder::new().build_or_default());
+            bundle_builder.push(default_transaction_builder().build().unwrap());
         }
 
         let bundle = bundle_builder.validate()?.build();
@@ -385,12 +409,7 @@ mod tests {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
         for _ in 0..3 {
-            let transaction_builder = TransactionBuilder::new()
-                .with_payload(Payload::zeros())
-                .with_address(Address::zeros())
-                .with_value(Value(0))
-                .with_tag(Tag::zeros());
-            bundle_builder.push(transaction_builder);
+            bundle_builder.push(default_transaction_builder());
         }
 
         let bundle = bundle_builder
@@ -411,12 +430,7 @@ mod tests {
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
         for _ in 0..3 {
-            let transaction_builder = TransactionBuilder::new()
-                .with_payload(Payload::zeros())
-                .with_address(Address::zeros())
-                .with_value(Value(0))
-                .with_tag(Tag::zeros());
-            bundle_builder.push(transaction_builder);
+            bundle_builder.push(default_transaction_builder());
         }
 
         let bundle = bundle_builder

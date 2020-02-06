@@ -455,7 +455,7 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn try_build(self) -> Result<Transaction, TransactionBuilderError> {
+    pub fn build(self) -> Result<Transaction, TransactionBuilderError> {
         Ok(Transaction {
             payload: self
                 .payload
@@ -504,29 +504,6 @@ impl TransactionBuilder {
                 .ok_or(TransactionBuilderError::MissingField("nonce"))?,
         })
     }
-
-    /// Builds a transaction from the current state of the builder. Even mandatory fields will be set to some
-    /// default, hence this operation will always succeed even if the built transaction is certain to get rejected by
-    /// the network.
-    pub fn build_or_default(self) -> Transaction {
-        Transaction {
-            payload: self.payload.unwrap_or(Payload::zeros()),
-            address: self.address.unwrap_or(Address::zeros()),
-            value: self.value.unwrap_or(Value(0)),
-            obsolete_tag: self.obsolete_tag.unwrap_or(Tag::zeros()),
-            timestamp: self.timestamp.unwrap_or(Timestamp(0)),
-            index: self.index.unwrap_or(Index(0)),
-            last_index: self.last_index.unwrap_or(Index(0)),
-            tag: self.tag.unwrap_or(Tag::zeros()),
-            bundle: self.bundle.unwrap_or(Hash::zeros()),
-            trunk: self.trunk.unwrap_or(Hash::zeros()),
-            branch: self.branch.unwrap_or(Hash::zeros()),
-            attachment_ts: self.attachment_ts.unwrap_or(Timestamp(0)),
-            attachment_lbts: self.attachment_lbts.unwrap_or(Timestamp(0)),
-            attachment_ubts: self.attachment_ubts.unwrap_or(Timestamp(0)),
-            nonce: self.nonce.unwrap_or(Nonce::zeros()),
-        }
-    }
 }
 
 #[derive(Default)]
@@ -548,12 +525,24 @@ mod tests {
 
     #[test]
     fn create_transaction_from_builder() {
-        let tx = Transaction::builder()
-            .with_value(Value(10))
-            .with_address(Address::from_str("ME"))
-            .with_tag(Tag::from_str("HELLO"))
-            .with_nonce(Nonce::from_str("ABCDEF"))
-            .build_or_default();
+        let tx = TransactionBuilder::new()
+            .with_payload(Payload::zeros())
+            .with_address(Address::zeros())
+            .with_value(Value(0))
+            .with_obsolete_tag(Tag::zeros())
+            .with_timestamp(Timestamp(0))
+            .with_index(Index(0))
+            .with_last_index(Index(0))
+            .with_tag(Tag::zeros())
+            .with_attachment_ts(Timestamp(0))
+            .with_bundle(Hash::zeros())
+            .with_trunk(Hash::zeros())
+            .with_branch(Hash::zeros())
+            .with_attachment_lbts(Timestamp(0))
+            .with_attachment_ubts(Timestamp(0))
+            .with_nonce(Nonce::zeros())
+            .build()
+            .unwrap();
     }
 
     #[test]
