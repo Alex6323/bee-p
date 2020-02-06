@@ -204,19 +204,19 @@ where
         let last_index = self.builders.len() - 1;
 
         for builder in &mut self.builders.0 {
-            if let None = builder.payload {
+            if builder.payload.is_none() {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
                     "payload",
                 ));
-            } else if let None = builder.address {
+            } else if builder.address.is_none() {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
                     "address",
                 ));
-            } else if let None = builder.value {
+            } else if builder.value.is_none() {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
                     "value",
                 ));
-            } else if let None = builder.tag {
+            } else if builder.tag.is_none() {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
                     "tag",
                 ));
