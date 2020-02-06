@@ -1,6 +1,6 @@
 use bee_common::constants::*;
 use bee_common::Errors;
-use bee_common::Result as BeeResult;;
+use bee_common::Result as BeeResult;
 use bee_common::Tryte;
 use bee_ternary::IsTryte;
 

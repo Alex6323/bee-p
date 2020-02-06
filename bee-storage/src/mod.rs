@@ -10,12 +10,12 @@ use std::rc::Rc;
 
 //pub use bundle::*;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // A transaction address. To be replaced later with whatever implementation is required.
 //type TxAddress = String;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Milestone {
     pub hash: bee_bundle::Hash,
     pub index: u32,
@@ -28,7 +28,7 @@ pub type MissingHashesToRCApprovers = HashMap<bee_bundle::Hash, HashSet<Rc<bee_b
 //per milestone (snapshot_index), when we no longer have milestones, we will have to find
 //another way to decide on a check point where to store an address's delta if we want to snapshot
 #[derive(Serialize, Deserialize, Default, Debug)]
-pub struct StateDeltaMap{
+pub struct StateDeltaMap {
     #[serde(flatten)]
     address_to_delta: HashMap<String, i64>,
 }
@@ -44,7 +44,6 @@ pub trait Connection<Conn> {
 
 #[async_trait]
 pub trait StorageBackend {
-
     type StorageError;
     //This method is heavy weighted and will be used to populate Tangle struct on initialization
     //**Operations over transaction's schema**//
@@ -54,12 +53,23 @@ pub trait StorageBackend {
 
     //This method is heavy weighted and will be used to populate Tangle struct on initialization
     fn map_missing_transaction_hashes_to_approvers(
-        &self, all_hashes: HashSet<bee_bundle::Hash>
+        &self,
+        all_hashes: HashSet<bee_bundle::Hash>,
     ) -> Result<MissingHashesToRCApprovers, Self::StorageError>;
 
-    async fn insert_transaction(&self, tx_hash: bee_bundle::Hash, tx: bee_bundle::Transaction) -> Result<(), Self::StorageError>;
-    async fn insert_transactions(&self, transactions : HashMap<bee_bundle::Hash,bee_bundle::Transaction>) -> Result<(), Self::StorageError>;
-    async fn find_transaction(&self, tx_hash: bee_bundle::Hash) -> Result<bee_bundle::Transaction, Self::StorageError>;
+    async fn insert_transaction(
+        &self,
+        tx_hash: bee_bundle::Hash,
+        tx: bee_bundle::Transaction,
+    ) -> Result<(), Self::StorageError>;
+    async fn insert_transactions(
+        &self,
+        transactions: HashMap<bee_bundle::Hash, bee_bundle::Transaction>,
+    ) -> Result<(), Self::StorageError>;
+    async fn find_transaction(
+        &self,
+        tx_hash: bee_bundle::Hash,
+    ) -> Result<bee_bundle::Transaction, Self::StorageError>;
     async fn update_transactions_set_solid(
         &self,
         transaction_hashes: HashSet<bee_bundle::Hash>,
@@ -72,17 +82,22 @@ pub trait StorageBackend {
 
     //**Operations over milestone's schema**//
 
-    async fn delete_transactions(&self, transaction_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), Self::StorageError>;
+    async fn delete_transactions(
+        &self,
+        transaction_hashes: &HashSet<bee_bundle::Hash>,
+    ) -> Result<(), Self::StorageError>;
 
     async fn insert_milestone(&self, milestone: Milestone) -> Result<(), Self::StorageError>;
 
-    async fn find_milestone(&self, milestone_hash: bee_bundle::Hash) -> Result<Milestone, Self::StorageError>;
+    async fn find_milestone(
+        &self,
+        milestone_hash: bee_bundle::Hash,
+    ) -> Result<Milestone, Self::StorageError>;
 
     async fn delete_milestones(
         &self,
         milestone_hashes: &HashSet<bee_bundle::Hash>,
     ) -> Result<(), Self::StorageError>;
-
 
     //**Operations over state_delta's schema**//
 
@@ -93,7 +108,6 @@ pub trait StorageBackend {
     ) -> Result<(), Self::StorageError>;
 
     async fn load_state_delta(&self, index: u32) -> Result<StateDeltaMap, Self::StorageError>;
-
 }
 
 #[derive(Clone, Debug)]

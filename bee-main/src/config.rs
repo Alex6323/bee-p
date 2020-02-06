@@ -100,14 +100,14 @@ impl ConfigBuilder {
 
     pub fn try_build(self) -> bee_common::Result<Config> {
         if self.peers.is_empty() {
-            return Err(bee_common::Error::ConfigError {
+            return Err(bee_common::Errors::ConfigError {
                 key: "peers",
                 msg: "error: you haven't configured any peers",
             });
         }
 
         Ok(Config {
-            host: self.host.ok_or(bee_common::Error::ConfigError {
+            host: self.host.ok_or(bee_common::Errors::ConfigError {
                 key: "host",
                 msg: "error: you haven't configured the host address",
             })?,

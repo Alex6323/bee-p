@@ -255,37 +255,37 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
             rec.get::<i32, _>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER) as u64;
         let timestamp: u64 = rec.get::<i32, _>(TRANSACTION_COL_TIMESTAMP) as u64;
 
-        let mut builder = bee_bundle::TransactionBuilder::new();
-        builder
-            .payload(Payload::from_str(
+        let mut builder = bee_bundle::TransactionBuilder::new()
+            .with_payload(Payload::from_str(
                 &rec.get::<String, _>(TRANSACTION_COL_SIG_OR_MESSAGE),
             ))
-            .address(Address::from_str(
+            .with_address(Address::from_str(
                 &rec.get::<String, _>(TRANSACTION_COL_ADDRESS),
             ))
-            .value(Value(value))
-            .obsolete_tag(Tag::from_str(
+            .with_value(Value(value))
+            .with_obsolete_tag(Tag::from_str(
                 &rec.get::<String, _>(TRANSACTION_COL_OBSOLETE_TAG),
             ))
-            .timestamp(Timestamp(timestamp))
-            .index(Index(index))
-            .last_index(Index(last_index))
-            .bundle(Hash::from_str(
+            .with_timestamp(Timestamp(timestamp))
+            .with_index(Index(index))
+            .with_last_index(Index(last_index))
+            .with_bundle(Hash::from_str(
                 &rec.get::<String, _>(TRANSACTION_COL_BUNDLE),
             ))
-            .trunk(Hash::from_str(&rec.get::<String, _>(TRANSACTION_COL_TRUNK)))
-            .branch(Hash::from_str(
+            .with_trunk(Hash::from_str(&rec.get::<String, _>(TRANSACTION_COL_TRUNK)))
+            .with_branch(Hash::from_str(
                 &rec.get::<String, _>(TRANSACTION_COL_BRANCH),
             ))
-            .tag(Tag::from_str(&rec.get::<String, _>(TRANSACTION_COL_TAG)))
-            .attachment_ts(Timestamp(attachment_ts))
-            .attachment_lbts(Timestamp(attachment_lbts))
-            .attachment_ubts(Timestamp(attachment_ubts))
-            .nonce(Nonce::from_str(
+            .with_tag(Tag::from_str(&rec.get::<String, _>(TRANSACTION_COL_TAG)))
+            .with_attachment_ts(Timestamp(attachment_ts))
+            .with_attachment_lbts(Timestamp(attachment_lbts))
+            .with_attachment_ubts(Timestamp(attachment_ubts))
+            .with_nonce(Nonce::from_str(
                 &rec.get::<String, _>(TRANSACTION_COL_NONCE),
             ));
 
-        let tx = builder.build();
+        // TODO(thibault) handle error!
+        let tx = builder.build().unwrap();
 
         Ok(tx)
     }
