@@ -22,6 +22,12 @@ impl Bundle {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    // TODO TEST
+    pub fn hash(&self) -> &Hash {
+        // Safe to unwrap because empty bundles can't be built
+        self.get(0).unwrap().bundle()
+    }
 }
 
 impl IntoIterator for Bundle {
