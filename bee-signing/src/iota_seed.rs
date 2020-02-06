@@ -1,9 +1,11 @@
 use crate::Seed;
-use crypto::Sponge;
 use iota_conversion::Trinary;
 use rand::Rng;
+
+use bee_crypto::Sponge;
+use bee_ternary::{TritsBuf, TRYTE_ALPHABET};
+
 use std::marker::PhantomData;
-use ternary::{TritsBuf, TRYTE_ALPHABET};
 
 // TODO Put constants in a separate file
 

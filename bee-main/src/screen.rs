@@ -1,4 +1,4 @@
-use common::constants::{BEE_DISPLAYED_NAME, BEE_DISPLAYED_VERSION};
+use bee_common::constants::{BEE_DISPLAYED_NAME, BEE_DISPLAYED_VERSION};
 
 use std::io::{stdout, Write};
 

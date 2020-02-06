@@ -17,12 +17,12 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Default, Debug, Clone)]
 pub struct Milestone {
-    pub hash: bundle::Hash,
+    pub hash: bee_bundle::Hash,
     pub index: u32,
 }
 
-pub type HashesToApprovers = HashMap<bundle::Hash, HashSet<bundle::Hash>>;
-pub type MissingHashesToRCApprovers = HashMap<bundle::Hash, HashSet<Rc<bundle::Hash>>>;
+pub type HashesToApprovers = HashMap<bee_bundle::Hash, HashSet<bee_bundle::Hash>>;
+pub type MissingHashesToRCApprovers = HashMap<bee_bundle::Hash, HashSet<Rc<bee_bundle::Hash>>>;
 //This is a mapping between an iota address and it's balance change
 //practically, a map for total balance change over an addresses will be collected
 //per milestone (snapshot_index), when we no longer have milestones, we will have to find
@@ -54,33 +54,33 @@ pub trait StorageBackend {
 
     //This method is heavy weighted and will be used to populate Tangle struct on initialization
     fn map_missing_transaction_hashes_to_approvers(
-        &self, all_hashes: HashSet<bundle::Hash>
+        &self, all_hashes: HashSet<bee_bundle::Hash>
     ) -> Result<MissingHashesToRCApprovers, Self::StorageError>;
 
-    async fn insert_transaction(&self, tx_hash: bundle::Hash, tx: bundle::Transaction) -> Result<(), Self::StorageError>;
-    async fn insert_transactions(&self, transactions : HashMap<bundle::Hash,bundle::Transaction>) -> Result<(), Self::StorageError>;
-    async fn find_transaction(&self, tx_hash: bundle::Hash) -> Result<bundle::Transaction, Self::StorageError>;
+    async fn insert_transaction(&self, tx_hash: bee_bundle::Hash, tx: bee_bundle::Transaction) -> Result<(), Self::StorageError>;
+    async fn insert_transactions(&self, transactions : HashMap<bee_bundle::Hash,bee_bundle::Transaction>) -> Result<(), Self::StorageError>;
+    async fn find_transaction(&self, tx_hash: bee_bundle::Hash) -> Result<bee_bundle::Transaction, Self::StorageError>;
     async fn update_transactions_set_solid(
         &self,
-        transaction_hashes: HashSet<bundle::Hash>,
+        transaction_hashes: HashSet<bee_bundle::Hash>,
     ) -> Result<(), Self::StorageError>;
     async fn update_transactions_set_snapshot_index(
         &self,
-        transaction_hashes: HashSet<bundle::Hash>,
+        transaction_hashes: HashSet<bee_bundle::Hash>,
         snapshot_index: u32,
     ) -> Result<(), Self::StorageError>;
 
     //**Operations over milestone's schema**//
 
-    async fn delete_transactions(&self, transaction_hashes: &HashSet<bundle::Hash>) -> Result<(), Self::StorageError>;
+    async fn delete_transactions(&self, transaction_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), Self::StorageError>;
 
     async fn insert_milestone(&self, milestone: Milestone) -> Result<(), Self::StorageError>;
 
-    async fn find_milestone(&self, milestone_hash: bundle::Hash) -> Result<Milestone, Self::StorageError>;
+    async fn find_milestone(&self, milestone_hash: bee_bundle::Hash) -> Result<Milestone, Self::StorageError>;
 
     async fn delete_milestones(
         &self,
-        milestone_hashes: &HashSet<bundle::Hash>,
+        milestone_hashes: &HashSet<bee_bundle::Hash>,
     ) -> Result<(), Self::StorageError>;
 
 

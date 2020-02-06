@@ -1,4 +1,4 @@
-use common::{logger, Result};
+use bee_common::{logger, Result};
 
 use crate::config::Config;
 use crate::state::State;

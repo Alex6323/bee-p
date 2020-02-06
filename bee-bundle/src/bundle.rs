@@ -5,8 +5,8 @@ use crate::transaction::{
 
 use std::marker::PhantomData;
 
-use crypto::Sponge;
-use ternary::TritsBuf;
+use bee_crypto::Sponge;
+use bee_ternary::TritsBuf;
 
 /// Bundle
 
@@ -76,7 +76,7 @@ pub struct StagedIncomingBundleBuilder<E, S> {
 
 pub type IncomingBundleBuilderSponge<E> = StagedIncomingBundleBuilder<E, IncomingRaw>;
 // TODO default kerl
-pub type IncomingBundleBuilder = IncomingBundleBuilderSponge<crypto::CurlP81>;
+pub type IncomingBundleBuilder = IncomingBundleBuilderSponge<bee_crypto::CurlP81>;
 
 impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
     // TODO TEST
@@ -161,7 +161,8 @@ pub struct StagedOutgoingBundleBuilder<E, H, S> {
 
 pub type OutgoingBundleBuilderSponge<E, H> = StagedOutgoingBundleBuilder<E, H, OutgoingRaw>;
 // TODO default to Kerl
-pub type OutgoingBundleBuilder = OutgoingBundleBuilderSponge<crypto::CurlP81, crypto::CurlP81>;
+pub type OutgoingBundleBuilder =
+    OutgoingBundleBuilderSponge<bee_crypto::CurlP81, bee_crypto::CurlP81>;
 
 impl<E, H, S> StagedOutgoingBundleBuilder<E, H, S>
 where

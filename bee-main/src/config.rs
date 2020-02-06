@@ -1,9 +1,9 @@
-use pow::{Cores, Difficulty};
+use bee_pow::{Cores, Difficulty};
 
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Peer(SocketAddr);
@@ -11,7 +11,13 @@ pub struct Peer(SocketAddr);
 impl Peer {
     pub fn from_address(address: impl ToSocketAddrs) -> Self {
         // FIXME
-        Self(address.to_socket_addrs().expect("error resolving address").nth(0).expect("error"))
+        Self(
+            address
+                .to_socket_addrs()
+                .expect("error resolving address")
+                .nth(0)
+                .expect("error"),
+        )
     }
 }
 
@@ -48,7 +54,13 @@ pub struct Host(SocketAddr);
 impl Host {
     pub fn from_address(address: impl ToSocketAddrs) -> Self {
         // FIXME
-        Self(address.to_socket_addrs().expect("error resolving address").nth(0).expect("error"))
+        Self(
+            address
+                .to_socket_addrs()
+                .expect("error resolving address")
+                .nth(0)
+                .expect("error"),
+        )
     }
 }
 
@@ -86,13 +98,19 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn try_build(self) -> common::Result<Config> {
+    pub fn try_build(self) -> bee_common::Result<Config> {
         if self.peers.is_empty() {
-            return Err(common::Errors::ConfigError { key: "peers", msg: "error: you haven't configured any peers" });
+            return Err(bee_common::Error::ConfigError {
+                key: "peers",
+                msg: "error: you haven't configured any peers",
+            });
         }
 
         Ok(Config {
-            host: self.host.ok_or(common::Errors::ConfigError { key: "host", msg: "error: you haven't configured the host address"})?,
+            host: self.host.ok_or(bee_common::Error::ConfigError {
+                key: "host",
+                msg: "error: you haven't configured the host address",
+            })?,
             peers: self.peers,
             pow_difficulty: self.pow_difficulty.unwrap_or(Difficulty::mainnet()),
             pow_cores: self.pow_cores.unwrap_or(Cores::max()),

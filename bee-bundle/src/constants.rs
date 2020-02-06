@@ -1,4 +1,4 @@
-use common::constants::*;
+use bee_common::constants::*;
 
 pub struct Offset {
     pub start: usize,

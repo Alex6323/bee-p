@@ -6,7 +6,7 @@ mod state;
 pub use crate::bee::Bee;
 pub use crate::config::{Config, Host, Peer};
 
-use common::logger;
+use bee_common::logger;
 
 fn main() {
     logger::init(log::LevelFilter::Info);

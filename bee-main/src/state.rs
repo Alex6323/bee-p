@@ -1,6 +1,6 @@
 use std::fmt;
 
-use common::constants::BEE_DISPLAYED_NAME;
+use bee_common::constants::BEE_DISPLAYED_NAME;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

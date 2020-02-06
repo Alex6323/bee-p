@@ -1,12 +1,12 @@
 [package]
-name = "pow"
+name = "bee-pow"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
-common = { path = "../bee-common" }
-crypto = { path = "../bee-crypto" }
+bee-common = { path = "../bee-common" }
+bee-crypto = { path = "../bee-crypto" }
 
 crossbeam = "0.7.3"
 num_cpus = "1.11.1"

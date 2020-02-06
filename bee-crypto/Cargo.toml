@@ -1,8 +1,8 @@
 [package]
-name = "crypto"
+name = "bee-crypto"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
-ternary = { path = '../bee-ternary' }
+bee-ternary = { path = '../bee-ternary' }

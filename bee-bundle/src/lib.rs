@@ -1,6 +1,3 @@
-// TEMPORARY
-#![allow(dead_code, unused_variables, unused_imports)]
-
 mod bundle;
 mod constants;
 mod transaction;
