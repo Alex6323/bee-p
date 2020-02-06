@@ -244,7 +244,7 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 mod tests {
 
     use super::*;
-    use crypto::{CurlP27, CurlP81};
+    use bee_crypto::{CurlP27, CurlP81};
     use iota_conversion::Trinary;
 
     const SEED: &str =

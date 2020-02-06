@@ -12,22 +12,24 @@ mod tests {
     const BEE_TEST_DB_NAME: &str = "test_db";
 
     use crate::sqlx_backend::SqlxBackendStorage;
+
+    use bee_bundle::{Hash, Transaction};
+    use bee_storage::{Milestone, StorageBackend};
+
     use rand::Rng;
-    use storage::{Milestone, StorageBackend};
     use futures::executor::block_on;
     use std::process::Command;
     use std::io::{self, Write};
     use std::panic;
     use std::borrow::Borrow;
     use std::collections::{HashMap, HashSet};
-    use bundle::{Hash, Transaction};
     use std::rc::Rc;
     use std::thread;
     use futures::future::{join_all, ok, err};
     use std::time::{Duration, Instant};
 
 
-    fn rand_hash() -> bundle::Hash{
+    fn rand_hash() -> bee_bundle::Hash{
         use rand::Rng;
         const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
         const HASH_LEN: usize = 81;
@@ -43,26 +45,26 @@ mod tests {
         Hash::from_str(&hash_str)
     }
 
-    fn create_random_tx() -> (bundle::Hash, bundle::Transaction) {
-        let mut builder = bundle::TransactionBuilder::default();
+    fn create_random_tx() -> (bee_bundle::Hash, bee_bundle::Transaction) {
+        let mut builder = bee_bundle::TransactionBuilder::default();
         builder
-            .value(bundle::Value(10))
-            .address(bundle::Address::from_str("ME"))
-            .tag(bundle::Tag::from_str("HELLO"))
-            .nonce(bundle::Nonce::from_str("ABCDEF"));
+            .value(bee_bundle::Value(10))
+            .address(bee_bundle::Address::from_str("ME"))
+            .tag(bee_bundle::Tag::from_str("HELLO"))
+            .nonce(bee_bundle::Nonce::from_str("ABCDEF"));
 
         (rand_hash(), builder.build())
     }
 
-    fn create_random_attached_tx(branch: bundle::Hash, trunk: bundle::Hash) -> (bundle::Hash, bundle::Transaction) {
-        let mut builder = bundle::TransactionBuilder::default();
+    fn create_random_attached_tx(branch: bee_bundle::Hash, trunk: bee_bundle::Hash) -> (bee_bundle::Hash, bee_bundle::Transaction) {
+        let mut builder = bee_bundle::TransactionBuilder::default();
         builder
             .branch(branch)
             .trunk(trunk)
-            .value(bundle::Value(10))
-            .address(bundle::Address::from_str("ME"))
-            .tag(bundle::Tag::from_str("HELLO"))
-            .nonce(bundle::Nonce::from_str("ABCDEF"));
+            .value(bee_bundle::Value(10))
+            .address(bee_bundle::Address::from_str("ME"))
+            .tag(bee_bundle::Tag::from_str("HELLO"))
+            .nonce(bee_bundle::Nonce::from_str("ABCDEF"));
 
 
         (rand_hash(), builder.build())
@@ -225,7 +227,7 @@ mod tests {
 
             block_on(storage.establish_connection());
 
-            let mut hash_to_approvers_expected = storage::HashesToApprovers::new();
+            let mut hash_to_approvers_expected = bee_storage::HashesToApprovers::new();
             let (tx_hash, tx) =  create_random_tx();
             block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
             let res = block_on(storage.find_transaction(tx_hash.clone()));
@@ -260,7 +262,7 @@ mod tests {
 
             block_on(storage.establish_connection());
 
-            let mut missing_hash_to_approvers_expected = storage::MissingHashesToRCApprovers::new();
+            let mut missing_hash_to_approvers_expected = bee_storage::MissingHashesToRCApprovers::new();
             let (tx_hash, tx) =  create_random_tx();
             block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
             let res = block_on(storage.find_transaction(tx_hash.clone()));
@@ -284,19 +286,19 @@ mod tests {
                 match i % 3 {
                     0 => {
                         let mut missing_approvers  = HashSet::new();
-                        missing_approvers.insert(Rc::<bundle::Hash>::new(tx_hash.clone()));
+                        missing_approvers.insert(Rc::<bee_bundle::Hash>::new(tx_hash.clone()));
                         missing_hash_to_approvers_expected.insert(missing_tx_hash_trunk.clone(), missing_approvers);
                     },
                     1 => {
                         let mut missing_approvers  = HashSet::new();
-                        missing_approvers.insert(Rc::<bundle::Hash>::new(tx_hash.clone()));
+                        missing_approvers.insert(Rc::<bee_bundle::Hash>::new(tx_hash.clone()));
                         missing_hash_to_approvers_expected.insert(missing_tx_hash_branch.clone(), missing_approvers);
                     },
                     2 => {
 
                             let mut missing_approvers_trunk  = HashSet::new();
                             let mut missing_approvers_branch  = HashSet::new();
-                            let rc = Rc::<bundle::Hash>::new(tx_hash.clone());
+                            let rc = Rc::<bee_bundle::Hash>::new(tx_hash.clone());
                             missing_approvers_trunk.insert(rc.clone());
                             missing_approvers_branch.insert(rc.clone());
                             missing_hash_to_approvers_expected.insert(missing_tx_hash_trunk.clone(), missing_approvers_trunk);

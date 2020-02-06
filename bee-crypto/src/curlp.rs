@@ -208,7 +208,7 @@ forward_sponge_impl!(CurlP27, CurlP81);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ternary::utils::trytes_to_trits_buf;
+    use bee_ternary::utils::trytes_to_trits_buf;
 
     const INPUT_TRITS: &[i8] = &[
         -1,  1, -1, -1,  1, -1,  1,  1,  0, -1,  0,  0,  1,  0,  1,  0,  0,  0, -1, -1, -1, -1,  0,  0,
