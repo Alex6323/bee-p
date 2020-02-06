@@ -1,6 +1,6 @@
 use common::constants::*;
 use common::Errors;
-use common::Result;
+use common::Result as BeeResult;
 use common::Tryte;
 
 use ternary::IsTryte;
@@ -225,14 +225,14 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn from_tryte_str(tx_trytes: &str) -> Result<Self> {
+    pub fn from_tryte_str(tx_trytes: &str) -> BeeResult<Self> {
         if tx_trytes.len() != TRANSACTION_TRYT_LEN {
             return Err(Errors::TransactionDeserializationError);
         }
         unimplemented!()
     }
     /// Create a `Transaction` from a reader object.
-    pub fn from_reader<R: std::io::Read>(reader: R) -> Result<Self> {
+    pub fn from_reader<R: std::io::Read>(reader: R) -> BeeResult<Self> {
         unimplemented!()
     }
 
@@ -352,6 +352,11 @@ impl Transactions {
 
 /// Transaction builder
 
+#[derive(Debug)]
+pub enum TransactionBuilderError {
+    MissingField(&'static str),
+}
+
 #[derive(Default)]
 pub struct TransactionBuilder {
     pub(crate) payload: Option<Payload>,
@@ -450,41 +455,53 @@ impl TransactionBuilder {
         self
     }
 
-    /// Tries to build a transaction from the current state of the builder. If mandatory fields have not
-    /// been set, this method will return a `TransactionBuilderError` describing which field has not been set.
-    pub fn try_build(self) -> Result<Transaction> {
+    pub fn try_build(self) -> Result<Transaction, TransactionBuilderError> {
         Ok(Transaction {
-            payload: self.payload.unwrap_or(Payload::zeros()),
-            address: self.address.unwrap_or(Address::zeros()),
-            value: self.value.unwrap_or(Value(0)),
-            obsolete_tag: self.obsolete_tag.unwrap_or(Tag::zeros()),
+            payload: self
+                .payload
+                .ok_or(TransactionBuilderError::MissingField("payload"))?,
+            address: self
+                .address
+                .ok_or(TransactionBuilderError::MissingField("address"))?,
+            value: self
+                .value
+                .ok_or(TransactionBuilderError::MissingField("value"))?,
+            obsolete_tag: self
+                .obsolete_tag
+                .ok_or(TransactionBuilderError::MissingField("obsolete_tag"))?,
             timestamp: self
                 .timestamp
-                .ok_or(Errors::TransactionBuilderError("timestamp not set"))?,
-            index: self.index.unwrap_or(Index(0)),
-            last_index: self.last_index.unwrap_or(Index(0)),
-            tag: self.tag.unwrap_or(Tag::zeros()),
+                .ok_or(TransactionBuilderError::MissingField("timestamp"))?,
+            index: self
+                .index
+                .ok_or(TransactionBuilderError::MissingField("index"))?,
+            last_index: self
+                .last_index
+                .ok_or(TransactionBuilderError::MissingField("last_index"))?,
+            tag: self
+                .tag
+                .ok_or(TransactionBuilderError::MissingField("tag"))?,
             bundle: self
                 .bundle
-                .ok_or(Errors::TransactionBuilderError("bundle hash not set"))?,
+                .ok_or(TransactionBuilderError::MissingField("bundle"))?,
             trunk: self
                 .trunk
-                .ok_or(Errors::TransactionBuilderError("trunk hash not set"))?,
+                .ok_or(TransactionBuilderError::MissingField("trunk"))?,
             branch: self
                 .branch
-                .ok_or(Errors::TransactionBuilderError("branch hash not set"))?,
-            attachment_ts: self.attachment_ts.ok_or(Errors::TransactionBuilderError(
-                "attachment timestamp not set",
-            ))?,
-            attachment_lbts: self.attachment_lbts.ok_or(Errors::TransactionBuilderError(
-                "attachment lower bound timestamp not set",
-            ))?,
-            attachment_ubts: self.attachment_ubts.ok_or(Errors::TransactionBuilderError(
-                "attachment upper bound timestamp not set",
-            ))?,
+                .ok_or(TransactionBuilderError::MissingField("branch"))?,
+            attachment_ts: self
+                .attachment_ts
+                .ok_or(TransactionBuilderError::MissingField("attachment_ts"))?,
+            attachment_lbts: self
+                .attachment_lbts
+                .ok_or(TransactionBuilderError::MissingField("attachment_lbts"))?,
+            attachment_ubts: self
+                .attachment_ubts
+                .ok_or(TransactionBuilderError::MissingField("attachment_ubts"))?,
             nonce: self
                 .nonce
-                .ok_or(Errors::TransactionBuilderError("nonce not set"))?,
+                .ok_or(TransactionBuilderError::MissingField("nonce"))?,
         })
     }
 
