@@ -3,10 +3,10 @@ use crate::transaction::{
     Transactions,
 };
 
-use std::marker::PhantomData;
-
 use bee_crypto::Sponge;
 use bee_ternary::TritsBuf;
+
+use std::marker::PhantomData;
 
 /// Bundle
 
@@ -154,9 +154,6 @@ impl OutgoingBundleBuilderStage for OutgoingSigned {}
 pub struct OutgoingAttached;
 impl OutgoingBundleBuilderStage for OutgoingAttached {}
 
-pub struct OutgoingValidated;
-impl OutgoingBundleBuilderStage for OutgoingValidated {}
-
 #[derive(Default)]
 pub struct StagedOutgoingBundleBuilder<E, H, S> {
     builders: TransactionBuilders,
@@ -209,10 +206,15 @@ where
         mut self,
     ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSealed>, OutgoingBundleBuilderError> {
         // TODO Impl
-        let mut index = 0;
+        // TODO should call validate() on transaction builders ?
+        let mut sum: i64 = 0;
         let last_index = self.builders.len() - 1;
 
-        for builder in &mut self.builders.0 {
+        if self.builders.len() == 0 {
+            return Err(OutgoingBundleBuilderError::Empty);
+        }
+
+        for (index, builder) in self.builders.0.iter_mut().enumerate() {
             if builder.payload.is_none() {
                 return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
                     "payload",
@@ -234,7 +236,12 @@ where
             builder.index.replace(Index(index));
             builder.last_index.replace(Index(last_index));
 
-            index = index + 1;
+            // Safe to unwrap since we just checked it's not None
+            sum += builder.value.as_ref().unwrap().0;
+        }
+
+        if sum != 0 {
+            return Err(OutgoingBundleBuilderError::NonZeroSum(sum));
         }
 
         Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingSealed> {
@@ -318,42 +325,6 @@ where
     H: Sponge + Default,
 {
     // TODO TEST
-    pub fn validate(
-        self,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingValidated>, OutgoingBundleBuilderError>
-    {
-        // TODO should call validate() on transaction builders ?
-        // TODO Impl
-        let mut sum: i64 = 0;
-
-        if self.builders.len() == 0 {
-            return Err(OutgoingBundleBuilderError::Empty);
-        }
-
-        // TODO unwrap ?
-        for builder in &self.builders.0 {
-            sum += builder.value.as_ref().unwrap().0;
-        }
-
-        if sum != 0 {
-            return Err(OutgoingBundleBuilderError::NonZeroSum(sum));
-        }
-
-        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingValidated> {
-            builders: self.builders,
-            essence_sponge: PhantomData,
-            hash_sponge: PhantomData,
-            stage: PhantomData,
-        })
-    }
-}
-
-impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingValidated>
-where
-    E: Sponge + Default,
-    H: Sponge + Default,
-{
-    // TODO TEST
     pub fn build(self) -> Result<Bundle, OutgoingBundleBuilderError> {
         // TODO Impl
         let mut transactions = Transactions::new();
@@ -423,7 +394,6 @@ mod tests {
             .seal()?
             .sign()?
             .attach(Hash::zeros(), Hash::zeros())?
-            .validate()?
             .build()?;
 
         assert_eq!(bundle.len(), 3);
@@ -443,7 +413,6 @@ mod tests {
         let bundle = bundle_builder
             .seal()?
             .attach(Hash::zeros(), Hash::zeros())?
-            .validate()?
             .build()?;
 
         assert_eq!(bundle.len(), 3);
