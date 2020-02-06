@@ -1,3 +1,5 @@
+use crate::network_interface::TcpClientConfig;
+
 use futures::{channel::mpsc, select, FutureExt, SinkExt};
 
 use async_std::{
@@ -42,7 +44,3 @@ pub async fn add_peer(mut shutdown_receiver: Receiver<()>, mut client_config_rec
 
 }
 
-#[derive(Clone)]
-pub struct TcpClientConfig {
-    pub address: String,
-}

@@ -18,7 +18,6 @@ use crate::write_task_broker;
 use crate::remove_peer;
 
 use crate::message::MessageToSend;
-use crate::add_peer::TcpClientConfig;
 use crate::message::ReceivedMessage;
 use crate::graceful_shutdown;
 use std::io::Error;
@@ -132,5 +131,10 @@ pub async fn bind(
 
 #[derive(Clone)]
 pub struct TcpServerConfig {
+    pub address: String,
+}
+
+#[derive(Clone)]
+pub struct TcpClientConfig {
     pub address: String,
 }
