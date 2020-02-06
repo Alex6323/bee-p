@@ -55,6 +55,7 @@ impl std::ops::Index<usize> for Bundle {
 
     // TODO TEST
     fn index(&self, index: usize) -> &Self::Output {
+        // Unwrap because index is expected to panic if out of range
         self.get(index).unwrap()
     }
 }
@@ -96,12 +97,13 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
     }
 
     // TODO TEST
+    // TODO common with outgoing bundle builder
     fn calculate_hash(&self) -> TritsBuf {
         // TODO Impl
         let mut sponge = E::default();
 
         for builder in &self.transactions.0 {
-            // TODO sponge.absorb(builder.essence());
+            // sponge.absorb(builder.address.0);
         }
 
         sponge.squeeze()
@@ -123,7 +125,6 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
 impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
     // TODO TEST
     pub fn build(self) -> Bundle {
-        // TODO Impl
         Bundle(self.transactions)
     }
 }
@@ -134,8 +135,8 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 pub enum OutgoingBundleBuilderError {
     Empty,
     UnsignedInput,
-    NonZeroSum(i64),
-    IncompleteTransactionBuilder(&'static str),
+    Inconsistent(i64),
+    MissingTransactionBuilderField(&'static str),
     FailedTransactionBuild(TransactionBuilderError),
 }
 
@@ -155,22 +156,19 @@ pub struct OutgoingAttached;
 impl OutgoingBundleBuilderStage for OutgoingAttached {}
 
 #[derive(Default)]
-pub struct StagedOutgoingBundleBuilder<E, H, S> {
+pub struct StagedOutgoingBundleBuilder<E, S> {
     builders: TransactionBuilders,
     essence_sponge: PhantomData<E>,
-    hash_sponge: PhantomData<H>,
     stage: PhantomData<S>,
 }
 
-pub type OutgoingBundleBuilderSponge<E, H> = StagedOutgoingBundleBuilder<E, H, OutgoingRaw>;
+pub type OutgoingBundleBuilderSponge<E> = StagedOutgoingBundleBuilder<E, OutgoingRaw>;
 // TODO default to Kerl
-pub type OutgoingBundleBuilder =
-    OutgoingBundleBuilderSponge<bee_crypto::CurlP81, bee_crypto::CurlP81>;
+pub type OutgoingBundleBuilder = OutgoingBundleBuilderSponge<bee_crypto::CurlP81>;
 
-impl<E, H, S> StagedOutgoingBundleBuilder<E, H, S>
+impl<E, S> StagedOutgoingBundleBuilder<E, S>
 where
     E: Sponge + Default,
-    H: Sponge + Default,
     S: OutgoingBundleBuilderStage,
 {
     // TODO TEST
@@ -186,11 +184,7 @@ where
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingRaw>
-where
-    E: Sponge + Default,
-    H: Sponge + Default,
-{
+impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
     // TODO TEST
     pub fn new() -> Self {
         Self::default()
@@ -204,7 +198,7 @@ where
     // TODO TEST
     pub fn seal(
         mut self,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSealed>, OutgoingBundleBuilderError> {
+    ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSealed>, OutgoingBundleBuilderError> {
         // TODO Impl
         // TODO should call validate() on transaction builders ?
         let mut sum: i64 = 0;
@@ -216,19 +210,19 @@ where
 
         for (index, builder) in self.builders.0.iter_mut().enumerate() {
             if builder.payload.is_none() {
-                return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
+                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
                     "payload",
                 ));
             } else if builder.address.is_none() {
-                return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
+                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
                     "address",
                 ));
             } else if builder.value.is_none() {
-                return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
+                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
                     "value",
                 ));
             } else if builder.tag.is_none() {
-                return Err(OutgoingBundleBuilderError::IncompleteTransactionBuilder(
+                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
                     "tag",
                 ));
             }
@@ -241,32 +235,27 @@ where
         }
 
         if sum != 0 {
-            return Err(OutgoingBundleBuilderError::NonZeroSum(sum));
+            return Err(OutgoingBundleBuilderError::Inconsistent(sum));
         }
 
-        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingSealed> {
+        Ok(StagedOutgoingBundleBuilder::<E, OutgoingSealed> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            hash_sponge: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingSealed>
-where
-    E: Sponge + Default,
-    H: Sponge + Default,
-{
+impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     // TODO TEST
     fn has_no_input(&self) -> Result<(), OutgoingBundleBuilderError> {
-        // Checking that no transaction actually needs to be signed (no inputs)
         for builder in &self.builders.0 {
-            // Safe to unwrap because since we made sure it's not None in `seal`
+            // Safe to unwrap since we made sure it's not None in `seal`
             if builder.value.as_ref().unwrap().0 < 0 {
                 return Err(OutgoingBundleBuilderError::UnsignedInput);
             }
         }
+
         Ok(())
     }
 
@@ -275,16 +264,13 @@ where
         self,
         trunk: Hash,
         branch: Hash,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
-    {
-        // TODO Impl
-
+    ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
+        // Checking that no transaction actually needs to be signed (no inputs)
         self.has_no_input()?;
 
-        StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
+        StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            hash_sponge: PhantomData,
             stage: PhantomData,
         }
         .attach_local(trunk, branch)
@@ -295,16 +281,13 @@ where
         self,
         trunk: Hash,
         branch: Hash,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
-    {
-        // TODO Impl
-
+    ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
+        // Checking that no transaction actually needs to be signed (no inputs)
         self.has_no_input()?;
 
-        StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
+        StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            hash_sponge: PhantomData,
             stage: PhantomData,
         }
         .attach_remote(trunk, branch)
@@ -313,34 +296,27 @@ where
     // TODO TEST
     pub fn sign(
         self,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingSigned>, OutgoingBundleBuilderError> {
+    ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
         // TODO Impl
-        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
+        Ok(StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            hash_sponge: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingSigned>
-where
-    E: Sponge + Default,
-    H: Sponge + Default,
-{
+impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
     // TODO TEST
     pub fn attach_local(
         self,
         trunk: Hash,
         branch: Hash,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
-    {
+    ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // TODO Impl
-        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingAttached> {
+        Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            hash_sponge: PhantomData,
             stage: PhantomData,
         })
     }
@@ -350,26 +326,19 @@ where
         self,
         trunk: Hash,
         branch: Hash,
-    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
-    {
+    ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // TODO Impl
-        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingAttached> {
+        Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
             builders: self.builders,
             essence_sponge: PhantomData,
-            hash_sponge: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl<E, H> StagedOutgoingBundleBuilder<E, H, OutgoingAttached>
-where
-    E: Sponge + Default,
-    H: Sponge + Default,
-{
+impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
     // TODO TEST
     pub fn build(self) -> Result<Bundle, OutgoingBundleBuilderError> {
-        // TODO Impl
         let mut transactions = Transactions::new();
 
         for transaction_builder in self.builders.0 {
