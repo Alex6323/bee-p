@@ -1,5 +1,7 @@
 mod bee;
 mod config;
+mod constants;
+mod errors;
 mod screen;
 mod state;
 
@@ -8,19 +10,34 @@ pub use crate::config::{Config, Host, Peer};
 
 use bee_common::logger;
 
+use async_std::task;
+
 fn main() {
     logger::init(log::LevelFilter::Info);
     screen::init();
 
     logger::warn("This node will destroy itself in about 10 seconds.");
 
-    let mut bee = Bee::from_config(Config::builder()
-        .with_host(Host::from_address("127.0.0.1:1337"))
-        .with_peer(Peer::from_address("127.0.0.1:1338"))
-        .try_build()
-        .expect("error creating config"));
+    task::block_on(async {
+        match Config::load().await {
+            Err(e) => {
+                logger::error(&e.to_string());
 
-    assert!(bee.run().is_ok());
+                task::block_on(async {
+                    task::sleep(std::time::Duration::from_millis(10000)).await;
+                });
+            }
+            Ok(config) => {
+                logger::info("Loaded config.");
+
+                let mut bee = Bee::from_config(config);
+
+                assert!(bee.run().is_ok());
+
+                bee.shutdown();
+            }
+        }
+    });
 
     screen::exit();
 }

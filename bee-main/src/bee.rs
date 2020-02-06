@@ -31,11 +31,6 @@ impl Bee {
             task::sleep(std::time::Duration::from_millis(8000)).await;
         });
 
-        self.set_state(State::ShuttingDown);
-        task::block_on(async {
-            task::sleep(std::time::Duration::from_millis(1000)).await;
-        });
-
         Ok(())
     }
 
@@ -46,7 +41,17 @@ impl Bee {
 
         self.set_state(State::ShuttingDown);
 
-        // send shutdown signal
+        task::block_on(async {
+            if let Err(e) = self.config().save().await {
+                logger::error(&e.to_string());
+            } else {
+                logger::info("Saved config.");
+            }
+
+            // FIX: simulating shutdown
+            task::sleep(std::time::Duration::from_millis(1000)).await;
+        });
+
     }
 
     pub fn config(&self) -> &Config {
