@@ -90,7 +90,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
     }
 
     // TODO TEST
-    pub fn calculate_hash(&self) -> TritsBuf {
+    fn calculate_hash(&self) -> TritsBuf {
         // TODO Impl
         let mut sponge = E::default();
 
