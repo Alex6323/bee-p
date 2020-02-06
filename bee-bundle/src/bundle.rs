@@ -259,7 +259,19 @@ where
     H: Sponge + Default,
 {
     // TODO TEST
-    pub fn attach(
+    fn has_no_input(&self) -> Result<(), OutgoingBundleBuilderError> {
+        // Checking that no transaction actually needs to be signed (no inputs)
+        for builder in &self.builders.0 {
+            // Safe to unwrap because since we made sure it's not None in `seal`
+            if builder.value.as_ref().unwrap().0 < 0 {
+                return Err(OutgoingBundleBuilderError::UnsignedInput);
+            }
+        }
+        Ok(())
+    }
+
+    // TODO TEST
+    pub fn attach_local(
         self,
         trunk: Hash,
         branch: Hash,
@@ -267,12 +279,7 @@ where
     {
         // TODO Impl
 
-        for builder in &self.builders.0 {
-            // Safe to unwrap because we made sure it's not None in `seal`
-            if builder.value.as_ref().unwrap().0 < 0 {
-                return Err(OutgoingBundleBuilderError::UnsignedInput);
-            }
-        }
+        self.has_no_input()?;
 
         StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
             builders: self.builders,
@@ -280,7 +287,27 @@ where
             hash_sponge: PhantomData,
             stage: PhantomData,
         }
-        .attach(trunk, branch)
+        .attach_local(trunk, branch)
+    }
+
+    // TODO TEST
+    pub fn attach_remote(
+        self,
+        trunk: Hash,
+        branch: Hash,
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
+    {
+        // TODO Impl
+
+        self.has_no_input()?;
+
+        StagedOutgoingBundleBuilder::<E, H, OutgoingSigned> {
+            builders: self.builders,
+            essence_sponge: PhantomData,
+            hash_sponge: PhantomData,
+            stage: PhantomData,
+        }
+        .attach_remote(trunk, branch)
     }
 
     // TODO TEST
@@ -303,7 +330,23 @@ where
     H: Sponge + Default,
 {
     // TODO TEST
-    pub fn attach(
+    pub fn attach_local(
+        self,
+        trunk: Hash,
+        branch: Hash,
+    ) -> Result<StagedOutgoingBundleBuilder<E, H, OutgoingAttached>, OutgoingBundleBuilderError>
+    {
+        // TODO Impl
+        Ok(StagedOutgoingBundleBuilder::<E, H, OutgoingAttached> {
+            builders: self.builders,
+            essence_sponge: PhantomData,
+            hash_sponge: PhantomData,
+            stage: PhantomData,
+        })
+    }
+
+    // TODO TEST
+    pub fn attach_remote(
         self,
         trunk: Hash,
         branch: Hash,
@@ -399,7 +442,7 @@ mod tests {
         let bundle = bundle_builder
             .seal()?
             .sign()?
-            .attach(Hash::zeros(), Hash::zeros())?
+            .attach_local(Hash::zeros(), Hash::zeros())?
             .build()?;
 
         assert_eq!(bundle.len(), 3);
@@ -418,7 +461,7 @@ mod tests {
 
         let bundle = bundle_builder
             .seal()?
-            .attach(Hash::zeros(), Hash::zeros())?
+            .attach_local(Hash::zeros(), Hash::zeros())?
             .build()?;
 
         assert_eq!(bundle.len(), 3);
