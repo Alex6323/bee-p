@@ -366,6 +366,10 @@ mod tests {
             .with_nonce(Nonce::zeros())
     }
 
+    /// Bundle
+
+    /// Incoming bundle builder
+
     #[test]
     fn incoming_bundle_builder_test() -> Result<(), IncomingBundleBuilderError> {
         let mut bundle_builder = IncomingBundleBuilder::new();
@@ -380,6 +384,8 @@ mod tests {
 
         Ok(())
     }
+
+    /// Outgoing bundle builder
 
     // TODO Also check to attach if value ?
     #[test]

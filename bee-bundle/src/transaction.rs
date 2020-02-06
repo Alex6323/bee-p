@@ -1,6 +1,6 @@
-use crate::constants::*;
+use crate::constants::{ADDRESS, BUNDLE_HASH, NONCE, PAYLOAD, TAG};
 
-use bee_common::constants::*;
+use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
 use bee_common::Errors;
 use bee_common::Result as BeeResult;
 use bee_common::Tryte;
