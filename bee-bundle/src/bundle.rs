@@ -225,10 +225,8 @@ pub struct StagedOutgoingBundleBuilder<E, S> {
     stage: PhantomData<S>,
 }
 
-// TODO Remove ?
-pub type OutgoingBundleBuilderSponge<E> = StagedOutgoingBundleBuilder<E, OutgoingRaw>;
 // TODO default to Kerl
-pub type OutgoingBundleBuilder = OutgoingBundleBuilderSponge<bee_crypto::CurlP81>;
+pub type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<bee_crypto::CurlP81, OutgoingRaw>;
 
 impl<E, S> StagedOutgoingBundleBuilder<E, S>
 where
