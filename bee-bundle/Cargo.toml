@@ -8,4 +8,5 @@ edition = "2018"
 bee-common = { path = "../bee-common" }
 bee-crypto = { path = "../bee-crypto" }
 bee-pow = { path = "../bee-pow" }
+bee-signing = { path = "../bee-signing" }
 bee-ternary = { path = "../bee-ternary" }

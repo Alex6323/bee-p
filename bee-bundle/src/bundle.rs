@@ -5,6 +5,7 @@ use crate::transaction::{
 };
 
 use bee_crypto::Sponge;
+use bee_signing::{PublicKey, WotsPublicKey};
 use bee_ternary::TritsBuf;
 
 use std::marker::PhantomData;
@@ -73,28 +74,39 @@ pub enum IncomingBundleBuilderError {
 
 pub trait IncomingBundleBuilderStage {}
 
-#[derive(Default)]
 pub struct IncomingRaw;
 impl IncomingBundleBuilderStage for IncomingRaw {}
 
 pub struct IncomingValidated;
 impl IncomingBundleBuilderStage for IncomingValidated {}
 
-#[derive(Default)]
-pub struct StagedIncomingBundleBuilder<E, S> {
+pub struct StagedIncomingBundleBuilder<E, P, S> {
     transactions: Transactions,
     essence_sponge: PhantomData<E>,
+    public_key: PhantomData<P>,
     stage: PhantomData<S>,
 }
 
-pub type IncomingBundleBuilderSponge<E> = StagedIncomingBundleBuilder<E, IncomingRaw>;
 // TODO default kerl
-pub type IncomingBundleBuilder = IncomingBundleBuilderSponge<bee_crypto::CurlP81>;
+pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<
+    bee_crypto::CurlP81,
+    WotsPublicKey<bee_crypto::CurlP81>,
+    IncomingRaw,
+>;
 
-impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
+impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+{
     // TODO TEST
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            transactions: Transactions::default(),
+            essence_sponge: PhantomData,
+            public_key: PhantomData,
+            stage: PhantomData,
+        }
     }
 
     // TODO TEST
@@ -119,7 +131,8 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
     // TODO make it parameterized ?
     pub fn validate(
         self,
-    ) -> Result<StagedIncomingBundleBuilder<E, IncomingValidated>, IncomingBundleBuilderError> {
+    ) -> Result<StagedIncomingBundleBuilder<E, P, IncomingValidated>, IncomingBundleBuilderError>
+    {
         let mut sum: i64 = 0;
 
         if self.transactions.len() == 0 {
@@ -159,15 +172,20 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
         // TODO check trunk/branch are tails
         // TODO ontology ?
 
-        Ok(StagedIncomingBundleBuilder::<E, IncomingValidated> {
+        Ok(StagedIncomingBundleBuilder::<E, P, IncomingValidated> {
             transactions: self.transactions,
             essence_sponge: PhantomData,
+            public_key: PhantomData,
             stage: PhantomData,
         })
     }
 }
 
-impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
+impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingValidated>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+{
     // TODO TEST
     pub fn build(self) -> Bundle {
         Bundle(self.transactions)
@@ -207,6 +225,7 @@ pub struct StagedOutgoingBundleBuilder<E, S> {
     stage: PhantomData<S>,
 }
 
+// TODO Remove ?
 pub type OutgoingBundleBuilderSponge<E> = StagedOutgoingBundleBuilder<E, OutgoingRaw>;
 // TODO default to Kerl
 pub type OutgoingBundleBuilder = OutgoingBundleBuilderSponge<bee_crypto::CurlP81>;

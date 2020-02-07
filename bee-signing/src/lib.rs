@@ -8,6 +8,10 @@ pub use iota_seed::IotaSeed;
 pub use scheme::{
     PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
 };
+pub use wots::{
+    WotsPrivateKey, WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey,
+    WotsSignature,
+};
 
 // TODO: remove
 // TODO: documentation
