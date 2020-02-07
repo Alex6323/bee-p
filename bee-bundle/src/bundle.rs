@@ -5,7 +5,7 @@ use crate::transaction::{
 };
 
 use bee_crypto::Sponge;
-use bee_signing::{PublicKey, WotsPublicKey};
+use bee_signing::{PublicKey, Signature, WotsPublicKey};
 use bee_ternary::TritsBuf;
 
 use std::marker::PhantomData;
@@ -70,6 +70,7 @@ pub enum IncomingBundleBuilderError {
     InvalidIndex(usize),
     InvalidLastIndex(usize),
     InvalidValue(i64),
+    InvalidSignature,
 }
 
 pub trait IncomingBundleBuilderStage {}
@@ -127,6 +128,20 @@ where
         sponge.squeeze()
     }
 
+    fn validate_signatures(&self) -> Result<(), IncomingBundleBuilderError> {
+        // TODO get real values
+        let public_key = P::from_bytes(&[]);
+        let signature = P::Signature::from_bytes(&[]);
+
+        match public_key.verify(&[], &signature) {
+            Ok(valid) => match valid {
+                true => Ok(()),
+                false => Err(IncomingBundleBuilderError::InvalidSignature),
+            },
+            Err(_) => Err(IncomingBundleBuilderError::InvalidSignature),
+        }
+    }
+
     // TODO TEST
     // TODO make it parameterized ?
     pub fn validate(
@@ -171,6 +186,8 @@ where
         // TODO check trunk/branch consistency
         // TODO check trunk/branch are tails
         // TODO ontology ?
+
+        self.validate_signatures()?;
 
         Ok(StagedIncomingBundleBuilder::<E, P, IncomingValidated> {
             transactions: self.transactions,
