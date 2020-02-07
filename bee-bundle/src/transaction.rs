@@ -1,4 +1,4 @@
-use crate::constants::{ADDRESS, BUNDLE_HASH, NONCE, PAYLOAD, TAG};
+use crate::constants::{ADDRESS, BUNDLE_HASH, IOTA_SUPPLY, NONCE, PAYLOAD, TAG};
 
 use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
 use bee_common::Errors;
@@ -355,6 +355,7 @@ impl Transactions {
 #[derive(Debug)]
 pub enum TransactionBuilderError {
     MissingField(&'static str),
+    InvalidValue(i64),
 }
 
 #[derive(Default)]
@@ -456,6 +457,16 @@ impl TransactionBuilder {
     }
 
     pub fn build(self) -> Result<Transaction, TransactionBuilderError> {
+        let value = self
+            .value
+            .as_ref()
+            .ok_or(TransactionBuilderError::MissingField("value"))?
+            .0;
+
+        if value.abs() > IOTA_SUPPLY {
+            return Err(TransactionBuilderError::InvalidValue(value));
+        }
+
         Ok(Transaction {
             payload: self
                 .payload
@@ -463,9 +474,7 @@ impl TransactionBuilder {
             address: self
                 .address
                 .ok_or(TransactionBuilderError::MissingField("address"))?,
-            value: self
-                .value
-                .ok_or(TransactionBuilderError::MissingField("value"))?,
+            value: Value(value),
             obsolete_tag: self
                 .obsolete_tag
                 .ok_or(TransactionBuilderError::MissingField("obsolete_tag"))?,
