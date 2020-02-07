@@ -1,3 +1,4 @@
+use crate::constants::IOTA_SUPPLY;
 use crate::transaction::{
     Hash, Index, Transaction, TransactionBuilder, TransactionBuilderError, TransactionBuilders,
     Transactions,
@@ -63,7 +64,12 @@ impl std::ops::Index<usize> for Bundle {
 /// Incoming bundle builder
 
 #[derive(Debug)]
-pub enum IncomingBundleBuilderError {}
+pub enum IncomingBundleBuilderError {
+    Empty,
+    InvalidIndex(usize),
+    InvalidLastIndex(usize),
+    InvalidBundleValue(i64),
+}
 
 pub trait IncomingBundleBuilderStage {}
 
@@ -110,10 +116,49 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
     }
 
     // TODO TEST
+    // TODO make it parameterized ?
     pub fn validate(
         self,
     ) -> Result<StagedIncomingBundleBuilder<E, IncomingValidated>, IncomingBundleBuilderError> {
-        // TODO Impl
+        let mut sum: i64 = 0;
+
+        if self.transactions.len() == 0 {
+            return Err(IncomingBundleBuilderError::Empty);
+        }
+
+        let last_index = self.transactions.len() - 1;
+
+        for (index, transaction) in self.transactions.0.iter().enumerate() {
+            if index != transaction.index().0 {
+                return Err(IncomingBundleBuilderError::InvalidIndex(
+                    transaction.index().0,
+                ));
+            }
+
+            if last_index != transaction.last_index().0 {
+                return Err(IncomingBundleBuilderError::InvalidLastIndex(
+                    transaction.last_index().0,
+                ));
+            }
+
+            sum += transaction.value.0;
+            if sum.abs() > IOTA_SUPPLY {
+                return Err(IncomingBundleBuilderError::InvalidBundleValue(sum));
+            }
+        }
+
+        if sum != 0 {
+            return Err(IncomingBundleBuilderError::InvalidBundleValue(sum));
+        }
+
+        // TODO check last trit of address
+        // TODO check bundle hash
+        // TODO check signatures
+        // TODO check trunk chaining
+        // TODO check trunk/branch consistency
+        // TODO check trunk/branch are tails
+        // TODO ontology ?
+
         Ok(StagedIncomingBundleBuilder::<E, IncomingValidated> {
             transactions: self.transactions,
             essence_sponge: PhantomData,
@@ -135,7 +180,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 pub enum OutgoingBundleBuilderError {
     Empty,
     UnsignedInput,
-    Inconsistent(i64),
+    InvalidBundleValue(i64),
     MissingTransactionBuilderField(&'static str),
     FailedTransactionBuild(TransactionBuilderError),
 }
@@ -232,10 +277,13 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
 
             // Safe to unwrap since we just checked it's not None
             sum += builder.value.as_ref().unwrap().0;
+            if sum.abs() > IOTA_SUPPLY {
+                return Err(OutgoingBundleBuilderError::InvalidBundleValue(sum));
+            }
         }
 
         if sum != 0 {
-            return Err(OutgoingBundleBuilderError::Inconsistent(sum));
+            return Err(OutgoingBundleBuilderError::InvalidBundleValue(sum));
         }
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSealed> {
@@ -359,15 +407,15 @@ mod tests {
     use super::*;
     use crate::transaction::{Address, Nonce, Payload, Tag, Timestamp, Value};
 
-    fn default_transaction_builder() -> TransactionBuilder {
+    fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
         TransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
             .with_value(Value(0))
             .with_obsolete_tag(Tag::zeros())
             .with_timestamp(Timestamp(0))
-            .with_index(Index(0))
-            .with_last_index(Index(0))
+            .with_index(Index(index))
+            .with_last_index(Index(last_index))
             .with_tag(Tag::zeros())
             .with_attachment_ts(Timestamp(0))
             .with_bundle(Hash::zeros())
@@ -384,15 +432,20 @@ mod tests {
 
     #[test]
     fn incoming_bundle_builder_test() -> Result<(), IncomingBundleBuilderError> {
+        let bundle_size = 3;
         let mut bundle_builder = IncomingBundleBuilder::new();
 
-        for _ in 0..5 {
-            bundle_builder.push(default_transaction_builder().build().unwrap());
+        for i in 0..bundle_size {
+            bundle_builder.push(
+                default_transaction_builder(i, bundle_size - 1)
+                    .build()
+                    .unwrap(),
+            );
         }
 
         let bundle = bundle_builder.validate()?.build();
 
-        assert_eq!(bundle.len(), 5);
+        assert_eq!(bundle.len(), bundle_size);
 
         Ok(())
     }
@@ -402,10 +455,11 @@ mod tests {
     // TODO Also check to attach if value ?
     #[test]
     fn outgoing_bundle_builder_value_test() -> Result<(), OutgoingBundleBuilderError> {
+        let bundle_size = 3;
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
-        for _ in 0..3 {
-            bundle_builder.push(default_transaction_builder());
+        for i in 0..bundle_size {
+            bundle_builder.push(default_transaction_builder(i, bundle_size - 1));
         }
 
         let bundle = bundle_builder
@@ -414,7 +468,7 @@ mod tests {
             .attach_local(Hash::zeros(), Hash::zeros())?
             .build()?;
 
-        assert_eq!(bundle.len(), 3);
+        assert_eq!(bundle.len(), bundle_size);
 
         Ok(())
     }
@@ -422,10 +476,11 @@ mod tests {
     // TODO Also check to sign if data ?
     #[test]
     fn outgoing_bundle_builder_data_test() -> Result<(), OutgoingBundleBuilderError> {
+        let bundle_size = 3;
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
-        for _ in 0..3 {
-            bundle_builder.push(default_transaction_builder());
+        for i in 0..bundle_size {
+            bundle_builder.push(default_transaction_builder(i, bundle_size - 1));
         }
 
         let bundle = bundle_builder
@@ -433,7 +488,7 @@ mod tests {
             .attach_local(Hash::zeros(), Hash::zeros())?
             .build()?;
 
-        assert_eq!(bundle.len(), 3);
+        assert_eq!(bundle.len(), bundle_size);
 
         Ok(())
     }

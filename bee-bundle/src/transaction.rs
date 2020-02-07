@@ -230,6 +230,7 @@ impl Transaction {
         }
         unimplemented!()
     }
+
     /// Create a `Transaction` from a reader object.
     pub fn from_reader<R: std::io::Read>(reader: R) -> BeeResult<Self> {
         unimplemented!()

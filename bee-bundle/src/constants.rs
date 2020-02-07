@@ -54,6 +54,8 @@ macro_rules! offsets_from_previous_field {
     };
 }
 
+pub const IOTA_SUPPLY: i64 = 2779530283277761;
+
 pub const PAYLOAD: Field = offsets_from_trits!(0, PAYLOAD_TRIT_LEN);
 pub const ADDRESS: Field = offsets_from_previous_field!(PAYLOAD, ADDRESS_TRIT_LEN);
 pub const VALUE: Field = offsets_from_previous_field!(ADDRESS, VALUE_TRIT_LEN);
