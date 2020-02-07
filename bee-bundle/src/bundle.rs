@@ -68,7 +68,7 @@ pub enum IncomingBundleBuilderError {
     Empty,
     InvalidIndex(usize),
     InvalidLastIndex(usize),
-    InvalidBundleValue(i64),
+    InvalidValue(i64),
 }
 
 pub trait IncomingBundleBuilderStage {}
@@ -143,12 +143,12 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingRaw> {
 
             sum += transaction.value.0;
             if sum.abs() > IOTA_SUPPLY {
-                return Err(IncomingBundleBuilderError::InvalidBundleValue(sum));
+                return Err(IncomingBundleBuilderError::InvalidValue(sum));
             }
         }
 
         if sum != 0 {
-            return Err(IncomingBundleBuilderError::InvalidBundleValue(sum));
+            return Err(IncomingBundleBuilderError::InvalidValue(sum));
         }
 
         // TODO check last trit of address
@@ -180,7 +180,7 @@ impl<E: Sponge + Default> StagedIncomingBundleBuilder<E, IncomingValidated> {
 pub enum OutgoingBundleBuilderError {
     Empty,
     UnsignedInput,
-    InvalidBundleValue(i64),
+    InvalidValue(i64),
     MissingTransactionBuilderField(&'static str),
     FailedTransactionBuild(TransactionBuilderError),
 }
@@ -278,12 +278,12 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
             // Safe to unwrap since we just checked it's not None
             sum += builder.value.as_ref().unwrap().0;
             if sum.abs() > IOTA_SUPPLY {
-                return Err(OutgoingBundleBuilderError::InvalidBundleValue(sum));
+                return Err(OutgoingBundleBuilderError::InvalidValue(sum));
             }
         }
 
         if sum != 0 {
-            return Err(OutgoingBundleBuilderError::InvalidBundleValue(sum));
+            return Err(OutgoingBundleBuilderError::InvalidValue(sum));
         }
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSealed> {
