@@ -1,6 +1,6 @@
 use crate::messages::message::Message;
 
-const _TYPE_ID_MESSAGE_HEADER: u8 = 6;
+const _TYPE_ID_MESSAGE_HEADER: u8 = 0;
 
 pub struct Header {}
 
