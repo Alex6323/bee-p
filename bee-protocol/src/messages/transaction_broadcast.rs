@@ -1,8 +1,8 @@
-use crate::message::Message;
+use crate::messages::message::Message;
 
-pub struct MilestoneRequest {}
+pub struct TransactionBroadcast {}
 
-impl Message for MilestoneRequest {
+impl Message for TransactionBroadcast {
     fn from_bytes(_bytes: &[u8]) -> Self {
         Self {}
     }

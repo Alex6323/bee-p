@@ -1,8 +1,8 @@
-use crate::message::Message;
+use crate::messages::message::Message;
 
-pub struct TransactionRequest {}
+pub struct HandShake {}
 
-impl Message for TransactionRequest {
+impl Message for HandShake {
     fn from_bytes(_bytes: &[u8]) -> Self {
         Self {}
     }

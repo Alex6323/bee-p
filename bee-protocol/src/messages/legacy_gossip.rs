@@ -1,8 +1,8 @@
-use crate::message::Message;
+use crate::messages::message::Message;
 
-pub struct Heartbeat {}
+pub struct LegacyGossip {}
 
-impl Message for Heartbeat {
+impl Message for LegacyGossip {
     fn from_bytes(_bytes: &[u8]) -> Self {
         Self {}
     }
