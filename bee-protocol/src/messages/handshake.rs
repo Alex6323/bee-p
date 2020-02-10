@@ -2,11 +2,23 @@ use crate::messages::message::Message;
 
 const _TYPE_ID_MESSAGE_HANDSHAKE: u8 = 1;
 
-pub struct Handshake {}
+pub struct Handshake {
+    port: u16,
+    timestamp: u64,
+    coordinator: [u8; 49],
+    minimum_weight_magnitude: u8,
+    supported_messages: [u8; 32],
+}
 
 impl Message for Handshake {
     fn from_bytes(_bytes: &[u8]) -> Self {
-        Self {}
+        Self {
+            port: 0,
+            timestamp: 0,
+            coordinator: [0; 49],
+            minimum_weight_magnitude: 0,
+            supported_messages: [0; 32],
+        }
     }
 
     fn to_bytes() -> Vec<u8> {
