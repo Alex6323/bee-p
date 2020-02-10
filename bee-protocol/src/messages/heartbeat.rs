@@ -2,7 +2,8 @@ use crate::messages::message::Message;
 
 use std::ops::Range;
 
-const _TYPE_ID_MESSAGE_HEARTBEAT: u8 = 6;
+const _HEARTBEAT_TYPE_ID: u8 = 6;
+const HEARTBEAT_CONSTANT_SIZE: usize = 8 + 8;
 
 pub struct Heartbeat {
     first_solid_milestone_index: u64,
@@ -20,7 +21,7 @@ impl Heartbeat {
 
 impl Message for Heartbeat {
     fn size_range() -> Range<usize> {
-        0..0
+        (HEARTBEAT_CONSTANT_SIZE)..(HEARTBEAT_CONSTANT_SIZE + 1)
     }
 
     fn from_bytes(_bytes: &[u8]) -> Self {

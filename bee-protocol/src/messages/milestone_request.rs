@@ -2,7 +2,8 @@ use crate::messages::message::Message;
 
 use std::ops::Range;
 
-const _TYPE_ID_MESSAGE_MILESTONE_REQUEST: u8 = 3;
+const _MILESTONE_REQUEST_TYPE_ID: u8 = 3;
+const MILESTONE_REQUEST_CONSTANT_SIZE: usize = 8;
 
 pub struct MilestoneRequest {
     index: u64,
@@ -16,7 +17,7 @@ impl MilestoneRequest {
 
 impl Message for MilestoneRequest {
     fn size_range() -> Range<usize> {
-        0..0
+        (MILESTONE_REQUEST_CONSTANT_SIZE)..(MILESTONE_REQUEST_CONSTANT_SIZE + 1)
     }
 
     fn from_bytes(_bytes: &[u8]) -> Self {
