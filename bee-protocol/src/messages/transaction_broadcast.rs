@@ -2,11 +2,15 @@ use crate::messages::message::Message;
 
 const _TYPE_ID_MESSAGE_TRANSACTION_BROADCAST: u8 = 4;
 
-pub struct TransactionBroadcast {}
+pub struct TransactionBroadcast {
+    transaction: Vec<u8>,
+}
 
 impl TransactionBroadcast {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(transaction: Vec<u8>) -> Self {
+        Self {
+            transaction: transaction,
+        }
     }
 }
 
@@ -16,7 +20,9 @@ impl Message for TransactionBroadcast {
     }
 
     fn from_bytes(_bytes: &[u8]) -> Self {
-        Self {}
+        Self {
+            transaction: Vec::new(),
+        }
     }
 
     fn to_bytes(self) -> Vec<u8> {

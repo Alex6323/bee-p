@@ -2,11 +2,13 @@ use crate::messages::message::Message;
 
 const _TYPE_ID_MESSAGE_MILESTONE_REQUEST: u8 = 3;
 
-pub struct MilestoneRequest {}
+pub struct MilestoneRequest {
+    index: u64,
+}
 
 impl MilestoneRequest {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(index: u64) -> Self {
+        Self { index: index }
     }
 }
 
@@ -16,7 +18,7 @@ impl Message for MilestoneRequest {
     }
 
     fn from_bytes(_bytes: &[u8]) -> Self {
-        Self {}
+        Self { index: 0 }
     }
 
     fn to_bytes(self) -> Vec<u8> {
