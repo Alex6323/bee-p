@@ -1,5 +1,7 @@
 use crate::messages::message::Message;
 
+use std::ops::Range;
+
 const _TYPE_ID_MESSAGE_HEARTBEAT: u8 = 6;
 
 pub struct Heartbeat {
@@ -17,8 +19,8 @@ impl Heartbeat {
 }
 
 impl Message for Heartbeat {
-    fn size_range() -> (usize, usize) {
-        (0, 0)
+    fn size_range() -> Range<usize> {
+        0..0
     }
 
     fn from_bytes(_bytes: &[u8]) -> Self {

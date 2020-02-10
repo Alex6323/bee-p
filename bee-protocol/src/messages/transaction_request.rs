@@ -1,5 +1,7 @@
 use crate::messages::message::Message;
 
+use std::ops::Range;
+
 const _TYPE_ID_MESSAGE_TRANSACTION_REQUEST: u8 = 5;
 
 pub struct TransactionRequest {
@@ -13,8 +15,8 @@ impl TransactionRequest {
 }
 
 impl Message for TransactionRequest {
-    fn size_range() -> (usize, usize) {
-        (0, 0)
+    fn size_range() -> Range<usize> {
+        0..0
     }
 
     fn from_bytes(_bytes: &[u8]) -> Self {
