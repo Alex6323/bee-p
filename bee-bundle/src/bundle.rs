@@ -222,7 +222,6 @@ pub enum OutgoingBundleBuilderError {
 
 pub trait OutgoingBundleBuilderStage {}
 
-#[derive(Default)]
 pub struct OutgoingRaw;
 impl OutgoingBundleBuilderStage for OutgoingRaw {}
 
@@ -235,7 +234,6 @@ impl OutgoingBundleBuilderStage for OutgoingSigned {}
 pub struct OutgoingAttached;
 impl OutgoingBundleBuilderStage for OutgoingAttached {}
 
-#[derive(Default)]
 pub struct StagedOutgoingBundleBuilder<E, S> {
     builders: TransactionBuilders,
     essence_sponge: PhantomData<E>,
@@ -266,7 +264,11 @@ where
 impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
     // TODO TEST
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            builders: TransactionBuilders::default(),
+            essence_sponge: PhantomData,
+            stage: PhantomData,
+        }
     }
 
     // TODO TEST
