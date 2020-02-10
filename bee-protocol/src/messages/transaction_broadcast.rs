@@ -4,6 +4,12 @@ const _TYPE_ID_MESSAGE_TRANSACTION_BROADCAST: u8 = 4;
 
 pub struct TransactionBroadcast {}
 
+impl TransactionBroadcast {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl Message for TransactionBroadcast {
     fn size() -> (usize, usize) {
         (0, 0)

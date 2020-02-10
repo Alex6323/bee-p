@@ -4,6 +4,12 @@ const _TYPE_ID_MESSAGE_MILESTONE_REQUEST: u8 = 3;
 
 pub struct MilestoneRequest {}
 
+impl MilestoneRequest {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl Message for MilestoneRequest {
     fn size() -> (usize, usize) {
         (0, 0)

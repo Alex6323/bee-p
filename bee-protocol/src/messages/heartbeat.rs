@@ -4,6 +4,12 @@ const _TYPE_ID_MESSAGE_HEARTBEAT: u8 = 6;
 
 pub struct Heartbeat {}
 
+impl Heartbeat {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl Message for Heartbeat {
     fn size() -> (usize, usize) {
         (0, 0)

@@ -4,6 +4,12 @@ const _TYPE_ID_MESSAGE_LEGACY_GOSSIP: u8 = 2;
 
 pub struct LegacyGossip {}
 
+impl LegacyGossip {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl Message for LegacyGossip {
     fn size() -> (usize, usize) {
         (0, 0)

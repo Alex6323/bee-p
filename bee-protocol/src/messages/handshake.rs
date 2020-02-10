@@ -10,6 +10,18 @@ pub struct Handshake {
     supported_messages: [u8; 32],
 }
 
+impl Handshake {
+    pub fn new() -> Self {
+        Self {
+            port: 0,
+            timestamp: 0,
+            coordinator: [0; 49],
+            minimum_weight_magnitude: 0,
+            supported_messages: [0; 32],
+        }
+    }
+}
+
 impl Message for Handshake {
     fn size() -> (usize, usize) {
         (0, 0)
