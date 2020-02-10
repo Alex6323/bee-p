@@ -1,5 +1,7 @@
 use crate::messages::message::Message;
 
+const _TYPE_ID_MESSAGE_HEARTBEAT: u8 = 6;
+
 pub struct Heartbeat {}
 
 impl Message for Heartbeat {

@@ -1,5 +1,7 @@
 use crate::messages::message::Message;
 
+const _TYPE_ID_MESSAGE_TRANSACTION_REQUEST: u8 = 5;
+
 pub struct TransactionRequest {}
 
 impl Message for TransactionRequest {

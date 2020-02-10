@@ -1,8 +1,10 @@
 use crate::messages::message::Message;
 
-pub struct HandShake {}
+const _TYPE_ID_MESSAGE_HANDSHAKE: u8 = 1;
 
-impl Message for HandShake {
+pub struct Handshake {}
+
+impl Message for Handshake {
     fn from_bytes(_bytes: &[u8]) -> Self {
         Self {}
     }

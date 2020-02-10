@@ -1,5 +1,7 @@
 use crate::messages::message::Message;
 
+const _TYPE_ID_MESSAGE_LEGACY_GOSSIP: u8 = 2;
+
 pub struct LegacyGossip {}
 
 impl Message for LegacyGossip {

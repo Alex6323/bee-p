@@ -1,5 +1,7 @@
 use crate::messages::message::Message;
 
+const _TYPE_ID_MESSAGE_MILESTONE_REQUEST: u8 = 3;
+
 pub struct MilestoneRequest {}
 
 impl Message for MilestoneRequest {

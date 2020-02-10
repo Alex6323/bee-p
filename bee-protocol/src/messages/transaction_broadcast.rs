@@ -1,5 +1,7 @@
 use crate::messages::message::Message;
 
+const _TYPE_ID_MESSAGE_TRANSACTION_BROADCAST: u8 = 4;
+
 pub struct TransactionBroadcast {}
 
 impl Message for TransactionBroadcast {
