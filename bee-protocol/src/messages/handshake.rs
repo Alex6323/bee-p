@@ -11,6 +11,10 @@ pub struct Handshake {
 }
 
 impl Message for Handshake {
+    fn size() -> (usize, usize) {
+        (0, 0)
+    }
+
     fn from_bytes(_bytes: &[u8]) -> Self {
         Self {
             port: 0,
@@ -21,11 +25,7 @@ impl Message for Handshake {
         }
     }
 
-    fn to_bytes() -> Vec<u8> {
+    fn to_bytes(self) -> Vec<u8> {
         [].to_vec()
-    }
-
-    fn size() -> (usize, usize) {
-        (0, 0)
     }
 }
