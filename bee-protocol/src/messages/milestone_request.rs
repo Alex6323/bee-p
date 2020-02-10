@@ -12,4 +12,8 @@ impl Message for MilestoneRequest {
     fn to_bytes() -> Vec<u8> {
         [].to_vec()
     }
+
+    fn size() -> (usize, usize) {
+        (0, 0)
+    }
 }
