@@ -1,4 +1,5 @@
 mod handshake;
+mod header;
 mod heartbeat;
 mod legacy_gossip;
 mod message;
@@ -7,6 +8,7 @@ mod transaction_broadcast;
 mod transaction_request;
 
 pub use handshake::Handshake;
+pub use header::Header;
 pub use heartbeat::Heartbeat;
 pub use legacy_gossip::LegacyGossip;
 pub use message::Message;
