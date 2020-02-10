@@ -33,3 +33,12 @@ impl Message for TransactionBroadcast {
         [].to_vec()
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn empty() {}
+}

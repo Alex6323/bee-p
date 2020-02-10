@@ -28,3 +28,12 @@ impl Message for MilestoneRequest {
         [].to_vec()
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn empty() {}
+}

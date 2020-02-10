@@ -38,3 +38,12 @@ impl Message for LegacyGossip {
         [].to_vec()
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn empty() {}
+}
