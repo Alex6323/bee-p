@@ -23,7 +23,7 @@ impl Handshake {
 }
 
 impl Message for Handshake {
-    fn size() -> (usize, usize) {
+    fn size_range() -> (usize, usize) {
         (0, 0)
     }
 

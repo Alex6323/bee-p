@@ -11,7 +11,7 @@ impl TransactionBroadcast {
 }
 
 impl Message for TransactionBroadcast {
-    fn size() -> (usize, usize) {
+    fn size_range() -> (usize, usize) {
         (0, 0)
     }
 

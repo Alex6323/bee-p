@@ -11,7 +11,7 @@ impl MilestoneRequest {
 }
 
 impl Message for MilestoneRequest {
-    fn size() -> (usize, usize) {
+    fn size_range() -> (usize, usize) {
         (0, 0)
     }
 

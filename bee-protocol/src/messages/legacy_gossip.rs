@@ -11,7 +11,7 @@ impl LegacyGossip {
 }
 
 impl Message for LegacyGossip {
-    fn size() -> (usize, usize) {
+    fn size_range() -> (usize, usize) {
         (0, 0)
     }
 

@@ -1,5 +1,5 @@
 pub trait Message {
-    fn size() -> (usize, usize);
+    fn size_range() -> (usize, usize);
 
     fn from_bytes(bytes: &[u8]) -> Self;
 
