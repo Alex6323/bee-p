@@ -53,4 +53,16 @@ mod tests {
         assert_eq!(TransactionBroadcast::size_range().contains(&1604), true);
         assert_eq!(TransactionBroadcast::size_range().contains(&1605), false);
     }
+
+    #[test]
+    fn from_bytes_invalid_length_test() {
+        match TransactionBroadcast::from_bytes(&[0; 291]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 291),
+            _ => unreachable!(),
+        }
+        match TransactionBroadcast::from_bytes(&[0; 1605]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 1605),
+            _ => unreachable!(),
+        }
+    }
 }

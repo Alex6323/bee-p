@@ -53,4 +53,16 @@ mod tests {
         assert_eq!(Header::size_range().contains(&3), true);
         assert_eq!(Header::size_range().contains(&4), false);
     }
+
+    #[test]
+    fn from_bytes_invalid_length_test() {
+        match Header::from_bytes(&[0; 2]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 2),
+            _ => unreachable!(),
+        }
+        match Header::from_bytes(&[0; 4]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 4),
+            _ => unreachable!(),
+        }
+    }
 }

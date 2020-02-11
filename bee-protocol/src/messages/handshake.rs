@@ -70,7 +70,14 @@ mod tests {
     }
 
     #[test]
-    fn test() {
-        Handshake::from_bytes(&[0; 40]);
+    fn from_bytes_invalid_length_test() {
+        match Handshake::from_bytes(&[0; 60]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 60),
+            _ => unreachable!(),
+        }
+        match Handshake::from_bytes(&[0; 93]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 93),
+            _ => unreachable!(),
+        }
     }
 }

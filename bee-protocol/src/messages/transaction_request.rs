@@ -46,4 +46,16 @@ mod tests {
         assert_eq!(TransactionRequest::size_range().contains(&49), true);
         assert_eq!(TransactionRequest::size_range().contains(&50), false);
     }
+
+    #[test]
+    fn from_bytes_invalid_length_test() {
+        match TransactionRequest::from_bytes(&[0; 48]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 48),
+            _ => unreachable!(),
+        }
+        match TransactionRequest::from_bytes(&[0; 50]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 50),
+            _ => unreachable!(),
+        }
+    }
 }

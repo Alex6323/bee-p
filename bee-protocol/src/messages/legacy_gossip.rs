@@ -58,4 +58,16 @@ mod tests {
         assert_eq!(LegacyGossip::size_range().contains(&1653), true);
         assert_eq!(LegacyGossip::size_range().contains(&1654), false);
     }
+
+    #[test]
+    fn from_bytes_invalid_length_test() {
+        match LegacyGossip::from_bytes(&[0; 340]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 340),
+            _ => unreachable!(),
+        }
+        match LegacyGossip::from_bytes(&[0; 1654]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 1654),
+            _ => unreachable!(),
+        }
+    }
 }

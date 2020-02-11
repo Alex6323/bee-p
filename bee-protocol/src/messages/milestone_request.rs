@@ -44,4 +44,16 @@ mod tests {
         assert_eq!(MilestoneRequest::size_range().contains(&8), true);
         assert_eq!(MilestoneRequest::size_range().contains(&9), false);
     }
+
+    #[test]
+    fn from_bytes_invalid_length_test() {
+        match MilestoneRequest::from_bytes(&[0; 7]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 7),
+            _ => unreachable!(),
+        }
+        match MilestoneRequest::from_bytes(&[0; 9]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 9),
+            _ => unreachable!(),
+        }
+    }
 }

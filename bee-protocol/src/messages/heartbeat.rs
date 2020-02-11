@@ -51,4 +51,16 @@ mod tests {
         assert_eq!(Heartbeat::size_range().contains(&16), true);
         assert_eq!(Heartbeat::size_range().contains(&17), false);
     }
+
+    #[test]
+    fn from_bytes_invalid_length_test() {
+        match Heartbeat::from_bytes(&[0; 15]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 15),
+            _ => unreachable!(),
+        }
+        match Heartbeat::from_bytes(&[0; 17]) {
+            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 17),
+            _ => unreachable!(),
+        }
+    }
 }
