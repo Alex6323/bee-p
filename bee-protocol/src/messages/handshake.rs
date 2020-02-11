@@ -1,8 +1,8 @@
+use crate::messages::errors::MessageError;
 use crate::messages::message::Message;
 
 use std::ops::Range;
 
-const _HANDSHAKE_TYPE_ID: u8 = 1;
 const HANDSHAKE_COORDINATOR_SIZE: usize = 49;
 const HANDSHAKE_CONSTANT_SIZE: usize = 2 + 8 + HANDSHAKE_COORDINATOR_SIZE + 1;
 const HANDSHAKE_VARIABLE_MIN_SIZE: usize = 1;
@@ -34,14 +34,14 @@ impl Message for Handshake {
             ..(HANDSHAKE_CONSTANT_SIZE + HANDSHAKE_VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(_bytes: &[u8]) -> Self {
-        Self {
+    fn from_bytes(_bytes: &[u8]) -> Result<Self, MessageError> {
+        Ok(Self {
             port: 0,
             timestamp: 0,
             coordinator: [0; HANDSHAKE_COORDINATOR_SIZE],
             minimum_weight_magnitude: 0,
             supported_messages: [0; HANDSHAKE_VARIABLE_MAX_SIZE],
-        }
+        })
     }
 
     fn to_bytes(self) -> Vec<u8> {

@@ -1,8 +1,8 @@
+use crate::messages::errors::MessageError;
 use crate::messages::message::Message;
 
 use std::ops::Range;
 
-const _HEARTBEAT_TYPE_ID: u8 = 6;
 const HEARTBEAT_CONSTANT_SIZE: usize = 8 + 8;
 
 pub struct Heartbeat {
@@ -24,11 +24,11 @@ impl Message for Heartbeat {
         (HEARTBEAT_CONSTANT_SIZE)..(HEARTBEAT_CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(_bytes: &[u8]) -> Self {
-        Self {
+    fn from_bytes(_bytes: &[u8]) -> Result<Self, MessageError> {
+        Ok(Self {
             first_solid_milestone_index: 0,
             last_solid_milestone_index: 0,
-        }
+        })
     }
 
     fn to_bytes(self) -> Vec<u8> {

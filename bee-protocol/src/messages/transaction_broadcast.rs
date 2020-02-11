@@ -1,8 +1,8 @@
+use crate::messages::errors::MessageError;
 use crate::messages::message::Message;
 
 use std::ops::Range;
 
-const _TRANSACTION_BROADCAST_TYPE_ID: u8 = 4;
 const TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE: usize = 292;
 const TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE: usize = 1604;
 
@@ -23,10 +23,10 @@ impl Message for TransactionBroadcast {
         (TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE)..(TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(_bytes: &[u8]) -> Self {
-        Self {
+    fn from_bytes(_bytes: &[u8]) -> Result<Self, MessageError> {
+        Ok(Self {
             transaction: Vec::new(),
-        }
+        })
     }
 
     fn to_bytes(self) -> Vec<u8> {
