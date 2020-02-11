@@ -1,9 +1,12 @@
-use bee_common::{logger, Result};
-
 use crate::config::Config;
 use crate::state::State;
 
+use bee_common::{logger, Result};
+use bee_network::message::{Message, MessageToSend, MessageType, ReceivedMessage};
+use bee_network::network_interface::{bind, TcpServerConfig};
+
 use async_std::task;
+use futures::channel::mpsc;
 
 /// The Bee prototype.
 pub struct Bee {
@@ -19,18 +22,21 @@ impl Bee {
         }
     }
 
+    // TEMP: after 10 seconds sends the termination signal
     pub fn run(&mut self) -> Result<()> {
-        // TEMP: simulate some runtime
+        // NOTE: Node is considered booting Up
         logger::info(&self.state.to_string());
         task::block_on(async {
             task::sleep(std::time::Duration::from_millis(1000)).await;
         });
 
+        // NOTE: Node is now considered running
         self.set_state(State::Running);
-        task::block_on(async {
-            task::sleep(std::time::Duration::from_millis(8000)).await;
-        });
 
+        // Start listening
+        let server_config = TcpServerConfig { address: self.config.host().to_string() };
+        //let
+        //bind(server_config, )
         Ok(())
     }
 
