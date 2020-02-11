@@ -1,9 +1,11 @@
 use crate::messages::errors::MessageError;
 use crate::messages::message::Message;
 
+use std::convert::TryInto;
 use std::ops::Range;
 
-const MILESTONE_REQUEST_CONSTANT_SIZE: usize = 8;
+const MILESTONE_REQUEST_INDEX_SIZE: usize = 8;
+const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
 
 pub struct MilestoneRequest {
     index: u64,
@@ -25,11 +27,20 @@ impl Message for MilestoneRequest {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
-        Ok(Self { index: 0 })
+        let offset = 0;
+
+        // Safe to unwrap since we made sure it has the right size
+        let index = u64::from_be_bytes(
+            bytes[offset..offset + MILESTONE_REQUEST_INDEX_SIZE]
+                .try_into()
+                .unwrap(),
+        );
+
+        Ok(Self { index: index })
     }
 
     fn to_bytes(self) -> Vec<u8> {
-        [].to_vec()
+        self.index.to_be_bytes().to_vec()
     }
 }
 
@@ -55,5 +66,13 @@ mod tests {
             Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 9),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn new_to_from_test() {
+        let message_from = MilestoneRequest::new(0x3cd44cef7195aa20);
+        let message_to = MilestoneRequest::from_bytes(&message_from.to_bytes()).unwrap();
+
+        assert_eq!(message_to.index, 0x3cd44cef7195aa20);
     }
 }
