@@ -34,7 +34,11 @@ impl Message for Handshake {
             ..(HANDSHAKE_CONSTANT_SIZE + HANDSHAKE_VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(_bytes: &[u8]) -> Result<Self, MessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
+        if !Self::size_range().contains(&bytes.len()) {
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+        }
+
         Ok(Self {
             port: 0,
             timestamp: 0,
@@ -63,5 +67,10 @@ mod tests {
         assert_eq!(Handshake::size_range().contains(&91), true);
         assert_eq!(Handshake::size_range().contains(&92), true);
         assert_eq!(Handshake::size_range().contains(&93), false);
+    }
+
+    #[test]
+    fn test() {
+        Handshake::from_bytes(&[0; 40]);
     }
 }

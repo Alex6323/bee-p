@@ -27,6 +27,10 @@ impl Message for Header {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
+        if !Self::size_range().contains(&bytes.len()) {
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+        }
+
         Ok(Self {
             message_type: bytes[0].try_into()?,
             message_length: 0,

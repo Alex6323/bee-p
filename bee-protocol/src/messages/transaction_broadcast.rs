@@ -23,7 +23,11 @@ impl Message for TransactionBroadcast {
         (TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE)..(TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(_bytes: &[u8]) -> Result<Self, MessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
+        if !Self::size_range().contains(&bytes.len()) {
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+        }
+
         Ok(Self {
             transaction: Vec::new(),
         })

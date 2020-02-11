@@ -20,7 +20,11 @@ impl Message for TransactionRequest {
         (TRANSACTION_REQUEST_CONSTANT_SIZE)..(TRANSACTION_REQUEST_CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(_bytes: &[u8]) -> Result<Self, MessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
+        if !Self::size_range().contains(&bytes.len()) {
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+        }
+
         Ok(Self {
             hash: [0; TRANSACTION_REQUEST_CONSTANT_SIZE],
         })
