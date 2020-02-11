@@ -45,5 +45,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty() {}
+    fn size_range_test() {
+        assert_eq!(LegacyGossip::size_range().contains(&340), false);
+        assert_eq!(LegacyGossip::size_range().contains(&341), true);
+        assert_eq!(LegacyGossip::size_range().contains(&342), true);
+
+        assert_eq!(LegacyGossip::size_range().contains(&1652), true);
+        assert_eq!(LegacyGossip::size_range().contains(&1653), true);
+        assert_eq!(LegacyGossip::size_range().contains(&1654), false);
+    }
 }

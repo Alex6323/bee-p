@@ -37,5 +37,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty() {}
+    fn size_range_test() {
+        assert_eq!(TransactionRequest::size_range().contains(&48), false);
+        assert_eq!(TransactionRequest::size_range().contains(&49), true);
+        assert_eq!(TransactionRequest::size_range().contains(&50), false);
+    }
 }

@@ -44,5 +44,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty() {}
+    fn size_range_test() {
+        assert_eq!(Header::size_range().contains(&2), false);
+        assert_eq!(Header::size_range().contains(&3), true);
+        assert_eq!(Header::size_range().contains(&4), false);
+    }
 }

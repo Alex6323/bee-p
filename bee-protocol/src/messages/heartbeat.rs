@@ -42,5 +42,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty() {}
+    fn size_range_test() {
+        assert_eq!(Heartbeat::size_range().contains(&15), false);
+        assert_eq!(Heartbeat::size_range().contains(&16), true);
+        assert_eq!(Heartbeat::size_range().contains(&17), false);
+    }
 }

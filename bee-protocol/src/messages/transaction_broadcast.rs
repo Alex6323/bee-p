@@ -40,5 +40,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty() {}
+    fn size_range_test() {
+        assert_eq!(TransactionBroadcast::size_range().contains(&291), false);
+        assert_eq!(TransactionBroadcast::size_range().contains(&292), true);
+        assert_eq!(TransactionBroadcast::size_range().contains(&293), true);
+
+        assert_eq!(TransactionBroadcast::size_range().contains(&1603), true);
+        assert_eq!(TransactionBroadcast::size_range().contains(&1604), true);
+        assert_eq!(TransactionBroadcast::size_range().contains(&1605), false);
+    }
 }

@@ -55,5 +55,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty() {}
+    fn size_range_test() {
+        assert_eq!(Handshake::size_range().contains(&60), false);
+        assert_eq!(Handshake::size_range().contains(&61), true);
+        assert_eq!(Handshake::size_range().contains(&62), true);
+
+        assert_eq!(Handshake::size_range().contains(&91), true);
+        assert_eq!(Handshake::size_range().contains(&92), true);
+        assert_eq!(Handshake::size_range().contains(&93), false);
+    }
 }

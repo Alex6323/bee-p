@@ -35,5 +35,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty() {}
+    fn size_range_test() {
+        assert_eq!(MilestoneRequest::size_range().contains(&7), false);
+        assert_eq!(MilestoneRequest::size_range().contains(&8), true);
+        assert_eq!(MilestoneRequest::size_range().contains(&9), false);
+    }
 }
