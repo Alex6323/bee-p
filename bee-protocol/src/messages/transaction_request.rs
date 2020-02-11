@@ -3,7 +3,8 @@ use crate::messages::message::Message;
 
 use std::ops::Range;
 
-const TRANSACTION_REQUEST_CONSTANT_SIZE: usize = 49;
+const TRANSACTION_REQUEST_HASH_SIZE: usize = 49;
+const TRANSACTION_REQUEST_CONSTANT_SIZE: usize = TRANSACTION_REQUEST_HASH_SIZE;
 
 pub struct TransactionRequest {
     hash: [u8; TRANSACTION_REQUEST_CONSTANT_SIZE],
@@ -25,13 +26,16 @@ impl Message for TransactionRequest {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
-        Ok(Self {
-            hash: [0; TRANSACTION_REQUEST_CONSTANT_SIZE],
-        })
+        let offset = 0;
+        let mut hash = [0u8; TRANSACTION_REQUEST_HASH_SIZE];
+
+        hash.copy_from_slice(&bytes[offset..offset + TRANSACTION_REQUEST_HASH_SIZE]);
+
+        Ok(Self { hash: hash })
     }
 
     fn to_bytes(self) -> Vec<u8> {
-        [].to_vec()
+        self.hash.to_vec()
     }
 }
 
@@ -39,6 +43,21 @@ impl Message for TransactionRequest {
 mod tests {
 
     use super::*;
+
+    // TODO Move to utils ?
+    fn eq<'a, T: PartialEq>(a: &'a [T], b: &'a [T]) -> bool {
+        if a.len() != b.len() {
+            return false;
+        }
+
+        for i in 0..a.len() {
+            if a[i] != b[i] {
+                return false;
+            }
+        }
+
+        true
+    }
 
     #[test]
     fn size_range_test() {
@@ -57,5 +76,18 @@ mod tests {
             Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 50),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn new_to_from_test() {
+        let hash = [
+            160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155,
+            232, 31, 255, 208, 9, 126, 21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203,
+            67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
+        ];
+        let message_from = TransactionRequest::new(hash);
+        let message_to = TransactionRequest::from_bytes(&message_from.to_bytes()).unwrap();
+
+        assert_eq!(eq(&message_to.hash, &hash), true);
     }
 }
