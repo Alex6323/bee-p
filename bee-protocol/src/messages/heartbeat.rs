@@ -1,9 +1,13 @@
 use crate::messages::errors::MessageError;
 use crate::messages::message::Message;
 
+use std::convert::TryInto;
 use std::ops::Range;
 
-const HEARTBEAT_CONSTANT_SIZE: usize = 8 + 8;
+const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = 8;
+const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = 8;
+const HEARTBEAT_CONSTANT_SIZE: usize =
+    HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE;
 
 pub struct Heartbeat {
     first_solid_milestone_index: u64,
@@ -29,14 +33,35 @@ impl Message for Heartbeat {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
+        let mut offset = 0;
+
+        // Safe to unwrap since we made sure it has the right size
+        let first_solid_milestone_index = u64::from_be_bytes(
+            bytes[offset..offset + HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
+                .try_into()
+                .unwrap(),
+        );
+        offset += HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE;
+
+        // Safe to unwrap since we made sure it has the right size
+        let last_solid_milestone_index = u64::from_be_bytes(
+            bytes[offset..offset + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE]
+                .try_into()
+                .unwrap(),
+        );
+
         Ok(Self {
-            first_solid_milestone_index: 0,
-            last_solid_milestone_index: 0,
+            first_solid_milestone_index: first_solid_milestone_index,
+            last_solid_milestone_index: last_solid_milestone_index,
         })
     }
 
     fn to_bytes(self) -> Vec<u8> {
-        [].to_vec()
+        [
+            self.first_solid_milestone_index.to_be_bytes(),
+            self.last_solid_milestone_index.to_be_bytes(),
+        ]
+        .concat()
     }
 }
 
@@ -62,5 +87,14 @@ mod tests {
             Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 17),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn new_to_from_test() {
+        let message_from = Heartbeat::new(0xe2659070221a4319, 0x3500fbdebbfdfb2c);
+        let message_to = Heartbeat::from_bytes(&message_from.to_bytes()).unwrap();
+
+        assert_eq!(message_to.first_solid_milestone_index, 0xe2659070221a4319);
+        assert_eq!(message_to.last_solid_milestone_index, 0x3500fbdebbfdfb2c);
     }
 }
