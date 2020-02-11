@@ -35,15 +35,15 @@ impl TryFrom<u8> for MessageType {
     type Error = MessageError;
 
     fn try_from(byte: u8) -> Result<Self, Self::Error> {
-        match byte {
-            0x00 => return Ok(MessageType::Header),
-            0x01 => return Ok(MessageType::Handshake),
-            0x02 => return Ok(MessageType::LegacyGossip),
-            0x03 => return Ok(MessageType::MilestoneRequest),
-            0x04 => return Ok(MessageType::TransactionBroadcast),
-            0x05 => return Ok(MessageType::TransactionRequest),
-            0x06 => return Ok(MessageType::Heartbeat),
-            _ => return Err(MessageError::UnknownMessageType(byte)),
+        return match byte {
+            0x00 => Ok(MessageType::Header),
+            0x01 => Ok(MessageType::Handshake),
+            0x02 => Ok(MessageType::LegacyGossip),
+            0x03 => Ok(MessageType::MilestoneRequest),
+            0x04 => Ok(MessageType::TransactionBroadcast),
+            0x05 => Ok(MessageType::TransactionRequest),
+            0x06 => Ok(MessageType::Heartbeat),
+            _ => Err(MessageError::UnknownMessageType(byte)),
         };
     }
 }
