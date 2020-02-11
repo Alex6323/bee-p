@@ -1,6 +1,6 @@
 pub const BEE_LOG: &str = "BEE_LOG";
 pub const BEE_DISPLAYED_NAME: &str = "Bee";
-pub const BEE_DISPLAYED_VERSION: &str = "0.0.1";
+pub const BEE_DISPLAYED_VERSION: &str = "0.1.0";
 
 pub const TRYTE_ZERO: char = '9';
 
