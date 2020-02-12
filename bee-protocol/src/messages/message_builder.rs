@@ -1,6 +1,5 @@
 use crate::messages::errors::MessageError;
 use crate::messages::handshake::Handshake;
-use crate::messages::header::Header;
 use crate::messages::heartbeat::Heartbeat;
 use crate::messages::legacy_gossip::LegacyGossip;
 use crate::messages::milestone_request::MilestoneRequest;
