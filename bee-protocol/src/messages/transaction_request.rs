@@ -69,11 +69,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match TransactionRequest::from_bytes(&[0; 48]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 48),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 48),
             _ => unreachable!(),
         }
         match TransactionRequest::from_bytes(&[0; 50]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 50),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 50),
             _ => unreachable!(),
         }
     }

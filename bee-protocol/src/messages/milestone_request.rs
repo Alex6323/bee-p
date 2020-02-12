@@ -59,11 +59,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match MilestoneRequest::from_bytes(&[0; 7]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 7),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 7),
             _ => unreachable!(),
         }
         match MilestoneRequest::from_bytes(&[0; 9]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 9),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 9),
             _ => unreachable!(),
         }
     }

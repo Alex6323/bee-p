@@ -62,11 +62,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match LegacyGossip::from_bytes(&[0; 340]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 340),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 340),
             _ => unreachable!(),
         }
         match LegacyGossip::from_bytes(&[0; 1654]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 1654),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 1654),
             _ => unreachable!(),
         }
     }

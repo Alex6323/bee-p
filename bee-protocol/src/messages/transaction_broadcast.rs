@@ -57,11 +57,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match TransactionBroadcast::from_bytes(&[0; 291]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 291),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 291),
             _ => unreachable!(),
         }
         match TransactionBroadcast::from_bytes(&[0; 1605]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 1605),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 1605),
             _ => unreachable!(),
         }
     }

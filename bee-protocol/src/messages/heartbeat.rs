@@ -80,11 +80,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match Heartbeat::from_bytes(&[0; 15]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 15),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 15),
             _ => unreachable!(),
         }
         match Heartbeat::from_bytes(&[0; 17]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 17),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 17),
             _ => unreachable!(),
         }
     }

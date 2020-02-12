@@ -53,15 +53,15 @@ mod tests {
     #[test]
     fn read_message_invalid_header_length_test() {
         match read_message(&[]) {
-            Err(MessageError::InvalidHeaderLength(l)) => assert_eq!(l, 0),
+            Err(MessageError::InvalidHeaderLength(length)) => assert_eq!(length, 0),
             _ => unreachable!(),
         }
         match read_message(&[0]) {
-            Err(MessageError::InvalidHeaderLength(l)) => assert_eq!(l, 1),
+            Err(MessageError::InvalidHeaderLength(length)) => assert_eq!(length, 1),
             _ => unreachable!(),
         }
         match read_message(&[0, 0]) {
-            Err(MessageError::InvalidHeaderLength(l)) => assert_eq!(l, 2),
+            Err(MessageError::InvalidHeaderLength(length)) => assert_eq!(length, 2),
             _ => unreachable!(),
         }
     }
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn read_message_unknown_message_type_test() {
         match read_message(&[0xff, 0, 0]) {
-            Err(MessageError::UnknownMessageType(l)) => assert_eq!(l, 0xff),
+            Err(MessageError::UnknownMessageType(message_type)) => assert_eq!(message_type, 0xff),
             _ => unreachable!(),
         }
     }

@@ -148,11 +148,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match Handshake::from_bytes(&[0; 60]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 60),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 60),
             _ => unreachable!(),
         }
         match Handshake::from_bytes(&[0; 93]) {
-            Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 93),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 93),
             _ => unreachable!(),
         }
     }
