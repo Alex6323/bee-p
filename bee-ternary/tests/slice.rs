@@ -1,6 +1,6 @@
 use std::ops::Range;
 use rand::prelude::*;
-use ternary::*;
+use bee_ternary::*;
 
 fn gen_buf<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8>) {
     let len = thread_rng().gen_range(len.start, len.end);

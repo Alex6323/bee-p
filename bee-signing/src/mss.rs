@@ -1,12 +1,9 @@
 use crate::{
     PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
 };
-
-use bee_crypto::Sponge;
-use bee_ternary::{Trits, TritsBuf, TritsMut};
-
 use std::marker::PhantomData;
-use ternary::{Trits, TritBuf};
+use bee_crypto::Sponge;
+use bee_ternary::{Trits, TritBuf};
 
 #[derive(Default)]
 pub struct MssPrivateKeyGeneratorBuilder<S, G> {

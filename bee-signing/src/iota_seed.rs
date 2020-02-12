@@ -1,12 +1,9 @@
 use crate::Seed;
 use iota_conversion::Trinary;
 use rand::Rng;
-
-use bee_crypto::Sponge;
-use bee_ternary::{TritsBuf, TRYTE_ALPHABET};
-
 use std::marker::PhantomData;
-use ternary::{Trits, TritBuf, TRYTE_ALPHABET};
+use bee_crypto::Sponge;
+use bee_ternary::{Trit, Trits, TritBuf, TRYTE_ALPHABET};
 
 // TODO Put constants in a separate file
 
@@ -75,12 +72,28 @@ impl<S: Sponge + Default> IotaSeed<S> {
         // TODO Put in trit utilities file
         for _ in 0..index {
             // TODO: Smelly code, needs refactoring for the new trits API
+            // Keeping here for posterity, in case I refactored it wrong
+            /*
             for trit in subseed.inner_mut().iter_mut() {
                 *trit += 1;
                 if *trit > MAX_TRIT_VALUE {
                     *trit = MIN_TRIT_VALUE;
                 } else {
                     break;
+                }
+            }
+            */
+
+            for i in 0..subseed.len() {
+                if let Some(ntrit) = subseed
+                    .get(i)
+                    .unwrap()
+                    .checked_increment()
+                {
+                    subseed.set(i, ntrit);
+                    break;
+                } else {
+                    subseed.set(i, Trit::MinusOne);
                 }
             }
         }
@@ -100,7 +113,7 @@ impl<S: Sponge + Default> IotaSeed<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crypto::{CurlP27, CurlP81};
+    use bee_crypto::{CurlP27, CurlP81};
 
     const IOTA_SEED: &str =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
@@ -110,7 +123,7 @@ mod tests {
         for _ in 0..10 {
             let iota_seed = IotaSeed::<CurlP27>::new();
 
-            for byte in iota_seed.to_bytes() {
+            for byte in iota_seed.as_bytes() {
                 assert!(*byte == -1 || *byte == 0 || *byte == 1);
             }
         }
@@ -120,12 +133,12 @@ mod tests {
         iota_seed_string: &str,
         iota_subseed_strings: &[&str],
     ) {
-        let iota_seed = IotaSeed::<S>::from_bytes(&iota_seed_string.trits()).unwrap();
+        let iota_seed = IotaSeed::<S>::from_buf(TritBuf::from_i8_unchecked(&iota_seed_string.trits())).unwrap();
 
         for (i, iota_subseed_string) in iota_subseed_strings.iter().enumerate() {
             let iota_subseed = iota_seed.subseed(i as u64);
 
-            assert_eq!(iota_subseed.to_bytes(), &iota_subseed_string.trits());
+            assert_eq!(iota_subseed.as_bytes(), iota_subseed_string.trits().as_slice());
         }
     }
 
@@ -190,7 +203,7 @@ mod tests {
     fn iota_seed_from_bytes_invalid_length_test() {
         let iota_seed_bytes = [0; 42];
 
-        match IotaSeed::<CurlP27>::from_bytes(&iota_seed_bytes) {
+        match IotaSeed::<CurlP27>::from_buf(TritBuf::from_i8_unchecked(&iota_seed_bytes)) {
             Err(IotaSeedError::InvalidLength(len)) => assert_eq!(len, 42),
             _ => unreachable!(),
         }
@@ -202,7 +215,7 @@ mod tests {
 
         iota_seed_bytes[100] = 42;
 
-        match IotaSeed::<CurlP27>::from_bytes(&iota_seed_bytes) {
+        match IotaSeed::<CurlP27>::from_buf(TritBuf::from_i8_unchecked(&iota_seed_bytes)) {
             Err(IotaSeedError::InvalidTrit(byte)) => assert_eq!(byte, 42),
             _ => unreachable!(),
         }
@@ -212,9 +225,9 @@ mod tests {
     fn iota_seed_to_bytes_from_bytes_test() {
         for _ in 0..10 {
             let iota_seed_1 = IotaSeed::<CurlP27>::new();
-            let iota_seed_2 = IotaSeed::<CurlP27>::from_bytes(iota_seed_1.to_bytes()).unwrap();
+            let iota_seed_2 = IotaSeed::<CurlP27>::from_buf(iota_seed_1.trits().to_buf()).unwrap();
 
-            assert_eq!(iota_seed_1.to_bytes(), iota_seed_2.to_bytes());
+            assert_eq!(iota_seed_1.as_bytes(), iota_seed_2.as_bytes());
         }
     }
 }

@@ -1,11 +1,10 @@
-use crate::{
+use bee_ternary::{
     Trits,
-    TritsMut,
-    TritsBuf,
+    TritBuf,
+    raw::{RawEncoding, RawEncodingBuf},
 };
 
 pub(crate) trait Sealed {}
 
-impl<'a> Sealed for Trits<'a> {}
-impl<'a> Sealed for TritsMut<'a> {}
-impl Sealed for TritsBuf {}
+impl<'a, T: RawEncoding> Sealed for &'a Trits<T> {}
+impl<T: RawEncodingBuf> Sealed for TritBuf<T> {}

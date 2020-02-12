@@ -1,4 +1,4 @@
-use ternary::*;
+use bee_ternary::*;
 
 #[test]
 fn convert_correct() {

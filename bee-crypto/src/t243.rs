@@ -7,25 +7,22 @@
 //! Analogous to fanning out a `u64` into 64 individual bits, `t243` is fanned out into
 //! 243 trits, each (rather inefficiently) represented by one `u8`.
 
-use crate::{
-    TritsBuf,
-    ValidTrits,
+use bee_ternary::{
+    TritBuf,
 };
 // use std::cmp::Ordering;
 
 /// The number of trits in a T243
 const T243_LEN: usize = 243;
 
-pub(crate) struct T243(TritsBuf);
+pub(crate) struct T243(TritBuf);
 
 impl T243 {
     fn zero() -> Self {
-        let mut inner = TritsBuf::with_capacity(T243_LEN);
-        inner.fill(ValidTrits::Zero);
-        Self(inner)
+        Self(TritBuf::zeros(T243_LEN))
     }
 
-    pub fn into_inner(self) -> TritsBuf {
+    pub fn into_inner(self) -> TritBuf {
         self.0
     }
 }

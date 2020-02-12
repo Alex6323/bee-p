@@ -40,6 +40,14 @@ impl Into<i8> for Trit {
 }
 
 impl Trit {
+    pub fn checked_increment(self) -> Option<Self> {
+        match self {
+            Trit::MinusOne => Some(Trit::Zero),
+            Trit::Zero => Some(Trit::PlusOne),
+            Trit::PlusOne => None,
+        }
+    }
+
     pub(crate) fn from_u8(x: u8) -> Self {
         match x {
             0 => Trit::MinusOne,

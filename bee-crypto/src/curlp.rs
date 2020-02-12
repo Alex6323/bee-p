@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 
-use crate::{
-    Sponge,
+use crate::Sponge;
+use bee_ternary::{
     Trit,
     Trits,
     TritBuf,
@@ -202,7 +202,7 @@ forward_sponge_impl!(CurlP27, CurlP81);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ternary::{
+    use bee_ternary::{
         util::trytes_to_trits_buf,
         T1B1Buf,
     };

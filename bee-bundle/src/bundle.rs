@@ -6,7 +6,7 @@ use crate::transaction::{
 
 use bee_crypto::Sponge;
 use bee_signing::{PublicKey, Signature, WotsPublicKey};
-use bee_ternary::TritsBuf;
+use bee_ternary::TritBuf;
 
 use std::marker::PhantomData;
 
@@ -117,7 +117,7 @@ where
 
     // TODO TEST
     // TODO common with outgoing bundle builder
-    fn calculate_hash(&self) -> TritsBuf {
+    fn calculate_hash(&self) -> TritBuf {
         // TODO Impl
         let mut sponge = E::default();
 
@@ -249,7 +249,7 @@ where
     S: OutgoingBundleBuilderStage,
 {
     // TODO TEST
-    fn calculate_hash(&self) -> TritsBuf {
+    fn calculate_hash(&self) -> TritBuf {
         // TODO Impl
         let mut sponge = E::default();
 

@@ -4,10 +4,8 @@ use crate::{
 };
 
 use bee_crypto::Sponge;
-use bee_ternary::{Trits, TritsBuf, TritsMut};
-
+use bee_ternary::{Trits, TritBuf};
 use std::marker::PhantomData;
-use ternary::{Trits, TritBuf};
 
 // TODO constants
 
@@ -299,7 +297,7 @@ mod tests {
     // }
 
     fn wots_generic_complete_test<S: Sponge + Default>() {
-        let seed = IotaSeed::<S>::from_bytes(&SEED.trits()).unwrap();
+        let seed = IotaSeed::<S>::from_buf(TritBuf::from_i8_unchecked(&SEED.trits())).unwrap();
 
         for security in 1..4 {
             for index in 0..5 {
@@ -311,7 +309,7 @@ mod tests {
                 let public_key = private_key.generate_public_key().unwrap();
                 let signature = private_key.sign(&MESSAGE.trits()).unwrap();
                 let recovered_public_key = signature.recover_public_key(&MESSAGE.trits()).unwrap();
-                assert_eq!(public_key.to_bytes(), recovered_public_key.to_bytes());
+                assert_eq!(public_key.as_bytes(), recovered_public_key.as_bytes());
                 let valid = public_key.verify(&MESSAGE.trits(), &signature).unwrap();
                 assert!(valid);
             }

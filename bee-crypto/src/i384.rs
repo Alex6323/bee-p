@@ -423,7 +423,7 @@ impl From<T243> for I384<LittleEndian, I384U32> {
     /// ```ignore
     /// s = (...((t_242 * 3 + t_241) * 3 + t_240) * 3 + ...
     ///   +  ...((t_{i+1} * 3 + t_i) * 3 + t_{i-1}) * 3 + ...
-    ///   +  ...t_1) * 3 + t_0  
+    ///   +  ...t_1) * 3 + t_0
     /// ```
     ///
     /// Or in procedural form, with the sum being accumulated in `acc` and with the index `i`
@@ -436,7 +436,7 @@ impl From<T243> for I384<LittleEndian, I384U32> {
     /// ```
     fn from(value: T243) -> Self {
         // This is the `Vec<i8>` inside `TritsBuf`
-        let mut raw_trits_buf = value.into_inner().into_inner();
+        let mut raw_trits_buf = value.into_inner().as_i8_slice().to_vec();
 
         // Shift the balanced trits from {-1, 0, 1} to {0, 1, 2}
         for element in raw_trits_buf.iter_mut() {
@@ -492,7 +492,7 @@ impl From<T243> for I384<LittleEndian, I384U32> {
                 accumulator.clone_from(&tmp);
             }
 
-            // Case 3: 
+            // Case 3:
             Equal => {
                 accumulator.clone_from(&HALF_3);
                 accumulator.not_inplace();
@@ -789,7 +789,7 @@ mod tests {
                 $(
                     #[test]
                     fn $fname() {
-                       let converted: I384<LittleEndian, I384U32> = $be_val.into(); 
+                       let converted: I384<LittleEndian, I384U32> = $be_val.into();
                        assert_eq!(converted, $le_val);
                     }
                 )+
@@ -801,7 +801,7 @@ mod tests {
                 $(
                     #[test]
                     fn $fname() {
-                       let converted: I384<BigEndian, I384U32> = $le_val.into(); 
+                       let converted: I384<BigEndian, I384U32> = $le_val.into();
                        assert_eq!(converted, $be_val);
                     }
                 )+
