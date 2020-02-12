@@ -14,6 +14,10 @@ impl TransactionRequest {
     pub fn new(hash: [u8; TRANSACTION_REQUEST_CONSTANT_SIZE]) -> Self {
         Self { hash: hash }
     }
+
+    pub fn hash(&self) -> &[u8; TRANSACTION_REQUEST_CONSTANT_SIZE] {
+        &self.hash
+    }
 }
 
 impl Message for TransactionRequest {
@@ -88,6 +92,6 @@ mod tests {
         let message_from = TransactionRequest::new(hash);
         let message_to = TransactionRequest::from_bytes(&message_from.to_bytes()).unwrap();
 
-        assert_eq!(eq(&message_to.hash, &hash), true);
+        assert_eq!(eq(message_to.hash(), &hash), true);
     }
 }

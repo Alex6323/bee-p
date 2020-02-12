@@ -21,6 +21,14 @@ impl Heartbeat {
             last_solid_milestone_index: last_solid_milestone_index,
         }
     }
+
+    pub fn first_solid_milestone_index(&self) -> u64 {
+        self.first_solid_milestone_index
+    }
+
+    pub fn last_solid_milestone_index(&self) -> u64 {
+        self.last_solid_milestone_index
+    }
 }
 
 impl Message for Heartbeat {
@@ -94,7 +102,7 @@ mod tests {
         let message_from = Heartbeat::new(0xe2659070221a4319, 0x3500fbdebbfdfb2c);
         let message_to = Heartbeat::from_bytes(&message_from.to_bytes()).unwrap();
 
-        assert_eq!(message_to.first_solid_milestone_index, 0xe2659070221a4319);
-        assert_eq!(message_to.last_solid_milestone_index, 0x3500fbdebbfdfb2c);
+        assert_eq!(message_to.first_solid_milestone_index(), 0xe2659070221a4319);
+        assert_eq!(message_to.last_solid_milestone_index(), 0x3500fbdebbfdfb2c);
     }
 }

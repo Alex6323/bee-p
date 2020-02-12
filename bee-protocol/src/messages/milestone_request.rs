@@ -15,6 +15,10 @@ impl MilestoneRequest {
     pub fn new(index: u64) -> Self {
         Self { index: index }
     }
+
+    pub fn index(&self) -> u64 {
+        self.index
+    }
 }
 
 impl Message for MilestoneRequest {
@@ -73,6 +77,6 @@ mod tests {
         let message_from = MilestoneRequest::new(0x3cd44cef7195aa20);
         let message_to = MilestoneRequest::from_bytes(&message_from.to_bytes()).unwrap();
 
-        assert_eq!(message_to.index, 0x3cd44cef7195aa20);
+        assert_eq!(message_to.index(), 0x3cd44cef7195aa20);
     }
 }

@@ -16,6 +16,10 @@ impl TransactionBroadcast {
             transaction: transaction.to_vec(),
         }
     }
+
+    pub fn transaction(&self) -> &Vec<u8> {
+        &self.transaction
+    }
 }
 
 impl Message for TransactionBroadcast {
@@ -72,6 +76,6 @@ mod tests {
         let message_from = TransactionBroadcast::new(&transaction);
         let message_to = TransactionBroadcast::from_bytes(&message_from.to_bytes()).unwrap();
 
-        assert_eq!(message_to.transaction, transaction);
+        assert_eq!(message_to.transaction(), &transaction);
     }
 }

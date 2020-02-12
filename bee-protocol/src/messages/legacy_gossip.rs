@@ -19,6 +19,14 @@ impl LegacyGossip {
             request: request,
         }
     }
+
+    pub fn transaction(&self) -> &Vec<u8> {
+        &self.transaction
+    }
+
+    pub fn request(&self) -> &[u8; LEGACY_GOSSIP_CONSTANT_SIZE] {
+        &self.request
+    }
 }
 
 impl Message for LegacyGossip {

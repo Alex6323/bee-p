@@ -46,6 +46,26 @@ impl Handshake {
             supported_messages: self_supported_messages,
         }
     }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub fn timestamp(&self) -> u64 {
+        self.timestamp
+    }
+
+    pub fn coordinator(&self) -> &[u8; HANDSHAKE_COORDINATOR_SIZE] {
+        &self.coordinator
+    }
+
+    pub fn minimum_weight_magnitude(&self) -> u8 {
+        self.minimum_weight_magnitude
+    }
+
+    pub fn supported_messages(&self) -> &[u8; HANDSHAKE_VARIABLE_MAX_SIZE] {
+        &self.supported_messages
+    }
 }
 
 impl Message for Handshake {
@@ -180,13 +200,16 @@ mod tests {
         );
         let message_to = Handshake::from_bytes(&message_from.to_bytes()).unwrap();
 
-        assert_eq!(message_to.port, port);
-        assert_eq!(message_to.timestamp, timestamp);
-        assert_eq!(eq(&message_to.coordinator, &coordinator), true);
+        assert_eq!(message_to.port(), port);
+        assert_eq!(message_to.timestamp(), timestamp);
+        assert_eq!(eq(message_to.coordinator(), &coordinator), true);
         assert_eq!(
-            message_to.minimum_weight_magnitude,
+            message_to.minimum_weight_magnitude(),
             minimum_weight_magnitude
         );
-        assert_eq!(message_to.supported_messages, supported_messages);
+        assert_eq!(
+            eq(message_to.supported_messages(), &supported_messages),
+            true
+        );
     }
 }
