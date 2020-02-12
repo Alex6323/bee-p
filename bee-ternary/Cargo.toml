@@ -12,3 +12,6 @@ bee-common = { path = "../bee-common" }
 
 # ONLY TEMPORARY
 iota-conversion = { path = "../iota-conversion" }
+
+#[dev-dependencies]
+rand = "0.7"

@@ -38,7 +38,7 @@ impl RawEncoding for T4B1 {
     unsafe fn set_unchecked(&mut self, index: usize, trit: Trit) {
         let b = self.ptr(index).read();
         let b = b & !(0b11 << (((self.len_offset().1 + index) % 4) * 2));
-        let b = b | (trit.into_u8() << (self.len_offset().1 * 2));
+        let b = b | (trit.into_u8() << (((self.len_offset().1 + index) % 4) * 2));
         (self.ptr(index) as *mut u8).write(b);
     }
 

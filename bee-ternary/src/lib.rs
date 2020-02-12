@@ -57,6 +57,8 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
     pub fn set(&mut self, index: usize, trit: Trit) {
         if index < self.0.len() {
             unsafe { self.set_unchecked(index, trit) };
+        } else {
+            panic!("Attempt to set trit at index {}, but length of slice is {}", index, self.len());
         }
     }
 
