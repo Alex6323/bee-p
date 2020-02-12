@@ -19,6 +19,8 @@ pub use milestone_request::MilestoneRequest;
 pub use transaction_broadcast::TransactionBroadcast;
 pub use transaction_request::TransactionRequest;
 
+use std::ops::Deref;
+
 pub enum MessageType {
     Header(Header),
     Handshake(Handshake),
@@ -28,3 +30,15 @@ pub enum MessageType {
     TransactionRequest(TransactionRequest),
     Heartbeat(Heartbeat),
 }
+
+// impl Deref for MessageType {
+//     type Target = dyn Message;
+//
+//     fn deref(&self) -> &(dyn Message + 'static) {
+//         match self {
+//             // $(
+//             //     $EnumName::$name(v) => v as &$Trait,
+//             // )*
+//         }
+//     }
+// }
