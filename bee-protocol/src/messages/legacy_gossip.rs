@@ -46,7 +46,7 @@ impl Message for LegacyGossip {
         })
     }
 
-    fn to_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         [].to_vec()
     }
 }

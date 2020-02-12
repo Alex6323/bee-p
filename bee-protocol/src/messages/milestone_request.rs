@@ -43,7 +43,7 @@ impl Message for MilestoneRequest {
         Ok(Self { index: index })
     }
 
-    fn to_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         self.index.to_be_bytes().to_vec()
     }
 }
@@ -73,9 +73,9 @@ mod tests {
     }
 
     #[test]
-    fn new_to_from_test() {
+    fn new_into_from_test() {
         let message_from = MilestoneRequest::new(0x3cd44cef7195aa20);
-        let message_to = MilestoneRequest::from_bytes(&message_from.to_bytes()).unwrap();
+        let message_to = MilestoneRequest::from_bytes(&message_from.into_bytes()).unwrap();
 
         assert_eq!(message_to.index(), 0x3cd44cef7195aa20);
     }

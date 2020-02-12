@@ -121,7 +121,7 @@ impl Message for Handshake {
         })
     }
 
-    fn to_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         let mut bytes = Vec::new();
 
         bytes.extend_from_slice(&self.port.to_be_bytes());
@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn new_to_from_test() {
+    fn new_into_from_test() {
         let port = 0xcd98;
         let timestamp = 0xb2a1d7546a470ed8;
         let coordinator = [
@@ -198,7 +198,7 @@ mod tests {
             minimum_weight_magnitude,
             &supported_messages,
         );
-        let message_to = Handshake::from_bytes(&message_from.to_bytes()).unwrap();
+        let message_to = Handshake::from_bytes(&message_from.into_bytes()).unwrap();
 
         assert_eq!(message_to.port(), port);
         assert_eq!(message_to.timestamp(), timestamp);

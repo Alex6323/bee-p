@@ -37,7 +37,7 @@ impl Message for TransactionBroadcast {
         })
     }
 
-    fn to_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         self.transaction
     }
 }
@@ -71,10 +71,10 @@ mod tests {
     }
 
     #[test]
-    fn new_to_from_test() {
+    fn new_into_from_test() {
         let transaction: Vec<u8> = (500..1000).map(|i| i as u8).collect();
         let message_from = TransactionBroadcast::new(&transaction);
-        let message_to = TransactionBroadcast::from_bytes(&message_from.to_bytes()).unwrap();
+        let message_to = TransactionBroadcast::from_bytes(&message_from.into_bytes()).unwrap();
 
         assert_eq!(message_to.transaction(), &transaction);
     }

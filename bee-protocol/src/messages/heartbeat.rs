@@ -64,7 +64,7 @@ impl Message for Heartbeat {
         })
     }
 
-    fn to_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         [
             self.first_solid_milestone_index.to_be_bytes(),
             self.last_solid_milestone_index.to_be_bytes(),
@@ -98,9 +98,9 @@ mod tests {
     }
 
     #[test]
-    fn new_to_from_test() {
+    fn new_into_from_test() {
         let message_from = Heartbeat::new(0xe2659070221a4319, 0x3500fbdebbfdfb2c);
-        let message_to = Heartbeat::from_bytes(&message_from.to_bytes()).unwrap();
+        let message_to = Heartbeat::from_bytes(&message_from.into_bytes()).unwrap();
 
         assert_eq!(message_to.first_solid_milestone_index(), 0xe2659070221a4319);
         assert_eq!(message_to.last_solid_milestone_index(), 0x3500fbdebbfdfb2c);

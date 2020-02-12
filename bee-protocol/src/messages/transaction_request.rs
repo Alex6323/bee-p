@@ -38,7 +38,7 @@ impl Message for TransactionRequest {
         Ok(Self { hash: hash })
     }
 
-    fn to_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         self.hash.to_vec()
     }
 }
@@ -83,14 +83,14 @@ mod tests {
     }
 
     #[test]
-    fn new_to_from_test() {
+    fn new_into_from_test() {
         let hash = [
             160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155,
             232, 31, 255, 208, 9, 126, 21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203,
             67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
         ];
         let message_from = TransactionRequest::new(hash);
-        let message_to = TransactionRequest::from_bytes(&message_from.to_bytes()).unwrap();
+        let message_to = TransactionRequest::from_bytes(&message_from.into_bytes()).unwrap();
 
         assert_eq!(eq(message_to.hash(), &hash), true);
     }

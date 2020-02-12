@@ -11,5 +11,5 @@ pub trait Message {
     where
         Self: std::marker::Sized;
 
-    fn to_bytes(self) -> Vec<u8>;
+    fn into_bytes(self) -> Vec<u8>;
 }
