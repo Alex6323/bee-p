@@ -7,15 +7,15 @@ const TRANSACTION_REQUEST_HASH_SIZE: usize = 49;
 const TRANSACTION_REQUEST_CONSTANT_SIZE: usize = TRANSACTION_REQUEST_HASH_SIZE;
 
 pub struct TransactionRequest {
-    hash: [u8; TRANSACTION_REQUEST_CONSTANT_SIZE],
+    hash: [u8; TRANSACTION_REQUEST_HASH_SIZE],
 }
 
 impl TransactionRequest {
-    pub fn new(hash: [u8; TRANSACTION_REQUEST_CONSTANT_SIZE]) -> Self {
+    pub fn new(hash: [u8; TRANSACTION_REQUEST_HASH_SIZE]) -> Self {
         Self { hash: hash }
     }
 
-    pub fn hash(&self) -> &[u8; TRANSACTION_REQUEST_CONSTANT_SIZE] {
+    pub fn hash(&self) -> &[u8; TRANSACTION_REQUEST_HASH_SIZE] {
         &self.hash
     }
 }
