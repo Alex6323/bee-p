@@ -13,6 +13,7 @@ pub use handshake::Handshake;
 pub use heartbeat::Heartbeat;
 pub use legacy_gossip::LegacyGossip;
 pub use message::Message;
+pub use message_builder::read_message;
 pub use milestone_request::MilestoneRequest;
 pub use transaction_broadcast::TransactionBroadcast;
 pub use transaction_request::TransactionRequest;
