@@ -101,7 +101,6 @@ mod tests {
             Err(_) => unreachable!(),
         };
 
-        // TODO uncomment when getters
-        // assert_eq!(message.index, milestone_index);
+        assert_eq!(message.index(), milestone_index);
     }
 }
