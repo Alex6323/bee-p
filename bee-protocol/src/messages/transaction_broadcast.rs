@@ -11,9 +11,9 @@ pub struct TransactionBroadcast {
 }
 
 impl TransactionBroadcast {
-    pub fn new(transaction: Vec<u8>) -> Self {
+    pub fn new(transaction: &[u8]) -> Self {
         Self {
-            transaction: transaction,
+            transaction: transaction.to_vec(),
         }
     }
 }
@@ -29,12 +29,12 @@ impl Message for TransactionBroadcast {
         }
 
         Ok(Self {
-            transaction: Vec::new(),
+            transaction: bytes.to_vec(),
         })
     }
 
     fn to_bytes(self) -> Vec<u8> {
-        [].to_vec()
+        self.transaction
     }
 }
 
@@ -64,5 +64,14 @@ mod tests {
             Err(MessageError::InvalidMessageLength(l)) => assert_eq!(l, 1605),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn new_to_from_test() {
+        let transaction: Vec<u8> = (500..1000).map(|i| i as u8).collect();
+        let message_from = TransactionBroadcast::new(&transaction);
+        let message_to = TransactionBroadcast::from_bytes(&message_from.to_bytes()).unwrap();
+
+        assert_eq!(message_to.transaction, transaction);
     }
 }
