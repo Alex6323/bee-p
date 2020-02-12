@@ -1,6 +1,6 @@
 mod messages;
 
 pub use messages::{
-    Handshake, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast,
-    TransactionRequest,
+    read_message, Handshake, Heartbeat, LegacyGossip, Message, MilestoneRequest,
+    TransactionBroadcast, TransactionRequest,
 };
