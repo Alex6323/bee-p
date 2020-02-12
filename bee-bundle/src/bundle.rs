@@ -130,8 +130,8 @@ where
 
     fn validate_signatures(&self) -> Result<(), IncomingBundleBuilderError> {
         // TODO get real values
-        let public_key = P::from_bytes(&[]);
-        let signature = P::Signature::from_bytes(&[]);
+        let public_key = P::from_buf(TritBuf::new());
+        let signature = P::Signature::from_buf(TritBuf::new());
 
         match public_key.verify(&[], &signature) {
             Ok(valid) => match valid {
