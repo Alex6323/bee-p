@@ -1,3 +1,6 @@
+// TODO: allow specifying a context
+// TODO: beautify datetime output
+
 use log::{log_enabled, trace, debug, info, warn, error};
 use env_logger::fmt::Color;
 

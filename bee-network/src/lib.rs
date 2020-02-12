@@ -1,10 +1,12 @@
-pub mod network_interface;
-pub mod message;
+pub use network_interface::*;
+pub use message::*;
 
 mod add_peer;
+mod assign_message;
+mod graceful_shutdown;
+mod network_interface;
+mod message;
 mod process_stream;
 mod read_task_broker;
-mod write_task_broker;
-mod assign_message;
 mod remove_peer;
-mod graceful_shutdown;
+mod write_task_broker;

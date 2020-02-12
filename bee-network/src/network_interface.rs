@@ -1,3 +1,5 @@
+use bee_common::logger;
+
 use std::{
     sync::Arc,
     collections::HashMap,
@@ -22,13 +24,17 @@ use crate::message::ReceivedMessage;
 use crate::graceful_shutdown;
 use std::io::Error;
 
-type Sender<T> = mpsc::UnboundedSender<T>;
-type Receiver<T> = mpsc::UnboundedReceiver<T>;
+pub type Sender<T> = mpsc::UnboundedSender<T>;
+pub type Receiver<T> = mpsc::UnboundedReceiver<T>;
 
 use async_std::{
     net::TcpListener,
     prelude::*,
 };
+
+pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
+    mpsc::unbounded()
+}
 
 pub async fn bind(
 
@@ -43,9 +49,10 @@ pub async fn bind(
     ) -> Result<(), Error> {
 
     // bind server
-    let listener = TcpListener::bind(server_config.address).await?;
+    let listener = TcpListener::bind(server_config.address.clone()).await?;
     let (bind_task_shutdown_sender, mut bind_task_shutdown_receiver) = mpsc::unbounded();
     let (mut tcp_stream_sender, tcp_stream_receiver) = mpsc::unbounded();
+    logger::info(&format!("Bee is listening for TCP packets at: {:?}", &server_config.address));
 
     // spawn add_peer_task
     let (add_peer_task_shutdown_sender, add_peer_task_shutdown_receiver) = mpsc::unbounded();
@@ -96,7 +103,10 @@ pub async fn bind(
             },
 
             void = bind_task_shutdown_receiver.next().fuse() => match void {
-                Some(()) => break,
+                Some(()) => {
+                    logger::info("Received shutdown signal.");
+                    break
+                }
                 None => break,
             }
 
@@ -105,11 +115,12 @@ pub async fn bind(
         match stream_result {
 
             Ok(stream) => {
+                logger::info("Client connected.");
                 tcp_stream_sender.send(stream).await.unwrap();
             },
 
             Err(_error) => {
-                eprintln!("can not accept client");
+                logger::warn("Client cannot be accepted");
             }
 
         }

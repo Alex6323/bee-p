@@ -14,9 +14,7 @@ use async_std::task;
 
 fn main() {
     logger::init(log::LevelFilter::Info);
-    screen::init();
-
-    logger::warn("This node will destroy itself in about 10 seconds.");
+    //screen::init();
 
     task::block_on(async {
         match Config::load().await {
@@ -39,5 +37,5 @@ fn main() {
         }
     });
 
-    screen::exit();
+    //screen::exit();
 }

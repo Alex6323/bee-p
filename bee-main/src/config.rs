@@ -50,8 +50,16 @@ impl Peers {
         self.0.is_empty()
     }
 
-    pub fn len(&self) -> usize {
+    pub fn num(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn get(&self, index: usize) -> Option<&Peer> {
+        if index < self.num() {
+            Some(&self.0[index])
+        } else {
+            None
+        }
     }
 }
 
