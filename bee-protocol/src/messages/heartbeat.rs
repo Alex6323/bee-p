@@ -42,10 +42,15 @@ impl Message for Heartbeat {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
+        let mut message = Self {
+            first_solid_milestone_index: 0,
+            last_solid_milestone_index: 0,
+        };
+
         let mut offset = 0;
 
         // Safe to unwrap since we made sure it has the right size
-        let first_solid_milestone_index = u64::from_be_bytes(
+        message.first_solid_milestone_index = u64::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .unwrap(),
@@ -53,16 +58,13 @@ impl Message for Heartbeat {
         offset += HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE;
 
         // Safe to unwrap since we made sure it has the right size
-        let last_solid_milestone_index = u64::from_be_bytes(
+        message.last_solid_milestone_index = u64::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .unwrap(),
         );
 
-        Ok(Self {
-            first_solid_milestone_index: first_solid_milestone_index,
-            last_solid_milestone_index: last_solid_milestone_index,
-        })
+        Ok(message)
     }
 
     fn into_bytes(self) -> Vec<u8> {

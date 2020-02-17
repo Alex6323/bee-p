@@ -32,16 +32,10 @@ impl Message for MilestoneRequest {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
-        let offset = 0;
-
-        // Safe to unwrap since we made sure it has the right size
-        let index = u64::from_be_bytes(
-            bytes[offset..offset + MILESTONE_REQUEST_INDEX_SIZE]
-                .try_into()
-                .unwrap(),
-        );
-
-        Ok(Self { index: index })
+        Ok(Self {
+            // Safe to unwrap since we made sure it has the right size
+            index: u64::from_be_bytes(bytes[0..MILESTONE_REQUEST_INDEX_SIZE].try_into().unwrap()),
+        })
     }
 
     fn into_bytes(self) -> Vec<u8> {

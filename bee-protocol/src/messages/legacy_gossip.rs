@@ -43,20 +43,23 @@ impl Message for LegacyGossip {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
+        let mut message = Self {
+            transaction: Vec::new(),
+            request: [0; LEGACY_GOSSIP_REQUEST_SIZE],
+        };
+
         let mut offset = 0;
 
-        let mut transaction = Vec::new();
-        transaction
+        message
+            .transaction
             .extend_from_slice(&bytes[offset..offset + bytes.len() - LEGACY_GOSSIP_REQUEST_SIZE]);
         offset += bytes.len() - LEGACY_GOSSIP_REQUEST_SIZE;
 
-        let mut request = [0; LEGACY_GOSSIP_REQUEST_SIZE];
-        request.copy_from_slice(&bytes[offset..offset + LEGACY_GOSSIP_REQUEST_SIZE]);
+        message
+            .request
+            .copy_from_slice(&bytes[offset..offset + LEGACY_GOSSIP_REQUEST_SIZE]);
 
-        Ok(Self {
-            transaction: transaction,
-            request: request,
-        })
+        Ok(message)
     }
 
     fn into_bytes(self) -> Vec<u8> {

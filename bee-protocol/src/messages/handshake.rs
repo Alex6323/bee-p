@@ -80,10 +80,18 @@ impl Message for Handshake {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
+        let mut message = Self {
+            port: 0,
+            timestamp: 0,
+            coordinator: [0; HANDSHAKE_COORDINATOR_SIZE],
+            minimum_weight_magnitude: 0,
+            supported_messages: [0; HANDSHAKE_VARIABLE_MAX_SIZE],
+        };
+
         let mut offset = 0;
 
         // Safe to unwrap since we made sure it has the right size
-        let port = u16::from_be_bytes(
+        message.port = u16::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_PORT_SIZE]
                 .try_into()
                 .unwrap(),
@@ -91,35 +99,29 @@ impl Message for Handshake {
         offset += HANDSHAKE_PORT_SIZE;
 
         // Safe to unwrap since we made sure it has the right size
-        let timestamp = u64::from_be_bytes(
+        message.timestamp = u64::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_TIMESTAMP_SIZE]
                 .try_into()
                 .unwrap(),
         );
         offset += HANDSHAKE_TIMESTAMP_SIZE;
 
-        let mut coordinator = [0; HANDSHAKE_COORDINATOR_SIZE];
-        coordinator.copy_from_slice(&bytes[offset..offset + HANDSHAKE_COORDINATOR_SIZE]);
+        message
+            .coordinator
+            .copy_from_slice(&bytes[offset..offset + HANDSHAKE_COORDINATOR_SIZE]);
         offset += HANDSHAKE_COORDINATOR_SIZE;
 
         // Safe to unwrap since we made sure it has the right size
-        let minimum_weight_magnitude = u8::from_be_bytes(
+        message.minimum_weight_magnitude = u8::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE]
                 .try_into()
                 .unwrap(),
         );
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE;
 
-        let mut supported_messages = [0; HANDSHAKE_VARIABLE_MAX_SIZE];
-        supported_messages.copy_from_slice(&bytes[offset..]);
+        message.supported_messages.copy_from_slice(&bytes[offset..]);
 
-        Ok(Self {
-            port: port,
-            timestamp: timestamp,
-            coordinator: coordinator,
-            minimum_weight_magnitude: minimum_weight_magnitude,
-            supported_messages: supported_messages,
-        })
+        Ok(message)
     }
 
     fn into_bytes(self) -> Vec<u8> {

@@ -31,12 +31,15 @@ impl Message for TransactionRequest {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
-        let offset = 0;
-        let mut hash = [0u8; TRANSACTION_REQUEST_HASH_SIZE];
+        let mut message = Self {
+            hash: [0u8; TRANSACTION_REQUEST_HASH_SIZE],
+        };
 
-        hash.copy_from_slice(&bytes[offset..offset + TRANSACTION_REQUEST_HASH_SIZE]);
+        message
+            .hash
+            .copy_from_slice(&bytes[0..TRANSACTION_REQUEST_HASH_SIZE]);
 
-        Ok(Self { hash: hash })
+        Ok(message)
     }
 
     fn into_bytes(self) -> Vec<u8> {
