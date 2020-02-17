@@ -119,7 +119,7 @@ impl Message for Handshake {
         );
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE;
 
-        message.supported_messages.copy_from_slice(&bytes[offset..]);
+        message.supported_messages[0..bytes[offset..].len()].copy_from_slice(&bytes[offset..]);
 
         Ok(message)
     }
