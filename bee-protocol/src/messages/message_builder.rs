@@ -95,14 +95,9 @@ mod tests {
         bytes.extend_from_slice(&message_length.to_be_bytes());
         bytes.extend_from_slice(&milestone_index.to_be_bytes());
 
-        // TODO
-        // let test = read_message(&bytes).unwrap();
-        // test.to_bytes();
-
         let message = match read_message(&bytes) {
             Ok(MessageType::MilestoneRequest(message)) => message,
-            Ok(_) => unreachable!(),
-            Err(_) => unreachable!(),
+            _ => unreachable!(),
         };
 
         assert_eq!(message.index(), milestone_index);
