@@ -1,17 +1,21 @@
 use hex;
 use blake2::{Blake2b, Digest};
 
-use bee_network::message::Message;
-use bee_network::message::TestMessage;
-use bee_network::message::MessageType;
-use bee_network::message::ReceivedMessage;
-use bee_network::message::MessageToSend;
-use bee_network::network_interface;
-use bee_network::network_interface::TcpClientConfig;
+use bee_network::{
+    self,
+    Message,
+    MessageToSend,
+    MessageType,
+    ReceivedMessage,
+    TestMessage,
+    TcpClientConfig,
+    TcpServerConfig,
+};
 
 use std::{
     sync::Arc,
     collections::{HashSet, HashMap},
+    io::Error,
 };
 
 use futures::{channel::mpsc, SinkExt, lock::Mutex};
@@ -19,11 +23,9 @@ use futures::{channel::mpsc, SinkExt, lock::Mutex};
 use async_std::{
     net::SocketAddr,
     prelude::*,
-    task
+    task,
+    task::JoinHandle,
 };
-use async_std::task::JoinHandle;
-use std::io::Error;
-use bee_network::network_interface::TcpServerConfig;
 
 type Sender<T> = mpsc::UnboundedSender<T>;
 type Receiver<T> = mpsc::UnboundedReceiver<T>;
@@ -51,7 +53,7 @@ impl Node {
         let (graceful_shutdown_sender, graceful_shutdown_receiver) = mpsc::unbounded();
         let (connected_peers_sender, connected_peers_receiver) = mpsc::unbounded();
 
-        let network_interface_handle = task::spawn(network_interface::bind(server_config, peers_to_add_receiver, received_messages_sender,messages_to_send_receiver, peers_to_remove_receiver, graceful_shutdown_receiver, connected_peers_sender));
+        let network_interface_handle = task::spawn(bee_network::bind(server_config, peers_to_add_receiver, received_messages_sender,messages_to_send_receiver, peers_to_remove_receiver, graceful_shutdown_receiver, connected_peers_sender));
         task::spawn(simple_receiver_and_gossip_logic(node_address.clone(), Arc::clone(&transactions), received_messages_receiver, messages_to_send_sender.clone()));
         task::spawn(on_new_connected_peer(connected_peers_receiver));
 

@@ -217,7 +217,7 @@ mod should {
             .expect("error creating config");
 
         assert_eq!(config.host().to_string(), "127.0.0.1:1337");
-        assert_eq!(config.peers().len(), 2);
+        assert_eq!(config.peers().num(), 2);
 
         // Use 'cargo t -- --nocapture' to print the JSON
         let s = serde_json::to_string_pretty(&config).expect("error serializing to JSON");

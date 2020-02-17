@@ -1,21 +1,28 @@
+//! Run this example with
+//! ```Bash
+//! cargo r --example simplesend
+//! ```
+//!
 use std::str::FromStr;
-use blake2::{Blake2b, Digest};
 use std::collections::HashSet;
 use std::time::Duration;
 
 use async_std::task;
 use async_std::net::SocketAddr;
+use blake2::{Blake2b, Digest};
 
-use crate::node::Node;
+use bee_network::{
+    Message,
+    MessageToSend,
+    MessageType,
+    TestMessage,
+    TcpClientConfig,
+    TcpServerConfig,
+};
 
-use bee_network::message::MessageType;
-use bee_network::message::Message;
-use bee_network::message::TestMessage;
-use bee_network::message::MessageToSend;
-use bee_network::network_interface::TcpClientConfig;
-use bee_network::network_interface::TcpServerConfig;
+mod common;
 
-mod node;
+use common::node::Node;
 
 fn main () {
     task::block_on(async_test_receive_message());
