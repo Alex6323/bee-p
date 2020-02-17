@@ -15,6 +15,7 @@ const HANDSHAKE_CONSTANT_SIZE: usize = HANDSHAKE_PORT_SIZE
 const HANDSHAKE_VARIABLE_MIN_SIZE: usize = 1;
 const HANDSHAKE_VARIABLE_MAX_SIZE: usize = 32;
 
+#[derive(Clone)]
 pub struct Handshake {
     port: u16,
     timestamp: u64,

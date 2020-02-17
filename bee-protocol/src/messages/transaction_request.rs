@@ -6,6 +6,7 @@ use std::ops::Range;
 const TRANSACTION_REQUEST_HASH_SIZE: usize = 49;
 const TRANSACTION_REQUEST_CONSTANT_SIZE: usize = TRANSACTION_REQUEST_HASH_SIZE;
 
+#[derive(Clone)]
 pub struct TransactionRequest {
     hash: [u8; TRANSACTION_REQUEST_HASH_SIZE],
 }

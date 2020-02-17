@@ -8,6 +8,7 @@ const LEGACY_GOSSIP_CONSTANT_SIZE: usize = LEGACY_GOSSIP_REQUEST_SIZE;
 const LEGACY_GOSSIP_VARIABLE_MIN_SIZE: usize = 292;
 const LEGACY_GOSSIP_VARIABLE_MAX_SIZE: usize = 1604;
 
+#[derive(Clone)]
 pub struct LegacyGossip {
     transaction: Vec<u8>,
     request: [u8; LEGACY_GOSSIP_REQUEST_SIZE],

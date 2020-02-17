@@ -9,6 +9,7 @@ use crate::messages::transaction_request::TransactionRequest;
 use std::ops::Deref;
 
 #[non_exhaustive]
+#[derive(Clone)]
 pub enum MessageType {
     Handshake(Handshake),
     LegacyGossip(LegacyGossip),
