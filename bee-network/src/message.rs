@@ -1,7 +1,4 @@
 use std::collections::HashSet;
-use std::fmt;
-use std::io::Error;
-use std::io::ErrorKind;
 
 use async_std::net::SocketAddr;
 
