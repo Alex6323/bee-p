@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::ops::Range;
 
 use async_std::net::SocketAddr;
+use std::io::Read;
 
 pub trait Message {
     type Error;
@@ -15,6 +16,13 @@ pub trait Message {
         Self: std::marker::Sized;
 
     fn into_bytes(self) -> Vec<u8>;
+}
+
+pub trait MessageReader {
+    type MessageType;
+    type Error;
+
+    fn read<R: Read>(reader: R) -> Result<Self::MessageType, Self::Error>;
 }
 
 // TODO M bounds ? Deref ?

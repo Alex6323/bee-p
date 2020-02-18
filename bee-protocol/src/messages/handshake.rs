@@ -1,4 +1,4 @@
-use crate::messages::errors::MessageError;
+use crate::messages::errors::ProtocolMessageError;
 
 use bee_network::Message;
 
@@ -71,16 +71,16 @@ impl Handshake {
 }
 
 impl Message for Handshake {
-    type Error = MessageError;
+    type Error = ProtocolMessageError;
 
     fn size_range() -> Range<usize> {
         (HANDSHAKE_CONSTANT_SIZE + HANDSHAKE_VARIABLE_MIN_SIZE)
             ..(HANDSHAKE_CONSTANT_SIZE + HANDSHAKE_VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+            Err(ProtocolMessageError::InvalidMessageLength(bytes.len()))?;
         }
 
         let mut message = Self {
@@ -174,11 +174,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match Handshake::from_bytes(&[0; 60]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 60),
+            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 60),
             _ => unreachable!(),
         }
         match Handshake::from_bytes(&[0; 93]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 93),
+            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 93),
             _ => unreachable!(),
         }
     }

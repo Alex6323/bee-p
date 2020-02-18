@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub enum MessageError {
+pub enum ProtocolMessageError {
     InvalidHeader,
     InvalidMessage,
     InvalidMessageType(u8),

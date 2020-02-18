@@ -1,4 +1,4 @@
-use crate::messages::errors::MessageError;
+use crate::messages::errors::ProtocolMessageError;
 use crate::messages::handshake::Handshake;
 use crate::messages::heartbeat::Heartbeat;
 use crate::messages::legacy_gossip::LegacyGossip;
@@ -12,7 +12,7 @@ use std::ops::Deref;
 
 #[non_exhaustive]
 #[derive(Clone)]
-pub enum MessageType {
+pub enum ProtocolMessageType {
     Handshake(Handshake),
     LegacyGossip(LegacyGossip),
     MilestoneRequest(MilestoneRequest),
@@ -21,17 +21,17 @@ pub enum MessageType {
     Heartbeat(Heartbeat),
 }
 
-impl Deref for MessageType {
-    type Target = dyn Message<Error = MessageError>;
+impl Deref for ProtocolMessageType {
+    type Target = dyn Message<Error = ProtocolMessageError>;
 
     fn deref<'a>(&'a self) -> &'a Self::Target {
         match self {
-            MessageType::Handshake(message) => message,
-            MessageType::LegacyGossip(message) => message,
-            MessageType::MilestoneRequest(message) => message,
-            MessageType::TransactionBroadcast(message) => message,
-            MessageType::TransactionRequest(message) => message,
-            MessageType::Heartbeat(message) => message,
+            ProtocolMessageType::Handshake(message) => message,
+            ProtocolMessageType::LegacyGossip(message) => message,
+            ProtocolMessageType::MilestoneRequest(message) => message,
+            ProtocolMessageType::TransactionBroadcast(message) => message,
+            ProtocolMessageType::TransactionRequest(message) => message,
+            ProtocolMessageType::Heartbeat(message) => message,
         }
     }
 }

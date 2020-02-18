@@ -1,4 +1,4 @@
-use crate::messages::errors::MessageError;
+use crate::messages::errors::ProtocolMessageError;
 
 use bee_network::Message;
 
@@ -24,15 +24,15 @@ impl MilestoneRequest {
 }
 
 impl Message for MilestoneRequest {
-    type Error = MessageError;
+    type Error = ProtocolMessageError;
 
     fn size_range() -> Range<usize> {
         (MILESTONE_REQUEST_CONSTANT_SIZE)..(MILESTONE_REQUEST_CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+            Err(ProtocolMessageError::InvalidMessageLength(bytes.len()))?;
         }
 
         Ok(Self {
@@ -61,11 +61,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match MilestoneRequest::from_bytes(&[0; 7]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 7),
+            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 7),
             _ => unreachable!(),
         }
         match MilestoneRequest::from_bytes(&[0; 9]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 9),
+            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 9),
             _ => unreachable!(),
         }
     }

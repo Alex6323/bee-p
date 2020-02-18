@@ -1,4 +1,4 @@
-use crate::messages::errors::MessageError;
+use crate::messages::errors::ProtocolMessageError;
 
 use bee_network::Message;
 
@@ -23,15 +23,15 @@ impl TransactionRequest {
 }
 
 impl Message for TransactionRequest {
-    type Error = MessageError;
+    type Error = ProtocolMessageError;
 
     fn size_range() -> Range<usize> {
         (TRANSACTION_REQUEST_CONSTANT_SIZE)..(TRANSACTION_REQUEST_CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+            Err(ProtocolMessageError::InvalidMessageLength(bytes.len()))?;
         }
 
         let mut message = Self {
@@ -80,11 +80,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match TransactionRequest::from_bytes(&[0; 48]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 48),
+            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 48),
             _ => unreachable!(),
         }
         match TransactionRequest::from_bytes(&[0; 50]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 50),
+            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 50),
             _ => unreachable!(),
         }
     }
