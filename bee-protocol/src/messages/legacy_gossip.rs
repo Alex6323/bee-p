@@ -33,6 +33,8 @@ impl LegacyGossip {
 }
 
 impl Message for LegacyGossip {
+    type Error = MessageError;
+
     fn size_range() -> Range<usize> {
         (LEGACY_GOSSIP_CONSTANT_SIZE + LEGACY_GOSSIP_VARIABLE_MIN_SIZE)
             ..(LEGACY_GOSSIP_CONSTANT_SIZE + LEGACY_GOSSIP_VARIABLE_MAX_SIZE + 1)

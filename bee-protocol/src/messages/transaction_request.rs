@@ -22,6 +22,8 @@ impl TransactionRequest {
 }
 
 impl Message for TransactionRequest {
+    type Error = MessageError;
+
     fn size_range() -> Range<usize> {
         (TRANSACTION_REQUEST_CONSTANT_SIZE)..(TRANSACTION_REQUEST_CONSTANT_SIZE + 1)
     }

@@ -70,6 +70,8 @@ impl Handshake {
 }
 
 impl Message for Handshake {
+    type Error = MessageError;
+
     fn size_range() -> Range<usize> {
         (HANDSHAKE_CONSTANT_SIZE + HANDSHAKE_VARIABLE_MIN_SIZE)
             ..(HANDSHAKE_CONSTANT_SIZE + HANDSHAKE_VARIABLE_MAX_SIZE + 1)

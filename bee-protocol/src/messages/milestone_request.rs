@@ -23,6 +23,8 @@ impl MilestoneRequest {
 }
 
 impl Message for MilestoneRequest {
+    type Error = MessageError;
+
     fn size_range() -> Range<usize> {
         (MILESTONE_REQUEST_CONSTANT_SIZE)..(MILESTONE_REQUEST_CONSTANT_SIZE + 1)
     }

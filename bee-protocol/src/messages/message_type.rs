@@ -1,3 +1,4 @@
+use crate::messages::errors::MessageError;
 use crate::messages::handshake::Handshake;
 use crate::messages::heartbeat::Heartbeat;
 use crate::messages::legacy_gossip::LegacyGossip;
@@ -20,7 +21,7 @@ pub enum MessageType {
 }
 
 impl Deref for MessageType {
-    type Target = dyn Message;
+    type Target = dyn Message<Error = MessageError>;
 
     fn deref<'a>(&'a self) -> &'a Self::Target {
         match self {

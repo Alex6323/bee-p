@@ -33,6 +33,8 @@ impl Heartbeat {
 }
 
 impl Message for Heartbeat {
+    type Error = MessageError;
+
     fn size_range() -> Range<usize> {
         (HEARTBEAT_CONSTANT_SIZE)..(HEARTBEAT_CONSTANT_SIZE + 1)
     }

@@ -24,6 +24,8 @@ impl TransactionBroadcast {
 }
 
 impl Message for TransactionBroadcast {
+    type Error = MessageError;
+
     fn size_range() -> Range<usize> {
         (TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE)..(TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE + 1)
     }
