@@ -1,5 +1,6 @@
 use crate::messages::errors::MessageError;
-use crate::messages::message::Message;
+
+use bee_network::Message;
 
 use std::ops::Range;
 

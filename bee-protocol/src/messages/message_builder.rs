@@ -5,7 +5,9 @@ use crate::messages::legacy_gossip::LegacyGossip;
 use crate::messages::milestone_request::MilestoneRequest;
 use crate::messages::transaction_broadcast::TransactionBroadcast;
 use crate::messages::transaction_request::TransactionRequest;
-use crate::messages::{Message, MessageType};
+use crate::messages::MessageType;
+
+use bee_network::Message;
 
 use std::convert::TryInto;
 

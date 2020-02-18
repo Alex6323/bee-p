@@ -2,10 +2,11 @@ use crate::messages::errors::MessageError;
 use crate::messages::handshake::Handshake;
 use crate::messages::heartbeat::Heartbeat;
 use crate::messages::legacy_gossip::LegacyGossip;
-use crate::messages::message::Message;
 use crate::messages::milestone_request::MilestoneRequest;
 use crate::messages::transaction_broadcast::TransactionBroadcast;
 use crate::messages::transaction_request::TransactionRequest;
+
+use bee_network::Message;
 
 use std::ops::Deref;
 
