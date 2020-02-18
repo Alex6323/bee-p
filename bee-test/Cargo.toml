@@ -1,5 +1,5 @@
 [package]
-name = "bee-test-utils"
+name = "bee-test"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"

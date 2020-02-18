@@ -76,7 +76,7 @@ mod tests {
         let mut storage = SqlxBackendStorage::new();
 
         block_on(storage.establish_connection());
-        let (tx_hash, tx) = bee_test_utils::transaction::create_random_tx();
+        let (tx_hash, tx) = bee_test::transaction::create_random_tx();
         block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
         let res = block_on(storage.find_transaction(tx_hash));
         let found_tx = res.unwrap();
@@ -88,7 +88,7 @@ mod tests {
         let mut storage = SqlxBackendStorage::new();
 
         block_on(storage.establish_connection());
-        let mut milestone = bee_test_utils::transaction::create_random_milestone();
+        let mut milestone = bee_test::transaction::create_random_milestone();
         milestone.index = 1;
         block_on(storage.insert_milestone(milestone.clone()));
         let res = block_on(storage.find_milestone(milestone.hash.clone()));
@@ -101,7 +101,7 @@ mod tests {
         let mut storage = SqlxBackendStorage::new();
 
         block_on(storage.establish_connection());
-        let (tx_hash, tx) = bee_test_utils::transaction::create_random_tx();
+        let (tx_hash, tx) = bee_test::transaction::create_random_tx();
         block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
@@ -121,7 +121,7 @@ mod tests {
         let mut storage = SqlxBackendStorage::new();
 
         block_on(storage.establish_connection());
-        let mut milestone = bee_test_utils::transaction::create_random_milestone();
+        let mut milestone = bee_test::transaction::create_random_milestone();
         milestone.index = 2;
         block_on(storage.insert_milestone(milestone.clone()));
         let res = block_on(storage.find_milestone(milestone.hash.clone()));
@@ -145,7 +145,7 @@ mod tests {
         let mut hashes = HashSet::new();
 
         for i in 0..10 {
-            let (tx_hash, tx) = bee_test_utils::transaction::create_random_tx();
+            let (tx_hash, tx) = bee_test::transaction::create_random_tx();
             block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
             let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
@@ -170,7 +170,7 @@ mod tests {
        block_on(storage.establish_connection());
 
         let mut hash_to_approvers_expected = bee_storage::HashesToApprovers::new();
-        let (tx_hash, tx) = bee_test_utils::transaction::create_random_tx();
+        let (tx_hash, tx) = bee_test::transaction::create_random_tx();
         block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
@@ -179,7 +179,7 @@ mod tests {
 
         for i in 0..2000 {
             let (tx_hash, mut tx) =
-                bee_test_utils::transaction::create_random_attached_tx(last_tx_hash.clone(), last_tx_hash.clone());
+                bee_test::transaction::create_random_attached_tx(last_tx_hash.clone(), last_tx_hash.clone());
             let mut approvers = HashSet::new();
             approvers.insert(tx_hash.clone());
             hash_to_approvers_expected.insert(last_tx_hash.clone(), approvers);
@@ -209,7 +209,7 @@ mod tests {
         block_on(storage.establish_connection());
 
         let mut missing_hash_to_approvers_expected = bee_storage::MissingHashesToRCApprovers::new();
-        let (tx_hash, tx) = bee_test_utils::transaction::create_random_tx();
+        let (tx_hash, tx) = bee_test::transaction::create_random_tx();
         block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
@@ -218,14 +218,14 @@ mod tests {
         let mut all_transactions_hashes = HashSet::new();
 
         for i in 0..2000 {
-            let missing_tx_hash_trunk = bee_test_utils::transaction::rand_hash();
-            let missing_tx_hash_branch = bee_test_utils::transaction::rand_hash();
+            let missing_tx_hash_trunk = bee_test::transaction::rand_hash();
+            let missing_tx_hash_branch = bee_test::transaction::rand_hash();
             let (tx_hash, mut tx) = match i % 3 {
-                0 => bee_test_utils::transaction::create_random_attached_tx(last_tx_hash.clone(), missing_tx_hash_trunk.clone()),
+                0 => bee_test::transaction::create_random_attached_tx(last_tx_hash.clone(), missing_tx_hash_trunk.clone()),
                 1 => {
-                    bee_test_utils::transaction::create_random_attached_tx(missing_tx_hash_branch.clone(), last_tx_hash.clone())
+                    bee_test::transaction::create_random_attached_tx(missing_tx_hash_branch.clone(), last_tx_hash.clone())
                 }
-                2 => bee_test_utils::transaction::create_random_attached_tx(
+                2 => bee_test::transaction::create_random_attached_tx(
                     missing_tx_hash_branch.clone(),
                     missing_tx_hash_trunk.clone(),
                 ),
@@ -293,7 +293,7 @@ mod tests {
 
         let mut futures = Vec::new();
         for i in 0..NUM_TRANSACTIONS {
-            let (tx_hash, tx) = bee_test_utils::transaction::create_random_tx();
+            let (tx_hash, tx) = bee_test::transaction::create_random_tx();
             hashes.insert(tx_hash.clone());
             hashes_transaction_seq.push((tx_hash, tx));
         }
@@ -325,7 +325,7 @@ mod tests {
         const NUM_TRANSACTIONS: usize = 10000;
 
         for i in 0..NUM_TRANSACTIONS {
-            let (tx_hash, tx) = bee_test_utils::transaction::create_random_tx();
+            let (tx_hash, tx) = bee_test::transaction::create_random_tx();
             hashes.insert(tx_hash.clone());
             hashes_to_transactions.insert(tx_hash, tx);
         }

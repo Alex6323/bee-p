@@ -13,7 +13,7 @@ members = [
 	"bee-ternary",
 	"bee-storage",
 	"bee-storage-sqlx",
-	"bee-test-utils",
+	"bee-test",
 
 	# ONLY TEMPORARY
 	"iota-conversion",
