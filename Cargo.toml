@@ -13,7 +13,6 @@ members = [
 	"bee-ternary",
 	"bee-storage",
 	"bee-storage-sqlx",
-	"bee-storage-sled",
 	"bee-test-utils",
 
 	# ONLY TEMPORARY
