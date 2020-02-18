@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub enum MessageError {
-    UnknownMessageType(u8),
-    InvalidHeaderLength(usize),
-    InvalidAdvertisedMessageLength(usize, usize),
+    InvalidHeader,
+    InvalidMessage,
+    InvalidMessageType(u8),
     InvalidMessageLength(usize),
 }

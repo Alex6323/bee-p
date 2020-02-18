@@ -55,30 +55,30 @@ async fn read_task<M>(
     let mut reader = BufReader::new(&*stream);
 
     loop {
-        // 1) Check message type
-        let mut message_type_buf = [0u8; 1];
-        select! {
-            result = reader.read_exact(&mut message_type_buf).fuse() => result?,
-            void = shutdown_task.next().fuse() => break
-        }
-        let message_type = u8::from_be_bytes(message_type_buf);
-
-        // 2) Check message length
-        let mut message_length_buf = [0u8; 2];
-        select! {
-            result = reader.read_exact(&mut message_length_buf).fuse() => result?,
-            void = shutdown_task.next().fuse() => break
-        }
-        let message_length_as_usize = usize::try_from(u16::from_be_bytes(message_length_buf));
-
-        if let Err(_) = message_length_as_usize {
-            return Err(Error::new(
-                ErrorKind::InvalidInput,
-                "Can't convert message_length to usize",
-            ));
-        }
-
-        let message_length = message_length_as_usize.unwrap();
+        // // 1) Check message type
+        // let mut message_type_buf = [0u8; 1];
+        // select! {
+        //     result = reader.read_exact(&mut message_type_buf).fuse() => result?,
+        //     void = shutdown_task.next().fuse() => break
+        // }
+        // let message_type = u8::from_be_bytes(message_type_buf);
+        //
+        // // 2) Check message length
+        // let mut message_length_buf = [0u8; 2];
+        // select! {
+        //     result = reader.read_exact(&mut message_length_buf).fuse() => result?,
+        //     void = shutdown_task.next().fuse() => break
+        // }
+        // let message_length_as_usize = usize::try_from(u16::from_be_bytes(message_length_buf));
+        //
+        // if let Err(_) = message_length_as_usize {
+        //     return Err(Error::new(
+        //         ErrorKind::InvalidInput,
+        //         "Can't convert message_length to usize",
+        //     ));
+        // }
+        //
+        // let message_length = message_length_as_usize.unwrap();
 
         // 3) Parse message based on type and length
         // match message_type {

@@ -10,40 +10,43 @@ use crate::messages::MessageType;
 use bee_network::Message;
 
 use std::convert::TryInto;
+use std::io::Read;
 
-pub fn read_message(bytes: &[u8]) -> Result<MessageType, MessageError> {
-    if bytes.len() < 3 {
-        Err(MessageError::InvalidHeaderLength(bytes.len()))?;
-    }
+pub fn read_message<R: Read>(mut reader: R) -> Result<MessageType, MessageError> {
+    let mut header_buffer = [0u8; 3];
 
-    let message_type = bytes[0];
-    // Safe to unwrap since we made sure it has the right size
-    let message_length = u16::from_be_bytes(bytes[1..3].try_into().unwrap());
-    let message = &bytes[3..];
+    reader
+        .read_exact(&mut header_buffer)
+        .map_err(|_| MessageError::InvalidHeader)?;
 
-    if message_length as usize != message.len() {
-        Err(MessageError::InvalidAdvertisedMessageLength(
-            message_length as usize,
-            message.len(),
-        ))?;
-    }
+    let message_type = header_buffer[0];
+    let message_length = u16::from_be_bytes(
+        header_buffer[1..3]
+            .try_into()
+            .map_err(|_| MessageError::InvalidHeader)?,
+    );
+    let mut message = vec![0u8; message_length as usize];
+
+    reader
+        .read_exact(&mut message)
+        .map_err(|_| MessageError::InvalidMessage)?;
 
     match message_type {
-        0x01 => Ok(MessageType::Handshake(Handshake::from_bytes(message)?)),
+        0x01 => Ok(MessageType::Handshake(Handshake::from_bytes(&message)?)),
         0x02 => Ok(MessageType::LegacyGossip(LegacyGossip::from_bytes(
-            message,
+            &message,
         )?)),
         0x03 => Ok(MessageType::MilestoneRequest(MilestoneRequest::from_bytes(
-            message,
+            &message,
         )?)),
         0x04 => Ok(MessageType::TransactionBroadcast(
-            TransactionBroadcast::from_bytes(message)?,
+            TransactionBroadcast::from_bytes(&message)?,
         )),
         0x05 => Ok(MessageType::TransactionRequest(
-            TransactionRequest::from_bytes(message)?,
+            TransactionRequest::from_bytes(&message)?,
         )),
-        0x06 => Ok(MessageType::Heartbeat(Heartbeat::from_bytes(message)?)),
-        _ => Err(MessageError::UnknownMessageType(message_type)),
+        0x06 => Ok(MessageType::Heartbeat(Heartbeat::from_bytes(&message)?)),
+        _ => Err(MessageError::InvalidMessageType(message_type)),
     }
 }
 
@@ -54,35 +57,32 @@ mod tests {
 
     #[test]
     fn read_message_invalid_header_length_test() {
-        match read_message(&[]) {
-            Err(MessageError::InvalidHeaderLength(length)) => assert_eq!(length, 0),
+        match read_message(&[][..]) {
+            Err(MessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
-        match read_message(&[0]) {
-            Err(MessageError::InvalidHeaderLength(length)) => assert_eq!(length, 1),
+        match read_message(&[0][..]) {
+            Err(MessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
-        match read_message(&[0, 0]) {
-            Err(MessageError::InvalidHeaderLength(length)) => assert_eq!(length, 2),
+        match read_message(&[0, 0][..]) {
+            Err(MessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
     }
 
     #[test]
     fn read_message_invalid_advertised_message_length_test() {
-        match read_message(&[0x04, 0, 7, 0, 0, 0, 0, 0]) {
-            Err(MessageError::InvalidAdvertisedMessageLength(advertised_length, real_length)) => {
-                assert_eq!(advertised_length, 7);
-                assert_eq!(real_length, 5);
-            }
+        match read_message(&[0x04, 0, 7, 0, 0, 0, 0, 0][..]) {
+            Err(MessageError::InvalidMessage) => (),
             _ => unreachable!(),
         }
     }
 
     #[test]
-    fn read_message_unknown_message_type_test() {
-        match read_message(&[0xff, 0, 0]) {
-            Err(MessageError::UnknownMessageType(message_type)) => assert_eq!(message_type, 0xff),
+    fn read_message_invalid_message_type_test() {
+        match read_message(&[0xff, 0, 0][..]) {
+            Err(MessageError::InvalidMessageType(message_type)) => assert_eq!(message_type, 0xff),
             _ => unreachable!(),
         }
     }
@@ -97,7 +97,7 @@ mod tests {
         bytes.extend_from_slice(&message_length.to_be_bytes());
         bytes.extend_from_slice(&milestone_index.to_be_bytes());
 
-        let message = match read_message(&bytes) {
+        let message = match read_message(&bytes[..]) {
             Ok(MessageType::MilestoneRequest(message)) => message,
             _ => unreachable!(),
         };
