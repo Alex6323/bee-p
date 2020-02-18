@@ -15,16 +15,17 @@ use async_std::{
 };
 
 use crate::message::ReceivedMessage;
-use bee_protocol::{Message, MessageType};
 
 type Sender<T> = mpsc::UnboundedSender<T>;
 type Receiver<T> = mpsc::UnboundedReceiver<T>;
 
-pub async fn read_task_broker(
+pub async fn read_task_broker<M>(
     mut read_task_receiver: Receiver<Arc<TcpStream>>,
-    received_messages_sender: Sender<ReceivedMessage>,
+    received_messages_sender: Sender<ReceivedMessage<M>>,
     shutdown_handles_of_read_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<()>>>>,
-) {
+) where
+    M: Clone + std::marker::Send + 'static,
+{
     while let Some(stream) = read_task_receiver.next().await {
         match stream.peer_addr() {
             Ok(address) => {
@@ -46,10 +47,10 @@ pub async fn read_task_broker(
     }
 }
 
-async fn read_task(
+async fn read_task<M>(
     mut shutdown_task: Receiver<()>,
     stream: Arc<TcpStream>,
-    mut received_messages: Sender<ReceivedMessage>,
+    mut received_messages: Sender<ReceivedMessage<M>>,
 ) -> Result<(), Error> {
     let mut reader = BufReader::new(&*stream);
 

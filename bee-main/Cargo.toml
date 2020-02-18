@@ -9,6 +9,7 @@ bee-bundle = { path = "../bee-bundle" }
 bee-common = { path = "../bee-common" }
 bee-network = { path = "../bee-network" }
 bee-pow = { path = "../bee-pow" }
+bee-protocol = { path = "../bee-protocol" }
 
 async-std = "1.4.0"
 crossterm = "0.15.0"

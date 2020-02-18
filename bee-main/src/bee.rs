@@ -3,18 +3,12 @@ use crate::state::State;
 
 use bee_common::{logger, Result};
 use bee_network::{
-    self,
-    bind,
-    MessageToSend,
-    Receiver,
-    ReceivedMessage,
-    Sender,
-    TcpServerConfig,
-    TcpClientConfig,
+    self, bind, MessageToSend, ReceivedMessage, Receiver, Sender, TcpClientConfig, TcpServerConfig,
 };
+use bee_protocol::MessageType;
 
-use async_std::task;
 use async_std::net::SocketAddr;
+use async_std::task;
 
 /// The Bee prototype.
 pub struct Bee {
@@ -46,7 +40,7 @@ impl Bee {
         match self.config.peers().get(0) {
             None => {
                 logger::warn("No static peers specified in the config. Exiting node.");
-            },
+            }
             Some(peer) => {
                 let host_addr = self.config.host().to_string();
                 logger::info(&format!("Host address: {}", host_addr));
@@ -61,10 +55,11 @@ impl Bee {
                 let (pa_sender, pa_receiver) = bee_network::channel::<TcpClientConfig>();
 
                 // received_messages channel
-                let (rm_sender, rm_receiver) = bee_network::channel::<ReceivedMessage>();
+                let (rm_sender, rm_receiver) =
+                    bee_network::channel::<ReceivedMessage<MessageType>>();
 
                 // messages_to_send channel
-                let (ms_sender, ms_receiver) = bee_network::channel::<MessageToSend>();
+                let (ms_sender, ms_receiver) = bee_network::channel::<MessageToSend<MessageType>>();
 
                 // peers_to_remove channel
                 let (pr_sender, pr_receiver) = bee_network::channel::<SocketAddr>();
@@ -75,9 +70,18 @@ impl Bee {
                 // connected_peers channel
                 let (cp_sender, cp_receiver) = bee_network::channel::<SocketAddr>();
 
-
                 task::block_on(async {
-                    bee_network::bind(server_config, pa_receiver, rm_sender, ms_receiver, pr_receiver, gs_receiver, cp_sender).await.unwrap_or_else(|e| {
+                    bee_network::bind(
+                        server_config,
+                        pa_receiver,
+                        rm_sender,
+                        ms_receiver,
+                        pr_receiver,
+                        gs_receiver,
+                        cp_sender,
+                    )
+                    .await
+                    .unwrap_or_else(|e| {
                         logger::error(&format!("Running network event loop. Error: {:?}", e));
                     });
                 });
@@ -113,7 +117,6 @@ impl Bee {
             // FIX: simulating shutdown
             task::sleep(std::time::Duration::from_millis(1000)).await;
         });
-
     }
 
     pub fn config(&self) -> &Config {
@@ -137,10 +140,12 @@ mod should {
 
     #[test]
     fn create_bee_from_config() {
-        let _bee = Bee::from_config(Config::builder()
-            .with_host(Host::from_address("127.0.0.1:1337"))
-            .with_peer(Peer::from_address("127.0.0.1:1338"))
-            .try_build()
-            .expect("error creating config"));
+        let _bee = Bee::from_config(
+            Config::builder()
+                .with_host(Host::from_address("127.0.0.1:1337"))
+                .with_peer(Peer::from_address("127.0.0.1:1338"))
+                .try_build()
+                .expect("error creating config"),
+        );
     }
 }

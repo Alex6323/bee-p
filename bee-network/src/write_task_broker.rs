@@ -14,17 +14,18 @@ use async_std::{
 };
 
 use crate::message::MessageToSend;
-use bee_protocol::{Message, MessageType};
 
 type Sender<T> = mpsc::UnboundedSender<T>;
 type Receiver<T> = mpsc::UnboundedReceiver<T>;
 
-pub async fn write_task_broker(
+pub async fn write_task_broker<M>(
     mut write_task_receiver: Receiver<Arc<TcpStream>>,
-    senders_of_write_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<MessageToSend>>>>,
+    senders_of_write_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<MessageToSend<M>>>>>,
     shutdown_handles_of_write_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<()>>>>,
     mut connected_peers_sender: Sender<SocketAddr>,
-) {
+) where
+    M: Clone + std::marker::Send + 'static,
+{
     while let Some(stream) = write_task_receiver.next().await {
         match stream.peer_addr() {
             Ok(address) => {
@@ -36,7 +37,7 @@ pub async fn write_task_broker(
 
                 // register message_sender of individual write_task
                 let (write_task_message_sender, write_task_message_receiver) = mpsc::unbounded();
-                let senders_of_write_tasks: &mut HashMap<SocketAddr, Sender<MessageToSend>> =
+                let senders_of_write_tasks: &mut HashMap<SocketAddr, Sender<MessageToSend<M>>> =
                     &mut *senders_of_write_tasks.lock().await;
                 senders_of_write_tasks.insert(address.clone(), write_task_message_sender);
 
@@ -56,11 +57,14 @@ pub async fn write_task_broker(
     }
 }
 
-async fn write_task(
+async fn write_task<M>(
     mut shutdown_task: Receiver<()>,
     stream: Arc<TcpStream>,
-    mut message_receiver: Receiver<MessageToSend>,
-) -> Result<(), Error> {
+    mut message_receiver: Receiver<MessageToSend<M>>,
+) -> Result<(), Error>
+where
+    M: Clone,
+{
     let mut stream = &*stream;
 
     loop {
@@ -75,7 +79,7 @@ async fn write_task(
 
         };
 
-        let message: MessageToSend = message;
+        let message: MessageToSend<M> = message;
 
         if !message.to.is_empty() && !message.to.contains(&stream.peer_addr()?) {
             continue;
