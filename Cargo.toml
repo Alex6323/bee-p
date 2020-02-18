@@ -12,7 +12,8 @@ members = [
 	"bee-tangle",
 	"bee-ternary",
 	"bee-storage",
-	"bee-storage-backends",
+	"bee-storage-sqlx",
+	"bee-storage-sled",
 
 	# ONLY TEMPORARY
 	"iota-conversion",
