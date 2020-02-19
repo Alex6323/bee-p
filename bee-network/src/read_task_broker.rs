@@ -63,15 +63,17 @@ where
 
     loop {
         let mut reader = BufReader::new(&*stream);
-        let message = R::read(reader)
-            .await
-            .map_err(|_| Error::new(ErrorKind::Other, "oh no!"))?;
+
+        // let message = R::read(reader)
+        //     .await
+        //     .map_err(|_| Error::new(ErrorKind::Other, "oh no!"))?;
+
         // // 1) Check message type
         // let mut message_type_buf = [0u8; 1];
-        // select! {
-        //     result = reader.read_exact(&mut message_type_buf).fuse() => result?,
-        //     void = shutdown_task.next().fuse() => break
-        // }
+        let message = select! {
+            result = R::read(reader).fuse() => result.map_err(|_| Error::new(ErrorKind::Other, "oh no!"))?,
+            void = shutdown_task.next().fuse() => break
+        };
         // let message_type = u8::from_be_bytes(message_type_buf);
         //
         // // 2) Check message length
