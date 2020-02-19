@@ -60,7 +60,7 @@ echo "CREATE DATABASE "$DB_NAME" WITH OWNER = "$USER";" >> setup.sql
 echo "GRANT ALL PRIVILEGES ON DATABASE "$DB_NAME" TO "$USER";" >> setup.sql
 
 
-sudo -u postgres psql -f setup.sql
-sudo -u postgres psql -f $PATH_TO_SCHEMA -U $USER $DB_NAME
+psql -U postgres  -f setup.sql
+psql -U postgres  -f $PATH_TO_SCHEMA -U $USER $DB_NAME
 
 rm -f setup.sql

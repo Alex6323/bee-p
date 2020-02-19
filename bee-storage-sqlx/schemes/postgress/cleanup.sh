@@ -8,6 +8,6 @@ CLEANUP_FILE="cleanup.sql"
 
 echo "DROP DATABASE "$DB_NAME";" > $CLEANUP_FILE
 
-sudo -u postgres psql -f $CLEANUP_FILE
+psql -U postgres -f $CLEANUP_FILE
 
 rm -f CLEANUP_FILE
