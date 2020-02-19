@@ -9,20 +9,28 @@ use crate::messages::ProtocolMessageType;
 
 use bee_network::{Message, MessageReader};
 
+use async_std::io::Read;
+use async_std::prelude::*;
+use async_trait::async_trait;
+
 use std::convert::TryInto;
-use std::io::Read;
 
 pub struct ProtocolMessageReader {}
 
+#[async_trait]
 impl MessageReader for ProtocolMessageReader {
     type MessageType = ProtocolMessageType;
     type Error = ProtocolMessageError;
 
-    fn read<R: Read>(mut reader: R) -> Result<Self::MessageType, Self::Error> {
+    async fn read<R>(mut reader: R) -> Result<Self::MessageType, Self::Error>
+    where
+        R: Read + std::marker::Unpin + std::marker::Send,
+    {
         let mut header_buffer = [0u8; 3];
 
         reader
             .read_exact(&mut header_buffer)
+            .await
             .map_err(|_| ProtocolMessageError::InvalidHeader)?;
 
         let message_type = header_buffer[0];
@@ -35,6 +43,7 @@ impl MessageReader for ProtocolMessageReader {
 
         reader
             .read_exact(&mut message)
+            .await
             .map_err(|_| ProtocolMessageError::InvalidMessage)?;
 
         match message_type {
@@ -65,38 +74,44 @@ impl MessageReader for ProtocolMessageReader {
 mod tests {
 
     use super::*;
+    use futures::executor::block_on;
 
     #[test]
     fn read_message_invalid_header_length_test() {
-        match ProtocolMessageReader::read(&[][..]) {
+        match block_on(ProtocolMessageReader::read(&[][..])) {
             Err(ProtocolMessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
-        match ProtocolMessageReader::read(&[0][..]) {
+        match block_on(ProtocolMessageReader::read(&[0][..])) {
             Err(ProtocolMessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
-        match ProtocolMessageReader::read(&[0, 0][..]) {
+        match block_on(ProtocolMessageReader::read(&[0, 0][..])) {
             Err(ProtocolMessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
     }
+
     #[test]
     fn read_message_invalid_advertised_message_length_test() {
-        match ProtocolMessageReader::read(&[0x04, 0, 7, 0, 0, 0, 0, 0][..]) {
+        match block_on(ProtocolMessageReader::read(
+            &[0x04, 0, 7, 0, 0, 0, 0, 0][..],
+        )) {
             Err(ProtocolMessageError::InvalidMessage) => (),
             _ => unreachable!(),
         }
     }
+
     #[test]
     fn read_message_invalid_message_type_test() {
-        match ProtocolMessageReader::read(&[0xff, 0, 0][..]) {
+        match block_on(ProtocolMessageReader::read(&[0xff, 0, 0][..])) {
             Err(ProtocolMessageError::InvalidMessageType(message_type)) => {
                 assert_eq!(message_type, 0xff)
             }
             _ => unreachable!(),
         }
     }
+
     #[test]
     fn read_message_test() {
         let mut bytes = Vec::new();
@@ -107,7 +122,7 @@ mod tests {
         bytes.extend_from_slice(&message_length.to_be_bytes());
         bytes.extend_from_slice(&milestone_index.to_be_bytes());
 
-        let message = match ProtocolMessageReader::read(&bytes[..]) {
+        let message = match block_on(ProtocolMessageReader::read(&bytes[..])) {
             Ok(ProtocolMessageType::MilestoneRequest(message)) => message,
             _ => unreachable!(),
         };

@@ -14,8 +14,7 @@ use crate::remove_peer;
 use crate::write_task_broker;
 
 use crate::graceful_shutdown;
-use crate::message::MessageToSend;
-use crate::message::ReceivedMessage;
+use crate::message::{MessageReader, MessageToSend, ReceivedMessage};
 use std::io::Error;
 
 pub type Sender<T> = mpsc::UnboundedSender<T>;
@@ -27,17 +26,18 @@ pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
     mpsc::unbounded()
 }
 
-pub async fn bind<M>(
+pub async fn bind<R>(
     server_config: TcpServerConfig,
     peers_to_add_receiver: Receiver<TcpClientConfig>,
-    received_messages_sender: Sender<ReceivedMessage<M>>,
-    messages_to_send_receiver: Receiver<MessageToSend<M>>,
+    received_messages_sender: Sender<ReceivedMessage<R::MessageType>>,
+    messages_to_send_receiver: Receiver<MessageToSend<R::MessageType>>,
     peers_to_remove_receiver: Receiver<SocketAddr>,
     graceful_shutdown_receiver: Receiver<()>,
     connected_peers_sender: Sender<SocketAddr>,
 ) -> Result<(), Error>
 where
-    M: Clone + std::marker::Send + std::marker::Sync + 'static,
+    R: MessageReader + 'static,
+    <R as MessageReader>::MessageType: std::clone::Clone + std::marker::Send + std::marker::Sync,
 {
     // bind server
     let listener = TcpListener::bind(server_config.address.clone()).await?;
@@ -68,7 +68,7 @@ where
     // start read_task broker
     let shutdown_handles_of_read_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<()>>>> =
         Arc::new(Mutex::new(HashMap::new()));
-    let read_task_broker_task = task::spawn(read_task_broker::read_task_broker(
+    let read_task_broker_task = task::spawn(read_task_broker::read_task_broker::<R>(
         read_task_receiver,
         received_messages_sender,
         Arc::clone(&shutdown_handles_of_read_tasks),
@@ -77,8 +77,9 @@ where
     // start assign_message
     let (assign_message_task_shutdown_sender, assign_message_task_shutdown_receiver) =
         mpsc::unbounded();
-    let senders_of_write_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<MessageToSend<M>>>>> =
-        Arc::new(Mutex::new(HashMap::new()));
+    let senders_of_write_tasks: Arc<
+        Mutex<HashMap<SocketAddr, Sender<MessageToSend<R::MessageType>>>>,
+    > = Arc::new(Mutex::new(HashMap::new()));
     let assign_message_task = task::spawn(assign_message::assign_message(
         assign_message_task_shutdown_receiver,
         messages_to_send_receiver,

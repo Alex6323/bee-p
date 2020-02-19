@@ -14,17 +14,18 @@ use async_std::{
     task,
 };
 
-use crate::message::ReceivedMessage;
+use crate::message::{MessageReader, ReceivedMessage};
 
 type Sender<T> = mpsc::UnboundedSender<T>;
 type Receiver<T> = mpsc::UnboundedReceiver<T>;
 
-pub async fn read_task_broker<M>(
+pub async fn read_task_broker<R>(
     mut read_task_receiver: Receiver<Arc<TcpStream>>,
-    received_messages_sender: Sender<ReceivedMessage<M>>,
+    received_messages_sender: Sender<ReceivedMessage<R::MessageType>>,
     shutdown_handles_of_read_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<()>>>>,
 ) where
-    M: Clone + std::marker::Send + 'static,
+    R: MessageReader + 'static,
+    <R as MessageReader>::MessageType: std::marker::Send,
 {
     while let Some(stream) = read_task_receiver.next().await {
         match stream.peer_addr() {
@@ -33,7 +34,7 @@ pub async fn read_task_broker<M>(
                 let shutdown_handles_of_read_tasks: &mut HashMap<SocketAddr, Sender<()>> =
                     &mut *shutdown_handles_of_read_tasks.lock().await;
                 shutdown_handles_of_read_tasks.insert(address, read_task_shutdown_sender);
-                spawn_and_log_error(read_task(
+                spawn_and_log_error(read_task::<R>(
                     read_task_shutdown_receiver,
                     stream,
                     received_messages_sender.clone(),
@@ -47,14 +48,21 @@ pub async fn read_task_broker<M>(
     }
 }
 
-async fn read_task<M>(
+async fn read_task<R>(
     mut shutdown_task: Receiver<()>,
     stream: Arc<TcpStream>,
-    mut received_messages: Sender<ReceivedMessage<M>>,
-) -> Result<(), Error> {
-    let mut reader = BufReader::new(&*stream);
+    mut received_messages: Sender<ReceivedMessage<R::MessageType>>,
+) -> Result<(), Error>
+where
+    R: MessageReader,
+{
+    // let mut reader = BufReader::new(&*stream);
 
     loop {
+        let mut reader = BufReader::new(&*stream);
+        let message = R::read(reader)
+            .await
+            .map_err(|_| Error::new(ErrorKind::Other, "oh no!"))?;
         // // 1) Check message type
         // let mut message_type_buf = [0u8; 1];
         // select! {
@@ -89,14 +97,14 @@ async fn read_task<M>(
         //             void = shutdown_task.next().fuse() => break
         //         }
         //
-        //         received_messages
-        //             .send(ReceivedMessage {
-        //                 from: stream.peer_addr()?,
-        //                 msg: MessageType::Test(Message::new(test_message_buf)?),
-        //             })
-        //             .await
-        //             .unwrap();
-        //     }
+        received_messages
+            .send(ReceivedMessage {
+                from: stream.peer_addr()?,
+                msg: message,
+            })
+            .await
+            .unwrap();
+        // }
         //
         //     _ => return Err(Error::new(ErrorKind::InvalidInput, "Invalid message type")),
         // }

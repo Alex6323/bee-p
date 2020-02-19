@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 use std::ops::Range;
 
+use async_std::io::Read;
 use async_std::net::SocketAddr;
-use std::io::Read;
+use async_trait::async_trait;
 
 pub trait Message {
     type Error;
@@ -18,11 +19,14 @@ pub trait Message {
     fn into_bytes(self) -> Vec<u8>;
 }
 
+#[async_trait]
 pub trait MessageReader {
     type MessageType;
     type Error;
 
-    fn read<R: Read>(reader: R) -> Result<Self::MessageType, Self::Error>;
+    async fn read<R>(reader: R) -> Result<Self::MessageType, Self::Error>
+    where
+        R: Read + std::marker::Unpin + std::marker::Send;
 }
 
 // TODO M bounds ? Deref ?

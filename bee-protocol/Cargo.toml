@@ -6,3 +6,9 @@ edition = "2018"
 
 [dependencies]
 bee-network = { path = "../bee-network" }
+
+async-std = "1.5.0"
+async-trait = "0.1.24"
+
+[dev-dependencies]
+futures = "0.3.4"

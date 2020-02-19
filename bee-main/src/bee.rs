@@ -5,7 +5,7 @@ use bee_common::{logger, Result};
 use bee_network::{
     self, bind, MessageToSend, ReceivedMessage, Receiver, Sender, TcpClientConfig, TcpServerConfig,
 };
-use bee_protocol::MessageType;
+use bee_protocol::{ProtocolMessageReader, ProtocolMessageType};
 
 use async_std::net::SocketAddr;
 use async_std::task;
@@ -56,10 +56,11 @@ impl Bee {
 
                 // received_messages channel
                 let (rm_sender, rm_receiver) =
-                    bee_network::channel::<ReceivedMessage<MessageType>>();
+                    bee_network::channel::<ReceivedMessage<ProtocolMessageType>>();
 
                 // messages_to_send channel
-                let (ms_sender, ms_receiver) = bee_network::channel::<MessageToSend<MessageType>>();
+                let (ms_sender, ms_receiver) =
+                    bee_network::channel::<MessageToSend<ProtocolMessageType>>();
 
                 // peers_to_remove channel
                 let (pr_sender, pr_receiver) = bee_network::channel::<SocketAddr>();
@@ -71,7 +72,7 @@ impl Bee {
                 let (cp_sender, cp_receiver) = bee_network::channel::<SocketAddr>();
 
                 task::block_on(async {
-                    bee_network::bind(
+                    bee_network::bind::<ProtocolMessageReader>(
                         server_config,
                         pa_receiver,
                         rm_sender,
