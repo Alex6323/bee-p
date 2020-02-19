@@ -1,10 +1,12 @@
-use bee_ternary::{Trits, TritBuf};
+use bee_ternary::{TritBuf, Trits};
 
 pub trait Seed {
     type Error;
 
     fn new() -> Self;
-    fn from_buf(buf: TritBuf) -> Result<Self, Self::Error> where Self: Sized;
+    fn from_buf(buf: TritBuf) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
     fn as_bytes(&self) -> &[i8];
     fn trits(&self) -> &Trits;
 }
@@ -27,9 +29,9 @@ pub trait PrivateKeyGenerator {
     ///
     /// ```
     /// use crypto::Kerl;
-    /// use signing::PrivateKeyGenerator;
-    /// use signing::iota_seed::IotaSeed;
-    /// use signing::wots::WotsPrivateKeyGeneratorBuilder;
+    /// use bee_signing::PrivateKeyGenerator;
+    /// use bee_signing::IotaSeed;
+    /// use bee_signing::WotsPrivateKeyGeneratorBuilder;
     ///
     /// let seed = IotaSeed::<Kerl>::new();
     /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
@@ -52,10 +54,10 @@ pub trait PrivateKey {
     ///
     /// ```
     /// # use crypto::Kerl;
-    /// # use signing::PrivateKeyGenerator;
-    /// # use signing::iota_seed::IotaSeed;
-    /// # use signing::wots::WotsPrivateKeyGeneratorBuilder;
-    /// use signing::PrivateKey;
+    /// # use bee_signing::PrivateKeyGenerator;
+    /// # use bee_signing::IotaSeed;
+    /// # use bee_signing::WotsPrivateKeyGeneratorBuilder;
+    /// use bee_signing::PrivateKey;
     ///
     /// # let seed = IotaSeed::<Kerl>::new();
     /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
@@ -74,10 +76,10 @@ pub trait PrivateKey {
     ///
     /// ```
     /// # use crypto::Kerl;
-    /// # use signing::PrivateKeyGenerator;
-    /// # use signing::iota_seed::IotaSeed;
-    /// # use signing::wots::WotsPrivateKeyGeneratorBuilder;
-    /// use signing::PrivateKey;
+    /// # use bee_signing::PrivateKeyGenerator;
+    /// # use bee_signing::IotaSeed;
+    /// # use bee_signing::WotsPrivateKeyGeneratorBuilder;
+    /// use bee_signing::PrivateKey;
     /// use iota_conversion::Trinary;
     ///
     /// # let seed = IotaSeed::<Kerl>::new();
