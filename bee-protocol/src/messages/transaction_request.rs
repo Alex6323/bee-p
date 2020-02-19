@@ -54,21 +54,7 @@ impl Message for TransactionRequest {
 mod tests {
 
     use super::*;
-
-    // TODO Move to utils ?
-    fn eq<'a, T: PartialEq>(a: &'a [T], b: &'a [T]) -> bool {
-        if a.len() != b.len() {
-            return false;
-        }
-
-        for i in 0..a.len() {
-            if a[i] != b[i] {
-                return false;
-            }
-        }
-
-        true
-    }
+    use bee_test::slices::slice_eq;
 
     #[test]
     fn size_range_test() {
@@ -99,6 +85,6 @@ mod tests {
         let message_from = TransactionRequest::new(hash);
         let message_to = TransactionRequest::from_bytes(&message_from.into_bytes()).unwrap();
 
-        assert_eq!(eq(message_to.hash(), &hash), true);
+        assert_eq!(slice_eq(message_to.hash(), &hash), true);
     }
 }

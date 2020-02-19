@@ -144,21 +144,7 @@ impl Message for Handshake {
 mod tests {
 
     use super::*;
-
-    // TODO Move to utils ?
-    fn eq<'a, T: PartialEq>(a: &'a [T], b: &'a [T]) -> bool {
-        if a.len() != b.len() {
-            return false;
-        }
-
-        for i in 0..a.len() {
-            if a[i] != b[i] {
-                return false;
-            }
-        }
-
-        true
-    }
+    use bee_test::slices::slice_eq;
 
     #[test]
     fn size_range_test() {
@@ -208,13 +194,13 @@ mod tests {
 
         assert_eq!(message_to.port(), port);
         assert_eq!(message_to.timestamp(), timestamp);
-        assert_eq!(eq(message_to.coordinator(), &coordinator), true);
+        assert_eq!(slice_eq(message_to.coordinator(), &coordinator), true);
         assert_eq!(
             message_to.minimum_weight_magnitude(),
             minimum_weight_magnitude
         );
         assert_eq!(
-            eq(message_to.supported_messages(), &supported_messages),
+            slice_eq(message_to.supported_messages(), &supported_messages),
             true
         );
     }
