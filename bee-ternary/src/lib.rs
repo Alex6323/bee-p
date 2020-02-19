@@ -94,6 +94,7 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
     }
 
     pub fn chunks(&self, chunk_len: usize) -> impl Iterator<Item=&Self> + '_ {
+        assert!(chunk_len > 0);
         (0..self.len())
             .step_by(chunk_len)
             .map(move |i| self.slice(i..(i + chunk_len).min(self.len())))
@@ -113,6 +114,7 @@ impl Trits<T1B1> {
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item=&mut Self> + '_ {
+        assert!(chunk_len > 0);
         (0..self.len())
             .step_by(chunk_len)
             .scan(self, move |this, _| {
@@ -128,7 +130,7 @@ impl Trits<T1B1> {
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     fn split_at_mut<'a>(this: &mut &'a mut Self, idx: usize) -> (&'a mut Self, &'a mut Self) {
-        assert!(idx < this.len());
+        assert!(idx <= this.len());
         (
             unsafe { &mut *(this.0.slice_unchecked_mut(0..idx) as *mut _ as *mut Self) },
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
@@ -145,7 +147,7 @@ impl<T: RawEncoding + ?Sized, U: RawEncoding + ?Sized> PartialEq<Trits<U>> for T
     }
 }
 
-impl<'a, T: RawEncoding> fmt::Debug for &'a Trits<T> {
+impl<'a, T: RawEncoding + ?Sized> fmt::Debug for &'a Trits<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Trits<{}> [", any::type_name::<T>())?;
         for (i, trit) in self.iter().enumerate() {
@@ -158,7 +160,7 @@ impl<'a, T: RawEncoding> fmt::Debug for &'a Trits<T> {
     }
 }
 
-impl<T: RawEncoding> Index<Range<usize>> for Trits<T> {
+impl<T: RawEncoding + ?Sized> Index<Range<usize>> for Trits<T> {
     type Output = Self;
 
     fn index(&self, range: Range<usize>) -> &Self::Output {
@@ -166,7 +168,7 @@ impl<T: RawEncoding> Index<Range<usize>> for Trits<T> {
     }
 }
 
-impl<T: RawEncoding> IndexMut<Range<usize>> for Trits<T> {
+impl<T: RawEncoding + ?Sized> IndexMut<Range<usize>> for Trits<T> {
     fn index_mut(&mut self, range: Range<usize>) -> &mut Self::Output {
         self.slice_mut(range)
     }

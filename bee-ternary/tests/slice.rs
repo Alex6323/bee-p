@@ -23,13 +23,23 @@ fn get_generic<T: raw::RawEncodingBuf + Clone>() {
             assert_eq!(a.get(a.len() + thread_rng().gen_range(0, 20)), None);
         });
 
-        fuzz(100, || {
-            let i = thread_rng().gen_range(0, a.len());
+        let mut sl = a.as_slice();
+        let mut sl_i8 = &a_i8[..];
+        for _ in 0..20 {
+            if sl.len() == 0 {
+                break;
+            }
+            let i = thread_rng().gen_range(0, sl.len());
             assert_eq!(
-                a.get(i),
-                Some(Trit::from(a_i8[i])),
+                sl.get(i),
+                Some(Trit::from(sl_i8[i])),
             );
-        });
+
+            let idx = thread_rng().gen_range(0, sl.len());
+            let len = thread_rng().gen_range(0, sl.len() - idx);
+            sl_i8 = &sl_i8[idx..idx + len];
+            sl = &sl[idx..idx + len];
+        }
     });
 }
 
@@ -38,16 +48,29 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
         let (mut a, mut a_i8) = gen_buf::<T>(1..1000);
 
         fuzz(100, || {
-            let i = thread_rng().gen_range(0, a.len());
-            let trit = thread_rng().gen_range(-1i8, 2);
+            let mut sl = a.as_slice_mut();
+            let mut sl_i8 = &mut a_i8[..];
+            for _ in 0..10 {
+                if sl.len() == 0 {
+                    break;
+                }
 
-            a.set(i, Trit::from(trit));
-            a_i8[i] = trit;
+                let i = thread_rng().gen_range(0, sl.len());
+                let trit = thread_rng().gen_range(-1i8, 2);
 
-            assert_eq!(
-                a.get(i),
-                Some(Trit::from(a_i8[i])),
-            );
+                sl.set(i, Trit::from(trit));
+                sl_i8[i] = trit;
+
+                assert_eq!(
+                    sl.get(i),
+                    Some(Trit::from(sl_i8[i])),
+                );
+
+                let idx = thread_rng().gen_range(0, sl.len());
+                let len = thread_rng().gen_range(0, sl.len() - idx);
+                sl_i8 = &mut sl_i8[idx..idx + len];
+                sl = &mut sl[idx..idx + len];
+            }
 
             assert!(a
                 .iter()
@@ -56,6 +79,20 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
 
             assert_eq!(a.len(), a_i8.len());
         });
+    });
+}
+
+fn chunks_generic<T: raw::RawEncodingBuf + Clone>() {
+    fuzz(100, || {
+        let (a, a_i8) = gen_buf::<T>(2..1000);
+
+        let chunk_len = thread_rng().gen_range(1, a.len());
+        for (a, a_i8) in a.chunks(chunk_len).zip(a_i8.chunks(chunk_len)) {
+            assert!(a
+                .iter()
+                .zip(a_i8.iter())
+                .all(|(a, b)| a == Trit::from(*b)));
+        }
     });
 }
 
@@ -82,4 +119,25 @@ fn set() {
 fn set_panic() {
     set_panic_generic::<T1B1Buf>();
     set_panic_generic::<T4B1Buf>();
+}
+
+#[test]
+fn chunks() {
+    chunks_generic::<T1B1Buf>();
+    chunks_generic::<T4B1Buf>();
+}
+
+#[test]
+fn chunks_mut() {
+    fuzz(100, || {
+        let (mut a, mut a_i8) = gen_buf::<T1B1Buf>(2..1000);
+
+        let chunk_len = thread_rng().gen_range(1, a.len());
+        for (a, a_i8) in a.chunks_mut(chunk_len).zip(a_i8.chunks_mut(chunk_len)) {
+            assert!(a
+                .iter()
+                .zip(a_i8.iter())
+                .all(|(a, b)| a == Trit::from(*b)));
+        }
+    });
 }

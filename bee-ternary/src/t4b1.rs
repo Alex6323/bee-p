@@ -11,7 +11,7 @@ impl T4B1 {
     }
 
     unsafe fn ptr(&self, index: usize) -> *const u8 {
-        let byte_offset = index / 4;
+        let byte_offset = (self.len_offset().1 + index) / 4;
         (self.0.as_ptr() as *const u8).offset(byte_offset as isize)
     }
 
@@ -43,11 +43,11 @@ impl RawEncoding for T4B1 {
     }
 
     unsafe fn slice_unchecked(&self, range: Range<usize>) -> &Self {
-        &*Self::make(self.ptr(0), range.start, range.end - range.start)
+        &*Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % 4, range.end - range.start)
     }
 
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self {
-        &mut *(Self::make(self.ptr(0), range.start, range.end - range.start) as *mut Self)
+        &mut *(Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % 4, range.end - range.start) as *mut Self)
     }
 }
 
