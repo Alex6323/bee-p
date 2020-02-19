@@ -5,6 +5,7 @@ authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
+bee-bundle = { path = "../bee-bundle" }
 bee-network = { path = "../bee-network" }
 
 async-std = "1.5.0"
