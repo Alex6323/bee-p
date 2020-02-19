@@ -1,12 +1,12 @@
 use std::ops::Range;
 use crate::{Trit, RawEncoding, RawEncodingBuf};
 
-const BASE: usize = 4;
+const BASE: usize = 3;
 
 #[repr(transparent)]
-pub struct T4B1([()]);
+pub struct T3B1([()]);
 
-impl T4B1 {
+impl T3B1 {
     unsafe fn make(ptr: *const u8, offset: usize, len: usize) -> *const Self {
         let len = (len << 2) | (offset % BASE);
         std::mem::transmute((ptr.offset((offset / BASE) as isize), len))
@@ -22,7 +22,7 @@ impl T4B1 {
     }
 }
 
-impl RawEncoding for T4B1 {
+impl RawEncoding for T3B1 {
     fn empty() -> &'static Self {
         unsafe { &*Self::make(&[] as *const _, 0, 0) }
     }
@@ -54,10 +54,10 @@ impl RawEncoding for T4B1 {
 }
 
 #[derive(Clone)]
-pub struct T4B1Buf(Vec<u8>, usize);
+pub struct T3B1Buf(Vec<u8>, usize);
 
-impl RawEncodingBuf for T4B1Buf {
-    type Slice = T4B1;
+impl RawEncodingBuf for T3B1Buf {
+    type Slice = T3B1;
 
     fn new() -> Self {
         Self(Vec::new(), 0)

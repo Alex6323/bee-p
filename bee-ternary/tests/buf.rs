@@ -54,19 +54,31 @@ fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>() {
 #[test]
 fn create() {
     create_generic::<T1B1Buf>();
+    create_generic::<T2B1Buf>();
+    create_generic::<T3B1Buf>();
     create_generic::<T4B1Buf>();
 }
 
 #[test]
 fn eq() {
     eq_generic::<T1B1Buf>();
+    eq_generic::<T2B1Buf>();
+    eq_generic::<T3B1Buf>();
     eq_generic::<T4B1Buf>();
 }
 
 #[test]
 fn encode() {
+    encode_generic::<T1B1Buf, T2B1Buf>();
+    encode_generic::<T1B1Buf, T3B1Buf>();
     encode_generic::<T1B1Buf, T4B1Buf>();
+    encode_generic::<T2B1Buf, T1B1Buf>();
+    encode_generic::<T3B1Buf, T1B1Buf>();
     encode_generic::<T4B1Buf, T1B1Buf>();
-    encode_generic::<T1B1Buf, T1B1Buf>();
-    encode_generic::<T4B1Buf, T4B1Buf>();
+    encode_generic::<T2B1Buf, T3B1Buf>();
+    encode_generic::<T3B1Buf, T4B1Buf>();
+    encode_generic::<T3B1Buf, T2B1Buf>();
+    encode_generic::<T2B1Buf, T3B1Buf>();
+    encode_generic::<T4B1Buf, T2B1Buf>();
+    encode_generic::<T4B1Buf, T3B1Buf>();
 }

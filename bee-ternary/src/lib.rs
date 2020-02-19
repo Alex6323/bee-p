@@ -2,6 +2,8 @@ pub mod trit;
 pub mod tryte;
 pub mod raw;
 pub mod t1b1;
+pub mod t2b1;
+pub mod t3b1;
 pub mod t4b1;
 pub mod util;
 
@@ -19,6 +21,8 @@ pub use crate::{
     tryte::{Tryte, IsTryte, TRYTE_ALPHABET},
     trit::Trit,
     t1b1::{T1B1, T1B1Buf},
+    t2b1::{T2B1, T2B1Buf},
+    t3b1::{T3B1, T3B1Buf},
     t4b1::{T4B1, T4B1Buf},
 };
 
