@@ -14,7 +14,9 @@ use async_std::{
     task,
 };
 
-use crate::message::{MessageReader, ReceivedMessage};
+use crate::message::{Message, MessageReader, ReceivedMessage};
+
+use std::ops::Deref;
 
 type Sender<T> = mpsc::UnboundedSender<T>;
 type Receiver<T> = mpsc::UnboundedReceiver<T>;
@@ -25,7 +27,8 @@ pub async fn read_task_broker<R>(
     shutdown_handles_of_read_tasks: Arc<Mutex<HashMap<SocketAddr, Sender<()>>>>,
 ) where
     R: MessageReader + 'static,
-    <R as MessageReader>::MessageType: std::marker::Send,
+    <R as MessageReader>::MessageType:
+        Deref<Target = Message<Error = R::Error>> + std::marker::Send,
 {
     while let Some(stream) = read_task_receiver.next().await {
         match stream.peer_addr() {

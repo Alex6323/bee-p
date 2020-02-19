@@ -14,13 +14,15 @@ use crate::remove_peer;
 use crate::write_task_broker;
 
 use crate::graceful_shutdown;
-use crate::message::{MessageReader, MessageToSend, ReceivedMessage};
+use crate::message::{Message, MessageReader, MessageToSend, ReceivedMessage};
 use std::io::Error;
 
 pub type Sender<T> = mpsc::UnboundedSender<T>;
 pub type Receiver<T> = mpsc::UnboundedReceiver<T>;
 
 use async_std::{net::TcpListener, prelude::*};
+
+use std::ops::Deref;
 
 pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
     mpsc::unbounded()
@@ -37,7 +39,10 @@ pub async fn bind<R>(
 ) -> Result<(), Error>
 where
     R: MessageReader + 'static,
-    <R as MessageReader>::MessageType: std::clone::Clone + std::marker::Send + std::marker::Sync,
+    <R as MessageReader>::MessageType: Deref<Target = Message<Error = R::Error>>
+        + std::clone::Clone
+        + std::marker::Send
+        + std::marker::Sync,
 {
     // bind server
     let listener = TcpListener::bind(server_config.address.clone()).await?;
