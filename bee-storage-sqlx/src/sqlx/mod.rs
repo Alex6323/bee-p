@@ -41,8 +41,7 @@ impl bee_storage::Connection<SqlxBackendConnection> for SqlxBackendConnection {
         let pool = PgPool::builder()
             .max_size(num_cpus::get() as u32)
             .build(&env::var("BEE_DATABASE_URL")?)
-            .await
-            .expect(FAILED_ESTABLISHING_CONNECTION);
+            .await?;
         self.connection_pool = Some(pool);
 
         Ok(())
