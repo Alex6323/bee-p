@@ -1,9 +1,6 @@
 mod message;
 mod neighbor;
+mod processing;
 
-pub use message::{
-    Handshake, Heartbeat, LegacyGossip, MilestoneRequest, ProtocolMessageReader,
-    ProtocolMessageType, TransactionBroadcast, TransactionRequest,
-};
-
+pub use message::{ProtocolMessageReader, ProtocolMessageType};
 pub use neighbor::Neighbor;
