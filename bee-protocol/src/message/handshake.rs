@@ -93,19 +93,17 @@ impl Message for Handshake {
 
         let mut offset = 0;
 
-        // Safe to unwrap since we made sure it has the right size
         message.port = u16::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_PORT_SIZE]
                 .try_into()
-                .unwrap(),
+                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
         );
         offset += HANDSHAKE_PORT_SIZE;
 
-        // Safe to unwrap since we made sure it has the right size
         message.timestamp = u64::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_TIMESTAMP_SIZE]
                 .try_into()
-                .unwrap(),
+                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
         );
         offset += HANDSHAKE_TIMESTAMP_SIZE;
 
@@ -114,11 +112,10 @@ impl Message for Handshake {
             .copy_from_slice(&bytes[offset..offset + HANDSHAKE_COORDINATOR_SIZE]);
         offset += HANDSHAKE_COORDINATOR_SIZE;
 
-        // Safe to unwrap since we made sure it has the right size
         message.minimum_weight_magnitude = u8::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE]
                 .try_into()
-                .unwrap(),
+                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
         );
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE;
 

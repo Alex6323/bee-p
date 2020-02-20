@@ -36,8 +36,11 @@ impl Message for MilestoneRequest {
         }
 
         Ok(Self {
-            // Safe to unwrap since we made sure it has the right size
-            index: u64::from_be_bytes(bytes[0..MILESTONE_REQUEST_INDEX_SIZE].try_into().unwrap()),
+            index: u64::from_be_bytes(
+                bytes[0..MILESTONE_REQUEST_INDEX_SIZE]
+                    .try_into()
+                    .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
+            ),
         })
     }
 

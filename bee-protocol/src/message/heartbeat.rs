@@ -52,19 +52,17 @@ impl Message for Heartbeat {
 
         let mut offset = 0;
 
-        // Safe to unwrap since we made sure it has the right size
         message.first_solid_milestone_index = u64::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
-                .unwrap(),
+                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
         );
         offset += HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE;
 
-        // Safe to unwrap since we made sure it has the right size
         message.last_solid_milestone_index = u64::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
-                .unwrap(),
+                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
         );
 
         Ok(message)
