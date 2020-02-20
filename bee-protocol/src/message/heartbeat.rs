@@ -1,6 +1,5 @@
 use crate::message::errors::ProtocolMessageError;
-
-use bee_network::Message;
+use crate::message::Message;
 
 use std::convert::TryInto;
 use std::ops::Range;

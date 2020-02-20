@@ -1,19 +1,23 @@
-use crate::message::errors::ProtocolMessageError;
-use crate::message::handshake::Handshake;
-use crate::message::heartbeat::Heartbeat;
-use crate::message::legacy_gossip::LegacyGossip;
-use crate::message::milestone_request::MilestoneRequest;
-use crate::message::transaction_broadcast::TransactionBroadcast;
-use crate::message::transaction_request::TransactionRequest;
-use crate::message::ProtocolMessageType;
-
-use bee_network::{Message, MessageReader};
+use crate::message::{
+    Handshake, Heartbeat, LegacyGossip, Message, MilestoneRequest, ProtocolMessageError,
+    ProtocolMessageType, TransactionBroadcast, TransactionRequest,
+};
 
 use async_std::io::Read;
 use async_std::prelude::*;
 use async_trait::async_trait;
 
 use std::convert::TryInto;
+
+#[async_trait]
+pub trait MessageReader {
+    type MessageType;
+    type Error;
+
+    async fn read<R>(reader: R) -> Result<Self::MessageType, Self::Error>
+    where
+        R: Read + std::marker::Unpin + std::marker::Send;
+}
 
 pub struct ProtocolMessageReader {}
 

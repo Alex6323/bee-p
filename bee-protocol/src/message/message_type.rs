@@ -5,11 +5,11 @@ use crate::message::legacy_gossip::LegacyGossip;
 use crate::message::milestone_request::MilestoneRequest;
 use crate::message::transaction_broadcast::TransactionBroadcast;
 use crate::message::transaction_request::TransactionRequest;
-
-use bee_network::Message;
+use crate::message::Message;
 
 use std::ops::Deref;
 
+// TODO probably not needed anymore
 #[non_exhaustive]
 #[derive(Clone)]
 pub enum ProtocolMessageType {
@@ -21,6 +21,7 @@ pub enum ProtocolMessageType {
     Heartbeat(Heartbeat),
 }
 
+// TODO probably not needed anymore
 impl Deref for ProtocolMessageType {
     type Target = dyn Message<Error = ProtocolMessageError>;
 

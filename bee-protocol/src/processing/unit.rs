@@ -1,5 +1,5 @@
+use crate::message::Message;
 use crate::neighbor::Neighbor;
-use bee_network::Message;
 
 pub(crate) trait ProcessingState {}
 
