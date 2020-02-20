@@ -1,20 +1,23 @@
 use crate::message::TransactionRequest;
+use crate::neighbor::Neighbor;
 use crate::processing::{ProcessingState, ProcessingUnit};
 
 struct TransactionRequestState;
 
 impl ProcessingState for TransactionRequestState {}
 
-impl ProcessingUnit<TransactionRequest, TransactionRequestState> {
-    pub fn new(message: TransactionRequest) -> Self {
+impl<'a> ProcessingUnit<'a, TransactionRequest, TransactionRequestState> {
+    pub fn new(message: TransactionRequest, neighbor: &'a Neighbor) -> Self {
         Self {
             message: Box::new(message),
+            neighbor: neighbor,
             state: TransactionRequestState {},
         }
     }
 }
 
-type TransactionRequestProcessor = ProcessingUnit<TransactionRequest, TransactionRequestState>;
+type TransactionRequestProcessor<'a> =
+    ProcessingUnit<'a, TransactionRequest, TransactionRequestState>;
 
 #[cfg(test)]
 mod tests {
@@ -29,6 +32,7 @@ mod tests {
             67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
         ];
         let message = TransactionRequest::new(hash);
-        let _processor = TransactionRequestProcessor::new(message);
+        let neighbor = Neighbor::new();
+        let _processor = TransactionRequestProcessor::new(message, &neighbor);
     }
 }
