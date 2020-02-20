@@ -1,6 +1,6 @@
-mod messages;
+mod message;
 
-pub use messages::{
+pub use message::{
     Handshake, Heartbeat, LegacyGossip, MilestoneRequest, ProtocolMessageReader,
     ProtocolMessageType, TransactionBroadcast, TransactionRequest,
 };

@@ -1,4 +1,4 @@
-use crate::messages::errors::ProtocolMessageError;
+use crate::message::errors::ProtocolMessageError;
 
 use bee_network::Message;
 

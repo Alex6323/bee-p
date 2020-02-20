@@ -1,10 +1,10 @@
-use crate::messages::errors::ProtocolMessageError;
-use crate::messages::handshake::Handshake;
-use crate::messages::heartbeat::Heartbeat;
-use crate::messages::legacy_gossip::LegacyGossip;
-use crate::messages::milestone_request::MilestoneRequest;
-use crate::messages::transaction_broadcast::TransactionBroadcast;
-use crate::messages::transaction_request::TransactionRequest;
+use crate::message::errors::ProtocolMessageError;
+use crate::message::handshake::Handshake;
+use crate::message::heartbeat::Heartbeat;
+use crate::message::legacy_gossip::LegacyGossip;
+use crate::message::milestone_request::MilestoneRequest;
+use crate::message::transaction_broadcast::TransactionBroadcast;
+use crate::message::transaction_request::TransactionRequest;
 
 use bee_network::Message;
 
