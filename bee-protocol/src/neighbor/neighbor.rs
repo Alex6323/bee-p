@@ -2,12 +2,19 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Default)]
 pub struct Neighbor {
-    handshake_count: AtomicU32,
-    heartbeat_count: AtomicU32,
-    legacy_gossip_count: AtomicU32,
-    milestone_request_count: AtomicU32,
-    transaction_broadcast_count: AtomicU32,
-    transaction_request_count: AtomicU32,
+    handshake_received: AtomicU32,
+    heartbeat_received: AtomicU32,
+    legacy_gossip_received: AtomicU32,
+    milestone_request_received: AtomicU32,
+    transaction_broadcast_received: AtomicU32,
+    transaction_request_received: AtomicU32,
+
+    handshake_sent: AtomicU32,
+    heartbeat_sent: AtomicU32,
+    legacy_gossip_sent: AtomicU32,
+    milestone_request_sent: AtomicU32,
+    transaction_broadcast_sent: AtomicU32,
+    transaction_request_sent: AtomicU32,
 }
 
 impl Neighbor {
@@ -15,54 +22,104 @@ impl Neighbor {
         Self::default()
     }
 
-    pub fn handshake_count(&self) -> u32 {
-        self.handshake_count.load(Ordering::Relaxed)
+    pub fn handshake_received(&self) -> u32 {
+        self.handshake_received.load(Ordering::Relaxed)
     }
 
-    pub fn handshake_count_inc(&self) -> u32 {
-        self.handshake_count.fetch_add(1, Ordering::SeqCst)
+    pub fn handshake_received_inc(&self) -> u32 {
+        self.handshake_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn heartbeat_count(&self) -> u32 {
-        self.heartbeat_count.load(Ordering::Relaxed)
+    pub fn heartbeat_received(&self) -> u32 {
+        self.heartbeat_received.load(Ordering::Relaxed)
     }
 
-    pub fn heartbeat_count_inc(&self) -> u32 {
-        self.heartbeat_count.fetch_add(1, Ordering::SeqCst)
+    pub fn heartbeat_received_inc(&self) -> u32 {
+        self.heartbeat_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn legacy_gossip_count(&self) -> u32 {
-        self.legacy_gossip_count.load(Ordering::Relaxed)
+    pub fn legacy_gossip_received(&self) -> u32 {
+        self.legacy_gossip_received.load(Ordering::Relaxed)
     }
 
-    pub fn legacy_gossip_count_inc(&self) -> u32 {
-        self.legacy_gossip_count.fetch_add(1, Ordering::SeqCst)
+    pub fn legacy_gossip_received_inc(&self) -> u32 {
+        self.legacy_gossip_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn milestone_request_count(&self) -> u32 {
-        self.milestone_request_count.load(Ordering::Relaxed)
+    pub fn milestone_request_received(&self) -> u32 {
+        self.milestone_request_received.load(Ordering::Relaxed)
     }
 
-    pub fn milestone_request_count_inc(&self) -> u32 {
-        self.milestone_request_count.fetch_add(1, Ordering::SeqCst)
-    }
-
-    pub fn transaction_broadcast_count(&self) -> u32 {
-        self.transaction_broadcast_count.load(Ordering::Relaxed)
-    }
-
-    pub fn transaction_broadcast_count_inc(&self) -> u32 {
-        self.transaction_broadcast_count
+    pub fn milestone_request_received_inc(&self) -> u32 {
+        self.milestone_request_received
             .fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_request_count(&self) -> u32 {
-        self.transaction_request_count.load(Ordering::Relaxed)
+    pub fn transaction_broadcast_received(&self) -> u32 {
+        self.transaction_broadcast_received.load(Ordering::Relaxed)
     }
 
-    pub fn transaction_request_count_inc(&self) -> u32 {
-        self.transaction_request_count
+    pub fn transaction_broadcast_received_inc(&self) -> u32 {
+        self.transaction_broadcast_received
             .fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn transaction_request_received(&self) -> u32 {
+        self.transaction_request_received.load(Ordering::Relaxed)
+    }
+
+    pub fn transaction_request_received_inc(&self) -> u32 {
+        self.transaction_request_received
+            .fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn handshake_sent(&self) -> u32 {
+        self.handshake_sent.load(Ordering::Relaxed)
+    }
+
+    pub fn handshake_sent_inc(&self) -> u32 {
+        self.handshake_sent.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn heartbeat_sent(&self) -> u32 {
+        self.heartbeat_sent.load(Ordering::Relaxed)
+    }
+
+    pub fn heartbeat_sent_inc(&self) -> u32 {
+        self.heartbeat_sent.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn legacy_gossip_sent(&self) -> u32 {
+        self.legacy_gossip_sent.load(Ordering::Relaxed)
+    }
+
+    pub fn legacy_gossip_sent_inc(&self) -> u32 {
+        self.legacy_gossip_sent.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn milestone_request_sent(&self) -> u32 {
+        self.milestone_request_sent.load(Ordering::Relaxed)
+    }
+
+    pub fn milestone_request_sent_inc(&self) -> u32 {
+        self.milestone_request_sent.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn transaction_broadcast_sent(&self) -> u32 {
+        self.transaction_broadcast_sent.load(Ordering::Relaxed)
+    }
+
+    pub fn transaction_broadcast_sent_inc(&self) -> u32 {
+        self.transaction_broadcast_sent
+            .fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn transaction_request_sent(&self) -> u32 {
+        self.transaction_request_sent.load(Ordering::Relaxed)
+    }
+
+    pub fn transaction_request_sent_inc(&self) -> u32 {
+        self.transaction_request_sent.fetch_add(1, Ordering::SeqCst)
     }
 }
 
@@ -72,28 +129,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn neighbor_counter_test() {
+    fn neighbor_counters_test() {
         let neighbor = Neighbor::new();
 
-        assert_eq!(neighbor.handshake_count(), 0);
-        assert_eq!(neighbor.heartbeat_count(), 0);
-        assert_eq!(neighbor.legacy_gossip_count(), 0);
-        assert_eq!(neighbor.milestone_request_count(), 0);
-        assert_eq!(neighbor.transaction_broadcast_count(), 0);
-        assert_eq!(neighbor.transaction_request_count(), 0);
+        assert_eq!(neighbor.handshake_received(), 0);
+        assert_eq!(neighbor.heartbeat_received(), 0);
+        assert_eq!(neighbor.legacy_gossip_received(), 0);
+        assert_eq!(neighbor.milestone_request_received(), 0);
+        assert_eq!(neighbor.transaction_broadcast_received(), 0);
+        assert_eq!(neighbor.transaction_request_received(), 0);
 
-        neighbor.handshake_count_inc();
-        neighbor.heartbeat_count_inc();
-        neighbor.legacy_gossip_count_inc();
-        neighbor.milestone_request_count_inc();
-        neighbor.transaction_broadcast_count_inc();
-        neighbor.transaction_request_count_inc();
+        assert_eq!(neighbor.handshake_sent(), 0);
+        assert_eq!(neighbor.heartbeat_sent(), 0);
+        assert_eq!(neighbor.legacy_gossip_sent(), 0);
+        assert_eq!(neighbor.milestone_request_sent(), 0);
+        assert_eq!(neighbor.transaction_broadcast_sent(), 0);
+        assert_eq!(neighbor.transaction_request_sent(), 0);
 
-        assert_eq!(neighbor.handshake_count(), 1);
-        assert_eq!(neighbor.heartbeat_count(), 1);
-        assert_eq!(neighbor.legacy_gossip_count(), 1);
-        assert_eq!(neighbor.milestone_request_count(), 1);
-        assert_eq!(neighbor.transaction_broadcast_count(), 1);
-        assert_eq!(neighbor.transaction_request_count(), 1);
+        neighbor.handshake_received_inc();
+        neighbor.heartbeat_received_inc();
+        neighbor.legacy_gossip_received_inc();
+        neighbor.milestone_request_received_inc();
+        neighbor.transaction_broadcast_received_inc();
+        neighbor.transaction_request_received_inc();
+
+        neighbor.handshake_sent_inc();
+        neighbor.heartbeat_sent_inc();
+        neighbor.legacy_gossip_sent_inc();
+        neighbor.milestone_request_sent_inc();
+        neighbor.transaction_broadcast_sent_inc();
+        neighbor.transaction_request_sent_inc();
+
+        assert_eq!(neighbor.handshake_received(), 1);
+        assert_eq!(neighbor.heartbeat_received(), 1);
+        assert_eq!(neighbor.legacy_gossip_received(), 1);
+        assert_eq!(neighbor.milestone_request_received(), 1);
+        assert_eq!(neighbor.transaction_broadcast_received(), 1);
+        assert_eq!(neighbor.transaction_request_received(), 1);
+
+        assert_eq!(neighbor.handshake_sent(), 1);
+        assert_eq!(neighbor.heartbeat_sent(), 1);
+        assert_eq!(neighbor.legacy_gossip_sent(), 1);
+        assert_eq!(neighbor.milestone_request_sent(), 1);
+        assert_eq!(neighbor.transaction_broadcast_sent(), 1);
+        assert_eq!(neighbor.transaction_request_sent(), 1);
     }
 }
