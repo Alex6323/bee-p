@@ -3,6 +3,8 @@ use crate::message::Message;
 
 use std::ops::Range;
 
+const TRANSACTION_BROADCAST_ID: u8 = 0x04;
+
 const TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE: usize = 292;
 const TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE: usize = 1604;
 
@@ -25,6 +27,10 @@ impl TransactionBroadcast {
 
 impl Message for TransactionBroadcast {
     type Error = ProtocolMessageError;
+
+    fn id() -> u8 {
+        TRANSACTION_BROADCAST_ID
+    }
 
     fn size_range() -> Range<usize> {
         (TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE)..(TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE + 1)
@@ -49,6 +55,11 @@ impl Message for TransactionBroadcast {
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn id_test() {
+        assert_eq!(TransactionBroadcast::id(), TRANSACTION_BROADCAST_ID);
+    }
 
     #[test]
     fn size_range_test() {

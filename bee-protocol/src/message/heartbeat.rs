@@ -4,6 +4,8 @@ use crate::message::Message;
 use std::convert::TryInto;
 use std::ops::Range;
 
+const HEARTBEAT_ID: u8 = 0x06;
+
 const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = 8;
 const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = 8;
 const HEARTBEAT_CONSTANT_SIZE: usize =
@@ -34,6 +36,10 @@ impl Heartbeat {
 
 impl Message for Heartbeat {
     type Error = ProtocolMessageError;
+
+    fn id() -> u8 {
+        HEARTBEAT_ID
+    }
 
     fn size_range() -> Range<usize> {
         (HEARTBEAT_CONSTANT_SIZE)..(HEARTBEAT_CONSTANT_SIZE + 1)
@@ -80,6 +86,11 @@ impl Message for Heartbeat {
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn id_test() {
+        assert_eq!(Heartbeat::id(), HEARTBEAT_ID);
+    }
 
     #[test]
     fn size_range_test() {

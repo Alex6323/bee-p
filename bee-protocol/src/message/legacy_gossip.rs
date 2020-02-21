@@ -3,6 +3,8 @@ use crate::message::Message;
 
 use std::ops::Range;
 
+const LEGACY_GOSSIP_ID: u8 = 0x02;
+
 const LEGACY_GOSSIP_REQUEST_SIZE: usize = 49;
 const LEGACY_GOSSIP_CONSTANT_SIZE: usize = LEGACY_GOSSIP_REQUEST_SIZE;
 const LEGACY_GOSSIP_VARIABLE_MIN_SIZE: usize = 292;
@@ -34,6 +36,10 @@ impl LegacyGossip {
 
 impl Message for LegacyGossip {
     type Error = ProtocolMessageError;
+
+    fn id() -> u8 {
+        LEGACY_GOSSIP_ID
+    }
 
     fn size_range() -> Range<usize> {
         (LEGACY_GOSSIP_CONSTANT_SIZE + LEGACY_GOSSIP_VARIABLE_MIN_SIZE)
@@ -78,6 +84,11 @@ mod tests {
 
     use super::*;
     use bee_test::slices::slice_eq;
+
+    #[test]
+    fn id_test() {
+        assert_eq!(LegacyGossip::id(), LEGACY_GOSSIP_ID);
+    }
 
     #[test]
     fn size_range_test() {

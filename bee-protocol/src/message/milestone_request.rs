@@ -4,6 +4,8 @@ use crate::message::Message;
 use std::convert::TryInto;
 use std::ops::Range;
 
+const MILESTONE_REQUEST_ID: u8 = 0x03;
+
 const MILESTONE_REQUEST_INDEX_SIZE: usize = 8;
 const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
 
@@ -24,6 +26,10 @@ impl MilestoneRequest {
 
 impl Message for MilestoneRequest {
     type Error = ProtocolMessageError;
+
+    fn id() -> u8 {
+        MILESTONE_REQUEST_ID
+    }
 
     fn size_range() -> Range<usize> {
         (MILESTONE_REQUEST_CONSTANT_SIZE)..(MILESTONE_REQUEST_CONSTANT_SIZE + 1)
@@ -52,6 +58,11 @@ impl Message for MilestoneRequest {
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn id_test() {
+        assert_eq!(MilestoneRequest::id(), MILESTONE_REQUEST_ID);
+    }
 
     #[test]
     fn size_range_test() {

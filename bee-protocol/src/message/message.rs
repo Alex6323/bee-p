@@ -3,6 +3,10 @@ use std::ops::Range;
 pub trait Message {
     type Error;
 
+    fn id() -> u8
+    where
+        Self: std::marker::Sized;
+
     fn size_range() -> Range<usize>
     where
         Self: std::marker::Sized;

@@ -3,6 +3,8 @@ use crate::message::Message;
 
 use std::ops::Range;
 
+const TRANSACTION_REQUEST_ID: u8 = 0x05;
+
 const TRANSACTION_REQUEST_HASH_SIZE: usize = 49;
 const TRANSACTION_REQUEST_CONSTANT_SIZE: usize = TRANSACTION_REQUEST_HASH_SIZE;
 
@@ -23,6 +25,10 @@ impl TransactionRequest {
 
 impl Message for TransactionRequest {
     type Error = ProtocolMessageError;
+
+    fn id() -> u8 {
+        TRANSACTION_REQUEST_ID
+    }
 
     fn size_range() -> Range<usize> {
         (TRANSACTION_REQUEST_CONSTANT_SIZE)..(TRANSACTION_REQUEST_CONSTANT_SIZE + 1)
@@ -54,6 +60,11 @@ mod tests {
 
     use super::*;
     use bee_test::slices::slice_eq;
+
+    #[test]
+    fn id_test() {
+        assert_eq!(TransactionRequest::id(), TRANSACTION_REQUEST_ID);
+    }
 
     #[test]
     fn size_range_test() {
