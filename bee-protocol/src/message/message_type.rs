@@ -12,7 +12,7 @@ use std::ops::Deref;
 // TODO probably not needed anymore
 #[non_exhaustive]
 #[derive(Clone)]
-pub enum ProtocolMessageType {
+pub(crate) enum ProtocolMessageType {
     Handshake(Handshake),
     LegacyGossip(LegacyGossip),
     MilestoneRequest(MilestoneRequest),

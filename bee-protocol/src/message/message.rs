@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-pub trait Message {
+pub(crate) trait Message {
     type Error;
 
     fn id() -> u8

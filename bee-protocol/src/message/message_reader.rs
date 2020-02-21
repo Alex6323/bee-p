@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use std::convert::TryInto;
 
 #[async_trait]
-pub trait MessageReader {
+pub(crate) trait MessageReader {
     type MessageType;
     type Error;
 
@@ -19,7 +19,7 @@ pub trait MessageReader {
         R: Read + std::marker::Unpin + std::marker::Send;
 }
 
-pub struct ProtocolMessageReader {}
+pub(crate) struct ProtocolMessageReader {}
 
 #[async_trait]
 impl MessageReader for ProtocolMessageReader {
