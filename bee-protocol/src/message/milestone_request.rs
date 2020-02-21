@@ -25,8 +25,6 @@ impl MilestoneRequest {
 }
 
 impl Message for MilestoneRequest {
-    type Error = ProtocolMessageError;
-
     fn id() -> u8 {
         MILESTONE_REQUEST_ID
     }

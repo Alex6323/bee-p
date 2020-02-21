@@ -24,8 +24,6 @@ impl TransactionRequest {
 }
 
 impl Message for TransactionRequest {
-    type Error = ProtocolMessageError;
-
     fn id() -> u8 {
         TRANSACTION_REQUEST_ID
     }

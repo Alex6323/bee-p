@@ -1,8 +1,8 @@
+use crate::message::ProtocolMessageError;
+
 use std::ops::Range;
 
 pub(crate) trait Message {
-    type Error;
-
     fn id() -> u8
     where
         Self: std::marker::Sized;
@@ -11,7 +11,7 @@ pub(crate) trait Message {
     where
         Self: std::marker::Sized;
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error>
+    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError>
     where
         Self: std::marker::Sized;
 

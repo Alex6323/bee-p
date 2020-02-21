@@ -26,8 +26,6 @@ impl TransactionBroadcast {
 }
 
 impl Message for TransactionBroadcast {
-    type Error = ProtocolMessageError;
-
     fn id() -> u8 {
         TRANSACTION_BROADCAST_ID
     }

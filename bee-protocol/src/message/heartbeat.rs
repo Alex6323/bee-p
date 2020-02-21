@@ -35,8 +35,6 @@ impl Heartbeat {
 }
 
 impl Message for Heartbeat {
-    type Error = ProtocolMessageError;
-
     fn id() -> u8 {
         HEARTBEAT_ID
     }

@@ -23,7 +23,7 @@ pub(crate) enum ProtocolMessageType {
 
 // TODO probably not needed anymore
 impl Deref for ProtocolMessageType {
-    type Target = dyn Message<Error = ProtocolMessageError>;
+    type Target = dyn Message;
 
     fn deref<'a>(&'a self) -> &'a Self::Target {
         match self {

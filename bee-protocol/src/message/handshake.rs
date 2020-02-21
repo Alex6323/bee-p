@@ -72,8 +72,6 @@ impl Handshake {
 }
 
 impl Message for Handshake {
-    type Error = ProtocolMessageError;
-
     fn id() -> u8 {
         HANDSHAKE_ID
     }

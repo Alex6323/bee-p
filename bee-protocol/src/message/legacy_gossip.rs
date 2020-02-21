@@ -35,8 +35,6 @@ impl LegacyGossip {
 }
 
 impl Message for LegacyGossip {
-    type Error = ProtocolMessageError;
-
     fn id() -> u8 {
         LEGACY_GOSSIP_ID
     }
