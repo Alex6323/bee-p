@@ -85,6 +85,9 @@ mod tests {
 
     use super::*;
 
+    const FIRST_SOLID_MILESTONE_INDEX: u64 = 0xe2659070221a4319;
+    const LAST_SOLID_MILESTONE_INDEX: u64 = 0x3500fbdebbfdfb2c;
+
     #[test]
     fn id_test() {
         assert_eq!(Heartbeat::id(), HEARTBEAT_ID);
@@ -109,12 +112,28 @@ mod tests {
         }
     }
 
-    #[test]
-    fn new_into_from_test() {
-        let message_from = Heartbeat::new(0xe2659070221a4319, 0x3500fbdebbfdfb2c);
-        let message_to = Heartbeat::from_bytes(&message_from.into_bytes()).unwrap();
+    fn into_from_eq(message: Heartbeat) {
+        assert_eq!(
+            message.first_solid_milestone_index(),
+            FIRST_SOLID_MILESTONE_INDEX
+        );
+        assert_eq!(
+            message.last_solid_milestone_index(),
+            LAST_SOLID_MILESTONE_INDEX
+        );
+    }
 
-        assert_eq!(message_to.first_solid_milestone_index(), 0xe2659070221a4319);
-        assert_eq!(message_to.last_solid_milestone_index(), 0x3500fbdebbfdfb2c);
+    #[test]
+    fn into_from_test() {
+        let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
+
+        into_from_eq(Heartbeat::from_bytes(&message_from.into_bytes()).unwrap());
+    }
+
+    #[test]
+    fn full_into_from_test() {
+        let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
+
+        into_from_eq(Heartbeat::from_full_bytes(&message_from.into_full_bytes()).unwrap());
     }
 }

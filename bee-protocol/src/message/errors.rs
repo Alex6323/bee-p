@@ -1,8 +1,8 @@
 #[derive(Debug)]
 pub enum ProtocolMessageError {
-    InvalidHeader,
-    InvalidMessage,
-    InvalidMessageField,
-    InvalidMessageType(u8),
+    InvalidHeaderLength(usize),
+    InvalidAdvertisedLengthBytes([u8; 2]),
+    InvalidAdvertisedLength(usize, usize),
     InvalidMessageLength(usize),
+    InvalidMessageField,
 }

@@ -146,6 +146,19 @@ mod tests {
     use super::*;
     use bee_test::slices::slice_eq;
 
+    const PORT: u16 = 0xcd98;
+    const TIMESTAMP: u64 = 0xb2a1d7546a470ed8;
+    const COORDINATOR: [u8; HANDSHAKE_COORDINATOR_SIZE] = [
+        160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232,
+        31, 255, 208, 9, 126, 21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93,
+        74, 238, 57, 39, 51, 169, 193, 124, 254,
+    ];
+    const MINIMUM_WEIGHT_MAGNITUDE: u8 = 0x6e;
+    const SUPPORTED_MESSAGES: [u8; HANDSHAKE_VARIABLE_MAX_SIZE] = [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0,
+    ];
+
     #[test]
     fn id_test() {
         assert_eq!(Handshake::id(), HANDSHAKE_ID);
@@ -174,39 +187,40 @@ mod tests {
         }
     }
 
-    #[test]
-    fn new_into_from_test() {
-        let port = 0xcd98;
-        let timestamp = 0xb2a1d7546a470ed8;
-        let coordinator = [
-            160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155,
-            232, 31, 255, 208, 9, 126, 21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203,
-            67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
-        ];
-        let minimum_weight_magnitude = 0x6e;
-        let supported_messages = [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0,
-        ];
-        let message_from = Handshake::new(
-            port,
-            timestamp,
-            &coordinator,
-            minimum_weight_magnitude,
-            &supported_messages,
-        );
-        let message_to = Handshake::from_bytes(&message_from.into_bytes()).unwrap();
-
-        assert_eq!(message_to.port(), port);
-        assert_eq!(message_to.timestamp(), timestamp);
-        assert_eq!(slice_eq(message_to.coordinator(), &coordinator), true);
+    fn into_from_eq(message: Handshake) {
+        assert_eq!(message.port(), PORT);
+        assert_eq!(message.timestamp(), TIMESTAMP);
+        assert_eq!(slice_eq(message.coordinator(), &COORDINATOR), true);
+        assert_eq!(message.minimum_weight_magnitude(), MINIMUM_WEIGHT_MAGNITUDE);
         assert_eq!(
-            message_to.minimum_weight_magnitude(),
-            minimum_weight_magnitude
-        );
-        assert_eq!(
-            slice_eq(message_to.supported_messages(), &supported_messages),
+            slice_eq(message.supported_messages(), &SUPPORTED_MESSAGES),
             true
         );
+    }
+
+    #[test]
+    fn into_from_test() {
+        let message_from = Handshake::new(
+            PORT,
+            TIMESTAMP,
+            &COORDINATOR,
+            MINIMUM_WEIGHT_MAGNITUDE,
+            &SUPPORTED_MESSAGES,
+        );
+
+        into_from_eq(Handshake::from_bytes(&message_from.into_bytes()).unwrap());
+    }
+
+    #[test]
+    fn full_into_from_test() {
+        let message_from = Handshake::new(
+            PORT,
+            TIMESTAMP,
+            &COORDINATOR,
+            MINIMUM_WEIGHT_MAGNITUDE,
+            &SUPPORTED_MESSAGES,
+        );
+
+        into_from_eq(Handshake::from_full_bytes(&message_from.into_full_bytes()).unwrap());
     }
 }

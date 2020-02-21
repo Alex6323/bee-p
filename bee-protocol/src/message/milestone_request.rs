@@ -57,6 +57,8 @@ mod tests {
 
     use super::*;
 
+    const INDEX: u64 = 0x3cd44cef7195aa20;
+
     #[test]
     fn id_test() {
         assert_eq!(MilestoneRequest::id(), MILESTONE_REQUEST_ID);
@@ -81,11 +83,21 @@ mod tests {
         }
     }
 
-    #[test]
-    fn new_into_from_test() {
-        let message_from = MilestoneRequest::new(0x3cd44cef7195aa20);
-        let message_to = MilestoneRequest::from_bytes(&message_from.into_bytes()).unwrap();
+    fn into_from_eq(message: MilestoneRequest) {
+        assert_eq!(message.index(), INDEX);
+    }
 
-        assert_eq!(message_to.index(), 0x3cd44cef7195aa20);
+    #[test]
+    fn into_from_test() {
+        let message_from = MilestoneRequest::new(INDEX);
+
+        into_from_eq(MilestoneRequest::from_bytes(&message_from.into_bytes()).unwrap());
+    }
+
+    #[test]
+    fn full_into_from_test() {
+        let message_from = MilestoneRequest::new(INDEX);
+
+        into_from_eq(MilestoneRequest::from_full_bytes(&message_from.into_full_bytes()).unwrap());
     }
 }
