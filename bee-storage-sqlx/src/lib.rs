@@ -75,32 +75,32 @@ mod tests {
     fn test_insert_one_transaction() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
         block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
         let res = block_on(storage.find_transaction(tx_hash));
         let found_tx = res.unwrap();
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
         assert_eq!(tx.nonce().0, found_tx.nonce().0);
     }
 
     fn test_insert_one_milestone() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
         let mut milestone = bee_test::transaction::create_random_milestone();
         milestone.index = 1;
         block_on(storage.insert_milestone(milestone.clone()));
         let res = block_on(storage.find_milestone(milestone.hash.clone()));
         let found_milestone = res.unwrap();
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
         assert_eq!(milestone.hash.to_string(), found_milestone.hash.to_string());
     }
 
     fn test_delete_one_transaction() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
         block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
         let res = block_on(storage.find_transaction(tx_hash.clone()));
@@ -113,14 +113,14 @@ mod tests {
         let res = block_on(
             storage.find_transaction(transactions_to_delete.iter().last().unwrap().clone()),
         );
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
         assert!(res.is_err());
     }
 
     fn test_delete_one_milestone() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
         let mut milestone = bee_test::transaction::create_random_milestone();
         milestone.index = 2;
         block_on(storage.insert_milestone(milestone.clone()));
@@ -133,14 +133,14 @@ mod tests {
         assert!(res.is_ok());
         let res =
             block_on(storage.find_milestone(milestones_to_delete.iter().last().unwrap().clone()));
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
         assert!(res.is_err());
     }
 
     fn test_transaction_multiple_delete() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
 
         let mut hashes = HashSet::new();
 
@@ -161,13 +161,13 @@ mod tests {
             assert!(res.is_err())
         }
 
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
     }
 
     fn test_map_hashes_to_approvers() {
         let mut storage = SqlxBackendStorage::new();
 
-       block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
 
         let mut hash_to_approvers_expected = bee_storage::HashesToApprovers::new();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
@@ -200,13 +200,13 @@ mod tests {
         });
         assert!(maps_equal);
 
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
     }
 
     fn test_map_missing_transaction_hashes_to_approvers() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
 
         let mut missing_hash_to_approvers_expected = bee_storage::MissingHashesToRCApprovers::new();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
@@ -280,13 +280,13 @@ mod tests {
         });
 
         //TODO - check ref count is equal
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
         assert!(maps_are_equal);
     }
 
     fn test_insert_transactions_concurrent() {
         let mut storage = SqlxBackendStorage::new();
-        block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
         let mut hashes_transaction_seq = Vec::new();
         let mut hashes = HashSet::new();
         const NUM_TRANSACTIONS: usize = 4000;
@@ -314,12 +314,12 @@ mod tests {
             let res = block_on(storage.find_transaction(h));
             assert!(res.is_ok());
         }
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
     }
 
     fn test_insert_transactions_batch() {
         let mut storage = SqlxBackendStorage::new();
-        block_on(storage.establish_connection());
+        block_on(storage.establish_connection()).unwrap();
         let mut hashes_to_transactions = HashMap::new();
         let mut hashes = HashSet::new();
         const NUM_TRANSACTIONS: usize = 10000;
@@ -343,7 +343,7 @@ mod tests {
             assert!(res.is_ok());
         }
 
-        block_on(storage.destroy_connection());
+        block_on(storage.destroy_connection()).unwrap();
     }
 
     #[test]
