@@ -9,7 +9,7 @@ const MILESTONE_REQUEST_ID: u8 = 0x03;
 const MILESTONE_REQUEST_INDEX_SIZE: usize = 8;
 const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub(crate) struct MilestoneRequest {
     index: u64,
 }

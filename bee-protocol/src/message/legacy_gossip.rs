@@ -34,6 +34,15 @@ impl LegacyGossip {
     }
 }
 
+impl Default for LegacyGossip {
+    fn default() -> Self {
+        Self {
+            transaction: Vec::default(),
+            request: [0; LEGACY_GOSSIP_REQUEST_SIZE],
+        }
+    }
+}
+
 impl Message for LegacyGossip {
     fn id() -> u8 {
         LEGACY_GOSSIP_ID

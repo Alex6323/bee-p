@@ -23,6 +23,14 @@ impl TransactionRequest {
     }
 }
 
+impl Default for TransactionRequest {
+    fn default() -> Self {
+        Self {
+            hash: [0; TRANSACTION_REQUEST_HASH_SIZE],
+        }
+    }
+}
+
 impl Message for TransactionRequest {
     fn id() -> u8 {
         TRANSACTION_REQUEST_ID

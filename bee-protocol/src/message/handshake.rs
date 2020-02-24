@@ -71,6 +71,18 @@ impl Handshake {
     }
 }
 
+impl Default for Handshake {
+    fn default() -> Self {
+        Self {
+            port: 0,
+            timestamp: 0,
+            coordinator: [0; HANDSHAKE_COORDINATOR_SIZE],
+            minimum_weight_magnitude: 0,
+            supported_messages: [0; HANDSHAKE_VARIABLE_MAX_SIZE],
+        }
+    }
+}
+
 impl Message for Handshake {
     fn id() -> u8 {
         HANDSHAKE_ID
