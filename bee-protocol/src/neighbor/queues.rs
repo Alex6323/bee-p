@@ -4,7 +4,7 @@ use crate::message::MilestoneRequest;
 use crate::message::TransactionBroadcast;
 use crate::message::TransactionRequest;
 
-use crossbeam_channel::{bounded, Receiver, Sender};
+use futures::channel::mpsc::{channel, Receiver, Sender};
 
 const HEARTBEAT_QUEUE_SIZE: usize = 1000;
 const LEGACY_GOSSIP_QUEUE_SIZE: usize = 1000;
@@ -23,11 +23,11 @@ pub(crate) struct NeighborQueues {
 impl Default for NeighborQueues {
     fn default() -> Self {
         Self {
-            heartbeat: bounded(HEARTBEAT_QUEUE_SIZE),
-            legacy_gossip: bounded(LEGACY_GOSSIP_QUEUE_SIZE),
-            milestone_request: bounded(MILESTONE_REQUEST_QUEUE_SIZE),
-            transaction_broadcast: bounded(TRANSACTION_BROADCAST_QUEUE_SIZE),
-            transaction_request: bounded(TRANSACTION_REQUEST_QUEUE_SIZE),
+            heartbeat: channel(HEARTBEAT_QUEUE_SIZE),
+            legacy_gossip: channel(LEGACY_GOSSIP_QUEUE_SIZE),
+            milestone_request: channel(MILESTONE_REQUEST_QUEUE_SIZE),
+            transaction_broadcast: channel(TRANSACTION_BROADCAST_QUEUE_SIZE),
+            transaction_request: channel(TRANSACTION_REQUEST_QUEUE_SIZE),
         }
     }
 }
