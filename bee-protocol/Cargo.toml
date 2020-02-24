@@ -7,9 +7,6 @@ edition = "2018"
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
 
-async-std = "1.5.0"
-async-trait = "0.1.24"
-
 [dev-dependencies]
 futures = "0.3.4"
 bee-test = { path = "../bee-test" }
