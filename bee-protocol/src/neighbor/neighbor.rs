@@ -1,8 +1,10 @@
 use crate::neighbor::NeighborMetrics;
+use crate::neighbor::NeighborQueues;
 
 #[derive(Default)]
 pub(crate) struct Neighbor {
-    pub(crate) metrics: NeighborMetrics,
+    queues: NeighborQueues,
+    metrics: NeighborMetrics,
 }
 
 impl Neighbor {
@@ -15,4 +17,9 @@ impl Neighbor {
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn neighbor_test() {
+        let neighbor = Neighbor::new();
+    }
 }

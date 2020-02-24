@@ -7,6 +7,8 @@ edition = "2018"
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
 
+crossbeam-channel = "0.4"
+
 [dev-dependencies]
 futures = "0.3.4"
 bee-test = { path = "../bee-test" }
