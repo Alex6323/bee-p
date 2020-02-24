@@ -37,10 +37,10 @@ impl SqlxBackendConnection {
 impl bee_storage::Connection<SqlxBackendConnection> for SqlxBackendConnection {
     type StorageError = SqlxBackendError;
 
-    async fn establish_connection(&mut self) -> Result<(), SqlxBackendError> {
+    async fn establish_connection(&mut self, url : &str) -> Result<(), SqlxBackendError> {
         let pool = PgPool::builder()
             .max_size(num_cpus::get() as u32)
-            .build(&env::var("BEE_DATABASE_URL")?)
+            .build(url)
             .await?;
         self.connection_pool = Some(pool);
 
@@ -63,8 +63,8 @@ impl SqlxBackendStorage {
         SqlxBackendStorage(stor)
     }
 
-    pub async fn establish_connection(&mut self) -> Result<(), SqlxBackendError> {
-        let _res = self.0.connection.establish_connection().await?;
+    pub async fn establish_connection(&mut self, url : &str) -> Result<(), SqlxBackendError> {
+        let _res = self.0.connection.establish_connection(url).await?;
         Ok(())
     }
     pub async fn destroy_connection(&mut self) -> Result<(), SqlxBackendError> {

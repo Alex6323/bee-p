@@ -49,10 +49,10 @@ if [ -z "$4" ]
     DB_NAME="$4"
 fi
 
-sed -i '/BEE_DATABASE_URL/d' ~/.bashrc
-echo "'"$PASS"'"
-echo  export BEE_DATABASE_URL="\"postgres://"$USER":"$PASS"@localhost/"$DB_NAME"\"" >> ~/.bashrc
-source ~/.bashrc
+#sed -i '/BEE_DATABASE_URL/d' ~/.bashrc
+#echo "'"$PASS"'"
+#echo  export BEE_DATABASE_URL="\"postgres://"$USER":"$PASS"@localhost/"$DB_NAME"\"" >> ~/.bashrc
+#source ~/.bashrc
 
 
 echo "CREATE USER "$USER" LOGIN PASSWORD '"$PASS"';" >> setup.sql
