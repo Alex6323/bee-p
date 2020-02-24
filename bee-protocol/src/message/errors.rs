@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub enum ProtocolMessageError {
+pub(crate) enum ProtocolMessageError {
     InvalidHeaderLength(usize),
     InvalidAdvertisedLengthBytes([u8; 2]),
     InvalidAdvertisedLength(usize, usize),

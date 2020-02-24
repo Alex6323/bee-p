@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Default)]
-pub struct Neighbor {
+pub(crate) struct Neighbor {
     handshake_received: AtomicU32,
     heartbeat_received: AtomicU32,
     legacy_gossip_received: AtomicU32,
@@ -129,7 +129,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn neighbor_counters_test() {
+    fn neighbor_counters_received_test() {
         let neighbor = Neighbor::new();
 
         assert_eq!(neighbor.handshake_received(), 0);
@@ -139,13 +139,6 @@ mod tests {
         assert_eq!(neighbor.transaction_broadcast_received(), 0);
         assert_eq!(neighbor.transaction_request_received(), 0);
 
-        assert_eq!(neighbor.handshake_sent(), 0);
-        assert_eq!(neighbor.heartbeat_sent(), 0);
-        assert_eq!(neighbor.legacy_gossip_sent(), 0);
-        assert_eq!(neighbor.milestone_request_sent(), 0);
-        assert_eq!(neighbor.transaction_broadcast_sent(), 0);
-        assert_eq!(neighbor.transaction_request_sent(), 0);
-
         neighbor.handshake_received_inc();
         neighbor.heartbeat_received_inc();
         neighbor.legacy_gossip_received_inc();
@@ -153,19 +146,31 @@ mod tests {
         neighbor.transaction_broadcast_received_inc();
         neighbor.transaction_request_received_inc();
 
-        neighbor.handshake_sent_inc();
-        neighbor.heartbeat_sent_inc();
-        neighbor.legacy_gossip_sent_inc();
-        neighbor.milestone_request_sent_inc();
-        neighbor.transaction_broadcast_sent_inc();
-        neighbor.transaction_request_sent_inc();
-
         assert_eq!(neighbor.handshake_received(), 1);
         assert_eq!(neighbor.heartbeat_received(), 1);
         assert_eq!(neighbor.legacy_gossip_received(), 1);
         assert_eq!(neighbor.milestone_request_received(), 1);
         assert_eq!(neighbor.transaction_broadcast_received(), 1);
         assert_eq!(neighbor.transaction_request_received(), 1);
+    }
+
+    #[test]
+    fn neighbor_counter_sent_test() {
+        let neighbor = Neighbor::new();
+
+        assert_eq!(neighbor.handshake_sent(), 0);
+        assert_eq!(neighbor.heartbeat_sent(), 0);
+        assert_eq!(neighbor.legacy_gossip_sent(), 0);
+        assert_eq!(neighbor.milestone_request_sent(), 0);
+        assert_eq!(neighbor.transaction_broadcast_sent(), 0);
+        assert_eq!(neighbor.transaction_request_sent(), 0);
+
+        neighbor.handshake_sent_inc();
+        neighbor.heartbeat_sent_inc();
+        neighbor.legacy_gossip_sent_inc();
+        neighbor.milestone_request_sent_inc();
+        neighbor.transaction_broadcast_sent_inc();
+        neighbor.transaction_request_sent_inc();
 
         assert_eq!(neighbor.handshake_sent(), 1);
         assert_eq!(neighbor.heartbeat_sent(), 1);

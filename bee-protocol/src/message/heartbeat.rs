@@ -12,7 +12,7 @@ const HEARTBEAT_CONSTANT_SIZE: usize =
     HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE;
 
 #[derive(Clone)]
-pub struct Heartbeat {
+pub(crate) struct Heartbeat {
     first_solid_milestone_index: u64,
     last_solid_milestone_index: u64,
 }

@@ -9,7 +9,7 @@ const TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE: usize = 292;
 const TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE: usize = 1604;
 
 #[derive(Clone)]
-pub struct TransactionBroadcast {
+pub(crate) struct TransactionBroadcast {
     transaction: Vec<u8>,
 }
 

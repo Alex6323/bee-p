@@ -1,3 +1,3 @@
 mod neighbor;
 
-pub use neighbor::Neighbor;
+pub(crate) use neighbor::Neighbor;
