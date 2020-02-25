@@ -2,6 +2,13 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Default)]
 pub(crate) struct NeighborMetrics {
+    all_transactions: AtomicU32,
+    invalid_transactions: AtomicU32,
+    stale_transactions: AtomicU32,
+    random_transactions: AtomicU32,
+    sent_transactions: AtomicU32,
+    new_transactions: AtomicU32,
+
     handshake_received: AtomicU32,
     heartbeat_received: AtomicU32,
     legacy_gossip_received: AtomicU32,
@@ -18,6 +25,54 @@ pub(crate) struct NeighborMetrics {
 }
 
 impl NeighborMetrics {
+    pub fn all_transactions(&self) -> u32 {
+        self.all_transactions.load(Ordering::Relaxed)
+    }
+
+    pub fn all_transactions_inc(&self) -> u32 {
+        self.all_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn invalid_transactions(&self) -> u32 {
+        self.invalid_transactions.load(Ordering::Relaxed)
+    }
+
+    pub fn invalid_transactions_inc(&self) -> u32 {
+        self.invalid_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn stale_transactions(&self) -> u32 {
+        self.stale_transactions.load(Ordering::Relaxed)
+    }
+
+    pub fn stale_transactions_inc(&self) -> u32 {
+        self.stale_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn random_transactions(&self) -> u32 {
+        self.random_transactions.load(Ordering::Relaxed)
+    }
+
+    pub fn random_transactions_inc(&self) -> u32 {
+        self.random_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn sent_transactions(&self) -> u32 {
+        self.sent_transactions.load(Ordering::Relaxed)
+    }
+
+    pub fn sent_transactions_inc(&self) -> u32 {
+        self.sent_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn new_transactions(&self) -> u32 {
+        self.new_transactions.load(Ordering::Relaxed)
+    }
+
+    pub fn new_transactions_inc(&self) -> u32 {
+        self.new_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
     pub fn handshake_received(&self) -> u32 {
         self.handshake_received.load(Ordering::Relaxed)
     }
@@ -123,6 +178,32 @@ impl NeighborMetrics {
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn neighbor_metrics_transactions_test() {
+        let metrics = NeighborMetrics::default();
+
+        assert_eq!(metrics.all_transactions(), 0);
+        assert_eq!(metrics.invalid_transactions(), 0);
+        assert_eq!(metrics.stale_transactions(), 0);
+        assert_eq!(metrics.random_transactions(), 0);
+        assert_eq!(metrics.sent_transactions(), 0);
+        assert_eq!(metrics.new_transactions(), 0);
+
+        metrics.all_transactions_inc();
+        metrics.invalid_transactions_inc();
+        metrics.stale_transactions_inc();
+        metrics.random_transactions_inc();
+        metrics.sent_transactions_inc();
+        metrics.new_transactions_inc();
+
+        assert_eq!(metrics.all_transactions(), 1);
+        assert_eq!(metrics.invalid_transactions(), 1);
+        assert_eq!(metrics.stale_transactions(), 1);
+        assert_eq!(metrics.random_transactions(), 1);
+        assert_eq!(metrics.sent_transactions_inc(), 1);
+        assert_eq!(metrics.new_transactions(), 1);
+    }
 
     #[test]
     fn neighbor_metrics_received_messages_test() {
