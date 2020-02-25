@@ -10,5 +10,4 @@ bee-bundle = { path = "../bee-bundle" }
 futures = "0.3.4"
 
 [dev-dependencies]
-futures = "0.3.4"
 bee-test = { path = "../bee-test" }
