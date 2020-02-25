@@ -10,12 +10,8 @@ pub enum Trit {
 
 impl From<i8> for Trit {
     fn from(x: i8) -> Self {
-        match x {
-            -1 => Trit::MinusOne,
-            0 => Trit::Zero,
-            1 => Trit::PlusOne,
-            x => panic!("Invalid trit representation '{}'", x),
-        }
+        Self::try_from(x)
+            .unwrap_or_else(|_| panic!("Invalid trit representation '{}'", x))
     }
 }
 
@@ -40,6 +36,16 @@ impl Into<i8> for Trit {
 }
 
 impl Trit {
+    // TODO: Use std::convert::TryFrom
+    pub fn try_from(x: i8) -> Result<Self, ()> {
+        match x {
+            -1 => Ok(Trit::MinusOne),
+            0 => Ok(Trit::Zero),
+            1 => Ok(Trit::PlusOne),
+            x => Err(()),
+        }
+    }
+
     pub fn checked_increment(self) -> Option<Self> {
         match self {
             Trit::MinusOne => Some(Trit::Zero),

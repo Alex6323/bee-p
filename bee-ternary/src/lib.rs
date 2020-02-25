@@ -7,6 +7,9 @@ pub mod t3b1;
 pub mod t4b1;
 pub mod util;
 
+#[cfg(feature = "serde1")]
+mod serde;
+
 use std::{
     ops::{Deref, DerefMut, Range, Index, IndexMut},
     cmp::PartialEq,
