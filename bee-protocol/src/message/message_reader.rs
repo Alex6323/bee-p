@@ -1,5 +1,5 @@
 use crate::message::{
-    Handshake, Heartbeat, LegacyGossip, Message, MilestoneRequest, ProtocolMessageError,
+    Handshake, Heartbeat, LegacyGossip, Message, MessageError, MilestoneRequest,
     ProtocolMessageType, TransactionBroadcast, TransactionRequest,
 };
 
@@ -24,7 +24,7 @@ pub(crate) struct ProtocolMessageReader {}
 #[async_trait]
 impl MessageReader for ProtocolMessageReader {
     type MessageType = ProtocolMessageType;
-    type Error = ProtocolMessageError;
+    type Error = MessageError;
 
     async fn read<R>(mut reader: R) -> Result<Self::MessageType, Self::Error>
     where
@@ -35,20 +35,20 @@ impl MessageReader for ProtocolMessageReader {
         reader
             .read_exact(&mut header_buffer)
             .await
-            .map_err(|_| ProtocolMessageError::InvalidHeader)?;
+            .map_err(|_| MessageError::InvalidHeader)?;
 
         let message_type = header_buffer[0];
         let message_length = u16::from_be_bytes(
             header_buffer[1..3]
                 .try_into()
-                .map_err(|_| ProtocolMessageError::InvalidHeader)?,
+                .map_err(|_| MessageError::InvalidHeader)?,
         );
         let mut message = vec![0u8; message_length as usize];
 
         reader
             .read_exact(&mut message)
             .await
-            .map_err(|_| ProtocolMessageError::InvalidMessage)?;
+            .map_err(|_| MessageError::InvalidMessage)?;
 
         match message_type {
             0x01 => Ok(ProtocolMessageType::Handshake(Handshake::from_bytes(
@@ -69,7 +69,7 @@ impl MessageReader for ProtocolMessageReader {
             0x06 => Ok(ProtocolMessageType::Heartbeat(Heartbeat::from_bytes(
                 &message,
             )?)),
-            _ => Err(ProtocolMessageError::InvalidMessageType(message_type)),
+            _ => Err(MessageError::InvalidMessageType(message_type)),
         }
     }
 }
@@ -83,15 +83,15 @@ mod tests {
     #[test]
     fn read_message_invalid_header_length_test() {
         match block_on(ProtocolMessageReader::read(&[][..])) {
-            Err(ProtocolMessageError::InvalidHeader) => (),
+            Err(MessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
         match block_on(ProtocolMessageReader::read(&[0][..])) {
-            Err(ProtocolMessageError::InvalidHeader) => (),
+            Err(MessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
         match block_on(ProtocolMessageReader::read(&[0, 0][..])) {
-            Err(ProtocolMessageError::InvalidHeader) => (),
+            Err(MessageError::InvalidHeader) => (),
             _ => unreachable!(),
         }
     }
@@ -101,7 +101,7 @@ mod tests {
         match block_on(ProtocolMessageReader::read(
             &[0x04, 0, 7, 0, 0, 0, 0, 0][..],
         )) {
-            Err(ProtocolMessageError::InvalidMessage) => (),
+            Err(MessageError::InvalidMessage) => (),
             _ => unreachable!(),
         }
     }
@@ -109,9 +109,7 @@ mod tests {
     #[test]
     fn read_message_invalid_message_type_test() {
         match block_on(ProtocolMessageReader::read(&[0xff, 0, 0][..])) {
-            Err(ProtocolMessageError::InvalidMessageType(message_type)) => {
-                assert_eq!(message_type, 0xff)
-            }
+            Err(MessageError::InvalidMessageType(message_type)) => assert_eq!(message_type, 0xff),
             _ => unreachable!(),
         }
     }

@@ -1,4 +1,4 @@
-use crate::message::errors::ProtocolMessageError;
+use crate::message::errors::MessageError;
 use crate::message::Message;
 
 use std::ops::Range;
@@ -53,9 +53,9 @@ impl Message for LegacyGossip {
             ..(LEGACY_GOSSIP_CONSTANT_SIZE + LEGACY_GOSSIP_VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(ProtocolMessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
         let mut message = Self {
@@ -145,11 +145,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match LegacyGossip::from_bytes(&[0; 340]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 340),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 340),
             _ => unreachable!(),
         }
         match LegacyGossip::from_bytes(&[0; 1654]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 1654),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 1654),
             _ => unreachable!(),
         }
     }

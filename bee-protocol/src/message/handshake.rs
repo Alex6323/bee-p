@@ -1,4 +1,4 @@
-use crate::message::errors::ProtocolMessageError;
+use crate::message::errors::MessageError;
 use crate::message::Message;
 
 use std::convert::TryInto;
@@ -93,9 +93,9 @@ impl Message for Handshake {
             ..(HANDSHAKE_CONSTANT_SIZE + HANDSHAKE_VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(ProtocolMessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
         let mut message = Self {
@@ -111,14 +111,14 @@ impl Message for Handshake {
         message.port = u16::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_PORT_SIZE]
                 .try_into()
-                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidMessageField)?,
         );
         offset += HANDSHAKE_PORT_SIZE;
 
         message.timestamp = u64::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_TIMESTAMP_SIZE]
                 .try_into()
-                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidMessageField)?,
         );
         offset += HANDSHAKE_TIMESTAMP_SIZE;
 
@@ -130,7 +130,7 @@ impl Message for Handshake {
         message.minimum_weight_magnitude = u8::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE]
                 .try_into()
-                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidMessageField)?,
         );
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE;
 
@@ -190,11 +190,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match Handshake::from_bytes(&[0; 60]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 60),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 60),
             _ => unreachable!(),
         }
         match Handshake::from_bytes(&[0; 93]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 93),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 93),
             _ => unreachable!(),
         }
     }

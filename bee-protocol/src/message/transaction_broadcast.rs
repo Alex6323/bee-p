@@ -1,4 +1,4 @@
-use crate::message::errors::ProtocolMessageError;
+use crate::message::errors::MessageError;
 use crate::message::Message;
 
 use std::ops::Range;
@@ -34,9 +34,9 @@ impl Message for TransactionBroadcast {
         (TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE)..(TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(ProtocolMessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
         Ok(Self {
@@ -103,11 +103,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match TransactionBroadcast::from_bytes(&[0; 291]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 291),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 291),
             _ => unreachable!(),
         }
         match TransactionBroadcast::from_bytes(&[0; 1605]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 1605),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 1605),
             _ => unreachable!(),
         }
     }

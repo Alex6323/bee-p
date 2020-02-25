@@ -1,4 +1,4 @@
-use crate::message::errors::ProtocolMessageError;
+use crate::message::errors::MessageError;
 use crate::message::Message;
 
 use std::convert::TryInto;
@@ -33,16 +33,16 @@ impl Message for MilestoneRequest {
         (MILESTONE_REQUEST_CONSTANT_SIZE)..(MILESTONE_REQUEST_CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(ProtocolMessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
         Ok(Self {
             index: u64::from_be_bytes(
                 bytes[0..MILESTONE_REQUEST_INDEX_SIZE]
                     .try_into()
-                    .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
+                    .map_err(|_| MessageError::InvalidMessageField)?,
             ),
         })
     }
@@ -74,11 +74,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match MilestoneRequest::from_bytes(&[0; 7]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 7),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 7),
             _ => unreachable!(),
         }
         match MilestoneRequest::from_bytes(&[0; 9]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 9),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 9),
             _ => unreachable!(),
         }
     }

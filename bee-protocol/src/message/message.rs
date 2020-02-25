@@ -1,4 +1,4 @@
-use crate::message::ProtocolMessageError;
+use crate::message::MessageError;
 
 use std::convert::TryInto;
 use std::ops::Range;
@@ -12,24 +12,26 @@ pub(crate) trait Message {
     where
         Self: std::marker::Sized;
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError>
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError>
     where
         Self: std::marker::Sized;
 
-    fn from_full_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError>
+    fn from_full_bytes(bytes: &[u8]) -> Result<Self, MessageError>
     where
         Self: std::marker::Sized,
     {
         if bytes.len() < 3 {
-            Err(ProtocolMessageError::InvalidHeaderLength(bytes.len()))?;
+            Err(MessageError::InvalidHeaderLength(bytes.len()))?;
         }
 
-        let message_length = u16::from_be_bytes(bytes[1..3].try_into().map_err(|_| {
-            ProtocolMessageError::InvalidAdvertisedLengthBytes([bytes[1], bytes[2]])
-        })?);
+        let message_length = u16::from_be_bytes(
+            bytes[1..3]
+                .try_into()
+                .map_err(|_| MessageError::InvalidAdvertisedLengthBytes([bytes[1], bytes[2]]))?,
+        );
 
         if message_length as usize != bytes[3..].len() {
-            Err(ProtocolMessageError::InvalidAdvertisedLength(
+            Err(MessageError::InvalidAdvertisedLength(
                 message_length as usize,
                 bytes[3..].len(),
             ))?;

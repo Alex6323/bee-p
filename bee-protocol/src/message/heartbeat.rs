@@ -1,4 +1,4 @@
-use crate::message::errors::ProtocolMessageError;
+use crate::message::errors::MessageError;
 use crate::message::Message;
 
 use std::convert::TryInto;
@@ -43,9 +43,9 @@ impl Message for Heartbeat {
         (HEARTBEAT_CONSTANT_SIZE)..(HEARTBEAT_CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, ProtocolMessageError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(ProtocolMessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
         let mut message = Self {
@@ -58,14 +58,14 @@ impl Message for Heartbeat {
         message.first_solid_milestone_index = u64::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
-                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidMessageField)?,
         );
         offset += HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE;
 
         message.last_solid_milestone_index = u64::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
-                .map_err(|_| ProtocolMessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidMessageField)?,
         );
 
         Ok(message)
@@ -103,11 +103,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match Heartbeat::from_bytes(&[0; 15]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 15),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 15),
             _ => unreachable!(),
         }
         match Heartbeat::from_bytes(&[0; 17]) {
-            Err(ProtocolMessageError::InvalidMessageLength(length)) => assert_eq!(length, 17),
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 17),
             _ => unreachable!(),
         }
     }
