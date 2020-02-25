@@ -1,10 +1,10 @@
-use crate::neighbor::NeighborMetrics;
 use crate::neighbor::NeighborQueues;
+use crate::node::NodeMetrics;
 
 #[derive(Default)]
 pub(crate) struct Neighbor {
     queues: NeighborQueues,
-    metrics: NeighborMetrics,
+    metrics: NodeMetrics,
 }
 
 impl Neighbor {

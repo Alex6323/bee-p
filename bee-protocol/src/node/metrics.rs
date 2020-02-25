@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Default)]
-pub(crate) struct NeighborMetrics {
+pub(crate) struct NodeMetrics {
     all_transactions: AtomicU32,
     invalid_transactions: AtomicU32,
     stale_transactions: AtomicU32,
@@ -24,7 +24,7 @@ pub(crate) struct NeighborMetrics {
     transaction_request_sent: AtomicU32,
 }
 
-impl NeighborMetrics {
+impl NodeMetrics {
     pub fn all_transactions(&self) -> u32 {
         self.all_transactions.load(Ordering::Relaxed)
     }
@@ -180,8 +180,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn neighbor_metrics_transactions_test() {
-        let metrics = NeighborMetrics::default();
+    fn node_metrics_transactions_test() {
+        let metrics = NodeMetrics::default();
 
         assert_eq!(metrics.all_transactions(), 0);
         assert_eq!(metrics.invalid_transactions(), 0);
@@ -206,8 +206,8 @@ mod tests {
     }
 
     #[test]
-    fn neighbor_metrics_received_messages_test() {
-        let metrics = NeighborMetrics::default();
+    fn node_metrics_received_messages_test() {
+        let metrics = NodeMetrics::default();
 
         assert_eq!(metrics.handshake_received(), 0);
         assert_eq!(metrics.heartbeat_received(), 0);
@@ -232,8 +232,8 @@ mod tests {
     }
 
     #[test]
-    fn neighbor_metrics_sent_messages_test() {
-        let metrics = NeighborMetrics::default();
+    fn node_metrics_sent_messages_test() {
+        let metrics = NodeMetrics::default();
 
         assert_eq!(metrics.handshake_sent(), 0);
         assert_eq!(metrics.heartbeat_sent(), 0);
