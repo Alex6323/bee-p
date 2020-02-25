@@ -27,13 +27,6 @@ impl Neighbor {
         self.queues.handshake.0.send(handshake).await
     }
 
-    pub async fn send_heartbeat(&mut self, heartbeat: Heartbeat) -> Result<(), SendError> {
-        // TODO add server metrics
-        self.metrics.heartbeat_sent_inc();
-
-        self.queues.heartbeat.0.send(heartbeat).await
-    }
-
     pub async fn send_legacy_gossip(
         &mut self,
         legacy_gossip: LegacyGossip,
@@ -86,15 +79,22 @@ impl Neighbor {
             .await
     }
 
+    pub async fn send_heartbeat(&mut self, heartbeat: Heartbeat) -> Result<(), SendError> {
+        // TODO add server metrics
+        self.metrics.heartbeat_sent_inc();
+
+        self.queues.heartbeat.0.send(heartbeat).await
+    }
+
     pub async fn send_task(&mut self) -> Result<(), ()> {
         loop {
             select! {
                 message = self.queues.handshake.1.next().fuse() => (),
-                message = self.queues.heartbeat.1.next().fuse() => (),
                 message = self.queues.legacy_gossip.1.next().fuse() => (),
                 message = self.queues.milestone_request.1.next().fuse() => (),
                 message = self.queues.transaction_broadcast.1.next().fuse() => (),
                 message = self.queues.transaction_request.1.next().fuse() => (),
+                message = self.queues.heartbeat.1.next().fuse() => (),
             };
         }
 
