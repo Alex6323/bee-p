@@ -13,6 +13,7 @@ use futures::{select, FutureExt};
 pub(crate) struct Neighbor {
     queues: NeighborQueues,
     metrics: NodeMetrics,
+    heartbeat: Heartbeat,
 }
 
 impl Neighbor {
