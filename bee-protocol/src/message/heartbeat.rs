@@ -6,30 +6,30 @@ use std::ops::Range;
 
 const HEARTBEAT_ID: u8 = 0x06;
 
-const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = 8;
-const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = 8;
+const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = 4;
+const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = 4;
 const HEARTBEAT_CONSTANT_SIZE: usize =
     HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct Heartbeat {
-    first_solid_milestone_index: u64,
-    last_solid_milestone_index: u64,
+    first_solid_milestone_index: u32,
+    last_solid_milestone_index: u32,
 }
 
 impl Heartbeat {
-    pub fn new(first_solid_milestone_index: u64, last_solid_milestone_index: u64) -> Self {
+    pub fn new(first_solid_milestone_index: u32, last_solid_milestone_index: u32) -> Self {
         Self {
             first_solid_milestone_index: first_solid_milestone_index,
             last_solid_milestone_index: last_solid_milestone_index,
         }
     }
 
-    pub fn first_solid_milestone_index(&self) -> u64 {
+    pub fn first_solid_milestone_index(&self) -> u32 {
         self.first_solid_milestone_index
     }
 
-    pub fn last_solid_milestone_index(&self) -> u64 {
+    pub fn last_solid_milestone_index(&self) -> u32 {
         self.last_solid_milestone_index
     }
 }
@@ -55,14 +55,14 @@ impl Message for Heartbeat {
 
         let mut offset = 0;
 
-        message.first_solid_milestone_index = u64::from_be_bytes(
+        message.first_solid_milestone_index = u32::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidMessageField)?,
         );
         offset += HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE;
 
-        message.last_solid_milestone_index = u64::from_be_bytes(
+        message.last_solid_milestone_index = u32::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidMessageField)?,
@@ -85,8 +85,8 @@ mod tests {
 
     use super::*;
 
-    const FIRST_SOLID_MILESTONE_INDEX: u64 = 0xe2659070221a4319;
-    const LAST_SOLID_MILESTONE_INDEX: u64 = 0x3500fbdebbfdfb2c;
+    const FIRST_SOLID_MILESTONE_INDEX: u32 = 0x3dc297b4;
+    const LAST_SOLID_MILESTONE_INDEX: u32 = 0x01181f9b;
 
     #[test]
     fn id_test() {
@@ -95,19 +95,19 @@ mod tests {
 
     #[test]
     fn size_range_test() {
-        assert_eq!(Heartbeat::size_range().contains(&15), false);
-        assert_eq!(Heartbeat::size_range().contains(&16), true);
-        assert_eq!(Heartbeat::size_range().contains(&17), false);
+        assert_eq!(Heartbeat::size_range().contains(&7), false);
+        assert_eq!(Heartbeat::size_range().contains(&8), true);
+        assert_eq!(Heartbeat::size_range().contains(&9), false);
     }
 
     #[test]
     fn from_bytes_invalid_length_test() {
-        match Heartbeat::from_bytes(&[0; 15]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 15),
+        match Heartbeat::from_bytes(&[0; 7]) {
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 7),
             _ => unreachable!(),
         }
-        match Heartbeat::from_bytes(&[0; 17]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 17),
+        match Heartbeat::from_bytes(&[0; 9]) {
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 9),
             _ => unreachable!(),
         }
     }
