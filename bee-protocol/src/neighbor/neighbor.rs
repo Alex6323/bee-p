@@ -4,6 +4,8 @@ use crate::message::{
 use crate::neighbor::NeighborQueues;
 use crate::node::NodeMetrics;
 
+use bee_common::logger;
+
 use futures::channel::mpsc::SendError;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
@@ -87,7 +89,9 @@ impl Neighbor {
         self.queues.heartbeat.0.send(heartbeat).await
     }
 
-    pub async fn send_task(&mut self) -> Result<(), ()> {
+    pub async fn actor(&mut self) {
+        logger::debug("Neighbor actor launched for [PeerID]");
+
         loop {
             select! {
                 message = self.queues.handshake.1.next().fuse() => (),
@@ -98,8 +102,6 @@ impl Neighbor {
                 message = self.queues.heartbeat.1.next().fuse() => (),
             };
         }
-
-        Ok(())
     }
 }
 
