@@ -38,7 +38,7 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait Connection<Conn> {
     type StorageError;
-    async fn establish_connection(&mut self) -> Result<(), Self::StorageError>;
+    async fn establish_connection(&mut self, url : &str) -> Result<(), Self::StorageError>;
     async fn destroy_connection(&mut self) -> Result<(), Self::StorageError>;
 }
 

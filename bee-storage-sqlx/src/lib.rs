@@ -25,6 +25,10 @@ mod tests {
     use std::thread;
     use std::time::{Duration, Instant};
 
+    fn test_db_url() -> String {
+        format!("postgres://{}:dummy_password@localhost/{}", BEE_TEST_DB_USER, BEE_TEST_DB_NAME)
+    }
+
     fn run_test<T>(test: T) -> ()
     where
         T: FnOnce() -> () + panic::UnwindSafe,
@@ -75,7 +79,7 @@ mod tests {
     fn test_insert_one_transaction() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
         block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
         let res = block_on(storage.find_transaction(tx_hash));
@@ -87,7 +91,7 @@ mod tests {
     fn test_insert_one_milestone() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let mut milestone = bee_test::transaction::create_random_milestone();
         milestone.index = 1;
         block_on(storage.insert_milestone(milestone.clone()));
@@ -100,7 +104,7 @@ mod tests {
     fn test_delete_one_transaction() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
         block_on(storage.insert_transaction(tx_hash.clone(), tx.clone()));
         let res = block_on(storage.find_transaction(tx_hash.clone()));
@@ -120,7 +124,7 @@ mod tests {
     fn test_delete_one_milestone() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let mut milestone = bee_test::transaction::create_random_milestone();
         milestone.index = 2;
         block_on(storage.insert_milestone(milestone.clone()));
@@ -140,7 +144,7 @@ mod tests {
     fn test_transaction_multiple_delete() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
 
         let mut hashes = HashSet::new();
 
@@ -167,7 +171,7 @@ mod tests {
     fn test_map_hashes_to_approvers() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
 
         let mut hash_to_approvers_expected = bee_storage::HashesToApprovers::new();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
@@ -206,7 +210,7 @@ mod tests {
     fn test_map_missing_transaction_hashes_to_approvers() {
         let mut storage = SqlxBackendStorage::new();
 
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
 
         let mut missing_hash_to_approvers_expected = bee_storage::MissingHashesToRCApprovers::new();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
@@ -286,7 +290,7 @@ mod tests {
 
     fn test_insert_transactions_concurrent() {
         let mut storage = SqlxBackendStorage::new();
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let mut hashes_transaction_seq = Vec::new();
         let mut hashes = HashSet::new();
         const NUM_TRANSACTIONS: usize = 4000;
@@ -319,7 +323,7 @@ mod tests {
 
     fn test_insert_transactions_batch() {
         let mut storage = SqlxBackendStorage::new();
-        block_on(storage.establish_connection()).unwrap();
+        block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let mut hashes_to_transactions = HashMap::new();
         let mut hashes = HashSet::new();
         const NUM_TRANSACTIONS: usize = 10000;
