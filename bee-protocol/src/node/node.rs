@@ -4,17 +4,23 @@ use crate::message::{
 use crate::neighbor::Neighbor;
 use crate::node::NodeMetrics;
 
+use std::collections::HashMap;
+
 use async_std::task::{block_on, spawn};
 use futures::channel::mpsc::SendError;
 use futures::sink::SinkExt;
 
 struct Node {
+    // TODO thread-safety
+    // TODO PeerID
+    neighbors: HashMap<String, Neighbor>,
     metrics: NodeMetrics,
 }
 
 impl Node {
     fn new() -> Self {
         Self {
+            neighbors: HashMap::new(),
             metrics: NodeMetrics::default(),
         }
     }
