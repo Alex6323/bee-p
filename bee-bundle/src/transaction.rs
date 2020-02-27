@@ -13,7 +13,7 @@ use std::fmt;
 macro_rules! implement_debug {
     ($($t:ty),+) => {
     $(
-        impl fmt::Debug for $t {
+        impl<T: RawEncodingBuf> fmt::Debug for $t {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "{:?}", self.0)
             }
@@ -25,7 +25,7 @@ macro_rules! implement_debug {
 macro_rules! implement_display {
     ($($t:ty),+) => {
     $(
-        impl fmt::Display for $t {
+        impl<T: RawEncodingBuf> fmt::Display for $t {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "{:?}", self.0)
             }
@@ -37,13 +37,13 @@ macro_rules! implement_display {
 macro_rules! implement_eq {
     ($($t:ty),+) => {
     $(
-        impl PartialEq for $t {
+        impl<T: RawEncodingBuf> PartialEq for $t {
             fn eq(&self,other: &$t) -> bool {
                     self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
             }
         }
 
-        impl Eq for $t {}
+        impl<T: RawEncodingBuf> Eq for $t {}
 
     )+
     }
@@ -91,7 +91,7 @@ impl Address {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Value(pub i64);
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -114,10 +114,10 @@ impl Tag {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Timestamp(pub u64);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Index(pub usize);
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -162,40 +162,40 @@ impl Nonce {
     }
 }
 
-implement_debug!(Payload, Address, Tag, Nonce, Hash);
-implement_display!(Payload, Address, Tag, Nonce, Hash);
-implement_eq!(Payload, Address, Tag, Nonce, Hash);
+implement_debug!(Payload<T>, Address<T>, Tag<T>, Nonce<T>, Hash<T>);
+implement_display!(Payload<T>, Address<T>, Tag<T>, Nonce<T>, Hash<T>);
+implement_eq!(Payload<T>, Address<T>, Tag<T>, Nonce<T>, Hash<T>);
 
 /// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits.
-pub struct Essence<'a> {
-    address: &'a Address,
+pub struct Essence<'a, T: RawEncodingBuf = T1B1Buf> {
+    address: &'a Address<T>,
     value: &'a Value,
-    obsolete_tag: &'a Tag,
+    obsolete_tag: &'a Tag<T>,
     timestamp: &'a Timestamp,
     index: &'a Index,
     last_index: &'a Index,
 }
 
-#[derive(Clone)]
-pub struct Transaction {
-    pub(crate) payload: Payload,
-    pub(crate) address: Address,
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Transaction<T: RawEncodingBuf = T1B1Buf> {
+    pub(crate) payload: Payload<T>,
+    pub(crate) address: Address<T>,
     pub(crate) value: Value,
-    pub(crate) obsolete_tag: Tag,
+    pub(crate) obsolete_tag: Tag<T>,
     pub(crate) timestamp: Timestamp,
     pub(crate) index: Index,
     pub(crate) last_index: Index,
-    pub(crate) bundle: Hash,
-    pub(crate) trunk: Hash,
-    pub(crate) branch: Hash,
-    pub(crate) tag: Tag,
+    pub(crate) bundle: Hash<T>,
+    pub(crate) trunk: Hash<T>,
+    pub(crate) branch: Hash<T>,
+    pub(crate) tag: Tag<T>,
     pub(crate) attachment_ts: Timestamp,
     pub(crate) attachment_lbts: Timestamp,
     pub(crate) attachment_ubts: Timestamp,
-    pub(crate) nonce: Nonce,
+    pub(crate) nonce: Nonce<T>,
 }
 
-impl Transaction {
+impl<T: RawEncodingBuf> Transaction<T> {
     pub fn from_tryte_str(tx_trytes: &str) -> BeeResult<Self> {
         if tx_trytes.len() != TRANSACTION_TRYT_LEN {
             return Err(Errors::TransactionDeserializationError);
@@ -208,11 +208,11 @@ impl Transaction {
         unimplemented!()
     }
 
-    pub fn payload(&self) -> &Payload {
+    pub fn payload(&self) -> &Payload<T> {
         &self.payload
     }
 
-    pub fn address(&self) -> &Address {
+    pub fn address(&self) -> &Address<T> {
         &self.address
     }
 
@@ -220,7 +220,7 @@ impl Transaction {
         &self.value
     }
 
-    pub fn obsolete_tag(&self) -> &Tag {
+    pub fn obsolete_tag(&self) -> &Tag<T> {
         &self.obsolete_tag
     }
 
@@ -236,19 +236,19 @@ impl Transaction {
         &self.last_index
     }
 
-    pub fn bundle(&self) -> &Hash {
+    pub fn bundle(&self) -> &Hash<T> {
         &self.bundle
     }
 
-    pub fn trunk(&self) -> &Hash {
+    pub fn trunk(&self) -> &Hash<T> {
         &self.trunk
     }
 
-    pub fn branch(&self) -> &Hash {
+    pub fn branch(&self) -> &Hash<T> {
         &self.branch
     }
 
-    pub fn tag(&self) -> &Tag {
+    pub fn tag(&self) -> &Tag<T> {
         &self.tag
     }
 
@@ -264,12 +264,12 @@ impl Transaction {
         &self.attachment_ubts
     }
 
-    pub fn nonce(&self) -> &Nonce {
+    pub fn nonce(&self) -> &Nonce<T> {
         &self.nonce
     }
 
     /// Returns the (bundle) essence of that transaction.
-    pub fn essence<'a>(&'a self) -> Essence<'a> {
+    pub fn essence<'a>(&'a self) -> Essence<'a, T> {
         Essence {
             address: &self.address,
             value: &self.value,
@@ -285,7 +285,7 @@ impl Transaction {
     }
 }
 
-impl fmt::Debug for Transaction {
+impl<T: RawEncodingBuf> fmt::Debug for Transaction<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "address={:?}\nvalue={:?}\ntimestamp={:?}\nindex={:?}\nlast_index={:?}\ntag={:?}\nbundle={:?}\ntrunk={:?}\nbranch={:?}\nnonce={:?}",
         self.address,
@@ -302,14 +302,14 @@ impl fmt::Debug for Transaction {
 }
 
 #[derive(Default)]
-pub struct Transactions(pub(crate) Vec<Transaction>);
+pub struct Transactions<T: RawEncodingBuf = T1B1Buf>(pub(crate) Vec<Transaction<T>>);
 
-impl Transactions {
+impl<T: RawEncodingBuf> Transactions<T> {
     pub fn new() -> Self {
-        Self::default()
+        Self(Vec::new())
     }
 
-    pub fn get(&self, index: usize) -> Option<&Transaction> {
+    pub fn get(&self, index: usize) -> Option<&Transaction<T>> {
         self.0.get(index)
     }
 
@@ -317,7 +317,7 @@ impl Transactions {
         self.0.len()
     }
 
-    pub fn push(&mut self, transaction: Transaction) {
+    pub fn push(&mut self, transaction: Transaction<T>) {
         self.0.push(transaction);
     }
 }
@@ -330,36 +330,57 @@ pub enum TransactionBuilderError {
     InvalidValue(i64),
 }
 
-#[derive(Default)]
-pub struct TransactionBuilder {
-    pub(crate) payload: Option<Payload>,
-    pub(crate) address: Option<Address>,
+pub struct TransactionBuilder<T: RawEncodingBuf = T1B1Buf> {
+    pub(crate) payload: Option<Payload<T>>,
+    pub(crate) address: Option<Address<T>>,
     pub(crate) value: Option<Value>,
-    pub(crate) obsolete_tag: Option<Tag>,
+    pub(crate) obsolete_tag: Option<Tag<T>>,
     pub(crate) timestamp: Option<Timestamp>,
     pub(crate) index: Option<Index>,
     pub(crate) last_index: Option<Index>,
-    pub(crate) bundle: Option<Hash>,
-    pub(crate) trunk: Option<Hash>,
-    pub(crate) branch: Option<Hash>,
-    pub(crate) tag: Option<Tag>,
+    pub(crate) bundle: Option<Hash<T>>,
+    pub(crate) trunk: Option<Hash<T>>,
+    pub(crate) branch: Option<Hash<T>>,
+    pub(crate) tag: Option<Tag<T>>,
     pub(crate) attachment_ts: Option<Timestamp>,
     pub(crate) attachment_lbts: Option<Timestamp>,
     pub(crate) attachment_ubts: Option<Timestamp>,
-    pub(crate) nonce: Option<Nonce>,
+    pub(crate) nonce: Option<Nonce<T>>,
 }
 
-impl TransactionBuilder {
+impl<T: RawEncodingBuf> Default for TransactionBuilder<T> {
+    fn default() -> Self {
+        Self {
+            payload: None,
+            address: None,
+            value: None,
+            obsolete_tag: None,
+            timestamp: None,
+            index: None,
+            last_index: None,
+            bundle: None,
+            trunk: None,
+            branch: None,
+            tag: None,
+            attachment_ts: None,
+            attachment_lbts: None,
+            attachment_ubts: None,
+            nonce: None,
+        }
+    }
+}
+
+impl<T: RawEncodingBuf> TransactionBuilder<T> {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn with_payload(mut self, payload: Payload) -> Self {
+    pub fn with_payload(mut self, payload: Payload<T>) -> Self {
         self.payload.replace(payload);
         self
     }
 
-    pub fn with_address(mut self, address: Address) -> Self {
+    pub fn with_address(mut self, address: Address<T>) -> Self {
         self.address.replace(address);
         self
     }
@@ -369,7 +390,7 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn with_obsolete_tag(mut self, obsolete_tag: Tag) -> Self {
+    pub fn with_obsolete_tag(mut self, obsolete_tag: Tag<T>) -> Self {
         self.obsolete_tag.replace(obsolete_tag);
         self
     }
@@ -388,7 +409,7 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn with_tag(mut self, tag: Tag) -> Self {
+    pub fn with_tag(mut self, tag: Tag<T>) -> Self {
         self.tag.replace(tag);
         self
     }
@@ -398,17 +419,17 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn with_bundle(mut self, bundle: Hash) -> Self {
+    pub fn with_bundle(mut self, bundle: Hash<T>) -> Self {
         self.bundle.replace(bundle);
         self
     }
 
-    pub fn with_trunk(mut self, trunk: Hash) -> Self {
+    pub fn with_trunk(mut self, trunk: Hash<T>) -> Self {
         self.trunk.replace(trunk);
         self
     }
 
-    pub fn with_branch(mut self, branch: Hash) -> Self {
+    pub fn with_branch(mut self, branch: Hash<T>) -> Self {
         self.branch.replace(branch);
         self
     }
@@ -423,12 +444,12 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn with_nonce(mut self, nonce: Nonce) -> Self {
+    pub fn with_nonce(mut self, nonce: Nonce<T>) -> Self {
         self.nonce.replace(nonce);
         self
     }
 
-    pub fn build(self) -> Result<Transaction, TransactionBuilderError> {
+    pub fn build(self) -> Result<Transaction<T>, TransactionBuilderError> {
         let value = self
             .value
             .as_ref()
@@ -439,7 +460,7 @@ impl TransactionBuilder {
             return Err(TransactionBuilderError::InvalidValue(value));
         }
 
-        Ok(Transaction {
+        Ok(Transaction::<T> {
             payload: self
                 .payload
                 .ok_or(TransactionBuilderError::MissingField("payload"))?,

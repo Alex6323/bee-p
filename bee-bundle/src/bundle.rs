@@ -103,7 +103,7 @@ where
     // TODO TEST
     pub fn new() -> Self {
         Self {
-            transactions: Transactions::default(),
+            transactions: Transactions::new(),
             essence_sponge: PhantomData,
             public_key: PhantomData,
             stage: PhantomData,
