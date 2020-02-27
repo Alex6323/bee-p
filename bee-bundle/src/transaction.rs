@@ -49,7 +49,7 @@ macro_rules! implement_eq {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Payload<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Payload {
@@ -69,7 +69,7 @@ impl Payload {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Address<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 // TODO Hash
@@ -94,7 +94,7 @@ impl Address {
 #[derive(Debug, Clone)]
 pub struct Value(pub i64);
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Tag<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Tag {
@@ -120,7 +120,7 @@ pub struct Timestamp(pub u64);
 #[derive(Debug, Clone)]
 pub struct Index(pub usize);
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Hash<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 // TODO Hash
@@ -142,7 +142,7 @@ impl Hash {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Nonce<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Nonce {
