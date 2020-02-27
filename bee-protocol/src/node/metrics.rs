@@ -2,12 +2,13 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Default)]
 pub(crate) struct NodeMetrics {
-    all_transactions: AtomicU32,
-    invalid_transactions: AtomicU32,
-    stale_transactions: AtomicU32,
-    random_transactions: AtomicU32,
-    sent_transactions: AtomicU32,
-    new_transactions: AtomicU32,
+    transactions_received: AtomicU32,
+    invalid_transactions_received: AtomicU32,
+    stale_transactions_received: AtomicU32,
+    random_transactions_received: AtomicU32,
+    new_transactions_received: AtomicU32,
+
+    transactions_sent: AtomicU32,
 
     handshake_received: AtomicU32,
     legacy_gossip_received: AtomicU32,
@@ -25,52 +26,56 @@ pub(crate) struct NodeMetrics {
 }
 
 impl NodeMetrics {
-    pub fn all_transactions(&self) -> u32 {
-        self.all_transactions.load(Ordering::Relaxed)
+    pub fn transactions_received(&self) -> u32 {
+        self.transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn all_transactions_inc(&self) -> u32 {
-        self.all_transactions.fetch_add(1, Ordering::SeqCst)
+    pub fn transactions_received_inc(&self) -> u32 {
+        self.transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn invalid_transactions(&self) -> u32 {
-        self.invalid_transactions.load(Ordering::Relaxed)
+    pub fn invalid_transactions_received(&self) -> u32 {
+        self.invalid_transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn invalid_transactions_inc(&self) -> u32 {
-        self.invalid_transactions.fetch_add(1, Ordering::SeqCst)
+    pub fn invalid_transactions_received_inc(&self) -> u32 {
+        self.invalid_transactions_received
+            .fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn stale_transactions(&self) -> u32 {
-        self.stale_transactions.load(Ordering::Relaxed)
+    pub fn stale_transactions_received(&self) -> u32 {
+        self.stale_transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn stale_transactions_inc(&self) -> u32 {
-        self.stale_transactions.fetch_add(1, Ordering::SeqCst)
+    pub fn stale_transactions_received_inc(&self) -> u32 {
+        self.stale_transactions_received
+            .fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn random_transactions(&self) -> u32 {
-        self.random_transactions.load(Ordering::Relaxed)
+    pub fn random_transactions_received(&self) -> u32 {
+        self.random_transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn random_transactions_inc(&self) -> u32 {
-        self.random_transactions.fetch_add(1, Ordering::SeqCst)
+    pub fn random_transactions_received_inc(&self) -> u32 {
+        self.random_transactions_received
+            .fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn sent_transactions(&self) -> u32 {
-        self.sent_transactions.load(Ordering::Relaxed)
+    pub fn new_transactions_received(&self) -> u32 {
+        self.new_transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn sent_transactions_inc(&self) -> u32 {
-        self.sent_transactions.fetch_add(1, Ordering::SeqCst)
+    pub fn new_transactions_received_inc(&self) -> u32 {
+        self.new_transactions_received
+            .fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn new_transactions(&self) -> u32 {
-        self.new_transactions.load(Ordering::Relaxed)
+    pub fn transactions_sent(&self) -> u32 {
+        self.transactions_sent.load(Ordering::Relaxed)
     }
 
-    pub fn new_transactions_inc(&self) -> u32 {
-        self.new_transactions.fetch_add(1, Ordering::SeqCst)
+    pub fn transactions_sent_inc(&self) -> u32 {
+        self.transactions_sent.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn handshake_received(&self) -> u32 {
@@ -180,33 +185,41 @@ mod tests {
     use super::*;
 
     #[test]
-    fn node_metrics_transactions_test() {
+    fn node_metrics_transactions_received_test() {
         let metrics = NodeMetrics::default();
 
-        assert_eq!(metrics.all_transactions(), 0);
-        assert_eq!(metrics.invalid_transactions(), 0);
-        assert_eq!(metrics.stale_transactions(), 0);
-        assert_eq!(metrics.random_transactions(), 0);
-        assert_eq!(metrics.sent_transactions(), 0);
-        assert_eq!(metrics.new_transactions(), 0);
+        assert_eq!(metrics.transactions_received(), 0);
+        assert_eq!(metrics.invalid_transactions_received(), 0);
+        assert_eq!(metrics.stale_transactions_received(), 0);
+        assert_eq!(metrics.random_transactions_received(), 0);
+        assert_eq!(metrics.new_transactions_received(), 0);
 
-        metrics.all_transactions_inc();
-        metrics.invalid_transactions_inc();
-        metrics.stale_transactions_inc();
-        metrics.random_transactions_inc();
-        metrics.sent_transactions_inc();
-        metrics.new_transactions_inc();
+        metrics.transactions_received_inc();
+        metrics.invalid_transactions_received_inc();
+        metrics.stale_transactions_received_inc();
+        metrics.random_transactions_received_inc();
+        metrics.new_transactions_received_inc();
 
-        assert_eq!(metrics.all_transactions(), 1);
-        assert_eq!(metrics.invalid_transactions(), 1);
-        assert_eq!(metrics.stale_transactions(), 1);
-        assert_eq!(metrics.random_transactions(), 1);
-        assert_eq!(metrics.sent_transactions_inc(), 1);
-        assert_eq!(metrics.new_transactions(), 1);
+        assert_eq!(metrics.transactions_received(), 1);
+        assert_eq!(metrics.invalid_transactions_received(), 1);
+        assert_eq!(metrics.stale_transactions_received(), 1);
+        assert_eq!(metrics.random_transactions_received(), 1);
+        assert_eq!(metrics.new_transactions_received(), 1);
     }
 
     #[test]
-    fn node_metrics_received_messages_test() {
+    fn node_metrics_transactions_sent_test() {
+        let metrics = NodeMetrics::default();
+
+        assert_eq!(metrics.transactions_sent(), 0);
+
+        metrics.transactions_sent_inc();
+
+        assert_eq!(metrics.transactions_sent_inc(), 1);
+    }
+
+    #[test]
+    fn node_metrics_messages_received_test() {
         let metrics = NodeMetrics::default();
 
         assert_eq!(metrics.handshake_received(), 0);
@@ -232,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn node_metrics_sent_messages_test() {
+    fn node_metrics_messages_sent_test() {
         let metrics = NodeMetrics::default();
 
         assert_eq!(metrics.handshake_sent(), 0);
