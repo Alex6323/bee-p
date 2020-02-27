@@ -1,7 +1,6 @@
-use crate::constants::IOTA_SUPPLY;
+use crate::constants::{IOTA_SUPPLY, PAYLOAD, ADDRESS, TAG, BUNDLE_HASH, NONCE};
 
 use bee_common::constants::{
-    ADDRESS_TRIT_LEN, HASH_TRIT_LEN, NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN,
     TRANSACTION_TRYT_LEN,
 };
 use bee_common::Errors;
@@ -54,14 +53,14 @@ pub struct Payload<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Payload {
     pub fn zeros() -> Self {
-        Self(TritBuf::zeros(PAYLOAD_TRIT_LEN))
+        Self(TritBuf::zeros(PAYLOAD.trit_offset.length))
     }
 
     pub fn from_str(payload: &str) -> Self {
-        assert!(payload.len() <= PAYLOAD_TRIT_LEN / 3);
+        assert!(payload.len() <= PAYLOAD.tryte_offset.length);
         assert!(payload.chars().all(|c| c.is_tryte()));
 
-        let missing_trytes = PAYLOAD_TRIT_LEN / 3 - payload.len();
+        let missing_trytes = PAYLOAD.tryte_offset.length - payload.len();
         let payload = payload.to_owned() + &"9".repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&payload);
 
@@ -76,14 +75,14 @@ pub struct Address<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Address {
     pub fn zeros() -> Self {
-        Self(TritBuf::zeros(ADDRESS_TRIT_LEN))
+        Self(TritBuf::zeros(ADDRESS.trit_offset.length))
     }
 
     pub fn from_str(address: &str) -> Self {
-        assert!(address.len() <= ADDRESS_TRIT_LEN / 3);
+        assert!(address.len() <= ADDRESS.tryte_offset.length);
         assert!(address.chars().all(|c| c.is_tryte()));
 
-        let missing_trytes = ADDRESS_TRIT_LEN / 3 - address.len();
+        let missing_trytes = ADDRESS.tryte_offset.length - address.len();
         let address = address.to_owned() + &"9".repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&address);
 
@@ -99,14 +98,14 @@ pub struct Tag<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Tag {
     pub fn zeros() -> Self {
-        Self(TritBuf::zeros(TAG_TRIT_LEN))
+        Self(TritBuf::zeros(TAG.trit_offset.length))
     }
 
     pub fn from_str(tag: &str) -> Self {
-        assert!(tag.len() <= TAG_TRIT_LEN / 3);
+        assert!(tag.len() <= TAG.tryte_offset.length);
         assert!(tag.chars().all(|c| c.is_tryte()));
 
-        let missing_trytes = TAG_TRIT_LEN / 3 - tag.len();
+        let missing_trytes = TAG.tryte_offset.length - tag.len();
         let tag = tag.to_owned() + &"9".repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&tag);
 
@@ -127,14 +126,14 @@ pub struct Hash<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Hash {
     pub fn zeros() -> Self {
-        Self(TritBuf::zeros(HASH_TRIT_LEN))
+        Self(TritBuf::zeros(BUNDLE_HASH.trit_offset.length))
     }
 
     pub fn from_str(hash: &str) -> Self {
-        assert!(hash.len() <= HASH_TRIT_LEN / 3);
+        assert!(hash.len() <= BUNDLE_HASH.tryte_offset.length);
         assert!(hash.chars().all(|c| c.is_tryte()));
 
-        let missing_trytes = HASH_TRIT_LEN / 3 - hash.len();
+        let missing_trytes = BUNDLE_HASH.tryte_offset.length - hash.len();
         let hash = hash.to_owned() + &"9".repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&hash);
 
@@ -147,14 +146,14 @@ pub struct Nonce<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Nonce {
     pub fn zeros() -> Self {
-        Self(TritBuf::zeros(NONCE_TRIT_LEN))
+        Self(TritBuf::zeros(NONCE.trit_offset.length))
     }
 
     pub fn from_str(nonce: &str) -> Self {
-        assert!(nonce.len() <= NONCE_TRIT_LEN / 3);
+        assert!(nonce.len() <= NONCE.tryte_offset.length);
         assert!(nonce.chars().all(|c| c.is_tryte()));
 
-        let missing_trytes = NONCE_TRIT_LEN / 3 - nonce.len();
+        let missing_trytes = NONCE.tryte_offset.length - nonce.len();
         let nonce = nonce.to_owned() + &"9".repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&nonce);
 
