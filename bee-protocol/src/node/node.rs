@@ -25,10 +25,28 @@ impl Node {
         }
     }
 
-    async fn actor() {}
+    async fn actor(self) {
+        // while let Some(event) = events.next().await {
+        //     match event {
+        //         Event::BytesReceived {
+        //             num_bytes,
+        //             from,
+        //             bytes,
+        //         } => {}
+        //         _ => (),
+        //     }
+        // }
+    }
 
-    fn start() {
-        spawn(Self::actor());
+    fn start(self) {
+        spawn(Self::actor(self));
+    }
+
+    fn added_neighbor(&mut self, id: String) {
+        // let neighbor = Neighbor::new();
+        // // TODO check return
+        // self.neighbors.insert(id, neighbor);
+        // spawn(Neighbor::actor(self.neighbors.get(&id).unwrap()));
     }
 
     pub async fn send_handshake(
