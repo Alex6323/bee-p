@@ -1,7 +1,7 @@
 use crate::constants::{IOTA_SUPPLY, PAYLOAD, ADDRESS, TAG, BUNDLE_HASH, NONCE};
 
 use bee_common::constants::{
-    TRANSACTION_TRYT_LEN,
+    TRANSACTION_TRYT_LEN, TRYTE_ZERO
 };
 use bee_common::Errors;
 use bee_common::Result as BeeResult;
@@ -61,7 +61,7 @@ impl Payload {
         assert!(payload.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = PAYLOAD.tryte_offset.length - payload.len();
-        let payload = payload.to_owned() + &"9".repeat(missing_trytes);
+        let payload = payload.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&payload);
 
         Self(tritbuf)
@@ -83,7 +83,7 @@ impl Address {
         assert!(address.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = ADDRESS.tryte_offset.length - address.len();
-        let address = address.to_owned() + &"9".repeat(missing_trytes);
+        let address = address.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&address);
 
         Self(tritbuf)
@@ -106,7 +106,7 @@ impl Tag {
         assert!(tag.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = TAG.tryte_offset.length - tag.len();
-        let tag = tag.to_owned() + &"9".repeat(missing_trytes);
+        let tag = tag.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&tag);
 
         Self(tritbuf)
@@ -134,7 +134,7 @@ impl Hash {
         assert!(hash.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = BUNDLE_HASH.tryte_offset.length - hash.len();
-        let hash = hash.to_owned() + &"9".repeat(missing_trytes);
+        let hash = hash.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&hash);
 
         Self(tritbuf)
@@ -154,7 +154,7 @@ impl Nonce {
         assert!(nonce.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = NONCE.tryte_offset.length - nonce.len();
-        let nonce = nonce.to_owned() + &"9".repeat(missing_trytes);
+        let nonce = nonce.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
         let tritbuf = trytes_to_trits_buf(&nonce);
 
         Self(tritbuf)
