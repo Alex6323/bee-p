@@ -1,8 +1,6 @@
-use crate::constants::{IOTA_SUPPLY, PAYLOAD, ADDRESS, TAG, BUNDLE_HASH, NONCE};
+use crate::constants::{ADDRESS, BUNDLE_HASH, IOTA_SUPPLY, NONCE, PAYLOAD, TAG};
 
-use bee_common::constants::{
-    TRANSACTION_TRYT_LEN, TRYTE_ZERO
-};
+use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
 use bee_common::Errors;
 use bee_common::Result as BeeResult;
 use bee_ternary::{raw::RawEncodingBuf, util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
