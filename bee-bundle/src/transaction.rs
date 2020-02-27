@@ -1,21 +1,21 @@
-use crate::constants::{ADDRESS, BUNDLE_HASH, IOTA_SUPPLY, NONCE, PAYLOAD, TAG};
+use crate::constants::IOTA_SUPPLY;
 
-use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
+use bee_common::constants::{
+    ADDRESS_TRIT_LEN, HASH_TRIT_LEN, NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN,
+    TRANSACTION_TRYT_LEN,
+};
 use bee_common::Errors;
 use bee_common::Result as BeeResult;
-use bee_common::Tryte;
-use bee_ternary::IsTryte;
+use bee_ternary::{raw::RawEncodingBuf, util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
 
 use std::fmt;
-use std::hash::Hash as StdHash;
-use std::hash::Hasher as StdHasher;
 
 macro_rules! implement_debug {
     ($($t:ty),+) => {
     $(
         impl fmt::Debug for $t {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "{}", self.0.iter().collect::<String>())
+                write!(f, "{:?}", self.0)
             }
         }
     )+
@@ -27,19 +27,7 @@ macro_rules! implement_display {
     $(
         impl fmt::Display for $t {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "{}", self.0.iter().collect::<String>())
-            }
-        }
-    )+
-    }
-}
-
-macro_rules! implement_hash {
-    ($($t:ty),+) => {
-    $(
-        impl StdHash for $t {
-            fn hash<H : StdHasher>(&self, state: &mut H) {
-                    self.0.hash(state);
+                write!(f, "{:?}", self.0)
             }
         }
     )+
@@ -61,82 +49,68 @@ macro_rules! implement_eq {
     }
 }
 
-macro_rules! implement_clone {
-    ($($t:ty),+) => {
-    $(
-        impl Clone for $t {
-            fn clone(&self) -> Self {
-                    Self(self.0)
-            }
-        }
-
-    )+
-    }
-}
-
-pub struct Payload(pub [Tryte; PAYLOAD.tryte_offset.length]);
+#[derive(Clone)]
+pub struct Payload<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Payload {
     pub fn zeros() -> Self {
-        Self([TRYTE_ZERO; PAYLOAD.tryte_offset.length])
+        Self(TritBuf::zeros(PAYLOAD_TRIT_LEN))
     }
 
     pub fn from_str(payload: &str) -> Self {
-        assert!(payload.len() <= PAYLOAD.tryte_offset.length);
+        assert!(payload.len() <= PAYLOAD_TRIT_LEN / 3);
         assert!(payload.chars().all(|c| c.is_tryte()));
 
-        let mut trytes = [TRYTE_ZERO; PAYLOAD.tryte_offset.length];
+        let missing_trytes = PAYLOAD_TRIT_LEN / 3 - payload.len();
+        let payload = payload.to_owned() + &"9".repeat(missing_trytes);
+        let tritbuf = trytes_to_trits_buf(&payload);
 
-        for (i, c) in payload.chars().enumerate() {
-            trytes[i] = c;
-        }
-
-        Self(trytes)
+        Self(tritbuf)
     }
 }
 
-pub struct Address(pub [Tryte; ADDRESS.tryte_offset.length]);
+#[derive(Clone)]
+pub struct Address<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
+
+// TODO Hash
 
 impl Address {
     pub fn zeros() -> Self {
-        Self([TRYTE_ZERO; ADDRESS.tryte_offset.length])
+        Self(TritBuf::zeros(ADDRESS_TRIT_LEN))
     }
 
     pub fn from_str(address: &str) -> Self {
-        assert!(address.len() <= ADDRESS.tryte_offset.length);
+        assert!(address.len() <= ADDRESS_TRIT_LEN / 3);
         assert!(address.chars().all(|c| c.is_tryte()));
 
-        let mut trytes = [TRYTE_ZERO; ADDRESS.tryte_offset.length];
+        let missing_trytes = ADDRESS_TRIT_LEN / 3 - address.len();
+        let address = address.to_owned() + &"9".repeat(missing_trytes);
+        let tritbuf = trytes_to_trits_buf(&address);
 
-        for (i, c) in address.chars().enumerate() {
-            trytes[i] = c;
-        }
-
-        Self(trytes)
+        Self(tritbuf)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Value(pub i64);
 
-pub struct Tag(pub [Tryte; TAG.tryte_offset.length]);
+#[derive(Clone)]
+pub struct Tag<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Tag {
     pub fn zeros() -> Self {
-        Self([TRYTE_ZERO; TAG.tryte_offset.length])
+        Self(TritBuf::zeros(TAG_TRIT_LEN))
     }
 
     pub fn from_str(tag: &str) -> Self {
-        assert!(tag.len() <= TAG.tryte_offset.length);
+        assert!(tag.len() <= TAG_TRIT_LEN / 3);
         assert!(tag.chars().all(|c| c.is_tryte()));
 
-        let mut trytes = [TRYTE_ZERO; TAG.tryte_offset.length];
+        let missing_trytes = TAG_TRIT_LEN / 3 - tag.len();
+        let tag = tag.to_owned() + &"9".repeat(missing_trytes);
+        let tritbuf = trytes_to_trits_buf(&tag);
 
-        for (i, c) in tag.chars().enumerate() {
-            trytes[i] = c;
-        }
-
-        Self(trytes)
+        Self(tritbuf)
     }
 }
 
@@ -146,53 +120,51 @@ pub struct Timestamp(pub u64);
 #[derive(Debug, Clone)]
 pub struct Index(pub usize);
 
-pub struct Hash(pub [Tryte; BUNDLE_HASH.tryte_offset.length]);
+#[derive(Clone)]
+pub struct Hash<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
+
+// TODO Hash
 
 impl Hash {
     pub fn zeros() -> Self {
-        Self([TRYTE_ZERO; BUNDLE_HASH.tryte_offset.length])
+        Self(TritBuf::zeros(HASH_TRIT_LEN))
     }
 
     pub fn from_str(hash: &str) -> Self {
-        assert!(hash.len() <= BUNDLE_HASH.tryte_offset.length);
+        assert!(hash.len() <= HASH_TRIT_LEN / 3);
         assert!(hash.chars().all(|c| c.is_tryte()));
 
-        let mut trytes = [TRYTE_ZERO; BUNDLE_HASH.tryte_offset.length];
+        let missing_trytes = HASH_TRIT_LEN / 3 - hash.len();
+        let hash = hash.to_owned() + &"9".repeat(missing_trytes);
+        let tritbuf = trytes_to_trits_buf(&hash);
 
-        for (i, c) in hash.chars().enumerate() {
-            trytes[i] = c;
-        }
-
-        Self(trytes)
+        Self(tritbuf)
     }
 }
 
-pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);
+#[derive(Clone)]
+pub struct Nonce<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
 
 impl Nonce {
     pub fn zeros() -> Self {
-        Self([TRYTE_ZERO; NONCE.tryte_offset.length])
+        Self(TritBuf::zeros(NONCE_TRIT_LEN))
     }
 
     pub fn from_str(nonce: &str) -> Self {
-        assert!(nonce.len() <= NONCE.tryte_offset.length);
+        assert!(nonce.len() <= NONCE_TRIT_LEN / 3);
         assert!(nonce.chars().all(|c| c.is_tryte()));
 
-        let mut trytes = [TRYTE_ZERO; NONCE.tryte_offset.length];
+        let missing_trytes = NONCE_TRIT_LEN / 3 - nonce.len();
+        let nonce = nonce.to_owned() + &"9".repeat(missing_trytes);
+        let tritbuf = trytes_to_trits_buf(&nonce);
 
-        for (i, c) in nonce.chars().enumerate() {
-            trytes[i] = c;
-        }
-
-        Self(trytes)
+        Self(tritbuf)
     }
 }
 
 implement_debug!(Payload, Address, Tag, Nonce, Hash);
 implement_display!(Payload, Address, Tag, Nonce, Hash);
-implement_hash!(Address, Hash);
-implement_eq!(Payload, Address, Tag, Hash, Nonce);
-implement_clone!(Payload, Address, Tag, Nonce, Hash);
+implement_eq!(Payload, Address, Tag, Nonce, Hash);
 
 /// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits.
 pub struct Essence<'a> {
