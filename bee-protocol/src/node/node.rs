@@ -42,7 +42,9 @@ impl Node {
         let res = neighbor.queues.legacy_gossip.0.send(legacy_gossip).await;
 
         if res.is_ok() {
+            neighbor.metrics.transactions_sent_inc();
             neighbor.metrics.legacy_gossip_sent_inc();
+            self.metrics.transactions_sent_inc();
             self.metrics.legacy_gossip_sent_inc();
         }
 
@@ -82,7 +84,9 @@ impl Node {
             .await;
 
         if res.is_ok() {
+            neighbor.metrics.transactions_sent_inc();
             neighbor.metrics.transaction_broadcast_sent_inc();
+            self.metrics.transactions_sent_inc();
             self.metrics.transaction_broadcast_sent_inc();
         }
 
