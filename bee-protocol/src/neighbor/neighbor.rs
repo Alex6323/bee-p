@@ -1,35 +1,32 @@
 use crate::message::{Heartbeat, Message};
-use crate::neighbor::NeighborChannels;
+use crate::neighbor::NeighborSenders;
 use crate::node::NodeMetrics;
 
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 use futures::{select, FutureExt};
 
-#[derive(Default)]
 pub(crate) struct Neighbor {
-    pub(crate) channels: NeighborChannels,
+    pub(crate) senders: NeighborSenders,
     pub(crate) metrics: NodeMetrics,
     heartbeat: Heartbeat,
 }
 
 impl Neighbor {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(senders: NeighborSenders) -> Self {
+        Self {
+            senders: senders,
+            metrics: NodeMetrics::default(),
+            heartbeat: Heartbeat::default(),
+        }
     }
 
-    pub async fn actor(&mut self) {
-        logger::debug("Neighbor actor launched for [PeerID]");
-
-        loop {
-            select! {
-                message = self.queues.handshake.1.next().fuse() => (),
-                message = self.queues.legacy_gossip.1.next().fuse() => (),
-                message = self.queues.milestone_request.1.next().fuse() => (),
-                message = self.queues.transaction_broadcast.1.next().fuse() => (),
-                message = self.queues.transaction_request.1.next().fuse() => (),
-                message = self.queues.heartbeat.1.next().fuse() => (),
-            };
+    // TODO pass sender as well
+    pub async fn actor<M: Message>(mut receiver: Receiver<M>) {
+        while let Some(message) = receiver.next().await {
+            message.into_full_bytes();
+            // TODO create event
+            // TODO send to network
         }
     }
 }
@@ -38,9 +35,4 @@ impl Neighbor {
 mod tests {
 
     use super::*;
-
-    #[test]
-    fn neighbor_test() {
-        let neighbor = Neighbor::new();
-    }
 }
