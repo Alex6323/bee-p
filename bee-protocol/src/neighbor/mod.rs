@@ -1,5 +1,5 @@
+mod channels;
 mod neighbor;
-mod queues;
 
+pub(crate) use channels::NeighborChannels;
 pub(crate) use neighbor::Neighbor;
-pub(crate) use queues::NeighborQueues;

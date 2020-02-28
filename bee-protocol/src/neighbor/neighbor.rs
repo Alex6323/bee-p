@@ -1,15 +1,14 @@
-use crate::message::Heartbeat;
-use crate::neighbor::NeighborQueues;
+use crate::message::{Heartbeat, Message};
+use crate::neighbor::NeighborChannels;
 use crate::node::NodeMetrics;
 
-use bee_common::logger;
-
+use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 use futures::{select, FutureExt};
 
 #[derive(Default)]
 pub(crate) struct Neighbor {
-    pub(crate) queues: NeighborQueues,
+    pub(crate) channels: NeighborChannels,
     pub(crate) metrics: NodeMetrics,
     heartbeat: Heartbeat,
 }

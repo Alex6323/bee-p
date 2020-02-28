@@ -1,7 +1,9 @@
 use crate::message::{
     Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
-use crate::neighbor::Neighbor;
+
+// TODO channels ?
+use crate::neighbor::{Neighbor, NeighborChannels};
 use crate::node::NodeMetrics;
 
 use std::collections::HashMap;
@@ -54,7 +56,7 @@ impl Node {
         neighbor: &mut Neighbor,
         handshake: Handshake,
     ) -> Result<(), SendError> {
-        let res = neighbor.queues.handshake.0.send(handshake).await;
+        let res = neighbor.channels.handshake.0.send(handshake).await;
 
         if res.is_ok() {
             neighbor.metrics.handshake_sent_inc();
@@ -69,7 +71,7 @@ impl Node {
         neighbor: &mut Neighbor,
         legacy_gossip: LegacyGossip,
     ) -> Result<(), SendError> {
-        let res = neighbor.queues.legacy_gossip.0.send(legacy_gossip).await;
+        let res = neighbor.channels.legacy_gossip.0.send(legacy_gossip).await;
 
         if res.is_ok() {
             neighbor.metrics.transactions_sent_inc();
@@ -87,7 +89,7 @@ impl Node {
         milestone_request: MilestoneRequest,
     ) -> Result<(), SendError> {
         let res = neighbor
-            .queues
+            .channels
             .milestone_request
             .0
             .send(milestone_request)
@@ -107,7 +109,7 @@ impl Node {
         transaction_broadcast: TransactionBroadcast,
     ) -> Result<(), SendError> {
         let res = neighbor
-            .queues
+            .channels
             .transaction_broadcast
             .0
             .send(transaction_broadcast)
@@ -129,7 +131,7 @@ impl Node {
         transaction_request: TransactionRequest,
     ) -> Result<(), SendError> {
         let res = neighbor
-            .queues
+            .channels
             .transaction_request
             .0
             .send(transaction_request)
@@ -148,7 +150,7 @@ impl Node {
         neighbor: &mut Neighbor,
         heartbeat: Heartbeat,
     ) -> Result<(), SendError> {
-        let res = neighbor.queues.heartbeat.0.send(heartbeat).await;
+        let res = neighbor.channels.heartbeat.0.send(heartbeat).await;
 
         if res.is_ok() {
             neighbor.metrics.heartbeat_sent_inc();
@@ -173,9 +175,9 @@ mod tests {
         assert_eq!(node.metrics.handshake_sent(), 0);
         assert_eq!(neighbor.metrics.handshake_sent(), 0);
 
-        assert!(neighbor.queues.handshake.1.try_next().is_err());
+        assert!(neighbor.channels.handshake.1.try_next().is_err());
         assert!(block_on(node.send_handshake(&mut neighbor, Handshake::default())).is_ok());
-        assert!(block_on(neighbor.queues.handshake.1.next()).is_some());
+        assert!(block_on(neighbor.channels.handshake.1.next()).is_some());
 
         assert_eq!(node.metrics.handshake_sent(), 1);
         assert_eq!(neighbor.metrics.handshake_sent(), 1);
@@ -191,9 +193,9 @@ mod tests {
         assert_eq!(neighbor.metrics.legacy_gossip_sent(), 0);
         assert_eq!(neighbor.metrics.transactions_sent(), 0);
 
-        assert!(neighbor.queues.legacy_gossip.1.try_next().is_err());
+        assert!(neighbor.channels.legacy_gossip.1.try_next().is_err());
         assert!(block_on(node.send_legacy_gossip(&mut neighbor, LegacyGossip::default())).is_ok());
-        assert!(block_on(neighbor.queues.legacy_gossip.1.next()).is_some());
+        assert!(block_on(neighbor.channels.legacy_gossip.1.next()).is_some());
 
         assert_eq!(node.metrics.legacy_gossip_sent(), 1);
         assert_eq!(node.metrics.transactions_sent(), 1);
@@ -209,12 +211,12 @@ mod tests {
         assert_eq!(node.metrics.milestone_request_sent(), 0);
         assert_eq!(neighbor.metrics.milestone_request_sent(), 0);
 
-        assert!(neighbor.queues.milestone_request.1.try_next().is_err());
+        assert!(neighbor.channels.milestone_request.1.try_next().is_err());
         assert!(
             block_on(node.send_milestone_request(&mut neighbor, MilestoneRequest::default()))
                 .is_ok()
         );
-        assert!(block_on(neighbor.queues.milestone_request.1.next()).is_some());
+        assert!(block_on(neighbor.channels.milestone_request.1.next()).is_some());
 
         assert_eq!(node.metrics.milestone_request_sent(), 1);
         assert_eq!(neighbor.metrics.milestone_request_sent(), 1);
@@ -230,12 +232,17 @@ mod tests {
         assert_eq!(neighbor.metrics.transaction_broadcast_sent(), 0);
         assert_eq!(neighbor.metrics.transactions_sent(), 0);
 
-        assert!(neighbor.queues.transaction_broadcast.1.try_next().is_err());
+        assert!(neighbor
+            .channels
+            .transaction_broadcast
+            .1
+            .try_next()
+            .is_err());
         assert!(block_on(
             node.send_transaction_broadcast(&mut neighbor, TransactionBroadcast::default())
         )
         .is_ok());
-        assert!(block_on(neighbor.queues.transaction_broadcast.1.next()).is_some());
+        assert!(block_on(neighbor.channels.transaction_broadcast.1.next()).is_some());
 
         assert_eq!(node.metrics.transaction_broadcast_sent(), 1);
         assert_eq!(node.metrics.transactions_sent(), 1);
@@ -251,12 +258,12 @@ mod tests {
         assert_eq!(node.metrics.transaction_request_sent(), 0);
         assert_eq!(neighbor.metrics.transaction_request_sent(), 0);
 
-        assert!(neighbor.queues.transaction_request.1.try_next().is_err());
+        assert!(neighbor.channels.transaction_request.1.try_next().is_err());
         assert!(block_on(
             node.send_transaction_request(&mut neighbor, TransactionRequest::default())
         )
         .is_ok());
-        assert!(block_on(neighbor.queues.transaction_request.1.next()).is_some());
+        assert!(block_on(neighbor.channels.transaction_request.1.next()).is_some());
 
         assert_eq!(node.metrics.transaction_request_sent(), 1);
         assert_eq!(neighbor.metrics.transaction_request_sent(), 1);
@@ -270,9 +277,9 @@ mod tests {
         assert_eq!(node.metrics.heartbeat_sent(), 0);
         assert_eq!(neighbor.metrics.heartbeat_sent(), 0);
 
-        assert!(neighbor.queues.heartbeat.1.try_next().is_err());
+        assert!(neighbor.channels.heartbeat.1.try_next().is_err());
         assert!(block_on(node.send_heartbeat(&mut neighbor, Heartbeat::default())).is_ok());
-        assert!(block_on(neighbor.queues.heartbeat.1.next()).is_some());
+        assert!(block_on(neighbor.channels.heartbeat.1.next()).is_some());
 
         assert_eq!(node.metrics.heartbeat_sent(), 1);
         assert_eq!(neighbor.metrics.heartbeat_sent(), 1);
