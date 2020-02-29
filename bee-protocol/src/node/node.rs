@@ -12,7 +12,7 @@ use async_std::task::{block_on, spawn};
 use futures::channel::mpsc::SendError;
 use futures::sink::SinkExt;
 
-struct Node {
+pub struct Node {
     // TODO thread-safety
     // TODO PeerID
     neighbors: HashMap<String, Neighbor>,
@@ -20,7 +20,7 @@ struct Node {
 }
 
 impl Node {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             neighbors: HashMap::new(),
             metrics: NodeMetrics::default(),
@@ -68,7 +68,7 @@ impl Node {
         spawn(Neighbor::actor::<Heartbeat>(channels.receivers.heartbeat));
     }
 
-    pub async fn send_handshake(
+    async fn send_handshake(
         &self,
         neighbor: &mut Neighbor,
         handshake: Handshake,
@@ -83,7 +83,7 @@ impl Node {
         res
     }
 
-    pub async fn send_legacy_gossip(
+    async fn send_legacy_gossip(
         &self,
         neighbor: &mut Neighbor,
         legacy_gossip: LegacyGossip,
@@ -100,7 +100,7 @@ impl Node {
         res
     }
 
-    pub async fn send_milestone_request(
+    async fn send_milestone_request(
         &self,
         neighbor: &mut Neighbor,
         milestone_request: MilestoneRequest,
@@ -119,7 +119,7 @@ impl Node {
         res
     }
 
-    pub async fn send_transaction_broadcast(
+    async fn send_transaction_broadcast(
         &self,
         neighbor: &mut Neighbor,
         transaction_broadcast: TransactionBroadcast,
@@ -140,7 +140,7 @@ impl Node {
         res
     }
 
-    pub async fn send_transaction_request(
+    async fn send_transaction_request(
         &self,
         neighbor: &mut Neighbor,
         transaction_request: TransactionRequest,
@@ -159,7 +159,7 @@ impl Node {
         res
     }
 
-    pub async fn send_heartbeat(
+    async fn send_heartbeat(
         &self,
         neighbor: &mut Neighbor,
         heartbeat: Heartbeat,
