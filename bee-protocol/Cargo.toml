@@ -8,8 +8,11 @@ edition = "2018"
 bee-bundle = { path = "../bee-bundle" }
 bee-common = { path = "../bee-common" }
 
+netzwerk = { git = "https://github.com/Alex6323/netzwerk" }
+
 async-std = "1.5.0"
 futures = "0.3.4"
+log = "0.4.8"
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }

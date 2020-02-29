@@ -6,13 +6,22 @@ use crate::message::{
 use crate::neighbor::{Neighbor, NeighborChannels};
 use crate::node::NodeMetrics;
 
+use netzwerk::Command::AddPeer;
+use netzwerk::{Config, Event, EventSubscriber, Network, Peer, Shutdown};
+
 use std::collections::HashMap;
 
 use async_std::task::{block_on, spawn};
 use futures::channel::mpsc::SendError;
 use futures::sink::SinkExt;
+use futures::stream::StreamExt;
+use log::*;
 
 pub struct Node {
+    config: Config,
+    network: Network,
+    shutdown: Shutdown,
+    events: EventSubscriber,
     // TODO thread-safety
     // TODO PeerID
     neighbors: HashMap<String, Neighbor>,
@@ -20,28 +29,56 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new() -> Self {
+    pub fn new(
+        config: Config,
+        network: Network,
+        shutdown: Shutdown,
+        events: EventSubscriber,
+    ) -> Self {
         Self {
+            network: network,
+            shutdown: shutdown,
+            events: events,
+            config: config,
             neighbors: HashMap::new(),
             metrics: NodeMetrics::default(),
         }
     }
 
-    async fn actor(self) {
-        // while let Some(event) = events.next().await {
-        //     match event {
-        //         Event::BytesReceived {
-        //             num_bytes,
-        //             from,
-        //             bytes,
-        //         } => {}
-        //         _ => (),
-        //     }
-        // }
+    async fn actor(mut self) {
+        info!("[Node ] Starting actor");
+        while let Some(event) = self.events.next().await {
+            info!("[Node ] Received event {:?}", event);
+            match event {
+                Event::BytesReceived {
+                    num_bytes,
+                    from,
+                    bytes,
+                } => {
+                    info!("[Node ] Received {} from {}.", num_bytes, from);
+                }
+                _ => (),
+            }
+        }
     }
 
-    fn start(self) {
-        spawn(Self::actor(self));
+    pub fn start(self) {
+        // spawn(Self::actor(self));
+        block_on(Self::actor(self));
+    }
+
+    pub async fn init(&mut self) {
+        info!("[Node ] Initializing...");
+
+        for peer in self.config.peers().values() {
+            self.add_peer(peer.clone()).await;
+        }
+
+        info!("[Node ] Initialized");
+    }
+
+    pub async fn add_peer(&mut self, peer: Peer) {
+        self.network.send(AddPeer { peer }).await;
     }
 
     fn added_neighbor(&mut self, id: String) {
