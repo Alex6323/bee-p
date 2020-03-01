@@ -12,8 +12,8 @@ const HEADER_CONSTANT_SIZE: usize = HEADER_TYPE_SIZE + HEADER_LENGTH_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct Header {
-    message_type: u8,
-    message_length: u16,
+    pub(crate) message_type: u8,
+    pub(crate) message_length: u16,
 }
 
 impl Header {
@@ -43,9 +43,9 @@ impl Message for Header {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
-        if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
-        }
+        // if !Self::size_range().contains(&bytes.len()) {
+        //     Err(MessageError::InvalidMessageLength(bytes.len()))?;
+        // }
 
         let mut message = Self::default();
         let mut offset = 0;
