@@ -7,7 +7,7 @@ use crate::neighbor::{Neighbor, NeighborChannels};
 use crate::node::NodeMetrics;
 
 use netzwerk::Command::AddPeer;
-use netzwerk::{Config, Event, EventSubscriber, Network, Peer, Shutdown};
+use netzwerk::{Config, Event, EventSubscriber, Network, Peer, PeerId, Shutdown};
 
 use std::collections::HashMap;
 
@@ -24,7 +24,7 @@ pub struct Node {
     events: EventSubscriber,
     // TODO thread-safety
     // TODO PeerID
-    neighbors: HashMap<String, Neighbor>,
+    neighbors: HashMap<PeerId, Neighbor>,
     metrics: NodeMetrics,
 }
 
@@ -83,13 +83,12 @@ impl Node {
         self.network.send(AddPeer { peer }).await;
     }
 
-    fn added_neighbor(&mut self, id: String) {
+    fn added_neighbor(&mut self, id: PeerId) {
         let channels = NeighborChannels::new();
         let neighbor = Neighbor::new(channels.senders);
 
         // // TODO check return
-        // TODO remove clone
-        self.neighbors.insert(id.clone(), neighbor);
+        self.neighbors.insert(id, neighbor);
 
         spawn(Neighbor::actor::<Handshake>(channels.receivers.handshake));
         spawn(Neighbor::actor::<LegacyGossip>(
