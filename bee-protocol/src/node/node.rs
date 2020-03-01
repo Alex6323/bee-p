@@ -81,15 +81,11 @@ impl Node {
                 }
                 Event::PeerDisconnected { peer_id, reconnect } => {}
                 Event::BytesReceived {
+                    peer_id,
                     num_bytes,
                     from,
                     bytes,
                 } => {
-                    let peer_id = if let Address::Ip(socket_addr) = from {
-                        PeerId::from(socket_addr.ip())
-                    } else {
-                        break;
-                    };
                     if let Some(sender) = self.neighbors.get_mut(&peer_id) {
                         sender
                             .send(NeighborEvent::Message {

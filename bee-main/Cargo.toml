@@ -10,7 +10,7 @@ bee-common = { path = "../bee-common" }
 bee-pow = { path = "../bee-pow" }
 bee-protocol = { path = "../bee-protocol" }
 
-netzwerk = { git = "https://github.com/Alex6323/netzwerk", rev = "475440987b0041cb71b5fa26b6ec5de13a898456"}
+netzwerk = { git = "https://github.com/Alex6323/netzwerk" }
 
 async-std = "1.4.0"
 crossterm = "0.15.0"
