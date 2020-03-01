@@ -181,6 +181,27 @@ impl GenericNeighborReceiverActor<NeighborMessageReceiverActorState> {
                     info!("[Neighbor ] Message received");
                     let header = Header::from_bytes(&bytes[0..size]).unwrap();
                     println!("{:?}", header.message_type());
+                    // match message_type {
+                    //     0x01 => Ok(ProtocolMessageType::Handshake(Handshake::from_bytes(
+                    //         &message,
+                    //     )?)),
+                    //     0x02 => Ok(ProtocolMessageType::LegacyGossip(LegacyGossip::from_bytes(
+                    //         &message,
+                    //     )?)),
+                    //     0x03 => Ok(ProtocolMessageType::MilestoneRequest(
+                    //         MilestoneRequest::from_bytes(&message)?,
+                    //     )),
+                    //     0x04 => Ok(ProtocolMessageType::TransactionBroadcast(
+                    //         TransactionBroadcast::from_bytes(&message)?,
+                    //     )),
+                    //     0x05 => Ok(ProtocolMessageType::TransactionRequest(
+                    //         TransactionRequest::from_bytes(&message)?,
+                    //     )),
+                    //     0x06 => Ok(ProtocolMessageType::Heartbeat(Heartbeat::from_bytes(
+                    //         &message,
+                    //     )?)),
+                    //     _ => Err(MessageError::InvalidMessageType(message_type)),
+                    // }
                 }
                 _ => {}
             }
