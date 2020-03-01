@@ -48,11 +48,7 @@ impl Message for Heartbeat {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
-        let mut message = Self {
-            first_solid_milestone_index: 0,
-            last_solid_milestone_index: 0,
-        };
-
+        let mut message = Self::default();
         let mut offset = 0;
 
         message.first_solid_milestone_index = u32::from_be_bytes(

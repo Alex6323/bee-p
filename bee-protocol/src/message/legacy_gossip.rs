@@ -58,11 +58,7 @@ impl Message for LegacyGossip {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
-        let mut message = Self {
-            transaction: Vec::new(),
-            request: [0; LEGACY_GOSSIP_REQUEST_SIZE],
-        };
-
+        let mut message = Self::default();
         let mut offset = 0;
 
         message

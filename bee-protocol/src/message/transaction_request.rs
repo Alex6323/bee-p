@@ -45,9 +45,7 @@ impl Message for TransactionRequest {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
-        let mut message = Self {
-            hash: [0u8; TRANSACTION_REQUEST_HASH_SIZE],
-        };
+        let mut message = Self::default();
 
         message
             .hash

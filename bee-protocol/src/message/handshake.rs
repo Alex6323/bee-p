@@ -98,14 +98,7 @@ impl Message for Handshake {
             Err(MessageError::InvalidMessageLength(bytes.len()))?;
         }
 
-        let mut message = Self {
-            port: 0,
-            timestamp: 0,
-            coordinator: [0; HANDSHAKE_COORDINATOR_SIZE],
-            minimum_weight_magnitude: 0,
-            supported_messages: [0; HANDSHAKE_VARIABLE_MAX_SIZE],
-        };
-
+        let mut message = Self::default();
         let mut offset = 0;
 
         message.port = u16::from_be_bytes(
