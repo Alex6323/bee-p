@@ -50,13 +50,15 @@ impl Node {
         while let Some(event) = self.events.next().await {
             info!("[Node ] Received event {:?}", event);
             match event {
+                Event::PeerAdded { peer_id, num_peers } => {}
+                Event::PeerRemoved { peer_id, num_peers } => {}
+                Event::PeerConnected { peer_id } => {}
+                Event::PeerDisconnected { peer_id, reconnect } => {}
                 Event::BytesReceived {
                     num_bytes,
                     from,
                     bytes,
-                } => {
-                    info!("[Node ] Received {} from {}.", num_bytes, from);
-                }
+                } => {}
                 _ => (),
             }
         }
