@@ -4,7 +4,6 @@ use crate::message::Message;
 use std::ops::Range;
 
 const TRANSACTION_BROADCAST_ID: u8 = 0x04;
-
 const TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE: usize = 292;
 const TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE: usize = 1604;
 

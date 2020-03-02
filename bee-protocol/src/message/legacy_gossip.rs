@@ -4,24 +4,22 @@ use crate::message::Message;
 use std::ops::Range;
 
 const LEGACY_GOSSIP_ID: u8 = 0x02;
-
-const LEGACY_GOSSIP_REQUEST_SIZE: usize = 49;
-const LEGACY_GOSSIP_CONSTANT_SIZE: usize = LEGACY_GOSSIP_REQUEST_SIZE;
+const LEGACY_GOSSIP_HASH_SIZE: usize = 49;
+const LEGACY_GOSSIP_CONSTANT_SIZE: usize = LEGACY_GOSSIP_HASH_SIZE;
 const LEGACY_GOSSIP_VARIABLE_MIN_SIZE: usize = 292;
 const LEGACY_GOSSIP_VARIABLE_MAX_SIZE: usize = 1604;
 
 #[derive(Clone)]
 pub(crate) struct LegacyGossip {
     pub(crate) transaction: Vec<u8>,
-    pub(crate) request: [u8; LEGACY_GOSSIP_REQUEST_SIZE],
+    pub(crate) hash: [u8; LEGACY_GOSSIP_HASH_SIZE],
 }
 
 impl LegacyGossip {
-    pub(crate) fn new(transaction: &Vec<u8>, request: [u8; LEGACY_GOSSIP_REQUEST_SIZE]) -> Self {
-        // TODO clone ?
+    pub(crate) fn new(transaction: &[u8], hash: [u8; LEGACY_GOSSIP_HASH_SIZE]) -> Self {
         Self {
-            transaction: transaction.clone(),
-            request: request,
+            transaction: transaction.to_vec(),
+            hash: hash,
         }
     }
 }
@@ -30,7 +28,7 @@ impl Default for LegacyGossip {
     fn default() -> Self {
         Self {
             transaction: Vec::default(),
-            request: [0; LEGACY_GOSSIP_REQUEST_SIZE],
+            hash: [0; LEGACY_GOSSIP_HASH_SIZE],
         }
     }
 }
@@ -55,12 +53,12 @@ impl Message for LegacyGossip {
 
         message
             .transaction
-            .extend_from_slice(&bytes[offset..offset + bytes.len() - LEGACY_GOSSIP_REQUEST_SIZE]);
-        offset += bytes.len() - LEGACY_GOSSIP_REQUEST_SIZE;
+            .extend_from_slice(&bytes[offset..offset + bytes.len() - LEGACY_GOSSIP_HASH_SIZE]);
+        offset += bytes.len() - LEGACY_GOSSIP_HASH_SIZE;
 
         message
-            .request
-            .copy_from_slice(&bytes[offset..offset + LEGACY_GOSSIP_REQUEST_SIZE]);
+            .hash
+            .copy_from_slice(&bytes[offset..offset + LEGACY_GOSSIP_HASH_SIZE]);
 
         Ok(message)
     }
@@ -68,7 +66,7 @@ impl Message for LegacyGossip {
     fn into_bytes(self) -> Vec<u8> {
         let mut bytes = self.transaction.clone();
 
-        bytes.extend_from_slice(&self.request);
+        bytes.extend_from_slice(&self.hash);
 
         bytes
     }
@@ -108,7 +106,7 @@ mod tests {
         224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241,
         242, 243, 244,
     ];
-    const REQUEST: [u8; LEGACY_GOSSIP_REQUEST_SIZE] = [
+    const REQUEST: [u8; LEGACY_GOSSIP_HASH_SIZE] = [
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232,
         31, 255, 208, 9, 126, 21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93,
         74, 238, 57, 39, 51, 169, 193, 124, 254,
@@ -144,19 +142,19 @@ mod tests {
 
     fn into_from_eq(message: LegacyGossip) {
         assert_eq!(slice_eq(&message.transaction, &TRANSACTION), true);
-        assert_eq!(slice_eq(&message.request, &REQUEST), true);
+        assert_eq!(slice_eq(&message.hash, &REQUEST), true);
     }
 
     #[test]
     fn into_from_test() {
-        let message_from = LegacyGossip::new(&TRANSACTION.to_vec(), REQUEST);
+        let message_from = LegacyGossip::new(&TRANSACTION, REQUEST);
 
         into_from_eq(LegacyGossip::from_bytes(&message_from.into_bytes()).unwrap());
     }
 
     #[test]
     fn full_into_from_test() {
-        let message_from = LegacyGossip::new(&TRANSACTION.to_vec(), REQUEST);
+        let message_from = LegacyGossip::new(&TRANSACTION, REQUEST);
         let bytes = message_from.into_full_bytes();
 
         into_from_eq(LegacyGossip::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());

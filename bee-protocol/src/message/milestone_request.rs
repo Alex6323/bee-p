@@ -5,17 +5,16 @@ use std::convert::TryInto;
 use std::ops::Range;
 
 const MILESTONE_REQUEST_ID: u8 = 0x03;
-
-const MILESTONE_REQUEST_INDEX_SIZE: usize = 8;
+const MILESTONE_REQUEST_INDEX_SIZE: usize = 4;
 const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct MilestoneRequest {
-    pub(crate) index: u64,
+    pub(crate) index: u32,
 }
 
 impl MilestoneRequest {
-    pub(crate) fn new(index: u64) -> Self {
+    pub(crate) fn new(index: u32) -> Self {
         Self { index: index }
     }
 }
@@ -35,7 +34,7 @@ impl Message for MilestoneRequest {
         }
 
         Ok(Self {
-            index: u64::from_be_bytes(
+            index: u32::from_be_bytes(
                 bytes[0..MILESTONE_REQUEST_INDEX_SIZE]
                     .try_into()
                     .map_err(|_| MessageError::InvalidMessageField)?,
@@ -53,7 +52,7 @@ mod tests {
 
     use super::*;
 
-    const INDEX: u64 = 0x3cd44cef7195aa20;
+    const INDEX: u32 = 0x81f7df7c;
 
     #[test]
     fn id_test() {
@@ -62,19 +61,19 @@ mod tests {
 
     #[test]
     fn size_range_test() {
-        assert_eq!(MilestoneRequest::size_range().contains(&7), false);
-        assert_eq!(MilestoneRequest::size_range().contains(&8), true);
-        assert_eq!(MilestoneRequest::size_range().contains(&9), false);
+        assert_eq!(MilestoneRequest::size_range().contains(&3), false);
+        assert_eq!(MilestoneRequest::size_range().contains(&4), true);
+        assert_eq!(MilestoneRequest::size_range().contains(&5), false);
     }
 
     #[test]
     fn from_bytes_invalid_length_test() {
-        match MilestoneRequest::from_bytes(&[0; 7]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 7),
+        match MilestoneRequest::from_bytes(&[0; 3]) {
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 3),
             _ => unreachable!(),
         }
-        match MilestoneRequest::from_bytes(&[0; 9]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 9),
+        match MilestoneRequest::from_bytes(&[0; 5]) {
+            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 5),
             _ => unreachable!(),
         }
     }

@@ -5,7 +5,6 @@ use std::convert::TryInto;
 use std::ops::Range;
 
 const HANDSHAKE_ID: u8 = 0x01;
-
 const HANDSHAKE_PORT_SIZE: usize = 2;
 const HANDSHAKE_TIMESTAMP_SIZE: usize = 8;
 const HANDSHAKE_COORDINATOR_SIZE: usize = 49;
@@ -23,30 +22,27 @@ pub(crate) struct Handshake {
     pub(crate) timestamp: u64,
     pub(crate) coordinator: [u8; HANDSHAKE_COORDINATOR_SIZE],
     pub(crate) minimum_weight_magnitude: u8,
-    pub(crate) supported_messages: [u8; HANDSHAKE_VARIABLE_MAX_SIZE],
+    pub(crate) supported_messages: Vec<u8>,
 }
 
 impl Handshake {
-    // TODO supported_messages as slice ?
     pub(crate) fn new(
         port: u16,
         timestamp: u64,
         coordinator: &[u8; HANDSHAKE_COORDINATOR_SIZE],
         minimum_weight_magnitude: u8,
-        supported_messages: &[u8; HANDSHAKE_VARIABLE_MAX_SIZE],
+        supported_messages: &[u8],
     ) -> Self {
         let mut self_coordinator = [0; HANDSHAKE_COORDINATOR_SIZE];
-        let mut self_supported_messages = [0; HANDSHAKE_VARIABLE_MAX_SIZE];
 
         self_coordinator.copy_from_slice(coordinator);
-        self_supported_messages.copy_from_slice(supported_messages);
 
         Self {
             port: port,
             timestamp: timestamp,
             coordinator: self_coordinator,
             minimum_weight_magnitude: minimum_weight_magnitude,
-            supported_messages: self_supported_messages,
+            supported_messages: supported_messages.to_vec(),
         }
     }
 }
@@ -58,7 +54,7 @@ impl Default for Handshake {
             timestamp: 0,
             coordinator: [0; HANDSHAKE_COORDINATOR_SIZE],
             minimum_weight_magnitude: 0,
-            supported_messages: [0; HANDSHAKE_VARIABLE_MAX_SIZE],
+            supported_messages: Vec::default(),
         }
     }
 }
@@ -107,7 +103,7 @@ impl Message for Handshake {
         );
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE;
 
-        message.supported_messages[0..bytes[offset..].len()].copy_from_slice(&bytes[offset..]);
+        message.supported_messages = bytes[offset..].to_vec();
 
         Ok(message)
     }

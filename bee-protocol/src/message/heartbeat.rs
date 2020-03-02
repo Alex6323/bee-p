@@ -5,7 +5,6 @@ use std::convert::TryInto;
 use std::ops::Range;
 
 const HEARTBEAT_ID: u8 = 0x06;
-
 const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = 4;
 const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = 4;
 const HEARTBEAT_CONSTANT_SIZE: usize =
