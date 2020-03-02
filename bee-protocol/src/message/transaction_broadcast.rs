@@ -10,7 +10,7 @@ const TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE: usize = 1604;
 
 #[derive(Clone, Default)]
 pub(crate) struct TransactionBroadcast {
-    transaction: Vec<u8>,
+    pub(crate) transaction: Vec<u8>,
 }
 
 impl TransactionBroadcast {
@@ -18,10 +18,6 @@ impl TransactionBroadcast {
         Self {
             transaction: transaction.to_vec(),
         }
-    }
-
-    pub fn transaction(&self) -> &Vec<u8> {
-        &self.transaction
     }
 }
 
@@ -113,7 +109,7 @@ mod tests {
     }
 
     fn into_from_eq(message: TransactionBroadcast) {
-        assert_eq!(slice_eq(message.transaction(), &TRANSACTION), true);
+        assert_eq!(slice_eq(&message.transaction, &TRANSACTION), true);
     }
 
     #[test]

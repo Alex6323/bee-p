@@ -10,16 +10,12 @@ const TRANSACTION_REQUEST_CONSTANT_SIZE: usize = TRANSACTION_REQUEST_HASH_SIZE;
 
 #[derive(Clone)]
 pub(crate) struct TransactionRequest {
-    hash: [u8; TRANSACTION_REQUEST_HASH_SIZE],
+    pub(crate) hash: [u8; TRANSACTION_REQUEST_HASH_SIZE],
 }
 
 impl TransactionRequest {
     pub fn new(hash: [u8; TRANSACTION_REQUEST_HASH_SIZE]) -> Self {
         Self { hash: hash }
-    }
-
-    pub fn hash(&self) -> &[u8; TRANSACTION_REQUEST_HASH_SIZE] {
-        &self.hash
     }
 }
 
@@ -96,7 +92,7 @@ mod tests {
     }
 
     fn into_from_eq(message: TransactionRequest) {
-        assert_eq!(slice_eq(message.hash(), &HASH), true);
+        assert_eq!(slice_eq(&message.hash, &HASH), true);
     }
 
     #[test]

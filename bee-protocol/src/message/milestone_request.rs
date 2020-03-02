@@ -11,16 +11,12 @@ const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct MilestoneRequest {
-    index: u64,
+    pub(crate) index: u64,
 }
 
 impl MilestoneRequest {
     pub fn new(index: u64) -> Self {
         Self { index: index }
-    }
-
-    pub fn index(&self) -> u64 {
-        self.index
     }
 }
 
@@ -84,7 +80,7 @@ mod tests {
     }
 
     fn into_from_eq(message: MilestoneRequest) {
-        assert_eq!(message.index(), INDEX);
+        assert_eq!(message.index, INDEX);
     }
 
     #[test]

@@ -13,8 +13,8 @@ const HEARTBEAT_CONSTANT_SIZE: usize =
 
 #[derive(Clone, Default)]
 pub(crate) struct Heartbeat {
-    first_solid_milestone_index: u32,
-    last_solid_milestone_index: u32,
+    pub(crate) first_solid_milestone_index: u32,
+    pub(crate) last_solid_milestone_index: u32,
 }
 
 impl Heartbeat {
@@ -23,14 +23,6 @@ impl Heartbeat {
             first_solid_milestone_index: first_solid_milestone_index,
             last_solid_milestone_index: last_solid_milestone_index,
         }
-    }
-
-    pub fn first_solid_milestone_index(&self) -> u32 {
-        self.first_solid_milestone_index
-    }
-
-    pub fn last_solid_milestone_index(&self) -> u32 {
-        self.last_solid_milestone_index
     }
 }
 
@@ -110,11 +102,11 @@ mod tests {
 
     fn into_from_eq(message: Heartbeat) {
         assert_eq!(
-            message.first_solid_milestone_index(),
+            message.first_solid_milestone_index,
             FIRST_SOLID_MILESTONE_INDEX
         );
         assert_eq!(
-            message.last_solid_milestone_index(),
+            message.last_solid_milestone_index,
             LAST_SOLID_MILESTONE_INDEX
         );
     }

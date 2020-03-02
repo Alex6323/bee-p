@@ -12,8 +12,8 @@ const LEGACY_GOSSIP_VARIABLE_MAX_SIZE: usize = 1604;
 
 #[derive(Clone)]
 pub(crate) struct LegacyGossip {
-    transaction: Vec<u8>,
-    request: [u8; LEGACY_GOSSIP_REQUEST_SIZE],
+    pub(crate) transaction: Vec<u8>,
+    pub(crate) request: [u8; LEGACY_GOSSIP_REQUEST_SIZE],
 }
 
 impl LegacyGossip {
@@ -23,14 +23,6 @@ impl LegacyGossip {
             transaction: transaction.clone(),
             request: request,
         }
-    }
-
-    pub fn transaction(&self) -> &Vec<u8> {
-        &self.transaction
-    }
-
-    pub fn request(&self) -> &[u8; LEGACY_GOSSIP_REQUEST_SIZE] {
-        &self.request
     }
 }
 
@@ -151,8 +143,8 @@ mod tests {
     }
 
     fn into_from_eq(message: LegacyGossip) {
-        assert_eq!(slice_eq(message.transaction(), &TRANSACTION), true);
-        assert_eq!(slice_eq(message.request(), &REQUEST), true);
+        assert_eq!(slice_eq(&message.transaction, &TRANSACTION), true);
+        assert_eq!(slice_eq(&message.request, &REQUEST), true);
     }
 
     #[test]

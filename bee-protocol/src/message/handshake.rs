@@ -19,11 +19,11 @@ const HANDSHAKE_VARIABLE_MAX_SIZE: usize = 32;
 
 #[derive(Clone)]
 pub(crate) struct Handshake {
-    port: u16,
-    timestamp: u64,
-    coordinator: [u8; HANDSHAKE_COORDINATOR_SIZE],
-    minimum_weight_magnitude: u8,
-    supported_messages: [u8; HANDSHAKE_VARIABLE_MAX_SIZE],
+    pub(crate) port: u16,
+    pub(crate) timestamp: u64,
+    pub(crate) coordinator: [u8; HANDSHAKE_COORDINATOR_SIZE],
+    pub(crate) minimum_weight_magnitude: u8,
+    pub(crate) supported_messages: [u8; HANDSHAKE_VARIABLE_MAX_SIZE],
 }
 
 impl Handshake {
@@ -48,26 +48,6 @@ impl Handshake {
             minimum_weight_magnitude: minimum_weight_magnitude,
             supported_messages: self_supported_messages,
         }
-    }
-
-    pub fn port(&self) -> u16 {
-        self.port
-    }
-
-    pub fn timestamp(&self) -> u64 {
-        self.timestamp
-    }
-
-    pub fn coordinator(&self) -> &[u8; HANDSHAKE_COORDINATOR_SIZE] {
-        &self.coordinator
-    }
-
-    pub fn minimum_weight_magnitude(&self) -> u8 {
-        self.minimum_weight_magnitude
-    }
-
-    pub fn supported_messages(&self) -> &[u8; HANDSHAKE_VARIABLE_MAX_SIZE] {
-        &self.supported_messages
     }
 }
 
@@ -193,12 +173,12 @@ mod tests {
     }
 
     fn into_from_eq(message: Handshake) {
-        assert_eq!(message.port(), PORT);
-        assert_eq!(message.timestamp(), TIMESTAMP);
-        assert_eq!(slice_eq(message.coordinator(), &COORDINATOR), true);
-        assert_eq!(message.minimum_weight_magnitude(), MINIMUM_WEIGHT_MAGNITUDE);
+        assert_eq!(message.port, PORT);
+        assert_eq!(message.timestamp, TIMESTAMP);
+        assert_eq!(slice_eq(&message.coordinator, &COORDINATOR), true);
+        assert_eq!(message.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
         assert_eq!(
-            slice_eq(message.supported_messages(), &SUPPORTED_MESSAGES),
+            slice_eq(&message.supported_messages, &SUPPORTED_MESSAGES),
             true
         );
     }
