@@ -2,6 +2,8 @@ use crate::message::{Handshake, Heartbeat, Message};
 use crate::neighbor::NeighborSenders;
 use crate::node::NodeMetrics;
 
+use std::convert::TryInto;
+
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};
 
@@ -120,43 +122,54 @@ impl GenericNeighborReceiverActor<NeighborHandshakeReceiverActorState> {
 
     async fn run(mut self) {
         // TODO periodically send handshake ?
-        // let mut header = None;
+        let mut header: Option<[u8; 3]> = None;
 
         while let Some(event) = self.receiver.next().await {
+            let mut handshake = None;
+
             match event {
                 NeighborEvent::Message { size, bytes } => {
-                    info!("[Neighbor ] Message received");
-                    // match header {
-                    // Some(Header {
-                    //     message_type,
-                    //     message_length,
-                    // }) => {
-                    //     info!("[Neighbor ] Reading Handshake");
-                    //     let handshake = Handshake::from_bytes(&bytes[3..size - 3]);
-                    // }
-                    // None => {
-                    //     info!("[Neighbor ] Reading Header");
-                    //     header = Some(Header::from_bytes(&bytes[0..size]).unwrap());
-                    //     if size > 3 {
-                    //         info!("[Neighbor ] Reading Handshake");
-                    //         let handshake = Handshake::from_bytes(&bytes[3..size - 3]);
-                    //         for i in 0..64 {
-                    //             print!("{:?},", bytes[i]);
-                    //         }
-                    //         println!("");
-                    //         return GenericNeighborReceiverActor::<
-                    //             NeighborMessageReceiverActorState,
-                    //         >::new(
-                    //             self.peer_id, self.receiver
-                    //         )
-                    //         .run()
-                    //         .await;
-                    //     }
-                    // }
-                    // }
+                    info!("[Neighbor-{:?}] Message received", self.peer_id);
+
+                    if size < 3 {
+                        continue;
+                    }
+                    match &header {
+                        Some(header_bytes) => {
+                            info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
+                            handshake =
+                                Some(Handshake::from_full_bytes(header_bytes, &bytes[0..size]));
+                        }
+                        None => {
+                            info!("[Neighbor-{:?}] Reading Header", self.peer_id);
+                            header = Some(bytes[0..3].try_into().unwrap());
+                            if size > 3 {
+                                info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
+                                handshake = Some(Handshake::from_full_bytes(
+                                    &bytes[0..3],
+                                    &bytes[3..size - 3],
+                                ));
+                            }
+                        }
+                    }
                 }
                 NeighborEvent::Disconnected => {}
                 _ => {}
+            }
+            match handshake {
+                Some(handshake) => match handshake {
+                    Ok(handshake) => {
+                        // TODO validate handshake
+                        return GenericNeighborReceiverActor::<NeighborMessageReceiverActorState>::new(
+                                            self.peer_id,
+                                            self.receiver,
+                                        )
+                                        .run()
+                                        .await;
+                    }
+                    Err(_) => continue,
+                },
+                None => continue,
             }
         }
     }
