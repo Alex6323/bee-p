@@ -129,7 +129,8 @@ mod tests {
     #[test]
     fn full_into_from_test() {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
+        let bytes = message_from.into_full_bytes();
 
-        into_from_eq(Heartbeat::from_full_bytes(&message_from.into_full_bytes()).unwrap());
+        into_from_eq(Heartbeat::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }

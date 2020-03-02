@@ -109,7 +109,8 @@ mod tests {
     #[test]
     fn full_into_from_test() {
         let message_from = TransactionRequest::new(HASH);
+        let bytes = message_from.into_full_bytes();
 
-        into_from_eq(TransactionRequest::from_full_bytes(&message_from.into_full_bytes()).unwrap());
+        into_from_eq(TransactionRequest::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }

@@ -165,7 +165,8 @@ mod tests {
     #[test]
     fn full_into_from_test() {
         let message_from = LegacyGossip::new(&TRANSACTION.to_vec(), REQUEST);
+        let bytes = message_from.into_full_bytes();
 
-        into_from_eq(LegacyGossip::from_bytes(&message_from.into_bytes()).unwrap());
+        into_from_eq(LegacyGossip::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }

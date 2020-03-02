@@ -16,28 +16,26 @@ pub(crate) trait Message {
     where
         Self: std::marker::Sized;
 
-    fn from_full_bytes(bytes: &[u8]) -> Result<Self, MessageError>
+    fn from_full_bytes(header_bytes: &[u8], payload_bytes: &[u8]) -> Result<Self, MessageError>
     where
         Self: std::marker::Sized,
     {
-        if bytes.len() < 3 {
-            Err(MessageError::InvalidHeaderLength(bytes.len()))?;
+        if header_bytes.len() < 3 {
+            Err(MessageError::InvalidHeaderLength(header_bytes.len()))?;
         }
 
-        let message_length = u16::from_be_bytes(
-            bytes[1..3]
-                .try_into()
-                .map_err(|_| MessageError::InvalidAdvertisedLengthBytes([bytes[1], bytes[2]]))?,
-        );
+        let payload_length = u16::from_be_bytes(header_bytes[1..3].try_into().map_err(|_| {
+            MessageError::InvalidAdvertisedLengthBytes([header_bytes[1], header_bytes[2]])
+        })?);
 
-        if message_length as usize != bytes[3..].len() {
+        if payload_length as usize != payload_bytes.len() {
             Err(MessageError::InvalidAdvertisedLength(
-                message_length as usize,
-                bytes[3..].len(),
+                payload_length as usize,
+                payload_bytes.len(),
             ))?;
         }
 
-        Self::from_bytes(&bytes[3..])
+        Self::from_bytes(payload_bytes)
     }
 
     fn into_bytes(self) -> Vec<u8>;
