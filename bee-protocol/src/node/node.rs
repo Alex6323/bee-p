@@ -3,10 +3,7 @@ use crate::message::{
 };
 
 // TODO channels ?
-use crate::neighbor::{
-    Neighbor, NeighborChannels, NeighborConnectedReceiverActorState, NeighborEvent,
-    NeighborReceiverActor,
-};
+use crate::neighbor::{Neighbor, NeighborChannels, NeighborEvent, NeighborReceiverActor};
 use crate::node::NodeMetrics;
 
 use netzwerk::Command::AddPeer;
@@ -63,14 +60,7 @@ impl Node {
                     self.neighbors.insert(peer_id, sender);
 
                     spawn(
-                        NeighborReceiverActor::new(
-                            peer_id,
-                            receiver,
-                            NeighborConnectedReceiverActorState {
-                                network: self.network.clone(),
-                            },
-                        )
-                        .run(),
+                        NeighborReceiverActor::new(peer_id, self.network.clone(), receiver).run(),
                     );
                 }
                 Event::PeerRemoved { peer_id, num_peers } => {}
@@ -79,7 +69,11 @@ impl Node {
                         sender.send(NeighborEvent::Connected).await;
                     }
                 }
-                Event::PeerDisconnected { peer_id, reconnect } => {}
+                Event::PeerDisconnected { peer_id, reconnect } => {
+                    if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+                        sender.send(NeighborEvent::Disconnected).await;
+                    }
+                }
                 Event::BytesReceived {
                     peer_id,
                     num_bytes,
