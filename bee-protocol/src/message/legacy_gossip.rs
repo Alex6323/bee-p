@@ -45,7 +45,7 @@ impl Message for LegacyGossip {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
         }
 
         let mut message = Self::default();
@@ -131,11 +131,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match LegacyGossip::from_bytes(&[0; 340]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 340),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 340),
             _ => unreachable!(),
         }
         match LegacyGossip::from_bytes(&[0; 1654]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 1654),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 1654),
             _ => unreachable!(),
         }
     }

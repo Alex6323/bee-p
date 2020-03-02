@@ -37,7 +37,7 @@ impl Message for TransactionRequest {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
         }
 
         let mut message = Self::default();
@@ -81,11 +81,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match TransactionRequest::from_bytes(&[0; 48]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 48),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 48),
             _ => unreachable!(),
         }
         match TransactionRequest::from_bytes(&[0; 50]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 50),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 50),
             _ => unreachable!(),
         }
     }

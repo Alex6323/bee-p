@@ -30,16 +30,18 @@ impl Message for MilestoneRequest {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
         }
 
-        Ok(Self {
-            index: u32::from_be_bytes(
-                bytes[0..MILESTONE_REQUEST_INDEX_SIZE]
-                    .try_into()
-                    .map_err(|_| MessageError::InvalidMessageField)?,
-            ),
-        })
+        let mut message = Self::default();
+
+        message.index = u32::from_be_bytes(
+            bytes[0..MILESTONE_REQUEST_INDEX_SIZE]
+                .try_into()
+                .map_err(|_| MessageError::InvalidPayloadField)?,
+        );
+
+        Ok(message)
     }
 
     fn into_bytes(self) -> Vec<u8> {
@@ -69,11 +71,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match MilestoneRequest::from_bytes(&[0; 3]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 3),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 3),
             _ => unreachable!(),
         }
         match MilestoneRequest::from_bytes(&[0; 5]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 5),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 5),
             _ => unreachable!(),
         }
     }

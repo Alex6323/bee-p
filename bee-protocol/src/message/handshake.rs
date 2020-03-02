@@ -71,7 +71,7 @@ impl Message for Handshake {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
         }
 
         let mut message = Self::default();
@@ -80,14 +80,14 @@ impl Message for Handshake {
         message.port = u16::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_PORT_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidPayloadField)?,
         );
         offset += HANDSHAKE_PORT_SIZE;
 
         message.timestamp = u64::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_TIMESTAMP_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidPayloadField)?,
         );
         offset += HANDSHAKE_TIMESTAMP_SIZE;
 
@@ -99,7 +99,7 @@ impl Message for Handshake {
         message.minimum_weight_magnitude = u8::from_be_bytes(
             bytes[offset..offset + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidPayloadField)?,
         );
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE;
 
@@ -159,11 +159,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match Handshake::from_bytes(&[0; 60]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 60),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 60),
             _ => unreachable!(),
         }
         match Handshake::from_bytes(&[0; 93]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 93),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 93),
             _ => unreachable!(),
         }
     }

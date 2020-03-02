@@ -36,7 +36,7 @@ impl Message for Heartbeat {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidMessageLength(bytes.len()))?;
+            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
         }
 
         let mut message = Self::default();
@@ -45,14 +45,14 @@ impl Message for Heartbeat {
         message.first_solid_milestone_index = u32::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidPayloadField)?,
         );
         offset += HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE;
 
         message.last_solid_milestone_index = u32::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidMessageField)?,
+                .map_err(|_| MessageError::InvalidPayloadField)?,
         );
 
         Ok(message)
@@ -90,11 +90,11 @@ mod tests {
     #[test]
     fn from_bytes_invalid_length_test() {
         match Heartbeat::from_bytes(&[0; 7]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 7),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 7),
             _ => unreachable!(),
         }
         match Heartbeat::from_bytes(&[0; 9]) {
-            Err(MessageError::InvalidMessageLength(length)) => assert_eq!(length, 9),
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 9),
             _ => unreachable!(),
         }
     }
