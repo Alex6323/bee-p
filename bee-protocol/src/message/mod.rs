@@ -1,6 +1,5 @@
 mod errors;
 mod handshake;
-mod header;
 mod heartbeat;
 mod legacy_gossip;
 mod message;
@@ -10,7 +9,6 @@ mod transaction_request;
 
 pub(crate) use errors::MessageError;
 pub(crate) use handshake::Handshake;
-pub(crate) use header::Header;
 pub(crate) use heartbeat::Heartbeat;
 pub(crate) use legacy_gossip::LegacyGossip;
 pub(crate) use message::Message;

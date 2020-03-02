@@ -1,4 +1,4 @@
-use crate::message::{Handshake, Header, Heartbeat, Message};
+use crate::message::{Handshake, Heartbeat, Message};
 use crate::neighbor::NeighborSenders;
 use crate::node::NodeMetrics;
 
@@ -120,40 +120,40 @@ impl GenericNeighborReceiverActor<NeighborHandshakeReceiverActorState> {
 
     async fn run(mut self) {
         // TODO periodically send handshake ?
-        let mut header = None;
+        // let mut header = None;
 
         while let Some(event) = self.receiver.next().await {
             match event {
                 NeighborEvent::Message { size, bytes } => {
                     info!("[Neighbor ] Message received");
-                    match header {
-                        Some(Header {
-                            message_type,
-                            message_length,
-                        }) => {
-                            info!("[Neighbor ] Reading Handshake");
-                            let handshake = Handshake::from_bytes(&bytes[3..size - 3]);
-                        }
-                        None => {
-                            info!("[Neighbor ] Reading Header");
-                            header = Some(Header::from_bytes(&bytes[0..size]).unwrap());
-                            if size > 3 {
-                                info!("[Neighbor ] Reading Handshake");
-                                let handshake = Handshake::from_bytes(&bytes[3..size - 3]);
-                                for i in 0..64 {
-                                    print!("{:?},", bytes[i]);
-                                }
-                                println!("");
-                                return GenericNeighborReceiverActor::<
-                                    NeighborMessageReceiverActorState,
-                                >::new(
-                                    self.peer_id, self.receiver
-                                )
-                                .run()
-                                .await;
-                            }
-                        }
-                    }
+                    // match header {
+                    // Some(Header {
+                    //     message_type,
+                    //     message_length,
+                    // }) => {
+                    //     info!("[Neighbor ] Reading Handshake");
+                    //     let handshake = Handshake::from_bytes(&bytes[3..size - 3]);
+                    // }
+                    // None => {
+                    //     info!("[Neighbor ] Reading Header");
+                    //     header = Some(Header::from_bytes(&bytes[0..size]).unwrap());
+                    //     if size > 3 {
+                    //         info!("[Neighbor ] Reading Handshake");
+                    //         let handshake = Handshake::from_bytes(&bytes[3..size - 3]);
+                    //         for i in 0..64 {
+                    //             print!("{:?},", bytes[i]);
+                    //         }
+                    //         println!("");
+                    //         return GenericNeighborReceiverActor::<
+                    //             NeighborMessageReceiverActorState,
+                    //         >::new(
+                    //             self.peer_id, self.receiver
+                    //         )
+                    //         .run()
+                    //         .await;
+                    //     }
+                    // }
+                    // }
                 }
                 NeighborEvent::Disconnected => {}
                 _ => {}
@@ -178,9 +178,9 @@ impl GenericNeighborReceiverActor<NeighborMessageReceiverActorState> {
         while let Some(event) = self.receiver.next().await {
             match event {
                 NeighborEvent::Message { size, bytes } => {
-                    info!("[Neighbor ] Message received");
-                    let header = Header::from_bytes(&bytes[0..size]).unwrap();
-                    println!("{:?}", header.message_type());
+                    // info!("[Neighbor ] Message received");
+                    // let header = Header::from_bytes(&bytes[0..size]).unwrap();
+                    // println!("{:?}", header.message_type());
                     // match message_type {
                     //     0x01 => Ok(ProtocolMessageType::Handshake(Handshake::from_bytes(
                     //         &message,
