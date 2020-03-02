@@ -14,7 +14,7 @@ pub(crate) struct TransactionBroadcast {
 }
 
 impl TransactionBroadcast {
-    pub fn new(transaction: &[u8]) -> Self {
+    pub(crate) fn new(transaction: &[u8]) -> Self {
         Self {
             transaction: transaction.to_vec(),
         }

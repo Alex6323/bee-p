@@ -18,7 +18,7 @@ pub(crate) struct Heartbeat {
 }
 
 impl Heartbeat {
-    pub fn new(first_solid_milestone_index: u32, last_solid_milestone_index: u32) -> Self {
+    pub(crate) fn new(first_solid_milestone_index: u32, last_solid_milestone_index: u32) -> Self {
         Self {
             first_solid_milestone_index: first_solid_milestone_index,
             last_solid_milestone_index: last_solid_milestone_index,

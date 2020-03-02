@@ -28,7 +28,7 @@ pub(crate) struct Handshake {
 
 impl Handshake {
     // TODO supported_messages as slice ?
-    pub fn new(
+    pub(crate) fn new(
         port: u16,
         timestamp: u64,
         coordinator: &[u8; HANDSHAKE_COORDINATOR_SIZE],

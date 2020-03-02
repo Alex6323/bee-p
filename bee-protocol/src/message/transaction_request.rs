@@ -14,7 +14,7 @@ pub(crate) struct TransactionRequest {
 }
 
 impl TransactionRequest {
-    pub fn new(hash: [u8; TRANSACTION_REQUEST_HASH_SIZE]) -> Self {
+    pub(crate) fn new(hash: [u8; TRANSACTION_REQUEST_HASH_SIZE]) -> Self {
         Self { hash: hash }
     }
 }

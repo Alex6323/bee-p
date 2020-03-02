@@ -15,7 +15,7 @@ pub(crate) struct MilestoneRequest {
 }
 
 impl MilestoneRequest {
-    pub fn new(index: u64) -> Self {
+    pub(crate) fn new(index: u64) -> Self {
         Self { index: index }
     }
 }

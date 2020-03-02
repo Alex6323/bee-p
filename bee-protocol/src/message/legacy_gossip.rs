@@ -17,7 +17,7 @@ pub(crate) struct LegacyGossip {
 }
 
 impl LegacyGossip {
-    pub fn new(transaction: &Vec<u8>, request: [u8; LEGACY_GOSSIP_REQUEST_SIZE]) -> Self {
+    pub(crate) fn new(transaction: &Vec<u8>, request: [u8; LEGACY_GOSSIP_REQUEST_SIZE]) -> Self {
         // TODO clone ?
         Self {
             transaction: transaction.clone(),
