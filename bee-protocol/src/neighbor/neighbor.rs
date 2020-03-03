@@ -97,7 +97,7 @@ impl NeighborReceiverActor {
                 // TODO block ?
                 self.network
                     .send(SendBytes {
-                        to: self.peer_id,
+                        to_peer: self.peer_id,
                         bytes: bytes.to_vec(),
                     })
                     .await;

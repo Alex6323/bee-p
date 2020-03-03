@@ -64,27 +64,27 @@ impl Node {
                     );
                 }
                 Event::PeerRemoved { peer_id, num_peers } => {}
-                Event::PeerConnected { peer_id } => {
+                Event::PeerConnected { peer_id, num_conns } => {
                     if let Some(sender) = self.neighbors.get_mut(&peer_id) {
                         sender.send(NeighborEvent::Connected).await;
                     }
                 }
-                Event::PeerDisconnected { peer_id, reconnect } => {
+                Event::PeerDisconnected { peer_id, num_conns } => {
                     if let Some(sender) = self.neighbors.get_mut(&peer_id) {
                         sender.send(NeighborEvent::Disconnected).await;
                     }
                 }
                 Event::BytesReceived {
-                    peer_id,
+                    from_peer,
+                    with_addr,
                     num_bytes,
-                    from,
-                    bytes,
+                    buffer,
                 } => {
-                    if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+                    if let Some(sender) = self.neighbors.get_mut(&from_peer) {
                         sender
                             .send(NeighborEvent::Message {
                                 size: num_bytes,
-                                bytes: bytes,
+                                bytes: buffer,
                             })
                             .await;
                     }
