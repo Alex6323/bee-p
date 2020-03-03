@@ -30,8 +30,6 @@ impl Payload {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Address(TritBuf<T1B1Buf>);
 
-// TODO Hash
-
 impl Address {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(ADDRESS.trit_offset.length))
@@ -80,8 +78,6 @@ pub struct Index(pub usize);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Hash(TritBuf<T1B1Buf>);
-
-// TODO Hash
 
 impl Hash {
     pub fn zeros() -> Self {
