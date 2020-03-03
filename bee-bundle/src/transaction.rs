@@ -3,51 +3,12 @@ use crate::constants::{ADDRESS, BUNDLE_HASH, IOTA_SUPPLY, NONCE, PAYLOAD, TAG};
 use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
 use bee_common::Errors;
 use bee_common::Result as BeeResult;
-use bee_ternary::{raw::RawEncodingBuf, util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
+use bee_ternary::{util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
 
 use std::fmt;
 
-macro_rules! implement_debug {
-    ($($t:ty),+) => {
-    $(
-        impl<T: RawEncodingBuf> fmt::Debug for $t {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "{:?}", self.0)
-            }
-        }
-    )+
-    }
-}
-
-macro_rules! implement_display {
-    ($($t:ty),+) => {
-    $(
-        impl<T: RawEncodingBuf> fmt::Display for $t {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "{:?}", self.0)
-            }
-        }
-    )+
-    }
-}
-
-macro_rules! implement_eq {
-    ($($t:ty),+) => {
-    $(
-        impl<T: RawEncodingBuf> PartialEq for $t {
-            fn eq(&self,other: &$t) -> bool {
-                    self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
-            }
-        }
-
-        impl<T: RawEncodingBuf> Eq for $t {}
-
-    )+
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Payload<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Payload(TritBuf<T1B1Buf>);
 
 impl Payload {
     pub fn zeros() -> Self {
@@ -66,8 +27,8 @@ impl Payload {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Address<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Address(TritBuf<T1B1Buf>);
 
 // TODO Hash
 
@@ -88,11 +49,11 @@ impl Address {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Value(pub i64);
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Tag<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Tag(TritBuf<T1B1Buf>);
 
 impl Tag {
     pub fn zeros() -> Self {
@@ -111,14 +72,14 @@ impl Tag {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Timestamp(pub u64);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Index(pub usize);
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Hash<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Hash(TritBuf<T1B1Buf>);
 
 // TODO Hash
 
@@ -139,8 +100,8 @@ impl Hash {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Nonce<T: RawEncodingBuf = T1B1Buf>(TritBuf<T>);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Nonce(TritBuf<T1B1Buf>);
 
 impl Nonce {
     pub fn zeros() -> Self {
@@ -159,40 +120,36 @@ impl Nonce {
     }
 }
 
-implement_debug!(Payload<T>, Address<T>, Tag<T>, Nonce<T>, Hash<T>);
-implement_display!(Payload<T>, Address<T>, Tag<T>, Nonce<T>, Hash<T>);
-implement_eq!(Payload<T>, Address<T>, Tag<T>, Nonce<T>, Hash<T>);
-
 /// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits.
-pub struct Essence<'a, T: RawEncodingBuf = T1B1Buf> {
-    address: &'a Address<T>,
+pub struct Essence<'a> {
+    address: &'a Address,
     value: &'a Value,
-    obsolete_tag: &'a Tag<T>,
+    obsolete_tag: &'a Tag,
     timestamp: &'a Timestamp,
     index: &'a Index,
     last_index: &'a Index,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Transaction<T: RawEncodingBuf = T1B1Buf> {
-    pub(crate) payload: Payload<T>,
-    pub(crate) address: Address<T>,
+#[derive(Serialize, Deserialize)]
+pub struct Transaction {
+    pub(crate) payload: Payload,
+    pub(crate) address: Address,
     pub(crate) value: Value,
-    pub(crate) obsolete_tag: Tag<T>,
+    pub(crate) obsolete_tag: Tag,
     pub(crate) timestamp: Timestamp,
     pub(crate) index: Index,
     pub(crate) last_index: Index,
-    pub(crate) bundle: Hash<T>,
-    pub(crate) trunk: Hash<T>,
-    pub(crate) branch: Hash<T>,
-    pub(crate) tag: Tag<T>,
+    pub(crate) bundle: Hash,
+    pub(crate) trunk: Hash,
+    pub(crate) branch: Hash,
+    pub(crate) tag: Tag,
     pub(crate) attachment_ts: Timestamp,
     pub(crate) attachment_lbts: Timestamp,
     pub(crate) attachment_ubts: Timestamp,
-    pub(crate) nonce: Nonce<T>,
+    pub(crate) nonce: Nonce,
 }
 
-impl<T: RawEncodingBuf> Transaction<T> {
+impl Transaction {
     pub fn from_tryte_str(tx_trytes: &str) -> BeeResult<Self> {
         if tx_trytes.len() != TRANSACTION_TRYT_LEN {
             return Err(Errors::TransactionDeserializationError);
@@ -205,11 +162,11 @@ impl<T: RawEncodingBuf> Transaction<T> {
         unimplemented!()
     }
 
-    pub fn payload(&self) -> &Payload<T> {
+    pub fn payload(&self) -> &Payload {
         &self.payload
     }
 
-    pub fn address(&self) -> &Address<T> {
+    pub fn address(&self) -> &Address {
         &self.address
     }
 
@@ -217,7 +174,7 @@ impl<T: RawEncodingBuf> Transaction<T> {
         &self.value
     }
 
-    pub fn obsolete_tag(&self) -> &Tag<T> {
+    pub fn obsolete_tag(&self) -> &Tag {
         &self.obsolete_tag
     }
 
@@ -233,19 +190,19 @@ impl<T: RawEncodingBuf> Transaction<T> {
         &self.last_index
     }
 
-    pub fn bundle(&self) -> &Hash<T> {
+    pub fn bundle(&self) -> &Hash {
         &self.bundle
     }
 
-    pub fn trunk(&self) -> &Hash<T> {
+    pub fn trunk(&self) -> &Hash {
         &self.trunk
     }
 
-    pub fn branch(&self) -> &Hash<T> {
+    pub fn branch(&self) -> &Hash {
         &self.branch
     }
 
-    pub fn tag(&self) -> &Tag<T> {
+    pub fn tag(&self) -> &Tag {
         &self.tag
     }
 
@@ -261,12 +218,12 @@ impl<T: RawEncodingBuf> Transaction<T> {
         &self.attachment_ubts
     }
 
-    pub fn nonce(&self) -> &Nonce<T> {
+    pub fn nonce(&self) -> &Nonce {
         &self.nonce
     }
 
     /// Returns the (bundle) essence of that transaction.
-    pub fn essence<'a>(&'a self) -> Essence<'a, T> {
+    pub fn essence<'a>(&'a self) -> Essence<'a> {
         Essence {
             address: &self.address,
             value: &self.value,
@@ -282,7 +239,7 @@ impl<T: RawEncodingBuf> Transaction<T> {
     }
 }
 
-impl<T: RawEncodingBuf> fmt::Debug for Transaction<T> {
+impl fmt::Debug for Transaction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "address={:?}\nvalue={:?}\ntimestamp={:?}\nindex={:?}\nlast_index={:?}\ntag={:?}\nbundle={:?}\ntrunk={:?}\nbranch={:?}\nnonce={:?}",
         self.address,
@@ -298,15 +255,14 @@ impl<T: RawEncodingBuf> fmt::Debug for Transaction<T> {
     }
 }
 
-#[derive(Default)]
-pub struct Transactions<T: RawEncodingBuf = T1B1Buf>(pub(crate) Vec<Transaction<T>>);
+pub struct Transactions(pub(crate) Vec<Transaction>);
 
-impl<T: RawEncodingBuf> Transactions<T> {
+impl Transactions {
     pub fn new() -> Self {
         Self(Vec::new())
     }
 
-    pub fn get(&self, index: usize) -> Option<&Transaction<T>> {
+    pub fn get(&self, index: usize) -> Option<&Transaction> {
         self.0.get(index)
     }
 
@@ -314,7 +270,7 @@ impl<T: RawEncodingBuf> Transactions<T> {
         self.0.len()
     }
 
-    pub fn push(&mut self, transaction: Transaction<T>) {
+    pub fn push(&mut self, transaction: Transaction) {
         self.0.push(transaction);
     }
 }
@@ -327,26 +283,26 @@ pub enum TransactionBuilderError {
     InvalidValue(i64),
 }
 
-pub struct TransactionBuilder<T: RawEncodingBuf = T1B1Buf> {
-    pub(crate) payload: Option<Payload<T>>,
-    pub(crate) address: Option<Address<T>>,
+pub struct TransactionBuilder {
+    pub(crate) payload: Option<Payload>,
+    pub(crate) address: Option<Address>,
     pub(crate) value: Option<Value>,
-    pub(crate) obsolete_tag: Option<Tag<T>>,
+    pub(crate) obsolete_tag: Option<Tag>,
     pub(crate) timestamp: Option<Timestamp>,
     pub(crate) index: Option<Index>,
     pub(crate) last_index: Option<Index>,
-    pub(crate) bundle: Option<Hash<T>>,
-    pub(crate) trunk: Option<Hash<T>>,
-    pub(crate) branch: Option<Hash<T>>,
-    pub(crate) tag: Option<Tag<T>>,
+    pub(crate) bundle: Option<Hash>,
+    pub(crate) trunk: Option<Hash>,
+    pub(crate) branch: Option<Hash>,
+    pub(crate) tag: Option<Tag>,
     pub(crate) attachment_ts: Option<Timestamp>,
     pub(crate) attachment_lbts: Option<Timestamp>,
     pub(crate) attachment_ubts: Option<Timestamp>,
-    pub(crate) nonce: Option<Nonce<T>>,
+    pub(crate) nonce: Option<Nonce>,
 }
 
-impl<T: RawEncodingBuf> Default for TransactionBuilder<T> {
-    fn default() -> Self {
+impl TransactionBuilder {
+    pub fn new() -> Self {
         Self {
             payload: None,
             address: None,
@@ -365,19 +321,13 @@ impl<T: RawEncodingBuf> Default for TransactionBuilder<T> {
             nonce: None,
         }
     }
-}
 
-impl<T: RawEncodingBuf> TransactionBuilder<T> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn with_payload(mut self, payload: Payload<T>) -> Self {
+    pub fn with_payload(mut self, payload: Payload) -> Self {
         self.payload.replace(payload);
         self
     }
 
-    pub fn with_address(mut self, address: Address<T>) -> Self {
+    pub fn with_address(mut self, address: Address) -> Self {
         self.address.replace(address);
         self
     }
@@ -387,7 +337,7 @@ impl<T: RawEncodingBuf> TransactionBuilder<T> {
         self
     }
 
-    pub fn with_obsolete_tag(mut self, obsolete_tag: Tag<T>) -> Self {
+    pub fn with_obsolete_tag(mut self, obsolete_tag: Tag) -> Self {
         self.obsolete_tag.replace(obsolete_tag);
         self
     }
@@ -406,7 +356,7 @@ impl<T: RawEncodingBuf> TransactionBuilder<T> {
         self
     }
 
-    pub fn with_tag(mut self, tag: Tag<T>) -> Self {
+    pub fn with_tag(mut self, tag: Tag) -> Self {
         self.tag.replace(tag);
         self
     }
@@ -416,17 +366,17 @@ impl<T: RawEncodingBuf> TransactionBuilder<T> {
         self
     }
 
-    pub fn with_bundle(mut self, bundle: Hash<T>) -> Self {
+    pub fn with_bundle(mut self, bundle: Hash) -> Self {
         self.bundle.replace(bundle);
         self
     }
 
-    pub fn with_trunk(mut self, trunk: Hash<T>) -> Self {
+    pub fn with_trunk(mut self, trunk: Hash) -> Self {
         self.trunk.replace(trunk);
         self
     }
 
-    pub fn with_branch(mut self, branch: Hash<T>) -> Self {
+    pub fn with_branch(mut self, branch: Hash) -> Self {
         self.branch.replace(branch);
         self
     }
@@ -441,12 +391,12 @@ impl<T: RawEncodingBuf> TransactionBuilder<T> {
         self
     }
 
-    pub fn with_nonce(mut self, nonce: Nonce<T>) -> Self {
+    pub fn with_nonce(mut self, nonce: Nonce) -> Self {
         self.nonce.replace(nonce);
         self
     }
 
-    pub fn build(self) -> Result<Transaction<T>, TransactionBuilderError> {
+    pub fn build(self) -> Result<Transaction, TransactionBuilderError> {
         let value = self
             .value
             .as_ref()
@@ -457,7 +407,7 @@ impl<T: RawEncodingBuf> TransactionBuilder<T> {
             return Err(TransactionBuilderError::InvalidValue(value));
         }
 
-        Ok(Transaction::<T> {
+        Ok(Transaction {
             payload: self
                 .payload
                 .ok_or(TransactionBuilderError::MissingField("payload"))?,
@@ -524,7 +474,7 @@ mod tests {
 
     #[test]
     fn create_transaction_from_builder() {
-        let tx = TransactionBuilder::new()
+        let _ = TransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
             .with_value(Value(0))
