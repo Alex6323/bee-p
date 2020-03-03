@@ -59,11 +59,14 @@ impl Message for Heartbeat {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        [
-            self.first_solid_milestone_index.to_be_bytes(),
-            self.last_solid_milestone_index.to_be_bytes(),
-        ]
-        .concat()
+        let mut bytes = vec![0u8; HEARTBEAT_CONSTANT_SIZE];
+
+        bytes[0..HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
+            .copy_from_slice(&self.first_solid_milestone_index.to_be_bytes());
+        bytes[HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE..]
+            .copy_from_slice(&self.last_solid_milestone_index.to_be_bytes());
+
+        bytes
     }
 }
 

@@ -64,9 +64,10 @@ impl Message for LegacyGossip {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        let mut bytes = self.transaction.clone();
+        let mut bytes = vec![0u8; LEGACY_GOSSIP_CONSTANT_SIZE + self.transaction.len()];
 
-        bytes.extend_from_slice(&self.hash);
+        bytes[0..self.transaction.len()].copy_from_slice(&self.transaction);
+        bytes[self.transaction.len()..].copy_from_slice(&self.hash);
 
         bytes
     }

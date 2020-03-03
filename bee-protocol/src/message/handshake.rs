@@ -8,11 +8,11 @@ const HANDSHAKE_ID: u8 = 0x01;
 const HANDSHAKE_PORT_SIZE: usize = 2;
 const HANDSHAKE_TIMESTAMP_SIZE: usize = 8;
 const HANDSHAKE_COORDINATOR_SIZE: usize = 49;
-const HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE: usize = 1;
+const HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE: usize = 1;
 const HANDSHAKE_CONSTANT_SIZE: usize = HANDSHAKE_PORT_SIZE
     + HANDSHAKE_TIMESTAMP_SIZE
     + HANDSHAKE_COORDINATOR_SIZE
-    + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE;
+    + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE;
 const HANDSHAKE_VARIABLE_MIN_SIZE: usize = 1;
 const HANDSHAKE_VARIABLE_MAX_SIZE: usize = 32;
 
@@ -97,11 +97,11 @@ impl Message for Handshake {
         offset += HANDSHAKE_COORDINATOR_SIZE;
 
         message.minimum_weight_magnitude = u8::from_be_bytes(
-            bytes[offset..offset + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE]
+            bytes[offset..offset + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
-        offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE;
+        offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE;
 
         message.supported_messages = bytes[offset..].to_vec();
 
@@ -109,13 +109,20 @@ impl Message for Handshake {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        let mut bytes = Vec::new();
+        let mut bytes = vec![0u8; HANDSHAKE_CONSTANT_SIZE + self.supported_messages.len()];
+        let mut offset = 0;
 
-        bytes.extend_from_slice(&self.port.to_be_bytes());
-        bytes.extend_from_slice(&self.timestamp.to_be_bytes());
-        bytes.extend_from_slice(&self.coordinator);
-        bytes.extend_from_slice(&self.minimum_weight_magnitude.to_be_bytes());
-        bytes.extend_from_slice(&self.supported_messages);
+        bytes[offset..offset + HANDSHAKE_PORT_SIZE].copy_from_slice(&self.port.to_be_bytes());
+        offset += HANDSHAKE_PORT_SIZE;
+        bytes[offset..offset + HANDSHAKE_TIMESTAMP_SIZE]
+            .copy_from_slice(&self.timestamp.to_be_bytes());
+        offset += HANDSHAKE_TIMESTAMP_SIZE;
+        bytes[offset..offset + HANDSHAKE_COORDINATOR_SIZE].copy_from_slice(&self.coordinator);
+        offset += HANDSHAKE_COORDINATOR_SIZE;
+        bytes[offset..offset + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE]
+            .copy_from_slice(&self.minimum_weight_magnitude.to_be_bytes());
+        offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE;
+        bytes[offset..].copy_from_slice(&self.supported_messages);
 
         bytes
     }
