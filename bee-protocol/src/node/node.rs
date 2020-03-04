@@ -45,6 +45,44 @@ impl Node {
         }
     }
 
+    fn peer_added_handler(&mut self, peer_id: PeerId) {
+        let (sender, receiver) = channel(1000);
+
+        self.neighbors.insert(peer_id, sender);
+
+        spawn(NeighborReceiverActor::new(peer_id, self.network.clone(), receiver).run());
+    }
+
+    fn peer_removed_handler(&self) {}
+
+    async fn peer_connected_handler(&mut self, peer_id: PeerId) {
+        if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+            sender.send(NeighborEvent::Connected).await;
+        }
+    }
+
+    async fn peer_disconnected_handler(&mut self, peer_id: PeerId) {
+        if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+            sender.send(NeighborEvent::Disconnected).await;
+        }
+    }
+
+    async fn peer_bytes_received_handler(
+        &mut self,
+        peer_id: PeerId,
+        num_bytes: usize,
+        buffer: Vec<u8>,
+    ) {
+        if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+            sender
+                .send(NeighborEvent::Message {
+                    size: num_bytes,
+                    bytes: buffer,
+                })
+                .await;
+        }
+    }
+
     async fn actor(mut self) {
         info!("[Node ] Starting actor");
         while let Some(event) = self.events.next().await {
@@ -54,33 +92,23 @@ impl Node {
                     peer_id,
                     num_peers: _,
                 } => {
-                    let (sender, receiver) = channel(1000);
-
-                    self.neighbors.insert(peer_id, sender);
-
-                    spawn(
-                        NeighborReceiverActor::new(peer_id, self.network.clone(), receiver).run(),
-                    );
+                    self.peer_added_handler(peer_id);
                 }
                 Event::PeerRemoved {
                     peer_id: _,
                     num_peers: _,
-                } => {}
+                } => self.peer_removed_handler(),
                 Event::PeerConnected {
                     peer_id,
                     num_conns: _,
                 } => {
-                    if let Some(sender) = self.neighbors.get_mut(&peer_id) {
-                        sender.send(NeighborEvent::Connected).await;
-                    }
+                    self.peer_connected_handler(peer_id).await;
                 }
                 Event::PeerDisconnected {
                     peer_id,
                     num_conns: _,
                 } => {
-                    if let Some(sender) = self.neighbors.get_mut(&peer_id) {
-                        sender.send(NeighborEvent::Disconnected).await;
-                    }
+                    self.peer_connected_handler(peer_id).await;
                 }
                 Event::BytesReceived {
                     from_peer,
@@ -88,54 +116,13 @@ impl Node {
                     num_bytes,
                     buffer,
                 } => {
-                    if let Some(sender) = self.neighbors.get_mut(&from_peer) {
-                        sender
-                            .send(NeighborEvent::Message {
-                                size: num_bytes,
-                                bytes: buffer,
-                            })
-                            .await;
-                    }
+                    self.peer_bytes_received_handler(from_peer, num_bytes, buffer)
+                        .await;
                 }
                 _ => (),
             }
         }
     }
-
-    // fn peer_added(&mut self, id: PeerId) {
-    //     let channels = NeighborChannels::new();
-    //     let neighbor = Neighbor::new(channels.senders);
-    //
-    //     // TODO check return
-    //     self.neighbors.insert(id, neighbor);
-    // }
-    //
-    // fn peer_removed(&mut self, id: PeerId) {
-    //     // TODO check return
-    //     self.neighbors.remove(&id);
-    // }
-    //
-    // fn peer_connected(&self, id: PeerId) {
-    //     if let Some(neighbor) = self.neighbors.get(&id) {
-    //         spawn(neighbor.receive_actor());
-    //     }
-    //     // spawn(Neighbor::actor::<Handshake>(channels.receivers.handshake));
-    //     // spawn(Neighbor::actor::<LegacyGossip>(
-    //     //     channels.receivers.legacy_gossip,
-    //     // ));
-    //     // spawn(Neighbor::actor::<MilestoneRequest>(
-    //     //     channels.receivers.milestone_request,
-    //     // ));
-    //     // spawn(Neighbor::actor::<TransactionBroadcast>(
-    //     //     channels.receivers.transaction_broadcast,
-    //     // ));
-    //     // spawn(Neighbor::actor::<TransactionRequest>(
-    //     //     channels.receivers.transaction_request,
-    //     // ));
-    //     // spawn(Neighbor::actor::<Heartbeat>(channels.receivers.heartbeat));
-    // }
-    //
-    // fn peer_disconnected(&mut self, id: PeerId) {}
 
     pub fn start(self) {
         // spawn(Self::actor(self));
