@@ -10,12 +10,6 @@ pub(crate) struct Neighbor {
     heartbeat: Heartbeat,
 }
 
-pub enum NeighborEvent {
-    Connected,
-    Disconnected,
-    Message { size: usize, bytes: Vec<u8> },
-}
-
 impl Neighbor {
     pub fn new(senders: NeighborSenders) -> Self {
         Self {
