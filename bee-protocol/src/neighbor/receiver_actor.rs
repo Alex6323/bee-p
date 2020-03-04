@@ -1,11 +1,15 @@
-use crate::message::{Handshake, Message};
-use crate::neighbor::NeighborEvent;
+use crate::message::{
+    Handshake, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast,
+    TransactionRequest,
+};
+use crate::neighbor::{NeighborEvent, NeighborSenderActor};
 
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};
 
 use std::convert::TryInto;
 
+use async_std::task::spawn;
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 use log::*;
@@ -143,6 +147,20 @@ impl NeighborReceiverActor {
         context: AwaitingMessageContext,
         event: NeighborEvent,
     ) -> NeighborReceiverActorState {
+        spawn(NeighborSenderActor::<LegacyGossip>::new(self.peer_id, self.network.clone()).run());
+        spawn(
+            NeighborSenderActor::<MilestoneRequest>::new(self.peer_id, self.network.clone()).run(),
+        );
+        spawn(
+            NeighborSenderActor::<TransactionBroadcast>::new(self.peer_id, self.network.clone())
+                .run(),
+        );
+        spawn(
+            NeighborSenderActor::<TransactionRequest>::new(self.peer_id, self.network.clone())
+                .run(),
+        );
+        spawn(NeighborSenderActor::<Heartbeat>::new(self.peer_id, self.network.clone()).run());
+
         match event {
             NeighborEvent::Disconnected => {
                 info!("[Neighbor-{:?}] Disconnected", self.peer_id);

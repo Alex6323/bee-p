@@ -2,17 +2,13 @@ use crate::message::{
     Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
 
-// TODO channels ?
-use crate::neighbor::{Neighbor, NeighborChannels, NeighborEvent, NeighborReceiverActor};
+use crate::neighbor::{Neighbor, NeighborEvent, NeighborReceiverActor};
 use crate::node::NodeMetrics;
 
 use netzwerk::Command::AddPeer;
-use netzwerk::{Address, Config, Event, EventSubscriber, Network, Peer, PeerId, Shutdown};
+use netzwerk::{Config, Event, EventSubscriber, Network, Peer, PeerId, Shutdown};
 
 use std::collections::HashMap;
-
-// TODO remove
-use async_std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs};
 
 use async_std::task::{block_on, spawn};
 use futures::channel::mpsc::{channel, SendError, Sender};
@@ -54,7 +50,10 @@ impl Node {
         while let Some(event) = self.events.next().await {
             info!("[Node ] Received event {:?}", event);
             match event {
-                Event::PeerAdded { peer_id, num_peers } => {
+                Event::PeerAdded {
+                    peer_id,
+                    num_peers: _,
+                } => {
                     let (sender, receiver) = channel(1000);
 
                     self.neighbors.insert(peer_id, sender);
@@ -63,20 +62,29 @@ impl Node {
                         NeighborReceiverActor::new(peer_id, self.network.clone(), receiver).run(),
                     );
                 }
-                Event::PeerRemoved { peer_id, num_peers } => {}
-                Event::PeerConnected { peer_id, num_conns } => {
+                Event::PeerRemoved {
+                    peer_id: _,
+                    num_peers: _,
+                } => {}
+                Event::PeerConnected {
+                    peer_id,
+                    num_conns: _,
+                } => {
                     if let Some(sender) = self.neighbors.get_mut(&peer_id) {
                         sender.send(NeighborEvent::Connected).await;
                     }
                 }
-                Event::PeerDisconnected { peer_id, num_conns } => {
+                Event::PeerDisconnected {
+                    peer_id,
+                    num_conns: _,
+                } => {
                     if let Some(sender) = self.neighbors.get_mut(&peer_id) {
                         sender.send(NeighborEvent::Disconnected).await;
                     }
                 }
                 Event::BytesReceived {
                     from_peer,
-                    with_addr,
+                    with_addr: _,
                     num_bytes,
                     buffer,
                 } => {
