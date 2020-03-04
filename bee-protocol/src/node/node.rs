@@ -22,8 +22,6 @@ pub struct Node {
     shutdown: Shutdown,
     events: EventSubscriber,
     // TODO thread-safety
-    // TODO PeerID
-    // neighbors: HashMap<PeerId, Neighbor>,
     neighbors: HashMap<PeerId, Sender<NeighborEvent>>,
     metrics: NodeMetrics,
 }

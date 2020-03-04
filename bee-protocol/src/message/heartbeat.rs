@@ -1,23 +1,26 @@
-use crate::message::errors::MessageError;
-use crate::message::Message;
+use crate::message::{Message, MessageError, MilestoneIndex};
 
 use std::convert::TryInto;
+use std::mem::size_of;
 use std::ops::Range;
 
 const HEARTBEAT_ID: u8 = 0x06;
-const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = 4;
-const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = 4;
+const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
+const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const HEARTBEAT_CONSTANT_SIZE: usize =
     HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct Heartbeat {
-    pub(crate) first_solid_milestone_index: u32,
-    pub(crate) last_solid_milestone_index: u32,
+    pub(crate) first_solid_milestone_index: MilestoneIndex,
+    pub(crate) last_solid_milestone_index: MilestoneIndex,
 }
 
 impl Heartbeat {
-    pub(crate) fn new(first_solid_milestone_index: u32, last_solid_milestone_index: u32) -> Self {
+    pub(crate) fn new(
+        first_solid_milestone_index: MilestoneIndex,
+        last_solid_milestone_index: MilestoneIndex,
+    ) -> Self {
         Self {
             first_solid_milestone_index: first_solid_milestone_index,
             last_solid_milestone_index: last_solid_milestone_index,
@@ -42,14 +45,14 @@ impl Message for Heartbeat {
         let mut message = Self::default();
         let mut offset = 0;
 
-        message.first_solid_milestone_index = u32::from_be_bytes(
+        message.first_solid_milestone_index = MilestoneIndex::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
         offset += HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE;
 
-        message.last_solid_milestone_index = u32::from_be_bytes(
+        message.last_solid_milestone_index = MilestoneIndex::from_be_bytes(
             bytes[offset..offset + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
@@ -75,8 +78,8 @@ mod tests {
 
     use super::*;
 
-    const FIRST_SOLID_MILESTONE_INDEX: u32 = 0x3dc297b4;
-    const LAST_SOLID_MILESTONE_INDEX: u32 = 0x01181f9b;
+    const FIRST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x3dc297b4;
+    const LAST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x01181f9b;
 
     #[test]
     fn id_test() {

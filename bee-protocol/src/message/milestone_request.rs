@@ -1,20 +1,20 @@
-use crate::message::errors::MessageError;
-use crate::message::Message;
+use crate::message::{Message, MessageError, MilestoneIndex};
 
 use std::convert::TryInto;
+use std::mem::size_of;
 use std::ops::Range;
 
 const MILESTONE_REQUEST_ID: u8 = 0x03;
-const MILESTONE_REQUEST_INDEX_SIZE: usize = 4;
+const MILESTONE_REQUEST_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct MilestoneRequest {
-    pub(crate) index: u32,
+    pub(crate) index: MilestoneIndex,
 }
 
 impl MilestoneRequest {
-    pub(crate) fn new(index: u32) -> Self {
+    pub(crate) fn new(index: MilestoneIndex) -> Self {
         Self { index: index }
     }
 }
@@ -35,7 +35,7 @@ impl Message for MilestoneRequest {
 
         let mut message = Self::default();
 
-        message.index = u32::from_be_bytes(
+        message.index = MilestoneIndex::from_be_bytes(
             bytes[0..MILESTONE_REQUEST_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
@@ -54,7 +54,7 @@ mod tests {
 
     use super::*;
 
-    const INDEX: u32 = 0x81f7df7c;
+    const INDEX: MilestoneIndex = 0x81f7df7c;
 
     #[test]
     fn id_test() {

@@ -1,5 +1,4 @@
-use crate::message::errors::MessageError;
-use crate::message::Message;
+use crate::message::{Message, MessageError};
 
 use std::ops::Range;
 
