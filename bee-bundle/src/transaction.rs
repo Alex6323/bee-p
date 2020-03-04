@@ -6,6 +6,7 @@ use bee_common::Result as BeeResult;
 use bee_ternary::{util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
 
 use std::fmt;
+use std::iter;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Payload(TritBuf<T1B1Buf>);
@@ -20,7 +21,7 @@ impl Payload {
         assert!(payload.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = PAYLOAD.tryte_offset.length - payload.len();
-        let payload = payload.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
+        let payload = payload.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
         let tritbuf = trytes_to_trits_buf(&payload);
 
         Self(tritbuf)
@@ -40,7 +41,7 @@ impl Address {
         assert!(address.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = ADDRESS.tryte_offset.length - address.len();
-        let address = address.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
+        let address = address.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
         let tritbuf = trytes_to_trits_buf(&address);
 
         Self(tritbuf)
@@ -63,7 +64,7 @@ impl Tag {
         assert!(tag.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = TAG.tryte_offset.length - tag.len();
-        let tag = tag.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
+        let tag = tag.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
         let tritbuf = trytes_to_trits_buf(&tag);
 
         Self(tritbuf)
@@ -89,7 +90,7 @@ impl Hash {
         assert!(hash.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = BUNDLE_HASH.tryte_offset.length - hash.len();
-        let hash = hash.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
+        let hash = hash.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
         let tritbuf = trytes_to_trits_buf(&hash);
 
         Self(tritbuf)
@@ -109,7 +110,7 @@ impl Nonce {
         assert!(nonce.chars().all(|c| c.is_tryte()));
 
         let missing_trytes = NONCE.tryte_offset.length - nonce.len();
-        let nonce = nonce.to_owned() + &TRYTE_ZERO.to_string().repeat(missing_trytes);
+        let nonce = nonce.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
         let tritbuf = trytes_to_trits_buf(&nonce);
 
         Self(tritbuf)
