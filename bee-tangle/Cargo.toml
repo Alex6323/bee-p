@@ -5,3 +5,10 @@ authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
+bee-storage = { path = "../bee-storage" }
+bee-storage-sqlx = { path = "../bee-storage-sqlx" }
+bee-bundle = { path = "../bee-bundle" }
+bee-test = { path = "../bee-test"}
+
+async-std = { version = "1.4.0", features = [ "attributes" ] }
+async-trait = "0.1.22"

@@ -165,6 +165,10 @@ impl Hash {
 
         Self(trytes)
     }
+
+    pub fn is_genesis(&self) -> bool {
+        unimplemented!()
+    }
 }
 
 pub struct Nonce(pub [Tryte; NONCE.tryte_offset.length]);

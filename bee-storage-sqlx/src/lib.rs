@@ -1,6 +1,6 @@
 extern crate rand;
 
-mod sqlx;
+pub mod sqlx;
 
 
 #[cfg(test)]

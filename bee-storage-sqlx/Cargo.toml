@@ -1,5 +1,5 @@
 [package]
-name = "bee-backends"
+name = "bee-storage-sqlx"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
