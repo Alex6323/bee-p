@@ -11,4 +11,4 @@ bee-bundle = { path = "../bee-bundle" }
 bee-test = { path = "../bee-test"}
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }
-async-trait = "0.1.22"
+futures = "0.3.1"

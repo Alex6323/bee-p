@@ -1,4 +1,4 @@
-pub mod tangle;
+pub mod r#mod;
 
 #[cfg(test)]
 mod tests {

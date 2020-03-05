@@ -1,13 +1,56 @@
 use bee_bundle::*;
 use bee_storage_sqlx::sqlx::SqlxBackendStorage as StorageBackendImpl;
+use bee_storage_sqlx::sqlx::errors;
+use bee_storage::StorageBackend;
 
-use async_trait::async_trait;
+use std::{
+    error::Error as StdError,
+    fmt,
+};
+
+
+#[derive(Debug, Clone)]
+pub enum TangleError {
+    SqlxError(String),
+    UnknownError,
+    //...
+}
+
+
+impl fmt::Display for TangleError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TangleError::SqlxError(ref reason) => write!(f, "Sqlx core error: {:?}", reason),
+            TangleError::UnknownError => write!(f, "Unknown error"),
+        }
+    }
+}
+
+// Allow this type to be treated like an error
+impl StdError for TangleError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            _ => None,
+        }
+    }
+}
+
+impl From<errors::SqlxBackendError> for TangleError {
+    #[inline]
+    fn from(err: errors::SqlxBackendError) -> Self {
+        TangleError::SqlxError(err.to_string())
+    }
+}
 
 use std::{
     collections::HashMap,
+    collections::HashSet,
     ops::{Deref, DerefMut},
     rc::Rc,
 };
+
+
+use futures::executor::block_on;
 
 
 /// A vertex within the Tangle. Each vertex represents a transaction and its associated metadata.
@@ -55,10 +98,19 @@ pub struct Tangle {
 
     //TODO - might want to change to Box<dyn StorageBackend<StorageError=SomeError>>
     storage: Option<StorageBackendImpl>,
+    //TODO - either remove (and use storage instead) or replace with cache
     vertices: HashMap<bee_bundle::Hash, Vertex>,
-    txs_to_approvers: HashMap<bee_bundle::Hash, Vec<bee_bundle::Hash>>,
-    missing_to_approvers: HashMap<bee_bundle::Hash, Vec<Rc<bee_bundle::Hash>>>,
+    txs_to_approvers: HashMap<bee_bundle::Hash, HashSet<bee_bundle::Hash>>,
+    missing_to_approvers: HashMap<bee_bundle::Hash, HashSet<Rc<bee_bundle::Hash>>>,
 }
+
+
+impl Drop for Tangle {
+    fn drop(&mut self) {
+        block_on(self.storage.as_mut().unwrap().destroy_connection());
+    }
+}
+
 
 impl Tangle {
     pub fn new() -> Self {
@@ -68,8 +120,39 @@ impl Tangle {
 
     }
 
+    pub async fn load(&mut self, db_url : &str) -> Result<(),TangleError> {
+
+        let storage : &mut StorageBackendImpl = self.storage.as_mut().unwrap();
+        storage.establish_connection(db_url).await?;
+
+
+        self.txs_to_approvers =
+        storage.map_existing_transaction_hashes_to_approvers()?;
+        let mut all_hashes = HashSet::new();
+        for key in self.txs_to_approvers.keys() {
+            all_hashes.insert(key.clone());
+        }
+        self.missing_to_approvers = storage.map_missing_transaction_hashes_to_approvers(all_hashes)?;
+        Ok(())
+    }
+
     pub fn contains(&self, hash: &bee_bundle::Hash) -> bool {
-        self.vertices.contains_key(hash)
+        let mut found = false;
+        if self.vertices.contains_key(hash) {
+            found = true;
+        }
+
+        if (!found){
+            //let storage : &mut StorageBackendImpl = self.storage.as_mut().unwrap();
+           /* found = match storage.find_transaction(hash) {
+
+                Err(reason) => false,
+                OK => true
+            }*/
+        }
+
+
+        found
     }
 
     /// Get an immutable handle to the transaction with the given hash.
@@ -107,7 +190,9 @@ impl Tangle {
             self.vertices.insert(new_hash.clone(), vert);
             new_approvees
                 .iter()
-                .for_each(|a| self.txs_to_approvers.entry(a.to_owned()).or_default().push(new_hash.clone()));
+                .for_each(|a| {
+                    self.txs_to_approvers.entry(a.to_owned()).or_default().insert(new_hash.clone());
+                });
 
             // Does the new vertex approve vertices that we don't yet know about?
             if new_approvees
@@ -130,7 +215,7 @@ impl Tangle {
                             .entry(approvee.to_owned())
                             .or_default()
                             // ...by associating it with the missing approvee.
-                            .push(new_rc.clone())
+                            .insert(new_rc.clone());
                     });
             }
 

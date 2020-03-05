@@ -4,7 +4,7 @@
 //Support multiple sql backends via sqlx
 //Get rid of all warnings
 
-mod errors;
+pub mod errors;
 
 use bee_bundle::*;
 use bee_storage::{Connection, Milestone, MissingHashesToRCApprovers};
@@ -229,7 +229,7 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
 
     async fn find_transaction(
         &self,
-        tx_hash: bee_bundle::Hash,
+        tx_hash: &bee_bundle::Hash,
     ) -> Result<bee_bundle::Transaction, SqlxBackendError> {
         let mut pool = self
             .0
