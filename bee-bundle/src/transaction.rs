@@ -26,6 +26,10 @@ impl Payload {
 
         Self(tritbuf)
     }
+
+    pub fn as_bytes(&self) -> &[i8] {
+        self.0.as_i8_slice()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -45,6 +49,10 @@ impl Address {
         let tritbuf = trytes_to_trits_buf(&address);
 
         Self(tritbuf)
+    }
+
+    pub fn as_bytes(&self) -> &[i8] {
+        self.0.as_i8_slice()
     }
 }
 
@@ -68,6 +76,10 @@ impl Tag {
         let tritbuf = trytes_to_trits_buf(&tag);
 
         Self(tritbuf)
+    }
+
+    pub fn as_bytes(&self) -> &[i8] {
+        self.0.as_i8_slice()
     }
 }
 
@@ -95,6 +107,10 @@ impl Hash {
 
         Self(tritbuf)
     }
+
+    pub fn as_bytes(&self) -> &[i8] {
+        self.0.as_i8_slice()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -114,6 +130,10 @@ impl Nonce {
         let tritbuf = trytes_to_trits_buf(&nonce);
 
         Self(tritbuf)
+    }
+
+    pub fn as_bytes(&self) -> &[i8] {
+        self.0.as_i8_slice()
     }
 }
 
