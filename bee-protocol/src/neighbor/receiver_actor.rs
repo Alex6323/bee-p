@@ -15,9 +15,11 @@ use futures::stream::StreamExt;
 use log::*;
 
 struct AwaitingConnectionContext {}
+
 struct AwaitingHandshakeContext {
     header: Option<[u8; 3]>,
 }
+
 struct AwaitingMessageContext {
     header: Option<[u8; 3]>,
 }
@@ -47,7 +49,26 @@ impl NeighborReceiverActor {
         }
     }
 
-    async fn awaiting_connection_handler(
+    pub(crate) async fn run(mut self) {
+        let mut state =
+            NeighborReceiverActorState::AwaitingConnection(AwaitingConnectionContext {});
+
+        while let Some(event) = self.receiver.next().await {
+            state = match state {
+                NeighborReceiverActorState::AwaitingConnection(context) => {
+                    self.connection_handler(context, event).await
+                }
+                NeighborReceiverActorState::AwaitingHandshake(context) => {
+                    self.handshake_handler(context, event).await
+                }
+                NeighborReceiverActorState::AwaitingMessage(context) => {
+                    self.message_handler(context, event).await
+                }
+            }
+        }
+    }
+
+    async fn connection_handler(
         &mut self,
         context: AwaitingConnectionContext,
         event: NeighborEvent,
@@ -79,7 +100,7 @@ impl NeighborReceiverActor {
         }
     }
 
-    async fn awaiting_handshake_handler(
+    async fn handshake_handler(
         &mut self,
         context: AwaitingHandshakeContext,
         event: NeighborEvent,
@@ -142,7 +163,7 @@ impl NeighborReceiverActor {
         }
     }
 
-    async fn awaiting_message_handler(
+    async fn message_handler(
         &mut self,
         context: AwaitingMessageContext,
         event: NeighborEvent,
@@ -190,25 +211,6 @@ impl NeighborReceiverActor {
                 }
             }
             _ => NeighborReceiverActorState::AwaitingMessage(context),
-        }
-    }
-
-    pub(crate) async fn run(mut self) {
-        let mut state =
-            NeighborReceiverActorState::AwaitingConnection(AwaitingConnectionContext {});
-
-        while let Some(event) = self.receiver.next().await {
-            state = match state {
-                NeighborReceiverActorState::AwaitingConnection(context) => {
-                    self.awaiting_connection_handler(context, event).await
-                }
-                NeighborReceiverActorState::AwaitingHandshake(context) => {
-                    self.awaiting_handshake_handler(context, event).await
-                }
-                NeighborReceiverActorState::AwaitingMessage(context) => {
-                    self.awaiting_message_handler(context, event).await
-                }
-            }
         }
     }
 }
