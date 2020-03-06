@@ -65,15 +65,11 @@ impl Message for Heartbeat {
         HEARTBEAT_CONSTANT_SIZE
     }
 
-    fn into_bytes(self) -> Vec<u8> {
-        let mut bytes = vec![0u8; HEARTBEAT_CONSTANT_SIZE];
-
+    fn to_bytes(self, bytes: &mut [u8]) {
         bytes[0..HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
             .copy_from_slice(&self.first_solid_milestone_index.to_be_bytes());
         bytes[HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE..]
             .copy_from_slice(&self.last_solid_milestone_index.to_be_bytes());
-
-        bytes
     }
 }
 
@@ -116,7 +112,7 @@ mod tests {
         assert_eq!(message.size(), HEARTBEAT_CONSTANT_SIZE);
     }
 
-    fn into_from_eq(message: Heartbeat) {
+    fn to_from_eq(message: Heartbeat) {
         assert_eq!(
             message.first_solid_milestone_index,
             FIRST_SOLID_MILESTONE_INDEX
@@ -128,17 +124,19 @@ mod tests {
     }
 
     #[test]
-    fn into_from_test() {
+    fn to_from_test() {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
+        let mut bytes = vec![0u8; message_from.size()];
 
-        into_from_eq(Heartbeat::from_bytes(&message_from.into_bytes()).unwrap());
+        message_from.to_bytes(&mut bytes);
+        to_from_eq(Heartbeat::from_bytes(&bytes).unwrap());
     }
 
     #[test]
-    fn full_into_from_test() {
+    fn full_to_from_test() {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
         let bytes = message_from.into_full_bytes();
 
-        into_from_eq(Heartbeat::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
+        to_from_eq(Heartbeat::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }

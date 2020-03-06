@@ -38,7 +38,7 @@ pub(crate) trait Message {
 
     fn size(&self) -> usize;
 
-    fn into_bytes(self) -> Vec<u8>;
+    fn to_bytes(self, bytes: &mut [u8]);
 
     fn into_full_bytes(self) -> Vec<u8>
     where
@@ -49,7 +49,7 @@ pub(crate) trait Message {
 
         bytes[0] = Self::id();
         bytes[1..3].copy_from_slice(&(self.size() as u16).to_be_bytes());
-        bytes[3..].copy_from_slice(&self.into_bytes());
+        self.to_bytes(&mut bytes[3..]);
 
         bytes
     }

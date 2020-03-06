@@ -52,8 +52,8 @@ impl Message for TransactionRequest {
         TRANSACTION_REQUEST_CONSTANT_SIZE
     }
 
-    fn into_bytes(self) -> Vec<u8> {
-        self.hash.to_vec()
+    fn to_bytes(self, bytes: &mut [u8]) {
+        bytes.copy_from_slice(&self.hash)
     }
 }
 
@@ -100,22 +100,24 @@ mod tests {
         assert_eq!(message.size(), TRANSACTION_REQUEST_CONSTANT_SIZE);
     }
 
-    fn into_from_eq(message: TransactionRequest) {
+    fn to_from_eq(message: TransactionRequest) {
         assert_eq!(slice_eq(&message.hash, &HASH), true);
     }
 
     #[test]
-    fn into_from_test() {
+    fn to_from_test() {
         let message_from = TransactionRequest::new(HASH);
+        let mut bytes = vec![0u8; message_from.size()];
 
-        into_from_eq(TransactionRequest::from_bytes(&message_from.into_bytes()).unwrap());
+        message_from.to_bytes(&mut bytes);
+        to_from_eq(TransactionRequest::from_bytes(&bytes).unwrap());
     }
 
     #[test]
-    fn full_into_from_test() {
+    fn full_to_from_test() {
         let message_from = TransactionRequest::new(HASH);
         let bytes = message_from.into_full_bytes();
 
-        into_from_eq(TransactionRequest::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
+        to_from_eq(TransactionRequest::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }

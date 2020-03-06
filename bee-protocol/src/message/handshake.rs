@@ -111,8 +111,7 @@ impl Message for Handshake {
         HANDSHAKE_CONSTANT_SIZE + self.supported_messages.len()
     }
 
-    fn into_bytes(self) -> Vec<u8> {
-        let mut bytes = vec![0u8; HANDSHAKE_CONSTANT_SIZE + self.supported_messages.len()];
+    fn to_bytes(self, bytes: &mut [u8]) {
         let mut offset = 0;
 
         bytes[offset..offset + HANDSHAKE_PORT_SIZE].copy_from_slice(&self.port.to_be_bytes());
@@ -126,8 +125,6 @@ impl Message for Handshake {
             .copy_from_slice(&self.minimum_weight_magnitude.to_be_bytes());
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE;
         bytes[offset..].copy_from_slice(&self.supported_messages);
-
-        bytes
     }
 }
 
@@ -188,7 +185,7 @@ mod tests {
         assert_eq!(message.size(), HANDSHAKE_CONSTANT_SIZE + 10);
     }
 
-    fn into_from_eq(message: Handshake) {
+    fn to_from_eq(message: Handshake) {
         assert_eq!(message.port, PORT);
         assert_eq!(message.timestamp, TIMESTAMP);
         assert_eq!(slice_eq(&message.coordinator, &COORDINATOR), true);
@@ -200,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn into_from_test() {
+    fn to_from_test() {
         let message_from = Handshake::new(
             PORT,
             TIMESTAMP,
@@ -208,12 +205,14 @@ mod tests {
             MINIMUM_WEIGHT_MAGNITUDE,
             &SUPPORTED_MESSAGES,
         );
+        let mut bytes = vec![0u8; message_from.size()];
 
-        into_from_eq(Handshake::from_bytes(&message_from.into_bytes()).unwrap());
+        message_from.to_bytes(&mut bytes);
+        to_from_eq(Handshake::from_bytes(&bytes).unwrap());
     }
 
     #[test]
-    fn full_into_from_test() {
+    fn full_to_from_test() {
         let message_from = Handshake::new(
             PORT,
             TIMESTAMP,
@@ -223,6 +222,6 @@ mod tests {
         );
         let bytes = message_from.into_full_bytes();
 
-        into_from_eq(Handshake::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
+        to_from_eq(Handshake::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }

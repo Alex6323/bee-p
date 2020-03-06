@@ -44,8 +44,8 @@ impl Message for TransactionBroadcast {
         self.transaction.len()
     }
 
-    fn into_bytes(self) -> Vec<u8> {
-        self.transaction
+    fn to_bytes(self, bytes: &mut [u8]) {
+        bytes.copy_from_slice(&self.transaction)
     }
 }
 
@@ -119,22 +119,24 @@ mod tests {
         assert_eq!(message.size(), 500);
     }
 
-    fn into_from_eq(message: TransactionBroadcast) {
+    fn to_from_eq(message: TransactionBroadcast) {
         assert_eq!(slice_eq(&message.transaction, &TRANSACTION), true);
     }
 
     #[test]
-    fn into_from_test() {
+    fn to_from_test() {
         let message_from = TransactionBroadcast::new(&TRANSACTION);
+        let mut bytes = vec![0u8; message_from.size()];
 
-        into_from_eq(TransactionBroadcast::from_bytes(&message_from.into_bytes()).unwrap());
+        message_from.to_bytes(&mut bytes);
+        to_from_eq(TransactionBroadcast::from_bytes(&bytes).unwrap());
     }
 
     #[test]
-    fn full_into_from_test() {
+    fn full_to_from_test() {
         let message_from = TransactionBroadcast::new(&TRANSACTION);
         let bytes = message_from.into_full_bytes();
 
-        into_from_eq(TransactionBroadcast::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
+        to_from_eq(TransactionBroadcast::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }

@@ -66,13 +66,9 @@ impl Message for LegacyGossip {
         self.transaction.len() + LEGACY_GOSSIP_CONSTANT_SIZE
     }
 
-    fn into_bytes(self) -> Vec<u8> {
-        let mut bytes = vec![0u8; LEGACY_GOSSIP_CONSTANT_SIZE + self.transaction.len()];
-
+    fn to_bytes(self, bytes: &mut [u8]) {
         bytes[0..self.transaction.len()].copy_from_slice(&self.transaction);
         bytes[self.transaction.len()..].copy_from_slice(&self.hash);
-
-        bytes
     }
 }
 
@@ -151,23 +147,25 @@ mod tests {
         assert_eq!(message.size(), LEGACY_GOSSIP_CONSTANT_SIZE + 500);
     }
 
-    fn into_from_eq(message: LegacyGossip) {
+    fn to_from_eq(message: LegacyGossip) {
         assert_eq!(slice_eq(&message.transaction, &TRANSACTION), true);
         assert_eq!(slice_eq(&message.hash, &REQUEST), true);
     }
 
     #[test]
-    fn into_from_test() {
+    fn to_from_test() {
         let message_from = LegacyGossip::new(&TRANSACTION, REQUEST);
+        let mut bytes = vec![0u8; message_from.size()];
 
-        into_from_eq(LegacyGossip::from_bytes(&message_from.into_bytes()).unwrap());
+        message_from.to_bytes(&mut bytes);
+        to_from_eq(LegacyGossip::from_bytes(&bytes).unwrap());
     }
 
     #[test]
-    fn full_into_from_test() {
+    fn full_to_from_test() {
         let message_from = LegacyGossip::new(&TRANSACTION, REQUEST);
         let bytes = message_from.into_full_bytes();
 
-        into_from_eq(LegacyGossip::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
+        to_from_eq(LegacyGossip::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }

@@ -48,8 +48,8 @@ impl Message for MilestoneRequest {
         MILESTONE_REQUEST_CONSTANT_SIZE
     }
 
-    fn into_bytes(self) -> Vec<u8> {
-        self.index.to_be_bytes().to_vec()
+    fn to_bytes(self, bytes: &mut [u8]) {
+        bytes.copy_from_slice(&self.index.to_be_bytes())
     }
 }
 
@@ -91,22 +91,24 @@ mod tests {
         assert_eq!(message.size(), MILESTONE_REQUEST_CONSTANT_SIZE);
     }
 
-    fn into_from_eq(message: MilestoneRequest) {
+    fn to_from_eq(message: MilestoneRequest) {
         assert_eq!(message.index, INDEX);
     }
 
     #[test]
-    fn into_from_test() {
+    fn to_from_test() {
         let message_from = MilestoneRequest::new(INDEX);
+        let mut bytes = vec![0u8; message_from.size()];
 
-        into_from_eq(MilestoneRequest::from_bytes(&message_from.into_bytes()).unwrap());
+        message_from.to_bytes(&mut bytes);
+        to_from_eq(MilestoneRequest::from_bytes(&bytes).unwrap());
     }
 
     #[test]
-    fn full_into_from_test() {
+    fn full_to_from_test() {
         let message_from = MilestoneRequest::new(INDEX);
         let bytes = message_from.into_full_bytes();
 
-        into_from_eq(MilestoneRequest::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
+        to_from_eq(MilestoneRequest::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
     }
 }
