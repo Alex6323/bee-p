@@ -45,10 +45,11 @@ pub(crate) trait Message {
         Self: std::marker::Sized,
     {
         // TODO constant
-        let mut bytes = vec![0u8; 3 + self.size()];
+        let size = self.size();
+        let mut bytes = vec![0u8; 3 + size];
 
         bytes[0] = Self::id();
-        bytes[1..3].copy_from_slice(&(self.size() as u16).to_be_bytes());
+        bytes[1..3].copy_from_slice(&(size as u16).to_be_bytes());
         self.to_bytes(&mut bytes[3..]);
 
         bytes

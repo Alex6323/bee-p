@@ -106,7 +106,7 @@ impl Node {
                     peer_id,
                     num_conns: _,
                 } => {
-                    self.peer_connected_handler(peer_id).await;
+                    self.peer_disconnected_handler(peer_id).await;
                 }
                 Event::BytesReceived {
                     from_peer,
