@@ -61,6 +61,10 @@ impl Message for Heartbeat {
         Ok(message)
     }
 
+    fn size(&self) -> usize {
+        HEARTBEAT_CONSTANT_SIZE
+    }
+
     fn into_bytes(self) -> Vec<u8> {
         let mut bytes = vec![0u8; HEARTBEAT_CONSTANT_SIZE];
 
@@ -103,6 +107,13 @@ mod tests {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 9),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn size_test() {
+        let message = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
+
+        assert_eq!(message.size(), HEARTBEAT_CONSTANT_SIZE);
     }
 
     fn into_from_eq(message: Heartbeat) {

@@ -48,6 +48,10 @@ impl Message for TransactionRequest {
         Ok(message)
     }
 
+    fn size(&self) -> usize {
+        TRANSACTION_REQUEST_CONSTANT_SIZE
+    }
+
     fn into_bytes(self) -> Vec<u8> {
         self.hash.to_vec()
     }
@@ -87,6 +91,13 @@ mod tests {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 50),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn size_test() {
+        let message = TransactionRequest::new(HASH);
+
+        assert_eq!(message.size(), TRANSACTION_REQUEST_CONSTANT_SIZE);
     }
 
     fn into_from_eq(message: TransactionRequest) {

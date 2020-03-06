@@ -40,6 +40,10 @@ impl Message for TransactionBroadcast {
         Ok(message)
     }
 
+    fn size(&self) -> usize {
+        self.transaction.len()
+    }
+
     fn into_bytes(self) -> Vec<u8> {
         self.transaction
     }
@@ -106,6 +110,13 @@ mod tests {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 1605),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn size_test() {
+        let message = TransactionBroadcast::new(&TRANSACTION);
+
+        assert_eq!(message.size(), 500);
     }
 
     fn into_from_eq(message: TransactionBroadcast) {

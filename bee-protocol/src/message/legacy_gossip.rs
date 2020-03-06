@@ -62,6 +62,10 @@ impl Message for LegacyGossip {
         Ok(message)
     }
 
+    fn size(&self) -> usize {
+        self.transaction.len() + LEGACY_GOSSIP_CONSTANT_SIZE
+    }
+
     fn into_bytes(self) -> Vec<u8> {
         let mut bytes = vec![0u8; LEGACY_GOSSIP_CONSTANT_SIZE + self.transaction.len()];
 
@@ -138,6 +142,13 @@ mod tests {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 1654),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn size_test() {
+        let message = LegacyGossip::new(&TRANSACTION, REQUEST);
+
+        assert_eq!(message.size(), LEGACY_GOSSIP_CONSTANT_SIZE + 500);
     }
 
     fn into_from_eq(message: LegacyGossip) {

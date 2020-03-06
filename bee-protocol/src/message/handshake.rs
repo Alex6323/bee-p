@@ -107,6 +107,10 @@ impl Message for Handshake {
         Ok(message)
     }
 
+    fn size(&self) -> usize {
+        HANDSHAKE_CONSTANT_SIZE + self.supported_messages.len()
+    }
+
     fn into_bytes(self) -> Vec<u8> {
         let mut bytes = vec![0u8; HANDSHAKE_CONSTANT_SIZE + self.supported_messages.len()];
         let mut offset = 0;
@@ -141,10 +145,7 @@ mod tests {
         74, 238, 57, 39, 51, 169, 193, 124, 254,
     ];
     const MINIMUM_WEIGHT_MAGNITUDE: u8 = 0x6e;
-    const SUPPORTED_MESSAGES: [u8; HANDSHAKE_VARIABLE_MAX_SIZE] = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0,
-    ];
+    const SUPPORTED_MESSAGES: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     #[test]
     fn id_test() {
@@ -172,6 +173,19 @@ mod tests {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 93),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn size_test() {
+        let message = Handshake::new(
+            PORT,
+            TIMESTAMP,
+            &COORDINATOR,
+            MINIMUM_WEIGHT_MAGNITUDE,
+            &SUPPORTED_MESSAGES,
+        );
+
+        assert_eq!(message.size(), HANDSHAKE_CONSTANT_SIZE + 10);
     }
 
     fn into_from_eq(message: Handshake) {

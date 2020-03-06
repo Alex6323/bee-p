@@ -44,6 +44,10 @@ impl Message for MilestoneRequest {
         Ok(message)
     }
 
+    fn size(&self) -> usize {
+        MILESTONE_REQUEST_CONSTANT_SIZE
+    }
+
     fn into_bytes(self) -> Vec<u8> {
         self.index.to_be_bytes().to_vec()
     }
@@ -78,6 +82,13 @@ mod tests {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 5),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn size_test() {
+        let message = MilestoneRequest::new(INDEX);
+
+        assert_eq!(message.size(), MILESTONE_REQUEST_CONSTANT_SIZE);
     }
 
     fn into_from_eq(message: MilestoneRequest) {

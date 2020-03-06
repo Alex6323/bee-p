@@ -24,6 +24,8 @@ pub(crate) trait Message {
             MessageError::InvalidAdvertisedLengthBytes([header_bytes[1], header_bytes[2]])
         })?);
 
+        // TODO check message type
+
         if payload_length as usize != payload_bytes.len() {
             Err(MessageError::InvalidAdvertisedLength(
                 payload_length as usize,
@@ -34,19 +36,21 @@ pub(crate) trait Message {
         Self::from_bytes(payload_bytes)
     }
 
+    fn size(&self) -> usize;
+
     fn into_bytes(self) -> Vec<u8>;
 
     fn into_full_bytes(self) -> Vec<u8>
     where
         Self: std::marker::Sized,
     {
-        let bytes = self.into_bytes();
-        let mut full_bytes = Vec::new();
+        // TODO constant
+        let mut bytes = vec![0u8; 3 + self.size()];
 
-        full_bytes.push(Self::id());
-        full_bytes.extend(&(bytes.len() as u16).to_be_bytes());
-        full_bytes.extend(bytes);
+        bytes[0] = Self::id();
+        bytes[1..3].copy_from_slice(&(self.size() as u16).to_be_bytes());
+        bytes[3..].copy_from_slice(&self.into_bytes());
 
-        full_bytes
+        bytes
     }
 }
