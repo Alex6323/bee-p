@@ -1,4 +1,5 @@
 use crate::message::MessageError;
+use crate::message::{HEADER_SIZE, HEADER_TYPE_SIZE};
 
 use std::convert::TryInto;
 use std::ops::Range;
@@ -16,13 +17,17 @@ pub(crate) trait Message {
     where
         Self: std::marker::Sized,
     {
-        if header_bytes.len() < 3 {
+        if header_bytes.len() < HEADER_SIZE {
             Err(MessageError::InvalidHeaderLength(header_bytes.len()))?;
         }
 
-        let payload_length = u16::from_be_bytes(header_bytes[1..3].try_into().map_err(|_| {
-            MessageError::InvalidAdvertisedLengthBytes([header_bytes[1], header_bytes[2]])
-        })?);
+        let payload_length = u16::from_be_bytes(
+            header_bytes[HEADER_TYPE_SIZE..HEADER_SIZE]
+                .try_into()
+                .map_err(|_| {
+                    MessageError::InvalidAdvertisedLengthBytes([header_bytes[1], header_bytes[2]])
+                })?,
+        );
 
         // TODO check message type
 
@@ -46,11 +51,11 @@ pub(crate) trait Message {
     {
         // TODO constant
         let size = self.size();
-        let mut bytes = vec![0u8; 3 + size];
+        let mut bytes = vec![0u8; HEADER_SIZE + size];
 
         bytes[0] = Self::id();
-        bytes[1..3].copy_from_slice(&(size as u16).to_be_bytes());
-        self.to_bytes(&mut bytes[3..]);
+        bytes[HEADER_TYPE_SIZE..HEADER_SIZE].copy_from_slice(&(size as u16).to_be_bytes());
+        self.to_bytes(&mut bytes[HEADER_SIZE..]);
 
         bytes
     }

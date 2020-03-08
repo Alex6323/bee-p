@@ -61,6 +61,7 @@ impl Message for TransactionRequest {
 mod tests {
 
     use super::*;
+    use crate::message::HEADER_SIZE;
     use bee_test::slices::slice_eq;
 
     const HASH: [u8; TRANSACTION_REQUEST_HASH_SIZE] = [
@@ -118,6 +119,9 @@ mod tests {
         let message_from = TransactionRequest::new(HASH);
         let bytes = message_from.into_full_bytes();
 
-        to_from_eq(TransactionRequest::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
+        to_from_eq(
+            TransactionRequest::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..])
+                .unwrap(),
+        );
     }
 }

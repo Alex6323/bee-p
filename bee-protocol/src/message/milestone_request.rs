@@ -57,6 +57,7 @@ impl Message for MilestoneRequest {
 mod tests {
 
     use super::*;
+    use crate::message::HEADER_SIZE;
 
     const INDEX: MilestoneIndex = 0x81f7df7c;
 
@@ -109,6 +110,9 @@ mod tests {
         let message_from = MilestoneRequest::new(INDEX);
         let bytes = message_from.into_full_bytes();
 
-        to_from_eq(MilestoneRequest::from_full_bytes(&bytes[0..3], &bytes[3..]).unwrap());
+        to_from_eq(
+            MilestoneRequest::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..])
+                .unwrap(),
+        );
     }
 }
