@@ -1,5 +1,5 @@
 use super::address::Address;
-use super::error::*;
+use super::errors::*;
 
 use std::fmt;
 

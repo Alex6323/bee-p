@@ -1,3 +1,3 @@
 pub mod address;
-pub mod error;
+pub mod errors;
 pub mod url;

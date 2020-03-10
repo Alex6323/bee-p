@@ -1,4 +1,4 @@
-use super::error::*;
+use super::errors::*;
 
 use async_std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 
