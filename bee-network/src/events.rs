@@ -1,6 +1,6 @@
 use crate::address::Address;
 use crate::address::url::Url;
-use crate::connection::ConnectionId;
+use crate::endpoint::EndpointId;
 
 use futures::channel::mpsc;
 
@@ -12,53 +12,53 @@ const EVENT_CHAN_CAPACITY: usize = 10000;
 pub enum Event {
 
     EndpointAdded {
-        endpoint: ConnectionId,
+        endpoint: EndpointId,
         total: usize,
     },
 
     EndpointRemoved {
-        endpoint: ConnectionId,
+        endpoint: EndpointId,
         total: usize,
     },
 
     EndpointAccepted {
-        endpoint: ConnectionId,
+        endpoint: EndpointId,
         url: Url,
         //sender: BytesSender,
     },
 
     ConnectionEstablished {
-        endpoint: ConnectionId,
+        endpoint: EndpointId,
         timestamp: u64,
         total: usize,
     },
 
     ConnectionDropped {
-        endpoint: ConnectionId,
+        endpoint: EndpointId,
         total: usize,
     },
 
     /*
     // TODO: find better solution!
     SendRecvStopped {
-        endpoint: ConnectionId,
+        endpoint: EndpointId,
     },
     */
 
     BytesSent {
-        to: ConnectionId,
+        to: EndpointId,
         num: usize,
     },
 
     BytesReceived {
-        from: ConnectionId,
+        from: EndpointId,
         with_addr: Address,
         num: usize,
         buffer: Vec<u8>,
     },
 
     TryConnect {
-        to: ConnectionId,
+        to: EndpointId,
         num_retries: Option<usize>,
     }
 }

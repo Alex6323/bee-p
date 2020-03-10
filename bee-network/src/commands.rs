@@ -1,5 +1,5 @@
 use crate::address::url::Url;
-use crate::connection::ConnectionId;
+use crate::endpoint::EndpointId;
 
 use futures::channel::{mpsc, oneshot};
 
@@ -17,32 +17,32 @@ pub enum Command {
 
     AddEndpoint {
         url: Url,
-        responder: Option<Responder<Option<ConnectionId>>>,
+        responder: Option<Responder<Option<EndpointId>>>,
     },
 
     RemoveEndpoint {
-        conn: ConnectionId,
+        endpoint: EndpointId,
         responder: Option<Responder<bool>>,
     },
 
     Connect {
-        conn: ConnectionId,
+        endpoint: EndpointId,
         attempts: Option<usize>,
         responder: Option<Responder<bool>>,
     },
 
     Disconnect {
-        conn: ConnectionId,
+        endpoint: EndpointId,
         responder: Option<Responder<bool>>,
     },
 
     UnicastBytes {
-        conn: ConnectionId,
+        endpoint: EndpointId,
         bytes: Vec<u8>,
     },
 
     MulticastBytes {
-        conns: Vec<ConnectionId>,
+        endpoints: Vec<EndpointId>,
         bytes: Vec<u8>,
     },
 
@@ -61,20 +61,20 @@ impl fmt::Display for Command {
             Command::AddEndpoint { url, .. } =>
                 write!(f, "Command::AddEndpoint {{ url = {:?} }} ", url),
 
-            Command::RemoveEndpoint { conn, .. } =>
-                write!(f, "Command::RemoveEndpoint {{ conn = {:?} }}", conn),
+            Command::RemoveEndpoint { endpoint, .. } =>
+                write!(f, "Command::RemoveEndpoint {{ ep = {:?} }}", endpoint),
 
-            Command::Connect { conn, attempts, .. } =>
-                write!(f, "Command::Connect {{ conn = {:?}, attempts = {:?} }}", conn, attempts),
+            Command::Connect { endpoint, attempts, .. } =>
+                write!(f, "Command::Connect {{ ep = {:?}, attempts = {:?} }}", endpoint, attempts),
 
-            Command::Disconnect { conn, .. } =>
-                write!(f, "Command::Disconnect {{ conn = {:?} }}", conn),
+            Command::Disconnect { endpoint, .. } =>
+                write!(f, "Command::Disconnect {{ ep = {:?} }}", endpoint),
 
-            Command::UnicastBytes { conn, .. } =>
-                write!(f, "Command::UnicastBytes {{ conn = {:?} }}", conn),
+            Command::UnicastBytes { endpoint, .. } =>
+                write!(f, "Command::UnicastBytes {{ ep = {:?} }}", endpoint),
 
-            Command::MulticastBytes { conns, .. } =>
-                write!(f, "Command::MulticastBytes {{ num_conns = {} }}", conns.len()),
+            Command::MulticastBytes { endpoints, .. } =>
+                write!(f, "Command::MulticastBytes {{ num_conns = {} }}", endpoints.len()),
 
             Command::BroadcastBytes { .. } =>
                 write!(f, "Command::BroadcastBytes"),
@@ -98,6 +98,7 @@ pub(crate) fn command_channel() -> (CommandSender, CommandReceiver) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_std::prelude::*;
     use async_std::task::{block_on, spawn};
     use futures::sink::SinkExt;
 
@@ -133,7 +134,7 @@ mod tests {
     #[test]
     fn issue_command_that_responds() {
         let (mut sender, mut receiver) = command_channel();
-        let (responder, requester) = response_channel::<Option<ConnectionId>>();
+        let (responder, requester) = response_channel::<Option<EndpointId>>();
         let url = block_on(Url::from_str_with_port("tcp://localhost:15600")).unwrap();
         let mut received_command = false;
         let mut received_response = false;
@@ -157,7 +158,7 @@ mod tests {
                         received_command = true;
 
                         if let Some(responder) = responder {
-                            responder.send(Some(ConnectionId::from(url))).unwrap();
+                            responder.send(Some(EndpointId::from(url))).unwrap();
                         }
                     },
                     _ => assert!(false, "Wrong command received"),
@@ -168,10 +169,10 @@ mod tests {
 
         // 3) wait for receiving the response
         block_on(async move {
-            if let Ok(conn_id) = requester.await {
-                let conn_id = conn_id.unwrap();
+            if let Ok(ep_id) = requester.await {
+                let ep_id = ep_id.unwrap();
 
-                assert_eq!("127.0.0.1:15600", conn_id.to_string(), "Unexpected ID");
+                assert_eq!("127.0.0.1:15600", ep_id.to_string(), "Unexpected ID");
                 received_response = true;
             }
             assert!(received_response, "Response was not received");

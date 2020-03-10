@@ -1,4 +1,4 @@
 pub mod address;
 pub mod commands;
-pub mod connection;
+pub mod endpoint;
 pub mod events;

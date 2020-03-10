@@ -6,17 +6,17 @@ use crate::address::url::{Protocol, Url};
 use std::fmt;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct ConnectionId {
+pub struct EndpointId {
     inner: Address,
 }
 
-impl From<Address> for ConnectionId {
+impl From<Address> for EndpointId {
     fn from(addr: Address) -> Self {
         Self { inner: addr }
     }
 }
 
-impl From<Url> for ConnectionId {
+impl From<Url> for EndpointId {
     fn from(url: Url) -> Self {
         match url {
             Url::Tcp(socket_addr) | Url::Udp(socket_addr) => Self { inner: socket_addr.into() },
@@ -24,60 +24,50 @@ impl From<Url> for ConnectionId {
     }
 }
 
-impl fmt::Display for ConnectionId {
+impl fmt::Display for EndpointId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.inner)
     }
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum ConnectionState {
-    Awaited,
-    Established,
-    Broken,
-    Stalled,
+pub enum EndpointState {
+    Disconnected,
+    Connected,
 }
 
 #[derive(Debug)]
-pub struct Connection {
-    pub id: ConnectionId,
-    pub endpoint: Address,
+pub struct Endpoint {
+    pub id: EndpointId,
+    pub address: Address,
     pub protocol: Protocol,
-    pub state: ConnectionState,
+    pub state: EndpointState,
 }
 
-impl Connection {
+impl Endpoint {
     pub fn from_url(url: Url) -> Self {
-        let endpoint = url.address().clone();
+        let address = url.address().clone();
         let protocol = url.protocol();
 
         Self {
             id: url.into(),
-            endpoint,
+            address,
             protocol,
-            state: ConnectionState::Awaited,
+            state: EndpointState::Disconnected,
         }
     }
 
-    pub fn is_awaited(&self) -> bool {
-        self.state == ConnectionState::Awaited
+    pub fn is_disconnected(&self) -> bool {
+        self.state == EndpointState::Disconnected
     }
 
-    pub fn is_established(&self) -> bool {
-        self.state == ConnectionState::Established
-    }
-
-    pub fn is_broken(&self) -> bool {
-        self.state == ConnectionState::Broken
-    }
-
-    pub fn is_stalled(&self) -> bool {
-        self.state == ConnectionState::Stalled
+    pub fn is_connected(&self) -> bool {
+        self.state == EndpointState::Connected
     }
 }
 
-impl Eq for Connection {}
-impl PartialEq for Connection {
+impl Eq for Endpoint {}
+impl PartialEq for Endpoint {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
@@ -92,7 +82,7 @@ mod tests {
     fn create_conn_id_from_address() {
         let addr = block_on(Address::from_host_addr("localhost:16000")).unwrap();
 
-        let conn_id: ConnectionId = addr.into();
+        let conn_id: EndpointId = addr.into();
 
         assert_eq!("127.0.0.1:16000", conn_id.to_string());
     }
@@ -101,7 +91,7 @@ mod tests {
     fn create_conn_id_from_url() {
         let url = block_on(Url::from_str_with_port("tcp://localhost:16000")).unwrap();
 
-        let conn_id: ConnectionId = url.into();
+        let conn_id: EndpointId = url.into();
 
         assert_eq!("127.0.0.1:16000", conn_id.to_string());
     }
@@ -109,11 +99,11 @@ mod tests {
     #[test]
     fn create_conn_from_url() {
         let url = block_on(Url::from_str_with_port("udp://localhost:16000")).unwrap();
-        let conn = Connection::from_url(url);
+        let ep = Endpoint::from_url(url);
 
-        assert!(conn.is_awaited());
-        assert_eq!("127.0.0.1:16000", conn.id.to_string());
-        assert_eq!(Protocol::Udp, conn.protocol);
-        assert_eq!("127.0.0.1:16000", conn.endpoint.to_string());
+        assert!(ep.is_disconnected());
+        assert_eq!("127.0.0.1:16000", ep.id.to_string());
+        assert_eq!(Protocol::Udp, ep.protocol);
+        assert_eq!("127.0.0.1:16000", ep.address.to_string());
     }
 }
