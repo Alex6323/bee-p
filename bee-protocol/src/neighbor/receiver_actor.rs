@@ -3,6 +3,7 @@ use crate::message::{
     TransactionRequest,
 };
 use crate::neighbor::{NeighborEvent, NeighborSenderActor};
+use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
 
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};
@@ -68,6 +69,24 @@ impl NeighborReceiverActor {
         }
     }
 
+    async fn send_hadnshake(&mut self) {
+        // TODO port
+        let bytes = Handshake::new(
+            1337,
+            &COORDINATOR_BYTES,
+            MINIMUM_WEIGHT_MAGNITUDE,
+            &SUPPORTED_VERSIONS,
+        )
+        .into_full_bytes();
+
+        self.network
+            .send(SendBytes {
+                to_peer: self.peer_id,
+                bytes: bytes.to_vec(),
+            })
+            .await;
+    }
+
     async fn connection_handler(
         &mut self,
         context: AwaitingConnectionContext,
@@ -78,19 +97,7 @@ impl NeighborReceiverActor {
                 info!("[Neighbor-{:?}] Connected", self.peer_id);
 
                 // TODO send handshake ?
-                let bytes = [
-                    1, 0, 61, 5, 57, 0, 0, 1, 112, 151, 168, 246, 60, 234, 56, 202, 174, 238, 197,
-                    195, 253, 109, 14, 137, 227, 44, 144, 151, 188, 192, 45, 220, 236, 64, 168,
-                    220, 197, 22, 199, 188, 1, 45, 11, 107, 190, 49, 84, 147, 176, 184, 108, 223,
-                    189, 17, 167, 184, 240, 213, 170, 111, 34, 0, 14, 3,
-                ];
-                // TODO block ?
-                self.network
-                    .send(SendBytes {
-                        to_peer: self.peer_id,
-                        bytes: bytes.to_vec(),
-                    })
-                    .await;
+                self.send_hadnshake().await;
 
                 NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext {
                     header: None,
