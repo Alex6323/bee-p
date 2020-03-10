@@ -26,7 +26,7 @@ impl From<Url> for ConnectionId {
 
 impl fmt::Display for ConnectionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Connection({})", self.inner)
+        write!(f, "{}", self.inner)
     }
 }
 
@@ -94,7 +94,7 @@ mod tests {
 
         let conn_id: ConnectionId = addr.into();
 
-        assert_eq!("Connection(127.0.0.1:16000)", conn_id.to_string());
+        assert_eq!("127.0.0.1:16000", conn_id.to_string());
     }
 
     #[test]
@@ -103,7 +103,7 @@ mod tests {
 
         let conn_id: ConnectionId = url.into();
 
-        assert_eq!("Connection(127.0.0.1:16000)", conn_id.to_string());
+        assert_eq!("127.0.0.1:16000", conn_id.to_string());
     }
 
     #[test]
@@ -112,7 +112,7 @@ mod tests {
         let conn = Connection::from_url(url);
 
         assert!(conn.is_awaited());
-        assert_eq!("Connection(127.0.0.1:16000)", conn.id.to_string());
+        assert_eq!("127.0.0.1:16000", conn.id.to_string());
         assert_eq!(Protocol::Udp, conn.protocol);
         assert_eq!("127.0.0.1:16000", conn.endpoint.to_string());
     }
