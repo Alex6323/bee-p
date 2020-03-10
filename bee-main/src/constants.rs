@@ -1,1 +1,1 @@
-pub const CONFIG_PATH: &str = "./bee_config";
+pub const CONFIG_PATH: &str = "./config.json";
