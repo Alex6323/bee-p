@@ -300,6 +300,7 @@ pub enum TransactionBuilderError {
     InvalidValue(i64),
 }
 
+#[derive(Default)]
 pub struct TransactionBuilder {
     pub(crate) payload: Option<Payload>,
     pub(crate) address: Option<Address>,
@@ -320,23 +321,7 @@ pub struct TransactionBuilder {
 
 impl TransactionBuilder {
     pub fn new() -> Self {
-        Self {
-            payload: None,
-            address: None,
-            value: None,
-            obsolete_tag: None,
-            timestamp: None,
-            index: None,
-            last_index: None,
-            bundle: None,
-            trunk: None,
-            branch: None,
-            tag: None,
-            attachment_ts: None,
-            attachment_lbts: None,
-            attachment_ubts: None,
-            nonce: None,
-        }
+        Self::default()
     }
 
     pub fn with_payload(mut self, payload: Payload) -> Self {
