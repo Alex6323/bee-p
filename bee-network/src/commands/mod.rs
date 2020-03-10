@@ -88,6 +88,7 @@ impl fmt::Display for Command {
 pub type CommandSender = mpsc::Sender<Command>;
 pub type CommandReceiver = mpsc::Receiver<Command>;
 
+// TODO: what's a good value here?
 const COMMAND_CHANNEL_CAPACITY: usize = 1000;
 
 pub(crate) fn command_channel() -> (CommandSender, CommandReceiver) {
