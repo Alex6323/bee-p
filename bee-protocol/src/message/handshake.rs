@@ -2,6 +2,7 @@ use crate::message::{Message, MessageError};
 
 use std::convert::TryInto;
 use std::ops::Range;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const HANDSHAKE_ID: u8 = 0x01;
 const HANDSHAKE_PORT_SIZE: usize = 2;
@@ -27,11 +28,14 @@ pub(crate) struct Handshake {
 impl Handshake {
     pub(crate) fn new(
         port: u16,
-        timestamp: u64,
         coordinator: &[u8; HANDSHAKE_COORDINATOR_SIZE],
         minimum_weight_magnitude: u8,
         supported_messages: &[u8],
     ) -> Self {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Clock may have gone backwards")
+            .as_millis() as u64;
         let mut self_coordinator = [0; HANDSHAKE_COORDINATOR_SIZE];
 
         self_coordinator.copy_from_slice(coordinator);
@@ -136,7 +140,6 @@ mod tests {
     use bee_test::slices::slice_eq;
 
     const PORT: u16 = 0xcd98;
-    const TIMESTAMP: u64 = 0xb2a1d7546a470ed8;
     const COORDINATOR: [u8; HANDSHAKE_COORDINATOR_SIZE] = [
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232,
         31, 255, 208, 9, 126, 21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93,
@@ -177,7 +180,6 @@ mod tests {
     fn size_test() {
         let message = Handshake::new(
             PORT,
-            TIMESTAMP,
             &COORDINATOR,
             MINIMUM_WEIGHT_MAGNITUDE,
             &SUPPORTED_MESSAGES,
@@ -188,7 +190,6 @@ mod tests {
 
     fn to_from_eq(message: Handshake) {
         assert_eq!(message.port, PORT);
-        assert_eq!(message.timestamp, TIMESTAMP);
         assert_eq!(slice_eq(&message.coordinator, &COORDINATOR), true);
         assert_eq!(message.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
         assert_eq!(
@@ -201,7 +202,6 @@ mod tests {
     fn to_from_test() {
         let message_from = Handshake::new(
             PORT,
-            TIMESTAMP,
             &COORDINATOR,
             MINIMUM_WEIGHT_MAGNITUDE,
             &SUPPORTED_MESSAGES,
@@ -216,7 +216,6 @@ mod tests {
     fn full_to_from_test() {
         let message_from = Handshake::new(
             PORT,
-            TIMESTAMP,
             &COORDINATOR,
             MINIMUM_WEIGHT_MAGNITUDE,
             &SUPPORTED_MESSAGES,
