@@ -16,7 +16,7 @@ impl ops::Deref for Port {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Address {
     inner: SocketAddr,
 }
