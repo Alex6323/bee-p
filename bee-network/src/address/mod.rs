@@ -4,6 +4,7 @@ use std::fmt;
 use std::ops;
 
 pub mod error;
+pub mod url;
 
 use error::*;
 
@@ -38,7 +39,7 @@ impl Address {
     /// Creates an `Address` from a host address string (e.g. "example.com:15600").
     ///
     /// NOTE: This operation is async, and can fail if the host name can't be resolved.
-    pub async fn from_host_addr(host_addr: &str) -> AddressResult {
+    pub async fn from_host_addr(host_addr: &str) -> AddressResult<Self> {
         let address = host_addr.to_socket_addrs().await?.next();
 
         match address {

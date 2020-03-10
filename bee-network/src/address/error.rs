@@ -1,5 +1,3 @@
-use super::Address;
-
 use err_derive::Error;
 
 /// Errors that can happen when dealing with `Address`es.
@@ -11,6 +9,9 @@ pub enum AddressError {
 
     #[error(display = "error resolving domain name to address")]
     ResolveFailure,
+
+    #[error(display = "error parsing url")]
+    UrlParseFailure,
 }
 
-pub type AddressResult = std::result::Result<Address, AddressError>;
+pub type AddressResult<T> = std::result::Result<T, AddressError>;
