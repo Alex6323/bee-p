@@ -1,4 +1,4 @@
-use crate::connection::connection::{Connection, ConnectionId};
+use crate::connection::{Connection, ConnectionId};
 
 use std::collections::HashMap;
 use std::collections::hash_map::{Entry, Iter, IterMut};
@@ -67,7 +67,7 @@ impl ConnectionPool {
 mod tests {
     use super::*;
     use crate::address::url::Url;
-    use crate::connection::connection::ConnectionState;
+    use crate::connection::ConnectionState;
     use async_std::task::block_on;
 
     #[test]

@@ -1,4 +1,4 @@
-use super::address::Address;
+use super::Address;
 use super::errors::*;
 
 use std::fmt;
