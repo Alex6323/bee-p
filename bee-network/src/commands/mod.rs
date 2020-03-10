@@ -1,7 +1,6 @@
 use crate::address::url::Url;
 use crate::connection::ConnectionId;
 
-use async_std::prelude::*;
 use futures::channel::{mpsc, oneshot};
 
 use std::fmt;
@@ -86,12 +85,12 @@ impl fmt::Display for Command {
     }
 }
 
-pub type CommandTx = mpsc::Sender<Command>;
-pub type CommandRx = mpsc::Receiver<Command>;
+pub type CommandSender = mpsc::Sender<Command>;
+pub type CommandReceiver = mpsc::Receiver<Command>;
 
 const COMMAND_CHANNEL_CAPACITY: usize = 1000;
 
-pub(crate) fn command_channel() -> (CommandTx, CommandRx) {
+pub(crate) fn command_channel() -> (CommandSender, CommandReceiver) {
     mpsc::channel(COMMAND_CHANNEL_CAPACITY)
 }
 
