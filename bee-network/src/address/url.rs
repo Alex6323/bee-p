@@ -1,4 +1,4 @@
-use super::Address;
+use super::address::Address;
 use super::error::*;
 
 use std::fmt;
@@ -91,6 +91,7 @@ impl fmt::Display for Url {
     }
 }
 
+// TODO: test Error conditions
 #[cfg(test)]
 mod tests {
     use super::*;
