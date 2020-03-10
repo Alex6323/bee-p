@@ -99,6 +99,7 @@ impl Node {
                 Event::PeerConnected {
                     peer_id,
                     num_conns: _,
+                    timestamp: _,
                 } => {
                     self.peer_connected_handler(peer_id).await;
                 }
@@ -138,7 +139,12 @@ impl Node {
     }
 
     pub async fn add_peer(&mut self, peer: Peer) {
-        self.network.send(AddPeer { peer }).await;
+        self.network
+            .send(AddPeer {
+                peer: peer,
+                connect_attempts: Some(0),
+            })
+            .await;
     }
 
     async fn send_handshake(
