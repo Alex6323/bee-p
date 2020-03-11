@@ -224,7 +224,8 @@ impl<T: RawEncodingBuf> TritBuf<T> {
         Self(T::from_trits(trits))
     }
 
-    // TODO: Is this a good API feature?
+    // TODO: Is this a good API feature? No, it's not. Kill it with fire.
+    #[deprecated]
     pub fn from_i8_unchecked(trits: &[i8]) -> Self {
         // TODO: Don't check
         Self::from_trits(trits)
@@ -232,6 +233,10 @@ impl<T: RawEncodingBuf> TritBuf<T> {
 
     pub fn push(&mut self, trit: UTrit) {
         self.0.push(trit.into());
+    }
+
+    pub fn pop(&mut self) -> Option<UTrit> {
+        self.0.pop()
     }
 
     pub fn as_slice(&self) -> &Trits<T::Slice> {

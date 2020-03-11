@@ -90,6 +90,10 @@ impl<T: Trit> RawEncodingBuf for T1B1Buf<T> {
         self.inner.push(trit.into());
     }
 
+    fn pop(&mut self) -> Option<UTrit> {
+        self.inner.pop().map(Into::into)
+    }
+
     fn as_slice(&self) -> &Self::Slice {
         unsafe { &*Self::Slice::make(self.inner.as_ptr() as _, 0, self.inner.len()) }
     }

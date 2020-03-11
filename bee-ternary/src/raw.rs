@@ -39,6 +39,9 @@ pub trait RawEncodingBuf {
     /// Push a trit to the back of this buffer
     fn push(&mut self, trit: UTrit);
 
+    /// Pop a trit from the back of this buffer
+    fn pop(&mut self) -> Option<UTrit>;
+
     /// View the trits in this buffer as a slice
     fn as_slice(&self) -> &Self::Slice;
 

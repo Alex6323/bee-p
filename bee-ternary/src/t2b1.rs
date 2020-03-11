@@ -91,6 +91,19 @@ impl RawEncodingBuf for T2B1Buf {
         self.1 += 1;
     }
 
+    fn pop(&mut self) -> Option<UTrit> {
+        let val = if self.1 == 0 {
+            return None;
+        } else if self.1 % TPB == 1 {
+            self.0.pop().map(|b| extract(b, 0))
+        } else {
+            let last_index = self.0.len() - 1;
+            unsafe { Some(extract(*self.0.get_unchecked(last_index), (self.1 + TPB - 1) % TPB)) }
+        };
+        self.1 -= 1;
+        val
+    }
+
     fn as_slice(&self) -> &Self::Slice {
         unsafe { &*Self::Slice::make(self.0.as_ptr() as _, 0, self.1) }
     }

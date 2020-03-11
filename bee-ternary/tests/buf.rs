@@ -2,10 +2,14 @@ use std::ops::Range;
 use rand::prelude::*;
 use bee_ternary::*;
 
+fn gen_trit() -> i8 {
+    (thread_rng().gen::<u8>() % 3) as i8 - 1
+}
+
 fn gen_buf<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8>) {
     let len = thread_rng().gen_range(len.start, len.end);
     let trits = (0..len)
-        .map(|_| (thread_rng().gen::<u8>() % 3) as i8 - 1)
+        .map(|_| gen_trit())
         .collect::<Vec<_>>();
     (TritBuf::<T>::from_i8_unchecked(&trits), trits)
 }
@@ -24,6 +28,24 @@ fn create_generic<T: raw::RawEncodingBuf>() {
     fuzz(100, || {
         let trits = gen_buf::<T>(0..1000).1;
         assert!(TritBuf::<T>::from_i8_unchecked(&trits).len() == trits.len());
+    });
+}
+
+fn push_pop_generic<T: raw::RawEncodingBuf>() {
+    fuzz(100, || {
+        let (mut a, mut b) = gen_buf::<T>(0..100);
+
+        for _ in 0..1000 {
+            if thread_rng().gen() {
+                let trit = gen_trit();
+                a.push(trit.into());
+                b.push(trit);
+            } else {
+                assert_eq!(a.pop(), b.pop().map(Into::into));
+            }
+            println!("{:?}", a);
+            println!("{:?}", b);
+        }
     });
 }
 
@@ -58,6 +80,15 @@ fn create() {
     create_generic::<T2B1Buf>();
     create_generic::<T3B1Buf>();
     create_generic::<T4B1Buf>();
+}
+
+#[test]
+fn push_pop() {
+    push_pop_generic::<T1B1Buf<BTrit>>();
+    push_pop_generic::<T1B1Buf<UTrit>>();
+    push_pop_generic::<T2B1Buf>();
+    push_pop_generic::<T3B1Buf>();
+    push_pop_generic::<T4B1Buf>();
 }
 
 #[test]
