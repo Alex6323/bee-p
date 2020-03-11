@@ -1,19 +1,9 @@
+mod common;
+use self::common::*;
+
 use std::ops::Range;
 use rand::prelude::*;
 use bee_ternary::*;
-
-fn gen_buf<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8>) {
-    let len = thread_rng().gen_range(len.start, len.end);
-    let trits = (0..len)
-        .map(|_| (thread_rng().gen::<u8>() % 3) as i8 - 1)
-        .collect::<Vec<_>>();
-    (TritBuf::<T>::from_i8_unchecked(&trits), trits)
-}
-
-// Not exactly fuzzing, just doing something a lot
-fn fuzz(n: usize, mut f: impl FnMut()) {
-    (0..n).for_each(|_| f());
-}
 
 fn get_generic<T: raw::RawEncodingBuf + Clone>() {
     fuzz(100, || {

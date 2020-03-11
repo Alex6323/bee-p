@@ -1,3 +1,6 @@
+mod common;
+use self::common::*;
+
 use bee_ternary::*;
 
 #[test]
