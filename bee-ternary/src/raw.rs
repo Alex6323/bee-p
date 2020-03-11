@@ -1,5 +1,5 @@
 use std::ops::Range;
-use crate::{Trit, TritBuf};
+use crate::{UTrit, TritBuf};
 
 pub trait RawEncoding {
     /// Get an empty slice of this encoding
@@ -9,10 +9,10 @@ pub trait RawEncoding {
     fn len(&self) -> usize;
 
     /// Get the trit at the given index
-    unsafe fn get_unchecked(&self, index: usize) -> Trit;
+    unsafe fn get_unchecked(&self, index: usize) -> UTrit;
 
     /// Set the trit at the given index
-    unsafe fn set_unchecked(&mut self, index: usize, trit: Trit);
+    unsafe fn set_unchecked(&mut self, index: usize, trit: UTrit);
 
     /// Get a slice of this slice
     unsafe fn slice_unchecked(&self, range: Range<usize>) -> &Self;
@@ -28,7 +28,7 @@ pub trait RawEncodingBuf {
     fn new() -> Self where Self: Sized;
 
     /// Create a new buffer containing the given trits
-    fn from_trits<T: Into<Trit> + Clone>(trits: &[T]) -> Self where Self: Sized {
+    fn from_trits<T: Into<UTrit> + Clone>(trits: &[T]) -> Self where Self: Sized {
         let mut this = Self::new();
         for trit in trits {
             this.push(trit.clone().into());
@@ -37,7 +37,7 @@ pub trait RawEncodingBuf {
     }
 
     /// Push a trit to the back of this buffer
-    fn push(&mut self, trit: Trit);
+    fn push(&mut self, trit: UTrit);
 
     /// View the trits in this buffer as a slice
     fn as_slice(&self) -> &Self::Slice;

@@ -1,22 +1,30 @@
-use std::ops::Range;
+use std::{
+    marker::PhantomData,
+    ops::Range,
+};
 use crate::{
-    Trit,
+    Trit, UTrit, BTrit,
     RawEncoding,
     RawEncodingBuf,
 };
 
 #[repr(transparent)]
-pub struct T1B1([()]);
+pub struct T1B1<T: Trit = BTrit> {
+    _phantom: PhantomData<T>,
+    inner: [()],
+}
 
-impl T1B1 {
-    unsafe fn make(ptr: *const i8, offset: usize, len: usize) -> *const Self {
+impl<T: Trit> T1B1<T> {
+    unsafe fn make(ptr: *const T, offset: usize, len: usize) -> *const Self {
         std::mem::transmute((ptr.offset(offset as isize), len))
     }
 
-    unsafe fn ptr(&self, index: usize) -> *const i8 {
-        (self.0.as_ptr() as *const i8).offset(index as isize)
+    unsafe fn ptr(&self, index: usize) -> *const T {
+        (self.inner.as_ptr() as *const T).offset(index as isize)
     }
+}
 
+impl T1B1<BTrit> {
     pub fn as_i8_slice(&self) -> &[i8] {
         unsafe { &*(Self::make(self.ptr(0), 0, self.len()) as *const _) }
     }
@@ -26,20 +34,20 @@ impl T1B1 {
     }
 }
 
-impl RawEncoding for T1B1 {
+impl<T: Trit> RawEncoding for T1B1<T> {
     fn empty() -> &'static Self {
         unsafe { &*Self::make(&[] as *const _, 0, 0) }
     }
 
     fn len(&self) -> usize {
-        self.0.len()
+        self.inner.len()
     }
 
-    unsafe fn get_unchecked(&self, index: usize) -> Trit {
-        Trit::from(self.ptr(index).read())
+    unsafe fn get_unchecked(&self, index: usize) -> UTrit {
+        self.ptr(index).read().into()
     }
 
-    unsafe fn set_unchecked(&mut self, index: usize, trit: Trit) {
+    unsafe fn set_unchecked(&mut self, index: usize, trit: UTrit) {
         (self.ptr(index) as *mut i8).write(trit.into());
     }
 
@@ -53,24 +61,30 @@ impl RawEncoding for T1B1 {
 }
 
 #[derive(Clone)]
-pub struct T1B1Buf(Vec<i8>);
+pub struct T1B1Buf<T: Trit = BTrit> {
+    _phantom: PhantomData<T>,
+    inner: Vec<T>,
+}
 
-impl RawEncodingBuf for T1B1Buf {
-    type Slice = T1B1;
+impl<T: Trit> RawEncodingBuf for T1B1Buf<T> {
+    type Slice = T1B1<T>;
 
     fn new() -> Self {
-        Self(Vec::new())
+        Self {
+            _phantom: PhantomData,
+            inner: Vec::new(),
+        }
     }
 
-    fn push(&mut self, trit: Trit) {
-        self.0.push(trit.into());
+    fn push(&mut self, trit: UTrit) {
+        self.inner.push(trit.into());
     }
 
     fn as_slice(&self) -> &Self::Slice {
-        unsafe { &*Self::Slice::make(self.0.as_ptr() as _, 0, self.0.len()) }
+        unsafe { &*Self::Slice::make(self.inner.as_ptr() as _, 0, self.inner.len()) }
     }
 
     fn as_slice_mut(&mut self) -> &mut Self::Slice {
-        unsafe { &mut *(Self::Slice::make(self.0.as_ptr() as _, 0, self.0.len()) as *mut _) }
+        unsafe { &mut *(Self::Slice::make(self.inner.as_ptr() as _, 0, self.inner.len()) as *mut _) }
     }
 }

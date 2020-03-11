@@ -22,7 +22,7 @@ use crate::raw::{RawEncoding, RawEncodingBuf};
 // Reexports
 pub use crate::{
     tryte::{Tryte, IsTryte, TRYTE_ALPHABET},
-    trit::Trit,
+    trit::{Trit, UTrit, BTrit},
     t1b1::{T1B1, T1B1Buf},
     t2b1::{T2B1, T2B1Buf},
     t3b1::{T3B1, T3B1Buf},
@@ -34,7 +34,7 @@ pub use crate::{
 pub use iota_conversion;
 
 #[repr(transparent)]
-pub struct Trits<T: RawEncoding + ?Sized = T1B1>(T);
+pub struct Trits<T: RawEncoding + ?Sized = T1B1<BTrit>>(T);
 
 impl<T: RawEncoding + ?Sized> Trits<T> {
     pub fn empty() -> &'static Self {
@@ -45,15 +45,15 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         self.0.len()
     }
 
-    pub unsafe fn get_unchecked(&self, index: usize) -> Trit {
+    pub unsafe fn get_unchecked(&self, index: usize) -> UTrit {
         self.0.get_unchecked(index).into()
     }
 
-    pub unsafe fn set_unchecked(&mut self, index: usize, trit: Trit) {
+    pub unsafe fn set_unchecked(&mut self, index: usize, trit: UTrit) {
         self.0.set_unchecked(index, trit.into());
     }
 
-    pub fn get(&self, index: usize) -> Option<Trit> {
+    pub fn get(&self, index: usize) -> Option<UTrit> {
         if index < self.0.len() {
             unsafe { Some(self.get_unchecked(index)) }
         } else {
@@ -61,7 +61,7 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         }
     }
 
-    pub fn set(&mut self, index: usize, trit: Trit) {
+    pub fn set(&mut self, index: usize, trit: UTrit) {
         if index < self.0.len() {
             unsafe { self.set_unchecked(index, trit) };
         } else {
@@ -69,7 +69,7 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=Trit> + '_ {
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item=UTrit> + ExactSizeIterator<Item=UTrit> + '_ {
         (0..self.0.len()).map(move |idx| unsafe { self.0.get_unchecked(idx).into() })
     }
 
@@ -90,7 +90,7 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         }
     }
 
-    pub fn fill(&mut self, trit: Trit) {
+    pub fn fill(&mut self, trit: UTrit) {
         for i in 0..self.len() {
             self.set(i, trit);
         }
@@ -100,7 +100,7 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         self.iter().collect()
     }
 
-    pub fn chunks(&self, chunk_len: usize) -> impl Iterator<Item=&Self> + '_ {
+    pub fn chunks(&self, chunk_len: usize) -> impl DoubleEndedIterator<Item=&Self> + ExactSizeIterator<Item=&Self> + '_ {
         assert!(chunk_len > 0);
         (0..self.len())
             .step_by(chunk_len)
@@ -108,16 +108,7 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
     }
 }
 
-impl Trits<T1B1> {
-    pub fn as_i8_slice(&self) -> &[i8] {
-        self.0.as_i8_slice()
-    }
-
-    // Unsafe because we don't want Trit to have an invalid format
-    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
-        self.0.as_i8_slice_mut()
-    }
-
+impl<T: Trit> Trits<T1B1<T>> {
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item=&mut Self> + '_ {
@@ -142,6 +133,17 @@ impl Trits<T1B1> {
             unsafe { &mut *(this.0.slice_unchecked_mut(0..idx) as *mut _ as *mut Self) },
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
         )
+    }
+}
+
+impl Trits<T1B1<BTrit>> {
+    pub fn as_i8_slice(&self) -> &[i8] {
+        self.0.as_i8_slice()
+    }
+
+    // Unsafe because we don't want UTrit to have an invalid format
+    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
+        self.0.as_i8_slice_mut()
     }
 }
 
@@ -183,7 +185,7 @@ impl<T: RawEncoding + ?Sized> IndexMut<Range<usize>> for Trits<T> {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct TritBuf<T: RawEncodingBuf = T1B1Buf>(T);
+pub struct TritBuf<T: RawEncodingBuf = T1B1Buf<BTrit>>(T);
 
 impl<T: RawEncodingBuf> TritBuf<T> {
     pub fn new() -> Self {
@@ -196,7 +198,7 @@ impl<T: RawEncodingBuf> TritBuf<T> {
         Self::new()
     }
 
-    pub fn filled(len: usize, trit: Trit) -> Self {
+    pub fn filled(len: usize, trit: UTrit) -> Self {
         let mut this = Self::with_capacity(len);
         for _ in 0..len {
             this.push(trit);
@@ -205,10 +207,10 @@ impl<T: RawEncodingBuf> TritBuf<T> {
     }
 
     pub fn zeros(len: usize) -> Self {
-        Self::filled(len, Trit::Zero)
+        Self::filled(len, UTrit::Zero)
     }
 
-    pub fn from_trits<U: Into<Trit> + Clone>(trits: &[U]) -> Self {
+    pub fn from_trits<U: Into<UTrit> + Clone>(trits: &[U]) -> Self {
         Self(T::from_trits(trits))
     }
 
@@ -218,7 +220,7 @@ impl<T: RawEncodingBuf> TritBuf<T> {
         Self::from_trits(trits)
     }
 
-    pub fn push(&mut self, trit: Trit) {
+    pub fn push(&mut self, trit: UTrit) {
         self.0.push(trit.into());
     }
 
@@ -259,8 +261,8 @@ impl<T: RawEncodingBuf> DerefMut for TritBuf<T> {
     }
 }
 
-impl<T: RawEncodingBuf> FromIterator<Trit> for TritBuf<T> {
-    fn from_iter<I: IntoIterator<Item=Trit>>(iter: I) -> Self {
+impl<T: RawEncodingBuf> FromIterator<UTrit> for TritBuf<T> {
+    fn from_iter<I: IntoIterator<Item=UTrit>>(iter: I) -> Self {
         let mut this = Self::new();
 
         for trit in iter {
@@ -295,30 +297,5 @@ impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
             write!(f, "{:?}", trit)?;
         }
         write!(f, "]")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn compare() {
-        fn slices_eq(a: &Trits<T4B1>, b: &Trits<T4B1>) -> bool {
-            a
-                .iter()
-                .zip(b.iter())
-                .all(|(a, b)| a == b)
-        }
-
-        let mut a = TritBuf::<T4B1Buf>::from_trits(&[1i8, -1, 0, 1, 0])
-            .into_encoding::<T1B1Buf>()
-            .into_encoding::<T4B1Buf>();
-
-        a.set(2, Trit::MinusOne);
-
-        let b = TritBuf::<T4B1Buf>::from_trits(&[-1i8, -1, 1]);
-
-        assert!(slices_eq(&a[1..5], &b));
     }
 }

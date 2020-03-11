@@ -2,20 +2,27 @@ use bee_ternary::*;
 
 #[test]
 fn convert_correct() {
-    assert_eq!(Trit::from(-1), Trit::MinusOne);
-    assert_eq!(Trit::from(0), Trit::Zero);
-    assert_eq!(Trit::from(1), Trit::PlusOne);
+    assert_eq!(UTrit::from(-1), UTrit::NegOne);
+    assert_eq!(UTrit::from(0), UTrit::Zero);
+    assert_eq!(UTrit::from(1), UTrit::PlusOne);
 
-    assert_eq!(Into::<i8>::into(Trit::MinusOne), -1i8);
-    assert_eq!(Into::<i8>::into(Trit::Zero), 0i8);
-    assert_eq!(Into::<i8>::into(Trit::PlusOne), 1i8);
+    assert_eq!(Into::<i8>::into(UTrit::NegOne), -1i8);
+    assert_eq!(Into::<i8>::into(UTrit::Zero), 0i8);
+    assert_eq!(Into::<i8>::into(UTrit::PlusOne), 1i8);
+}
+
+#[test]
+fn convert_balanced() {
+    assert_eq!(UTrit::from(BTrit::NegOne), UTrit::NegOne);
+    assert_eq!(UTrit::from(BTrit::Zero), UTrit::Zero);
+    assert_eq!(UTrit::from(BTrit::PlusOne), UTrit::PlusOne);
 }
 
 #[test]
 #[should_panic]
-fn convert_incorrect_0() { Trit::from(-2); }
+fn convert_incorrect_0() { UTrit::from(-2); }
 
 #[test]
 #[should_panic]
-fn convert_incorrect_1() { Trit::from(2); }
+fn convert_incorrect_1() { UTrit::from(2); }
 

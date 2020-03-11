@@ -1,24 +1,43 @@
 use std::ops::Range;
-use crate::{Trit, RawEncoding, RawEncodingBuf};
+use crate::{UTrit, RawEncoding, RawEncodingBuf};
 
-const BASE: usize = 2;
+const TPB: usize = 2;
+const BAL: i8 = 4;
 
 #[repr(transparent)]
 pub struct T2B1([()]);
 
 impl T2B1 {
-    unsafe fn make(ptr: *const u8, offset: usize, len: usize) -> *const Self {
-        let len = (len << 2) | (offset % BASE);
-        std::mem::transmute((ptr.offset((offset / BASE) as isize), len))
+    unsafe fn make(ptr: *const i8, offset: usize, len: usize) -> *const Self {
+        let len = (len << 2) | (offset % TPB);
+        std::mem::transmute((ptr.offset((offset / TPB) as isize), len))
     }
 
-    unsafe fn ptr(&self, index: usize) -> *const u8 {
-        let byte_offset = (self.len_offset().1 + index) / BASE;
-        (self.0.as_ptr() as *const u8).offset(byte_offset as isize)
+    unsafe fn ptr(&self, index: usize) -> *const i8 {
+        let byte_offset = (self.len_offset().1 + index) / TPB;
+        (self.0.as_ptr() as *const i8).offset(byte_offset as isize)
     }
 
     fn len_offset(&self) -> (usize, usize) {
         (self.0.len() >> 2, self.0.len() & 0b11)
+    }
+}
+
+fn extract(x: i8, elem: usize) -> UTrit {
+    if elem < TPB {
+        UTrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8)
+    } else {
+        unreachable!("Attempted to extract invalid element {} from balanced T2B1", elem)
+    }
+}
+
+fn insert(x: i8, elem: usize, trit: UTrit) -> i8 {
+    if elem < TPB {
+        let ux = x + BAL;
+        let ux = ux + (trit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
+        ux - BAL
+    } else {
+        unreachable!("Attempted to insert invalid element {} into balanced T2B1", elem)
     }
 }
 
@@ -31,30 +50,28 @@ impl RawEncoding for T2B1 {
         self.len_offset().0
     }
 
-    unsafe fn get_unchecked(&self, index: usize) -> Trit {
+    unsafe fn get_unchecked(&self, index: usize) -> UTrit {
         let b = self.ptr(index).read();
-        let trit = (b >> (((self.len_offset().1 + index) % BASE) * 2)) & 0b11;
-        Trit::from_u8(trit)
+        extract(b, (self.len_offset().1 + index) % TPB)
     }
 
-    unsafe fn set_unchecked(&mut self, index: usize, trit: Trit) {
+    unsafe fn set_unchecked(&mut self, index: usize, trit: UTrit) {
         let b = self.ptr(index).read();
-        let b = b & !(0b11 << (((self.len_offset().1 + index) % BASE) * 2));
-        let b = b | (trit.into_u8() << (((self.len_offset().1 + index) % BASE) * 2));
-        (self.ptr(index) as *mut u8).write(b);
+        let b = insert(b, (self.len_offset().1 + index) % TPB, trit);
+        (self.ptr(index) as *mut i8).write(b);
     }
 
     unsafe fn slice_unchecked(&self, range: Range<usize>) -> &Self {
-        &*Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % BASE, range.end - range.start)
+        &*Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start)
     }
 
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self {
-        &mut *(Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % BASE, range.end - range.start) as *mut Self)
+        &mut *(Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start) as *mut Self)
     }
 }
 
 #[derive(Clone)]
-pub struct T2B1Buf(Vec<u8>, usize);
+pub struct T2B1Buf(Vec<i8>, usize);
 
 impl RawEncodingBuf for T2B1Buf {
     type Slice = T2B1;
@@ -63,13 +80,14 @@ impl RawEncodingBuf for T2B1Buf {
         Self(Vec::new(), 0)
     }
 
-    fn push(&mut self, trit: Trit) {
+    fn push(&mut self, trit: UTrit) {
         let b = trit.into_u8();
-        if self.1 % BASE == 0 {
-            self.0.push(b);
+        if self.1 % TPB == 0 {
+            self.0.push(insert(0, 0, trit));
         } else {
             let last_index = self.0.len() - 1;
-            unsafe { *self.0.get_unchecked_mut(last_index) |= b << ((self.1 % BASE) * 2) };
+            let b = unsafe { self.0.get_unchecked_mut(last_index) };
+            *b = insert(*b, self.1 % TPB, trit);
         }
         self.1 += 1;
     }
