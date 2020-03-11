@@ -1,0 +1,3 @@
+imports_layout = "Vertical"
+max_width = 120
+trailing_comma = "Always"
