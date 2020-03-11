@@ -1,5 +1,8 @@
+#![recursion_limit = "2048"]
+
 pub mod address;
 pub mod commands;
+pub mod connection;
 pub mod endpoint;
 pub mod events;
 pub mod network;
@@ -20,7 +23,6 @@ use async_std::task::spawn;
 use futures::channel::oneshot;
 
 pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
-
     let (command_sender, commands) = commands::command_channel();
     let (event_sender, events) = events::event_channel();
     let (internal_event_sender, internal_events) = events::event_channel();
@@ -36,22 +38,17 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
         internal_events,
         internal_event_sender.clone(),
         event_sender.clone(),
-        edp_shutdown
+        edp_shutdown,
     );
 
     let tcp_actor = TcpActor::new(
         binding_addr.clone(),
         internal_event_sender.clone(),
         event_sender.clone(),
-        tcp_shutdown
+        tcp_shutdown,
     );
 
-    let udp_actor = UdpActor::new(
-        binding_addr,
-        internal_event_sender,
-        event_sender,
-        udp_shutdown
-    );
+    let udp_actor = UdpActor::new(binding_addr, internal_event_sender, event_sender, udp_shutdown);
 
     shutdown.add_notifier(edp_sd_sender);
     shutdown.add_notifier(tcp_sd_sender);

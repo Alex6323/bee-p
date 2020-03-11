@@ -1,18 +1,22 @@
-use super::{Endpoint, EndpointId};
+use super::{
+    Endpoint,
+    EndpointId,
+};
 
+use std::collections::hash_map::{
+    Entry,
+    Iter,
+    IterMut,
+};
 use std::collections::HashMap;
-use std::collections::hash_map::{Entry, Iter, IterMut};
 
 pub struct EndpointPool {
     inner: HashMap<EndpointId, Endpoint>,
 }
 
 impl EndpointPool {
-
     pub fn new() -> Self {
-        Self {
-            inner: HashMap::new(),
-        }
+        Self { inner: HashMap::new() }
     }
 
     pub fn size(&self) -> usize {
@@ -54,8 +58,8 @@ impl EndpointPool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::EndpointState;
+    use super::*;
     use crate::address::url::Url;
     use async_std::task::block_on;
 

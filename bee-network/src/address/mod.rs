@@ -3,7 +3,13 @@ pub mod url;
 
 use errors::*;
 
-use async_std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
+use async_std::net::{
+    IpAddr,
+    Ipv4Addr,
+    Ipv6Addr,
+    SocketAddr,
+    ToSocketAddrs,
+};
 
 use std::fmt;
 use std::ops;
@@ -25,15 +31,18 @@ pub struct Address {
 }
 
 impl Address {
-
     /// Creates an `Address` from an `Ipv4Addr` and a `Port`.
     pub fn from_v4_addr_and_port(addr: Ipv4Addr, port: Port) -> Self {
-        Self { inner: SocketAddr::new(IpAddr::V4(addr), *port) }
+        Self {
+            inner: SocketAddr::new(IpAddr::V4(addr), *port),
+        }
     }
 
     /// Creates an `Address` from an `Ipv6Addr` and a `Port`.
     pub fn from_v6_addr_and_port(addr: Ipv6Addr, port: Port) -> Self {
-        Self { inner: SocketAddr::new(IpAddr::V6(addr), *port) }
+        Self {
+            inner: SocketAddr::new(IpAddr::V6(addr), *port),
+        }
     }
 
     /// Creates an `Address` from a host address string (e.g. "example.com:15600").

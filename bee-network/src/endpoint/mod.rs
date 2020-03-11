@@ -1,8 +1,11 @@
-pub mod pool;
 pub mod actor;
+pub mod pool;
 
+use crate::address::url::{
+    Protocol,
+    Url,
+};
 use crate::address::Address;
-use crate::address::url::{Protocol, Url};
 
 use std::fmt;
 
@@ -20,7 +23,9 @@ impl From<Address> for EndpointId {
 impl From<Url> for EndpointId {
     fn from(url: Url) -> Self {
         match url {
-            Url::Tcp(socket_addr) | Url::Udp(socket_addr) => Self { inner: socket_addr.into() },
+            Url::Tcp(socket_addr) | Url::Udp(socket_addr) => Self {
+                inner: socket_addr.into(),
+            },
         }
     }
 }

@@ -1,11 +1,13 @@
-use crate::commands::{Command, CommandSender};
+use crate::commands::{
+    Command,
+    CommandSender,
+};
 
 use err_derive::Error;
 use futures::sink::SinkExt;
 
 #[derive(Debug, Error)]
 pub enum NetworkError {
-
     #[error(display = "error sending command")]
     CommandSendFailure(#[source] futures::channel::mpsc::SendError),
 }

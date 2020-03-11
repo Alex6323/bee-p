@@ -1,7 +1,10 @@
 use crate::address::url::Url;
 use crate::endpoint::EndpointId;
 
-use futures::channel::{mpsc, oneshot};
+use futures::channel::{
+    mpsc,
+    oneshot,
+};
 
 use std::fmt;
 
@@ -14,7 +17,6 @@ pub fn response_channel<T>() -> (Responder<T>, Requester<T>) {
 
 #[derive(Debug)]
 pub enum Command {
-
     AddEndpoint {
         url: Url,
         responder: Option<Responder<Option<EndpointId>>>,
@@ -57,29 +59,27 @@ pub enum Command {
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Command::AddEndpoint { url, .. } =>
-                write!(f, "Command::AddEndpoint {{ url = {:?} }} ", url),
+            Command::AddEndpoint { url, .. } => write!(f, "Command::AddEndpoint {{ url = {:?} }} ", url),
 
-            Command::RemoveEndpoint { endpoint, .. } =>
-                write!(f, "Command::RemoveEndpoint {{ ep = {:?} }}", endpoint),
+            Command::RemoveEndpoint { endpoint, .. } => write!(f, "Command::RemoveEndpoint {{ ep = {:?} }}", endpoint),
 
-            Command::Connect { endpoint, attempts, .. } =>
-                write!(f, "Command::Connect {{ ep = {:?}, attempts = {:?} }}", endpoint, attempts),
+            Command::Connect { endpoint, attempts, .. } => write!(
+                f,
+                "Command::Connect {{ ep = {:?}, attempts = {:?} }}",
+                endpoint, attempts
+            ),
 
-            Command::Disconnect { endpoint, .. } =>
-                write!(f, "Command::Disconnect {{ ep = {:?} }}", endpoint),
+            Command::Disconnect { endpoint, .. } => write!(f, "Command::Disconnect {{ ep = {:?} }}", endpoint),
 
-            Command::SendBytes { to, .. } =>
-                write!(f, "Command::UnicastBytes {{ to = {:?} }}", to),
+            Command::SendBytes { to, .. } => write!(f, "Command::UnicastBytes {{ to = {:?} }}", to),
 
-            Command::MulticastBytes { to, .. } =>
-                write!(f, "Command::MulticastBytes {{ num_endpoints = {} }}", to.len()),
+            Command::MulticastBytes { to, .. } => {
+                write!(f, "Command::MulticastBytes {{ num_endpoints = {} }}", to.len())
+            }
 
-            Command::BroadcastBytes { .. } =>
-                write!(f, "Command::BroadcastBytes"),
+            Command::BroadcastBytes { .. } => write!(f, "Command::BroadcastBytes"),
 
-            Command::Shutdown =>
-                write!(f, "Command::Shutdown"),
+            Command::Shutdown => write!(f, "Command::Shutdown"),
         }
     }
 }
@@ -98,7 +98,10 @@ pub(crate) fn command_channel() -> (CommandSender, CommandReceiver) {
 mod tests {
     use super::*;
     use async_std::prelude::*;
-    use async_std::task::{block_on, spawn};
+    use async_std::task::{
+        block_on,
+        spawn,
+    };
     use futures::sink::SinkExt;
 
     #[test]
@@ -108,21 +111,19 @@ mod tests {
         let mut received_command = false;
 
         spawn(async move {
-            sender.send(
-                Command::AddEndpoint {
-                    url,
-                    responder: None,
-                }).await.unwrap();
+            sender
+                .send(Command::AddEndpoint { url, responder: None })
+                .await
+                .unwrap();
         });
 
         block_on(async move {
             while let Some(command) = receiver.next().await {
                 match command {
                     Command::AddEndpoint { url, .. } => {
-
                         assert_eq!("tcp://127.0.0.1:15600", url.to_string(), "Unexpected URL");
                         received_command = true;
-                    },
+                    }
                     _ => assert!(false, "Wrong command received"),
                 }
             }
@@ -140,11 +141,13 @@ mod tests {
 
         // 1) spawn a task which sends a command
         spawn(async move {
-            sender.send(
-                Command::AddEndpoint {
+            sender
+                .send(Command::AddEndpoint {
                     url,
                     responder: Some(responder),
-                }).await.unwrap();
+                })
+                .await
+                .unwrap();
         });
 
         // 2) spawn another task which receives the command
@@ -152,14 +155,13 @@ mod tests {
             while let Some(command) = receiver.next().await {
                 match command {
                     Command::AddEndpoint { url, responder } => {
-
                         assert_eq!("tcp://127.0.0.1:15600", url.to_string(), "Unexpected URL");
                         received_command = true;
 
                         if let Some(responder) = responder {
                             responder.send(Some(EndpointId::from(url))).unwrap();
                         }
-                    },
+                    }
                     _ => assert!(false, "Wrong command received"),
                 }
             }

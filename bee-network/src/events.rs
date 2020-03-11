@@ -1,5 +1,5 @@
-use crate::address::Address;
 use crate::address::url::Url;
+use crate::address::Address;
 use crate::endpoint::EndpointId;
 
 use futures::channel::mpsc;
@@ -10,7 +10,6 @@ const EVENT_CHAN_CAPACITY: usize = 10000;
 
 #[derive(Clone, Debug)]
 pub enum Event {
-
     EndpointAdded {
         endpoint: EndpointId,
         total: usize,
@@ -44,7 +43,6 @@ pub enum Event {
         endpoint: EndpointId,
     },
     */
-
     BytesSent {
         to: EndpointId,
         num: usize,
@@ -60,36 +58,58 @@ pub enum Event {
     TryConnect {
         to: EndpointId,
         num_retries: Option<usize>,
-    }
+    },
 }
 
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Event::EndpointAdded { endpoint, total } =>
-                write!(f, "Event::EndpointAdded {{ ep = {:?}, total = {} }}", endpoint, total),
+            Event::EndpointAdded { endpoint, total } => {
+                write!(f, "Event::EndpointAdded {{ ep = {:?}, total = {} }}", endpoint, total)
+            }
 
-            Event::EndpointRemoved { endpoint, total } =>
-                write!(f, "Event::EndpointRemoved {{ ep = {:?}, total = {} }}", endpoint, total),
+            Event::EndpointRemoved { endpoint, total } => {
+                write!(f, "Event::EndpointRemoved {{ ep = {:?}, total = {} }}", endpoint, total)
+            }
 
-            Event::EndpointAccepted { endpoint, url, .. } =>
-                write!(f, "Event::EndpointAccepted {{ ep = {:?}, url = {} }}", endpoint, url.to_string()),
+            Event::EndpointAccepted { endpoint, url, .. } => write!(
+                f,
+                "Event::EndpointAccepted {{ ep = {:?}, url = {} }}",
+                endpoint,
+                url.to_string()
+            ),
 
-            Event::ConnectionEstablished { endpoint, timestamp, total } =>
-                write!(f, "Event::ConnectionEstablished {{ ep = {:?}, timestamp = {}, total = {} }}", endpoint, timestamp, total),
+            Event::ConnectionEstablished {
+                endpoint,
+                timestamp,
+                total,
+            } => write!(
+                f,
+                "Event::ConnectionEstablished {{ ep = {:?}, timestamp = {}, total = {} }}",
+                endpoint, timestamp, total
+            ),
 
-            Event::ConnectionDropped { endpoint, total } =>
-                write!(f, "Event::ConnectionDropped {{ ep = {:?}, total = {} }}", endpoint, total),
+            Event::ConnectionDropped { endpoint, total } => write!(
+                f,
+                "Event::ConnectionDropped {{ ep = {:?}, total = {} }}",
+                endpoint, total
+            ),
 
-            Event::BytesSent { to, num } =>
-                write!(f, "Event::BytesSent {{ to = {}, num = {} }}", to, num),
+            Event::BytesSent { to, num } => write!(f, "Event::BytesSent {{ to = {}, num = {} }}", to, num),
 
-            Event::BytesReceived { from, with_addr, num, .. } =>
-                write!(f, "Event::BytesReceived {{ from = {}, with_addr = {}, num = {} }}", from, with_addr, num),
+            Event::BytesReceived {
+                from, with_addr, num, ..
+            } => write!(
+                f,
+                "Event::BytesReceived {{ from = {}, with_addr = {}, num = {} }}",
+                from, with_addr, num
+            ),
 
-            Event::TryConnect { to, num_retries } =>
-                write!(f, "Event::TryConnect {{ to = {}, num_retries = {:?} }}", to, num_retries),
-
+            Event::TryConnect { to, num_retries } => write!(
+                f,
+                "Event::TryConnect {{ to = {}, num_retries = {:?} }}",
+                to, num_retries
+            ),
         }
     }
 }

@@ -1,5 +1,5 @@
-use super::Address;
 use super::errors::*;
+use super::Address;
 
 use std::fmt;
 
@@ -21,7 +21,6 @@ pub enum Protocol {
 }
 
 impl Protocol {
-
     pub fn is_tcp(&self) -> bool {
         *self == Protocol::Tcp
     }
@@ -29,7 +28,6 @@ impl Protocol {
     pub fn is_udp(&self) -> bool {
         *self == Protocol::Udp
     }
-
 }
 
 impl Url {
@@ -42,7 +40,6 @@ impl Url {
 
     /// Example: tcp://example.com:15600
     pub async fn from_str_with_port(url: &str) -> AddressResult<Self> {
-
         // TODO: should be use 'url' crate instead of manual parsing?
         let proto_addr: Vec<&str> = url.split_terminator(PROTOCOL_SEPARATOR).collect();
         if proto_addr.len() != 2 {

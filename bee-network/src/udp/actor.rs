@@ -10,13 +10,7 @@ pub struct UdpActor {
 }
 
 impl UdpActor {
-    pub fn new(
-        binding_addr: Address,
-        notifier: EventPub,
-        publisher: EventPub,
-        shutdown: ShutdownListener,
-    ) -> Self {
-
+    pub fn new(binding_addr: Address, notifier: EventPub, publisher: EventPub, shutdown: ShutdownListener) -> Self {
         Self {
             binding_addr,
             notifier,
