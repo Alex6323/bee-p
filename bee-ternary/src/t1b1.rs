@@ -34,6 +34,16 @@ impl T1B1<BTrit> {
     }
 }
 
+impl<T: Trit> T1B1<T> {
+    pub fn as_raw_slice(&self) -> &[T] {
+        unsafe { &*(Self::make(self.ptr(0), 0, self.len()) as *const _) }
+    }
+
+    pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
+        unsafe { &mut *(Self::make(self.ptr(0), 0, self.len()) as *mut _) }
+    }
+}
+
 impl<T: Trit> RawEncoding for T1B1<T> {
     fn empty() -> &'static Self {
         unsafe { &*Self::make(&[] as *const _, 0, 0) }
@@ -48,7 +58,7 @@ impl<T: Trit> RawEncoding for T1B1<T> {
     }
 
     unsafe fn set_unchecked(&mut self, index: usize, trit: UTrit) {
-        (self.ptr(index) as *mut i8).write(trit.into());
+        (self.ptr(index) as *mut T).write(trit.into());
     }
 
     unsafe fn slice_unchecked(&self, range: Range<usize>) -> &Self {

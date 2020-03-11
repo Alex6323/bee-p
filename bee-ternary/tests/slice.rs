@@ -44,6 +44,7 @@ fn get_generic<T: raw::RawEncodingBuf + Clone>() {
 }
 
 fn set_generic<T: raw::RawEncodingBuf + Clone>() {
+    println!("{}", std::any::type_name::<T>());
     fuzz(100, || {
         let (mut a, mut a_i8) = gen_buf::<T>(1..1000);
 
@@ -105,7 +106,8 @@ fn set_panic_generic<T: raw::RawEncodingBuf + Clone>() {
 
 #[test]
 fn get() {
-    get_generic::<T1B1Buf>();
+    get_generic::<T1B1Buf<BTrit>>();
+    get_generic::<T1B1Buf<UTrit>>();
     get_generic::<T2B1Buf>();
     get_generic::<T3B1Buf>();
     get_generic::<T4B1Buf>();
@@ -113,7 +115,8 @@ fn get() {
 
 #[test]
 fn set() {
-    set_generic::<T1B1Buf>();
+    set_generic::<T1B1Buf<BTrit>>();
+    set_generic::<T1B1Buf<UTrit>>();
     set_generic::<T2B1Buf>();
     set_generic::<T3B1Buf>();
     set_generic::<T4B1Buf>();
@@ -122,7 +125,8 @@ fn set() {
 #[test]
 #[should_panic]
 fn set_panic() {
-    set_panic_generic::<T1B1Buf>();
+    set_panic_generic::<T1B1Buf<BTrit>>();
+    set_panic_generic::<T1B1Buf<UTrit>>();
     set_panic_generic::<T2B1Buf>();
     set_panic_generic::<T3B1Buf>();
     set_panic_generic::<T4B1Buf>();
@@ -130,7 +134,8 @@ fn set_panic() {
 
 #[test]
 fn chunks() {
-    chunks_generic::<T1B1Buf>();
+    chunks_generic::<T1B1Buf<BTrit>>();
+    chunks_generic::<T1B1Buf<UTrit>>();
     chunks_generic::<T2B1Buf>();
     chunks_generic::<T3B1Buf>();
     chunks_generic::<T4B1Buf>();

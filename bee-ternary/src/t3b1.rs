@@ -81,7 +81,6 @@ impl RawEncodingBuf for T3B1Buf {
     }
 
     fn push(&mut self, trit: UTrit) {
-        let b = trit.into_u8();
         if self.1 % TPB == 0 {
             self.0.push(insert(0, 0, trit));
         } else {

@@ -147,6 +147,16 @@ impl Trits<T1B1<BTrit>> {
     }
 }
 
+impl<T: Trit> Trits<T1B1<T>> {
+    pub fn as_raw_slice(&self) -> &[T] {
+        self.0.as_raw_slice()
+    }
+
+    pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
+        self.0.as_raw_slice_mut()
+    }
+}
+
 impl<T: RawEncoding + ?Sized, U: RawEncoding + ?Sized> PartialEq<Trits<U>> for Trits<T> {
     fn eq(&self, other: &Trits<U>) -> bool {
         self.len() == other.len() && self

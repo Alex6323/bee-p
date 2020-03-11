@@ -38,7 +38,7 @@ fn eq_generic<T: raw::RawEncodingBuf + Clone>() {
 
 fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>() {
     fuzz(100, || {
-        let a = gen_buf::<T>(0..1000).0;
+        let a = gen_buf::<T>(0..100).0;
         let b = a.clone().into_encoding::<U>();
 
         assert_eq!(a, b);
@@ -53,7 +53,8 @@ fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>() {
 
 #[test]
 fn create() {
-    create_generic::<T1B1Buf>();
+    create_generic::<T1B1Buf<BTrit>>();
+    create_generic::<T1B1Buf<UTrit>>();
     create_generic::<T2B1Buf>();
     create_generic::<T3B1Buf>();
     create_generic::<T4B1Buf>();
@@ -61,7 +62,8 @@ fn create() {
 
 #[test]
 fn eq() {
-    eq_generic::<T1B1Buf>();
+    eq_generic::<T1B1Buf<BTrit>>();
+    eq_generic::<T1B1Buf<UTrit>>();
     eq_generic::<T2B1Buf>();
     eq_generic::<T3B1Buf>();
     eq_generic::<T4B1Buf>();
@@ -69,12 +71,18 @@ fn eq() {
 
 #[test]
 fn encode() {
-    encode_generic::<T1B1Buf, T2B1Buf>();
-    encode_generic::<T1B1Buf, T3B1Buf>();
-    encode_generic::<T1B1Buf, T4B1Buf>();
-    encode_generic::<T2B1Buf, T1B1Buf>();
-    encode_generic::<T3B1Buf, T1B1Buf>();
-    encode_generic::<T4B1Buf, T1B1Buf>();
+    encode_generic::<T1B1Buf<BTrit>, T2B1Buf>();
+    encode_generic::<T1B1Buf<UTrit>, T2B1Buf>();
+    encode_generic::<T1B1Buf<BTrit>, T3B1Buf>();
+    encode_generic::<T1B1Buf<UTrit>, T3B1Buf>();
+    encode_generic::<T1B1Buf<BTrit>, T4B1Buf>();
+    encode_generic::<T1B1Buf<UTrit>, T4B1Buf>();
+    encode_generic::<T2B1Buf, T1B1Buf<BTrit>>();
+    encode_generic::<T2B1Buf, T1B1Buf<UTrit>>();
+    encode_generic::<T3B1Buf, T1B1Buf<BTrit>>();
+    encode_generic::<T3B1Buf, T1B1Buf<UTrit>>();
+    encode_generic::<T4B1Buf, T1B1Buf<BTrit>>();
+    encode_generic::<T4B1Buf, T1B1Buf<UTrit>>();
     encode_generic::<T2B1Buf, T3B1Buf>();
     encode_generic::<T3B1Buf, T4B1Buf>();
     encode_generic::<T3B1Buf, T2B1Buf>();
