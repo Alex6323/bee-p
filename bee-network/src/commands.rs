@@ -36,13 +36,13 @@ pub enum Command {
         responder: Option<Responder<bool>>,
     },
 
-    UnicastBytes {
-        endpoint: EndpointId,
+    SendBytes {
+        to: EndpointId,
         bytes: Vec<u8>,
     },
 
     MulticastBytes {
-        endpoints: Vec<EndpointId>,
+        to: Vec<EndpointId>,
         bytes: Vec<u8>,
     },
 
@@ -50,9 +50,8 @@ pub enum Command {
         bytes: Vec<u8>,
     },
 
-    Shutdown {
-        responder: Option<Responder<bool>>,
-    },
+    // TODO: can probably be removed
+    Shutdown,
 }
 
 impl fmt::Display for Command {
@@ -70,16 +69,16 @@ impl fmt::Display for Command {
             Command::Disconnect { endpoint, .. } =>
                 write!(f, "Command::Disconnect {{ ep = {:?} }}", endpoint),
 
-            Command::UnicastBytes { endpoint, .. } =>
-                write!(f, "Command::UnicastBytes {{ ep = {:?} }}", endpoint),
+            Command::SendBytes { to, .. } =>
+                write!(f, "Command::UnicastBytes {{ to = {:?} }}", to),
 
-            Command::MulticastBytes { endpoints, .. } =>
-                write!(f, "Command::MulticastBytes {{ num_conns = {} }}", endpoints.len()),
+            Command::MulticastBytes { to, .. } =>
+                write!(f, "Command::MulticastBytes {{ num_endpoints = {} }}", to.len()),
 
             Command::BroadcastBytes { .. } =>
                 write!(f, "Command::BroadcastBytes"),
 
-            Command::Shutdown { .. }=>
+            Command::Shutdown =>
                 write!(f, "Command::Shutdown"),
         }
     }

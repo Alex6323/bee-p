@@ -1,4 +1,5 @@
 pub mod pool;
+pub mod actor;
 
 use crate::address::Address;
 use crate::address::url::{Protocol, Url};
