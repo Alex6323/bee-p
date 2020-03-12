@@ -272,11 +272,12 @@ impl fmt::Debug for Transaction {
     }
 }
 
+#[derive(Default)]
 pub struct Transactions(pub(crate) Vec<Transaction>);
 
 impl Transactions {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self::default()
     }
 
     pub fn get(&self, index: usize) -> Option<&Transaction> {
