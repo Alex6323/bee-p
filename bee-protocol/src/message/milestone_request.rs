@@ -110,9 +110,6 @@ mod tests {
         let message_from = MilestoneRequest::new(INDEX);
         let bytes = message_from.into_full_bytes();
 
-        to_from_eq(
-            MilestoneRequest::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..])
-                .unwrap(),
-        );
+        to_from_eq(MilestoneRequest::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..]).unwrap());
     }
 }

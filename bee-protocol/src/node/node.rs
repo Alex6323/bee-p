@@ -1,6 +1,4 @@
-use crate::message::{
-    Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest,
-};
+use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
 
 use crate::neighbor::{Neighbor, NeighborEvent, NeighborReceiverActor};
 use crate::node::NodeMetrics;
@@ -27,12 +25,7 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(
-        config: Config,
-        network: Network,
-        shutdown: Shutdown,
-        events: EventSubscriber,
-    ) -> Self {
+    pub fn new(config: Config, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
         Self {
             network: network,
             shutdown: shutdown,
@@ -65,12 +58,7 @@ impl Node {
         }
     }
 
-    async fn peer_bytes_received_handler(
-        &mut self,
-        peer_id: PeerId,
-        num_bytes: usize,
-        buffer: Vec<u8>,
-    ) {
+    async fn peer_bytes_received_handler(&mut self, peer_id: PeerId, num_bytes: usize, buffer: Vec<u8>) {
         if let Some(sender) = self.neighbors.get_mut(&peer_id) {
             sender
                 .send(NeighborEvent::Message {
@@ -86,10 +74,7 @@ impl Node {
         while let Some(event) = self.events.next().await {
             info!("[Node ] Received event {:?}", event);
             match event {
-                Event::PeerAdded {
-                    peer_id,
-                    num_peers: _,
-                } => {
+                Event::PeerAdded { peer_id, num_peers: _ } => {
                     self.peer_added_handler(peer_id);
                 }
                 Event::PeerRemoved {
@@ -103,10 +88,7 @@ impl Node {
                 } => {
                     self.peer_connected_handler(peer_id).await;
                 }
-                Event::PeerDisconnected {
-                    peer_id,
-                    num_conns: _,
-                } => {
+                Event::PeerDisconnected { peer_id, num_conns: _ } => {
                     self.peer_disconnected_handler(peer_id).await;
                 }
                 Event::BytesReceived {
@@ -115,8 +97,7 @@ impl Node {
                     num_bytes,
                     buffer,
                 } => {
-                    self.peer_bytes_received_handler(from_peer, num_bytes, buffer)
-                        .await;
+                    self.peer_bytes_received_handler(from_peer, num_bytes, buffer).await;
                 }
                 _ => (),
             }
@@ -147,11 +128,7 @@ impl Node {
             .await;
     }
 
-    async fn send_handshake(
-        &self,
-        neighbor: &mut Neighbor,
-        handshake: Handshake,
-    ) -> Result<(), SendError> {
+    async fn send_handshake(&self, neighbor: &mut Neighbor, handshake: Handshake) -> Result<(), SendError> {
         let res = neighbor.senders.handshake.send(handshake).await;
 
         if res.is_ok() {
@@ -162,11 +139,7 @@ impl Node {
         res
     }
 
-    async fn send_legacy_gossip(
-        &self,
-        neighbor: &mut Neighbor,
-        legacy_gossip: LegacyGossip,
-    ) -> Result<(), SendError> {
+    async fn send_legacy_gossip(&self, neighbor: &mut Neighbor, legacy_gossip: LegacyGossip) -> Result<(), SendError> {
         let res = neighbor.senders.legacy_gossip.send(legacy_gossip).await;
 
         if res.is_ok() {
@@ -184,11 +157,7 @@ impl Node {
         neighbor: &mut Neighbor,
         milestone_request: MilestoneRequest,
     ) -> Result<(), SendError> {
-        let res = neighbor
-            .senders
-            .milestone_request
-            .send(milestone_request)
-            .await;
+        let res = neighbor.senders.milestone_request.send(milestone_request).await;
 
         if res.is_ok() {
             neighbor.metrics.milestone_request_sent_inc();
@@ -203,11 +172,7 @@ impl Node {
         neighbor: &mut Neighbor,
         transaction_broadcast: TransactionBroadcast,
     ) -> Result<(), SendError> {
-        let res = neighbor
-            .senders
-            .transaction_broadcast
-            .send(transaction_broadcast)
-            .await;
+        let res = neighbor.senders.transaction_broadcast.send(transaction_broadcast).await;
 
         if res.is_ok() {
             neighbor.metrics.transactions_sent_inc();
@@ -224,11 +189,7 @@ impl Node {
         neighbor: &mut Neighbor,
         transaction_request: TransactionRequest,
     ) -> Result<(), SendError> {
-        let res = neighbor
-            .senders
-            .transaction_request
-            .send(transaction_request)
-            .await;
+        let res = neighbor.senders.transaction_request.send(transaction_request).await;
 
         if res.is_ok() {
             neighbor.metrics.transaction_request_sent_inc();
@@ -238,11 +199,7 @@ impl Node {
         res
     }
 
-    async fn send_heartbeat(
-        &self,
-        neighbor: &mut Neighbor,
-        heartbeat: Heartbeat,
-    ) -> Result<(), SendError> {
+    async fn send_heartbeat(&self, neighbor: &mut Neighbor, heartbeat: Heartbeat) -> Result<(), SendError> {
         let res = neighbor.senders.heartbeat.send(heartbeat).await;
 
         if res.is_ok() {

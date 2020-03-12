@@ -39,8 +39,7 @@ impl NodeMetrics {
     }
 
     pub fn invalid_transactions_received_inc(&self) -> u32 {
-        self.invalid_transactions_received
-            .fetch_add(1, Ordering::SeqCst)
+        self.invalid_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn stale_transactions_received(&self) -> u32 {
@@ -48,8 +47,7 @@ impl NodeMetrics {
     }
 
     pub fn stale_transactions_received_inc(&self) -> u32 {
-        self.stale_transactions_received
-            .fetch_add(1, Ordering::SeqCst)
+        self.stale_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn random_transactions_received(&self) -> u32 {
@@ -57,8 +55,7 @@ impl NodeMetrics {
     }
 
     pub fn random_transactions_received_inc(&self) -> u32 {
-        self.random_transactions_received
-            .fetch_add(1, Ordering::SeqCst)
+        self.random_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn new_transactions_received(&self) -> u32 {
@@ -66,8 +63,7 @@ impl NodeMetrics {
     }
 
     pub fn new_transactions_received_inc(&self) -> u32 {
-        self.new_transactions_received
-            .fetch_add(1, Ordering::SeqCst)
+        self.new_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn transactions_sent(&self) -> u32 {
@@ -99,8 +95,7 @@ impl NodeMetrics {
     }
 
     pub fn milestone_request_received_inc(&self) -> u32 {
-        self.milestone_request_received
-            .fetch_add(1, Ordering::SeqCst)
+        self.milestone_request_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn transaction_broadcast_received(&self) -> u32 {
@@ -108,8 +103,7 @@ impl NodeMetrics {
     }
 
     pub fn transaction_broadcast_received_inc(&self) -> u32 {
-        self.transaction_broadcast_received
-            .fetch_add(1, Ordering::SeqCst)
+        self.transaction_broadcast_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn transaction_request_received(&self) -> u32 {
@@ -117,8 +111,7 @@ impl NodeMetrics {
     }
 
     pub fn transaction_request_received_inc(&self) -> u32 {
-        self.transaction_request_received
-            .fetch_add(1, Ordering::SeqCst)
+        self.transaction_request_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn heartbeat_received(&self) -> u32 {
@@ -158,8 +151,7 @@ impl NodeMetrics {
     }
 
     pub fn transaction_broadcast_sent_inc(&self) -> u32 {
-        self.transaction_broadcast_sent
-            .fetch_add(1, Ordering::SeqCst)
+        self.transaction_broadcast_sent.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn transaction_request_sent(&self) -> u32 {

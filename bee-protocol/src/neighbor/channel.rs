@@ -1,6 +1,4 @@
-use crate::message::{
-    Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest,
-};
+use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
 

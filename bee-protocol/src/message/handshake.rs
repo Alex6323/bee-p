@@ -120,8 +120,7 @@ impl Message for Handshake {
 
         bytes[offset..offset + HANDSHAKE_PORT_SIZE].copy_from_slice(&self.port.to_be_bytes());
         offset += HANDSHAKE_PORT_SIZE;
-        bytes[offset..offset + HANDSHAKE_TIMESTAMP_SIZE]
-            .copy_from_slice(&self.timestamp.to_be_bytes());
+        bytes[offset..offset + HANDSHAKE_TIMESTAMP_SIZE].copy_from_slice(&self.timestamp.to_be_bytes());
         offset += HANDSHAKE_TIMESTAMP_SIZE;
         bytes[offset..offset + HANDSHAKE_COORDINATOR_SIZE].copy_from_slice(&self.coordinator);
         offset += HANDSHAKE_COORDINATOR_SIZE;
@@ -141,9 +140,8 @@ mod tests {
 
     const PORT: u16 = 0xcd98;
     const COORDINATOR: [u8; HANDSHAKE_COORDINATOR_SIZE] = [
-        160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232,
-        31, 255, 208, 9, 126, 21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93,
-        74, 238, 57, 39, 51, 169, 193, 124, 254,
+        160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
+        21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
     ];
     const MINIMUM_WEIGHT_MAGNITUDE: u8 = 0x6e;
     const SUPPORTED_MESSAGES: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -178,12 +176,7 @@ mod tests {
 
     #[test]
     fn size_test() {
-        let message = Handshake::new(
-            PORT,
-            &COORDINATOR,
-            MINIMUM_WEIGHT_MAGNITUDE,
-            &SUPPORTED_MESSAGES,
-        );
+        let message = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_MESSAGES);
 
         assert_eq!(message.size(), HANDSHAKE_CONSTANT_SIZE + 10);
     }
@@ -192,20 +185,12 @@ mod tests {
         assert_eq!(message.port, PORT);
         assert_eq!(slice_eq(&message.coordinator, &COORDINATOR), true);
         assert_eq!(message.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
-        assert_eq!(
-            slice_eq(&message.supported_messages, &SUPPORTED_MESSAGES),
-            true
-        );
+        assert_eq!(slice_eq(&message.supported_messages, &SUPPORTED_MESSAGES), true);
     }
 
     #[test]
     fn to_from_test() {
-        let message_from = Handshake::new(
-            PORT,
-            &COORDINATOR,
-            MINIMUM_WEIGHT_MAGNITUDE,
-            &SUPPORTED_MESSAGES,
-        );
+        let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_MESSAGES);
         let mut bytes = vec![0u8; message_from.size()];
 
         message_from.to_bytes(&mut bytes);
@@ -214,16 +199,9 @@ mod tests {
 
     #[test]
     fn full_to_from_test() {
-        let message_from = Handshake::new(
-            PORT,
-            &COORDINATOR,
-            MINIMUM_WEIGHT_MAGNITUDE,
-            &SUPPORTED_MESSAGES,
-        );
+        let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_MESSAGES);
         let bytes = message_from.into_full_bytes();
 
-        to_from_eq(
-            Handshake::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..]).unwrap(),
-        );
+        to_from_eq(Handshake::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..]).unwrap());
     }
 }

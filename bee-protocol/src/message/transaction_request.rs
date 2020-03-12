@@ -41,9 +41,7 @@ impl Message for TransactionRequest {
 
         let mut message = Self::default();
 
-        message
-            .hash
-            .copy_from_slice(&bytes[0..TRANSACTION_REQUEST_HASH_SIZE]);
+        message.hash.copy_from_slice(&bytes[0..TRANSACTION_REQUEST_HASH_SIZE]);
 
         Ok(message)
     }
@@ -65,9 +63,8 @@ mod tests {
     use bee_test::slices::slice_eq;
 
     const HASH: [u8; TRANSACTION_REQUEST_HASH_SIZE] = [
-        160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232,
-        31, 255, 208, 9, 126, 21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93,
-        74, 238, 57, 39, 51, 169, 193, 124, 254,
+        160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
+        21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
     ];
 
     #[test]
@@ -119,9 +116,6 @@ mod tests {
         let message_from = TransactionRequest::new(HASH);
         let bytes = message_from.into_full_bytes();
 
-        to_from_eq(
-            TransactionRequest::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..])
-                .unwrap(),
-        );
+        to_from_eq(TransactionRequest::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..]).unwrap());
     }
 }

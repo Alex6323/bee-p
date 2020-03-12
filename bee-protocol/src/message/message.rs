@@ -24,9 +24,7 @@ pub(crate) trait Message {
         let payload_length = u16::from_be_bytes(
             header_bytes[HEADER_TYPE_SIZE..HEADER_SIZE]
                 .try_into()
-                .map_err(|_| {
-                    MessageError::InvalidAdvertisedLengthBytes([header_bytes[1], header_bytes[2]])
-                })?,
+                .map_err(|_| MessageError::InvalidAdvertisedLengthBytes([header_bytes[1], header_bytes[2]]))?,
         );
 
         // TODO check message type
