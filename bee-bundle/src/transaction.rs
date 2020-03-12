@@ -1,8 +1,6 @@
 use crate::constants::{ADDRESS, BUNDLE_HASH, IOTA_SUPPLY, NONCE, PAYLOAD, TAG};
 
 use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
-use bee_common::Errors;
-use bee_common::Result as BeeResult;
 use bee_ternary::{util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
 
 use std::fmt;
@@ -147,6 +145,11 @@ pub struct Essence<'a> {
     last_index: &'a Index,
 }
 
+#[derive(Debug)]
+pub enum TransactionError {
+    TransactionDeserializationError,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Transaction {
     pub(crate) payload: Payload,
@@ -167,15 +170,15 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn from_tryte_str(tx_trytes: &str) -> BeeResult<Self> {
+    pub fn from_tryte_str(tx_trytes: &str) -> Result<(), TransactionError> {
         if tx_trytes.len() != TRANSACTION_TRYT_LEN {
-            return Err(Errors::TransactionDeserializationError);
+            Err(TransactionError::TransactionDeserializationError)?;
         }
         unimplemented!()
     }
 
     /// Create a `Transaction` from a reader object.
-    pub fn from_reader<R: std::io::Read>(reader: R) -> BeeResult<Self> {
+    pub fn from_reader<R: std::io::Read>(reader: R) -> Result<(), TransactionError> {
         unimplemented!()
     }
 
