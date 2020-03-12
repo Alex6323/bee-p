@@ -13,29 +13,29 @@ const EVENT_CHAN_CAPACITY: usize = 10000;
 #[derive(Debug)]
 pub enum Event {
     EndpointAdded {
-        id: EndpointId,
+        epid: EndpointId,
         total: usize,
     },
 
     EndpointRemoved {
-        id: EndpointId,
+        epid: EndpointId,
         total: usize,
     },
 
     EndpointAccepted {
-        id: EndpointId,
+        epid: EndpointId,
         url: Url,
         sender: BytesSender,
     },
 
-    ConnectionEstablished {
-        id: EndpointId,
+    EndpointConnected {
+        epid: EndpointId,
         timestamp: u64,
         total: usize,
     },
 
-    ConnectionDropped {
-        id: EndpointId,
+    EndpointDisconnected {
+        epid: EndpointId,
         total: usize,
     },
 
@@ -60,30 +60,32 @@ pub enum Event {
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Event::EndpointAdded { id, total } => {
-                write!(f, "Event::EndpointAdded {{ id = {:?}, total = {} }}", id, total)
+            Event::EndpointAdded { epid, total } => {
+                write!(f, "Event::EndpointAdded {{ epid = {:?}, total = {} }}", epid, total)
             }
 
-            Event::EndpointRemoved { id, total } => {
-                write!(f, "Event::EndpointRemoved {{ id = {:?}, total = {} }}", id, total)
+            Event::EndpointRemoved { epid, total } => {
+                write!(f, "Event::EndpointRemoved {{ epid = {:?}, total = {} }}", epid, total)
             }
 
-            Event::EndpointAccepted { id, url, .. } => write!(
+            Event::EndpointAccepted { epid, url, .. } => write!(
                 f,
-                "Event::EndpointAccepted {{ id = {:?}, url = {} }}",
-                id,
+                "Event::EndpointAccepted {{ epid = {:?}, url = {} }}",
+                epid,
                 url.to_string()
             ),
 
-            Event::ConnectionEstablished { id, timestamp, total } => write!(
+            Event::EndpointConnected { epid, timestamp, total } => write!(
                 f,
-                "Event::ConnectionEstablished {{ id = {:?}, timestamp = {}, total = {} }}",
-                id, timestamp, total
+                "Event::EndpointConnected {{ epid = {:?}, timestamp = {}, total = {} }}",
+                epid, timestamp, total
             ),
 
-            Event::ConnectionDropped { id, total } => {
-                write!(f, "Event::ConnectionDropped {{ id = {:?}, total = {} }}", id, total)
-            }
+            Event::EndpointDisconnected { epid, total } => write!(
+                f,
+                "Event::EndpointDisconnected {{ epid = {:?}, total = {} }}",
+                epid, total
+            ),
 
             Event::BytesSent { to, num } => write!(f, "Event::BytesSent {{ to = {}, num = {} }}", to, num),
 

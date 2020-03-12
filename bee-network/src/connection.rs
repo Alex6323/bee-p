@@ -1,14 +1,14 @@
-use crate::endpoint::EndpointId;
+use crate::endpoint::EndpointId as EpId;
+use crate::{
+    R,
+    R0,
+};
 
 use async_std::sync::Arc;
 use futures::channel::mpsc;
 use futures::sink::SinkExt;
 
-use std::collections::hash_map::{
-    Entry,
-    Iter,
-    IterMut,
-};
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 pub type BytesSender = mpsc::Sender<Arc<Vec<u8>>>;
@@ -22,19 +22,22 @@ pub fn channel() -> (BytesSender, BytesReceiver) {
 }
 
 pub struct ConnectionPool {
-    inner: HashMap<EndpointId, BytesSender>,
+    inner: HashMap<EpId, BytesSender>,
 }
 
 impl ConnectionPool {
+    /// Creates a new `ConnectionPool`.
     pub fn new() -> Self {
         Self { inner: HashMap::new() }
     }
 
+    /// Returns the size of the pool.
     pub fn size(&self) -> usize {
         self.inner.len()
     }
 
-    pub fn insert(&mut self, id: EndpointId, sender: BytesSender) -> bool {
+    /// Inserts a `sender` to the pool.
+    pub fn insert(&mut self, id: EpId, sender: BytesSender) -> bool {
         match self.inner.entry(id.clone()) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
@@ -44,31 +47,57 @@ impl ConnectionPool {
         }
     }
 
-    pub fn remove(&mut self, id: &EndpointId) -> bool {
+    /// Removes a `sender` associated with an endpoint.
+    pub fn remove(&mut self, id: &EpId) -> bool {
         self.inner.remove(id).is_some()
     }
 
-    pub fn sender(&mut self, id: &EndpointId) -> Option<&mut BytesSender> {
-        self.inner.get_mut(id)
-    }
-
-    pub fn contains(&self, id: &EndpointId) -> bool {
+    /// Checks whether the specified endpoint belongs to the pool.
+    pub fn contains(&self, id: &EpId) -> bool {
         self.inner.contains_key(id)
     }
 
-    pub async fn broadcast(&mut self, bytes: Vec<u8>) {
-        let bytes = Arc::new(bytes);
-
-        for (_, sender) in self.inner.iter_mut() {
-            sender.send(Arc::clone(&bytes)).await;
+    /// Sends `bytes` to `receiver`.
+    ///
+    /// Returns `true` if the send was successful.
+    pub async fn send(&mut self, bytes: Arc<Vec<u8>>, receiver: &EpId) -> R<bool> {
+        if let Some(sender) = self.inner.get_mut(receiver) {
+            sender.send(bytes).await?;
+            Ok(true)
+        } else {
+            Ok(false)
         }
     }
 
-    pub async fn send(&mut self, bytes: Vec<u8>, to: &EndpointId) {
-        let bytes = Arc::new(bytes);
+    /// Multicasts `bytes` to the `receivers`.
+    ///
+    /// NOTE: The multicast is considered to be successful, if at least
+    /// one send is successful.
+    pub async fn multicast(&mut self, bytes: Arc<Vec<u8>>, receivers: &Vec<EpId>) -> R<bool> {
+        let mut num_sends = 0;
 
-        if let Some(sender) = self.sender(&to) {
-            sender.send(bytes).await;
+        for (epid, sender) in self.inner.iter_mut() {
+            if receivers.contains(epid) {
+                sender.send(Arc::clone(&bytes)).await?;
+                num_sends += 1;
+            }
         }
+
+        Ok(num_sends > 0)
+    }
+
+    /// Broadcasts `bytes` using all available connections from the pool.
+    ///
+    /// NOTE: The broadcast is considered to be successful, if at least
+    /// one send is successful.
+    pub async fn broadcast(&mut self, bytes: Arc<Vec<u8>>) -> R<bool> {
+        let mut num_sends = 0;
+
+        for (_, sender) in self.inner.iter_mut() {
+            sender.send(Arc::clone(&bytes)).await?;
+            num_sends += 1;
+        }
+
+        Ok(num_sends > 0)
     }
 }

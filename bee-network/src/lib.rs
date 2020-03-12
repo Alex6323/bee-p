@@ -1,4 +1,4 @@
-#![recursion_limit = "2048"]
+#![recursion_limit = "1024"]
 
 pub mod address;
 pub mod commands;
@@ -66,6 +66,7 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
 
 #[derive(Debug, Error)]
 pub enum ActorError {
+    // TODO: rename to `ChannelSendFailure`?
     #[error(display = "error issuing a notification event")]
     NotifyFailure(#[source] futures::channel::mpsc::SendError),
 }

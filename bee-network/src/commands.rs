@@ -19,7 +19,7 @@ pub fn response_channel<T>() -> (Responder<T>, Requester<T>) {
 pub enum Command {
     AddEndpoint {
         url: Url,
-        responder: Option<Responder<Option<EndpointId>>>,
+        responder: Option<Responder<bool>>,
     },
 
     RemoveEndpoint {
@@ -40,15 +40,18 @@ pub enum Command {
     SendBytes {
         to: EndpointId,
         bytes: Vec<u8>,
+        responder: Option<Responder<bool>>,
     },
 
     MulticastBytes {
         to: Vec<EndpointId>,
         bytes: Vec<u8>,
+        responder: Option<Responder<bool>>,
     },
 
     BroadcastBytes {
         bytes: Vec<u8>,
+        responder: Option<Responder<bool>>,
     },
 }
 
