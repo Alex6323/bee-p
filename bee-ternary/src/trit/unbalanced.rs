@@ -2,7 +2,7 @@ use std::fmt;
 use super::{Trit, Btrit};
 
 #[repr(u8)]
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Utrit {
     NegOne = 0,
     Zero = 1,
@@ -16,13 +16,9 @@ impl From<i8> for Utrit {
     }
 }
 
-impl fmt::Debug for Utrit {
+impl fmt::Display for Utrit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Utrit::NegOne => write!(f, "{}", -1),
-            Utrit::Zero => write!(f, "{}", 0),
-            Utrit::PlusOne => write!(f, "{}", 1),
-        }
+        write!(f, "{}", *self as i8)
     }
 }
 
