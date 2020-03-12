@@ -29,7 +29,7 @@ impl fmt::Debug for Btrit {
 impl From<Utrit> for Btrit {
     fn from(trit: Utrit) -> Self {
         // TODO: Fully review this
-        unsafe { std::mem::transmute(std::mem::transmute::<_, i8>(trit) - 1) }
+        unsafe { std::mem::transmute(trit as i8 - 1) }
     }
 }
 
