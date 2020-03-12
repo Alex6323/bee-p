@@ -1,73 +1,73 @@
 use std::fmt;
-use super::{Trit, BTrit};
+use super::{Trit, Btrit};
 
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub enum UTrit {
+pub enum Utrit {
     NegOne = 0,
     Zero = 1,
     PlusOne = 2,
 }
 
-impl From<i8> for UTrit {
+impl From<i8> for Utrit {
     fn from(x: i8) -> Self {
         Self::try_from(x)
             .unwrap_or_else(|_| panic!("Invalid unbalanced trit representation '{}'", x))
     }
 }
 
-impl fmt::Debug for UTrit {
+impl fmt::Debug for Utrit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            UTrit::NegOne => write!(f, "{}", -1),
-            UTrit::Zero => write!(f, "{}", 0),
-            UTrit::PlusOne => write!(f, "{}", 1),
+            Utrit::NegOne => write!(f, "{}", -1),
+            Utrit::Zero => write!(f, "{}", 0),
+            Utrit::PlusOne => write!(f, "{}", 1),
         }
     }
 }
 
-impl From<BTrit> for UTrit {
-    fn from(trit: BTrit) -> Self {
+impl From<Btrit> for Utrit {
+    fn from(trit: Btrit) -> Self {
         // TODO: Fully review this
         unsafe { std::mem::transmute(std::mem::transmute::<_, i8>(trit) + 1) }
     }
 }
 
-impl Into<i8> for UTrit {
+impl Into<i8> for Utrit {
     fn into(self) -> i8 {
         match self {
-            UTrit::NegOne => -1,
-            UTrit::Zero => 0,
-            UTrit::PlusOne => 1,
+            Utrit::NegOne => -1,
+            Utrit::Zero => 0,
+            Utrit::PlusOne => 1,
         }
     }
 }
 
-impl Trit for UTrit {
+impl Trit for Utrit {
     fn try_from(x: i8) -> Result<Self, ()> {
         match x {
-            -1 => Ok(UTrit::NegOne),
-            0 => Ok(UTrit::Zero),
-            1 => Ok(UTrit::PlusOne),
+            -1 => Ok(Utrit::NegOne),
+            0 => Ok(Utrit::Zero),
+            1 => Ok(Utrit::PlusOne),
             x => Err(()),
         }
     }
 
     fn checked_increment(self) -> Option<Self> {
         match self {
-            UTrit::NegOne => Some(UTrit::Zero),
-            UTrit::Zero => Some(UTrit::PlusOne),
-            UTrit::PlusOne => None,
+            Utrit::NegOne => Some(Utrit::Zero),
+            Utrit::Zero => Some(Utrit::PlusOne),
+            Utrit::PlusOne => None,
         }
     }
 }
 
-impl UTrit {
+impl Utrit {
     pub(crate) fn from_u8(x: u8) -> Self {
         match x {
-            0 => UTrit::NegOne,
-            1 => UTrit::Zero,
-            2 => UTrit::PlusOne,
+            0 => Utrit::NegOne,
+            1 => Utrit::Zero,
+            2 => Utrit::PlusOne,
             x => panic!("Invalid trit representation '{}'", x),
         }
     }
@@ -79,9 +79,9 @@ impl UTrit {
 
     pub(crate) fn into_u8(self) -> u8 {
         match self {
-            UTrit::NegOne => 0,
-            UTrit::Zero => 1,
-            UTrit::PlusOne => 2,
+            Utrit::NegOne => 0,
+            Utrit::Zero => 1,
+            Utrit::PlusOne => 2,
         }
     }
 }

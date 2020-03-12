@@ -24,8 +24,8 @@ fn deserialize_generic<T: raw::RawEncodingBuf>() {
 
 #[test]
 fn serialize() {
-    serialize_generic::<T1B1Buf<BTrit>>();
-    serialize_generic::<T1B1Buf<UTrit>>();
+    serialize_generic::<T1B1Buf<Btrit>>();
+    serialize_generic::<T1B1Buf<Utrit>>();
     serialize_generic::<T2B1Buf>();
     serialize_generic::<T3B1Buf>();
     serialize_generic::<T4B1Buf>();
@@ -33,8 +33,8 @@ fn serialize() {
 
 #[test]
 fn deserialize() {
-    deserialize_generic::<T1B1Buf<BTrit>>();
-    deserialize_generic::<T1B1Buf<UTrit>>();
+    deserialize_generic::<T1B1Buf<Btrit>>();
+    deserialize_generic::<T1B1Buf<Utrit>>();
     deserialize_generic::<T2B1Buf>();
     deserialize_generic::<T3B1Buf>();
     deserialize_generic::<T4B1Buf>();

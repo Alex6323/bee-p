@@ -3,13 +3,13 @@ use std::{
     ops::Range,
 };
 use crate::{
-    Trit, UTrit, BTrit,
+    Trit, Utrit, Btrit,
     RawEncoding,
     RawEncodingBuf,
 };
 
 #[repr(transparent)]
-pub struct T1B1<T: Trit = BTrit> {
+pub struct T1B1<T: Trit = Btrit> {
     _phantom: PhantomData<T>,
     inner: [()],
 }
@@ -24,7 +24,7 @@ impl<T: Trit> T1B1<T> {
     }
 }
 
-impl T1B1<BTrit> {
+impl T1B1<Btrit> {
     pub fn as_i8_slice(&self) -> &[i8] {
         unsafe { &*(Self::make(self.ptr(0), 0, self.len()) as *const _) }
     }
@@ -53,11 +53,11 @@ impl<T: Trit> RawEncoding for T1B1<T> {
         self.inner.len()
     }
 
-    unsafe fn get_unchecked(&self, index: usize) -> UTrit {
+    unsafe fn get_unchecked(&self, index: usize) -> Utrit {
         self.ptr(index).read().into()
     }
 
-    unsafe fn set_unchecked(&mut self, index: usize, trit: UTrit) {
+    unsafe fn set_unchecked(&mut self, index: usize, trit: Utrit) {
         (self.ptr(index) as *mut T).write(trit.into());
     }
 
@@ -71,7 +71,7 @@ impl<T: Trit> RawEncoding for T1B1<T> {
 }
 
 #[derive(Clone)]
-pub struct T1B1Buf<T: Trit = BTrit> {
+pub struct T1B1Buf<T: Trit = Btrit> {
     _phantom: PhantomData<T>,
     inner: Vec<T>,
 }
@@ -86,11 +86,11 @@ impl<T: Trit> RawEncodingBuf for T1B1Buf<T> {
         }
     }
 
-    fn push(&mut self, trit: UTrit) {
+    fn push(&mut self, trit: Utrit) {
         self.inner.push(trit.into());
     }
 
-    fn pop(&mut self) -> Option<UTrit> {
+    fn pop(&mut self) -> Option<Utrit> {
         self.inner.pop().map(Into::into)
     }
 

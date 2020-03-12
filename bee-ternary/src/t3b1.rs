@@ -1,5 +1,5 @@
 use std::ops::Range;
-use crate::{UTrit, RawEncoding, RawEncodingBuf};
+use crate::{Utrit, RawEncoding, RawEncodingBuf};
 
 const TPB: usize = 3;
 const BAL: i8 = 13;
@@ -23,15 +23,15 @@ impl T3B1 {
     }
 }
 
-fn extract(x: i8, elem: usize) -> UTrit {
+fn extract(x: i8, elem: usize) -> Utrit {
     if elem < TPB {
-        UTrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8)
+        Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8)
     } else {
         unreachable!("Attempted to extract invalid element {} from balanced T3B1", elem)
     }
 }
 
-fn insert(x: i8, elem: usize, trit: UTrit) -> i8 {
+fn insert(x: i8, elem: usize, trit: Utrit) -> i8 {
     if elem < TPB {
         let ux = x + BAL;
         let ux = ux + (trit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
@@ -50,12 +50,12 @@ impl RawEncoding for T3B1 {
         self.len_offset().0
     }
 
-    unsafe fn get_unchecked(&self, index: usize) -> UTrit {
+    unsafe fn get_unchecked(&self, index: usize) -> Utrit {
         let b = self.ptr(index).read();
         extract(b, (self.len_offset().1 + index) % TPB)
     }
 
-    unsafe fn set_unchecked(&mut self, index: usize, trit: UTrit) {
+    unsafe fn set_unchecked(&mut self, index: usize, trit: Utrit) {
         let b = self.ptr(index).read();
         let b = insert(b, (self.len_offset().1 + index) % TPB, trit);
         (self.ptr(index) as *mut i8).write(b);
@@ -80,7 +80,7 @@ impl RawEncodingBuf for T3B1Buf {
         Self(Vec::new(), 0)
     }
 
-    fn push(&mut self, trit: UTrit) {
+    fn push(&mut self, trit: Utrit) {
         if self.1 % TPB == 0 {
             self.0.push(insert(0, 0, trit));
         } else {
@@ -91,7 +91,7 @@ impl RawEncodingBuf for T3B1Buf {
         self.1 += 1;
     }
 
-    fn pop(&mut self) -> Option<UTrit> {
+    fn pop(&mut self) -> Option<Utrit> {
         let val = if self.1 == 0 {
             return None;
         } else if self.1 % TPB == 1 {

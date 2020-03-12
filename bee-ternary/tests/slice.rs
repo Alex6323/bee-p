@@ -22,7 +22,7 @@ fn get_generic<T: raw::RawEncodingBuf + Clone>() {
             let i = thread_rng().gen_range(0, sl.len());
             assert_eq!(
                 sl.get(i),
-                Some(UTrit::from(sl_i8[i])),
+                Some(Utrit::from(sl_i8[i])),
             );
 
             let idx = thread_rng().gen_range(0, sl.len());
@@ -49,12 +49,12 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
                 let i = thread_rng().gen_range(0, sl.len());
                 let trit = thread_rng().gen_range(-1i8, 2);
 
-                sl.set(i, UTrit::from(trit));
+                sl.set(i, Utrit::from(trit));
                 sl_i8[i] = trit;
 
                 assert_eq!(
                     sl.get(i),
-                    Some(UTrit::from(sl_i8[i])),
+                    Some(Utrit::from(sl_i8[i])),
                 );
 
                 let idx = thread_rng().gen_range(0, sl.len());
@@ -66,7 +66,7 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == UTrit::from(*b)));
+                .all(|(a, b)| a == Utrit::from(*b)));
 
             assert_eq!(a.len(), a_i8.len());
         });
@@ -83,7 +83,7 @@ fn chunks_generic<T: raw::RawEncodingBuf + Clone>() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == UTrit::from(*b)));
+                .all(|(a, b)| a == Utrit::from(*b)));
         }
     });
 }
@@ -91,13 +91,13 @@ fn chunks_generic<T: raw::RawEncodingBuf + Clone>() {
 fn set_panic_generic<T: raw::RawEncodingBuf + Clone>() {
     let mut a = gen_buf::<T>(0..1000).0;
     let len = a.len();
-    a.set(len, UTrit::Zero);
+    a.set(len, Utrit::Zero);
 }
 
 #[test]
 fn get() {
-    get_generic::<T1B1Buf<BTrit>>();
-    get_generic::<T1B1Buf<UTrit>>();
+    get_generic::<T1B1Buf<Btrit>>();
+    get_generic::<T1B1Buf<Utrit>>();
     get_generic::<T2B1Buf>();
     get_generic::<T3B1Buf>();
     get_generic::<T4B1Buf>();
@@ -105,8 +105,8 @@ fn get() {
 
 #[test]
 fn set() {
-    set_generic::<T1B1Buf<BTrit>>();
-    set_generic::<T1B1Buf<UTrit>>();
+    set_generic::<T1B1Buf<Btrit>>();
+    set_generic::<T1B1Buf<Utrit>>();
     set_generic::<T2B1Buf>();
     set_generic::<T3B1Buf>();
     set_generic::<T4B1Buf>();
@@ -115,8 +115,8 @@ fn set() {
 #[test]
 #[should_panic]
 fn set_panic() {
-    set_panic_generic::<T1B1Buf<BTrit>>();
-    set_panic_generic::<T1B1Buf<UTrit>>();
+    set_panic_generic::<T1B1Buf<Btrit>>();
+    set_panic_generic::<T1B1Buf<Utrit>>();
     set_panic_generic::<T2B1Buf>();
     set_panic_generic::<T3B1Buf>();
     set_panic_generic::<T4B1Buf>();
@@ -124,8 +124,8 @@ fn set_panic() {
 
 #[test]
 fn chunks() {
-    chunks_generic::<T1B1Buf<BTrit>>();
-    chunks_generic::<T1B1Buf<UTrit>>();
+    chunks_generic::<T1B1Buf<Btrit>>();
+    chunks_generic::<T1B1Buf<Utrit>>();
     chunks_generic::<T2B1Buf>();
     chunks_generic::<T3B1Buf>();
     chunks_generic::<T4B1Buf>();
@@ -142,7 +142,7 @@ fn chunks_mut() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == UTrit::from(*b)));
+                .all(|(a, b)| a == Utrit::from(*b)));
         }
     });
 }
