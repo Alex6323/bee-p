@@ -22,20 +22,16 @@ impl fmt::Display for Btrit {
     }
 }
 
+impl From<Btrit> for i8 {
+    fn from(value: Btrit) -> Self {
+        value as i8
+    }
+}
+
 impl From<Utrit> for Btrit {
     fn from(trit: Utrit) -> Self {
         // TODO: Fully review this
         unsafe { std::mem::transmute(trit as i8 - 1) }
-    }
-}
-
-impl Into<i8> for Btrit {
-    fn into(self) -> i8 {
-        match self {
-            Btrit::NegOne => -1,
-            Btrit::Zero => 0,
-            Btrit::PlusOne => 1,
-        }
     }
 }
 
