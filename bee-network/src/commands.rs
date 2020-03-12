@@ -23,18 +23,17 @@ pub enum Command {
     },
 
     RemoveEndpoint {
-        endpoint: EndpointId,
+        id: EndpointId,
         responder: Option<Responder<bool>>,
     },
 
     Connect {
-        endpoint: EndpointId,
-        attempts: Option<usize>,
+        to: EndpointId,
         responder: Option<Responder<bool>>,
     },
 
     Disconnect {
-        endpoint: EndpointId,
+        from: EndpointId,
         responder: Option<Responder<bool>>,
     },
 
@@ -51,9 +50,6 @@ pub enum Command {
     BroadcastBytes {
         bytes: Vec<u8>,
     },
-
-    // TODO: can probably be removed
-    Shutdown,
 }
 
 impl fmt::Display for Command {
@@ -61,15 +57,11 @@ impl fmt::Display for Command {
         match self {
             Command::AddEndpoint { url, .. } => write!(f, "Command::AddEndpoint {{ url = {:?} }} ", url),
 
-            Command::RemoveEndpoint { endpoint, .. } => write!(f, "Command::RemoveEndpoint {{ ep = {:?} }}", endpoint),
+            Command::RemoveEndpoint { id, .. } => write!(f, "Command::RemoveEndpoint {{ id = {:?} }}", id),
 
-            Command::Connect { endpoint, attempts, .. } => write!(
-                f,
-                "Command::Connect {{ ep = {:?}, attempts = {:?} }}",
-                endpoint, attempts
-            ),
+            Command::Connect { to, .. } => write!(f, "Command::Connect {{ to = {:?} }}", to),
 
-            Command::Disconnect { endpoint, .. } => write!(f, "Command::Disconnect {{ ep = {:?} }}", endpoint),
+            Command::Disconnect { from, .. } => write!(f, "Command::Disconnect {{ from = {:?} }}", from),
 
             Command::SendBytes { to, .. } => write!(f, "Command::UnicastBytes {{ to = {:?} }}", to),
 
@@ -78,8 +70,6 @@ impl fmt::Display for Command {
             }
 
             Command::BroadcastBytes { .. } => write!(f, "Command::BroadcastBytes"),
-
-            Command::Shutdown => write!(f, "Command::Shutdown"),
         }
     }
 }
@@ -170,10 +160,10 @@ mod tests {
 
         // 3) wait for receiving the response
         block_on(async move {
-            if let Ok(ep_id) = requester.await {
-                let ep_id = ep_id.unwrap();
+            if let Ok(id) = requester.await {
+                let id = id.unwrap();
 
-                assert_eq!("127.0.0.1:15600", ep_id.to_string(), "Unexpected ID");
+                assert_eq!("127.0.0.1:15600", id.to_string(), "Unexpected ID");
                 received_response = true;
             }
             assert!(received_response, "Response was not received");

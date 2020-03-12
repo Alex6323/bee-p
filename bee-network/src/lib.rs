@@ -20,6 +20,7 @@ use crate::tcp::actor::TcpActor;
 use crate::udp::actor::UdpActor;
 
 use async_std::task::spawn;
+use err_derive::Error;
 use futures::channel::oneshot;
 
 pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
@@ -36,9 +37,9 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
     let edp_actor = EdpActor::new(
         commands,
         internal_events,
+        edp_shutdown,
         internal_event_sender.clone(),
         event_sender.clone(),
-        edp_shutdown,
     );
 
     let tcp_actor = TcpActor::new(
@@ -55,10 +56,19 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
     shutdown.add_notifier(udp_sd_sender);
 
     shutdown.add_task(spawn(edp_actor.run()));
-    shutdown.add_task(spawn(tcp_actor.run()));
-    shutdown.add_task(spawn(udp_actor.run()));
+    //shutdown.add_task(spawn(tcp_actor.run()));
+    //shutdown.add_task(spawn(udp_actor.run()));
 
     let network = Network::new(command_sender);
 
     (network, shutdown, events)
 }
+
+#[derive(Debug, Error)]
+pub enum ActorError {
+    #[error(display = "error issuing a notification event")]
+    NotifyFailure(#[source] futures::channel::mpsc::SendError),
+}
+
+pub type R<T> = std::result::Result<T, ActorError>;
+pub type R0 = R<()>;

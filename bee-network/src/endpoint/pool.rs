@@ -23,8 +23,6 @@ impl EndpointPool {
         self.inner.len()
     }
 
-    // TODO: instead of ignoring the insertion attempt, if a endpoint with the same ID already
-    // exists, should we replace?
     pub fn insert(&mut self, ep: Endpoint) -> bool {
         match self.inner.entry(ep.id.clone()) {
             Entry::Occupied(_) => false,
@@ -35,16 +33,16 @@ impl EndpointPool {
         }
     }
 
-    pub fn remove(&mut self, ep_id: &EndpointId) -> bool {
-        self.inner.remove(ep_id).is_some()
+    pub fn remove(&mut self, id: &EndpointId) -> bool {
+        self.inner.remove(id).is_some()
     }
 
-    pub fn get(&self, ep_id: &EndpointId) -> Option<&Endpoint> {
-        self.inner.get(ep_id)
+    pub fn get(&self, id: &EndpointId) -> Option<&Endpoint> {
+        self.inner.get(id)
     }
 
-    pub fn get_mut(&mut self, ep_id: &EndpointId) -> Option<&mut Endpoint> {
-        self.inner.get_mut(ep_id)
+    pub fn get_mut(&mut self, id: &EndpointId) -> Option<&mut Endpoint> {
+        self.inner.get_mut(id)
     }
 
     pub fn iter(&self) -> Iter<EndpointId, Endpoint> {
@@ -53,6 +51,10 @@ impl EndpointPool {
 
     pub fn iter_mut(&mut self) -> IterMut<EndpointId, Endpoint> {
         self.inner.iter_mut()
+    }
+
+    pub fn contains(&self, id: &EndpointId) -> bool {
+        self.inner.contains_key(id)
     }
 }
 

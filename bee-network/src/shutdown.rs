@@ -1,13 +1,15 @@
+use crate::R0;
+
 use async_std::task;
 use futures::channel::oneshot;
 
 pub(crate) type ShutdownNotifier = oneshot::Sender<()>;
 pub(crate) type ShutdownListener = oneshot::Receiver<()>;
-pub(crate) type Task = task::JoinHandle<()>;
+pub(crate) type ActorTask = task::JoinHandle<R0>;
 
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
-    tasks: Vec<Task>,
+    tasks: Vec<ActorTask>,
 }
 
 impl Shutdown {
@@ -22,7 +24,7 @@ impl Shutdown {
         self.notifiers.push(notifier);
     }
 
-    pub(crate) fn add_task(&mut self, task: Task) {
+    pub(crate) fn add_task(&mut self, task: ActorTask) {
         self.tasks.push(task);
     }
 

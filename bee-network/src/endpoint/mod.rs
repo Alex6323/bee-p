@@ -55,20 +55,33 @@ impl Endpoint {
         let address = url.address().clone();
         let protocol = url.protocol();
 
+        let state = match protocol {
+            Protocol::Tcp => EndpointState::Disconnected,
+            Protocol::Udp => EndpointState::Connected,
+        };
+
         Self {
             id: url.into(),
             address,
             protocol,
-            state: EndpointState::Disconnected,
+            state,
         }
+    }
+
+    pub fn is_connected(&self) -> bool {
+        self.state == EndpointState::Connected
     }
 
     pub fn is_disconnected(&self) -> bool {
         self.state == EndpointState::Disconnected
     }
 
-    pub fn is_connected(&self) -> bool {
-        self.state == EndpointState::Connected
+    pub fn set_connected(&mut self) {
+        self.state = EndpointState::Connected;
+    }
+
+    pub fn set_disconnected(&mut self) {
+        self.state = EndpointState::Disconnected;
     }
 }
 
