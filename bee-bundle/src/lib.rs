@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate serde;
+
 mod bundle;
 mod constants;
 mod transaction;
