@@ -69,8 +69,7 @@ pub const BRANCH_HASH: Field = offsets_from_previous_field!(TRUNK_HASH, HASH_TRI
 pub const TAG: Field = offsets_from_previous_field!(BRANCH_HASH, TAG_TRIT_LEN);
 pub const ATTACHMENT_TS: Field = offsets_from_previous_field!(TAG, TIMESTAMP_TRIT_LEN);
 pub const ATTACHMENT_LBTS: Field = offsets_from_previous_field!(ATTACHMENT_TS, TIMESTAMP_TRIT_LEN);
-pub const ATTACHMENT_UBTS: Field =
-    offsets_from_previous_field!(ATTACHMENT_LBTS, TIMESTAMP_TRIT_LEN);
+pub const ATTACHMENT_UBTS: Field = offsets_from_previous_field!(ATTACHMENT_LBTS, TIMESTAMP_TRIT_LEN);
 pub const NONCE: Field = offsets_from_previous_field!(ATTACHMENT_UBTS, NONCE_TRIT_LEN);
 
 #[cfg(test)]

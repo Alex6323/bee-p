@@ -411,12 +411,8 @@ impl TransactionBuilder {
         }
 
         Ok(Transaction {
-            payload: self
-                .payload
-                .ok_or(TransactionBuilderError::MissingField("payload"))?,
-            address: self
-                .address
-                .ok_or(TransactionBuilderError::MissingField("address"))?,
+            payload: self.payload.ok_or(TransactionBuilderError::MissingField("payload"))?,
+            address: self.address.ok_or(TransactionBuilderError::MissingField("address"))?,
             value: Value(value),
             obsolete_tag: self
                 .obsolete_tag
@@ -424,24 +420,14 @@ impl TransactionBuilder {
             timestamp: self
                 .timestamp
                 .ok_or(TransactionBuilderError::MissingField("timestamp"))?,
-            index: self
-                .index
-                .ok_or(TransactionBuilderError::MissingField("index"))?,
+            index: self.index.ok_or(TransactionBuilderError::MissingField("index"))?,
             last_index: self
                 .last_index
                 .ok_or(TransactionBuilderError::MissingField("last_index"))?,
-            tag: self
-                .tag
-                .ok_or(TransactionBuilderError::MissingField("tag"))?,
-            bundle: self
-                .bundle
-                .ok_or(TransactionBuilderError::MissingField("bundle"))?,
-            trunk: self
-                .trunk
-                .ok_or(TransactionBuilderError::MissingField("trunk"))?,
-            branch: self
-                .branch
-                .ok_or(TransactionBuilderError::MissingField("branch"))?,
+            tag: self.tag.ok_or(TransactionBuilderError::MissingField("tag"))?,
+            bundle: self.bundle.ok_or(TransactionBuilderError::MissingField("bundle"))?,
+            trunk: self.trunk.ok_or(TransactionBuilderError::MissingField("trunk"))?,
+            branch: self.branch.ok_or(TransactionBuilderError::MissingField("branch"))?,
             attachment_ts: self
                 .attachment_ts
                 .ok_or(TransactionBuilderError::MissingField("attachment_ts"))?,
@@ -451,9 +437,7 @@ impl TransactionBuilder {
             attachment_ubts: self
                 .attachment_ubts
                 .ok_or(TransactionBuilderError::MissingField("attachment_ubts"))?,
-            nonce: self
-                .nonce
-                .ok_or(TransactionBuilderError::MissingField("nonce"))?,
+            nonce: self.nonce.ok_or(TransactionBuilderError::MissingField("nonce"))?,
         })
     }
 }
