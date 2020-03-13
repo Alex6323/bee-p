@@ -54,7 +54,7 @@ impl Trit for Utrit {
             -1 => Ok(Utrit::NegOne),
             0 => Ok(Utrit::Zero),
             1 => Ok(Utrit::PlusOne),
-            x => Err(()),
+            _ => Err(()),
         }
     }
 

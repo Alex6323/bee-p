@@ -14,7 +14,7 @@ const BAL: i8 = 13;
 pub struct T3B1([()]);
 
 impl T3B1 {
-    unsafe fn make(ptr: *const i8, offset: usize, len: usize) -> *const Self {
+    pub(crate) unsafe fn make(ptr: *const i8, offset: usize, len: usize) -> *const Self {
         let len = (len << 2) | (offset % TPB);
         std::mem::transmute((ptr.offset((offset / TPB) as isize), len))
     }

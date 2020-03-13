@@ -21,12 +21,12 @@ use crate::raw::{RawEncoding, RawEncodingBuf};
 
 // Reexports
 pub use crate::{
-    tryte::{Tryte, IsTryte, TRYTE_ALPHABET},
-    trit::{Btrit, Utrit, Trit, ToggleTernary},
+    trit::{Trit, Utrit, Btrit, ToggleTernary},
     t1b1::{T1B1, T1B1Buf},
     t2b1::{T2B1, T2B1Buf},
     t3b1::{T3B1, T3B1Buf},
     t4b1::{T4B1, T4B1Buf},
+    tryte::{IsTryte, TRYTE_ALPHABET, Tryte, TryteBuf},
 };
 
 // ONLY TEMPORARY
@@ -214,7 +214,7 @@ impl<T: RawEncodingBuf> TritBuf<T> {
     }
 
     // TODO: Make public when original purged
-    fn with_capacity(cap: usize) -> Self {
+    fn with_capacity(_cap: usize) -> Self {
         // TODO: Allocate capacity
         Self::new()
     }
@@ -295,12 +295,11 @@ impl<T: RawEncodingBuf> DerefMut for TritBuf<T> {
 
 impl<T: RawEncodingBuf> FromIterator<<T::Slice as RawEncoding>::Trit> for TritBuf<T> {
     fn from_iter<I: IntoIterator<Item=<T::Slice as RawEncoding>::Trit>>(iter: I) -> Self {
-        let mut this = Self::new();
-
+        let iter = iter.into_iter();
+        let mut this = Self::with_capacity(iter.size_hint().0);
         for trit in iter {
             this.push(trit);
         }
-
         this
     }
 }

@@ -54,7 +54,7 @@ impl Trit for Btrit {
             -1 => Ok(Btrit::NegOne),
             0 => Ok(Btrit::Zero),
             1 => Ok(Btrit::PlusOne),
-            x => Err(()),
+            _ => Err(()),
         }
     }
 
