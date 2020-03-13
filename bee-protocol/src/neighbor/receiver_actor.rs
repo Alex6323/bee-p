@@ -145,34 +145,36 @@ impl NeighborReceiverActor {
         }
     }
 
-    fn process_message() {
-        // info!("[Neighbor ] Message received");
-        // let header = Header::from_bytes(&bytes[0..size]).unwrap();
-        // println!("{:?}", header.message_type());
-        let message_type = 0x01;
-        let message = [1];
-
-        match message_type {
+    fn process_message(&self, header: Header, bytes: &[u8]) -> NeighborReceiverActorState {
+        match header[0] {
             Handshake::ID => {
-                Handshake::from_bytes(&message);
+                info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
+                // Not expecting a handshake at this point, ignore
             }
             LegacyGossip::ID => {
-                LegacyGossip::from_bytes(&message);
+                info!("[Neighbor-{:?}] Reading LegacyGossip", self.peer_id);
+                LegacyGossip::from_bytes(bytes);
             }
             MilestoneRequest::ID => {
-                MilestoneRequest::from_bytes(&message);
+                info!("[Neighbor-{:?}] Reading MilestoneRequest", self.peer_id);
+                MilestoneRequest::from_bytes(bytes);
             }
             TransactionBroadcast::ID => {
-                TransactionBroadcast::from_bytes(&message);
+                info!("[Neighbor-{:?}] Reading TransactionBroadcast", self.peer_id);
+                TransactionBroadcast::from_bytes(bytes);
             }
             TransactionRequest::ID => {
-                TransactionRequest::from_bytes(&message);
+                info!("[Neighbor-{:?}] Reading TransactionRequest", self.peer_id);
+                TransactionRequest::from_bytes(bytes);
             }
             Heartbeat::ID => {
-                Heartbeat::from_bytes(&message);
+                info!("[Neighbor-{:?}] Reading Heartbeat", self.peer_id);
+                Heartbeat::from_bytes(bytes);
             } // _ => Err(MessageError::InvalidMessageType(message_type)),
             _ => {}
         }
+
+        NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
     }
 
     async fn message_handler(
@@ -199,10 +201,20 @@ impl NeighborReceiverActor {
                     NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
                 } else {
                     match context.header {
-                        Some(header) => {
-                            NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
+                        Some(header) => self.process_message(header, &bytes[3..size - 3]),
+                        None => {
+                            info!("[Neighbor-{:?}] Reading Header", self.peer_id);
+
+                            let header = bytes[0..3].try_into().unwrap();
+
+                            if size > 3 {
+                                self.process_message(header, &bytes[3..size - 3])
+                            } else {
+                                NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
+                                    header: Some(header),
+                                })
+                            }
                         }
-                        None => NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None }),
                     }
                 }
             }
