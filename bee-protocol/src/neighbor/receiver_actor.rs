@@ -145,41 +145,35 @@ impl NeighborReceiverActor {
         }
     }
 
-    // impl GenericNeighborReceiverActor<NeighborMessageReceiverActorState> {
-    //     async fn run(mut self) {
-    //         while let Some(event) = self.receiver.next().await {
-    //             match event {
-    //                 NeighborEvent::Message { size, bytes } => {
-    //                     // info!("[Neighbor ] Message received");
-    //                     // let header = Header::from_bytes(&bytes[0..size]).unwrap();
-    //                     // println!("{:?}", header.message_type());
-    //                     // match message_type {
-    //                     //     0x01 => Ok(ProtocolMessageType::Handshake(Handshake::from_bytes(
-    //                     //         &message,
-    //                     //     )?)),
-    //                     //     0x02 => Ok(ProtocolMessageType::LegacyGossip(LegacyGossip::from_bytes(
-    //                     //         &message,
-    //                     //     )?)),
-    //                     //     0x03 => Ok(ProtocolMessageType::MilestoneRequest(
-    //                     //         MilestoneRequest::from_bytes(&message)?,
-    //                     //     )),
-    //                     //     0x04 => Ok(ProtocolMessageType::TransactionBroadcast(
-    //                     //         TransactionBroadcast::from_bytes(&message)?,
-    //                     //     )),
-    //                     //     0x05 => Ok(ProtocolMessageType::TransactionRequest(
-    //                     //         TransactionRequest::from_bytes(&message)?,
-    //                     //     )),
-    //                     //     0x06 => Ok(ProtocolMessageType::Heartbeat(Heartbeat::from_bytes(
-    //                     //         &message,
-    //                     //     )?)),
-    //                     //     _ => Err(MessageError::InvalidMessageType(message_type)),
-    //                     // }
-    //                 }
-    //                 _ => {}
-    //             }
-    //         }
-    //     }
-    // }
+    fn process_message() {
+        // info!("[Neighbor ] Message received");
+        // let header = Header::from_bytes(&bytes[0..size]).unwrap();
+        // println!("{:?}", header.message_type());
+        let message_type = 0x01;
+        let message = [1];
+
+        match message_type {
+            Handshake::ID => {
+                Handshake::from_bytes(&message);
+            }
+            LegacyGossip::ID => {
+                LegacyGossip::from_bytes(&message);
+            }
+            MilestoneRequest::ID => {
+                MilestoneRequest::from_bytes(&message);
+            }
+            TransactionBroadcast::ID => {
+                TransactionBroadcast::from_bytes(&message);
+            }
+            TransactionRequest::ID => {
+                TransactionRequest::from_bytes(&message);
+            }
+            Heartbeat::ID => {
+                Heartbeat::from_bytes(&message);
+            } // _ => Err(MessageError::InvalidMessageType(message_type)),
+            _ => {}
+        }
+    }
 
     async fn message_handler(
         &mut self,
