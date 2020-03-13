@@ -1,7 +1,8 @@
 use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
-
 use crate::neighbor::{Neighbor, NeighborEvent, NeighborReceiverActor};
 use crate::node::NodeMetrics;
+
+use bee_peering::{PeerManager, StaticPeerManager};
 
 use netzwerk::Command::AddPeer;
 use netzwerk::{Config, Event, EventSubscriber, Network, Peer, PeerId, Shutdown};
@@ -105,27 +106,15 @@ impl Node {
     }
 
     pub fn start(self) {
+        // TODO spawn task + give conf
+        block_on(StaticPeerManager::new(self.network.clone()).run());
         // spawn(Self::actor(self));
         block_on(Self::actor(self));
     }
 
     pub async fn init(&mut self) {
         info!("[Node ] Initializing...");
-
-        for peer in self.config.peers().values() {
-            self.add_peer(peer.clone()).await;
-        }
-
         info!("[Node ] Initialized");
-    }
-
-    pub async fn add_peer(&mut self, peer: Peer) {
-        self.network
-            .send(AddPeer {
-                peer: peer,
-                connect_attempts: Some(0),
-            })
-            .await;
     }
 
     async fn send_handshake(&self, neighbor: &mut Neighbor, handshake: Handshake) -> Result<(), SendError> {

@@ -7,9 +7,7 @@ use async_std::task::block_on;
 fn main() {
     // let args = Args::from_args();
     // let config = args.make_config();
-    let config = ConfigBuilder::new()
-        .with_peer("tcp://127.0.0.1:15600")
-        .build();
+    let config = ConfigBuilder::new().build();
 
     logger::init(log::LevelFilter::Debug);
 

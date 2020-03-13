@@ -5,3 +5,7 @@ authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
+
+netzwerk = { git = "https://github.com/Alex6323/netzwerk" }
+
+async-trait = "0.1.24"
