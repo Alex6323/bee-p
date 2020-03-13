@@ -2,7 +2,6 @@ use crate::message::{Message, MessageError};
 
 use std::ops::Range;
 
-const LEGACY_GOSSIP_ID: u8 = 0x02;
 const LEGACY_GOSSIP_HASH_SIZE: usize = 49;
 const LEGACY_GOSSIP_CONSTANT_SIZE: usize = LEGACY_GOSSIP_HASH_SIZE;
 const LEGACY_GOSSIP_VARIABLE_MIN_SIZE: usize = 292;
@@ -33,9 +32,7 @@ impl Default for LegacyGossip {
 }
 
 impl Message for LegacyGossip {
-    fn id() -> u8 {
-        LEGACY_GOSSIP_ID
-    }
+    const ID: u8 = 0x02;
 
     fn size_range() -> Range<usize> {
         (LEGACY_GOSSIP_CONSTANT_SIZE + LEGACY_GOSSIP_VARIABLE_MIN_SIZE)
@@ -106,11 +103,6 @@ mod tests {
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
         21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
     ];
-
-    #[test]
-    fn id_test() {
-        assert_eq!(LegacyGossip::id(), LEGACY_GOSSIP_ID);
-    }
 
     #[test]
     fn size_range_test() {

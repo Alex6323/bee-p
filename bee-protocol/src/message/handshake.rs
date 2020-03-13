@@ -4,7 +4,6 @@ use std::convert::TryInto;
 use std::ops::Range;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const HANDSHAKE_ID: u8 = 0x01;
 const HANDSHAKE_PORT_SIZE: usize = 2;
 const HANDSHAKE_TIMESTAMP_SIZE: usize = 8;
 const HANDSHAKE_COORDINATOR_SIZE: usize = 49;
@@ -63,9 +62,7 @@ impl Default for Handshake {
 }
 
 impl Message for Handshake {
-    fn id() -> u8 {
-        HANDSHAKE_ID
-    }
+    const ID: u8 = 0x01;
 
     fn size_range() -> Range<usize> {
         (HANDSHAKE_CONSTANT_SIZE + HANDSHAKE_VARIABLE_MIN_SIZE)
@@ -145,11 +142,6 @@ mod tests {
     ];
     const MINIMUM_WEIGHT_MAGNITUDE: u8 = 0x6e;
     const SUPPORTED_MESSAGES: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-    #[test]
-    fn id_test() {
-        assert_eq!(Handshake::id(), HANDSHAKE_ID);
-    }
 
     #[test]
     fn size_range_test() {

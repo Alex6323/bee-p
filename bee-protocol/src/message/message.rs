@@ -5,13 +5,17 @@ use std::convert::TryInto;
 use std::ops::Range;
 
 pub(crate) trait Message {
-    fn id() -> u8;
+    const ID: u8;
 
     fn size_range() -> Range<usize>;
+
+    fn size(&self) -> usize;
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError>
     where
         Self: std::marker::Sized;
+
+    fn to_bytes(self, bytes: &mut [u8]);
 
     fn from_full_bytes(header_bytes: &[u8], payload_bytes: &[u8]) -> Result<Self, MessageError>
     where
@@ -39,10 +43,6 @@ pub(crate) trait Message {
         Self::from_bytes(payload_bytes)
     }
 
-    fn size(&self) -> usize;
-
-    fn to_bytes(self, bytes: &mut [u8]);
-
     fn into_full_bytes(self) -> Vec<u8>
     where
         Self: std::marker::Sized,
@@ -51,7 +51,7 @@ pub(crate) trait Message {
         let size = self.size();
         let mut bytes = vec![0u8; HEADER_SIZE + size];
 
-        bytes[0] = Self::id();
+        bytes[0] = Self::ID;
         bytes[HEADER_TYPE_SIZE..HEADER_SIZE].copy_from_slice(&(size as u16).to_be_bytes());
         self.to_bytes(&mut bytes[HEADER_SIZE..]);
 

@@ -4,7 +4,6 @@ use std::convert::TryInto;
 use std::mem::size_of;
 use std::ops::Range;
 
-const HEARTBEAT_ID: u8 = 0x06;
 const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const HEARTBEAT_CONSTANT_SIZE: usize =
@@ -26,9 +25,7 @@ impl Heartbeat {
 }
 
 impl Message for Heartbeat {
-    fn id() -> u8 {
-        HEARTBEAT_ID
-    }
+    const ID: u8 = 0x06;
 
     fn size_range() -> Range<usize> {
         (HEARTBEAT_CONSTANT_SIZE)..(HEARTBEAT_CONSTANT_SIZE + 1)
@@ -78,11 +75,6 @@ mod tests {
 
     const FIRST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x3dc297b4;
     const LAST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x01181f9b;
-
-    #[test]
-    fn id_test() {
-        assert_eq!(Heartbeat::id(), HEARTBEAT_ID);
-    }
 
     #[test]
     fn size_range_test() {

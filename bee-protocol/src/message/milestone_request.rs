@@ -4,7 +4,6 @@ use std::convert::TryInto;
 use std::mem::size_of;
 use std::ops::Range;
 
-const MILESTONE_REQUEST_ID: u8 = 0x03;
 const MILESTONE_REQUEST_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
 
@@ -20,9 +19,7 @@ impl MilestoneRequest {
 }
 
 impl Message for MilestoneRequest {
-    fn id() -> u8 {
-        MILESTONE_REQUEST_ID
-    }
+    const ID: u8 = 0x03;
 
     fn size_range() -> Range<usize> {
         (MILESTONE_REQUEST_CONSTANT_SIZE)..(MILESTONE_REQUEST_CONSTANT_SIZE + 1)
@@ -60,11 +57,6 @@ mod tests {
     use crate::message::HEADER_SIZE;
 
     const INDEX: MilestoneIndex = 0x81f7df7c;
-
-    #[test]
-    fn id_test() {
-        assert_eq!(MilestoneRequest::id(), MILESTONE_REQUEST_ID);
-    }
 
     #[test]
     fn size_range_test() {

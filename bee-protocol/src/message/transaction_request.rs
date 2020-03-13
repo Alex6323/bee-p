@@ -2,7 +2,6 @@ use crate::message::{Message, MessageError};
 
 use std::ops::Range;
 
-const TRANSACTION_REQUEST_ID: u8 = 0x05;
 const TRANSACTION_REQUEST_HASH_SIZE: usize = 49;
 const TRANSACTION_REQUEST_CONSTANT_SIZE: usize = TRANSACTION_REQUEST_HASH_SIZE;
 
@@ -26,9 +25,7 @@ impl Default for TransactionRequest {
 }
 
 impl Message for TransactionRequest {
-    fn id() -> u8 {
-        TRANSACTION_REQUEST_ID
-    }
+    const ID: u8 = 0x05;
 
     fn size_range() -> Range<usize> {
         (TRANSACTION_REQUEST_CONSTANT_SIZE)..(TRANSACTION_REQUEST_CONSTANT_SIZE + 1)
@@ -66,11 +63,6 @@ mod tests {
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
         21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
     ];
-
-    #[test]
-    fn id_test() {
-        assert_eq!(TransactionRequest::id(), TRANSACTION_REQUEST_ID);
-    }
 
     #[test]
     fn size_range_test() {
