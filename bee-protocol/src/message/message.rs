@@ -1,5 +1,5 @@
 use crate::message::MessageError;
-use crate::message::{HEADER_SIZE, HEADER_TYPE_SIZE};
+use crate::message::{Header, HEADER_SIZE, HEADER_TYPE_SIZE};
 
 use std::convert::TryInto;
 use std::ops::Range;
@@ -17,30 +17,26 @@ pub(crate) trait Message {
 
     fn to_bytes(self, bytes: &mut [u8]);
 
-    fn from_full_bytes(header_bytes: &[u8], payload_bytes: &[u8]) -> Result<Self, MessageError>
+    fn from_full_bytes(header: &Header, payload: &[u8]) -> Result<Self, MessageError>
     where
         Self: std::marker::Sized,
     {
-        if header_bytes.len() < HEADER_SIZE {
-            Err(MessageError::InvalidHeaderLength(header_bytes.len()))?;
-        }
-
         let payload_length = u16::from_be_bytes(
-            header_bytes[HEADER_TYPE_SIZE..HEADER_SIZE]
+            header[HEADER_TYPE_SIZE..HEADER_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidAdvertisedLengthBytes([header_bytes[1], header_bytes[2]]))?,
+                .map_err(|_| MessageError::InvalidAdvertisedLengthBytes([header[1], header[2]]))?,
         );
 
         // TODO check message type
 
-        if payload_length as usize != payload_bytes.len() {
+        if payload_length as usize != payload.len() {
             Err(MessageError::InvalidAdvertisedLength(
                 payload_length as usize,
-                payload_bytes.len(),
+                payload.len(),
             ))?;
         }
 
-        Self::from_bytes(payload_bytes)
+        Self::from_bytes(payload)
     }
 
     fn into_full_bytes(self) -> Vec<u8>

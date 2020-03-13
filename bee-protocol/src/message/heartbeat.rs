@@ -71,7 +71,10 @@ impl Message for Heartbeat {
 mod tests {
 
     use super::*;
+
     use crate::message::HEADER_SIZE;
+
+    use std::convert::TryInto;
 
     const FIRST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x3dc297b4;
     const LAST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x01181f9b;
@@ -121,6 +124,8 @@ mod tests {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
         let bytes = message_from.into_full_bytes();
 
-        to_from_eq(Heartbeat::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..]).unwrap());
+        to_from_eq(
+            Heartbeat::from_full_bytes(&bytes[0..HEADER_SIZE].try_into().unwrap(), &bytes[HEADER_SIZE..]).unwrap(),
+        );
     }
 }

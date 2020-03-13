@@ -1,5 +1,5 @@
 use crate::message::{
-    Handshake, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
+    Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
 use crate::neighbor::{NeighborEvent, NeighborSenderActor};
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
@@ -17,11 +17,11 @@ use log::*;
 struct AwaitingConnectionContext {}
 
 struct AwaitingHandshakeContext {
-    header: Option<[u8; 3]>,
+    header: Option<Header>,
 }
 
 struct AwaitingMessageContext {
-    header: Option<[u8; 3]>,
+    header: Option<Header>,
 }
 
 enum NeighborReceiverActorState {
@@ -96,7 +96,7 @@ impl NeighborReceiverActor {
         }
     }
 
-    fn check_handshake(&self, header: [u8; 3], bytes: &[u8]) -> NeighborReceiverActorState {
+    fn check_handshake(&self, header: Header, bytes: &[u8]) -> NeighborReceiverActorState {
         info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
 
         let handshake = Some(Handshake::from_full_bytes(&header, bytes));
@@ -128,7 +128,7 @@ impl NeighborReceiverActor {
                         None => {
                             info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
-                            let header: [u8; 3] = bytes[0..3].try_into().unwrap();
+                            let header = bytes[0..3].try_into().unwrap();
 
                             if size > 3 {
                                 self.check_handshake(header, &bytes[3..size - 3])

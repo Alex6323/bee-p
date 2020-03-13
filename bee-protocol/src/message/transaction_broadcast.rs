@@ -50,8 +50,12 @@ impl Message for TransactionBroadcast {
 mod tests {
 
     use super::*;
+
     use crate::message::HEADER_SIZE;
+
     use bee_test::slices::slice_eq;
+
+    use std::convert::TryInto;
 
     const TRANSACTION: [u8; 500] = [
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -125,6 +129,9 @@ mod tests {
         let message_from = TransactionBroadcast::new(&TRANSACTION);
         let bytes = message_from.into_full_bytes();
 
-        to_from_eq(TransactionBroadcast::from_full_bytes(&bytes[0..HEADER_SIZE], &bytes[HEADER_SIZE..]).unwrap());
+        to_from_eq(
+            TransactionBroadcast::from_full_bytes(&bytes[0..HEADER_SIZE].try_into().unwrap(), &bytes[HEADER_SIZE..])
+                .unwrap(),
+        );
     }
 }
