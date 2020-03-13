@@ -49,6 +49,10 @@ impl NeighborReceiverActor {
         let mut state = NeighborReceiverActorState::AwaitingConnection(AwaitingConnectionContext {});
 
         while let Some(event) = self.receiver.next().await {
+            if let NeighborEvent::Removed = event {
+                break;
+            }
+
             state = match state {
                 NeighborReceiverActorState::AwaitingConnection(context) => {
                     self.connection_handler(context, event).await

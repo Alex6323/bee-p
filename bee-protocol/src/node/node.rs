@@ -45,7 +45,12 @@ impl Node {
         spawn(NeighborReceiverActor::new(peer_id, self.network.clone(), receiver).run());
     }
 
-    fn peer_removed_handler(&self) {}
+    async fn peer_removed_handler(&mut self, peer_id: PeerId) {
+        if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+            sender.send(NeighborEvent::Removed).await;
+            self.neighbors.remove(&peer_id);
+        }
+    }
 
     async fn peer_connected_handler(&mut self, peer_id: PeerId) {
         if let Some(sender) = self.neighbors.get_mut(&peer_id) {
@@ -75,31 +80,16 @@ impl Node {
         while let Some(event) = self.events.next().await {
             info!("[Node ] Received event {:?}", event);
             match event {
-                Event::PeerAdded { peer_id, num_peers: _ } => {
-                    self.peer_added_handler(peer_id);
-                }
-                Event::PeerRemoved {
-                    peer_id: _,
-                    num_peers: _,
-                } => self.peer_removed_handler(),
-                Event::PeerConnected {
-                    peer_id,
-                    num_conns: _,
-                    timestamp: _,
-                } => {
-                    self.peer_connected_handler(peer_id).await;
-                }
-                Event::PeerDisconnected { peer_id, num_conns: _ } => {
-                    self.peer_disconnected_handler(peer_id).await;
-                }
+                Event::PeerAdded { peer_id, .. } => self.peer_added_handler(peer_id),
+                Event::PeerRemoved { peer_id, .. } => self.peer_removed_handler(peer_id).await,
+                Event::PeerConnected { peer_id, .. } => self.peer_connected_handler(peer_id).await,
+                Event::PeerDisconnected { peer_id, .. } => self.peer_disconnected_handler(peer_id).await,
                 Event::BytesReceived {
                     from_peer,
-                    with_addr: _,
                     num_bytes,
                     buffer,
-                } => {
-                    self.peer_bytes_received_handler(from_peer, num_bytes, buffer).await;
-                }
+                    ..
+                } => self.peer_bytes_received_handler(from_peer, num_bytes, buffer).await,
                 _ => (),
             }
         }
