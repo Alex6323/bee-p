@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
 bee-common = { path = "../bee-common" }
+bee-peering = { path = "../bee-peering" }
 
 netzwerk = { git = "https://github.com/Alex6323/netzwerk" }
 
