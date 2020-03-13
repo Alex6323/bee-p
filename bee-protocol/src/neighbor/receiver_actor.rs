@@ -45,6 +45,20 @@ impl NeighborReceiverActor {
         }
     }
 
+    async fn send_handshake(&mut self) {
+        // TODO metric ?
+        // TODO port
+        let bytes =
+            Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS).into_full_bytes();
+
+        self.network
+            .send(SendBytes {
+                to_peer: self.peer_id,
+                bytes: bytes.to_vec(),
+            })
+            .await;
+    }
+
     pub(crate) async fn run(mut self) {
         let mut state = NeighborReceiverActorState::AwaitingConnection(AwaitingConnectionContext {});
 
@@ -63,20 +77,6 @@ impl NeighborReceiverActor {
         }
     }
 
-    async fn send_hadnshake(&mut self) {
-        // TODO metric ?
-        // TODO port
-        let bytes =
-            Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS).into_full_bytes();
-
-        self.network
-            .send(SendBytes {
-                to_peer: self.peer_id,
-                bytes: bytes.to_vec(),
-            })
-            .await;
-    }
-
     async fn connection_handler(
         &mut self,
         context: AwaitingConnectionContext,
@@ -87,12 +87,22 @@ impl NeighborReceiverActor {
                 info!("[Neighbor-{:?}] Connected", self.peer_id);
 
                 // TODO send handshake ?
-                self.send_hadnshake().await;
+                self.send_handshake().await;
 
                 NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext { header: None })
             }
             _ => NeighborReceiverActorState::AwaitingConnection(context),
         }
+    }
+
+    fn check_handshake(&self, header: [u8; 3], bytes: &[u8]) -> NeighborReceiverActorState {
+        info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
+
+        let handshake = Some(Handshake::from_full_bytes(&header, bytes));
+
+        // TODO check handshake
+
+        NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
     }
 
     async fn handshake_handler(
@@ -113,28 +123,14 @@ impl NeighborReceiverActor {
                     NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext { header: None })
                 } else {
                     match context.header {
-                        Some(header) => {
-                            info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
-
-                            let handshake = Some(Handshake::from_full_bytes(&header, &bytes[3..size - 3]));
-
-                            // TODO check handshake
-
-                            NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
-                        }
+                        Some(header) => self.check_handshake(header, &bytes[3..size - 3]),
                         None => {
                             info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
                             let header: [u8; 3] = bytes[0..3].try_into().unwrap();
 
                             if size > 3 {
-                                info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
-
-                                let handshake = Some(Handshake::from_full_bytes(&header, &bytes[3..size - 3]));
-
-                                // TODO check handshake
-
-                                NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
+                                self.check_handshake(header, &bytes[3..size - 3])
                             } else {
                                 NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext {
                                     header: Some(header),
