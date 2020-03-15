@@ -14,14 +14,19 @@ use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 use log::*;
 
+enum ReceivingState {
+    Header,
+    Payload(Header),
+}
+
 struct AwaitingConnectionContext {}
 
 struct AwaitingHandshakeContext {
-    header: Option<Header>,
+    state: ReceivingState,
 }
 
 struct AwaitingMessageContext {
-    header: Option<Header>,
+    state: ReceivingState,
 }
 
 enum NeighborReceiverActorState {
@@ -90,7 +95,9 @@ impl NeighborReceiverActor {
                 // TODO spawn ?
                 self.send_handshake().await;
 
-                NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext { header: None })
+                NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext {
+                    state: ReceivingState::Header,
+                })
             }
             _ => NeighborReceiverActorState::AwaitingConnection(context),
         }
@@ -103,7 +110,9 @@ impl NeighborReceiverActor {
 
         // TODO check handshake
 
-        NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
+        NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
+            state: ReceivingState::Header,
+        })
     }
 
     async fn handshake_handler(
@@ -121,11 +130,12 @@ impl NeighborReceiverActor {
                 info!("[Neighbor-{:?}] Message received", self.peer_id);
 
                 if size < 3 {
-                    NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext { header: None })
+                    NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext {
+                        state: ReceivingState::Header,
+                    })
                 } else {
-                    match context.header {
-                        Some(header) => self.check_handshake(header, &bytes[3..size - 3]),
-                        None => {
+                    match context.state {
+                        ReceivingState::Header => {
                             info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
                             let header = bytes[0..3].try_into().unwrap();
@@ -134,10 +144,11 @@ impl NeighborReceiverActor {
                                 self.check_handshake(header, &bytes[3..size - 3])
                             } else {
                                 NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext {
-                                    header: Some(header),
+                                    state: ReceivingState::Payload(header),
                                 })
                             }
                         }
+                        ReceivingState::Payload(header) => self.check_handshake(header, &bytes[3..size - 3]),
                     }
                 }
             }
@@ -174,7 +185,9 @@ impl NeighborReceiverActor {
             _ => {}
         }
 
-        NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
+        NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
+            state: ReceivingState::Header,
+        })
     }
 
     async fn message_handler(
@@ -182,11 +195,11 @@ impl NeighborReceiverActor {
         context: AwaitingMessageContext,
         event: NeighborEvent,
     ) -> NeighborReceiverActorState {
-        spawn(NeighborSenderActor::<LegacyGossip>::new(self.peer_id, self.network.clone()).run());
-        spawn(NeighborSenderActor::<MilestoneRequest>::new(self.peer_id, self.network.clone()).run());
-        spawn(NeighborSenderActor::<TransactionBroadcast>::new(self.peer_id, self.network.clone()).run());
-        spawn(NeighborSenderActor::<TransactionRequest>::new(self.peer_id, self.network.clone()).run());
-        spawn(NeighborSenderActor::<Heartbeat>::new(self.peer_id, self.network.clone()).run());
+        // spawn(NeighborSenderActor::<LegacyGossip>::new(self.peer_id, self.network.clone()).run());
+        // spawn(NeighborSenderActor::<MilestoneRequest>::new(self.peer_id, self.network.clone()).run());
+        // spawn(NeighborSenderActor::<TransactionBroadcast>::new(self.peer_id, self.network.clone()).run());
+        // spawn(NeighborSenderActor::<TransactionRequest>::new(self.peer_id, self.network.clone()).run());
+        // spawn(NeighborSenderActor::<Heartbeat>::new(self.peer_id, self.network.clone()).run());
 
         match event {
             NeighborEvent::Disconnected => {
@@ -198,11 +211,12 @@ impl NeighborReceiverActor {
                 info!("[Neighbor-{:?}] Message received", self.peer_id);
 
                 if size < 3 {
-                    NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext { header: None })
+                    NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
+                        state: ReceivingState::Header,
+                    })
                 } else {
-                    match context.header {
-                        Some(header) => self.process_message(header, &bytes[3..size - 3]),
-                        None => {
+                    match context.state {
+                        ReceivingState::Header => {
                             info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
                             let header = bytes[0..3].try_into().unwrap();
@@ -211,10 +225,11 @@ impl NeighborReceiverActor {
                                 self.process_message(header, &bytes[3..size - 3])
                             } else {
                                 NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
-                                    header: Some(header),
+                                    state: ReceivingState::Payload(header),
                                 })
                             }
                         }
+                        ReceivingState::Payload(header) => self.process_message(header, &bytes[3..size - 3]),
                     }
                 }
             }
