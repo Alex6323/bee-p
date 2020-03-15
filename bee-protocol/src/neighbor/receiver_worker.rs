@@ -286,20 +286,32 @@ impl ReceiverWorker {
                             ReceiverWorkerMessageState::Header { offset } => {
                                 info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
+                                let header = Header::from_bytes(&bytes[offset..offset + 3]);
+
+                                if offset as usize == size {
+                                    break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                                        state: ReceiverWorkerMessageState::Payload {
+                                            offset: 0,
+                                            header: header,
+                                        },
+                                    });
+                                }
+
                                 ReceiverWorkerMessageState::Payload {
                                     offset: offset + 3,
-                                    header: Header::from_bytes(&bytes[offset..offset + 3]),
+                                    header: header,
                                 }
                             }
                             ReceiverWorkerMessageState::Payload { offset, header } => {
                                 // TODO check that size is enough
-                                self.process_message(&header, &bytes[offset..offset + header.message_length as usize]);
 
-                                if offset + header.message_length as usize == size {
+                                if offset as usize == size {
                                     break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                                         state: ReceiverWorkerMessageState::Header { offset: 0 },
                                     });
                                 }
+
+                                self.process_message(&header, &bytes[offset..offset + header.message_length as usize]);
 
                                 ReceiverWorkerMessageState::Header {
                                     offset: offset + header.message_length as usize,
