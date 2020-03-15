@@ -7,9 +7,6 @@ use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VER
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};
 
-use std::convert::TryInto;
-
-use async_std::task::spawn;
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 use log::*;
@@ -22,8 +19,8 @@ pub enum ReceiverWorkerEvent {
 }
 
 enum ReceiverWorkerMessageState {
-    Header,
-    Payload(Header),
+    Header { offset: usize },
+    Payload { offset: usize, header: Header },
 }
 
 struct AwaitingConnectionContext {}
@@ -100,7 +97,7 @@ impl ReceiverWorker {
                 self.send_handshake().await;
 
                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceiverWorkerMessageState::Header,
+                    state: ReceiverWorkerMessageState::Header { offset: 0 },
                 })
             }
             _ => ReceiverWorkerState::AwaitingConnection(context),
@@ -115,7 +112,7 @@ impl ReceiverWorker {
                 // TODO check handshake
 
                 ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                    state: ReceiverWorkerMessageState::Header,
+                    state: ReceiverWorkerMessageState::Header { offset: 0 },
                 })
             }
 
@@ -123,7 +120,7 @@ impl ReceiverWorker {
                 warn!("[Neighbor-{:?}] Reading Handshake failed: {:?}", self.peer_id, e);
 
                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceiverWorkerMessageState::Header,
+                    state: ReceiverWorkerMessageState::Header { offset: 0 },
                 })
             }
         }
@@ -141,28 +138,32 @@ impl ReceiverWorker {
                 ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
             ReceiverWorkerEvent::Message { size, bytes } => {
-                info!("[Neighbor-{:?}] Message received", self.peer_id);
-
+                // TODO needed ?
                 if size < 3 {
                     ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                        state: ReceiverWorkerMessageState::Header,
+                        state: ReceiverWorkerMessageState::Header { offset: 0 },
                     })
                 } else {
                     match context.state {
-                        ReceiverWorkerMessageState::Header => {
+                        ReceiverWorkerMessageState::Header { .. } => {
                             info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
-                            let header = bytes[0..3].try_into().unwrap();
+                            let header = Header::from_bytes(&bytes[0..3]);
 
                             if size > 3 {
                                 self.check_handshake(header, &bytes[3..size])
                             } else {
                                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                                    state: ReceiverWorkerMessageState::Payload(header),
+                                    state: ReceiverWorkerMessageState::Payload {
+                                        offset: 0,
+                                        header: header,
+                                    },
                                 })
                             }
                         }
-                        ReceiverWorkerMessageState::Payload(header) => self.check_handshake(header, &bytes[..size]),
+                        ReceiverWorkerMessageState::Payload { offset, header } => {
+                            self.check_handshake(header, &bytes[..size])
+                        }
                     }
                 }
             }
@@ -170,9 +171,9 @@ impl ReceiverWorker {
         }
     }
 
-    fn process_message(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
+    fn process_message(&self, header: &Header, bytes: &[u8]) {
         // TODO metrics
-        match header[0] {
+        match header.message_type {
             Handshake::ID => {
                 warn!("[Neighbor-{:?}] Reading unexpected Handshake", self.peer_id);
 
@@ -254,15 +255,11 @@ impl ReceiverWorker {
                 // _ => Err(MessageError::InvalidMessageType(message_type)),
             }
         }
-
-        ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-            state: ReceiverWorkerMessageState::Header,
-        })
     }
 
     async fn message_handler(
         &mut self,
-        context: AwaitingMessageContext,
+        mut context: AwaitingMessageContext,
         event: ReceiverWorkerEvent,
     ) -> ReceiverWorkerState {
         // spawn(SenderWorker::<LegacyGossip>::new(self.peer_id, self.network.clone()).run());
@@ -278,28 +275,37 @@ impl ReceiverWorker {
                 ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
             ReceiverWorkerEvent::Message { size, bytes } => {
-                info!("[Neighbor-{:?}] Message received", self.peer_id);
-
+                // TODO needed ?
                 if size < 3 {
                     ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                        state: ReceiverWorkerMessageState::Header,
+                        state: ReceiverWorkerMessageState::Header { offset: 0 },
                     })
                 } else {
-                    match context.state {
-                        ReceiverWorkerMessageState::Header => {
-                            info!("[Neighbor-{:?}] Reading Header", self.peer_id);
+                    loop {
+                        context.state = match context.state {
+                            ReceiverWorkerMessageState::Header { offset } => {
+                                info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
-                            let header = bytes[0..3].try_into().unwrap();
-
-                            if size > 3 {
-                                self.process_message(header, &bytes[3..size])
-                            } else {
-                                ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                                    state: ReceiverWorkerMessageState::Payload(header),
-                                })
+                                ReceiverWorkerMessageState::Payload {
+                                    offset: offset + 3,
+                                    header: Header::from_bytes(&bytes[offset..offset + 3]),
+                                }
                             }
-                        }
-                        ReceiverWorkerMessageState::Payload(header) => self.process_message(header, &bytes[..size]),
+                            ReceiverWorkerMessageState::Payload { offset, header } => {
+                                // TODO check that size is enough
+                                self.process_message(&header, &bytes[offset..offset + header.message_length as usize]);
+
+                                if offset + header.message_length as usize == size {
+                                    break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                                        state: ReceiverWorkerMessageState::Header { offset: 0 },
+                                    });
+                                }
+
+                                ReceiverWorkerMessageState::Header {
+                                    offset: offset + header.message_length as usize,
+                                }
+                            }
+                        };
                     }
                 }
             }

@@ -4,8 +4,7 @@ use crate::node::NodeMetrics;
 
 use bee_peering::{PeerManager, StaticPeerManager};
 
-use netzwerk::Command::AddPeer;
-use netzwerk::{Config, Event, EventSubscriber, Network, Peer, PeerId, Shutdown};
+use netzwerk::{Config, Event, EventSubscriber, Network, PeerId, Shutdown};
 
 use std::collections::HashMap;
 

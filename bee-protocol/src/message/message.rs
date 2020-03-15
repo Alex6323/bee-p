@@ -1,7 +1,6 @@
 use crate::message::MessageError;
 use crate::message::{Header, HEADER_SIZE, HEADER_TYPE_SIZE};
 
-use std::convert::TryInto;
 use std::ops::Range;
 
 pub(crate) trait Message {
@@ -21,17 +20,11 @@ pub(crate) trait Message {
     where
         Self: std::marker::Sized,
     {
-        let payload_length = u16::from_be_bytes(
-            header[HEADER_TYPE_SIZE..HEADER_SIZE]
-                .try_into()
-                .map_err(|_| MessageError::InvalidAdvertisedLengthBytes([header[1], header[2]]))?,
-        );
-
         // TODO check message type
 
-        if payload_length as usize != payload.len() {
+        if header.message_length as usize != payload.len() {
             Err(MessageError::InvalidAdvertisedLength(
-                payload_length as usize,
+                header.message_length as usize,
                 payload.len(),
             ))?;
         }
