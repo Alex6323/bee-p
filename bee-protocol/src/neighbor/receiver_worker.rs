@@ -96,7 +96,6 @@ impl ReceiverWorker {
             ReceiverWorkerEvent::Connected => {
                 info!("[Neighbor-{:?}] Connected", self.peer_id);
 
-                // TODO send handshake ?
                 // TODO spawn ?
                 self.send_handshake().await;
 
@@ -111,13 +110,23 @@ impl ReceiverWorker {
     fn check_handshake(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
         info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
 
-        let handshake = Some(Handshake::from_full_bytes(&header, bytes));
+        match Handshake::from_full_bytes(&header, bytes) {
+            Ok(_) => {
+                // TODO check handshake
 
-        // TODO check handshake
+                ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                    state: ReceiverWorkerMessageState::Header,
+                })
+            }
 
-        ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-            state: ReceiverWorkerMessageState::Header,
-        })
+            Err(e) => {
+                warn!("[Neighbor-{:?}] Reading Handshake failed: {:?}", self.peer_id, e);
+
+                ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                    state: ReceiverWorkerMessageState::Header,
+                })
+            }
+        }
     }
 
     async fn handshake_handler(
@@ -146,16 +155,14 @@ impl ReceiverWorker {
                             let header = bytes[0..3].try_into().unwrap();
 
                             if size > 3 {
-                                self.check_handshake(header, &bytes[3..size - 3])
+                                self.check_handshake(header, &bytes[3..size])
                             } else {
                                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                                     state: ReceiverWorkerMessageState::Payload(header),
                                 })
                             }
                         }
-                        ReceiverWorkerMessageState::Payload(header) => {
-                            self.check_handshake(header, &bytes[3..size - 3])
-                        }
+                        ReceiverWorkerMessageState::Payload(header) => self.check_handshake(header, &bytes[..size]),
                     }
                 }
             }
@@ -164,32 +171,88 @@ impl ReceiverWorker {
     }
 
     fn process_message(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
+        // TODO metrics
         match header[0] {
             Handshake::ID => {
-                info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
-                // Not expecting a handshake at this point, ignore
+                warn!("[Neighbor-{:?}] Reading unexpected Handshake", self.peer_id);
+
+                match Handshake::from_full_bytes(&header, bytes) {
+                    Ok(_) => {
+                        // Not expecting a handshake at this point, ignore
+                    }
+                    Err(e) => {
+                        warn!(
+                            "[Neighbor-{:?}] Reading unexpected Handshake failed: {:?}",
+                            self.peer_id, e
+                        );
+                    }
+                }
             }
+
             LegacyGossip::ID => {
                 info!("[Neighbor-{:?}] Reading LegacyGossip", self.peer_id);
-                LegacyGossip::from_bytes(bytes);
+
+                match LegacyGossip::from_full_bytes(&header, bytes) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        warn!("[Neighbor-{:?}] Reading LegacyGossip failed: {:?}", self.peer_id, e);
+                    }
+                }
             }
+
             MilestoneRequest::ID => {
                 info!("[Neighbor-{:?}] Reading MilestoneRequest", self.peer_id);
-                MilestoneRequest::from_bytes(bytes);
+
+                match MilestoneRequest::from_full_bytes(&header, bytes) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        warn!("[Neighbor-{:?}] Reading MilestoneRequest failed: {:?}", self.peer_id, e);
+                    }
+                }
             }
+
             TransactionBroadcast::ID => {
                 info!("[Neighbor-{:?}] Reading TransactionBroadcast", self.peer_id);
-                TransactionBroadcast::from_bytes(bytes);
+
+                match TransactionBroadcast::from_full_bytes(&header, bytes) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        warn!(
+                            "[Neighbor-{:?}] Reading TransactionBroadcast failed: {:?}",
+                            self.peer_id, e
+                        );
+                    }
+                }
             }
+
             TransactionRequest::ID => {
                 info!("[Neighbor-{:?}] Reading TransactionRequest", self.peer_id);
-                TransactionRequest::from_bytes(bytes);
+
+                match TransactionRequest::from_full_bytes(&header, bytes) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        warn!(
+                            "[Neighbor-{:?}] Reading TransactionRequest failed: {:?}",
+                            self.peer_id, e
+                        );
+                    }
+                }
             }
+
             Heartbeat::ID => {
                 info!("[Neighbor-{:?}] Reading Heartbeat", self.peer_id);
-                Heartbeat::from_bytes(bytes);
-            } // _ => Err(MessageError::InvalidMessageType(message_type)),
-            _ => {}
+
+                match Heartbeat::from_full_bytes(&header, bytes) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        warn!("[Neighbor-{:?}] Reading Heartbeat failed: {:?}", self.peer_id, e);
+                    }
+                }
+            }
+
+            _ => {
+                // _ => Err(MessageError::InvalidMessageType(message_type)),
+            }
         }
 
         ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
@@ -229,16 +292,14 @@ impl ReceiverWorker {
                             let header = bytes[0..3].try_into().unwrap();
 
                             if size > 3 {
-                                self.process_message(header, &bytes[3..size - 3])
+                                self.process_message(header, &bytes[3..size])
                             } else {
                                 ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                                     state: ReceiverWorkerMessageState::Payload(header),
                                 })
                             }
                         }
-                        ReceiverWorkerMessageState::Payload(header) => {
-                            self.process_message(header, &bytes[3..size - 3])
-                        }
+                        ReceiverWorkerMessageState::Payload(header) => self.process_message(header, &bytes[..size]),
                     }
                 }
             }
