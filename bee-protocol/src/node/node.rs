@@ -1,5 +1,5 @@
 use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
-use crate::neighbor::{Neighbor, NeighborEvent, NeighborReceiverActor};
+use crate::neighbor::{Neighbor, ReceiverWorker, ReceiverWorkerEvent};
 use crate::node::NodeMetrics;
 
 use bee_peering::{PeerManager, StaticPeerManager};
@@ -21,7 +21,7 @@ pub struct Node {
     shutdown: Shutdown,
     events: EventSubscriber,
     // TODO thread-safety
-    neighbors: HashMap<PeerId, Sender<NeighborEvent>>,
+    neighbors: HashMap<PeerId, Sender<ReceiverWorkerEvent>>,
     metrics: NodeMetrics,
 }
 
@@ -42,32 +42,32 @@ impl Node {
 
         self.neighbors.insert(peer_id, sender);
 
-        spawn(NeighborReceiverActor::new(peer_id, self.network.clone(), receiver).run());
+        spawn(ReceiverWorker::new(peer_id, self.network.clone(), receiver).run());
     }
 
     async fn peer_removed_handler(&mut self, peer_id: PeerId) {
         if let Some(sender) = self.neighbors.get_mut(&peer_id) {
-            sender.send(NeighborEvent::Removed).await;
+            sender.send(ReceiverWorkerEvent::Removed).await;
             self.neighbors.remove(&peer_id);
         }
     }
 
     async fn peer_connected_handler(&mut self, peer_id: PeerId) {
         if let Some(sender) = self.neighbors.get_mut(&peer_id) {
-            sender.send(NeighborEvent::Connected).await;
+            sender.send(ReceiverWorkerEvent::Connected).await;
         }
     }
 
     async fn peer_disconnected_handler(&mut self, peer_id: PeerId) {
         if let Some(sender) = self.neighbors.get_mut(&peer_id) {
-            sender.send(NeighborEvent::Disconnected).await;
+            sender.send(ReceiverWorkerEvent::Disconnected).await;
         }
     }
 
     async fn peer_bytes_received_handler(&mut self, peer_id: PeerId, num_bytes: usize, buffer: Vec<u8>) {
         if let Some(sender) = self.neighbors.get_mut(&peer_id) {
             sender
-                .send(NeighborEvent::Message {
+                .send(ReceiverWorkerEvent::Message {
                     size: num_bytes,
                     bytes: buffer,
                 })
@@ -75,7 +75,7 @@ impl Node {
         }
     }
 
-    async fn actor(mut self) {
+    async fn run(mut self) {
         info!("[Node ] Starting actor");
         while let Some(event) = self.events.next().await {
             info!("[Node ] Received event {:?}", event);
@@ -98,8 +98,8 @@ impl Node {
     pub fn start(self) {
         // TODO spawn task + give conf
         block_on(StaticPeerManager::new(self.network.clone()).run());
-        // spawn(Self::actor(self));
-        block_on(Self::actor(self));
+        // spawn(Self::run(self));
+        block_on(Self::run(self));
     }
 
     pub async fn init(&mut self) {

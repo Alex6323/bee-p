@@ -1,7 +1,7 @@
 use crate::message::{
     Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
-use crate::neighbor::{NeighborEvent, NeighborSenderActor};
+use crate::neighbor::SenderWorker;
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
 
 use netzwerk::Command::SendBytes;
@@ -14,7 +14,14 @@ use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 use log::*;
 
-enum ReceivingState {
+pub enum ReceiverWorkerEvent {
+    Removed,
+    Connected,
+    Disconnected,
+    Message { size: usize, bytes: Vec<u8> },
+}
+
+enum ReceiverWorkerMessageState {
     Header,
     Payload(Header),
 }
@@ -22,27 +29,27 @@ enum ReceivingState {
 struct AwaitingConnectionContext {}
 
 struct AwaitingHandshakeContext {
-    state: ReceivingState,
+    state: ReceiverWorkerMessageState,
 }
 
 struct AwaitingMessageContext {
-    state: ReceivingState,
+    state: ReceiverWorkerMessageState,
 }
 
-enum NeighborReceiverActorState {
+enum ReceiverWorkerState {
     AwaitingConnection(AwaitingConnectionContext),
     AwaitingHandshake(AwaitingHandshakeContext),
     AwaitingMessage(AwaitingMessageContext),
 }
 
-pub(crate) struct NeighborReceiverActor {
+pub(crate) struct ReceiverWorker {
     peer_id: PeerId,
     network: Network,
-    receiver: Receiver<NeighborEvent>,
+    receiver: Receiver<ReceiverWorkerEvent>,
 }
 
-impl NeighborReceiverActor {
-    pub(crate) fn new(peer_id: PeerId, network: Network, receiver: Receiver<NeighborEvent>) -> Self {
+impl ReceiverWorker {
+    pub(crate) fn new(peer_id: PeerId, network: Network, receiver: Receiver<ReceiverWorkerEvent>) -> Self {
         Self {
             peer_id: peer_id,
             network: network,
@@ -65,19 +72,17 @@ impl NeighborReceiverActor {
     }
 
     pub(crate) async fn run(mut self) {
-        let mut state = NeighborReceiverActorState::AwaitingConnection(AwaitingConnectionContext {});
+        let mut state = ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {});
 
         while let Some(event) = self.receiver.next().await {
-            if let NeighborEvent::Removed = event {
+            if let ReceiverWorkerEvent::Removed = event {
                 break;
             }
 
             state = match state {
-                NeighborReceiverActorState::AwaitingConnection(context) => {
-                    self.connection_handler(context, event).await
-                }
-                NeighborReceiverActorState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,
-                NeighborReceiverActorState::AwaitingMessage(context) => self.message_handler(context, event).await,
+                ReceiverWorkerState::AwaitingConnection(context) => self.connection_handler(context, event).await,
+                ReceiverWorkerState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,
+                ReceiverWorkerState::AwaitingMessage(context) => self.message_handler(context, event).await,
             }
         }
     }
@@ -85,57 +90,57 @@ impl NeighborReceiverActor {
     async fn connection_handler(
         &mut self,
         context: AwaitingConnectionContext,
-        event: NeighborEvent,
-    ) -> NeighborReceiverActorState {
+        event: ReceiverWorkerEvent,
+    ) -> ReceiverWorkerState {
         match event {
-            NeighborEvent::Connected => {
+            ReceiverWorkerEvent::Connected => {
                 info!("[Neighbor-{:?}] Connected", self.peer_id);
 
                 // TODO send handshake ?
                 // TODO spawn ?
                 self.send_handshake().await;
 
-                NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceivingState::Header,
+                ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                    state: ReceiverWorkerMessageState::Header,
                 })
             }
-            _ => NeighborReceiverActorState::AwaitingConnection(context),
+            _ => ReceiverWorkerState::AwaitingConnection(context),
         }
     }
 
-    fn check_handshake(&self, header: Header, bytes: &[u8]) -> NeighborReceiverActorState {
+    fn check_handshake(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
         info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
 
         let handshake = Some(Handshake::from_full_bytes(&header, bytes));
 
         // TODO check handshake
 
-        NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
-            state: ReceivingState::Header,
+        ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+            state: ReceiverWorkerMessageState::Header,
         })
     }
 
     async fn handshake_handler(
         &mut self,
         context: AwaitingHandshakeContext,
-        event: NeighborEvent,
-    ) -> NeighborReceiverActorState {
+        event: ReceiverWorkerEvent,
+    ) -> ReceiverWorkerState {
         match event {
-            NeighborEvent::Disconnected => {
+            ReceiverWorkerEvent::Disconnected => {
                 info!("[Neighbor-{:?}] Disconnected", self.peer_id);
 
-                NeighborReceiverActorState::AwaitingConnection(AwaitingConnectionContext {})
+                ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
-            NeighborEvent::Message { size, bytes } => {
+            ReceiverWorkerEvent::Message { size, bytes } => {
                 info!("[Neighbor-{:?}] Message received", self.peer_id);
 
                 if size < 3 {
-                    NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext {
-                        state: ReceivingState::Header,
+                    ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                        state: ReceiverWorkerMessageState::Header,
                     })
                 } else {
                     match context.state {
-                        ReceivingState::Header => {
+                        ReceiverWorkerMessageState::Header => {
                             info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
                             let header = bytes[0..3].try_into().unwrap();
@@ -143,20 +148,22 @@ impl NeighborReceiverActor {
                             if size > 3 {
                                 self.check_handshake(header, &bytes[3..size - 3])
                             } else {
-                                NeighborReceiverActorState::AwaitingHandshake(AwaitingHandshakeContext {
-                                    state: ReceivingState::Payload(header),
+                                ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                                    state: ReceiverWorkerMessageState::Payload(header),
                                 })
                             }
                         }
-                        ReceivingState::Payload(header) => self.check_handshake(header, &bytes[3..size - 3]),
+                        ReceiverWorkerMessageState::Payload(header) => {
+                            self.check_handshake(header, &bytes[3..size - 3])
+                        }
                     }
                 }
             }
-            _ => NeighborReceiverActorState::AwaitingHandshake(context),
+            _ => ReceiverWorkerState::AwaitingHandshake(context),
         }
     }
 
-    fn process_message(&self, header: Header, bytes: &[u8]) -> NeighborReceiverActorState {
+    fn process_message(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
         match header[0] {
             Handshake::ID => {
                 info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
@@ -185,38 +192,38 @@ impl NeighborReceiverActor {
             _ => {}
         }
 
-        NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
-            state: ReceivingState::Header,
+        ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+            state: ReceiverWorkerMessageState::Header,
         })
     }
 
     async fn message_handler(
         &mut self,
         context: AwaitingMessageContext,
-        event: NeighborEvent,
-    ) -> NeighborReceiverActorState {
-        // spawn(NeighborSenderActor::<LegacyGossip>::new(self.peer_id, self.network.clone()).run());
-        // spawn(NeighborSenderActor::<MilestoneRequest>::new(self.peer_id, self.network.clone()).run());
-        // spawn(NeighborSenderActor::<TransactionBroadcast>::new(self.peer_id, self.network.clone()).run());
-        // spawn(NeighborSenderActor::<TransactionRequest>::new(self.peer_id, self.network.clone()).run());
-        // spawn(NeighborSenderActor::<Heartbeat>::new(self.peer_id, self.network.clone()).run());
+        event: ReceiverWorkerEvent,
+    ) -> ReceiverWorkerState {
+        // spawn(SenderWorker::<LegacyGossip>::new(self.peer_id, self.network.clone()).run());
+        // spawn(SenderWorker::<MilestoneRequest>::new(self.peer_id, self.network.clone()).run());
+        // spawn(SenderWorker::<TransactionBroadcast>::new(self.peer_id, self.network.clone()).run());
+        // spawn(SenderWorker::<TransactionRequest>::new(self.peer_id, self.network.clone()).run());
+        // spawn(SenderWorker::<Heartbeat>::new(self.peer_id, self.network.clone()).run());
 
         match event {
-            NeighborEvent::Disconnected => {
+            ReceiverWorkerEvent::Disconnected => {
                 info!("[Neighbor-{:?}] Disconnected", self.peer_id);
 
-                NeighborReceiverActorState::AwaitingConnection(AwaitingConnectionContext {})
+                ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
-            NeighborEvent::Message { size, bytes } => {
+            ReceiverWorkerEvent::Message { size, bytes } => {
                 info!("[Neighbor-{:?}] Message received", self.peer_id);
 
                 if size < 3 {
-                    NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
-                        state: ReceivingState::Header,
+                    ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                        state: ReceiverWorkerMessageState::Header,
                     })
                 } else {
                     match context.state {
-                        ReceivingState::Header => {
+                        ReceiverWorkerMessageState::Header => {
                             info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
                             let header = bytes[0..3].try_into().unwrap();
@@ -224,16 +231,18 @@ impl NeighborReceiverActor {
                             if size > 3 {
                                 self.process_message(header, &bytes[3..size - 3])
                             } else {
-                                NeighborReceiverActorState::AwaitingMessage(AwaitingMessageContext {
-                                    state: ReceivingState::Payload(header),
+                                ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                                    state: ReceiverWorkerMessageState::Payload(header),
                                 })
                             }
                         }
-                        ReceivingState::Payload(header) => self.process_message(header, &bytes[3..size - 3]),
+                        ReceiverWorkerMessageState::Payload(header) => {
+                            self.process_message(header, &bytes[3..size - 3])
+                        }
                     }
                 }
             }
-            _ => NeighborReceiverActorState::AwaitingMessage(context),
+            _ => ReceiverWorkerState::AwaitingMessage(context),
         }
     }
 }

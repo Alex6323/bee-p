@@ -3,13 +3,13 @@ use netzwerk::{Network, PeerId};
 
 use std::marker::PhantomData;
 
-pub(crate) struct NeighborSenderActor<M> {
+pub(crate) struct SenderWorker<M> {
     peer_id: PeerId,
     network: Network,
     message_type: PhantomData<M>,
 }
 
-impl<M: Message> NeighborSenderActor<M> {
+impl<M: Message> SenderWorker<M> {
     pub(crate) fn new(peer_id: PeerId, network: Network) -> Self {
         Self {
             peer_id: peer_id,
