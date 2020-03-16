@@ -12,6 +12,11 @@ use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use log::*;
 
+#[derive(Debug)]
+pub(crate) enum ReceiverWorkerError {
+    FailedSend,
+}
+
 pub(crate) enum ReceiverWorkerEvent {
     Removed,
     Connected,
@@ -182,7 +187,7 @@ impl ReceiverWorker {
         }
     }
 
-    async fn process_message(&mut self, header: &Header, bytes: &[u8]) {
+    async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), ReceiverWorkerError> {
         // TODO metrics
         match header.message_type {
             Handshake::ID => {
@@ -208,7 +213,8 @@ impl ReceiverWorker {
                     Ok(message) => {
                         self.transaction_worker_sender
                             .send(TransactionWorkerEvent::LegacyGossip(message))
-                            .await;
+                            .await
+                            .map_err(|e| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
                         warn!("[Neighbor-{:?}] Reading LegacyGossip failed: {:?}", self.peer_id, e);
@@ -223,7 +229,8 @@ impl ReceiverWorker {
                     Ok(message) => {
                         self.request_worker_sender
                             .send(RequestWorkerEvent::MilestoneRequest(message))
-                            .await;
+                            .await
+                            .map_err(|e| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
                         warn!("[Neighbor-{:?}] Reading MilestoneRequest failed: {:?}", self.peer_id, e);
@@ -238,7 +245,8 @@ impl ReceiverWorker {
                     Ok(message) => {
                         self.transaction_worker_sender
                             .send(TransactionWorkerEvent::TransactionBroadcast(message))
-                            .await;
+                            .await
+                            .map_err(|e| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
                         warn!(
@@ -256,7 +264,8 @@ impl ReceiverWorker {
                     Ok(message) => {
                         self.request_worker_sender
                             .send(RequestWorkerEvent::TransactionRequest(message))
-                            .await;
+                            .await
+                            .map_err(|e| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
                         warn!(
@@ -281,7 +290,9 @@ impl ReceiverWorker {
             _ => {
                 // _ => Err(MessageError::InvalidMessageType(message_type)),
             }
-        }
+        };
+
+        Ok(())
     }
 
     async fn message_handler(
@@ -336,8 +347,12 @@ impl ReceiverWorker {
                                     });
                                 }
 
-                                self.process_message(&header, &bytes[offset..offset + header.message_length as usize])
-                                    .await;
+                                if let Err(e) = self
+                                    .process_message(&header, &bytes[offset..offset + header.message_length as usize])
+                                    .await
+                                {
+                                    error!("[Neighbor-{:?}] Processing message failed: {:?}", self.peer_id, e);
+                                }
 
                                 ReceiverWorkerMessageState::Header {
                                     offset: offset + header.message_length as usize,
