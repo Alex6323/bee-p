@@ -286,20 +286,15 @@ impl ReceiverWorker {
                             ReceiverWorkerMessageState::Header { offset } => {
                                 info!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
-                                let header = Header::from_bytes(&bytes[offset..offset + 3]);
-
                                 if offset as usize == size {
                                     break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                                        state: ReceiverWorkerMessageState::Payload {
-                                            offset: 0,
-                                            header: header,
-                                        },
+                                        state: ReceiverWorkerMessageState::Header { offset: 0 },
                                     });
                                 }
 
                                 ReceiverWorkerMessageState::Payload {
                                     offset: offset + 3,
-                                    header: header,
+                                    header: Header::from_bytes(&bytes[offset..offset + 3]),
                                 }
                             }
                             ReceiverWorkerMessageState::Payload { offset, header } => {
@@ -307,7 +302,10 @@ impl ReceiverWorker {
 
                                 if offset as usize == size {
                                     break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                                        state: ReceiverWorkerMessageState::Header { offset: 0 },
+                                        state: ReceiverWorkerMessageState::Payload {
+                                            offset: 0,
+                                            header: header,
+                                        },
                                     });
                                 }
 
