@@ -118,7 +118,7 @@ impl Node {
 
         let (request_worker_sender, request_worker_receiver) = channel(1000);
         self.request_worker_sender = Some(request_worker_sender);
-        spawn(RequestWorker::new(request_worker_receiver).run());
+        spawn(RequestWorker::new(self.network.clone(), request_worker_receiver).run());
 
         info!("[Node ] Initialized");
     }
