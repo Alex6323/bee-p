@@ -3,7 +3,7 @@ use std::{
     ops::Range,
 };
 use crate::{
-    Trit, Utrit, Btrit,
+    Trit, Btrit,
     RawEncoding,
     RawEncodingBuf,
 };
@@ -45,6 +45,8 @@ impl<T: Trit> T1B1<T> {
 }
 
 impl<T: Trit> RawEncoding for T1B1<T> {
+    type Trit = T;
+
     fn empty() -> &'static Self {
         unsafe { &*Self::make(&[] as *const _, 0, 0) }
     }
@@ -53,12 +55,12 @@ impl<T: Trit> RawEncoding for T1B1<T> {
         self.inner.len()
     }
 
-    unsafe fn get_unchecked(&self, index: usize) -> Utrit {
-        self.ptr(index).read().into()
+    unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {
+        self.ptr(index).read()
     }
 
-    unsafe fn set_unchecked(&mut self, index: usize, trit: Utrit) {
-        (self.ptr(index) as *mut T).write(trit.into());
+    unsafe fn set_unchecked(&mut self, index: usize, trit: Self::Trit) {
+        (self.ptr(index) as *mut T).write(trit);
     }
 
     unsafe fn slice_unchecked(&self, range: Range<usize>) -> &Self {
@@ -86,12 +88,12 @@ impl<T: Trit> RawEncodingBuf for T1B1Buf<T> {
         }
     }
 
-    fn push(&mut self, trit: Utrit) {
-        self.inner.push(trit.into());
+    fn push(&mut self, trit: <Self::Slice as RawEncoding>::Trit) {
+        self.inner.push(trit);
     }
 
-    fn pop(&mut self) -> Option<Utrit> {
-        self.inner.pop().map(Into::into)
+    fn pop(&mut self) -> Option<<Self::Slice as RawEncoding>::Trit> {
+        self.inner.pop()
     }
 
     fn as_slice(&self) -> &Self::Slice {

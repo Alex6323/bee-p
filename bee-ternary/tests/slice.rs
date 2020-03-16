@@ -22,7 +22,7 @@ fn get_generic<T: raw::RawEncodingBuf + Clone>() {
             let i = thread_rng().gen_range(0, sl.len());
             assert_eq!(
                 sl.get(i),
-                Some(Utrit::from(sl_i8[i])),
+                Some(<T::Slice as raw::RawEncoding>::Trit::from(sl_i8[i])),
             );
 
             let idx = thread_rng().gen_range(0, sl.len());
@@ -49,12 +49,12 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
                 let i = thread_rng().gen_range(0, sl.len());
                 let trit = thread_rng().gen_range(-1i8, 2);
 
-                sl.set(i, Utrit::from(trit));
+                sl.set(i, trit.into());
                 sl_i8[i] = trit;
 
                 assert_eq!(
                     sl.get(i),
-                    Some(Utrit::from(sl_i8[i])),
+                    Some(<T::Slice as raw::RawEncoding>::Trit::from(sl_i8[i])),
                 );
 
                 let idx = thread_rng().gen_range(0, sl.len());
@@ -66,7 +66,7 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == Utrit::from(*b)));
+                .all(|(a, b)| a == (*b).into()));
 
             assert_eq!(a.len(), a_i8.len());
         });
@@ -83,7 +83,7 @@ fn chunks_generic<T: raw::RawEncodingBuf + Clone>() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == Utrit::from(*b)));
+                .all(|(a, b)| a == (*b).into()));
         }
     });
 }
@@ -91,7 +91,7 @@ fn chunks_generic<T: raw::RawEncodingBuf + Clone>() {
 fn set_panic_generic<T: raw::RawEncodingBuf + Clone>() {
     let mut a = gen_buf::<T>(0..1000).0;
     let len = a.len();
-    a.set(len, Utrit::Zero);
+    a.set(len, <T::Slice as raw::RawEncoding>::Trit::zero());
 }
 
 #[test]
@@ -142,7 +142,7 @@ fn chunks_mut() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == Utrit::from(*b)));
+                .all(|(a, b)| a == (*b).into()))
         }
     });
 }

@@ -37,7 +37,7 @@ pub fn trytes_to_trits_buf(trytes: &str) -> TritBuf {
         };
         trits_buf_internal.extend_from_slice(trits);
     }
-    TritBuf::from_i8_unchecked(&trits_buf_internal)
+    TritBuf::from_i8_unchecked(&trits_buf_internal).unwrap()
 }
 
 #[cfg(test)]
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn correct_trytes_to_trits_conversion() {
         let trits_converted = trytes_to_trits_buf(TRYTES_IN);
-        let trits_expected = TritBuf::<T1B1Buf>::from_i8_unchecked(&BYTES_EXPECTED);
+        let trits_expected = TritBuf::<T1B1Buf>::from_i8_unchecked(&BYTES_EXPECTED).unwrap();
         assert_eq!(trits_expected, trits_converted);
     }
 }

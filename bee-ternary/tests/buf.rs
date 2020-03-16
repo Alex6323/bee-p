@@ -12,7 +12,7 @@ fn create_generic<T: raw::RawEncodingBuf>() {
     });
     fuzz(100, || {
         let trits = gen_buf::<T>(0..1000).1;
-        assert!(TritBuf::<T>::from_i8_unchecked(&trits).len() == trits.len());
+        assert!(TritBuf::<T>::from_i8_unchecked(&trits).unwrap().len() == trits.len());
     });
 }
 
@@ -43,7 +43,10 @@ fn eq_generic<T: raw::RawEncodingBuf + Clone>() {
     });
 }
 
-fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>() {
+fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>()
+where
+    U::Slice: raw::RawEncoding<Trit = <T::Slice as raw::RawEncoding>::Trit>,
+{
     fuzz(100, || {
         let a = gen_buf::<T>(0..100).0;
         let b = a.clone().into_encoding::<U>();
@@ -88,17 +91,17 @@ fn eq() {
 #[test]
 fn encode() {
     encode_generic::<T1B1Buf<Btrit>, T2B1Buf>();
-    encode_generic::<T1B1Buf<Utrit>, T2B1Buf>();
+    // encode_generic::<T1B1Buf<Utrit>, T2B1Buf>();
     encode_generic::<T1B1Buf<Btrit>, T3B1Buf>();
-    encode_generic::<T1B1Buf<Utrit>, T3B1Buf>();
+    // encode_generic::<T1B1Buf<Utrit>, T3B1Buf>();
     encode_generic::<T1B1Buf<Btrit>, T4B1Buf>();
-    encode_generic::<T1B1Buf<Utrit>, T4B1Buf>();
+    // encode_generic::<T1B1Buf<Utrit>, T4B1Buf>();
     encode_generic::<T2B1Buf, T1B1Buf<Btrit>>();
-    encode_generic::<T2B1Buf, T1B1Buf<Utrit>>();
+    // encode_generic::<T2B1Buf, T1B1Buf<Utrit>>();
     encode_generic::<T3B1Buf, T1B1Buf<Btrit>>();
-    encode_generic::<T3B1Buf, T1B1Buf<Utrit>>();
+    // encode_generic::<T3B1Buf, T1B1Buf<Utrit>>();
     encode_generic::<T4B1Buf, T1B1Buf<Btrit>>();
-    encode_generic::<T4B1Buf, T1B1Buf<Utrit>>();
+    // encode_generic::<T4B1Buf, T1B1Buf<Utrit>>();
     encode_generic::<T2B1Buf, T3B1Buf>();
     encode_generic::<T3B1Buf, T4B1Buf>();
     encode_generic::<T3B1Buf, T2B1Buf>();

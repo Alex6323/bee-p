@@ -1,5 +1,5 @@
 use std::ops::Range;
-use crate::{Utrit, RawEncoding, RawEncodingBuf};
+use crate::{Btrit, Utrit, RawEncoding, RawEncodingBuf, ToggleTernary};
 
 const TPB: usize = 4;
 const BAL: i8 = 40;
@@ -23,18 +23,19 @@ impl T4B1 {
     }
 }
 
-fn extract(x: i8, elem: usize) -> Utrit {
+fn extract(x: i8, elem: usize) -> Btrit {
     if elem < TPB {
-        Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8)
+        Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8).toggle()
     } else {
         unreachable!("Attempted to extract invalid element {} from balanced T4B1", elem)
     }
 }
 
-fn insert(x: i8, elem: usize, trit: Utrit) -> i8 {
+fn insert(x: i8, elem: usize, trit: Btrit) -> i8 {
     if elem < TPB {
+        let utrit = trit.toggle();
         let ux = x + BAL;
-        let ux = ux + (trit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
+        let ux = ux + (utrit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
         ux - BAL
     } else {
         unreachable!("Attempted to insert invalid element {} into balanced T4B1", elem)
@@ -42,6 +43,8 @@ fn insert(x: i8, elem: usize, trit: Utrit) -> i8 {
 }
 
 impl RawEncoding for T4B1 {
+    type Trit = Btrit;
+
     fn empty() -> &'static Self {
         unsafe { &*Self::make(&[] as *const _, 0, 0) }
     }
@@ -50,12 +53,12 @@ impl RawEncoding for T4B1 {
         self.len_offset().0
     }
 
-    unsafe fn get_unchecked(&self, index: usize) -> Utrit {
+    unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {
         let b = self.ptr(index).read();
         extract(b, (self.len_offset().1 + index) % TPB)
     }
 
-    unsafe fn set_unchecked(&mut self, index: usize, trit: Utrit) {
+    unsafe fn set_unchecked(&mut self, index: usize, trit: Self::Trit) {
         let b = self.ptr(index).read();
         let b = insert(b, (self.len_offset().1 + index) % TPB, trit);
         (self.ptr(index) as *mut i8).write(b);
@@ -80,7 +83,7 @@ impl RawEncodingBuf for T4B1Buf {
         Self(Vec::new(), 0)
     }
 
-    fn push(&mut self, trit: Utrit) {
+    fn push(&mut self, trit: <Self::Slice as RawEncoding>::Trit) {
         if self.1 % TPB == 0 {
             self.0.push(insert(0, 0, trit));
         } else {
@@ -91,7 +94,7 @@ impl RawEncodingBuf for T4B1Buf {
         self.1 += 1;
     }
 
-    fn pop(&mut self) -> Option<Utrit> {
+    fn pop(&mut self) -> Option<<Self::Slice as RawEncoding>::Trit> {
         let val = if self.1 == 0 {
             return None;
         } else if self.1 % TPB == 1 {
