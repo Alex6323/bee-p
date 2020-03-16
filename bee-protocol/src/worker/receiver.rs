@@ -2,7 +2,7 @@ use crate::message::{
     Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
-use crate::worker::{RequestWorkerEvent, SenderWorker, TransactionWorkerEvent};
+use crate::worker::{RequestWorkerEvent, TransactionWorkerEvent};
 
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};
@@ -12,7 +12,7 @@ use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use log::*;
 
-pub enum ReceiverWorkerEvent {
+pub(crate) enum ReceiverWorkerEvent {
     Removed,
     Connected,
     Disconnected,
@@ -182,7 +182,7 @@ impl ReceiverWorker {
         }
     }
 
-    fn process_message(&mut self, header: &Header, bytes: &[u8]) {
+    async fn process_message(&mut self, header: &Header, bytes: &[u8]) {
         // TODO metrics
         match header.message_type {
             Handshake::ID => {
@@ -207,7 +207,8 @@ impl ReceiverWorker {
                 match LegacyGossip::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.transaction_worker_sender
-                            .send(TransactionWorkerEvent::LegacyGossip(message));
+                            .send(TransactionWorkerEvent::LegacyGossip(message))
+                            .await;
                     }
                     Err(e) => {
                         warn!("[Neighbor-{:?}] Reading LegacyGossip failed: {:?}", self.peer_id, e);
@@ -221,7 +222,8 @@ impl ReceiverWorker {
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.request_worker_sender
-                            .send(RequestWorkerEvent::MilestoneRequest(message));
+                            .send(RequestWorkerEvent::MilestoneRequest(message))
+                            .await;
                     }
                     Err(e) => {
                         warn!("[Neighbor-{:?}] Reading MilestoneRequest failed: {:?}", self.peer_id, e);
@@ -235,7 +237,8 @@ impl ReceiverWorker {
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.transaction_worker_sender
-                            .send(TransactionWorkerEvent::TransactionBroadcast(message));
+                            .send(TransactionWorkerEvent::TransactionBroadcast(message))
+                            .await;
                     }
                     Err(e) => {
                         warn!(
@@ -252,7 +255,8 @@ impl ReceiverWorker {
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.request_worker_sender
-                            .send(RequestWorkerEvent::TransactionRequest(message));
+                            .send(RequestWorkerEvent::TransactionRequest(message))
+                            .await;
                     }
                     Err(e) => {
                         warn!(
@@ -332,7 +336,8 @@ impl ReceiverWorker {
                                     });
                                 }
 
-                                self.process_message(&header, &bytes[offset..offset + header.message_length as usize]);
+                                self.process_message(&header, &bytes[offset..offset + header.message_length as usize])
+                                    .await;
 
                                 ReceiverWorkerMessageState::Header {
                                     offset: offset + header.message_length as usize,
