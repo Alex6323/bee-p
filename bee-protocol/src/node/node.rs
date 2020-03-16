@@ -1,5 +1,8 @@
 use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
-use crate::neighbor::{Neighbor, ReceiverWorker, ReceiverWorkerEvent, TransactionWorker, TransactionWorkerEvent};
+use crate::neighbor::{
+    Neighbor, ReceiverWorker, ReceiverWorkerEvent, RequestWorker, RequestWorkerEvent, TransactionWorker,
+    TransactionWorkerEvent,
+};
 use crate::node::NodeMetrics;
 
 use bee_peering::{PeerManager, StaticPeerManager};
@@ -22,6 +25,7 @@ pub struct Node {
     // TODO thread-safety
     neighbors: HashMap<PeerId, Sender<ReceiverWorkerEvent>>,
     transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
+    request_worker_sender: Option<Sender<RequestWorkerEvent>>,
     metrics: NodeMetrics,
 }
 
@@ -34,6 +38,7 @@ impl Node {
             events: events,
             neighbors: HashMap::new(),
             transaction_worker_sender: None,
+            request_worker_sender: None,
             metrics: NodeMetrics::default(),
         }
     }
@@ -49,6 +54,7 @@ impl Node {
                 self.network.clone(),
                 receiver,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
+                self.request_worker_sender.as_ref().unwrap().clone(),
             )
             .run(),
         );
@@ -108,9 +114,13 @@ impl Node {
         info!("[Node ] Initializing...");
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
-        let (sender, receiver) = channel(1000);
-        self.transaction_worker_sender = Some(sender);
-        spawn(TransactionWorker::new(receiver).run());
+        let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
+        self.transaction_worker_sender = Some(transaction_worker_sender);
+        spawn(TransactionWorker::new(transaction_worker_receiver).run());
+
+        let (request_worker_sender, request_worker_receiver) = channel(1000);
+        self.request_worker_sender = Some(request_worker_sender);
+        spawn(RequestWorker::new(request_worker_receiver).run());
 
         info!("[Node ] Initialized");
     }

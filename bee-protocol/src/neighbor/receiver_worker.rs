@@ -1,7 +1,7 @@
 use crate::message::{
     Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
-use crate::neighbor::{SenderWorker, TransactionWorkerEvent};
+use crate::neighbor::{RequestWorkerEvent, SenderWorker, TransactionWorkerEvent};
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
 
 use netzwerk::Command::SendBytes;
@@ -45,6 +45,7 @@ pub(crate) struct ReceiverWorker {
     network: Network,
     receiver: Receiver<ReceiverWorkerEvent>,
     transaction_worker_sender: Sender<TransactionWorkerEvent>,
+    request_worker_sender: Sender<RequestWorkerEvent>,
 }
 
 impl ReceiverWorker {
@@ -53,12 +54,14 @@ impl ReceiverWorker {
         network: Network,
         receiver: Receiver<ReceiverWorkerEvent>,
         transaction_worker_sender: Sender<TransactionWorkerEvent>,
+        request_worker_sender: Sender<RequestWorkerEvent>,
     ) -> Self {
         Self {
             peer_id: peer_id,
             network: network,
             receiver: receiver,
             transaction_worker_sender: transaction_worker_sender,
+            request_worker_sender: request_worker_sender,
         }
     }
 
@@ -216,7 +219,10 @@ impl ReceiverWorker {
                 info!("[Neighbor-{:?}] Reading MilestoneRequest", self.peer_id);
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
-                    Ok(_) => {}
+                    Ok(message) => {
+                        self.request_worker_sender
+                            .send(RequestWorkerEvent::MilestoneRequest(message));
+                    }
                     Err(e) => {
                         warn!("[Neighbor-{:?}] Reading MilestoneRequest failed: {:?}", self.peer_id, e);
                     }
@@ -244,7 +250,10 @@ impl ReceiverWorker {
                 info!("[Neighbor-{:?}] Reading TransactionRequest", self.peer_id);
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
-                    Ok(_) => {}
+                    Ok(message) => {
+                        self.request_worker_sender
+                            .send(RequestWorkerEvent::TransactionRequest(message));
+                    }
                     Err(e) => {
                         warn!(
                             "[Neighbor-{:?}] Reading TransactionRequest failed: {:?}",
