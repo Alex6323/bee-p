@@ -1,11 +1,19 @@
 use crate::message::{MilestoneRequest, TransactionRequest};
 
+use netzwerk::PeerId;
+
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 
 pub(crate) enum RequestWorkerEvent {
-    TransactionRequest(TransactionRequest),
-    MilestoneRequest(MilestoneRequest),
+    TransactionRequest {
+        peer_id: PeerId,
+        message: TransactionRequest,
+    },
+    MilestoneRequest {
+        peer_id: PeerId,
+        message: MilestoneRequest,
+    },
 }
 
 pub(crate) struct RequestWorker {
@@ -20,8 +28,8 @@ impl RequestWorker {
     pub(crate) async fn run(mut self) {
         while let Some(event) = self.receiver.next().await {
             match event {
-                RequestWorkerEvent::TransactionRequest(message) => {}
-                RequestWorkerEvent::MilestoneRequest(message) => {}
+                RequestWorkerEvent::TransactionRequest { peer_id, message } => {}
+                RequestWorkerEvent::MilestoneRequest { peer_id, message } => {}
             }
         }
     }
