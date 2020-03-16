@@ -1,9 +1,7 @@
 use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
 use crate::neighbor::Neighbor;
 use crate::node::NodeMetrics;
-use crate::worker::{
-    ReceiverWorker, ReceiverWorkerEvent, RequestWorker, RequestWorkerEvent, TransactionWorker, TransactionWorkerEvent,
-};
+use crate::worker::{ReceiverWorker, ReceiverWorkerEvent, RequestWorker, RequestWorkerEvent, TransactionWorker};
 
 use bee_peering::{PeerManager, StaticPeerManager};
 
@@ -24,7 +22,7 @@ pub struct Node {
     events: EventSubscriber,
     // TODO thread-safety
     neighbors: HashMap<PeerId, Sender<ReceiverWorkerEvent>>,
-    transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
+    transaction_worker_sender: Option<Sender<TransactionBroadcast>>,
     request_worker_sender: Option<Sender<RequestWorkerEvent>>,
     metrics: NodeMetrics,
 }

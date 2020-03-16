@@ -2,7 +2,7 @@ use crate::message::{
     Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
-use crate::worker::{RequestWorkerEvent, TransactionWorkerEvent};
+use crate::worker::RequestWorkerEvent;
 
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};
@@ -49,7 +49,7 @@ pub(crate) struct ReceiverWorker {
     peer_id: PeerId,
     network: Network,
     receiver: Receiver<ReceiverWorkerEvent>,
-    transaction_worker_sender: Sender<TransactionWorkerEvent>,
+    transaction_worker_sender: Sender<TransactionBroadcast>,
     request_worker_sender: Sender<RequestWorkerEvent>,
 }
 
@@ -58,7 +58,7 @@ impl ReceiverWorker {
         peer_id: PeerId,
         network: Network,
         receiver: Receiver<ReceiverWorkerEvent>,
-        transaction_worker_sender: Sender<TransactionWorkerEvent>,
+        transaction_worker_sender: Sender<TransactionBroadcast>,
         request_worker_sender: Sender<RequestWorkerEvent>,
     ) -> Self {
         Self {
@@ -210,11 +210,8 @@ impl ReceiverWorker {
                 info!("[Neighbor-{:?}] Reading LegacyGossip", self.peer_id);
 
                 match LegacyGossip::from_full_bytes(&header, bytes) {
-                    Ok(message) => {
-                        self.transaction_worker_sender
-                            .send(TransactionWorkerEvent::LegacyGossip(message))
-                            .await
-                            .map_err(|e| ReceiverWorkerError::FailedSend)?;
+                    Ok(_) => {
+                        // TODO not supported
                     }
                     Err(e) => {
                         warn!("[Neighbor-{:?}] Reading LegacyGossip failed: {:?}", self.peer_id, e);
@@ -247,7 +244,7 @@ impl ReceiverWorker {
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.transaction_worker_sender
-                            .send(TransactionWorkerEvent::TransactionBroadcast(message))
+                            .send(message)
                             .await
                             .map_err(|e| ReceiverWorkerError::FailedSend)?;
                     }
