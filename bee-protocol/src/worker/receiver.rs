@@ -1,8 +1,8 @@
 use crate::message::{
     Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
-use crate::neighbor::{RequestWorkerEvent, SenderWorker, TransactionWorkerEvent};
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
+use crate::worker::{RequestWorkerEvent, SenderWorker, TransactionWorkerEvent};
 
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};

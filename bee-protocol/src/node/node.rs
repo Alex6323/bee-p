@@ -1,9 +1,9 @@
 use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
-use crate::neighbor::{
-    Neighbor, ReceiverWorker, ReceiverWorkerEvent, RequestWorker, RequestWorkerEvent, TransactionWorker,
-    TransactionWorkerEvent,
-};
+use crate::neighbor::Neighbor;
 use crate::node::NodeMetrics;
+use crate::worker::{
+    ReceiverWorker, ReceiverWorkerEvent, RequestWorker, RequestWorkerEvent, TransactionWorker, TransactionWorkerEvent,
+};
 
 use bee_peering::{PeerManager, StaticPeerManager};
 
