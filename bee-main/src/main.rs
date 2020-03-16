@@ -17,7 +17,7 @@ fn main() {
 
     block_on(node.init());
 
-    node.start();
+    block_on(node.run());
 
     // task::spawn(notification_handler(receiver));
     //

@@ -1,5 +1,5 @@
 use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
-use crate::neighbor::{Neighbor, ReceiverWorker, ReceiverWorkerEvent};
+use crate::neighbor::{Neighbor, ReceiverWorker, ReceiverWorkerEvent, TransactionWorker, TransactionWorkerEvent};
 use crate::node::NodeMetrics;
 
 use bee_peering::{PeerManager, StaticPeerManager};
@@ -21,17 +21,19 @@ pub struct Node {
     events: EventSubscriber,
     // TODO thread-safety
     neighbors: HashMap<PeerId, Sender<ReceiverWorkerEvent>>,
+    transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
     metrics: NodeMetrics,
 }
 
 impl Node {
     pub fn new(config: Config, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
         Self {
+            config: config,
             network: network,
             shutdown: shutdown,
             events: events,
-            config: config,
             neighbors: HashMap::new(),
+            transaction_worker_sender: None,
             metrics: NodeMetrics::default(),
         }
     }
@@ -41,7 +43,15 @@ impl Node {
 
         self.neighbors.insert(peer_id, sender);
 
-        spawn(ReceiverWorker::new(peer_id, self.network.clone(), receiver).run());
+        spawn(
+            ReceiverWorker::new(
+                peer_id,
+                self.network.clone(),
+                receiver,
+                self.transaction_worker_sender.as_ref().unwrap().clone(),
+            )
+            .run(),
+        );
     }
 
     async fn peer_removed_handler(&mut self, peer_id: PeerId) {
@@ -74,7 +84,7 @@ impl Node {
         }
     }
 
-    async fn run(mut self) {
+    pub async fn run(mut self) {
         info!("[Node ] Starting actor");
         while let Some(event) = self.events.next().await {
             info!("[Node ] Received event {:?}", event);
@@ -94,15 +104,14 @@ impl Node {
         }
     }
 
-    pub fn start(self) {
-        // TODO spawn task + give conf
-        block_on(StaticPeerManager::new(self.network.clone()).run());
-        // spawn(Self::run(self));
-        block_on(Self::run(self));
-    }
-
     pub async fn init(&mut self) {
         info!("[Node ] Initializing...");
+        block_on(StaticPeerManager::new(self.network.clone()).run());
+
+        let (sender, receiver) = channel(1000);
+        self.transaction_worker_sender = Some(sender);
+        spawn(TransactionWorker::new(receiver).run());
+
         info!("[Node ] Initialized");
     }
 

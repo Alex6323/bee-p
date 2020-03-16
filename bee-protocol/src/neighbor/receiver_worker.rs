@@ -1,13 +1,14 @@
 use crate::message::{
     Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
-use crate::neighbor::SenderWorker;
+use crate::neighbor::{SenderWorker, TransactionWorkerEvent};
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
 
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};
 
-use futures::channel::mpsc::Receiver;
+use futures::channel::mpsc::{Receiver, Sender};
+use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use log::*;
 
@@ -43,14 +44,21 @@ pub(crate) struct ReceiverWorker {
     peer_id: PeerId,
     network: Network,
     receiver: Receiver<ReceiverWorkerEvent>,
+    transaction_worker_sender: Sender<TransactionWorkerEvent>,
 }
 
 impl ReceiverWorker {
-    pub(crate) fn new(peer_id: PeerId, network: Network, receiver: Receiver<ReceiverWorkerEvent>) -> Self {
+    pub(crate) fn new(
+        peer_id: PeerId,
+        network: Network,
+        receiver: Receiver<ReceiverWorkerEvent>,
+        transaction_worker_sender: Sender<TransactionWorkerEvent>,
+    ) -> Self {
         Self {
             peer_id: peer_id,
             network: network,
             receiver: receiver,
+            transaction_worker_sender: transaction_worker_sender,
         }
     }
 
@@ -171,7 +179,7 @@ impl ReceiverWorker {
         }
     }
 
-    fn process_message(&self, header: &Header, bytes: &[u8]) {
+    fn process_message(&mut self, header: &Header, bytes: &[u8]) {
         // TODO metrics
         match header.message_type {
             Handshake::ID => {
@@ -194,7 +202,10 @@ impl ReceiverWorker {
                 info!("[Neighbor-{:?}] Reading LegacyGossip", self.peer_id);
 
                 match LegacyGossip::from_full_bytes(&header, bytes) {
-                    Ok(_) => {}
+                    Ok(message) => {
+                        self.transaction_worker_sender
+                            .send(TransactionWorkerEvent::LegacyGossip(message));
+                    }
                     Err(e) => {
                         warn!("[Neighbor-{:?}] Reading LegacyGossip failed: {:?}", self.peer_id, e);
                     }
@@ -216,7 +227,10 @@ impl ReceiverWorker {
                 info!("[Neighbor-{:?}] Reading TransactionBroadcast", self.peer_id);
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
-                    Ok(_) => {}
+                    Ok(message) => {
+                        self.transaction_worker_sender
+                            .send(TransactionWorkerEvent::TransactionBroadcast(message));
+                    }
                     Err(e) => {
                         warn!(
                             "[Neighbor-{:?}] Reading TransactionBroadcast failed: {:?}",
