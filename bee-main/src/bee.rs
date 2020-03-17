@@ -2,10 +2,6 @@ use crate::config::Config;
 use crate::state::State;
 
 use bee_common::{logger, Result};
-use bee_network::{
-    self, bind, MessageToSend, ReceivedMessage, Receiver, Sender, TcpClientConfig, TcpServerConfig,
-};
-use bee_protocol::{ProtocolMessageReader, ProtocolMessageType};
 
 use async_std::net::SocketAddr;
 use async_std::task;
@@ -47,45 +43,6 @@ impl Bee {
 
                 let peer_addr = peer.to_string();
                 logger::info(&format!("Peer address: {}", peer_addr));
-
-                let server_config = TcpServerConfig { address: host_addr };
-                let client_config = TcpClientConfig { address: peer_addr };
-
-                // peers_to_add channel
-                let (pa_sender, pa_receiver) = bee_network::channel::<TcpClientConfig>();
-
-                // received_messages channel
-                let (rm_sender, rm_receiver) =
-                    bee_network::channel::<ReceivedMessage<ProtocolMessageType>>();
-
-                // messages_to_send channel
-                let (ms_sender, ms_receiver) =
-                    bee_network::channel::<MessageToSend<ProtocolMessageType>>();
-
-                // peers_to_remove channel
-                let (pr_sender, pr_receiver) = bee_network::channel::<SocketAddr>();
-
-                // graceful_shutdown channel
-                let (gs_sender, gs_receiver) = bee_network::channel::<()>();
-
-                // connected_peers channel
-                let (cp_sender, cp_receiver) = bee_network::channel::<SocketAddr>();
-
-                task::block_on(async {
-                    bee_network::bind::<ProtocolMessageReader>(
-                        server_config,
-                        pa_receiver,
-                        rm_sender,
-                        ms_receiver,
-                        pr_receiver,
-                        gs_receiver,
-                        cp_sender,
-                    )
-                    .await
-                    .unwrap_or_else(|e| {
-                        logger::error(&format!("Running network event loop. Error: {:?}", e));
-                    });
-                });
             }
         }
 

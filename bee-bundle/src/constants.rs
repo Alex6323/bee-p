@@ -63,10 +63,10 @@ pub const OBSOLETE_TAG: Field = offsets_from_previous_field!(VALUE, TAG_TRIT_LEN
 pub const TIMESTAMP: Field = offsets_from_previous_field!(OBSOLETE_TAG, TIMESTAMP_TRIT_LEN);
 pub const INDEX: Field = offsets_from_previous_field!(TIMESTAMP, INDEX_TRIT_LEN);
 pub const LAST_INDEX: Field = offsets_from_previous_field!(INDEX, INDEX_TRIT_LEN);
-pub const BUNDLE_HASH: Field = offsets_from_previous_field!(LAST_INDEX, HASH_TRIT_LEN);
-pub const TRUNK_HASH: Field = offsets_from_previous_field!(BUNDLE_HASH, HASH_TRIT_LEN);
-pub const BRANCH_HASH: Field = offsets_from_previous_field!(TRUNK_HASH, HASH_TRIT_LEN);
-pub const TAG: Field = offsets_from_previous_field!(BRANCH_HASH, TAG_TRIT_LEN);
+pub const BUNDLE: Field = offsets_from_previous_field!(LAST_INDEX, HASH_TRIT_LEN);
+pub const TRUNK: Field = offsets_from_previous_field!(BUNDLE, HASH_TRIT_LEN);
+pub const BRANCH: Field = offsets_from_previous_field!(TRUNK, HASH_TRIT_LEN);
+pub const TAG: Field = offsets_from_previous_field!(BRANCH, TAG_TRIT_LEN);
 pub const ATTACHMENT_TS: Field = offsets_from_previous_field!(TAG, TIMESTAMP_TRIT_LEN);
 pub const ATTACHMENT_LBTS: Field = offsets_from_previous_field!(ATTACHMENT_TS, TIMESTAMP_TRIT_LEN);
 pub const ATTACHMENT_UBTS: Field = offsets_from_previous_field!(ATTACHMENT_LBTS, TIMESTAMP_TRIT_LEN);
@@ -86,9 +86,9 @@ mod tests {
             + TIMESTAMP.trit_offset.length
             + INDEX.trit_offset.length
             + LAST_INDEX.trit_offset.length
-            + BUNDLE_HASH.trit_offset.length
-            + TRUNK_HASH.trit_offset.length
-            + BRANCH_HASH.trit_offset.length
+            + BUNDLE.trit_offset.length
+            + TRUNK.trit_offset.length
+            + BRANCH.trit_offset.length
             + TAG.trit_offset.length
             + ATTACHMENT_TS.trit_offset.length
             + ATTACHMENT_LBTS.trit_offset.length
@@ -107,9 +107,9 @@ mod tests {
             + TIMESTAMP.tryte_offset.length
             + INDEX.tryte_offset.length
             + LAST_INDEX.tryte_offset.length
-            + BUNDLE_HASH.tryte_offset.length
-            + TRUNK_HASH.tryte_offset.length
-            + BRANCH_HASH.tryte_offset.length
+            + BUNDLE.tryte_offset.length
+            + TRUNK.tryte_offset.length
+            + BRANCH.tryte_offset.length
             + TAG.tryte_offset.length
             + ATTACHMENT_TS.tryte_offset.length
             + ATTACHMENT_LBTS.tryte_offset.length

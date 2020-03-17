@@ -1,6 +1,7 @@
-use crate::constants::{ADDRESS, BUNDLE_HASH, IOTA_SUPPLY, NONCE, PAYLOAD, TAG};
+use crate::constants::{ADDRESS, BRANCH, BUNDLE, IOTA_SUPPLY, NONCE, OBSOLETE_TAG, PAYLOAD, TAG, TRUNK};
 
 use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
+use bee_ternary::raw;
 use bee_ternary::{util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
 
 use std::fmt;
@@ -92,14 +93,14 @@ pub struct Hash(TritBuf<T1B1Buf>);
 
 impl Hash {
     pub fn zeros() -> Self {
-        Self(TritBuf::zeros(BUNDLE_HASH.trit_offset.length))
+        Self(TritBuf::zeros(BUNDLE.trit_offset.length))
     }
 
     pub fn from_str(hash: &str) -> Self {
-        assert!(hash.len() <= BUNDLE_HASH.tryte_offset.length);
+        assert!(hash.len() <= BUNDLE.tryte_offset.length);
         assert!(hash.chars().all(|c| c.is_tryte()));
 
-        let missing_trytes = BUNDLE_HASH.tryte_offset.length - hash.len();
+        let missing_trytes = BUNDLE.tryte_offset.length - hash.len();
         let hash = hash.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
         let tritbuf = trytes_to_trits_buf(&hash);
 
@@ -148,6 +149,7 @@ pub struct Essence<'a> {
 #[derive(Debug)]
 pub enum TransactionError {
     TransactionDeserializationError,
+    TransactionBuilderError(TransactionBuilderError),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -170,15 +172,45 @@ pub struct Transaction {
 }
 
 impl Transaction {
+    pub fn from_trits<R: raw::RawEncodingBuf>(buffer: TritBuf<R>) -> Result<Self, TransactionError> {
+        let trits = R::into_encoding::<T1B1Buf>(buffer);
+
+        let transaction = TransactionBuilder::new()
+            .with_payload(Payload(
+                trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.length].to_buf(),
+            ))
+            .with_address(Address(
+                trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.length].to_buf(),
+            ))
+            .with_value(Value(0))
+            .with_obsolete_tag(Tag(trits
+                [OBSOLETE_TAG.trit_offset.start..OBSOLETE_TAG.trit_offset.length]
+                .to_buf()))
+            .with_timestamp(Timestamp(0))
+            .with_index(Index(0))
+            .with_last_index(Index(0))
+            .with_tag(Tag(trits[TAG.trit_offset.start..TAG.trit_offset.length].to_buf()))
+            .with_attachment_ts(Timestamp(0))
+            .with_bundle(Hash(
+                trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.length].to_buf(),
+            ))
+            .with_trunk(Hash(trits[TRUNK.trit_offset.start..TRUNK.trit_offset.length].to_buf()))
+            .with_branch(Hash(
+                trits[BRANCH.trit_offset.start..BRANCH.trit_offset.length].to_buf(),
+            ))
+            .with_attachment_lbts(Timestamp(0))
+            .with_attachment_ubts(Timestamp(0))
+            .with_nonce(Nonce(trits[NONCE.trit_offset.start..NONCE.trit_offset.length].to_buf()))
+            .build()
+            .map_err(|e| TransactionError::TransactionBuilderError(e))?;
+
+        Ok(transaction)
+    }
+
     pub fn from_tryte_str(tx_trytes: &str) -> Result<(), TransactionError> {
         if tx_trytes.len() != TRANSACTION_TRYT_LEN {
             Err(TransactionError::TransactionDeserializationError)?;
         }
-        unimplemented!()
-    }
-
-    /// Create a `Transaction` from a reader object.
-    pub fn from_reader<R: std::io::Read>(reader: R) -> Result<(), TransactionError> {
         unimplemented!()
     }
 
