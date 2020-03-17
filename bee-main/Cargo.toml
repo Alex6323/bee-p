@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
 bee-common = { path = "../bee-common" }
-bee-network = { path = "../bee-network" }
 bee-pow = { path = "../bee-pow" }
 
 async-std = "1.4.0"

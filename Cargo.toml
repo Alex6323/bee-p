@@ -4,7 +4,6 @@ members = [
 	"bee-common",
 	"bee-crypto",
 	"bee-main",
-	"bee-network",
 	"bee-pow",
 	"bee-protocol",
 	"bee-signing",
