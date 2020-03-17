@@ -230,7 +230,7 @@ impl ReceiverWorker {
                                 message: message,
                             })
                             .await
-                            .map_err(|e| ReceiverWorkerError::FailedSend)?;
+                            .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
                         warn!("[Neighbor-{:?}] Reading MilestoneRequest failed: {:?}", self.peer_id, e);
@@ -246,7 +246,7 @@ impl ReceiverWorker {
                         self.transaction_worker_sender
                             .send(message)
                             .await
-                            .map_err(|e| ReceiverWorkerError::FailedSend)?;
+                            .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
                         warn!(
@@ -268,7 +268,7 @@ impl ReceiverWorker {
                                 message: message,
                             })
                             .await
-                            .map_err(|e| ReceiverWorkerError::FailedSend)?;
+                            .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
                         warn!(
