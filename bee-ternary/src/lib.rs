@@ -115,6 +115,14 @@ where
             .step_by(chunk_len)
             .map(move |i| self.slice(i..(i + chunk_len).min(self.len())))
     }
+
+    pub fn encode<U>(&self) -> TritBuf<U>
+    where
+        U: RawEncodingBuf,
+        U::Slice: RawEncoding<Trit = T::Trit>,
+    {
+        self.iter().collect()
+    }
 }
 
 impl<T: Trit> Trits<T1B1<T>> {
@@ -263,6 +271,7 @@ impl<T: RawEncodingBuf> TritBuf<T> {
         unsafe { &mut *(self.0.as_slice_mut() as *mut T::Slice as *mut Trits<T::Slice>) }
     }
 
+    #[deprecated]
     pub fn into_encoding<U>(self) -> TritBuf<U>
     where
         U: RawEncodingBuf,

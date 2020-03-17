@@ -81,11 +81,6 @@ impl Utrit {
         }
     }
 
-    pub(crate) unsafe fn from_u8_unchecked(x: u8) -> Self {
-        // std::mem::transmute(x)
-        Self::from_u8(x)
-    }
-
     pub(crate) fn into_u8(self) -> u8 {
         match self {
             Utrit::NegOne => 0,
