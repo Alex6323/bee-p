@@ -1,4 +1,4 @@
-use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
+use crate::message::{Handshake, Heartbeat, MilestoneRequest, TransactionBroadcast, TransactionRequest};
 use crate::neighbor::Neighbor;
 use crate::node::NodeMetrics;
 use crate::worker::{
@@ -143,19 +143,6 @@ impl Node {
         res
     }
 
-    async fn send_legacy_gossip(&self, neighbor: &mut Neighbor, legacy_gossip: LegacyGossip) -> Result<(), SendError> {
-        let res = neighbor.senders.legacy_gossip.send(legacy_gossip).await;
-
-        if res.is_ok() {
-            neighbor.metrics.transactions_sent_inc();
-            neighbor.metrics.legacy_gossip_sent_inc();
-            self.metrics.transactions_sent_inc();
-            self.metrics.legacy_gossip_sent_inc();
-        }
-
-        res
-    }
-
     async fn send_milestone_request(
         &self,
         neighbor: &mut Neighbor,
@@ -236,27 +223,6 @@ mod tests {
     //
     //     assert_eq!(node.metrics.handshake_sent(), 1);
     //     assert_eq!(neighbor.metrics.handshake_sent(), 1);
-    // }
-    //
-    // #[test]
-    // fn send_legacy_gossip_test() {
-    //     let node = Node::new();
-    //     let mut channels = NeighborChannels::new();
-    //     let mut neighbor = Neighbor::new(channels.senders);
-    //
-    //     assert_eq!(node.metrics.legacy_gossip_sent(), 0);
-    //     assert_eq!(node.metrics.transactions_sent(), 0);
-    //     assert_eq!(neighbor.metrics.legacy_gossip_sent(), 0);
-    //     assert_eq!(neighbor.metrics.transactions_sent(), 0);
-    //
-    //     assert!(channels.receivers.legacy_gossip.try_next().is_err());
-    //     assert!(block_on(node.send_legacy_gossip(&mut neighbor, LegacyGossip::default())).is_ok());
-    //     assert!(block_on(channels.receivers.legacy_gossip.next()).is_some());
-    //
-    //     assert_eq!(node.metrics.legacy_gossip_sent(), 1);
-    //     assert_eq!(node.metrics.transactions_sent(), 1);
-    //     assert_eq!(neighbor.metrics.legacy_gossip_sent(), 1);
-    //     assert_eq!(neighbor.metrics.transactions_sent(), 1);
     // }
     //
     // #[test]
