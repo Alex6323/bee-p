@@ -121,7 +121,7 @@ impl ReceiverWorker {
     }
 
     fn check_handshake(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
-        info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
+        debug!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
 
         match Handshake::from_full_bytes(&header, bytes) {
             Ok(handshake) => {
@@ -159,6 +159,8 @@ impl ReceiverWorker {
                 //     state: ReceiverWorkerMessageState::Header { offset: 0 },
                 // })
 
+                info!("[Neighbor-{:?}] Handshake completed", self.peer_id);
+
                 ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                     state: ReceiverWorkerMessageState::Header { offset: 0 },
                 })
@@ -194,7 +196,7 @@ impl ReceiverWorker {
                 } else {
                     match context.state {
                         ReceiverWorkerMessageState::Header { .. } => {
-                            info!("[Neighbor-{:?}] Reading Header", self.peer_id);
+                            debug!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
                             let header = Header::from_bytes(&bytes[0..3]);
 
@@ -232,7 +234,7 @@ impl ReceiverWorker {
             }
 
             MilestoneRequest::ID => {
-                info!("[Neighbor-{:?}] Receiving MilestoneRequest", self.peer_id);
+                debug!("[Neighbor-{:?}] Receiving MilestoneRequest", self.peer_id);
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -254,7 +256,7 @@ impl ReceiverWorker {
             }
 
             TransactionBroadcast::ID => {
-                info!("[Neighbor-{:?}] Receiving TransactionBroadcast", self.peer_id);
+                debug!("[Neighbor-{:?}] Receiving TransactionBroadcast", self.peer_id);
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -273,7 +275,7 @@ impl ReceiverWorker {
             }
 
             TransactionRequest::ID => {
-                info!("[Neighbor-{:?}] Receiving TransactionRequest", self.peer_id);
+                debug!("[Neighbor-{:?}] Receiving TransactionRequest", self.peer_id);
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -295,7 +297,7 @@ impl ReceiverWorker {
             }
 
             Heartbeat::ID => {
-                info!("[Neighbor-{:?}] Receiving Heartbeat", self.peer_id);
+                debug!("[Neighbor-{:?}] Receiving Heartbeat", self.peer_id);
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
                     Ok(_) => {}
@@ -326,7 +328,7 @@ impl ReceiverWorker {
 
         match event {
             ReceiverWorkerEvent::Disconnected => {
-                info!("[Neighbor-{:?}] Disconnected", self.peer_id);
+                debug!("[Neighbor-{:?}] Disconnected", self.peer_id);
 
                 ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
@@ -340,7 +342,7 @@ impl ReceiverWorker {
                     loop {
                         context.state = match context.state {
                             ReceiverWorkerMessageState::Header { offset } => {
-                                info!("[Neighbor-{:?}] Reading Header", self.peer_id);
+                                debug!("[Neighbor-{:?}] Reading Header", self.peer_id);
 
                                 if offset as usize == size {
                                     break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
