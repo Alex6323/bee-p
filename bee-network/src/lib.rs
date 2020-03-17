@@ -4,10 +4,12 @@ pub mod address;
 pub mod commands;
 pub mod connection;
 pub mod endpoint;
+pub mod errors;
 pub mod events;
 pub mod network;
 pub mod shutdown;
 
+mod constants;
 mod tcp;
 mod udp;
 
@@ -17,10 +19,9 @@ use crate::events::EventSubscriber as Events;
 use crate::network::Network;
 use crate::shutdown::Shutdown;
 use crate::tcp::actor::TcpActor;
-use crate::udp::actor::UdpActor;
+//use crate::udp::actor::UdpActor;
 
 use async_std::task::spawn;
-use err_derive::Error;
 use futures::channel::oneshot;
 
 pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
@@ -32,7 +33,7 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
 
     let (edp_sd_sender, edp_shutdown) = oneshot::channel();
     let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
-    let (udp_sd_sender, udp_shutdown) = oneshot::channel();
+    //let (udp_sd_sender, udp_shutdown) = oneshot::channel();
 
     let edp_actor = EdpActor::new(
         commands,
@@ -49,27 +50,17 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
         tcp_shutdown,
     );
 
-    let udp_actor = UdpActor::new(binding_addr, internal_event_sender, event_sender, udp_shutdown);
+    //let udp_actor = UdpActor::new(binding_addr, internal_event_sender, event_sender, udp_shutdown);
 
     shutdown.add_notifier(edp_sd_sender);
     shutdown.add_notifier(tcp_sd_sender);
-    shutdown.add_notifier(udp_sd_sender);
+    //shutdown.add_notifier(udp_sd_sender);
 
     shutdown.add_task(spawn(edp_actor.run()));
-    //shutdown.add_task(spawn(tcp_actor.run()));
+    shutdown.add_task(spawn(tcp_actor.run()));
     //shutdown.add_task(spawn(udp_actor.run()));
 
     let network = Network::new(command_sender);
 
     (network, shutdown, events)
 }
-
-#[derive(Debug, Error)]
-pub enum ActorError {
-    // TODO: rename to `ChannelSendFailure`?
-    #[error(display = "error issuing a notification event")]
-    NotifyFailure(#[source] futures::channel::mpsc::SendError),
-}
-
-pub type R<T> = std::result::Result<T, ActorError>;
-pub type R0 = R<()>;

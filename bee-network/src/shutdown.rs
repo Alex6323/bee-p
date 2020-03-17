@@ -1,11 +1,11 @@
-use crate::R0;
+use crate::errors::ActorSuccess as S;
 
 use async_std::task;
 use futures::channel::oneshot;
 
 pub(crate) type ShutdownNotifier = oneshot::Sender<()>;
 pub(crate) type ShutdownListener = oneshot::Receiver<()>;
-pub(crate) type ActorTask = task::JoinHandle<R0>;
+pub(crate) type ActorTask = task::JoinHandle<S>;
 
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,

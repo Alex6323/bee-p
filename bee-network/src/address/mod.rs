@@ -84,6 +84,14 @@ impl From<SocketAddr> for Address {
     }
 }
 
+impl ops::Deref for Address {
+    type Target = SocketAddr;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)

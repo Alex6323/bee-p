@@ -1,4 +1,4 @@
-use crate::address::url::Url;
+use crate::address::url::Protocol;
 use crate::address::Address;
 use crate::commands::Responder;
 use crate::connection::BytesSender;
@@ -22,9 +22,10 @@ pub enum Event {
         total: usize,
     },
 
-    EndpointAccepted {
+    NewConnection {
         epid: EndpointId,
-        url: Url,
+        addr: Address,
+        prot: Protocol,
         sender: BytesSender,
     },
 
@@ -47,8 +48,7 @@ pub enum Event {
     BytesReceived {
         from: EndpointId,
         with_addr: Address,
-        num: usize,
-        buffer: Vec<u8>,
+        bytes: Vec<u8>,
     },
 
     TryConnect {
@@ -68,11 +68,10 @@ impl fmt::Display for Event {
                 write!(f, "Event::EndpointRemoved {{ epid = {:?}, total = {} }}", epid, total)
             }
 
-            Event::EndpointAccepted { epid, url, .. } => write!(
+            Event::NewConnection { epid, addr, prot, .. } => write!(
                 f,
-                "Event::EndpointAccepted {{ epid = {:?}, url = {} }}",
-                epid,
-                url.to_string()
+                "Event::NewConnection {{ epid = {:?}, addr = {}, protocol = {:?} }}",
+                epid, addr, prot,
             ),
 
             Event::EndpointConnected { epid, timestamp, total } => write!(
@@ -89,12 +88,12 @@ impl fmt::Display for Event {
 
             Event::BytesSent { to, num } => write!(f, "Event::BytesSent {{ to = {}, num = {} }}", to, num),
 
-            Event::BytesReceived {
-                from, with_addr, num, ..
-            } => write!(
+            Event::BytesReceived { from, with_addr, bytes } => write!(
                 f,
                 "Event::BytesReceived {{ from = {}, with_addr = {}, num = {} }}",
-                from, with_addr, num
+                from,
+                with_addr,
+                bytes.len()
             ),
 
             Event::TryConnect { to, .. } => write!(f, "Event::TryConnect {{ to = {} }}", to),

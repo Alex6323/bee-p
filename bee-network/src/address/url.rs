@@ -8,13 +8,6 @@ const PORT_SEPARATOR: &'static str = ":";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
-pub enum Url {
-    Tcp(Address),
-    Udp(Address),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
 pub enum Protocol {
     Tcp,
     Udp,
@@ -30,8 +23,15 @@ impl Protocol {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum Url {
+    Tcp(Address),
+    Udp(Address),
+}
+
 impl Url {
-    pub fn from_addr_and_protocol(addr: Address, proto: Protocol) -> Self {
+    pub fn new(addr: Address, proto: Protocol) -> Self {
         match proto {
             Protocol::Tcp => Url::Tcp(addr),
             Protocol::Udp => Url::Udp(addr),
@@ -59,8 +59,8 @@ impl Url {
         let addr = Address::from_host_addr(host_addr).await?;
 
         match protocol {
-            "tcp" => Ok(Url::from_addr_and_protocol(addr, Protocol::Tcp)),
-            "udp" => Ok(Url::from_addr_and_protocol(addr, Protocol::Udp)),
+            "tcp" => Ok(Url::new(addr, Protocol::Tcp)),
+            "udp" => Ok(Url::new(addr, Protocol::Udp)),
             _ => Err(AddressError::UrlParseFailure),
         }
     }

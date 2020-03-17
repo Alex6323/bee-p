@@ -1,8 +1,5 @@
 use crate::endpoint::EndpointId as EpId;
-use crate::{
-    R,
-    R0,
-};
+use crate::errors::ActorResult as R;
 
 use async_std::sync::Arc;
 use futures::channel::mpsc;
@@ -17,7 +14,7 @@ pub type BytesReceiver = mpsc::Receiver<Arc<Vec<u8>>>;
 const MAX_BUFFER_SIZE: usize = 1654;
 const BYTES_CHANNEL_CAPACITY: usize = 10000;
 
-pub fn channel() -> (BytesSender, BytesReceiver) {
+pub fn bytes_channel() -> (BytesSender, BytesReceiver) {
     mpsc::channel(BYTES_CHANNEL_CAPACITY)
 }
 

@@ -2,6 +2,7 @@ use crate::address::url::{
     Protocol,
     Url,
 };
+
 use crate::commands::CommandReceiver as Commands;
 use crate::commands::{
     Command,
@@ -13,16 +14,16 @@ use crate::endpoint::{
     Endpoint,
     EndpointId,
 };
+use crate::errors::{
+    ActorResult as R,
+    ActorSuccess as S,
+};
 use crate::events::Event;
 use crate::events::EventPublisher as Notifier;
 use crate::events::EventPublisher as Publisher;
 use crate::events::EventSubscriber as Events;
 use crate::shutdown::ShutdownListener as Shutdown;
 use crate::tcp;
-use crate::{
-    R,
-    R0,
-};
 
 use async_std::prelude::*;
 use async_std::sync::Arc;
@@ -66,7 +67,7 @@ impl EndpointActor {
         }
     }
 
-    pub async fn run(mut self) -> R0 {
+    pub async fn run(mut self) -> S {
         debug!("[Endp ] Starting actor");
 
         let mut servers = EndpointPool::new();
@@ -155,7 +156,7 @@ impl EndpointActor {
                         Event::EndpointRemoved { epid, total } => {
                             self.publisher.send(Event::EndpointRemoved { epid, total }).await;
                         },
-                        Event::EndpointAccepted { epid, url, sender } => {
+                        Event::NewConnection { epid, addr, prot, sender } => {
                             // TODO
                         },
                         Event::EndpointConnected { epid, timestamp, total } => {
@@ -167,7 +168,7 @@ impl EndpointActor {
                         Event::BytesSent { to, num } => {
                             // TODO
                         },
-                        Event::BytesReceived { from, with_addr, num, buffer } => {
+                        Event::BytesReceived { from, with_addr, bytes } => {
                             // TODO
                         },
                         Event::TryConnect { to, responder } => {
@@ -179,7 +180,6 @@ impl EndpointActor {
                 shutdown = shutdown.fuse() => {
                     break;
                 }
-
             }
         }
 
@@ -261,7 +261,7 @@ async fn try_connect(
             match ep.protocol {
                 Protocol::Tcp => {
                     // If the connection attempt succeeds, change the endpoint's state.
-                    if tcp::connect(&ep.id, &ep.address, notifier.clone()).await {
+                    if tcp::try_connect(&ep.id, &ep.address, notifier.clone()).await.is_ok() {
                         ep.set_connected();
                         if let Some(responder) = responder {
                             responder.send(true);
@@ -295,7 +295,7 @@ async fn try_connect(
 }
 
 #[inline(always)]
-async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifier) -> R0 {
+async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifier) -> S {
     task::sleep(Duration::from_millis(delay)).await;
 
     Ok(notifier.send(event).await?)
