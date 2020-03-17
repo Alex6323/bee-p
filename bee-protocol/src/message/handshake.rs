@@ -133,11 +133,9 @@ mod tests {
 
     use super::*;
 
-    use crate::message::HEADER_SIZE;
+    use crate::message::{Header, HEADER_SIZE};
 
     use bee_test::slices::slice_eq;
-
-    use std::convert::TryInto;
 
     const PORT: u16 = 0xcd98;
     const COORDINATOR: [u8; HANDSHAKE_COORDINATOR_SIZE] = [
@@ -199,7 +197,7 @@ mod tests {
         let bytes = message_from.into_full_bytes();
 
         to_from_eq(
-            Handshake::from_full_bytes(&bytes[0..HEADER_SIZE].try_into().unwrap(), &bytes[HEADER_SIZE..]).unwrap(),
+            Handshake::from_full_bytes(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
         );
     }
 }

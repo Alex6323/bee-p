@@ -55,7 +55,7 @@ mod tests {
 
     use super::*;
 
-    use crate::message::HEADER_SIZE;
+    use crate::message::{Header, HEADER_SIZE};
 
     use std::convert::TryInto;
 
@@ -106,7 +106,7 @@ mod tests {
         let bytes = message_from.into_full_bytes();
 
         to_from_eq(
-            MilestoneRequest::from_full_bytes(&bytes[0..HEADER_SIZE].try_into().unwrap(), &bytes[HEADER_SIZE..])
+            MilestoneRequest::from_full_bytes(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
                 .unwrap(),
         );
     }

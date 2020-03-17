@@ -20,7 +20,9 @@ pub(crate) trait Message {
     where
         Self: std::marker::Sized,
     {
-        // TODO check message type
+        if header.message_type != Self::ID {
+            Err(MessageError::InvalidAdvertisedType(header.message_type, Self::ID))?;
+        }
 
         if header.message_length as usize != payload.len() {
             Err(MessageError::InvalidAdvertisedLength(

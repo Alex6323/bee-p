@@ -56,11 +56,10 @@ impl Message for TransactionRequest {
 mod tests {
 
     use super::*;
-    use crate::message::HEADER_SIZE;
+
+    use crate::message::{Header, HEADER_SIZE};
 
     use bee_test::slices::slice_eq;
-
-    use std::convert::TryInto;
 
     const HASH: [u8; TRANSACTION_REQUEST_HASH_SIZE] = [
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
@@ -112,7 +111,7 @@ mod tests {
         let bytes = message_from.into_full_bytes();
 
         to_from_eq(
-            TransactionRequest::from_full_bytes(&bytes[0..HEADER_SIZE].try_into().unwrap(), &bytes[HEADER_SIZE..])
+            TransactionRequest::from_full_bytes(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
                 .unwrap(),
         );
     }
