@@ -6,29 +6,37 @@ use bee_ternary::*;
 
 #[test]
 fn convert_correct() {
-    assert_eq!(Utrit::from(-1), Utrit::NegOne);
     assert_eq!(Utrit::from(0), Utrit::Zero);
-    assert_eq!(Utrit::from(1), Utrit::PlusOne);
+    assert_eq!(Utrit::from(1), Utrit::One);
+    assert_eq!(Utrit::from(2), Utrit::Two);
 
-    assert_eq!(Into::<i8>::into(Utrit::NegOne), -1i8);
     assert_eq!(Into::<i8>::into(Utrit::Zero), 0i8);
-    assert_eq!(Into::<i8>::into(Utrit::PlusOne), 1i8);
+    assert_eq!(Into::<i8>::into(Utrit::One), 1i8);
+    assert_eq!(Into::<i8>::into(Utrit::Two), 2i8);
 }
 
 #[test]
 fn convert_balanced() {
-    assert_eq!(Utrit::from(Btrit::NegOne), Utrit::NegOne);
-    assert_eq!(Utrit::from(Btrit::Zero), Utrit::Zero);
-    assert_eq!(Utrit::from(Btrit::PlusOne), Utrit::PlusOne);
+    assert_eq!(Utrit::from(Btrit::NegOne), Utrit::Zero);
+    assert_eq!(Utrit::from(Btrit::Zero), Utrit::One);
+    assert_eq!(Utrit::from(Btrit::PlusOne), Utrit::Two);
 }
 
 #[test]
 #[should_panic]
-fn convert_incorrect_0() { Utrit::from(-2); }
+fn convert_incorrect_0() { Utrit::from(-1); }
 
 #[test]
 #[should_panic]
-fn convert_incorrect_1() { Utrit::from(2); }
+fn convert_incorrect_1() { Utrit::from(3); }
+
+#[test]
+#[should_panic]
+fn convert_incorrect_2() { Btrit::from(-2); }
+
+#[test]
+#[should_panic]
+fn convert_incorrect_3() { Btrit::from(2); }
 
 #[test]
 fn tryte() {

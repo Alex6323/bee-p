@@ -41,9 +41,9 @@ impl ToggleTernary for Btrit {
     fn toggle(self) -> Self::Target {
         use Btrit::*;
         match self {
-            NegOne => Self::Target::NegOne,
-            Zero => Self::Target::Zero,
-            PlusOne => Self::Target::PlusOne,
+            NegOne => Self::Target::Zero,
+            Zero => Self::Target::One,
+            PlusOne => Self::Target::Two,
         }
     }
 }

@@ -16,6 +16,18 @@ fn create_generic<T: raw::RawEncodingBuf>() {
     });
 }
 
+fn create_unbalanced<T: raw::RawEncodingBuf>() {
+    assert!(TritBuf::<T>::new().len() == 0);
+    fuzz(100, || {
+        let len = thread_rng().gen_range(0, 100);
+        assert!(TritBuf::<T>::zeros(len).len() == len);
+    });
+    fuzz(100, || {
+        let trits = gen_buf_unbalanced::<T>(0..1000).1;
+        assert!(TritBuf::<T>::from_i8_unchecked(&trits).unwrap().len() == trits.len());
+    });
+}
+
 fn push_pop_generic<T: raw::RawEncodingBuf>() {
     fuzz(100, || {
         let (mut a, mut b) = gen_buf::<T>(0..100);
@@ -28,8 +40,26 @@ fn push_pop_generic<T: raw::RawEncodingBuf>() {
             } else {
                 assert_eq!(a.pop(), b.pop().map(Into::into));
             }
-            //println!("{:?}", a);
-            //println!("{:?}", b);
+            // println!("{:?}", a);
+            // println!("{:?}", b);
+        }
+    });
+}
+
+fn push_pop_generic_unbalanced<T: raw::RawEncodingBuf>() {
+    fuzz(100, || {
+        let (mut a, mut b) = gen_buf_unbalanced::<T>(0..100);
+
+        for _ in 0..1000 {
+            if thread_rng().gen() {
+                let trit = gen_trit() + 1;
+                a.push(trit.into());
+                b.push(trit);
+            } else {
+                assert_eq!(a.pop(), b.pop().map(Into::into));
+            }
+            // println!("{:?}", a);
+            // println!("{:?}", b);
         }
     });
 }
@@ -37,6 +67,15 @@ fn push_pop_generic<T: raw::RawEncodingBuf>() {
 fn eq_generic<T: raw::RawEncodingBuf + Clone>() {
     fuzz(100, || {
         let a = gen_buf::<T>(0..1000).0;
+        let b = a.clone();
+
+        assert_eq!(a, b);
+    });
+}
+
+fn eq_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
+    fuzz(100, || {
+        let a = gen_buf_unbalanced::<T>(0..1000).0;
         let b = a.clone();
 
         assert_eq!(a, b);
@@ -64,7 +103,7 @@ where
 #[test]
 fn create() {
     create_generic::<T1B1Buf<Btrit>>();
-    create_generic::<T1B1Buf<Utrit>>();
+    create_unbalanced::<T1B1Buf<Utrit>>();
     create_generic::<T2B1Buf>();
     create_generic::<T3B1Buf>();
     create_generic::<T4B1Buf>();
@@ -74,7 +113,7 @@ fn create() {
 #[test]
 fn push_pop() {
     push_pop_generic::<T1B1Buf<Btrit>>();
-    push_pop_generic::<T1B1Buf<Utrit>>();
+    push_pop_generic_unbalanced::<T1B1Buf<Utrit>>();
     push_pop_generic::<T2B1Buf>();
     push_pop_generic::<T3B1Buf>();
     push_pop_generic::<T4B1Buf>();
@@ -84,7 +123,7 @@ fn push_pop() {
 #[test]
 fn eq() {
     eq_generic::<T1B1Buf<Btrit>>();
-    eq_generic::<T1B1Buf<Utrit>>();
+    eq_generic_unbalanced::<T1B1Buf<Utrit>>();
     eq_generic::<T2B1Buf>();
     eq_generic::<T3B1Buf>();
     eq_generic::<T4B1Buf>();

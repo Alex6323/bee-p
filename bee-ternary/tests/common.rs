@@ -14,6 +14,14 @@ pub fn gen_buf<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8
     (TritBuf::<T>::from_i8_unchecked(&trits), trits)
 }
 
+pub fn gen_buf_unbalanced<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8>) {
+    let len = thread_rng().gen_range(len.start, len.end);
+    let trits = (0..len)
+        .map(|_| gen_trit() + 1)
+        .collect::<Vec<_>>();
+    (TritBuf::<T>::from_i8_unchecked(&trits), trits)
+}
+
 // Not exactly fuzzing, just doing something a lot
 pub fn fuzz(n: usize, mut f: impl FnMut()) {
     (0..n).for_each(|_| f());

@@ -4,19 +4,19 @@ use super::{Trit, Btrit, ToggleTernary};
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Utrit {
-    NegOne = 0,
-    Zero = 1,
-    PlusOne = 2,
+    Zero = 0,
+    One = 1,
+    Two = 2,
 }
 
-/*
+use Utrit::*;
+
 impl From<i8> for Utrit {
     fn from(x: i8) -> Self {
-        Self::try_from(x)
+        Self::try_convert(x as u8)
             .unwrap_or_else(|_| panic!("Invalid unbalanced trit representation '{}'", x))
     }
 }
-*/
 
 impl fmt::Display for Utrit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -41,11 +41,10 @@ impl ToggleTernary for Utrit {
     type Target = Btrit;
 
     fn toggle(self) -> Self::Target {
-        use Utrit::*;
         match self {
-            NegOne => Self::Target::NegOne,
-            Zero => Self::Target::Zero,
-            PlusOne => Self::Target::PlusOne,
+            Zero => Self::Target::NegOne,
+            One => Self::Target::Zero,
+            Two => Self::Target::PlusOne,
         }
     }
 }
@@ -55,18 +54,18 @@ impl Trit for Utrit {
 
     fn try_convert(x: Self::Repr) -> Result<Self, ()> {
         match x {
-            0 => Ok(Utrit::NegOne),
-            1 => Ok(Utrit::Zero),
-            2 => Ok(Utrit::PlusOne),
+            0 => Ok(Zero),
+            1 => Ok(One),
+            2 => Ok(Two),
             _ => Err(()),
         }
     }
 
     fn checked_increment(self) -> Option<Self> {
         match self {
-            Utrit::NegOne => Some(Utrit::Zero),
-            Utrit::Zero => Some(Utrit::PlusOne),
-            Utrit::PlusOne => None,
+            Zero => Some(One),
+            One => Some(Two),
+            Two => None,
         }
     }
 
@@ -78,18 +77,18 @@ impl Trit for Utrit {
 impl Utrit {
     pub(crate) fn from_u8(x: u8) -> Self {
         match x {
-            0 => Utrit::NegOne,
-            1 => Utrit::Zero,
-            2 => Utrit::PlusOne,
+            0 => Zero,
+            1 => One,
+            2 => Two,
             x => panic!("Invalid trit representation '{}'", x),
         }
     }
 
     pub(crate) fn into_u8(self) -> u8 {
         match self {
-            Utrit::NegOne => 0,
-            Utrit::Zero => 1,
-            Utrit::PlusOne => 2,
+            Zero => 0,
+            One => 1,
+            Two => 2,
         }
     }
 }
