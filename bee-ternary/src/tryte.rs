@@ -2,37 +2,37 @@ use std::{
     ops::{Deref, DerefMut},
     convert::TryFrom,
     iter::FromIterator,
+    fmt,
 };
 use crate::{
     T3B1,
     Trits,
 };
 
+#[deprecated]
 pub const TRYTE_ALPHABET: [char; 27] = [
     '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
     'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 ];
 
+#[deprecated]
 pub trait IsTryte {
     fn is_tryte(&self) -> bool;
 }
 
+#[deprecated]
 impl IsTryte for char {
     fn is_tryte(&self) -> bool {
         *self == '9' || (*self >= 'A' && *self <= 'Z')
     }
 }
 
-
-
-
-
 #[derive(Debug)]
 pub enum TryteError {
     InvalidRepr,
 }
 
-// TODO: Fill out numbers properly?
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
 #[repr(i8)]
 pub enum Tryte {
     N = -13,
@@ -74,9 +74,26 @@ impl Tryte {
     }
 }
 
-impl Into<char> for Tryte {
-    fn into(self) -> char {
-        TRYTE_ALPHABET[self as usize]
+impl From<Tryte> for char {
+    fn from(tryte: Tryte) -> char {
+        match tryte as i8 {
+            0 => '9',
+            -13..=-1 => (((tryte as i8 + 13) as u8) + b'N') as char,
+            1..=13 => (((tryte as i8 - 1) as u8) + b'A') as char,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl fmt::Debug for Tryte {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", char::from(*self))
+    }
+}
+
+impl fmt::Display for Tryte {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", char::from(*self))
     }
 }
 
@@ -133,6 +150,10 @@ impl TryteBuf {
     pub fn as_trits_mut(&mut self) -> &mut Trits<T3B1> {
         unsafe { &mut *(T3B1::make(self.as_ptr() as *const _, 0, self.len() * 3) as *mut _) }
     }
+
+    pub fn iter(&self) -> impl Iterator<Item=Tryte> + '_ {
+        self.inner.iter().copied()
+    }
 }
 
 impl Deref for TryteBuf {
@@ -152,5 +173,20 @@ impl FromIterator<Tryte> for TryteBuf {
             this.push(tryte);
         }
         this
+    }
+}
+
+impl fmt::Debug for TryteBuf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
+impl fmt::Display for TryteBuf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for tryte in self.iter() {
+            write!(f, "{}", tryte)?;
+        }
+        Ok(())
     }
 }

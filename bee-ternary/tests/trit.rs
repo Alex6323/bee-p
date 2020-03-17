@@ -34,9 +34,14 @@ fn convert_incorrect_1() { Utrit::from(2); }
 fn tryte() {
     for c in &TRYTE_ALPHABET {
         println!("{}", c);
+        let tryte = Tryte::try_from(*c).unwrap();
         assert_eq!(
-            Tryte::try_from(*c).unwrap().as_trits(),
+            tryte.as_trits(),
             util::trytes_to_trits_buf(&format!("{}", c)).as_slice(),
+        );
+        assert_eq!(
+            char::from(tryte),
+            *c,
         );
     }
 }
