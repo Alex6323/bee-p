@@ -1,6 +1,7 @@
 mod common;
 use self::common::*;
 
+use std::convert::TryFrom;
 use bee_ternary::*;
 
 #[test]
@@ -29,3 +30,13 @@ fn convert_incorrect_0() { Utrit::from(-2); }
 #[should_panic]
 fn convert_incorrect_1() { Utrit::from(2); }
 
+#[test]
+fn tryte() {
+    for c in &TRYTE_ALPHABET {
+        println!("{}", c);
+        assert_eq!(
+            Tryte::try_from(*c).unwrap().as_trits(),
+            util::trytes_to_trits_buf(&format!("{}", c)).as_slice(),
+        );
+    }
+}

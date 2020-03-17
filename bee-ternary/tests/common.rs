@@ -11,7 +11,7 @@ pub fn gen_buf<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8
     let trits = (0..len)
         .map(|_| gen_trit())
         .collect::<Vec<_>>();
-    (TritBuf::<T>::from_i8_unchecked(&trits).unwrap(), trits)
+    (TritBuf::<T>::from_i8_unchecked(&trits), trits)
 }
 
 // Not exactly fuzzing, just doing something a lot

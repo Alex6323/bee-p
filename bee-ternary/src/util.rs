@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn correct_trytes_to_trits_conversion() {
         let trits_converted = trytes_to_trits_buf(TRYTES_IN);
-        let trits_expected = TritBuf::<T1B1Buf>::from_i8_unchecked(&BYTES_EXPECTED).unwrap();
+        let trits_expected = TritBuf::<T1B1Buf>::from_i8_unchecked(&BYTES_EXPECTED);
         assert_eq!(trits_expected, trits_converted);
     }
 }

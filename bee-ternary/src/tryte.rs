@@ -66,11 +66,11 @@ pub enum Tryte {
 
 impl Tryte {
     pub fn as_trits(&self) -> &Trits<T3B1> {
-        unsafe { &*(T3B1::make(self as *const _ as *const _, 0, 1) as *const _) }
+        unsafe { &*(T3B1::make(self as *const _ as *const _, 0, 3) as *const _) }
     }
 
     pub fn as_trits_mut(&mut self) -> &mut Trits<T3B1> {
-        unsafe { &mut *(T3B1::make(self as *const _ as *const _, 0, 1) as *mut _) }
+        unsafe { &mut *(T3B1::make(self as *const _ as *const _, 0, 3) as *mut _) }
     }
 }
 
@@ -84,13 +84,11 @@ impl TryFrom<char> for Tryte {
     type Error = TryteError;
 
     fn try_from(c: char) -> Result<Self, Self::Error> {
-        if c as u8 >= b'A' && c as u8 <= b'Z' {
-            // TODO: Don't do this
-            Ok(unsafe { std::mem::transmute(1 + c as u8 - b'A') })
-        } else if c == '9' {
-            Ok(Tryte::Nine)
-        } else {
-            Err(TryteError::InvalidRepr)
+        match c {
+            '9' => Ok(Tryte::Nine),
+            'N'..='Z' => Ok(unsafe { std::mem::transmute((c as u8 - b'N') as i8 - 13) }),
+            'A'..='M' => Ok(unsafe { std::mem::transmute((c as u8 - b'A') as i8 + 1) }),
+            _ => Err(TryteError::InvalidRepr)
         }
     }
 }
