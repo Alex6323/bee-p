@@ -109,6 +109,10 @@ impl Hash {
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
     }
+
+    pub fn is_genesis(&self) -> bool {
+        unimplemented!()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

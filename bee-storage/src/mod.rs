@@ -68,7 +68,7 @@ pub trait StorageBackend {
     ) -> Result<(), Self::StorageError>;
     async fn find_transaction(
         &self,
-        tx_hash: bee_bundle::Hash,
+        tx_hash: &bee_bundle::Hash,
     ) -> Result<bee_bundle::Transaction, Self::StorageError>;
     async fn update_transactions_set_solid(
         &self,
