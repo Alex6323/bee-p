@@ -1,7 +1,7 @@
 use crate::Seed;
 
 use bee_crypto::Sponge;
-use bee_ternary::{Trit, TritBuf, Trits, TRYTE_ALPHABET};
+use bee_ternary::{Trit, Btrit, TritBuf, Trits, TRYTE_ALPHABET};
 use iota_conversion::Trinary;
 
 use rand::Rng;
@@ -78,7 +78,7 @@ impl<S: Sponge + Default> IotaSeed<S> {
                     subseed.set(i, ntrit);
                     break;
                 } else {
-                    subseed.set(i, Trit::MinusOne);
+                    subseed.set(i, Btrit::NegOne);
                 }
             }
         }

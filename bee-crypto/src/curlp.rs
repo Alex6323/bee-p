@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 
 use crate::Sponge;
-use bee_ternary::{Trit, Trits, TritBuf};
+use bee_ternary::{Btrit, Trits, TritBuf};
 
 /// The length of a hash as returned by the hash functions implemented in this RFC (in
 /// units of binary-coded, balanced trits).
@@ -114,7 +114,7 @@ impl Sponge for CurlP {
     fn reset(&mut self) {
         self
             .state
-            .fill(Trit::Zero);
+            .fill(Btrit::Zero);
     }
 
     /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill

@@ -37,7 +37,7 @@ pub fn trytes_to_trits_buf(trytes: &str) -> TritBuf {
         };
         trits_buf_internal.extend_from_slice(trits);
     }
-    TritBuf::from_i8_unchecked(&trits_buf_internal).unwrap()
+    TritBuf::from_i8_unchecked(&trits_buf_internal)
 }
 
 #[cfg(test)]

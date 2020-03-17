@@ -239,11 +239,12 @@ impl<T: RawEncodingBuf> TritBuf<T> {
 
     // TODO: Is this a good API feature? No, it's not. Kill it with fire.
     #[deprecated]
-    pub fn from_i8_unchecked(trits: &[i8]) -> Result<Self, ()>  {
+    pub fn from_i8_unchecked(trits: &[i8]) -> Self  {
         trits
             .iter()
             .map(|t| <T::Slice as RawEncoding>::Trit::try_from(*t))
-            .collect()
+            .collect::<Result<_, _>>()
+            .unwrap()
     }
 
     pub fn push(&mut self, trit: <T::Slice as RawEncoding>::Trit) {
