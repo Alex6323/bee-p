@@ -150,10 +150,6 @@ impl TryteBuf {
     pub fn as_trits_mut(&mut self) -> &mut Trits<T3B1> {
         unsafe { &mut *(T3B1::make(self.as_ptr() as *const _, 0, self.len() * 3) as *mut _) }
     }
-
-    pub fn iter(&self) -> impl Iterator<Item=Tryte> + '_ {
-        self.inner.iter().copied()
-    }
 }
 
 impl Deref for TryteBuf {
