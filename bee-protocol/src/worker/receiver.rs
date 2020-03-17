@@ -124,8 +124,40 @@ impl ReceiverWorker {
         info!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
 
         match Handshake::from_full_bytes(&header, bytes) {
-            Ok(_) => {
+            Ok(handshake) => {
                 // TODO check handshake
+
+                // if handshake.port != port {
+                //     warn!(
+                //         "[Neighbor-{:?}] Invalid handshake port: {:?} != {:?}",
+                //         self.peer_id, handshake.port, port
+                //     );
+                // } else if handshake.timestamp != timestamp {
+                //     warn!(
+                //         "[Neighbor-{:?}] Invalid handshake timestamp: {:?}",
+                //         self.peer_id, handshake.timestamp
+                //     );
+                // } else if handshake.coordinator != coordinator {
+                //     warn!("[Neighbor-{:?}] Invalid handshake coordinator", self.peer_id);
+                // } else if handshake.minimum_weight_magnitude != minimum_weight_magnitude {
+                //     warn!(
+                //         "[Neighbor-{:?}] Invalid handshake MWM: {:?} != {:?}",
+                //         self.peer_id, handshake.minimum_weight_magnitude, minimum_weight_magnitude
+                //     );
+                // } else if handshake.supported_messages != supported_messages {
+                //     warn!(
+                //         "[Neighbor-{:?}] Invalid handshake version: {:?}",
+                //         self.peer_id, handshake.
+                //     );
+                // } else {
+                //     ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                //         state: ReceiverWorkerMessageState::Header { offset: 0 },
+                //     })
+                // }
+                //
+                // ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                //     state: ReceiverWorkerMessageState::Header { offset: 0 },
+                // })
 
                 ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                     state: ReceiverWorkerMessageState::Header { offset: 0 },
@@ -192,6 +224,7 @@ impl ReceiverWorker {
         match header.message_type {
             Handshake::ID => {
                 warn!("[Neighbor-{:?}] Ignoring unexpected Handshake", self.peer_id);
+                // TODO handle here instead of dedicated state ?
             }
 
             LegacyGossip::ID => {
