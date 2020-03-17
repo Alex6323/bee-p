@@ -35,6 +35,11 @@ pub use crate::{
 // re-export iota-conversion
 pub use iota_conversion;
 
+#[derive(Debug)]
+pub enum Error {
+    InvalidRepr,
+}
+
 #[repr(transparent)]
 pub struct Trits<T: RawEncoding + ?Sized = T1B1<Btrit>>(T);
 
@@ -44,6 +49,30 @@ where
 {
     pub fn empty() -> &'static Self {
         unsafe { &*(T::empty() as *const _ as *const Self) }
+    }
+
+    pub unsafe fn from_raw_unchecked(raw: &[<T::Trit as Trit>::Repr]) -> &Self {
+        &*(T::from_raw_unchecked(raw) as *const _ as *const _)
+    }
+
+    pub unsafe fn from_raw_unchecked_mut(raw: &mut [<T::Trit as Trit>::Repr]) -> &mut Self {
+        &mut *(T::from_raw_unchecked(raw) as *const _ as *mut _)
+    }
+
+    pub fn try_from_raw(raw: &[<T::Trit as Trit>::Repr]) -> Result<&Self, Error> {
+        if raw.iter().all(T::is_valid) {
+            Ok(unsafe { Self::from_raw_unchecked(raw) })
+        } else {
+            Err(Error::InvalidRepr)
+        }
+    }
+
+    pub fn try_from_raw_mut(raw: &mut [<T::Trit as Trit>::Repr]) -> Result<&mut Self, Error> {
+        if raw.iter().all(T::is_valid) {
+            Ok(unsafe { Self::from_raw_unchecked_mut(raw) })
+        } else {
+            Err(Error::InvalidRepr)
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -247,10 +276,10 @@ impl<T: RawEncodingBuf> TritBuf<T> {
 
     // TODO: Is this a good API feature? No, it's not. Kill it with fire.
     #[deprecated]
-    pub fn from_i8_unchecked(trits: &[i8]) -> Self  {
+    pub fn from_i8_unchecked(trits: &[i8]) -> Self {
         trits
             .iter()
-            .map(|t| <T::Slice as RawEncoding>::Trit::try_from(*t))
+            .map(|t| Btrit::try_convert(*t).map(Into::into))
             .collect::<Result<_, _>>()
             .unwrap()
     }

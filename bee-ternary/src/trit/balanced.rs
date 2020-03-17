@@ -11,7 +11,7 @@ pub enum Btrit {
 
 impl From<i8> for Btrit {
     fn from(x: i8) -> Self {
-        Self::try_from(x)
+        Self::try_convert(x)
             .unwrap_or_else(|_| panic!("Invalid balanced trit representation '{}'", x))
     }
 }
@@ -49,7 +49,9 @@ impl ToggleTernary for Btrit {
 }
 
 impl Trit for Btrit {
-    fn try_from(x: i8) -> Result<Self, ()> {
+    type Repr = i8;
+
+    fn try_convert(x: Self::Repr) -> Result<Self, ()> {
         match x {
             -1 => Ok(Btrit::NegOne),
             0 => Ok(Btrit::Zero),

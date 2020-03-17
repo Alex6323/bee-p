@@ -9,12 +9,14 @@ pub enum Utrit {
     PlusOne = 2,
 }
 
+/*
 impl From<i8> for Utrit {
     fn from(x: i8) -> Self {
         Self::try_from(x)
             .unwrap_or_else(|_| panic!("Invalid unbalanced trit representation '{}'", x))
     }
 }
+*/
 
 impl fmt::Display for Utrit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -49,11 +51,13 @@ impl ToggleTernary for Utrit {
 }
 
 impl Trit for Utrit {
-    fn try_from(x: i8) -> Result<Self, ()> {
+    type Repr = u8;
+
+    fn try_convert(x: Self::Repr) -> Result<Self, ()> {
         match x {
-            -1 => Ok(Utrit::NegOne),
-            0 => Ok(Utrit::Zero),
-            1 => Ok(Utrit::PlusOne),
+            0 => Ok(Utrit::NegOne),
+            1 => Ok(Utrit::Zero),
+            2 => Ok(Utrit::PlusOne),
             _ => Err(()),
         }
     }

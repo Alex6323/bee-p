@@ -21,6 +21,15 @@ pub trait RawEncoding {
 
     /// Get a mutable slice of this slice
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self;
+
+    /// Decide whether a byte is a valid series of trits in this encoding
+    fn is_valid(repr: &<Self::Trit as Trit>::Repr) -> bool;
+
+    /// Unsafely reinterpret a slice of bytes as trit slice
+    unsafe fn from_raw_unchecked(b: &[<Self::Trit as Trit>::Repr]) -> &Self;
+
+    /// Unsafely reinterpret a slice of bytes as trit slice
+    unsafe fn from_raw_unchecked_mut(b: &mut [<Self::Trit as Trit>::Repr]) -> &mut Self;
 }
 
 pub trait RawEncodingBuf {

@@ -71,6 +71,16 @@ impl RawEncoding for T4B1 {
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self {
         &mut *(Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start) as *mut Self)
     }
+
+    fn is_valid(b: &i8) -> bool { *b >= -BAL && *b <= BAL }
+
+    unsafe fn from_raw_unchecked(b: &[i8]) -> &Self {
+        &*Self::make(b.as_ptr() as *const _, 0, b.len() * TPB)
+    }
+
+    unsafe fn from_raw_unchecked_mut(b: &mut [i8]) -> &mut Self {
+        &mut *(Self::make(b.as_ptr() as *const _, 0, b.len() * TPB) as *mut _)
+    }
 }
 
 #[derive(Clone)]

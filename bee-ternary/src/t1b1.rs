@@ -70,6 +70,16 @@ impl<T: Trit> RawEncoding for T1B1<T> {
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self {
         &mut *(Self::make(self.ptr(0), range.start, range.end - range.start) as *mut _)
     }
+
+    fn is_valid(b: &T::Repr) -> bool { T::try_convert(*b).is_ok() }
+
+    unsafe fn from_raw_unchecked(b: &[T::Repr]) -> &Self {
+        &*Self::make(b.as_ptr() as *const _, 0, b.len())
+    }
+
+    unsafe fn from_raw_unchecked_mut(b: &mut [T::Repr]) -> &mut Self {
+        &mut *(Self::make(b.as_ptr() as *const _, 0, b.len()) as *mut _)
+    }
 }
 
 #[derive(Clone)]

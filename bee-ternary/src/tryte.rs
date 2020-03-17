@@ -5,6 +5,7 @@ use std::{
     fmt,
 };
 use crate::{
+    Error,
     T3B1,
     Trits,
 };
@@ -25,11 +26,6 @@ impl IsTryte for char {
     fn is_tryte(&self) -> bool {
         *self == '9' || (*self >= 'A' && *self <= 'Z')
     }
-}
-
-#[derive(Debug)]
-pub enum TryteError {
-    InvalidRepr,
 }
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
@@ -98,14 +94,14 @@ impl fmt::Display for Tryte {
 }
 
 impl TryFrom<char> for Tryte {
-    type Error = TryteError;
+    type Error = Error;
 
     fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
             '9' => Ok(Tryte::Nine),
             'N'..='Z' => Ok(unsafe { std::mem::transmute((c as u8 - b'N') as i8 - 13) }),
             'A'..='M' => Ok(unsafe { std::mem::transmute((c as u8 - b'A') as i8 + 1) }),
-            _ => Err(TryteError::InvalidRepr)
+            _ => Err(Error::InvalidRepr)
         }
     }
 }
@@ -124,7 +120,7 @@ impl TryteBuf {
         Self { inner: Vec::with_capacity(cap) }
     }
 
-    pub fn try_from_str(s: &str) -> Result<Self, TryteError> {
+    pub fn try_from_str(s: &str) -> Result<Self, Error> {
         s
             .chars()
             .map(Tryte::try_from)

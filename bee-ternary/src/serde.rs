@@ -12,6 +12,7 @@ use serde::{
     de::{Visitor, SeqAccess, Error, Unexpected},
 };
 use crate::{
+    Trit,
     Btrit,
     Utrit,
     Trits,
@@ -115,9 +116,9 @@ impl<'de> Visitor<'de> for UtritVisitor {
     }
 
     fn visit_u64<E: Error>(self, trit: u64) -> Result<Self::Value, E> {
-        i8::try_from(trit)
+        u8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Utrit::try_from(trit)
+            .and_then(|trit| Utrit::try_convert(trit)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Unsigned(trit), &self))
     }
@@ -125,21 +126,22 @@ impl<'de> Visitor<'de> for UtritVisitor {
     fn visit_i64<E: Error>(self, trit: i64) -> Result<Self::Value, E> {
         i8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Utrit::try_from(trit)
+            .and_then(|trit| Btrit::try_convert(trit).map(Into::into)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Signed(trit), &self))
     }
 
     fn visit_u8<E: Error>(self, trit: u8) -> Result<Self::Value, E> {
-        i8::try_from(trit)
+        u8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Utrit::try_from(trit)
+            .and_then(|trit| Utrit::try_convert(trit)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Unsigned(trit as u64), &self))
     }
 
     fn visit_i8<E: Error>(self, trit: i8) -> Result<Self::Value, E> {
-        Utrit::try_from(trit)
+        Btrit::try_convert(trit)
+            .map(Into::into)
             .map_err(|_| E::invalid_value(Unexpected::Signed(trit as i64), &self))
     }
 }
