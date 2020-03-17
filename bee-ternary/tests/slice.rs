@@ -6,6 +6,7 @@ use rand::prelude::*;
 use bee_ternary::*;
 
 fn get_generic<T: raw::RawEncodingBuf + Clone>() {
+    println!("{}", std::any::type_name::<T>());
     fuzz(100, || {
         let (a, a_i8) = gen_buf::<T>(1..1000);
 
@@ -101,6 +102,7 @@ fn get() {
     get_generic::<T2B1Buf>();
     get_generic::<T3B1Buf>();
     get_generic::<T4B1Buf>();
+    get_generic::<T5B1Buf>();
 }
 
 #[test]
@@ -110,6 +112,7 @@ fn set() {
     set_generic::<T2B1Buf>();
     set_generic::<T3B1Buf>();
     set_generic::<T4B1Buf>();
+    set_generic::<T5B1Buf>();
 }
 
 #[test]
@@ -120,6 +123,7 @@ fn set_panic() {
     set_panic_generic::<T2B1Buf>();
     set_panic_generic::<T3B1Buf>();
     set_panic_generic::<T4B1Buf>();
+    set_panic_generic::<T5B1Buf>();
 }
 
 #[test]
@@ -129,6 +133,7 @@ fn chunks() {
     chunks_generic::<T2B1Buf>();
     chunks_generic::<T3B1Buf>();
     chunks_generic::<T4B1Buf>();
+    chunks_generic::<T5B1Buf>();
 }
 
 #[test]

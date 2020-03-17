@@ -5,6 +5,7 @@ pub mod t1b1;
 pub mod t2b1;
 pub mod t3b1;
 pub mod t4b1;
+pub mod t5b1;
 pub mod util;
 
 #[cfg(feature = "serde1")]
@@ -26,6 +27,7 @@ pub use crate::{
     t2b1::{T2B1, T2B1Buf},
     t3b1::{T3B1, T3B1Buf},
     t4b1::{T4B1, T4B1Buf},
+    t5b1::{T5B1, T5B1Buf},
     tryte::{IsTryte, TRYTE_ALPHABET, Tryte, TryteBuf},
 };
 

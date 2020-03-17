@@ -35,6 +35,19 @@ pub enum TryteError {
 // TODO: Fill out numbers properly?
 #[repr(i8)]
 pub enum Tryte {
+    N = -13,
+    O = -12,
+    P = -11,
+    Q = -10,
+    R = -9,
+    S = -8,
+    T = -7,
+    U = -6,
+    V = -5,
+    W = -4,
+    X = -3,
+    Y = -2,
+    Z = -1,
     Nine = 0,
     A = 1,
     B = 2,
@@ -49,19 +62,16 @@ pub enum Tryte {
     K = 11,
     L = 12,
     M = 13,
-    N = 14,
-    O = 15,
-    P = 16,
-    Q = 17,
-    R = 18,
-    S = 19,
-    T = 20,
-    U = 21,
-    V = 22,
-    W = 23,
-    X = 24,
-    Y = 25,
-    Z = 26,
+}
+
+impl Tryte {
+    pub fn as_trits(&self) -> &Trits<T3B1> {
+        unsafe { &*(T3B1::make(self as *const _ as *const _, 0, 1) as *const _) }
+    }
+
+    pub fn as_trits_mut(&mut self) -> &mut Trits<T3B1> {
+        unsafe { &mut *(T3B1::make(self as *const _ as *const _, 0, 1) as *mut _) }
+    }
 }
 
 impl Into<char> for Tryte {
@@ -119,10 +129,11 @@ impl TryteBuf {
     }
 
     pub fn as_trits(&self) -> &Trits<T3B1> {
-        // TODO: This is ungodly and wrong. Remove the unimplemented!() when the encoding is the
-        // same. Also,
-        unimplemented!();
-        unsafe { &*(T3B1::make(self.as_ptr() as *const _, 0, self.len()) as *const _) }
+        unsafe { &*(T3B1::make(self.as_ptr() as *const _, 0, self.len() * 3) as *const _) }
+    }
+
+    pub fn as_trits_mut(&mut self) -> &mut Trits<T3B1> {
+        unsafe { &mut *(T3B1::make(self.as_ptr() as *const _, 0, self.len() * 3) as *mut _) }
     }
 }
 

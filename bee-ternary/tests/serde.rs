@@ -4,9 +4,12 @@ mod common;
 use self::common::*;
 
 use rand::prelude::*;
-use bee_ternary::*;
+use serde::{*, de::DeserializeOwned};
+use bee_ternary::{*, raw::*};
 
-fn serialize_generic<T: raw::RawEncodingBuf>() {
+fn serialize_generic<T: raw::RawEncodingBuf>()
+    where <T::Slice as RawEncoding>::Trit: Serialize
+{
     let (a, a_i8) = gen_buf::<T>(0..1000);
     assert_eq!(
         serde_json::to_string(&a).unwrap(),
@@ -14,7 +17,9 @@ fn serialize_generic<T: raw::RawEncodingBuf>() {
     );
 }
 
-fn deserialize_generic<T: raw::RawEncodingBuf>() {
+fn deserialize_generic<T: raw::RawEncodingBuf>()
+    where <T::Slice as RawEncoding>::Trit: DeserializeOwned
+{
     let (a, a_i8) = gen_buf::<T>(0..1000);
     assert_eq!(
         serde_json::from_str::<TritBuf<T>>(&format!("[{}]", a_i8.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(","))).unwrap(),
@@ -29,6 +34,7 @@ fn serialize() {
     serialize_generic::<T2B1Buf>();
     serialize_generic::<T3B1Buf>();
     serialize_generic::<T4B1Buf>();
+    serialize_generic::<T5B1Buf>();
 }
 
 #[test]
@@ -38,4 +44,5 @@ fn deserialize() {
     deserialize_generic::<T2B1Buf>();
     deserialize_generic::<T3B1Buf>();
     deserialize_generic::<T4B1Buf>();
+    deserialize_generic::<T5B1Buf>();
 }

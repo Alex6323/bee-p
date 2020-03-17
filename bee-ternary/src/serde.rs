@@ -34,7 +34,9 @@ impl Serialize for Utrit {
     }
 }
 
-impl<'a, T: RawEncoding> Serialize for &'a Trits<T> {
+impl<'a, T: RawEncoding> Serialize for &'a Trits<T>
+    where T::Trit: Serialize
+{
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
         for trit in self.iter() {
@@ -44,7 +46,9 @@ impl<'a, T: RawEncoding> Serialize for &'a Trits<T> {
     }
 }
 
-impl<T: RawEncodingBuf> Serialize for TritBuf<T> {
+impl<T: RawEncodingBuf> Serialize for TritBuf<T>
+    where <T::Slice as RawEncoding>::Trit: Serialize
+{
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
         for trit in self.iter() {
@@ -148,7 +152,9 @@ impl<'de> Deserialize<'de> for Utrit {
 
 struct TritBufVisitor<T>(PhantomData<T>);
 
-impl<'de, T: RawEncodingBuf> Visitor<'de> for TritBufVisitor<T> {
+impl<'de, T: RawEncodingBuf> Visitor<'de> for TritBufVisitor<T>
+    where <T::Slice as RawEncoding>::Trit: Deserialize<'de>
+{
     type Value = TritBuf<T>;
 
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -166,7 +172,9 @@ impl<'de, T: RawEncodingBuf> Visitor<'de> for TritBufVisitor<T> {
     }
 }
 
-impl<'de, T: RawEncodingBuf> Deserialize<'de> for TritBuf<T> {
+impl<'de, T: RawEncodingBuf> Deserialize<'de> for TritBuf<T>
+    where <T::Slice as RawEncoding>::Trit: Deserialize<'de>
+{
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         deserializer.deserialize_seq(TritBufVisitor::<T>(PhantomData))
     }

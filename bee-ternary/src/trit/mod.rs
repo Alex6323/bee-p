@@ -9,7 +9,7 @@ pub use self::{
 
 use std::fmt;
 
-pub trait Trit: Copy + Sized + fmt::Debug + From<i8> + Into<i8> + PartialEq + ToggleTernary {
+pub trait Trit: Copy + Sized + fmt::Debug + From<i8> + Into<i8> + PartialEq + ToggleTernary + Into<Utrit> + Into<Btrit> {
     // TODO: Use std::convert::TryFrom
     fn try_from(x: i8) -> Result<Self, ()>;
     fn checked_increment(self) -> Option<Self>;

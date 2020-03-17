@@ -28,8 +28,8 @@ fn push_pop_generic<T: raw::RawEncodingBuf>() {
             } else {
                 assert_eq!(a.pop(), b.pop().map(Into::into));
             }
-            println!("{:?}", a);
-            println!("{:?}", b);
+            //println!("{:?}", a);
+            //println!("{:?}", b);
         }
     });
 }
@@ -68,6 +68,7 @@ fn create() {
     create_generic::<T2B1Buf>();
     create_generic::<T3B1Buf>();
     create_generic::<T4B1Buf>();
+    create_generic::<T5B1Buf>();
 }
 
 #[test]
@@ -77,6 +78,7 @@ fn push_pop() {
     push_pop_generic::<T2B1Buf>();
     push_pop_generic::<T3B1Buf>();
     push_pop_generic::<T4B1Buf>();
+    push_pop_generic::<T5B1Buf>();
 }
 
 #[test]
@@ -86,6 +88,7 @@ fn eq() {
     eq_generic::<T2B1Buf>();
     eq_generic::<T3B1Buf>();
     eq_generic::<T4B1Buf>();
+    eq_generic::<T5B1Buf>();
 }
 
 #[test]
@@ -102,10 +105,15 @@ fn encode() {
     // encode_generic::<T3B1Buf, T1B1Buf<Utrit>>();
     encode_generic::<T4B1Buf, T1B1Buf<Btrit>>();
     // encode_generic::<T4B1Buf, T1B1Buf<Utrit>>();
+    encode_generic::<T5B1Buf, T1B1Buf<Btrit>>();
+    // encode_generic::<T5B1Buf, T1B1Buf<Utrit>>();
     encode_generic::<T2B1Buf, T3B1Buf>();
     encode_generic::<T3B1Buf, T4B1Buf>();
+    encode_generic::<T3B1Buf, T5B1Buf>();
     encode_generic::<T3B1Buf, T2B1Buf>();
     encode_generic::<T2B1Buf, T3B1Buf>();
     encode_generic::<T4B1Buf, T2B1Buf>();
     encode_generic::<T4B1Buf, T3B1Buf>();
+    encode_generic::<T5B1Buf, T2B1Buf>();
+    encode_generic::<T5B1Buf, T3B1Buf>();
 }
