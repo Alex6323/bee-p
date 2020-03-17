@@ -1,7 +1,7 @@
 use crate::message::{Handshake, Heartbeat, LegacyGossip, MilestoneRequest, TransactionBroadcast, TransactionRequest};
 use crate::neighbor::Neighbor;
 use crate::node::NodeMetrics;
-use crate::worker::{ReceiverWorker, ReceiverWorkerEvent, RequestWorker, RequestWorkerEvent, TransactionWorker};
+use crate::worker::{ReceiverWorker, ReceiverWorkerEvent, ResponderWorker, ResponderWorkerEvent, TransactionWorker};
 
 use bee_peering::{PeerManager, StaticPeerManager};
 
@@ -23,7 +23,7 @@ pub struct Node {
     // TODO thread-safety
     neighbors: HashMap<PeerId, Sender<ReceiverWorkerEvent>>,
     transaction_worker_sender: Option<Sender<TransactionBroadcast>>,
-    request_worker_sender: Option<Sender<RequestWorkerEvent>>,
+    responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
     metrics: NodeMetrics,
 }
 
@@ -36,7 +36,7 @@ impl Node {
             events: events,
             neighbors: HashMap::new(),
             transaction_worker_sender: None,
-            request_worker_sender: None,
+            responder_worker_sender: None,
             metrics: NodeMetrics::default(),
         }
     }
@@ -52,7 +52,7 @@ impl Node {
                 self.network.clone(),
                 receiver,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
-                self.request_worker_sender.as_ref().unwrap().clone(),
+                self.responder_worker_sender.as_ref().unwrap().clone(),
             )
             .run(),
         );
@@ -116,9 +116,9 @@ impl Node {
         self.transaction_worker_sender = Some(transaction_worker_sender);
         spawn(TransactionWorker::new(transaction_worker_receiver).run());
 
-        let (request_worker_sender, request_worker_receiver) = channel(1000);
-        self.request_worker_sender = Some(request_worker_sender);
-        spawn(RequestWorker::new(self.network.clone(), request_worker_receiver).run());
+        let (responder_worker_sender, responder_worker_receiver) = channel(1000);
+        self.responder_worker_sender = Some(responder_worker_sender);
+        spawn(ResponderWorker::new(self.network.clone(), responder_worker_receiver).run());
 
         info!("[Node ] Initialized");
     }

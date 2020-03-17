@@ -1,5 +1,3 @@
-// TODO Rename ? Request/Requester confusion
-
 use crate::message::{Message, MilestoneRequest, TransactionBroadcast, TransactionRequest};
 
 use netzwerk::Command::SendBytes;
@@ -8,7 +6,7 @@ use netzwerk::{Network, PeerId};
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 
-pub(crate) enum RequestWorkerEvent {
+pub(crate) enum ResponderWorkerEvent {
     TransactionRequest {
         peer_id: PeerId,
         message: TransactionRequest,
@@ -19,14 +17,14 @@ pub(crate) enum RequestWorkerEvent {
     },
 }
 
-pub(crate) struct RequestWorker {
+pub(crate) struct ResponderWorker {
     // TODO network or dedicated sender ?
     network: Network,
-    receiver: Receiver<RequestWorkerEvent>,
+    receiver: Receiver<ResponderWorkerEvent>,
 }
 
-impl RequestWorker {
-    pub(crate) fn new(network: Network, receiver: Receiver<RequestWorkerEvent>) -> Self {
+impl ResponderWorker {
+    pub(crate) fn new(network: Network, receiver: Receiver<ResponderWorkerEvent>) -> Self {
         Self {
             network: network,
             receiver: receiver,
@@ -36,11 +34,11 @@ impl RequestWorker {
     pub(crate) async fn run(mut self) {
         while let Some(event) = self.receiver.next().await {
             if let (peer_id, Some(transaction)) = match event {
-                RequestWorkerEvent::TransactionRequest { peer_id, message } => {
+                ResponderWorkerEvent::TransactionRequest { peer_id, message } => {
                     // TODO Tangle lookup
                     (peer_id, Some(TransactionBroadcast::new(&[0; 500])))
                 }
-                RequestWorkerEvent::MilestoneRequest { peer_id, message } => {
+                ResponderWorkerEvent::MilestoneRequest { peer_id, message } => {
                     // TODO Tangle lookup
                     (peer_id, Some(TransactionBroadcast::new(&[0; 500])))
                 }

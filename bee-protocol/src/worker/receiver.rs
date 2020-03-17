@@ -2,7 +2,7 @@ use crate::message::{
     Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
-use crate::worker::RequestWorkerEvent;
+use crate::worker::ResponderWorkerEvent;
 
 use netzwerk::Command::SendBytes;
 use netzwerk::{Network, PeerId};
@@ -50,7 +50,7 @@ pub(crate) struct ReceiverWorker {
     network: Network,
     receiver: Receiver<ReceiverWorkerEvent>,
     transaction_worker_sender: Sender<TransactionBroadcast>,
-    request_worker_sender: Sender<RequestWorkerEvent>,
+    responder_worker: Sender<ResponderWorkerEvent>,
 }
 
 impl ReceiverWorker {
@@ -59,14 +59,14 @@ impl ReceiverWorker {
         network: Network,
         receiver: Receiver<ReceiverWorkerEvent>,
         transaction_worker_sender: Sender<TransactionBroadcast>,
-        request_worker_sender: Sender<RequestWorkerEvent>,
+        responder_worker: Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
             peer_id: peer_id,
             network: network,
             receiver: receiver,
             transaction_worker_sender: transaction_worker_sender,
-            request_worker_sender: request_worker_sender,
+            responder_worker: responder_worker,
         }
     }
 
@@ -191,41 +191,20 @@ impl ReceiverWorker {
         // TODO metrics
         match header.message_type {
             Handshake::ID => {
-                warn!("[Neighbor-{:?}] Reading unexpected Handshake", self.peer_id);
-
-                match Handshake::from_full_bytes(&header, bytes) {
-                    Ok(_) => {
-                        // Not expecting a handshake at this point, ignore
-                    }
-                    Err(e) => {
-                        warn!(
-                            "[Neighbor-{:?}] Reading unexpected Handshake failed: {:?}",
-                            self.peer_id, e
-                        );
-                    }
-                }
+                warn!("[Neighbor-{:?}] Ignoring unexpected Handshake", self.peer_id);
             }
 
             LegacyGossip::ID => {
-                info!("[Neighbor-{:?}] Reading LegacyGossip", self.peer_id);
-
-                match LegacyGossip::from_full_bytes(&header, bytes) {
-                    Ok(_) => {
-                        // TODO not supported
-                    }
-                    Err(e) => {
-                        warn!("[Neighbor-{:?}] Reading LegacyGossip failed: {:?}", self.peer_id, e);
-                    }
-                }
+                warn!("[Neighbor-{:?}] Ignoring unsupported LegacyGossip", self.peer_id);
             }
 
             MilestoneRequest::ID => {
-                info!("[Neighbor-{:?}] Reading MilestoneRequest", self.peer_id);
+                info!("[Neighbor-{:?}] Receiving MilestoneRequest", self.peer_id);
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
-                        self.request_worker_sender
-                            .send(RequestWorkerEvent::MilestoneRequest {
+                        self.responder_worker
+                            .send(ResponderWorkerEvent::MilestoneRequest {
                                 peer_id: self.peer_id,
                                 message: message,
                             })
@@ -233,13 +212,16 @@ impl ReceiverWorker {
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!("[Neighbor-{:?}] Reading MilestoneRequest failed: {:?}", self.peer_id, e);
+                        warn!(
+                            "[Neighbor-{:?}] Receiving MilestoneRequest failed: {:?}",
+                            self.peer_id, e
+                        );
                     }
                 }
             }
 
             TransactionBroadcast::ID => {
-                info!("[Neighbor-{:?}] Reading TransactionBroadcast", self.peer_id);
+                info!("[Neighbor-{:?}] Receiving TransactionBroadcast", self.peer_id);
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -250,7 +232,7 @@ impl ReceiverWorker {
                     }
                     Err(e) => {
                         warn!(
-                            "[Neighbor-{:?}] Reading TransactionBroadcast failed: {:?}",
+                            "[Neighbor-{:?}] Receiving TransactionBroadcast failed: {:?}",
                             self.peer_id, e
                         );
                     }
@@ -258,12 +240,12 @@ impl ReceiverWorker {
             }
 
             TransactionRequest::ID => {
-                info!("[Neighbor-{:?}] Reading TransactionRequest", self.peer_id);
+                info!("[Neighbor-{:?}] Receiving TransactionRequest", self.peer_id);
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
-                        self.request_worker_sender
-                            .send(RequestWorkerEvent::TransactionRequest {
+                        self.responder_worker
+                            .send(ResponderWorkerEvent::TransactionRequest {
                                 peer_id: self.peer_id,
                                 message: message,
                             })
@@ -272,7 +254,7 @@ impl ReceiverWorker {
                     }
                     Err(e) => {
                         warn!(
-                            "[Neighbor-{:?}] Reading TransactionRequest failed: {:?}",
+                            "[Neighbor-{:?}] Receiving TransactionRequest failed: {:?}",
                             self.peer_id, e
                         );
                     }
@@ -280,12 +262,12 @@ impl ReceiverWorker {
             }
 
             Heartbeat::ID => {
-                info!("[Neighbor-{:?}] Reading Heartbeat", self.peer_id);
+                info!("[Neighbor-{:?}] Receiving Heartbeat", self.peer_id);
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
                     Ok(_) => {}
                     Err(e) => {
-                        warn!("[Neighbor-{:?}] Reading Heartbeat failed: {:?}", self.peer_id, e);
+                        warn!("[Neighbor-{:?}] Receiving Heartbeat failed: {:?}", self.peer_id, e);
                     }
                 }
             }
