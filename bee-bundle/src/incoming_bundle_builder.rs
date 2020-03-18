@@ -56,8 +56,8 @@ where
     }
 
     // TODO TEST
-    pub fn push(&mut self, transactions: Transaction) {
-        self.transactions.push(transactions);
+    pub fn push(&mut self, transaction: Transaction) {
+        self.transactions.push(transaction);
     }
 
     // TODO TEST

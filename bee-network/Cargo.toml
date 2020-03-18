@@ -5,11 +5,16 @@ authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
-bee-bundle = { path = "../bee-bundle" }
-bee-common = { path = "../bee-common" }
-
-async-std = "1.4.0"
-blake2 = "0.8.1"
-futures = "0.3.1"
-hex = "0.4.0"
+async-std = "1.5.0"
+err-derive = "0.2.3"
+futures = "0.3.4"
 log = "0.4.8"
+
+[dev-dependencies]
+bincode = "1.2.1"
+crossterm = "0.16.0"
+env_logger = "0.7.1"
+pretty_env_logger = "0.4.0"
+serde = { version = "1.0.104", features = ["derive"] }
+structopt = "0.3.9"
+tokio = { version = "0.2.11", features = ["signal"] }
