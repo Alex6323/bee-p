@@ -1,19 +1,16 @@
 use bee_common::logger;
+use bee_network::Address;
 use bee_protocol::Node;
-use netzwerk::ConfigBuilder;
 
 use async_std::task::block_on;
 
 fn main() {
-    // let args = Args::from_args();
-    // let config = args.make_config();
-    let config = ConfigBuilder::new().build();
-
     logger::init(log::LevelFilter::Debug);
 
-    let (network, shutdown, receiver) = netzwerk::init(config.clone());
+    let addr = block_on(Address::from_host_addr("localhost:1337")).unwrap();
+    let (network, shutdown, receiver) = bee_network::init(addr);
 
-    let mut node = Node::new(config, network, shutdown, receiver);
+    let mut node = Node::new(network, shutdown, receiver);
 
     block_on(node.init());
 

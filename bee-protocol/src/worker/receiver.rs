@@ -4,8 +4,8 @@ use crate::message::{
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
 use crate::worker::ResponderWorkerEvent;
 
-use netzwerk::Command::SendBytes;
-use netzwerk::{Network, PeerId};
+use bee_network::Command::SendBytes;
+use bee_network::{EndpointId, Network};
 
 use futures::channel::mpsc::{Receiver, Sender};
 use futures::sink::SinkExt;
@@ -21,7 +21,7 @@ pub(crate) enum ReceiverWorkerEvent {
     Removed,
     Connected,
     Disconnected,
-    Message { size: usize, bytes: Vec<u8> },
+    Message(Vec<u8>),
 }
 
 enum ReceiverWorkerMessageState {
@@ -46,7 +46,7 @@ enum ReceiverWorkerState {
 }
 
 pub(crate) struct ReceiverWorker {
-    peer_id: PeerId,
+    epid: EndpointId,
     network: Network,
     receiver: Receiver<ReceiverWorkerEvent>,
     transaction_worker_sender: Sender<TransactionBroadcast>,
@@ -55,14 +55,14 @@ pub(crate) struct ReceiverWorker {
 
 impl ReceiverWorker {
     pub(crate) fn new(
-        peer_id: PeerId,
+        epid: EndpointId,
         network: Network,
         receiver: Receiver<ReceiverWorkerEvent>,
         transaction_worker_sender: Sender<TransactionBroadcast>,
         responder_worker: Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
-            peer_id: peer_id,
+            epid: epid,
             network: network,
             receiver: receiver,
             transaction_worker_sender: transaction_worker_sender,
@@ -78,8 +78,9 @@ impl ReceiverWorker {
 
         self.network
             .send(SendBytes {
-                to_peer: self.peer_id,
+                epid: self.epid,
                 bytes: bytes.to_vec(),
+                responder: None,
             })
             .await;
     }
@@ -107,7 +108,7 @@ impl ReceiverWorker {
     ) -> ReceiverWorkerState {
         match event {
             ReceiverWorkerEvent::Connected => {
-                info!("[Neighbor-{:?}] Connected", self.peer_id);
+                info!("[Neighbor-{:?}] Connected", self.epid);
 
                 // TODO spawn ?
                 self.send_handshake().await;
@@ -121,7 +122,7 @@ impl ReceiverWorker {
     }
 
     fn check_handshake(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
-        debug!("[Neighbor-{:?}] Reading Handshake", self.peer_id);
+        debug!("[Neighbor-{:?}] Reading Handshake", self.epid);
 
         match Handshake::from_full_bytes(&header, bytes) {
             Ok(handshake) => {
@@ -130,24 +131,24 @@ impl ReceiverWorker {
                 // if handshake.port != port {
                 //     warn!(
                 //         "[Neighbor-{:?}] Invalid handshake port: {:?} != {:?}",
-                //         self.peer_id, handshake.port, port
+                //         self.epid, handshake.port, port
                 //     );
                 // } else if handshake.timestamp != timestamp {
                 //     warn!(
                 //         "[Neighbor-{:?}] Invalid handshake timestamp: {:?}",
-                //         self.peer_id, handshake.timestamp
+                //         self.epid, handshake.timestamp
                 //     );
                 // } else if handshake.coordinator != coordinator {
-                //     warn!("[Neighbor-{:?}] Invalid handshake coordinator", self.peer_id);
+                //     warn!("[Neighbor-{:?}] Invalid handshake coordinator", self.epid);
                 // } else if handshake.minimum_weight_magnitude != minimum_weight_magnitude {
                 //     warn!(
                 //         "[Neighbor-{:?}] Invalid handshake MWM: {:?} != {:?}",
-                //         self.peer_id, handshake.minimum_weight_magnitude, minimum_weight_magnitude
+                //         self.epid, handshake.minimum_weight_magnitude, minimum_weight_magnitude
                 //     );
                 // } else if let Err(version) = supported_version(handshake.supported_messages) {
                 //     warn!(
                 //         "[Neighbor-{:?}] Unsupported protocol version: {:?}",
-                //         self.peer_id, version
+                //         self.epid, version
                 //     );
                 // } else {
                 //     ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
@@ -159,7 +160,7 @@ impl ReceiverWorker {
                 //     state: ReceiverWorkerMessageState::Header { offset: 0 },
                 // })
 
-                info!("[Neighbor-{:?}] Handshake completed", self.peer_id);
+                info!("[Neighbor-{:?}] Handshake completed", self.epid);
 
                 ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                     state: ReceiverWorkerMessageState::Header { offset: 0 },
@@ -167,7 +168,7 @@ impl ReceiverWorker {
             }
 
             Err(e) => {
-                warn!("[Neighbor-{:?}] Reading Handshake failed: {:?}", self.peer_id, e);
+                warn!("[Neighbor-{:?}] Reading Handshake failed: {:?}", self.epid, e);
 
                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                     state: ReceiverWorkerMessageState::Header { offset: 0 },
@@ -183,25 +184,25 @@ impl ReceiverWorker {
     ) -> ReceiverWorkerState {
         match event {
             ReceiverWorkerEvent::Disconnected => {
-                info!("[Neighbor-{:?}] Disconnected", self.peer_id);
+                info!("[Neighbor-{:?}] Disconnected", self.epid);
 
                 ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
-            ReceiverWorkerEvent::Message { size, bytes } => {
+            ReceiverWorkerEvent::Message(bytes) => {
                 // TODO needed ?
-                if size < 3 {
+                if bytes.len() < 3 {
                     ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                         state: ReceiverWorkerMessageState::Header { offset: 0 },
                     })
                 } else {
                     match context.state {
                         ReceiverWorkerMessageState::Header { .. } => {
-                            debug!("[Neighbor-{:?}] Reading Header", self.peer_id);
+                            debug!("[Neighbor-{:?}] Reading Header", self.epid);
 
                             let header = Header::from_bytes(&bytes[0..3]);
 
-                            if size > 3 {
-                                self.check_handshake(header, &bytes[3..size])
+                            if bytes.len() > 3 {
+                                self.check_handshake(header, &bytes[3..bytes.len()])
                             } else {
                                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                                     state: ReceiverWorkerMessageState::Payload {
@@ -212,7 +213,7 @@ impl ReceiverWorker {
                             }
                         }
                         ReceiverWorkerMessageState::Payload { offset, header } => {
-                            self.check_handshake(header, &bytes[..size])
+                            self.check_handshake(header, &bytes[..bytes.len()])
                         }
                     }
                 }
@@ -225,38 +226,35 @@ impl ReceiverWorker {
         // TODO metrics
         match header.message_type {
             Handshake::ID => {
-                warn!("[Neighbor-{:?}] Ignoring unexpected Handshake", self.peer_id);
+                warn!("[Neighbor-{:?}] Ignoring unexpected Handshake", self.epid);
                 // TODO handle here instead of dedicated state ?
             }
 
             LegacyGossip::ID => {
-                warn!("[Neighbor-{:?}] Ignoring unsupported LegacyGossip", self.peer_id);
+                warn!("[Neighbor-{:?}] Ignoring unsupported LegacyGossip", self.epid);
             }
 
             MilestoneRequest::ID => {
-                debug!("[Neighbor-{:?}] Receiving MilestoneRequest", self.peer_id);
+                debug!("[Neighbor-{:?}] Receiving MilestoneRequest", self.epid);
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.responder_worker
                             .send(ResponderWorkerEvent::MilestoneRequest {
-                                peer_id: self.peer_id,
+                                epid: self.epid,
                                 message: message,
                             })
                             .await
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!(
-                            "[Neighbor-{:?}] Receiving MilestoneRequest failed: {:?}",
-                            self.peer_id, e
-                        );
+                        warn!("[Neighbor-{:?}] Receiving MilestoneRequest failed: {:?}", self.epid, e);
                     }
                 }
             }
 
             TransactionBroadcast::ID => {
-                debug!("[Neighbor-{:?}] Receiving TransactionBroadcast", self.peer_id);
+                debug!("[Neighbor-{:?}] Receiving TransactionBroadcast", self.epid);
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -268,20 +266,20 @@ impl ReceiverWorker {
                     Err(e) => {
                         warn!(
                             "[Neighbor-{:?}] Receiving TransactionBroadcast failed: {:?}",
-                            self.peer_id, e
+                            self.epid, e
                         );
                     }
                 }
             }
 
             TransactionRequest::ID => {
-                debug!("[Neighbor-{:?}] Receiving TransactionRequest", self.peer_id);
+                debug!("[Neighbor-{:?}] Receiving TransactionRequest", self.epid);
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.responder_worker
                             .send(ResponderWorkerEvent::TransactionRequest {
-                                peer_id: self.peer_id,
+                                epid: self.epid,
                                 message: message,
                             })
                             .await
@@ -290,19 +288,19 @@ impl ReceiverWorker {
                     Err(e) => {
                         warn!(
                             "[Neighbor-{:?}] Receiving TransactionRequest failed: {:?}",
-                            self.peer_id, e
+                            self.epid, e
                         );
                     }
                 }
             }
 
             Heartbeat::ID => {
-                debug!("[Neighbor-{:?}] Receiving Heartbeat", self.peer_id);
+                debug!("[Neighbor-{:?}] Receiving Heartbeat", self.epid);
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
                     Ok(_) => {}
                     Err(e) => {
-                        warn!("[Neighbor-{:?}] Receiving Heartbeat failed: {:?}", self.peer_id, e);
+                        warn!("[Neighbor-{:?}] Receiving Heartbeat failed: {:?}", self.epid, e);
                     }
                 }
             }
@@ -320,21 +318,21 @@ impl ReceiverWorker {
         mut context: AwaitingMessageContext,
         event: ReceiverWorkerEvent,
     ) -> ReceiverWorkerState {
-        // spawn(SenderWorker::<LegacyGossip>::new(self.peer_id, self.network.clone()).run());
-        // spawn(SenderWorker::<MilestoneRequest>::new(self.peer_id, self.network.clone()).run());
-        // spawn(SenderWorker::<TransactionBroadcast>::new(self.peer_id, self.network.clone()).run());
-        // spawn(SenderWorker::<TransactionRequest>::new(self.peer_id, self.network.clone()).run());
-        // spawn(SenderWorker::<Heartbeat>::new(self.peer_id, self.network.clone()).run());
+        // spawn(SenderWorker::<LegacyGossip>::new(self.epid, self.network.clone()).run());
+        // spawn(SenderWorker::<MilestoneRequest>::new(self.epid, self.network.clone()).run());
+        // spawn(SenderWorker::<TransactionBroadcast>::new(self.epid, self.network.clone()).run());
+        // spawn(SenderWorker::<TransactionRequest>::new(self.epid, self.network.clone()).run());
+        // spawn(SenderWorker::<Heartbeat>::new(self.epid, self.network.clone()).run());
 
         match event {
             ReceiverWorkerEvent::Disconnected => {
-                debug!("[Neighbor-{:?}] Disconnected", self.peer_id);
+                debug!("[Neighbor-{:?}] Disconnected", self.epid);
 
                 ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
-            ReceiverWorkerEvent::Message { size, bytes } => {
+            ReceiverWorkerEvent::Message(bytes) => {
                 // TODO needed ?
-                if size < 3 {
+                if bytes.len() < 3 {
                     ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                         state: ReceiverWorkerMessageState::Header { offset: 0 },
                     })
@@ -342,9 +340,9 @@ impl ReceiverWorker {
                     loop {
                         context.state = match context.state {
                             ReceiverWorkerMessageState::Header { offset } => {
-                                debug!("[Neighbor-{:?}] Reading Header", self.peer_id);
+                                debug!("[Neighbor-{:?}] Reading Header", self.epid);
 
-                                if offset as usize == size {
+                                if offset as usize == bytes.len() {
                                     break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                                         state: ReceiverWorkerMessageState::Header { offset: 0 },
                                     });
@@ -358,7 +356,7 @@ impl ReceiverWorker {
                             ReceiverWorkerMessageState::Payload { offset, header } => {
                                 // TODO check that size is enough
 
-                                if offset as usize == size {
+                                if offset as usize == bytes.len() {
                                     break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                                         state: ReceiverWorkerMessageState::Payload {
                                             offset: 0,
@@ -371,7 +369,7 @@ impl ReceiverWorker {
                                     .process_message(&header, &bytes[offset..offset + header.message_length as usize])
                                     .await
                                 {
-                                    error!("[Neighbor-{:?}] Processing message failed: {:?}", self.peer_id, e);
+                                    error!("[Neighbor-{:?}] Processing message failed: {:?}", self.epid, e);
                                 }
 
                                 ReceiverWorkerMessageState::Header {

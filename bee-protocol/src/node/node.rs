@@ -6,9 +6,8 @@ use crate::worker::{
     TransactionWorker,
 };
 
+use bee_network::{EndpointId, Event, EventSubscriber, Network, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
-
-use netzwerk::{Config, Event, EventSubscriber, Network, PeerId, Shutdown};
 
 use std::collections::HashMap;
 
@@ -19,12 +18,11 @@ use futures::stream::StreamExt;
 use log::*;
 
 pub struct Node {
-    config: Config,
     network: Network,
     shutdown: Shutdown,
     events: EventSubscriber,
     // TODO thread-safety
-    neighbors: HashMap<PeerId, Sender<ReceiverWorkerEvent>>,
+    neighbors: HashMap<EndpointId, Sender<ReceiverWorkerEvent>>,
     transaction_worker_sender: Option<Sender<TransactionBroadcast>>,
     responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
     requester_worker_sender: Option<Sender<RequesterWorkerEvent>>,
@@ -32,9 +30,8 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(config: Config, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
+    pub fn new(network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
         Self {
-            config: config,
             network: network,
             shutdown: shutdown,
             events: events,
@@ -46,14 +43,14 @@ impl Node {
         }
     }
 
-    fn peer_added_handler(&mut self, peer_id: PeerId) {
+    fn endpoint_added_handler(&mut self, epid: EndpointId) {
         let (sender, receiver) = channel(1000);
 
-        self.neighbors.insert(peer_id, sender);
+        self.neighbors.insert(epid, sender);
 
         spawn(
             ReceiverWorker::new(
-                peer_id,
+                epid,
                 self.network.clone(),
                 receiver,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
@@ -63,33 +60,28 @@ impl Node {
         );
     }
 
-    async fn peer_removed_handler(&mut self, peer_id: PeerId) {
-        if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+    async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
+        if let Some(sender) = self.neighbors.get_mut(&epid) {
             sender.send(ReceiverWorkerEvent::Removed).await;
-            self.neighbors.remove(&peer_id);
+            self.neighbors.remove(&epid);
         }
     }
 
-    async fn peer_connected_handler(&mut self, peer_id: PeerId) {
-        if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+    async fn endpoint_connected_handler(&mut self, epid: EndpointId) {
+        if let Some(sender) = self.neighbors.get_mut(&epid) {
             sender.send(ReceiverWorkerEvent::Connected).await;
         }
     }
 
-    async fn peer_disconnected_handler(&mut self, peer_id: PeerId) {
-        if let Some(sender) = self.neighbors.get_mut(&peer_id) {
+    async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
+        if let Some(sender) = self.neighbors.get_mut(&epid) {
             sender.send(ReceiverWorkerEvent::Disconnected).await;
         }
     }
 
-    async fn peer_bytes_received_handler(&mut self, peer_id: PeerId, num_bytes: usize, buffer: Vec<u8>) {
-        if let Some(sender) = self.neighbors.get_mut(&peer_id) {
-            sender
-                .send(ReceiverWorkerEvent::Message {
-                    size: num_bytes,
-                    bytes: buffer,
-                })
-                .await;
+    async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
+        if let Some(sender) = self.neighbors.get_mut(&epid) {
+            sender.send(ReceiverWorkerEvent::Message(bytes)).await;
         }
     }
 
@@ -98,16 +90,11 @@ impl Node {
         while let Some(event) = self.events.next().await {
             debug!("[Node ] Received event {:?}", event);
             match event {
-                Event::PeerAdded { peer_id, .. } => self.peer_added_handler(peer_id),
-                Event::PeerRemoved { peer_id, .. } => self.peer_removed_handler(peer_id).await,
-                Event::PeerConnected { peer_id, .. } => self.peer_connected_handler(peer_id).await,
-                Event::PeerDisconnected { peer_id, .. } => self.peer_disconnected_handler(peer_id).await,
-                Event::BytesReceived {
-                    from_peer,
-                    num_bytes,
-                    buffer,
-                    ..
-                } => self.peer_bytes_received_handler(from_peer, num_bytes, buffer).await,
+                Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid),
+                Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
+                Event::EndpointConnected { epid, .. } => self.endpoint_connected_handler(epid).await,
+                Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
+                Event::BytesReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
                 _ => (),
             }
         }

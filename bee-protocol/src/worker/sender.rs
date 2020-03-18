@@ -1,18 +1,19 @@
 use crate::message::Message;
-use netzwerk::{Network, PeerId};
+
+use bee_network::{EndpointId, Network};
 
 use std::marker::PhantomData;
 
 pub(crate) struct SenderWorker<M> {
-    peer_id: PeerId,
+    epid: EndpointId,
     network: Network,
     message_type: PhantomData<M>,
 }
 
 impl<M: Message> SenderWorker<M> {
-    pub(crate) fn new(peer_id: PeerId, network: Network) -> Self {
+    pub(crate) fn new(epid: EndpointId, network: Network) -> Self {
         Self {
-            peer_id: peer_id,
+            epid: epid,
             network: network,
             message_type: PhantomData,
         }
