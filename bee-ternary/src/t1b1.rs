@@ -26,9 +26,7 @@ impl<T: Trit> T1B1<T> {
     unsafe fn ptr(&self, index: usize) -> *const T {
         (self.inner.as_ptr() as *const T).offset(index as isize)
     }
-}
 
-impl T1B1<Btrit> {
     pub fn as_i8_slice(&self) -> &[i8] {
         unsafe { &*(Self::make(self.ptr(0), 0, self.len()) as *const _) }
     }
@@ -36,9 +34,7 @@ impl T1B1<Btrit> {
     pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
         &mut *(Self::make(self.ptr(0), 0, self.len()) as *mut _)
     }
-}
 
-impl<T: Trit> T1B1<T> {
     pub fn as_raw_slice(&self) -> &[T] {
         unsafe { &*(Self::make(self.ptr(0), 0, self.len()) as *const _) }
     }
