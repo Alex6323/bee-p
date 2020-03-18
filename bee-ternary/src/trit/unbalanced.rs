@@ -26,7 +26,7 @@ impl fmt::Display for Utrit {
 
 impl From<Utrit> for i8 {
     fn from(value: Utrit) -> Self {
-        value as i8 - 1
+        value as i8
     }
 }
 

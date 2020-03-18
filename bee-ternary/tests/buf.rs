@@ -24,7 +24,7 @@ fn create_unbalanced<T: raw::RawEncodingBuf>() {
     });
     fuzz(100, || {
         let trits = gen_buf_unbalanced::<T>(0..1000).1;
-        assert!(TritBuf::<T>::from_i8_unchecked(&trits).unwrap().len() == trits.len());
+        assert!(TritBuf::<T>::from_i8_unchecked(&trits).len() == trits.len());
     });
 }
 

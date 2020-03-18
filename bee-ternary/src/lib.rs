@@ -279,9 +279,8 @@ impl<T: RawEncodingBuf> TritBuf<T> {
     pub fn from_i8_unchecked(trits: &[i8]) -> Self {
         trits
             .iter()
-            .map(|t| Btrit::try_convert(*t).map(Into::into))
-            .collect::<Result<_, _>>()
-            .unwrap()
+            .map(|t| <T::Slice as RawEncoding>::Trit::from(*t))
+            .collect()
     }
 
     pub fn push(&mut self, trit: <T::Slice as RawEncoding>::Trit) {

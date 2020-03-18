@@ -9,7 +9,7 @@ pub use self::{
 
 use std::fmt;
 
-pub trait Trit: Copy + Sized + fmt::Debug + PartialEq + ToggleTernary + From<Utrit> + From<Btrit> + Into<Utrit> + Into<Btrit> {
+pub trait Trit: Copy + Sized + fmt::Debug + PartialEq + ToggleTernary + From<i8> {
     type Repr: Copy;
 
     // TODO: Use std::convert::TryFrom
