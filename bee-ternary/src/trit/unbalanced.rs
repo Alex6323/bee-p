@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::fmt;
 use super::{Trit, Btrit, ShiftTernary};
 
-#[repr(u8)]
+#[repr(i8)]
 #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Utrit {
     Zero = 0,
