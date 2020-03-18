@@ -22,13 +22,6 @@ impl From<Btrit> for i8 {
     }
 }
 
-impl From<Utrit> for Btrit {
-    fn from(trit: Utrit) -> Self {
-        // TODO: Fully review this
-        unsafe { std::mem::transmute(trit as i8 - 1) }
-    }
-}
-
 impl ShiftTernary for Btrit {
     type Target = Utrit;
 

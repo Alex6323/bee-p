@@ -112,13 +112,13 @@ impl<'de> Visitor<'de> for UtritVisitor {
     type Value = Utrit;
 
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("a value between -1 and 1 inclusive")
+        f.write_str("a value between 0 and 2 inclusive")
     }
 
     fn visit_u64<E: Error>(self, trit: u64) -> Result<Self::Value, E> {
         u8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Utrit::try_convert(trit)
+            .and_then(|trit| Utrit::try_from(trit)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Unsigned(trit), &self))
     }
@@ -126,7 +126,7 @@ impl<'de> Visitor<'de> for UtritVisitor {
     fn visit_i64<E: Error>(self, trit: i64) -> Result<Self::Value, E> {
         i8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Btrit::try_convert(trit).map(Into::into)
+            .and_then(|trit| Utrit::try_from(trit)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Signed(trit), &self))
     }
@@ -134,14 +134,13 @@ impl<'de> Visitor<'de> for UtritVisitor {
     fn visit_u8<E: Error>(self, trit: u8) -> Result<Self::Value, E> {
         u8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Utrit::try_convert(trit)
+            .and_then(|trit| Utrit::try_from(trit)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Unsigned(trit as u64), &self))
     }
 
     fn visit_i8<E: Error>(self, trit: i8) -> Result<Self::Value, E> {
-        Btrit::try_convert(trit)
-            .map(Into::into)
+        Utrit::try_from(trit)
             .map_err(|_| E::invalid_value(Unexpected::Signed(trit as i64), &self))
     }
 }

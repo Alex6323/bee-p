@@ -17,6 +17,16 @@ fn serialize_generic<T: raw::RawEncodingBuf>()
     );
 }
 
+fn serialize_generic_unbalanced<T: raw::RawEncodingBuf>()
+    where <T::Slice as RawEncoding>::Trit: Serialize
+{
+    let (a, a_i8) = gen_buf_unbalanced::<T>(0..1000);
+    assert_eq!(
+        serde_json::to_string(&a).unwrap(),
+        format!("[{}]", a_i8.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(",")),
+    );
+}
+
 fn deserialize_generic<T: raw::RawEncodingBuf>()
     where <T::Slice as RawEncoding>::Trit: DeserializeOwned
 {
@@ -27,10 +37,20 @@ fn deserialize_generic<T: raw::RawEncodingBuf>()
     );
 }
 
+fn deserialize_generic_unbalanced<T: raw::RawEncodingBuf>()
+    where <T::Slice as RawEncoding>::Trit: DeserializeOwned
+{
+    let (a, a_i8) = gen_buf_unbalanced::<T>(0..1000);
+    assert_eq!(
+        serde_json::from_str::<TritBuf<T>>(&format!("[{}]", a_i8.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(","))).unwrap(),
+        a,
+    );
+}
+
 #[test]
 fn serialize() {
     serialize_generic::<T1B1Buf<Btrit>>();
-    serialize_generic::<T1B1Buf<Utrit>>();
+    serialize_generic_unbalanced::<T1B1Buf<Utrit>>();
     serialize_generic::<T2B1Buf>();
     serialize_generic::<T3B1Buf>();
     serialize_generic::<T4B1Buf>();
@@ -40,7 +60,7 @@ fn serialize() {
 #[test]
 fn deserialize() {
     deserialize_generic::<T1B1Buf<Btrit>>();
-    deserialize_generic::<T1B1Buf<Utrit>>();
+    deserialize_generic_unbalanced::<T1B1Buf<Utrit>>();
     deserialize_generic::<T2B1Buf>();
     deserialize_generic::<T3B1Buf>();
     deserialize_generic::<T4B1Buf>();
