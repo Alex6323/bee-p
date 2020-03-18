@@ -24,7 +24,7 @@ impl Endpoints {
     }
 
     pub fn insert(&mut self, ep: Endpoint) -> bool {
-        match self.inner.entry(ep.id.clone()) {
+        match self.inner.entry(ep.id) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
                 entry.insert(ep);
