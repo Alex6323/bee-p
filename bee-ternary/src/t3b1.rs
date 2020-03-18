@@ -4,7 +4,7 @@ use crate::{
     Utrit,
     RawEncoding,
     RawEncodingBuf,
-    ToggleTernary
+    ShiftTernary
 };
 
 const TPB: usize = 3;
@@ -31,7 +31,7 @@ impl T3B1 {
 
 fn extract(x: i8, elem: usize) -> Btrit {
     if elem < TPB {
-        Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8).toggle()
+        Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8).shift()
     } else {
         unreachable!("Attempted to extract invalid element {} from balanced T3B1", elem)
     }
@@ -39,7 +39,7 @@ fn extract(x: i8, elem: usize) -> Btrit {
 
 fn insert(x: i8, elem: usize, trit: Btrit) -> i8 {
     if elem < TPB {
-        let utrit = trit.toggle();
+        let utrit = trit.shift();
         let ux = x + BAL;
         let ux = ux + (utrit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
         ux - BAL

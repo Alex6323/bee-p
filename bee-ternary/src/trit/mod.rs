@@ -9,7 +9,7 @@ pub use self::{
 
 use std::fmt;
 
-pub trait Trit: Copy + Sized + fmt::Debug + PartialEq + ToggleTernary + From<i8> {
+pub trait Trit: Copy + Sized + fmt::Debug + PartialEq + ShiftTernary + From<i8> {
     type Repr: Copy;
 
     // TODO: Use std::convert::TryFrom
@@ -19,8 +19,8 @@ pub trait Trit: Copy + Sized + fmt::Debug + PartialEq + ToggleTernary + From<i8>
     fn zero() -> Self;
 }
 
-pub trait ToggleTernary: Sized {
-    type Target: ToggleTernary<Target=Self>;
+pub trait ShiftTernary: Sized {
+    type Target: ShiftTernary<Target=Self>;
 
-    fn toggle(self) -> Self::Target;
+    fn shift(self) -> Self::Target;
 }

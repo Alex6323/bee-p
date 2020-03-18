@@ -1,5 +1,5 @@
 use std::ops::Range;
-use crate::{Btrit, Utrit, RawEncoding, RawEncodingBuf, ToggleTernary};
+use crate::{Btrit, Utrit, RawEncoding, RawEncodingBuf, ShiftTernary};
 
 const TPB: usize = 5;
 const BAL: i8 = 121;
@@ -25,7 +25,7 @@ impl T5B1 {
 
 fn extract(x: i8, elem: usize) -> Btrit {
     if elem < TPB {
-        Utrit::from_u8((((x as i16 + BAL as i16) / 3i16.pow(elem as u32)) % 3) as u8).toggle()
+        Utrit::from_u8((((x as i16 + BAL as i16) / 3i16.pow(elem as u32)) % 3) as u8).shift()
     } else {
         unreachable!("Attempted to extract invalid element {} from balanced T5B1", elem)
     }
@@ -33,7 +33,7 @@ fn extract(x: i8, elem: usize) -> Btrit {
 
 fn insert(x: i8, elem: usize, trit: Btrit) -> i8 {
     if elem < TPB {
-        let utrit = trit.toggle();
+        let utrit = trit.shift();
         let ux = x as i16 + BAL as i16;
         let ux = ux + (utrit.into_u8() as i16 - (ux / 3i16.pow(elem as u32)) % 3) * 3i16.pow(elem as u32);
         (ux - BAL as i16) as i8

@@ -22,7 +22,7 @@ use crate::raw::{RawEncoding, RawEncodingBuf};
 
 // Reexports
 pub use crate::{
-    trit::{Trit, Utrit, Btrit, ToggleTernary},
+    trit::{Trit, Utrit, Btrit, ShiftTernary},
     t1b1::{T1B1, T1B1Buf},
     t2b1::{T2B1, T2B1Buf},
     t3b1::{T3B1, T3B1Buf},

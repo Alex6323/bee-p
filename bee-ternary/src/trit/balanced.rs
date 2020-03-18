@@ -1,5 +1,5 @@
 use std::fmt;
-use super::{Trit, Utrit, ToggleTernary};
+use super::{Trit, Utrit, ShiftTernary};
 
 #[repr(i8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -35,10 +35,10 @@ impl From<Utrit> for Btrit {
     }
 }
 
-impl ToggleTernary for Btrit {
+impl ShiftTernary for Btrit {
     type Target = Utrit;
 
-    fn toggle(self) -> Self::Target {
+    fn shift(self) -> Self::Target {
         use Btrit::*;
         match self {
             NegOne => Self::Target::Zero,

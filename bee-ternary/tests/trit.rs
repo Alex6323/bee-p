@@ -17,9 +17,9 @@ fn convert_correct() {
 
 #[test]
 fn convert_balanced() {
-    assert_eq!(Btrit::NegOne.toggle(), Utrit::Zero);
-    assert_eq!(Btrit::Zero.toggle(), Utrit::One);
-    assert_eq!(Btrit::PlusOne.toggle(), Utrit::Two);
+    assert_eq!(Btrit::NegOne.shift(), Utrit::Zero);
+    assert_eq!(Btrit::Zero.shift(), Utrit::One);
+    assert_eq!(Btrit::PlusOne.shift(), Utrit::Two);
 }
 
 #[test]
