@@ -28,6 +28,10 @@ pub enum Event {
         sender: BytesSender,
     },
 
+    LostConnection {
+        epid: EndpointId,
+    },
+
     EndpointConnected {
         epid: EndpointId,
         timestamp: u64,
@@ -68,6 +72,7 @@ impl fmt::Display for Event {
             }
 
             Event::NewConnection { ep, .. } => write!(f, "Event::NewConnection {{ epid = {:?} }}", ep.id,),
+            Event::LostConnection { epid, .. } => write!(f, "Event::LostConnection {{ epid = {:?} }}", epid,),
 
             Event::EndpointConnected { epid, timestamp, total } => write!(
                 f,

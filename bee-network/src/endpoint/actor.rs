@@ -90,6 +90,8 @@ impl EndpointActor {
                         break;
                     };
 
+                    debug!("[Endp ] Received {} command.", command);
+
                     match command {
                         Command::AddEndpoint { url, responder } => {
                             let res = add_endpoint(&mut contacts, url, &mut self.notifier).await?;
@@ -110,7 +112,7 @@ impl EndpointActor {
                             try_connect(epid, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
                         },
                         Command::Disconnect { epid, responder } => {
-                            let res = disconnect(epid, &mut connected, &mut outbox, &mut self.notifier).await?;
+                            let res = disconnect(epid, &mut connected, &mut outbox, &mut self.publisher).await?;
 
                             if let Some(responder) = responder {
                                 responder.send(res);
@@ -148,6 +150,8 @@ impl EndpointActor {
                         break;
                     };
 
+                    debug!("[Endp ] Received {} event.", event);
+
                     match event {
                         Event::EndpointAdded { epid, total } => {
                             self.publisher.send(Event::EndpointAdded { epid, total }).await;
@@ -167,15 +171,12 @@ impl EndpointActor {
                                 total: connected.num(),
                             }).await?
                         },
-                        Event::EndpointDisconnected { epid, total } => {
-                            self.publisher.send(Event::EndpointDisconnected {
-                                epid: epid.clone(),
-                                total,
-                            }).await?;
+                        Event::LostConnection { epid } => {
+                            disconnect(epid.clone(), &mut connected, &mut outbox, &mut self.publisher).await?;
 
                             // NOTE: 'try_connect' will check if 'epid' is part of the contact list
                             try_connect(epid, &mut contacts, &mut connected, None, &mut self.notifier).await?;
-                        },
+                        }
                         Event::BytesSent { epid, num } => {
                             self.publisher.send(Event::BytesSent {
                                 epid,
@@ -337,7 +338,7 @@ async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifie
 }
 
 #[inline(always)]
-async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, notifier: &mut Notifier) -> R<bool> {
+async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, publisher: &mut Publisher) -> R<bool> {
     let removed_recipient = outbox.remove(&epid);
     let removed_connected = connected.remove(&epid);
 
@@ -346,7 +347,7 @@ async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, 
     }
 
     if removed_connected {
-        notifier
+        publisher
             .send(Event::EndpointDisconnected {
                 epid,
                 total: connected.num(),

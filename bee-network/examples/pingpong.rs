@@ -36,7 +36,7 @@ fn main() {
     let args = Args::from_args();
     let config = args.make_config();
 
-    logger::init(log::LevelFilter::Debug);
+    logger::init(log::LevelFilter::Info);
 
     let (network, shutdown, events) = bee_network::init(config.host_addr.clone());
 
@@ -45,23 +45,40 @@ fn main() {
         .with_shutdown(shutdown)
         .build();
 
-    task::spawn(notification_handler(events));
+    task::spawn(notification_handler(events, network.clone(), args.msg.clone()));
 
     block_on(node.init(config));
-
-    //let msg = Utf8Message::new(&args.msg);
-    //std::thread::spawn(|| spam(network, msg, 50, 1000));
-
     block_on(node.shutdown());
 }
 
-async fn notification_handler(mut events: Events) {
+async fn notification_handler(mut events: Events, mut network: Network, msg: String) {
+    let network = &mut network;
+
     while let Some(event) = events.next().await {
-        //info!("[Node ] {:?} received", event);
+        info!("[Expl ] Received {:?} event.", event);
         match event {
+            Event::EndpointAdded { epid, total } => {
+                info!("[Expl ] Added endpoint {}. Now at {}.", epid, total);
+                network
+                    .send(Connect { epid, responder: None })
+                    .await
+                    .expect("error sending Connect command");
+            }
+            Event::EndpointConnected { epid, total, .. } => {
+                info!("[Expl ] Connected endpoint {}. Now at {}.", epid, total);
+                let msg = Utf8Message::new(&msg);
+                network
+                    .send(SendBytes {
+                        epid,
+                        bytes: msg.as_bytes(),
+                        responder: None,
+                    })
+                    .await
+                    .expect("error sinding SendBytes command");
+            }
             Event::BytesReceived { epid, bytes, .. } => {
                 info!(
-                    "[Expl ] Received: '{}' from peer {}",
+                    "[Expl ] Received bytes '{}' from peer {}",
                     Utf8Message::from_bytes(&bytes),
                     epid
                 );
@@ -88,26 +105,7 @@ impl Node {
     }
 
     pub async fn add_peer(&mut self, url: Url) {
-        self.network.send(AddEndpoint { url, responder: None }).await;
-    }
-
-    pub async fn send_msg(&mut self, message: Utf8Message, epid: EpId) {
-        self.network
-            .send(SendBytes {
-                epid,
-                bytes: message.as_bytes(),
-                responder: None,
-            })
-            .await;
-    }
-
-    pub async fn broadcast_msg(&mut self, message: Utf8Message) {
-        self.network
-            .send(BroadcastBytes {
-                bytes: message.as_bytes(),
-                responder: None,
-            })
-            .await;
+        self.network.send(AddEndpoint { url, responder: None }).await.unwrap();
     }
 
     pub async fn shutdown(self) {

@@ -60,8 +60,8 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
             Ok(spawn_connection_workers(conn, notifier).await?)
         }
         Err(e) => {
-            error!("[TCP  ] Connection attempt failed (Endpoint offline?).");
-            error!("[TCP  ] Error was: {:?}.", e);
+            warn!("[TCP  ] Connection attempt failed (Endpoint offline?).");
+            warn!("[TCP  ] Error was: {:?}.", e);
             Err(ConnectionError::ConnectionAttemptFailed)
         }
     }
@@ -144,7 +144,7 @@ async fn writer(
     match sd.send(()) {
         Ok(_) => (),
         Err(_) => {
-            error!("[TCP  ] Failed to send shutdown signal to reader task");
+            warn!("[TCP  ] Failed to send shutdown signal to reader task");
         }
     }
 
@@ -171,9 +171,16 @@ async fn reader(
                     Ok(num_read) => {
                         if num_read == 0 {
                             warn!("[TCP  ] Received an empty message (0 bytes).");
-                            continue;
+                            //continue;
+
+                            // TODO: this can probably be spawned
+                            notifier.send(Event::LostConnection {
+                                epid: epid.clone(),
+                            }).await;
+
+                            break;
                         } else {
-                            let mut bytes = Vec::with_capacity(num_read);
+                            let mut bytes = vec![0u8; num_read];
                             bytes.copy_from_slice(&buffer[0..num_read]);
 
                             match notifier.send(Event::BytesReceived {
@@ -199,5 +206,5 @@ async fn reader(
             }
         }
     }
-    debug!("[TCP  ] Connection reader event loop for ({:?}) stopped.", epid);
+    debug!("[TCP  ] Connection reader event loop for {:?} stopped.", epid);
 }
