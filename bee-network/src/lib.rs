@@ -1,25 +1,37 @@
 #![recursion_limit = "1024"]
 
-pub mod address;
-pub mod commands;
-pub mod endpoint;
-pub mod errors;
-pub mod events;
-pub mod network;
-pub mod shutdown;
+pub use address::{
+    url::Url,
+    Address,
+};
+pub use commands::Command;
+pub use endpoint::{
+    Endpoint,
+    EndpointId,
+};
+pub use events::{
+    Event,
+    EventSubscriber,
+};
+pub use network::Network;
+pub use shutdown::Shutdown;
 
+mod address;
+mod commands;
 mod constants;
+mod endpoint;
+mod errors;
+mod events;
+mod network;
+mod shutdown;
 mod tcp;
 mod udp;
 mod utils;
 
-use crate::address::Address;
-use crate::endpoint::actor::EndpointActor as EdpActor;
-use crate::events::EventSubscriber as Events;
-use crate::network::Network;
-use crate::shutdown::Shutdown;
-use crate::tcp::actor::TcpActor;
-//use crate::udp::actor::UdpActor;
+use endpoint::actor::EndpointActor as EdpActor;
+use events::EventSubscriber as Events;
+use tcp::actor::TcpActor;
+//use udp::actor::UdpActor;
 
 use async_std::task::spawn;
 use futures::channel::oneshot;

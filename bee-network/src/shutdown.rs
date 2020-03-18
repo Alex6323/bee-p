@@ -32,15 +32,16 @@ impl Shutdown {
         self.tasks.len()
     }
 
+    // TODO: error handling
     pub async fn execute(self) {
         let mut tasks = self.tasks;
 
         for notifier in self.notifiers {
-            notifier.send(()).expect("error executing shutdown");
+            notifier.send(()).expect("error sending shutdown signal to task");
         }
 
         for task in &mut tasks {
-            task.await;
+            task.await.expect("error waiting for task to finish");
         }
     }
 }
