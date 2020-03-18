@@ -1,11 +1,12 @@
-use crate::address::url::Protocol;
 use crate::address::Address;
 use crate::commands::Responder;
-use crate::connection::BytesSender;
-use crate::endpoint::EndpointId;
+use crate::endpoint::{
+    outbox::BytesSender,
+    Endpoint,
+    EndpointId,
+};
 
 use futures::channel::mpsc;
-
 use std::fmt;
 
 const EVENT_CHAN_CAPACITY: usize = 10000;
@@ -23,9 +24,7 @@ pub enum Event {
     },
 
     NewConnection {
-        epid: EndpointId,
-        addr: Address,
-        prot: Protocol,
+        ep: Endpoint,
         sender: BytesSender,
     },
 
@@ -41,18 +40,18 @@ pub enum Event {
     },
 
     BytesSent {
-        to: EndpointId,
+        epid: EndpointId,
         num: usize,
     },
 
     BytesReceived {
-        from: EndpointId,
-        with_addr: Address,
+        epid: EndpointId,
+        addr: Address,
         bytes: Vec<u8>,
     },
 
     TryConnect {
-        to: EndpointId,
+        epid: EndpointId,
         responder: Option<Responder<bool>>,
     },
 }
@@ -68,11 +67,7 @@ impl fmt::Display for Event {
                 write!(f, "Event::EndpointRemoved {{ epid = {:?}, total = {} }}", epid, total)
             }
 
-            Event::NewConnection { epid, addr, prot, .. } => write!(
-                f,
-                "Event::NewConnection {{ epid = {:?}, addr = {}, protocol = {:?} }}",
-                epid, addr, prot,
-            ),
+            Event::NewConnection { ep, .. } => write!(f, "Event::NewConnection {{ epid = {:?} }}", ep.id,),
 
             Event::EndpointConnected { epid, timestamp, total } => write!(
                 f,
@@ -86,17 +81,17 @@ impl fmt::Display for Event {
                 epid, total
             ),
 
-            Event::BytesSent { to, num } => write!(f, "Event::BytesSent {{ to = {}, num = {} }}", to, num),
+            Event::BytesSent { epid, num } => write!(f, "Event::BytesSent {{ epid = {}, num = {} }}", epid, num),
 
-            Event::BytesReceived { from, with_addr, bytes } => write!(
+            Event::BytesReceived { epid, addr, bytes } => write!(
                 f,
-                "Event::BytesReceived {{ from = {}, with_addr = {}, num = {} }}",
-                from,
-                with_addr,
+                "Event::BytesReceived {{ epid = {}, addr = {}, num = {} }}",
+                epid,
+                addr,
                 bytes.len()
             ),
 
-            Event::TryConnect { to, .. } => write!(f, "Event::TryConnect {{ to = {} }}", to),
+            Event::TryConnect { epid, .. } => write!(f, "Event::TryConnect {{ epid = {} }}", epid),
         }
     }
 }

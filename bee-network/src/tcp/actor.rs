@@ -5,7 +5,7 @@ use crate::events::EventPublisher as Publisher;
 use crate::shutdown::ShutdownListener as Shutdown;
 
 use super::connection::{
-    ConnectionType,
+    Role,
     TcpConnection,
 };
 use super::spawn_connection_workers;
@@ -47,7 +47,7 @@ impl TcpActor {
                     if let Some(stream) = stream {
                         match stream {
                             Ok(stream) => {
-                                let conn = match TcpConnection::new(stream, ConnectionType::Accepted) {
+                                let conn = match TcpConnection::new(stream, Role::Server) {
                                     Ok(conn) => conn,
                                     Err(e) => {
                                         error!["TCP  ] Error creating TCP connection (Stream immediatedly aborted?)."];
@@ -57,9 +57,9 @@ impl TcpActor {
                                 };
 
                                 debug!(
-                                    "TCP  ] Sucessfully connected to endpoint {:?} ({:?}).",
-                                    conn.epid,
-                                    ConnectionType::Accepted
+                                    "TCP  ] Sucessfully established connection to {:?} ({:?}).",
+                                    conn.remote_addr,
+                                    Role::Server
                                 );
 
                                 match spawn_connection_workers(conn, self.notifier.clone()).await {

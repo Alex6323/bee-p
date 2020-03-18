@@ -8,11 +8,12 @@ use crate::commands::{
     Command,
     Responder,
 };
-use crate::connection::ConnectionPool;
-use crate::endpoint::pool::EndpointPool;
+use crate::constants::CONNECT_INTERVAL;
 use crate::endpoint::{
-    Endpoint,
-    EndpointId,
+    outbox::Outbox,
+    store::Endpoints,
+    Endpoint as Ep,
+    EndpointId as EpId,
 };
 use crate::errors::{
     ActorResult as R,
@@ -24,9 +25,9 @@ use crate::events::EventPublisher as Publisher;
 use crate::events::EventSubscriber as Events;
 use crate::shutdown::ShutdownListener as Shutdown;
 use crate::tcp;
+use crate::utils::time;
 
 use async_std::prelude::*;
-use async_std::sync::Arc;
 use async_std::task::{
     self,
     spawn,
@@ -39,8 +40,6 @@ use futures::{
 use log::*;
 
 use std::time::Duration;
-
-const CONNECT_INTERVAL: u64 = 5000;
 
 pub struct EndpointActor {
     commands: Commands,
@@ -70,11 +69,11 @@ impl EndpointActor {
     pub async fn run(mut self) -> S {
         debug!("[Endp ] Starting actor");
 
-        let mut servers = EndpointPool::new();
-        let mut clients = EndpointPool::new();
+        let mut contacts = Endpoints::new();
 
-        let mut tconns = ConnectionPool::new();
-        let mut uconns = ConnectionPool::new();
+        // TODO: those two probably need to be merged as each connected endpoint is also part of the outbox
+        let mut connected = Endpoints::new();
+        let mut outbox = Outbox::new();
 
         let commands = &mut self.commands;
         let events = &mut self.events;
@@ -93,46 +92,46 @@ impl EndpointActor {
 
                     match command {
                         Command::AddEndpoint { url, responder } => {
-                            let res = add_endpoint(&mut servers, &clients, url, &mut self.notifier).await?;
+                            let res = add_endpoint(&mut contacts, url, &mut self.notifier).await?;
 
                             if let Some(responder) = responder {
                                 responder.send(res);
                             }
                         },
-                        Command::RemoveEndpoint { id, responder } => {
-                            let res = rem_endpoint(&mut servers, &mut clients, &mut tconns, &mut uconns, id,
+                        Command::RemoveEndpoint { epid, responder } => {
+                            let res = rem_endpoint(epid, &mut contacts, &mut connected, &mut outbox,
                                 &mut self.notifier).await?;
 
                             if let Some(responder) = responder {
                                 responder.send(res);
                             }
                         },
-                        Command::Connect { to, responder } => {
-                            try_connect(&mut servers, to, responder, &mut self.notifier).await?;
+                        Command::Connect { epid, responder } => {
+                            try_connect(epid, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
                         },
-                        Command::Disconnect { from, responder } => {
-                            let res = disconnect(&mut servers, &mut clients, &mut tconns, &mut uconns, from, &mut self.notifier).await?;
+                        Command::Disconnect { epid, responder } => {
+                            let res = disconnect(epid, &mut connected, &mut outbox, &mut self.notifier).await?;
 
                             if let Some(responder) = responder {
                                 responder.send(res);
                             }
                         },
-                        Command::SendBytes { to, bytes, responder } => {
-                            let res = send_bytes(&mut tconns, &mut uconns, bytes, &to).await?;
+                        Command::SendBytes { epid, bytes, responder } => {
+                            let res = send_bytes(&epid, bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
                                 responder.send(res);
                             }
                         },
-                        Command::MulticastBytes { to, bytes, responder } => {
-                            let res = multicast_bytes(&mut tconns, &mut uconns, bytes, &to).await?;
+                        Command::MulticastBytes { epids, bytes, responder } => {
+                            let res = multicast_bytes(&epids, bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
                                 responder.send(res);
                             }
                         },
                         Command::BroadcastBytes { bytes, responder } => {
-                            let res = broadcast_bytes(&mut tconns, &mut uconns, bytes).await?;
+                            let res = broadcast_bytes(bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
                                 responder.send(res);
@@ -156,24 +155,44 @@ impl EndpointActor {
                         Event::EndpointRemoved { epid, total } => {
                             self.publisher.send(Event::EndpointRemoved { epid, total }).await;
                         },
-                        Event::NewConnection { epid, addr, prot, sender } => {
-                            // TODO
-                        },
-                        Event::EndpointConnected { epid, timestamp, total } => {
-                            // TODO
+                        Event::NewConnection { ep, sender } => {
+                            let epid = ep.id.clone();
+
+                            outbox.insert(epid.clone(), sender);
+                            connected.insert(ep);
+
+                            self.publisher.send(Event::EndpointConnected {
+                                epid,
+                                timestamp: time::timestamp_millis(),
+                                total: connected.num(),
+                            }).await?
                         },
                         Event::EndpointDisconnected { epid, total } => {
-                            // TODO
+                            self.publisher.send(Event::EndpointDisconnected {
+                                epid: epid.clone(),
+                                total,
+                            }).await?;
+
+                            // NOTE: 'try_connect' will check if 'epid' is part of the contact list
+                            try_connect(epid, &mut contacts, &mut connected, None, &mut self.notifier).await?;
                         },
-                        Event::BytesSent { to, num } => {
-                            // TODO
+                        Event::BytesSent { epid, num } => {
+                            self.publisher.send(Event::BytesSent {
+                                epid,
+                                num,
+                            }).await?
                         },
-                        Event::BytesReceived { from, with_addr, bytes } => {
-                            // TODO
+                        Event::BytesReceived { epid, addr, bytes } => {
+                            self.publisher.send(Event::BytesReceived {
+                                epid,
+                                addr,
+                                bytes,
+                            }).await?
                         },
-                        Event::TryConnect { to, responder } => {
-                            try_connect(&mut servers, to, responder, &mut self.notifier).await?;
+                        Event::TryConnect { epid, responder } => {
+                            try_connect(epid, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
                         }
+                        _ => (),
                     }
                 },
 
@@ -189,22 +208,15 @@ impl EndpointActor {
 }
 
 #[inline(always)]
-async fn add_endpoint(
-    servers: &mut EndpointPool,
-    clients: &EndpointPool,
-    url: Url,
-    notifier: &mut Notifier,
-) -> R<bool> {
-    let ep = Endpoint::from_url(url.clone());
+async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> R<bool> {
+    let ep = Ep::from_url(url.clone());
     let epid = ep.id.clone();
 
-    let added_server = servers.insert(ep);
-
-    if added_server {
+    if contacts.insert(ep) {
         notifier
             .send(Event::EndpointAdded {
                 epid,
-                total: servers.size() + clients.size(),
+                total: contacts.num(),
             })
             .await?;
         Ok(true)
@@ -215,25 +227,26 @@ async fn add_endpoint(
 
 #[inline(always)]
 async fn rem_endpoint(
-    servers: &mut EndpointPool,
-    clients: &mut EndpointPool,
-    tconns: &mut ConnectionPool,
-    uconns: &mut ConnectionPool,
-    epid: EndpointId,
+    epid: EpId,
+    contacts: &mut Endpoints,
+    connected: &mut Endpoints,
+    outbox: &mut Outbox,
     notifier: &mut Notifier,
 ) -> R<bool> {
-    // NOTE: current default behavior is to drop connections as well
-    tconns.remove(&epid);
-    uconns.remove(&epid);
+    // NOTE: current default behavior is to drop connections once the contact is removed
+    let removed_recipient = outbox.remove(&epid);
+    let removed_contact = contacts.remove(&epid);
+    let removed_connected = connected.remove(&epid);
 
-    let removed_server = servers.remove(&epid);
-    let removed_client = clients.remove(&epid);
+    if removed_connected && !removed_recipient {
+        warn!("[Endp ] Removed an endpoint that was connected, but couldn't be sent to.");
+    }
 
-    if removed_server || removed_client {
+    if removed_contact || removed_connected {
         notifier
             .send(Event::EndpointRemoved {
                 epid,
-                total: clients.size() + servers.size(),
+                total: contacts.num(),
             })
             .await?;
         Ok(true)
@@ -244,17 +257,23 @@ async fn rem_endpoint(
 
 #[inline(always)]
 async fn try_connect(
-    servers: &mut EndpointPool,
-    epid: EndpointId,
+    epid: EpId,
+    contacts: &mut Endpoints,
+    connected: &mut Endpoints,
     responder: Option<Responder<bool>>,
     notifier: &mut Notifier,
 ) -> R<bool> {
     // Try to find the endpoint in our servers list.
-    if let Some(ep) = servers.get_mut(&epid) {
-        // If already connected, do nothing.
-        if ep.is_connected() {
+    if let Some(ep) = contacts.get_mut(&epid) {
+        //if ep.is_connected() {
+        if connected.contains(&ep.id) {
             if let Some(responder) = responder {
-                responder.send(false);
+                match responder.send(false) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        error!("[Endp ] Failed to send response: {}", e);
+                    }
+                }
             }
             Ok(false)
         } else {
@@ -262,16 +281,22 @@ async fn try_connect(
                 Protocol::Tcp => {
                     // If the connection attempt succeeds, change the endpoint's state.
                     if tcp::try_connect(&ep.id, &ep.address, notifier.clone()).await.is_ok() {
-                        ep.set_connected();
+                        //ep.set_connected();
+                        connected.insert(ep.clone());
                         if let Some(responder) = responder {
-                            responder.send(true);
+                            match responder.send(true) {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    error!("[Endp ] Failed to send response: {}", e);
+                                }
+                            }
                         }
                         Ok(true)
                     } else {
                         // If connection attempt fails, issue a `TryConnect` event after a certain delay.
                         // NOTE: It won't be raised, if the endpoint has been removed in the mean time.
                         spawn(raise_event_after_delay(
-                            Event::TryConnect { to: epid, responder },
+                            Event::TryConnect { epid, responder },
                             CONNECT_INTERVAL,
                             notifier.clone(),
                         ));
@@ -280,7 +305,12 @@ async fn try_connect(
                 }
                 Protocol::Udp => {
                     if let Some(responder) = responder {
-                        responder.send(true);
+                        match responder.send(true) {
+                            Ok(_) => (),
+                            Err(e) => {
+                                error!("[Endp ] Failed to send response: {}", e);
+                            }
+                        }
                     }
                     Ok(true)
                 }
@@ -288,7 +318,12 @@ async fn try_connect(
         }
     } else {
         if let Some(responder) = responder {
-            responder.send(false);
+            match responder.send(false) {
+                Ok(_) => (),
+                Err(e) => {
+                    error!("[Endp ] Failed to send response: {}", e);
+                }
+            }
         }
         Ok(false)
     }
@@ -302,30 +337,19 @@ async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifie
 }
 
 #[inline(always)]
-async fn disconnect(
-    servers: &mut EndpointPool,
-    clients: &mut EndpointPool,
-    tconns: &mut ConnectionPool,
-    uconns: &mut ConnectionPool,
-    epid: EndpointId,
-    notifier: &mut Notifier,
-) -> R<bool> {
-    // NOTE: By removing the `BytesSender`s we are exiting their event loops,
-    // which completes their futures/finishes their tasks handling the connection.
-    let removed_tconn = tconns.remove(&epid);
-    let removed_uconn = uconns.remove(&epid);
+async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, notifier: &mut Notifier) -> R<bool> {
+    let removed_recipient = outbox.remove(&epid);
+    let removed_connected = connected.remove(&epid);
 
-    if removed_tconn || removed_uconn {
-        if let Some(server_ep) = servers.get_mut(&epid) {
-            server_ep.set_disconnected();
-        } else if let Some(client_ep) = clients.get_mut(&epid) {
-            client_ep.set_disconnected();
-        }
+    if removed_connected && !removed_recipient {
+        warn!("[Endp ] Removed an endpoint that was connected, but couldn't be sent to.");
+    }
 
+    if removed_connected {
         notifier
             .send(Event::EndpointDisconnected {
                 epid,
-                total: tconns.size() + uconns.size(),
+                total: connected.num(),
             })
             .await?;
         Ok(true)
@@ -335,47 +359,16 @@ async fn disconnect(
 }
 
 #[inline(always)]
-async fn send_bytes(
-    tconns: &mut ConnectionPool,
-    uconns: &mut ConnectionPool,
-    bytes: Vec<u8>,
-    receiver: &EndpointId,
-) -> R<bool> {
-    let bytes = Arc::new(bytes);
-
-    // FIXME: Make it so that we can spawn two tasks (so that sending can happen in parallel)
-
-    let sent_over_tcp = tconns.send(Arc::clone(&bytes), receiver).await?;
-    let sent_over_udp = uconns.send(bytes, receiver).await?;
-
-    Ok(sent_over_tcp || sent_over_udp)
+async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+    Ok(outbox.send(bytes, recipient).await?)
 }
 
 #[inline(always)]
-async fn multicast_bytes(
-    tconns: &mut ConnectionPool,
-    uconns: &mut ConnectionPool,
-    bytes: Vec<u8>,
-    receivers: &Vec<EndpointId>,
-) -> R<bool> {
-    let bytes = Arc::new(bytes);
-
-    // FIXME: Make it so that we can spawn two tasks (so that sending can happen in parallel)
-
-    let sent_over_tcp = tconns.multicast(Arc::clone(&bytes), receivers).await?;
-    let sent_over_udp = uconns.multicast(bytes, receivers).await?;
-
-    Ok(sent_over_tcp || sent_over_udp)
+async fn multicast_bytes(recipients: &Vec<EpId>, bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+    Ok(outbox.multicast(bytes, recipients).await?)
 }
 
 #[inline(always)]
-async fn broadcast_bytes(tconns: &mut ConnectionPool, uconns: &mut ConnectionPool, bytes: Vec<u8>) -> R<bool> {
-    let bytes = Arc::new(bytes);
-
-    // FIXME: Make it so that we can spawn two tasks (so that sending can happen in parallel)
-
-    let sent_over_tcp = tconns.broadcast(Arc::clone(&bytes)).await?;
-    let sent_over_udp = uconns.broadcast(bytes).await?;
-
-    Ok(sent_over_tcp || sent_over_udp)
+async fn broadcast_bytes(bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+    Ok(outbox.broadcast(bytes).await?)
 }

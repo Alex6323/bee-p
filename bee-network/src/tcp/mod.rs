@@ -2,7 +2,7 @@ pub mod actor;
 pub mod connection;
 
 use connection::{
-    ConnectionType,
+    Role,
     TcpConnection,
 };
 
@@ -10,12 +10,15 @@ use crate::address::{
     url::Protocol,
     Address,
 };
-use crate::connection::{
-    bytes_channel,
-    BytesReceiver,
-};
 use crate::constants::MAX_BUFFER_SIZE;
 use crate::endpoint::EndpointId as EpId;
+use crate::endpoint::{
+    outbox::{
+        bytes_channel,
+        BytesReceiver,
+    },
+    Endpoint,
+};
 use crate::errors::{
     ConnectionError,
     ConnectionSuccess as S,
@@ -39,7 +42,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
 
     match TcpStream::connect(**addr).await {
         Ok(stream) => {
-            let conn = match TcpConnection::new(stream, ConnectionType::Initiated) {
+            let conn = match TcpConnection::new(stream, Role::Client) {
                 Ok(conn) => conn,
                 Err(e) => {
                     error!["TCP  ] Error creating TCP connection (Stream immediatedly aborted?)."];
@@ -49,9 +52,9 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
             };
 
             debug!(
-                "TCP  ] Sucessfully connected to endpoint {:?} ({:?}).",
-                conn.epid,
-                ConnectionType::Initiated
+                "TCP  ] Sucessfully established connection to {:?} ({:?}).",
+                conn.remote_addr,
+                Role::Client
             );
 
             Ok(spawn_connection_workers(conn, notifier).await?)
@@ -67,15 +70,16 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
 pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> S {
     debug!("[TCP  ] Spawning TCP connection workers...");
 
-    let epid = conn.epid.clone();
     let addr: Address = conn.remote_addr.into();
-    let prot = Protocol::Tcp;
+    let proto = Protocol::Tcp;
+
+    let ep = Endpoint::new(addr.clone(), proto);
 
     let (sender, receiver) = bytes_channel();
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
 
     spawn(writer(
-        epid.clone(),
+        ep.id.clone(),
         conn.stream.clone(),
         receiver,
         notifier.clone(),
@@ -83,21 +87,14 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
     ));
 
     spawn(reader(
-        epid.clone(),
-        addr.clone(),
+        ep.id.clone(),
+        addr,
         conn.stream.clone(),
         notifier.clone(),
         shutdown_receiver,
     ));
 
-    Ok(notifier
-        .send(Event::NewConnection {
-            epid,
-            addr,
-            prot,
-            sender,
-        })
-        .await?)
+    Ok(notifier.send(Event::NewConnection { ep, sender }).await?)
 }
 
 async fn writer(
@@ -121,7 +118,7 @@ async fn writer(
                             // TODO: Is this event interesting at all, because if not, then
                             // we should not raise it and spare resources
                             match notifier.send(Event::BytesSent {
-                                to: epid.clone(),
+                                epid: epid.clone(),
                                 num: bytes_out.len(),
                             }).await {
                                 Ok(_) => (),
@@ -180,8 +177,8 @@ async fn reader(
                             bytes.copy_from_slice(&buffer[0..num_read]);
 
                             match notifier.send(Event::BytesReceived {
-                                from: epid.clone(),
-                                with_addr: addr.clone(),
+                                epid: epid.clone(),
+                                addr: addr.clone(),
                                 bytes,
                             }).await {
                                 Ok(_) => (),

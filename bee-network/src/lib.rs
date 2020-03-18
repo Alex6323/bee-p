@@ -2,7 +2,6 @@
 
 pub mod address;
 pub mod commands;
-pub mod connection;
 pub mod endpoint;
 pub mod errors;
 pub mod events;
@@ -12,6 +11,7 @@ pub mod shutdown;
 mod constants;
 mod tcp;
 mod udp;
+mod utils;
 
 use crate::address::Address;
 use crate::endpoint::actor::EndpointActor as EdpActor;

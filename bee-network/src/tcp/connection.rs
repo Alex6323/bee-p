@@ -1,41 +1,35 @@
-use crate::address::Address;
-use crate::endpoint::EndpointId as EpId;
 use crate::errors::ConnectionResult as R;
 
 use async_std::net::{
     SocketAddr,
     TcpStream,
 };
-use async_std::prelude::*;
 use async_std::sync::Arc;
 
 use std::fmt;
 
 #[derive(Clone, Debug)]
-pub enum ConnectionType {
-    Initiated,
-    Accepted,
+pub enum Role {
+    Client,
+    Server,
 }
 
 #[derive(Clone)]
 pub struct TcpConnection {
-    pub epid: EpId,
-    pub r#type: ConnectionType,
+    pub role: Role,
     pub local_addr: SocketAddr,
     pub remote_addr: SocketAddr,
     pub stream: Arc<TcpStream>,
 }
 
 impl TcpConnection {
-    pub fn new(stream: TcpStream, r#type: ConnectionType) -> R<Self> {
+    pub fn new(stream: TcpStream, role: Role) -> R<Self> {
         let local_addr = stream.local_addr()?;
         let remote_addr = stream.peer_addr()?;
-        let epid = Address::from(remote_addr).into();
         let stream = Arc::new(stream);
 
         Ok(Self {
-            epid,
-            r#type,
+            role,
             local_addr,
             remote_addr,
             stream,

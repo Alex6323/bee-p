@@ -23,28 +23,28 @@ pub enum Command {
     },
 
     RemoveEndpoint {
-        id: EndpointId,
+        epid: EndpointId,
         responder: Option<Responder<bool>>,
     },
 
     Connect {
-        to: EndpointId,
+        epid: EndpointId,
         responder: Option<Responder<bool>>,
     },
 
     Disconnect {
-        from: EndpointId,
+        epid: EndpointId,
         responder: Option<Responder<bool>>,
     },
 
     SendBytes {
-        to: EndpointId,
+        epid: EndpointId,
         bytes: Vec<u8>,
         responder: Option<Responder<bool>>,
     },
 
     MulticastBytes {
-        to: Vec<EndpointId>,
+        epids: Vec<EndpointId>,
         bytes: Vec<u8>,
         responder: Option<Responder<bool>>,
     },
@@ -60,16 +60,16 @@ impl fmt::Display for Command {
         match self {
             Command::AddEndpoint { url, .. } => write!(f, "Command::AddEndpoint {{ url = {:?} }} ", url),
 
-            Command::RemoveEndpoint { id, .. } => write!(f, "Command::RemoveEndpoint {{ id = {:?} }}", id),
+            Command::RemoveEndpoint { epid, .. } => write!(f, "Command::RemoveEndpoint {{ epid = {:?} }}", epid),
 
-            Command::Connect { to, .. } => write!(f, "Command::Connect {{ to = {:?} }}", to),
+            Command::Connect { epid, .. } => write!(f, "Command::Connect {{ epid = {:?} }}", epid),
 
-            Command::Disconnect { from, .. } => write!(f, "Command::Disconnect {{ from = {:?} }}", from),
+            Command::Disconnect { epid, .. } => write!(f, "Command::Disconnect {{ epid = {:?} }}", epid),
 
-            Command::SendBytes { to, .. } => write!(f, "Command::UnicastBytes {{ to = {:?} }}", to),
+            Command::SendBytes { epid, .. } => write!(f, "Command::UnicastBytes {{ epid = {:?} }}", epid),
 
-            Command::MulticastBytes { to, .. } => {
-                write!(f, "Command::MulticastBytes {{ num_endpoints = {} }}", to.len())
+            Command::MulticastBytes { epids, .. } => {
+                write!(f, "Command::MulticastBytes {{ num_endpoints = {} }}", epids.len())
             }
 
             Command::BroadcastBytes { .. } => write!(f, "Command::BroadcastBytes"),

@@ -1,5 +1,6 @@
 pub mod actor;
-pub mod pool;
+pub mod outbox;
+pub mod store;
 
 use crate::address::url::{
     Protocol,
@@ -42,32 +43,31 @@ pub enum EndpointState {
     Connected,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Endpoint {
     pub id: EndpointId,
     pub address: Address,
     pub protocol: Protocol,
-    pub state: EndpointState,
+    //pub state: EndpointState,
 }
 
 impl Endpoint {
+    pub fn new(address: Address, protocol: Protocol) -> Self {
+        Self {
+            id: address.clone().into(),
+            address,
+            protocol,
+            //state: EndpointState::Disconnected,
+        }
+    }
     pub fn from_url(url: Url) -> Self {
         let address = url.address().clone();
         let protocol = url.protocol();
 
-        let state = match protocol {
-            Protocol::Tcp => EndpointState::Disconnected,
-            Protocol::Udp => EndpointState::Connected,
-        };
-
-        Self {
-            id: url.into(),
-            address,
-            protocol,
-            state,
-        }
+        Endpoint::new(address, protocol)
     }
 
+    /*
     pub fn is_connected(&self) -> bool {
         self.state == EndpointState::Connected
     }
@@ -83,6 +83,7 @@ impl Endpoint {
     pub fn set_disconnected(&mut self) {
         self.state = EndpointState::Disconnected;
     }
+    */
 }
 
 impl Eq for Endpoint {}

@@ -10,16 +10,16 @@ use std::collections::hash_map::{
 };
 use std::collections::HashMap;
 
-pub struct EndpointPool {
+pub struct Endpoints {
     inner: HashMap<EndpointId, Endpoint>,
 }
 
-impl EndpointPool {
+impl Endpoints {
     pub fn new() -> Self {
         Self { inner: HashMap::new() }
     }
 
-    pub fn size(&self) -> usize {
+    pub fn num(&self) -> usize {
         self.inner.len()
     }
 
