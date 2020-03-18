@@ -1,4 +1,7 @@
-use std::convert::Infallible;
+use std::convert::{
+    Infallible,
+    TryInto,
+};
 
 use crate::Sponge;
 use bee_ternary::{Btrit, Trits, TritBuf};
@@ -55,9 +58,11 @@ impl CurlP {
             assert!(input.len() <= STATE_LEN);
             assert!(output.len() <= STATE_LEN);
 
+            // Unwrapping here and below is acceptable because we have verified that
+            // `calculate_truth_table_index` and `TRUTH_TABLE` always yield a value in {-1, 0, 1}
             output.set(0, TRUTH_TABLE[
                 calculate_truth_table_index(input, 0, HALF_STATE_LEN)
-            ].into());
+            ].try_into().unwrap());
 
             for state_index in 0..HALF_STATE_LEN {
                 let left_idx = HALF_STATE_LEN - state_index;
@@ -65,12 +70,12 @@ impl CurlP {
 
                 output.set(2 * state_index + 1, TRUTH_TABLE[
                     calculate_truth_table_index(input, left_idx, right_idx)
-                ].into());
+                ].try_into().unwrap());
 
                 let left_idx = left_idx - 1;
                 output.set(2 * state_index + 2, TRUTH_TABLE[
                     calculate_truth_table_index(input, right_idx, left_idx)
-                ].into());
+                ].try_into().unwrap());
             }
         }
 
