@@ -2,7 +2,7 @@ use std::fmt;
 use super::{Trit, Utrit, ShiftTernary};
 
 #[repr(i8)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Btrit {
     NegOne = -1,
     Zero = 0,

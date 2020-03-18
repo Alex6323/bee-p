@@ -2,7 +2,7 @@ use std::fmt;
 use super::{Trit, Btrit, ShiftTernary};
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Utrit {
     Zero = 0,
     One = 1,
