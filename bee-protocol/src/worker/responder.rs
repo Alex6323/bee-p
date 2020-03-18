@@ -18,7 +18,7 @@ pub(crate) enum ResponderWorkerEvent {
 }
 
 pub(crate) struct ResponderWorker {
-    // TODO network or dedicated sender ?
+    // TODO Dedicated sender with backpressure
     network: Network,
     receiver: Receiver<ResponderWorkerEvent>,
 }
@@ -35,12 +35,31 @@ impl ResponderWorker {
         while let Some(event) = self.receiver.next().await {
             if let (peer_id, Some(transaction)) = match event {
                 ResponderWorkerEvent::TransactionRequest { peer_id, message } => {
-                    // TODO Tangle lookup
+                    // TODO
+                    // if let Some(transaction) = tangle.get_transaction(message.hash) {
+                    //     (peer_id, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
+                    // }
+                    // (peer_id, None)
+
+                    // TODO remove
                     (peer_id, Some(TransactionBroadcast::new(&[0; 500])))
                 }
                 ResponderWorkerEvent::MilestoneRequest { peer_id, message } => {
-                    // TODO Tangle lookup
+                    // TODO
+                    // let index = if message.index == 0 {
+                    //     tangle.get_latest_milestone_index()
+                    // } else {
+                    //     message.index
+                    // }
+                    // if let Some(transaction) = tangle.get_milestone(index) {
+                    //     (peer_id, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
+                    // }
+                    // (peer_id, None)
+
+                    // TODO remove
                     (peer_id, Some(TransactionBroadcast::new(&[0; 500])))
+
+                    // TODO send complete ms bundle ?
                 }
             } {
                 self.network
