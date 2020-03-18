@@ -26,7 +26,7 @@ pub(crate) enum ReceiverWorkerEvent {
 
 enum ReceiverWorkerMessageState {
     Header { offset: usize },
-    Payload { offset: usize, header: Header },
+    Payload { header: Header, offset: usize },
 }
 
 struct AwaitingConnectionContext {}
@@ -206,13 +206,13 @@ impl ReceiverWorker {
                             } else {
                                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                                     state: ReceiverWorkerMessageState::Payload {
-                                        offset: 0,
                                         header: header,
+                                        offset: 0,
                                     },
                                 })
                             }
                         }
-                        ReceiverWorkerMessageState::Payload { offset, header } => {
+                        ReceiverWorkerMessageState::Payload { header, offset } => {
                             self.check_handshake(header, &bytes[..bytes.len()])
                         }
                     }
@@ -349,18 +349,18 @@ impl ReceiverWorker {
                                 }
 
                                 ReceiverWorkerMessageState::Payload {
-                                    offset: offset + 3,
                                     header: Header::from_bytes(&bytes[offset..offset + 3]),
+                                    offset: offset + 3,
                                 }
                             }
-                            ReceiverWorkerMessageState::Payload { offset, header } => {
+                            ReceiverWorkerMessageState::Payload { header, offset } => {
                                 // TODO check that size is enough
 
                                 if offset as usize == bytes.len() {
                                     break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                                         state: ReceiverWorkerMessageState::Payload {
-                                            offset: 0,
                                             header: header,
+                                            offset: 0,
                                         },
                                     });
                                 }
