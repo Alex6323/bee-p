@@ -13,7 +13,10 @@ mod serde;
 
 use std::{
     ops::{Deref, DerefMut, Range, Index, IndexMut},
-    cmp::PartialEq,
+    cmp::{
+        self,
+        Ordering,
+    },
     hash,
     iter::FromIterator,
     any,
@@ -205,7 +208,7 @@ impl<T: Trit> Trits<T1B1<T>> {
     }
 }
 
-impl<T, U> PartialEq<Trits<U>> for Trits<T>
+impl<T, U> cmp::PartialEq<Trits<U>> for Trits<T>
 where
     T: RawEncoding + ?Sized,
     U: RawEncoding<Trit = T::Trit> + ?Sized,
@@ -215,6 +218,28 @@ where
             .iter()
             .zip(other.iter())
             .all(|(a, b)| a == b)
+    }
+}
+
+impl<T, U> cmp::PartialOrd<Trits<U>> for Trits<T>
+where
+    T: RawEncoding + ?Sized,
+    U: RawEncoding<Trit = T::Trit> + ?Sized,
+    T::Trit: cmp::PartialOrd,
+{
+    fn partial_cmp(&self, other: &Trits<U>) -> Option<Ordering> {
+        if self.len() != other.len() {
+            return None;
+        }
+
+        for (a, b) in self.iter().zip(other.iter()) {
+            match a.partial_cmp(&b) {
+                Some(Ordering::Equal) => continue,
+                other_order => return other_order,
+            }
+        }
+
+        Some(Ordering::Equal)
     }
 }
 
