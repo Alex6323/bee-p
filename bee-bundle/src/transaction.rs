@@ -56,10 +56,10 @@ impl Address {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Value(pub(crate) i64);
+pub struct Value(pub i64);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Tag(pub(crate) TritBuf<T1B1Buf>);
+pub struct Tag(pub TritBuf<T1B1Buf>);
 
 impl Tag {
     pub fn zeros() -> Self {
@@ -83,13 +83,13 @@ impl Tag {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Timestamp(pub(crate) u64);
+pub struct Timestamp(pub u64);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Index(pub(crate) usize);
+pub struct Index(pub usize);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Hash(pub(crate) TritBuf<T1B1Buf>);
+pub struct Hash(pub TritBuf<T1B1Buf>);
 
 impl Hash {
     pub fn zeros() -> Self {
@@ -113,7 +113,7 @@ impl Hash {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Nonce(pub(crate) TritBuf<T1B1Buf>);
+pub struct Nonce(pub TritBuf<T1B1Buf>);
 
 impl Nonce {
     pub fn zeros() -> Self {
