@@ -144,10 +144,10 @@ impl ReceiverWorker {
                 //         "[Neighbor-{:?}] Invalid handshake MWM: {:?} != {:?}",
                 //         self.peer_id, handshake.minimum_weight_magnitude, minimum_weight_magnitude
                 //     );
-                // } else if handshake.supported_messages != supported_messages {
+                // } else if let Err(version) = supported_version(handshake.supported_messages) {
                 //     warn!(
-                //         "[Neighbor-{:?}] Invalid handshake version: {:?}",
-                //         self.peer_id, handshake.
+                //         "[Neighbor-{:?}] Unsupported protocol version: {:?}",
+                //         self.peer_id, version
                 //     );
                 // } else {
                 //     ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
