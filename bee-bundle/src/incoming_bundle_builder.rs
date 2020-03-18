@@ -6,7 +6,7 @@ use bee_crypto::Sponge;
 use bee_signing::{PublicKey, Signature, WotsPublicKey};
 use bee_ternary::TritBuf;
 
-use bee_ternary::trit::*;
+use bee_ternary::trit::{Trit};
 use std::marker::PhantomData;
 
 #[derive(Debug)]
@@ -119,7 +119,7 @@ where
             }
 
             if transaction.value.0 != 0
-                && unsafe { transaction.address().0.get_unchecked(ADDRESS.trit_offset.length - 1) != Trit::Zero }
+                && transaction.address().0.get(ADDRESS.trit_offset.length - 1).unwrap() != Trit::Zero
             {
                 return Err(IncomingBundleBuilderError::InvalidAddress);
             }
