@@ -128,7 +128,7 @@ where
                 return Err(IncomingBundleBuilderError::InvalidBundleHash);
             }
 
-            if index < 0 as usize && transaction.branch().ne(first_branch) {
+            if index > 0 as usize && transaction.branch().ne(first_branch) {
                 return Err(IncomingBundleBuilderError::InvalidBranchInconsistency);
             }
 
