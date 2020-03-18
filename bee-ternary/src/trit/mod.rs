@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 pub mod balanced;
 pub mod unbalanced;
 
@@ -9,11 +11,7 @@ pub use self::{
 
 use std::fmt;
 
-pub trait Trit: Copy + Sized + fmt::Debug + PartialEq + ShiftTernary + From<i8> {
-    type Repr: Copy;
-
-    // TODO: Use std::convert::TryFrom
-    fn try_convert(x: Self::Repr) -> Result<Self, ()>;
+pub trait Trit: Copy + Sized + fmt::Debug + PartialEq + ShiftTernary + TryFrom<i8> {
     fn checked_increment(self) -> Option<Self>;
 
     fn zero() -> Self;

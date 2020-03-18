@@ -6,9 +6,9 @@ use bee_ternary::*;
 
 #[test]
 fn convert_correct() {
-    assert_eq!(Utrit::from(0), Utrit::Zero);
-    assert_eq!(Utrit::from(1), Utrit::One);
-    assert_eq!(Utrit::from(2), Utrit::Two);
+    assert_eq!(Utrit::try_from(0i8).unwrap(), Utrit::Zero);
+    assert_eq!(Utrit::try_from(1i8).unwrap(), Utrit::One);
+    assert_eq!(Utrit::try_from(2i8).unwrap(), Utrit::Two);
 
     assert_eq!(Into::<i8>::into(Utrit::Zero), 0i8);
     assert_eq!(Into::<i8>::into(Utrit::One), 1i8);
@@ -24,19 +24,19 @@ fn convert_balanced() {
 
 #[test]
 #[should_panic]
-fn convert_incorrect_0() { Utrit::from(-1); }
+fn convert_incorrect_0() { Utrit::try_from(-1i8).unwrap(); }
 
 #[test]
 #[should_panic]
-fn convert_incorrect_1() { Utrit::from(3); }
+fn convert_incorrect_1() { Utrit::try_from(3i8).unwrap(); }
 
 #[test]
 #[should_panic]
-fn convert_incorrect_2() { Btrit::from(-2); }
+fn convert_incorrect_2() { Btrit::try_from(-2i8).unwrap(); }
 
 #[test]
 #[should_panic]
-fn convert_incorrect_3() { Btrit::from(2); }
+fn convert_incorrect_3() { Btrit::try_from(2i8).unwrap(); }
 
 #[test]
 fn tryte() {

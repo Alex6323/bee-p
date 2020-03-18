@@ -1,3 +1,8 @@
+use std::convert::{
+    TryFrom,
+    TryInto,
+};
+
 mod common;
 use self::common::*;
 
@@ -23,7 +28,7 @@ fn get_generic<T: raw::RawEncodingBuf + Clone>() {
             let i = thread_rng().gen_range(0, sl.len());
             assert_eq!(
                 sl.get(i),
-                Some(<T::Slice as raw::RawEncoding>::Trit::from(sl_i8[i])),
+                Some(<T::Slice as raw::RawEncoding>::Trit::try_from(sl_i8[i]).unwrap_or_else(|_| unreachable!())),
             );
 
             let idx = thread_rng().gen_range(0, sl.len());
@@ -51,7 +56,7 @@ fn get_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
             let i = thread_rng().gen_range(0, sl.len());
             assert_eq!(
                 sl.get(i),
-                Some(<T::Slice as raw::RawEncoding>::Trit::from(sl_i8[i])),
+                Some(<T::Slice as raw::RawEncoding>::Trit::try_from(sl_i8[i]).unwrap_or_else(|_| unreachable!())),
             );
 
             let idx = thread_rng().gen_range(0, sl.len());
@@ -78,12 +83,12 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
                 let i = thread_rng().gen_range(0, sl.len());
                 let trit = thread_rng().gen_range(-1i8, 2);
 
-                sl.set(i, trit.into());
+                sl.set(i, trit.try_into().unwrap_or_else(|_| unreachable!()));
                 sl_i8[i] = trit;
 
                 assert_eq!(
                     sl.get(i),
-                    Some(<T::Slice as raw::RawEncoding>::Trit::from(sl_i8[i])),
+                    Some(<T::Slice as raw::RawEncoding>::Trit::try_from(sl_i8[i]).unwrap_or_else(|_| unreachable!())),
                 );
 
                 let idx = thread_rng().gen_range(0, sl.len());
@@ -95,7 +100,7 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == (*b).into()));
+                .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
 
             assert_eq!(a.len(), a_i8.len());
         });
@@ -118,12 +123,12 @@ fn set_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
                 let i = thread_rng().gen_range(0, sl.len());
                 let trit = thread_rng().gen_range(0i8, 3);
 
-                sl.set(i, trit.into());
+                sl.set(i, trit.try_into().unwrap_or_else(|_| unreachable!()));
                 sl_i8[i] = trit;
 
                 assert_eq!(
                     sl.get(i),
-                    Some(<T::Slice as raw::RawEncoding>::Trit::from(sl_i8[i])),
+                    Some(<T::Slice as raw::RawEncoding>::Trit::try_from(sl_i8[i]).unwrap_or_else(|_| unreachable!())),
                 );
 
                 let idx = thread_rng().gen_range(0, sl.len());
@@ -135,7 +140,7 @@ fn set_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == (*b).into()));
+                .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
 
             assert_eq!(a.len(), a_i8.len());
         });
@@ -152,7 +157,7 @@ fn chunks_generic<T: raw::RawEncodingBuf + Clone>() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == (*b).into()));
+                .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }
     });
 }
@@ -167,7 +172,7 @@ fn chunks_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == (*b).into()));
+                .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }
     });
 }
@@ -236,7 +241,7 @@ fn chunks_mut() {
             assert!(a
                 .iter()
                 .zip(a_i8.iter())
-                .all(|(a, b)| a == (*b).into()))
+                .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }
     });
 }

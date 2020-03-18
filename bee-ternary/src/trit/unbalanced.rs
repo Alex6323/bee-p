@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::fmt;
 use super::{Trit, Btrit, ShiftTernary};
 
@@ -10,13 +11,6 @@ pub enum Utrit {
 }
 
 use Utrit::*;
-
-impl From<i8> for Utrit {
-    fn from(x: i8) -> Self {
-        Self::try_convert(x as u8)
-            .unwrap_or_else(|_| panic!("Invalid unbalanced trit representation '{}'", x))
-    }
-}
 
 impl fmt::Display for Utrit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -50,17 +44,6 @@ impl ShiftTernary for Utrit {
 }
 
 impl Trit for Utrit {
-    type Repr = u8;
-
-    fn try_convert(x: Self::Repr) -> Result<Self, ()> {
-        match x {
-            0 => Ok(Zero),
-            1 => Ok(One),
-            2 => Ok(Two),
-            _ => Err(()),
-        }
-    }
-
     fn checked_increment(self) -> Option<Self> {
         match self {
             Zero => Some(One),
@@ -90,5 +73,33 @@ impl Utrit {
             One => 1,
             Two => 2,
         }
+    }
+}
+
+impl TryFrom<i8> for Utrit {
+    type Error = ();
+
+    fn try_from(x: i8) -> Result<Self, Self::Error> {
+        let converted = match x {
+            0 => Zero,
+            1 => One,
+            2 => Two,
+            _ => Err(())?,
+        };
+        Ok(converted)
+    }
+}
+
+impl TryFrom<u8> for Utrit {
+    type Error = ();
+
+    fn try_from(x: u8) -> Result<Self, Self::Error> {
+        let converted = match x {
+            0 => Zero,
+            1 => One,
+            2 => Two,
+            _ => Err(())?,
+        };
+        Ok(converted)
     }
 }

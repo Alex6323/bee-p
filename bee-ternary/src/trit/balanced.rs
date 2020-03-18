@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::fmt;
 use super::{Trit, Utrit, ShiftTernary};
 
@@ -7,13 +8,6 @@ pub enum Btrit {
     NegOne = -1,
     Zero = 0,
     PlusOne = 1,
-}
-
-impl From<i8> for Btrit {
-    fn from(x: i8) -> Self {
-        Self::try_convert(x)
-            .unwrap_or_else(|_| panic!("Invalid balanced trit representation '{}'", x))
-    }
 }
 
 impl fmt::Display for Btrit {
@@ -49,17 +43,6 @@ impl ShiftTernary for Btrit {
 }
 
 impl Trit for Btrit {
-    type Repr = i8;
-
-    fn try_convert(x: Self::Repr) -> Result<Self, ()> {
-        match x {
-            -1 => Ok(Btrit::NegOne),
-            0 => Ok(Btrit::Zero),
-            1 => Ok(Btrit::PlusOne),
-            _ => Err(()),
-        }
-    }
-
     fn checked_increment(self) -> Option<Self> {
         match self {
             Btrit::NegOne => Some(Btrit::Zero),
@@ -70,5 +53,32 @@ impl Trit for Btrit {
 
     fn zero() -> Self {
         Self::Zero
+    }
+}
+
+impl TryFrom<i8> for Btrit {
+    type Error = ();
+
+    fn try_from(x: i8) -> Result<Self, Self::Error> {
+        let converted = match x {
+            -1 => Btrit::NegOne,
+            0 => Btrit::Zero,
+            1 => Btrit::PlusOne,
+            _ => Err(())?,
+        };
+        Ok(converted)
+    }
+}
+
+impl TryFrom<u8> for Btrit {
+    type Error = ();
+
+    fn try_from(x: u8) -> Result<Self, Self::Error> {
+        let converted = match x {
+            0 => Btrit::Zero,
+            1 => Btrit::PlusOne,
+            _ => Err(())?,
+        };
+        Ok(converted)
     }
 }

@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 pub mod trit;
 pub mod tryte;
 pub mod raw;
@@ -56,15 +58,15 @@ where
         unsafe { &*(T::empty() as *const _ as *const Self) }
     }
 
-    pub unsafe fn from_raw_unchecked(raw: &[<T::Trit as Trit>::Repr]) -> &Self {
+    pub unsafe fn from_raw_unchecked(raw: &[i8]) -> &Self {
         &*(T::from_raw_unchecked(raw) as *const _ as *const _)
     }
 
-    pub unsafe fn from_raw_unchecked_mut(raw: &mut [<T::Trit as Trit>::Repr]) -> &mut Self {
+    pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8]) -> &mut Self {
         &mut *(T::from_raw_unchecked(raw) as *const _ as *mut _)
     }
 
-    pub fn try_from_raw(raw: &[<T::Trit as Trit>::Repr]) -> Result<&Self, Error> {
+    pub fn try_from_raw(raw: &[i8]) -> Result<&Self, Error> {
         if raw.iter().all(T::is_valid) {
             Ok(unsafe { Self::from_raw_unchecked(raw) })
         } else {
@@ -72,7 +74,7 @@ where
         }
     }
 
-    pub fn try_from_raw_mut(raw: &mut [<T::Trit as Trit>::Repr]) -> Result<&mut Self, Error> {
+    pub fn try_from_raw_mut(raw: &mut [i8]) -> Result<&mut Self, Error> {
         if raw.iter().all(T::is_valid) {
             Ok(unsafe { Self::from_raw_unchecked_mut(raw) })
         } else {
@@ -306,8 +308,9 @@ impl<T: RawEncodingBuf> TritBuf<T> {
     pub fn from_i8_unchecked(trits: &[i8]) -> Self {
         trits
             .iter()
-            .map(|t| <T::Slice as RawEncoding>::Trit::from(*t))
-            .collect()
+            .map(|t| <T::Slice as RawEncoding>::Trit::try_from(*t))
+            .collect::<Result<Self, _>>()
+            .unwrap_or_else(|_| panic!("Invalid i8 when converting to trit."))
     }
 
     pub fn push(&mut self, trit: <T::Slice as RawEncoding>::Trit) {

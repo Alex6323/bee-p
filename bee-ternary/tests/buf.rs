@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 mod common;
 use self::common::*;
 
@@ -35,10 +37,10 @@ fn push_pop_generic<T: raw::RawEncodingBuf>() {
         for _ in 0..1000 {
             if thread_rng().gen() {
                 let trit = gen_trit();
-                a.push(trit.into());
+                a.push(trit.try_into().unwrap_or_else(|_| unreachable!()));
                 b.push(trit);
             } else {
-                assert_eq!(a.pop(), b.pop().map(Into::into));
+                assert_eq!(a.pop(), b.pop().map(|x| x.try_into().unwrap_or_else(|_| unreachable!())));
             }
             // println!("{:?}", a);
             // println!("{:?}", b);
@@ -53,10 +55,10 @@ fn push_pop_generic_unbalanced<T: raw::RawEncodingBuf>() {
         for _ in 0..1000 {
             if thread_rng().gen() {
                 let trit = gen_trit() + 1;
-                a.push(trit.into());
+                a.push(trit.try_into().unwrap_or_else(|_| unreachable!()));
                 b.push(trit);
             } else {
-                assert_eq!(a.pop(), b.pop().map(Into::into));
+                assert_eq!(a.pop(), b.pop().map(|x| x.try_into().unwrap_or_else(|_| unreachable!())));
             }
             // println!("{:?}", a);
             // println!("{:?}", b);

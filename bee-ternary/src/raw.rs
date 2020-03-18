@@ -23,13 +23,13 @@ pub trait RawEncoding {
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self;
 
     /// Decide whether a byte is a valid series of trits in this encoding
-    fn is_valid(repr: &<Self::Trit as Trit>::Repr) -> bool;
+    fn is_valid(repr: &i8) -> bool;
 
     /// Unsafely reinterpret a slice of bytes as trit slice
-    unsafe fn from_raw_unchecked(b: &[<Self::Trit as Trit>::Repr]) -> &Self;
+    unsafe fn from_raw_unchecked(b: &[i8]) -> &Self;
 
     /// Unsafely reinterpret a slice of bytes as trit slice
-    unsafe fn from_raw_unchecked_mut(b: &mut [<Self::Trit as Trit>::Repr]) -> &mut Self;
+    unsafe fn from_raw_unchecked_mut(b: &mut [i8]) -> &mut Self;
 }
 
 pub trait RawEncodingBuf {
