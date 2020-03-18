@@ -6,6 +6,7 @@ use crate::worker::{
     TransactionWorker,
 };
 
+use bee_network::Command::Connect;
 use bee_network::{EndpointId, Event, EventSubscriber, Network, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
 
@@ -43,7 +44,7 @@ impl Node {
         }
     }
 
-    fn endpoint_added_handler(&mut self, epid: EndpointId) {
+    async fn endpoint_added_handler(&mut self, epid: EndpointId) {
         let (sender, receiver) = channel(1000);
 
         self.neighbors.insert(epid, sender);
@@ -58,6 +59,13 @@ impl Node {
             )
             .run(),
         );
+
+        self.network
+            .send(Connect {
+                epid: epid,
+                responder: None,
+            })
+            .await;
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
@@ -90,7 +98,7 @@ impl Node {
         while let Some(event) = self.events.next().await {
             debug!("[Node ] Received event {:?}", event);
             match event {
-                Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid),
+                Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
                 Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
                 Event::EndpointConnected { epid, .. } => self.endpoint_connected_handler(epid).await,
                 Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
