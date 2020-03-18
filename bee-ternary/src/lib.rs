@@ -14,6 +14,7 @@ mod serde;
 use std::{
     ops::{Deref, DerefMut, Range, Index, IndexMut},
     cmp::PartialEq,
+    hash,
     iter::FromIterator,
     any,
     fmt,
@@ -40,6 +41,7 @@ pub enum Error {
     InvalidRepr,
 }
 
+#[derive(Hash)]
 #[repr(transparent)]
 pub struct Trits<T: RawEncoding + ?Sized = T1B1<Btrit>>(T);
 
@@ -341,6 +343,16 @@ impl<T: RawEncodingBuf> FromIterator<<T::Slice as RawEncoding>::Trit> for TritBu
             this.push(trit);
         }
         this
+    }
+}
+
+impl<T> hash::Hash for TritBuf<T>
+where
+    T: RawEncodingBuf,
+    T::Slice: hash::Hash,
+{
+    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+        (**self).hash(hasher)
     }
 }
 
