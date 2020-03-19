@@ -25,8 +25,8 @@ pub(crate) enum ReceiverWorkerEvent {
 }
 
 enum ReceiverWorkerMessageState {
-    Header { offset: usize },
-    Payload { header: Header, offset: usize },
+    Header,
+    Payload(Header),
 }
 
 struct AwaitingConnectionContext {}
@@ -37,6 +37,7 @@ struct AwaitingHandshakeContext {
 
 struct AwaitingMessageContext {
     state: ReceiverWorkerMessageState,
+    buffer: Vec<u8>,
 }
 
 enum ReceiverWorkerState {
@@ -114,7 +115,7 @@ impl ReceiverWorker {
                 self.send_handshake().await;
 
                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceiverWorkerMessageState::Header { offset: 0 },
+                    state: ReceiverWorkerMessageState::Header,
                 })
             }
             _ => ReceiverWorkerState::AwaitingConnection(context),
@@ -163,7 +164,8 @@ impl ReceiverWorker {
                 info!("[Neighbor-{:?}] Handshake completed", self.epid);
 
                 ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                    state: ReceiverWorkerMessageState::Header { offset: 0 },
+                    state: ReceiverWorkerMessageState::Header,
+                    buffer: Vec::new(),
                 })
             }
 
@@ -171,7 +173,7 @@ impl ReceiverWorker {
                 warn!("[Neighbor-{:?}] Reading Handshake failed: {:?}", self.epid, e);
 
                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceiverWorkerMessageState::Header { offset: 0 },
+                    state: ReceiverWorkerMessageState::Header,
                 })
             }
         }
@@ -192,11 +194,11 @@ impl ReceiverWorker {
                 // TODO needed ?
                 if bytes.len() < 3 {
                     ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                        state: ReceiverWorkerMessageState::Header { offset: 0 },
+                        state: ReceiverWorkerMessageState::Header,
                     })
                 } else {
                     match context.state {
-                        ReceiverWorkerMessageState::Header { .. } => {
+                        ReceiverWorkerMessageState::Header => {
                             debug!("[Neighbor-{:?}] Reading Header", self.epid);
 
                             let header = Header::from_bytes(&bytes[0..3]);
@@ -205,14 +207,11 @@ impl ReceiverWorker {
                                 self.check_handshake(header, &bytes[3..bytes.len()])
                             } else {
                                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                                    state: ReceiverWorkerMessageState::Payload {
-                                        header: header,
-                                        offset: 0,
-                                    },
+                                    state: ReceiverWorkerMessageState::Payload(header),
                                 })
                             }
                         }
-                        ReceiverWorkerMessageState::Payload { header, offset } => {
+                        ReceiverWorkerMessageState::Payload(header) => {
                             self.check_handshake(header, &bytes[..bytes.len()])
                         }
                     }
@@ -235,7 +234,7 @@ impl ReceiverWorker {
             }
 
             MilestoneRequest::ID => {
-                debug!("[Neighbor-{:?}] Receiving MilestoneRequest", self.epid);
+                debug!("[Neighbor-{:?}] Reading MilestoneRequest", self.epid);
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -248,13 +247,13 @@ impl ReceiverWorker {
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!("[Neighbor-{:?}] Receiving MilestoneRequest failed: {:?}", self.epid, e);
+                        warn!("[Neighbor-{:?}] Reading MilestoneRequest failed: {:?}", self.epid, e);
                     }
                 }
             }
 
             TransactionBroadcast::ID => {
-                debug!("[Neighbor-{:?}] Receiving TransactionBroadcast", self.epid);
+                debug!("[Neighbor-{:?}] Reading TransactionBroadcast", self.epid);
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -265,7 +264,7 @@ impl ReceiverWorker {
                     }
                     Err(e) => {
                         warn!(
-                            "[Neighbor-{:?}] Receiving TransactionBroadcast failed: {:?}",
+                            "[Neighbor-{:?}] Reading TransactionBroadcast failed: {:?}",
                             self.epid, e
                         );
                     }
@@ -273,7 +272,7 @@ impl ReceiverWorker {
             }
 
             TransactionRequest::ID => {
-                debug!("[Neighbor-{:?}] Receiving TransactionRequest", self.epid);
+                debug!("[Neighbor-{:?}] Reading TransactionRequest", self.epid);
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -286,21 +285,18 @@ impl ReceiverWorker {
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!(
-                            "[Neighbor-{:?}] Receiving TransactionRequest failed: {:?}",
-                            self.epid, e
-                        );
+                        warn!("[Neighbor-{:?}] Reading TransactionRequest failed: {:?}", self.epid, e);
                     }
                 }
             }
 
             Heartbeat::ID => {
-                debug!("[Neighbor-{:?}] Receiving Heartbeat", self.epid);
+                debug!("[Neighbor-{:?}] Reading Heartbeat", self.epid);
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
                     Ok(_) => {}
                     Err(e) => {
-                        warn!("[Neighbor-{:?}] Receiving Heartbeat failed: {:?}", self.epid, e);
+                        warn!("[Neighbor-{:?}] Reading Heartbeat failed: {:?}", self.epid, e);
                     }
                 }
             }
@@ -330,55 +326,55 @@ impl ReceiverWorker {
 
                 ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
-            ReceiverWorkerEvent::Message(bytes) => {
-                // TODO needed ?
-                if bytes.len() < 3 {
-                    ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                        state: ReceiverWorkerMessageState::Header { offset: 0 },
-                    })
+            ReceiverWorkerEvent::Message(mut bytes) => {
+                let mut offset = 0;
+
+                if context.buffer.is_empty() {
+                    context.buffer = bytes;
                 } else {
-                    loop {
-                        context.state = match context.state {
-                            ReceiverWorkerMessageState::Header { offset } => {
-                                debug!("[Neighbor-{:?}] Reading Header", self.epid);
+                    context.buffer.append(&mut bytes);
+                }
 
-                                if offset as usize == bytes.len() {
-                                    break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                                        state: ReceiverWorkerMessageState::Header { offset: 0 },
-                                    });
-                                }
+                while offset < context.buffer.len() {
+                    context.state = match context.state {
+                        ReceiverWorkerMessageState::Header => {
+                            debug!("[Neighbor-{:?}] Reading Header", self.epid);
 
-                                ReceiverWorkerMessageState::Payload {
-                                    header: Header::from_bytes(&bytes[offset..offset + 3]),
-                                    offset: offset + 3,
-                                }
+                            if offset + 3 <= context.buffer.len() {
+                                let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
+                                offset = offset + 3;
+
+                                ReceiverWorkerMessageState::Payload(header)
+                            } else {
+                                ReceiverWorkerMessageState::Header
                             }
-                            ReceiverWorkerMessageState::Payload { header, offset } => {
-                                // TODO check that size is enough
-
-                                if offset as usize == bytes.len() {
-                                    break ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                                        state: ReceiverWorkerMessageState::Payload {
-                                            header: header,
-                                            offset: 0,
-                                        },
-                                    });
-                                }
-
+                        }
+                        ReceiverWorkerMessageState::Payload(header) => {
+                            if (offset + header.message_length as usize) <= context.buffer.len() {
                                 if let Err(e) = self
-                                    .process_message(&header, &bytes[offset..offset + header.message_length as usize])
+                                    .process_message(
+                                        &header,
+                                        &context.buffer[offset..offset + header.message_length as usize],
+                                    )
                                     .await
                                 {
                                     error!("[Neighbor-{:?}] Processing message failed: {:?}", self.epid, e);
                                 }
 
-                                ReceiverWorkerMessageState::Header {
-                                    offset: offset + header.message_length as usize,
-                                }
+                                offset = offset + header.message_length as usize;
+
+                                ReceiverWorkerMessageState::Header
+                            } else {
+                                ReceiverWorkerMessageState::Payload(header)
                             }
-                        };
-                    }
+                        }
+                    };
                 }
+
+                ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                    state: context.state,
+                    buffer: context.buffer[offset..].to_vec(),
+                })
             }
             _ => ReceiverWorkerState::AwaitingMessage(context),
         }
