@@ -2,13 +2,10 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Default)]
 pub(crate) struct NodeMetrics {
-    transactions_received: AtomicU32,
     invalid_transactions_received: AtomicU32,
     stale_transactions_received: AtomicU32,
     random_transactions_received: AtomicU32,
     new_transactions_received: AtomicU32,
-
-    transactions_sent: AtomicU32,
 
     handshake_received: AtomicU32,
     milestone_request_received: AtomicU32,
@@ -24,14 +21,6 @@ pub(crate) struct NodeMetrics {
 }
 
 impl NodeMetrics {
-    pub fn transactions_received(&self) -> u32 {
-        self.transactions_received.load(Ordering::Relaxed)
-    }
-
-    pub fn transactions_received_inc(&self) -> u32 {
-        self.transactions_received.fetch_add(1, Ordering::SeqCst)
-    }
-
     pub fn invalid_transactions_received(&self) -> u32 {
         self.invalid_transactions_received.load(Ordering::Relaxed)
     }
@@ -62,14 +51,6 @@ impl NodeMetrics {
 
     pub fn new_transactions_received_inc(&self) -> u32 {
         self.new_transactions_received.fetch_add(1, Ordering::SeqCst)
-    }
-
-    pub fn transactions_sent(&self) -> u32 {
-        self.transactions_sent.load(Ordering::Relaxed)
-    }
-
-    pub fn transactions_sent_inc(&self) -> u32 {
-        self.transactions_sent.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn handshake_received(&self) -> u32 {
@@ -162,34 +143,20 @@ mod tests {
     fn node_metrics_transactions_received_test() {
         let metrics = NodeMetrics::default();
 
-        assert_eq!(metrics.transactions_received(), 0);
         assert_eq!(metrics.invalid_transactions_received(), 0);
         assert_eq!(metrics.stale_transactions_received(), 0);
         assert_eq!(metrics.random_transactions_received(), 0);
         assert_eq!(metrics.new_transactions_received(), 0);
 
-        metrics.transactions_received_inc();
         metrics.invalid_transactions_received_inc();
         metrics.stale_transactions_received_inc();
         metrics.random_transactions_received_inc();
         metrics.new_transactions_received_inc();
 
-        assert_eq!(metrics.transactions_received(), 1);
         assert_eq!(metrics.invalid_transactions_received(), 1);
         assert_eq!(metrics.stale_transactions_received(), 1);
         assert_eq!(metrics.random_transactions_received(), 1);
         assert_eq!(metrics.new_transactions_received(), 1);
-    }
-
-    #[test]
-    fn node_metrics_transactions_sent_test() {
-        let metrics = NodeMetrics::default();
-
-        assert_eq!(metrics.transactions_sent(), 0);
-
-        metrics.transactions_sent_inc();
-
-        assert_eq!(metrics.transactions_sent_inc(), 1);
     }
 
     #[test]

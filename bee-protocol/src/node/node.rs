@@ -161,9 +161,7 @@ impl Node {
         let res = neighbor.senders.transaction_broadcast.send(transaction_broadcast).await;
 
         if res.is_ok() {
-            neighbor.metrics.transactions_sent_inc();
             neighbor.metrics.transaction_broadcast_sent_inc();
-            self.metrics.transactions_sent_inc();
             self.metrics.transaction_broadcast_sent_inc();
         }
 
