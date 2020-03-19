@@ -1,5 +1,6 @@
 use crate::TritBuf;
 
+#[deprecated]
 pub fn trytes_to_trits_buf(trytes: &str) -> TritBuf {
     let mut trits_buf_internal = Vec::new();
     for tryte in trytes.trim().chars() {

@@ -1,20 +1,21 @@
 use std::ops::Range;
-use crate::{Trit, RawEncoding, RawEncodingBuf};
+use crate::{Btrit, Utrit, RawEncoding, RawEncodingBuf, ShiftTernary};
 
-const BASE: usize = 2;
+const TPB: usize = 2;
+const BAL: i8 = 4;
 
 #[repr(transparent)]
 pub struct T2B1([()]);
 
 impl T2B1 {
-    unsafe fn make(ptr: *const u8, offset: usize, len: usize) -> *const Self {
-        let len = (len << 2) | (offset % BASE);
-        std::mem::transmute((ptr.offset((offset / BASE) as isize), len))
+    unsafe fn make(ptr: *const i8, offset: usize, len: usize) -> *const Self {
+        let len = (len << 2) | (offset % TPB);
+        std::mem::transmute((ptr.offset((offset / TPB) as isize), len))
     }
 
-    unsafe fn ptr(&self, index: usize) -> *const u8 {
-        let byte_offset = (self.len_offset().1 + index) / BASE;
-        (self.0.as_ptr() as *const u8).offset(byte_offset as isize)
+    unsafe fn ptr(&self, index: usize) -> *const i8 {
+        let byte_offset = (self.len_offset().1 + index) / TPB;
+        (self.0.as_ptr() as *const i8).offset(byte_offset as isize)
     }
 
     fn len_offset(&self) -> (usize, usize) {
@@ -22,7 +23,28 @@ impl T2B1 {
     }
 }
 
+fn extract(x: i8, elem: usize) -> Btrit {
+    if elem < TPB {
+        Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8).shift()
+    } else {
+        unreachable!("Attempted to extract invalid element {} from balanced T2B1", elem)
+    }
+}
+
+fn insert(x: i8, elem: usize, trit: Btrit) -> i8 {
+    if elem < TPB {
+        let utrit = trit.shift();
+        let ux = x + BAL;
+        let ux = ux + (utrit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
+        ux - BAL
+    } else {
+        unreachable!("Attempted to insert invalid element {} into balanced T2B1", elem)
+    }
+}
+
 impl RawEncoding for T2B1 {
+    type Trit = Btrit;
+
     fn empty() -> &'static Self {
         unsafe { &*Self::make(&[] as *const _, 0, 0) }
     }
@@ -31,30 +53,38 @@ impl RawEncoding for T2B1 {
         self.len_offset().0
     }
 
-    unsafe fn get_unchecked(&self, index: usize) -> Trit {
+    unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {
         let b = self.ptr(index).read();
-        let trit = (b >> (((self.len_offset().1 + index) % BASE) * 2)) & 0b11;
-        Trit::from_u8(trit)
+        extract(b, (self.len_offset().1 + index) % TPB)
     }
 
-    unsafe fn set_unchecked(&mut self, index: usize, trit: Trit) {
+    unsafe fn set_unchecked(&mut self, index: usize, trit: Self::Trit) {
         let b = self.ptr(index).read();
-        let b = b & !(0b11 << (((self.len_offset().1 + index) % BASE) * 2));
-        let b = b | (trit.into_u8() << (((self.len_offset().1 + index) % BASE) * 2));
-        (self.ptr(index) as *mut u8).write(b);
+        let b = insert(b, (self.len_offset().1 + index) % TPB, trit);
+        (self.ptr(index) as *mut i8).write(b);
     }
 
     unsafe fn slice_unchecked(&self, range: Range<usize>) -> &Self {
-        &*Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % BASE, range.end - range.start)
+        &*Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start)
     }
 
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self {
-        &mut *(Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % BASE, range.end - range.start) as *mut Self)
+        &mut *(Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start) as *mut Self)
+    }
+
+    fn is_valid(b: &i8) -> bool { *b >= -BAL && *b <= BAL }
+
+    unsafe fn from_raw_unchecked(b: &[i8]) -> &Self {
+        &*Self::make(b.as_ptr() as *const _, 0, b.len() * TPB)
+    }
+
+    unsafe fn from_raw_unchecked_mut(b: &mut [i8]) -> &mut Self {
+        &mut *(Self::make(b.as_ptr() as *const _, 0, b.len() * TPB) as *mut _)
     }
 }
 
 #[derive(Clone)]
-pub struct T2B1Buf(Vec<u8>, usize);
+pub struct T2B1Buf(Vec<i8>, usize);
 
 impl RawEncodingBuf for T2B1Buf {
     type Slice = T2B1;
@@ -63,15 +93,28 @@ impl RawEncodingBuf for T2B1Buf {
         Self(Vec::new(), 0)
     }
 
-    fn push(&mut self, trit: Trit) {
-        let b = trit.into_u8();
-        if self.1 % BASE == 0 {
-            self.0.push(b);
+    fn push(&mut self, trit: <Self::Slice as RawEncoding>::Trit) {
+        if self.1 % TPB == 0 {
+            self.0.push(insert(0, 0, trit));
         } else {
             let last_index = self.0.len() - 1;
-            unsafe { *self.0.get_unchecked_mut(last_index) |= b << ((self.1 % BASE) * 2) };
+            let b = unsafe { self.0.get_unchecked_mut(last_index) };
+            *b = insert(*b, self.1 % TPB, trit);
         }
         self.1 += 1;
+    }
+
+    fn pop(&mut self) -> Option<<Self::Slice as RawEncoding>::Trit> {
+        let val = if self.1 == 0 {
+            return None;
+        } else if self.1 % TPB == 1 {
+            self.0.pop().map(|b| extract(b, 0))
+        } else {
+            let last_index = self.0.len() - 1;
+            unsafe { Some(extract(*self.0.get_unchecked(last_index), (self.1 + TPB - 1) % TPB)) }
+        };
+        self.1 -= 1;
+        val
     }
 
     fn as_slice(&self) -> &Self::Slice {

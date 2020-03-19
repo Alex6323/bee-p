@@ -13,6 +13,8 @@ use serde::{
 };
 use crate::{
     Trit,
+    Btrit,
+    Utrit,
     Trits,
     TritBuf,
     RawEncoding,
@@ -21,26 +23,36 @@ use crate::{
 
 // Serialisation
 
-impl Serialize for Trit {
+impl Serialize for Btrit {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_i8((*self).into())
     }
 }
 
-impl<'a, T: RawEncoding> Serialize for &'a Trits<T> {
+impl Serialize for Utrit {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_i8((*self).into())
+    }
+}
+
+impl<'a, T: RawEncoding> Serialize for &'a Trits<T>
+    where T::Trit: Serialize
+{
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for trit in self.iter() {
+        for trit in self.trits() {
             seq.serialize_element(&trit)?;
         }
         seq.end()
     }
 }
 
-impl<T: RawEncodingBuf> Serialize for TritBuf<T> {
+impl<T: RawEncodingBuf> Serialize for TritBuf<T>
+    where <T::Slice as RawEncoding>::Trit: Serialize
+{
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for trit in self.iter() {
+        for trit in self.trits() {
             seq.serialize_element(&trit)?;
         }
         seq.end()
@@ -49,10 +61,10 @@ impl<T: RawEncodingBuf> Serialize for TritBuf<T> {
 
 // Deserialisation
 
-struct TritVisitor;
+struct BtritVisitor;
 
-impl<'de> Visitor<'de> for TritVisitor {
-    type Value = Trit;
+impl<'de> Visitor<'de> for BtritVisitor {
+    type Value = Btrit;
 
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("a value between -1 and 1 inclusive")
@@ -61,7 +73,7 @@ impl<'de> Visitor<'de> for TritVisitor {
     fn visit_u64<E: Error>(self, trit: u64) -> Result<Self::Value, E> {
         i8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Trit::try_from(trit)
+            .and_then(|trit| Btrit::try_from(trit)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Unsigned(trit), &self))
     }
@@ -69,7 +81,7 @@ impl<'de> Visitor<'de> for TritVisitor {
     fn visit_i64<E: Error>(self, trit: i64) -> Result<Self::Value, E> {
         i8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Trit::try_from(trit)
+            .and_then(|trit| Btrit::try_from(trit)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Signed(trit), &self))
     }
@@ -77,26 +89,73 @@ impl<'de> Visitor<'de> for TritVisitor {
     fn visit_u8<E: Error>(self, trit: u8) -> Result<Self::Value, E> {
         i8::try_from(trit)
             .map_err(|_| ())
-            .and_then(|trit| Trit::try_from(trit)
+            .and_then(|trit| Btrit::try_from(trit)
                 .map_err(|_| ()))
             .map_err(|_| E::invalid_value(Unexpected::Unsigned(trit as u64), &self))
     }
 
     fn visit_i8<E: Error>(self, trit: i8) -> Result<Self::Value, E> {
-        Trit::try_from(trit)
+        Btrit::try_from(trit)
             .map_err(|_| E::invalid_value(Unexpected::Signed(trit as i64), &self))
     }
 }
 
-impl<'de> Deserialize<'de> for Trit {
+impl<'de> Deserialize<'de> for Btrit {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_i8(TritVisitor)
+        deserializer.deserialize_i8(BtritVisitor)
+    }
+}
+
+struct UtritVisitor;
+
+impl<'de> Visitor<'de> for UtritVisitor {
+    type Value = Utrit;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("a value between 0 and 2 inclusive")
+    }
+
+    fn visit_u64<E: Error>(self, trit: u64) -> Result<Self::Value, E> {
+        u8::try_from(trit)
+            .map_err(|_| ())
+            .and_then(|trit| Utrit::try_from(trit)
+                .map_err(|_| ()))
+            .map_err(|_| E::invalid_value(Unexpected::Unsigned(trit), &self))
+    }
+
+    fn visit_i64<E: Error>(self, trit: i64) -> Result<Self::Value, E> {
+        i8::try_from(trit)
+            .map_err(|_| ())
+            .and_then(|trit| Utrit::try_from(trit)
+                .map_err(|_| ()))
+            .map_err(|_| E::invalid_value(Unexpected::Signed(trit), &self))
+    }
+
+    fn visit_u8<E: Error>(self, trit: u8) -> Result<Self::Value, E> {
+        u8::try_from(trit)
+            .map_err(|_| ())
+            .and_then(|trit| Utrit::try_from(trit)
+                .map_err(|_| ()))
+            .map_err(|_| E::invalid_value(Unexpected::Unsigned(trit as u64), &self))
+    }
+
+    fn visit_i8<E: Error>(self, trit: i8) -> Result<Self::Value, E> {
+        Utrit::try_from(trit)
+            .map_err(|_| E::invalid_value(Unexpected::Signed(trit as i64), &self))
+    }
+}
+
+impl<'de> Deserialize<'de> for Utrit {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_i8(UtritVisitor)
     }
 }
 
 struct TritBufVisitor<T>(PhantomData<T>);
 
-impl<'de, T: RawEncodingBuf> Visitor<'de> for TritBufVisitor<T> {
+impl<'de, T: RawEncodingBuf> Visitor<'de> for TritBufVisitor<T>
+    where <T::Slice as RawEncoding>::Trit: Deserialize<'de>
+{
     type Value = TritBuf<T>;
 
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -114,7 +173,9 @@ impl<'de, T: RawEncodingBuf> Visitor<'de> for TritBufVisitor<T> {
     }
 }
 
-impl<'de, T: RawEncodingBuf> Deserialize<'de> for TritBuf<T> {
+impl<'de, T: RawEncodingBuf> Deserialize<'de> for TritBuf<T>
+    where <T::Slice as RawEncoding>::Trit: Deserialize<'de>
+{
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         deserializer.deserialize_seq(TritBufVisitor::<T>(PhantomData))
     }

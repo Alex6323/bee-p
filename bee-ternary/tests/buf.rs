@@ -1,19 +1,10 @@
-use std::ops::Range;
+use std::convert::TryInto;
+
+mod common;
+use self::common::*;
+
 use rand::prelude::*;
 use bee_ternary::*;
-
-fn gen_buf<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8>) {
-    let len = thread_rng().gen_range(len.start, len.end);
-    let trits = (0..len)
-        .map(|_| (thread_rng().gen::<u8>() % 3) as i8 - 1)
-        .collect::<Vec<_>>();
-    (TritBuf::<T>::from_i8_unchecked(&trits), trits)
-}
-
-// Not exactly fuzzing, just doing something a lot
-fn fuzz(n: usize, mut f: impl FnMut()) {
-    (0..n).for_each(|_| f());
-}
 
 fn create_generic<T: raw::RawEncodingBuf>() {
     assert!(TritBuf::<T>::new().len() == 0);
@@ -27,6 +18,54 @@ fn create_generic<T: raw::RawEncodingBuf>() {
     });
 }
 
+fn create_unbalanced<T: raw::RawEncodingBuf>() {
+    assert!(TritBuf::<T>::new().len() == 0);
+    fuzz(100, || {
+        let len = thread_rng().gen_range(0, 100);
+        assert!(TritBuf::<T>::zeros(len).len() == len);
+    });
+    fuzz(100, || {
+        let trits = gen_buf_unbalanced::<T>(0..1000).1;
+        assert!(TritBuf::<T>::from_i8_unchecked(&trits).len() == trits.len());
+    });
+}
+
+fn push_pop_generic<T: raw::RawEncodingBuf>() {
+    fuzz(100, || {
+        let (mut a, mut b) = gen_buf::<T>(0..100);
+
+        for _ in 0..1000 {
+            if thread_rng().gen() {
+                let trit = gen_trit();
+                a.push(trit.try_into().unwrap_or_else(|_| unreachable!()));
+                b.push(trit);
+            } else {
+                assert_eq!(a.pop(), b.pop().map(|x| x.try_into().unwrap_or_else(|_| unreachable!())));
+            }
+            // println!("{:?}", a);
+            // println!("{:?}", b);
+        }
+    });
+}
+
+fn push_pop_generic_unbalanced<T: raw::RawEncodingBuf>() {
+    fuzz(100, || {
+        let (mut a, mut b) = gen_buf_unbalanced::<T>(0..100);
+
+        for _ in 0..1000 {
+            if thread_rng().gen() {
+                let trit = gen_trit() + 1;
+                a.push(trit.try_into().unwrap_or_else(|_| unreachable!()));
+                b.push(trit);
+            } else {
+                assert_eq!(a.pop(), b.pop().map(|x| x.try_into().unwrap_or_else(|_| unreachable!())));
+            }
+            // println!("{:?}", a);
+            // println!("{:?}", b);
+        }
+    });
+}
+
 fn eq_generic<T: raw::RawEncodingBuf + Clone>() {
     fuzz(100, || {
         let a = gen_buf::<T>(0..1000).0;
@@ -36,9 +75,21 @@ fn eq_generic<T: raw::RawEncodingBuf + Clone>() {
     });
 }
 
-fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>() {
+fn eq_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
     fuzz(100, || {
-        let a = gen_buf::<T>(0..1000).0;
+        let a = gen_buf_unbalanced::<T>(0..1000).0;
+        let b = a.clone();
+
+        assert_eq!(a, b);
+    });
+}
+
+fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>()
+where
+    U::Slice: raw::RawEncoding<Trit = <T::Slice as raw::RawEncoding>::Trit>,
+{
+    fuzz(100, || {
+        let a = gen_buf::<T>(0..100).0;
         let b = a.clone().into_encoding::<U>();
 
         assert_eq!(a, b);
@@ -53,32 +104,57 @@ fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>() {
 
 #[test]
 fn create() {
-    create_generic::<T1B1Buf>();
+    create_generic::<T1B1Buf<Btrit>>();
+    create_unbalanced::<T1B1Buf<Utrit>>();
     create_generic::<T2B1Buf>();
     create_generic::<T3B1Buf>();
     create_generic::<T4B1Buf>();
+    create_generic::<T5B1Buf>();
+}
+
+#[test]
+fn push_pop() {
+    push_pop_generic::<T1B1Buf<Btrit>>();
+    push_pop_generic_unbalanced::<T1B1Buf<Utrit>>();
+    push_pop_generic::<T2B1Buf>();
+    push_pop_generic::<T3B1Buf>();
+    push_pop_generic::<T4B1Buf>();
+    push_pop_generic::<T5B1Buf>();
 }
 
 #[test]
 fn eq() {
-    eq_generic::<T1B1Buf>();
+    eq_generic::<T1B1Buf<Btrit>>();
+    eq_generic_unbalanced::<T1B1Buf<Utrit>>();
     eq_generic::<T2B1Buf>();
     eq_generic::<T3B1Buf>();
     eq_generic::<T4B1Buf>();
+    eq_generic::<T5B1Buf>();
 }
 
 #[test]
 fn encode() {
-    encode_generic::<T1B1Buf, T2B1Buf>();
-    encode_generic::<T1B1Buf, T3B1Buf>();
-    encode_generic::<T1B1Buf, T4B1Buf>();
-    encode_generic::<T2B1Buf, T1B1Buf>();
-    encode_generic::<T3B1Buf, T1B1Buf>();
-    encode_generic::<T4B1Buf, T1B1Buf>();
+    encode_generic::<T1B1Buf<Btrit>, T2B1Buf>();
+    // encode_generic::<T1B1Buf<Utrit>, T2B1Buf>();
+    encode_generic::<T1B1Buf<Btrit>, T3B1Buf>();
+    // encode_generic::<T1B1Buf<Utrit>, T3B1Buf>();
+    encode_generic::<T1B1Buf<Btrit>, T4B1Buf>();
+    // encode_generic::<T1B1Buf<Utrit>, T4B1Buf>();
+    encode_generic::<T2B1Buf, T1B1Buf<Btrit>>();
+    // encode_generic::<T2B1Buf, T1B1Buf<Utrit>>();
+    encode_generic::<T3B1Buf, T1B1Buf<Btrit>>();
+    // encode_generic::<T3B1Buf, T1B1Buf<Utrit>>();
+    encode_generic::<T4B1Buf, T1B1Buf<Btrit>>();
+    // encode_generic::<T4B1Buf, T1B1Buf<Utrit>>();
+    encode_generic::<T5B1Buf, T1B1Buf<Btrit>>();
+    // encode_generic::<T5B1Buf, T1B1Buf<Utrit>>();
     encode_generic::<T2B1Buf, T3B1Buf>();
     encode_generic::<T3B1Buf, T4B1Buf>();
+    encode_generic::<T3B1Buf, T5B1Buf>();
     encode_generic::<T3B1Buf, T2B1Buf>();
     encode_generic::<T2B1Buf, T3B1Buf>();
     encode_generic::<T4B1Buf, T2B1Buf>();
     encode_generic::<T4B1Buf, T3B1Buf>();
+    encode_generic::<T5B1Buf, T2B1Buf>();
+    encode_generic::<T5B1Buf, T3B1Buf>();
 }
