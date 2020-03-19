@@ -1,15 +1,15 @@
 use std::ops::Range;
 use crate::{Btrit, Utrit, RawEncoding, RawEncodingBuf, ShiftTernary};
 
-const TPB: usize = 4;
-const BAL: i8 = 40;
+const TPB: usize = 5;
+const BAL: i8 = 121;
 
 #[repr(transparent)]
-pub struct T4B1([()]);
+pub struct T5B1([()]);
 
-impl T4B1 {
+impl T5B1 {
     unsafe fn make(ptr: *const i8, offset: usize, len: usize) -> *const Self {
-        let len = (len << 2) | (offset % TPB);
+        let len = (len << 3) | (offset % TPB);
         std::mem::transmute((ptr.offset((offset / TPB) as isize), len))
     }
 
@@ -19,30 +19,30 @@ impl T4B1 {
     }
 
     fn len_offset(&self) -> (usize, usize) {
-        (self.0.len() >> 2, self.0.len() & 0b11)
+        (self.0.len() >> 3, self.0.len() & 0b111)
     }
 }
 
 fn extract(x: i8, elem: usize) -> Btrit {
     if elem < TPB {
-        Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8).shift()
+        Utrit::from_u8((((x as i16 + BAL as i16) / 3i16.pow(elem as u32)) % 3) as u8).shift()
     } else {
-        unreachable!("Attempted to extract invalid element {} from balanced T4B1", elem)
+        unreachable!("Attempted to extract invalid element {} from balanced T5B1", elem)
     }
 }
 
 fn insert(x: i8, elem: usize, trit: Btrit) -> i8 {
     if elem < TPB {
         let utrit = trit.shift();
-        let ux = x + BAL;
-        let ux = ux + (utrit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
-        ux - BAL
+        let ux = x as i16 + BAL as i16;
+        let ux = ux + (utrit.into_u8() as i16 - (ux / 3i16.pow(elem as u32)) % 3) * 3i16.pow(elem as u32);
+        (ux - BAL as i16) as i8
     } else {
-        unreachable!("Attempted to insert invalid element {} into balanced T4B1", elem)
+        unreachable!("Attempted to insert invalid element {} into balanced T5B1", elem)
     }
 }
 
-impl RawEncoding for T4B1 {
+impl RawEncoding for T5B1 {
     type Trit = Btrit;
 
     fn empty() -> &'static Self {
@@ -84,10 +84,10 @@ impl RawEncoding for T4B1 {
 }
 
 #[derive(Clone)]
-pub struct T4B1Buf(Vec<i8>, usize);
+pub struct T5B1Buf(Vec<i8>, usize);
 
-impl RawEncodingBuf for T4B1Buf {
-    type Slice = T4B1;
+impl RawEncodingBuf for T5B1Buf {
+    type Slice = T5B1;
 
     fn new() -> Self {
         Self(Vec::new(), 0)

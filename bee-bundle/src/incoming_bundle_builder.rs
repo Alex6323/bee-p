@@ -1,10 +1,10 @@
 use crate::bundle::Bundle;
-use crate::constants::IOTA_SUPPLY;
+use crate::constants::{ADDRESS, IOTA_SUPPLY};
 use crate::transaction::{Transaction, Transactions};
 
 use bee_crypto::Sponge;
 use bee_signing::{PublicKey, Signature, WotsPublicKey};
-use bee_ternary::TritBuf;
+use bee_ternary::{TritBuf, trit::Btrit};
 
 use std::marker::PhantomData;
 
@@ -15,6 +15,9 @@ pub enum IncomingBundleBuilderError {
     InvalidLastIndex(usize),
     InvalidValue(i64),
     InvalidSignature,
+    InvalidAddress,
+    InvalidBundleHash,
+    InvalidBranchInconsistency,
 }
 
 pub trait IncomingBundleBuilderStage {}
@@ -94,6 +97,12 @@ where
 
         let last_index = self.transactions.len() - 1;
 
+        let bundle_hash_calculated = self.calculate_hash().as_i8_slice().to_vec();
+
+        let first_branch = self.transactions.0[0].branch();
+
+        // TODO - check trunk of the last transaction and branch is tail, the same tail
+
         for (index, transaction) in self.transactions.0.iter().enumerate() {
             if index != transaction.index().0 {
                 return Err(IncomingBundleBuilderError::InvalidIndex(transaction.index().0));
@@ -107,19 +116,28 @@ where
             if sum.abs() > IOTA_SUPPLY {
                 return Err(IncomingBundleBuilderError::InvalidValue(sum));
             }
+
+            if transaction.value.0 != 0
+                && transaction.address().0.get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero
+            {
+                return Err(IncomingBundleBuilderError::InvalidAddress);
+            }
+
+            if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().as_bytes().to_vec()) {
+                return Err(IncomingBundleBuilderError::InvalidBundleHash);
+            }
+
+            if index > 0 as usize && transaction.branch().ne(first_branch) {
+                return Err(IncomingBundleBuilderError::InvalidBranchInconsistency);
+            }
+
+            // TODO - for each transaction's hash check that it is its prev trunk
+
         }
 
         if sum != 0 {
             return Err(IncomingBundleBuilderError::InvalidValue(sum));
         }
-
-        // TODO check last trit of address
-        // TODO check bundle hash
-        // TODO check signatures
-        // TODO check trunk chaining
-        // TODO check trunk/branch consistency
-        // TODO check trunk/branch are tails
-        // TODO ontology ?
 
         self.validate_signatures()?;
 

@@ -1,3 +1,6 @@
+use std::convert::TryFrom;
+use std::slice;
+
 pub mod trit;
 pub mod tryte;
 pub mod raw;
@@ -5,6 +8,7 @@ pub mod t1b1;
 pub mod t2b1;
 pub mod t3b1;
 pub mod t4b1;
+pub mod t5b1;
 pub mod util;
 
 #[cfg(feature = "serde1")]
@@ -12,7 +16,11 @@ mod serde;
 
 use std::{
     ops::{Deref, DerefMut, Range, Index, IndexMut},
-    cmp::PartialEq,
+    cmp::{
+        self,
+        Ordering,
+    },
+    hash,
     iter::FromIterator,
     any,
     fmt,
@@ -21,39 +29,73 @@ use crate::raw::{RawEncoding, RawEncodingBuf};
 
 // Reexports
 pub use crate::{
-    tryte::{Tryte, IsTryte, TRYTE_ALPHABET},
-    trit::Trit,
+    trit::{Trit, Utrit, Btrit, ShiftTernary},
     t1b1::{T1B1, T1B1Buf},
     t2b1::{T2B1, T2B1Buf},
     t3b1::{T3B1, T3B1Buf},
     t4b1::{T4B1, T4B1Buf},
+    t5b1::{T5B1, T5B1Buf},
+    tryte::{IsTryte, TRYTE_ALPHABET, Tryte, TryteBuf},
 };
 
 // ONLY TEMPORARY
 // re-export iota-conversion
 pub use iota_conversion;
 
-#[repr(transparent)]
-pub struct Trits<T: RawEncoding + ?Sized = T1B1>(T);
+#[derive(Debug)]
+pub enum Error {
+    InvalidRepr,
+}
 
-impl<T: RawEncoding + ?Sized> Trits<T> {
+#[derive(Hash)]
+#[repr(transparent)]
+pub struct Trits<T: RawEncoding + ?Sized = T1B1<Btrit>>(T);
+
+impl<T> Trits<T>
+where
+    T: RawEncoding + ?Sized
+{
     pub fn empty() -> &'static Self {
         unsafe { &*(T::empty() as *const _ as *const Self) }
+    }
+
+    pub unsafe fn from_raw_unchecked(raw: &[i8]) -> &Self {
+        &*(T::from_raw_unchecked(raw) as *const _ as *const _)
+    }
+
+    pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8]) -> &mut Self {
+        &mut *(T::from_raw_unchecked(raw) as *const _ as *mut _)
+    }
+
+    pub fn try_from_raw(raw: &[i8]) -> Result<&Self, Error> {
+        if raw.iter().all(T::is_valid) {
+            Ok(unsafe { Self::from_raw_unchecked(raw) })
+        } else {
+            Err(Error::InvalidRepr)
+        }
+    }
+
+    pub fn try_from_raw_mut(raw: &mut [i8]) -> Result<&mut Self, Error> {
+        if raw.iter().all(T::is_valid) {
+            Ok(unsafe { Self::from_raw_unchecked_mut(raw) })
+        } else {
+            Err(Error::InvalidRepr)
+        }
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    pub unsafe fn get_unchecked(&self, index: usize) -> Trit {
-        self.0.get_unchecked(index).into()
+    pub unsafe fn get_unchecked(&self, index: usize) -> T::Trit {
+        self.0.get_unchecked(index)
     }
 
-    pub unsafe fn set_unchecked(&mut self, index: usize, trit: Trit) {
-        self.0.set_unchecked(index, trit.into());
+    pub unsafe fn set_unchecked(&mut self, index: usize, trit: T::Trit) {
+        self.0.set_unchecked(index, trit);
     }
 
-    pub fn get(&self, index: usize) -> Option<Trit> {
+    pub fn get(&self, index: usize) -> Option<T::Trit> {
         if index < self.0.len() {
             unsafe { Some(self.get_unchecked(index)) }
         } else {
@@ -61,7 +103,7 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         }
     }
 
-    pub fn set(&mut self, index: usize, trit: Trit) {
+    pub fn set(&mut self, index: usize, trit: T::Trit) {
         if index < self.0.len() {
             unsafe { self.set_unchecked(index, trit) };
         } else {
@@ -69,8 +111,8 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=Trit> + '_ {
-        (0..self.0.len()).map(move |idx| unsafe { self.0.get_unchecked(idx).into() })
+    pub fn trits(&self) -> impl DoubleEndedIterator<Item=T::Trit> + ExactSizeIterator<Item=T::Trit> + '_ {
+        (0..self.0.len()).map(move |idx| unsafe { self.0.get_unchecked(idx) })
     }
 
     pub fn slice(&self, range: Range<usize>) -> &Self {
@@ -83,41 +125,44 @@ impl<T: RawEncoding + ?Sized> Trits<T> {
         unsafe { &mut *(self.0.slice_unchecked_mut(range) as *mut _ as *mut Self) }
     }
 
-    pub fn copy_from<U: RawEncoding + ?Sized>(&mut self, trits: &Trits<U>) {
+    pub fn copy_from<U: RawEncoding<Trit = T::Trit> + ?Sized>(&mut self, trits: &Trits<U>) {
         assert!(self.len() == trits.len());
-        for (i, trit) in trits.iter().enumerate() {
+        for (i, trit) in trits.trits().enumerate() {
             unsafe { self.set_unchecked(i, trit); }
         }
     }
 
-    pub fn fill(&mut self, trit: Trit) {
+    pub fn fill(&mut self, trit: T::Trit) {
         for i in 0..self.len() {
             self.set(i, trit);
         }
     }
 
-    pub fn to_buf<U: RawEncodingBuf>(&self) -> TritBuf<U> {
-        self.iter().collect()
+    pub fn to_buf<U>(&self) -> TritBuf<U>
+    where
+        U: RawEncodingBuf,
+        U::Slice: RawEncoding<Trit = T::Trit>,
+    {
+        self.trits().collect()
     }
 
-    pub fn chunks(&self, chunk_len: usize) -> impl Iterator<Item=&Self> + '_ {
+    pub fn chunks(&self, chunk_len: usize) -> impl DoubleEndedIterator<Item=&Self> + ExactSizeIterator<Item=&Self> + '_ {
         assert!(chunk_len > 0);
         (0..self.len())
             .step_by(chunk_len)
             .map(move |i| self.slice(i..(i + chunk_len).min(self.len())))
     }
+
+    pub fn encode<U>(&self) -> TritBuf<U>
+    where
+        U: RawEncodingBuf,
+        U::Slice: RawEncoding<Trit = T::Trit>,
+    {
+        self.trits().collect()
+    }
 }
 
-impl Trits<T1B1> {
-    pub fn as_i8_slice(&self) -> &[i8] {
-        self.0.as_i8_slice()
-    }
-
-    // Unsafe because we don't want Trit to have an invalid format
-    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
-        self.0.as_i8_slice_mut()
-    }
-
+impl<T: Trit> Trits<T1B1<T>> {
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item=&mut Self> + '_ {
@@ -143,21 +188,76 @@ impl Trits<T1B1> {
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
         )
     }
+
+    pub fn iter<'a>(&'a self) -> slice::Iter<'a, T> {
+        self.as_raw_slice().iter()
+    }
+
+    pub fn iter_mut<'a>(&'a mut self) -> slice::IterMut<'a, T> {
+        self.as_raw_slice_mut().iter_mut()
+    }
 }
 
-impl<T: RawEncoding + ?Sized, U: RawEncoding + ?Sized> PartialEq<Trits<U>> for Trits<T> {
+impl Trits<T1B1<Btrit>> {
+    pub fn as_i8_slice(&self) -> &[i8] {
+        self.0.as_i8_slice()
+    }
+
+    // Unsafe because we don't want Utrit to have an invalid format
+    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
+        self.0.as_i8_slice_mut()
+    }
+}
+
+impl<T: Trit> Trits<T1B1<T>> {
+    pub fn as_raw_slice(&self) -> &[T] {
+        self.0.as_raw_slice()
+    }
+
+    pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
+        self.0.as_raw_slice_mut()
+    }
+}
+
+impl<T, U> cmp::PartialEq<Trits<U>> for Trits<T>
+where
+    T: RawEncoding + ?Sized,
+    U: RawEncoding<Trit = T::Trit> + ?Sized,
+{
     fn eq(&self, other: &Trits<U>) -> bool {
         self.len() == other.len() && self
-            .iter()
-            .zip(other.iter())
+            .trits()
+            .zip(other.trits())
             .all(|(a, b)| a == b)
+    }
+}
+
+impl<T, U> cmp::PartialOrd<Trits<U>> for Trits<T>
+where
+    T: RawEncoding + ?Sized,
+    U: RawEncoding<Trit = T::Trit> + ?Sized,
+    T::Trit: cmp::PartialOrd,
+{
+    fn partial_cmp(&self, other: &Trits<U>) -> Option<Ordering> {
+        if self.len() != other.len() {
+            return None;
+        }
+
+        for (a, b) in self.trits().zip(other.trits()) {
+            match a.partial_cmp(&b) {
+                Some(Ordering::Equal) => continue,
+                other_order => return other_order,
+            }
+        }
+
+        Some(Ordering::Equal)
     }
 }
 
 impl<'a, T: RawEncoding + ?Sized> fmt::Debug for &'a Trits<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Trits<{}> [", any::type_name::<T>())?;
-        for (i, trit) in self.iter().enumerate() {
+        for (i, trit) in self.trits().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
@@ -183,7 +283,7 @@ impl<T: RawEncoding + ?Sized> IndexMut<Range<usize>> for Trits<T> {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct TritBuf<T: RawEncodingBuf = T1B1Buf>(T);
+pub struct TritBuf<T: RawEncodingBuf = T1B1Buf<Btrit>>(T);
 
 impl<T: RawEncodingBuf> TritBuf<T> {
     pub fn new() -> Self {
@@ -191,12 +291,12 @@ impl<T: RawEncodingBuf> TritBuf<T> {
     }
 
     // TODO: Make public when original purged
-    fn with_capacity(cap: usize) -> Self {
+    fn with_capacity(_cap: usize) -> Self {
         // TODO: Allocate capacity
         Self::new()
     }
 
-    pub fn filled(len: usize, trit: Trit) -> Self {
+    pub fn filled(len: usize, trit: <T::Slice as RawEncoding>::Trit) -> Self {
         let mut this = Self::with_capacity(len);
         for _ in 0..len {
             this.push(trit);
@@ -205,21 +305,29 @@ impl<T: RawEncodingBuf> TritBuf<T> {
     }
 
     pub fn zeros(len: usize) -> Self {
-        Self::filled(len, Trit::Zero)
+        Self::filled(len, <T::Slice as RawEncoding>::Trit::zero())
     }
 
-    pub fn from_trits<U: Into<Trit> + Clone>(trits: &[U]) -> Self {
+    pub fn from_trits(trits: &[<T::Slice as RawEncoding>::Trit]) -> Self {
         Self(T::from_trits(trits))
     }
 
-    // TODO: Is this a good API feature?
+    // TODO: Is this a good API feature? No, it's not. Kill it with fire.
+    #[deprecated]
     pub fn from_i8_unchecked(trits: &[i8]) -> Self {
-        // TODO: Don't check
-        Self::from_trits(trits)
+        trits
+            .iter()
+            .map(|t| <T::Slice as RawEncoding>::Trit::try_from(*t))
+            .collect::<Result<Self, _>>()
+            .unwrap_or_else(|_| panic!("Invalid i8 when converting to trit."))
     }
 
-    pub fn push(&mut self, trit: Trit) {
-        self.0.push(trit.into());
+    pub fn push(&mut self, trit: <T::Slice as RawEncoding>::Trit) {
+        self.0.push(trit);
+    }
+
+    pub fn pop(&mut self) -> Option<<T::Slice as RawEncoding>::Trit> {
+        self.0.pop()
     }
 
     pub fn as_slice(&self) -> &Trits<T::Slice> {
@@ -230,7 +338,12 @@ impl<T: RawEncodingBuf> TritBuf<T> {
         unsafe { &mut *(self.0.as_slice_mut() as *mut T::Slice as *mut Trits<T::Slice>) }
     }
 
-    pub fn into_encoding<U: RawEncodingBuf>(self) -> TritBuf<U> {
+    #[deprecated]
+    pub fn into_encoding<U>(self) -> TritBuf<U>
+    where
+        U: RawEncodingBuf,
+        U::Slice: RawEncoding<Trit = <T::Slice as RawEncoding>::Trit>,
+    {
         T::into_encoding(self)
     }
 }
@@ -238,7 +351,7 @@ impl<T: RawEncodingBuf> TritBuf<T> {
 impl<T: RawEncodingBuf, U: RawEncodingBuf> PartialEq<TritBuf<U>> for TritBuf<T>
     where
         T::Slice: RawEncoding,
-        U::Slice: RawEncoding,
+        U::Slice: RawEncoding<Trit = <T::Slice as RawEncoding>::Trit>,
 {
     fn eq(&self, other: &TritBuf<U>) -> bool {
         self.as_slice() == other.as_slice()
@@ -259,15 +372,24 @@ impl<T: RawEncodingBuf> DerefMut for TritBuf<T> {
     }
 }
 
-impl<T: RawEncodingBuf> FromIterator<Trit> for TritBuf<T> {
-    fn from_iter<I: IntoIterator<Item=Trit>>(iter: I) -> Self {
-        let mut this = Self::new();
-
+impl<T: RawEncodingBuf> FromIterator<<T::Slice as RawEncoding>::Trit> for TritBuf<T> {
+    fn from_iter<I: IntoIterator<Item=<T::Slice as RawEncoding>::Trit>>(iter: I) -> Self {
+        let iter = iter.into_iter();
+        let mut this = Self::with_capacity(iter.size_hint().0);
         for trit in iter {
             this.push(trit);
         }
-
         this
+    }
+}
+
+impl<T> hash::Hash for TritBuf<T>
+where
+    T: RawEncodingBuf,
+    T::Slice: hash::Hash,
+{
+    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+        (**self).hash(hasher)
     }
 }
 
@@ -288,37 +410,12 @@ impl<T: RawEncodingBuf> IndexMut<Range<usize>> for TritBuf<T> {
 impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TritBuf<{}> [", any::type_name::<T>())?;
-        for (i, trit) in self.iter().enumerate() {
+        for (i, trit) in self.trits().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
             write!(f, "{:?}", trit)?;
         }
         write!(f, "]")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn compare() {
-        fn slices_eq(a: &Trits<T4B1>, b: &Trits<T4B1>) -> bool {
-            a
-                .iter()
-                .zip(b.iter())
-                .all(|(a, b)| a == b)
-        }
-
-        let mut a = TritBuf::<T4B1Buf>::from_trits(&[1i8, -1, 0, 1, 0])
-            .into_encoding::<T1B1Buf>()
-            .into_encoding::<T4B1Buf>();
-
-        a.set(2, Trit::MinusOne);
-
-        let b = TritBuf::<T4B1Buf>::from_trits(&[-1i8, -1, 1]);
-
-        assert!(slices_eq(&a[1..5], &b));
     }
 }
