@@ -40,7 +40,7 @@ impl<'a, T: RawEncoding> Serialize for &'a Trits<T>
 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for trit in self.iter() {
+        for trit in self.trits() {
             seq.serialize_element(&trit)?;
         }
         seq.end()
@@ -52,7 +52,7 @@ impl<T: RawEncodingBuf> Serialize for TritBuf<T>
 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for trit in self.iter() {
+        for trit in self.trits() {
             seq.serialize_element(&trit)?;
         }
         seq.end()
