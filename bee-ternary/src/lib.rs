@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::slice;
 
 pub mod trit;
 pub mod tryte;
@@ -110,7 +111,7 @@ where
         }
     }
 
-    pub fn iter(&self) -> impl DoubleEndedIterator<Item=T::Trit> + ExactSizeIterator<Item=T::Trit> + '_ {
+    pub fn trits(&self) -> impl DoubleEndedIterator<Item=T::Trit> + ExactSizeIterator<Item=T::Trit> + '_ {
         (0..self.0.len()).map(move |idx| unsafe { self.0.get_unchecked(idx) })
     }
 
@@ -126,7 +127,7 @@ where
 
     pub fn copy_from<U: RawEncoding<Trit = T::Trit> + ?Sized>(&mut self, trits: &Trits<U>) {
         assert!(self.len() == trits.len());
-        for (i, trit) in trits.iter().enumerate() {
+        for (i, trit) in trits.trits().enumerate() {
             unsafe { self.set_unchecked(i, trit); }
         }
     }
@@ -142,7 +143,7 @@ where
         U: RawEncodingBuf,
         U::Slice: RawEncoding<Trit = T::Trit>,
     {
-        self.iter().collect()
+        self.trits().collect()
     }
 
     pub fn chunks(&self, chunk_len: usize) -> impl DoubleEndedIterator<Item=&Self> + ExactSizeIterator<Item=&Self> + '_ {
@@ -157,7 +158,7 @@ where
         U: RawEncodingBuf,
         U::Slice: RawEncoding<Trit = T::Trit>,
     {
-        self.iter().collect()
+        self.trits().collect()
     }
 }
 
@@ -186,6 +187,14 @@ impl<T: Trit> Trits<T1B1<T>> {
             unsafe { &mut *(this.0.slice_unchecked_mut(0..idx) as *mut _ as *mut Self) },
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
         )
+    }
+
+    pub fn iter<'a>(&'a self) -> slice::Iter<'a, T> {
+        self.as_raw_slice().iter()
+    }
+
+    pub fn iter_mut<'a>(&'a mut self) -> slice::IterMut<'a, T> {
+        self.as_raw_slice_mut().iter_mut()
     }
 }
 
@@ -217,8 +226,8 @@ where
 {
     fn eq(&self, other: &Trits<U>) -> bool {
         self.len() == other.len() && self
-            .iter()
-            .zip(other.iter())
+            .trits()
+            .zip(other.trits())
             .all(|(a, b)| a == b)
     }
 }
@@ -234,7 +243,7 @@ where
             return None;
         }
 
-        for (a, b) in self.iter().zip(other.iter()) {
+        for (a, b) in self.trits().zip(other.trits()) {
             match a.partial_cmp(&b) {
                 Some(Ordering::Equal) => continue,
                 other_order => return other_order,
@@ -248,7 +257,7 @@ where
 impl<'a, T: RawEncoding + ?Sized> fmt::Debug for &'a Trits<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Trits<{}> [", any::type_name::<T>())?;
-        for (i, trit) in self.iter().enumerate() {
+        for (i, trit) in self.trits().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
@@ -401,7 +410,7 @@ impl<T: RawEncodingBuf> IndexMut<Range<usize>> for TritBuf<T> {
 impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TritBuf<{}> [", any::type_name::<T>())?;
-        for (i, trit) in self.iter().enumerate() {
+        for (i, trit) in self.trits().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
