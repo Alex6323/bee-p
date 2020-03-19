@@ -51,7 +51,4 @@ impl std::ops::Index<usize> for Bundle {
 }
 
 #[cfg(test)]
-mod tests {
-
-    use super::*;
-}
+mod tests {}
