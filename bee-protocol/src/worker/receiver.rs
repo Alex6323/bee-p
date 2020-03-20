@@ -136,7 +136,7 @@ impl ReceiverWorker {
     ) -> ReceiverWorkerState {
         match event {
             ReceiverWorkerEvent::Connected => {
-                info!("[Neighbor-{}] Connected", self.epid);
+                info!("[Peer({})] Connected", self.epid);
 
                 // TODO spawn ?
                 self.send_handshake().await;
@@ -150,7 +150,7 @@ impl ReceiverWorker {
     }
 
     fn check_handshake(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
-        debug!("[Neighbor-{}] Reading Handshake", self.epid);
+        debug!("[Peer({})] Reading Handshake", self.epid);
 
         match Handshake::from_full_bytes(&header, bytes) {
             Ok(handshake) => {
@@ -165,25 +165,25 @@ impl ReceiverWorker {
                 // TODO check actual port
                 if handshake.port != handshake.port {
                     warn!(
-                        "[Neighbor-{}] Invalid handshake port: {} != {}",
+                        "[Peer({})] Invalid handshake port: {} != {}",
                         self.epid, handshake.port, handshake.port
                     );
                 } else if timestamp - handshake.timestamp > 5000 {
                     warn!(
-                        "[Neighbor-{}] Invalid handshake timestamp: {}",
+                        "[Peer({})] Invalid handshake timestamp: {}",
                         self.epid, handshake.timestamp
                     );
                 } else if !slice_eq(&handshake.coordinator, &COORDINATOR_BYTES) {
-                    warn!("[Neighbor-{}] Invalid handshake coordinator", self.epid);
+                    warn!("[Peer({})] Invalid handshake coordinator", self.epid);
                 } else if handshake.minimum_weight_magnitude != MINIMUM_WEIGHT_MAGNITUDE {
                     warn!(
-                        "[Neighbor-{}] Invalid handshake MWM: {} != {}",
+                        "[Peer({})] Invalid handshake MWM: {} != {}",
                         self.epid, handshake.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE
                     );
                 } else if let Err(version) = supported_version(&handshake.supported_messages) {
-                    warn!("[Neighbor-{}] Unsupported protocol version: {}", self.epid, version);
+                    warn!("[Peer({})] Unsupported protocol version: {}", self.epid, version);
                 } else {
-                    info!("[Neighbor-{}] Handshake completed", self.epid);
+                    info!("[Peer({})] Handshake completed", self.epid);
 
                     state = ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                         state: ReceiverWorkerMessageState::Header,
@@ -195,7 +195,7 @@ impl ReceiverWorker {
             }
 
             Err(e) => {
-                warn!("[Neighbor-{}] Reading Handshake failed: {:?}", self.epid, e);
+                warn!("[Peer({})] Reading Handshake failed: {:?}", self.epid, e);
 
                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                     state: ReceiverWorkerMessageState::Header,
@@ -211,7 +211,7 @@ impl ReceiverWorker {
     ) -> ReceiverWorkerState {
         match event {
             ReceiverWorkerEvent::Disconnected => {
-                info!("[Neighbor-{}] Disconnected", self.epid);
+                info!("[Peer({})] Disconnected", self.epid);
 
                 ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
@@ -224,7 +224,7 @@ impl ReceiverWorker {
                 } else {
                     match context.state {
                         ReceiverWorkerMessageState::Header => {
-                            debug!("[Neighbor-{}] Reading Header", self.epid);
+                            debug!("[Peer({})] Reading Header", self.epid);
 
                             let header = Header::from_bytes(&bytes[0..3]);
 
@@ -250,16 +250,16 @@ impl ReceiverWorker {
         // TODO metrics
         match header.message_type {
             Handshake::ID => {
-                warn!("[Neighbor-{}] Ignoring unexpected Handshake", self.epid);
+                warn!("[Peer({})] Ignoring unexpected Handshake", self.epid);
                 // TODO handle here instead of dedicated state ?
             }
 
             LegacyGossip::ID => {
-                warn!("[Neighbor-{}] Ignoring unsupported LegacyGossip", self.epid);
+                warn!("[Peer({})] Ignoring unsupported LegacyGossip", self.epid);
             }
 
             MilestoneRequest::ID => {
-                debug!("[Neighbor-{}] Reading MilestoneRequest", self.epid);
+                debug!("[Peer({})] Reading MilestoneRequest", self.epid);
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -272,13 +272,13 @@ impl ReceiverWorker {
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!("[Neighbor-{}] Reading MilestoneRequest failed: {:?}", self.epid, e);
+                        warn!("[Peer({})] Reading MilestoneRequest failed: {:?}", self.epid, e);
                     }
                 }
             }
 
             TransactionBroadcast::ID => {
-                debug!("[Neighbor-{}] Reading TransactionBroadcast", self.epid);
+                debug!("[Peer({})] Reading TransactionBroadcast", self.epid);
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -288,13 +288,13 @@ impl ReceiverWorker {
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!("[Neighbor-{}] Reading TransactionBroadcast failed: {:?}", self.epid, e);
+                        warn!("[Peer({})] Reading TransactionBroadcast failed: {:?}", self.epid, e);
                     }
                 }
             }
 
             TransactionRequest::ID => {
-                debug!("[Neighbor-{}] Reading TransactionRequest", self.epid);
+                debug!("[Peer({})] Reading TransactionRequest", self.epid);
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -307,18 +307,18 @@ impl ReceiverWorker {
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!("[Neighbor-{}] Reading TransactionRequest failed: {:?}", self.epid, e);
+                        warn!("[Peer({})] Reading TransactionRequest failed: {:?}", self.epid, e);
                     }
                 }
             }
 
             Heartbeat::ID => {
-                debug!("[Neighbor-{}] Reading Heartbeat", self.epid);
+                debug!("[Peer({})] Reading Heartbeat", self.epid);
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
                     Ok(_) => {}
                     Err(e) => {
-                        warn!("[Neighbor-{}] Reading Heartbeat failed: {:?}", self.epid, e);
+                        warn!("[Peer({})] Reading Heartbeat failed: {:?}", self.epid, e);
                     }
                 }
             }
@@ -344,7 +344,7 @@ impl ReceiverWorker {
 
         match event {
             ReceiverWorkerEvent::Disconnected => {
-                debug!("[Neighbor-{}] Disconnected", self.epid);
+                debug!("[Peer({})] Disconnected", self.epid);
 
                 ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
             }
@@ -361,7 +361,7 @@ impl ReceiverWorker {
                 while remaining {
                     context.state = match context.state {
                         ReceiverWorkerMessageState::Header => {
-                            debug!("[Neighbor-{}] Reading Header", self.epid);
+                            debug!("[Peer({})] Reading Header", self.epid);
 
                             if offset + 3 <= context.buffer.len() {
                                 let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
@@ -383,7 +383,7 @@ impl ReceiverWorker {
                                     )
                                     .await
                                 {
-                                    error!("[Neighbor-{}] Processing message failed: {:?}", self.epid, e);
+                                    error!("[Peer({})] Processing message failed: {:?}", self.epid, e);
                                 }
 
                                 offset = offset + header.message_length as usize;
