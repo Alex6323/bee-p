@@ -1,4 +1,7 @@
-use crate::message::{Message, MessageError};
+use crate::message::{
+    Message,
+    MessageError,
+};
 
 use std::ops::Range;
 
@@ -51,7 +54,10 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{Header, HEADER_SIZE};
+    use crate::message::{
+        Header,
+        HEADER_SIZE,
+    };
 
     use bee_test::slices::slice_eq;
 

@@ -1,13 +1,33 @@
 use crate::message::{
-    Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
+    Handshake,
+    Header,
+    Heartbeat,
+    LegacyGossip,
+    Message,
+    MilestoneRequest,
+    TransactionBroadcast,
+    TransactionRequest,
 };
-use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
-use crate::worker::{ResponderWorkerEvent, TransactionWorkerEvent};
+use crate::protocol::{
+    COORDINATOR_BYTES,
+    MINIMUM_WEIGHT_MAGNITUDE,
+    SUPPORTED_VERSIONS,
+};
+use crate::worker::{
+    ResponderWorkerEvent,
+    TransactionWorkerEvent,
+};
 
 use bee_network::Command::SendBytes;
-use bee_network::{EndpointId, Network};
+use bee_network::{
+    EndpointId,
+    Network,
+};
 
-use futures::channel::mpsc::{Receiver, Sender};
+use futures::channel::mpsc::{
+    Receiver,
+    Sender,
+};
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use log::*;

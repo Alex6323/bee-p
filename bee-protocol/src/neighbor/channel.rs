@@ -1,6 +1,16 @@
-use crate::message::{Handshake, Heartbeat, MilestoneRequest, TransactionBroadcast, TransactionRequest};
+use crate::message::{
+    Handshake,
+    Heartbeat,
+    MilestoneRequest,
+    TransactionBroadcast,
+    TransactionRequest,
+};
 
-use futures::channel::mpsc::{channel, Receiver, Sender};
+use futures::channel::mpsc::{
+    channel,
+    Receiver,
+    Sender,
+};
 
 // TODO analyze default values
 const HANDSHAKE_CHANNEL_SIZE: usize = 1000;

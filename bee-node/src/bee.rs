@@ -1,7 +1,10 @@
 use crate::config::Config;
 use crate::state::State;
 
-use bee_common::{logger, Result};
+use bee_common::{
+    logger,
+    Result,
+};
 
 use async_std::task;
 
@@ -93,7 +96,11 @@ impl Bee {
 #[cfg(test)]
 mod should {
     use super::*;
-    use crate::config::{Config, Host, Peer};
+    use crate::config::{
+        Config,
+        Host,
+        Peer,
+    };
 
     #[test]
     fn create_bee_from_config() {

@@ -1,15 +1,38 @@
 use bee_network::Command::Connect;
-use bee_network::{EndpointId, Event, EventSubscriber, Network, Shutdown};
-use bee_peering::{PeerManager, StaticPeerManager};
+use bee_network::{
+    EndpointId,
+    Event,
+    EventSubscriber,
+    Network,
+    Shutdown,
+};
+use bee_peering::{
+    PeerManager,
+    StaticPeerManager,
+};
 use bee_protocol::{
-    NodeMetrics, ReceiverWorker, ReceiverWorkerEvent, RequesterWorker, RequesterWorkerEvent, ResponderWorker,
-    ResponderWorkerEvent, TransactionWorker, TransactionWorkerEvent,
+    NodeMetrics,
+    ReceiverWorker,
+    ReceiverWorkerEvent,
+    RequesterWorker,
+    RequesterWorkerEvent,
+    ResponderWorker,
+    ResponderWorkerEvent,
+    TransactionWorker,
+    TransactionWorkerEvent,
 };
 
 use std::collections::HashMap;
 
-use async_std::task::{block_on, spawn};
-use futures::channel::mpsc::{channel, SendError, Sender};
+use async_std::task::{
+    block_on,
+    spawn,
+};
+use futures::channel::mpsc::{
+    channel,
+    SendError,
+    Sender,
+};
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use log::*;

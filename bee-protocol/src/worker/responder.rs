@@ -1,7 +1,15 @@
-use crate::message::{Message, MilestoneRequest, TransactionBroadcast, TransactionRequest};
+use crate::message::{
+    Message,
+    MilestoneRequest,
+    TransactionBroadcast,
+    TransactionRequest,
+};
 
 use bee_network::Command::SendBytes;
-use bee_network::{EndpointId, Network};
+use bee_network::{
+    EndpointId,
+    Network,
+};
 
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;

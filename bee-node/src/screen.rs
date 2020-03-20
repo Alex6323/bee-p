@@ -1,13 +1,35 @@
 // TODO: handle proper screen exit when pressing CTRL-C
 
-use bee_common::constants::{BEE_DISPLAYED_NAME, BEE_DISPLAYED_VERSION};
+use bee_common::constants::{
+    BEE_DISPLAYED_NAME,
+    BEE_DISPLAYED_VERSION,
+};
 
-use std::io::{stdout, Write};
+use std::io::{
+    stdout,
+    Write,
+};
 
-use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
-use crossterm::cursor::{Hide, Show, MoveTo};
-use crossterm::{execute, ExecutableCommand};
-use crossterm::style::{SetForegroundColor, SetBackgroundColor, Color, ResetColor, Print};
+use crossterm::cursor::{
+    Hide,
+    MoveTo,
+    Show,
+};
+use crossterm::style::{
+    Color,
+    Print,
+    ResetColor,
+    SetBackgroundColor,
+    SetForegroundColor,
+};
+use crossterm::terminal::{
+    EnterAlternateScreen,
+    LeaveAlternateScreen,
+};
+use crossterm::{
+    execute,
+    ExecutableCommand,
+};
 
 pub fn init() {
     execute!(std::io::stdout(), EnterAlternateScreen).expect("error entering alternate screen");
@@ -26,10 +48,13 @@ pub fn exit() {
 
 fn header() -> crossterm::Result<()> {
     stdout()
-    .execute(SetForegroundColor(Color::Black))?
-    .execute(SetBackgroundColor(Color::Yellow))?
-    .execute(Print(format!("IOTA Foundation, {} Version {}", BEE_DISPLAYED_NAME, BEE_DISPLAYED_VERSION)))?
-    .execute(ResetColor)?;
+        .execute(SetForegroundColor(Color::Black))?
+        .execute(SetBackgroundColor(Color::Yellow))?
+        .execute(Print(format!(
+            "IOTA Foundation, {} Version {}",
+            BEE_DISPLAYED_NAME, BEE_DISPLAYED_VERSION
+        )))?
+        .execute(ResetColor)?;
 
     Ok(())
 }

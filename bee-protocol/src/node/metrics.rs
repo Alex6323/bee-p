@@ -1,4 +1,7 @@
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{
+    AtomicU32,
+    Ordering,
+};
 
 #[derive(Default)]
 pub struct NodeMetrics {

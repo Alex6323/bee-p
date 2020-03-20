@@ -1,6 +1,9 @@
 use crate::message::Message;
 
-use bee_network::{EndpointId, Network};
+use bee_network::{
+    EndpointId,
+    Network,
+};
 
 use std::marker::PhantomData;
 

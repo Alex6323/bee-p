@@ -10,7 +10,11 @@ mod transaction_request;
 
 pub(crate) use errors::MessageError;
 pub(crate) use handshake::Handshake;
-pub(crate) use header::{Header, HEADER_SIZE, HEADER_TYPE_SIZE};
+pub(crate) use header::{
+    Header,
+    HEADER_SIZE,
+    HEADER_TYPE_SIZE,
+};
 pub(crate) use heartbeat::Heartbeat;
 pub(crate) use legacy_gossip::LegacyGossip;
 pub(crate) use message::Message;

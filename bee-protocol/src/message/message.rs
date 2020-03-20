@@ -1,5 +1,9 @@
 use crate::message::MessageError;
-use crate::message::{Header, HEADER_SIZE, HEADER_TYPE_SIZE};
+use crate::message::{
+    Header,
+    HEADER_SIZE,
+    HEADER_TYPE_SIZE,
+};
 
 use std::ops::Range;
 

@@ -1,4 +1,8 @@
-use crate::message::{Message, MessageError, MilestoneIndex};
+use crate::message::{
+    Message,
+    MessageError,
+    MilestoneIndex,
+};
 
 use std::convert::TryInto;
 use std::mem::size_of;
@@ -55,7 +59,10 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{Header, HEADER_SIZE};
+    use crate::message::{
+        Header,
+        HEADER_SIZE,
+    };
 
     use std::convert::TryInto;
 

@@ -1,8 +1,14 @@
-use crate::message::{Message, MessageError};
+use crate::message::{
+    Message,
+    MessageError,
+};
 
 use std::convert::TryInto;
 use std::ops::Range;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{
+    SystemTime,
+    UNIX_EPOCH,
+};
 
 const HANDSHAKE_PORT_SIZE: usize = 2;
 const HANDSHAKE_TIMESTAMP_SIZE: usize = 8;
@@ -133,7 +139,10 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{Header, HEADER_SIZE};
+    use crate::message::{
+        Header,
+        HEADER_SIZE,
+    };
 
     use bee_test::slices::slice_eq;
 

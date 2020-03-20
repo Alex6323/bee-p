@@ -1,4 +1,8 @@
-use crate::message::{Message, MilestoneRequest, TransactionRequest};
+use crate::message::{
+    Message,
+    MilestoneRequest,
+    TransactionRequest,
+};
 
 use bee_network::Command::SendBytes;
 use bee_network::Network;

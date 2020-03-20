@@ -1,4 +1,8 @@
-use crate::message::{Message, MessageError, MilestoneIndex};
+use crate::message::{
+    Message,
+    MessageError,
+    MilestoneIndex,
+};
 
 use std::convert::TryInto;
 use std::mem::size_of;
@@ -72,7 +76,10 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{Header, HEADER_SIZE};
+    use crate::message::{
+        Header,
+        HEADER_SIZE,
+    };
 
     const FIRST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x3dc297b4;
     const LAST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x01181f9b;
