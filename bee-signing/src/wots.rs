@@ -10,8 +10,10 @@ use crate::{
 
 use bee_crypto::Sponge;
 use bee_ternary::{
+    T1B1Buf,
     TritBuf,
     Trits,
+    TryteBuf,
 };
 
 use std::marker::PhantomData;
@@ -298,7 +300,8 @@ mod tests {
     // }
 
     fn wots_generic_complete_test<S: Sponge + Default>() {
-        let seed = IotaSeed::<S>::from_buf(TritBuf::from_i8_unchecked(&SEED.trits())).unwrap();
+        let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
+        let seed = IotaSeed::<S>::from_buf(seed_trits).unwrap();
 
         for security in 1..4 {
             for index in 0..5 {
