@@ -108,7 +108,7 @@ where
         let mut sum: i64 = 0;
 
         if self.transactions.len() == 0 {
-            return Err(IncomingBundleBuilderError::Empty);
+            Err(IncomingBundleBuilderError::Empty)?;
         }
 
         let last_index = self.transactions.len() - 1;
@@ -121,37 +121,37 @@ where
 
         for (index, transaction) in self.transactions.0.iter().enumerate() {
             if index != transaction.index().0 {
-                return Err(IncomingBundleBuilderError::InvalidIndex(transaction.index().0));
+                Err(IncomingBundleBuilderError::InvalidIndex(transaction.index().0))?;
             }
 
             if last_index != transaction.last_index().0 {
-                return Err(IncomingBundleBuilderError::InvalidLastIndex(transaction.last_index().0));
+                Err(IncomingBundleBuilderError::InvalidLastIndex(transaction.last_index().0))?;
             }
 
             sum += transaction.value.0;
             if sum.abs() > IOTA_SUPPLY {
-                return Err(IncomingBundleBuilderError::InvalidValue(sum));
+                Err(IncomingBundleBuilderError::InvalidValue(sum))?;
             }
 
             if transaction.value.0 != 0
                 && transaction.address().0.get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero
             {
-                return Err(IncomingBundleBuilderError::InvalidAddress);
+                Err(IncomingBundleBuilderError::InvalidAddress)?;
             }
 
             if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().as_bytes().to_vec()) {
-                return Err(IncomingBundleBuilderError::InvalidBundleHash);
+                Err(IncomingBundleBuilderError::InvalidBundleHash)?;
             }
 
             if index > 0 as usize && transaction.branch().ne(first_branch) {
-                return Err(IncomingBundleBuilderError::InvalidBranchInconsistency);
+                Err(IncomingBundleBuilderError::InvalidBranchInconsistency)?;
             }
 
             // TODO - for each transaction's hash check that it is its prev trunk
         }
 
         if sum != 0 {
-            return Err(IncomingBundleBuilderError::InvalidValue(sum));
+            Err(IncomingBundleBuilderError::InvalidValue(sum))?;
         }
 
         self.validate_signatures()?;

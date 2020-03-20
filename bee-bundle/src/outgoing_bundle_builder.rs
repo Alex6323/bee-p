@@ -87,18 +87,18 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
         let last_index = self.builders.len() - 1;
 
         if self.builders.len() == 0 {
-            return Err(OutgoingBundleBuilderError::Empty);
+            Err(OutgoingBundleBuilderError::Empty)?;
         }
 
         for (index, builder) in self.builders.0.iter_mut().enumerate() {
             if builder.payload.is_none() {
-                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("payload"));
+                Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("payload"))?;
             } else if builder.address.is_none() {
-                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("address"));
+                Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("address"))?;
             } else if builder.value.is_none() {
-                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("value"));
+                Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("value"))?;
             } else if builder.tag.is_none() {
-                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("tag"));
+                Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("tag"))?;
             }
 
             builder.index.replace(Index(index));
@@ -107,12 +107,12 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
             // Safe to unwrap since we just checked it's not None
             sum += builder.value.as_ref().unwrap().0;
             if sum.abs() > IOTA_SUPPLY {
-                return Err(OutgoingBundleBuilderError::InvalidValue(sum));
+                Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
             }
         }
 
         if sum != 0 {
-            return Err(OutgoingBundleBuilderError::InvalidValue(sum));
+            Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
         }
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSealed> {
@@ -129,7 +129,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         for builder in &self.builders.0 {
             // Safe to unwrap since we made sure it's not None in `seal`
             if builder.value.as_ref().unwrap().0 < 0 {
-                return Err(OutgoingBundleBuilderError::UnsignedInput);
+                Err(OutgoingBundleBuilderError::UnsignedInput)?;
             }
         }
 

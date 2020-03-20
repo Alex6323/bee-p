@@ -475,7 +475,7 @@ impl TransactionBuilder {
             .0;
 
         if value.abs() > IOTA_SUPPLY {
-            return Err(TransactionBuilderError::InvalidValue(value));
+            Err(TransactionBuilderError::InvalidValue(value))?;
         }
 
         Ok(Transaction {
