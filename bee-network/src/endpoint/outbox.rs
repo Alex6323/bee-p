@@ -16,26 +16,22 @@ pub fn bytes_channel() -> (BytesSender, BytesReceiver) {
     mpsc::channel(BYTES_CHANNEL_CAPACITY)
 }
 
+/// Responsible for sending messages (i.e. chunks of bytes) to the writer tasks handling the recipients.
 pub struct Outbox {
     inner: HashMap<EpId, BytesSender>,
 }
 
 impl Outbox {
-    /// Creates a new instance.
+    /// Creates a new instance of `Self`.
     pub fn new() -> Self {
         Self { inner: HashMap::new() }
     }
 
-    /// Returns the size of the pool.
-    pub fn size(&self) -> usize {
-        self.inner.len()
-    }
-
-    /// Inserts a `sender` to the pool.
+    /// Inserts a new outgoing communication channel to a recipient referred to by its `EndpointId`.
     ///
-    /// NOTE: Inserts only if there is no entry with the endpoint id yet.
+    /// NOTE: Instead of replacing, this method inserts only, if there is no entry with that endpoint id yet.
     pub fn insert(&mut self, epid: EpId, sender: BytesSender) -> bool {
-        match self.inner.entry(epid.clone()) {
+        match self.inner.entry(epid) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
                 entry.insert(sender);
@@ -44,14 +40,11 @@ impl Outbox {
         }
     }
 
-    /// Removes a `sender` associated with an endpoint.
+    /// Removes an outgoing communication channel.
+    ///
+    /// NOTE: Releasing the channel sender half will cause the writer task to end.
     pub fn remove(&mut self, id: &EpId) -> bool {
         self.inner.remove(id).is_some()
-    }
-
-    /// Checks whether the specified endpoint belongs to the pool.
-    pub fn contains(&self, id: &EpId) -> bool {
-        self.inner.contains_key(id)
     }
 
     /// Sends `bytes` to `receiver`.

@@ -55,14 +55,8 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
         event_sender.clone(),
     );
 
-    let tcp_actor = TcpActor::new(
-        binding_addr.clone(),
-        internal_event_sender.clone(),
-        event_sender.clone(),
-        tcp_shutdown,
-    );
-
-    //let udp_actor = UdpActor::new(binding_addr, internal_event_sender, event_sender, udp_shutdown);
+    let tcp_actor = TcpActor::new(binding_addr.clone(), internal_event_sender.clone(), tcp_shutdown);
+    //let udp_actor = UdpActor::new(binding_addr, internal_event_sender, udp_shutdown);
 
     shutdown.add_notifier(edp_sd_sender);
     shutdown.add_notifier(tcp_sd_sender);

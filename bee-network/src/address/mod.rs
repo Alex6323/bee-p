@@ -14,7 +14,7 @@ use async_std::net::{
 use std::fmt;
 use std::ops;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Port(pub u16);
 
 impl ops::Deref for Port {

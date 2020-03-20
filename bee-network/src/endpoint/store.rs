@@ -2,7 +2,6 @@ use super::{
     Endpoint,
     EndpointId,
 };
-
 use std::collections::hash_map::{
     Entry,
     Iter,
@@ -74,7 +73,7 @@ mod tests {
 
         let url = block_on(Url::from_str_with_port("udp://localhost:16000")).unwrap();
         let ep = Endpoint::from_url(url);
-        let ep_id = ep.id.clone();
+        let ep_id = ep.id;
 
         assert!(store.insert(ep), "Insertion failed");
         assert_eq!(1, store.num(), "Incorrect store size");
@@ -116,7 +115,7 @@ mod tests {
 
         let url1 = block_on(Url::from_str_with_port("udp://localhost:16000")).unwrap();
         let ep1 = Endpoint::from_url(url1);
-        let ep1_id = ep1.id.clone();
+        let ep1_id = ep1.id;
 
         store.insert(ep1);
 
@@ -129,7 +128,7 @@ mod tests {
 
         let url1 = block_on(Url::from_str_with_port("udp://localhost:16000")).unwrap();
         let ep1 = Endpoint::from_url(url1);
-        let ep1_id = ep1.id.clone();
+        let ep1_id = ep1.id;
 
         store.insert(ep1);
 

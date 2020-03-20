@@ -160,9 +160,9 @@ impl EndpointActor {
                             self.publisher.send(Event::EndpointRemoved { epid, total }).await;
                         },
                         Event::NewConnection { ep, sender } => {
-                            let epid = ep.id.clone();
+                            let epid = ep.id;
 
-                            outbox.insert(epid.clone(), sender);
+                            outbox.insert(epid, sender);
                             connected.insert(ep);
 
                             self.publisher.send(Event::EndpointConnected {
@@ -172,7 +172,7 @@ impl EndpointActor {
                             }).await?
                         },
                         Event::LostConnection { epid } => {
-                            disconnect(epid.clone(), &mut connected, &mut outbox, &mut self.publisher).await?;
+                            disconnect(epid, &mut connected, &mut outbox, &mut self.publisher).await?;
 
                             // NOTE: 'try_connect' will check if 'epid' is part of the contact list
                             try_connect(epid, &mut contacts, &mut connected, None, &mut self.notifier).await?;
@@ -210,8 +210,8 @@ impl EndpointActor {
 
 #[inline(always)]
 async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> R<bool> {
-    let ep = Ep::from_url(url.clone());
-    let epid = ep.id.clone();
+    let ep = Ep::from_url(url);
+    let epid = ep.id;
 
     if contacts.insert(ep) {
         notifier
@@ -280,9 +280,7 @@ async fn try_connect(
         } else {
             match ep.protocol {
                 Protocol::Tcp => {
-                    // If the connection attempt succeeds, change the endpoint's state.
                     if tcp::try_connect(&ep.id, &ep.address, notifier.clone()).await.is_ok() {
-                        //ep.set_connected();
                         connected.insert(ep.clone());
                         if let Some(responder) = responder {
                             match responder.send(true) {

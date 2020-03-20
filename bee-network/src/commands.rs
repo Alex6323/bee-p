@@ -8,6 +8,8 @@ use futures::channel::{
 
 use std::fmt;
 
+// TODO: do not expose `futures::Sender, futures::Receiver` directly to make sure
+// we can version up independently
 pub type Responder<T> = oneshot::Sender<T>;
 pub type Requester<T> = oneshot::Receiver<T>;
 
@@ -81,6 +83,7 @@ pub type CommandSender = mpsc::Sender<Command>;
 pub type CommandReceiver = mpsc::Receiver<Command>;
 
 // TODO: what's a good value here?
+// TODO: put this into `constants.rs`
 const COMMAND_CHANNEL_CAPACITY: usize = 1000;
 
 pub(crate) fn command_channel() -> (CommandSender, CommandReceiver) {

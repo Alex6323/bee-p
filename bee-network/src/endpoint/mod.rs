@@ -47,13 +47,13 @@ pub struct Endpoint {
 impl Endpoint {
     pub fn new(address: Address, protocol: Protocol) -> Self {
         Self {
-            id: address.clone().into(),
+            id: address.into(),
             address,
             protocol,
         }
     }
     pub fn from_url(url: Url) -> Self {
-        let address = url.address().clone();
+        let address = url.address();
         let protocol = url.protocol();
 
         Endpoint::new(address, protocol)

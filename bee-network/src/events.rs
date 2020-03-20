@@ -9,6 +9,7 @@ use crate::endpoint::{
 use futures::channel::mpsc;
 use std::fmt;
 
+// TODO: remove this
 const EVENT_CHAN_CAPACITY: usize = 10000;
 
 #[derive(Debug)]
@@ -105,6 +106,7 @@ pub type EventPublisher = mpsc::Sender<Event>;
 pub type EventSubscriber = mpsc::Receiver<Event>;
 
 // TODO: what's a good value here?
+// TODO: move this into `constants.rs`
 const EVENT_CHANNEL_CAPACITY: usize = 10000;
 
 pub fn event_channel() -> (EventPublisher, EventSubscriber) {

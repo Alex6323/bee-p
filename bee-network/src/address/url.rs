@@ -6,7 +6,7 @@ use std::fmt;
 const PROTOCOL_SEPARATOR: &'static str = "://";
 const PORT_SEPARATOR: &'static str = ":";
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Protocol {
     Tcp,
@@ -23,7 +23,7 @@ impl Protocol {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Url {
     Tcp(Address),
@@ -65,9 +65,9 @@ impl Url {
         }
     }
 
-    pub fn address(&self) -> &Address {
+    pub fn address(&self) -> Address {
         match *self {
-            Url::Tcp(ref address) | Url::Udp(ref address) => address,
+            Url::Tcp(address) | Url::Udp(address) => address,
         }
     }
 

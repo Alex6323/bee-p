@@ -1,7 +1,6 @@
 use crate::address::Address;
 use crate::errors::ActorSuccess as S;
 use crate::events::EventPublisher as Notifier;
-use crate::events::EventPublisher as Publisher;
 use crate::shutdown::ShutdownListener as Shutdown;
 
 use super::connection::{
@@ -18,16 +17,14 @@ use log::*;
 pub(crate) struct TcpActor {
     binding_addr: Address,
     notifier: Notifier,
-    publisher: Notifier,
     shutdown: Shutdown,
 }
 
 impl TcpActor {
-    pub fn new(binding_addr: Address, notifier: Notifier, publisher: Publisher, shutdown: Shutdown) -> Self {
+    pub fn new(binding_addr: Address, notifier: Notifier, shutdown: Shutdown) -> Self {
         Self {
             binding_addr,
             notifier,
-            publisher,
             shutdown,
         }
     }
