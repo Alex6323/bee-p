@@ -9,9 +9,11 @@ use futures::sink::SinkExt;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
+// TODO: rename to `MessageSender`, `MessageReceiver`.
 pub type BytesSender = mpsc::Sender<Arc<Vec<u8>>>;
 pub type BytesReceiver = mpsc::Receiver<Arc<Vec<u8>>>;
 
+// TODO: rename to `message_channel`
 pub fn bytes_channel() -> (BytesSender, BytesReceiver) {
     mpsc::channel(BYTES_CHANNEL_CAPACITY)
 }

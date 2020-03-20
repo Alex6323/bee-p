@@ -9,54 +9,94 @@ use crate::endpoint::{
 use futures::channel::mpsc;
 use std::fmt;
 
-// TODO: remove this
-const EVENT_CHAN_CAPACITY: usize = 10000;
-
+/// Network events.
 #[derive(Debug)]
 pub enum Event {
+    /// Signals that a new `Endpoint` has been added.
     EndpointAdded {
+        /// The id of new `Endpoint`.
         epid: EndpointId,
+
+        /// The total number of managed `Endpoint`s.
         total: usize,
     },
 
+    /// Signals that an  `Endpoint` has been removed.
     EndpointRemoved {
+        /// The id of the removed `Endpoint`.
         epid: EndpointId,
+
+        /// The total number of the remaining `Endpoint`s.
         total: usize,
     },
 
+    /// Signals that a new connection was established.
     NewConnection {
+        /// The new `Endpoint`.
         ep: Endpoint,
+
+        /// The
         sender: BytesSender,
     },
 
+    /// Signals that a connection has been dropped.
     LostConnection {
+        /// The id of the previously connected connections.
         epid: EndpointId,
     },
 
+    /// Signals that a connection to an `Endpoint` has been established.
     EndpointConnected {
+        /// The id of the connected `Endpoint`.
         epid: EndpointId,
+
+        /// The timestamp when the connection was established.
         timestamp: u64,
+
+        /// The total number of active connections.
         total: usize,
     },
 
+    /// Signals that a connection to an `Endpoint` has been dropped.
     EndpointDisconnected {
+        /// The id of the disconnected `Endpoint`.
         epid: EndpointId,
+
+        /// The total number of remaining connections.
         total: usize,
     },
 
+    // TODO: rename to `MessageSent`
+    /// Signals that a message has been sent.
     BytesSent {
+        /// The id of the `Endpoint` a message was sent to.
         epid: EndpointId,
+
+        // TODO: rename to `num_bytes`
+        /// The number of bytes sent.
         num: usize,
     },
 
+    // TODO: rename to `MessageReceived`
+    /// Signals that a message has been received.
     BytesReceived {
+        /// The id of the `Endpoint` a message was received from.
         epid: EndpointId,
+
+        // TODO: remove this for now.
+        /// The `Address` of the `Endpoint` a message was received from.
         addr: Address,
+
+        /// The raw bytes of the message.
         bytes: Vec<u8>,
     },
 
+    /// Signals the next connection attempt to an `Endpoint`.
     TryConnect {
+        /// The id of the `Endpoint`.
         epid: EndpointId,
+
+        /// The success responder.
         responder: Option<Responder<bool>>,
     },
 }
@@ -103,6 +143,9 @@ impl fmt::Display for Event {
 }
 
 pub type EventPublisher = mpsc::Sender<Event>;
+
+// TODO: create a wrapper type to not expose futures::mpsc directly.
+/// `Event` receiver channel half.
 pub type EventSubscriber = mpsc::Receiver<Event>;
 
 // TODO: what's a good value here?

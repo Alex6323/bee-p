@@ -10,49 +10,89 @@ use std::fmt;
 
 // TODO: do not expose `futures::Sender, futures::Receiver` directly to make sure
 // we can version up independently
+// TODO: we don't need this to be generic atm; just use `bool` for now
+/// Receiver half of the notification channel.
 pub type Responder<T> = oneshot::Sender<T>;
+/// Sender half of the notification channel.
 pub type Requester<T> = oneshot::Receiver<T>;
 
+/// Creates a channel for returning success/failure notfication.
 pub fn response_channel<T>() -> (Responder<T>, Requester<T>) {
     oneshot::channel::<T>()
 }
 
+/// `Command`s that can be sent to the network layer.
 #[derive(Debug)]
 pub enum Command {
+    /// Adds an `Endpoint`.
     AddEndpoint {
+        /// `Url` of the `Endpoint`.
         url: Url,
+
+        /// Success responder.
         responder: Option<Responder<bool>>,
     },
 
+    /// Removes an `Endpoint`.
     RemoveEndpoint {
+        /// The id of the `Endpoint` to remove.
         epid: EndpointId,
+
+        /// Success responder.
         responder: Option<Responder<bool>>,
     },
 
+    /// Connects to an `Endpoint`.
     Connect {
+        /// The id of the `Endpoint` to connect.
         epid: EndpointId,
+
+        /// Sucess responder.
         responder: Option<Responder<bool>>,
     },
 
+    /// Disconnects from an `Endpoint`.
     Disconnect {
+        /// The id of the `Endpoint` to disconnect from.
         epid: EndpointId,
+
+        /// Success responder.
         responder: Option<Responder<bool>>,
     },
 
+    // TODO: rename to `SendMessage`
+    /// Sends a message to a connected `Endpoint`.
     SendBytes {
+        /// The id of the `Endpoint` to send the message to.
         epid: EndpointId,
+
+        /// The raw bytes of the message.
         bytes: Vec<u8>,
+
+        /// Success responder.
         responder: Option<Responder<bool>>,
     },
 
+    // TODO: rename to `MulticastMessage`
+    /// Sends a message to multiple connected `Endpoint`s.
     MulticastBytes {
+        ///  The ids of `Endpoint`s to connect to.
         epids: Vec<EndpointId>,
+
+        /// The raw bytes of the message.
         bytes: Vec<u8>,
+
+        /// Success responder.
         responder: Option<Responder<bool>>,
     },
 
+    // TODO: rename to `BroadcastMessage`
+    /// Sends a message to all connected `Endpoint`s.
     BroadcastBytes {
+        /// The raw bytes of the message.
         bytes: Vec<u8>,
+
+        /// Success responder.
         responder: Option<Responder<bool>>,
     },
 }

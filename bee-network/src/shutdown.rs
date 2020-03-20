@@ -7,6 +7,7 @@ pub(crate) type ShutdownNotifier = oneshot::Sender<()>;
 pub(crate) type ShutdownListener = oneshot::Receiver<()>;
 pub(crate) type ActorTask = task::JoinHandle<S>;
 
+/// Handles the graceful shutdown of the network layer.
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
     tasks: Vec<ActorTask>,
@@ -28,11 +29,7 @@ impl Shutdown {
         self.tasks.push(task);
     }
 
-    pub fn num_tasks(&self) -> usize {
-        self.tasks.len()
-    }
-
-    // TODO: error handling
+    /// Executes the shutdown.
     pub async fn execute(self) {
         let mut tasks = self.tasks;
 

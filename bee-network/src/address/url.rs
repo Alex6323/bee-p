@@ -23,14 +23,19 @@ impl Protocol {
     }
 }
 
+/// Represents various types of `Url`s.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Url {
+    /// A TCP Url.
     Tcp(Address),
+
+    /// A UDP Url.
     Udp(Address),
 }
 
 impl Url {
+    /// Creates a new `Url`.
     pub fn new(addr: Address, proto: Protocol) -> Self {
         match proto {
             Protocol::Tcp => Url::Tcp(addr),
@@ -38,7 +43,9 @@ impl Url {
         }
     }
 
-    /// Example: tcp://example.com:15600
+    /// Creates a `Url` from a string.
+    ///
+    /// NOTE: This function expects an input of the format: tcp://example.com:15600.
     pub async fn from_str_with_port(url: &str) -> AddressResult<Self> {
         // TODO: should be use 'url' crate instead of manual parsing?
         let proto_addr: Vec<&str> = url.split_terminator(PROTOCOL_SEPARATOR).collect();
@@ -65,12 +72,14 @@ impl Url {
         }
     }
 
+    /// Returns the `Address` of this `Url`.
     pub fn address(&self) -> Address {
         match *self {
             Url::Tcp(address) | Url::Udp(address) => address,
         }
     }
 
+    /// Returns the `Protocol` of this `Url`.
     pub fn protocol(&self) -> Protocol {
         match *self {
             Url::Tcp(_) => Protocol::Tcp,

@@ -68,7 +68,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
 }
 
 pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> S {
-    debug!("[TCP  ] Spawning TCP connection workers ...");
+    debug!("[TCP  ] Spawning TCP connection workers...");
 
     let addr: Address = conn.remote_addr.into();
     let proto = Protocol::Tcp;
@@ -78,13 +78,7 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
     let (sender, receiver) = bytes_channel();
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
 
-    spawn(writer(
-        ep.id,
-        conn.stream.clone(),
-        receiver,
-        notifier.clone(),
-        shutdown_sender,
-    ));
+    spawn(writer(ep.id, conn.stream.clone(), receiver, shutdown_sender));
 
     spawn(reader(
         ep.id,
@@ -97,13 +91,7 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
     Ok(notifier.send(Event::NewConnection { ep, sender }).await?)
 }
 
-async fn writer(
-    epid: EpId,
-    stream: Arc<TcpStream>,
-    mut bytes_rx: BytesReceiver,
-    mut notifier: Notifier,
-    sd: oneshot::Sender<()>,
-) {
+async fn writer(epid: EpId, stream: Arc<TcpStream>, mut bytes_rx: BytesReceiver, sd: oneshot::Sender<()>) {
     debug!("[TCP  ] Starting connection writer task for {}...", epid);
 
     let mut stream = &*stream;

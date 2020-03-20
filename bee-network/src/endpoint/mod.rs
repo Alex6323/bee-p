@@ -10,6 +10,7 @@ use crate::address::Address;
 
 use std::fmt;
 
+/// The id of an `Endpoint`.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct EndpointId {
     inner: Address,
@@ -37,14 +38,21 @@ impl fmt::Display for EndpointId {
     }
 }
 
+/// Represents an `Endpoint`.
 #[derive(Clone, Debug)]
 pub struct Endpoint {
+    /// The id of the endpoint.
     pub id: EndpointId,
+
+    /// The address of the endpoint.
     pub address: Address,
+
+    /// The protocol used to communicate with that endpoint.
     pub protocol: Protocol,
 }
 
 impl Endpoint {
+    /// Creates a new endpoint.
     pub fn new(address: Address, protocol: Protocol) -> Self {
         Self {
             id: address.into(),
@@ -52,6 +60,7 @@ impl Endpoint {
             protocol,
         }
     }
+    /// Creates an endpoint from an `Url`.
     pub fn from_url(url: Url) -> Self {
         let address = url.address();
         let protocol = url.protocol();

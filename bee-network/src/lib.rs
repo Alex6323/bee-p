@@ -1,3 +1,17 @@
+//! # bee-network
+//!
+//! Network layer for Bee.
+//!
+//! The main properties of its architecure are:
+//! * async (depends on async_std),
+//! * message passing in favor of shared state (mpsc, oneshot channels),
+//! * event-driven (situations are modeled as events),
+//! * command pattern
+//! * no unsafe code
+//! * very few dependencies
+//! * well documented
+
+#![deny(missing_docs)]
 #![recursion_limit = "1024"]
 
 pub use address::{
@@ -5,6 +19,11 @@ pub use address::{
     Address,
 };
 pub use commands::Command;
+pub use commands::{
+    response_channel,
+    Requester,
+    Responder,
+};
 pub use endpoint::{
     Endpoint,
     EndpointId,
@@ -36,6 +55,7 @@ use tcp::actor::TcpActor;
 use async_std::task::spawn;
 use futures::channel::oneshot;
 
+/// Initializes the network layer.
 pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
     let (command_sender, commands) = commands::command_channel();
     let (event_sender, events) = events::event_channel();
@@ -55,7 +75,7 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
         event_sender.clone(),
     );
 
-    let tcp_actor = TcpActor::new(binding_addr.clone(), internal_event_sender.clone(), tcp_shutdown);
+    let tcp_actor = TcpActor::new(binding_addr, internal_event_sender.clone(), tcp_shutdown);
     //let udp_actor = UdpActor::new(binding_addr, internal_event_sender, udp_shutdown);
 
     shutdown.add_notifier(edp_sd_sender);

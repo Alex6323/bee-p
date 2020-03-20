@@ -5,9 +5,10 @@ pub enum ActorError {
     #[error(display = "Async IO error")]
     AsyncIo(#[source] async_std::io::Error),
 
+    /*
     #[error(display = "IO error")]
     Io(#[error(source, no_from)] std::io::Error),
-
+    */
     #[error(display = "Error sending a message")]
     SendingMessageFailed(#[source] futures::channel::mpsc::SendError),
 }
@@ -20,9 +21,10 @@ pub enum ConnectionError {
     #[error(display = "Async IO error")]
     AsyncIo(#[source] async_std::io::Error),
 
+    /*
     #[error(display = "IO error")]
     Io(#[error(source, no_from)] std::io::Error),
-
+    */
     #[error(display = "Error sending bytes")]
     SendingBytesFailed(#[source] SendError),
 
@@ -45,14 +47,14 @@ pub enum SendError {
 //Io(#[source] async_std::io::Error),
 }
 
-pub type SendResult<T> = std::result::Result<T, SendError>;
+//pub type SendResult<T> = std::result::Result<T, SendError>;
 
 #[derive(Debug, Error)]
 pub enum RecvError {
-    //#[error(display = "Receiving Error")]
-    //Io(#[source] async_std::io::Error),
-    #[error(display = "Reading 0 bytes from stream")]
-    ZeroBytesReceived,
+    #[error(display = "Receiving Error")]
+    Io(#[source] async_std::io::Error),
+    //#[error(display = "Reading 0 bytes from stream")]
+    //ZeroBytesReceived,
 }
 
-pub type RecvResult<T> = std::result::Result<T, RecvError>;
+//pub type RecvResult<T> = std::result::Result<T, RecvError>;
