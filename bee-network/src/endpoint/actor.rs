@@ -67,7 +67,7 @@ impl EndpointActor {
     }
 
     pub async fn run(mut self) -> S {
-        debug!("[Endp ] Starting actor");
+        debug!("[Endp ] Starting endpoint worker...");
 
         let mut contacts = Endpoints::new();
 
@@ -86,11 +86,11 @@ impl EndpointActor {
                     let command = if let Some(command) = command {
                         command
                     } else {
-                        error!("[Endp ] Command channel unexpectedly closed");
+                        error!("[Endp ] Command channel unexpectedly closed.");
                         break;
                     };
 
-                    debug!("[Endp ] Received {} command.", command);
+                    debug!("[Endp ] Received {}.", command);
 
                     match command {
                         Command::AddEndpoint { url, responder } => {
@@ -146,11 +146,11 @@ impl EndpointActor {
                     let event = if let Some(event) = event {
                         event
                     } else {
-                        error!("[Endp ] Event channel unexpectedly closed");
+                        error!("[Endp ] Event channel unexpectedly closed.");
                         break;
                     };
 
-                    debug!("[Endp ] Received {} event.", event);
+                    debug!("[Endp ] Received {}.", event);
 
                     match event {
                         Event::EndpointAdded { epid, total } => {
@@ -203,7 +203,7 @@ impl EndpointActor {
             }
         }
 
-        debug!("[Endp ] Stopping actor");
+        debug!("[Endp ] Stopped endpoint worker.");
         Ok(())
     }
 }
@@ -271,8 +271,8 @@ async fn try_connect(
             if let Some(responder) = responder {
                 match responder.send(false) {
                     Ok(_) => (),
-                    Err(e) => {
-                        error!("[Endp ] Failed to send response: {}", e);
+                    Err(_) => {
+                        error!("[Endp ] Failed to send command response.");
                     }
                 }
             }
@@ -285,8 +285,8 @@ async fn try_connect(
                         if let Some(responder) = responder {
                             match responder.send(true) {
                                 Ok(_) => (),
-                                Err(e) => {
-                                    error!("[Endp ] Failed to send response: {}", e);
+                                Err(_) => {
+                                    error!("[Endp ] Failed to send command response.");
                                 }
                             }
                         }
@@ -306,8 +306,8 @@ async fn try_connect(
                     if let Some(responder) = responder {
                         match responder.send(true) {
                             Ok(_) => (),
-                            Err(e) => {
-                                error!("[Endp ] Failed to send response: {}", e);
+                            Err(_) => {
+                                error!("[Endp ] Failed to send response.");
                             }
                         }
                     }
@@ -319,8 +319,8 @@ async fn try_connect(
         if let Some(responder) = responder {
             match responder.send(false) {
                 Ok(_) => (),
-                Err(e) => {
-                    error!("[Endp ] Failed to send response: {}", e);
+                Err(_) => {
+                    error!("[Endp ] Failed to send response.");
                 }
             }
         }

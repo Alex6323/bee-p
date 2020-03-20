@@ -38,7 +38,7 @@ use log::*;
 
 /// Tries to connect to an endpoint.
 pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier) -> S {
-    debug!("[TCP  ] Trying to connect to {:?} ...", epid);
+    debug!("[TCP  ] Trying to connect to {}...", epid);
 
     match TcpStream::connect(**addr).await {
         Ok(stream) => {
@@ -52,7 +52,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
             };
 
             debug!(
-                "TCP  ] Sucessfully established connection to {:?} ({:?}).",
+                "TCP  ] Sucessfully established connection to {} ({}).",
                 conn.remote_addr,
                 Role::Client
             );
@@ -68,18 +68,18 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
 }
 
 pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> S {
-    debug!("[TCP  ] Spawning TCP connection workers...");
+    debug!("[TCP  ] Spawning TCP connection workers ...");
 
     let addr: Address = conn.remote_addr.into();
     let proto = Protocol::Tcp;
 
-    let ep = Endpoint::new(addr.clone(), proto);
+    let ep = Endpoint::new(addr, proto);
 
     let (sender, receiver) = bytes_channel();
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
 
     spawn(writer(
-        ep.id.clone(),
+        ep.id,
         conn.stream.clone(),
         receiver,
         notifier.clone(),
@@ -87,7 +87,7 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
     ));
 
     spawn(reader(
-        ep.id.clone(),
+        ep.id,
         addr,
         conn.stream.clone(),
         notifier.clone(),
@@ -104,7 +104,7 @@ async fn writer(
     mut notifier: Notifier,
     sd: oneshot::Sender<()>,
 ) {
-    debug!("[TCP  ] Starting connection writer task for {:?}...", epid);
+    debug!("[TCP  ] Starting connection writer task for {}...", epid);
 
     let mut stream = &*stream;
 
@@ -118,7 +118,7 @@ async fn writer(
                             // TODO: Is this event interesting at all, because if not, then
                             // we should not raise it and spare resources
                             match notifier.send(Event::BytesSent {
-                                epid: epid.clone(),
+                                epid,
                                 num: bytes_out.len(),
                             }).await {
                                 Ok(_) => (),
@@ -129,7 +129,7 @@ async fn writer(
                         },
                         Err(e) => {
                             error!("[TCP  ] Sending bytes failed.");
-                            error!("[TCP  ] Error was: {:?}", e);
+                            error!("[TCP  ] Error was: {:?}.", e);
                         }
                     }
                 } else {
@@ -144,11 +144,11 @@ async fn writer(
     match sd.send(()) {
         Ok(_) => (),
         Err(_) => {
-            warn!("[TCP  ] Failed to send shutdown signal to reader task");
+            warn!("[TCP  ] Failed to send shutdown signal to reader task.");
         }
     }
 
-    debug!("[TCP  ] Connection writer event loop for {:?} stopped.", epid);
+    debug!("[TCP  ] Connection writer event loop for {} stopped.", epid);
 }
 
 async fn reader(
@@ -158,7 +158,7 @@ async fn reader(
     mut notifier: Notifier,
     mut sd: oneshot::Receiver<()>,
 ) {
-    debug!("[TCP  ] Starting connection reader event loop for {:?}...", epid);
+    debug!("[TCP  ] Starting connection reader event loop for {}...", epid);
 
     let mut stream = &*stream;
     let mut buffer = vec![0; MAX_BUFFER_SIZE];
@@ -175,7 +175,7 @@ async fn reader(
 
                             // TODO: this can probably be spawned
                             notifier.send(Event::LostConnection {
-                                epid: epid.clone(),
+                                epid,
                             }).await;
 
                             break;
@@ -184,8 +184,8 @@ async fn reader(
                             bytes.copy_from_slice(&buffer[0..num_read]);
 
                             match notifier.send(Event::BytesReceived {
-                                epid: epid.clone(),
-                                addr: addr.clone(),
+                                epid,
+                                addr,
                                 bytes,
                             }).await {
                                 Ok(_) => (),
@@ -197,7 +197,7 @@ async fn reader(
                     },
                     Err(e) => {
                         error!("[TCP  ] Receiveing bytes failed.");
-                        error!("[TCP  ] Error was: {:?}", e);
+                        error!("[TCP  ] Error was: {:?}.", e);
                     }
                 }
             },
@@ -206,5 +206,5 @@ async fn reader(
             }
         }
     }
-    debug!("[TCP  ] Connection reader event loop for {:?} stopped.", epid);
+    debug!("[TCP  ] Connection reader event loop for {} stopped.", epid);
 }

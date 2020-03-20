@@ -30,14 +30,15 @@ impl TcpActor {
     }
 
     pub async fn run(mut self) -> S {
+        debug!("[TCP  ] Starting TCP worker...");
+
         let listener = TcpListener::bind(*self.binding_addr).await?;
 
-        debug!("[TCP  ] Accepting connections on {}", listener.local_addr()?);
+        debug!("[TCP  ] Accepting connections on {}.", listener.local_addr()?);
 
         let mut incoming = listener.incoming();
         let shutdown = &mut self.shutdown;
 
-        debug!("[TCP  ] Starting acceptor...");
         loop {
             select! {
                 stream = incoming.next().fuse() => {
@@ -54,7 +55,7 @@ impl TcpActor {
                                 };
 
                                 debug!(
-                                    "TCP  ] Sucessfully established connection to {:?} ({:?}).",
+                                    "TCP  ] Sucessfully established connection to {} ({}).",
                                     conn.remote_addr,
                                     Role::Server
                                 );
@@ -81,7 +82,7 @@ impl TcpActor {
             }
         }
 
-        debug!("[TCP  ] Stopped accepting connections.");
+        debug!("[TCP  ] Stopped TCP worker.");
         Ok(())
     }
 }

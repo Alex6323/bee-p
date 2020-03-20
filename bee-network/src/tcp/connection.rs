@@ -14,6 +14,15 @@ pub enum Role {
     Server,
 }
 
+impl fmt::Display for Role {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Role::Client => write!(f, "Client"),
+            Role::Server => write!(f, "Server"),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct TcpConnection {
     pub role: Role,

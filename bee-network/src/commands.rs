@@ -60,18 +60,18 @@ pub enum Command {
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Command::AddEndpoint { url, .. } => write!(f, "Command::AddEndpoint {{ url = {:?} }} ", url),
+            Command::AddEndpoint { url, .. } => write!(f, "Command::AddEndpoint {{ {} }}", url),
 
-            Command::RemoveEndpoint { epid, .. } => write!(f, "Command::RemoveEndpoint {{ epid = {:?} }}", epid),
+            Command::RemoveEndpoint { epid, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", epid),
 
-            Command::Connect { epid, .. } => write!(f, "Command::Connect {{ epid = {:?} }}", epid),
+            Command::Connect { epid, .. } => write!(f, "Command::Connect {{ {} }}", epid),
 
-            Command::Disconnect { epid, .. } => write!(f, "Command::Disconnect {{ epid = {:?} }}", epid),
+            Command::Disconnect { epid, .. } => write!(f, "Command::Disconnect {{ {} }}", epid),
 
-            Command::SendBytes { epid, .. } => write!(f, "Command::UnicastBytes {{ epid = {:?} }}", epid),
+            Command::SendBytes { epid, .. } => write!(f, "Command::UnicastBytes {{ {} }}", epid),
 
             Command::MulticastBytes { epids, .. } => {
-                write!(f, "Command::MulticastBytes {{ num_endpoints = {} }}", epids.len())
+                write!(f, "Command::MulticastBytes {{ {} receivers }}", epids.len())
             }
 
             Command::BroadcastBytes { .. } => write!(f, "Command::BroadcastBytes"),

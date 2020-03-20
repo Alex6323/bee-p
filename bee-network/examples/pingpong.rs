@@ -55,17 +55,18 @@ async fn notification_handler(mut events: Events, mut network: Network, msg: Str
     let network = &mut network;
 
     while let Some(event) = events.next().await {
-        info!("[Expl ] Received {:?} event.", event);
+        info!("[.....] Received {}.", event);
         match event {
             Event::EndpointAdded { epid, total } => {
-                info!("[Expl ] Added endpoint {}. Now at {}.", epid, total);
+                info!("[.....] Added endpoint {} ({}).", epid, total);
                 network
                     .send(Connect { epid, responder: None })
                     .await
                     .expect("error sending Connect command");
             }
             Event::EndpointConnected { epid, total, .. } => {
-                info!("[Expl ] Connected endpoint {}. Now at {}.", epid, total);
+                info!("[.....] Connected endpoint {} ({}).", epid, total);
+
                 let msg = Utf8Message::new(&msg);
                 network
                     .send(SendBytes {
@@ -78,7 +79,7 @@ async fn notification_handler(mut events: Events, mut network: Network, msg: Str
             }
             Event::BytesReceived { epid, bytes, .. } => {
                 info!(
-                    "[Expl ] Received bytes '{}' from peer {}",
+                    "[.....] Received message '{}' ({})",
                     Utf8Message::from_bytes(&bytes),
                     epid
                 );
@@ -95,13 +96,13 @@ struct Node {
 
 impl Node {
     pub async fn init(&mut self, config: Config) {
-        info!("[Expl ] Initializing...");
+        info!("[.....] Initializing...");
 
         for peer in config.peers {
             self.add_peer(peer.clone()).await;
         }
 
-        info!("[Expl ] Initialized.");
+        info!("[.....] Initialized.");
     }
 
     pub async fn add_peer(&mut self, url: Url) {
@@ -111,11 +112,11 @@ impl Node {
     pub async fn shutdown(self) {
         self.block_on_ctrl_c();
 
-        info!("[Expl ] Shutting down...");
+        info!("[.....] Shutting down...");
 
         self.shutdown.execute().await;
 
-        info!("[Expl ] Shutdown complete. See you soon!");
+        info!("[.....] Shutdown complete. See you soon!");
     }
 
     fn block_on_ctrl_c(&self) {

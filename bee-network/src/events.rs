@@ -65,39 +65,39 @@ impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Event::EndpointAdded { epid, total } => {
-                write!(f, "Event::EndpointAdded {{ epid = {:?}, total = {} }}", epid, total)
+                write!(f, "Event::EndpointAdded {{ {}, num_endpoints: {} }}", epid, total)
             }
 
             Event::EndpointRemoved { epid, total } => {
-                write!(f, "Event::EndpointRemoved {{ epid = {:?}, total = {} }}", epid, total)
+                write!(f, "Event::EndpointRemoved {{ {}, num_endpoints: {} }}", epid, total)
             }
 
-            Event::NewConnection { ep, .. } => write!(f, "Event::NewConnection {{ epid = {:?} }}", ep.id,),
-            Event::LostConnection { epid, .. } => write!(f, "Event::LostConnection {{ epid = {:?} }}", epid,),
+            Event::NewConnection { ep, .. } => write!(f, "Event::NewConnection {{ {} }}", ep.id,),
+            Event::LostConnection { epid, .. } => write!(f, "Event::LostConnection {{ {} }}", epid,),
 
             Event::EndpointConnected { epid, timestamp, total } => write!(
                 f,
-                "Event::EndpointConnected {{ epid = {:?}, timestamp = {}, total = {} }}",
+                "Event::EndpointConnected {{ {}, ts: {}, num_connected: {} }}",
                 epid, timestamp, total
             ),
 
             Event::EndpointDisconnected { epid, total } => write!(
                 f,
-                "Event::EndpointDisconnected {{ epid = {:?}, total = {} }}",
+                "Event::EndpointDisconnected {{ {}, num_connected: {} }}",
                 epid, total
             ),
 
-            Event::BytesSent { epid, num } => write!(f, "Event::BytesSent {{ epid = {}, num = {} }}", epid, num),
+            Event::BytesSent { epid, num } => write!(f, "Event::BytesSent {{ {}, num_bytes: {} }}", epid, num),
 
             Event::BytesReceived { epid, addr, bytes } => write!(
                 f,
-                "Event::BytesReceived {{ epid = {}, addr = {}, num = {} }}",
+                "Event::BytesReceived {{ {}, from: {}, num_bytes: {} }}",
                 epid,
                 addr,
                 bytes.len()
             ),
 
-            Event::TryConnect { epid, .. } => write!(f, "Event::TryConnect {{ epid = {} }}", epid),
+            Event::TryConnect { epid, .. } => write!(f, "Event::TryConnect {{ {} }}", epid),
         }
     }
 }
