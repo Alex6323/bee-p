@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Default)]
-pub(crate) struct NodeMetrics {
+pub struct NodeMetrics {
     invalid_transactions_received: AtomicU32,
     stale_transactions_received: AtomicU32,
     random_transactions_received: AtomicU32,

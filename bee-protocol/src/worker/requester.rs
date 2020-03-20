@@ -6,27 +6,27 @@ use bee_network::Network;
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 
-pub(crate) enum RequesterWorkerEvent {
+pub enum RequesterWorkerEvent {
     TransactionRequest([u8; 49]),
     // TODO use MilestonIndex
     MilestoneRequest(u32),
 }
 
-pub(crate) struct RequesterWorker {
+pub struct RequesterWorker {
     // TODO network or dedicated sender ?
     network: Network,
     receiver: Receiver<RequesterWorkerEvent>,
 }
 
 impl RequesterWorker {
-    pub(crate) fn new(network: Network, receiver: Receiver<RequesterWorkerEvent>) -> Self {
+    pub fn new(network: Network, receiver: Receiver<RequesterWorkerEvent>) -> Self {
         Self {
             network: network,
             receiver: receiver,
         }
     }
 
-    pub(crate) async fn run(mut self) {
+    pub async fn run(mut self) {
         while let Some(event) = self.receiver.next().await {
             if let bytes = match event {
                 RequesterWorkerEvent::TransactionRequest(hash) => TransactionRequest::new(hash).into_full_bytes(),

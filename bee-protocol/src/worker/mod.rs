@@ -4,8 +4,9 @@ mod responder;
 mod sender;
 mod transaction;
 
-pub(crate) use receiver::{ReceiverWorker, ReceiverWorkerEvent};
-pub(crate) use requester::{RequesterWorker, RequesterWorkerEvent};
-pub(crate) use responder::{ResponderWorker, ResponderWorkerEvent};
+pub use receiver::{ReceiverWorker, ReceiverWorkerEvent};
+pub use requester::{RequesterWorker, RequesterWorkerEvent};
+pub use responder::{ResponderWorker, ResponderWorkerEvent};
+// TODO remove ?
 pub(crate) use sender::SenderWorker;
-pub(crate) use transaction::TransactionWorker;
+pub use transaction::{TransactionWorker, TransactionWorkerEvent};

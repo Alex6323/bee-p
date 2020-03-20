@@ -6,7 +6,7 @@ use bee_network::{EndpointId, Network};
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
 
-pub(crate) enum ResponderWorkerEvent {
+pub enum ResponderWorkerEvent {
     TransactionRequest {
         epid: EndpointId,
         message: TransactionRequest,
@@ -17,21 +17,21 @@ pub(crate) enum ResponderWorkerEvent {
     },
 }
 
-pub(crate) struct ResponderWorker {
+pub struct ResponderWorker {
     // TODO Dedicated sender with backpressure
     network: Network,
     receiver: Receiver<ResponderWorkerEvent>,
 }
 
 impl ResponderWorker {
-    pub(crate) fn new(network: Network, receiver: Receiver<ResponderWorkerEvent>) -> Self {
+    pub fn new(network: Network, receiver: Receiver<ResponderWorkerEvent>) -> Self {
         Self {
             network: network,
             receiver: receiver,
         }
     }
 
-    pub(crate) async fn run(mut self) {
+    pub async fn run(mut self) {
         while let Some(event) = self.receiver.next().await {
             if let (epid, Some(transaction)) = match event {
                 ResponderWorkerEvent::TransactionRequest { epid, message } => {

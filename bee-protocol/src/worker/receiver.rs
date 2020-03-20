@@ -2,7 +2,7 @@ use crate::message::{
     Handshake, Header, Heartbeat, LegacyGossip, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
 };
 use crate::protocol::{COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, SUPPORTED_VERSIONS};
-use crate::worker::ResponderWorkerEvent;
+use crate::worker::{ResponderWorkerEvent, TransactionWorkerEvent};
 
 use bee_network::Command::SendBytes;
 use bee_network::{EndpointId, Network};
@@ -17,7 +17,7 @@ pub(crate) enum ReceiverWorkerError {
     FailedSend,
 }
 
-pub(crate) enum ReceiverWorkerEvent {
+pub enum ReceiverWorkerEvent {
     Removed,
     Connected,
     Disconnected,
@@ -46,20 +46,20 @@ enum ReceiverWorkerState {
     AwaitingMessage(AwaitingMessageContext),
 }
 
-pub(crate) struct ReceiverWorker {
+pub struct ReceiverWorker {
     epid: EndpointId,
     network: Network,
     receiver: Receiver<ReceiverWorkerEvent>,
-    transaction_worker_sender: Sender<TransactionBroadcast>,
+    transaction_worker_sender: Sender<TransactionWorkerEvent>,
     responder_worker: Sender<ResponderWorkerEvent>,
 }
 
 impl ReceiverWorker {
-    pub(crate) fn new(
+    pub fn new(
         epid: EndpointId,
         network: Network,
         receiver: Receiver<ReceiverWorkerEvent>,
-        transaction_worker_sender: Sender<TransactionBroadcast>,
+        transaction_worker_sender: Sender<TransactionWorkerEvent>,
         responder_worker: Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
@@ -86,7 +86,7 @@ impl ReceiverWorker {
             .await;
     }
 
-    pub(crate) async fn run(mut self) {
+    pub async fn run(mut self) {
         let mut state = ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {});
 
         while let Some(event) = self.receiver.next().await {
@@ -258,7 +258,7 @@ impl ReceiverWorker {
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.transaction_worker_sender
-                            .send(message)
+                            .send(TransactionWorkerEvent::Transaction(message))
                             .await
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }

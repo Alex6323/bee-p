@@ -3,7 +3,7 @@ use crate::message::{Header, HEADER_SIZE, HEADER_TYPE_SIZE};
 
 use std::ops::Range;
 
-pub(crate) trait Message {
+pub trait Message {
     const ID: u8;
 
     fn size_range() -> Range<usize>;

@@ -8,7 +8,7 @@ const MILESTONE_REQUEST_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
 
 #[derive(Clone, Default)]
-pub(crate) struct MilestoneRequest {
+pub struct MilestoneRequest {
     pub(crate) index: MilestoneIndex,
 }
 

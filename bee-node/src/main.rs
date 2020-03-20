@@ -1,6 +1,9 @@
+mod node;
+
+use node::Node;
+
 use bee_common::logger;
 use bee_network::Address;
-use bee_protocol::Node;
 
 use async_std::task::block_on;
 
