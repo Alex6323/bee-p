@@ -52,7 +52,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
             };
 
             debug!(
-                "TCP  ] Sucessfully established connection to {} ({}).",
+                "[TCP  ] Sucessfully established connection to {} (as {}).",
                 conn.remote_addr,
                 Role::Client
             );
@@ -115,17 +115,7 @@ async fn writer(
 
                     match stream.write_all(&*bytes_out).await {
                         Ok(_) => {
-                            // TODO: Is this event interesting at all, because if not, then
-                            // we should not raise it and spare resources
-                            match notifier.send(Event::BytesSent {
-                                epid,
-                                num: bytes_out.len(),
-                            }).await {
-                                Ok(_) => (),
-                                Err(e) => {
-                                    error!("[TCP  ] Failed notifying about bytes sent: {:?}.", e);
-                                }
-                            }
+                            // NOTE: if we should need it, we can raise [`Event::BytesSent`] here.
                         },
                         Err(e) => {
                             error!("[TCP  ] Sending bytes failed.");

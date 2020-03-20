@@ -36,7 +36,7 @@ fn main() {
     let args = Args::from_args();
     let config = args.make_config();
 
-    logger::init(log::LevelFilter::Info);
+    logger::init(log::LevelFilter::Debug);
 
     let (network, shutdown, events) = bee_network::init(config.host_addr.clone());
 

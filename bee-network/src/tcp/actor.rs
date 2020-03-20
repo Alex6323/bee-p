@@ -55,16 +55,14 @@ impl TcpActor {
                                 };
 
                                 debug!(
-                                    "TCP  ] Sucessfully established connection to {} ({}).",
+                                    "[TCP  ] Sucessfully established connection to {} (as {}).",
                                     conn.remote_addr,
                                     Role::Server
                                 );
 
                                 match spawn_connection_workers(conn, self.notifier.clone()).await {
                                     Ok(_) => (),
-                                    Err(_) => {
-                                        //
-                                    }
+                                    Err(_) => (),
                                 }
                             }
                             Err(e) => {

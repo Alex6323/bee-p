@@ -68,7 +68,7 @@ impl fmt::Display for Command {
 
             Command::Disconnect { epid, .. } => write!(f, "Command::Disconnect {{ {} }}", epid),
 
-            Command::SendBytes { epid, .. } => write!(f, "Command::UnicastBytes {{ {} }}", epid),
+            Command::SendBytes { epid, .. } => write!(f, "Command::SendBytes {{ {} }}", epid),
 
             Command::MulticastBytes { epids, .. } => {
                 write!(f, "Command::MulticastBytes {{ {} receivers }}", epids.len())
