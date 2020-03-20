@@ -92,7 +92,7 @@ impl Node {
     pub async fn run(mut self) {
         info!("[Node ] Starting actor");
         while let Some(event) = self.events.next().await {
-            debug!("[Node ] Received event {:?}", event);
+            debug!("[Node ] Received event {}", event);
             match event {
                 Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
                 Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
