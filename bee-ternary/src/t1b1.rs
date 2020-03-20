@@ -3,6 +3,7 @@ use crate::{
     RawEncoding,
     RawEncodingBuf,
     Trit,
+    trit::ShiftTernary,
 };
 use std::{
     convert::TryInto,
@@ -96,6 +97,57 @@ where
 pub struct T1B1Buf<T: Trit = Btrit> {
     _phantom: PhantomData<T>,
     inner: Vec<T>,
+}
+
+impl<T> T1B1Buf<T>
+where
+    T: Trit,
+    <T as ShiftTernary>::Target: Trit,
+{
+    pub fn into_shifted(self) -> T1B1Buf<T::Target> {
+        // Shift each trit, cast it to i8, and update the inner buffer.
+        // This puts the inner buffer into an incorrect state!
+        let mut trit_buf = self;
+        unsafe {
+            trit_buf
+                .as_slice_mut()
+                .as_i8_slice_mut()
+                .iter_mut()
+                .for_each(|t| {
+                    // Unwrapping is safe because the bytes are coming from
+                    // within the trit buffer.
+                    let trit: T = (*t).try_into().unwrap_or_else(|_| unreachable!("Unreachable because input bytes are guaranteed to be correct"));
+                    let shifted_trit = trit.shift();
+                    *t = shifted_trit.into();
+            });
+        }
+
+        // Take ownership of the inner vector and cast it to a `Vec<T::Target>`
+        let raw_trits = std::mem::ManuallyDrop::new(trit_buf.inner);
+
+        let p = raw_trits.as_ptr();
+        let len = raw_trits.len();
+        let cap = raw_trits.capacity();
+
+        let raw_shifted_trits = unsafe {
+            Vec::from_raw_parts (
+                p as *const i8 as *mut _,
+                len,
+                cap,
+        )};
+
+        T1B1Buf {
+            _phantom: PhantomData,
+            inner: raw_shifted_trits,
+        }
+    }
+}
+
+
+impl<T: Trit> T1B1Buf<T> {
+    pub fn into_inner(self) -> Vec<T> {
+        self.inner
+    }
 }
 
 impl<T> RawEncodingBuf for T1B1Buf<T>

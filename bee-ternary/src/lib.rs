@@ -171,6 +171,14 @@ where
 }
 
 impl<T: Trit> Trits<T1B1<T>> {
+    pub fn as_raw_slice(&self) -> &[T] {
+        self.0.as_raw_slice()
+    }
+
+    pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
+        self.0.as_raw_slice_mut()
+    }
+
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item=&mut Self> + '_ {
@@ -203,16 +211,6 @@ impl<T: Trit> Trits<T1B1<T>> {
 
     pub fn iter_mut<'a>(&'a mut self) -> slice::IterMut<'a, T> {
         self.as_raw_slice_mut().iter_mut()
-    }
-}
-
-impl<T: Trit> Trits<T1B1<T>> {
-    pub fn as_raw_slice(&self) -> &[T] {
-        self.0.as_raw_slice()
-    }
-
-    pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
-        self.0.as_raw_slice_mut()
     }
 }
 
@@ -342,6 +340,16 @@ impl<T: RawEncodingBuf> TritBuf<T> {
         U::Slice: RawEncoding<Trit = <T::Slice as RawEncoding>::Trit>,
     {
         T::into_encoding(self)
+    }
+}
+
+impl<T> TritBuf<T1B1Buf<T>>
+where
+    T: Trit,
+    T::Target: Trit,
+{
+    pub fn into_shifted(self) -> TritBuf<T1B1Buf<<T as ShiftTernary>::Target>> {
+        TritBuf(self.0.into_shifted())
     }
 }
 
