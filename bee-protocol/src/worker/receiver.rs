@@ -328,6 +328,7 @@ impl ReceiverWorker {
             }
             ReceiverWorkerEvent::Message(mut bytes) => {
                 let mut offset = 0;
+                let mut remaining = true;
 
                 if context.buffer.is_empty() {
                     context.buffer = bytes;
@@ -335,7 +336,7 @@ impl ReceiverWorker {
                     context.buffer.append(&mut bytes);
                 }
 
-                while offset < context.buffer.len() {
+                while remaining {
                     context.state = match context.state {
                         ReceiverWorkerMessageState::Header => {
                             debug!("[Neighbor-{:?}] Reading Header", self.epid);
@@ -346,6 +347,8 @@ impl ReceiverWorker {
 
                                 ReceiverWorkerMessageState::Payload(header)
                             } else {
+                                remaining = false;
+
                                 ReceiverWorkerMessageState::Header
                             }
                         }
@@ -365,6 +368,8 @@ impl ReceiverWorker {
 
                                 ReceiverWorkerMessageState::Header
                             } else {
+                                remaining = false;
+
                                 ReceiverWorkerMessageState::Payload(header)
                             }
                         }
