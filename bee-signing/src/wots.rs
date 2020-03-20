@@ -1,9 +1,18 @@
 use crate::{
-    IotaSeed, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
+    IotaSeed,
+    PrivateKey,
+    PrivateKeyGenerator,
+    PublicKey,
+    RecoverableSignature,
+    Seed,
+    Signature,
 };
 
 use bee_crypto::Sponge;
-use bee_ternary::{TritBuf, Trits};
+use bee_ternary::{
+    TritBuf,
+    Trits,
+};
 
 use std::marker::PhantomData;
 
@@ -239,13 +248,14 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 mod tests {
 
     use super::*;
-    use bee_crypto::{CurlP27, CurlP81};
+    use bee_crypto::{
+        CurlP27,
+        CurlP81,
+    };
     use iota_conversion::Trinary;
 
-    const SEED: &str =
-        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
-    const MESSAGE: &str =
-        "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
+    const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
+    const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
 
     // #[test]
     // fn wots_generator_missing_security_level_test() {

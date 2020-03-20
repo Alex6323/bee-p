@@ -1,5 +1,14 @@
-use crate::{PrivateKey, PrivateKeyGenerator, PublicKey, Seed, Signature};
-use bee_ternary::{TritBuf, Trits};
+use crate::{
+    PrivateKey,
+    PrivateKeyGenerator,
+    PublicKey,
+    Seed,
+    Signature,
+};
+use bee_ternary::{
+    TritBuf,
+    Trits,
+};
 use rand::rngs::OsRng;
 use std::convert::Infallible;
 
@@ -172,12 +181,9 @@ mod tests {
     use super::*;
     use iota_conversion::Trinary;
 
-    const SEED1: &str =
-        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
-    const SEED2: &str =
-        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNDNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
-    const MESSAGE: &str =
-        "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
+    const SEED1: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
+    const SEED2: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNDNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
+    const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
 
     // #[test]
     // fn ed25519_test() {

@@ -1,7 +1,13 @@
 use crate::Seed;
 
 use bee_crypto::Sponge;
-use bee_ternary::{Trit, Btrit, TritBuf, Trits, TRYTE_ALPHABET};
+use bee_ternary::{
+    Btrit,
+    Trit,
+    TritBuf,
+    Trits,
+    TRYTE_ALPHABET,
+};
 use iota_conversion::Trinary;
 
 use rand::Rng;
@@ -99,10 +105,12 @@ impl<S: Sponge + Default> IotaSeed<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bee_crypto::{CurlP27, CurlP81};
+    use bee_crypto::{
+        CurlP27,
+        CurlP81,
+    };
 
-    const IOTA_SEED: &str =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
+    const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
 
     #[test]
     fn iota_seed_new_test() {
@@ -114,20 +122,13 @@ mod tests {
         }
     }
 
-    fn iota_seed_subseed_generic_test<S: Sponge + Default>(
-        iota_seed_string: &str,
-        iota_subseed_strings: &[&str],
-    ) {
-        let iota_seed =
-            IotaSeed::<S>::from_buf(TritBuf::from_i8_unchecked(&iota_seed_string.trits())).unwrap();
+    fn iota_seed_subseed_generic_test<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
+        let iota_seed = IotaSeed::<S>::from_buf(TritBuf::from_i8_unchecked(&iota_seed_string.trits())).unwrap();
 
         for (i, iota_subseed_string) in iota_subseed_strings.iter().enumerate() {
             let iota_subseed = iota_seed.subseed(i as u64);
 
-            assert_eq!(
-                iota_subseed.as_bytes(),
-                iota_subseed_string.trits().as_slice()
-            );
+            assert_eq!(iota_subseed.as_bytes(), iota_subseed_string.trits().as_slice());
         }
     }
 

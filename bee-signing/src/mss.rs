@@ -1,9 +1,17 @@
 use crate::{
-    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
+    PrivateKey,
+    PrivateKeyGenerator,
+    PublicKey,
+    RecoverableSignature,
+    Seed,
+    Signature,
+};
+use bee_crypto::Sponge;
+use bee_ternary::{
+    TritBuf,
+    Trits,
 };
 use std::marker::PhantomData;
-use bee_crypto::Sponge;
-use bee_ternary::{Trits, TritBuf};
 
 #[derive(Default)]
 pub struct MssPrivateKeyGeneratorBuilder<S, G> {
@@ -92,8 +100,7 @@ impl<S, G> PrivateKeyGenerator for MssPrivateKeyGenerator<S, G>
 where
     S: Sponge + Default,
     G: PrivateKeyGenerator,
-    <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
-        RecoverableSignature,
+    <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature: RecoverableSignature,
 {
     type Seed = G::Seed;
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
@@ -119,8 +126,7 @@ where
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
             keys.push(ots_private_key);
-            tree[tree_index * 243..(tree_index + 1) * 243]
-                .copy_from(ots_public_key.trits());
+            tree[tree_index * 243..(tree_index + 1) * 243].copy_from(ots_public_key.trits());
         }
 
         for depth in (0..self.depth - 1).rev() {
@@ -220,9 +226,9 @@ where
 
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
         let mut sponge = S::default();
-        let ots_signature = K::Signature::from_buf(signature.state[0..((signature.state.len() / 6561) - 1) * 6561].to_buf());
-        let siblings: TritBuf =
-            signature.state.chunks(6561).last().unwrap().to_buf();
+        let ots_signature =
+            K::Signature::from_buf(signature.state[0..((signature.state.len() / 6561) - 1) * 6561].to_buf());
+        let siblings: TritBuf = signature.state.chunks(6561).last().unwrap().to_buf();
         let ots_public_key = match ots_signature.recover_public_key(message) {
             Ok(public_key) => public_key,
             Err(_) => return Err(Self::Error::FailedUnderlyingPublicKeyRecovery),
@@ -316,8 +322,15 @@ mod tests {
 
     use super::*;
     use crate::iota_seed::IotaSeed;
-    use crate::wots::{WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey};
-    use bee_crypto::{CurlP27, CurlP81};
+    use crate::wots::{
+        WotsPrivateKeyGenerator,
+        WotsPrivateKeyGeneratorBuilder,
+        WotsPublicKey,
+    };
+    use bee_crypto::{
+        CurlP27,
+        CurlP81,
+    };
     use iota_conversion::Trinary;
 
     // #[test]
@@ -443,10 +456,8 @@ mod tests {
         <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
             RecoverableSignature,
     {
-        const SEED: &str =
-            "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
-        const MESSAGE: &str =
-            "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
+        const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
+        const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
         const DEPTH: u8 = 4;
 
         // todo try with not recover
@@ -460,9 +471,7 @@ mod tests {
 
         for _ in 0..(1 << DEPTH - 1) {
             let mss_signature = mss_private_key.sign(&MESSAGE.trits()).unwrap();
-            let mss_valid = mss_public_key
-                .verify(&MESSAGE.trits(), &mss_signature)
-                .unwrap();
+            let mss_valid = mss_public_key.verify(&MESSAGE.trits(), &mss_signature).unwrap();
             assert!(mss_valid);
             //  TODO invalid test
         }
