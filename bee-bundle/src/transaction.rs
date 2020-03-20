@@ -1,12 +1,12 @@
 use crate::constants::{ADDRESS, BRANCH, BUNDLE, IOTA_SUPPLY, NONCE, OBSOLETE_TAG, PAYLOAD, TAG, TRUNK};
 
 use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
-use bee_ternary::{raw, Btrit};
+use bee_ternary::Btrit;
 use bee_ternary::{util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
 
+use bee_ternary::{raw::RawEncoding, Trits};
 use std::fmt;
 use std::iter;
-use bee_ternary::{raw::RawEncoding, Trits};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Payload(pub TritBuf<T1B1Buf>);
@@ -173,7 +173,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn from_trits(buffer: &Trits<impl RawEncoding<Trit=Btrit> + ?Sized>)-> Result<Self, TransactionError> {
+    pub fn from_trits(buffer: &Trits<impl RawEncoding<Trit = Btrit> + ?Sized>) -> Result<Self, TransactionError> {
         let trits = buffer.encode::<T1B1Buf>();
 
         let transaction = TransactionBuilder::new()

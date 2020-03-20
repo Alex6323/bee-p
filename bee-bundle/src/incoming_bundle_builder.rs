@@ -1,10 +1,10 @@
 use crate::bundle::Bundle;
 use crate::constants::{ADDRESS, IOTA_SUPPLY};
-use crate::transaction::{Transaction, Transactions};
+use crate::transaction::{Hash, Index, Transaction, TransactionBuilder, Transactions};
 
 use bee_crypto::Sponge;
 use bee_signing::{PublicKey, Signature, WotsPublicKey};
-use bee_ternary::{TritBuf, trit::Btrit};
+use bee_ternary::{trit::Btrit, TritBuf};
 
 use std::marker::PhantomData;
 
@@ -132,7 +132,6 @@ where
             }
 
             // TODO - for each transaction's hash check that it is its prev trunk
-
         }
 
         if sum != 0 {

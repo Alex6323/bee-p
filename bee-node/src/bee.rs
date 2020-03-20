@@ -3,7 +3,6 @@ use crate::state::State;
 
 use bee_common::{logger, Result};
 
-use async_std::net::SocketAddr;
 use async_std::task;
 
 /// The Bee prototype.
