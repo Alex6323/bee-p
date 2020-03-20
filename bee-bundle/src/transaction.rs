@@ -1,10 +1,31 @@
-use crate::constants::{ADDRESS, BRANCH, BUNDLE, IOTA_SUPPLY, NONCE, OBSOLETE_TAG, PAYLOAD, TAG, TRUNK};
+use crate::constants::{
+    ADDRESS,
+    BRANCH,
+    BUNDLE,
+    IOTA_SUPPLY,
+    NONCE,
+    OBSOLETE_TAG,
+    PAYLOAD,
+    TAG,
+    TRUNK,
+};
 
-use bee_common::constants::{TRANSACTION_TRYT_LEN, TRYTE_ZERO};
+use bee_common::constants::{
+    TRANSACTION_TRYT_LEN,
+    TRYTE_ZERO,
+};
 use bee_ternary::Btrit;
-use bee_ternary::{util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
+use bee_ternary::{
+    util::trytes_to_trits_buf,
+    IsTryte,
+    T1B1Buf,
+    TritBuf,
+};
 
-use bee_ternary::{raw::RawEncoding, Trits};
+use bee_ternary::{
+    raw::RawEncoding,
+    Trits,
+};
 use std::fmt;
 use std::iter;
 use std::hash;

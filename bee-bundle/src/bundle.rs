@@ -1,4 +1,8 @@
-use crate::transaction::{Hash, Transaction, Transactions};
+use crate::transaction::{
+    Hash,
+    Transaction,
+    Transactions,
+};
 
 pub struct Bundle(pub(crate) Transactions);
 

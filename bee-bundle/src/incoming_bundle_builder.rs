@@ -1,10 +1,26 @@
 use crate::bundle::Bundle;
-use crate::constants::{ADDRESS, IOTA_SUPPLY};
-use crate::transaction::{Hash, Index, Transaction, TransactionBuilder, Transactions};
+use crate::constants::{
+    ADDRESS,
+    IOTA_SUPPLY,
+};
+use crate::transaction::{
+    Hash,
+    Index,
+    Transaction,
+    TransactionBuilder,
+    Transactions,
+};
 
 use bee_crypto::Sponge;
-use bee_signing::{PublicKey, Signature, WotsPublicKey};
-use bee_ternary::{trit::Btrit, TritBuf};
+use bee_signing::{
+    PublicKey,
+    Signature,
+    WotsPublicKey,
+};
+use bee_ternary::{
+    trit::Btrit,
+    TritBuf,
+};
 
 use std::marker::PhantomData;
 
@@ -164,7 +180,14 @@ where
 mod tests {
 
     use super::*;
-    use crate::transaction::{Address, Nonce, Payload, Tag, Timestamp, Value};
+    use crate::transaction::{
+        Address,
+        Nonce,
+        Payload,
+        Tag,
+        Timestamp,
+        Value,
+    };
 
     fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
         TransactionBuilder::new()
