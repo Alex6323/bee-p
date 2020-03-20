@@ -9,6 +9,8 @@ use crate::message::{
     TransactionRequest,
 };
 use crate::protocol::{
+    slice_eq,
+    supported_version,
     COORDINATOR_BYTES,
     MINIMUM_WEIGHT_MAGNITUDE,
     SUPPORTED_VERSIONS,
@@ -22,6 +24,11 @@ use bee_network::Command::SendBytes;
 use bee_network::{
     EndpointId,
     Network,
+};
+
+use std::time::{
+    SystemTime,
+    UNIX_EPOCH,
 };
 
 use futures::channel::mpsc::{
@@ -147,46 +154,44 @@ impl ReceiverWorker {
 
         match Handshake::from_full_bytes(&header, bytes) {
             Ok(handshake) => {
-                // TODO check handshake
-
-                // if handshake.port != port {
-                //     warn!(
-                //         "[Neighbor-{}] Invalid handshake port: {} != {}",
-                //         self.epid, handshake.port, port
-                //     );
-                // } else if handshake.timestamp != timestamp {
-                //     warn!(
-                //         "[Neighbor-{}] Invalid handshake timestamp: {}",
-                //         self.epid, handshake.timestamp
-                //     );
-                // } else if handshake.coordinator != coordinator {
-                //     warn!("[Neighbor-{}] Invalid handshake coordinator", self.epid);
-                // } else if handshake.minimum_weight_magnitude != minimum_weight_magnitude {
-                //     warn!(
-                //         "[Neighbor-{}] Invalid handshake MWM: {} != {}",
-                //         self.epid, handshake.minimum_weight_magnitude, minimum_weight_magnitude
-                //     );
-                // } else if let Err(version) = supported_version(handshake.supported_messages) {
-                //     warn!(
-                //         "[Neighbor-{}] Unsupported protocol version: {}",
-                //         self.epid, version
-                //     );
-                // } else {
-                //     ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                //         state: ReceiverWorkerMessageState::Header { offset: 0 },
-                //     })
-                // }
-                //
-                // ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                //     state: ReceiverWorkerMessageState::Header { offset: 0 },
-                // })
-
-                info!("[Neighbor-{}] Handshake completed", self.epid);
-
-                ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Clock may have gone backwards")
+                    .as_millis() as u64;
+                let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                     state: ReceiverWorkerMessageState::Header,
-                    buffer: Vec::new(),
-                })
+                });
+
+                // TODO check actual port
+                if handshake.port != handshake.port {
+                    warn!(
+                        "[Neighbor-{}] Invalid handshake port: {} != {}",
+                        self.epid, handshake.port, handshake.port
+                    );
+                } else if timestamp - handshake.timestamp > 5000 {
+                    warn!(
+                        "[Neighbor-{}] Invalid handshake timestamp: {}",
+                        self.epid, handshake.timestamp
+                    );
+                } else if !slice_eq(&handshake.coordinator, &COORDINATOR_BYTES) {
+                    warn!("[Neighbor-{}] Invalid handshake coordinator", self.epid);
+                } else if handshake.minimum_weight_magnitude != MINIMUM_WEIGHT_MAGNITUDE {
+                    warn!(
+                        "[Neighbor-{}] Invalid handshake MWM: {} != {}",
+                        self.epid, handshake.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE
+                    );
+                } else if let Err(version) = supported_version(&handshake.supported_messages) {
+                    warn!("[Neighbor-{}] Unsupported protocol version: {}", self.epid, version);
+                } else {
+                    info!("[Neighbor-{}] Handshake completed", self.epid);
+
+                    state = ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                        state: ReceiverWorkerMessageState::Header,
+                        buffer: Vec::new(),
+                    });
+                }
+
+                state
             }
 
             Err(e) => {

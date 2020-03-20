@@ -2,6 +2,7 @@ mod conf;
 mod version;
 
 pub(crate) use conf::{
+    slice_eq,
     COORDINATOR_BYTES,
     MINIMUM_WEIGHT_MAGNITUDE,
 };
