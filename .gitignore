@@ -11,3 +11,6 @@ Cargo.lock
 
 # bee-storage-backends
 cleanup.sql
+
+# bee-node
+bee-node/data
