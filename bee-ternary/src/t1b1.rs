@@ -1,15 +1,14 @@
+use crate::{
+    Btrit,
+    RawEncoding,
+    RawEncodingBuf,
+    Trit,
+};
 use std::{
-    convert::{
-        TryInto,
-    },
+    convert::TryInto,
     hash,
     marker::PhantomData,
     ops::Range,
-};
-use crate::{
-    Trit, Btrit,
-    RawEncoding,
-    RawEncodingBuf,
 };
 
 #[repr(transparent)]

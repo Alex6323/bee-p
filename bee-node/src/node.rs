@@ -21,6 +21,7 @@ use bee_protocol::{
     TransactionWorker,
     TransactionWorkerEvent,
 };
+use bee_snapshot::SnapshotMetadata;
 
 use std::collections::HashMap;
 
@@ -130,6 +131,25 @@ impl Node {
     pub async fn init(&mut self) {
         info!("[Node ] Initializing...");
         block_on(StaticPeerManager::new(self.network.clone()).run());
+
+        info!("[Node ] Reading snapshot metadata file...");
+        // TODO pass conf
+        match SnapshotMetadata::new() {
+            Ok(snapshot_metadata) => {
+                // TODO convert timestamp to date for better UX
+                info!(
+                    "[Node ] Snapshot metadata file read with index {}, timestamp {}, {} solid entry points and {} seen milestones.",
+                    snapshot_metadata.index(),
+                    snapshot_metadata.timestamp(),
+                    snapshot_metadata.solid_entry_points().len(),
+                    snapshot_metadata.seen_milestones().len(),
+                );
+                // TODO deal with SEPs
+                // TODO deal with SMs
+            }
+            // TODO exit ?
+            Err(e) => error!("[Node ] Failed to read snapshot metadata file: {:?}.", e),
+        }
 
         let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
         self.transaction_worker_sender = Some(transaction_worker_sender);
