@@ -55,7 +55,7 @@ impl SnapshotMetadata {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<u64>()
                         .map_err(|e| SnapshotMetadataError::InvalidSnapshotMetadataIndex(e)),
-                    Err(e) => Err(SnapshotMetadataError::IOError(e))?,
+                    Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
                 // Parsing snapshot metadata timestamp
@@ -64,7 +64,7 @@ impl SnapshotMetadata {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<u64>()
                         .map_err(|e| SnapshotMetadataError::InvalidSnapshotMetadataTimestamp(e)),
-                    Err(e) => Err(SnapshotMetadataError::IOError(e))?,
+                    Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
                 // Parsing solid entry points number
@@ -73,7 +73,7 @@ impl SnapshotMetadata {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<usize>()
                         .map_err(|e| SnapshotMetadataError::InvalidSolidEntryPointNumber(e)),
-                    Err(e) => Err(SnapshotMetadataError::IOError(e))?,
+                    Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
                 // Parsing seen milestone number
@@ -82,7 +82,7 @@ impl SnapshotMetadata {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<usize>()
                         .map_err(|e| SnapshotMetadataError::InvalidSeenMilestoneNumber(e)),
-                    Err(e) => Err(SnapshotMetadataError::IOError(e))?,
+                    Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
                 // Parsing solid entry points
