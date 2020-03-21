@@ -10,9 +10,6 @@ use std::io::{
     BufReader,
 };
 
-// TODO conf
-const METADA_FILE: &str = "./mainnet.snapshot.meta";
-
 #[derive(Debug)]
 pub enum SnapshotMetadataError {
     IOError(std::io::Error),
@@ -35,8 +32,8 @@ pub struct SnapshotMetadata {
 }
 
 impl SnapshotMetadata {
-    pub fn new() -> Result<Self, SnapshotMetadataError> {
-        match File::open(METADA_FILE) {
+    pub fn new(path: &str) -> Result<Self, SnapshotMetadataError> {
+        match File::open(path) {
             Ok(file) => {
                 let mut reader = BufReader::new(file);
                 let mut line = String::new();

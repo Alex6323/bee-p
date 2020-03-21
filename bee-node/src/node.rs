@@ -133,8 +133,8 @@ impl Node {
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
         info!("[Node ] Reading snapshot metadata file...");
-        // TODO pass conf
-        match SnapshotMetadata::new() {
+        // TODO conf
+        match SnapshotMetadata::new("./data/mainnet.snapshot.meta") {
             Ok(snapshot_metadata) => {
                 // TODO convert timestamp to date for better UX
                 info!(
