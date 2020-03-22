@@ -9,7 +9,6 @@ bee-bundle = { path = "../bee-bundle" }
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }
 async-trait = "0.1.22"
-iota-lib-rs = "0.4"
 serde = "1.0.104"
 
 [lib]
