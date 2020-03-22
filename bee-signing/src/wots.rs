@@ -77,7 +77,7 @@ impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
         // TODO map_err
         let security_level = match self.security_level {
             Some(security_level) => security_level,
-            None => return Err(WotsError::MissingSecurityLevel),
+            None => Err(WotsError::MissingSecurityLevel)?,
         };
 
         Ok(WotsPrivateKeyGenerator {
@@ -98,7 +98,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
         let mut state = TritBuf::zeros(self.security_level as usize * 6561);
 
         if let Err(_) = sponge.digest_into(subseed.trits(), &mut state) {
-            return Err(Self::Error::FailedSpongeOperation);
+            Err(Self::Error::FailedSpongeOperation)?;
         }
 
         Ok(Self::PrivateKey {
@@ -122,7 +122,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
         for chunk in hashed_private_key.chunks_mut(243) {
             for _ in 0..26 {
                 if let Err(_) = sponge.absorb(chunk) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 }
                 sponge.squeeze_into(chunk);
                 sponge.reset();
@@ -131,12 +131,12 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
         for (i, chunk) in hashed_private_key.chunks(6561).enumerate() {
             if let Err(_) = sponge.digest_into(chunk, &mut digests[i * 243..(i + 1) * 243]) {
-                return Err(Self::Error::FailedSpongeOperation);
+                Err(Self::Error::FailedSpongeOperation)?;
             }
         }
 
         if let Err(_) = sponge.digest_into(&digests, &mut hash) {
-            return Err(Self::Error::FailedSpongeOperation);
+            Err(Self::Error::FailedSpongeOperation)?;
         }
 
         Ok(Self::PublicKey {
@@ -155,7 +155,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
             for _ in 0..(13 - val) {
                 if let Err(_) = sponge.absorb(chunk) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 }
                 sponge.squeeze_into(chunk);
                 sponge.reset();
@@ -232,7 +232,7 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
             for _ in 0..(val - -13) {
                 if let Err(_) = sponge.absorb(chunk) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 }
                 sponge.squeeze_into(chunk);
                 sponge.reset();
@@ -241,12 +241,12 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
         for (i, chunk) in state.chunks(6561).enumerate() {
             if let Err(_) = sponge.digest_into(chunk, &mut digests[i * 243..(i + 1) * 243]) {
-                return Err(Self::Error::FailedSpongeOperation);
+                Err(Self::Error::FailedSpongeOperation)?;
             }
         }
 
         if let Err(_) = sponge.digest_into(&digests, &mut hash) {
-            return Err(Self::Error::FailedSpongeOperation);
+            Err(Self::Error::FailedSpongeOperation)?;
         }
 
         Ok(Self::PublicKey {

@@ -79,13 +79,13 @@ where
         let depth = match self.depth {
             Some(depth) => match depth {
                 0..=20 => depth,
-                _ => return Err(MssError::InvalidDepth(depth)),
+                _ => Err(MssError::InvalidDepth(depth))?,
             },
-            None => return Err(MssError::MissingDepth),
+            None => Err(MssError::MissingDepth)?,
         };
         let generator = match self.generator {
             Some(generator) => generator,
-            None => return Err(MssError::MissingGenerator),
+            None => Err(MssError::MissingGenerator)?,
         };
 
         Ok(MssPrivateKeyGenerator {
@@ -117,11 +117,11 @@ where
         for key_index in 0..(1 << (self.depth - 1)) {
             let ots_private_key = match self.generator.generate(seed, key_index) {
                 Ok(private_key) => private_key,
-                Err(_) => return Err(Self::Error::FailedUnderlyingPrivateKeyGeneration),
+                Err(_) => Err(Self::Error::FailedUnderlyingPrivateKeyGeneration)?,
             };
             let ots_public_key = match ots_private_key.generate_public_key() {
                 Ok(public_key) => public_key,
-                Err(_) => return Err(Self::Error::FailedUnderlyingPublicKeyGeneration),
+                Err(_) => Err(Self::Error::FailedUnderlyingPublicKeyGeneration)?,
             };
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
@@ -135,10 +135,10 @@ where
                 let left_index = index * 2 + 1;
                 let right_index = left_index + 1;
                 if let Err(_) = sponge.absorb(&tree[left_index * 243..(left_index + 1) * 243]) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 };
                 if let Err(_) = sponge.absorb(&tree[right_index * 243..(right_index + 1) * 243]) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 };
                 sponge.squeeze_into(&mut tree[index * 243..(index + 1) * 243]);
                 sponge.reset();
@@ -174,7 +174,7 @@ where
         let ots_private_key = &mut self.keys[self.index as usize];
         let ots_signature = match ots_private_key.sign(message) {
             Ok(signature) => signature,
-            Err(_) => return Err(Self::Error::FailedUnderlyingSignatureGeneration),
+            Err(_) => Err(Self::Error::FailedUnderlyingSignatureGeneration)?,
         };
         let mut state = vec![0; ots_signature.size() + 6561];
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
@@ -231,7 +231,7 @@ where
         let siblings: TritBuf = signature.state.chunks(6561).last().unwrap().to_buf();
         let ots_public_key = match ots_signature.recover_public_key(message) {
             Ok(public_key) => public_key,
-            Err(_) => return Err(Self::Error::FailedUnderlyingPublicKeyRecovery),
+            Err(_) => Err(Self::Error::FailedUnderlyingPublicKeyRecovery)?,
         };
         let mut hash: TritBuf = TritBuf::zeros(243);
 
@@ -245,17 +245,17 @@ where
 
             if signature.index & j != 0 {
                 if let Err(_) = sponge.absorb(sibling) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 };
                 if let Err(_) = sponge.absorb(&hash) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 };
             } else {
                 if let Err(_) = sponge.absorb(&hash) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 };
                 if let Err(_) = sponge.absorb(&sibling) {
-                    return Err(Self::Error::FailedSpongeOperation);
+                    Err(Self::Error::FailedSpongeOperation)?;
                 };
             }
             sponge.squeeze_into(&mut hash);

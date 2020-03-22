@@ -52,7 +52,7 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
     // TODO: documentation
     fn from_buf(buf: TritBuf) -> Result<Self, Self::Error> {
         if buf.len() != 243 {
-            return Err(Self::Error::InvalidLength(buf.len()));
+            Err(Self::Error::InvalidLength(buf.len()))?;
         }
 
         Ok(Self {
