@@ -76,7 +76,7 @@ impl SnapshotMetadata {
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
-                // Parsing seen milestone number
+                // Parsing seen milestones number
                 line.clear();
                 let seen_milestones_num = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
