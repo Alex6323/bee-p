@@ -86,7 +86,7 @@ impl SnapshotMetadata {
                 }?;
 
                 // Parsing solid entry points
-                let mut solid_entry_points = Vec::new();
+                let mut solid_entry_points = Vec::with_capacity(solid_entry_points_num);
                 for _ in 0..solid_entry_points_num {
                     line.clear();
                     let hash = match reader.read_line(&mut line) {
@@ -106,7 +106,7 @@ impl SnapshotMetadata {
                 }
 
                 // Parsing seen milestones
-                let mut seen_milestones = Vec::new();
+                let mut seen_milestones = Vec::with_capacity(seen_milestones_num);
                 for _ in 0..seen_milestones_num {
                     line.clear();
                     let hash = match reader.read_line(&mut line) {
