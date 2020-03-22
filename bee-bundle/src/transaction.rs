@@ -14,18 +14,16 @@ use bee_common::constants::{
     TRANSACTION_TRYT_LEN,
     TRYTE_ZERO,
 };
-use bee_ternary::Btrit;
+use bee_ternary::raw::RawEncoding;
+use bee_ternary::util::trytes_to_trits_buf;
 use bee_ternary::{
-    util::trytes_to_trits_buf,
+    Btrit,
     IsTryte,
     T1B1Buf,
     TritBuf,
-};
-
-use bee_ternary::{
-    raw::RawEncoding,
     Trits,
 };
+
 use std::fmt;
 use std::iter;
 use std::hash;
