@@ -83,10 +83,7 @@ where
             },
             None => Err(MssError::MissingDepth)?,
         };
-        let generator = match self.generator {
-            Some(generator) => generator,
-            None => Err(MssError::MissingGenerator)?,
-        };
+        let generator = self.generator.ok_or(MssError::MissingGenerator)?;
 
         Ok(MssPrivateKeyGenerator {
             depth: depth,
@@ -115,14 +112,13 @@ where
         // TODO: reserve ?
 
         for key_index in 0..(1 << (self.depth - 1)) {
-            let ots_private_key = match self.generator.generate(seed, key_index) {
-                Ok(private_key) => private_key,
-                Err(_) => Err(Self::Error::FailedUnderlyingPrivateKeyGeneration)?,
-            };
-            let ots_public_key = match ots_private_key.generate_public_key() {
-                Ok(public_key) => public_key,
-                Err(_) => Err(Self::Error::FailedUnderlyingPublicKeyGeneration)?,
-            };
+            let ots_private_key = self
+                .generator
+                .generate(seed, key_index)
+                .map_err(|_| Self::Error::FailedUnderlyingPrivateKeyGeneration)?;
+            let ots_public_key = ots_private_key
+                .generate_public_key()
+                .map_err(|_| Self::Error::FailedUnderlyingPublicKeyGeneration)?;
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
             keys.push(ots_private_key);
@@ -134,12 +130,13 @@ where
                 let index = (1 << depth) + i - 1;
                 let left_index = index * 2 + 1;
                 let right_index = left_index + 1;
-                if let Err(_) = sponge.absorb(&tree[left_index * 243..(left_index + 1) * 243]) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                };
-                if let Err(_) = sponge.absorb(&tree[right_index * 243..(right_index + 1) * 243]) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                };
+
+                sponge
+                    .absorb(&tree[left_index * 243..(left_index + 1) * 243])
+                    .map_err(|_| Self::Error::FailedSpongeOperation)?;
+                sponge
+                    .absorb(&tree[right_index * 243..(right_index + 1) * 243])
+                    .map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.squeeze_into(&mut tree[index * 243..(index + 1) * 243]);
                 sponge.reset();
             }
@@ -172,10 +169,9 @@ where
 
     fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
         let ots_private_key = &mut self.keys[self.index as usize];
-        let ots_signature = match ots_private_key.sign(message) {
-            Ok(signature) => signature,
-            Err(_) => Err(Self::Error::FailedUnderlyingSignatureGeneration)?,
-        };
+        let ots_signature = ots_private_key
+            .sign(message)
+            .map_err(|_| Self::Error::FailedUnderlyingSignatureGeneration)?;
         let mut state = vec![0; ots_signature.size() + 6561];
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
         let mut sibling_index;
@@ -229,10 +225,9 @@ where
         let ots_signature =
             K::Signature::from_buf(signature.state[0..((signature.state.len() / 6561) - 1) * 6561].to_buf());
         let siblings: TritBuf = signature.state.chunks(6561).last().unwrap().to_buf();
-        let ots_public_key = match ots_signature.recover_public_key(message) {
-            Ok(public_key) => public_key,
-            Err(_) => Err(Self::Error::FailedUnderlyingPublicKeyRecovery)?,
-        };
+        let ots_public_key = ots_signature
+            .recover_public_key(message)
+            .map_err(|_| Self::Error::FailedUnderlyingPublicKeyRecovery)?;
         let mut hash: TritBuf = TritBuf::zeros(243);
 
         hash.copy_from(ots_public_key.trits());
@@ -244,19 +239,13 @@ where
             }
 
             if signature.index & j != 0 {
-                if let Err(_) = sponge.absorb(sibling) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                };
-                if let Err(_) = sponge.absorb(&hash) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                };
+                sponge.absorb(sibling).map_err(|_| Self::Error::FailedSpongeOperation)?;
+                sponge.absorb(&hash).map_err(|_| Self::Error::FailedSpongeOperation)?;
             } else {
-                if let Err(_) = sponge.absorb(&hash) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                };
-                if let Err(_) = sponge.absorb(&sibling) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                };
+                sponge.absorb(&hash).map_err(|_| Self::Error::FailedSpongeOperation)?;
+                sponge
+                    .absorb(&sibling)
+                    .map_err(|_| Self::Error::FailedSpongeOperation)?;
             }
             sponge.squeeze_into(&mut hash);
             sponge.reset();

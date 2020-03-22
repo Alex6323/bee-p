@@ -74,11 +74,7 @@ impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
     }
 
     pub fn build(&mut self) -> Result<WotsPrivateKeyGenerator<S>, WotsError> {
-        // TODO map_err
-        let security_level = match self.security_level {
-            Some(security_level) => security_level,
-            None => Err(WotsError::MissingSecurityLevel)?,
-        };
+        let security_level = self.security_level.ok_or(WotsError::MissingSecurityLevel)?;
 
         Ok(WotsPrivateKeyGenerator {
             security_level: security_level,
@@ -97,9 +93,9 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
         let mut sponge = S::default();
         let mut state = TritBuf::zeros(self.security_level as usize * 6561);
 
-        if let Err(_) = sponge.digest_into(subseed.trits(), &mut state) {
-            Err(Self::Error::FailedSpongeOperation)?;
-        }
+        sponge
+            .digest_into(subseed.trits(), &mut state)
+            .map_err(|_| Self::Error::FailedSpongeOperation)?;
 
         Ok(Self::PrivateKey {
             state: state,
@@ -121,23 +117,21 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
         for chunk in hashed_private_key.chunks_mut(243) {
             for _ in 0..26 {
-                if let Err(_) = sponge.absorb(chunk) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                }
+                sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.squeeze_into(chunk);
                 sponge.reset();
             }
         }
 
         for (i, chunk) in hashed_private_key.chunks(6561).enumerate() {
-            if let Err(_) = sponge.digest_into(chunk, &mut digests[i * 243..(i + 1) * 243]) {
-                Err(Self::Error::FailedSpongeOperation)?;
-            }
+            sponge
+                .digest_into(chunk, &mut digests[i * 243..(i + 1) * 243])
+                .map_err(|_| Self::Error::FailedSpongeOperation)?;
         }
 
-        if let Err(_) = sponge.digest_into(&digests, &mut hash) {
-            Err(Self::Error::FailedSpongeOperation)?;
-        }
+        sponge
+            .digest_into(&digests, &mut hash)
+            .map_err(|_| Self::Error::FailedSpongeOperation)?;
 
         Ok(Self::PublicKey {
             state: hash,
@@ -154,9 +148,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(13 - val) {
-                if let Err(_) = sponge.absorb(chunk) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                }
+                sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.squeeze_into(chunk);
                 sponge.reset();
             }
@@ -231,23 +223,21 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
             let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
 
             for _ in 0..(val - -13) {
-                if let Err(_) = sponge.absorb(chunk) {
-                    Err(Self::Error::FailedSpongeOperation)?;
-                }
+                sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.squeeze_into(chunk);
                 sponge.reset();
             }
         }
 
         for (i, chunk) in state.chunks(6561).enumerate() {
-            if let Err(_) = sponge.digest_into(chunk, &mut digests[i * 243..(i + 1) * 243]) {
-                Err(Self::Error::FailedSpongeOperation)?;
-            }
+            sponge
+                .digest_into(chunk, &mut digests[i * 243..(i + 1) * 243])
+                .map_err(|_| Self::Error::FailedSpongeOperation)?;
         }
 
-        if let Err(_) = sponge.digest_into(&digests, &mut hash) {
-            Err(Self::Error::FailedSpongeOperation)?;
-        }
+        sponge
+            .digest_into(&digests, &mut hash)
+            .map_err(|_| Self::Error::FailedSpongeOperation)?;
 
         Ok(Self::PublicKey {
             state: hash,
