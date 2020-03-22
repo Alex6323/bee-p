@@ -2,10 +2,8 @@ pub mod constants;
 pub mod logger;
 
 mod errors;
-mod result;
 mod types;
 
-pub use result::Result;
 pub use errors::Errors;
 pub use types::*;
 
