@@ -7,6 +7,7 @@ use bee_ternary::{util::trytes_to_trits_buf, IsTryte, T1B1Buf, TritBuf};
 use bee_ternary::{raw::RawEncoding, Trits};
 use std::fmt;
 use std::iter;
+use std::hash;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Payload(pub TritBuf<T1B1Buf>);
@@ -110,6 +111,16 @@ impl Hash {
 
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
+    }
+}
+
+impl Eq for Hash {}
+
+
+impl hash::Hash for Hash
+{
+    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+        self.0.hash(hasher)
     }
 }
 
