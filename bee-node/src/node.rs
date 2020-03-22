@@ -21,7 +21,10 @@ use bee_protocol::{
     TransactionWorker,
     TransactionWorkerEvent,
 };
-use bee_snapshot::SnapshotMetadata;
+use bee_snapshot::{
+    SnapshotMetadata,
+    SnapshotState,
+};
 
 use std::collections::HashMap;
 
@@ -149,6 +152,20 @@ impl Node {
             }
             // TODO exit ?
             Err(e) => error!("[Node ] Failed to read snapshot metadata file: {:?}.", e),
+        }
+
+        info!("[Node ] Reading snapshot state file...");
+        // TODO conf
+        match SnapshotState::new("./data/mainnet.snapshot.state") {
+            Ok(snapshot_state) => {
+                info!(
+                    "[Node ] Snapshot state file read with {} entries and correct supply.",
+                    snapshot_state.entries().len()
+                );
+                // TODO deal with entries
+            }
+            // TODO exit ?
+            Err(e) => error!("[Node ] Failed to read snapshot state file: {:?}.", e),
         }
 
         let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
