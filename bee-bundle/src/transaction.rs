@@ -8,12 +8,9 @@ use crate::constants::{
     PAYLOAD,
     TAG,
     TRUNK,
-};
-
-use bee_common::constants::{
-    TRANSACTION_TRYT_LEN,
     TRYTE_ZERO,
 };
+
 use bee_ternary::raw::RawEncoding;
 use bee_ternary::util::trytes_to_trits_buf;
 use bee_ternary::{
@@ -197,7 +194,7 @@ impl Transaction {
     pub fn from_trits(buffer: &Trits<impl RawEncoding<Trit = Btrit> + ?Sized>) -> Result<Self, TransactionError> {
         let trits = buffer.encode::<T1B1Buf>();
 
-        let transaction = TransactionBuilder::new()
+        let transaction = Self::builder()
             .with_payload(Payload(
                 trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.length].to_buf(),
             ))

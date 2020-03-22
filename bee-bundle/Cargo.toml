@@ -5,9 +5,9 @@ authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
-bee-common = { path = "../bee-common" }
 bee-crypto = { path = "../bee-crypto" }
 bee-pow = { path = "../bee-pow" }
 bee-signing = { path = "../bee-signing" }
 bee-ternary = { path = "../bee-ternary", features = ["serde1"] }
+
 serde = { version = "1.0", features = ["derive"] }

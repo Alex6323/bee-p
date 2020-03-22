@@ -1,5 +1,3 @@
-use bee_common::constants::*;
-
 pub struct Offset {
     pub start: usize,
     pub length: usize,
@@ -55,6 +53,16 @@ macro_rules! offsets_from_previous_field {
 }
 
 pub const IOTA_SUPPLY: i64 = 2779530283277761;
+pub const TRYTE_ZERO: char = '9';
+
+pub const PAYLOAD_TRIT_LEN: usize = 6561;
+pub const ADDRESS_TRIT_LEN: usize = 243;
+pub const VALUE_TRIT_LEN: usize = 81;
+pub const TAG_TRIT_LEN: usize = 81;
+pub const TIMESTAMP_TRIT_LEN: usize = 27;
+pub const INDEX_TRIT_LEN: usize = 27;
+pub const HASH_TRIT_LEN: usize = 243;
+pub const NONCE_TRIT_LEN: usize = 81;
 
 pub const PAYLOAD: Field = offsets_from_trits!(0, PAYLOAD_TRIT_LEN);
 pub const ADDRESS: Field = offsets_from_previous_field!(PAYLOAD, ADDRESS_TRIT_LEN);
