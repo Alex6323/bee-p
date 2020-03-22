@@ -20,15 +20,28 @@ use std::marker::PhantomData;
 
 // TODO constants
 
+#[derive(Clone, Copy)]
+pub enum WotsSecurityLevel {
+    Low = 1,
+    Medium = 2,
+    High = 3,
+}
+
+impl Default for WotsSecurityLevel {
+    fn default() -> Self {
+        WotsSecurityLevel::Medium
+    }
+}
+
 #[derive(Default)]
 pub struct WotsPrivateKeyGeneratorBuilder<S> {
-    security_level: Option<u8>,
+    security_level: Option<WotsSecurityLevel>,
     _sponge: PhantomData<S>,
 }
 
 #[derive(Default, Clone, Copy)]
 pub struct WotsPrivateKeyGenerator<S> {
-    security_level: u8,
+    security_level: WotsSecurityLevel,
     _sponge: PhantomData<S>,
 }
 
@@ -50,23 +63,20 @@ pub struct WotsSignature<S> {
 // TODO: documentation
 #[derive(Debug, PartialEq)]
 pub enum WotsError {
-    InvalidSecurityLevel(u8),
     MissingSecurityLevel,
     FailedSpongeOperation,
 }
 
 impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
-    pub fn security_level(&mut self, security_level: u8) -> &mut Self {
+    pub fn security_level(&mut self, security_level: WotsSecurityLevel) -> &mut Self {
         self.security_level = Some(security_level);
         self
     }
 
     pub fn build(&mut self) -> Result<WotsPrivateKeyGenerator<S>, WotsError> {
+        // TODO map_err
         let security_level = match self.security_level {
-            Some(security_level) => match security_level {
-                1 | 2 | 3 => security_level,
-                _ => return Err(WotsError::InvalidSecurityLevel(security_level)),
-            },
+            Some(security_level) => security_level,
             None => return Err(WotsError::MissingSecurityLevel),
         };
 
@@ -268,25 +278,6 @@ mod tests {
     // }
 
     // #[test]
-    // fn wots_generator_invalid_security_level_test() {
-    //     match WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-    //         .security_level(0)
-    //         .build()
-    //     {
-    //         Err(WotsError::InvalidSecurityLevel(s)) => assert_eq!(s, 0),
-    //         _ => unreachable!(),
-    //     }
-    //
-    //     match WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-    //         .security_level(4)
-    //         .build()
-    //     {
-    //         Err(WotsError::InvalidSecurityLevel(s)) => assert_eq!(s, 4),
-    //         _ => unreachable!(),
-    //     }
-    // }
-
-    // #[test]
     // fn wots_generator_valid_test() {
     //     for s in 1..4 {
     //         assert_eq!(
@@ -302,8 +293,13 @@ mod tests {
     fn wots_generic_complete_test<S: Sponge + Default>() {
         let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
         let seed = IotaSeed::<S>::from_buf(seed_trits).unwrap();
+        let security_levels = vec![
+            WotsSecurityLevel::Low,
+            WotsSecurityLevel::Medium,
+            WotsSecurityLevel::High,
+        ];
 
-        for security in 1..4 {
+        for security in security_levels {
             for index in 0..5 {
                 let private_key_generator = WotsPrivateKeyGeneratorBuilder::<S>::default()
                     .security_level(security)
