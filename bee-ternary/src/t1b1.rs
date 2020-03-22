@@ -3,6 +3,7 @@ use std::{
         TryFrom,
         TryInto,
     },
+    hash,
     marker::PhantomData,
     ops::Range,
 };
@@ -41,6 +42,12 @@ impl<T: Trit> T1B1<T> {
 
     pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
         unsafe { &mut *(Self::make(self.ptr(0), 0, self.len()) as *mut _) }
+    }
+}
+
+impl<T: Trit> hash::Hash for T1B1<T> {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.as_raw_slice().hash(state);
     }
 }
 

@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::hash;
 
 pub mod balanced;
 pub mod unbalanced;
@@ -11,7 +12,7 @@ pub use self::{
 
 use std::fmt;
 
-pub trait Trit: Copy + Sized + fmt::Debug + PartialEq + ShiftTernary + TryFrom<i8> {
+pub trait Trit: Copy + Sized + fmt::Debug + hash::Hash + PartialEq + ShiftTernary + TryFrom<i8> {
     fn checked_increment(self) -> Option<Self>;
 
     fn zero() -> Self;
