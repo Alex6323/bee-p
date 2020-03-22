@@ -167,16 +167,6 @@ impl Nonce {
     }
 }
 
-/// The (bundle) essence of each transaction is a subset of its fields, with a total size of 486 trits.
-pub struct Essence<'a> {
-    address: &'a Address,
-    value: &'a Value,
-    obsolete_tag: &'a Tag,
-    timestamp: &'a Timestamp,
-    index: &'a Index,
-    last_index: &'a Index,
-}
-
 #[derive(Debug)]
 pub enum TransactionError {
     TransactionDeserializationError,
@@ -303,18 +293,6 @@ impl Transaction {
 
     pub fn nonce(&self) -> &Nonce {
         &self.nonce
-    }
-
-    /// Returns the (bundle) essence of that transaction.
-    pub fn essence<'a>(&'a self) -> Essence<'a> {
-        Essence {
-            address: &self.address,
-            value: &self.value,
-            obsolete_tag: &self.obsolete_tag,
-            timestamp: &self.timestamp,
-            index: &self.index,
-            last_index: &self.last_index,
-        }
     }
 
     pub fn builder() -> TransactionBuilder {
