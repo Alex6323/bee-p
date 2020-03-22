@@ -24,9 +24,8 @@ use bee_ternary::{
     Trits,
 };
 
-use std::fmt;
-use std::iter;
 use std::hash;
+use std::iter;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Payload(pub TritBuf<T1B1Buf>);
@@ -135,9 +134,7 @@ impl Hash {
 
 impl Eq for Hash {}
 
-
-impl hash::Hash for Hash
-{
+impl hash::Hash for Hash {
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         self.0.hash(hasher)
     }
@@ -290,22 +287,6 @@ impl Transaction {
 
     pub fn nonce(&self) -> &Nonce {
         &self.nonce
-    }
-}
-
-impl fmt::Debug for Transaction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "address={:?}\nvalue={:?}\ntimestamp={:?}\nindex={:?}\nlast_index={:?}\ntag={:?}\nbundle={:?}\ntrunk={:?}\nbranch={:?}\nnonce={:?}",
-        self.address,
-        self.value,
-        self.timestamp,
-        self.index,
-        self.last_index,
-        self.tag,
-        self.bundle,
-        self.trunk,
-        self.branch,
-        self.nonce)
     }
 }
 
