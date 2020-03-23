@@ -17,6 +17,7 @@ use crate::protocol::{
 };
 use crate::worker::{
     ResponderWorkerEvent,
+    SenderWorker,
     TransactionWorkerEvent,
 };
 
@@ -31,7 +32,9 @@ use std::time::{
     UNIX_EPOCH,
 };
 
+use async_std::task::spawn;
 use futures::channel::mpsc::{
+    channel,
     Receiver,
     Sender,
 };
@@ -189,6 +192,12 @@ impl ReceiverWorker {
                     // TODO check duplicate connection
                     info!("[Peer({})] Handshake completed.", self.epid);
 
+                    // let (sender, receiver) = channel(1000);
+                    // spawn(SenderWorker::<MilestoneRequest>::new(self.epid, self.network.clone(), receiver).run());
+                    // spawn(SenderWorker::<TransactionBroadcast>::new(self.epid, self.network.clone()).run());
+                    // spawn(SenderWorker::<TransactionRequest>::new(self.epid, self.network.clone()).run());
+                    // spawn(SenderWorker::<Heartbeat>::new(self.epid, self.network.clone()).run());
+
                     state = ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                         state: ReceiverWorkerMessageState::Header,
                         buffer: Vec::new(),
@@ -340,12 +349,6 @@ impl ReceiverWorker {
         mut context: AwaitingMessageContext,
         event: ReceiverWorkerEvent,
     ) -> ReceiverWorkerState {
-        // spawn(SenderWorker::<LegacyGossip>::new(self.epid, self.network.clone()).run());
-        // spawn(SenderWorker::<MilestoneRequest>::new(self.epid, self.network.clone()).run());
-        // spawn(SenderWorker::<TransactionBroadcast>::new(self.epid, self.network.clone()).run());
-        // spawn(SenderWorker::<TransactionRequest>::new(self.epid, self.network.clone()).run());
-        // spawn(SenderWorker::<Heartbeat>::new(self.epid, self.network.clone()).run());
-
         match event {
             ReceiverWorkerEvent::Disconnected => {
                 debug!("[Peer({})] Disconnected.", self.epid);
