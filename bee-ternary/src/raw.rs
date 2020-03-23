@@ -10,6 +10,10 @@ pub trait RawEncoding {
     /// Get the number of trits in this buffer
     fn len(&self) -> usize;
 
+    fn as_i8_slice(&self) -> &[i8];
+
+    unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8];
+
     /// Get the trit at the given index
     unsafe fn get_unchecked(&self, index: usize) -> Self::Trit;
 

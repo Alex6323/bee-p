@@ -59,6 +59,14 @@ impl RawEncoding for T3B1 {
         self.len_offset().0
     }
 
+    fn as_i8_slice(&self) -> &[i8] {
+        unsafe { &*(Self::make(self.ptr(0), 0, self.len()) as *const _) }
+    }
+
+    unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
+        &mut *(Self::make(self.ptr(0), 0, self.len()) as *mut _)
+    }
+
     unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {
         let b = self.ptr(index).read();
         extract(b, (self.len_offset().1 + index) % TPB)
