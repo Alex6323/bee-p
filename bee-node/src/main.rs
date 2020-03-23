@@ -1,5 +1,4 @@
 mod constants;
-mod logger;
 mod node;
 
 use constants::{
@@ -8,6 +7,7 @@ use constants::{
 };
 use node::Node;
 
+use bee_common::logger;
 use bee_network::Address;
 
 use async_std::task::block_on;
