@@ -1,7 +1,10 @@
 use crate::PeerManager;
 
 use bee_network::Command::AddEndpoint;
-use bee_network::{Network, Url};
+use bee_network::{
+    Network,
+    Url,
+};
 
 use async_std::task::block_on;
 use async_trait::async_trait;
