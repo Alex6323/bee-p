@@ -1,10 +1,32 @@
 use crate::constants::{
-    ADDRESS, ADDRESS_TRIT_LEN, BRANCH, BUNDLE, HASH_TRIT_LEN, IOTA_SUPPLY, NONCE, NONCE_TRIT_LEN, OBSOLETE_TAG,
-    PAYLOAD, PAYLOAD_TRIT_LEN, TAG, TAG_TRIT_LEN, TRUNK, TRYTE_ZERO,
+    ADDRESS,
+    ADDRESS_TRIT_LEN,
+    BRANCH,
+    BUNDLE,
+    HASH_TRIT_LEN,
+    IOTA_SUPPLY,
+    NONCE,
+    NONCE_TRIT_LEN,
+    OBSOLETE_TAG,
+    PAYLOAD,
+    PAYLOAD_TRIT_LEN,
+    TAG,
+    TAG_TRIT_LEN,
+    TRUNK,
+    TRYTE_ZERO,
 };
 
 use bee_ternary::util::trytes_to_trits_buf;
-use bee_ternary::{raw::RawEncoding, raw::RawEncodingBuf, Btrit, IsTryte, T1B1Buf, Trit, TritBuf, Trits};
+use bee_ternary::{
+    raw::RawEncoding,
+    raw::RawEncodingBuf,
+    Btrit,
+    IsTryte,
+    T1B1Buf,
+    Trit,
+    TritBuf,
+    Trits,
+};
 
 use std::hash;
 use std::iter;
@@ -187,11 +209,11 @@ macro_rules! impl_into_inner_for_fields {
 
             type ActualField = $field_name;
 
-            fn into_inner(&self) -> TritBuf<T1B1Buf> {
+    fn into_inner(&self) -> TritBuf<T1B1Buf> {
                 self.0.to_buf()
             }
 
-                fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError> {
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError> {
 
 
         if buffer.len() != $field_name::trit_len() {
@@ -200,6 +222,7 @@ macro_rules! impl_into_inner_for_fields {
 
         Ok(Self(buffer))
     }
+
     fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField {
 
         if buffer.len() != $field_name::trit_len() {
@@ -212,7 +235,6 @@ macro_rules! impl_into_inner_for_fields {
         })+
     }
 }
-
 
 impl_into_inner_for_fields!(Payload, Address, Hash, Tag, Nonce);
 
