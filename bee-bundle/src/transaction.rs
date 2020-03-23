@@ -23,6 +23,7 @@ use bee_ternary::{
 
 use std::hash;
 use std::iter;
+use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Payload(pub TritBuf<T1B1Buf>);
@@ -134,6 +135,12 @@ impl Eq for Hash {}
 impl hash::Hash for Hash {
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         self.0.hash(hasher)
+    }
+}
+
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.0)
     }
 }
 

@@ -168,13 +168,13 @@ impl Node {
 
         // TODO conf
         let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
-        self.milestone_validator_worker_sender = Some(milestone_validator_worker_sender);
+        self.milestone_validator_worker_sender = Some(milestone_validator_worker_sender.clone());
         spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
 
         // TODO conf
         let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
         self.transaction_worker_sender = Some(transaction_worker_sender);
-        spawn(TransactionWorker::new(transaction_worker_receiver).run());
+        spawn(TransactionWorker::new(transaction_worker_receiver, milestone_validator_worker_sender).run());
 
         // TODO conf
         let (responder_worker_sender, responder_worker_receiver) = channel(1000);
