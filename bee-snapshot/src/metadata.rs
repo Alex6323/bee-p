@@ -126,11 +126,11 @@ impl SnapshotMetadata {
                 }
 
                 Ok(Self {
-                    hash: hash,
-                    index: index,
-                    timestamp: timestamp,
-                    solid_entry_points: solid_entry_points,
-                    seen_milestones: seen_milestones,
+                    hash,
+                    index,
+                    timestamp,
+                    solid_entry_points,
+                    seen_milestones,
                 })
             }
             Err(e) => Err(SnapshotMetadataError::IOError(e)),

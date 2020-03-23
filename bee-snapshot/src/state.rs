@@ -62,7 +62,7 @@ impl SnapshotState {
                     Err(SnapshotStateError::InvalidSupply(supply, IOTA_SUPPLY))?;
                 }
 
-                Ok(Self { entries: entries })
+                Ok(Self { entries })
             }
             Err(e) => Err(SnapshotStateError::IOError(e)),
         }
