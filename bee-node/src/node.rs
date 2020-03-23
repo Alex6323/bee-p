@@ -11,6 +11,8 @@ use bee_peering::{
     StaticPeerManager,
 };
 use bee_protocol::{
+    MilestoneValidatorWorker,
+    MilestoneValidatorWorkerEvent,
     NodeMetrics,
     ReceiverWorker,
     ReceiverWorkerEvent,
@@ -34,7 +36,6 @@ use async_std::task::{
 };
 use futures::channel::mpsc::{
     channel,
-    SendError,
     Sender,
 };
 use futures::sink::SinkExt;
@@ -50,6 +51,7 @@ pub struct Node {
     transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
     responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
     requester_worker_sender: Option<Sender<RequesterWorkerEvent>>,
+    milestone_validator_worker_sender: Option<Sender<MilestoneValidatorWorkerEvent>>,
     metrics: NodeMetrics,
 }
 
@@ -63,6 +65,7 @@ impl Node {
             transaction_worker_sender: None,
             responder_worker_sender: None,
             requester_worker_sender: None,
+            milestone_validator_worker_sender: None,
             metrics: NodeMetrics::default(),
         }
     }
@@ -83,36 +86,54 @@ impl Node {
             .run(),
         );
 
-        self.network
+        if let Err(e) = self
+            .network
             .send(Connect {
                 epid: epid,
                 responder: None,
             })
-            .await;
+            .await
+        {
+            warn!("[Node ] Sending Command::Connect for {} failed: {}", epid, e);
+        }
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
         if let Some(sender) = self.neighbors.get_mut(&epid) {
-            sender.send(ReceiverWorkerEvent::Removed).await;
+            if let Err(e) = sender.send(ReceiverWorkerEvent::Removed).await {
+                warn!("[Node ] Sending ReceiverWorkerEvent::Removed to {} failed: {}", epid, e);
+            }
             self.neighbors.remove(&epid);
         }
     }
 
     async fn endpoint_connected_handler(&mut self, epid: EndpointId) {
         if let Some(sender) = self.neighbors.get_mut(&epid) {
-            sender.send(ReceiverWorkerEvent::Connected).await;
+            if let Err(e) = sender.send(ReceiverWorkerEvent::Connected).await {
+                warn!(
+                    "[Node ] Sending ReceiverWorkerEvent::Connected to {} failed: {}",
+                    epid, e
+                );
+            }
         }
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
         if let Some(sender) = self.neighbors.get_mut(&epid) {
-            sender.send(ReceiverWorkerEvent::Disconnected).await;
+            if let Err(e) = sender.send(ReceiverWorkerEvent::Disconnected).await {
+                warn!(
+                    "[Node ] Sending ReceiverWorkerEvent::Disconnected to {} failed: {}",
+                    epid, e
+                );
+            }
         }
     }
 
     async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
         if let Some(sender) = self.neighbors.get_mut(&epid) {
-            sender.send(ReceiverWorkerEvent::Message(bytes)).await;
+            if let Err(e) = sender.send(ReceiverWorkerEvent::Message(bytes)).await {
+                warn!("[Node ] Sending ReceiverWorkerEvent::Message to {} failed: {}", epid, e);
+            }
         }
     }
 
@@ -133,7 +154,24 @@ impl Node {
 
     pub async fn init(&mut self) {
         info!("[Node ] Initializing...");
+
         block_on(StaticPeerManager::new(self.network.clone()).run());
+
+        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
+        self.milestone_validator_worker_sender = Some(milestone_validator_worker_sender);
+        spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
+
+        let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
+        self.transaction_worker_sender = Some(transaction_worker_sender);
+        spawn(TransactionWorker::new(transaction_worker_receiver).run());
+
+        let (responder_worker_sender, responder_worker_receiver) = channel(1000);
+        self.responder_worker_sender = Some(responder_worker_sender);
+        spawn(ResponderWorker::new(self.network.clone(), responder_worker_receiver).run());
+
+        let (requester_worker_sender, requester_worker_receiver) = channel(1000);
+        self.requester_worker_sender = Some(requester_worker_sender);
+        spawn(RequesterWorker::new(self.network.clone(), requester_worker_receiver).run());
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf
@@ -167,18 +205,6 @@ impl Node {
             // TODO exit ?
             Err(e) => error!("[Node ] Failed to read snapshot state file: {:?}.", e),
         }
-
-        let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
-        self.transaction_worker_sender = Some(transaction_worker_sender);
-        spawn(TransactionWorker::new(transaction_worker_receiver).run());
-
-        let (responder_worker_sender, responder_worker_receiver) = channel(1000);
-        self.responder_worker_sender = Some(responder_worker_sender);
-        spawn(ResponderWorker::new(self.network.clone(), responder_worker_receiver).run());
-
-        let (requester_worker_sender, requester_worker_receiver) = channel(1000);
-        self.requester_worker_sender = Some(requester_worker_sender);
-        spawn(RequesterWorker::new(self.network.clone(), requester_worker_receiver).run());
 
         info!("[Node ] Initialized");
     }
