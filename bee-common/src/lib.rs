@@ -1,5 +1,4 @@
 pub mod constants;
-pub mod logger;
 
 mod errors;
 mod types;
