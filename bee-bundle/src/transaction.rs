@@ -21,7 +21,7 @@ pub trait TransactionField {
     fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError>;
     fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField;
 
-    fn into_inner(&self) -> TritBuf;
+    fn into_inner(&self) -> TritBuf<T1B1Buf>;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -187,7 +187,7 @@ macro_rules! impl_into_inner_for_fields {
 
             type ActualField = $field_name;
 
-            fn into_inner(&self) -> TritBuf {
+            fn into_inner(&self) -> TritBuf<T1B1Buf> {
                 self.0.to_buf()
             }
 
