@@ -11,6 +11,8 @@ use bee_peering::{
     StaticPeerManager,
 };
 use bee_protocol::{
+    MilestoneValidatorWorker,
+    MilestoneValidatorWorkerEvent,
     NodeMetrics,
     ReceiverWorker,
     ReceiverWorkerEvent,
@@ -45,6 +47,7 @@ pub struct Node {
     transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
     responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
     requester_worker_sender: Option<Sender<RequesterWorkerEvent>>,
+    milestone_validator_worker_sender: Option<Sender<MilestoneValidatorWorkerEvent>>,
     metrics: NodeMetrics,
 }
 
@@ -58,6 +61,7 @@ impl Node {
             transaction_worker_sender: None,
             responder_worker_sender: None,
             requester_worker_sender: None,
+            milestone_validator_worker_sender: None,
             metrics: NodeMetrics::default(),
         }
     }
@@ -147,6 +151,10 @@ impl Node {
     pub async fn init(&mut self) {
         info!("[Node ] Initializing...");
         block_on(StaticPeerManager::new(self.network.clone()).run());
+
+        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
+        self.milestone_validator_worker_sender = Some(milestone_validator_worker_sender);
+        spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
 
         let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
         self.transaction_worker_sender = Some(transaction_worker_sender);

@@ -8,6 +8,7 @@ edition = "2018"
 bee-bundle = { path = "../bee-bundle" }
 bee-common = { path = "../bee-common" }
 bee-network = { path = "../bee-network" }
+bee-ternary = { path = "../bee-ternary" }
 
 async-std = "1.5.0"
 futures = "0.3.4"

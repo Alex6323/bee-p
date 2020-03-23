@@ -6,6 +6,8 @@ mod worker;
 
 pub use node::NodeMetrics;
 pub use worker::{
+    MilestoneValidatorWorker,
+    MilestoneValidatorWorkerEvent,
     ReceiverWorker,
     ReceiverWorkerEvent,
     RequesterWorker,
