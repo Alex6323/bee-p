@@ -30,7 +30,6 @@ use async_std::task::{
 };
 use futures::channel::mpsc::{
     channel,
-    SendError,
     Sender,
 };
 use futures::sink::SinkExt;
@@ -79,36 +78,54 @@ impl Node {
             .run(),
         );
 
-        self.network
+        if let Err(e) = self
+            .network
             .send(Connect {
                 epid: epid,
                 responder: None,
             })
-            .await;
+            .await
+        {
+            warn!("[Node ] Sending Command::Connect for {} failed: {}", epid, e);
+        }
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
         if let Some(sender) = self.neighbors.get_mut(&epid) {
-            sender.send(ReceiverWorkerEvent::Removed).await;
+            if let Err(e) = sender.send(ReceiverWorkerEvent::Removed).await {
+                warn!("[Node ] Sending ReceiverWorkerEvent::Removed to {} failed: {}", epid, e);
+            }
             self.neighbors.remove(&epid);
         }
     }
 
     async fn endpoint_connected_handler(&mut self, epid: EndpointId) {
         if let Some(sender) = self.neighbors.get_mut(&epid) {
-            sender.send(ReceiverWorkerEvent::Connected).await;
+            if let Err(e) = sender.send(ReceiverWorkerEvent::Connected).await {
+                warn!(
+                    "[Node ] Sending ReceiverWorkerEvent::Connected to {} failed: {}",
+                    epid, e
+                );
+            }
         }
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
         if let Some(sender) = self.neighbors.get_mut(&epid) {
-            sender.send(ReceiverWorkerEvent::Disconnected).await;
+            if let Err(e) = sender.send(ReceiverWorkerEvent::Disconnected).await {
+                warn!(
+                    "[Node ] Sending ReceiverWorkerEvent::Disconnected to {} failed: {}",
+                    epid, e
+                );
+            }
         }
     }
 
     async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
         if let Some(sender) = self.neighbors.get_mut(&epid) {
-            sender.send(ReceiverWorkerEvent::Message(bytes)).await;
+            if let Err(e) = sender.send(ReceiverWorkerEvent::Message(bytes)).await {
+                warn!("[Node ] Sending ReceiverWorkerEvent::Message to {} failed: {}", epid, e);
+            }
         }
     }
 
