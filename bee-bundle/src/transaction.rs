@@ -37,11 +37,10 @@ pub enum TransactionFieldError {
     FieldDeserializationError,
 }
 
-pub trait TransactionField {
-    type ActualField: TransactionField;
+pub trait TransactionField : Sized{
 
-    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError>;
-    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField;
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self, TransactionFieldError>;
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self;
 
     fn into_inner(&self) -> TritBuf<T1B1Buf>;
 }
@@ -207,13 +206,11 @@ macro_rules! impl_into_inner_for_fields {
     ( $($field_name:ident),+ $(,)?) => {
         $( impl TransactionField for $field_name {
 
-            type ActualField = $field_name;
-
     fn into_inner(&self) -> TritBuf<T1B1Buf> {
                 self.0.to_buf()
             }
 
-    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError> {
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self, TransactionFieldError> {
 
 
         if buffer.len() != $field_name::trit_len() {
@@ -223,7 +220,7 @@ macro_rules! impl_into_inner_for_fields {
         Ok(Self(buffer))
     }
 
-    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField {
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self{
 
         if buffer.len() != $field_name::trit_len() {
             panic!("Provided trit buffer expected length: {}, observed: {}",$field_name::trit_len(), buffer.len());
