@@ -9,6 +9,7 @@ use bee_network::Network;
 
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
+use log::info;
 
 pub enum RequesterWorkerEvent {
     TransactionRequest([u8; 49]),
@@ -31,6 +32,8 @@ impl RequesterWorker {
     }
 
     pub async fn run(mut self) {
+        info!("[RequesterWorker ] Running.");
+
         while let Some(event) = self.receiver.next().await {
             if let bytes = match event {
                 RequesterWorkerEvent::TransactionRequest(hash) => TransactionRequest::new(hash).into_full_bytes(),
