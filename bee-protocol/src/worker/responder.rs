@@ -13,6 +13,7 @@ use bee_network::{
 
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
+use log::info;
 
 pub enum ResponderWorkerEvent {
     TransactionRequest {
@@ -40,6 +41,8 @@ impl ResponderWorker {
     }
 
     pub async fn run(mut self) {
+        info!("[ResponderWorker ] Running.");
+
         while let Some(event) = self.receiver.next().await {
             if let (epid, Some(transaction)) = match event {
                 ResponderWorkerEvent::TransactionRequest { epid, message } => {

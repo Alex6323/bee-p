@@ -5,6 +5,7 @@ use bee_ternary::{
 
 use futures::channel::mpsc::Receiver;
 use futures::stream::StreamExt;
+use log::info;
 
 pub enum MilestoneValidatorWorkerEvent {
     Candidate(TritBuf<T1B1Buf>),
@@ -20,6 +21,8 @@ impl MilestoneValidatorWorker {
     }
 
     pub async fn run(mut self) {
+        info!("[MilestoneValidatorWorker ] Running.");
+
         while let Some(event) = self.receiver.next().await {}
     }
 }
