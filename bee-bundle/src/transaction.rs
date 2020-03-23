@@ -9,20 +9,46 @@ use crate::constants::{
     TAG,
     TRUNK,
     TRYTE_ZERO,
+    PAYLOAD_TRIT_LEN,
+    ADDRESS_TRIT_LEN,
+    HASH_TRIT_LEN,
+    TAG_TRIT_LEN,
+    NONCE_TRIT_LEN,
 };
 
-use bee_ternary::raw::RawEncoding;
 use bee_ternary::util::trytes_to_trits_buf;
 use bee_ternary::{
+    Trit,
     Btrit,
     IsTryte,
     T1B1Buf,
     TritBuf,
     Trits,
+    raw::RawEncoding,
+    raw::RawEncodingBuf,
 };
 
 use std::hash;
 use std::iter;
+
+#[derive(Debug)]
+pub enum TransactionFieldError {
+    FieldWrongLength,
+    FieldDeserializationError,
+}
+
+pub trait TransactionField {
+
+    type ActualField : TransactionField ;
+
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError>;
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField;
+
+    fn to_tritbuf<U>(&self) -> TritBuf<U>
+        where
+            U: RawEncodingBuf,
+            U::Slice: RawEncoding<Trit = Btrit> ;
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Payload(pub TritBuf<T1B1Buf>);
@@ -45,6 +71,35 @@ impl Payload {
 
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
+    }
+}
+
+impl TransactionField for Payload {
+    type ActualField = Payload;
+
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError> {
+
+
+        if buffer.len() != PAYLOAD_TRIT_LEN {
+            return Err(TransactionFieldError::FieldWrongLength)
+        }
+
+        Ok(Self(buffer))
+    }
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField {
+
+        if buffer.len() != PAYLOAD_TRIT_LEN {
+            panic!("Provided trit buffer expected lenght: {}, observed: {}",PAYLOAD_TRIT_LEN, buffer.len());
+        }
+
+        Self(buffer)
+    }
+
+    fn to_tritbuf<U>(&self) -> TritBuf<U>
+        where
+            U: RawEncodingBuf,
+            U::Slice: RawEncoding<Trit = Btrit>{
+        self.0.encode::<U>()
     }
 }
 
@@ -72,6 +127,35 @@ impl Address {
     }
 }
 
+impl TransactionField for Address {
+    type ActualField = Address;
+
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError> {
+
+
+        if buffer.len() != ADDRESS_TRIT_LEN {
+            return Err(TransactionFieldError::FieldWrongLength)
+        }
+
+        Ok(Self(buffer))
+    }
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField {
+
+        if buffer.len() != ADDRESS_TRIT_LEN {
+            panic!("Provided trit buffer expected lenght: {}, observed: {}",ADDRESS_TRIT_LEN, buffer.len());
+        }
+
+        Self(buffer)
+    }
+
+    fn to_tritbuf<U>(&self) -> TritBuf<U>
+        where
+            U: RawEncodingBuf,
+            U::Slice: RawEncoding<Trit = Btrit>{
+        self.0.encode::<U>()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Value(pub i64);
 
@@ -96,6 +180,35 @@ impl Tag {
 
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
+    }
+}
+
+impl TransactionField for Tag {
+    type ActualField = Tag;
+
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError> {
+
+
+        if buffer.len() != TAG_TRIT_LEN {
+            return Err(TransactionFieldError::FieldWrongLength)
+        }
+
+        Ok(Self(buffer))
+    }
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField {
+
+        if buffer.len() != TAG_TRIT_LEN {
+            panic!("Provided trit buffer expected lenght: {}, observed: {}",TAG_TRIT_LEN, buffer.len());
+        }
+
+        Self(buffer)
+    }
+
+    fn to_tritbuf<U>(&self) -> TritBuf<U>
+        where
+            U: RawEncodingBuf,
+            U::Slice: RawEncoding<Trit = Btrit>{
+        self.0.encode::<U>()
     }
 }
 
@@ -129,6 +242,36 @@ impl Hash {
     }
 }
 
+
+impl TransactionField for Hash {
+    type ActualField = Hash;
+
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError> {
+
+
+        if buffer.len() != HASH_TRIT_LEN {
+            return Err(TransactionFieldError::FieldWrongLength)
+        }
+
+        Ok(Self(buffer))
+    }
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField {
+
+        if buffer.len() != HASH_TRIT_LEN {
+            panic!("Provided trit buffer expected lenght: {}, observed: {}",HASH_TRIT_LEN, buffer.len());
+        }
+
+        Self(buffer)
+    }
+
+    fn to_tritbuf<U>(&self) -> TritBuf<U>
+        where
+            U: RawEncodingBuf,
+            U::Slice: RawEncoding<Trit = Btrit>{
+        self.0.encode::<U>()
+    }
+}
+
 impl Eq for Hash {}
 
 impl hash::Hash for Hash {
@@ -158,6 +301,35 @@ impl Nonce {
 
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
+    }
+}
+
+impl TransactionField for Nonce {
+    type ActualField = Nonce;
+
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self::ActualField, TransactionFieldError> {
+
+
+        if buffer.len() != NONCE_TRIT_LEN {
+            return Err(TransactionFieldError::FieldWrongLength)
+        }
+
+        Ok(Self(buffer))
+    }
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self::ActualField {
+
+        if buffer.len() != NONCE_TRIT_LEN {
+            panic!("Provided trit buffer expected lenght: {}, observed: {}",NONCE_TRIT_LEN, buffer.len());
+        }
+
+        Self(buffer)
+    }
+
+    fn to_tritbuf<U>(&self) -> TritBuf<U>
+        where
+            U: RawEncodingBuf,
+            U::Slice: RawEncoding<Trit = Btrit>{
+        self.0.encode::<U>()
     }
 }
 
