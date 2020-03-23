@@ -5,20 +5,25 @@ use bee_network::{
     Network,
 };
 
+use futures::channel::mpsc::Receiver;
 use std::marker::PhantomData;
 
-pub(crate) struct SenderWorker<M> {
+pub enum SenderWorkerEvent<M: Message> {
+    Message(M),
+}
+
+pub(crate) struct SenderWorker<M: Message> {
     epid: EndpointId,
     network: Network,
-    message_type: PhantomData<M>,
+    receiver: Receiver<SenderWorkerEvent<M>>,
 }
 
 impl<M: Message> SenderWorker<M> {
-    pub(crate) fn new(epid: EndpointId, network: Network) -> Self {
+    pub(crate) fn new(epid: EndpointId, network: Network, receiver: Receiver<SenderWorkerEvent<M>>) -> Self {
         Self {
             epid: epid,
             network: network,
-            message_type: PhantomData,
+            receiver: receiver,
         }
     }
 
