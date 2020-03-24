@@ -206,14 +206,11 @@ macro_rules! impl_into_inner_for_fields {
     ( $($field_name:ident),+ $(,)?) => {
         $(
             impl TransactionField for $field_name {
-
                 fn into_inner(&self) -> TritBuf<T1B1Buf> {
                     self.0.to_buf()
                 }
 
                 fn try_from_tritbuf(buffer: TritBuf<T1B1Buf>) -> Result<Self, TransactionFieldError> {
-
-
                     if buffer.len() != $field_name::trit_len() {
                         Err(TransactionFieldError::FieldWrongLength)?
                     }
@@ -225,7 +222,6 @@ macro_rules! impl_into_inner_for_fields {
 
                     Self(buffer)
                 }
-
             })+
     }
 }

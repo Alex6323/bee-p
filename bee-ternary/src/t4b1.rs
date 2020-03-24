@@ -18,15 +18,6 @@ impl T4B1 {
         (self.0.as_ptr() as *const i8).offset(byte_offset as isize)
     }
 
-    pub fn as_i8_slice(&self) -> &[i8] {
-        unsafe { &*(Self::make(self.ptr(0), 0, self.len()) as *const _) }
-    }
-
-    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
-        &mut *(Self::make(self.ptr(0), 0, self.len()) as *mut _)
-    }
-
-
     fn len_offset(&self) -> (usize, usize) {
         (self.0.len() >> 2, self.0.len() & 0b11)
     }
