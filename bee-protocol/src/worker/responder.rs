@@ -4,6 +4,10 @@ use crate::message::{
     TransactionBroadcast,
     TransactionRequest,
 };
+use crate::worker::{
+    sender_registry,
+    SenderWorkerEvent,
+};
 
 use bee_network::Command::SendBytes;
 use bee_network::{
@@ -12,6 +16,7 @@ use bee_network::{
 };
 
 use futures::channel::mpsc::Receiver;
+use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use log::info;
 
@@ -73,13 +78,14 @@ impl ResponderWorker {
                     // TODO send complete ms bundle ?
                 }
             } {
-                self.network
-                    .send(SendBytes {
-                        epid: epid,
-                        bytes: transaction.into_full_bytes(),
-                        responder: None,
-                    })
-                    .await;
+                if let Some(context) = sender_registry().contexts().read().await.get(&epid) {
+                    context
+                        .transaction_broadcast_sender
+                        // TODO avoid clone
+                        .clone()
+                        .send(SenderWorkerEvent::Message(transaction))
+                        .await;
+                };
             }
         }
     }

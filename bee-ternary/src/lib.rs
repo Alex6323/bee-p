@@ -87,6 +87,14 @@ where
         self.0.len()
     }
 
+    pub fn as_i8_slice(&self) -> &[i8] {
+        self.0.as_i8_slice()
+    }
+
+    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
+        self.0.as_i8_slice_mut()
+    }
+
     pub unsafe fn get_unchecked(&self, index: usize) -> T::Trit {
         self.0.get_unchecked(index)
     }
@@ -195,17 +203,6 @@ impl<T: Trit> Trits<T1B1<T>> {
 
     pub fn iter_mut<'a>(&'a mut self) -> slice::IterMut<'a, T> {
         self.as_raw_slice_mut().iter_mut()
-    }
-}
-
-impl Trits<T1B1<Btrit>> {
-    pub fn as_i8_slice(&self) -> &[i8] {
-        self.0.as_i8_slice()
-    }
-
-    // Unsafe because we don't want Utrit to have an invalid format
-    pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
-        self.0.as_i8_slice_mut()
     }
 }
 

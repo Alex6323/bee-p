@@ -6,8 +6,16 @@ mod node;
 mod protocol;
 mod worker;
 
+pub use message::{
+    Handshake,
+    Heartbeat,
+    MilestoneRequest,
+    TransactionBroadcast,
+    TransactionRequest,
+};
 pub use node::NodeMetrics;
 pub use worker::{
+    sender_registry,
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
     ReceiverWorker,
@@ -16,6 +24,10 @@ pub use worker::{
     RequesterWorkerEvent,
     ResponderWorker,
     ResponderWorkerEvent,
+    SenderContext,
+    SenderRegistry,
+    SenderWorker,
+    SenderWorkerEvent,
     TransactionWorker,
     TransactionWorkerEvent,
 };
