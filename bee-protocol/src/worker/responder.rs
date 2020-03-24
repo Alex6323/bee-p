@@ -1,5 +1,4 @@
 use crate::message::{
-    Message,
     MilestoneRequest,
     TransactionBroadcast,
     TransactionRequest,
@@ -9,16 +8,15 @@ use crate::worker::{
     SenderWorkerEvent,
 };
 
-use bee_network::Command::SendBytes;
-use bee_network::{
-    EndpointId,
-    Network,
-};
+use bee_network::EndpointId;
 
 use futures::channel::mpsc::Receiver;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
-use log::info;
+use log::{
+    info,
+    warn,
+};
 
 pub enum ResponderWorkerEvent {
     TransactionRequest {
@@ -32,17 +30,12 @@ pub enum ResponderWorkerEvent {
 }
 
 pub struct ResponderWorker {
-    // TODO Dedicated sender with backpressure
-    network: Network,
     receiver: Receiver<ResponderWorkerEvent>,
 }
 
 impl ResponderWorker {
-    pub fn new(network: Network, receiver: Receiver<ResponderWorkerEvent>) -> Self {
-        Self {
-            network: network,
-            receiver: receiver,
-        }
+    pub fn new(receiver: Receiver<ResponderWorkerEvent>) -> Self {
+        Self { receiver: receiver }
     }
 
     pub async fn run(mut self) {
@@ -50,7 +43,7 @@ impl ResponderWorker {
 
         while let Some(event) = self.receiver.next().await {
             if let (epid, Some(transaction)) = match event {
-                ResponderWorkerEvent::TransactionRequest { epid, message } => {
+                ResponderWorkerEvent::TransactionRequest { epid, .. } => {
                     // TODO
                     // if let Some(transaction) = tangle.get_transaction(message.hash) {
                     //     (epid, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
@@ -60,7 +53,7 @@ impl ResponderWorker {
                     // TODO remove
                     (epid, Some(TransactionBroadcast::new(&[0; 500])))
                 }
-                ResponderWorkerEvent::MilestoneRequest { epid, message } => {
+                ResponderWorkerEvent::MilestoneRequest { epid, .. } => {
                     // TODO
                     // let index = if message.index == 0 {
                     //     tangle.get_latest_milestone_index()
@@ -79,12 +72,15 @@ impl ResponderWorker {
                 }
             } {
                 if let Some(context) = sender_registry().contexts().read().await.get(&epid) {
-                    context
+                    if let Err(e) = context
                         .transaction_broadcast_sender
                         // TODO avoid clone
                         .clone()
                         .send(SenderWorkerEvent::Message(transaction))
-                        .await;
+                        .await
+                    {
+                        warn!("[ResponderWorker ] Sending message failed: {}.", e);
+                    }
                 };
             }
         }

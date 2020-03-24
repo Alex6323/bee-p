@@ -22,19 +22,14 @@ use crate::worker::{
     TransactionWorkerEvent,
 };
 
-use bee_network::{
-    EndpointId,
-    Network,
-};
+use bee_network::EndpointId;
 
 use std::time::{
     SystemTime,
     UNIX_EPOCH,
 };
 
-use async_std::task::spawn;
 use futures::channel::mpsc::{
-    channel,
     Receiver,
     Sender,
 };
@@ -78,7 +73,6 @@ enum ReceiverWorkerState {
 
 pub struct ReceiverWorker {
     epid: EndpointId,
-    network: Network,
     receiver: Receiver<ReceiverWorkerEvent>,
     transaction_worker_sender: Sender<TransactionWorkerEvent>,
     responder_worker: Sender<ResponderWorkerEvent>,
@@ -87,14 +81,12 @@ pub struct ReceiverWorker {
 impl ReceiverWorker {
     pub fn new(
         epid: EndpointId,
-        network: Network,
         receiver: Receiver<ReceiverWorkerEvent>,
         transaction_worker_sender: Sender<TransactionWorkerEvent>,
         responder_worker: Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
             epid: epid,
-            network: network,
             receiver: receiver,
             transaction_worker_sender: transaction_worker_sender,
             responder_worker: responder_worker,
@@ -106,12 +98,15 @@ impl ReceiverWorker {
         let handshake = Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
 
         if let Some(context) = sender_registry().contexts().read().await.get(&self.epid) {
-            context
+            if let Err(e) = context
                 .handshake_sender
                 // TODO avoid clone
                 .clone()
                 .send(SenderWorkerEvent::Message(handshake))
-                .await;
+                .await
+            {
+                warn!("[ResponderWorker ] Sending message failed: {}.", e);
+            }
         };
     }
 

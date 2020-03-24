@@ -23,6 +23,6 @@ impl MilestoneValidatorWorker {
     pub async fn run(mut self) {
         info!("[MilestoneValidatorWorker ] Running.");
 
-        while let Some(event) = self.receiver.next().await {}
+        while let Some(_event) = self.receiver.next().await {}
     }
 }

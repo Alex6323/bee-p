@@ -13,16 +13,16 @@ use bee_network::{
     Network,
 };
 
+use std::collections::HashMap;
+use std::ptr;
+
 use async_std::sync::RwLock;
 use futures::channel::mpsc::{
     Receiver,
     Sender,
 };
 use futures::stream::StreamExt;
-
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::ptr;
+use log::warn;
 
 pub struct SenderContext {
     pub(crate) handshake_sender: Sender<SenderWorkerEvent<Handshake>>,
@@ -97,15 +97,23 @@ impl<M: Message> SenderWorker<M> {
     }
 
     pub async fn run(mut self) {
-        // TODO metric ?
         while let Some(SenderWorkerEvent::Message(message)) = self.receiver.next().await {
-            self.network
+            match self
+                .network
                 .send(SendBytes {
                     epid: self.epid,
                     bytes: message.into_full_bytes(),
                     responder: None,
                 })
-                .await;
+                .await
+            {
+                Ok(_) => {
+                    // TODO metric ?
+                }
+                Err(e) => {
+                    warn!("[SenderWorker({}) ] Sending message failed: {}.", self.epid, e);
+                }
+            }
         }
     }
 }

@@ -4,10 +4,7 @@ use crate::constants::{
     IOTA_SUPPLY,
 };
 use crate::transaction::{
-    Hash,
-    Index,
     Transaction,
-    TransactionBuilder,
     Transactions,
 };
 

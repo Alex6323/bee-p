@@ -17,7 +17,6 @@ use bee_protocol::{
     MilestoneRequest,
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
-    NodeMetrics,
     ReceiverWorker,
     ReceiverWorkerEvent,
     RequesterWorker,
@@ -31,6 +30,11 @@ use bee_protocol::{
     TransactionRequest,
     TransactionWorker,
     TransactionWorkerEvent,
+    HANDSHAKE_SEND_BOUND,
+    HEARTBEAT_SEND_BOUND,
+    MILESTONE_REQUEST_SEND_BOUND,
+    TRANSACTION_BROADCAST_SEND_BOUND,
+    TRANSACTION_REQUEST_SEND_BOUND,
 };
 use bee_snapshot::{
     SnapshotMetadata,
@@ -61,7 +65,6 @@ pub struct Node {
     responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
     requester_worker_sender: Option<Sender<RequesterWorkerEvent>>,
     milestone_validator_worker_sender: Option<Sender<MilestoneValidatorWorkerEvent>>,
-    metrics: NodeMetrics,
 }
 
 impl Node {
@@ -75,18 +78,18 @@ impl Node {
             responder_worker_sender: None,
             requester_worker_sender: None,
             milestone_validator_worker_sender: None,
-            metrics: NodeMetrics::default(),
         }
     }
 
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
         // TODO conf
         let (receiver_tx, receiver_rx) = channel(1000);
-        let (handshake_sender_tx, handshake_sender_rx) = channel(1000);
-        let (milestone_request_sender_tx, milestone_request_sender_rx) = channel(1000);
-        let (transaction_broadcast_sender_tx, transaction_broadcast_sender_rx) = channel(1000);
-        let (transaction_request_sender_tx, transaction_request_sender_rx) = channel(1000);
-        let (heartbeat_sender_tx, heartbeat_sender_rx) = channel(1000);
+        let (handshake_sender_tx, handshake_sender_rx) = channel(HANDSHAKE_SEND_BOUND);
+        let (milestone_request_sender_tx, milestone_request_sender_rx) = channel(MILESTONE_REQUEST_SEND_BOUND);
+        let (transaction_broadcast_sender_tx, transaction_broadcast_sender_rx) =
+            channel(TRANSACTION_BROADCAST_SEND_BOUND);
+        let (transaction_request_sender_tx, transaction_request_sender_rx) = channel(TRANSACTION_REQUEST_SEND_BOUND);
+        let (heartbeat_sender_tx, heartbeat_sender_rx) = channel(HEARTBEAT_SEND_BOUND);
         let context = SenderContext::new(
             handshake_sender_tx,
             milestone_request_sender_tx,
@@ -101,7 +104,6 @@ impl Node {
         spawn(
             ReceiverWorker::new(
                 epid,
-                self.network.clone(),
                 receiver_rx,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
                 self.responder_worker_sender.as_ref().unwrap().clone(),
@@ -212,12 +214,12 @@ impl Node {
         // TODO conf
         let (responder_worker_sender, responder_worker_receiver) = channel(1000);
         self.responder_worker_sender = Some(responder_worker_sender);
-        spawn(ResponderWorker::new(self.network.clone(), responder_worker_receiver).run());
+        spawn(ResponderWorker::new(responder_worker_receiver).run());
 
         // TODO conf
         let (requester_worker_sender, requester_worker_receiver) = channel(1000);
         self.requester_worker_sender = Some(requester_worker_sender);
-        spawn(RequesterWorker::new(self.network.clone(), requester_worker_receiver).run());
+        spawn(RequesterWorker::new(requester_worker_receiver).run());
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf
