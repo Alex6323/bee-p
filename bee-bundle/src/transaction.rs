@@ -198,7 +198,7 @@ impl Nonce {
     }
 
     pub fn trit_len() -> usize {
-        PAYLOAD_TRIT_LEN
+        NONCE_TRIT_LEN
     }
 }
 
@@ -217,14 +217,10 @@ macro_rules! impl_into_inner_for_fields {
             Err(TransactionFieldError::FieldWrongLength)?
         }
 
-        Ok(Self(buffer))
+        Ok(Self::from_tritbuf_unchecked(buffer))
     }
 
     fn from_tritbuf_unchecked(buffer: TritBuf<T1B1Buf>) -> Self{
-
-        if buffer.len() != $field_name::trit_len() {
-            panic!("Provided trit buffer expected length: {}, observed: {}",$field_name::trit_len(), buffer.len());
-        }
 
         Self(buffer)
     }
