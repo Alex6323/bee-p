@@ -107,7 +107,7 @@ impl ReceiverWorker {
 
         if let Some(context) = sender_registry().contexts().read().await.get(&self.epid) {
             context
-                .handshake_sender_tx
+                .handshake_sender
                 // TODO avoid clone
                 .clone()
                 .send(SenderWorkerEvent::Message(handshake))

@@ -25,27 +25,27 @@ use std::marker::PhantomData;
 use std::ptr;
 
 pub struct SenderContext {
-    pub(crate) handshake_sender_tx: Sender<SenderWorkerEvent<Handshake>>,
-    pub(crate) milestone_request_sender_tx: Sender<SenderWorkerEvent<MilestoneRequest>>,
-    pub(crate) transaction_broadcast_sender_tx: Sender<SenderWorkerEvent<TransactionBroadcast>>,
-    pub(crate) transaction_request_sender_tx: Sender<SenderWorkerEvent<TransactionRequest>>,
-    pub(crate) heartbeat_sender_tx: Sender<SenderWorkerEvent<Heartbeat>>,
+    pub(crate) handshake_sender: Sender<SenderWorkerEvent<Handshake>>,
+    pub(crate) milestone_request_sender: Sender<SenderWorkerEvent<MilestoneRequest>>,
+    pub(crate) transaction_broadcast_sender: Sender<SenderWorkerEvent<TransactionBroadcast>>,
+    pub(crate) transaction_request_sender: Sender<SenderWorkerEvent<TransactionRequest>>,
+    pub(crate) heartbeat_sender: Sender<SenderWorkerEvent<Heartbeat>>,
 }
 
 impl SenderContext {
     pub fn new(
-        handshake_sender_tx: Sender<SenderWorkerEvent<Handshake>>,
-        milestone_request_sender_tx: Sender<SenderWorkerEvent<MilestoneRequest>>,
-        transaction_broadcast_sender_tx: Sender<SenderWorkerEvent<TransactionBroadcast>>,
-        transaction_request_sender_tx: Sender<SenderWorkerEvent<TransactionRequest>>,
-        heartbeat_sender_tx: Sender<SenderWorkerEvent<Heartbeat>>,
+        handshake_sender: Sender<SenderWorkerEvent<Handshake>>,
+        milestone_request_sender: Sender<SenderWorkerEvent<MilestoneRequest>>,
+        transaction_broadcast_sender: Sender<SenderWorkerEvent<TransactionBroadcast>>,
+        transaction_request_sender: Sender<SenderWorkerEvent<TransactionRequest>>,
+        heartbeat_sender: Sender<SenderWorkerEvent<Heartbeat>>,
     ) -> Self {
         Self {
-            handshake_sender_tx,
-            milestone_request_sender_tx,
-            transaction_broadcast_sender_tx,
-            transaction_request_sender_tx,
-            heartbeat_sender_tx,
+            handshake_sender,
+            milestone_request_sender,
+            transaction_broadcast_sender,
+            transaction_request_sender,
+            heartbeat_sender,
         }
     }
 }
