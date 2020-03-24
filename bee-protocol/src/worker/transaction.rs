@@ -156,20 +156,11 @@ impl TemporaryTangle {
     pub fn contains(&self, key: &Hash) -> bool {
         self.tangle.contains_key(key)
     }
+    pub fn size(&self) -> usize {
+        self.tangle.len()
+    }
 }
 
-#[test]
-fn test_tx_worker() {
-
-    let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
-    let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
-    let tx_worker = TransactionWorker::new(transaction_worker_receiver, milestone_validator_worker_sender);
-    spawn(tx_worker);
-
-
-
-
-}
 
 #[test]
 fn test_tangle_insert() {
@@ -199,15 +190,34 @@ fn test_tangle_insert() {
         .build()
         .unwrap();
 
-    // TODO: something like Transaction::to_trits() would be helpful to convert Transaction with its fields to a T1B1-trit-buf
+    // get trits of transaction (using transaction.address())
+    let trit_buf: TritBuf<T1B1Buf> = transaction.address().into_inner();
+
     // calculate hash of transaction
-    //let mut curlp27 = CurlP27::new();
-    //let tx_hash: Hash = Hash { 0: curlp27.digest(&t1b1_trit_buf).unwrap() };
+    let mut curlp27 = CurlP27::new();
+    let tx_hash: Hash = Hash { 0: curlp27.digest(&trit_buf).unwrap() };
 
-    // store transaction in the tangle
-    //tangle.insert(tx_hash.clone(), transaction);
+    //store transaction in the tangle
+    tangle.insert(tx_hash.clone(), transaction);
 
-    //assert_eq!(true, tangle.contains(&tx_hash));
+    assert_eq!(true, tangle.contains(&tx_hash));
 
 }
 
+#[test]
+fn test_tx_worker() {
+
+    let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
+    let (mut transaction_worker_sender, transaction_worker_receiver) = channel(1000);
+
+    // send tx to the channel
+    block_on(tx_sender(transaction_worker_sender));
+
+    block_on(TransactionWorker::new(transaction_worker_receiver, milestone_validator_worker_sender).run());
+}
+
+async fn tx_sender(mut sender: Sender<TransactionWorkerEvent>) {
+    let mut tx: [u8; 1604] = [0; 1604];
+    let message = TransactionBroadcast::new(&tx);
+    sender.send(TransactionWorkerEvent::Transaction(message)).await.unwrap();
+}

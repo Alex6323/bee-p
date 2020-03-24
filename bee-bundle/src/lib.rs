@@ -30,4 +30,5 @@ pub use transaction::{
     TransactionBuilders,
     Transactions,
     Value,
+    TransactionField
 };
