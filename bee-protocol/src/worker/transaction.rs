@@ -159,6 +159,19 @@ impl TemporaryTangle {
 }
 
 #[test]
+fn test_tx_worker() {
+
+    let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
+    let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
+    let tx_worker = TransactionWorker::new(transaction_worker_receiver, milestone_validator_worker_sender);
+    spawn(tx_worker);
+
+
+
+
+}
+
+#[test]
 fn test_tangle_insert() {
 
     use bee_bundle::*;
