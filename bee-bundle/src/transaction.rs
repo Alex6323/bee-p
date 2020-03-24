@@ -222,7 +222,8 @@ macro_rules! impl_into_inner_for_fields {
 
                     Self(buffer)
                 }
-            })+
+            }
+        )+
     }
 }
 

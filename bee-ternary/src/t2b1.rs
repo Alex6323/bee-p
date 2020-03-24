@@ -18,7 +18,6 @@ impl T2B1 {
         (self.0.as_ptr() as *const i8).offset(byte_offset as isize)
     }
 
-
     fn len_offset(&self) -> (usize, usize) {
         (self.0.len() >> 2, self.0.len() & 0b11)
     }
