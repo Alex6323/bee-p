@@ -21,8 +21,13 @@ pub use responder::{
     ResponderWorker,
     ResponderWorkerEvent,
 };
-// TODO remove ?
-pub(crate) use sender::SenderWorker;
+pub use sender::{
+    sender_registry,
+    SenderContext,
+    SenderRegistry,
+    SenderWorker,
+    SenderWorkerEvent,
+};
 pub use transaction::{
     TransactionWorker,
     TransactionWorkerEvent,
