@@ -80,7 +80,7 @@ impl ResponderWorker {
             } {
                 if let Some(context) = sender_registry().contexts().read().await.get(&epid) {
                     context
-                        .transaction_broadcast_sender_tx
+                        .transaction_broadcast_sender
                         // TODO avoid clone
                         .clone()
                         .send(SenderWorkerEvent::Message(transaction))
