@@ -11,6 +11,10 @@ use bee_peering::{
     StaticPeerManager,
 };
 use bee_protocol::{
+    sender_registry,
+    Handshake,
+    Heartbeat,
+    MilestoneRequest,
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
     NodeMetrics,
@@ -20,6 +24,11 @@ use bee_protocol::{
     RequesterWorkerEvent,
     ResponderWorker,
     ResponderWorkerEvent,
+    SenderContext,
+    SenderRegistry,
+    SenderWorker,
+    TransactionBroadcast,
+    TransactionRequest,
     TransactionWorker,
     TransactionWorkerEvent,
 };
@@ -72,20 +81,42 @@ impl Node {
 
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
         // TODO conf
-        let (sender, receiver) = channel(1000);
+        let (receiver_tx, receiver_rx) = channel(1000);
+        let (handshake_sender_tx, handshake_sender_rx) = channel(1000);
+        let (milestone_request_sender_tx, milestone_request_sender_rx) = channel(1000);
+        let (transaction_broadcast_sender_tx, transaction_broadcast_sender_rx) = channel(1000);
+        let (transaction_request_sender_tx, transaction_request_sender_rx) = channel(1000);
+        let (heartbeat_sender_tx, heartbeat_sender_rx) = channel(1000);
+        let context = SenderContext::new(
+            handshake_sender_tx,
+            milestone_request_sender_tx,
+            transaction_broadcast_sender_tx,
+            transaction_request_sender_tx,
+            heartbeat_sender_tx,
+        );
 
-        self.neighbors.insert(epid, sender);
+        self.neighbors.insert(epid, receiver_tx);
+        sender_registry().contexts().write().await.insert(epid, context);
 
         spawn(
             ReceiverWorker::new(
                 epid,
                 self.network.clone(),
-                receiver,
+                receiver_rx,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
                 self.responder_worker_sender.as_ref().unwrap().clone(),
             )
             .run(),
         );
+
+        spawn(SenderWorker::<Handshake>::new(epid, self.network.clone(), handshake_sender_rx).run());
+        spawn(SenderWorker::<MilestoneRequest>::new(epid, self.network.clone(), milestone_request_sender_rx).run());
+        spawn(
+            SenderWorker::<TransactionBroadcast>::new(epid, self.network.clone(), transaction_broadcast_sender_rx)
+                .run(),
+        );
+        spawn(SenderWorker::<TransactionRequest>::new(epid, self.network.clone(), transaction_request_sender_rx).run());
+        spawn(SenderWorker::<Heartbeat>::new(epid, self.network.clone(), heartbeat_sender_rx).run());
 
         if let Err(e) = self
             .network
@@ -165,6 +196,8 @@ impl Node {
         info!("[Node ] Initializing...");
 
         block_on(StaticPeerManager::new(self.network.clone()).run());
+
+        SenderRegistry::init();
 
         // TODO conf
         let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
