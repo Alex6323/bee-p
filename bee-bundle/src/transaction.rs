@@ -210,7 +210,7 @@ macro_rules! impl_into_inner_for_fields {
                 self.0.to_buf()
             }
 
-    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self, TransactionFieldError> {
+    fn try_from_tritbuf(buffer: TritBuf<T1B1Buf>) -> Result<Self, TransactionFieldError> {
 
 
         if buffer.len() != $field_name::trit_len() {
@@ -220,7 +220,7 @@ macro_rules! impl_into_inner_for_fields {
         Ok(Self(buffer))
     }
 
-    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self{
+    fn from_tritbuf_unchecked(buffer: TritBuf<T1B1Buf>) -> Self{
 
         if buffer.len() != $field_name::trit_len() {
             panic!("Provided trit buffer expected length: {}, observed: {}",$field_name::trit_len(), buffer.len());
