@@ -28,6 +28,7 @@ use bee_ternary::{
     Trits,
 };
 
+use std::fmt;
 use std::hash;
 use std::iter;
 
@@ -37,8 +38,7 @@ pub enum TransactionFieldError {
     FieldDeserializationError,
 }
 
-pub trait TransactionField : Sized{
-
+pub trait TransactionField: Sized {
     fn try_from_tritbuf(buffer: TritBuf) -> Result<Self, TransactionFieldError>;
     fn from_tritbuf_unchecked(buffer: TritBuf) -> Self;
 
@@ -264,30 +264,36 @@ impl Transaction {
 
         let transaction = Self::builder()
             .with_payload(Payload(
-                trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.length].to_buf(),
+                trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.start + PAYLOAD.trit_offset.length].to_buf(),
             ))
             .with_address(Address(
-                trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.length].to_buf(),
+                trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.start + ADDRESS.trit_offset.length].to_buf(),
             ))
             .with_value(Value(0))
-            .with_obsolete_tag(Tag(trits
-                [OBSOLETE_TAG.trit_offset.start..OBSOLETE_TAG.trit_offset.length]
+            .with_obsolete_tag(Tag(trits[OBSOLETE_TAG.trit_offset.start
+                ..OBSOLETE_TAG.trit_offset.start + OBSOLETE_TAG.trit_offset.length]
                 .to_buf()))
             .with_timestamp(Timestamp(0))
             .with_index(Index(0))
             .with_last_index(Index(0))
-            .with_tag(Tag(trits[TAG.trit_offset.start..TAG.trit_offset.length].to_buf()))
+            .with_tag(Tag(trits
+                [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
+                .to_buf()))
             .with_attachment_ts(Timestamp(0))
             .with_bundle(Hash(
-                trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.length].to_buf(),
+                trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
-            .with_trunk(Hash(trits[TRUNK.trit_offset.start..TRUNK.trit_offset.length].to_buf()))
+            .with_trunk(Hash(
+                trits[TRUNK.trit_offset.start..TRUNK.trit_offset.start + TRUNK.trit_offset.length].to_buf(),
+            ))
             .with_branch(Hash(
-                trits[BRANCH.trit_offset.start..BRANCH.trit_offset.length].to_buf(),
+                trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
             ))
             .with_attachment_lbts(Timestamp(0))
             .with_attachment_ubts(Timestamp(0))
-            .with_nonce(Nonce(trits[NONCE.trit_offset.start..NONCE.trit_offset.length].to_buf()))
+            .with_nonce(Nonce(
+                trits[NONCE.trit_offset.start..NONCE.trit_offset.start + NONCE.trit_offset.length].to_buf(),
+            ))
             .build()
             .map_err(|e| TransactionError::TransactionBuilderError(e))?;
 
