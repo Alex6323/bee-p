@@ -16,12 +16,12 @@ use crate::protocol::{
     SUPPORTED_VERSIONS,
 };
 use crate::worker::{
+    sender_registry,
     ResponderWorkerEvent,
-    SenderWorker,
+    SenderWorkerEvent,
     TransactionWorkerEvent,
 };
 
-use bee_network::Command::SendBytes;
 use bee_network::{
     EndpointId,
     Network,
@@ -102,18 +102,17 @@ impl ReceiverWorker {
     }
 
     async fn send_handshake(&mut self) {
-        // TODO metric ?
         // TODO port
-        let bytes =
-            Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS).into_full_bytes();
+        let handshake = Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
 
-        self.network
-            .send(SendBytes {
-                epid: self.epid,
-                bytes: bytes.to_vec(),
-                responder: None,
-            })
-            .await;
+        if let Some(context) = sender_registry().contexts().read().await.get(&self.epid) {
+            context
+                .handshake_sender_tx
+                // TODO avoid clone
+                .clone()
+                .send(SenderWorkerEvent::Message(handshake))
+                .await;
+        };
     }
 
     pub async fn run(mut self) {
@@ -191,12 +190,6 @@ impl ReceiverWorker {
                 } else {
                     // TODO check duplicate connection
                     info!("[Peer({})] Handshake completed.", self.epid);
-
-                    // let (sender, receiver) = channel(1000);
-                    // spawn(SenderWorker::<MilestoneRequest>::new(self.epid, self.network.clone(), receiver).run());
-                    // spawn(SenderWorker::<TransactionBroadcast>::new(self.epid, self.network.clone()).run());
-                    // spawn(SenderWorker::<TransactionRequest>::new(self.epid, self.network.clone()).run());
-                    // spawn(SenderWorker::<Heartbeat>::new(self.epid, self.network.clone()).run());
 
                     state = ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                         state: ReceiverWorkerMessageState::Header,
