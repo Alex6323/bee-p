@@ -24,6 +24,12 @@ pub struct PeerMetrics {
 }
 
 impl PeerMetrics {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl PeerMetrics {
     pub fn invalid_transactions_received(&self) -> u32 {
         self.invalid_transactions_received.load(Ordering::Relaxed)
     }
