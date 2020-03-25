@@ -186,6 +186,7 @@ impl Node {
                 );
             }
             self.peers.remove(&epid);
+            sender_registry().contexts().write().await.remove(&epid);
         }
     }
 
