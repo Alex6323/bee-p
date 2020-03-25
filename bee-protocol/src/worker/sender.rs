@@ -6,6 +6,7 @@ use crate::message::{
     TransactionBroadcast,
     TransactionRequest,
 };
+use crate::peer::Peer;
 
 use bee_network::Command::SendBytes;
 use bee_network::{
@@ -15,6 +16,7 @@ use bee_network::{
 
 use std::collections::HashMap;
 use std::ptr;
+use std::sync::Arc;
 
 use async_std::sync::RwLock;
 use futures::channel::mpsc::{
@@ -82,17 +84,17 @@ pub enum SenderWorkerEvent<M: Message> {
 }
 
 pub struct SenderWorker<M: Message> {
-    epid: EndpointId,
+    peer: Arc<Peer>,
     network: Network,
     receiver: Receiver<SenderWorkerEvent<M>>,
 }
 
 impl<M: Message> SenderWorker<M> {
-    pub fn new(epid: EndpointId, network: Network, receiver: Receiver<SenderWorkerEvent<M>>) -> Self {
+    pub fn new(peer: Arc<Peer>, network: Network, receiver: Receiver<SenderWorkerEvent<M>>) -> Self {
         Self {
-            epid: epid,
-            network: network,
-            receiver: receiver,
+            peer,
+            network,
+            receiver,
         }
     }
 
@@ -101,7 +103,7 @@ impl<M: Message> SenderWorker<M> {
             match self
                 .network
                 .send(SendBytes {
-                    epid: self.epid,
+                    epid: self.peer.epid,
                     bytes: message.into_full_bytes(),
                     responder: None,
                 })
@@ -111,7 +113,7 @@ impl<M: Message> SenderWorker<M> {
                     // TODO metric ?
                 }
                 Err(e) => {
-                    warn!("[SenderWorker({}) ] Sending message failed: {}.", self.epid, e);
+                    warn!("[SenderWorker({}) ] Sending message failed: {}.", self.peer.epid, e);
                 }
             }
         }

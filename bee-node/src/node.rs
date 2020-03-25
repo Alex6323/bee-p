@@ -107,7 +107,7 @@ impl Node {
 
         spawn(
             ReceiverWorker::new(
-                peer,
+                peer.clone(),
                 receiver_rx,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
                 self.responder_worker_sender.as_ref().unwrap().clone(),
@@ -115,14 +115,24 @@ impl Node {
             .run(),
         );
 
-        spawn(SenderWorker::<Handshake>::new(epid, self.network.clone(), handshake_sender_rx).run());
-        spawn(SenderWorker::<MilestoneRequest>::new(epid, self.network.clone(), milestone_request_sender_rx).run());
+        spawn(SenderWorker::<Handshake>::new(peer.clone(), self.network.clone(), handshake_sender_rx).run());
         spawn(
-            SenderWorker::<TransactionBroadcast>::new(epid, self.network.clone(), transaction_broadcast_sender_rx)
+            SenderWorker::<MilestoneRequest>::new(peer.clone(), self.network.clone(), milestone_request_sender_rx)
                 .run(),
         );
-        spawn(SenderWorker::<TransactionRequest>::new(epid, self.network.clone(), transaction_request_sender_rx).run());
-        spawn(SenderWorker::<Heartbeat>::new(epid, self.network.clone(), heartbeat_sender_rx).run());
+        spawn(
+            SenderWorker::<TransactionBroadcast>::new(
+                peer.clone(),
+                self.network.clone(),
+                transaction_broadcast_sender_rx,
+            )
+            .run(),
+        );
+        spawn(
+            SenderWorker::<TransactionRequest>::new(peer.clone(), self.network.clone(), transaction_request_sender_rx)
+                .run(),
+        );
+        spawn(SenderWorker::<Heartbeat>::new(peer.clone(), self.network.clone(), heartbeat_sender_rx).run());
 
         if let Err(e) = self
             .network
