@@ -10,10 +10,8 @@ use crate::{
 
 use bee_crypto::Sponge;
 use bee_ternary::{
-    T1B1Buf,
     TritBuf,
     Trits,
-    TryteBuf,
 };
 
 use std::marker::PhantomData;
@@ -39,7 +37,7 @@ pub struct WotsPrivateKeyGeneratorBuilder<S> {
     _sponge: PhantomData<S>,
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default)]
 pub struct WotsPrivateKeyGenerator<S> {
     security_level: WotsSecurityLevel,
     _sponge: PhantomData<S>,
@@ -68,16 +66,14 @@ pub enum WotsError {
 }
 
 impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
-    pub fn security_level(&mut self, security_level: WotsSecurityLevel) -> &mut Self {
-        self.security_level = Some(security_level);
+    pub fn security_level(mut self, security_level: WotsSecurityLevel) -> Self {
+        self.security_level.replace(security_level);
         self
     }
 
-    pub fn build(&mut self) -> Result<WotsPrivateKeyGenerator<S>, WotsError> {
-        let security_level = self.security_level.ok_or(WotsError::MissingSecurityLevel)?;
-
+    pub fn build(self) -> Result<WotsPrivateKeyGenerator<S>, WotsError> {
         Ok(WotsPrivateKeyGenerator {
-            security_level: security_level,
+            security_level: self.security_level.ok_or(WotsError::MissingSecurityLevel)?,
             _sponge: PhantomData,
         })
     }
@@ -260,6 +256,10 @@ mod tests {
         CurlP27,
         CurlP81,
         Kerl,
+    };
+    use bee_ternary::{
+        T1B1Buf,
+        TryteBuf,
     };
 
     const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
