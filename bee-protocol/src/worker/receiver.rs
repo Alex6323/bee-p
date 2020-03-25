@@ -170,10 +170,11 @@ impl ReceiverWorker {
                         "[Peer({})] Invalid handshake port: {} != {}.",
                         self.peer.epid, handshake.port, handshake.port
                     );
-                } else if timestamp - handshake.timestamp > 5000 {
+                } else if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
                     warn!(
-                        "[Peer({})] Invalid handshake timestamp: {}.",
-                        self.peer.epid, handshake.timestamp
+                        "[Peer({})] Invalid handshake timestamp, difference of {}ms.",
+                        self.peer.epid,
+                        ((timestamp - handshake.timestamp) as i64).abs()
                     );
                 } else if !slice_eq(&handshake.coordinator, &COORDINATOR_BYTES) {
                     warn!("[Peer({})] Invalid handshake coordinator.", self.peer.epid);
