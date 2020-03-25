@@ -1,18 +1,22 @@
-use crate::message::{
-    MilestoneRequest,
-    TransactionBroadcast,
-    TransactionRequest,
-};
-use crate::worker::{
-    sender_registry,
-    SenderWorkerEvent,
+use crate::{
+    message::{
+        MilestoneRequest,
+        TransactionBroadcast,
+        TransactionRequest,
+    },
+    worker::{
+        sender_registry,
+        SenderWorkerEvent,
+    },
 };
 
 use bee_network::EndpointId;
 
-use futures::channel::mpsc::Receiver;
-use futures::sink::SinkExt;
-use futures::stream::StreamExt;
+use futures::{
+    channel::mpsc::Receiver,
+    sink::SinkExt,
+    stream::StreamExt,
+};
 use log::{
     info,
     warn,

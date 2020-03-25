@@ -4,9 +4,11 @@ use crate::message::{
     MilestoneIndex,
 };
 
-use std::convert::TryInto;
-use std::mem::size_of;
-use std::ops::Range;
+use std::{
+    convert::TryInto,
+    mem::size_of,
+    ops::Range,
+};
 
 const MILESTONE_REQUEST_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;

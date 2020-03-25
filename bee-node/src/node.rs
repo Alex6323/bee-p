@@ -1,5 +1,5 @@
-use bee_network::Command::Connect;
 use bee_network::{
+    Command::Connect,
     EndpointId,
     Event,
     EventSubscriber,
@@ -43,19 +43,23 @@ use bee_snapshot::{
     SnapshotState,
 };
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    sync::Arc,
+};
 
 use async_std::task::{
     block_on,
     spawn,
 };
-use futures::channel::mpsc::{
-    channel,
-    Sender,
+use futures::{
+    channel::mpsc::{
+        channel,
+        Sender,
+    },
+    sink::SinkExt,
+    stream::StreamExt,
 };
-use futures::sink::SinkExt;
-use futures::stream::StreamExt;
 use log::*;
 
 pub struct Node {

@@ -4,8 +4,10 @@ use crate::message::{
     TransactionRequest,
 };
 
-use futures::channel::mpsc::Receiver;
-use futures::stream::StreamExt;
+use futures::{
+    channel::mpsc::Receiver,
+    stream::StreamExt,
+};
 use log::info;
 
 pub enum RequesterWorkerEvent {

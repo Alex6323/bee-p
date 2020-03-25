@@ -4,9 +4,11 @@ use crate::message::{
     MilestoneIndex,
 };
 
-use std::convert::TryInto;
-use std::mem::size_of;
-use std::ops::Range;
+use std::{
+    convert::TryInto,
+    mem::size_of,
+    ops::Range,
+};
 
 const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();

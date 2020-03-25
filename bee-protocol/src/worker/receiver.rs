@@ -1,45 +1,51 @@
-use crate::message::{
-    Handshake,
-    Header,
-    Heartbeat,
-    LegacyGossip,
-    Message,
-    MilestoneRequest,
-    TransactionBroadcast,
-    TransactionRequest,
-};
-use crate::peer::{
-    Peer,
-    PeerMetrics,
-};
-use crate::protocol::{
-    slice_eq,
-    supported_version,
-    COORDINATOR_BYTES,
-    MINIMUM_WEIGHT_MAGNITUDE,
-    SUPPORTED_VERSIONS,
-};
-use crate::worker::{
-    sender_registry,
-    ResponderWorkerEvent,
-    SenderWorkerEvent,
-    TransactionWorkerEvent,
+use crate::{
+    message::{
+        Handshake,
+        Header,
+        Heartbeat,
+        LegacyGossip,
+        Message,
+        MilestoneRequest,
+        TransactionBroadcast,
+        TransactionRequest,
+    },
+    peer::{
+        Peer,
+        PeerMetrics,
+    },
+    protocol::{
+        slice_eq,
+        supported_version,
+        COORDINATOR_BYTES,
+        MINIMUM_WEIGHT_MAGNITUDE,
+        SUPPORTED_VERSIONS,
+    },
+    worker::{
+        sender_registry,
+        ResponderWorkerEvent,
+        SenderWorkerEvent,
+        TransactionWorkerEvent,
+    },
 };
 
 use bee_network::EndpointId;
 
-use std::sync::Arc;
-use std::time::{
-    SystemTime,
-    UNIX_EPOCH,
+use std::{
+    sync::Arc,
+    time::{
+        SystemTime,
+        UNIX_EPOCH,
+    },
 };
 
-use futures::channel::mpsc::{
-    Receiver,
-    Sender,
+use futures::{
+    channel::mpsc::{
+        Receiver,
+        Sender,
+    },
+    sink::SinkExt,
+    stream::StreamExt,
 };
-use futures::sink::SinkExt;
-use futures::stream::StreamExt;
 use log::*;
 
 #[derive(Debug)]

@@ -3,11 +3,13 @@ use crate::message::{
     MessageError,
 };
 
-use std::convert::TryInto;
-use std::ops::Range;
-use std::time::{
-    SystemTime,
-    UNIX_EPOCH,
+use std::{
+    convert::TryInto,
+    ops::Range,
+    time::{
+        SystemTime,
+        UNIX_EPOCH,
+    },
 };
 
 const HANDSHAKE_PORT_SIZE: usize = 2;

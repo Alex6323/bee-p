@@ -1,32 +1,38 @@
-use crate::message::{
-    Handshake,
-    Heartbeat,
-    Message,
-    MilestoneRequest,
-    TransactionBroadcast,
-    TransactionRequest,
-};
-use crate::peer::{
-    Peer,
-    PeerMetrics,
+use crate::{
+    message::{
+        Handshake,
+        Heartbeat,
+        Message,
+        MilestoneRequest,
+        TransactionBroadcast,
+        TransactionRequest,
+    },
+    peer::{
+        Peer,
+        PeerMetrics,
+    },
 };
 
-use bee_network::Command::SendBytes;
 use bee_network::{
+    Command::SendBytes,
     EndpointId,
     Network,
 };
 
-use std::collections::HashMap;
-use std::ptr;
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    ptr,
+    sync::Arc,
+};
 
 use async_std::sync::RwLock;
-use futures::channel::mpsc::{
-    Receiver,
-    Sender,
+use futures::{
+    channel::mpsc::{
+        Receiver,
+        Sender,
+    },
+    stream::StreamExt,
 };
-use futures::stream::StreamExt;
 use log::warn;
 
 pub struct SenderContext {

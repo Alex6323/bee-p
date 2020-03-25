@@ -3,8 +3,10 @@ use bee_ternary::{
     TritBuf,
 };
 
-use futures::channel::mpsc::Receiver;
-use futures::stream::StreamExt;
+use futures::{
+    channel::mpsc::Receiver,
+    stream::StreamExt,
+};
 use log::info;
 
 pub enum MilestoneValidatorWorkerEvent {

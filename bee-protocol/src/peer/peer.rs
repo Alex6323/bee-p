@@ -1,5 +1,7 @@
-use crate::message::Heartbeat;
-use crate::peer::PeerMetrics;
+use crate::{
+    message::Heartbeat,
+    peer::PeerMetrics,
+};
 use bee_network::EndpointId;
 
 pub struct Peer {
