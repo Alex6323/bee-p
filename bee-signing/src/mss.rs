@@ -137,7 +137,9 @@ where
                 sponge
                     .absorb(&tree[right_index * 243..(right_index + 1) * 243])
                     .map_err(|_| Self::Error::FailedSpongeOperation)?;
-                sponge.squeeze_into(&mut tree[index * 243..(index + 1) * 243]);
+                sponge
+                    .squeeze_into(&mut tree[index * 243..(index + 1) * 243])
+                    .map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.reset();
             }
         }
@@ -247,7 +249,9 @@ where
                     .absorb(&sibling)
                     .map_err(|_| Self::Error::FailedSpongeOperation)?;
             }
-            sponge.squeeze_into(&mut hash);
+            sponge
+                .squeeze_into(&mut hash)
+                .map_err(|_| Self::Error::FailedSpongeOperation)?;
             sponge.reset();
 
             j <<= 1;

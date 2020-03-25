@@ -118,7 +118,9 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
         for chunk in hashed_private_key.chunks_mut(243) {
             for _ in 0..26 {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
-                sponge.squeeze_into(chunk);
+                sponge
+                    .squeeze_into(chunk)
+                    .map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.reset();
             }
         }
@@ -149,7 +151,9 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
             for _ in 0..(13 - val) {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
-                sponge.squeeze_into(chunk);
+                sponge
+                    .squeeze_into(chunk)
+                    .map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.reset();
             }
         }
@@ -224,7 +228,9 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
             for _ in 0..(val - -13) {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
-                sponge.squeeze_into(chunk);
+                sponge
+                    .squeeze_into(chunk)
+                    .map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.reset();
             }
         }
