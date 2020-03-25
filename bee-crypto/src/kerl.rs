@@ -4,18 +4,18 @@ use tiny_keccak::{
 };
 
 use bee_ternary::{
-    Btrit,
-    Trits,
-    T1B1,
     bigint::{
-        I384,
-        T242,
-        T243,
         common::{
             BigEndian,
             U8Repr,
         },
+        I384,
+        T242,
+        T243,
     },
+    Btrit,
+    Trits,
+    T1B1,
 };
 
 use crate::Sponge;
@@ -36,6 +36,12 @@ impl Kerl {
             binary_buffer: I384::<BigEndian, U8Repr>::default(),
             ternary_buffer: T243::<Btrit>::default(),
         }
+    }
+}
+
+impl Default for Kerl {
+    fn default() -> Self {
+        Kerl::new()
     }
 }
 
@@ -69,10 +75,7 @@ impl Sponge for Kerl {
         }
 
         for trits_chunk in input.chunks(Self::IN_LEN) {
-            self.ternary_buffer
-                .inner_mut()
-                .copy_from(&trits_chunk);
-            
+            self.ternary_buffer.inner_mut().copy_from(&trits_chunk);
             // Unwrapping is ok because this cannot fail.
             //
             // TODO: Replace with a dedicated `TryFrom` implementation with `Error = !`.
@@ -80,11 +83,7 @@ impl Sponge for Kerl {
             // TODO: Convert to `t242` without cloning.
             //
             // TODO: Convert to binary without cloning.
-            self.binary_buffer = self
-                .ternary_buffer
-                .clone()
-                .into_t242()
-                .into();
+            self.binary_buffer = self.ternary_buffer.clone().into_t242().into();
 
             self.keccak.update(self.binary_buffer.inner_ref());
         }
@@ -94,7 +93,6 @@ impl Sponge for Kerl {
 
     /// Reset the internal state by overwriting it with zeros.
     fn reset(&mut self) {
-
         // TODO: Overwrite the internal buffer directly rather then setting it to a new Keccak
         // object. This requires using `KeccakState::reset` via a new method `Keccak::method`
         // calling its internal state.
@@ -119,8 +117,7 @@ impl Sponge for Kerl {
             std::mem::swap(&mut self.keccak, &mut keccak);
 
             keccak.finalize(&mut self.binary_buffer.inner_mut()[..]);
-            let ternary_value = T242::from_i384_be_u8repr_ignoring_msd(self.binary_buffer)
-                .into_t243();
+            let ternary_value = T242::from_i384_be_u8repr_ignoring_msd(self.binary_buffer).into_t243();
 
             trit_chunk.copy_from(&ternary_value.inner_ref());
             self.binary_buffer.not_inplace();
@@ -155,9 +152,7 @@ EJEAOOZYSAWFPZQESYDHZCGYNSTWXUMVJOVDWUNZJXDGWCLUFGIMZRMGCAZGKNPLBRLGUNYWKLJTYEAQ
         assert!(input_trytes.is_ok());
         let input_trytes = input_trytes.unwrap();
 
-        let input_trit_buf = input_trytes
-            .as_trits()
-            .encode::<T1B1Buf>();
+        let input_trit_buf = input_trytes.as_trits().encode::<T1B1Buf>();
 
         let expected_hash = TryteBuf::try_from_str(EXPECTED_KERL_HASH_TRYTES);
         assert!(expected_hash.is_ok());
