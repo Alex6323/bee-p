@@ -28,7 +28,6 @@ use bee_ternary::{
     Trits,
 };
 
-use std::fmt;
 use std::hash;
 use std::iter;
 use std::fmt;
