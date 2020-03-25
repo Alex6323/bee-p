@@ -127,11 +127,12 @@ impl Sponge for CurlP {
     ///
     /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written
     /// into it.
-    fn squeeze_into(&mut self, buf: &mut Trits) {
+    fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
         for chunk in buf.chunks_mut(Self::OUT_LEN) {
             chunk.copy_from(&self.state[0..chunk.len()]);
             self.transform()
         }
+        Ok(())
     }
 }
 
@@ -190,8 +191,9 @@ macro_rules! forward_sponge_impl {
                 self.0.reset()
             }
 
-            fn squeeze_into(&mut self, buf: &mut Trits) {
-                self.0.squeeze_into(buf);
+            fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
+                self.0.squeeze_into(buf)?;
+                Ok(())
             }
         }
     )+
