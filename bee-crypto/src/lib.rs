@@ -7,13 +7,16 @@
 //!
 //! [PR #21]: https://github.com/iotaledger/bee-rfcs/pull/21
 
-mod curlp;
+pub mod curlp;
+pub mod kerl;
 
 pub use curlp::{
     CurlP,
     CurlP27,
     CurlP81,
 };
+
+pub use kerl::Kerl;
 
 use bee_ternary::{
     Trits,
