@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 use std::slice;
 
+pub mod bigint;
 pub mod trit;
 pub mod tryte;
 pub mod raw;
