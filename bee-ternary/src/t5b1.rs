@@ -84,10 +84,12 @@ impl RawEncoding for T5B1 {
     fn is_valid(b: &i8) -> bool { *b >= -BAL && *b <= BAL }
 
     unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self {
+        debug_assert!(num_trits <= b.len()*TPB);
         &*Self::make(b.as_ptr() as *const _, 0, num_trits)
     }
 
     unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self {
+        debug_assert!(num_trits <= b.len()*TPB);
         &mut *(Self::make(b.as_ptr() as *const _, 0, num_trits) as *mut _)
     }
 }
