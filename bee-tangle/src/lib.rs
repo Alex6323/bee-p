@@ -1,5 +1,112 @@
 use std::{
     collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicPtr, Ordering},
+    },
+    ptr,
+};
+use async_std::{prelude::*, sync::{channel, Sender, Receiver}};
+use dashmap::DashMap;
+use bee_bundle::{
+    Hash,
+    Transaction,
+};
+
+pub struct Vertex {
+    transaction: Transaction,
+}
+
+static mut TANGLE: AtomicPtr<Tangle> = AtomicPtr::new(ptr::null_mut());
+
+pub fn tangle() -> &'static Tangle {
+    let tangle = TANGLE.load(Ordering::Relaxed);
+    if tangle.is_null() {
+        panic!("Tangle cannot be null");
+    } else {
+        unsafe { &*tangle }
+    }
+}
+
+pub fn init_tangle() {
+    TANGLE.store(Box::into_raw(Tangle::new().into()));
+}
+
+pub struct Tangle {
+    vertices: DashMap<Hash, Vertex>,
+    unsolid_new: Sender<Hash>,
+}
+
+impl Tangle {
+    pub fn new() -> Self {
+        Self {
+            vertices: DashMap::new(),
+            unsolid_new: panic!(),
+        }
+    }
+
+    pub async fn insert(&self, hash: Hash, v: Vertex) -> bool {
+        let is_ok = self.vertices.insert(hash, v).is_none();
+        self.unsolid_new.send(hash).await;
+        is_ok
+    }
+
+    pub async fn get_meta(&self, hash: Hash) -> Option<VertexMeta> {
+        todo!()
+    }
+
+    pub async fn get(&'static self, hash: Hash) -> Option<VertexRef> {
+        Some(VertexRef {
+            meta: self.get_meta(hash).await?,
+            tangle: self,
+        })
+    }
+}
+
+// Solidifier
+
+pub struct SoldifierState {
+    vert_to_approvers: HashMap<Hash, Vec<Hash>>,
+    missing_to_approvers: HashMap<Hash, Vec<Arc<Hash>>>,
+    unsolid_new: Receiver<Hash>,
+}
+
+impl SoldifierState {
+    pub async fn worker(mut state: SoldifierState) {
+        while let Some(hash) = state.unsolid_new.next().await {
+            // Solidification algorithm here, write back to TANGLE
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct VertexMeta {
+    hash: Hash,
+    trunk: Hash,
+    branch: Hash,
+}
+
+// VertexRef API
+
+#[derive(Copy, Clone)]
+pub struct VertexRef {
+    meta: VertexMeta,
+    tangle: &'static Tangle,
+}
+
+impl VertexRef {
+    pub fn get_trunk(&self) -> Option<Self> {
+        self.tangle.get(self.meta.trunk)
+    }
+
+    pub fn get_branch(&self) -> Option<Self> {
+        self.tangle.get(self.meta.branch)
+    }
+}
+
+/*
+use std::{
+    collections::HashMap,
     ops::{Deref, DerefMut},
     rc::Rc,
 };
@@ -306,3 +413,4 @@ mod tests {
     }
     */
 }
+*/
