@@ -17,6 +17,7 @@ use bee_protocol::{
     MilestoneRequest,
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
+    Peer,
     ReceiverWorker,
     ReceiverWorkerEvent,
     RequesterWorker,
@@ -42,6 +43,7 @@ use bee_snapshot::{
 };
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use async_std::task::{
     block_on,
@@ -59,8 +61,7 @@ pub struct Node {
     network: Network,
     shutdown: Shutdown,
     events: EventSubscriber,
-    // TODO thread-safety
-    neighbors: HashMap<EndpointId, Sender<ReceiverWorkerEvent>>,
+    peers: HashMap<EndpointId, (Sender<ReceiverWorkerEvent>, Arc<Peer>)>,
     transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
     responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
     requester_worker_sender: Option<Sender<RequesterWorkerEvent>>,
@@ -73,7 +74,7 @@ impl Node {
             network: network,
             shutdown: shutdown,
             events: events,
-            neighbors: HashMap::new(),
+            peers: HashMap::new(),
             transaction_worker_sender: None,
             responder_worker_sender: None,
             requester_worker_sender: None,
@@ -90,6 +91,7 @@ impl Node {
             channel(TRANSACTION_BROADCAST_SEND_BOUND);
         let (transaction_request_sender_tx, transaction_request_sender_rx) = channel(TRANSACTION_REQUEST_SEND_BOUND);
         let (heartbeat_sender_tx, heartbeat_sender_rx) = channel(HEARTBEAT_SEND_BOUND);
+
         let context = SenderContext::new(
             handshake_sender_tx,
             milestone_request_sender_tx,
@@ -98,12 +100,14 @@ impl Node {
             heartbeat_sender_tx,
         );
 
-        self.neighbors.insert(epid, receiver_tx);
+        let peer = Arc::new(Peer::new(epid));
+
+        self.peers.insert(epid, (receiver_tx, peer.clone()));
         sender_registry().contexts().write().await.insert(epid, context);
 
         spawn(
             ReceiverWorker::new(
-                epid,
+                peer,
                 receiver_rx,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
                 self.responder_worker_sender.as_ref().unwrap().clone(),
@@ -133,20 +137,20 @@ impl Node {
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
-        if let Some(sender) = self.neighbors.get_mut(&epid) {
-            if let Err(e) = sender.send(ReceiverWorkerEvent::Removed).await {
+        if let Some(peer) = self.peers.get_mut(&epid) {
+            if let Err(e) = peer.0.send(ReceiverWorkerEvent::Removed).await {
                 warn!(
                     "[Node ] Sending ReceiverWorkerEvent::Removed to {} failed: {}.",
                     epid, e
                 );
             }
-            self.neighbors.remove(&epid);
+            self.peers.remove(&epid);
         }
     }
 
     async fn endpoint_connected_handler(&mut self, epid: EndpointId) {
-        if let Some(sender) = self.neighbors.get_mut(&epid) {
-            if let Err(e) = sender.send(ReceiverWorkerEvent::Connected).await {
+        if let Some(peer) = self.peers.get_mut(&epid) {
+            if let Err(e) = peer.0.send(ReceiverWorkerEvent::Connected).await {
                 warn!(
                     "[Node ] Sending ReceiverWorkerEvent::Connected to {} failed: {}.",
                     epid, e
@@ -156,8 +160,8 @@ impl Node {
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
-        if let Some(sender) = self.neighbors.get_mut(&epid) {
-            if let Err(e) = sender.send(ReceiverWorkerEvent::Disconnected).await {
+        if let Some(peer) = self.peers.get_mut(&epid) {
+            if let Err(e) = peer.0.send(ReceiverWorkerEvent::Disconnected).await {
                 warn!(
                     "[Node ] Sending ReceiverWorkerEvent::Disconnected to {} failed: {}.",
                     epid, e
@@ -167,8 +171,8 @@ impl Node {
     }
 
     async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
-        if let Some(sender) = self.neighbors.get_mut(&epid) {
-            if let Err(e) = sender.send(ReceiverWorkerEvent::Message(bytes)).await {
+        if let Some(peer) = self.peers.get_mut(&epid) {
+            if let Err(e) = peer.0.send(ReceiverWorkerEvent::Message(bytes)).await {
                 warn!(
                     "[Node ] Sending ReceiverWorkerEvent::Message to {} failed: {}.",
                     epid, e

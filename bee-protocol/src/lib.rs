@@ -10,7 +10,10 @@ pub use message::{
     TransactionBroadcast,
     TransactionRequest,
 };
-pub use peer::PeerMetrics;
+pub use peer::{
+    Peer,
+    PeerMetrics,
+};
 pub use worker::{
     sender_registry,
     MilestoneValidatorWorker,
