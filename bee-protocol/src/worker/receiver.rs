@@ -8,7 +8,10 @@ use crate::message::{
     TransactionBroadcast,
     TransactionRequest,
 };
-use crate::peer::Peer;
+use crate::peer::{
+    Peer,
+    PeerMetrics,
+};
 use crate::protocol::{
     slice_eq,
     supported_version,
@@ -75,6 +78,7 @@ enum ReceiverWorkerState {
 
 pub struct ReceiverWorker {
     peer: Arc<Peer>,
+    metrics: Arc<PeerMetrics>,
     receiver: Receiver<ReceiverWorkerEvent>,
     transaction_worker_sender: Sender<TransactionWorkerEvent>,
     responder_worker: Sender<ResponderWorkerEvent>,
@@ -83,12 +87,14 @@ pub struct ReceiverWorker {
 impl ReceiverWorker {
     pub fn new(
         peer: Arc<Peer>,
+        metrics: Arc<PeerMetrics>,
         receiver: Receiver<ReceiverWorkerEvent>,
         transaction_worker_sender: Sender<TransactionWorkerEvent>,
         responder_worker: Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
             peer,
+            metrics,
             receiver,
             transaction_worker_sender,
             responder_worker,
@@ -257,6 +263,7 @@ impl ReceiverWorker {
                 warn!("[Peer({})] Ignoring unexpected Handshake.", self.peer.epid);
 
                 self.peer.metrics.handshake_received_inc();
+                self.metrics.handshake_received_inc();
                 // TODO handle here instead of dedicated state ?
             }
 
@@ -268,6 +275,7 @@ impl ReceiverWorker {
                 debug!("[Peer({})] Reading MilestoneRequest...", self.peer.epid);
 
                 self.peer.metrics.milestone_request_received_inc();
+                self.metrics.milestone_request_received_inc();
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -289,6 +297,7 @@ impl ReceiverWorker {
                 debug!("[Peer({})] Reading TransactionBroadcast...", self.peer.epid);
 
                 self.peer.metrics.transaction_broadcast_received_inc();
+                self.metrics.transaction_broadcast_received_inc();
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -310,6 +319,7 @@ impl ReceiverWorker {
                 debug!("[Peer({})] Reading TransactionRequest...", self.peer.epid);
 
                 self.peer.metrics.transaction_request_received_inc();
+                self.metrics.transaction_request_received_inc();
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -331,6 +341,7 @@ impl ReceiverWorker {
                 debug!("[Peer({})] Reading Heartbeat...", self.peer.epid);
 
                 self.peer.metrics.heartbeat_received_inc();
+                self.metrics.heartbeat_received_inc();
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
                     Ok(_) => {}

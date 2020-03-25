@@ -6,7 +6,10 @@ use crate::message::{
     TransactionBroadcast,
     TransactionRequest,
 };
-use crate::peer::Peer;
+use crate::peer::{
+    Peer,
+    PeerMetrics,
+};
 
 use bee_network::Command::SendBytes;
 use bee_network::{
@@ -85,6 +88,7 @@ pub enum SenderWorkerEvent<M: Message> {
 
 pub struct SenderWorker<M: Message> {
     peer: Arc<Peer>,
+    metrics: Arc<PeerMetrics>,
     network: Network,
     receiver: Receiver<SenderWorkerEvent<M>>,
 }
@@ -92,9 +96,15 @@ pub struct SenderWorker<M: Message> {
 macro_rules! implement_sender_worker {
     ($type:ident, $incrementor:ident) => {
         impl SenderWorker<$type> {
-            pub fn new(peer: Arc<Peer>, network: Network, receiver: Receiver<SenderWorkerEvent<$type>>) -> Self {
+            pub fn new(
+                peer: Arc<Peer>,
+                metrics: Arc<PeerMetrics>,
+                network: Network,
+                receiver: Receiver<SenderWorkerEvent<$type>>,
+            ) -> Self {
                 Self {
                     peer,
+                    metrics,
                     network,
                     receiver,
                 }
@@ -113,6 +123,7 @@ macro_rules! implement_sender_worker {
                     {
                         Ok(_) => {
                             self.peer.metrics.$incrementor();
+                            self.metrics.$incrementor();
                         }
                         Err(e) => {
                             warn!(

@@ -18,6 +18,7 @@ use bee_protocol::{
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
     Peer,
+    PeerMetrics,
     ReceiverWorker,
     ReceiverWorkerEvent,
     RequesterWorker,
@@ -62,6 +63,7 @@ pub struct Node {
     shutdown: Shutdown,
     events: EventSubscriber,
     peers: HashMap<EndpointId, (Sender<ReceiverWorkerEvent>, Arc<Peer>)>,
+    metrics: Arc<PeerMetrics>,
     transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
     responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
     requester_worker_sender: Option<Sender<RequesterWorkerEvent>>,
@@ -75,6 +77,7 @@ impl Node {
             shutdown: shutdown,
             events: events,
             peers: HashMap::new(),
+            metrics: Arc::new(PeerMetrics::new()),
             transaction_worker_sender: None,
             responder_worker_sender: None,
             requester_worker_sender: None,
@@ -108,6 +111,7 @@ impl Node {
         spawn(
             ReceiverWorker::new(
                 peer.clone(),
+                self.metrics.clone(),
                 receiver_rx,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
                 self.responder_worker_sender.as_ref().unwrap().clone(),
@@ -115,24 +119,51 @@ impl Node {
             .run(),
         );
 
-        spawn(SenderWorker::<Handshake>::new(peer.clone(), self.network.clone(), handshake_sender_rx).run());
         spawn(
-            SenderWorker::<MilestoneRequest>::new(peer.clone(), self.network.clone(), milestone_request_sender_rx)
-                .run(),
+            SenderWorker::<Handshake>::new(
+                peer.clone(),
+                self.metrics.clone(),
+                self.network.clone(),
+                handshake_sender_rx,
+            )
+            .run(),
+        );
+        spawn(
+            SenderWorker::<MilestoneRequest>::new(
+                peer.clone(),
+                self.metrics.clone(),
+                self.network.clone(),
+                milestone_request_sender_rx,
+            )
+            .run(),
         );
         spawn(
             SenderWorker::<TransactionBroadcast>::new(
                 peer.clone(),
+                self.metrics.clone(),
                 self.network.clone(),
                 transaction_broadcast_sender_rx,
             )
             .run(),
         );
         spawn(
-            SenderWorker::<TransactionRequest>::new(peer.clone(), self.network.clone(), transaction_request_sender_rx)
-                .run(),
+            SenderWorker::<TransactionRequest>::new(
+                peer.clone(),
+                self.metrics.clone(),
+                self.network.clone(),
+                transaction_request_sender_rx,
+            )
+            .run(),
         );
-        spawn(SenderWorker::<Heartbeat>::new(peer.clone(), self.network.clone(), heartbeat_sender_rx).run());
+        spawn(
+            SenderWorker::<Heartbeat>::new(
+                peer.clone(),
+                self.metrics.clone(),
+                self.network.clone(),
+                heartbeat_sender_rx,
+            )
+            .run(),
+        );
 
         if let Err(e) = self
             .network
