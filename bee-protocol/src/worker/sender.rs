@@ -89,33 +89,46 @@ pub struct SenderWorker<M: Message> {
     receiver: Receiver<SenderWorkerEvent<M>>,
 }
 
-impl<M: Message> SenderWorker<M> {
-    pub fn new(peer: Arc<Peer>, network: Network, receiver: Receiver<SenderWorkerEvent<M>>) -> Self {
-        Self {
-            peer,
-            network,
-            receiver,
-        }
-    }
-
-    pub async fn run(mut self) {
-        while let Some(SenderWorkerEvent::Message(message)) = self.receiver.next().await {
-            match self
-                .network
-                .send(SendBytes {
-                    epid: self.peer.epid,
-                    bytes: message.into_full_bytes(),
-                    responder: None,
-                })
-                .await
-            {
-                Ok(_) => {
-                    // TODO metric ?
+macro_rules! implement_sender_worker {
+    ($type:ident, $incrementor:ident) => {
+        impl SenderWorker<$type> {
+            pub fn new(peer: Arc<Peer>, network: Network, receiver: Receiver<SenderWorkerEvent<$type>>) -> Self {
+                Self {
+                    peer,
+                    network,
+                    receiver,
                 }
-                Err(e) => {
-                    warn!("[SenderWorker({}) ] Sending message failed: {}.", self.peer.epid, e);
+            }
+
+            pub async fn run(mut self) {
+                while let Some(SenderWorkerEvent::Message(message)) = self.receiver.next().await {
+                    match self
+                        .network
+                        .send(SendBytes {
+                            epid: self.peer.epid,
+                            bytes: message.into_full_bytes(),
+                            responder: None,
+                        })
+                        .await
+                    {
+                        Ok(_) => {
+                            self.peer.metrics.$incrementor();
+                        }
+                        Err(e) => {
+                            warn!(
+                                "[SenderWorker({}) ] Sending message failed: {}.",
+                                self.peer.epid, e
+                            );
+                        }
+                    }
                 }
             }
         }
-    }
+    };
 }
+
+implement_sender_worker!(Handshake, handshake_sent);
+implement_sender_worker!(MilestoneRequest, milestone_request_sent);
+implement_sender_worker!(TransactionBroadcast, transaction_broadcast_sent);
+implement_sender_worker!(TransactionRequest, transaction_request_sent);
+implement_sender_worker!(Heartbeat, heartbeat_sent);
