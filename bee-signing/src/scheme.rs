@@ -31,7 +31,7 @@ pub trait PrivateKeyGenerator {
     /// # Example
     ///
     /// ```
-    /// use crypto::Kerl;
+    /// use bee_crypto::Kerl;
     /// use bee_signing::PrivateKeyGenerator;
     /// use bee_signing::IotaSeed;
     /// use bee_signing::WotsPrivateKeyGeneratorBuilder;
@@ -56,7 +56,7 @@ pub trait PrivateKey {
     /// # Example
     ///
     /// ```
-    /// # use crypto::Kerl;
+    /// # use bee_crypto::Kerl;
     /// # use bee_signing::PrivateKeyGenerator;
     /// # use bee_signing::IotaSeed;
     /// # use bee_signing::WotsPrivateKeyGeneratorBuilder;
@@ -78,7 +78,7 @@ pub trait PrivateKey {
     /// # Example
     ///
     /// ```
-    /// # use crypto::Kerl;
+    /// # use bee_crypto::Kerl;
     /// # use bee_signing::PrivateKeyGenerator;
     /// # use bee_signing::IotaSeed;
     /// # use bee_signing::WotsPrivateKeyGeneratorBuilder;
