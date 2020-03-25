@@ -1,15 +1,15 @@
 use crate::message::Heartbeat;
-use crate::node::NodeMetrics;
+use crate::peer::PeerMetrics;
 
-pub(crate) struct Neighbor {
-    pub(crate) metrics: NodeMetrics,
+pub(crate) struct Peer {
+    pub(crate) metrics: PeerMetrics,
     heartbeat: Heartbeat,
 }
 
-impl Neighbor {
+impl Peer {
     pub fn new() -> Self {
         Self {
-            metrics: NodeMetrics::default(),
+            metrics: PeerMetrics::default(),
             heartbeat: Heartbeat::default(),
         }
     }

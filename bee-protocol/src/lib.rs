@@ -1,6 +1,5 @@
 mod message;
-mod neighbor;
-mod node;
+mod peer;
 mod protocol;
 mod worker;
 
@@ -11,7 +10,7 @@ pub use message::{
     TransactionBroadcast,
     TransactionRequest,
 };
-pub use node::NodeMetrics;
+pub use peer::PeerMetrics;
 pub use worker::{
     sender_registry,
     MilestoneValidatorWorker,
