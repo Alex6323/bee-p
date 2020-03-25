@@ -60,11 +60,11 @@ impl RawEncoding for T3B1 {
     }
 
     fn as_i8_slice(&self) -> &[i8] {
-        unsafe { &*(Self::make(self.ptr(0), 0, self.len()) as *const _) }
+        unsafe { &*(Self::make(self.ptr(0), 0, (self.len() as f32/TPB as f32).ceil() as usize) as *const _) }
     }
 
     unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
-        &mut *(Self::make(self.ptr(0), 0, self.len()) as *mut _)
+        &mut *(Self::make(self.ptr(0), 0, (self.len() as f32/TPB as f32).ceil() as usize) as *mut _)
     }
 
     unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {
@@ -88,12 +88,12 @@ impl RawEncoding for T3B1 {
 
     fn is_valid(b: &i8) -> bool { *b >= -BAL && *b <= BAL }
 
-    unsafe fn from_raw_unchecked(b: &[i8]) -> &Self {
-        &*Self::make(b.as_ptr() as *const _, 0, b.len() * TPB)
+    unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self {
+        &*Self::make(b.as_ptr() as *const _, 0, num_trits)
     }
 
-    unsafe fn from_raw_unchecked_mut(b: &mut [i8]) -> &mut Self {
-        &mut *(Self::make(b.as_ptr() as *const _, 0, b.len() * TPB) as *mut _)
+    unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self {
+        &mut *(Self::make(b.as_ptr() as *const _, 0, num_trits) as *mut _)
     }
 }
 
