@@ -85,7 +85,9 @@ where
             // sponge.absorb(builder.address.0);
         }
 
-        sponge.squeeze()
+        sponge
+            .squeeze()
+            .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."))
     }
 
     fn validate_signatures(&self) -> Result<(), IncomingBundleBuilderError> {

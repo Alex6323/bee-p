@@ -60,7 +60,9 @@ where
             // TODO sponge.absorb(builder.essence());
         }
 
-        sponge.squeeze()
+        sponge
+            .squeeze()
+            .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."))
     }
 }
 
