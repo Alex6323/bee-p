@@ -24,18 +24,16 @@ use crate::storage::{
 
 use bee_bundle::{
     constants::*,
-    transaction::{
-        Address,
-        Hash,
-        Index,
-        Milestone,
-        Nonce,
-        Payload,
-        Tag,
-        Timestamp,
-        TransactionField,
-        Value,
-    },
+    Address,
+    Hash,
+    Index,
+    Milestone,
+    Nonce,
+    Payload,
+    Tag,
+    Timestamp,
+    TransactionField,
+    Value,
 };
 
 use bee_ternary::{
