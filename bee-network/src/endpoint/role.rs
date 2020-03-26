@@ -1,6 +1,6 @@
 use std::fmt;
 
-/// The connection relationship with a TCP endpoint.
+/// The connection relationship with an endpoint.
 #[derive(Clone, Debug)]
 pub enum Role {
     /// Outgoing connection attempt that got accepted.
