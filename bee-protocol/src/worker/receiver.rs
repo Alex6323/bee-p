@@ -21,8 +21,8 @@ use crate::{
         SUPPORTED_VERSIONS,
     },
     worker::{
-        sender_registry,
         ResponderWorkerEvent,
+        SenderWorker,
         SenderWorkerEvent,
         TransactionWorkerEvent,
     },
@@ -115,17 +115,7 @@ impl ReceiverWorker {
         // TODO port
         let handshake = Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
 
-        if let Some(context) = sender_registry().contexts().read().await.get(&self.peer.epid) {
-            if let Err(e) = context
-                .handshake_sender
-                // TODO avoid clone
-                .clone()
-                .send(SenderWorkerEvent::Message(handshake))
-                .await
-            {
-                warn!("[ResponderWorker ] Sending message failed: {}.", e);
-            }
-        };
+        SenderWorker::<Handshake>::send(self.peer.epid, handshake).await;
     }
 
     pub async fn run(mut self) {

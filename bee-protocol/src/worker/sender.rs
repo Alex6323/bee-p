@@ -31,6 +31,7 @@ use futures::{
         Receiver,
         Sender,
     },
+    sink::SinkExt,
     stream::StreamExt,
 };
 use log::warn;
@@ -100,7 +101,7 @@ pub struct SenderWorker<M: Message> {
 }
 
 macro_rules! implement_sender_worker {
-    ($type:ident, $incrementor:ident) => {
+    ($type:ident, $sender:ident, $incrementor:ident) => {
         impl SenderWorker<$type> {
             pub fn new(
                 peer: Arc<Peer>,
@@ -114,6 +115,20 @@ macro_rules! implement_sender_worker {
                     network,
                     receiver,
                 }
+            }
+
+            pub async fn send(epid: EndpointId, message: $type) {
+                if let Some(context) = sender_registry().contexts().read().await.get(&epid) {
+                    if let Err(e) = context
+                        .$sender
+                        // TODO avoid clone
+                        .clone()
+                        .send(SenderWorkerEvent::Message(message))
+                        .await
+                    {
+                        warn!("[SenderWorker ] Sending message failed: {:?}.", e);
+                    }
+                };
             }
 
             pub async fn run(mut self) {
@@ -144,8 +159,12 @@ macro_rules! implement_sender_worker {
     };
 }
 
-implement_sender_worker!(Handshake, handshake_sent);
-implement_sender_worker!(MilestoneRequest, milestone_request_sent);
-implement_sender_worker!(TransactionBroadcast, transaction_broadcast_sent);
-implement_sender_worker!(TransactionRequest, transaction_request_sent);
-implement_sender_worker!(Heartbeat, heartbeat_sent);
+implement_sender_worker!(Handshake, handshake_sender, handshake_sent);
+implement_sender_worker!(MilestoneRequest, milestone_request_sender, milestone_request_sent);
+implement_sender_worker!(
+    TransactionBroadcast,
+    transaction_broadcast_sender,
+    transaction_broadcast_sent
+);
+implement_sender_worker!(TransactionRequest, transaction_request_sender, transaction_request_sent);
+implement_sender_worker!(Heartbeat, heartbeat_sender, heartbeat_sent);

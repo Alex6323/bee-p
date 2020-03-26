@@ -5,7 +5,7 @@ use crate::{
         TransactionRequest,
     },
     worker::{
-        sender_registry,
+        SenderWorker,
         SenderWorkerEvent,
     },
 };
@@ -75,17 +75,7 @@ impl ResponderWorker {
                     // TODO send complete ms bundle ?
                 }
             } {
-                if let Some(context) = sender_registry().contexts().read().await.get(&epid) {
-                    if let Err(e) = context
-                        .transaction_broadcast_sender
-                        // TODO avoid clone
-                        .clone()
-                        .send(SenderWorkerEvent::Message(transaction))
-                        .await
-                    {
-                        warn!("[ResponderWorker ] Sending message failed: {}.", e);
-                    }
-                };
+                SenderWorker::<TransactionBroadcast>::send(epid, transaction).await;
             }
         }
     }
