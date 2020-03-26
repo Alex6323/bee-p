@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate serde;
 
-mod bundle;
-mod constants;
-mod incoming_bundle_builder;
-mod outgoing_bundle_builder;
-mod transaction;
+pub mod bundle;
+pub mod constants;
+pub mod incoming_bundle_builder;
+pub mod outgoing_bundle_builder;
+pub mod transaction;
 
 pub use crate::bundle::Bundle;
 pub use incoming_bundle_builder::{

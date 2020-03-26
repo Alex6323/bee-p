@@ -30,10 +30,11 @@ pub type MissingHashesToRCApprovers = HashMap<bee_bundle::Hash, HashSet<Rc<bee_b
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct StateDeltaMap {
     #[serde(flatten)]
-    address_to_delta: HashMap<String, i64>,
+    address_to_delta: HashMap<Address, i64>,
 }
 
 use async_trait::async_trait;
+use bee_bundle::{Hash, Address};
 
 #[async_trait]
 pub trait Connection<Conn> {

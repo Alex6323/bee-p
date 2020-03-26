@@ -1,5 +1,5 @@
 [package]
-name = "bee-backends"
+name = "bee-storage-sqlx"
 version = "0.1.0"
 authors = ["Bee developers"]
 edition = "2018"
@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 bee-storage = { path = "../bee-storage" }
 bee-bundle = { path = "../bee-bundle" }
+bee-ternary = { path = "../bee-ternary"}
 bee-test = { path = "../bee-test"}
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }
@@ -17,3 +18,4 @@ num_cpus = "1.12.0"
 rand = "0.7.3"
 serde = "1.0.104"
 sqlx = {version = "0.2.6", features = [ "postgres" ]}
+#sqlx = { version = "0.3.0-alpha.2", features = [ "postgres" ] }
