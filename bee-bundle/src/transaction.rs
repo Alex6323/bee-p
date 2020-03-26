@@ -28,9 +28,9 @@ use bee_ternary::{
     Trits,
 };
 
+use std::fmt;
 use std::hash;
 use std::iter;
-use std::fmt;
 
 #[derive(Debug)]
 pub enum TransactionFieldError {

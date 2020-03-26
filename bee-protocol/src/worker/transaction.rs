@@ -14,6 +14,8 @@ use bee_ternary::T5B1Buf;
 use bee_ternary::T1B1Buf;
 
 use crate::message::TransactionBroadcast;
+use crate::protocol::COORDINATOR_BYTES;
+use crate::worker::milestone_validator::MilestoneValidatorWorkerEvent;
 
 use futures::channel::mpsc;
 use futures::channel::mpsc::{channel, SendError, Sender, Receiver};
@@ -25,7 +27,6 @@ use futures::select;
 use log::info;
 
 use std::collections::HashMap;
-use crate::worker::milestone_validator::MilestoneValidatorWorkerEvent;
 
 pub enum TransactionWorkerEvent {
     Transaction(TransactionBroadcast),
@@ -55,6 +56,10 @@ impl TransactionWorker {
         let milestone_validator_worker_sender = &mut self.milestone_validator_worker_sender;
         //let shutdown_receiver = &mut self.shutdown_receiver;
 
+        // convert bytes of coordinator address to i8 slice
+        let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
+        let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8).unwrap().to_buf::<T1B1Buf>();
+
         loop {
 
             select! {
@@ -66,19 +71,19 @@ impl TransactionWorker {
                         info!("[TransactionWorker ] Processing received data...");
 
                         // transform &[u8] to &[i8]
-                        let i8_transaction_slice = unsafe { &*(&transaction[..] as *const [u8] as *const [i8]) };
+                        let t5b1_transaction: &[i8] = unsafe { &*(&transaction[..] as *const [u8] as *const [i8]) };
 
                         // get T5B1 trits
-                        let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(i8_transaction_slice).unwrap();
+                        let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_transaction).unwrap();
 
                         // get T5B1 trit_buf
-                        let t5b1_trit_buf = t5b1_trits.to_buf::<T5B1Buf>();
+                        let t5b1_trit_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
 
                         // get T1B1 trit_buf from TB51 trit_buf
-                        let t1b1_trit_buf = t5b1_trit_buf.encode::<T1B1Buf>();
+                        let t1b1_trit_buf: TritBuf<T1B1Buf> = t5b1_trit_buf.encode::<T1B1Buf>();
 
                         // build transaction
-                        let transaction_result = Transaction::from_trits(&t5b1_trit_buf);
+                        let transaction_result = Transaction::from_trits(&t1b1_trit_buf);
 
                         // validate transaction result
                         let built_transaction = match transaction_result {
@@ -101,10 +106,16 @@ impl TransactionWorker {
                             continue;
                         }
 
+                        // get address of transaction
+                        let address = built_transaction.address().clone();
+
                         // store transaction
                         tangle.insert(tx_hash.clone(), built_transaction);
 
-                       //milestone_validator_worker_sender.send(MilestoneValidatorWorkerEvent::Candidate{0: t1b1_trit_buf}).await.unwrap();
+                        // check if transaction is a potential milestone candidate
+                        if address.0.eq(&t1b1_coo_buf) {
+                            milestone_validator_worker_sender.send(MilestoneValidatorWorkerEvent::Candidate(tx_hash.0)).await.unwrap();
+                        }
 
                     },
 
@@ -161,7 +172,6 @@ impl TemporaryTangle {
     }
 }
 
-
 #[test]
 fn test_tangle_insert() {
 
@@ -205,10 +215,27 @@ fn test_tangle_insert() {
 }
 
 #[test]
+fn test_identify_coo_address() {
+
+    use bee_bundle::*;
+
+    // convert bytes of coordinator address to i8 slice
+    let t5b1_coo: &[i8] = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
+    //
+    let t5b1_coo_buf: TritBuf<T5B1Buf> = Trits::<T5B1>::try_from_raw(t5b1_coo).unwrap().to_buf();
+
+    let t1b1_coo_buf: TritBuf<T1B1Buf> = t5b1_coo_buf.encode::<T1B1Buf>();
+
+    // build address
+    let address = Address::try_from_tritbuf(t1b1_coo_buf).unwrap();
+
+}
+
+#[test]
 fn test_tx_worker() {
 
     let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
-    let (mut transaction_worker_sender, transaction_worker_receiver) = channel(1000);
+    let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
 
     // send tx to the channel
     block_on(tx_sender(transaction_worker_sender));
@@ -217,7 +244,7 @@ fn test_tx_worker() {
 }
 
 async fn tx_sender(mut sender: Sender<TransactionWorkerEvent>) {
-    let mut tx: [u8; 1604] = [0; 1604];
+    let tx: [u8; 1604] = [0; 1604];
     let message = TransactionBroadcast::new(&tx);
     sender.send(TransactionWorkerEvent::Transaction(message)).await.unwrap();
 }
