@@ -159,14 +159,17 @@ impl EndpointActor {
                         Event::EndpointRemoved { epid, total } => {
                             self.publisher.send(Event::EndpointRemoved { epid, total }).await;
                         },
-                        Event::NewConnection { ep, sender } => {
+                        Event::NewConnection { ep, role, sender } => {
                             let epid = ep.id;
+                            let addr = ep.address;
 
                             outbox.insert(epid, sender);
                             connected.insert(ep);
 
                             self.publisher.send(Event::EndpointConnected {
                                 epid,
+                                address: addr,
+                                role,
                                 timestamp: time::timestamp_millis(),
                                 total: connected.num(),
                             }).await?
