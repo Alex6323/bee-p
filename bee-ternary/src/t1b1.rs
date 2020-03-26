@@ -84,12 +84,14 @@ where
         TryInto::<T>::try_into(*b).is_ok()
     }
 
-    unsafe fn from_raw_unchecked(b: &[i8]) -> &Self {
-        &*Self::make(b.as_ptr() as *const _, 0, b.len())
+    unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self {
+        debug_assert!(num_trits == b.len());
+        &*Self::make(b.as_ptr() as *const _, 0, num_trits)
     }
 
-    unsafe fn from_raw_unchecked_mut(b: &mut [i8]) -> &mut Self {
-        &mut *(Self::make(b.as_ptr() as *const _, 0, b.len()) as *mut _)
+    unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self {
+        debug_assert!(num_trits == b.len());
+        &mut *(Self::make(b.as_ptr() as *const _, 0, num_trits) as *mut _)
     }
 }
 
