@@ -36,7 +36,7 @@ pub enum TransactionFieldError {
     FieldDeserializationError,
 }
 
-pub trait TransactionField: Sized {
+pub trait TransactionField: Sized + TransactionFieldType {
     type inner;
     fn try_from_inner(buffer: Self::inner) -> Result<Self, TransactionFieldError>;
     fn from_inner_unchecked(buffer: Self::inner) -> Self;
@@ -46,10 +46,47 @@ pub trait TransactionField: Sized {
     fn trit_len() -> usize;
 }
 
+pub trait  NumTritsOFValue {
+    fn num_trits(&self) -> usize;
+}
+
+
+pub trait TransactionFieldType {
+    type inner_type : NumTritsOFValue;
+
+    fn is_trits_type() -> bool;
+}
+
+
+impl NumTritsOFValue for TritBuf<T1B1Buf> {
+    fn num_trits(&self) -> usize {
+        self.len()
+    }
+}
+
+impl NumTritsOFValue for i64 {
+    fn num_trits(&self) -> usize {
+        unimplemented!();
+    }
+}
+
+impl NumTritsOFValue for u64 {
+    fn num_trits(&self) -> usize {
+        unimplemented!();
+    }
+}
+
+impl NumTritsOFValue for usize {
+    fn num_trits(&self) -> usize {
+        unimplemented!();
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Payload(TritBuf<T1B1Buf>);
 
 impl Payload {
+
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(PAYLOAD.trit_offset.length))
     }
@@ -85,6 +122,12 @@ impl Eq for Address {}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Value(i64);
 
+impl Value {
+    pub fn trit_len() -> usize {
+        unimplemented!();
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Tag(TritBuf<T1B1Buf>);
 
@@ -105,8 +148,21 @@ impl Tag {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Timestamp(u64);
 
+impl Timestamp {
+    pub fn trit_len() -> usize {
+        unimplemented!();
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Index(usize);
+
+impl Index {
+    pub fn trit_len() -> usize {
+        unimplemented!();
+    }
+}
+
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Hash(TritBuf<T1B1Buf>);
@@ -144,27 +200,25 @@ impl Nonce {
     }
 }
 
-macro_rules! impl_into_inner_for_trit_fields {
+macro_rules! impl_transaction_field {
     ( $($field_name:ident),+ $(,)?) => {
         $(
             impl TransactionField for $field_name {
 
-                type inner = TritBuf<T1B1Buf>;
+                type inner = <$field_name as TransactionFieldType>::inner_type;
                 fn into_inner(&self) -> &Self::inner{
                     &self.0
                 }
 
-                fn try_from_inner(buffer: Self::inner) -> Result<Self, TransactionFieldError> {
-                    if buffer.len() != $field_name::trit_len() {
+                fn try_from_inner(val: Self::inner) -> Result<Self, TransactionFieldError> {
+                    if $field_name::is_trits_type() && val.num_trits() != $field_name::trit_len() {
                         Err(TransactionFieldError::FieldWrongLength)?
                     }
-
-                    Ok(Self::from_inner_unchecked(buffer))
+                    Ok(Self::from_inner_unchecked(val))
                 }
 
-                fn from_inner_unchecked(buffer: Self::inner) -> Self{
-
-                    Self(buffer)
+                fn from_inner_unchecked(val: Self::inner) -> Self{
+                    Self(val)
                 }
 
                 fn trit_len() -> usize {
@@ -175,61 +229,34 @@ macro_rules! impl_into_inner_for_trit_fields {
     }
 }
 
-impl TransactionField for Index {
-    type inner = usize;
-    fn into_inner(&self) -> &Self::inner {
-        &self.0
-    }
-
-    fn try_from_inner(inner: Self::inner) -> Result<Self, TransactionFieldError> {
-        Ok(Self(inner))
-    }
-
-    fn from_inner_unchecked(inner: Self::inner) -> Self {
-        Self(inner)
-    }
-
-    fn trit_len() -> usize {
-        unimplemented!()
+macro_rules! impl_transaction_field_type_for_tritbuf_fields {
+    ( $($field_name:ident),+ $(,)?) => {
+        $(
+            impl TransactionFieldType for $field_name {
+                type inner_type = TritBuf<T1B1Buf>;
+                fn is_trits_type() -> bool {true}
+            }
+        )+
     }
 }
 
-impl TransactionField for Value {
-    type inner = i64;
-    fn into_inner(&self) -> &Self::inner {
-        &self.0
-    }
+impl TransactionFieldType for Value {
+    type inner_type = i64;
 
-    fn try_from_inner(inner: Self::inner) -> Result<Self, TransactionFieldError> {
-        Ok(Self(inner))
-    }
-
-    fn from_inner_unchecked(inner: Self::inner) -> Self {
-        Self(inner)
-    }
-
-    fn trit_len() -> usize {
-        unimplemented!()
-    }
+    fn is_trits_type() -> bool {false}
 }
 
-impl TransactionField for Timestamp {
-    type inner = u64;
-    fn into_inner(&self) -> &Self::inner {
-        &self.0
-    }
+impl TransactionFieldType for Index {
+    type inner_type = usize;
 
-    fn try_from_inner(inner: Self::inner) -> Result<Self, TransactionFieldError> {
-        Ok(Self(inner))
-    }
 
-    fn from_inner_unchecked(inner: Self::inner) -> Self {
-        Self(inner)
-    }
+    fn is_trits_type() -> bool {false}
+}
 
-    fn trit_len() -> usize {
-        unimplemented!()
-    }
+impl TransactionFieldType for Timestamp {
+    type inner_type = u64;
+    
+    fn is_trits_type() -> bool {false}
 }
 
 macro_rules! impl_hash_trait {
@@ -244,7 +271,8 @@ macro_rules! impl_hash_trait {
     }
 }
 
-impl_into_inner_for_trit_fields!(Payload, Address, Hash, Tag, Nonce);
+impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Hash, Tag, Nonce);
+impl_transaction_field!(Payload, Address, Hash, Tag, Nonce, Index, Value, Timestamp);
 impl_hash_trait!(Hash, Address);
 
 #[derive(Debug)]
