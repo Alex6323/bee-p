@@ -13,11 +13,15 @@ use bee_bundle::{
     Transaction,
 };
 
+pub type TransactionId = Hash;
+pub type MilestoneIndex = usize;
+
 pub struct Vertex {
+    meta: VertexMeta,
     transaction: Transaction,
 }
 
-static mut TANGLE: AtomicPtr<Tangle> = AtomicPtr::new(ptr::null_mut());
+static TANGLE: AtomicPtr<Tangle> = AtomicPtr::new(ptr::null_mut());
 
 pub fn tangle() -> &'static Tangle {
     let tangle = TANGLE.load(Ordering::Relaxed);
@@ -29,11 +33,11 @@ pub fn tangle() -> &'static Tangle {
 }
 
 pub fn init_tangle() {
-    TANGLE.store(Box::into_raw(Tangle::new().into()));
+    TANGLE.store(Box::into_raw(Tangle::new().into()), Ordering::Acquire);
 }
 
 pub struct Tangle {
-    vertices: DashMap<Hash, Vertex>,
+    vertices: DashMap<TransactionId, Vertex>,
     unsolid_new: Sender<Hash>,
 }
 
@@ -45,21 +49,46 @@ impl Tangle {
         }
     }
 
-    pub async fn insert(&self, hash: Hash, v: Vertex) -> bool {
-        let is_ok = self.vertices.insert(hash, v).is_none();
-        self.unsolid_new.send(hash).await;
-        is_ok
+    pub async fn insert(&'static self, hash: Hash, v: Vertex) -> Option<VertexRef> {
+        let meta = v.meta;
+        if self.vertices.insert(hash, v).is_none() {
+            self.unsolid_new.send(hash).await;
+            Some(VertexRef {
+                meta,
+                tangle: self,
+            })
+        } else {
+            None
+        }
     }
 
-    pub async fn get_meta(&self, hash: Hash) -> Option<VertexMeta> {
+    pub async fn get_meta(&'static self, id: TransactionId) -> Option<VertexMeta> {
         todo!()
     }
 
-    pub async fn get(&'static self, hash: Hash) -> Option<VertexRef> {
+    pub async fn get_body(&'static self, id: TransactionId) -> Option<&Transaction> {
+        todo!()
+    }
+
+    pub async fn get(&'static self, id: TransactionId) -> Option<VertexRef> {
         Some(VertexRef {
-            meta: self.get_meta(hash).await?,
+            meta: self.get_meta(id).await?,
             tangle: self,
         })
+    }
+
+    pub async fn contains(&'static self, id: TransactionId) -> bool {
+        self.get_meta(id).await.is_some()
+    }
+
+    // Milestone stuff
+
+    pub async fn get_milestone(&'static self, idx: MilestoneIndex) -> Option<VertexRef> {
+        todo!()
+    }
+
+    pub async fn get_latest_milestone(&'static self, idx: MilestoneIndex) -> Option<VertexRef> {
+        todo!()
     }
 }
 
@@ -81,9 +110,9 @@ impl SoldifierState {
 
 #[derive(Copy, Clone)]
 pub struct VertexMeta {
-    hash: Hash,
-    trunk: Hash,
-    branch: Hash,
+    id: TransactionId,
+    trunk: TransactionId,
+    branch: TransactionId,
 }
 
 // VertexRef API
@@ -95,12 +124,16 @@ pub struct VertexRef {
 }
 
 impl VertexRef {
-    pub fn get_trunk(&self) -> Option<Self> {
-        self.tangle.get(self.meta.trunk)
+    pub async fn get_body(&self) -> Option<&Transaction> {
+        self.tangle.get_body(self.meta.id).await
     }
 
-    pub fn get_branch(&self) -> Option<Self> {
-        self.tangle.get(self.meta.branch)
+    pub async fn get_trunk(&self) -> Option<Self> {
+        self.tangle.get(self.meta.trunk).await
+    }
+
+    pub async fn get_branch(&self) -> Option<Self> {
+        self.tangle.get(self.meta.branch).await
     }
 }
 

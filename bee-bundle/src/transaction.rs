@@ -22,16 +22,21 @@ use bee_ternary::{
         RawEncodingBuf,
     },
     Btrit,
+    IsTryte,
+    T1B1,
     T1B1Buf,
     Trit,
     TritBuf,
     Trits,
+    Tryte,
 };
 
 use std::{
     fmt,
     hash,
     iter,
+    cmp::PartialEq,
+    convert::TryFrom,
 };
 
 #[derive(Debug)]
@@ -164,16 +169,42 @@ impl Index {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Hash(TritBuf<T1B1Buf>);
+#[derive(Copy, Clone)]
+pub struct Hash(pub [i8; 243]);
 
 impl Hash {
     pub fn zeros() -> Self {
-        Self(TritBuf::zeros(BUNDLE.trit_offset.length))
+        Self([0; 243])
+    }
+
+    pub fn from_str(hash: &str) -> Self {
+        assert!(hash.len() <= BUNDLE.tryte_offset.length);
+        assert!(hash.chars().all(|c| c.is_tryte()));
+
+        let missing_trytes = BUNDLE.tryte_offset.length - hash.len();
+        let hash = hash.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
+
+        let mut trits = [0; 243];
+
+        hash
+            .chars()
+            .map(|c| Tryte::try_from(c).expect("Invalid tryte representation"))
+            .enumerate()
+            .for_each(|(i, tryte)| tryte
+                .as_trits()
+                .trits()
+                .enumerate()
+                .for_each(|(j, trit)| trits[i * 3 + j] = trit.into()));
+
+        Self(trits)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
-        self.0.as_i8_slice()
+        &self.0
+    }
+
+    pub fn as_trits(&self) -> &Trits<T1B1> {
+        unsafe { Trits::from_raw_unchecked(self.as_bytes()) }
     }
 
     pub fn trit_len() -> usize {
@@ -181,7 +212,56 @@ impl Hash {
     }
 }
 
+impl PartialEq for Hash {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b)
+    }
+}
 impl Eq for Hash {}
+
+/*
+TODO: Implement this when we need it
+use serde::ser::{Serialize, Serializer};
+impl Serialize for Hash {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.collect_seq(&self.0[..])
+    }
+}
+*/
+
+impl fmt::Debug for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.as_trits())
+    }
+}
+
+impl hash::Hash for Hash {
+    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+        self.0.hash(hasher)
+    }
+}
+
+impl TransactionField for Hash {
+    fn into_inner(&self) -> TritBuf<T1B1Buf> {
+        self.as_trits().to_buf()
+    }
+
+    fn try_from_tritbuf(buffer: TritBuf<T1B1Buf>) -> Result<Self, TransactionFieldError> {
+        if buffer.len() != Self::trit_len() {
+            Err(TransactionFieldError::FieldWrongLength)?
+        }
+
+        Ok(Self::from_tritbuf_unchecked(buffer))
+    }
+
+    fn from_tritbuf_unchecked(buffer: TritBuf<T1B1Buf>) -> Self {
+
+        let mut trits = [0; 243];
+        trits.copy_from_slice(buffer.as_i8_slice());
+
+        Self(trits)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Nonce(TritBuf<T1B1Buf>);
@@ -276,9 +356,9 @@ macro_rules! impl_hash_trait {
     }
 }
 
-impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Hash, Tag, Nonce);
-impl_transaction_field!(Payload, Address, Hash, Tag, Nonce, Index, Value, Timestamp);
-impl_hash_trait!(Hash, Address);
+impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Tag, Nonce);
+impl_transaction_field!(Payload, Address, Tag, Nonce, Index, Value, Timestamp);
+impl_hash_trait!(Address);
 
 #[derive(Debug)]
 pub enum TransactionError {
@@ -286,7 +366,6 @@ pub enum TransactionError {
     TransactionBuilderError(TransactionBuilderError),
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct Transaction {
     pub(crate) payload: Payload,
     pub(crate) address: Address,
@@ -330,14 +409,19 @@ impl Transaction {
             .with_tag(Tag(trits
                 [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
                 .to_buf()))
+<<<<<<< HEAD
             .with_attachment_ts(Timestamp::from_inner_unchecked(0))
             .with_bundle(Hash(
+=======
+            .with_attachment_ts(Timestamp(0))
+            .with_bundle(Hash::from_tritbuf_unchecked(
+>>>>>>> Made Hash Copy, began adding Alex's tangle API to async tangle API
                 trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
-            .with_trunk(Hash(
+            .with_trunk(Hash::from_tritbuf_unchecked(
                 trits[TRUNK.trit_offset.start..TRUNK.trit_offset.start + TRUNK.trit_offset.length].to_buf(),
             ))
-            .with_branch(Hash(
+            .with_branch(Hash::from_tritbuf_unchecked(
                 trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
             ))
             .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
