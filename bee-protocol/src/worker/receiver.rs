@@ -23,12 +23,9 @@ use crate::{
     worker::{
         ResponderWorkerEvent,
         SenderWorker,
-        SenderWorkerEvent,
         TransactionWorkerEvent,
     },
 };
-
-use bee_network::EndpointId;
 
 use std::{
     sync::Arc,

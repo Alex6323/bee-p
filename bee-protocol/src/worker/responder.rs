@@ -4,23 +4,16 @@ use crate::{
         TransactionBroadcast,
         TransactionRequest,
     },
-    worker::{
-        SenderWorker,
-        SenderWorkerEvent,
-    },
+    worker::SenderWorker,
 };
 
 use bee_network::EndpointId;
 
 use futures::{
     channel::mpsc::Receiver,
-    sink::SinkExt,
     stream::StreamExt,
 };
-use log::{
-    info,
-    warn,
-};
+use log::info;
 
 pub enum ResponderWorkerEvent {
     TransactionRequest {
