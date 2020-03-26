@@ -33,3 +33,11 @@ pub use transaction::{
     Transactions,
     Value,
 };
+
+pub use constants::{
+    PAYLOAD_TRIT_LEN,
+    HASH_TRIT_LEN,
+    ADDRESS_TRIT_LEN,
+    TAG_TRIT_LEN,
+    NONCE_TRIT_LEN
+};

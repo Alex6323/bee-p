@@ -23,7 +23,6 @@ use crate::storage::{
 };
 
 use bee_bundle::{
-    constants::*,
     Address,
     Hash,
     Index,
@@ -34,6 +33,11 @@ use bee_bundle::{
     Timestamp,
     TransactionField,
     Value,
+    ADDRESS_TRIT_LEN,
+    HASH_TRIT_LEN,
+    NONCE_TRIT_LEN,
+    PAYLOAD_TRIT_LEN,
+    TAG_TRIT_LEN,
 };
 
 use bee_ternary::{
