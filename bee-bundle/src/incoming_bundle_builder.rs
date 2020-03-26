@@ -18,10 +18,7 @@ use bee_signing::{
     Signature,
     WotsPublicKey,
 };
-use bee_ternary::{
-    trit::Btrit,
-    TritBuf,
-};
+use bee_ternary::{trit::Btrit, TritBuf, T1B1Buf};
 
 use std::marker::PhantomData;
 
@@ -123,21 +120,21 @@ where
         // TODO - check trunk of the last transaction and branch is tail, the same tail
 
         for (index, transaction) in self.transactions.0.iter().enumerate() {
-            if index != transaction.index().0 {
-                Err(IncomingBundleBuilderError::InvalidIndex(transaction.index().0))?;
+            if index != *transaction.index().into_inner() {
+                Err(IncomingBundleBuilderError::InvalidIndex(*transaction.index().into_inner()))?;
             }
 
-            if last_index != transaction.last_index().0 {
-                Err(IncomingBundleBuilderError::InvalidLastIndex(transaction.last_index().0))?;
+            if last_index != *transaction.last_index().into_inner() {
+                Err(IncomingBundleBuilderError::InvalidLastIndex(*transaction.last_index().into_inner()))?;
             }
 
-            sum += transaction.value.0;
+            sum += *transaction.value.into_inner();
             if sum.abs() > IOTA_SUPPLY {
                 Err(IncomingBundleBuilderError::InvalidValue(sum))?;
             }
 
-            if transaction.value.0 != 0
-                && transaction.address().to_owned().into_inner().get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero
+            if *transaction.value.into_inner() != 0
+                && transaction.address().into_inner().get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero
             {
                 Err(IncomingBundleBuilderError::InvalidAddress)?;
             }

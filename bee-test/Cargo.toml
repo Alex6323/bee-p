@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
-bee-storage = { path = "../bee-storage" }
 bee-ternary = { path = "../bee-ternary" }
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }

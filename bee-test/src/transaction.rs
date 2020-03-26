@@ -1,12 +1,13 @@
 extern crate rand;
 
-use bee_bundle::{transaction::{TransactionField, Hash, Payload, Address, Nonce, Tag}};
-use bee_storage::Milestone;
-use bee_ternary::{Trits, T1B1Buf, T1B1};
+use bee_bundle::{transaction::{TransactionField, Hash, Payload, Address, Nonce, Tag, Milestone}};
+use bee_ternary::{Trits, T1B1Buf, T1B1, TritBuf};
 
 use rand::Rng;
 
-pub fn rand_trits_field<T: TransactionField>() -> T {
+pub fn rand_trits_field<T: TransactionField<inner = TritBuf>>() -> T {
+
+    //type T::inner = TritBuf;
     const TRIT_SET: &[i8] = &[-1,0,1];
     let mut rng = rand::thread_rng();
 
@@ -20,7 +21,7 @@ pub fn rand_trits_field<T: TransactionField>() -> T {
     let trits = Trits::<T1B1>::try_from_raw(raw_buffer.as_slice(), T::trit_len())
         .unwrap()
         .to_buf::<T1B1Buf>();
-    T::from_tritbuf_unchecked(trits)
+    T::from_inner_unchecked(trits)
 }
 
 pub fn clone_tx(tx : &bee_bundle::Transaction) -> bee_bundle::Transaction {
@@ -48,18 +49,18 @@ pub fn create_random_tx() -> (bee_bundle::Hash, bee_bundle::Transaction) {
     let builder = bee_bundle::TransactionBuilder::new()
         .with_payload(rand_trits_field::<Payload>())
         .with_address(rand_trits_field::<Address>())
-        .with_value(bee_bundle::Value(0))
+        .with_value(bee_bundle::Value::from_inner_unchecked(0))
         .with_obsolete_tag(rand_trits_field::<Tag>())
-        .with_timestamp(bee_bundle::Timestamp(0))
-        .with_index(bee_bundle::Index(0))
-        .with_last_index(bee_bundle::Index(0))
+        .with_timestamp(bee_bundle::Timestamp::from_inner_unchecked(0))
+        .with_index(bee_bundle::Index::from_inner_unchecked(0))
+        .with_last_index(bee_bundle::Index::from_inner_unchecked(0))
         .with_tag(rand_trits_field::<Tag>())
-        .with_attachment_ts(bee_bundle::Timestamp(0))
+        .with_attachment_ts(bee_bundle::Timestamp::from_inner_unchecked(0))
         .with_bundle(rand_trits_field::<Hash>())
         .with_trunk(rand_trits_field::<Hash>())
         .with_branch(rand_trits_field::<Hash>())
-        .with_attachment_lbts(bee_bundle::Timestamp(0))
-        .with_attachment_ubts(bee_bundle::Timestamp(0))
+        .with_attachment_lbts(bee_bundle::Timestamp::from_inner_unchecked(0))
+        .with_attachment_ubts(bee_bundle::Timestamp::from_inner_unchecked(0))
         .with_nonce(rand_trits_field::<Nonce>());
 
     (rand_trits_field::<Hash>(), builder.build().unwrap())
@@ -72,18 +73,18 @@ pub fn create_random_attached_tx(
     let builder = bee_bundle::TransactionBuilder::new()
         .with_payload(rand_trits_field::<Payload>())
         .with_address(rand_trits_field::<Address>())
-        .with_value(bee_bundle::Value(0))
+        .with_value(bee_bundle::Value::from_inner_unchecked(0))
         .with_obsolete_tag(rand_trits_field::<Tag>())
-        .with_timestamp(bee_bundle::Timestamp(0))
-        .with_index(bee_bundle::Index(0))
-        .with_last_index(bee_bundle::Index(0))
+        .with_timestamp(bee_bundle::Timestamp::from_inner_unchecked(0))
+        .with_index(bee_bundle::Index::from_inner_unchecked(0))
+        .with_last_index(bee_bundle::Index::from_inner_unchecked(0))
         .with_tag(rand_trits_field::<Tag>())
-        .with_attachment_ts(bee_bundle::Timestamp(0))
+        .with_attachment_ts(bee_bundle::Timestamp::from_inner_unchecked(0))
         .with_bundle(rand_trits_field::<Hash>())
         .with_trunk(trunk)
         .with_branch(branch)
-        .with_attachment_lbts(bee_bundle::Timestamp(0))
-        .with_attachment_ubts(bee_bundle::Timestamp(0))
+        .with_attachment_lbts(bee_bundle::Timestamp::from_inner_unchecked(0))
+        .with_attachment_ubts(bee_bundle::Timestamp::from_inner_unchecked(0))
         .with_nonce(rand_trits_field::<Nonce>());
 
     (rand_trits_field::<Hash>(), builder.build().unwrap())
