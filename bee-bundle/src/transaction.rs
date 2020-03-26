@@ -43,6 +43,8 @@ pub trait TransactionField: Sized {
     fn from_tritbuf_unchecked(buffer: TritBuf) -> Self;
 
     fn into_inner(&self) -> TritBuf<T1B1Buf>;
+
+    fn trit_len() -> usize;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -51,17 +53,6 @@ pub struct Payload(pub TritBuf<T1B1Buf>);
 impl Payload {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(PAYLOAD.trit_offset.length))
-    }
-
-    pub fn from_str(payload: &str) -> Self {
-        assert!(payload.len() <= PAYLOAD.tryte_offset.length);
-        assert!(payload.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = PAYLOAD.tryte_offset.length - payload.len();
-        let payload = payload.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&payload);
-
-        Self(tritbuf)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -81,17 +72,6 @@ impl Address {
         Self(TritBuf::zeros(ADDRESS.trit_offset.length))
     }
 
-    pub fn from_str(address: &str) -> Self {
-        assert!(address.len() <= ADDRESS.tryte_offset.length);
-        assert!(address.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = ADDRESS.tryte_offset.length - address.len();
-        let address = address.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&address);
-
-        Self(tritbuf)
-    }
-
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
     }
@@ -100,6 +80,8 @@ impl Address {
         ADDRESS_TRIT_LEN
     }
 }
+
+impl Eq for Address {}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Value(pub i64);
@@ -110,17 +92,6 @@ pub struct Tag(pub TritBuf<T1B1Buf>);
 impl Tag {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(TAG.trit_offset.length))
-    }
-
-    pub fn from_str(tag: &str) -> Self {
-        assert!(tag.len() <= TAG.tryte_offset.length);
-        assert!(tag.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = TAG.tryte_offset.length - tag.len();
-        let tag = tag.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&tag);
-
-        Self(tritbuf)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -146,17 +117,6 @@ impl Hash {
         Self(TritBuf::zeros(BUNDLE.trit_offset.length))
     }
 
-    pub fn from_str(hash: &str) -> Self {
-        assert!(hash.len() <= BUNDLE.tryte_offset.length);
-        assert!(hash.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = BUNDLE.tryte_offset.length - hash.len();
-        let hash = hash.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&hash);
-
-        Self(tritbuf)
-    }
-
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
     }
@@ -168,11 +128,6 @@ impl Hash {
 
 impl Eq for Hash {}
 
-impl hash::Hash for Hash {
-    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        self.0.hash(hasher)
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Nonce(pub TritBuf<T1B1Buf>);
@@ -180,17 +135,6 @@ pub struct Nonce(pub TritBuf<T1B1Buf>);
 impl Nonce {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(NONCE.trit_offset.length))
-    }
-
-    pub fn from_str(nonce: &str) -> Self {
-        assert!(nonce.len() <= NONCE.tryte_offset.length);
-        assert!(nonce.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = NONCE.tryte_offset.length - nonce.len();
-        let nonce = nonce.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&nonce);
-
-        Self(tritbuf)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -222,12 +166,29 @@ macro_rules! impl_into_inner_for_fields {
 
                     Self(buffer)
                 }
+
+                fn trit_len() -> usize {
+                   Self::trit_len()
+                }
+            }
+        )+
+    }
+}
+
+macro_rules! impl_hash_trait {
+    ( $($field_name:ident),+ $(,)?) => {
+        $(
+            impl hash::Hash for $field_name {
+                fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+                       self.0.hash(hasher)
+                }
             }
         )+
     }
 }
 
 impl_into_inner_for_fields!(Payload, Address, Hash, Tag, Nonce);
+impl_hash_trait!(Hash,Address);
 
 #[derive(Debug)]
 pub enum TransactionError {
