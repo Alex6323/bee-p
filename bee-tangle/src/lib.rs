@@ -62,7 +62,22 @@ impl Tangle {
         }
     }
 
+    pub async fn solidify(&'static self, id: TransactionId) -> Option<()> {
+        todo!()
+    }
+
     pub async fn get_meta(&'static self, id: TransactionId) -> Option<VertexMeta> {
+        todo!()
+    }
+
+    pub async fn get_meta(&'static self, id: TransactionId) -> Option<VertexMeta> {
+        todo!()
+    }
+
+    /// This function is *eventually consistent* - if `true` is returned, solidification has
+    /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
+    /// or solidification information has not yet been fully propagated.
+    pub async fn is_solid(&'static self, id: TransactionId) -> Option<bool> {
         todo!()
     }
 
