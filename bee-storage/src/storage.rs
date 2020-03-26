@@ -84,12 +84,12 @@ pub trait StorageBackend {
         transaction_hashes: &HashSet<bee_bundle::Hash>,
     ) -> Result<(), Self::StorageError>;
 
-    async fn insert_milestone(&self, milestone: bee_bundle::transaction::Milestone) -> Result<(), Self::StorageError>;
+    async fn insert_milestone(&self, milestone: bee_bundle::Milestone) -> Result<(), Self::StorageError>;
 
     async fn find_milestone(
         &self,
         milestone_hash: bee_bundle::Hash,
-    ) -> Result<bee_bundle::transaction::Milestone, Self::StorageError>;
+    ) -> Result<bee_bundle::Milestone, Self::StorageError>;
 
     async fn delete_milestones(&self, milestone_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), Self::StorageError>;
 

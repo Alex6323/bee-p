@@ -10,8 +10,6 @@ mod tests {
     const BEE_TEST_DB_USER: &str = "test_db_user";
     const BEE_TEST_DB_NAME: &str = "test_db";
 
-    use bee_bundle::Hash;
-
     use crate::sqlx::SqlxBackendStorage;
     use crate::storage::{
         HashesToApprovers,
@@ -36,7 +34,12 @@ mod tests {
     use std::rc::Rc;
     use std::time::Instant;
 
-    use bee_bundle::transaction::TransactionField;
+    use bee_bundle::{
+        Address,
+        Hash,
+        Payload,
+        TransactionField,
+    };
 
     fn test_db_url() -> String {
         format!(

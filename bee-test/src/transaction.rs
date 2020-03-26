@@ -1,6 +1,6 @@
 extern crate rand;
 
-use bee_bundle::transaction::{
+use bee_bundle::{
     Address,
     Hash,
     Milestone,

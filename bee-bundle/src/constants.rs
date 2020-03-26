@@ -1,3 +1,8 @@
+use bee_common::constants::{
+    TRANSACTION_TRIT_LEN,
+    TRANSACTION_TRYT_LEN,
+};
+
 pub struct Offset {
     pub start: usize,
     pub length: usize,

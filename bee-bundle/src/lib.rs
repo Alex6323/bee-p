@@ -2,10 +2,10 @@
 extern crate serde;
 
 mod bundle;
-pub mod constants;
-pub mod incoming_bundle_builder;
-pub mod outgoing_bundle_builder;
-pub mod transaction;
+mod constants;
+mod incoming_bundle_builder;
+mod outgoing_bundle_builder;
+mod transaction;
 
 pub use crate::bundle::Bundle;
 pub use incoming_bundle_builder::{
@@ -20,6 +20,7 @@ pub use transaction::{
     Address,
     Hash,
     Index,
+    Milestone,
     Nonce,
     Payload,
     Tag,
@@ -28,6 +29,7 @@ pub use transaction::{
     TransactionBuilder,
     TransactionBuilderError,
     TransactionBuilders,
+    TransactionField,
     Transactions,
     Value,
 };
