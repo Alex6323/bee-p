@@ -108,13 +108,6 @@ impl ReceiverWorker {
         }
     }
 
-    async fn send_handshake(&mut self) {
-        // TODO port
-        let handshake = Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
-
-        SenderWorker::<Handshake>::send(self.peer.epid, handshake).await;
-    }
-
     pub async fn run(mut self) {
         info!("[Peer({})] Receiver worker running.", self.peer.epid);
 
@@ -148,8 +141,10 @@ impl ReceiverWorker {
             ReceiverWorkerEvent::Connected => {
                 info!("[Peer({})] Connected.", self.peer.epid);
 
-                // TODO spawn ?
-                self.send_handshake().await;
+                // TODO port
+                let handshake = Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
+
+                SenderWorker::<Handshake>::send(self.peer.epid, handshake).await;
 
                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                     state: ReceiverWorkerMessageState::Header,
