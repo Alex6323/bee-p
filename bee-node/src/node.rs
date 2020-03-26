@@ -53,9 +53,9 @@ use async_std::task::{
     spawn,
 };
 use futures::{
-    channel::mpsc::{
-        channel,
-        Sender,
+    channel::{
+        mpsc,
+        oneshot,
     },
     sink::SinkExt,
     stream::StreamExt,
@@ -66,12 +66,13 @@ pub struct Node {
     network: Network,
     shutdown: Shutdown,
     events: EventSubscriber,
-    peers: HashMap<EndpointId, (Sender<ReceiverWorkerEvent>, Arc<Peer>)>,
+    // TODO real type ?
+    peers: HashMap<EndpointId, (mpsc::Sender<ReceiverWorkerEvent>, oneshot::Sender<()>, Arc<Peer>)>,
     metrics: Arc<PeerMetrics>,
-    transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
-    responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
-    requester_worker_sender: Option<Sender<RequesterWorkerEvent>>,
-    milestone_validator_worker_sender: Option<Sender<MilestoneValidatorWorkerEvent>>,
+    transaction_worker_sender: Option<mpsc::Sender<TransactionWorkerEvent>>,
+    responder_worker_sender: Option<mpsc::Sender<ResponderWorkerEvent>>,
+    requester_worker_sender: Option<mpsc::Sender<RequesterWorkerEvent>>,
+    milestone_validator_worker_sender: Option<mpsc::Sender<MilestoneValidatorWorkerEvent>>,
 }
 
 impl Node {
@@ -91,13 +92,17 @@ impl Node {
 
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
         // TODO conf
-        let (receiver_tx, receiver_rx) = channel(1000);
-        let (handshake_sender_tx, handshake_sender_rx) = channel(HANDSHAKE_SEND_BOUND);
-        let (milestone_request_sender_tx, milestone_request_sender_rx) = channel(MILESTONE_REQUEST_SEND_BOUND);
+        // ReceiverWorker channels
+        let (receiver_tx, receiver_rx) = mpsc::channel(1000);
+        let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
+
+        let (handshake_sender_tx, handshake_sender_rx) = mpsc::channel(HANDSHAKE_SEND_BOUND);
+        let (milestone_request_sender_tx, milestone_request_sender_rx) = mpsc::channel(MILESTONE_REQUEST_SEND_BOUND);
         let (transaction_broadcast_sender_tx, transaction_broadcast_sender_rx) =
-            channel(TRANSACTION_BROADCAST_SEND_BOUND);
-        let (transaction_request_sender_tx, transaction_request_sender_rx) = channel(TRANSACTION_REQUEST_SEND_BOUND);
-        let (heartbeat_sender_tx, heartbeat_sender_rx) = channel(HEARTBEAT_SEND_BOUND);
+            mpsc::channel(TRANSACTION_BROADCAST_SEND_BOUND);
+        let (transaction_request_sender_tx, transaction_request_sender_rx) =
+            mpsc::channel(TRANSACTION_REQUEST_SEND_BOUND);
+        let (heartbeat_sender_tx, heartbeat_sender_rx) = mpsc::channel(HEARTBEAT_SEND_BOUND);
 
         let context = SenderContext::new(
             handshake_sender_tx,
@@ -109,7 +114,8 @@ impl Node {
 
         let peer = Arc::new(Peer::new(epid));
 
-        self.peers.insert(epid, (receiver_tx, peer.clone()));
+        self.peers
+            .insert(epid, (receiver_tx, receiver_shutdown_tx, peer.clone()));
         sender_registry().contexts().write().await.insert(epid, context);
 
         spawn(
@@ -117,6 +123,7 @@ impl Node {
                 peer.clone(),
                 self.metrics.clone(),
                 receiver_rx,
+                receiver_shutdown_rx,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
                 self.responder_worker_sender.as_ref().unwrap().clone(),
             )
@@ -182,14 +189,10 @@ impl Node {
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
-        if let Some(peer) = self.peers.get_mut(&epid) {
-            if let Err(e) = peer.0.send(ReceiverWorkerEvent::Removed).await {
-                warn!(
-                    "[Node ] Sending ReceiverWorkerEvent::Removed to {} failed: {}.",
-                    epid, e
-                );
+        if let Some((_, shutdown, _)) = self.peers.remove(&epid) {
+            if let Err(_) = shutdown.send(()) {
+                warn!("[Node ] Sending shutdown to {} failed.", epid);
             }
-            self.peers.remove(&epid);
             sender_registry().contexts().write().await.remove(&epid);
         }
     }
@@ -252,22 +255,22 @@ impl Node {
         SenderRegistry::init();
 
         // TODO conf
-        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
+        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = mpsc::channel(1000);
         self.milestone_validator_worker_sender = Some(milestone_validator_worker_sender);
         spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
 
         // TODO conf
-        let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
+        let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
         self.transaction_worker_sender = Some(transaction_worker_sender);
         spawn(TransactionWorker::new(transaction_worker_receiver).run());
 
         // TODO conf
-        let (responder_worker_sender, responder_worker_receiver) = channel(1000);
+        let (responder_worker_sender, responder_worker_receiver) = mpsc::channel(1000);
         self.responder_worker_sender = Some(responder_worker_sender);
         spawn(ResponderWorker::new(responder_worker_receiver).run());
 
         // TODO conf
-        let (requester_worker_sender, requester_worker_receiver) = channel(1000);
+        let (requester_worker_sender, requester_worker_receiver) = mpsc::channel(1000);
         self.requester_worker_sender = Some(requester_worker_sender);
         spawn(RequesterWorker::new(requester_worker_receiver).run());
 

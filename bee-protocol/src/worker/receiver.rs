@@ -39,10 +39,12 @@ use std::{
 };
 
 use futures::{
-    channel::mpsc::{
-        Receiver,
-        Sender,
+    channel::{
+        mpsc,
+        oneshot,
     },
+    future::FutureExt,
+    select,
     sink::SinkExt,
     stream::StreamExt,
 };
@@ -54,7 +56,6 @@ pub(crate) enum ReceiverWorkerError {
 }
 
 pub enum ReceiverWorkerEvent {
-    Removed,
     Connected,
     Disconnected,
     Message(Vec<u8>),
@@ -85,23 +86,26 @@ enum ReceiverWorkerState {
 pub struct ReceiverWorker {
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
-    receiver: Receiver<ReceiverWorkerEvent>,
-    transaction_worker_sender: Sender<TransactionWorkerEvent>,
-    responder_worker: Sender<ResponderWorkerEvent>,
+    event_receiver: mpsc::Receiver<ReceiverWorkerEvent>,
+    shutdown_receiver: oneshot::Receiver<()>,
+    transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
+    responder_worker: mpsc::Sender<ResponderWorkerEvent>,
 }
 
 impl ReceiverWorker {
     pub fn new(
         peer: Arc<Peer>,
         metrics: Arc<PeerMetrics>,
-        receiver: Receiver<ReceiverWorkerEvent>,
-        transaction_worker_sender: Sender<TransactionWorkerEvent>,
-        responder_worker: Sender<ResponderWorkerEvent>,
+        event_receiver: mpsc::Receiver<ReceiverWorkerEvent>,
+        shutdown_receiver: oneshot::Receiver<()>,
+        transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
+        responder_worker: mpsc::Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
             peer,
             metrics,
-            receiver,
+            event_receiver,
+            shutdown_receiver,
             transaction_worker_sender,
             responder_worker,
         }
@@ -129,16 +133,21 @@ impl ReceiverWorker {
 
         let mut state = ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {});
 
-        while let Some(event) = self.receiver.next().await {
-            if let ReceiverWorkerEvent::Removed = event {
-                info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
-                break;
-            }
-
-            state = match state {
-                ReceiverWorkerState::AwaitingConnection(context) => self.connection_handler(context, event).await,
-                ReceiverWorkerState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,
-                ReceiverWorkerState::AwaitingMessage(context) => self.message_handler(context, event).await,
+        loop {
+            select! {
+                event = self.event_receiver.next().fuse() => {
+                    if let Some(event) = event {
+                        state = match state {
+                            ReceiverWorkerState::AwaitingConnection(context) => self.connection_handler(context, event).await,
+                            ReceiverWorkerState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,
+                            ReceiverWorkerState::AwaitingMessage(context) => self.message_handler(context, event).await,
+                        }
+                    }
+                },
+                _ = (&mut self.shutdown_receiver).fuse() => {
+                    info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
+                    break;
+                }
             }
         }
     }
