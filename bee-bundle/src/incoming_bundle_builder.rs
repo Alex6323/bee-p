@@ -8,8 +8,8 @@ use crate::transaction::{
     Index,
     Transaction,
     TransactionBuilder,
+    TransactionField,
     Transactions,
-    TransactionField
 };
 
 use bee_crypto::Sponge;
@@ -18,7 +18,11 @@ use bee_signing::{
     Signature,
     WotsPublicKey,
 };
-use bee_ternary::{trit::Btrit, TritBuf, T1B1Buf};
+use bee_ternary::{
+    trit::Btrit,
+    T1B1Buf,
+    TritBuf,
+};
 
 use std::marker::PhantomData;
 
@@ -121,11 +125,15 @@ where
 
         for (index, transaction) in self.transactions.0.iter().enumerate() {
             if index != *transaction.index().into_inner() {
-                Err(IncomingBundleBuilderError::InvalidIndex(*transaction.index().into_inner()))?;
+                Err(IncomingBundleBuilderError::InvalidIndex(
+                    *transaction.index().into_inner(),
+                ))?;
             }
 
             if last_index != *transaction.last_index().into_inner() {
-                Err(IncomingBundleBuilderError::InvalidLastIndex(*transaction.last_index().into_inner()))?;
+                Err(IncomingBundleBuilderError::InvalidLastIndex(
+                    *transaction.last_index().into_inner(),
+                ))?;
             }
 
             sum += *transaction.value.into_inner();
@@ -134,7 +142,12 @@ where
             }
 
             if *transaction.value.into_inner() != 0
-                && transaction.address().into_inner().get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero
+                && transaction
+                    .address()
+                    .into_inner()
+                    .get(ADDRESS.trit_offset.length - 1)
+                    .unwrap()
+                    != Btrit::Zero
             {
                 Err(IncomingBundleBuilderError::InvalidAddress)?;
             }

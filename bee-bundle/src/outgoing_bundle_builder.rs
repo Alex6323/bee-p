@@ -1,6 +1,14 @@
 use crate::bundle::Bundle;
 use crate::constants::IOTA_SUPPLY;
-use crate::transaction::{Hash, Index, TransactionBuilder, TransactionBuilderError, TransactionBuilders, Transactions, TransactionField};
+use crate::transaction::{
+    Hash,
+    Index,
+    TransactionBuilder,
+    TransactionBuilderError,
+    TransactionBuilders,
+    TransactionField,
+    Transactions,
+};
 
 use bee_crypto::Sponge;
 use bee_ternary::TritBuf;

@@ -1,8 +1,8 @@
-extern crate rand;
 extern crate bee_bundle;
+extern crate rand;
 
-pub mod storage;
 pub mod sqlx;
+pub mod storage;
 
 #[cfg(test)]
 mod tests {
@@ -10,18 +10,18 @@ mod tests {
     const BEE_TEST_DB_USER: &str = "test_db_user";
     const BEE_TEST_DB_NAME: &str = "test_db";
 
+    use bee_bundle::Hash;
 
-    use bee_bundle::{
-        Hash,
+    use crate::sqlx::SqlxBackendStorage;
+    use crate::storage::{
+        HashesToApprovers,
+        MissingHashesToRCApprovers,
+        StateDeltaMap,
+        StorageBackend,
     };
-
-    use crate::storage::{StorageBackend, MissingHashesToRCApprovers, HashesToApprovers, StateDeltaMap};
-    use crate::sqlx::{SqlxBackendStorage};
 
     use futures::executor::block_on;
-    use futures::future::{
-        join_all,
-    };
+    use futures::future::join_all;
 
     use std::collections::{
         HashMap,
@@ -34,9 +34,7 @@ mod tests {
     use std::panic;
     use std::process::Command;
     use std::rc::Rc;
-    use std::time::{
-        Instant,
-    };
+    use std::time::Instant;
 
     use bee_bundle::transaction::TransactionField;
 

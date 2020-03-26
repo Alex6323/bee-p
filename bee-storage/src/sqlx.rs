@@ -13,9 +13,30 @@ use std::{
 
 use sqlx::Error as SqlxError;
 
-use crate::storage::{Storage, StorageBackend, Connection, StateDeltaMap, HashesToApprovers, MissingHashesToRCApprovers};
+use crate::storage::{
+    Connection,
+    HashesToApprovers,
+    MissingHashesToRCApprovers,
+    StateDeltaMap,
+    Storage,
+    StorageBackend,
+};
 
-use bee_bundle::{constants::*, transaction::{Milestone, Hash, Address, Payload, Tag, Nonce, Timestamp, Index, Value, TransactionField}};
+use bee_bundle::{
+    constants::*,
+    transaction::{
+        Address,
+        Hash,
+        Index,
+        Milestone,
+        Nonce,
+        Payload,
+        Tag,
+        Timestamp,
+        TransactionField,
+        Value,
+    },
+};
 
 use bee_ternary::{
     T1B1Buf,
@@ -39,7 +60,6 @@ use sqlx::{
     PgPool,
     Row,
 };
-
 
 std::include!("sql/statements.rs");
 
@@ -257,9 +277,10 @@ impl StorageBackend for SqlxBackendStorage {
                 let mut optional_approver_rc = None;
 
                 if !all_hashes.contains(&branch) {
-                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(Hash::from_inner_unchecked(
-                        decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(), HASH_TRIT_LEN),
-                    )));
+                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(Hash::from_inner_unchecked(decode_bytes(
+                        row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
+                        HASH_TRIT_LEN,
+                    ))));
                     missing_to_approvers
                         .entry(Hash::from_inner_unchecked(decode_bytes(
                             row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(),
@@ -572,11 +593,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn insert_state_delta(
-        &self,
-        state_delta: StateDeltaMap,
-        index: u32,
-    ) -> Result<(), SqlxBackendError> {
+    async fn insert_state_delta(&self, state_delta: StateDeltaMap, index: u32) -> Result<(), SqlxBackendError> {
         let pool = self
             .0
             .connection

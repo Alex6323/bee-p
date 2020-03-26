@@ -1,17 +1,29 @@
 extern crate rand;
 
-use bee_bundle::{transaction::{TransactionField, Hash, Payload, Address, Nonce, Tag, Milestone}};
-use bee_ternary::{Trits, T1B1Buf, T1B1, TritBuf};
+use bee_bundle::transaction::{
+    Address,
+    Hash,
+    Milestone,
+    Nonce,
+    Payload,
+    Tag,
+    TransactionField,
+};
+use bee_ternary::{
+    T1B1Buf,
+    TritBuf,
+    Trits,
+    T1B1,
+};
 
 use rand::Rng;
 
 pub fn rand_trits_field<T: TransactionField<inner = TritBuf>>() -> T {
-
     //type T::inner = TritBuf;
-    const TRIT_SET: &[i8] = &[-1,0,1];
+    const TRIT_SET: &[i8] = &[-1, 0, 1];
     let mut rng = rand::thread_rng();
 
-    let raw_buffer : Vec<i8> = (0..T::trit_len())
+    let raw_buffer: Vec<i8> = (0..T::trit_len())
         .map(|_| {
             let idx = rng.gen_range(0, TRIT_SET.len());
             TRIT_SET[idx]
@@ -24,7 +36,7 @@ pub fn rand_trits_field<T: TransactionField<inner = TritBuf>>() -> T {
     T::from_inner_unchecked(trits)
 }
 
-pub fn clone_tx(tx : &bee_bundle::Transaction) -> bee_bundle::Transaction {
+pub fn clone_tx(tx: &bee_bundle::Transaction) -> bee_bundle::Transaction {
     let builder = bee_bundle::TransactionBuilder::new()
         .with_payload(tx.payload().clone())
         .with_address(tx.address().clone())
