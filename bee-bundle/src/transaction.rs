@@ -16,7 +16,6 @@ use crate::constants::{
     TRYTE_ZERO,
 };
 
-use bee_ternary::util::trytes_to_trits_buf;
 use bee_ternary::{
     raw::RawEncoding,
     raw::RawEncodingBuf,
@@ -65,7 +64,7 @@ impl Payload {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Address(pub TritBuf<T1B1Buf>);
+pub struct Address(TritBuf<T1B1Buf>);
 
 impl Address {
     pub fn zeros() -> Self {
@@ -87,7 +86,7 @@ impl Eq for Address {}
 pub struct Value(pub i64);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Tag(pub TritBuf<T1B1Buf>);
+pub struct Tag(TritBuf<T1B1Buf>);
 
 impl Tag {
     pub fn zeros() -> Self {
@@ -110,7 +109,7 @@ pub struct Timestamp(pub u64);
 pub struct Index(pub usize);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Hash(pub TritBuf<T1B1Buf>);
+pub struct Hash(TritBuf<T1B1Buf>);
 
 impl Hash {
     pub fn zeros() -> Self {
@@ -130,7 +129,7 @@ impl Eq for Hash {}
 
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Nonce(pub TritBuf<T1B1Buf>);
+pub struct Nonce(TritBuf<T1B1Buf>);
 
 impl Nonce {
     pub fn zeros() -> Self {

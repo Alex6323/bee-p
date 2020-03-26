@@ -9,6 +9,7 @@ use crate::transaction::{
     Transaction,
     TransactionBuilder,
     Transactions,
+    TransactionField
 };
 
 use bee_crypto::Sponge;
@@ -136,7 +137,7 @@ where
             }
 
             if transaction.value.0 != 0
-                && transaction.address().0.get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero
+                && transaction.address().to_owned().into_inner().get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero
             {
                 Err(IncomingBundleBuilderError::InvalidAddress)?;
             }

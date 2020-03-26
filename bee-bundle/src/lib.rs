@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate serde;
 
-pub mod bundle;
+mod bundle;
 pub mod constants;
 pub mod incoming_bundle_builder;
 pub mod outgoing_bundle_builder;
