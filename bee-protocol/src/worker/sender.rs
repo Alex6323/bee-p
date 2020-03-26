@@ -27,37 +27,63 @@ use std::{
 
 use async_std::sync::RwLock;
 use futures::{
-    channel::mpsc::{
-        Receiver,
-        Sender,
+    channel::{
+        mpsc,
+        oneshot,
     },
+    future::FutureExt,
+    select,
     sink::SinkExt,
     stream::StreamExt,
 };
 use log::warn;
 
 pub struct SenderContext {
-    pub(crate) handshake_sender: Sender<SenderWorkerEvent<Handshake>>,
-    pub(crate) milestone_request_sender: Sender<SenderWorkerEvent<MilestoneRequest>>,
-    pub(crate) transaction_broadcast_sender: Sender<SenderWorkerEvent<TransactionBroadcast>>,
-    pub(crate) transaction_request_sender: Sender<SenderWorkerEvent<TransactionRequest>>,
-    pub(crate) heartbeat_sender: Sender<SenderWorkerEvent<Heartbeat>>,
+    pub(crate) handshake: (mpsc::Sender<SenderWorkerEvent<Handshake>>, oneshot::Sender<()>),
+    pub(crate) milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
+    pub(crate) transaction_broadcast: (
+        mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
+        oneshot::Sender<()>,
+    ),
+    pub(crate) transaction_request: (mpsc::Sender<SenderWorkerEvent<TransactionRequest>>, oneshot::Sender<()>),
+    pub(crate) heartbeat: (mpsc::Sender<SenderWorkerEvent<Heartbeat>>, oneshot::Sender<()>),
 }
 
 impl SenderContext {
     pub fn new(
-        handshake_sender: Sender<SenderWorkerEvent<Handshake>>,
-        milestone_request_sender: Sender<SenderWorkerEvent<MilestoneRequest>>,
-        transaction_broadcast_sender: Sender<SenderWorkerEvent<TransactionBroadcast>>,
-        transaction_request_sender: Sender<SenderWorkerEvent<TransactionRequest>>,
-        heartbeat_sender: Sender<SenderWorkerEvent<Heartbeat>>,
+        handshake: (mpsc::Sender<SenderWorkerEvent<Handshake>>, oneshot::Sender<()>),
+        milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
+        transaction_broadcast: (
+            mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
+            oneshot::Sender<()>,
+        ),
+        transaction_request: (mpsc::Sender<SenderWorkerEvent<TransactionRequest>>, oneshot::Sender<()>),
+        heartbeat: (mpsc::Sender<SenderWorkerEvent<Heartbeat>>, oneshot::Sender<()>),
     ) -> Self {
         Self {
-            handshake_sender,
-            milestone_request_sender,
-            transaction_broadcast_sender,
-            transaction_request_sender,
-            heartbeat_sender,
+            handshake,
+            milestone_request,
+            transaction_broadcast,
+            transaction_request,
+            heartbeat,
+        }
+    }
+
+    pub fn shutdown(self) {
+        if let Err(_) = self.handshake.1.send(()) {
+            warn!("[SenderContext ] Shutting down Handshake SenderWorker failed.");
+        }
+        if let Err(_) = self.milestone_request.1.send(()) {
+            warn!("[SenderContext ] Shutting down MilestoneRequest SenderWorker failed.");
+        }
+        if let Err(_) = self.transaction_broadcast.1.send(()) {
+            warn!("[SenderContext ] Shutting down TransactionBroadcast SenderWorker failed.");
+        }
+        if let Err(_) = self.transaction_request.1.send(()) {
+            warn!("[SenderContext ] Shutting down TransactionRequest SenderWorker failed.");
+        }
+        if let Err(_) = self.heartbeat.1.send(()) {
+            warn!("[SenderContext ] Shutting down Heartbeat SenderWorker failed.");
         }
     }
 }
@@ -97,23 +123,26 @@ pub struct SenderWorker<M: Message> {
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
     network: Network,
-    receiver: Receiver<SenderWorkerEvent<M>>,
+    events: mpsc::Receiver<SenderWorkerEvent<M>>,
+    shutdown: oneshot::Receiver<()>,
 }
 
 macro_rules! implement_sender_worker {
-    ($type:ident, $sender:ident, $incrementor:ident) => {
+    ($type:tt, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
             pub fn new(
                 peer: Arc<Peer>,
                 metrics: Arc<PeerMetrics>,
                 network: Network,
-                receiver: Receiver<SenderWorkerEvent<$type>>,
+                events: mpsc::Receiver<SenderWorkerEvent<$type>>,
+                shutdown: oneshot::Receiver<()>,
             ) -> Self {
                 Self {
                     peer,
                     metrics,
                     network,
-                    receiver,
+                    events,
+                    shutdown,
                 }
             }
 
@@ -121,6 +150,7 @@ macro_rules! implement_sender_worker {
                 if let Some(context) = sender_registry().contexts().read().await.get(&epid) {
                     if let Err(e) = context
                         .$sender
+                        .0
                         // TODO avoid clone
                         .clone()
                         .send(SenderWorkerEvent::Message(message))
@@ -132,25 +162,34 @@ macro_rules! implement_sender_worker {
             }
 
             pub async fn run(mut self) {
-                while let Some(SenderWorkerEvent::Message(message)) = self.receiver.next().await {
-                    match self
-                        .network
-                        .send(SendBytes {
-                            epid: self.peer.epid,
-                            bytes: message.into_full_bytes(),
-                            responder: None,
-                        })
-                        .await
-                    {
-                        Ok(_) => {
-                            self.peer.metrics.$incrementor();
-                            self.metrics.$incrementor();
+                loop {
+                    select! {
+                        message = self.events.next().fuse() => {
+                            if let Some(SenderWorkerEvent::Message(message)) = message {
+                                match self
+                                    .network
+                                    .send(SendBytes {
+                                        epid: self.peer.epid,
+                                        bytes: message.into_full_bytes(),
+                                        responder: None,
+                                    })
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        self.peer.metrics.$incrementor();
+                                        self.metrics.$incrementor();
+                                    }
+                                    Err(e) => {
+                                        warn!(
+                                            "[SenderWorker({}) ] Sending message failed: {}.",
+                                            self.peer.epid, e
+                                        );
+                                    }
+                                }
+                            }
                         }
-                        Err(e) => {
-                            warn!(
-                                "[SenderWorker({}) ] Sending message failed: {}.",
-                                self.peer.epid, e
-                            );
+                        _ = (&mut self.shutdown).fuse() => {
+                            break;
                         }
                     }
                 }
@@ -159,12 +198,8 @@ macro_rules! implement_sender_worker {
     };
 }
 
-implement_sender_worker!(Handshake, handshake_sender, handshake_sent);
-implement_sender_worker!(MilestoneRequest, milestone_request_sender, milestone_request_sent);
-implement_sender_worker!(
-    TransactionBroadcast,
-    transaction_broadcast_sender,
-    transaction_broadcast_sent
-);
-implement_sender_worker!(TransactionRequest, transaction_request_sender, transaction_request_sent);
-implement_sender_worker!(Heartbeat, heartbeat_sender, heartbeat_sent);
+implement_sender_worker!(Handshake, handshake, handshake_sent);
+implement_sender_worker!(MilestoneRequest, milestone_request, milestone_request_sent);
+implement_sender_worker!(TransactionBroadcast, transaction_broadcast, transaction_broadcast_sent);
+implement_sender_worker!(TransactionRequest, transaction_request, transaction_request_sent);
+implement_sender_worker!(Heartbeat, heartbeat, heartbeat_sent);

@@ -96,20 +96,32 @@ impl Node {
         let (receiver_tx, receiver_rx) = mpsc::channel(1000);
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
-        let (handshake_sender_tx, handshake_sender_rx) = mpsc::channel(HANDSHAKE_SEND_BOUND);
-        let (milestone_request_sender_tx, milestone_request_sender_rx) = mpsc::channel(MILESTONE_REQUEST_SEND_BOUND);
-        let (transaction_broadcast_sender_tx, transaction_broadcast_sender_rx) =
-            mpsc::channel(TRANSACTION_BROADCAST_SEND_BOUND);
-        let (transaction_request_sender_tx, transaction_request_sender_rx) =
-            mpsc::channel(TRANSACTION_REQUEST_SEND_BOUND);
-        let (heartbeat_sender_tx, heartbeat_sender_rx) = mpsc::channel(HEARTBEAT_SEND_BOUND);
+        // SenderWorker Handshake channels
+        let (handshake_tx, handshake_rx) = mpsc::channel(HANDSHAKE_SEND_BOUND);
+        let (handshake_shutdown_tx, handshake_shutdown_rx) = oneshot::channel();
+
+        // SenderWorker MilestoneRequest channels
+        let (milestone_request_tx, milestone_request_rx) = mpsc::channel(MILESTONE_REQUEST_SEND_BOUND);
+        let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
+
+        // SenderWorker TransactionBroadcast channels
+        let (transaction_broadcast_tx, transaction_broadcast_rx) = mpsc::channel(TRANSACTION_BROADCAST_SEND_BOUND);
+        let (transaction_broadcast_shutdown_tx, transaction_broadcast_shutdown_rx) = oneshot::channel();
+
+        // SenderWorker TransactionRequest channels
+        let (transaction_request_tx, transaction_request_rx) = mpsc::channel(TRANSACTION_REQUEST_SEND_BOUND);
+        let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
+
+        // SenderWorker Heartbeat channels
+        let (heartbeat_tx, heartbeat_rx) = mpsc::channel(HEARTBEAT_SEND_BOUND);
+        let (heartbeat_shutdown_tx, heartbeat_shutdown_rx) = oneshot::channel();
 
         let context = SenderContext::new(
-            handshake_sender_tx,
-            milestone_request_sender_tx,
-            transaction_broadcast_sender_tx,
-            transaction_request_sender_tx,
-            heartbeat_sender_tx,
+            (handshake_tx, handshake_shutdown_tx),
+            (milestone_request_tx, milestone_request_shutdown_tx),
+            (transaction_broadcast_tx, transaction_broadcast_shutdown_tx),
+            (transaction_request_tx, transaction_request_shutdown_tx),
+            (heartbeat_tx, heartbeat_shutdown_tx),
         );
 
         let peer = Arc::new(Peer::new(epid));
@@ -135,7 +147,8 @@ impl Node {
                 peer.clone(),
                 self.metrics.clone(),
                 self.network.clone(),
-                handshake_sender_rx,
+                handshake_rx,
+                handshake_shutdown_rx,
             )
             .run(),
         );
@@ -144,7 +157,8 @@ impl Node {
                 peer.clone(),
                 self.metrics.clone(),
                 self.network.clone(),
-                milestone_request_sender_rx,
+                milestone_request_rx,
+                milestone_request_shutdown_rx,
             )
             .run(),
         );
@@ -153,7 +167,8 @@ impl Node {
                 peer.clone(),
                 self.metrics.clone(),
                 self.network.clone(),
-                transaction_broadcast_sender_rx,
+                transaction_broadcast_rx,
+                transaction_broadcast_shutdown_rx,
             )
             .run(),
         );
@@ -162,7 +177,8 @@ impl Node {
                 peer.clone(),
                 self.metrics.clone(),
                 self.network.clone(),
-                transaction_request_sender_rx,
+                transaction_request_rx,
+                transaction_request_shutdown_rx,
             )
             .run(),
         );
@@ -171,7 +187,8 @@ impl Node {
                 peer.clone(),
                 self.metrics.clone(),
                 self.network.clone(),
-                heartbeat_sender_rx,
+                heartbeat_rx,
+                heartbeat_shutdown_rx,
             )
             .run(),
         );
@@ -193,7 +210,9 @@ impl Node {
             if let Err(_) = shutdown.send(()) {
                 warn!("[Node ] Sending shutdown to {} failed.", epid);
             }
-            sender_registry().contexts().write().await.remove(&epid);
+        }
+        if let Some(context) = sender_registry().contexts().write().await.remove(&epid) {
+            context.shutdown();
         }
     }
 

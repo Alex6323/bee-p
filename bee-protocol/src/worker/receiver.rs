@@ -83,8 +83,8 @@ enum ReceiverWorkerState {
 pub struct ReceiverWorker {
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
-    event_receiver: mpsc::Receiver<ReceiverWorkerEvent>,
-    shutdown_receiver: oneshot::Receiver<()>,
+    events: mpsc::Receiver<ReceiverWorkerEvent>,
+    shutdown: oneshot::Receiver<()>,
     transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
     responder_worker: mpsc::Sender<ResponderWorkerEvent>,
 }
@@ -93,16 +93,16 @@ impl ReceiverWorker {
     pub fn new(
         peer: Arc<Peer>,
         metrics: Arc<PeerMetrics>,
-        event_receiver: mpsc::Receiver<ReceiverWorkerEvent>,
-        shutdown_receiver: oneshot::Receiver<()>,
+        events: mpsc::Receiver<ReceiverWorkerEvent>,
+        shutdown: oneshot::Receiver<()>,
         transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
         responder_worker: mpsc::Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
             peer,
             metrics,
-            event_receiver,
-            shutdown_receiver,
+            events,
+            shutdown,
             transaction_worker_sender,
             responder_worker,
         }
@@ -115,7 +115,7 @@ impl ReceiverWorker {
 
         loop {
             select! {
-                event = self.event_receiver.next().fuse() => {
+                event = self.events.next().fuse() => {
                     if let Some(event) = event {
                         state = match state {
                             ReceiverWorkerState::AwaitingConnection(context) => self.connection_handler(context, event).await,
@@ -124,7 +124,7 @@ impl ReceiverWorker {
                         }
                     }
                 },
-                _ = (&mut self.shutdown_receiver).fuse() => {
+                _ = (&mut self.shutdown).fuse() => {
                     info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
                     break;
                 }
