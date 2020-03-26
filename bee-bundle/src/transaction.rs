@@ -127,7 +127,6 @@ impl Hash {
 
 impl Eq for Hash {}
 
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Nonce(TritBuf<T1B1Buf>);
 
@@ -177,30 +176,8 @@ macro_rules! impl_into_inner_for_trit_fields {
 }
 
 impl TransactionField for Index {
-
-type inner = usize;
-fn into_inner(&self) -> &Self::inner{
-    &self.0
-}
-
-fn try_from_inner(inner: Self::inner) -> Result<Self, TransactionFieldError> {
-    Ok(Self(inner))
-}
-
-fn from_inner_unchecked(inner: Self::inner) -> Self{
-
-    Self(inner)
-}
-
-fn trit_len() -> usize {
-    unimplemented!()
-}
-}
-
-impl TransactionField for Value {
-
-    type inner = i64;
-    fn into_inner(&self) -> &Self::inner{
+    type inner = usize;
+    fn into_inner(&self) -> &Self::inner {
         &self.0
     }
 
@@ -208,11 +185,28 @@ impl TransactionField for Value {
         Ok(Self(inner))
     }
 
-    fn from_inner_unchecked(inner: Self::inner) -> Self{
-
+    fn from_inner_unchecked(inner: Self::inner) -> Self {
         Self(inner)
     }
 
+    fn trit_len() -> usize {
+        unimplemented!()
+    }
+}
+
+impl TransactionField for Value {
+    type inner = i64;
+    fn into_inner(&self) -> &Self::inner {
+        &self.0
+    }
+
+    fn try_from_inner(inner: Self::inner) -> Result<Self, TransactionFieldError> {
+        Ok(Self(inner))
+    }
+
+    fn from_inner_unchecked(inner: Self::inner) -> Self {
+        Self(inner)
+    }
 
     fn trit_len() -> usize {
         unimplemented!()
@@ -220,29 +214,23 @@ impl TransactionField for Value {
 }
 
 impl TransactionField for Timestamp {
-
     type inner = u64;
-    fn into_inner(&self) -> &Self::inner{
+    fn into_inner(&self) -> &Self::inner {
         &self.0
     }
-
 
     fn try_from_inner(inner: Self::inner) -> Result<Self, TransactionFieldError> {
         Ok(Self(inner))
     }
 
-    fn from_inner_unchecked(inner: Self::inner) -> Self{
-
+    fn from_inner_unchecked(inner: Self::inner) -> Self {
         Self(inner)
     }
-
 
     fn trit_len() -> usize {
         unimplemented!()
     }
 }
-
-
 
 macro_rules! impl_hash_trait {
     ( $($field_name:ident),+ $(,)?) => {
@@ -257,7 +245,7 @@ macro_rules! impl_hash_trait {
 }
 
 impl_into_inner_for_trit_fields!(Payload, Address, Hash, Tag, Nonce);
-impl_hash_trait!(Hash,Address);
+impl_hash_trait!(Hash, Address);
 
 #[derive(Debug)]
 pub enum TransactionError {
@@ -411,7 +399,6 @@ impl Transactions {
         self.0.push(transaction);
     }
 }
-
 
 /// Milestone - TODO - builder?
 
