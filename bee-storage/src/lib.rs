@@ -1,6 +1,8 @@
 extern crate rand;
+extern crate bee_bundle;
 
-mod sqlx;
+pub mod storage;
+pub mod sqlx;
 
 #[cfg(test)]
 mod tests {
@@ -8,24 +10,19 @@ mod tests {
     const BEE_TEST_DB_USER: &str = "test_db_user";
     const BEE_TEST_DB_NAME: &str = "test_db";
 
-    use crate::sqlx::SqlxBackendStorage;
+
     use bee_bundle::{
         Hash,
-        Transaction,
     };
-    use bee_storage::{
-        Milestone,
-        StorageBackend,
-    };
+
+    use crate::storage::{StorageBackend, MissingHashesToRCApprovers, HashesToApprovers, StateDeltaMap};
+    use crate::sqlx::{SqlxBackendStorage};
 
     use futures::executor::block_on;
     use futures::future::{
-        err,
         join_all,
-        ok,
     };
-    use rand::Rng;
-    use std::borrow::Borrow;
+
     use std::collections::{
         HashMap,
         HashSet,
@@ -37,22 +34,9 @@ mod tests {
     use std::panic;
     use std::process::Command;
     use std::rc::Rc;
-    use std::thread;
     use std::time::{
-        Duration,
         Instant,
     };
-
-    use bee_ternary::{
-        T1B1Buf,
-        T5B1Buf,
-        TritBuf,
-        Trits,
-        T1B1,
-        T5B1,
-    };
-
-    use std::slice;
 
     use bee_bundle::transaction::TransactionField;
 
@@ -77,8 +61,8 @@ mod tests {
     }
 
     fn setup_db() -> () {
-        let output = Command::new("schemes/postgress/setup.sh")
-            .arg("schemes/postgress/schema.sql")
+        let output = Command::new("src/sqlx/schemes/postgres/setup.sh")
+            .arg("src/sqlx/schemes/postgres/schema.sql")
             .arg(BEE_TEST_DB_USER)
             .arg("dummy_password")
             .arg(BEE_TEST_DB_NAME)
@@ -94,7 +78,7 @@ mod tests {
     }
 
     fn teardown_db() -> () {
-        let output = Command::new("schemes/postgress/cleanup.sh")
+        let output = Command::new("src/sqlx/schemes/postgres/cleanup.sh")
             .arg(BEE_TEST_DB_USER)
             .arg(BEE_TEST_DB_NAME)
             .output()
@@ -115,10 +99,11 @@ mod tests {
 
         block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx)));
+        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
         let res = block_on(storage.find_transaction(tx_hash));
         let found_tx = res.unwrap();
         block_on(storage.destroy_connection()).unwrap();
+
         assert_eq!(tx.payload().into_inner().len(), found_tx.payload().into_inner().len());
         assert_eq!(tx.bundle(), found_tx.bundle());
         assert_eq!(tx.trunk(), found_tx.trunk());
@@ -147,10 +132,10 @@ mod tests {
 
         block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx)));
+        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
-        assert_eq!(tx.nonce().0, found_tx.nonce().0);
+        assert_eq!(tx.nonce(), found_tx.nonce());
         let mut transactions_to_delete = HashSet::new();
         transactions_to_delete.insert(tx_hash);
         let res = block_on(storage.delete_transactions(&transactions_to_delete));
@@ -166,7 +151,7 @@ mod tests {
         block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
         let mut milestone = bee_test::transaction::create_random_milestone();
         milestone.index = 2;
-        block_on(storage.insert_milestone(milestone.clone()));
+        block_on(storage.insert_milestone(milestone.clone())).unwrap();
         let res = block_on(storage.find_milestone(milestone.hash.clone()));
         let found_milestone = res.unwrap();
         assert_eq!(milestone.hash.as_bytes(), found_milestone.hash.as_bytes());
@@ -186,12 +171,12 @@ mod tests {
 
         let mut hashes = HashSet::new();
 
-        for i in 0..10 {
+        for _i in 0..10 {
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx)));
+            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
-            assert_eq!(tx.nonce().0, found_tx.nonce().0);
+            assert_eq!(tx.nonce(), found_tx.nonce());
             hashes.insert(tx_hash);
         }
 
@@ -211,30 +196,30 @@ mod tests {
 
         block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
 
-        let mut hash_to_approvers_expected = bee_storage::HashesToApprovers::new();
+        let mut hash_to_approvers_expected = HashesToApprovers::new();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx)));
+        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
-        assert_eq!(tx.nonce().0, found_tx.nonce().0);
+        assert_eq!(tx.nonce(), found_tx.nonce());
         let mut last_tx_hash = tx_hash.clone();
 
-        for i in 0..2000 {
-            let (tx_hash, mut tx) =
+        for _i in 0..2000 {
+            let (tx_hash, tx) =
                 bee_test::transaction::create_random_attached_tx(last_tx_hash.clone(), last_tx_hash.clone());
             let mut approvers = HashSet::new();
             approvers.insert(tx_hash.clone());
             hash_to_approvers_expected.insert(last_tx_hash.clone(), approvers);
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx)));
+            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
-            assert_eq!(tx.nonce().0, found_tx.nonce().0);
+            assert_eq!(tx.nonce(), found_tx.nonce());
             last_tx_hash = tx_hash.clone();
         }
 
         let hash_to_approvers_observed = storage.map_existing_transaction_hashes_to_approvers().unwrap();
 
-        let maps_equal = hash_to_approvers_expected.iter().all(|(k, v)| {
+        let maps_equal = hash_to_approvers_expected.iter().all(|(k, _v)| {
             hash_to_approvers_expected.get_key_value(&k).unwrap()
                 == hash_to_approvers_observed.get_key_value(&k).unwrap()
         });
@@ -248,19 +233,19 @@ mod tests {
 
         block_on(storage.establish_connection(test_db_url().as_str())).unwrap();
 
-        let mut missing_hash_to_approvers_expected = bee_storage::MissingHashesToRCApprovers::new();
+        let mut missing_hash_to_approvers_expected = MissingHashesToRCApprovers::new();
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx)));
+        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
-        assert_eq!(tx.nonce().0, found_tx.nonce().0);
+        assert_eq!(tx.nonce(), found_tx.nonce());
         let mut last_tx_hash = tx_hash.clone();
         let mut all_transactions_hashes = HashSet::new();
 
         for i in 0..2000 {
             let missing_tx_hash_trunk = bee_test::transaction::rand_trits_field::<Hash>();
             let missing_tx_hash_branch = bee_test::transaction::rand_trits_field::<Hash>();
-            let (tx_hash, mut tx) = match i % 3 {
+            let (tx_hash, tx) = match i % 3 {
                 0 => bee_test::transaction::create_random_attached_tx(
                     last_tx_hash.clone(),
                     missing_tx_hash_trunk.clone(),
@@ -298,10 +283,10 @@ mod tests {
                 }
                 _ => panic!("Residual is incorrect"),
             };
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx)));
+            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
-            assert_eq!(tx.nonce().0, found_tx.nonce().0);
+            assert_eq!(tx.nonce(), found_tx.nonce());
             all_transactions_hashes.insert(tx_hash.clone());
             last_tx_hash = tx_hash.clone();
         }
@@ -310,7 +295,7 @@ mod tests {
             .map_missing_transaction_hashes_to_approvers(all_transactions_hashes)
             .unwrap();
 
-        let maps_are_equal = missing_hash_to_approvers_expected.iter().all(|(k, v)| {
+        let maps_are_equal = missing_hash_to_approvers_expected.iter().all(|(k, _v)| {
             missing_hash_to_approvers_expected.get_key_value(&k).unwrap()
                 == missing_hash_to_approvers_observed.get_key_value(&k).unwrap()
         });
@@ -328,7 +313,7 @@ mod tests {
         const NUM_TRANSACTIONS: usize = 1000;
 
         let mut futures = Vec::new();
-        for i in 0..NUM_TRANSACTIONS {
+        for _i in 0..NUM_TRANSACTIONS {
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
             hashes.insert(tx_hash.clone());
             hashes_transaction_seq.push((tx_hash, tx));
@@ -360,14 +345,14 @@ mod tests {
         let mut hashes = HashSet::new();
         const NUM_TRANSACTIONS: usize = 1000;
 
-        for i in 0..NUM_TRANSACTIONS {
+        for _i in 0..NUM_TRANSACTIONS {
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
             hashes.insert(tx_hash.clone());
             hashes_to_transactions.insert(tx_hash, tx);
         }
 
         let now = Instant::now();
-        block_on(storage.insert_transactions(hashes_to_transactions));
+        block_on(storage.insert_transactions(hashes_to_transactions)).unwrap();
         let message = format!(
             "\ntest_insert_transactions_batch Elapsed: {}\n",
             now.elapsed().as_secs()

@@ -1,13 +1,6 @@
 use crate::bundle::Bundle;
 use crate::constants::IOTA_SUPPLY;
-use crate::transaction::{
-    Hash,
-    Index,
-    TransactionBuilder,
-    TransactionBuilderError,
-    TransactionBuilders,
-    Transactions,
-};
+use crate::transaction::{Hash, Index, TransactionBuilder, TransactionBuilderError, TransactionBuilders, Transactions, TransactionField};
 
 use bee_crypto::Sponge;
 use bee_ternary::TritBuf;
@@ -103,11 +96,11 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
                 Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("tag"))?;
             }
 
-            builder.index.replace(Index(index));
-            builder.last_index.replace(Index(last_index));
+            builder.index.replace(Index::from_inner_unchecked(index));
+            builder.last_index.replace(Index::from_inner_unchecked(last_index));
 
             // Safe to unwrap since we just checked it's not None
-            sum += builder.value.as_ref().unwrap().0;
+            sum += builder.value.as_ref().unwrap().into_inner();
             if sum.abs() > IOTA_SUPPLY {
                 Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
             }
@@ -130,7 +123,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     fn has_no_input(&self) -> Result<(), OutgoingBundleBuilderError> {
         for builder in &self.builders.0 {
             // Safe to unwrap since we made sure it's not None in `seal`
-            if builder.value.as_ref().unwrap().0 < 0 {
+            if *builder.value.as_ref().unwrap().into_inner() < 0 {
                 Err(OutgoingBundleBuilderError::UnsignedInput)?;
             }
         }

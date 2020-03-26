@@ -4,21 +4,24 @@
 //Support multiple sql backends via sqlx
 //Get rid of all warnings
 
-mod errors;
+pub extern crate bincode;
 
-use bee_bundle::transaction::TransactionField;
-use bee_bundle::*;
-use bee_storage::{
-    Connection,
-    Milestone,
-    MissingHashesToRCApprovers,
+use std::{
+    error::Error as StdError,
+    fmt,
 };
+
+use sqlx::Error as SqlxError;
+
+use crate::storage::{Storage, StorageBackend, Connection, StateDeltaMap, HashesToApprovers, MissingHashesToRCApprovers};
+
+use bee_bundle::{constants::*, transaction::{Milestone, Hash, Address, Payload, Tag, Nonce, Timestamp, Index, Value, TransactionField}};
+
 use bee_ternary::{
     T1B1Buf,
     T5B1Buf,
     TritBuf,
     Trits,
-    T1B1,
     T5B1,
 };
 
@@ -26,40 +29,74 @@ use std::collections::{
     HashMap,
     HashSet,
 };
-use std::env;
+
 use std::rc::Rc;
 use std::slice;
 
 use async_trait::async_trait;
-use errors::*;
 use futures::executor::block_on;
 use sqlx::{
     PgPool,
-    Query,
     Row,
 };
 
-use std::ops::Deref;
 
-use bee_bundle::constants::{
-    ADDRESS,
-    ADDRESS_TRIT_LEN,
-    BRANCH,
-    BUNDLE,
-    HASH_TRIT_LEN,
-    IOTA_SUPPLY,
-    NONCE,
-    NONCE_TRIT_LEN,
-    OBSOLETE_TAG,
-    PAYLOAD,
-    PAYLOAD_TRIT_LEN,
-    TAG,
-    TAG_TRIT_LEN,
-    TRUNK,
-    TRYTE_ZERO,
-};
+std::include!("sql/statements.rs");
 
-std::include!("../sql/statements.rs");
+pub const FAILED_ESTABLISHING_CONNECTION: &str = "failed to establish connection.";
+pub const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
+
+#[derive(Debug, Clone)]
+pub enum SqlxBackendError {
+    ConnectionBackendError(String),
+    EnvError(std::env::VarError),
+    SqlxError(String),
+    Bincode(String),
+    UnknownError,
+    //...
+}
+
+impl fmt::Display for SqlxBackendError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SqlxBackendError::ConnectionBackendError(ref reason) => write!(f, "Connection error: {:?}", reason),
+            SqlxBackendError::EnvError(ref reason) => write!(f, "Connection error: {:?}", reason),
+            SqlxBackendError::SqlxError(ref reason) => write!(f, "Sqlx core error: {:?}", reason),
+            SqlxBackendError::Bincode(ref reason) => write!(f, "Bincode error: {:?}", reason),
+            SqlxBackendError::UnknownError => write!(f, "Unknown error"),
+        }
+    }
+}
+
+// Allow this type to be treated like an error
+impl StdError for SqlxBackendError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            _ => None,
+        }
+    }
+}
+
+impl From<std::env::VarError> for SqlxBackendError {
+    #[inline]
+    fn from(err: std::env::VarError) -> Self {
+        SqlxBackendError::EnvError(err)
+    }
+}
+
+impl From<SqlxError> for SqlxBackendError {
+    #[inline]
+    fn from(err: SqlxError) -> Self {
+        SqlxBackendError::SqlxError(String::from(err.to_string()))
+    }
+}
+
+impl From<std::boxed::Box<bincode::ErrorKind>> for SqlxBackendError {
+    #[inline]
+    fn from(err: std::boxed::Box<bincode::ErrorKind>) -> Self {
+        SqlxBackendError::Bincode(String::from(err.as_ref().to_string()))
+    }
+}
 
 //TODO - Encoded data is T5B1, decodeds to T1B1,should be generic
 fn decode_bytes(u8_slice: &[u8], num_trits: usize) -> TritBuf {
@@ -87,7 +124,7 @@ impl SqlxBackendConnection {
 }
 
 #[async_trait]
-impl bee_storage::Connection<SqlxBackendConnection> for SqlxBackendConnection {
+impl Connection<SqlxBackendConnection> for SqlxBackendConnection {
     type StorageError = SqlxBackendError;
 
     async fn establish_connection(&mut self, url: &str) -> Result<(), SqlxBackendError> {
@@ -103,11 +140,11 @@ impl bee_storage::Connection<SqlxBackendConnection> for SqlxBackendConnection {
 }
 
 #[derive(Clone, Debug)]
-pub struct SqlxBackendStorage(bee_storage::Storage<SqlxBackendConnection>);
+pub struct SqlxBackendStorage(Storage<SqlxBackendConnection>);
 
 impl SqlxBackendStorage {
     pub fn new() -> Self {
-        let stor = bee_storage::Storage {
+        let stor = Storage {
             connection: SqlxBackendConnection::new(),
         };
         SqlxBackendStorage(stor)
@@ -125,10 +162,10 @@ impl SqlxBackendStorage {
 
 //TODO - handle errors
 #[async_trait]
-impl bee_storage::StorageBackend for SqlxBackendStorage {
+impl StorageBackend for SqlxBackendStorage {
     type StorageError = SqlxBackendError;
 
-    fn map_existing_transaction_hashes_to_approvers(&self) -> Result<bee_storage::HashesToApprovers, SqlxBackendError> {
+    fn map_existing_transaction_hashes_to_approvers(&self) -> Result<HashesToApprovers, SqlxBackendError> {
         let mut pool = self
             .0
             .connection
@@ -152,22 +189,22 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
 
             for (_, row) in rows.iter().enumerate() {
                 hash_to_approvers
-                    .entry(Hash::from_tritbuf_unchecked(decode_bytes(
+                    .entry(Hash::from_inner_unchecked(decode_bytes(
                         row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(),
                         HASH_TRIT_LEN,
                     )))
                     .or_insert(HashSet::new())
-                    .insert(Hash::from_tritbuf_unchecked(decode_bytes(
+                    .insert(Hash::from_inner_unchecked(decode_bytes(
                         row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
                         HASH_TRIT_LEN,
                     )));
                 hash_to_approvers
-                    .entry(Hash::from_tritbuf_unchecked(decode_bytes(
+                    .entry(Hash::from_inner_unchecked(decode_bytes(
                         row.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(),
                         HASH_TRIT_LEN,
                     )))
                     .or_insert(HashSet::new())
-                    .insert(Hash::from_tritbuf_unchecked(decode_bytes(
+                    .insert(Hash::from_inner_unchecked(decode_bytes(
                         row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
                         HASH_TRIT_LEN,
                     )));
@@ -209,22 +246,22 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
             )?;
 
             for (_, row) in rows.iter().enumerate() {
-                let branch = Hash::from_tritbuf_unchecked(decode_bytes(
+                let branch = Hash::from_inner_unchecked(decode_bytes(
                     row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(),
                     HASH_TRIT_LEN,
                 ));
-                let trunk = Hash::from_tritbuf_unchecked(decode_bytes(
+                let trunk = Hash::from_inner_unchecked(decode_bytes(
                     row.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(),
                     HASH_TRIT_LEN,
                 ));
                 let mut optional_approver_rc = None;
 
                 if !all_hashes.contains(&branch) {
-                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(Hash::from_tritbuf_unchecked(
+                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(Hash::from_inner_unchecked(
                         decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(), HASH_TRIT_LEN),
                     )));
                     missing_to_approvers
-                        .entry(Hash::from_tritbuf_unchecked(decode_bytes(
+                        .entry(Hash::from_inner_unchecked(decode_bytes(
                             row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(),
                             HASH_TRIT_LEN,
                         )))
@@ -234,14 +271,14 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
 
                 if !all_hashes.contains(&trunk) {
                     let approver_rc: Rc<bee_bundle::Hash> = optional_approver_rc.map_or(
-                        Rc::new(Hash::from_tritbuf_unchecked(decode_bytes(
+                        Rc::new(Hash::from_inner_unchecked(decode_bytes(
                             row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
                             HASH_TRIT_LEN,
                         ))),
                         |rc| rc.clone(),
                     );
                     missing_to_approvers
-                        .entry(Hash::from_tritbuf_unchecked(decode_bytes(
+                        .entry(Hash::from_inner_unchecked(decode_bytes(
                             row.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(),
                             HASH_TRIT_LEN,
                         )))
@@ -276,18 +313,18 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
         sqlx::query(INSERT_TRANSACTION_STATEMENT)
             .bind(encode_buffer(tx.payload().into_inner().encode::<T5B1Buf>()))
             .bind(encode_buffer(tx.address().into_inner().encode::<T5B1Buf>()))
-            .bind(tx.value().0)
+            .bind(*tx.value().into_inner())
             .bind(encode_buffer(tx.obsolete_tag().into_inner().encode::<T5B1Buf>()))
-            .bind(tx.timestamp().0 as i32)
-            .bind(tx.index().0 as i32)
-            .bind(tx.last_index().0 as i32)
+            .bind(*tx.timestamp().into_inner() as i32)
+            .bind(*tx.index().into_inner() as i32)
+            .bind(*tx.last_index().into_inner() as i32)
             .bind(encode_buffer(tx.bundle().into_inner().encode::<T5B1Buf>()))
             .bind(encode_buffer(tx.trunk().into_inner().encode::<T5B1Buf>()))
             .bind(encode_buffer(tx.branch().into_inner().encode::<T5B1Buf>()))
             .bind(encode_buffer(tx.tag().into_inner().encode::<T5B1Buf>()))
-            .bind(tx.attachment_ts().0 as i32)
-            .bind(tx.attachment_lbts().0 as i32)
-            .bind(tx.attachment_ubts().0 as i32)
+            .bind(*tx.attachment_ts().into_inner() as i32)
+            .bind(*tx.attachment_lbts().into_inner() as i32)
+            .bind(*tx.attachment_ubts().into_inner() as i32)
             .bind(encode_buffer(tx.nonce().into_inner().encode::<T5B1Buf>()))
             .bind(encode_buffer(tx_hash.into_inner().encode::<T5B1Buf>()))
             .execute(&mut conn_transaction)
@@ -338,22 +375,22 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
         let tag_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(TRANSACTION_COL_TAG).as_slice(), TAG_TRIT_LEN);
         let nonce_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(TRANSACTION_COL_NONCE).as_slice(), NONCE_TRIT_LEN);
 
-        let mut builder = bee_bundle::TransactionBuilder::new()
-            .with_payload(Payload::from_tritbuf_unchecked(payload_tritbuf))
-            .with_address(Address::from_tritbuf_unchecked(address_tritbuf))
-            .with_value(Value(value))
-            .with_obsolete_tag(Tag::from_tritbuf_unchecked(obs_tag_tritbuf))
-            .with_timestamp(Timestamp(timestamp))
-            .with_index(Index(index))
-            .with_last_index(Index(last_index))
-            .with_bundle(Hash::from_tritbuf_unchecked(bundle_tritbuf))
-            .with_trunk(Hash::from_tritbuf_unchecked(trunk_tritbuf))
-            .with_branch(Hash::from_tritbuf_unchecked(branch_tritbuf))
-            .with_tag(Tag::from_tritbuf_unchecked(tag_tritbuf))
-            .with_attachment_ts(Timestamp(attachment_ts))
-            .with_attachment_lbts(Timestamp(attachment_lbts))
-            .with_attachment_ubts(Timestamp(attachment_ubts))
-            .with_nonce(Nonce::from_tritbuf_unchecked(nonce_tritbuf));
+        let builder = bee_bundle::TransactionBuilder::new()
+            .with_payload(Payload::from_inner_unchecked(payload_tritbuf))
+            .with_address(Address::from_inner_unchecked(address_tritbuf))
+            .with_value(Value::from_inner_unchecked(value))
+            .with_obsolete_tag(Tag::from_inner_unchecked(obs_tag_tritbuf))
+            .with_timestamp(Timestamp::from_inner_unchecked(timestamp))
+            .with_index(Index::from_inner_unchecked(index))
+            .with_last_index(Index::from_inner_unchecked(last_index))
+            .with_bundle(Hash::from_inner_unchecked(bundle_tritbuf))
+            .with_trunk(Hash::from_inner_unchecked(trunk_tritbuf))
+            .with_branch(Hash::from_inner_unchecked(branch_tritbuf))
+            .with_tag(Tag::from_inner_unchecked(tag_tritbuf))
+            .with_attachment_ts(Timestamp::from_inner_unchecked(attachment_ts))
+            .with_attachment_lbts(Timestamp::from_inner_unchecked(attachment_lbts))
+            .with_attachment_ubts(Timestamp::from_inner_unchecked(attachment_ubts))
+            .with_nonce(Nonce::from_inner_unchecked(nonce_tritbuf));
 
         // TODO(thibault) handle error!
         let tx = builder.build().unwrap();
@@ -447,18 +484,18 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
             sqlx::query(INSERT_TRANSACTION_STATEMENT)
                 .bind(encode_buffer(tx.payload().into_inner().encode::<T5B1Buf>()))
                 .bind(encode_buffer(tx.address().into_inner().encode::<T5B1Buf>()))
-                .bind(tx.value().0)
+                .bind(*tx.value().into_inner())
                 .bind(encode_buffer(tx.obsolete_tag().into_inner().encode::<T5B1Buf>()))
-                .bind(tx.timestamp().0 as i32)
-                .bind(tx.index().0 as i32)
-                .bind(tx.last_index().0 as i32)
+                .bind(*tx.timestamp().into_inner() as i32)
+                .bind(*tx.index().into_inner() as i32)
+                .bind(*tx.last_index().into_inner() as i32)
                 .bind(encode_buffer(tx.bundle().into_inner().encode::<T5B1Buf>()))
                 .bind(encode_buffer(tx.trunk().into_inner().encode::<T5B1Buf>()))
                 .bind(encode_buffer(tx.branch().into_inner().encode::<T5B1Buf>()))
                 .bind(encode_buffer(tx.tag().into_inner().encode::<T5B1Buf>()))
-                .bind(tx.attachment_ts().0 as i32)
-                .bind(tx.attachment_lbts().0 as i32)
-                .bind(tx.attachment_ubts().0 as i32)
+                .bind(*tx.attachment_ts().into_inner() as i32)
+                .bind(*tx.attachment_lbts().into_inner() as i32)
+                .bind(*tx.attachment_ubts().into_inner() as i32)
                 .bind(encode_buffer(tx.nonce().into_inner().encode::<T5B1Buf>()))
                 .bind(encode_buffer(tx_hash.into_inner().encode::<T5B1Buf>()))
                 .execute(&mut conn_transaction)
@@ -507,7 +544,7 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
         let hash_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(MILESTONE_COL_HASH).as_slice(), HASH_TRIT_LEN);
 
         let milestone = Milestone {
-            hash: Hash::from_tritbuf_unchecked(hash_tritbuf),
+            hash: Hash::from_inner_unchecked(hash_tritbuf),
             index: rec.get::<i32, _>(MILESTONE_COL_ID) as u32,
         };
 
@@ -537,7 +574,7 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
 
     async fn insert_state_delta(
         &self,
-        state_delta: bee_storage::StateDeltaMap,
+        state_delta: StateDeltaMap,
         index: u32,
     ) -> Result<(), SqlxBackendError> {
         let pool = self
@@ -561,7 +598,7 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn load_state_delta(&self, index: u32) -> Result<bee_storage::StateDeltaMap, SqlxBackendError> {
+    async fn load_state_delta(&self, index: u32) -> Result<StateDeltaMap, SqlxBackendError> {
         let mut pool = self
             .0
             .connection
@@ -575,7 +612,7 @@ impl bee_storage::StorageBackend for SqlxBackendStorage {
             .await?;
 
         let delta = rec.get::<String, _>(MILESTONE_COL_DELTA);
-        let decoded: bee_storage::StateDeltaMap = bincode::deserialize(&delta.as_bytes())?;
+        let decoded: StateDeltaMap = bincode::deserialize(&delta.as_bytes())?;
 
         Ok(decoded)
     }

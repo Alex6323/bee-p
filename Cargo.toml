@@ -14,7 +14,6 @@ members = [
 	"bee-tangle",
 	"bee-ternary",
 	"bee-storage",
-	"bee-storage-sqlx",
 	"bee-test",
 
 	# ONLY TEMPORARY

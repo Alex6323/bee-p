@@ -8,18 +8,10 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::rc::Rc;
 
-//pub use bundle::*;
-
 use serde::{Deserialize, Serialize};
 
 // A transaction address. To be replaced later with whatever implementation is required.
 //type TxAddress = String;
-
-#[derive(Debug, Clone)]
-pub struct Milestone {
-    pub hash: bee_bundle::Hash,
-    pub index: u32,
-}
 
 pub type HashesToApprovers = HashMap<bee_bundle::Hash, HashSet<bee_bundle::Hash>>;
 pub type MissingHashesToRCApprovers = HashMap<bee_bundle::Hash, HashSet<Rc<bee_bundle::Hash>>>;
@@ -88,12 +80,12 @@ pub trait StorageBackend {
         transaction_hashes: &HashSet<bee_bundle::Hash>,
     ) -> Result<(), Self::StorageError>;
 
-    async fn insert_milestone(&self, milestone: Milestone) -> Result<(), Self::StorageError>;
+    async fn insert_milestone(&self, milestone: bee_bundle::transaction::Milestone) -> Result<(), Self::StorageError>;
 
     async fn find_milestone(
         &self,
         milestone_hash: bee_bundle::Hash,
-    ) -> Result<Milestone, Self::StorageError>;
+    ) -> Result<bee_bundle::transaction::Milestone, Self::StorageError>;
 
     async fn delete_milestones(
         &self,
