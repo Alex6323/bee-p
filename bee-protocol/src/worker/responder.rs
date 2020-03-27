@@ -68,7 +68,7 @@ impl ResponderWorker {
                     // TODO send complete ms bundle ?
                 }
             } {
-                SenderWorker::<TransactionBroadcast>::send(epid, transaction).await;
+                SenderWorker::<TransactionBroadcast>::send(&epid, transaction).await;
             }
         }
     }

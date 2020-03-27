@@ -144,7 +144,7 @@ impl ReceiverWorker {
                 // TODO port
                 let handshake = Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
 
-                SenderWorker::<Handshake>::send(self.peer.epid, handshake).await;
+                SenderWorker::<Handshake>::send(&self.peer.epid, handshake).await;
 
                 ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                     state: ReceiverWorkerMessageState::Header,

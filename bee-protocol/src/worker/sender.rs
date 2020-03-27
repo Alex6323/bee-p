@@ -150,7 +150,7 @@ macro_rules! implement_sender_worker {
                 }
             }
 
-            pub async fn send(epid: EndpointId, message: $type) {
+            pub async fn send(epid: &EndpointId, message: $type) {
                 if let Some(context) = SenderRegistry::registry().contexts.read().await.get(&epid) {
                     if let Err(e) = context
                         .$sender
@@ -163,6 +163,12 @@ macro_rules! implement_sender_worker {
                         warn!("[SenderWorker ] Sending message failed: {:?}.", e);
                     }
                 };
+            }
+
+            pub async fn broadcast(message: $type) {
+                for key in SenderRegistry::registry().contexts.read().await.keys() {
+                    SenderWorker::<$type>::send(key, message.clone()).await;
+                }
             }
 
             pub async fn run(mut self) {
