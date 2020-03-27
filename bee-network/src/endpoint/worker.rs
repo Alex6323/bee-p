@@ -99,7 +99,7 @@ impl EndpointWorker {
                             }
                         },
                         Command::RemoveEndpoint { epid, responder } => {
-                            let res = rem_endpoint(epid, &mut contacts, &mut connected, &mut outbox,
+                            let res = rmv_endpoint(epid, &mut contacts, &mut connected, &mut outbox,
                                 &mut self.notifier).await?;
 
                             if let Some(responder) = responder {
@@ -248,7 +248,7 @@ async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifie
 }
 
 #[inline(always)]
-async fn rem_endpoint(
+async fn rmv_endpoint(
     epid: EpId,
     contacts: &mut Endpoints,
     connected: &mut Endpoints,
