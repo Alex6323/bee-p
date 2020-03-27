@@ -39,7 +39,7 @@ impl ResponderWorker {
         info!("[ResponderWorker ] Running.");
 
         while let Some(event) = self.receiver.next().await {
-            if let (epid, Some(transaction)) = match event {
+            match event {
                 ResponderWorkerEvent::TransactionRequest { epid, .. } => {
                     // TODO
                     // if let Some(transaction) = tangle.get_transaction(message.hash) {
@@ -47,8 +47,7 @@ impl ResponderWorker {
                     // }
                     // (epid, None)
 
-                    // TODO remove
-                    (epid, Some(TransactionBroadcast::new(&[0; 500])))
+                    SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(&[0; 500])).await;
                 }
                 ResponderWorkerEvent::MilestoneRequest { epid, .. } => {
                     // TODO
@@ -62,13 +61,9 @@ impl ResponderWorker {
                     // }
                     // (epid, None)
 
-                    // TODO remove
-                    (epid, Some(TransactionBroadcast::new(&[0; 500])))
-
+                    SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(&[0; 500])).await;
                     // TODO send complete ms bundle ?
                 }
-            } {
-                SenderWorker::<TransactionBroadcast>::send(&epid, transaction).await;
             }
         }
     }
