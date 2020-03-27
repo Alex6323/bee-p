@@ -38,7 +38,7 @@ use log::*;
 
 use std::time::Duration;
 
-pub struct EndpointActor {
+pub struct EndpointWorker {
     commands: Commands,
     events: Events,
     shutdown: Shutdown,
@@ -46,7 +46,7 @@ pub struct EndpointActor {
     publisher: Publisher,
 }
 
-impl EndpointActor {
+impl EndpointWorker {
     pub fn new(
         commands: Commands,
         events: Events,

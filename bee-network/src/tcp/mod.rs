@@ -1,4 +1,4 @@
-pub mod actor;
+pub mod worker;
 pub mod connection;
 
 use connection::TcpConnection;

@@ -48,10 +48,10 @@ mod tcp;
 mod udp;
 mod utils;
 
-use endpoint::actor::EndpointActor as EdpActor;
+use endpoint::worker::EndpointWorker as EpWorker;
 use events::EventSubscriber as Events;
-use tcp::actor::TcpActor;
-//use udp::actor::UdpActor;
+use tcp::worker::TcpWorker;
+//use udp::worker::UdpWorker;
 
 use async_std::task::spawn;
 use futures::channel::oneshot;
@@ -64,28 +64,28 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
 
     let mut shutdown = Shutdown::new();
 
-    let (edp_sd_sender, edp_shutdown) = oneshot::channel();
+    let (epw_sd_sender, epw_shutdown) = oneshot::channel();
     let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
     //let (udp_sd_sender, udp_shutdown) = oneshot::channel();
 
-    let edp_actor = EdpActor::new(
+    let ep_worker = EpWorker::new(
         commands,
         internal_events,
-        edp_shutdown,
+        epw_shutdown,
         internal_event_sender.clone(),
         event_sender.clone(),
     );
 
-    let tcp_actor = TcpActor::new(binding_addr, internal_event_sender.clone(), tcp_shutdown);
-    //let udp_actor = UdpActor::new(binding_addr, internal_event_sender, udp_shutdown);
+    let tcp_worker = TcpWorker::new(binding_addr, internal_event_sender.clone(), tcp_shutdown);
+    //let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
 
-    shutdown.add_notifier(edp_sd_sender);
+    shutdown.add_notifier(epw_sd_sender);
     shutdown.add_notifier(tcp_sd_sender);
     //shutdown.add_notifier(udp_sd_sender);
 
-    shutdown.add_task(spawn(edp_actor.run()));
-    shutdown.add_task(spawn(tcp_actor.run()));
-    //shutdown.add_task(spawn(udp_actor.run()));
+    shutdown.add_task(spawn(ep_worker.run()));
+    shutdown.add_task(spawn(tcp_worker.run()));
+    //shutdown.add_task(spawn(udp_worker.run()));
 
     let network = Network::new(command_sender);
 

@@ -1,4 +1,4 @@
-pub mod actor;
+pub mod worker;
 pub mod outbox;
 pub mod role;
 pub mod store;

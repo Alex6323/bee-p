@@ -12,13 +12,13 @@ use futures::prelude::*;
 use futures::select;
 use log::*;
 
-pub(crate) struct TcpActor {
+pub(crate) struct TcpWorker {
     binding_addr: Address,
     notifier: Notifier,
     shutdown: Shutdown,
 }
 
-impl TcpActor {
+impl TcpWorker {
     pub fn new(binding_addr: Address, notifier: Notifier, shutdown: Shutdown) -> Self {
         Self {
             binding_addr,
