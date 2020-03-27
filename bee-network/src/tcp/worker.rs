@@ -34,12 +34,12 @@ impl TcpWorker {
 
         debug!("[TCP  ] Accepting connections on {}.", listener.local_addr()?);
 
-        let mut incoming = listener.incoming();
+        let mut incoming = listener.incoming().fuse();
         let shutdown = &mut self.shutdown;
 
         loop {
             select! {
-                stream = incoming.next().fuse() => {
+                stream = incoming.next() => {
                     if let Some(stream) = stream {
                         match stream {
                             Ok(stream) => {

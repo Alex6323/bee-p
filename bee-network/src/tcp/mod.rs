@@ -90,14 +90,15 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
     Ok(notifier.send(Event::NewConnection { ep, role, sender }).await?)
 }
 
-async fn writer(epid: EpId, stream: Arc<TcpStream>, mut bytes_rx: BytesReceiver, sd: oneshot::Sender<()>) {
+async fn writer(epid: EpId, stream: Arc<TcpStream>, bytes_rx: BytesReceiver, sd: oneshot::Sender<()>) {
     debug!("[TCP  ] Starting connection writer task for {}...", epid);
 
     let mut stream = &*stream;
+    let mut bytes_rx = bytes_rx.fuse();
 
     loop {
         select! {
-            bytes_out = bytes_rx.next().fuse() => {
+            bytes_out = bytes_rx.next() => {
                 if let Some(bytes_out) = bytes_out {
 
                     match stream.write_all(&*bytes_out).await {
