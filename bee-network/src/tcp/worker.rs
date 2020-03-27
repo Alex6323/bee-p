@@ -1,5 +1,5 @@
 use crate::address::Address;
-use crate::endpoint::role::Role;
+use crate::endpoint::{role::Role, whitelist, whitelist::WhiteList};
 use crate::errors::Result;
 use crate::events::EventPublisher as Notifier;
 use crate::shutdown::ShutdownListener as Shutdown;
@@ -43,6 +43,7 @@ impl TcpWorker {
                     if let Some(stream) = stream {
                         match stream {
                             Ok(stream) => {
+
                                 let conn = match TcpConnection::new(stream, Role::Server) {
                                     Ok(conn) => conn,
                                     Err(e) => {
@@ -51,6 +52,18 @@ impl TcpWorker {
                                         continue;
                                     }
                                 };
+
+                                let whitelist = whitelist::get();
+
+                                // Update IP addresses if necessary
+                                // whitelist.refresh().await;
+
+                                // Immediatedly drop stream, if it's associated IP address isn't whitelisted
+                                if !whitelist.contains_address(&conn.remote_addr.ip()) {
+                                    warn!("[TCP  ] Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
+                                    warn!("[TCP  ] Connection disallowed.");
+                                    continue;
+                                }
 
                                 debug!(
                                     "[TCP  ] Sucessfully established connection to {} (as {}).",

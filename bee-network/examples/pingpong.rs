@@ -10,6 +10,8 @@
 //! cargo r --example pingpong -- --bind localhost:1338 --peers tcp://localhost:1337 --msg pong
 //! ```
 
+#![allow(dead_code, unused_imports)]
+
 use bee_network::{
     Command::*,
     EndpointId as EpId,

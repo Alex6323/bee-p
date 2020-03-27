@@ -1,3 +1,5 @@
+use super::whitelist;
+
 use crate::address::url::{
     Protocol,
     Url,
@@ -235,6 +237,12 @@ async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifie
     let epid = ep.id;
 
     if contacts.insert(ep) {
+
+        // add its ip to the whitelist, so that we can make sure that we accept only connections
+        // from known peers
+        let whitelist = whitelist::get();
+        whitelist.insert(epid, url.address().ip());
+
         notifier
             .send(Event::EndpointAdded {
                 epid,
@@ -265,6 +273,12 @@ async fn rmv_endpoint(
     }
 
     if removed_contact || removed_connected {
+
+        // Remove its IP also from the whitelist, so we won't accept connections from it
+        // anymore
+        let whitelist = whitelist::get();
+        whitelist.remove(&epid);
+
         notifier
             .send(Event::EndpointRemoved {
                 epid,

@@ -1,3 +1,4 @@
+use crate::endpoint::whitelist;
 use crate::errors::Result;
 
 use async_std::task;
@@ -31,6 +32,10 @@ impl Shutdown {
 
     /// Executes the shutdown.
     pub async fn execute(self) {
+
+        // deallocate whitelist
+        whitelist::free();
+
         let mut tasks = self.tasks;
 
         for notifier in self.notifiers {

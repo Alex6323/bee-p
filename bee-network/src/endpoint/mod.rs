@@ -2,6 +2,7 @@ pub mod outbox;
 pub mod role;
 pub mod store;
 pub mod worker;
+pub mod whitelist;
 
 use crate::address::url::{
     Protocol,

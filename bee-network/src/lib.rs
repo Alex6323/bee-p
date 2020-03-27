@@ -45,10 +45,11 @@ mod events;
 mod network;
 mod shutdown;
 mod tcp;
-mod udp;
+//mod udp;
 mod utils;
 
 use endpoint::worker::EndpointWorker as EpWorker;
+use endpoint::whitelist;
 use events::EventSubscriber as Events;
 use tcp::worker::TcpWorker;
 //use udp::worker::UdpWorker;
@@ -88,6 +89,9 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
     //shutdown.add_task(spawn(udp_worker.run()));
 
     let network = Network::new(command_sender);
+
+    // initialize IP whitelisting
+    whitelist::init();
 
     (network, shutdown, events)
 }
