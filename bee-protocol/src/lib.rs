@@ -1,8 +1,19 @@
+mod helper;
 mod message;
 mod peer;
 mod protocol;
 mod worker;
 
+pub use helper::{
+    broadcast_heartbeat,
+    broadcast_milestone_request,
+    broadcast_transaction,
+    broadcast_transaction_request,
+    send_heartbeat,
+    send_milestone_request,
+    send_transaction,
+    send_transaction_request,
+};
 pub use message::{
     Handshake,
     Heartbeat,
@@ -30,7 +41,6 @@ pub use worker::{
     TransactionWorker,
     TransactionWorkerEvent,
 };
-
 // TODO  do not export
 pub use protocol::{
     HANDSHAKE_SEND_BOUND,
