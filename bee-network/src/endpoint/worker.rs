@@ -75,6 +75,7 @@ impl EndpointWorker {
         let commands = &mut self.commands;
         let events = &mut self.events;
         let shutdown = &mut self.shutdown;
+        let publisher = &mut self.publisher;
 
         loop {
             select! {
@@ -109,11 +110,21 @@ impl EndpointWorker {
                             try_connect(epid, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
                         },
                         Command::Disconnect { epid, responder } => {
-                            let res = disconnect(epid, &mut connected, &mut outbox, &mut self.publisher).await?;
+                            let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
 
                             if let Some(responder) = responder {
-                                responder.send(res);
+                                responder.send(is_disconnected);
                             }
+
+                            if is_disconnected {
+                                publisher
+                                    .send(Event::EndpointDisconnected {
+                                        epid,
+                                        total: connected.num(),
+                                    })
+                                    .await?;
+                            }
+
                         },
                         Command::SendBytes { epid, bytes, responder } => {
                             let res = send_bytes(&epid, bytes, &mut outbox).await?;
@@ -151,10 +162,10 @@ impl EndpointWorker {
 
                     match event {
                         Event::EndpointAdded { epid, total } => {
-                            self.publisher.send(Event::EndpointAdded { epid, total }).await;
+                            publisher.send(Event::EndpointAdded { epid, total }).await;
                         },
                         Event::EndpointRemoved { epid, total } => {
-                            self.publisher.send(Event::EndpointRemoved { epid, total }).await;
+                            publisher.send(Event::EndpointRemoved { epid, total }).await;
                         },
                         Event::NewConnection { ep, role, sender } => {
                             let epid = ep.id;
@@ -163,7 +174,7 @@ impl EndpointWorker {
                             outbox.insert(epid, sender);
                             connected.insert(ep);
 
-                            self.publisher.send(Event::EndpointConnected {
+                            publisher.send(Event::EndpointConnected {
                                 epid,
                                 address: addr,
                                 role,
@@ -172,19 +183,29 @@ impl EndpointWorker {
                             }).await?
                         },
                         Event::LostConnection { epid } => {
-                            disconnect(epid, &mut connected, &mut outbox, &mut self.publisher).await?;
+                            let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
 
+                            if is_disconnected {
+                                publisher
+                                    .send(Event::EndpointDisconnected {
+                                        epid,
+                                        total: connected.num(),
+                                    })
+                                    .await?;
+                            }
+
+                            // TODO: do not try to reconnect to duplicate endpoints
                             // NOTE: 'try_connect' will check if 'epid' is part of the contact list
                             try_connect(epid, &mut contacts, &mut connected, None, &mut self.notifier).await?;
                         }
                         Event::BytesSent { epid, num } => {
-                            self.publisher.send(Event::BytesSent {
+                            publisher.send(Event::BytesSent {
                                 epid,
                                 num,
                             }).await?
                         },
                         Event::BytesReceived { epid, addr, bytes } => {
-                            self.publisher.send(Event::BytesReceived {
+                            publisher.send(Event::BytesReceived {
                                 epid,
                                 addr,
                                 bytes,
@@ -336,7 +357,7 @@ async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifie
 }
 
 #[inline(always)]
-async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, publisher: &mut Publisher) -> Result<bool> {
+async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox) -> bool {
     let removed_recipient = outbox.remove(&epid);
     let removed_connected = connected.remove(&epid);
 
@@ -344,17 +365,7 @@ async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, 
         warn!("[Endp ] Removed an endpoint that was connected, but couldn't be sent to.");
     }
 
-    if removed_connected {
-        publisher
-            .send(Event::EndpointDisconnected {
-                epid,
-                total: connected.num(),
-            })
-            .await?;
-        Ok(true)
-    } else {
-        Ok(false)
-    }
+    removed_connected
 }
 
 #[inline(always)]

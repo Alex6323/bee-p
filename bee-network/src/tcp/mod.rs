@@ -1,5 +1,5 @@
-pub mod worker;
 pub mod connection;
+pub mod worker;
 
 use connection::TcpConnection;
 
