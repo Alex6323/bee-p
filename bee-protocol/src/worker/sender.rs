@@ -132,7 +132,7 @@ pub struct SenderWorker<M: Message> {
 }
 
 macro_rules! implement_sender_worker {
-    ($type:tt, $sender:tt, $incrementor:tt) => {
+    ($type:ty, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
             pub fn new(
                 peer: Arc<Peer>,
