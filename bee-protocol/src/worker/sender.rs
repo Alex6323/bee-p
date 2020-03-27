@@ -155,7 +155,7 @@ macro_rules! implement_sender_worker {
                     if let Err(e) = context
                         .$sender
                         .0
-                        // TODO avoid clone
+                        // TODO avoid clone ?
                         .clone()
                         .send(SenderWorkerEvent::Message(message))
                         .await
@@ -166,8 +166,17 @@ macro_rules! implement_sender_worker {
             }
 
             pub async fn broadcast(message: $type) {
-                for key in SenderRegistry::registry().contexts.read().await.keys() {
-                    SenderWorker::<$type>::send(key, message.clone()).await;
+                for context in SenderRegistry::registry().contexts.read().await.values() {
+                    if let Err(e) = context
+                        .$sender
+                        .0
+                        // TODO avoid clone ?
+                        .clone()
+                        .send(SenderWorkerEvent::Message(message.clone()))
+                        .await
+                    {
+                        warn!("[SenderWorker ] Sending message failed: {:?}.", e);
+                    }
                 }
             }
 
