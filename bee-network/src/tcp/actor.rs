@@ -1,6 +1,6 @@
 use crate::address::Address;
 use crate::endpoint::role::Role;
-use crate::errors::ActorSuccess as S;
+use crate::errors::Result;
 use crate::events::EventPublisher as Notifier;
 use crate::shutdown::ShutdownListener as Shutdown;
 
@@ -27,7 +27,7 @@ impl TcpActor {
         }
     }
 
-    pub async fn run(mut self) -> S {
+    pub async fn run(mut self) -> Result<()> {
         debug!("[TCP  ] Starting TCP worker...");
 
         let listener = TcpListener::bind(*self.binding_addr).await?;

@@ -1,6 +1,6 @@
 use crate::constants::BYTES_CHANNEL_CAPACITY;
 use crate::endpoint::EndpointId as EpId;
-use crate::errors::ActorResult as R;
+use crate::errors::Result;
 
 use async_std::sync::Arc;
 use futures::channel::mpsc;
@@ -52,7 +52,7 @@ impl Outbox {
     /// Sends `bytes` to `receiver`.
     ///
     /// Returns `true` if the send was successful.
-    pub async fn send(&mut self, bytes: Vec<u8>, recipient: &EpId) -> R<bool> {
+    pub async fn send(&mut self, bytes: Vec<u8>, recipient: &EpId) -> Result<bool> {
         let bytes = Arc::new(bytes);
         if let Some(sender) = self.inner.get_mut(recipient) {
             sender.send(bytes).await?;
@@ -66,7 +66,7 @@ impl Outbox {
     ///
     /// NOTE: The multicast is considered to be successful, if at least
     /// one send is successful.
-    pub async fn multicast(&mut self, bytes: Vec<u8>, recipients: &Vec<EpId>) -> R<bool> {
+    pub async fn multicast(&mut self, bytes: Vec<u8>, recipients: &Vec<EpId>) -> Result<bool> {
         let bytes = Arc::new(bytes);
         let mut num_sends = 0;
 
@@ -85,7 +85,7 @@ impl Outbox {
     ///
     /// NOTE: The broadcast is considered to be successful, if at least
     /// one send is successful.
-    pub async fn broadcast(&mut self, bytes: Vec<u8>) -> R<bool> {
+    pub async fn broadcast(&mut self, bytes: Vec<u8>) -> Result<bool> {
         let bytes = Arc::new(bytes);
         let mut num_sends = 0;
 

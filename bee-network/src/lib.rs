@@ -25,9 +25,9 @@ pub use commands::{
     Responder,
 };
 pub use endpoint::{
+    role::Role,
     Endpoint,
     EndpointId,
-    role::Role,
 };
 pub use events::{
     Event,

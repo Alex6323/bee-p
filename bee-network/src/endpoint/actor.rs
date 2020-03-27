@@ -15,10 +15,7 @@ use crate::endpoint::{
     Endpoint as Ep,
     EndpointId as EpId,
 };
-use crate::errors::{
-    ActorResult as R,
-    ActorSuccess as S,
-};
+use crate::errors::Result;
 use crate::events::Event;
 use crate::events::EventPublisher as Notifier;
 use crate::events::EventPublisher as Publisher;
@@ -66,7 +63,7 @@ impl EndpointActor {
         }
     }
 
-    pub async fn run(mut self) -> S {
+    pub async fn run(mut self) -> Result<()> {
         debug!("[Endp ] Starting endpoint worker...");
 
         let mut contacts = Endpoints::new();
@@ -212,7 +209,7 @@ impl EndpointActor {
 }
 
 #[inline(always)]
-async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> R<bool> {
+async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> Result<bool> {
     let ep = Ep::from_url(url);
     let epid = ep.id;
 
@@ -236,7 +233,7 @@ async fn rem_endpoint(
     connected: &mut Endpoints,
     outbox: &mut Outbox,
     notifier: &mut Notifier,
-) -> R<bool> {
+) -> Result<bool> {
     // NOTE: current default behavior is to drop connections once the contact is removed
     let removed_recipient = outbox.remove(&epid);
     let removed_contact = contacts.remove(&epid);
@@ -266,7 +263,7 @@ async fn try_connect(
     connected: &mut Endpoints,
     responder: Option<Responder<bool>>,
     notifier: &mut Notifier,
-) -> R<bool> {
+) -> Result<bool> {
     // Try to find the endpoint in our servers list.
     if let Some(ep) = contacts.get_mut(&epid) {
         //if ep.is_connected() {
@@ -332,14 +329,14 @@ async fn try_connect(
 }
 
 #[inline(always)]
-async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifier) -> S {
+async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifier) -> Result<()> {
     task::sleep(Duration::from_millis(delay)).await;
 
     Ok(notifier.send(event).await?)
 }
 
 #[inline(always)]
-async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, publisher: &mut Publisher) -> R<bool> {
+async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, publisher: &mut Publisher) -> Result<bool> {
     let removed_recipient = outbox.remove(&epid);
     let removed_connected = connected.remove(&epid);
 
@@ -361,16 +358,16 @@ async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, 
 }
 
 #[inline(always)]
-async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
     Ok(outbox.send(bytes, recipient).await?)
 }
 
 #[inline(always)]
-async fn multicast_bytes(recipients: &Vec<EpId>, bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+async fn multicast_bytes(recipients: &Vec<EpId>, bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
     Ok(outbox.multicast(bytes, recipients).await?)
 }
 
 #[inline(always)]
-async fn broadcast_bytes(bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+async fn broadcast_bytes(bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
     Ok(outbox.broadcast(bytes).await?)
 }

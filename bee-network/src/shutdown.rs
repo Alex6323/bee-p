@@ -1,11 +1,11 @@
-use crate::errors::ActorSuccess as S;
+use crate::errors::Result;
 
 use async_std::task;
 use futures::channel::oneshot;
 
 pub(crate) type ShutdownNotifier = oneshot::Sender<()>;
 pub(crate) type ShutdownListener = oneshot::Receiver<()>;
-pub(crate) type ActorTask = task::JoinHandle<S>;
+pub(crate) type ActorTask = task::JoinHandle<Result<()>>;
 
 /// Handles the graceful shutdown of the network layer.
 pub struct Shutdown {
