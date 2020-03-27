@@ -15,7 +15,6 @@ pub use peer::{
     PeerMetrics,
 };
 pub use worker::{
-    sender_registry,
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
     ReceiverWorker,

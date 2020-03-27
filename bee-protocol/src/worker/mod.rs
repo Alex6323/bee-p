@@ -22,7 +22,6 @@ pub use responder::{
     ResponderWorkerEvent,
 };
 pub use sender::{
-    sender_registry,
     SenderContext,
     SenderRegistry,
     SenderWorker,

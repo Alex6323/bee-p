@@ -100,20 +100,24 @@ impl SenderRegistry {
         }
     }
 
-    pub fn contexts(&self) -> &RwLock<HashMap<EndpointId, SenderContext>> {
-        &self.contexts
+    fn registry() -> &'static SenderRegistry {
+        if unsafe { SENDER_REGISTRY.is_null() } {
+            panic!("Uninitialized sender registry.");
+        } else {
+            unsafe { &*SENDER_REGISTRY }
+        }
+    }
+
+    pub async fn insert(epid: EndpointId, context: SenderContext) {
+        SenderRegistry::registry().contexts.write().await.insert(epid, context);
+    }
+
+    pub async fn remove(epid: &EndpointId) -> Option<SenderContext> {
+        SenderRegistry::registry().contexts.write().await.remove(epid)
     }
 }
 
-pub static mut SENDER_REGISTRY: *const SenderRegistry = ptr::null();
-
-pub fn sender_registry() -> &'static SenderRegistry {
-    if unsafe { SENDER_REGISTRY.is_null() } {
-        panic!("Uninitialized sender registry.");
-    } else {
-        unsafe { &*SENDER_REGISTRY }
-    }
-}
+static mut SENDER_REGISTRY: *const SenderRegistry = ptr::null();
 
 pub enum SenderWorkerEvent<M: Message> {
     Message(M),
@@ -147,7 +151,7 @@ macro_rules! implement_sender_worker {
             }
 
             pub async fn send(epid: EndpointId, message: $type) {
-                if let Some(context) = sender_registry().contexts().read().await.get(&epid) {
+                if let Some(context) = SenderRegistry::registry().contexts.read().await.get(&epid) {
                     if let Err(e) = context
                         .$sender
                         .0

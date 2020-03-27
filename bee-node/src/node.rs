@@ -11,7 +11,6 @@ use bee_peering::{
     StaticPeerManager,
 };
 use bee_protocol::{
-    sender_registry,
     Handshake,
     Heartbeat,
     MilestoneRequest,
@@ -128,7 +127,7 @@ impl Node {
 
         self.peers
             .insert(epid, (receiver_tx, receiver_shutdown_tx, peer.clone()));
-        sender_registry().contexts().write().await.insert(epid, context);
+        SenderRegistry::insert(epid, context).await;
 
         spawn(
             ReceiverWorker::new(
@@ -211,7 +210,7 @@ impl Node {
                 warn!("[Node ] Sending shutdown to {} failed.", epid);
             }
         }
-        if let Some(context) = sender_registry().contexts().write().await.remove(&epid) {
+        if let Some(context) = SenderRegistry::remove(&epid).await {
             context.shutdown();
         }
     }
