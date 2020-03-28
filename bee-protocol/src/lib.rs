@@ -15,14 +15,16 @@ pub use helper::{
     send_transaction,
     send_transaction_request,
 };
+pub use milestone::{
+    MilestoneValidatorWorker,
+    MilestoneValidatorWorkerEvent,
+};
 pub use peer::{
     Peer,
     PeerMetrics,
 };
 pub use protocol::protocol_add;
 pub use worker::{
-    MilestoneValidatorWorker,
-    MilestoneValidatorWorkerEvent,
     ReceiverWorker,
     ReceiverWorkerEvent,
     RequesterWorker,
