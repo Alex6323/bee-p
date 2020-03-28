@@ -1,8 +1,6 @@
 use crate::{
-    message::{
-        MilestoneIndex,
-        MilestoneRequest,
-    },
+    message::MilestoneRequest,
+    milestone::MilestoneIndex,
     worker::SenderWorker,
 };
 

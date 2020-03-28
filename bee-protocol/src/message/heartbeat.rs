@@ -1,7 +1,9 @@
-use crate::message::{
-    Message,
-    MessageError,
-    MilestoneIndex,
+use crate::{
+    message::{
+        Message,
+        MessageError,
+    },
+    milestone::MilestoneIndex,
 };
 
 use std::{

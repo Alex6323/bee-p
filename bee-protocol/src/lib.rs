@@ -1,5 +1,6 @@
 mod helper;
 mod message;
+mod milestone;
 mod peer;
 mod protocol;
 mod worker;
