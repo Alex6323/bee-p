@@ -1,1 +1,1 @@
-pub(crate) type MilestoneIndex = u32;
+pub type MilestoneIndex = u32;

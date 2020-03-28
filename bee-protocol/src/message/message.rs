@@ -7,7 +7,7 @@ use crate::message::{
 
 use std::ops::Range;
 
-pub trait Message {
+pub(crate) trait Message {
     const ID: u8;
 
     fn size_range() -> Range<usize>;

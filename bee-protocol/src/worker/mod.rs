@@ -16,7 +16,7 @@ pub use responder::{
     ResponderWorker,
     ResponderWorkerEvent,
 };
-pub use sender::{
+pub(crate) use sender::{
     SenderContext,
     SenderRegistry,
     SenderWorker,

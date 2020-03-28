@@ -1,7 +1,10 @@
-use crate::message::{
-    Message,
-    MilestoneRequest,
-    TransactionRequest,
+use crate::{
+    message::{
+        Message,
+        MilestoneRequest,
+        TransactionRequest,
+    },
+    milestone::MilestoneIndex,
 };
 
 use futures::{
@@ -12,8 +15,7 @@ use log::info;
 
 pub enum RequesterWorkerEvent {
     TransactionRequest([u8; 49]),
-    // TODO use MilestonIndex
-    MilestoneRequest(u32),
+    MilestoneRequest(MilestoneIndex),
 }
 
 pub struct RequesterWorker {

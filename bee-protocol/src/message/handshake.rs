@@ -24,7 +24,7 @@ const HANDSHAKE_VARIABLE_MIN_SIZE: usize = 1;
 const HANDSHAKE_VARIABLE_MAX_SIZE: usize = 32;
 
 #[derive(Clone)]
-pub struct Handshake {
+pub(crate) struct Handshake {
     pub(crate) port: u16,
     pub(crate) timestamp: u64,
     pub(crate) coordinator: [u8; HANDSHAKE_COORDINATOR_SIZE],

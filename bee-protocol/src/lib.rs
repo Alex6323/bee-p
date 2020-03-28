@@ -23,7 +23,7 @@ pub use peer::{
     Peer,
     PeerMetrics,
 };
-pub use protocol::protocol_add;
+pub use protocol::protocol_init;
 pub use worker::{
     ReceiverWorker,
     ReceiverWorkerEvent,
@@ -31,10 +31,6 @@ pub use worker::{
     RequesterWorkerEvent,
     ResponderWorker,
     ResponderWorkerEvent,
-    SenderContext,
-    SenderRegistry,
-    SenderWorker,
-    SenderWorkerEvent,
     TransactionWorker,
     TransactionWorkerEvent,
 };

@@ -23,6 +23,7 @@ use crate::{
     },
     worker::{
         ResponderWorkerEvent,
+        SenderRegistry,
         TransactionWorkerEvent,
     },
 };
@@ -140,10 +141,15 @@ impl ReceiverWorker {
                     }
                 },
                 _ = shutdown => {
-                    info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
                     break;
                 }
             }
+        }
+
+        info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
+
+        if let Some(context) = SenderRegistry::remove(&self.peer.epid).await {
+            context.shutdown();
         }
     }
 

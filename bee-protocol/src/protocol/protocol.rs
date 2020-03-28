@@ -32,7 +32,11 @@ use futures::channel::{
     oneshot,
 };
 
-pub async fn protocol_add(network: Network, peer: Arc<Peer>, metrics: Arc<PeerMetrics>) {
+pub fn protocol_init() {
+    SenderRegistry::init();
+}
+
+pub(crate) async fn protocol_add(network: Network, peer: Arc<Peer>, metrics: Arc<PeerMetrics>) {
     // SenderWorker MilestoneRequest channels
     let (milestone_request_tx, milestone_request_rx) = mpsc::channel(MILESTONE_REQUEST_SEND_BOUND);
     let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();

@@ -11,7 +11,7 @@ pub struct Peer {
     pub(crate) epid: EndpointId,
     pub(crate) role: Role,
     pub(crate) metrics: PeerMetrics,
-    heartbeat: Heartbeat,
+    pub(crate) heartbeat: Heartbeat,
 }
 
 impl Peer {

@@ -12,7 +12,7 @@ use bee_peering::{
     StaticPeerManager,
 };
 use bee_protocol::{
-    protocol_add,
+    protocol_init,
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
     Peer,
@@ -23,7 +23,6 @@ use bee_protocol::{
     RequesterWorkerEvent,
     ResponderWorker,
     ResponderWorkerEvent,
-    SenderRegistry,
     TransactionWorker,
     TransactionWorkerEvent,
 };
@@ -127,9 +126,6 @@ impl Node {
                 warn!("[Node ] Sending shutdown to {} failed.", epid);
             }
         }
-        if let Some(context) = SenderRegistry::remove(&epid).await {
-            context.shutdown();
-        }
     }
 
     async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
@@ -165,7 +161,7 @@ impl Node {
 
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
-        SenderRegistry::init();
+        protocol_init();
 
         // TODO conf
         let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = mpsc::channel(1000);

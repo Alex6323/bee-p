@@ -38,7 +38,7 @@ use futures::{
 };
 use log::warn;
 
-pub struct SenderContext {
+pub(crate) struct SenderContext {
     pub(crate) milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
     pub(crate) transaction_broadcast: (
         mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
@@ -49,7 +49,7 @@ pub struct SenderContext {
 }
 
 impl SenderContext {
-    pub fn new(
+    pub(crate) fn new(
         milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
         transaction_broadcast: (
             mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
@@ -66,7 +66,7 @@ impl SenderContext {
         }
     }
 
-    pub fn shutdown(self) {
+    pub(crate) fn shutdown(self) {
         if let Err(_) = self.milestone_request.1.send(()) {
             warn!("[SenderContext ] Shutting down MilestoneRequest SenderWorker failed.");
         }
@@ -83,12 +83,12 @@ impl SenderContext {
 }
 
 #[derive(Default)]
-pub struct SenderRegistry {
+pub(crate) struct SenderRegistry {
     contexts: RwLock<HashMap<EndpointId, SenderContext>>,
 }
 
 impl SenderRegistry {
-    pub fn init() {
+    pub(crate) fn init() {
         unsafe {
             SENDER_REGISTRY = Box::leak(SenderRegistry::default().into()) as *const _;
         }
@@ -102,22 +102,22 @@ impl SenderRegistry {
         }
     }
 
-    pub async fn insert(epid: EndpointId, context: SenderContext) {
+    pub(crate) async fn insert(epid: EndpointId, context: SenderContext) {
         SenderRegistry::registry().contexts.write().await.insert(epid, context);
     }
 
-    pub async fn remove(epid: &EndpointId) -> Option<SenderContext> {
+    pub(crate) async fn remove(epid: &EndpointId) -> Option<SenderContext> {
         SenderRegistry::registry().contexts.write().await.remove(epid)
     }
 }
 
 static mut SENDER_REGISTRY: *const SenderRegistry = ptr::null();
 
-pub enum SenderWorkerEvent<M: Message> {
+pub(crate) enum SenderWorkerEvent<M: Message> {
     Message(M),
 }
 
-pub struct SenderWorker<M: Message> {
+pub(crate) struct SenderWorker<M: Message> {
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
     network: Network,
@@ -127,7 +127,7 @@ pub struct SenderWorker<M: Message> {
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
-            pub fn new(peer: Arc<Peer>, metrics: Arc<PeerMetrics>, network: Network) -> Self {
+            pub(crate) fn new(peer: Arc<Peer>, metrics: Arc<PeerMetrics>, network: Network) -> Self {
                 Self {
                     peer,
                     metrics,
@@ -136,7 +136,7 @@ macro_rules! implement_sender_worker {
                 }
             }
 
-            pub async fn send(epid: &EndpointId, message: $type) {
+            pub(crate) async fn send(epid: &EndpointId, message: $type) {
                 if let Some(context) = SenderRegistry::registry().contexts.read().await.get(&epid) {
                     if let Err(e) = context
                         .$sender
@@ -151,7 +151,7 @@ macro_rules! implement_sender_worker {
                 };
             }
 
-            pub async fn broadcast(message: $type) {
+            pub(crate) async fn broadcast(message: $type) {
                 for context in SenderRegistry::registry().contexts.read().await.values() {
                     if let Err(e) = context
                         .$sender
@@ -166,7 +166,7 @@ macro_rules! implement_sender_worker {
                 }
             }
 
-            pub async fn run(
+            pub(crate) async fn run(
                 mut self,
                 events_receiver: mpsc::Receiver<SenderWorkerEvent<$type>>,
                 shutdown_receiver: oneshot::Receiver<()>,

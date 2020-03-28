@@ -11,7 +11,8 @@ pub(crate) use conf::{
     TRANSACTION_BROADCAST_SEND_BOUND,
     TRANSACTION_REQUEST_SEND_BOUND,
 };
-pub use protocol::protocol_add;
+pub(crate) use protocol::protocol_add;
+pub use protocol::protocol_init;
 pub(crate) use version::{
     supported_version,
     SUPPORTED_VERSIONS,
