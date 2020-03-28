@@ -21,6 +21,7 @@ use bee_network::{
 
 use std::{
     collections::HashMap,
+    marker::PhantomData,
     ptr,
     sync::Arc,
 };
@@ -127,26 +128,18 @@ pub struct SenderWorker<M: Message> {
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
     network: Network,
-    events: mpsc::Receiver<SenderWorkerEvent<M>>,
-    shutdown: oneshot::Receiver<()>,
+    _message_type: PhantomData<M>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
-            pub fn new(
-                peer: Arc<Peer>,
-                metrics: Arc<PeerMetrics>,
-                network: Network,
-                events: mpsc::Receiver<SenderWorkerEvent<$type>>,
-                shutdown: oneshot::Receiver<()>,
-            ) -> Self {
+            pub fn new(peer: Arc<Peer>, metrics: Arc<PeerMetrics>, network: Network) -> Self {
                 Self {
                     peer,
                     metrics,
                     network,
-                    events,
-                    shutdown,
+                    _message_type: PhantomData,
                 }
             }
 
@@ -180,10 +173,17 @@ macro_rules! implement_sender_worker {
                 }
             }
 
-            pub async fn run(mut self) {
+            pub async fn run(
+                mut self,
+                events_receiver: mpsc::Receiver<SenderWorkerEvent<$type>>,
+                shutdown_receiver: oneshot::Receiver<()>,
+            ) {
+                let mut events = events_receiver.fuse();
+                let mut shutdown = shutdown_receiver.fuse();
+
                 loop {
                     select! {
-                        message = self.events.next().fuse() => {
+                        message = events.next() => {
                             if let Some(SenderWorkerEvent::Message(message)) = message {
                                 match self
                                     .network
@@ -207,7 +207,7 @@ macro_rules! implement_sender_worker {
                                 }
                             }
                         }
-                        _ = (&mut self.shutdown).fuse() => {
+                        _ = shutdown => {
                             break;
                         }
                     }

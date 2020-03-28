@@ -53,8 +53,6 @@ pub(crate) enum ReceiverWorkerError {
 }
 
 pub enum ReceiverWorkerEvent {
-    Connected,
-    Disconnected,
     Message(Vec<u8>),
 }
 
@@ -62,8 +60,6 @@ enum ReceiverWorkerMessageState {
     Header,
     Payload(Header),
 }
-
-struct AwaitingConnectionContext {}
 
 struct AwaitingHandshakeContext {
     state: ReceiverWorkerMessageState,
@@ -75,7 +71,6 @@ struct AwaitingMessageContext {
 }
 
 enum ReceiverWorkerState {
-    AwaitingConnection(AwaitingConnectionContext),
     AwaitingHandshake(AwaitingHandshakeContext),
     AwaitingMessage(AwaitingMessageContext),
 }
@@ -83,8 +78,6 @@ enum ReceiverWorkerState {
 pub struct ReceiverWorker {
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
-    events: mpsc::Receiver<ReceiverWorkerEvent>,
-    shutdown: oneshot::Receiver<()>,
     transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
     responder_worker: mpsc::Sender<ResponderWorkerEvent>,
 }
@@ -93,64 +86,52 @@ impl ReceiverWorker {
     pub fn new(
         peer: Arc<Peer>,
         metrics: Arc<PeerMetrics>,
-        events: mpsc::Receiver<ReceiverWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
         transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
         responder_worker: mpsc::Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
             peer,
             metrics,
-            events,
-            shutdown,
             transaction_worker_sender,
             responder_worker,
         }
     }
 
-    pub async fn run(mut self) {
+    pub async fn run(
+        mut self,
+        events_receiver: mpsc::Receiver<ReceiverWorkerEvent>,
+        shutdown_receiver: oneshot::Receiver<()>,
+    ) {
         info!("[Peer({})] Receiver worker running.", self.peer.epid);
 
-        let mut state = ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {});
+        let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+            state: ReceiverWorkerMessageState::Header,
+        });
+        let mut events = events_receiver.fuse();
+        let mut shutdown = shutdown_receiver.fuse();
+
+        SenderWorker::<Handshake>::send(
+            &self.peer.epid,
+            // TODO port
+            Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS),
+        )
+        .await;
 
         loop {
             select! {
-                event = self.events.next().fuse() => {
+                event = events.next() => {
                     if let Some(event) = event {
                         state = match state {
-                            ReceiverWorkerState::AwaitingConnection(context) => self.connection_handler(context, event).await,
                             ReceiverWorkerState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,
                             ReceiverWorkerState::AwaitingMessage(context) => self.message_handler(context, event).await,
                         }
                     }
                 },
-                _ = (&mut self.shutdown).fuse() => {
+                _ = shutdown => {
                     info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
                     break;
                 }
             }
-        }
-    }
-
-    async fn connection_handler(
-        &mut self,
-        context: AwaitingConnectionContext,
-        event: ReceiverWorkerEvent,
-    ) -> ReceiverWorkerState {
-        match event {
-            ReceiverWorkerEvent::Connected => {
-                info!("[Peer({})] Connected.", self.peer.epid);
-
-                // TODO port
-                let handshake = Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
-
-                SenderWorker::<Handshake>::send(&self.peer.epid, handshake).await;
-
-                ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceiverWorkerMessageState::Header,
-                })
-            }
-            _ => ReceiverWorkerState::AwaitingConnection(context),
         }
     }
 
@@ -217,11 +198,6 @@ impl ReceiverWorker {
         event: ReceiverWorkerEvent,
     ) -> ReceiverWorkerState {
         match event {
-            ReceiverWorkerEvent::Disconnected => {
-                info!("[Peer({})] Disconnected.", self.peer.epid);
-
-                ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
-            }
             ReceiverWorkerEvent::Message(bytes) => {
                 // TODO needed ?
                 if bytes.len() < 3 {
@@ -362,11 +338,6 @@ impl ReceiverWorker {
         event: ReceiverWorkerEvent,
     ) -> ReceiverWorkerState {
         match event {
-            ReceiverWorkerEvent::Disconnected => {
-                debug!("[Peer({})] Disconnected.", self.peer.epid);
-
-                ReceiverWorkerState::AwaitingConnection(AwaitingConnectionContext {})
-            }
             ReceiverWorkerEvent::Message(mut bytes) => {
                 let mut offset = 0;
                 let mut remaining = true;
@@ -380,9 +351,8 @@ impl ReceiverWorker {
                 while remaining {
                     context.state = match context.state {
                         ReceiverWorkerMessageState::Header => {
-                            debug!("[Peer({})] Reading Header...", self.peer.epid);
-
                             if offset + 3 <= context.buffer.len() {
+                                debug!("[Peer({})] Reading Header...", self.peer.epid);
                                 let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
                                 offset = offset + 3;
 

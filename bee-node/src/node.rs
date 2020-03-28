@@ -4,6 +4,7 @@ use bee_network::{
     Event,
     EventSubscriber,
     Network,
+    Role,
     Shutdown,
 };
 use bee_peering::{
@@ -90,6 +91,25 @@ impl Node {
     }
 
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
+        info!("[Node ] Endpoint {} has been added.", epid);
+
+        if let Err(e) = self
+            .network
+            .send(Connect {
+                epid: epid,
+                responder: None,
+            })
+            .await
+        {
+            warn!("[Node ] Sending Command::Connect for {} failed: {}.", epid, e);
+        }
+    }
+
+    async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
+        info!("[Node ] Endpoint {} has been removed.", epid);
+    }
+
+    async fn endpoint_connected_handler(&mut self, epid: EndpointId, role: Role) {
         // TODO conf
         // ReceiverWorker channels
         let (receiver_tx, receiver_rx) = mpsc::channel(1000);
@@ -133,78 +153,35 @@ impl Node {
             ReceiverWorker::new(
                 peer.clone(),
                 self.metrics.clone(),
-                receiver_rx,
-                receiver_shutdown_rx,
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
                 self.responder_worker_sender.as_ref().unwrap().clone(),
             )
-            .run(),
+            .run(receiver_rx, receiver_shutdown_rx),
         );
 
         spawn(
-            SenderWorker::<Handshake>::new(
-                peer.clone(),
-                self.metrics.clone(),
-                self.network.clone(),
-                handshake_rx,
-                handshake_shutdown_rx,
-            )
-            .run(),
+            SenderWorker::<Handshake>::new(peer.clone(), self.metrics.clone(), self.network.clone())
+                .run(handshake_rx, handshake_shutdown_rx),
         );
         spawn(
-            SenderWorker::<MilestoneRequest>::new(
-                peer.clone(),
-                self.metrics.clone(),
-                self.network.clone(),
-                milestone_request_rx,
-                milestone_request_shutdown_rx,
-            )
-            .run(),
+            SenderWorker::<MilestoneRequest>::new(peer.clone(), self.metrics.clone(), self.network.clone())
+                .run(milestone_request_rx, milestone_request_shutdown_rx),
         );
         spawn(
-            SenderWorker::<TransactionBroadcast>::new(
-                peer.clone(),
-                self.metrics.clone(),
-                self.network.clone(),
-                transaction_broadcast_rx,
-                transaction_broadcast_shutdown_rx,
-            )
-            .run(),
+            SenderWorker::<TransactionBroadcast>::new(peer.clone(), self.metrics.clone(), self.network.clone())
+                .run(transaction_broadcast_rx, transaction_broadcast_shutdown_rx),
         );
         spawn(
-            SenderWorker::<TransactionRequest>::new(
-                peer.clone(),
-                self.metrics.clone(),
-                self.network.clone(),
-                transaction_request_rx,
-                transaction_request_shutdown_rx,
-            )
-            .run(),
+            SenderWorker::<TransactionRequest>::new(peer.clone(), self.metrics.clone(), self.network.clone())
+                .run(transaction_request_rx, transaction_request_shutdown_rx),
         );
         spawn(
-            SenderWorker::<Heartbeat>::new(
-                peer.clone(),
-                self.metrics.clone(),
-                self.network.clone(),
-                heartbeat_rx,
-                heartbeat_shutdown_rx,
-            )
-            .run(),
+            SenderWorker::<Heartbeat>::new(peer.clone(), self.metrics.clone(), self.network.clone())
+                .run(heartbeat_rx, heartbeat_shutdown_rx),
         );
-
-        if let Err(e) = self
-            .network
-            .send(Connect {
-                epid: epid,
-                responder: None,
-            })
-            .await
-        {
-            warn!("[Node ] Sending Command::Connect for {} failed: {}.", epid, e);
-        }
     }
 
-    async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
+    async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
         if let Some((_, shutdown, _)) = self.peers.remove(&epid) {
             if let Err(_) = shutdown.send(()) {
                 warn!("[Node ] Sending shutdown to {} failed.", epid);
@@ -212,28 +189,6 @@ impl Node {
         }
         if let Some(context) = SenderRegistry::remove(&epid).await {
             context.shutdown();
-        }
-    }
-
-    async fn endpoint_connected_handler(&mut self, epid: EndpointId) {
-        if let Some(peer) = self.peers.get_mut(&epid) {
-            if let Err(e) = peer.0.send(ReceiverWorkerEvent::Connected).await {
-                warn!(
-                    "[Node ] Sending ReceiverWorkerEvent::Connected to {} failed: {}.",
-                    epid, e
-                );
-            }
-        }
-    }
-
-    async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
-        if let Some(peer) = self.peers.get_mut(&epid) {
-            if let Err(e) = peer.0.send(ReceiverWorkerEvent::Disconnected).await {
-                warn!(
-                    "[Node ] Sending ReceiverWorkerEvent::Disconnected to {} failed: {}.",
-                    epid, e
-                );
-            }
         }
     }
 
@@ -257,7 +212,7 @@ impl Node {
             match event {
                 Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
                 Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
-                Event::EndpointConnected { epid, .. } => self.endpoint_connected_handler(epid).await,
+                Event::EndpointConnected { epid, role, .. } => self.endpoint_connected_handler(epid, role).await,
                 Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
                 Event::BytesReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
                 _ => warn!("[Node ] Unsupported event {}.", event),
