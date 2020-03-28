@@ -1,6 +1,5 @@
 use crate::{
     message::{
-        Handshake,
         Heartbeat,
         Message,
         MilestoneRequest,
@@ -40,7 +39,6 @@ use futures::{
 use log::warn;
 
 pub struct SenderContext {
-    pub(crate) handshake: (mpsc::Sender<SenderWorkerEvent<Handshake>>, oneshot::Sender<()>),
     pub(crate) milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
     pub(crate) transaction_broadcast: (
         mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
@@ -52,7 +50,6 @@ pub struct SenderContext {
 
 impl SenderContext {
     pub fn new(
-        handshake: (mpsc::Sender<SenderWorkerEvent<Handshake>>, oneshot::Sender<()>),
         milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
         transaction_broadcast: (
             mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
@@ -62,7 +59,6 @@ impl SenderContext {
         heartbeat: (mpsc::Sender<SenderWorkerEvent<Heartbeat>>, oneshot::Sender<()>),
     ) -> Self {
         Self {
-            handshake,
             milestone_request,
             transaction_broadcast,
             transaction_request,
@@ -71,9 +67,6 @@ impl SenderContext {
     }
 
     pub fn shutdown(self) {
-        if let Err(_) = self.handshake.1.send(()) {
-            warn!("[SenderContext ] Shutting down Handshake SenderWorker failed.");
-        }
         if let Err(_) = self.milestone_request.1.send(()) {
             warn!("[SenderContext ] Shutting down MilestoneRequest SenderWorker failed.");
         }
@@ -217,7 +210,6 @@ macro_rules! implement_sender_worker {
     };
 }
 
-implement_sender_worker!(Handshake, handshake, handshake_sent);
 implement_sender_worker!(MilestoneRequest, milestone_request, milestone_request_sent);
 implement_sender_worker!(TransactionBroadcast, transaction_broadcast, transaction_broadcast_sent);
 implement_sender_worker!(TransactionRequest, transaction_request, transaction_request_sent);

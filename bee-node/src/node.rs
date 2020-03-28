@@ -12,9 +12,7 @@ use bee_peering::{
     StaticPeerManager,
 };
 use bee_protocol::{
-    Handshake,
-    Heartbeat,
-    MilestoneRequest,
+    protocol_add,
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
     Peer,
@@ -25,18 +23,9 @@ use bee_protocol::{
     RequesterWorkerEvent,
     ResponderWorker,
     ResponderWorkerEvent,
-    SenderContext,
     SenderRegistry,
-    SenderWorker,
-    TransactionBroadcast,
-    TransactionRequest,
     TransactionWorker,
     TransactionWorkerEvent,
-    HANDSHAKE_SEND_BOUND,
-    HEARTBEAT_SEND_BOUND,
-    MILESTONE_REQUEST_SEND_BOUND,
-    TRANSACTION_BROADCAST_SEND_BOUND,
-    TRANSACTION_REQUEST_SEND_BOUND,
 };
 use bee_snapshot::{
     SnapshotMetadata,
@@ -93,16 +82,16 @@ impl Node {
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
         info!("[Node ] Endpoint {} has been added.", epid);
 
-        if let Err(e) = self
-            .network
-            .send(Connect {
-                epid: epid,
-                responder: None,
-            })
-            .await
-        {
-            warn!("[Node ] Sending Command::Connect for {} failed: {}.", epid, e);
-        }
+        // if let Err(e) = self
+        //     .network
+        //     .send(Connect {
+        //         epid: epid,
+        //         responder: None,
+        //     })
+        //     .await
+        // {
+        //     warn!("[Node ] Sending Command::Connect for {} failed: {}.", epid, e);
+        // }
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
@@ -115,42 +104,14 @@ impl Node {
         let (receiver_tx, receiver_rx) = mpsc::channel(1000);
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
-        // SenderWorker Handshake channels
-        let (handshake_tx, handshake_rx) = mpsc::channel(HANDSHAKE_SEND_BOUND);
-        let (handshake_shutdown_tx, handshake_shutdown_rx) = oneshot::channel();
-
-        // SenderWorker MilestoneRequest channels
-        let (milestone_request_tx, milestone_request_rx) = mpsc::channel(MILESTONE_REQUEST_SEND_BOUND);
-        let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
-
-        // SenderWorker TransactionBroadcast channels
-        let (transaction_broadcast_tx, transaction_broadcast_rx) = mpsc::channel(TRANSACTION_BROADCAST_SEND_BOUND);
-        let (transaction_broadcast_shutdown_tx, transaction_broadcast_shutdown_rx) = oneshot::channel();
-
-        // SenderWorker TransactionRequest channels
-        let (transaction_request_tx, transaction_request_rx) = mpsc::channel(TRANSACTION_REQUEST_SEND_BOUND);
-        let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
-
-        // SenderWorker Heartbeat channels
-        let (heartbeat_tx, heartbeat_rx) = mpsc::channel(HEARTBEAT_SEND_BOUND);
-        let (heartbeat_shutdown_tx, heartbeat_shutdown_rx) = oneshot::channel();
-
-        let context = SenderContext::new(
-            (handshake_tx, handshake_shutdown_tx),
-            (milestone_request_tx, milestone_request_shutdown_tx),
-            (transaction_broadcast_tx, transaction_broadcast_shutdown_tx),
-            (transaction_request_tx, transaction_request_shutdown_tx),
-            (heartbeat_tx, heartbeat_shutdown_tx),
-        );
-
         let peer = Arc::new(Peer::new(epid, role));
 
         self.peers
             .insert(epid, (receiver_tx, receiver_shutdown_tx, peer.clone()));
-        SenderRegistry::insert(epid, context).await;
 
         spawn(
             ReceiverWorker::new(
+                self.network.clone(),
                 peer.clone(),
                 self.metrics.clone(),
                 self.transaction_worker_sender.as_ref().unwrap().clone(),
@@ -159,26 +120,7 @@ impl Node {
             .run(receiver_rx, receiver_shutdown_rx),
         );
 
-        spawn(
-            SenderWorker::<Handshake>::new(peer.clone(), self.metrics.clone(), self.network.clone())
-                .run(handshake_rx, handshake_shutdown_rx),
-        );
-        spawn(
-            SenderWorker::<MilestoneRequest>::new(peer.clone(), self.metrics.clone(), self.network.clone())
-                .run(milestone_request_rx, milestone_request_shutdown_rx),
-        );
-        spawn(
-            SenderWorker::<TransactionBroadcast>::new(peer.clone(), self.metrics.clone(), self.network.clone())
-                .run(transaction_broadcast_rx, transaction_broadcast_shutdown_rx),
-        );
-        spawn(
-            SenderWorker::<TransactionRequest>::new(peer.clone(), self.metrics.clone(), self.network.clone())
-                .run(transaction_request_rx, transaction_request_shutdown_rx),
-        );
-        spawn(
-            SenderWorker::<Heartbeat>::new(peer.clone(), self.metrics.clone(), self.network.clone())
-                .run(heartbeat_rx, heartbeat_shutdown_rx),
-        );
+        protocol_add(self.network.clone(), peer.clone(), self.metrics.clone());
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {

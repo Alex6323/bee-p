@@ -22,9 +22,13 @@ use crate::{
     },
     worker::{
         ResponderWorkerEvent,
-        SenderWorker,
         TransactionWorkerEvent,
     },
+};
+
+use bee_network::{
+    Command::SendBytes,
+    Network,
 };
 
 use std::{
@@ -76,6 +80,7 @@ enum ReceiverWorkerState {
 }
 
 pub struct ReceiverWorker {
+    network: Network,
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
     transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
@@ -84,12 +89,14 @@ pub struct ReceiverWorker {
 
 impl ReceiverWorker {
     pub fn new(
+        network: Network,
         peer: Arc<Peer>,
         metrics: Arc<PeerMetrics>,
         transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
         responder_worker: mpsc::Sender<ResponderWorkerEvent>,
     ) -> Self {
         Self {
+            network,
             peer,
             metrics,
             transaction_worker_sender,
@@ -110,12 +117,15 @@ impl ReceiverWorker {
         let mut events = events_receiver.fuse();
         let mut shutdown = shutdown_receiver.fuse();
 
-        SenderWorker::<Handshake>::send(
-            &self.peer.epid,
-            // TODO port
-            Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS),
-        )
-        .await;
+        self.network
+            .send(SendBytes {
+                epid: self.peer.epid,
+                // TODO port
+                bytes: Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS)
+                    .into_full_bytes(),
+                responder: None,
+            })
+            .await;
 
         loop {
             select! {

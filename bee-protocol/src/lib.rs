@@ -14,17 +14,11 @@ pub use helper::{
     send_transaction,
     send_transaction_request,
 };
-pub use message::{
-    Handshake,
-    Heartbeat,
-    MilestoneRequest,
-    TransactionBroadcast,
-    TransactionRequest,
-};
 pub use peer::{
     Peer,
     PeerMetrics,
 };
+pub use protocol::protocol_add;
 pub use worker::{
     MilestoneValidatorWorker,
     MilestoneValidatorWorkerEvent,
@@ -40,12 +34,4 @@ pub use worker::{
     SenderWorkerEvent,
     TransactionWorker,
     TransactionWorkerEvent,
-};
-// TODO  do not export
-pub use protocol::{
-    HANDSHAKE_SEND_BOUND,
-    HEARTBEAT_SEND_BOUND,
-    MILESTONE_REQUEST_SEND_BOUND,
-    TRANSACTION_BROADCAST_SEND_BOUND,
-    TRANSACTION_REQUEST_SEND_BOUND,
 };
