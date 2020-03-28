@@ -2,18 +2,23 @@ use crate::{
     message::Heartbeat,
     peer::PeerMetrics,
 };
-use bee_network::EndpointId;
+use bee_network::{
+    EndpointId,
+    Role,
+};
 
 pub struct Peer {
     pub(crate) epid: EndpointId,
+    pub(crate) role: Role,
     pub(crate) metrics: PeerMetrics,
     heartbeat: Heartbeat,
 }
 
 impl Peer {
-    pub fn new(epid: EndpointId) -> Self {
+    pub fn new(epid: EndpointId, role: Role) -> Self {
         Self {
-            epid: epid,
+            epid,
+            role,
             metrics: PeerMetrics::default(),
             heartbeat: Heartbeat::default(),
         }

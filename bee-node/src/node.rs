@@ -143,7 +143,7 @@ impl Node {
             (heartbeat_tx, heartbeat_shutdown_tx),
         );
 
-        let peer = Arc::new(Peer::new(epid));
+        let peer = Arc::new(Peer::new(epid, role));
 
         self.peers
             .insert(epid, (receiver_tx, receiver_shutdown_tx, peer.clone()));
