@@ -119,8 +119,6 @@ impl Node {
             )
             .run(receiver_rx, receiver_shutdown_rx),
         );
-
-        protocol_add(self.network.clone(), peer.clone(), self.metrics.clone());
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {

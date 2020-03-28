@@ -14,6 +14,7 @@ use crate::{
         PeerMetrics,
     },
     protocol::{
+        protocol_add,
         slice_eq,
         supported_version,
         COORDINATOR_BYTES,
@@ -117,6 +118,7 @@ impl ReceiverWorker {
         let mut events = events_receiver.fuse();
         let mut shutdown = shutdown_receiver.fuse();
 
+        // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
         self.network
             .send(SendBytes {
                 epid: self.peer.epid,
@@ -182,6 +184,8 @@ impl ReceiverWorker {
                 } else {
                     // TODO check duplicate connection
                     info!("[Peer({})] Handshake completed.", self.peer.epid);
+
+                    protocol_add(self.network.clone(), self.peer.clone(), self.metrics.clone());
 
                     state = ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                         state: ReceiverWorkerMessageState::Header,
