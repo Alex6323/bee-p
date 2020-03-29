@@ -124,27 +124,27 @@ where
         // TODO - check trunk of the last transaction and branch is tail, the same tail
 
         for (index, transaction) in self.transactions.0.iter().enumerate() {
-            if index != *transaction.index().into_inner() {
+            if index != *transaction.index().to_inner() {
                 Err(IncomingBundleBuilderError::InvalidIndex(
-                    *transaction.index().into_inner(),
+                    *transaction.index().to_inner(),
                 ))?;
             }
 
-            if last_index != *transaction.last_index().into_inner() {
+            if last_index != *transaction.last_index().to_inner() {
                 Err(IncomingBundleBuilderError::InvalidLastIndex(
-                    *transaction.last_index().into_inner(),
+                    *transaction.last_index().to_inner(),
                 ))?;
             }
 
-            sum += *transaction.value.into_inner();
+            sum += *transaction.value.to_inner();
             if sum.abs() > IOTA_SUPPLY {
                 Err(IncomingBundleBuilderError::InvalidValue(sum))?;
             }
 
-            if *transaction.value.into_inner() != 0
+            if *transaction.value.to_inner() != 0
                 && transaction
                     .address()
-                    .into_inner()
+                    .to_inner()
                     .get(ADDRESS.trit_offset.length - 1)
                     .unwrap()
                     != Btrit::Zero

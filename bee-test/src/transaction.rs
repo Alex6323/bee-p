@@ -18,7 +18,7 @@ use bee_ternary::{
 
 use rand::Rng;
 
-pub fn rand_trits_field<T: TransactionField<inner = TritBuf>>() -> T {
+pub fn rand_trits_field<T: TransactionField<Inner = TritBuf>>() -> T {
     //type T::inner = TritBuf;
     const TRIT_SET: &[i8] = &[-1, 0, 1];
     let mut rng = rand::thread_rng();
