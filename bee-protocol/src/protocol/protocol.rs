@@ -6,6 +6,7 @@ use crate::{
         TransactionRequest,
     },
     milestone::{
+        MilestoneIndex,
         MilestoneValidatorWorker,
         MilestoneValidatorWorkerEvent,
     },
@@ -207,5 +208,53 @@ impl Protocol {
                 warn!("[Protocol ] Shutting down Heartbeat SenderWorker failed.");
             }
         }
+    }
+
+    // Helpers
+
+    pub async fn send_heartbeat(
+        epid: EndpointId,
+        first_solid_milestone_index: MilestoneIndex,
+        last_solid_milestone_index: MilestoneIndex,
+    ) {
+        SenderWorker::<Heartbeat>::send(
+            &epid,
+            Heartbeat::new(first_solid_milestone_index, last_solid_milestone_index),
+        )
+        .await;
+    }
+
+    pub async fn broadcast_heartbeat(
+        first_solid_milestone_index: MilestoneIndex,
+        last_solid_milestone_index: MilestoneIndex,
+    ) {
+        SenderWorker::<Heartbeat>::broadcast(Heartbeat::new(first_solid_milestone_index, last_solid_milestone_index))
+            .await;
+    }
+
+    pub async fn send_milestone_request(epid: EndpointId, index: MilestoneIndex) {
+        SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+    }
+
+    pub async fn broadcast_milestone_request(index: MilestoneIndex) {
+        SenderWorker::<MilestoneRequest>::broadcast(MilestoneRequest::new(index)).await;
+    }
+
+    pub async fn send_transaction(epid: EndpointId, transaction: &[u8]) {
+        SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(transaction)).await;
+    }
+
+    pub async fn broadcast_transaction(transaction: &[u8]) {
+        SenderWorker::<TransactionBroadcast>::broadcast(TransactionBroadcast::new(transaction)).await;
+    }
+
+    //  TODO constant
+
+    pub async fn send_transaction_request(epid: EndpointId, hash: [u8; 49]) {
+        SenderWorker::<TransactionRequest>::send(&epid, TransactionRequest::new(hash)).await;
+    }
+
+    pub async fn broadcast_transaction_request(hash: [u8; 49]) {
+        SenderWorker::<TransactionRequest>::broadcast(TransactionRequest::new(hash)).await;
     }
 }
