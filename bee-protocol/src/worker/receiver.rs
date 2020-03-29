@@ -22,7 +22,8 @@ use crate::{
         SUPPORTED_VERSIONS,
     },
     worker::{
-        ResponderWorkerEvent,
+        MilestoneResponderWorkerEvent,
+        TransactionResponderWorkerEvent,
         TransactionWorkerEvent,
     },
 };
@@ -81,7 +82,8 @@ pub struct ReceiverWorker {
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
     transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
-    responder_worker: mpsc::Sender<ResponderWorkerEvent>,
+    transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
+    milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
 }
 
 impl ReceiverWorker {
@@ -91,7 +93,8 @@ impl ReceiverWorker {
             peer,
             metrics,
             transaction_worker: Protocol::get().transaction_worker.clone(),
-            responder_worker: Protocol::get().responder_worker.clone(),
+            transaction_responder_worker: Protocol::get().transaction_responder_worker.clone(),
+            milestone_responder_worker: Protocol::get().milestone_responder_worker.clone(),
         }
     }
 
@@ -246,8 +249,8 @@ impl ReceiverWorker {
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
-                        self.responder_worker
-                            .send(ResponderWorkerEvent::MilestoneRequest {
+                        self.milestone_responder_worker
+                            .send(MilestoneResponderWorkerEvent::Request {
                                 epid: self.peer.epid,
                                 message: message,
                             })
@@ -290,8 +293,8 @@ impl ReceiverWorker {
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
-                        self.responder_worker
-                            .send(ResponderWorkerEvent::TransactionRequest {
+                        self.transaction_responder_worker
+                            .send(TransactionResponderWorkerEvent::Request {
                                 epid: self.peer.epid,
                                 message: message,
                             })

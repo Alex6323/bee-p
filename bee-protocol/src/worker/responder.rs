@@ -15,32 +15,30 @@ use futures::{
 };
 use log::info;
 
-pub(crate) enum ResponderWorkerEvent {
-    TransactionRequest {
+// Transaction responder worker
+
+pub(crate) enum TransactionResponderWorkerEvent {
+    Request {
         epid: EndpointId,
         message: TransactionRequest,
     },
-    MilestoneRequest {
-        epid: EndpointId,
-        message: MilestoneRequest,
-    },
 }
 
-pub(crate) struct ResponderWorker {
-    receiver: Receiver<ResponderWorkerEvent>,
+pub(crate) struct TransactionResponderWorker {
+    receiver: Receiver<TransactionResponderWorkerEvent>,
 }
 
-impl ResponderWorker {
-    pub(crate) fn new(receiver: Receiver<ResponderWorkerEvent>) -> Self {
+impl TransactionResponderWorker {
+    pub(crate) fn new(receiver: Receiver<TransactionResponderWorkerEvent>) -> Self {
         Self { receiver: receiver }
     }
 
     pub(crate) async fn run(mut self) {
-        info!("[ResponderWorker ] Running.");
+        info!("[TransactionResponderWorker ] Running.");
 
         while let Some(event) = self.receiver.next().await {
             match event {
-                ResponderWorkerEvent::TransactionRequest { epid, .. } => {
+                TransactionResponderWorkerEvent::Request { epid, .. } => {
                     // TODO
                     // if let Some(transaction) = tangle.get_transaction(message.hash) {
                     //     (epid, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
@@ -49,7 +47,35 @@ impl ResponderWorker {
 
                     SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(&[0; 500])).await;
                 }
-                ResponderWorkerEvent::MilestoneRequest { epid, .. } => {
+            }
+        }
+    }
+}
+
+// Milestone responder worker
+
+pub(crate) enum MilestoneResponderWorkerEvent {
+    Request {
+        epid: EndpointId,
+        message: MilestoneRequest,
+    },
+}
+
+pub(crate) struct MilestoneResponderWorker {
+    receiver: Receiver<MilestoneResponderWorkerEvent>,
+}
+
+impl MilestoneResponderWorker {
+    pub(crate) fn new(receiver: Receiver<MilestoneResponderWorkerEvent>) -> Self {
+        Self { receiver: receiver }
+    }
+
+    pub(crate) async fn run(mut self) {
+        info!("[MilestoneResponderWorker ] Running.");
+
+        while let Some(event) = self.receiver.next().await {
+            match event {
+                MilestoneResponderWorkerEvent::Request { epid, .. } => {
                     // TODO
                     // let index = if message.index == 0 {
                     //     tangle.get_latest_milestone_index()

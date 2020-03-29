@@ -12,8 +12,10 @@ pub(crate) use requester::{
     TransactionRequesterWorkerEvent,
 };
 pub(crate) use responder::{
-    ResponderWorker,
-    ResponderWorkerEvent,
+    MilestoneResponderWorker,
+    MilestoneResponderWorkerEvent,
+    TransactionResponderWorker,
+    TransactionResponderWorkerEvent,
 };
 pub(crate) use sender::{
     SenderContext,

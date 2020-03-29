@@ -22,13 +22,15 @@ use crate::{
     worker::{
         MilestoneRequesterWorker,
         MilestoneRequesterWorkerEvent,
+        MilestoneResponderWorker,
+        MilestoneResponderWorkerEvent,
         ReceiverWorker,
-        ResponderWorker,
-        ResponderWorkerEvent,
         SenderContext,
         SenderWorker,
         TransactionRequesterWorker,
         TransactionRequesterWorkerEvent,
+        TransactionResponderWorker,
+        TransactionResponderWorkerEvent,
         TransactionWorker,
         TransactionWorkerEvent,
     },
@@ -59,7 +61,8 @@ static mut PROTOCOL: *const Protocol = ptr::null();
 
 pub struct Protocol {
     pub(crate) transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
-    pub(crate) responder_worker: mpsc::Sender<ResponderWorkerEvent>,
+    pub(crate) transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
+    pub(crate) milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: mpsc::Sender<TransactionRequesterWorkerEvent>,
     pub(crate) milestone_requester_worker: mpsc::Sender<MilestoneRequesterWorkerEvent>,
     pub(crate) milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
@@ -82,8 +85,12 @@ impl Protocol {
         spawn(TransactionWorker::new(transaction_worker_receiver).run());
 
         // TODO conf
-        let (responder_worker_sender, responder_worker_receiver) = mpsc::channel(1000);
-        spawn(ResponderWorker::new(responder_worker_receiver).run());
+        let (transaction_responder_worker_sender, transaction_responder_worker_receiver) = mpsc::channel(1000);
+        spawn(TransactionResponderWorker::new(transaction_responder_worker_receiver).run());
+
+        // TODO conf
+        let (milestone_responder_worker_sender, milestone_responder_worker_receiver) = mpsc::channel(1000);
+        spawn(MilestoneResponderWorker::new(milestone_responder_worker_receiver).run());
 
         // TODO conf
         let (transaction_requester_worker_sender, transaction_requester_worker_receiver) = mpsc::channel(1000);
@@ -95,7 +102,8 @@ impl Protocol {
 
         let protocol = Protocol {
             transaction_worker: transaction_worker_sender,
-            responder_worker: responder_worker_sender,
+            transaction_responder_worker: transaction_responder_worker_sender,
+            milestone_responder_worker: milestone_responder_worker_sender,
             transaction_requester_worker: transaction_requester_worker_sender,
             milestone_requester_worker: milestone_requester_worker_sender,
             milestone_validator_worker: milestone_validator_worker_sender,
