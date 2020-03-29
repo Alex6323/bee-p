@@ -1,8 +1,64 @@
 {
-  "host": "127.0.0.1:3782",
-  "peers": [
-    "127.0.0.1:14265"
-  ],
-  "pow_difficulty": 14,
-  "pow_cores": 4
+  "bundle": {
+  },
+
+  "crypto": {
+  },
+
+  "network": {
+    "server": {
+      "type": "TCP",
+      "host": "localhost",
+      "port": 1337,
+    }
+  },
+
+  "node": {
+    "logLevel": "debug",
+    "snapshot": {
+      "stateFilePath": "./data/mainnet.snapshot.state",
+      "metaFilePath": "./data/mainnet.snapshot.meta",
+    }
+  },
+
+  "peering": {
+  },
+
+  "pow": {
+  },
+
+  "protocol": {
+    "coordinator": {
+      "publicKey": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
+      "sponge": "kerl",
+      "securityLevel": 2,
+      "depth": 23
+    },
+    "mwm": 14,
+    "channels": {
+      "milestoneRequestSendWorkerBound": 1000,
+      "transactionBroadcastSendWorkerBound": 1000,
+      "transactionRequestSendWorkerBound": 1000,
+      "heartbeatSendWorkerBound": 1000,
+      "milestoneValidatorWorkerBound": 1000,
+      "transactionWorkerBound": 1000,
+      "transactionResponderWorkerBound": 1000,
+      "milestoneResponderWorkerBound": 1000,
+      "transactionRequesterWorkerBound": 1000,
+      "milestoneRequesterWorkerBound": 1000,
+      "receiverWorkerBound": 1000,
+    }
+  },
+
+  "signing": {
+  },
+
+  "snapshot": {
+  },
+
+  "storage": {
+  },
+
+  "tangle": {
+  }
 }
