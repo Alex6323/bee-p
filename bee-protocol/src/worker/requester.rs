@@ -15,9 +15,8 @@ use log::info;
 
 // Transaction requester worker
 
-pub(crate) enum TransactionRequesterWorkerEvent {
-    Request([u8; 49]),
-}
+// TODO use proper hash type
+pub(crate) type TransactionRequesterWorkerEvent = [u8; 49];
 
 pub(crate) struct TransactionRequesterWorker {
     receiver: Receiver<TransactionRequesterWorkerEvent>,
@@ -31,10 +30,8 @@ impl TransactionRequesterWorker {
     pub(crate) async fn run(mut self) {
         info!("[TransactionRequesterWorker ] Running.");
 
-        while let Some(event) = self.receiver.next().await {
-            let _bytes = match event {
-                TransactionRequesterWorkerEvent::Request(hash) => TransactionRequest::new(hash).into_full_bytes(),
-            };
+        while let Some(hash) = self.receiver.next().await {
+            let _bytes = TransactionRequest::new(hash).into_full_bytes();
             // TODO we don't have any peer_id here
         }
     }
@@ -42,9 +39,7 @@ impl TransactionRequesterWorker {
 
 // Milestone requester worker
 
-pub(crate) enum MilestoneRequesterWorkerEvent {
-    Request(MilestoneIndex),
-}
+pub(crate) type MilestoneRequesterWorkerEvent = MilestoneIndex;
 
 pub(crate) struct MilestoneRequesterWorker {
     receiver: Receiver<MilestoneRequesterWorkerEvent>,
@@ -58,10 +53,8 @@ impl MilestoneRequesterWorker {
     pub(crate) async fn run(mut self) {
         info!("[MilestoneRequesterWorker ] Running.");
 
-        while let Some(event) = self.receiver.next().await {
-            let _bytes = match event {
-                MilestoneRequesterWorkerEvent::Request(index) => MilestoneRequest::new(index).into_full_bytes(),
-            };
+        while let Some(index) = self.receiver.next().await {
+            let _bytes = MilestoneRequest::new(index).into_full_bytes();
             // TODO we don't have any peer_id here
         }
     }

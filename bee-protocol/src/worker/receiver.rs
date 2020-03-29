@@ -250,7 +250,7 @@ impl ReceiverWorker {
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.milestone_responder_worker
-                            .send(MilestoneResponderWorkerEvent::Request {
+                            .send(MilestoneResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 message: message,
                             })
@@ -272,7 +272,7 @@ impl ReceiverWorker {
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.transaction_worker
-                            .send(TransactionWorkerEvent::Transaction(message))
+                            .send(message)
                             .await
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
                     }
@@ -294,7 +294,7 @@ impl ReceiverWorker {
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
                         self.transaction_responder_worker
-                            .send(TransactionResponderWorkerEvent::Request {
+                            .send(TransactionResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 message: message,
                             })

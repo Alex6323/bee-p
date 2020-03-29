@@ -9,22 +9,20 @@ use futures::{
 };
 use log::info;
 
-pub enum MilestoneValidatorWorkerEvent {
-    Candidate(TritBuf<T1B1Buf>),
-}
+pub(crate) type MilestoneValidatorWorkerEvent = TritBuf<T1B1Buf>;
 
-pub struct MilestoneValidatorWorker {
+pub(crate) struct MilestoneValidatorWorker {
     receiver: Receiver<MilestoneValidatorWorkerEvent>,
 }
 
 impl MilestoneValidatorWorker {
-    pub fn new(receiver: Receiver<MilestoneValidatorWorkerEvent>) -> Self {
+    pub(crate) fn new(receiver: Receiver<MilestoneValidatorWorkerEvent>) -> Self {
         Self { receiver: receiver }
     }
 
-    pub async fn run(mut self) {
+    pub(crate) async fn run(mut self) {
         info!("[MilestoneValidatorWorker ] Running.");
 
-        while let Some(_event) = self.receiver.next().await {}
+        while let Some(_hash) = self.receiver.next().await {}
     }
 }

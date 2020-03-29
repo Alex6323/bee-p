@@ -65,9 +65,7 @@ impl SenderContext {
     }
 }
 
-pub(crate) enum SenderWorkerEvent<M: Message> {
-    Message(M),
-}
+pub(crate) type SenderWorkerEvent<M> = M;
 
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
@@ -95,7 +93,7 @@ macro_rules! implement_sender_worker {
                         .0
                         // TODO avoid clone ?
                         .clone()
-                        .send(SenderWorkerEvent::Message(message))
+                        .send(message)
                         .await
                     {
                         warn!("[SenderWorker ] Sending message failed: {:?}.", e);
@@ -110,7 +108,7 @@ macro_rules! implement_sender_worker {
                         .0
                         // TODO avoid clone ?
                         .clone()
-                        .send(SenderWorkerEvent::Message(message.clone()))
+                        .send(message.clone())
                         .await
                     {
                         warn!("[SenderWorker ] Sending message failed: {:?}.", e);
@@ -123,13 +121,13 @@ macro_rules! implement_sender_worker {
                 events_receiver: mpsc::Receiver<SenderWorkerEvent<$type>>,
                 shutdown_receiver: oneshot::Receiver<()>,
             ) {
-                let mut events = events_receiver.fuse();
-                let mut shutdown = shutdown_receiver.fuse();
+                let mut events_fused = events_receiver.fuse();
+                let mut shutdown_fused = shutdown_receiver.fuse();
 
                 loop {
                     select! {
-                        message = events.next() => {
-                            if let Some(SenderWorkerEvent::Message(message)) = message {
+                        message = events_fused.next() => {
+                            if let Some(message) = message {
                                 match self
                                     .network
                                     .send(SendBytes {
@@ -152,7 +150,7 @@ macro_rules! implement_sender_worker {
                                 }
                             }
                         }
-                        _ = shutdown => {
+                        _ = shutdown_fused => {
                             break;
                         }
                     }

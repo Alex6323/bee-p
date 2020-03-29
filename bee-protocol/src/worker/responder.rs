@@ -17,11 +17,9 @@ use log::info;
 
 // Transaction responder worker
 
-pub(crate) enum TransactionResponderWorkerEvent {
-    Request {
-        epid: EndpointId,
-        message: TransactionRequest,
-    },
+pub(crate) struct TransactionResponderWorkerEvent {
+    pub(crate) epid: EndpointId,
+    pub(crate) message: TransactionRequest,
 }
 
 pub(crate) struct TransactionResponderWorker {
@@ -36,29 +34,23 @@ impl TransactionResponderWorker {
     pub(crate) async fn run(mut self) {
         info!("[TransactionResponderWorker ] Running.");
 
-        while let Some(event) = self.receiver.next().await {
-            match event {
-                TransactionResponderWorkerEvent::Request { epid, .. } => {
-                    // TODO
-                    // if let Some(transaction) = tangle.get_transaction(message.hash) {
-                    //     (epid, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
-                    // }
-                    // (epid, None)
+        while let Some(TransactionResponderWorkerEvent { epid, message }) = self.receiver.next().await {
+            // TODO
+            // if let Some(transaction) = tangle.get_transaction(message.hash) {
+            //     (epid, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
+            // }
+            // (epid, None)
 
-                    SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(&[0; 500])).await;
-                }
-            }
+            SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(&[0; 500])).await;
         }
     }
 }
 
 // Milestone responder worker
 
-pub(crate) enum MilestoneResponderWorkerEvent {
-    Request {
-        epid: EndpointId,
-        message: MilestoneRequest,
-    },
+pub(crate) struct MilestoneResponderWorkerEvent {
+    pub(crate) epid: EndpointId,
+    pub(crate) message: MilestoneRequest,
 }
 
 pub(crate) struct MilestoneResponderWorker {
@@ -73,24 +65,20 @@ impl MilestoneResponderWorker {
     pub(crate) async fn run(mut self) {
         info!("[MilestoneResponderWorker ] Running.");
 
-        while let Some(event) = self.receiver.next().await {
-            match event {
-                MilestoneResponderWorkerEvent::Request { epid, .. } => {
-                    // TODO
-                    // let index = if message.index == 0 {
-                    //     tangle.get_latest_milestone_index()
-                    // } else {
-                    //     message.index
-                    // }
-                    // if let Some(transaction) = tangle.get_milestone(index) {
-                    //     (epid, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
-                    // }
-                    // (epid, None)
+        while let Some(MilestoneResponderWorkerEvent { epid, message }) = self.receiver.next().await {
+            // TODO
+            // let index = if message.index == 0 {
+            //     tangle.get_latest_milestone_index()
+            // } else {
+            //     message.index
+            // }
+            // if let Some(transaction) = tangle.get_milestone(index) {
+            //     (epid, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
+            // }
+            // (epid, None)
 
-                    SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(&[0; 500])).await;
-                    // TODO send complete ms bundle ?
-                }
-            }
+            SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(&[0; 500])).await;
+            // TODO send complete ms bundle ?
         }
     }
 }

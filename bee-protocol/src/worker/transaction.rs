@@ -6,9 +6,7 @@ use futures::{
 };
 use log::info;
 
-pub(crate) enum TransactionWorkerEvent {
-    Transaction(TransactionBroadcast),
-}
+pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
 pub(crate) struct TransactionWorker {
     receiver: Receiver<TransactionWorkerEvent>,
@@ -22,6 +20,6 @@ impl TransactionWorker {
     pub(crate) async fn run(mut self) {
         info!("[TransactionWorker ] Running.");
 
-        while let Some(TransactionWorkerEvent::Transaction(transaction)) = self.receiver.next().await {}
+        while let Some(transaction) = self.receiver.next().await {}
     }
 }
