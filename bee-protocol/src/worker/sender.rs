@@ -10,6 +10,7 @@ use crate::{
         Peer,
         PeerMetrics,
     },
+    protocol::Protocol,
 };
 
 use bee_network::{
@@ -19,13 +20,10 @@ use bee_network::{
 };
 
 use std::{
-    collections::HashMap,
     marker::PhantomData,
-    ptr,
     sync::Arc,
 };
 
-use async_std::sync::RwLock;
 use futures::{
     channel::{
         mpsc,
@@ -65,79 +63,33 @@ impl SenderContext {
             heartbeat,
         }
     }
-
-    pub(crate) fn shutdown(self) {
-        if let Err(_) = self.milestone_request.1.send(()) {
-            warn!("[SenderContext ] Shutting down MilestoneRequest SenderWorker failed.");
-        }
-        if let Err(_) = self.transaction_broadcast.1.send(()) {
-            warn!("[SenderContext ] Shutting down TransactionBroadcast SenderWorker failed.");
-        }
-        if let Err(_) = self.transaction_request.1.send(()) {
-            warn!("[SenderContext ] Shutting down TransactionRequest SenderWorker failed.");
-        }
-        if let Err(_) = self.heartbeat.1.send(()) {
-            warn!("[SenderContext ] Shutting down Heartbeat SenderWorker failed.");
-        }
-    }
 }
-
-#[derive(Default)]
-pub(crate) struct SenderRegistry {
-    contexts: RwLock<HashMap<EndpointId, SenderContext>>,
-}
-
-impl SenderRegistry {
-    pub(crate) fn init() {
-        unsafe {
-            SENDER_REGISTRY = Box::leak(SenderRegistry::default().into()) as *const _;
-        }
-    }
-
-    fn registry() -> &'static SenderRegistry {
-        if unsafe { SENDER_REGISTRY.is_null() } {
-            panic!("Uninitialized sender registry.");
-        } else {
-            unsafe { &*SENDER_REGISTRY }
-        }
-    }
-
-    pub(crate) async fn insert(epid: EndpointId, context: SenderContext) {
-        SenderRegistry::registry().contexts.write().await.insert(epid, context);
-    }
-
-    pub(crate) async fn remove(epid: &EndpointId) -> Option<SenderContext> {
-        SenderRegistry::registry().contexts.write().await.remove(epid)
-    }
-}
-
-static mut SENDER_REGISTRY: *const SenderRegistry = ptr::null();
 
 pub(crate) enum SenderWorkerEvent<M: Message> {
     Message(M),
 }
 
 pub(crate) struct SenderWorker<M: Message> {
+    network: Network,
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
-    network: Network,
     _message_type: PhantomData<M>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
-            pub(crate) fn new(peer: Arc<Peer>, metrics: Arc<PeerMetrics>, network: Network) -> Self {
+            pub(crate) fn new(network: Network, peer: Arc<Peer>, metrics: Arc<PeerMetrics>) -> Self {
                 Self {
+                    network,
                     peer,
                     metrics,
-                    network,
                     _message_type: PhantomData,
                 }
             }
 
             pub(crate) async fn send(epid: &EndpointId, message: $type) {
-                if let Some(context) = SenderRegistry::registry().contexts.read().await.get(&epid) {
+                if let Some(context) = Protocol::get().contexts.read().await.get(&epid) {
                     if let Err(e) = context
                         .$sender
                         .0
@@ -152,7 +104,7 @@ macro_rules! implement_sender_worker {
             }
 
             pub(crate) async fn broadcast(message: $type) {
-                for context in SenderRegistry::registry().contexts.read().await.values() {
+                for context in Protocol::get().contexts.read().await.values() {
                     if let Err(e) = context
                         .$sender
                         .0

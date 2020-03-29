@@ -12,19 +12,9 @@ use bee_peering::{
     StaticPeerManager,
 };
 use bee_protocol::{
-    protocol_init,
-    MilestoneValidatorWorker,
-    MilestoneValidatorWorkerEvent,
     Peer,
     PeerMetrics,
-    ReceiverWorker,
-    ReceiverWorkerEvent,
-    RequesterWorker,
-    RequesterWorkerEvent,
-    ResponderWorker,
-    ResponderWorkerEvent,
-    TransactionWorker,
-    TransactionWorkerEvent,
+    Protocol,
 };
 use bee_snapshot::{
     SnapshotMetadata,
@@ -36,10 +26,7 @@ use std::{
     sync::Arc,
 };
 
-use async_std::task::{
-    block_on,
-    spawn,
-};
+use async_std::task::block_on;
 use futures::{
     channel::{
         mpsc,
@@ -55,12 +42,8 @@ pub struct Node {
     shutdown: Shutdown,
     events: EventSubscriber,
     // TODO real type ?
-    peers: HashMap<EndpointId, (mpsc::Sender<ReceiverWorkerEvent>, oneshot::Sender<()>, Arc<Peer>)>,
+    peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>, Arc<Peer>)>,
     metrics: Arc<PeerMetrics>,
-    transaction_worker_sender: Option<mpsc::Sender<TransactionWorkerEvent>>,
-    responder_worker_sender: Option<mpsc::Sender<ResponderWorkerEvent>>,
-    requester_worker_sender: Option<mpsc::Sender<RequesterWorkerEvent>>,
-    milestone_validator_worker_sender: Option<mpsc::Sender<MilestoneValidatorWorkerEvent>>,
 }
 
 impl Node {
@@ -71,10 +54,6 @@ impl Node {
             events: events,
             peers: HashMap::new(),
             metrics: Arc::new(PeerMetrics::new()),
-            transaction_worker_sender: None,
-            responder_worker_sender: None,
-            requester_worker_sender: None,
-            milestone_validator_worker_sender: None,
         }
     }
 
@@ -98,29 +77,15 @@ impl Node {
     }
 
     async fn endpoint_connected_handler(&mut self, epid: EndpointId, role: Role) {
-        // TODO conf
-        // ReceiverWorker channels
-        let (receiver_tx, receiver_rx) = mpsc::channel(1000);
-        let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
-
         let peer = Arc::new(Peer::new(epid, role));
+        let (receiver_tx, receiver_shutdown_tx) =
+            Protocol::register(self.network.clone(), peer.clone(), self.metrics.clone());
 
-        self.peers
-            .insert(epid, (receiver_tx, receiver_shutdown_tx, peer.clone()));
-
-        spawn(
-            ReceiverWorker::new(
-                self.network.clone(),
-                peer.clone(),
-                self.metrics.clone(),
-                self.transaction_worker_sender.as_ref().unwrap().clone(),
-                self.responder_worker_sender.as_ref().unwrap().clone(),
-            )
-            .run(receiver_rx, receiver_shutdown_rx),
-        );
+        self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx, peer));
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
+        //TODO unregister ?
         if let Some((_, shutdown, _)) = self.peers.remove(&epid) {
             if let Err(_) = shutdown.send(()) {
                 warn!("[Node ] Sending shutdown to {} failed.", epid);
@@ -130,7 +95,7 @@ impl Node {
 
     async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
         if let Some(peer) = self.peers.get_mut(&epid) {
-            if let Err(e) = peer.0.send(ReceiverWorkerEvent::Message(bytes)).await {
+            if let Err(e) = peer.0.send(bytes).await {
                 warn!(
                     "[Node ] Sending ReceiverWorkerEvent::Message to {} failed: {}.",
                     epid, e
@@ -161,27 +126,7 @@ impl Node {
 
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
-        protocol_init();
-
-        // TODO conf
-        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = mpsc::channel(1000);
-        self.milestone_validator_worker_sender = Some(milestone_validator_worker_sender);
-        spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
-
-        // TODO conf
-        let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
-        self.transaction_worker_sender = Some(transaction_worker_sender);
-        spawn(TransactionWorker::new(transaction_worker_receiver).run());
-
-        // TODO conf
-        let (responder_worker_sender, responder_worker_receiver) = mpsc::channel(1000);
-        self.responder_worker_sender = Some(responder_worker_sender);
-        spawn(ResponderWorker::new(responder_worker_receiver).run());
-
-        // TODO conf
-        let (requester_worker_sender, requester_worker_receiver) = mpsc::channel(1000);
-        self.requester_worker_sender = Some(requester_worker_sender);
-        spawn(RequesterWorker::new(requester_worker_receiver).run());
+        Protocol::init();
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf

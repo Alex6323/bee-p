@@ -4,25 +4,21 @@ mod responder;
 mod sender;
 mod transaction;
 
-pub use receiver::{
-    ReceiverWorker,
-    ReceiverWorkerEvent,
-};
-pub use requester::{
+pub(crate) use receiver::ReceiverWorker;
+pub(crate) use requester::{
     RequesterWorker,
     RequesterWorkerEvent,
 };
-pub use responder::{
+pub(crate) use responder::{
     ResponderWorker,
     ResponderWorkerEvent,
 };
 pub(crate) use sender::{
     SenderContext,
-    SenderRegistry,
     SenderWorker,
     SenderWorkerEvent,
 };
-pub use transaction::{
+pub(crate) use transaction::{
     TransactionWorker,
     TransactionWorkerEvent,
 };

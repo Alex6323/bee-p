@@ -15,7 +15,7 @@ use futures::{
 };
 use log::info;
 
-pub enum ResponderWorkerEvent {
+pub(crate) enum ResponderWorkerEvent {
     TransactionRequest {
         epid: EndpointId,
         message: TransactionRequest,
@@ -26,16 +26,16 @@ pub enum ResponderWorkerEvent {
     },
 }
 
-pub struct ResponderWorker {
+pub(crate) struct ResponderWorker {
     receiver: Receiver<ResponderWorkerEvent>,
 }
 
 impl ResponderWorker {
-    pub fn new(receiver: Receiver<ResponderWorkerEvent>) -> Self {
+    pub(crate) fn new(receiver: Receiver<ResponderWorkerEvent>) -> Self {
         Self { receiver: receiver }
     }
 
-    pub async fn run(mut self) {
+    pub(crate) async fn run(mut self) {
         info!("[ResponderWorker ] Running.");
 
         while let Some(event) = self.receiver.next().await {

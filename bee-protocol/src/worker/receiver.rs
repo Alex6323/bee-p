@@ -14,16 +14,15 @@ use crate::{
         PeerMetrics,
     },
     protocol::{
-        protocol_add,
         slice_eq,
         supported_version,
+        Protocol,
         COORDINATOR_BYTES,
         MINIMUM_WEIGHT_MAGNITUDE,
         SUPPORTED_VERSIONS,
     },
     worker::{
         ResponderWorkerEvent,
-        SenderRegistry,
         TransactionWorkerEvent,
     },
 };
@@ -58,10 +57,6 @@ pub(crate) enum ReceiverWorkerError {
     FailedSend,
 }
 
-pub enum ReceiverWorkerEvent {
-    Message(Vec<u8>),
-}
-
 enum ReceiverWorkerMessageState {
     Header,
     Payload(Header),
@@ -85,39 +80,29 @@ pub struct ReceiverWorker {
     network: Network,
     peer: Arc<Peer>,
     metrics: Arc<PeerMetrics>,
-    transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
+    transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
     responder_worker: mpsc::Sender<ResponderWorkerEvent>,
 }
 
 impl ReceiverWorker {
-    pub fn new(
-        network: Network,
-        peer: Arc<Peer>,
-        metrics: Arc<PeerMetrics>,
-        transaction_worker_sender: mpsc::Sender<TransactionWorkerEvent>,
-        responder_worker: mpsc::Sender<ResponderWorkerEvent>,
-    ) -> Self {
+    pub fn new(network: Network, peer: Arc<Peer>, metrics: Arc<PeerMetrics>) -> Self {
         Self {
             network,
             peer,
             metrics,
-            transaction_worker_sender,
-            responder_worker,
+            transaction_worker: Protocol::get().transaction_worker.clone(),
+            responder_worker: Protocol::get().responder_worker.clone(),
         }
     }
 
-    pub async fn run(
-        mut self,
-        events_receiver: mpsc::Receiver<ReceiverWorkerEvent>,
-        shutdown_receiver: oneshot::Receiver<()>,
-    ) {
+    pub async fn run(mut self, bytes_receiver: mpsc::Receiver<Vec<u8>>, shutdown_receiver: oneshot::Receiver<()>) {
         info!("[Peer({})] Receiver worker running.", self.peer.epid);
 
         let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
             state: ReceiverWorkerMessageState::Header,
         });
-        let mut events = events_receiver.fuse();
-        let mut shutdown = shutdown_receiver.fuse();
+        let mut bytes_fused = bytes_receiver.fuse();
+        let mut shutdown_fused = shutdown_receiver.fuse();
 
         // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
         self.network
@@ -132,7 +117,7 @@ impl ReceiverWorker {
 
         loop {
             select! {
-                event = events.next() => {
+                event = bytes_fused.next() => {
                     if let Some(event) = event {
                         state = match state {
                             ReceiverWorkerState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,
@@ -140,7 +125,7 @@ impl ReceiverWorker {
                         }
                     }
                 },
-                _ = shutdown => {
+                _ = shutdown_fused => {
                     break;
                 }
             }
@@ -148,12 +133,10 @@ impl ReceiverWorker {
 
         info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
 
-        if let Some(context) = SenderRegistry::remove(&self.peer.epid).await {
-            context.shutdown();
-        }
+        Protocol::senders_remove(&self.peer.epid).await;
     }
 
-    fn check_handshake(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
+    async fn check_handshake(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
         debug!("[Peer({})] Reading Handshake...", self.peer.epid);
 
         match Handshake::from_full_bytes(&header, bytes) {
@@ -191,7 +174,7 @@ impl ReceiverWorker {
                     // TODO check duplicate connection
                     info!("[Peer({})] Handshake completed.", self.peer.epid);
 
-                    protocol_add(self.network.clone(), self.peer.clone(), self.metrics.clone());
+                    Protocol::senders_add(self.network.clone(), self.peer.clone(), self.metrics.clone()).await;
 
                     state = ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
                         state: ReceiverWorkerMessageState::Header,
@@ -212,40 +195,31 @@ impl ReceiverWorker {
         }
     }
 
-    async fn handshake_handler(
-        &mut self,
-        context: AwaitingHandshakeContext,
-        event: ReceiverWorkerEvent,
-    ) -> ReceiverWorkerState {
-        match event {
-            ReceiverWorkerEvent::Message(bytes) => {
-                // TODO needed ?
-                if bytes.len() < 3 {
-                    ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                        state: ReceiverWorkerMessageState::Header,
-                    })
-                } else {
-                    match context.state {
-                        ReceiverWorkerMessageState::Header => {
-                            debug!("[Peer({})] Reading Header...", self.peer.epid);
+    async fn handshake_handler(&mut self, context: AwaitingHandshakeContext, bytes: Vec<u8>) -> ReceiverWorkerState {
+        // TODO needed ?
+        if bytes.len() < 3 {
+            ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                state: ReceiverWorkerMessageState::Header,
+            })
+        } else {
+            match context.state {
+                ReceiverWorkerMessageState::Header => {
+                    debug!("[Peer({})] Reading Header...", self.peer.epid);
 
-                            let header = Header::from_bytes(&bytes[0..3]);
+                    let header = Header::from_bytes(&bytes[0..3]);
 
-                            if bytes.len() > 3 {
-                                self.check_handshake(header, &bytes[3..bytes.len()])
-                            } else {
-                                ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                                    state: ReceiverWorkerMessageState::Payload(header),
-                                })
-                            }
-                        }
-                        ReceiverWorkerMessageState::Payload(header) => {
-                            self.check_handshake(header, &bytes[..bytes.len()])
-                        }
+                    if bytes.len() > 3 {
+                        self.check_handshake(header, &bytes[3..bytes.len()]).await
+                    } else {
+                        ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                            state: ReceiverWorkerMessageState::Payload(header),
+                        })
                     }
                 }
+                ReceiverWorkerMessageState::Payload(header) => {
+                    self.check_handshake(header, &bytes[..bytes.len()]).await
+                }
             }
-            _ => ReceiverWorkerState::AwaitingHandshake(context),
         }
     }
 
@@ -294,7 +268,7 @@ impl ReceiverWorker {
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
-                        self.transaction_worker_sender
+                        self.transaction_worker
                             .send(TransactionWorkerEvent::Transaction(message))
                             .await
                             .map_err(|_| ReceiverWorkerError::FailedSend)?;
@@ -355,65 +329,60 @@ impl ReceiverWorker {
     async fn message_handler(
         &mut self,
         mut context: AwaitingMessageContext,
-        event: ReceiverWorkerEvent,
+        mut bytes: Vec<u8>,
     ) -> ReceiverWorkerState {
-        match event {
-            ReceiverWorkerEvent::Message(mut bytes) => {
-                let mut offset = 0;
-                let mut remaining = true;
+        let mut offset = 0;
+        let mut remaining = true;
 
-                if context.buffer.is_empty() {
-                    context.buffer = bytes;
-                } else {
-                    context.buffer.append(&mut bytes);
-                }
-
-                while remaining {
-                    context.state = match context.state {
-                        ReceiverWorkerMessageState::Header => {
-                            if offset + 3 <= context.buffer.len() {
-                                debug!("[Peer({})] Reading Header...", self.peer.epid);
-                                let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
-                                offset = offset + 3;
-
-                                ReceiverWorkerMessageState::Payload(header)
-                            } else {
-                                remaining = false;
-
-                                ReceiverWorkerMessageState::Header
-                            }
-                        }
-                        ReceiverWorkerMessageState::Payload(header) => {
-                            if (offset + header.message_length as usize) <= context.buffer.len() {
-                                if let Err(e) = self
-                                    .process_message(
-                                        &header,
-                                        &context.buffer[offset..offset + header.message_length as usize],
-                                    )
-                                    .await
-                                {
-                                    error!("[Peer({})] Processing message failed: {:?}.", self.peer.epid, e);
-                                }
-
-                                offset = offset + header.message_length as usize;
-
-                                ReceiverWorkerMessageState::Header
-                            } else {
-                                remaining = false;
-
-                                ReceiverWorkerMessageState::Payload(header)
-                            }
-                        }
-                    };
-                }
-
-                ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                    state: context.state,
-                    buffer: context.buffer[offset..].to_vec(),
-                })
-            }
-            _ => ReceiverWorkerState::AwaitingMessage(context),
+        if context.buffer.is_empty() {
+            context.buffer = bytes;
+        } else {
+            context.buffer.append(&mut bytes);
         }
+
+        while remaining {
+            context.state = match context.state {
+                ReceiverWorkerMessageState::Header => {
+                    if offset + 3 <= context.buffer.len() {
+                        debug!("[Peer({})] Reading Header...", self.peer.epid);
+                        let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
+                        offset = offset + 3;
+
+                        ReceiverWorkerMessageState::Payload(header)
+                    } else {
+                        remaining = false;
+
+                        ReceiverWorkerMessageState::Header
+                    }
+                }
+                ReceiverWorkerMessageState::Payload(header) => {
+                    if (offset + header.message_length as usize) <= context.buffer.len() {
+                        if let Err(e) = self
+                            .process_message(
+                                &header,
+                                &context.buffer[offset..offset + header.message_length as usize],
+                            )
+                            .await
+                        {
+                            error!("[Peer({})] Processing message failed: {:?}.", self.peer.epid, e);
+                        }
+
+                        offset = offset + header.message_length as usize;
+
+                        ReceiverWorkerMessageState::Header
+                    } else {
+                        remaining = false;
+
+                        ReceiverWorkerMessageState::Payload(header)
+                    }
+                }
+            };
+        }
+
+        ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+            state: context.state,
+            buffer: context.buffer[offset..].to_vec(),
+        })
     }
 }
 

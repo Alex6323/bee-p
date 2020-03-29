@@ -13,21 +13,21 @@ use futures::{
 };
 use log::info;
 
-pub enum RequesterWorkerEvent {
+pub(crate) enum RequesterWorkerEvent {
     TransactionRequest([u8; 49]),
     MilestoneRequest(MilestoneIndex),
 }
 
-pub struct RequesterWorker {
+pub(crate) struct RequesterWorker {
     receiver: Receiver<RequesterWorkerEvent>,
 }
 
 impl RequesterWorker {
-    pub fn new(receiver: Receiver<RequesterWorkerEvent>) -> Self {
+    pub(crate) fn new(receiver: Receiver<RequesterWorkerEvent>) -> Self {
         Self { receiver: receiver }
     }
 
-    pub async fn run(mut self) {
+    pub(crate) async fn run(mut self) {
         info!("[RequesterWorker ] Running.");
 
         while let Some(event) = self.receiver.next().await {

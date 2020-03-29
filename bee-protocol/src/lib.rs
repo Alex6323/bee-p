@@ -5,6 +5,7 @@ mod peer;
 mod protocol;
 mod worker;
 
+// TODO as part of Protocol:: ?
 pub use helper::{
     broadcast_heartbeat,
     broadcast_milestone_request,
@@ -15,22 +16,8 @@ pub use helper::{
     send_transaction,
     send_transaction_request,
 };
-pub use milestone::{
-    MilestoneValidatorWorker,
-    MilestoneValidatorWorkerEvent,
-};
 pub use peer::{
     Peer,
     PeerMetrics,
 };
-pub use protocol::protocol_init;
-pub use worker::{
-    ReceiverWorker,
-    ReceiverWorkerEvent,
-    RequesterWorker,
-    RequesterWorkerEvent,
-    ResponderWorker,
-    ResponderWorkerEvent,
-    TransactionWorker,
-    TransactionWorkerEvent,
-};
+pub use protocol::Protocol;

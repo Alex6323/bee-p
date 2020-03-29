@@ -2,6 +2,7 @@ mod conf;
 mod protocol;
 mod version;
 
+// TODO use conf object and do not expose these default values
 pub(crate) use conf::{
     slice_eq,
     COORDINATOR_BYTES,
@@ -11,8 +12,7 @@ pub(crate) use conf::{
     TRANSACTION_BROADCAST_SEND_BOUND,
     TRANSACTION_REQUEST_SEND_BOUND,
 };
-pub(crate) use protocol::protocol_add;
-pub use protocol::protocol_init;
+pub use protocol::Protocol;
 pub(crate) use version::{
     supported_version,
     SUPPORTED_VERSIONS,
