@@ -65,7 +65,10 @@ pub struct Protocol {
 
 impl Protocol {
     pub fn init() {
-        // TODO only init once
+        if unsafe { !PROTOCOL.is_null() } {
+            warn!("[Protocol ] Already initialized.");
+            return;
+        }
 
         // TODO conf
         let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = mpsc::channel(1000);
