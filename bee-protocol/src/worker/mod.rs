@@ -6,8 +6,10 @@ mod transaction;
 
 pub(crate) use receiver::ReceiverWorker;
 pub(crate) use requester::{
-    RequesterWorker,
-    RequesterWorkerEvent,
+    MilestoneRequesterWorker,
+    MilestoneRequesterWorkerEvent,
+    TransactionRequesterWorker,
+    TransactionRequesterWorkerEvent,
 };
 pub(crate) use responder::{
     ResponderWorker,

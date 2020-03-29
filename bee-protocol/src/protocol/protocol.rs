@@ -20,13 +20,15 @@ use crate::{
         TRANSACTION_REQUEST_SEND_BOUND,
     },
     worker::{
+        MilestoneRequesterWorker,
+        MilestoneRequesterWorkerEvent,
         ReceiverWorker,
-        RequesterWorker,
-        RequesterWorkerEvent,
         ResponderWorker,
         ResponderWorkerEvent,
         SenderContext,
         SenderWorker,
+        TransactionRequesterWorker,
+        TransactionRequesterWorkerEvent,
         TransactionWorker,
         TransactionWorkerEvent,
     },
@@ -58,7 +60,8 @@ static mut PROTOCOL: *const Protocol = ptr::null();
 pub struct Protocol {
     pub(crate) transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
     pub(crate) responder_worker: mpsc::Sender<ResponderWorkerEvent>,
-    pub(crate) requester_worker: mpsc::Sender<RequesterWorkerEvent>,
+    pub(crate) transaction_requester_worker: mpsc::Sender<TransactionRequesterWorkerEvent>,
+    pub(crate) milestone_requester_worker: mpsc::Sender<MilestoneRequesterWorkerEvent>,
     pub(crate) milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
     pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
 }
@@ -83,13 +86,18 @@ impl Protocol {
         spawn(ResponderWorker::new(responder_worker_receiver).run());
 
         // TODO conf
-        let (requester_worker_sender, requester_worker_receiver) = mpsc::channel(1000);
-        spawn(RequesterWorker::new(requester_worker_receiver).run());
+        let (transaction_requester_worker_sender, transaction_requester_worker_receiver) = mpsc::channel(1000);
+        spawn(TransactionRequesterWorker::new(transaction_requester_worker_receiver).run());
+
+        // TODO conf
+        let (milestone_requester_worker_sender, milestone_requester_worker_receiver) = mpsc::channel(1000);
+        spawn(MilestoneRequesterWorker::new(milestone_requester_worker_receiver).run());
 
         let protocol = Protocol {
             transaction_worker: transaction_worker_sender,
             responder_worker: responder_worker_sender,
-            requester_worker: requester_worker_sender,
+            transaction_requester_worker: transaction_requester_worker_sender,
+            milestone_requester_worker: milestone_requester_worker_sender,
             milestone_validator_worker: milestone_validator_worker_sender,
             contexts: RwLock::new(HashMap::new()),
         };
