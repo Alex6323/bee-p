@@ -4,7 +4,10 @@
 //Support multiple sql backends via sqlx
 //Get rid of all warnings
 
-pub extern crate bincode;
+extern crate bincode;
+extern crate bytemuck;
+
+use bytemuck::{cast_slice};
 
 use std::{
     error::Error as StdError,
@@ -123,15 +126,12 @@ impl From<std::boxed::Box<bincode::ErrorKind>> for SqlxBackendError {
 //TODO - Encoded data is T5B1, decodeds to T1B1,should be generic
 fn decode_bytes(u8_slice: &[u8], num_trits: usize) -> TritBuf {
     let decoded_column_i8_slice: &[i8] =
-        unsafe { slice::from_raw_parts(u8_slice.as_ptr() as *const i8, u8_slice.len()) };
-    Trits::<T5B1>::try_from_raw(decoded_column_i8_slice, num_trits)
-        .unwrap()
-        .to_buf::<T1B1Buf>()
+        cast_slice(u8_slice);
+    unsafe { Trits::<T5B1>::from_raw_unchecked(decoded_column_i8_slice, num_trits).to_buf::<T1B1Buf>() }
 }
 
 fn encode_buffer(buffer: TritBuf<T5B1Buf>) -> Vec<u8> {
-    let i8_slice = buffer.as_i8_slice();
-    unsafe { slice::from_raw_parts(i8_slice.as_ptr() as *const u8, i8_slice.len()) }.to_vec()
+    cast_slice(buffer.as_i8_slice()).to_vec()
 }
 
 #[derive(Clone, Debug)]
@@ -334,22 +334,22 @@ impl StorageBackend for SqlxBackendStorage {
         let mut conn_transaction = pool.begin().await?;
 
         sqlx::query(INSERT_TRANSACTION_STATEMENT)
-            .bind(encode_buffer(tx.payload().into_inner().encode::<T5B1Buf>()))
-            .bind(encode_buffer(tx.address().into_inner().encode::<T5B1Buf>()))
-            .bind(*tx.value().into_inner())
-            .bind(encode_buffer(tx.obsolete_tag().into_inner().encode::<T5B1Buf>()))
-            .bind(*tx.timestamp().into_inner() as i32)
-            .bind(*tx.index().into_inner() as i32)
-            .bind(*tx.last_index().into_inner() as i32)
-            .bind(encode_buffer(tx.bundle().into_inner().encode::<T5B1Buf>()))
-            .bind(encode_buffer(tx.trunk().into_inner().encode::<T5B1Buf>()))
-            .bind(encode_buffer(tx.branch().into_inner().encode::<T5B1Buf>()))
-            .bind(encode_buffer(tx.tag().into_inner().encode::<T5B1Buf>()))
-            .bind(*tx.attachment_ts().into_inner() as i32)
-            .bind(*tx.attachment_lbts().into_inner() as i32)
-            .bind(*tx.attachment_ubts().into_inner() as i32)
-            .bind(encode_buffer(tx.nonce().into_inner().encode::<T5B1Buf>()))
-            .bind(encode_buffer(tx_hash.into_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(tx.payload().to_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(tx.address().to_inner().encode::<T5B1Buf>()))
+            .bind(*tx.value().to_inner())
+            .bind(encode_buffer(tx.obsolete_tag().to_inner().encode::<T5B1Buf>()))
+            .bind(*tx.timestamp().to_inner() as i32)
+            .bind(*tx.index().to_inner() as i32)
+            .bind(*tx.last_index().to_inner() as i32)
+            .bind(encode_buffer(tx.bundle().to_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(tx.trunk().to_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(tx.branch().to_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(tx.tag().to_inner().encode::<T5B1Buf>()))
+            .bind(*tx.attachment_ts().to_inner() as i32)
+            .bind(*tx.attachment_lbts().to_inner() as i32)
+            .bind(*tx.attachment_ubts().to_inner() as i32)
+            .bind(encode_buffer(tx.nonce().to_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(tx_hash.to_inner().encode::<T5B1Buf>()))
             .execute(&mut conn_transaction)
             .await?;
 
@@ -368,7 +368,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         let _user_id: i32 = 0;
         let rec = sqlx::query(FIND_TRANSACTION_BY_HASH_STATEMENT)
-            .bind(encode_buffer(tx_hash.into_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(tx_hash.to_inner().encode::<T5B1Buf>()))
             .fetch_one(&mut pool)
             .await?;
 
@@ -435,7 +435,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         transaction_hashes.iter().for_each(|hash| {
             let _ = sqlx::query(UPDATE_SET_SOLID_STATEMENT)
-                .bind(encode_buffer(hash.into_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
                 .fetch_one(&mut conn_transaction);
         });
 
@@ -457,7 +457,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         transaction_hashes.iter().for_each(|hash| {
             let _ = sqlx::query(UPDATE_SNAPSHOT_INDEX_STATEMENT)
-                .bind(encode_buffer(hash.into_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
                 .bind(snapshot_index as i32)
                 .fetch_one(&mut conn_transaction);
         });
@@ -481,7 +481,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         for hash in transaction_hashes.iter() {
             let _ = sqlx::query(DELETE_TRANSACTION_STATEMENT)
-                .bind(encode_buffer(hash.into_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
                 .fetch_all(&mut conn_transaction)
                 .await?;
         }
@@ -505,22 +505,22 @@ impl StorageBackend for SqlxBackendStorage {
 
         for (tx_hash, tx) in transactions {
             sqlx::query(INSERT_TRANSACTION_STATEMENT)
-                .bind(encode_buffer(tx.payload().into_inner().encode::<T5B1Buf>()))
-                .bind(encode_buffer(tx.address().into_inner().encode::<T5B1Buf>()))
-                .bind(*tx.value().into_inner())
-                .bind(encode_buffer(tx.obsolete_tag().into_inner().encode::<T5B1Buf>()))
-                .bind(*tx.timestamp().into_inner() as i32)
-                .bind(*tx.index().into_inner() as i32)
-                .bind(*tx.last_index().into_inner() as i32)
-                .bind(encode_buffer(tx.bundle().into_inner().encode::<T5B1Buf>()))
-                .bind(encode_buffer(tx.trunk().into_inner().encode::<T5B1Buf>()))
-                .bind(encode_buffer(tx.branch().into_inner().encode::<T5B1Buf>()))
-                .bind(encode_buffer(tx.tag().into_inner().encode::<T5B1Buf>()))
-                .bind(*tx.attachment_ts().into_inner() as i32)
-                .bind(*tx.attachment_lbts().into_inner() as i32)
-                .bind(*tx.attachment_ubts().into_inner() as i32)
-                .bind(encode_buffer(tx.nonce().into_inner().encode::<T5B1Buf>()))
-                .bind(encode_buffer(tx_hash.into_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(tx.payload().to_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(tx.address().to_inner().encode::<T5B1Buf>()))
+                .bind(*tx.value().to_inner())
+                .bind(encode_buffer(tx.obsolete_tag().to_inner().encode::<T5B1Buf>()))
+                .bind(*tx.timestamp().to_inner() as i32)
+                .bind(*tx.index().to_inner() as i32)
+                .bind(*tx.last_index().to_inner() as i32)
+                .bind(encode_buffer(tx.bundle().to_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(tx.trunk().to_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(tx.branch().to_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(tx.tag().to_inner().encode::<T5B1Buf>()))
+                .bind(*tx.attachment_ts().to_inner() as i32)
+                .bind(*tx.attachment_lbts().to_inner() as i32)
+                .bind(*tx.attachment_ubts().to_inner() as i32)
+                .bind(encode_buffer(tx.nonce().to_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(tx_hash.to_inner().encode::<T5B1Buf>()))
                 .execute(&mut conn_transaction)
                 .await?;
         }
@@ -540,7 +540,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         sqlx::query(INSERT_MILESTONE_STATEMENT)
             .bind(milestone.index as i32)
-            .bind(encode_buffer(milestone.hash.into_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(milestone.hash.to_inner().encode::<T5B1Buf>()))
             .execute(&mut conn_transaction)
             .await?;
 
@@ -560,7 +560,7 @@ impl StorageBackend for SqlxBackendStorage {
         let _user_id: i32 = 0;
 
         let rec = sqlx::query(FIND_MILESTONE_BY_HASH_STATEMENT)
-            .bind(encode_buffer(milestone_hash.into_inner().encode::<T5B1Buf>()))
+            .bind(encode_buffer(milestone_hash.to_inner().encode::<T5B1Buf>()))
             .fetch_one(&mut pool)
             .await?;
 
@@ -585,7 +585,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         for hash in milestone_hashes.iter() {
             let _row = sqlx::query(DELETE_MILESTONE_BY_HASH_STATEMENT)
-                .bind(encode_buffer(hash.into_inner().encode::<T5B1Buf>()))
+                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
                 .fetch_all(&mut conn_transaction)
                 .await?;
         }

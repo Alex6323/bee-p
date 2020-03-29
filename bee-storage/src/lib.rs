@@ -105,7 +105,7 @@ mod tests {
         let found_tx = res.unwrap();
         block_on(storage.destroy_connection()).unwrap();
 
-        assert_eq!(tx.payload().into_inner().len(), found_tx.payload().into_inner().len());
+        assert_eq!(tx.payload().to_inner().len(), found_tx.payload().to_inner().len());
         assert_eq!(tx.bundle(), found_tx.bundle());
         assert_eq!(tx.trunk(), found_tx.trunk());
         assert_eq!(tx.branch(), found_tx.branch());

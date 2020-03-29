@@ -108,7 +108,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
             builder.last_index.replace(Index::from_inner_unchecked(last_index));
 
             // Safe to unwrap since we just checked it's not None
-            sum += builder.value.as_ref().unwrap().into_inner();
+            sum += builder.value.as_ref().unwrap().to_inner();
             if sum.abs() > IOTA_SUPPLY {
                 Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
             }
@@ -131,7 +131,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     fn has_no_input(&self) -> Result<(), OutgoingBundleBuilderError> {
         for builder in &self.builders.0 {
             // Safe to unwrap since we made sure it's not None in `seal`
-            if *builder.value.as_ref().unwrap().into_inner() < 0 {
+            if *builder.value.as_ref().unwrap().to_inner() < 0 {
                 Err(OutgoingBundleBuilderError::UnsignedInput)?;
             }
         }
