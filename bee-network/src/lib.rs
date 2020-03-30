@@ -18,14 +18,14 @@ pub use address::{
     url::Url,
     Address,
 };
-pub use commands::Command;
 pub use commands::{
     response_channel,
+    Command,
     Requester,
     Responder,
 };
 pub use endpoint::{
-    role::Role,
+    origin::Origin,
     Endpoint,
     EndpointId,
 };
@@ -48,8 +48,10 @@ mod tcp;
 //mod udp;
 mod utils;
 
-use endpoint::worker::EndpointWorker as EpWorker;
-use endpoint::whitelist;
+use endpoint::{
+    whitelist,
+    worker::EndpointWorker as EpWorker,
+};
 use events::EventSubscriber as Events;
 use tcp::worker::TcpWorker;
 //use udp::worker::UdpWorker;

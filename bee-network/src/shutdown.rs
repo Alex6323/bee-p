@@ -1,5 +1,7 @@
-use crate::endpoint::whitelist;
-use crate::errors::Result;
+use crate::{
+    endpoint::whitelist,
+    errors::Result,
+};
 
 use async_std::task;
 use futures::channel::oneshot;
@@ -32,7 +34,6 @@ impl Shutdown {
 
     /// Executes the shutdown.
     pub async fn execute(self) {
-
         whitelist::free();
 
         let mut tasks = self.tasks;

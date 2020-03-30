@@ -1,5 +1,7 @@
-use super::errors::*;
-use super::Address;
+use super::{
+    errors::*,
+    Address,
+};
 
 use std::fmt;
 

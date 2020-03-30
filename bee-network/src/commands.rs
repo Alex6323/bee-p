@@ -1,5 +1,7 @@
-use crate::address::url::Url;
-use crate::endpoint::EndpointId;
+use crate::{
+    address::url::Url,
+    endpoint::EndpointId,
+};
 
 use futures::channel::{
     mpsc,
@@ -133,10 +135,12 @@ pub(crate) fn command_channel() -> (CommandSender, CommandReceiver) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_std::prelude::*;
-    use async_std::task::{
-        block_on,
-        spawn,
+    use async_std::{
+        prelude::*,
+        task::{
+            block_on,
+            spawn,
+        },
     };
     use futures::sink::SinkExt;
 

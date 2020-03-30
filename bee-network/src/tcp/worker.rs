@@ -1,15 +1,24 @@
-use crate::address::Address;
-use crate::endpoint::{role::Role, whitelist};
-use crate::errors::Result;
-use crate::events::EventPublisher as Notifier;
-use crate::shutdown::ShutdownListener as Shutdown;
+use crate::{
+    address::Address,
+    endpoint::{
+        origin::Origin,
+        whitelist,
+    },
+    errors::Result,
+    events::EventPublisher as Notifier,
+    shutdown::ShutdownListener as Shutdown,
+};
 
-use super::connection::TcpConnection;
-use super::spawn_connection_workers;
+use super::{
+    connection::TcpConnection,
+    spawn_connection_workers,
+};
 
 use async_std::net::TcpListener;
-use futures::prelude::*;
-use futures::select;
+use futures::{
+    prelude::*,
+    select,
+};
 use log::*;
 
 pub(crate) struct TcpWorker {
@@ -44,7 +53,7 @@ impl TcpWorker {
                         match stream {
                             Ok(stream) => {
 
-                                let conn = match TcpConnection::new(stream, Role::Server) {
+                                let conn = match TcpConnection::new(stream, Origin::Inbound) {
                                     Ok(conn) => conn,
                                     Err(e) => {
                                         error!["TCP  ] Error creating TCP connection (Stream immediatedly aborted?)."];
@@ -66,9 +75,9 @@ impl TcpWorker {
                                 }
 
                                 debug!(
-                                    "[TCP  ] Sucessfully established connection to {} (as {}).",
+                                    "[TCP  ] Sucessfully established connection to {} ({}).",
                                     conn.remote_addr,
-                                    Role::Server
+                                    Origin::Inbound
                                 );
 
                                 match spawn_connection_workers(conn, self.notifier.clone()).await {

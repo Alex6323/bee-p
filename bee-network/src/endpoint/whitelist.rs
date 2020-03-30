@@ -3,8 +3,13 @@ use super::EndpointId as EpId;
 use async_std::net::IpAddr;
 use dashmap::DashMap;
 
-use std::sync::atomic::{AtomicPtr, Ordering};
-use std::ptr;
+use std::{
+    ptr,
+    sync::atomic::{
+        AtomicPtr,
+        Ordering,
+    },
+};
 
 use log::*;
 

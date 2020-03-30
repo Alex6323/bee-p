@@ -1,14 +1,16 @@
+pub mod origin;
 pub mod outbox;
-pub mod role;
 pub mod store;
-pub mod worker;
 pub mod whitelist;
+pub mod worker;
 
-use crate::address::url::{
-    Protocol,
-    Url,
+use crate::address::{
+    url::{
+        Protocol,
+        Url,
+    },
+    Address,
 };
-use crate::address::Address;
 
 use std::fmt;
 
@@ -62,7 +64,7 @@ impl Endpoint {
             protocol,
         }
     }
-    /// Creates an endpoint from an `Url`.
+    /// Creates an endpoint from a `Url`.
     pub fn from_url(url: Url) -> Self {
         let address = url.address();
         let protocol = url.protocol();

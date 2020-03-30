@@ -1,39 +1,44 @@
 use super::whitelist;
 
-use crate::address::url::{
-    Protocol,
-    Url,
+use crate::{
+    address::url::{
+        Protocol,
+        Url,
+    },
+    commands::{
+        Command,
+        CommandReceiver as Commands,
+        Responder,
+    },
+    constants::CONNECT_INTERVAL,
+    endpoint::{
+        outbox::Outbox,
+        store::Endpoints,
+        Endpoint as Ep,
+        EndpointId as EpId,
+    },
+    errors::Result,
+    events::{
+        Event,
+        EventPublisher as Notifier,
+        EventPublisher as Publisher,
+        EventSubscriber as Events,
+    },
+    shutdown::ShutdownListener as Shutdown,
+    tcp,
+    utils::time,
 };
 
-use crate::commands::CommandReceiver as Commands;
-use crate::commands::{
-    Command,
-    Responder,
+use async_std::{
+    prelude::*,
+    task::{
+        self,
+        spawn,
+    },
 };
-use crate::constants::CONNECT_INTERVAL;
-use crate::endpoint::{
-    outbox::Outbox,
-    store::Endpoints,
-    Endpoint as Ep,
-    EndpointId as EpId,
-};
-use crate::errors::Result;
-use crate::events::Event;
-use crate::events::EventPublisher as Notifier;
-use crate::events::EventPublisher as Publisher;
-use crate::events::EventSubscriber as Events;
-use crate::shutdown::ShutdownListener as Shutdown;
-use crate::tcp;
-use crate::utils::time;
-
-use async_std::prelude::*;
-use async_std::task::{
-    self,
-    spawn,
-};
-use futures::sink::SinkExt;
 use futures::{
     select,
+    sink::SinkExt,
     FutureExt,
 };
 use log::*;
@@ -169,7 +174,7 @@ impl EndpointWorker {
                         Event::EndpointRemoved { epid, total } => {
                             publisher.send(Event::EndpointRemoved { epid, total }).await;
                         },
-                        Event::NewConnection { ep, role, sender } => {
+                        Event::NewConnection { ep, origin, sender } => {
                             let epid = ep.id;
                             let addr = ep.address;
 
@@ -179,7 +184,7 @@ impl EndpointWorker {
                             publisher.send(Event::EndpointConnected {
                                 epid,
                                 address: addr,
-                                role,
+                                origin,
                                 timestamp: time::timestamp_millis(),
                                 total: connected.num(),
                             }).await?
@@ -237,7 +242,6 @@ async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifie
     let epid = ep.id;
 
     if contacts.insert(ep) {
-
         // add its ip to the whitelist, so that we can make sure that we accept only connections
         // from known peers
         let whitelist = whitelist::get();
@@ -273,7 +277,6 @@ async fn rmv_endpoint(
     }
 
     if removed_contact || removed_connected {
-
         // Remove its IP also from the whitelist, so we won't accept connections from it
         // anymore
         let whitelist = whitelist::get();

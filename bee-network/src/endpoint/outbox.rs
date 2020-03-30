@@ -1,13 +1,19 @@
-use crate::constants::BYTES_CHANNEL_CAPACITY;
-use crate::endpoint::EndpointId as EpId;
-use crate::errors::Result;
+use crate::{
+    constants::BYTES_CHANNEL_CAPACITY,
+    endpoint::EndpointId as EpId,
+    errors::Result,
+};
 
 use async_std::sync::Arc;
-use futures::channel::mpsc;
-use futures::sink::SinkExt;
+use futures::{
+    channel::mpsc,
+    sink::SinkExt,
+};
 
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{
+    hash_map::Entry,
+    HashMap,
+};
 
 // TODO: rename to `MessageSender`, `MessageReceiver`.
 pub type BytesSender = mpsc::Sender<Arc<Vec<u8>>>;
