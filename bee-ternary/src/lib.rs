@@ -171,10 +171,6 @@ where
     }
 }
 
-unsafe impl<T> Send for Trits<T> {}
-
-unsafe impl<T> Sync for Trits<T> {}
-
 impl<T: Trit> Trits<T1B1<T>> {
     pub fn as_raw_slice(&self) -> &[T] {
         self.0.as_raw_slice()
@@ -430,6 +426,10 @@ impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
     }
 }
 
-unsafe impl<T> Send for TritBuf<T> {}
+unsafe impl<T: raw::RawEncoding> Send for Trits<T> {}
 
-unsafe impl<T> Sync for TritBuf<T> {}
+unsafe impl<T: raw::RawEncoding> Sync for Trits<T> {}
+
+unsafe impl<T: raw::RawEncodingBuf> Send for TritBuf<T> {}
+
+unsafe impl<T: raw::RawEncodingBuf> Sync for TritBuf<T> {}
