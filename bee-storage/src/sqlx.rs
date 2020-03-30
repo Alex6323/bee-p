@@ -7,6 +7,8 @@
 extern crate bincode;
 extern crate bytemuck;
 
+mod sql_statements;
+
 use bytemuck::{cast_slice};
 
 use std::{
@@ -66,7 +68,7 @@ use sqlx::{
     Row,
 };
 
-std::include!("sql/statements.rs");
+use crate::sqlx::sql_statements::*;
 
 pub const FAILED_ESTABLISHING_CONNECTION: &str = "failed to establish connection.";
 pub const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
