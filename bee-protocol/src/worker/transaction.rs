@@ -56,6 +56,7 @@ impl TransactionWorker {
 
         while let Some(transaction_broadcast) = self.receiver.next().await {
 
+            // TODO: move out from the loop
             // convert bytes of coordinator address to i8 slice
             let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
             let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8,243).unwrap().to_buf::<T1B1Buf>();
@@ -201,6 +202,8 @@ fn test_identify_coo_address() {
     let t5b1_coo_buf: TritBuf<T5B1Buf> = Trits::<T5B1>::try_from_raw(t5b1_coo, 243).unwrap().to_buf();
 
     let t1b1_coo_buf: TritBuf<T1B1Buf> = t5b1_coo_buf.encode::<T1B1Buf>();
+
+    assert_eq!(243, t1b1_coo_buf.len());
 
     // build address
     let address: Address = Address::try_from_tritbuf(t1b1_coo_buf).unwrap();
