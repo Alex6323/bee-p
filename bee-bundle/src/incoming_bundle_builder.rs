@@ -6,6 +6,7 @@ use crate::{
     },
     transaction::{
         Transaction,
+        TransactionField,
         Transactions,
     },
 };
