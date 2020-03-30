@@ -59,7 +59,6 @@ echo "CREATE USER "$USER" LOGIN PASSWORD '"$PASS"';" >> setup.sql
 echo "CREATE DATABASE "$DB_NAME" WITH OWNER = "$USER";" >> setup.sql
 echo "GRANT ALL PRIVILEGES ON DATABASE "$DB_NAME" TO "$USER";" >> setup.sql
 
-
 psql -U postgres  -f setup.sql
 psql -U postgres  -f $PATH_TO_SCHEMA -U $USER $DB_NAME
 

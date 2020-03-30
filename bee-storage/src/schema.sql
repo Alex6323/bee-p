@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS transactions (
-  signature_or_message BYTEA NOT NULL,
+  payload BYTEA NOT NULL,
   address BYTEA NOT NULL,
   value INTEGER NOT NULL,
   obsolete_tag BYTEA,

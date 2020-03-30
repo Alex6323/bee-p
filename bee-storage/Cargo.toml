@@ -6,11 +6,20 @@ edition = "2018"
 
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
+bee-ternary = { path = "../bee-ternary"}
+bee-test = { path = "../bee-test"}
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }
 async-trait = "0.1.22"
 serde = "1.0.104"
 
+bincode = "1.2.1"
+futures = "0.3.1"
+num_cpus = "1.12.0"
+rand = "0.7.3"
+sqlx = {version = "0.2.6", features = [ "postgres" ]}
+bytemuck = "1.2.0"
+
 [lib]
 name = "bee_storage"
-path = "src/mod.rs"
+path = "src/lib.rs"
