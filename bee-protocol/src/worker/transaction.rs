@@ -1,5 +1,6 @@
 use async_std::task::{block_on, spawn};
 
+use bee_bundle::Address;
 use bee_bundle::Hash;
 use bee_bundle::Transaction;
 use bee_bundle::TransactionField;
@@ -35,14 +36,22 @@ pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
 pub(crate) struct TransactionWorker {
     receiver: Receiver<TransactionWorkerEvent>,
-    milestone_validator_worker_sender: Sender<MilestoneValidatorWorkerEvent>
+    milestone_validator_worker_sender: Sender<MilestoneValidatorWorkerEvent>,
+    coordinator_address: Address
 }
 
 impl TransactionWorker {
     pub(crate) fn new(receiver: Receiver<TransactionWorkerEvent>) -> Self {
+
+        // convert bytes of coordinator address to i8 slice
+        let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
+        let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8,243).unwrap().to_buf::<T1B1Buf>();
+        let coordinator_address = Address::from_inner_unchecked(t1b1_coo_buf);
+
         Self {
             receiver: receiver,
             milestone_validator_worker_sender: Protocol::get().milestone_validator_worker.clone(),
+            coordinator_address: coordinator_address
         }
     }
 
@@ -55,9 +64,7 @@ impl TransactionWorker {
         //let milestone_validator_worker_sender = &mut self.milestone_validator_worker_sender;
         //let shutdown_receiver = &mut self.shutdown_receiver;
 
-        // convert bytes of coordinator address to i8 slice
-        let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
-        let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8,243).unwrap().to_buf::<T1B1Buf>();
+        let (mut milestone_sender, milestone_receiver) = channel(1000);
 
         while let Some(transaction_broadcast) = self.receiver.next().await {
 
@@ -108,9 +115,9 @@ impl TransactionWorker {
             tangle.insert(tx_hash.clone(), built_transaction);
 
             // check if transaction is a potential milestone candidate
-            //if address.0.eq(&t1b1_coo_buf) {
-                //milestone_sender.send(tx_hash.clone().0).await.unwrap();
-            //}
+            if address.eq(&self.coordinator_address) {
+                milestone_sender.send(tx_hash.clone()).await.unwrap();
+            }
 
         }
     }
