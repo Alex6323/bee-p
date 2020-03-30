@@ -1,12 +1,10 @@
 use crate::address::Address;
+use crate::endpoint::role::Role;
 use crate::errors::ActorSuccess as S;
 use crate::events::EventPublisher as Notifier;
 use crate::shutdown::ShutdownListener as Shutdown;
 
-use super::connection::{
-    Role,
-    TcpConnection,
-};
+use super::connection::TcpConnection;
 use super::spawn_connection_workers;
 
 use async_std::net::TcpListener;

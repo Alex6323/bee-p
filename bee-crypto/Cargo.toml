@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 bee-ternary = { path = '../bee-ternary' }
+tiny-keccak = { version = "2.0.1", features = ["keccak"] }

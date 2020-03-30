@@ -1,3 +1,4 @@
+use crate::endpoint::role::Role;
 use crate::errors::ConnectionResult as R;
 
 use async_std::net::{
@@ -7,21 +8,6 @@ use async_std::net::{
 use async_std::sync::Arc;
 
 use std::fmt;
-
-#[derive(Clone, Debug)]
-pub enum Role {
-    Client,
-    Server,
-}
-
-impl fmt::Display for Role {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Role::Client => write!(f, "Client"),
-            Role::Server => write!(f, "Server"),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct TcpConnection {

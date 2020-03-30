@@ -4,7 +4,7 @@ pub(crate) const HEADER_TYPE_SIZE: usize = 1;
 const HEADER_LENGTH_SIZE: usize = 2;
 pub(crate) const HEADER_SIZE: usize = HEADER_TYPE_SIZE + HEADER_LENGTH_SIZE;
 
-pub struct Header {
+pub(crate) struct Header {
     pub(crate) message_type: u8,
     pub(crate) message_length: u16,
 }

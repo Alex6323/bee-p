@@ -1,34 +1,28 @@
-mod milestone_validator;
 mod receiver;
 mod requester;
 mod responder;
 mod sender;
 mod transaction;
 
-pub use milestone_validator::{
-    MilestoneValidatorWorker,
-    MilestoneValidatorWorkerEvent,
+pub(crate) use receiver::ReceiverWorker;
+pub(crate) use requester::{
+    MilestoneRequesterWorker,
+    MilestoneRequesterWorkerEvent,
+    TransactionRequesterWorker,
+    TransactionRequesterWorkerEvent,
 };
-pub use receiver::{
-    ReceiverWorker,
-    ReceiverWorkerEvent,
+pub(crate) use responder::{
+    MilestoneResponderWorker,
+    MilestoneResponderWorkerEvent,
+    TransactionResponderWorker,
+    TransactionResponderWorkerEvent,
 };
-pub use requester::{
-    RequesterWorker,
-    RequesterWorkerEvent,
-};
-pub use responder::{
-    ResponderWorker,
-    ResponderWorkerEvent,
-};
-pub use sender::{
-    sender_registry,
+pub(crate) use sender::{
     SenderContext,
-    SenderRegistry,
     SenderWorker,
     SenderWorkerEvent,
 };
-pub use transaction::{
+pub(crate) use transaction::{
     TransactionWorker,
     TransactionWorkerEvent,
 };

@@ -16,6 +16,7 @@ use bee_network::{
     Event,
     EventSubscriber as Events,
     Network,
+    Role,
     Shutdown,
     Url,
 };
@@ -64,8 +65,20 @@ async fn notification_handler(mut events: Events, mut network: Network, msg: Str
                     .await
                     .expect("error sending Connect command");
             }
-            Event::EndpointConnected { epid, total, .. } => {
+            Event::EndpointConnected {
+                epid,
+                total,
+                role,
+                address,
+                timestamp,
+            } => {
                 info!("[.....] Connected endpoint {} ({}).", epid, total);
+
+                match role {
+                    Role::Client => info!("[.....] Being the client"),
+                    Role::Server => info!("[.....] Being the server"),
+                    Role::Unspecified => (),
+                }
 
                 let msg = Utf8Message::new(&msg);
                 network

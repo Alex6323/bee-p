@@ -1,28 +1,49 @@
 use crate::constants::{
     ADDRESS,
+    ADDRESS_TRIT_LEN,
     BRANCH,
     BUNDLE,
+    HASH_TRIT_LEN,
     IOTA_SUPPLY,
     NONCE,
+    NONCE_TRIT_LEN,
     OBSOLETE_TAG,
     PAYLOAD,
+    PAYLOAD_TRIT_LEN,
     TAG,
+    TAG_TRIT_LEN,
     TRUNK,
     TRYTE_ZERO,
 };
 
-use bee_ternary::raw::RawEncoding;
 use bee_ternary::util::trytes_to_trits_buf;
 use bee_ternary::{
+    raw::RawEncoding,
+    raw::RawEncodingBuf,
     Btrit,
     IsTryte,
     T1B1Buf,
+    Trit,
     TritBuf,
     Trits,
 };
 
+use std::fmt;
 use std::hash;
 use std::iter;
+
+#[derive(Debug)]
+pub enum TransactionFieldError {
+    FieldWrongLength,
+    FieldDeserializationError,
+}
+
+pub trait TransactionField: Sized {
+    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self, TransactionFieldError>;
+    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self;
+
+    fn into_inner(&self) -> TritBuf<T1B1Buf>;
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Payload(pub TritBuf<T1B1Buf>);
@@ -45,6 +66,10 @@ impl Payload {
 
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
+    }
+
+    pub fn trit_len() -> usize {
+        PAYLOAD_TRIT_LEN
     }
 }
 
@@ -69,6 +94,10 @@ impl Address {
 
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
+    }
+
+    pub fn trit_len() -> usize {
+        ADDRESS_TRIT_LEN
     }
 }
 
@@ -96,6 +125,10 @@ impl Tag {
 
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
+    }
+
+    pub fn trit_len() -> usize {
+        TAG_TRIT_LEN
     }
 }
 
@@ -126,6 +159,10 @@ impl Hash {
 
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
+    }
+
+    pub fn trit_len() -> usize {
+        HASH_TRIT_LEN
     }
 }
 
@@ -159,7 +196,38 @@ impl Nonce {
     pub fn as_bytes(&self) -> &[i8] {
         self.0.as_i8_slice()
     }
+
+    pub fn trit_len() -> usize {
+        NONCE_TRIT_LEN
+    }
 }
+
+macro_rules! impl_into_inner_for_fields {
+    ( $($field_name:ident),+ $(,)?) => {
+        $(
+            impl TransactionField for $field_name {
+                fn into_inner(&self) -> TritBuf<T1B1Buf> {
+                    self.0.to_buf()
+                }
+
+                fn try_from_tritbuf(buffer: TritBuf<T1B1Buf>) -> Result<Self, TransactionFieldError> {
+                    if buffer.len() != $field_name::trit_len() {
+                        Err(TransactionFieldError::FieldWrongLength)?
+                    }
+
+                    Ok(Self::from_tritbuf_unchecked(buffer))
+                }
+
+                fn from_tritbuf_unchecked(buffer: TritBuf<T1B1Buf>) -> Self{
+
+                    Self(buffer)
+                }
+            }
+        )+
+    }
+}
+
+impl_into_inner_for_fields!(Payload, Address, Hash, Tag, Nonce);
 
 #[derive(Debug)]
 pub enum TransactionError {
@@ -196,30 +264,36 @@ impl Transaction {
 
         let transaction = Self::builder()
             .with_payload(Payload(
-                trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.length].to_buf(),
+                trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.start + PAYLOAD.trit_offset.length].to_buf(),
             ))
             .with_address(Address(
-                trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.length].to_buf(),
+                trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.start + ADDRESS.trit_offset.length].to_buf(),
             ))
             .with_value(Value(0))
-            .with_obsolete_tag(Tag(trits
-                [OBSOLETE_TAG.trit_offset.start..OBSOLETE_TAG.trit_offset.length]
+            .with_obsolete_tag(Tag(trits[OBSOLETE_TAG.trit_offset.start
+                ..OBSOLETE_TAG.trit_offset.start + OBSOLETE_TAG.trit_offset.length]
                 .to_buf()))
             .with_timestamp(Timestamp(0))
             .with_index(Index(0))
             .with_last_index(Index(0))
-            .with_tag(Tag(trits[TAG.trit_offset.start..TAG.trit_offset.length].to_buf()))
+            .with_tag(Tag(trits
+                [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
+                .to_buf()))
             .with_attachment_ts(Timestamp(0))
             .with_bundle(Hash(
-                trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.length].to_buf(),
+                trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
-            .with_trunk(Hash(trits[TRUNK.trit_offset.start..TRUNK.trit_offset.length].to_buf()))
+            .with_trunk(Hash(
+                trits[TRUNK.trit_offset.start..TRUNK.trit_offset.start + TRUNK.trit_offset.length].to_buf(),
+            ))
             .with_branch(Hash(
-                trits[BRANCH.trit_offset.start..BRANCH.trit_offset.length].to_buf(),
+                trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
             ))
             .with_attachment_lbts(Timestamp(0))
             .with_attachment_ubts(Timestamp(0))
-            .with_nonce(Nonce(trits[NONCE.trit_offset.start..NONCE.trit_offset.length].to_buf()))
+            .with_nonce(Nonce(
+                trits[NONCE.trit_offset.start..NONCE.trit_offset.start + NONCE.trit_offset.length].to_buf(),
+            ))
             .build()
             .map_err(|e| TransactionError::TransactionBuilderError(e))?;
 

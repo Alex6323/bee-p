@@ -30,10 +30,10 @@ pub trait RawEncoding {
     fn is_valid(repr: &i8) -> bool;
 
     /// Unsafely reinterpret a slice of bytes as trit slice
-    unsafe fn from_raw_unchecked(b: &[i8]) -> &Self;
+    unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self;
 
     /// Unsafely reinterpret a slice of bytes as trit slice
-    unsafe fn from_raw_unchecked_mut(b: &mut [i8]) -> &mut Self;
+    unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self;
 }
 
 pub trait RawEncodingBuf {

@@ -1,52 +1,61 @@
-use crate::message::{
-    Message,
-    MilestoneRequest,
-    TransactionRequest,
+use crate::{
+    message::{
+        Message,
+        MilestoneRequest,
+        TransactionRequest,
+    },
+    milestone::MilestoneIndex,
 };
 
-use bee_network::Command::SendBytes;
-use bee_network::Network;
-
-use futures::channel::mpsc::Receiver;
-use futures::stream::StreamExt;
+use futures::{
+    channel::mpsc::Receiver,
+    stream::StreamExt,
+};
 use log::info;
 
-pub enum RequesterWorkerEvent {
-    TransactionRequest([u8; 49]),
-    // TODO use MilestonIndex
-    MilestoneRequest(u32),
+// Transaction requester worker
+
+// TODO use proper hash type
+pub(crate) type TransactionRequesterWorkerEvent = [u8; 49];
+
+pub(crate) struct TransactionRequesterWorker {
+    receiver: Receiver<TransactionRequesterWorkerEvent>,
 }
 
-pub struct RequesterWorker {
-    // TODO network or dedicated sender ?
-    network: Network,
-    receiver: Receiver<RequesterWorkerEvent>,
-}
-
-impl RequesterWorker {
-    pub fn new(network: Network, receiver: Receiver<RequesterWorkerEvent>) -> Self {
-        Self {
-            network: network,
-            receiver: receiver,
-        }
+impl TransactionRequesterWorker {
+    pub(crate) fn new(receiver: Receiver<TransactionRequesterWorkerEvent>) -> Self {
+        Self { receiver: receiver }
     }
 
-    pub async fn run(mut self) {
-        info!("[RequesterWorker ] Running.");
+    pub(crate) async fn run(mut self) {
+        info!("[TransactionRequesterWorker ] Running.");
 
-        while let Some(event) = self.receiver.next().await {
-            if let bytes = match event {
-                RequesterWorkerEvent::TransactionRequest(hash) => TransactionRequest::new(hash).into_full_bytes(),
-                RequesterWorkerEvent::MilestoneRequest(index) => MilestoneRequest::new(index).into_full_bytes(),
-            } {
-                // TODO we don't have any peer_id here
-                // self.network
-                //     .send(SendBytes {
-                //         to_peer: peer_id,
-                //         bytes: transaction.into_full_bytes(),
-                //     })
-                //     .await;
-            }
+        while let Some(hash) = self.receiver.next().await {
+            let _bytes = TransactionRequest::new(hash).into_full_bytes();
+            // TODO we don't have any peer_id here
+        }
+    }
+}
+
+// Milestone requester worker
+
+pub(crate) type MilestoneRequesterWorkerEvent = MilestoneIndex;
+
+pub(crate) struct MilestoneRequesterWorker {
+    receiver: Receiver<MilestoneRequesterWorkerEvent>,
+}
+
+impl MilestoneRequesterWorker {
+    pub(crate) fn new(receiver: Receiver<MilestoneRequesterWorkerEvent>) -> Self {
+        Self { receiver: receiver }
+    }
+
+    pub(crate) async fn run(mut self) {
+        info!("[MilestoneRequesterWorker ] Running.");
+
+        while let Some(index) = self.receiver.next().await {
+            let _bytes = MilestoneRequest::new(index).into_full_bytes();
+            // TODO we don't have any peer_id here
         }
     }
 }

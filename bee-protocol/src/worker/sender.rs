@@ -1,111 +1,166 @@
-use crate::message::{
-    Handshake,
-    Heartbeat,
-    Message,
-    MilestoneRequest,
-    TransactionBroadcast,
-    TransactionRequest,
+use crate::{
+    message::{
+        Heartbeat,
+        Message,
+        MilestoneRequest,
+        TransactionBroadcast,
+        TransactionRequest,
+    },
+    peer::{
+        Peer,
+        PeerMetrics,
+    },
+    protocol::Protocol,
 };
 
-use bee_network::Command::SendBytes;
 use bee_network::{
+    Command::SendBytes,
     EndpointId,
     Network,
 };
 
-use async_std::sync::RwLock;
-use futures::channel::mpsc::{
-    Receiver,
-    Sender,
+use std::{
+    marker::PhantomData,
+    sync::Arc,
 };
-use futures::stream::StreamExt;
 
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::ptr;
+use futures::{
+    channel::{
+        mpsc,
+        oneshot,
+    },
+    future::FutureExt,
+    select,
+    sink::SinkExt,
+    stream::StreamExt,
+};
+use log::warn;
 
-pub struct SenderContext {
-    pub(crate) handshake_sender: Sender<SenderWorkerEvent<Handshake>>,
-    pub(crate) milestone_request_sender: Sender<SenderWorkerEvent<MilestoneRequest>>,
-    pub(crate) transaction_broadcast_sender: Sender<SenderWorkerEvent<TransactionBroadcast>>,
-    pub(crate) transaction_request_sender: Sender<SenderWorkerEvent<TransactionRequest>>,
-    pub(crate) heartbeat_sender: Sender<SenderWorkerEvent<Heartbeat>>,
+pub(crate) struct SenderContext {
+    pub(crate) milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
+    pub(crate) transaction_broadcast: (
+        mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
+        oneshot::Sender<()>,
+    ),
+    pub(crate) transaction_request: (mpsc::Sender<SenderWorkerEvent<TransactionRequest>>, oneshot::Sender<()>),
+    pub(crate) heartbeat: (mpsc::Sender<SenderWorkerEvent<Heartbeat>>, oneshot::Sender<()>),
 }
 
 impl SenderContext {
-    pub fn new(
-        handshake_sender: Sender<SenderWorkerEvent<Handshake>>,
-        milestone_request_sender: Sender<SenderWorkerEvent<MilestoneRequest>>,
-        transaction_broadcast_sender: Sender<SenderWorkerEvent<TransactionBroadcast>>,
-        transaction_request_sender: Sender<SenderWorkerEvent<TransactionRequest>>,
-        heartbeat_sender: Sender<SenderWorkerEvent<Heartbeat>>,
+    pub(crate) fn new(
+        milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
+        transaction_broadcast: (
+            mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
+            oneshot::Sender<()>,
+        ),
+        transaction_request: (mpsc::Sender<SenderWorkerEvent<TransactionRequest>>, oneshot::Sender<()>),
+        heartbeat: (mpsc::Sender<SenderWorkerEvent<Heartbeat>>, oneshot::Sender<()>),
     ) -> Self {
         Self {
-            handshake_sender,
-            milestone_request_sender,
-            transaction_broadcast_sender,
-            transaction_request_sender,
-            heartbeat_sender,
+            milestone_request,
+            transaction_broadcast,
+            transaction_request,
+            heartbeat,
         }
     }
 }
 
-#[derive(Default)]
-pub struct SenderRegistry {
-    contexts: RwLock<HashMap<EndpointId, SenderContext>>,
-}
+pub(crate) type SenderWorkerEvent<M> = M;
 
-impl SenderRegistry {
-    pub fn init() {
-        unsafe {
-            SENDER_REGISTRY = Box::leak(SenderRegistry::default().into()) as *const _;
-        }
-    }
-
-    pub fn contexts(&self) -> &RwLock<HashMap<EndpointId, SenderContext>> {
-        &self.contexts
-    }
-}
-
-pub static mut SENDER_REGISTRY: *const SenderRegistry = ptr::null();
-
-pub fn sender_registry() -> &'static SenderRegistry {
-    if unsafe { SENDER_REGISTRY.is_null() } {
-        panic!("Uninitialized sender registry.");
-    } else {
-        unsafe { &*SENDER_REGISTRY }
-    }
-}
-
-pub enum SenderWorkerEvent<M: Message> {
-    Message(M),
-}
-
-pub struct SenderWorker<M: Message> {
-    epid: EndpointId,
+pub(crate) struct SenderWorker<M: Message> {
     network: Network,
-    receiver: Receiver<SenderWorkerEvent<M>>,
+    peer: Arc<Peer>,
+    metrics: Arc<PeerMetrics>,
+    _message_type: PhantomData<M>,
 }
 
-impl<M: Message> SenderWorker<M> {
-    pub fn new(epid: EndpointId, network: Network, receiver: Receiver<SenderWorkerEvent<M>>) -> Self {
-        Self {
-            epid: epid,
-            network: network,
-            receiver: receiver,
-        }
-    }
+macro_rules! implement_sender_worker {
+    ($type:ty, $sender:tt, $incrementor:tt) => {
+        impl SenderWorker<$type> {
+            pub(crate) fn new(network: Network, peer: Arc<Peer>, metrics: Arc<PeerMetrics>) -> Self {
+                Self {
+                    network,
+                    peer,
+                    metrics,
+                    _message_type: PhantomData,
+                }
+            }
 
-    pub async fn run(mut self) {
-        // TODO metric ?
-        while let Some(SenderWorkerEvent::Message(message)) = self.receiver.next().await {
-            self.network
-                .send(SendBytes {
-                    epid: self.epid,
-                    bytes: message.into_full_bytes(),
-                    responder: None,
-                })
-                .await;
+            pub(crate) async fn send(epid: &EndpointId, message: $type) {
+                if let Some(context) = Protocol::get().contexts.read().await.get(&epid) {
+                    if let Err(e) = context
+                        .$sender
+                        .0
+                        // TODO avoid clone ?
+                        .clone()
+                        .send(message)
+                        .await
+                    {
+                        warn!("[SenderWorker ] Sending message failed: {:?}.", e);
+                    }
+                };
+            }
+
+            pub(crate) async fn broadcast(message: $type) {
+                for context in Protocol::get().contexts.read().await.values() {
+                    if let Err(e) = context
+                        .$sender
+                        .0
+                        // TODO avoid clone ?
+                        .clone()
+                        .send(message.clone())
+                        .await
+                    {
+                        warn!("[SenderWorker ] Sending message failed: {:?}.", e);
+                    }
+                }
+            }
+
+            pub(crate) async fn run(
+                mut self,
+                events_receiver: mpsc::Receiver<SenderWorkerEvent<$type>>,
+                shutdown_receiver: oneshot::Receiver<()>,
+            ) {
+                let mut events_fused = events_receiver.fuse();
+                let mut shutdown_fused = shutdown_receiver.fuse();
+
+                loop {
+                    select! {
+                        message = events_fused.next() => {
+                            if let Some(message) = message {
+                                match self
+                                    .network
+                                    .send(SendBytes {
+                                        epid: self.peer.epid,
+                                        bytes: message.into_full_bytes(),
+                                        responder: None,
+                                    })
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        self.peer.metrics.$incrementor();
+                                        self.metrics.$incrementor();
+                                    }
+                                    Err(e) => {
+                                        warn!(
+                                            "[SenderWorker({}) ] Sending message failed: {}.",
+                                            self.peer.epid, e
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        _ = shutdown_fused => {
+                            break;
+                        }
+                    }
+                }
+            }
         }
-    }
+    };
 }
+
+implement_sender_worker!(MilestoneRequest, milestone_request, milestone_request_sent);
+implement_sender_worker!(TransactionBroadcast, transaction_broadcast, transaction_broadcast_sent);
+implement_sender_worker!(TransactionRequest, transaction_request, transaction_request_sent);
+implement_sender_worker!(Heartbeat, heartbeat, heartbeat_sent);
