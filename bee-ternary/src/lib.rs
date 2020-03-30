@@ -170,10 +170,6 @@ where
     }
 }
 
-unsafe impl<T> Send for Trits<T> {}
-
-unsafe impl<T> Sync for Trits<T> {}
-
 impl<T: Trit> Trits<T1B1<T>> {
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
@@ -421,6 +417,10 @@ impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
     }
 }
 
-unsafe impl<T> Send for TritBuf<T> {}
+unsafe impl<T: raw::RawEncoding> Send for Trits<T> {}
 
-unsafe impl<T> Sync for TritBuf<T> {}
+unsafe impl<T: raw::RawEncoding> Sync for Trits<T> {}
+
+unsafe impl<T: raw::RawEncodingBuf> Send for TritBuf<T> {}
+
+unsafe impl<T: raw::RawEncodingBuf> Sync for TritBuf<T> {}
