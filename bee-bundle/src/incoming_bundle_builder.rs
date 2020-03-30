@@ -1,11 +1,14 @@
-use crate::bundle::Bundle;
-use crate::constants::{
-    ADDRESS,
-    IOTA_SUPPLY,
-};
-use crate::transaction::{
-    Transaction,
-    Transactions,
+use crate::{
+    bundle::Bundle,
+    constants::{
+        ADDRESS,
+        IOTA_SUPPLY,
+    },
+    transaction::{
+        Transaction,
+        TransactionField,
+        Transactions,
+    },
 };
 
 use bee_crypto::Sponge;
@@ -16,6 +19,7 @@ use bee_signing::{
 };
 use bee_ternary::{
     trit::Btrit,
+    T1B1Buf,
     TritBuf,
 };
 
@@ -119,21 +123,30 @@ where
         // TODO - check trunk of the last transaction and branch is tail, the same tail
 
         for (index, transaction) in self.transactions.0.iter().enumerate() {
-            if index != transaction.index().0 {
-                Err(IncomingBundleBuilderError::InvalidIndex(transaction.index().0))?;
+            if index != *transaction.index().to_inner() {
+                Err(IncomingBundleBuilderError::InvalidIndex(
+                    *transaction.index().to_inner(),
+                ))?;
             }
 
-            if last_index != transaction.last_index().0 {
-                Err(IncomingBundleBuilderError::InvalidLastIndex(transaction.last_index().0))?;
+            if last_index != *transaction.last_index().to_inner() {
+                Err(IncomingBundleBuilderError::InvalidLastIndex(
+                    *transaction.last_index().to_inner(),
+                ))?;
             }
 
-            sum += transaction.value.0;
+            sum += *transaction.value.to_inner();
             if sum.abs() > IOTA_SUPPLY {
                 Err(IncomingBundleBuilderError::InvalidValue(sum))?;
             }
 
-            if transaction.value.0 != 0
-                && transaction.address().0.get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero
+            if *transaction.value.to_inner() != 0
+                && transaction
+                    .address()
+                    .to_inner()
+                    .get(ADDRESS.trit_offset.length - 1)
+                    .unwrap()
+                    != Btrit::Zero
             {
                 Err(IncomingBundleBuilderError::InvalidAddress)?;
             }
@@ -192,18 +205,18 @@ mod tests {
         TransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
-            .with_value(Value(0))
+            .with_value(Value::from_inner_unchecked(0))
             .with_obsolete_tag(Tag::zeros())
-            .with_timestamp(Timestamp(0))
-            .with_index(Index(index))
-            .with_last_index(Index(last_index))
+            .with_timestamp(Timestamp::from_inner_unchecked(0))
+            .with_index(Index::from_inner_unchecked(index))
+            .with_last_index(Index::from_inner_unchecked(last_index))
             .with_tag(Tag::zeros())
-            .with_attachment_ts(Timestamp(0))
+            .with_attachment_ts(Timestamp::from_inner_unchecked(0))
             .with_bundle(Hash::zeros())
             .with_trunk(Hash::zeros())
             .with_branch(Hash::zeros())
-            .with_attachment_lbts(Timestamp(0))
-            .with_attachment_ubts(Timestamp(0))
+            .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
+            .with_attachment_ubts(Timestamp::from_inner_unchecked(0))
             .with_nonce(Nonce::zeros())
     }
 

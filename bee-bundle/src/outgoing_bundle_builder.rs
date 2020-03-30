@@ -6,6 +6,7 @@ use crate::transaction::{
     TransactionBuilder,
     TransactionBuilderError,
     TransactionBuilders,
+    TransactionField,
     Transactions,
 };
 
@@ -103,11 +104,11 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
                 Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("tag"))?;
             }
 
-            builder.index.replace(Index(index));
-            builder.last_index.replace(Index(last_index));
+            builder.index.replace(Index::from_inner_unchecked(index));
+            builder.last_index.replace(Index::from_inner_unchecked(last_index));
 
             // Safe to unwrap since we just checked it's not None
-            sum += builder.value.as_ref().unwrap().0;
+            sum += builder.value.as_ref().unwrap().to_inner();
             if sum.abs() > IOTA_SUPPLY {
                 Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
             }
@@ -130,7 +131,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     fn has_no_input(&self) -> Result<(), OutgoingBundleBuilderError> {
         for builder in &self.builders.0 {
             // Safe to unwrap since we made sure it's not None in `seal`
-            if builder.value.as_ref().unwrap().0 < 0 {
+            if *builder.value.as_ref().unwrap().to_inner() < 0 {
                 Err(OutgoingBundleBuilderError::UnsignedInput)?;
             }
         }
@@ -247,18 +248,18 @@ mod tests {
         TransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
-            .with_value(Value(0))
+            .with_value(Value::from_inner_unchecked(0))
             .with_obsolete_tag(Tag::zeros())
-            .with_timestamp(Timestamp(0))
-            .with_index(Index(index))
-            .with_last_index(Index(last_index))
+            .with_timestamp(Timestamp::from_inner_unchecked(0))
+            .with_index(Index::from_inner_unchecked(index))
+            .with_last_index(Index::from_inner_unchecked(last_index))
             .with_tag(Tag::zeros())
-            .with_attachment_ts(Timestamp(0))
+            .with_attachment_ts(Timestamp::from_inner_unchecked(0))
             .with_bundle(Hash::zeros())
             .with_trunk(Hash::zeros())
             .with_branch(Hash::zeros())
-            .with_attachment_lbts(Timestamp(0))
-            .with_attachment_ubts(Timestamp(0))
+            .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
+            .with_attachment_ubts(Timestamp::from_inner_unchecked(0))
             .with_nonce(Nonce::zeros())
     }
 

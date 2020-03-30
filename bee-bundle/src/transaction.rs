@@ -16,12 +16,10 @@ use crate::constants::{
     TRYTE_ZERO,
 };
 
-use bee_ternary::util::trytes_to_trits_buf;
 use bee_ternary::{
     raw::RawEncoding,
     raw::RawEncodingBuf,
     Btrit,
-    IsTryte,
     T1B1Buf,
     Trit,
     TritBuf,
@@ -38,30 +36,56 @@ pub enum TransactionFieldError {
     FieldDeserializationError,
 }
 
-pub trait TransactionField: Sized {
-    fn try_from_tritbuf(buffer: TritBuf) -> Result<Self, TransactionFieldError>;
-    fn from_tritbuf_unchecked(buffer: TritBuf) -> Self;
+pub trait TransactionField: Sized + TransactionFieldType {
+    type Inner;
+    fn try_from_inner(buffer: Self::Inner) -> Result<Self, TransactionFieldError>;
+    fn from_inner_unchecked(buffer: Self::Inner) -> Self;
 
-    fn into_inner(&self) -> TritBuf<T1B1Buf>;
+    fn to_inner(&self) -> &Self::Inner;
+
+    fn trit_len() -> usize;
+}
+
+pub trait NumTritsOfValue {
+    fn num_trits(&self) -> usize;
+}
+
+pub trait TransactionFieldType {
+    type InnerType: NumTritsOfValue;
+
+    fn is_trits_type() -> bool;
+}
+
+impl NumTritsOfValue for TritBuf<T1B1Buf> {
+    fn num_trits(&self) -> usize {
+        self.len()
+    }
+}
+
+impl NumTritsOfValue for i64 {
+    fn num_trits(&self) -> usize {
+        unimplemented!();
+    }
+}
+
+impl NumTritsOfValue for u64 {
+    fn num_trits(&self) -> usize {
+        unimplemented!();
+    }
+}
+
+impl NumTritsOfValue for usize {
+    fn num_trits(&self) -> usize {
+        unimplemented!();
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Payload(pub TritBuf<T1B1Buf>);
+pub struct Payload(TritBuf<T1B1Buf>);
 
 impl Payload {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(PAYLOAD.trit_offset.length))
-    }
-
-    pub fn from_str(payload: &str) -> Self {
-        assert!(payload.len() <= PAYLOAD.tryte_offset.length);
-        assert!(payload.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = PAYLOAD.tryte_offset.length - payload.len();
-        let payload = payload.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&payload);
-
-        Self(tritbuf)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -74,22 +98,11 @@ impl Payload {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Address(pub TritBuf<T1B1Buf>);
+pub struct Address(TritBuf<T1B1Buf>);
 
 impl Address {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(ADDRESS.trit_offset.length))
-    }
-
-    pub fn from_str(address: &str) -> Self {
-        assert!(address.len() <= ADDRESS.tryte_offset.length);
-        assert!(address.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = ADDRESS.tryte_offset.length - address.len();
-        let address = address.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&address);
-
-        Self(tritbuf)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -101,26 +114,23 @@ impl Address {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Value(pub i64);
+impl Eq for Address {}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Tag(pub TritBuf<T1B1Buf>);
+pub struct Value(i64);
+
+impl Value {
+    pub fn trit_len() -> usize {
+        unimplemented!();
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Tag(TritBuf<T1B1Buf>);
 
 impl Tag {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(TAG.trit_offset.length))
-    }
-
-    pub fn from_str(tag: &str) -> Self {
-        assert!(tag.len() <= TAG.tryte_offset.length);
-        assert!(tag.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = TAG.tryte_offset.length - tag.len();
-        let tag = tag.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&tag);
-
-        Self(tritbuf)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -133,28 +143,29 @@ impl Tag {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Timestamp(pub u64);
+pub struct Timestamp(u64);
+
+impl Timestamp {
+    pub fn trit_len() -> usize {
+        unimplemented!();
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Index(pub usize);
+pub struct Index(usize);
+
+impl Index {
+    pub fn trit_len() -> usize {
+        unimplemented!();
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Hash(pub TritBuf<T1B1Buf>);
+pub struct Hash(TritBuf<T1B1Buf>);
 
 impl Hash {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(BUNDLE.trit_offset.length))
-    }
-
-    pub fn from_str(hash: &str) -> Self {
-        assert!(hash.len() <= BUNDLE.tryte_offset.length);
-        assert!(hash.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = BUNDLE.tryte_offset.length - hash.len();
-        let hash = hash.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&hash);
-
-        Self(tritbuf)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -168,35 +179,12 @@ impl Hash {
 
 impl Eq for Hash {}
 
-impl hash::Hash for Hash {
-    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        self.0.hash(hasher)
-    }
-}
-
-impl fmt::Display for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.0)
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Nonce(pub TritBuf<T1B1Buf>);
+pub struct Nonce(TritBuf<T1B1Buf>);
 
 impl Nonce {
     pub fn zeros() -> Self {
         Self(TritBuf::zeros(NONCE.trit_offset.length))
-    }
-
-    pub fn from_str(nonce: &str) -> Self {
-        assert!(nonce.len() <= NONCE.tryte_offset.length);
-        assert!(nonce.chars().all(|c| c.is_tryte()));
-
-        let missing_trytes = NONCE.tryte_offset.length - nonce.len();
-        let nonce = nonce.to_owned() + &iter::repeat(TRYTE_ZERO).take(missing_trytes).collect::<String>();
-        let tritbuf = trytes_to_trits_buf(&nonce);
-
-        Self(tritbuf)
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -208,32 +196,85 @@ impl Nonce {
     }
 }
 
-macro_rules! impl_into_inner_for_fields {
+macro_rules! impl_transaction_field {
     ( $($field_name:ident),+ $(,)?) => {
         $(
             impl TransactionField for $field_name {
-                fn into_inner(&self) -> TritBuf<T1B1Buf> {
-                    self.0.to_buf()
+
+                type Inner = <$field_name as TransactionFieldType>::InnerType;
+                fn to_inner(&self) -> &Self::Inner{
+                    &self.0
                 }
 
-                fn try_from_tritbuf(buffer: TritBuf<T1B1Buf>) -> Result<Self, TransactionFieldError> {
-                    if buffer.len() != $field_name::trit_len() {
+                fn try_from_inner(val: Self::Inner) -> Result<Self, TransactionFieldError> {
+                    if $field_name::is_trits_type() && val.num_trits() != $field_name::trit_len() {
                         Err(TransactionFieldError::FieldWrongLength)?
                     }
-
-                    Ok(Self::from_tritbuf_unchecked(buffer))
+                    Ok(Self::from_inner_unchecked(val))
                 }
 
-                fn from_tritbuf_unchecked(buffer: TritBuf<T1B1Buf>) -> Self{
+                fn from_inner_unchecked(val: Self::Inner) -> Self{
+                    Self(val)
+                }
 
-                    Self(buffer)
+                fn trit_len() -> usize {
+                   Self::trit_len()
                 }
             }
         )+
     }
 }
 
-impl_into_inner_for_fields!(Payload, Address, Hash, Tag, Nonce);
+macro_rules! impl_transaction_field_type_for_tritbuf_fields {
+    ( $($field_name:ident),+ $(,)?) => {
+        $(
+            impl TransactionFieldType for $field_name {
+                type InnerType = TritBuf<T1B1Buf>;
+                fn is_trits_type() -> bool {true}
+            }
+        )+
+    }
+}
+
+impl TransactionFieldType for Value {
+    type InnerType = i64;
+
+    fn is_trits_type() -> bool {
+        false
+    }
+}
+
+impl TransactionFieldType for Index {
+    type InnerType = usize;
+
+    fn is_trits_type() -> bool {
+        false
+    }
+}
+
+impl TransactionFieldType for Timestamp {
+    type InnerType = u64;
+
+    fn is_trits_type() -> bool {
+        false
+    }
+}
+
+macro_rules! impl_hash_trait {
+    ( $($field_name:ident),+ $(,)?) => {
+        $(
+            impl hash::Hash for $field_name {
+                fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+                       self.0.hash(hasher)
+                }
+            }
+        )+
+    }
+}
+
+impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Hash, Tag, Nonce);
+impl_transaction_field!(Payload, Address, Hash, Tag, Nonce, Index, Value, Timestamp);
+impl_hash_trait!(Hash, Address);
 
 #[derive(Debug)]
 pub enum TransactionError {
@@ -275,17 +316,17 @@ impl Transaction {
             .with_address(Address(
                 trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.start + ADDRESS.trit_offset.length].to_buf(),
             ))
-            .with_value(Value(0))
+            .with_value(Value::from_inner_unchecked(0))
             .with_obsolete_tag(Tag(trits[OBSOLETE_TAG.trit_offset.start
                 ..OBSOLETE_TAG.trit_offset.start + OBSOLETE_TAG.trit_offset.length]
                 .to_buf()))
-            .with_timestamp(Timestamp(0))
-            .with_index(Index(0))
-            .with_last_index(Index(0))
+            .with_timestamp(Timestamp::from_inner_unchecked(0))
+            .with_index(Index::from_inner_unchecked(0))
+            .with_last_index(Index::from_inner_unchecked(0))
             .with_tag(Tag(trits
                 [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
                 .to_buf()))
-            .with_attachment_ts(Timestamp(0))
+            .with_attachment_ts(Timestamp::from_inner_unchecked(0))
             .with_bundle(Hash(
                 trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
@@ -295,8 +336,8 @@ impl Transaction {
             .with_branch(Hash(
                 trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
             ))
-            .with_attachment_lbts(Timestamp(0))
-            .with_attachment_ubts(Timestamp(0))
+            .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
+            .with_attachment_ubts(Timestamp::from_inner_unchecked(0))
             .with_nonce(Nonce(
                 trits[NONCE.trit_offset.start..NONCE.trit_offset.start + NONCE.trit_offset.length].to_buf(),
             ))
@@ -386,6 +427,14 @@ impl Transactions {
     pub fn push(&mut self, transaction: Transaction) {
         self.0.push(transaction);
     }
+}
+
+/// Milestone - TODO - builder?
+
+#[derive(Debug, Clone)]
+pub struct Milestone {
+    pub hash: Hash,
+    pub index: u32,
 }
 
 /// Transaction builder
