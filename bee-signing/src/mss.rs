@@ -63,19 +63,19 @@ pub enum MssError {
 impl<S, G> MssPrivateKeyGeneratorBuilder<S, G>
 where
     S: Sponge + Default,
-    G: PrivateKeyGenerator + Copy,
+    G: PrivateKeyGenerator,
 {
-    pub fn depth(&mut self, depth: u8) -> &mut Self {
+    pub fn depth(mut self, depth: u8) -> Self {
         self.depth = Some(depth);
         self
     }
 
-    pub fn generator(&mut self, generator: G) -> &mut Self {
+    pub fn generator(mut self, generator: G) -> Self {
         self.generator = Some(generator);
         self
     }
 
-    pub fn build(&mut self) -> Result<MssPrivateKeyGenerator<S, G>, MssError> {
+    pub fn build(self) -> Result<MssPrivateKeyGenerator<S, G>, MssError> {
         let depth = match self.depth {
             Some(depth) => match depth {
                 0..=20 => depth,
@@ -319,6 +319,7 @@ mod tests {
         WotsPrivateKeyGenerator,
         WotsPrivateKeyGeneratorBuilder,
         WotsPublicKey,
+        WotsSecurityLevel,
     };
     use bee_crypto::{
         CurlP27,
@@ -329,51 +330,48 @@ mod tests {
         T1B1Buf,
         TryteBuf,
     };
-    use iota_conversion::Trinary;
 
-    // #[test]
-    // fn mss_generator_missing_depth_test() {
-    //     let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-    //         .security_level(1)
-    //         .build()
-    //         .unwrap();
-    //
-    //     match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
-    //         .generator(wots_private_key_generator)
-    //         .build()
-    //     {
-    //         Ok(_) => unreachable!(),
-    //         Err(err) => assert_eq!(err, MssError::MissingDepth),
-    //     }
-    // }
+    #[test]
+    fn mss_generator_missing_depth_test() {
+        let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(WotsSecurityLevel::Low)
+            .build()
+            .unwrap();
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+            .generator(wots_private_key_generator)
+            .build()
+        {
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, MssError::MissingDepth),
+        }
+    }
 
-    // #[test]
-    // fn mss_generator_invalid_depth_test() {
-    //     let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-    //         .security_level(1)
-    //         .build()
-    //         .unwrap();
-    //
-    //     match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
-    //         .generator(wots_private_key_generator)
-    //         .depth(21)
-    //         .build()
-    //     {
-    //         Err(MssError::InvalidDepth(depth)) => assert_eq!(depth, 21),
-    //         _ => unreachable!(),
-    //     }
-    // }
+    #[test]
+    fn mss_generator_invalid_depth_test() {
+        let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(WotsSecurityLevel::Low)
+            .build()
+            .unwrap();
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+            .generator(wots_private_key_generator)
+            .depth(21)
+            .build()
+        {
+            Err(MssError::InvalidDepth(depth)) => assert_eq!(depth, 21),
+            _ => unreachable!(),
+        }
+    }
 
-    // #[test]
-    // fn mss_generator_missing_generator_test() {
-    //     match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
-    //         .depth(5)
-    //         .build()
-    //     {
-    //         Ok(_) => unreachable!(),
-    //         Err(err) => assert_eq!(err, MssError::MissingGenerator),
-    //     }
-    // }
+    #[test]
+    fn mss_generator_missing_generator_test() {
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+            .depth(5)
+            .build()
+        {
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, MssError::MissingGenerator),
+        }
+    }
 
     fn mss_wots_generic_signature_verify<S>(public_key: &str, message: &str, signature: &str, depth: u8, index: u64)
     where
@@ -440,17 +438,21 @@ mod tests {
         mss_wots_generic_signature_verify::<CurlP27>(PUBLIC_KEY, MESSAGE, SIGNATURE, DEPTH, INDEX);
     }
 
-    fn mss_generic_gen_test<S, G>(generator: G, seed: G::Seed)
+    fn mss_wots_generic_roundtrip_test<S, G>(generator: G)
     where
         S: Sponge + Default,
-        G: Default,
-        G: PrivateKeyGenerator + Copy,
+        G: PrivateKeyGenerator + Default,
         <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
             RecoverableSignature,
+        <<G as PrivateKeyGenerator>::Seed as Seed>::Error: std::fmt::Debug,
     {
         const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
         const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
         const DEPTH: u8 = 4;
+
+        let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
+        let seed = G::Seed::from_buf(seed_trits).unwrap();
+        let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
 
         // todo try with not recover
         let mss_private_key_generator = MssPrivateKeyGeneratorBuilder::<S, G>::default()
@@ -462,55 +464,85 @@ mod tests {
         let mss_public_key = mss_private_key.generate_public_key().unwrap();
 
         for _ in 0..(1 << DEPTH - 1) {
-            let mss_signature = mss_private_key.sign(&MESSAGE.trits()).unwrap();
-            let mss_valid = mss_public_key.verify(&MESSAGE.trits(), &mss_signature).unwrap();
-            assert!(mss_valid);
+            let mss_signature = mss_private_key.sign(message_trits.as_i8_slice()).unwrap();
+            let valid = mss_public_key
+                .verify(message_trits.as_i8_slice(), &mss_signature)
+                .unwrap();
+
+            assert!(valid);
             //  TODO invalid test
         }
     }
 
-    // #[test]
-    // fn mss_wots_kerl_kerl_test() {
-    //         let seed = IotaSeed::from_bytes(&SEED.trits()).unwrap();
-    //     for s in 1..4 {
-    //         let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-    //             .security_level(s)
-    //             .build()
-    //             .unwrap();
-    //         mss_generic_gen_test::<Kerl, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
-    //     }
-    // }
+    #[test]
+    fn mss_wots_kerl_kerl_roundtrip_test() {
+        for s in [
+            WotsSecurityLevel::Low,
+            WotsSecurityLevel::Medium,
+            WotsSecurityLevel::High,
+        ]
+        .to_vec()
+        .into_iter()
+        {
+            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(s)
+                .build()
+                .unwrap();
+            mss_wots_generic_roundtrip_test::<Kerl, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
+        }
+    }
 
-    // #[test]
-    // fn mss_wots_curl_curl_test() {
-    //     for s in 1..4 {
-    //         let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Curl>::default()
-    //             .security_level(s)
-    //             .build()
-    //             .unwrap();
-    //         mss_generic_gen_test::<Curl, WotsPrivateKeyGenerator<Curl>>(wots_private_key_generator);
-    //     }
-    // }
+    #[test]
+    fn mss_wots_curl_curl_roundtrip_test() {
+        for s in [
+            WotsSecurityLevel::Low,
+            WotsSecurityLevel::Medium,
+            WotsSecurityLevel::High,
+        ]
+        .to_vec()
+        .into_iter()
+        {
+            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<CurlP27>::default()
+                .security_level(s)
+                .build()
+                .unwrap();
+            mss_wots_generic_roundtrip_test::<CurlP27, WotsPrivateKeyGenerator<CurlP27>>(wots_private_key_generator);
+        }
+    }
 
-    // #[test]
-    // fn mss_wots_curl_kerl_test() {
-    //     for s in 1..4 {
-    //         let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-    //             .security_level(s)
-    //             .build()
-    //             .unwrap();
-    //         mss_generic_gen_test::<Curl, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
-    //     }
-    // }
+    #[test]
+    fn mss_wots_curl_kerl_roundtrip_test() {
+        for s in [
+            WotsSecurityLevel::Low,
+            WotsSecurityLevel::Medium,
+            WotsSecurityLevel::High,
+        ]
+        .to_vec()
+        .into_iter()
+        {
+            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(s)
+                .build()
+                .unwrap();
+            mss_wots_generic_roundtrip_test::<CurlP27, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
+        }
+    }
 
-    // #[test]
-    // fn mss_wots_kerl_curl_test() {
-    //     for s in 1..4 {
-    //         let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Curl>::default()
-    //             .security_level(s)
-    //             .build()
-    //             .unwrap();
-    //         mss_generic_gen_test::<Kerl, WotsPrivateKeyGenerator<Curl>>(wots_private_key_generator);
-    //     }
-    // }
+    #[test]
+    fn mss_wots_kerl_curl_roundtrip_test() {
+        for s in [
+            WotsSecurityLevel::Low,
+            WotsSecurityLevel::Medium,
+            WotsSecurityLevel::High,
+        ]
+        .to_vec()
+        .into_iter()
+        {
+            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<CurlP27>::default()
+                .security_level(s)
+                .build()
+                .unwrap();
+            mss_wots_generic_roundtrip_test::<Kerl, WotsPrivateKeyGenerator<CurlP27>>(wots_private_key_generator);
+        }
+    }
 }

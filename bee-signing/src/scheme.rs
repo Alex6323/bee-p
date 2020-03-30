@@ -83,7 +83,6 @@ pub trait PrivateKey {
     /// # use bee_signing::IotaSeed;
     /// # use bee_signing::WotsPrivateKeyGeneratorBuilder;
     /// use bee_signing::PrivateKey;
-    /// use iota_conversion::Trinary;
     ///
     /// # let seed = IotaSeed::<Kerl>::new();
     /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(2).build().unwrap();
