@@ -78,15 +78,13 @@ pub enum Event {
         total: usize,
     },
 
-    // TODO: rename to `MessageSent`
     /// Signals that a message has been sent.
-    BytesSent {
+    MessageSent {
         /// The id of the `Endpoint` a message was sent to.
         epid: EndpointId,
 
-        // TODO: rename to `num_bytes`
         /// The number of bytes sent.
-        num: usize,
+        num_bytes: usize,
     },
 
     // TODO: rename to `MessageReceived`
@@ -145,7 +143,9 @@ impl fmt::Display for Event {
                 epid, total
             ),
 
-            Event::BytesSent { epid, num } => write!(f, "Event::BytesSent {{ {}, num_bytes: {} }}", epid, num),
+            Event::MessageSent { epid, num_bytes } => {
+                write!(f, "Event::MessageSent {{ {}, num_bytes: {} }}", epid, num_bytes)
+            }
 
             Event::BytesReceived { epid, addr, bytes } => write!(
                 f,
