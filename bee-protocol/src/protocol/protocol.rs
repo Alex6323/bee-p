@@ -79,27 +79,16 @@ impl Protocol {
 
         // TODO conf
         let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = mpsc::channel(1000);
-        spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
-
         // TODO conf
         let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
-        spawn(TransactionWorker::new(transaction_worker_receiver).run());
-
         // TODO conf
         let (transaction_responder_worker_sender, transaction_responder_worker_receiver) = mpsc::channel(1000);
-        spawn(TransactionResponderWorker::new(transaction_responder_worker_receiver).run());
-
         // TODO conf
         let (milestone_responder_worker_sender, milestone_responder_worker_receiver) = mpsc::channel(1000);
-        spawn(MilestoneResponderWorker::new(milestone_responder_worker_receiver).run());
-
         // TODO conf
         let (transaction_requester_worker_sender, transaction_requester_worker_receiver) = mpsc::channel(1000);
-        spawn(TransactionRequesterWorker::new(transaction_requester_worker_receiver).run());
-
         // TODO conf
         let (milestone_requester_worker_sender, milestone_requester_worker_receiver) = mpsc::channel(1000);
-        spawn(MilestoneRequesterWorker::new(milestone_requester_worker_receiver).run());
 
         let protocol = Protocol {
             transaction_worker: transaction_worker_sender,
@@ -114,6 +103,13 @@ impl Protocol {
         unsafe {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
+
+        spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
+        spawn(TransactionWorker::new(transaction_worker_receiver).run());
+        spawn(TransactionResponderWorker::new(transaction_responder_worker_receiver).run());
+        spawn(MilestoneResponderWorker::new(milestone_responder_worker_receiver).run());
+        spawn(TransactionRequesterWorker::new(transaction_requester_worker_receiver).run());
+        spawn(MilestoneRequesterWorker::new(milestone_requester_worker_receiver).run());
     }
 
     pub fn shutdown() {
