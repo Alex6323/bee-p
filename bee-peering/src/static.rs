@@ -1,7 +1,7 @@
 use crate::PeerManager;
 
-use bee_network::Command::AddEndpoint;
 use bee_network::{
+    Command::AddEndpoint,
     Network,
     Url,
 };
@@ -41,6 +41,6 @@ impl StaticPeerManager {
 impl PeerManager for StaticPeerManager {
     async fn run(mut self) {
         // TODO conf file watcher
-        self.add_endpoint("tcp://127.0.0.1:15600").await;
+        self.add_endpoint("tcp://::1:15600").await;
     }
 }
