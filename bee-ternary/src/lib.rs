@@ -11,7 +11,6 @@ pub mod t3b1;
 pub mod t4b1;
 pub mod t5b1;
 pub mod util;
-pub mod num_types;
 
 #[cfg(feature = "serde1")]
 mod serde;
