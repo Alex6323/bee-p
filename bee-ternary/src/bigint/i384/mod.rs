@@ -12,57 +12,56 @@ use std::fmt;
 use std::marker::PhantomData;
 
 use crate::{
-    Btrit,
     bigint::{
+        common::{
+            BigEndian,
+            BinaryRepresentation,
+            Error,
+            LittleEndian,
+            U32Repr,
+            U8Repr,
+            BINARY_LEN_IN_U32 as LEN_IN_U32,
+            BINARY_LEN_IN_U8 as LEN_IN_U8,
+        },
+        u384,
+        utils::OverflowingAddExt,
         T242,
         T243,
         U384,
-        common::{
-            Error,
-            U8Repr,
-            U32Repr,
-            BigEndian,
-            LittleEndian,
-            BinaryRepresentation,
-            BINARY_LEN as LEN,
-            BINARY_LEN_IN_U8 as LEN_IN_U8,
-            BINARY_LEN_IN_U32 as LEN_IN_U32,
-        },
-        utils::OverflowingAddExt,
-        u384,
-    }
+    },
+    Btrit,
 };
 
 mod constants;
 pub use constants::{
-    BE_U8_0,
-    BE_U8_1,
-    BE_U8_NEG_1,
-    BE_U8_MAX,
-    BE_U8_MIN,
-    BE_U8_2,
-    BE_U8_NEG_2,
     BE_U32_0,
     BE_U32_1,
-    BE_U32_NEG_1,
+    BE_U32_2,
     BE_U32_MAX,
     BE_U32_MIN,
-    BE_U32_2,
+    BE_U32_NEG_1,
     BE_U32_NEG_2,
-    LE_U8_0,
-    LE_U8_1,
-    LE_U8_NEG_1,
-    LE_U8_MAX,
-    LE_U8_MIN,
-    LE_U8_2,
-    LE_U8_NEG_2,
+    BE_U8_0,
+    BE_U8_1,
+    BE_U8_2,
+    BE_U8_MAX,
+    BE_U8_MIN,
+    BE_U8_NEG_1,
+    BE_U8_NEG_2,
     LE_U32_0,
     LE_U32_1,
-    LE_U32_NEG_1,
+    LE_U32_2,
     LE_U32_MAX,
     LE_U32_MIN,
-    LE_U32_2,
+    LE_U32_NEG_1,
     LE_U32_NEG_2,
+    LE_U8_0,
+    LE_U8_1,
+    LE_U8_2,
+    LE_U8_MAX,
+    LE_U8_MIN,
+    LE_U8_NEG_1,
+    LE_U8_NEG_2,
 };
 
 /// A biginteger encoding a signed integer with 384 bits.
@@ -172,7 +171,7 @@ impl I384<BigEndian, U8Repr> {
     }
 }
 
-impl_default!( (I384<BigEndian, U8Repr>), LEN_IN_U8);
+impl_default!((I384<BigEndian, U8Repr>), LEN_IN_U8);
 
 impl Eq for I384<BigEndian, U8Repr> {}
 
@@ -215,19 +214,19 @@ impl PartialOrd for I384<BigEndian, U8Repr> {
         const UMAX: u8 = std::u8::MAX;
         let numbers_negative = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less
-            Some(( s @ 0x70..=UMAX, o @ 0x70..=UMAX )) if s > o => return Some(Less),
+            Some((s @ 0x70..=UMAX, o @ 0x70..=UMAX)) if s > o => return Some(Less),
 
             // Case 2: both numbers are negative, s is greater
-            Some(( s @ 0x70..=UMAX, o @ 0x70..=UMAX )) if s < o => return Some(Greater),
+            Some((s @ 0x70..=UMAX, o @ 0x70..=UMAX)) if s < o => return Some(Greater),
 
             // Case 3: both numbers are negative, but equal
-            Some(( 0x70..=UMAX, 0x70..=UMAX )) => true,
+            Some((0x70..=UMAX, 0x70..=UMAX)) => true,
 
             // Case 4: only s is negative
-            Some(( 0x70..=UMAX, _ )) => return Some(Less),
+            Some((0x70..=UMAX, _)) => return Some(Less),
 
             // Case 5: only o is negative
-            Some(( _, 0x70..=UMAX )) => return Some(Greater),
+            Some((_, 0x70..=UMAX)) => return Some(Greater),
 
             // Case 6: both are positive
             Some((s, o)) if s > o => return Some(Greater),
@@ -246,17 +245,17 @@ impl PartialOrd for I384<BigEndian, U8Repr> {
         if numbers_negative {
             for (s, o) in zipped_iter {
                 if s > o {
-                    return Some(Less)
+                    return Some(Less);
                 } else if s < o {
-                    return Some(Greater)
+                    return Some(Greater);
                 }
             }
         } else {
             for (s, o) in zipped_iter {
                 if s > o {
-                    return Some(Greater)
+                    return Some(Greater);
                 } else if s < o {
-                    return Some(Less)
+                    return Some(Less);
                 }
             }
         }
@@ -329,9 +328,7 @@ impl I384<BigEndian, U32Repr> {
     }
 
     pub fn as_u384(self) -> U384<BigEndian, U32Repr> {
-        U384::<BigEndian, U32Repr>::from_array(
-            self.inner
-        )
+        U384::<BigEndian, U32Repr>::from_array(self.inner)
     }
 
     pub fn from_t242(value: T242<Btrit>) -> Self {
@@ -348,7 +345,7 @@ impl I384<BigEndian, U32Repr> {
     }
 
     pub fn is_positive(&self) -> bool {
-        (self.inner[LEN_IN_U32-1] & 0x7000_0000) == 0x7000_0000
+        (self.inner[LEN_IN_U32 - 1] & 0x7000_0000) == 0x7000_0000
     }
 
     pub fn is_negative(&self) -> bool {
@@ -423,12 +420,12 @@ impl I384<BigEndian, U32Repr> {
 
     pub fn try_from_t243(balanced_trits: T243<Btrit>) -> Result<Self, Error> {
         let unbalanced_trits = balanced_trits.into_shifted();
-        let u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(unbalanced_trits)?; 
+        let u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(unbalanced_trits)?;
         Ok(u384_integer.shift_into_i384())
     }
 }
 
-impl_default!( (I384<BigEndian, U32Repr>), LEN_IN_U32);
+impl_default!((I384<BigEndian, U32Repr>), LEN_IN_U32);
 
 impl Eq for I384<BigEndian, U32Repr> {}
 
@@ -478,19 +475,19 @@ impl PartialOrd for I384<BigEndian, U32Repr> {
         const UMAX: u32 = std::u32::MAX;
         let numbers_negative = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less
-            Some(( s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX )) if s > o => return Some(Less),
+            Some((s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX)) if s > o => return Some(Less),
 
             // Case 2: both numbers are negative, s is greater
-            Some(( s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX )) if s < o => return Some(Greater),
+            Some((s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX)) if s < o => return Some(Greater),
 
             // Case 3: both numbers are negative, but equal
-            Some(( 0x7000_0000..=UMAX, 0x7000_0000..=UMAX )) => true,
+            Some((0x7000_0000..=UMAX, 0x7000_0000..=UMAX)) => true,
 
             // Case 4: only s is negative
-            Some(( 0x7000_0000..=UMAX, _ )) => return Some(Less),
+            Some((0x7000_0000..=UMAX, _)) => return Some(Less),
 
             // Case 5: only o is negative
-            Some(( _, 0x7000_0000..=UMAX )) => return Some(Greater),
+            Some((_, 0x7000_0000..=UMAX)) => return Some(Greater),
 
             // Case 6: both are positive
             Some((s, o)) if s > o => return Some(Greater),
@@ -509,17 +506,17 @@ impl PartialOrd for I384<BigEndian, U32Repr> {
         if numbers_negative {
             for (s, o) in zipped_iter {
                 if s > o {
-                    return Some(Less)
+                    return Some(Less);
                 } else if s < o {
-                    return Some(Greater)
+                    return Some(Greater);
                 }
             }
         } else {
             for (s, o) in zipped_iter {
                 if s > o {
-                    return Some(Greater)
+                    return Some(Greater);
                 } else if s < o {
-                    return Some(Less)
+                    return Some(Less);
                 }
             }
         }
@@ -544,7 +541,7 @@ impl TryFrom<T243<Btrit>> for I384<BigEndian, U32Repr> {
     }
 }
 
-impl_default!(( I384<LittleEndian, U8Repr> ), LEN_IN_U8);
+impl_default!((I384<LittleEndian, U8Repr>), LEN_IN_U8);
 
 impl Eq for I384<LittleEndian, U8Repr> {}
 
@@ -598,19 +595,19 @@ impl PartialOrd for I384<LittleEndian, U8Repr> {
         const UMAX: u8 = std::u8::MAX;
         let numbers_negative = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less
-            Some(( s @ 0x70..=UMAX, o @ 0x70..=UMAX )) if s > o => return Some(Less),
+            Some((s @ 0x70..=UMAX, o @ 0x70..=UMAX)) if s > o => return Some(Less),
 
             // Case 2: both numbers are negative, s is greater
-            Some(( s @ 0x70..=UMAX, o @ 0x70..=UMAX )) if s < o => return Some(Greater),
+            Some((s @ 0x70..=UMAX, o @ 0x70..=UMAX)) if s < o => return Some(Greater),
 
             // Case 3: both numbers are negative, but equal
-            Some(( 0x70..=UMAX, 0x70..=UMAX )) => true,
+            Some((0x70..=UMAX, 0x70..=UMAX)) => true,
 
             // Case 4: only s is negative
-            Some(( 0x70..=UMAX, _ )) => return Some(Less),
+            Some((0x70..=UMAX, _)) => return Some(Less),
 
             // Case 5: only o is negative
-            Some(( _, 0x70..=UMAX )) => return Some(Greater),
+            Some((_, 0x70..=UMAX)) => return Some(Greater),
 
             // Case 6: both are positive
             Some((s, o)) if s > o => return Some(Greater),
@@ -629,17 +626,17 @@ impl PartialOrd for I384<LittleEndian, U8Repr> {
         if numbers_negative {
             for (s, o) in zipped_iter {
                 if s > o {
-                    return Some(Less)
+                    return Some(Less);
                 } else if s < o {
-                    return Some(Greater)
+                    return Some(Greater);
                 }
             }
         } else {
             for (s, o) in zipped_iter {
                 if s > o {
-                    return Some(Greater)
+                    return Some(Greater);
                 } else if s < o {
-                    return Some(Less)
+                    return Some(Less);
                 }
             }
         }
@@ -683,9 +680,7 @@ impl I384<LittleEndian, U32Repr> {
     }
 
     pub fn as_u384(self) -> U384<LittleEndian, U32Repr> {
-        U384::<LittleEndian, U32Repr>::from_array(
-            self.inner
-        )
+        U384::<LittleEndian, U32Repr>::from_array(self.inner)
     }
 
     pub fn from_t242(value: T242<Btrit>) -> Self {
@@ -702,7 +697,7 @@ impl I384<LittleEndian, U32Repr> {
     }
 
     pub fn is_positive(&self) -> bool {
-        (self.inner[LEN_IN_U32-1] & 0x7000_0000) == 0x7000_0000
+        (self.inner[LEN_IN_U32 - 1] & 0x7000_0000) == 0x7000_0000
     }
 
     pub fn is_negative(&self) -> bool {
@@ -777,12 +772,12 @@ impl I384<LittleEndian, U32Repr> {
 
     pub fn try_from_t243(balanced_trits: T243<Btrit>) -> Result<Self, Error> {
         let unbalanced_trits = balanced_trits.into_shifted();
-        let u384_integer = U384::<LittleEndian, U32Repr>::try_from_t243(unbalanced_trits)?; 
+        let u384_integer = U384::<LittleEndian, U32Repr>::try_from_t243(unbalanced_trits)?;
         Ok(u384_integer.shift_into_i384())
     }
 }
 
-impl_default!(( I384<LittleEndian, U32Repr> ), LEN_IN_U32);
+impl_default!((I384<LittleEndian, U32Repr>), LEN_IN_U32);
 
 impl Eq for I384<LittleEndian, U32Repr> {}
 
@@ -832,19 +827,19 @@ impl PartialOrd for I384<LittleEndian, U32Repr> {
         const UMAX: u32 = std::u32::MAX;
         let numbers_negative = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less
-            Some(( s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX )) if s > o => return Some(Less),
+            Some((s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX)) if s > o => return Some(Less),
 
             // Case 2: both numbers are negative, s is greater
-            Some(( s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX )) if s < o => return Some(Greater),
+            Some((s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX)) if s < o => return Some(Greater),
 
             // Case 3: both numbers are negative, but equal
-            Some(( 0x7000_0000..=UMAX, 0x7000_0000..=UMAX )) => true,
+            Some((0x7000_0000..=UMAX, 0x7000_0000..=UMAX)) => true,
 
             // Case 4: only s is negative
-            Some(( 0x7000_0000..=UMAX, _ )) => return Some(Less),
+            Some((0x7000_0000..=UMAX, _)) => return Some(Less),
 
             // Case 5: only o is negative
-            Some(( _, 0x7000_0000..=UMAX )) => return Some(Greater),
+            Some((_, 0x7000_0000..=UMAX)) => return Some(Greater),
 
             // Case 6: both are positive
             Some((s, o)) if s > o => return Some(Greater),
@@ -863,17 +858,17 @@ impl PartialOrd for I384<LittleEndian, U32Repr> {
         if numbers_negative {
             for (s, o) in zipped_iter {
                 if s > o {
-                    return Some(Less)
+                    return Some(Less);
                 } else if s < o {
-                    return Some(Greater)
+                    return Some(Greater);
                 }
             }
         } else {
             for (s, o) in zipped_iter {
                 if s > o {
-                    return Some(Greater)
+                    return Some(Greater);
                 } else if s < o {
-                    return Some(Less)
+                    return Some(Less);
                 }
             }
         }
@@ -895,7 +890,7 @@ impl TryFrom<T243<Btrit>> for I384<LittleEndian, U32Repr> {
     }
 }
 
-impl_toggle_endianness!( ( I384 ), U8Repr, U32Repr);
+impl_toggle_endianness!((I384), U8Repr, U32Repr);
 
 #[cfg(test)]
 mod tests {
@@ -903,45 +898,85 @@ mod tests {
 
     test_binary_op!(
         [min_minus_one_is_max, sub_inplace, LE_U32_MIN, LE_U32_1, LE_U32_MAX],
-        [min_plus_neg_one_is_max, add_inplace, LE_U32_MIN, LE_U32_NEG_1, LE_U32_MAX],
+        [
+            min_plus_neg_one_is_max,
+            add_inplace,
+            LE_U32_MIN,
+            LE_U32_NEG_1,
+            LE_U32_MAX
+        ],
         [min_minus_zero_is_min, sub_inplace, LE_U32_MIN, LE_U32_0, LE_U32_MIN],
         [min_plus_zero_is_min, add_inplace, LE_U32_MIN, LE_U32_0, LE_U32_MIN],
-        [neg_one_minus_one_is_neg_two, sub_inplace, LE_U32_NEG_1, LE_U32_1, LE_U32_NEG_2],
-        [neg_one_minus_neg_one_is_zero, sub_inplace, LE_U32_NEG_1, LE_U32_NEG_1, LE_U32_0],
+        [
+            neg_one_minus_one_is_neg_two,
+            sub_inplace,
+            LE_U32_NEG_1,
+            LE_U32_1,
+            LE_U32_NEG_2
+        ],
+        [
+            neg_one_minus_neg_one_is_zero,
+            sub_inplace,
+            LE_U32_NEG_1,
+            LE_U32_NEG_1,
+            LE_U32_0
+        ],
         [neg_one_plus_one_is_zero, add_inplace, LE_U32_NEG_1, LE_U32_1, LE_U32_0],
-        [neg_one_plus_neg_one_is_neg_two, add_inplace, LE_U32_NEG_1, LE_U32_NEG_1, LE_U32_NEG_2],
+        [
+            neg_one_plus_neg_one_is_neg_two,
+            add_inplace,
+            LE_U32_NEG_1,
+            LE_U32_NEG_1,
+            LE_U32_NEG_2
+        ],
         [zero_minus_one_is_neg_one, sub_inplace, LE_U32_0, LE_U32_1, LE_U32_NEG_1],
         [zero_minus_neg_one_is_one, sub_inplace, LE_U32_0, LE_U32_NEG_1, LE_U32_1],
         [zero_plus_one_is_one, add_inplace, LE_U32_0, LE_U32_1, LE_U32_1],
-        [zero_plus_neg_one_is_neg_one, add_inplace, LE_U32_0, LE_U32_NEG_1, LE_U32_NEG_1],
+        [
+            zero_plus_neg_one_is_neg_one,
+            add_inplace,
+            LE_U32_0,
+            LE_U32_NEG_1,
+            LE_U32_NEG_1
+        ],
         [one_minus_neg_one_is_two, sub_inplace, LE_U32_1, LE_U32_NEG_1, LE_U32_2],
         [one_minus_one_is_zero, sub_inplace, LE_U32_1, LE_U32_1, LE_U32_0],
         [one_plus_one_is_two, add_inplace, LE_U32_1, LE_U32_1, LE_U32_2],
         [one_plus_neg_one_is_zero, add_inplace, LE_U32_1, LE_U32_NEG_1, LE_U32_0],
         [max_plus_one_is_min, add_inplace, LE_U32_MAX, LE_U32_1, LE_U32_MIN],
-        [max_minus_neg_one_is_min, sub_inplace, LE_U32_MAX, LE_U32_NEG_1, LE_U32_MIN],
+        [
+            max_minus_neg_one_is_min,
+            sub_inplace,
+            LE_U32_MAX,
+            LE_U32_NEG_1,
+            LE_U32_MIN
+        ],
     );
 
     test_binary_op_calc_result!(
-        [min_minus_two_is_max_minus_one, sub_inplace, LE_U32_MIN, LE_U32_2, sub_inplace, LE_U32_MAX, LE_U32_1],
-        [min_plus_one_is_max_plus_two, add_inplace, LE_U32_MIN, LE_U32_1, add_inplace, LE_U32_MAX, LE_U32_2],
+        [
+            min_minus_two_is_max_minus_one,
+            sub_inplace,
+            LE_U32_MIN,
+            LE_U32_2,
+            sub_inplace,
+            LE_U32_MAX,
+            LE_U32_1
+        ],
+        [
+            min_plus_one_is_max_plus_two,
+            add_inplace,
+            LE_U32_MIN,
+            LE_U32_1,
+            add_inplace,
+            LE_U32_MAX,
+            LE_U32_2
+        ],
     );
 
-    test_endianness_toggle!(
-        ( I384 ),
-        [u8_repr, U8Repr],
-        [u32_repr, U32Repr],
-    );
+    test_endianness_toggle!((I384), [u8_repr, U8Repr], [u32_repr, U32Repr],);
 
-    test_endianness_roundtrip!(
-        ( I384 ),
-        [u8_repr, U8Repr],
-        [u32_repr, U32Repr],
-    );
+    test_endianness_roundtrip!((I384), [u8_repr, U8Repr], [u32_repr, U32Repr],);
 
-    test_repr_roundtrip!(
-        ( I384 ),
-        [big_endian, BigEndian],
-        [little_endian, LittleEndian],
-    );
+    test_repr_roundtrip!((I384), [big_endian, BigEndian], [little_endian, LittleEndian],);
 }

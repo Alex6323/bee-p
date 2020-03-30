@@ -1,32 +1,23 @@
-use std::{
-    ops::{Deref, DerefMut},
-    convert::TryFrom,
-    iter::FromIterator,
-    fmt,
-};
 use crate::{
     Error,
-    T3B1,
     Trits,
+    T3B1,
+};
+use std::{
+    convert::TryFrom,
+    fmt,
+    iter::FromIterator,
+    ops::{
+        Deref,
+        DerefMut,
+    },
 };
 
 #[deprecated]
 pub const TRYTE_ALPHABET: [char; 27] = [
-    '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
-    'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+    'W', 'X', 'Y', 'Z',
 ];
-
-#[deprecated]
-pub trait IsTryte {
-    fn is_tryte(&self) -> bool;
-}
-
-#[deprecated]
-impl IsTryte for char {
-    fn is_tryte(&self) -> bool {
-        *self == '9' || (*self >= 'A' && *self <= 'Z')
-    }
-}
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 #[repr(i8)]
@@ -101,7 +92,7 @@ impl TryFrom<char> for Tryte {
             '9' => Ok(Tryte::Nine),
             'N'..='Z' => Ok(unsafe { std::mem::transmute((c as u8 - b'N') as i8 - 13) }),
             'A'..='M' => Ok(unsafe { std::mem::transmute((c as u8 - b'A') as i8 + 1) }),
-            _ => Err(Error::InvalidRepr)
+            _ => Err(Error::InvalidRepr),
         }
     }
 }
@@ -117,14 +108,13 @@ impl TryteBuf {
     }
 
     pub fn with_capacity(cap: usize) -> Self {
-        Self { inner: Vec::with_capacity(cap) }
+        Self {
+            inner: Vec::with_capacity(cap),
+        }
     }
 
     pub fn try_from_str(s: &str) -> Result<Self, Error> {
-        s
-            .chars()
-            .map(Tryte::try_from)
-            .collect()
+        s.chars().map(Tryte::try_from).collect()
     }
 
     pub fn len(&self) -> usize {
@@ -150,15 +140,19 @@ impl TryteBuf {
 
 impl Deref for TryteBuf {
     type Target = [Tryte];
-    fn deref(&self) -> &Self::Target { &self.inner }
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl DerefMut for TryteBuf {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.inner }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
 }
 
 impl FromIterator<Tryte> for TryteBuf {
-    fn from_iter<I: IntoIterator<Item=Tryte>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = Tryte>>(iter: I) -> Self {
         let iter = iter.into_iter();
         let mut this = Self::with_capacity(iter.size_hint().0);
         for tryte in iter {
