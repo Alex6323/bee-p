@@ -46,29 +46,29 @@ impl OverflowingAddExt for u32 {
         (sum, first_overflow | second_overflow)
     }
 }
-
-
 #[cfg(test)]
 mod tests {
     use super::SplitInteger;
 
-    #[test]
-    fn split_i64_hi_minus_one() {
-        assert_eq!((-1i64).hi(), -1i32);
+    macro_rules! test_split_integers {
+        ( $( [$fname:ident, $src:expr, $dst:expr] ),+ $(,)? ) => {
+            $(
+                #[test]
+                fn $fname() {
+                    assert_eq!($src,$dst);
+                }
+            )+
+        }
     }
 
-    #[test]
-    fn split_i64_hi_min() {
-        assert_eq!(i64::min_value().hi(), i32::min_value());
-    }
-
-    #[test]
-    fn split_i64_lo_minus_one() {
-        assert_eq!((-1i64).lo(), u32::max_value());
-    }
-
-    #[test]
-    fn split_i64_lo_min() {
-        assert_eq!(i64::min_value().lo(), 0u32);
-    }
+    test_split_integers!(
+        [split_i64_hi_one_is_zero, 1i64.hi(), 0i32],
+        [split_i64_lo_one_is_one, 1i64.lo(), 1u32],
+        [split_i64_hi_max_is_max, i64::max_value().hi(), i32::max_value()],
+        [split_i64_lo_max_is_max, i64::max_value().lo(), u32::max_value()],
+        [split_i64_hi_min_is_min, i64::min_value().hi(), i32::min_value()],
+        [split_i64_lo_min_is_zero, i64::min_value().lo(), 0u32],
+        [split_i64_hi_neg_one_is_neg_one, (-1i64).hi(), -1i32],
+        [split_i64_lo_neg_one_is_max, (-1i64).lo(), u32::max_value()],
+    );
 }

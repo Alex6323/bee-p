@@ -1,5 +1,6 @@
 pub mod actor;
 pub mod outbox;
+pub mod role;
 pub mod store;
 
 use crate::address::url::{

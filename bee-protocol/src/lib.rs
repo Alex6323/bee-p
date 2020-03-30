@@ -1,33 +1,13 @@
 #![recursion_limit = "1024"]
 
 mod message;
-mod neighbor;
-mod node;
+mod milestone;
+mod peer;
 mod protocol;
 mod worker;
 
-pub use message::{
-    Handshake,
-    Heartbeat,
-    MilestoneRequest,
-    TransactionBroadcast,
-    TransactionRequest,
+pub use peer::{
+    Peer,
+    PeerMetrics,
 };
-pub use node::NodeMetrics;
-pub use worker::{
-    sender_registry,
-    MilestoneValidatorWorker,
-    MilestoneValidatorWorkerEvent,
-    ReceiverWorker,
-    ReceiverWorkerEvent,
-    RequesterWorker,
-    RequesterWorkerEvent,
-    ResponderWorker,
-    ResponderWorkerEvent,
-    SenderContext,
-    SenderRegistry,
-    SenderWorker,
-    SenderWorkerEvent,
-    TransactionWorker,
-    TransactionWorkerEvent,
-};
+pub use protocol::Protocol;

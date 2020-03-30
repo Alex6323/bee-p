@@ -1,13 +1,13 @@
-use crate::message::MessageError;
 use crate::message::{
     Header,
+    MessageError,
     HEADER_SIZE,
     HEADER_TYPE_SIZE,
 };
 
 use std::ops::Range;
 
-pub trait Message {
+pub(crate) trait Message {
     const ID: u8;
 
     fn size_range() -> Range<usize>;

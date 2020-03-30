@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 use std::slice;
 
+pub mod bigint;
 pub mod trit;
 pub mod tryte;
 pub mod raw;
@@ -59,25 +60,25 @@ where
         unsafe { &*(T::empty() as *const _ as *const Self) }
     }
 
-    pub unsafe fn from_raw_unchecked(raw: &[i8]) -> &Self {
-        &*(T::from_raw_unchecked(raw) as *const _ as *const _)
+    pub unsafe fn from_raw_unchecked(raw: &[i8], num_trits: usize) -> &Self {
+        &*(T::from_raw_unchecked(raw, num_trits) as *const _ as *const _)
     }
 
-    pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8]) -> &mut Self {
-        &mut *(T::from_raw_unchecked(raw) as *const _ as *mut _)
+    pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8], num_trits: usize) -> &mut Self {
+        &mut *(T::from_raw_unchecked(raw, num_trits) as *const _ as *mut _)
     }
 
-    pub fn try_from_raw(raw: &[i8]) -> Result<&Self, Error> {
+    pub fn try_from_raw(raw: &[i8], num_trits: usize) -> Result<&Self, Error> {
         if raw.iter().all(T::is_valid) {
-            Ok(unsafe { Self::from_raw_unchecked(raw) })
+            Ok(unsafe { Self::from_raw_unchecked(raw, num_trits) })
         } else {
             Err(Error::InvalidRepr)
         }
     }
 
-    pub fn try_from_raw_mut(raw: &mut [i8]) -> Result<&mut Self, Error> {
+    pub fn try_from_raw_mut(raw: &mut [i8], num_trits: usize) -> Result<&mut Self, Error> {
         if raw.iter().all(T::is_valid) {
-            Ok(unsafe { Self::from_raw_unchecked_mut(raw) })
+            Ok(unsafe { Self::from_raw_unchecked_mut(raw, num_trits) })
         } else {
             Err(Error::InvalidRepr)
         }
@@ -171,6 +172,14 @@ where
 }
 
 impl<T: Trit> Trits<T1B1<T>> {
+    pub fn as_raw_slice(&self) -> &[T] {
+        self.0.as_raw_slice()
+    }
+
+    pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
+        self.0.as_raw_slice_mut()
+    }
+
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item=&mut Self> + '_ {
@@ -203,16 +212,6 @@ impl<T: Trit> Trits<T1B1<T>> {
 
     pub fn iter_mut<'a>(&'a mut self) -> slice::IterMut<'a, T> {
         self.as_raw_slice_mut().iter_mut()
-    }
-}
-
-impl<T: Trit> Trits<T1B1<T>> {
-    pub fn as_raw_slice(&self) -> &[T] {
-        self.0.as_raw_slice()
-    }
-
-    pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
-        self.0.as_raw_slice_mut()
     }
 }
 
@@ -342,6 +341,16 @@ impl<T: RawEncodingBuf> TritBuf<T> {
         U::Slice: RawEncoding<Trit = <T::Slice as RawEncoding>::Trit>,
     {
         T::into_encoding(self)
+    }
+}
+
+impl<T> TritBuf<T1B1Buf<T>>
+where
+    T: Trit,
+    T::Target: Trit,
+{
+    pub fn into_shifted(self) -> TritBuf<T1B1Buf<<T as ShiftTernary>::Target>> {
+        TritBuf(self.0.into_shifted())
     }
 }
 

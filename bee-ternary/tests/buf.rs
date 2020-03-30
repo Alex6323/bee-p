@@ -88,14 +88,14 @@ fn encode_generic<T: raw::RawEncodingBuf + Clone, U: raw::RawEncodingBuf>()
 where
     U::Slice: raw::RawEncoding<Trit = <T::Slice as raw::RawEncoding>::Trit>,
 {
-    fuzz(100, || {
+    fuzz(49, || {
         let a = gen_buf::<T>(0..100).0;
-        let b = a.clone().into_encoding::<U>();
+        let b = a.clone().encode::<U>();
 
         assert_eq!(a, b);
         assert_eq!(a.len(), b.len());
 
-        let c = b.into_encoding::<T>();
+        let c = b.encode::<T>();
 
         assert_eq!(a, c);
         assert_eq!(a.len(), c.len());

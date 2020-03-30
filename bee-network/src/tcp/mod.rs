@@ -1,23 +1,21 @@
 pub mod actor;
 pub mod connection;
 
-use connection::{
-    Role,
-    TcpConnection,
-};
+use connection::TcpConnection;
 
 use crate::address::{
     url::Protocol,
     Address,
 };
 use crate::constants::MAX_BUFFER_SIZE;
-use crate::endpoint::EndpointId as EpId;
 use crate::endpoint::{
     outbox::{
         bytes_channel,
         BytesReceiver,
     },
+    role::Role,
     Endpoint,
+    EndpointId as EpId,
 };
 use crate::errors::{
     ConnectionError,
@@ -72,6 +70,7 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
 
     let addr: Address = conn.remote_addr.into();
     let proto = Protocol::Tcp;
+    let role = conn.role;
 
     let ep = Endpoint::new(addr, proto);
 
@@ -88,7 +87,7 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
         shutdown_receiver,
     ));
 
-    Ok(notifier.send(Event::NewConnection { ep, sender }).await?)
+    Ok(notifier.send(Event::NewConnection { ep, role, sender }).await?)
 }
 
 async fn writer(epid: EpId, stream: Arc<TcpStream>, mut bytes_rx: BytesReceiver, sd: oneshot::Sender<()>) {

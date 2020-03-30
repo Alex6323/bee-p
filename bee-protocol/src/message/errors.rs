@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub enum MessageError {
+pub(crate) enum MessageError {
     InvalidAdvertisedLengthBytes([u8; 2]),
     InvalidAdvertisedType(u8, u8),
     InvalidAdvertisedLength(usize, usize),

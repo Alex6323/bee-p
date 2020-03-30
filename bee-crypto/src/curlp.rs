@@ -127,11 +127,12 @@ impl Sponge for CurlP {
     ///
     /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written
     /// into it.
-    fn squeeze_into(&mut self, buf: &mut Trits) {
+    fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
         for chunk in buf.chunks_mut(Self::OUT_LEN) {
             chunk.copy_from(&self.state[0..chunk.len()]);
             self.transform()
         }
+        Ok(())
     }
 }
 
@@ -190,8 +191,9 @@ macro_rules! forward_sponge_impl {
                 self.0.reset()
             }
 
-            fn squeeze_into(&mut self, buf: &mut Trits) {
-                self.0.squeeze_into(buf);
+            fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
+                self.0.squeeze_into(buf)?;
+                Ok(())
             }
         }
     )+
@@ -204,8 +206,9 @@ forward_sponge_impl!(CurlP27, CurlP81);
 mod tests {
     use super::*;
     use bee_ternary::{
-        util::trytes_to_trits_buf,
         T1B1Buf,
+        T3B1Buf,
+        TryteBuf,
     };
 
     const INPUT_TRITS: &[i8] = &[
@@ -276,18 +279,35 @@ KXRVLFETGUTUWBCNCC9DWO99JQTEI9YXVOZHWELSYP9SG9KN9WCKXOVTEFHFH9EFZJKFYCZKQPPBXYSG
     #[test]
     fn verify_curlp27_hash_trytes() {
         let mut curlp27 = CurlP27::new();
-        let input_trits = trytes_to_trits_buf(INPUT_TRYTES);
-        let expected_hash = trytes_to_trits_buf(EXPECTED_CURLP27_HASH_TRYTES);
-        let calculated_hash = curlp27.digest(&input_trits);
+
+        let input_trytes = TryteBuf::try_from_str(INPUT_TRYTES);
+        assert!(input_trytes.is_ok());
+        let input_trytes = input_trytes.unwrap();
+
+        let input_trit_buf = input_trytes
+            .as_trits()
+            .encode::<T1B1Buf>();
+
+        let expected_hash = TryteBuf::try_from_str(EXPECTED_CURLP27_HASH_TRYTES);
+        assert!(expected_hash.is_ok());
+        let expected_hash = expected_hash.unwrap();
+
+        let calculated_hash = curlp27.digest(&input_trit_buf);
         assert!(calculated_hash.is_ok(), "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail");
-        assert_eq!(expected_hash, calculated_hash.unwrap());
+        let calculated_hash = calculated_hash
+            .unwrap()
+            .encode::<T3B1Buf>();
+
+        assert_eq!(calculated_hash.as_slice(), expected_hash.as_trits());
     }
 
     #[test]
     fn verify_curlp27_hash_trits() {
         let mut curlp27 = CurlP27::new();
+
         let input_trits = TritBuf::<T1B1Buf>::from_i8_unchecked(INPUT_TRITS);
         let expected_hash = TritBuf::<T1B1Buf>::from_i8_unchecked(EXPECTED_CURLP27_HASH_TRITS);
+
         let calculated_hash = curlp27.digest(&input_trits);
         assert!(calculated_hash.is_ok(), "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail");
         assert_eq!(expected_hash, calculated_hash.unwrap());

@@ -1,12 +1,16 @@
-use crate::message::{
-    Message,
-    MessageError,
-    MilestoneIndex,
+use crate::{
+    message::{
+        Message,
+        MessageError,
+    },
+    milestone::MilestoneIndex,
 };
 
-use std::convert::TryInto;
-use std::mem::size_of;
-use std::ops::Range;
+use std::{
+    convert::TryInto,
+    mem::size_of,
+    ops::Range,
+};
 
 const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
 const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
@@ -14,7 +18,7 @@ const HEARTBEAT_CONSTANT_SIZE: usize =
     HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE;
 
 #[derive(Clone, Default)]
-pub struct Heartbeat {
+pub(crate) struct Heartbeat {
     pub(crate) first_solid_milestone_index: MilestoneIndex,
     pub(crate) last_solid_milestone_index: MilestoneIndex,
 }

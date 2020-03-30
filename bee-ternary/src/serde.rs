@@ -11,15 +11,7 @@ use serde::{
     Deserializer,
     de::{Visitor, SeqAccess, Error, Unexpected},
 };
-use crate::{
-    Trit,
-    Btrit,
-    Utrit,
-    Trits,
-    TritBuf,
-    RawEncoding,
-    RawEncodingBuf,
-};
+use crate::{Trit, Btrit, Utrit, Trits, TritBuf, RawEncoding, RawEncodingBuf, T5B1};
 
 // Serialisation
 
@@ -36,7 +28,8 @@ impl Serialize for Utrit {
 }
 
 impl<'a, T: RawEncoding> Serialize for &'a Trits<T>
-    where T::Trit: Serialize
+    where T::Trit: Serialize,
+          T : serde::Serialize
 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
