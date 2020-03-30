@@ -3,18 +3,12 @@ use super::EndpointId as EpId;
 use async_std::net::IpAddr;
 use dashmap::DashMap;
 
-use std::collections::HashSet;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use std::ptr;
 
 use log::*;
 
-
-//type DashSet<T> = DashMap<T, ()>;
-
 static WHITELIST: AtomicPtr<WhiteList> = AtomicPtr::new(ptr::null_mut());
-
-// TODO: make it thread-safe and globally shared
 
 pub fn init() {
     WHITELIST.store(Box::into_raw(WhiteList::new().into()), Ordering::SeqCst);
@@ -25,8 +19,10 @@ pub fn free() {
     if whitelist.is_null() {
         panic!("whitelist can't be null");
     } else {
-        // just turn it into a box again, and let Rust do the cleaning up
-        debug!("[Endp ] Deallocating whitelist");
+        trace!("[Endp ] Deallocating whitelist");
+
+        // NOTE: let Box own the atomic ptr. When it gets dropped it will
+        // make sure that the whitelist will be deallocated
         let _ = unsafe { Box::from_raw(WHITELIST.load(Ordering::SeqCst)) };
     }
 }
@@ -58,6 +54,8 @@ impl WhiteList {
         self.inner.remove(epid).is_some()
     }
 
+    // TODO: re-resolve domain names
+    #[allow(dead_code)]
     pub async fn refresh(&self) {
         todo!("implement refresh")
     }

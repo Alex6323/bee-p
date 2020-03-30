@@ -1,5 +1,5 @@
 use crate::address::Address;
-use crate::endpoint::{role::Role, whitelist, whitelist::WhiteList};
+use crate::endpoint::{role::Role, whitelist};
 use crate::errors::Result;
 use crate::events::EventPublisher as Notifier;
 use crate::shutdown::ShutdownListener as Shutdown;

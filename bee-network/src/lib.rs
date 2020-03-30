@@ -88,10 +88,7 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
     shutdown.add_task(spawn(tcp_worker.run()));
     //shutdown.add_task(spawn(udp_worker.run()));
 
-    let network = Network::new(command_sender);
-
-    // initialize IP whitelisting
     whitelist::init();
 
-    (network, shutdown, events)
+    (Network::new(command_sender), shutdown, events)
 }
