@@ -20,6 +20,7 @@ pub use transaction::{
     Address,
     Hash,
     Index,
+    Milestone,
     Nonce,
     Payload,
     Tag,
@@ -28,6 +29,15 @@ pub use transaction::{
     TransactionBuilder,
     TransactionBuilderError,
     TransactionBuilders,
+    TransactionField,
     Transactions,
     Value,
+};
+
+pub use constants::{
+    ADDRESS_TRIT_LEN,
+    HASH_TRIT_LEN,
+    NONCE_TRIT_LEN,
+    PAYLOAD_TRIT_LEN,
+    TAG_TRIT_LEN,
 };
