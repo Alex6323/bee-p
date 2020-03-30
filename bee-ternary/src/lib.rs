@@ -72,10 +72,6 @@ pub use crate::{
     },
 };
 
-// ONLY TEMPORARY
-// re-export iota-conversion
-pub use iota_conversion;
-
 #[derive(Debug)]
 pub enum Error {
     InvalidRepr,
