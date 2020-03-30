@@ -53,7 +53,7 @@ impl TransactionWorker {
         let receiver = &mut self.receiver;
         //let milestone_validator_worker_sender = &mut self.milestone_validator_worker_sender;
         //let shutdown_receiver = &mut self.shutdown_receiver;
-
+        
         while let Some(transaction_broadcast) = self.receiver.next().await {
 
             // TODO: move out from the loop
@@ -108,9 +108,9 @@ impl TransactionWorker {
             tangle.insert(tx_hash.clone(), built_transaction);
 
             // check if transaction is a potential milestone candidate
-            if address.0.eq(&t1b1_coo_buf) {
-                //milestone_validator_worker_sender.send(MilestoneValidatorWorkerEvent::Candidate(tx_hash.0)).await.unwrap();
-            }
+            //if address.0.eq(&t1b1_coo_buf) {
+                //milestone_sender.send(tx_hash.clone().0).await.unwrap();
+            //}
 
         }
     }
@@ -211,26 +211,3 @@ fn test_identify_coo_address() {
     assert_eq!(243, address.as_bytes().len());
 
 }
-
-#[test]
-fn test_tx_worker() {
-
-    Protocol::init();
-
-    //let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
-    let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
-
-    // send tx to the channel
-    block_on(tx_sender(transaction_worker_sender));
-
-    block_on(TransactionWorker::new(transaction_worker_receiver).run());
-}
-
-async fn tx_sender(mut sender: Sender<TransactionWorkerEvent>) {
-
-    Protocol::init();
-    let tx: [u8; 1604] = [0; 1604];
-    let message = TransactionBroadcast::new(&tx);
-    sender.send(message).await.unwrap();
-}
-
