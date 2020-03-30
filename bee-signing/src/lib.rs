@@ -1,6 +1,6 @@
 // mod ed25519;
 mod iota_seed;
-// mod mss;
+mod mss;
 mod scheme;
 mod wots;
 
