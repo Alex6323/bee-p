@@ -87,15 +87,10 @@ pub enum Event {
         num_bytes: usize,
     },
 
-    // TODO: rename to `MessageReceived`
     /// Signals that a message has been received.
-    BytesReceived {
+    MessageReceived {
         /// The id of the `Endpoint` a message was received from.
         epid: EndpointId,
-
-        // TODO: remove this for now.
-        /// The `Address` of the `Endpoint` a message was received from.
-        addr: Address,
 
         /// The raw bytes of the message.
         bytes: Vec<u8>,
@@ -147,13 +142,9 @@ impl fmt::Display for Event {
                 write!(f, "Event::MessageSent {{ {}, num_bytes: {} }}", epid, num_bytes)
             }
 
-            Event::BytesReceived { epid, addr, bytes } => write!(
-                f,
-                "Event::BytesReceived {{ {}, from: {}, num_bytes: {} }}",
-                epid,
-                addr,
-                bytes.len()
-            ),
+            Event::MessageReceived { epid, bytes } => {
+                write!(f, "Event::MessageReceived {{ {}, num_bytes: {} }}", epid, bytes.len())
+            }
 
             Event::TryConnect { epid, .. } => write!(f, "Event::TryConnect {{ {} }}", epid),
         }

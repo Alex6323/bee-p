@@ -211,10 +211,9 @@ impl EndpointWorker {
                                 num_bytes,
                             }).await?
                         },
-                        Event::BytesReceived { epid, addr, bytes } => {
-                            publisher.send(Event::BytesReceived {
+                        Event::MessageReceived { epid, bytes } => {
+                            publisher.send(Event::MessageReceived {
                                 epid,
-                                addr,
                                 bytes,
                             }).await?
                         },

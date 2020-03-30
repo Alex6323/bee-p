@@ -167,9 +167,8 @@ async fn reader(
                             let mut bytes = vec![0u8; num_read];
                             bytes.copy_from_slice(&buffer[0..num_read]);
 
-                            match notifier.send(Event::BytesReceived {
+                            match notifier.send(Event::MessageReceived {
                                 epid,
-                                addr,
                                 bytes,
                             }).await {
                                 Ok(_) => (),
