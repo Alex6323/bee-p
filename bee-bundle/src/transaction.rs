@@ -179,6 +179,12 @@ impl Hash {
 
 impl Eq for Hash {}
 
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Nonce(TritBuf<T1B1Buf>);
 

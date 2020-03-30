@@ -32,7 +32,6 @@ pub use transaction::{
     TransactionField,
     Transactions,
     Value,
-    TransactionField
 };
 
 pub use constants::{
