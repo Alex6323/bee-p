@@ -61,9 +61,6 @@ impl TransactionWorker {
         let mut tangle = TemporaryTangle::new();
 
         let receiver = &mut self.receiver;
-        //let milestone_validator_worker_sender = &mut self.milestone_validator_worker_sender;
-        //let shutdown_receiver = &mut self.shutdown_receiver;
-
         let (mut milestone_sender, milestone_receiver) = channel(1000);
 
         while let Some(transaction_broadcast) = self.receiver.next().await {
@@ -189,7 +186,7 @@ fn test_tangle_insert() {
 
     // calculate hash of transaction
     let mut curlp27 = CurlP27::new();
-    let tx_hash: Hash = Hash { 0: curlp27.digest(&trit_buf).unwrap() };
+    let tx_hash: Hash = Hash::from_inner_unchecked(curlp27.digest(&trit_buf).unwrap());
 
     //store transaction in the tangle
     tangle.insert(tx_hash.clone(), transaction);
