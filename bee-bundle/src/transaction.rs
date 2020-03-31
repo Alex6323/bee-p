@@ -13,26 +13,17 @@ use crate::constants::{
     TAG,
     TAG_TRIT_LEN,
     TRUNK,
-    TRYTE_ZERO,
 };
 
 use bee_ternary::{
-    raw::{
-        RawEncoding,
-        RawEncodingBuf,
-    },
+    raw::RawEncoding,
     Btrit,
     T1B1Buf,
-    Trit,
     TritBuf,
     Trits,
 };
 
-use std::{
-    fmt,
-    hash,
-    iter,
-};
+use std::hash;
 
 #[derive(Debug)]
 pub enum TransactionFieldError {
