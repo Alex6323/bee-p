@@ -108,7 +108,8 @@ impl ReceiverWorker {
         let mut shutdown_fused = shutdown_receiver.fuse();
 
         // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
-        self.network
+        if let Err(e) = self
+            .network
             .send(SendBytes {
                 epid: self.peer.epid,
                 // TODO port
@@ -116,7 +117,11 @@ impl ReceiverWorker {
                     .into_full_bytes(),
                 responder: None,
             })
-            .await;
+            .await
+        {
+            // TODO then what ?
+            warn!("[Peer({})] Failed to send handshake.", self.peer.epid);
+        }
 
         loop {
             select! {

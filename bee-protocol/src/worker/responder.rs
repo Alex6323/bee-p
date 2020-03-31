@@ -34,7 +34,7 @@ impl TransactionResponderWorker {
     pub(crate) async fn run(mut self) {
         info!("[TransactionResponderWorker ] Running.");
 
-        while let Some(TransactionResponderWorkerEvent { epid, message }) = self.receiver.next().await {
+        while let Some(TransactionResponderWorkerEvent { epid, .. }) = self.receiver.next().await {
             // TODO
             // if let Some(transaction) = tangle.get_transaction(message.hash) {
             //     (epid, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
@@ -65,7 +65,7 @@ impl MilestoneResponderWorker {
     pub(crate) async fn run(mut self) {
         info!("[MilestoneResponderWorker ] Running.");
 
-        while let Some(MilestoneResponderWorkerEvent { epid, message }) = self.receiver.next().await {
+        while let Some(MilestoneResponderWorkerEvent { epid, .. }) = self.receiver.next().await {
             // TODO
             // let index = if message.index == 0 {
             //     tangle.get_latest_milestone_index()
