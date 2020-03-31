@@ -18,5 +18,6 @@ pub use wots::{
     WotsPrivateKeyGenerator,
     WotsPrivateKeyGeneratorBuilder,
     WotsPublicKey,
+    WotsSecurityLevel,
     WotsSignature,
 };
