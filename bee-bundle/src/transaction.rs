@@ -24,6 +24,7 @@ use bee_ternary::{
 };
 
 use std::hash;
+use std::fmt;
 
 #[derive(Debug)]
 pub enum TransactionFieldError {
