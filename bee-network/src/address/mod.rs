@@ -11,8 +11,10 @@ use async_std::net::{
     ToSocketAddrs,
 };
 
-use std::fmt;
-use std::ops;
+use std::{
+    fmt,
+    ops,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Port(pub u16);

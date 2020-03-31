@@ -13,22 +13,17 @@ use crate::constants::{
     TAG,
     TAG_TRIT_LEN,
     TRUNK,
-    TRYTE_ZERO,
 };
 
 use bee_ternary::{
     raw::RawEncoding,
-    raw::RawEncodingBuf,
     Btrit,
     T1B1Buf,
-    Trit,
     TritBuf,
     Trits,
 };
 
-use std::fmt;
 use std::hash;
-use std::iter;
 
 #[derive(Debug)]
 pub enum TransactionFieldError {
@@ -427,14 +422,6 @@ impl Transactions {
     pub fn push(&mut self, transaction: Transaction) {
         self.0.push(transaction);
     }
-}
-
-/// Milestone - TODO - builder?
-
-#[derive(Debug, Clone)]
-pub struct Milestone {
-    pub hash: Hash,
-    pub index: u32,
 }
 
 /// Transaction builder

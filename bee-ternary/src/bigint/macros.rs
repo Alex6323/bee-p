@@ -49,9 +49,8 @@ macro_rules! def_and_impl_ternary {
             <T as ShiftTernary>::Target: Trit,
         {
             pub fn into_shifted(self) -> $ident<<T as ShiftTernary>::Target> {
-                Self(self.0.into_shifted())
+                $ident(self.0.into_shifted())
             }
-
         }
 
         impl $ident<Btrit> {

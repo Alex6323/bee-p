@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
+bee-protocol = { path = "../bee-protocol" }
 bee-ternary = { path = "../bee-ternary" }
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }
@@ -14,4 +15,3 @@ bincode = "1.2.1"
 futures = "0.3.1"
 num_cpus = "1.12.0"
 rand = "0.7.3"
-

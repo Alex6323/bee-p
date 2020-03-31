@@ -1,13 +1,15 @@
-use crate::bundle::Bundle;
-use crate::constants::IOTA_SUPPLY;
-use crate::transaction::{
-    Hash,
-    Index,
-    TransactionBuilder,
-    TransactionBuilderError,
-    TransactionBuilders,
-    TransactionField,
-    Transactions,
+use crate::{
+    bundle::Bundle,
+    constants::IOTA_SUPPLY,
+    transaction::{
+        Hash,
+        Index,
+        TransactionBuilder,
+        TransactionBuilderError,
+        TransactionBuilders,
+        TransactionField,
+        Transactions,
+    },
 };
 
 use bee_crypto::Sponge;
@@ -57,7 +59,7 @@ where
         // TODO Impl
         let mut sponge = E::default();
 
-        for builder in &self.builders.0 {
+        for _builder in &self.builders.0 {
             // TODO sponge.absorb(builder.essence());
         }
 

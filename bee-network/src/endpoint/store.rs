@@ -2,12 +2,14 @@ use super::{
     Endpoint,
     EndpointId,
 };
-use std::collections::hash_map::{
-    Entry,
-    Iter,
-    IterMut,
+use std::collections::{
+    hash_map::{
+        Entry,
+        Iter,
+        IterMut,
+    },
+    HashMap,
 };
-use std::collections::HashMap;
 
 pub struct Endpoints {
     inner: HashMap<EndpointId, Endpoint>,

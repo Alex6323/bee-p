@@ -1,8 +1,8 @@
 mod common;
 use self::common::*;
 
-use std::convert::TryFrom;
 use bee_ternary::*;
+use std::convert::TryFrom;
 
 #[test]
 fn convert_correct() {
@@ -24,32 +24,24 @@ fn convert_balanced() {
 
 #[test]
 #[should_panic]
-fn convert_incorrect_0() { Utrit::try_from(-1i8).unwrap(); }
+fn convert_incorrect_0() {
+    Utrit::try_from(-1i8).unwrap();
+}
 
 #[test]
 #[should_panic]
-fn convert_incorrect_1() { Utrit::try_from(3i8).unwrap(); }
+fn convert_incorrect_1() {
+    Utrit::try_from(3i8).unwrap();
+}
 
 #[test]
 #[should_panic]
-fn convert_incorrect_2() { Btrit::try_from(-2i8).unwrap(); }
+fn convert_incorrect_2() {
+    Btrit::try_from(-2i8).unwrap();
+}
 
 #[test]
 #[should_panic]
-fn convert_incorrect_3() { Btrit::try_from(2i8).unwrap(); }
-
-#[test]
-fn tryte() {
-    for c in &TRYTE_ALPHABET {
-        println!("{}", c);
-        let tryte = Tryte::try_from(*c).unwrap();
-        assert_eq!(
-            tryte.as_trits(),
-            util::trytes_to_trits_buf(&format!("{}", c)).as_slice(),
-        );
-        assert_eq!(
-            char::from(tryte),
-            *c,
-        );
-    }
+fn convert_incorrect_3() {
+    Btrit::try_from(2i8).unwrap();
 }

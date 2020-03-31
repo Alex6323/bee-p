@@ -1,4 +1,4 @@
-mod ed25519;
+// mod ed25519;
 mod iota_seed;
 mod mss;
 mod scheme;
@@ -18,5 +18,6 @@ pub use wots::{
     WotsPrivateKeyGenerator,
     WotsPrivateKeyGeneratorBuilder,
     WotsPublicKey,
+    WotsSecurityLevel,
     WotsSignature,
 };

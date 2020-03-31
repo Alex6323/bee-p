@@ -4,7 +4,7 @@ use bee_network::{
     Event,
     EventSubscriber,
     Network,
-    Role,
+    Origin,
     Shutdown,
 };
 use bee_peering::{
@@ -76,8 +76,8 @@ impl Node {
         info!("[Node ] Endpoint {} has been removed.", epid);
     }
 
-    async fn endpoint_connected_handler(&mut self, epid: EndpointId, role: Role) {
-        let peer = Arc::new(Peer::new(epid, role));
+    async fn endpoint_connected_handler(&mut self, epid: EndpointId, origin: Origin) {
+        let peer = Arc::new(Peer::new(epid, origin));
         let (receiver_tx, receiver_shutdown_tx) =
             Protocol::register(self.network.clone(), peer.clone(), self.metrics.clone());
 
@@ -113,9 +113,9 @@ impl Node {
             match event {
                 Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
                 Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
-                Event::EndpointConnected { epid, role, .. } => self.endpoint_connected_handler(epid, role).await,
+                Event::EndpointConnected { epid, origin, .. } => self.endpoint_connected_handler(epid, origin).await,
                 Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
-                Event::BytesReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
+                Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
                 _ => warn!("[Node ] Unsupported event {}.", event),
             }
         }

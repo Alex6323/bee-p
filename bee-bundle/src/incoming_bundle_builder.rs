@@ -19,7 +19,6 @@ use bee_signing::{
 };
 use bee_ternary::{
     trit::Btrit,
-    T1B1Buf,
     TritBuf,
 };
 
@@ -82,7 +81,7 @@ where
         // TODO Impl
         let mut sponge = E::default();
 
-        for builder in &self.transactions.0 {
+        for _builder in &self.transactions.0 {
             // sponge.absorb(builder.address.0);
         }
 
@@ -194,10 +193,13 @@ mod tests {
     use super::*;
     use crate::transaction::{
         Address,
+        Hash,
+        Index,
         Nonce,
         Payload,
         Tag,
         Timestamp,
+        TransactionBuilder,
         Value,
     };
 

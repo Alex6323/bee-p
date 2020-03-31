@@ -13,8 +13,7 @@ pub enum ActorError {
     SendingMessageFailed(#[source] futures::channel::mpsc::SendError),
 }
 
-pub type ActorResult<T> = std::result::Result<T, ActorError>;
-pub type ActorSuccess = ActorResult<()>;
+pub type Result<T> = std::result::Result<T, ActorError>;
 
 #[derive(Debug, Error)]
 pub enum ConnectionError {
