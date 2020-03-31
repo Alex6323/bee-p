@@ -8,7 +8,6 @@ use bee_ternary::{
     Trits,
     TRYTE_ALPHABET,
 };
-use iota_conversion::Trinary;
 
 use rand::Rng;
 use std::marker::PhantomData;
@@ -39,12 +38,12 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
     // TODO: is this random enough ?
     fn new() -> Self {
         let mut rng = rand::thread_rng();
-        let seed: String = (0..81)
-            .map(|_| TRYTE_ALPHABET[rng.gen_range(0, TRYTE_ALPHABET.len())] as char)
-            .collect();
+        // TODO out of here ?
+        let trits = [-1, 0, 1];
+        let seed: Vec<i8> = (0..243).map(|_| trits[rng.gen_range(0, trits.len())]).collect();
 
         Self {
-            seed: TritBuf::from_i8_unchecked(&seed.trits()),
+            seed: TritBuf::from_i8_unchecked(&seed),
             _sponge: PhantomData,
         }
     }
@@ -104,10 +103,17 @@ impl<S: Sponge + Default> IotaSeed<S> {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
+
     use bee_crypto::{
         CurlP27,
         CurlP81,
+        Kerl,
+    };
+    use bee_ternary::{
+        T1B1Buf,
+        TryteBuf,
     };
 
     const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
@@ -123,12 +129,20 @@ mod tests {
     }
 
     fn iota_seed_subseed_generic_test<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
-        let iota_seed = IotaSeed::<S>::from_buf(TritBuf::from_i8_unchecked(&iota_seed_string.trits())).unwrap();
+        let iota_seed_trits = TryteBuf::try_from_str(iota_seed_string)
+            .unwrap()
+            .as_trits()
+            .encode::<T1B1Buf>();
+        let iota_seed = IotaSeed::<S>::from_buf(iota_seed_trits).unwrap();
 
         for (i, iota_subseed_string) in iota_subseed_strings.iter().enumerate() {
             let iota_subseed = iota_seed.subseed(i as u64);
+            let iota_subseed_trits = TryteBuf::try_from_str(iota_subseed_string)
+                .unwrap()
+                .as_trits()
+                .encode::<T1B1Buf>();
 
-            assert_eq!(iota_subseed.as_bytes(), iota_subseed_string.trits().as_slice());
+            assert_eq!(iota_subseed.as_bytes(), iota_subseed_trits.as_i8_slice());
         }
     }
 
