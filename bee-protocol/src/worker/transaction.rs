@@ -36,16 +36,24 @@ pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
 pub(crate) struct TransactionWorker {
     receiver: Receiver<TransactionWorkerEvent>,
-    milestone_validator_worker_sender: Sender<MilestoneValidatorWorkerEvent>,
+    milestone_validator_sender: Sender<MilestoneValidatorWorkerEvent>,
+    coordinator_address: Address,
 }
 
 impl TransactionWorker {
 
     pub(crate) fn new(receiver: Receiver<TransactionWorkerEvent>) -> Self {
 
+        let coordinator_address = {
+            let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
+            let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8,243).unwrap().to_buf::<T1B1Buf>();
+            Address::from_inner_unchecked(t1b1_coo_buf)
+        };
+
         Self {
             receiver,
-            milestone_validator_worker_sender: Protocol::get().milestone_validator_worker.clone(),
+            milestone_validator_sender: Protocol::get().milestone_validator_worker.clone(),
+            coordinator_address
         }
 
     }
@@ -55,12 +63,6 @@ impl TransactionWorker {
         info!("[TransactionWorker ] Running.");
 
         let mut tangle = TemporaryTangle::new();
-
-        let coordinator_address = {
-            let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
-            let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8,243).unwrap().to_buf::<T1B1Buf>();
-            Address::from_inner_unchecked(t1b1_coo_buf)
-        };
 
         loop {
 
@@ -72,7 +74,7 @@ impl TransactionWorker {
 
                         info!("[TransactionWorker ] Processing received data...");
 
-                        // get T1B1 transaction buffer
+                        // convert received transaction bytes into T1B1 buffer
                         let transaction_buf: TritBuf<T1B1Buf> = {
 
                             let transaction: Vec<u8> = transaction_broadcast.transaction;
@@ -122,8 +124,8 @@ impl TransactionWorker {
                         tangle.insert(tx_hash.clone(), built_transaction);
 
                         // check if transaction is a potential milestone candidate
-                        if address.eq(&coordinator_address.clone()) {
-                            self.milestone_validator_worker_sender.send(tx_hash).await;
+                        if address.eq(&self.coordinator_address) {
+                            self.milestone_validator_sender.send(tx_hash).await;
                         }
 
                     },
