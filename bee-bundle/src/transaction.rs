@@ -17,8 +17,10 @@ use crate::constants::{
 };
 
 use bee_ternary::{
-    raw::RawEncoding,
-    raw::RawEncodingBuf,
+    raw::{
+        RawEncoding,
+        RawEncodingBuf,
+    },
     Btrit,
     T1B1Buf,
     Trit,
@@ -26,9 +28,11 @@ use bee_ternary::{
     Trits,
 };
 
-use std::fmt;
-use std::hash;
-use std::iter;
+use std::{
+    fmt,
+    hash,
+    iter,
+};
 
 #[derive(Debug)]
 pub enum TransactionFieldError {
@@ -427,14 +431,6 @@ impl Transactions {
     pub fn push(&mut self, transaction: Transaction) {
         self.0.push(transaction);
     }
-}
-
-/// Milestone - TODO - builder?
-
-#[derive(Debug, Clone)]
-pub struct Milestone {
-    pub hash: Hash,
-    pub index: u32,
 }
 
 /// Transaction builder
