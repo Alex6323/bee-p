@@ -13,12 +13,6 @@ use std::{
     },
 };
 
-#[deprecated]
-pub const TRYTE_ALPHABET: [char; 27] = [
-    '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-    'W', 'X', 'Y', 'Z',
-];
-
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 #[repr(i8)]
 pub enum Tryte {

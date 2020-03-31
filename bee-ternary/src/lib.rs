@@ -68,7 +68,6 @@ pub use crate::{
     tryte::{
         Tryte,
         TryteBuf,
-        TRYTE_ALPHABET,
     },
 };
 

@@ -6,7 +6,6 @@ use bee_ternary::{
     Trit,
     TritBuf,
     Trits,
-    TRYTE_ALPHABET,
 };
 
 use rand::Rng;
