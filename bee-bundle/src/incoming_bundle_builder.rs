@@ -1,15 +1,14 @@
-use crate::bundle::Bundle;
-use crate::constants::{
-    ADDRESS,
-    IOTA_SUPPLY,
-};
-use crate::transaction::{
-    Hash,
-    Index,
-    Transaction,
-    TransactionBuilder,
-    TransactionField,
-    Transactions,
+use crate::{
+    bundle::Bundle,
+    constants::{
+        ADDRESS,
+        IOTA_SUPPLY,
+    },
+    transaction::{
+        Transaction,
+        TransactionField,
+        Transactions,
+    },
 };
 
 use bee_crypto::Sponge;

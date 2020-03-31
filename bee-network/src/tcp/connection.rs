@@ -1,30 +1,34 @@
-use crate::endpoint::role::Role;
-use crate::errors::ConnectionResult as R;
-
-use async_std::net::{
-    SocketAddr,
-    TcpStream,
+use crate::{
+    endpoint::origin::Origin,
+    errors::ConnectionResult as R,
 };
-use async_std::sync::Arc;
+
+use async_std::{
+    net::{
+        SocketAddr,
+        TcpStream,
+    },
+    sync::Arc,
+};
 
 use std::fmt;
 
 #[derive(Clone)]
 pub struct TcpConnection {
-    pub role: Role,
+    pub origin: Origin,
     pub local_addr: SocketAddr,
     pub remote_addr: SocketAddr,
     pub stream: Arc<TcpStream>,
 }
 
 impl TcpConnection {
-    pub fn new(stream: TcpStream, role: Role) -> R<Self> {
+    pub fn new(stream: TcpStream, origin: Origin) -> R<Self> {
         let local_addr = stream.local_addr()?;
         let remote_addr = stream.peer_addr()?;
         let stream = Arc::new(stream);
 
         Ok(Self {
-            role,
+            origin,
             local_addr,
             remote_addr,
             stream,
@@ -41,7 +45,7 @@ impl fmt::Display for TcpConnection {
 impl Eq for TcpConnection {}
 impl PartialEq for TcpConnection {
     fn eq(&self, other: &Self) -> bool {
-        // NOTE: do we need more than this comparison?
+        // TODO: use socket address instead of IP
         self.remote_addr.ip() == other.remote_addr.ip()
     }
 }

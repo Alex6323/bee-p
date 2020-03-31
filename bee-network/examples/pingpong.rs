@@ -10,13 +10,15 @@
 //! cargo r --example pingpong -- --bind localhost:1338 --peers tcp://localhost:1337 --msg pong
 //! ```
 
+#![allow(dead_code, unused_imports)]
+
 use bee_network::{
     Command::*,
     EndpointId as EpId,
     Event,
     EventSubscriber as Events,
     Network,
-    Role,
+    Origin,
     Shutdown,
     Url,
 };
@@ -65,20 +67,8 @@ async fn notification_handler(mut events: Events, mut network: Network, msg: Str
                     .await
                     .expect("error sending Connect command");
             }
-            Event::EndpointConnected {
-                epid,
-                total,
-                role,
-                address,
-                timestamp,
-            } => {
-                info!("[.....] Connected endpoint {} ({}).", epid, total);
-
-                match role {
-                    Role::Client => info!("[.....] Being the client"),
-                    Role::Server => info!("[.....] Being the server"),
-                    Role::Unspecified => (),
-                }
+            Event::EndpointConnected { epid, origin, .. } => {
+                info!("[.....] Connected endpoint {} ({}).", epid, origin);
 
                 let msg = Utf8Message::new(&msg);
                 network

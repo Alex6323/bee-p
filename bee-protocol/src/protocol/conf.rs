@@ -8,6 +8,11 @@ pub(crate) const COORDINATOR_SECURITY_LEVEL: u8 = 2;
 pub(crate) const COORDINATOR_DEPTH: u8 = 23;
 pub(crate) const MINIMUM_WEIGHT_MAGNITUDE: u8 = 14;
 
+pub(crate) const MILESTONE_REQUEST_SEND_BOUND: usize = 1000;
+pub(crate) const TRANSACTION_BROADCAST_SEND_BOUND: usize = 1000;
+pub(crate) const TRANSACTION_REQUEST_SEND_BOUND: usize = 1000;
+pub(crate) const HEARTBEAT_SEND_BOUND: usize = 1000;
+
 // TODO move out of here
 pub(crate) fn slice_eq(a: &[u8; 49], b: &[u8; 49]) -> bool {
     if a.len() != b.len() {

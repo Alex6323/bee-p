@@ -21,6 +21,3 @@ pub(crate) use message::Message;
 pub(crate) use milestone_request::MilestoneRequest;
 pub(crate) use transaction_broadcast::TransactionBroadcast;
 pub(crate) use transaction_request::TransactionRequest;
-
-// TODO Move with Milestone declaration
-pub(crate) type MilestoneIndex = u32;

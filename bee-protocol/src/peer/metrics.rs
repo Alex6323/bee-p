@@ -4,7 +4,7 @@ use std::sync::atomic::{
 };
 
 #[derive(Default)]
-pub struct NodeMetrics {
+pub struct PeerMetrics {
     invalid_transactions_received: AtomicU32,
     stale_transactions_received: AtomicU32,
     random_transactions_received: AtomicU32,
@@ -23,7 +23,13 @@ pub struct NodeMetrics {
     heartbeat_sent: AtomicU32,
 }
 
-impl NodeMetrics {
+impl PeerMetrics {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl PeerMetrics {
     pub fn invalid_transactions_received(&self) -> u32 {
         self.invalid_transactions_received.load(Ordering::Relaxed)
     }
@@ -144,7 +150,7 @@ mod tests {
 
     #[test]
     fn node_metrics_transactions_received_test() {
-        let metrics = NodeMetrics::default();
+        let metrics = PeerMetrics::default();
 
         assert_eq!(metrics.invalid_transactions_received(), 0);
         assert_eq!(metrics.stale_transactions_received(), 0);
@@ -164,7 +170,7 @@ mod tests {
 
     #[test]
     fn node_metrics_messages_received_test() {
-        let metrics = NodeMetrics::default();
+        let metrics = PeerMetrics::default();
 
         assert_eq!(metrics.handshake_received(), 0);
         assert_eq!(metrics.milestone_request_received(), 0);
@@ -187,7 +193,7 @@ mod tests {
 
     #[test]
     fn node_metrics_messages_sent_test() {
-        let metrics = NodeMetrics::default();
+        let metrics = PeerMetrics::default();
 
         assert_eq!(metrics.handshake_sent(), 0);
         assert_eq!(metrics.milestone_request_sent(), 0);

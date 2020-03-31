@@ -1,37 +1,43 @@
-pub mod actor;
 pub mod connection;
+pub mod worker;
 
 use connection::TcpConnection;
 
-use crate::address::{
-    url::Protocol,
-    Address,
-};
-use crate::constants::MAX_BUFFER_SIZE;
-use crate::endpoint::{
-    outbox::{
-        bytes_channel,
-        BytesReceiver,
+use crate::{
+    address::{
+        url::Protocol,
+        Address,
     },
-    role::Role,
-    Endpoint,
-    EndpointId as EpId,
-};
-use crate::errors::{
-    ConnectionError,
-    ConnectionSuccess as S,
-};
-use crate::events::{
-    Event,
-    EventPublisher as Notifier,
+    constants::MAX_BUFFER_SIZE,
+    endpoint::{
+        origin::Origin,
+        outbox::{
+            bytes_channel,
+            BytesReceiver,
+        },
+        Endpoint,
+        EndpointId as EpId,
+    },
+    errors::{
+        ConnectionError,
+        ConnectionSuccess as S,
+    },
+    events::{
+        Event,
+        EventPublisher as Notifier,
+    },
 };
 
-use async_std::net::TcpStream;
-use async_std::sync::Arc;
-use async_std::task::spawn;
-use futures::channel::oneshot;
-use futures::prelude::*;
-use futures::select;
+use async_std::{
+    net::TcpStream,
+    sync::Arc,
+    task::spawn,
+};
+use futures::{
+    channel::oneshot,
+    prelude::*,
+    select,
+};
 use log::*;
 
 /// Tries to connect to an endpoint.
@@ -40,7 +46,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
 
     match TcpStream::connect(**addr).await {
         Ok(stream) => {
-            let conn = match TcpConnection::new(stream, Role::Client) {
+            let conn = match TcpConnection::new(stream, Origin::Outbound) {
                 Ok(conn) => conn,
                 Err(e) => {
                     error!["TCP  ] Error creating TCP connection (Stream immediatedly aborted?)."];
@@ -50,9 +56,9 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
             };
 
             debug!(
-                "[TCP  ] Sucessfully established connection to {} (as {}).",
+                "[TCP  ] Sucessfully established connection to {} ({}).",
                 conn.remote_addr,
-                Role::Client
+                Origin::Outbound
             );
 
             Ok(spawn_connection_workers(conn, notifier).await?)
@@ -70,7 +76,7 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
 
     let addr: Address = conn.remote_addr.into();
     let proto = Protocol::Tcp;
-    let role = conn.role;
+    let origin = conn.origin;
 
     let ep = Endpoint::new(addr, proto);
 
@@ -87,17 +93,18 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
         shutdown_receiver,
     ));
 
-    Ok(notifier.send(Event::NewConnection { ep, role, sender }).await?)
+    Ok(notifier.send(Event::NewConnection { ep, origin, sender }).await?)
 }
 
-async fn writer(epid: EpId, stream: Arc<TcpStream>, mut bytes_rx: BytesReceiver, sd: oneshot::Sender<()>) {
+async fn writer(epid: EpId, stream: Arc<TcpStream>, bytes_rx: BytesReceiver, sd: oneshot::Sender<()>) {
     debug!("[TCP  ] Starting connection writer task for {}...", epid);
 
     let mut stream = &*stream;
+    let mut bytes_rx = bytes_rx.fuse();
 
     loop {
         select! {
-            bytes_out = bytes_rx.next().fuse() => {
+            bytes_out = bytes_rx.next() => {
                 if let Some(bytes_out) = bytes_out {
 
                     match stream.write_all(&*bytes_out).await {

@@ -1,9 +1,10 @@
-use bee_network::Command::Connect;
 use bee_network::{
+    Command::Connect,
     EndpointId,
     Event,
     EventSubscriber,
     Network,
+    Role,
     Shutdown,
 };
 use bee_peering::{
@@ -11,48 +12,38 @@ use bee_peering::{
     StaticPeerManager,
 };
 use bee_protocol::{
-    MilestoneValidatorWorker,
-    MilestoneValidatorWorkerEvent,
-    NodeMetrics,
-    ReceiverWorker,
-    ReceiverWorkerEvent,
-    RequesterWorker,
-    RequesterWorkerEvent,
-    ResponderWorker,
-    ResponderWorkerEvent,
-    TransactionWorker,
-    TransactionWorkerEvent,
+    Peer,
+    PeerMetrics,
+    Protocol,
 };
 use bee_snapshot::{
     SnapshotMetadata,
     SnapshotState,
 };
 
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::Arc,
+};
 
-use async_std::task::{
-    block_on,
-    spawn,
+use async_std::task::block_on;
+use futures::{
+    channel::{
+        mpsc,
+        oneshot,
+    },
+    sink::SinkExt,
+    stream::StreamExt,
 };
-use futures::channel::mpsc::{
-    channel,
-    Sender,
-};
-use futures::sink::SinkExt;
-use futures::stream::StreamExt;
 use log::*;
 
 pub struct Node {
     network: Network,
     shutdown: Shutdown,
     events: EventSubscriber,
-    // TODO thread-safety
-    neighbors: HashMap<EndpointId, Sender<ReceiverWorkerEvent>>,
-    transaction_worker_sender: Option<Sender<TransactionWorkerEvent>>,
-    responder_worker_sender: Option<Sender<ResponderWorkerEvent>>,
-    requester_worker_sender: Option<Sender<RequesterWorkerEvent>>,
-    milestone_validator_worker_sender: Option<Sender<MilestoneValidatorWorkerEvent>>,
-    metrics: NodeMetrics,
+    // TODO real type ?
+    peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>, Arc<Peer>)>,
+    metrics: Arc<PeerMetrics>,
 }
 
 impl Node {
@@ -61,93 +52,71 @@ impl Node {
             network: network,
             shutdown: shutdown,
             events: events,
-            neighbors: HashMap::new(),
-            transaction_worker_sender: None,
-            responder_worker_sender: None,
-            requester_worker_sender: None,
-            milestone_validator_worker_sender: None,
-            metrics: NodeMetrics::default(),
+            peers: HashMap::new(),
+            metrics: Arc::new(PeerMetrics::new()),
         }
     }
 
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
-        let (sender, receiver) = channel(1000);
+        info!("[Node ] Endpoint {} has been added.", epid);
 
-        self.neighbors.insert(epid, sender);
-
-        spawn(
-            ReceiverWorker::new(
-                epid,
-                self.network.clone(),
-                receiver,
-                self.transaction_worker_sender.as_ref().unwrap().clone(),
-                self.responder_worker_sender.as_ref().unwrap().clone(),
-            )
-            .run(),
-        );
-
-        if let Err(e) = self
-            .network
-            .send(Connect {
-                epid: epid,
-                responder: None,
-            })
-            .await
-        {
-            warn!("[Node ] Sending Command::Connect for {} failed: {}", epid, e);
-        }
+        // if let Err(e) = self
+        //     .network
+        //     .send(Connect {
+        //         epid: epid,
+        //         responder: None,
+        //     })
+        //     .await
+        // {
+        //     warn!("[Node ] Sending Command::Connect for {} failed: {}.", epid, e);
+        // }
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
-        if let Some(sender) = self.neighbors.get_mut(&epid) {
-            if let Err(e) = sender.send(ReceiverWorkerEvent::Removed).await {
-                warn!("[Node ] Sending ReceiverWorkerEvent::Removed to {} failed: {}", epid, e);
-            }
-            self.neighbors.remove(&epid);
-        }
+        info!("[Node ] Endpoint {} has been removed.", epid);
     }
 
-    async fn endpoint_connected_handler(&mut self, epid: EndpointId) {
-        if let Some(sender) = self.neighbors.get_mut(&epid) {
-            if let Err(e) = sender.send(ReceiverWorkerEvent::Connected).await {
-                warn!(
-                    "[Node ] Sending ReceiverWorkerEvent::Connected to {} failed: {}",
-                    epid, e
-                );
-            }
-        }
+    async fn endpoint_connected_handler(&mut self, epid: EndpointId, role: Role) {
+        let peer = Arc::new(Peer::new(epid, role));
+        let (receiver_tx, receiver_shutdown_tx) =
+            Protocol::register(self.network.clone(), peer.clone(), self.metrics.clone());
+
+        self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx, peer));
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
-        if let Some(sender) = self.neighbors.get_mut(&epid) {
-            if let Err(e) = sender.send(ReceiverWorkerEvent::Disconnected).await {
-                warn!(
-                    "[Node ] Sending ReceiverWorkerEvent::Disconnected to {} failed: {}",
-                    epid, e
-                );
+        //TODO unregister ?
+        if let Some((_, shutdown, _)) = self.peers.remove(&epid) {
+            if let Err(_) = shutdown.send(()) {
+                warn!("[Node ] Sending shutdown to {} failed.", epid);
             }
         }
     }
 
     async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
-        if let Some(sender) = self.neighbors.get_mut(&epid) {
-            if let Err(e) = sender.send(ReceiverWorkerEvent::Message(bytes)).await {
-                warn!("[Node ] Sending ReceiverWorkerEvent::Message to {} failed: {}", epid, e);
+        if let Some(peer) = self.peers.get_mut(&epid) {
+            if let Err(e) = peer.0.send(bytes).await {
+                warn!(
+                    "[Node ] Sending ReceiverWorkerEvent::Message to {} failed: {}.",
+                    epid, e
+                );
             }
         }
     }
 
     pub async fn run(mut self) {
-        info!("[Node ] Starting actor");
+        info!("[Node ] Running.");
+
         while let Some(event) = self.events.next().await {
-            debug!("[Node ] Received event {}", event);
+            debug!("[Node ] Received event {}.", event);
+
             match event {
                 Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
                 Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
-                Event::EndpointConnected { epid, .. } => self.endpoint_connected_handler(epid).await,
+                Event::EndpointConnected { epid, role, .. } => self.endpoint_connected_handler(epid, role).await,
                 Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
                 Event::BytesReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
-                _ => (),
+                _ => warn!("[Node ] Unsupported event {}.", event),
             }
         }
     }
@@ -157,21 +126,7 @@ impl Node {
 
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
-        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = channel(1000);
-        self.milestone_validator_worker_sender = Some(milestone_validator_worker_sender);
-        spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
-
-        let (transaction_worker_sender, transaction_worker_receiver) = channel(1000);
-        self.transaction_worker_sender = Some(transaction_worker_sender);
-        spawn(TransactionWorker::new(transaction_worker_receiver).run());
-
-        let (responder_worker_sender, responder_worker_receiver) = channel(1000);
-        self.responder_worker_sender = Some(responder_worker_sender);
-        spawn(ResponderWorker::new(self.network.clone(), responder_worker_receiver).run());
-
-        let (requester_worker_sender, requester_worker_receiver) = channel(1000);
-        self.requester_worker_sender = Some(requester_worker_sender);
-        spawn(RequesterWorker::new(self.network.clone(), requester_worker_receiver).run());
+        Protocol::init();
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf
@@ -206,7 +161,7 @@ impl Node {
             Err(e) => error!("[Node ] Failed to read snapshot state file: {:?}.", e),
         }
 
-        info!("[Node ] Initialized");
+        info!("[Node ] Initialized.");
     }
 }
 

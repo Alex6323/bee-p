@@ -2,14 +2,14 @@ use crate::address::Address;
 use crate::events::EventPublisher as EventPub;
 use crate::shutdown::ShutdownListener;
 
-pub struct UdpActor {
+pub struct UdpWorker {
     binding_addr: Address,
     notifier: EventPub,
     publisher: EventPub,
     shutdown: ShutdownListener,
 }
 
-impl UdpActor {
+impl UdpWorker {
     pub fn new(binding_addr: Address, notifier: EventPub, publisher: EventPub, shutdown: ShutdownListener) -> Self {
         Self {
             binding_addr,

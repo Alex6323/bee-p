@@ -1,10 +1,12 @@
-use crate::address::Address;
-use crate::commands::Responder;
-use crate::endpoint::role::Role;
-use crate::endpoint::{
-    outbox::BytesSender,
-    Endpoint,
-    EndpointId,
+use crate::{
+    address::Address,
+    commands::Responder,
+    endpoint::{
+        origin::Origin,
+        outbox::BytesSender,
+        Endpoint,
+        EndpointId,
+    },
 };
 
 use futures::channel::mpsc;
@@ -36,9 +38,8 @@ pub enum Event {
         /// The new `Endpoint`.
         ep: Endpoint,
 
-        /// The connection relationship with the endpoint. Can either be
-        /// `Role::Server` (incoming) or `Role::Client` (outgoing).
-        role: Role,
+        /// Information about which endpoint initiated the connection.
+        origin: Origin,
 
         /// The channel half to send messages over this connection.
         sender: BytesSender,
@@ -58,9 +59,8 @@ pub enum Event {
         /// The address of the connected endpoint.
         address: Address,
 
-        /// The connection relationship with the endpoint. Can either be
-        /// `Role::Server` (incoming) or `Role::Client` (outgoing).
-        role: Role,
+        /// Information about which endpoint initiated the connection.
+        origin: Origin,
 
         /// The timestamp when the connection was established.
         timestamp: u64,
@@ -130,13 +130,13 @@ impl fmt::Display for Event {
             Event::EndpointConnected {
                 epid,
                 address,
-                role,
+                origin,
                 timestamp,
                 total,
             } => write!(
                 f,
-                "Event::EndpointConnected {{ {}, address: {}, role: {}, ts: {}, num_connected: {} }}",
-                epid, address, role, timestamp, total
+                "Event::EndpointConnected {{ {}, address: {}, origin: {}, ts: {}, num_connected: {} }}",
+                epid, address, origin, timestamp, total
             ),
 
             Event::EndpointDisconnected { epid, total } => write!(
