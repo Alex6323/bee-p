@@ -194,10 +194,13 @@ mod tests {
     use super::*;
     use crate::transaction::{
         Address,
+        Hash,
+        Index,
         Nonce,
         Payload,
         Tag,
         Timestamp,
+        TransactionBuilder,
         Value,
     };
 
