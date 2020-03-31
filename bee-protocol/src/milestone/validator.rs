@@ -8,8 +8,9 @@ use futures::{
     stream::StreamExt,
 };
 use log::info;
+use bee_bundle::Hash;
 
-pub(crate) type MilestoneValidatorWorkerEvent = TritBuf<T1B1Buf>;
+pub(crate) type MilestoneValidatorWorkerEvent = Hash;
 
 pub(crate) struct MilestoneValidatorWorker {
     receiver: Receiver<MilestoneValidatorWorkerEvent>,

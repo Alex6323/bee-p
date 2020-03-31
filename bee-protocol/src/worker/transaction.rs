@@ -37,88 +37,110 @@ pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 pub(crate) struct TransactionWorker {
     receiver: Receiver<TransactionWorkerEvent>,
     milestone_validator_worker_sender: Sender<MilestoneValidatorWorkerEvent>,
-    coordinator_address: Address
 }
 
 impl TransactionWorker {
+
     pub(crate) fn new(receiver: Receiver<TransactionWorkerEvent>) -> Self {
 
-        // convert bytes of coordinator address to i8 slice
-        let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
-        let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8,243).unwrap().to_buf::<T1B1Buf>();
-        let coordinator_address = Address::from_inner_unchecked(t1b1_coo_buf);
-
         Self {
-            receiver: receiver,
+            receiver,
             milestone_validator_worker_sender: Protocol::get().milestone_validator_worker.clone(),
-            coordinator_address: coordinator_address
         }
+
     }
 
     pub(crate) async fn run(mut self) {
+
         info!("[TransactionWorker ] Running.");
 
         let mut tangle = TemporaryTangle::new();
 
-        let receiver = &mut self.receiver;
-        let (mut milestone_sender, milestone_receiver) = channel(1000);
+        let coordinator_address = {
+            let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
+            let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8,243).unwrap().to_buf::<T1B1Buf>();
+            Address::from_inner_unchecked(t1b1_coo_buf)
+        };
 
-        while let Some(transaction_broadcast) = self.receiver.next().await {
+        loop {
 
-            info!("[TransactionWorker ] Processing received data...");
+            select! {
 
-            let transaction = transaction_broadcast.transaction;
+                transaction_broadcast = self.receiver.next().fuse() => match transaction_broadcast {
 
-            // transform &[u8] to &[i8]
-            let t5b1_transaction: &[i8] = unsafe { &*(&transaction[..] as *const [u8] as *const [i8]) };
+                    Some(transaction_broadcast) => {
 
-            // get T5B1 trits
-            let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_transaction, 8019).unwrap();
+                        info!("[TransactionWorker ] Processing received data...");
 
-            // get T5B1 trit_buf
-            let t5b1_trit_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
+                        // get T1B1 transaction buffer
+                        let transaction_buf: TritBuf<T1B1Buf> = {
 
-            // get T1B1 trit_buf from TB51 trit_buf
-            let t1b1_trit_buf: TritBuf<T1B1Buf> = t5b1_trit_buf.encode::<T1B1Buf>();
+                            let transaction: Vec<u8> = transaction_broadcast.transaction;
 
-            // build transaction
-            let transaction_result = Transaction::from_trits(&t1b1_trit_buf);
+                            // transform &[u8] to &[i8]
+                            let t5b1_transaction: &[i8] = unsafe { &*(&transaction[..] as *const [u8] as *const [i8]) };
 
-            // validate transaction result
-            let built_transaction = match transaction_result {
-                Ok(tx) => tx,
-                Err(_) => {
-                    info!("[TransactionWorker ] Can not build transaction from received data.");
-                    continue;
+                            // get T5B1 trits
+                            let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_transaction, 8019).unwrap();
+
+                            // get T5B1 trit_buf
+                            let t5b1_trit_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
+
+                            // get T1B1 trit_buf from TB51 trit_buf
+                            t5b1_trit_buf.encode::<T1B1Buf>()
+
+                        };
+
+                        // build transaction
+                        let transaction_result = Transaction::from_trits(&transaction_buf);
+
+                        // validate transaction result
+                        let built_transaction = match transaction_result {
+                            Ok(tx) => tx,
+                            Err(_) => {
+                                info!("[TransactionWorker ] Can not build transaction from received data.");
+                                continue;
+                            }
+                        };
+
+                        // calculate transaction hash
+                        let mut curlp27 = CurlP27::new();
+                        let tx_hash: Hash = Hash::from_inner_unchecked(curlp27.digest(&transaction_buf).unwrap());
+
+                        info!("[TransactionWorker ] Received transaction {}.", tx_hash);
+
+                        // check if transactions is already present in the tangle before doing any further work
+                        if tangle.contains(&tx_hash) {
+                            info!("[TransactionWorker ] Transaction {} already present in the tangle.", &tx_hash);
+                            continue;
+                        }
+
+                        // get address of transaction
+                        let address = built_transaction.address().clone();
+
+                        // store transaction
+                        tangle.insert(tx_hash.clone(), built_transaction);
+
+                        // check if transaction is a potential milestone candidate
+                        if address.eq(&coordinator_address.clone()) {
+                            self.milestone_validator_worker_sender.send(tx_hash).await;
+                        }
+
+                    },
+
+                    None => {
+                       break;
+                    }
+
                 }
-            };
 
-            // calculate transaction hash
-            let mut curlp27 = CurlP27::new();
-            let tx_hash: Hash = Hash::from_inner_unchecked(curlp27.digest(&t1b1_trit_buf).unwrap());
-
-            info!("[TransactionWorker ] Received transaction {}.", tx_hash);
-
-            // check if transactions is already present in the tangle before doing any further work
-            if tangle.contains(&tx_hash) {
-                info!("[TransactionWorker ] Transaction {} already present in the tangle.", &tx_hash);
-                continue;
-            }
-
-            // get address of transaction
-            let address = built_transaction.address().clone();
-
-            // store transaction
-            tangle.insert(tx_hash.clone(), built_transaction);
-
-            // check if transaction is a potential milestone candidate
-            if address.eq(&self.coordinator_address) {
-                milestone_sender.send(tx_hash.clone()).await.unwrap();
             }
 
         }
+
     }
 }
+
 
 struct TemporaryTangle {
     tx_counter: usize,
@@ -206,8 +228,6 @@ fn test_identify_coo_address() {
     let t5b1_coo_buf: TritBuf<T5B1Buf> = Trits::<T5B1>::try_from_raw(t5b1_coo, 243).unwrap().to_buf();
 
     let t1b1_coo_buf: TritBuf<T1B1Buf> = t5b1_coo_buf.encode::<T1B1Buf>();
-
-    assert_eq!(243, t1b1_coo_buf.len());
 
     // build address
     let address: Address = Address::try_from_inner(t1b1_coo_buf).unwrap();
