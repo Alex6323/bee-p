@@ -92,9 +92,9 @@ impl ReceiverWorker {
             network,
             peer,
             metrics,
-            transaction_worker: Protocol::get().transaction_worker.clone(),
-            transaction_responder_worker: Protocol::get().transaction_responder_worker.clone(),
-            milestone_responder_worker: Protocol::get().milestone_responder_worker.clone(),
+            transaction_worker: Protocol::get().transaction_worker.0.clone(),
+            transaction_responder_worker: Protocol::get().transaction_responder_worker.0.clone(),
+            milestone_responder_worker: Protocol::get().milestone_responder_worker.0.clone(),
         }
     }
 
@@ -120,7 +120,7 @@ impl ReceiverWorker {
             .await
         {
             // TODO then what ?
-            warn!("[Peer({})] Failed to send handshake.", self.peer.epid);
+            warn!("[Peer({})] Failed to send handshake: {:?}.", self.peer.epid, e);
         }
 
         loop {
