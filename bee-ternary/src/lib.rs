@@ -458,11 +458,3 @@ impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
         write!(f, "]")
     }
 }
-
-unsafe impl<T: raw::RawEncoding> Send for Trits<T> {}
-
-unsafe impl<T: raw::RawEncoding> Sync for Trits<T> {}
-
-unsafe impl<T: raw::RawEncodingBuf> Send for TritBuf<T> {}
-
-unsafe impl<T: raw::RawEncodingBuf> Sync for TritBuf<T> {}
