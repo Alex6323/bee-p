@@ -8,54 +8,53 @@ use std::fmt;
 use std::marker::PhantomData;
 
 use crate::{
-    Btrit,
-    Utrit,
     bigint::{
         common::{
+            BigEndian,
             BinaryRepresentation,
             Error,
-            BigEndian,
             LittleEndian,
-            U8Repr,
             U32Repr,
+            U8Repr,
         },
+        t243,
         utils::{
             OverflowingAddExt,
             SplitInteger,
         },
+        I384,
         T242,
         T243,
-        t243,
-        I384,
-    }
+    },
+    Utrit,
 };
 
 mod constants;
 
 pub use constants::{
+    BE_U32_0,
+    BE_U32_1,
+    BE_U32_2,
+    BE_U32_HALF_MAX,
+    BE_U32_HALF_MAX_T242,
+    BE_U32_MAX,
     BE_U8_0,
     BE_U8_1,
     BE_U8_2,
     // BE_U8_HALF_MAX,
     BE_U8_MAX,
-    BE_U32_0,
-    BE_U32_1,
-    BE_U32_2,
-    BE_U32_HALF_MAX,
-    BE_U32_MAX,
-    BE_U32_HALF_MAX_T242,
+    LE_U32_0,
+    LE_U32_1,
+    LE_U32_2,
+    LE_U32_HALF_MAX,
+    LE_U32_HALF_MAX_T242,
+    LE_U32_MAX,
+    LE_U32_MAX_T242,
     LE_U8_0,
     LE_U8_1,
     LE_U8_2,
     // LE_U8_HALF_MAX,
     LE_U8_MAX,
-    LE_U32_0,
-    LE_U32_1,
-    LE_U32_2,
-    LE_U32_HALF_MAX,
-    LE_U32_MAX,
-    LE_U32_HALF_MAX_T242,
-    LE_U32_MAX_T242,
 };
 
 #[derive(Clone, Copy)]
@@ -126,7 +125,7 @@ impl U384<BigEndian, U32Repr> {
     pub fn divide_by_two(&mut self) {
         let mut i = self.inner.len() - 1;
         while i < self.inner.len() - 1 {
-            let (left_slice, right_slice) = self.inner.split_at_mut(i+1);
+            let (left_slice, right_slice) = self.inner.split_at_mut(i + 1);
             let left = &mut left_slice[i];
             let right = &mut right_slice[0];
             *left >>= 1;
@@ -185,7 +184,7 @@ impl U384<BigEndian, U32Repr> {
     /// ```ignore
     /// s = (...((t_242 * 3 + t_241) * 3 + t_240) * 3 + ...
     ///   +  ...((t_{i+1} * 3 + t_i) * 3 + t_{i-1}) * 3 + ...
-    ///   +  ...t_1) * 3 + t_0  
+    ///   +  ...t_1) * 3 + t_0
     /// ```
     ///
     /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i`
@@ -244,14 +243,14 @@ impl U384<LittleEndian, U32Repr> {
     pub fn divide_by_two(&mut self) {
         let mut i = 0;
         while i < self.inner.len() - 1 {
-            let (left_slice, right_slice) = self.inner.split_at_mut(i+1);
+            let (left_slice, right_slice) = self.inner.split_at_mut(i + 1);
             let left = &mut left_slice[i];
             let right = &mut right_slice[0];
             *left >>= 1;
             *left |= *right << 31;
             i += 1;
         }
-        self.inner[self.inner.len()-1] >>= 1;
+        self.inner[self.inner.len() - 1] >>= 1;
     }
 
     pub fn from_t242(trits: T242<Utrit>) -> Self {
@@ -311,7 +310,7 @@ impl U384<LittleEndian, U32Repr> {
     /// ```ignore
     /// s = (...((t_242 * 3 + t_241) * 3 + t_240) * 3 + ...
     ///   +  ...((t_{i+1} * 3 + t_i) * 3 + t_{i-1}) * 3 + ...
-    ///   +  ...t_1) * 3 + t_0  
+    ///   +  ...t_1) * 3 + t_0
     /// ```
     ///
     /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i`
@@ -447,9 +446,9 @@ impl PartialOrd for U384<LittleEndian, U32Repr> {
 
         for (s, o) in zipped_iter {
             if s > o {
-                return Some(Greater)
+                return Some(Greater);
             } else if s < o {
-                return Some(Less)
+                return Some(Less);
             }
         }
 
@@ -476,7 +475,7 @@ impl TryFrom<T243<Utrit>> for U384<LittleEndian, U32Repr> {
     }
 }
 
-impl_toggle_endianness!( (U384), U8Repr, U32Repr );
+impl_toggle_endianness!((U384), U8Repr, U32Repr);
 
 #[cfg(test)]
 mod tests {
@@ -506,9 +505,15 @@ mod tests {
         [max_plus_two_is_one, add_inplace, LE_U32_MAX, LE_U32_2, LE_U32_1],
     );
 
-    test_binary_op_calc_result!(
-        [max_plus_max_is_max_minus_one, add_inplace, LE_U32_MAX, LE_U32_MAX, sub_inplace, LE_U32_MAX, LE_U32_1],
-    );
+    test_binary_op_calc_result!([
+        max_plus_max_is_max_minus_one,
+        add_inplace,
+        LE_U32_MAX,
+        LE_U32_MAX,
+        sub_inplace,
+        LE_U32_MAX,
+        LE_U32_1
+    ],);
 
     // test_endianness_toggle!(
     //     ( U384 ),

@@ -1,47 +1,51 @@
-use crate::address::url::{
-    Protocol,
-    Url,
+use super::whitelist;
+
+use crate::{
+    address::url::{
+        Protocol,
+        Url,
+    },
+    commands::{
+        Command,
+        CommandReceiver as Commands,
+        Responder,
+    },
+    constants::CONNECT_INTERVAL,
+    endpoint::{
+        outbox::Outbox,
+        store::Endpoints,
+        Endpoint as Ep,
+        EndpointId as EpId,
+    },
+    errors::Result,
+    events::{
+        Event,
+        EventPublisher as Notifier,
+        EventPublisher as Publisher,
+        EventSubscriber as Events,
+    },
+    shutdown::ShutdownListener as Shutdown,
+    tcp,
+    utils::time,
 };
 
-use crate::commands::CommandReceiver as Commands;
-use crate::commands::{
-    Command,
-    Responder,
+use async_std::{
+    prelude::*,
+    task::{
+        self,
+        spawn,
+    },
 };
-use crate::constants::CONNECT_INTERVAL;
-use crate::endpoint::{
-    outbox::Outbox,
-    store::Endpoints,
-    Endpoint as Ep,
-    EndpointId as EpId,
-};
-use crate::errors::{
-    ActorResult as R,
-    ActorSuccess as S,
-};
-use crate::events::Event;
-use crate::events::EventPublisher as Notifier;
-use crate::events::EventPublisher as Publisher;
-use crate::events::EventSubscriber as Events;
-use crate::shutdown::ShutdownListener as Shutdown;
-use crate::tcp;
-use crate::utils::time;
-
-use async_std::prelude::*;
-use async_std::task::{
-    self,
-    spawn,
-};
-use futures::sink::SinkExt;
 use futures::{
     select,
+    sink::SinkExt,
     FutureExt,
 };
 use log::*;
 
 use std::time::Duration;
 
-pub struct EndpointActor {
+pub struct EndpointWorker {
     commands: Commands,
     events: Events,
     shutdown: Shutdown,
@@ -49,7 +53,7 @@ pub struct EndpointActor {
     publisher: Publisher,
 }
 
-impl EndpointActor {
+impl EndpointWorker {
     pub fn new(
         commands: Commands,
         events: Events,
@@ -66,7 +70,7 @@ impl EndpointActor {
         }
     }
 
-    pub async fn run(mut self) -> S {
+    pub async fn run(mut self) -> Result<()> {
         debug!("[Endp ] Starting endpoint worker...");
 
         let mut contacts = Endpoints::new();
@@ -78,6 +82,7 @@ impl EndpointActor {
         let commands = &mut self.commands;
         let events = &mut self.events;
         let shutdown = &mut self.shutdown;
+        let publisher = &mut self.publisher;
 
         loop {
             select! {
@@ -101,7 +106,7 @@ impl EndpointActor {
                             }
                         },
                         Command::RemoveEndpoint { epid, responder } => {
-                            let res = rem_endpoint(epid, &mut contacts, &mut connected, &mut outbox,
+                            let res = rmv_endpoint(epid, &mut contacts, &mut connected, &mut outbox,
                                 &mut self.notifier).await?;
 
                             if let Some(responder) = responder {
@@ -112,11 +117,21 @@ impl EndpointActor {
                             try_connect(epid, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
                         },
                         Command::Disconnect { epid, responder } => {
-                            let res = disconnect(epid, &mut connected, &mut outbox, &mut self.publisher).await?;
+                            let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
 
                             if let Some(responder) = responder {
-                                responder.send(res);
+                                responder.send(is_disconnected);
                             }
+
+                            if is_disconnected {
+                                publisher
+                                    .send(Event::EndpointDisconnected {
+                                        epid,
+                                        total: connected.num(),
+                                    })
+                                    .await?;
+                            }
+
                         },
                         Command::SendBytes { epid, bytes, responder } => {
                             let res = send_bytes(&epid, bytes, &mut outbox).await?;
@@ -154,42 +169,51 @@ impl EndpointActor {
 
                     match event {
                         Event::EndpointAdded { epid, total } => {
-                            self.publisher.send(Event::EndpointAdded { epid, total }).await;
+                            publisher.send(Event::EndpointAdded { epid, total }).await;
                         },
                         Event::EndpointRemoved { epid, total } => {
-                            self.publisher.send(Event::EndpointRemoved { epid, total }).await;
+                            publisher.send(Event::EndpointRemoved { epid, total }).await;
                         },
-                        Event::NewConnection { ep, role, sender } => {
+                        Event::NewConnection { ep, origin, sender } => {
                             let epid = ep.id;
                             let addr = ep.address;
 
                             outbox.insert(epid, sender);
                             connected.insert(ep);
 
-                            self.publisher.send(Event::EndpointConnected {
+                            publisher.send(Event::EndpointConnected {
                                 epid,
                                 address: addr,
-                                role,
+                                origin,
                                 timestamp: time::timestamp_millis(),
                                 total: connected.num(),
                             }).await?
                         },
                         Event::LostConnection { epid } => {
-                            disconnect(epid, &mut connected, &mut outbox, &mut self.publisher).await?;
+                            let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
 
+                            if is_disconnected {
+                                publisher
+                                    .send(Event::EndpointDisconnected {
+                                        epid,
+                                        total: connected.num(),
+                                    })
+                                    .await?;
+                            }
+
+                            // TODO: do not try to reconnect to duplicate endpoints
                             // NOTE: 'try_connect' will check if 'epid' is part of the contact list
                             try_connect(epid, &mut contacts, &mut connected, None, &mut self.notifier).await?;
                         }
-                        Event::BytesSent { epid, num } => {
-                            self.publisher.send(Event::BytesSent {
+                        Event::MessageSent { epid, num_bytes } => {
+                            publisher.send(Event::MessageSent {
                                 epid,
-                                num,
+                                num_bytes,
                             }).await?
                         },
-                        Event::BytesReceived { epid, addr, bytes } => {
-                            self.publisher.send(Event::BytesReceived {
+                        Event::MessageReceived { epid, bytes } => {
+                            publisher.send(Event::MessageReceived {
                                 epid,
-                                addr,
                                 bytes,
                             }).await?
                         },
@@ -212,11 +236,16 @@ impl EndpointActor {
 }
 
 #[inline(always)]
-async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> R<bool> {
+async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> Result<bool> {
     let ep = Ep::from_url(url);
     let epid = ep.id;
 
     if contacts.insert(ep) {
+        // add its ip to the whitelist, so that we can make sure that we accept only connections
+        // from known peers
+        let whitelist = whitelist::get();
+        whitelist.insert(epid, url.address().ip());
+
         notifier
             .send(Event::EndpointAdded {
                 epid,
@@ -230,13 +259,13 @@ async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifie
 }
 
 #[inline(always)]
-async fn rem_endpoint(
+async fn rmv_endpoint(
     epid: EpId,
     contacts: &mut Endpoints,
     connected: &mut Endpoints,
     outbox: &mut Outbox,
     notifier: &mut Notifier,
-) -> R<bool> {
+) -> Result<bool> {
     // NOTE: current default behavior is to drop connections once the contact is removed
     let removed_recipient = outbox.remove(&epid);
     let removed_contact = contacts.remove(&epid);
@@ -247,6 +276,11 @@ async fn rem_endpoint(
     }
 
     if removed_contact || removed_connected {
+        // Remove its IP also from the whitelist, so we won't accept connections from it
+        // anymore
+        let whitelist = whitelist::get();
+        whitelist.remove(&epid);
+
         notifier
             .send(Event::EndpointRemoved {
                 epid,
@@ -266,7 +300,7 @@ async fn try_connect(
     connected: &mut Endpoints,
     responder: Option<Responder<bool>>,
     notifier: &mut Notifier,
-) -> R<bool> {
+) -> Result<bool> {
     // Try to find the endpoint in our servers list.
     if let Some(ep) = contacts.get_mut(&epid) {
         //if ep.is_connected() {
@@ -332,14 +366,14 @@ async fn try_connect(
 }
 
 #[inline(always)]
-async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifier) -> S {
+async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifier) -> Result<()> {
     task::sleep(Duration::from_millis(delay)).await;
 
     Ok(notifier.send(event).await?)
 }
 
 #[inline(always)]
-async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, publisher: &mut Publisher) -> R<bool> {
+async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox) -> bool {
     let removed_recipient = outbox.remove(&epid);
     let removed_connected = connected.remove(&epid);
 
@@ -347,30 +381,20 @@ async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox, 
         warn!("[Endp ] Removed an endpoint that was connected, but couldn't be sent to.");
     }
 
-    if removed_connected {
-        publisher
-            .send(Event::EndpointDisconnected {
-                epid,
-                total: connected.num(),
-            })
-            .await?;
-        Ok(true)
-    } else {
-        Ok(false)
-    }
+    removed_connected
 }
 
 #[inline(always)]
-async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
     Ok(outbox.send(bytes, recipient).await?)
 }
 
 #[inline(always)]
-async fn multicast_bytes(recipients: &Vec<EpId>, bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+async fn multicast_bytes(recipients: &Vec<EpId>, bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
     Ok(outbox.multicast(bytes, recipients).await?)
 }
 
 #[inline(always)]
-async fn broadcast_bytes(bytes: Vec<u8>, outbox: &mut Outbox) -> R<bool> {
+async fn broadcast_bytes(bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
     Ok(outbox.broadcast(bytes).await?)
 }

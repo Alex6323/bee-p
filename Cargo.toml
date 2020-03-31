@@ -17,6 +17,5 @@ members = [
 	"bee-test",
 
 	# ONLY TEMPORARY
-	"iota-conversion",
 	"iota-constants",
 ]

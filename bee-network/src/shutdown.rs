@@ -1,16 +1,19 @@
-use crate::errors::ActorSuccess as S;
+use crate::{
+    endpoint::whitelist,
+    errors::Result,
+};
 
 use async_std::task;
 use futures::channel::oneshot;
 
 pub(crate) type ShutdownNotifier = oneshot::Sender<()>;
 pub(crate) type ShutdownListener = oneshot::Receiver<()>;
-pub(crate) type ActorTask = task::JoinHandle<S>;
+pub(crate) type WorkerTask = task::JoinHandle<Result<()>>;
 
 /// Handles the graceful shutdown of the network layer.
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
-    tasks: Vec<ActorTask>,
+    tasks: Vec<WorkerTask>,
 }
 
 impl Shutdown {
@@ -25,12 +28,14 @@ impl Shutdown {
         self.notifiers.push(notifier);
     }
 
-    pub(crate) fn add_task(&mut self, task: ActorTask) {
+    pub(crate) fn add_task(&mut self, task: WorkerTask) {
         self.tasks.push(task);
     }
 
     /// Executes the shutdown.
     pub async fn execute(self) {
+        whitelist::free();
+
         let mut tasks = self.tasks;
 
         for notifier in self.notifiers {

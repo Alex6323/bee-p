@@ -4,21 +4,21 @@ use crate::{
 };
 use bee_network::{
     EndpointId,
-    Role,
+    Origin,
 };
 
 pub struct Peer {
     pub(crate) epid: EndpointId,
-    pub(crate) role: Role,
+    pub(crate) origin: Origin,
     pub(crate) metrics: PeerMetrics,
     pub(crate) heartbeat: Heartbeat,
 }
 
 impl Peer {
-    pub fn new(epid: EndpointId, role: Role) -> Self {
+    pub fn new(epid: EndpointId, origin: Origin) -> Self {
         Self {
             epid,
-            role,
+            origin,
             metrics: PeerMetrics::default(),
             heartbeat: Heartbeat::default(),
         }

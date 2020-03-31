@@ -9,7 +9,7 @@ extern crate bytemuck;
 
 mod sql_statements;
 
-use bytemuck::{cast_slice};
+use bytemuck::cast_slice;
 
 use std::{
     error::Error as StdError,
@@ -31,7 +31,6 @@ use bee_bundle::{
     Address,
     Hash,
     Index,
-    Milestone,
     Nonce,
     Payload,
     Tag,
@@ -44,7 +43,10 @@ use bee_bundle::{
     PAYLOAD_TRIT_LEN,
     TAG_TRIT_LEN,
 };
-
+use bee_protocol::{
+    Milestone,
+    MilestoneIndex,
+};
 use bee_ternary::{
     T1B1Buf,
     T5B1Buf,
@@ -59,7 +61,6 @@ use std::collections::{
 };
 
 use std::rc::Rc;
-use std::slice;
 
 use async_trait::async_trait;
 use futures::executor::block_on;
@@ -127,8 +128,7 @@ impl From<std::boxed::Box<bincode::ErrorKind>> for SqlxBackendError {
 
 //TODO - Encoded data is T5B1, decodeds to T1B1,should be generic
 fn decode_bytes(u8_slice: &[u8], num_trits: usize) -> TritBuf {
-    let decoded_column_i8_slice: &[i8] =
-        cast_slice(u8_slice);
+    let decoded_column_i8_slice: &[i8] = cast_slice(u8_slice);
     unsafe { Trits::<T5B1>::from_raw_unchecked(decoded_column_i8_slice, num_trits).to_buf::<T1B1Buf>() }
 }
 
@@ -447,7 +447,7 @@ impl StorageBackend for SqlxBackendStorage {
     async fn update_transactions_set_snapshot_index(
         &self,
         transaction_hashes: HashSet<bee_bundle::Hash>,
-        snapshot_index: u32,
+        snapshot_index: MilestoneIndex,
     ) -> Result<(), SqlxBackendError> {
         let pool = self
             .0
@@ -570,7 +570,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         let milestone = Milestone {
             hash: Hash::from_inner_unchecked(hash_tritbuf),
-            index: rec.get::<i32, _>(MILESTONE_COL_ID) as u32,
+            index: rec.get::<i32, _>(MILESTONE_COL_ID) as MilestoneIndex,
         };
 
         Ok(milestone)
@@ -597,7 +597,11 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn insert_state_delta(&self, state_delta: StateDeltaMap, index: u32) -> Result<(), SqlxBackendError> {
+    async fn insert_state_delta(
+        &self,
+        state_delta: StateDeltaMap,
+        index: MilestoneIndex,
+    ) -> Result<(), SqlxBackendError> {
         let pool = self
             .0
             .connection
@@ -619,7 +623,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn load_state_delta(&self, index: u32) -> Result<StateDeltaMap, SqlxBackendError> {
+    async fn load_state_delta(&self, index: MilestoneIndex) -> Result<StateDeltaMap, SqlxBackendError> {
         let mut pool = self
             .0
             .connection

@@ -20,7 +20,6 @@ pub use transaction::{
     Address,
     Hash,
     Index,
-    Milestone,
     Nonce,
     Payload,
     Tag,

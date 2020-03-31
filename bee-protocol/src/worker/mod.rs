@@ -20,7 +20,6 @@ pub(crate) use responder::{
 pub(crate) use sender::{
     SenderContext,
     SenderWorker,
-    SenderWorkerEvent,
 };
 pub(crate) use transaction::{
     TransactionWorker,

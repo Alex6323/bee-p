@@ -3,12 +3,12 @@ extern crate rand;
 use bee_bundle::{
     Address,
     Hash,
-    Milestone,
     Nonce,
     Payload,
     Tag,
     TransactionField,
 };
+use bee_protocol::Milestone;
 use bee_ternary::{
     T1B1Buf,
     TritBuf,

@@ -1,47 +1,76 @@
-use std::convert::TryFrom;
-use std::slice;
+use std::{
+    convert::TryFrom,
+    slice,
+};
 
 pub mod bigint;
-pub mod trit;
-pub mod tryte;
 pub mod raw;
 pub mod t1b1;
 pub mod t2b1;
 pub mod t3b1;
 pub mod t4b1;
 pub mod t5b1;
-pub mod util;
+pub mod trit;
+pub mod tryte;
 
 #[cfg(feature = "serde1")]
 mod serde;
 
+use crate::raw::{
+    RawEncoding,
+    RawEncodingBuf,
+};
 use std::{
-    ops::{Deref, DerefMut, Range, Index, IndexMut},
+    any,
     cmp::{
         self,
         Ordering,
     },
+    fmt,
     hash,
     iter::FromIterator,
-    any,
-    fmt,
+    ops::{
+        Deref,
+        DerefMut,
+        Index,
+        IndexMut,
+        Range,
+    },
 };
-use crate::raw::{RawEncoding, RawEncodingBuf};
 
 // Reexports
 pub use crate::{
-    trit::{Trit, Utrit, Btrit, ShiftTernary},
-    t1b1::{T1B1, T1B1Buf},
-    t2b1::{T2B1, T2B1Buf},
-    t3b1::{T3B1, T3B1Buf},
-    t4b1::{T4B1, T4B1Buf},
-    t5b1::{T5B1, T5B1Buf},
-    tryte::{IsTryte, TRYTE_ALPHABET, Tryte, TryteBuf},
+    t1b1::{
+        T1B1Buf,
+        T1B1,
+    },
+    t2b1::{
+        T2B1Buf,
+        T2B1,
+    },
+    t3b1::{
+        T3B1Buf,
+        T3B1,
+    },
+    t4b1::{
+        T4B1Buf,
+        T4B1,
+    },
+    t5b1::{
+        T5B1Buf,
+        T5B1,
+    },
+    trit::{
+        Btrit,
+        ShiftTernary,
+        Trit,
+        Utrit,
+    },
+    tryte::{
+        Tryte,
+        TryteBuf,
+    },
 };
-
-// ONLY TEMPORARY
-// re-export iota-conversion
-pub use iota_conversion;
 
 #[derive(Debug)]
 pub enum Error {
@@ -54,7 +83,7 @@ pub struct Trits<T: RawEncoding + ?Sized = T1B1<Btrit>>(T);
 
 impl<T> Trits<T>
 where
-    T: RawEncoding + ?Sized
+    T: RawEncoding + ?Sized,
 {
     pub fn empty() -> &'static Self {
         unsafe { &*(T::empty() as *const _ as *const Self) }
@@ -116,11 +145,15 @@ where
         if index < self.0.len() {
             unsafe { self.set_unchecked(index, trit) };
         } else {
-            panic!("Attempt to set trit at index {}, but length of slice is {}", index, self.len());
+            panic!(
+                "Attempt to set trit at index {}, but length of slice is {}",
+                index,
+                self.len()
+            );
         }
     }
 
-    pub fn trits(&self) -> impl DoubleEndedIterator<Item=T::Trit> + ExactSizeIterator<Item=T::Trit> + '_ {
+    pub fn trits(&self) -> impl DoubleEndedIterator<Item = T::Trit> + ExactSizeIterator<Item = T::Trit> + '_ {
         (0..self.0.len()).map(move |idx| unsafe { self.0.get_unchecked(idx) })
     }
 
@@ -137,7 +170,9 @@ where
     pub fn copy_from<U: RawEncoding<Trit = T::Trit> + ?Sized>(&mut self, trits: &Trits<U>) {
         assert!(self.len() == trits.len());
         for (i, trit) in trits.trits().enumerate() {
-            unsafe { self.set_unchecked(i, trit); }
+            unsafe {
+                self.set_unchecked(i, trit);
+            }
         }
     }
 
@@ -155,7 +190,10 @@ where
         self.trits().collect()
     }
 
-    pub fn chunks(&self, chunk_len: usize) -> impl DoubleEndedIterator<Item=&Self> + ExactSizeIterator<Item=&Self> + '_ {
+    pub fn chunks(
+        &self,
+        chunk_len: usize,
+    ) -> impl DoubleEndedIterator<Item = &Self> + ExactSizeIterator<Item = &Self> + '_ {
         assert!(chunk_len > 0);
         (0..self.len())
             .step_by(chunk_len)
@@ -182,16 +220,14 @@ impl<T: Trit> Trits<T1B1<T>> {
 
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
-    pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item=&mut Self> + '_ {
+    pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item = &mut Self> + '_ {
         assert!(chunk_len > 0);
-        (0..self.len())
-            .step_by(chunk_len)
-            .scan(self, move |this, _| {
-                let idx = chunk_len.min(this.len());
-                let (a, b) = Trits::split_at_mut(this, idx);
-                *this = b;
-                Some(a)
-            })
+        (0..self.len()).step_by(chunk_len).scan(self, move |this, _| {
+            let idx = chunk_len.min(this.len());
+            let (a, b) = Trits::split_at_mut(this, idx);
+            *this = b;
+            Some(a)
+        })
     }
 
     // Helper
@@ -221,10 +257,7 @@ where
     U: RawEncoding<Trit = T::Trit> + ?Sized,
 {
     fn eq(&self, other: &Trits<U>) -> bool {
-        self.len() == other.len() && self
-            .trits()
-            .zip(other.trits())
-            .all(|(a, b)| a == b)
+        self.len() == other.len() && self.trits().zip(other.trits()).all(|(a, b)| a == b)
     }
 }
 
@@ -355,9 +388,9 @@ where
 }
 
 impl<T: RawEncodingBuf, U: RawEncodingBuf> PartialEq<TritBuf<U>> for TritBuf<T>
-    where
-        T::Slice: RawEncoding,
-        U::Slice: RawEncoding<Trit = <T::Slice as RawEncoding>::Trit>,
+where
+    T::Slice: RawEncoding,
+    U::Slice: RawEncoding<Trit = <T::Slice as RawEncoding>::Trit>,
 {
     fn eq(&self, other: &TritBuf<U>) -> bool {
         self.as_slice() == other.as_slice()
@@ -379,7 +412,7 @@ impl<T: RawEncodingBuf> DerefMut for TritBuf<T> {
 }
 
 impl<T: RawEncodingBuf> FromIterator<<T::Slice as RawEncoding>::Trit> for TritBuf<T> {
-    fn from_iter<I: IntoIterator<Item=<T::Slice as RawEncoding>::Trit>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = <T::Slice as RawEncoding>::Trit>>(iter: I) -> Self {
         let iter = iter.into_iter();
         let mut this = Self::with_capacity(iter.size_hint().0);
         for trit in iter {

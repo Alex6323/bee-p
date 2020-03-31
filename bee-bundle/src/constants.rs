@@ -58,7 +58,6 @@ macro_rules! offsets_from_previous_field {
 }
 
 pub const IOTA_SUPPLY: i64 = 2779530283277761;
-pub const TRYTE_ZERO: char = '9';
 
 pub const PAYLOAD_TRIT_LEN: usize = 6561;
 pub const ADDRESS_TRIT_LEN: usize = 243;

@@ -4,18 +4,18 @@ use tiny_keccak::{
 };
 
 use bee_ternary::{
-    Btrit,
-    Trits,
-    T1B1,
     bigint::{
-        I384,
-        T242,
-        T243,
         common::{
             BigEndian,
             U8Repr,
         },
+        I384,
+        T242,
+        T243,
     },
+    Btrit,
+    Trits,
+    T1B1,
 };
 
 use crate::Sponge;
@@ -36,6 +36,12 @@ impl Kerl {
             binary_buffer: I384::<BigEndian, U8Repr>::default(),
             ternary_buffer: T243::<Btrit>::default(),
         }
+    }
+}
+
+impl Default for Kerl {
+    fn default() -> Self {
+        Kerl::new()
     }
 }
 
@@ -69,10 +75,7 @@ impl Sponge for Kerl {
         }
 
         for trits_chunk in input.chunks(Self::IN_LEN) {
-            self.ternary_buffer
-                .inner_mut()
-                .copy_from(&trits_chunk);
-            
+            self.ternary_buffer.inner_mut().copy_from(&trits_chunk);
             // Unwrapping is ok because this cannot fail.
             //
             // TODO: Replace with a dedicated `TryFrom` implementation with `Error = !`.
@@ -80,11 +83,7 @@ impl Sponge for Kerl {
             // TODO: Convert to `t242` without cloning.
             //
             // TODO: Convert to binary without cloning.
-            self.binary_buffer = self
-                .ternary_buffer
-                .clone()
-                .into_t242()
-                .into();
+            self.binary_buffer = self.ternary_buffer.clone().into_t242().into();
 
             self.keccak.update(self.binary_buffer.inner_ref());
         }
@@ -94,7 +93,6 @@ impl Sponge for Kerl {
 
     /// Reset the internal state by overwriting it with zeros.
     fn reset(&mut self) {
-
         // TODO: Overwrite the internal buffer directly rather then setting it to a new Keccak
         // object. This requires using `KeccakState::reset` via a new method `Keccak::method`
         // calling its internal state.
@@ -119,8 +117,7 @@ impl Sponge for Kerl {
             std::mem::swap(&mut self.keccak, &mut keccak);
 
             keccak.finalize(&mut self.binary_buffer.inner_mut()[..]);
-            let ternary_value = T242::from_i384_be_u8repr_ignoring_msd(self.binary_buffer)
-                .into_t243();
+            let ternary_value = T242::from_i384_be_u8repr_ignoring_msd(self.binary_buffer).into_t243();
 
             trit_chunk.copy_from(&ternary_value.inner_ref());
             self.binary_buffer.not_inplace();
@@ -140,36 +137,74 @@ mod tests {
         TryteBuf,
     };
 
-    const INPUT_TRYTES: &'static str = "\
-EMIDYNHBWMBCXVDEFOFWINXTERALUKYYPPHKP9JJFGJEIUY9MUDVNFZHMMWZUYUSWAIOWEVTHNWMHANBH\
-";
-    const EXPECTED_KERL_HASH_TRYTES: &'static str = "\
-EJEAOOZYSAWFPZQESYDHZCGYNSTWXUMVJOVDWUNZJXDGWCLUFGIMZRMGCAZGKNPLBRLGUNYWKLJTYEAQX\
-";
+    macro_rules! test_kerl {
+        ($test_name:ident, $input_trytes:expr, $output_trytes:expr) => {
+            #[test]
+            fn $test_name() {
+                let input = $input_trytes;
+                let output = $output_trytes;
 
-    #[test]
-    fn verify_kerl_one_absorb_trytes() {
-        let mut kerl = Kerl::new();
+                let mut kerl = Kerl::new();
 
-        let input_trytes = TryteBuf::try_from_str(INPUT_TRYTES);
-        assert!(input_trytes.is_ok());
-        let input_trytes = input_trytes.unwrap();
+                let input_trytes = TryteBuf::try_from_str(input);
+                assert!(input_trytes.is_ok());
+                let input_trytes = input_trytes.unwrap();
 
-        let input_trit_buf = input_trytes
-            .as_trits()
-            .encode::<T1B1Buf>();
+                let input_trit_buf = input_trytes.as_trits().encode::<T1B1Buf>();
 
-        let expected_hash = TryteBuf::try_from_str(EXPECTED_KERL_HASH_TRYTES);
-        assert!(expected_hash.is_ok());
-        let expected_hash = expected_hash.unwrap();
+                let expected_hash = TryteBuf::try_from_str(output);
+                assert!(expected_hash.is_ok());
+                let expected_hash = expected_hash.unwrap();
 
-        assert!(kerl.absorb(input_trit_buf.as_slice()).is_ok());
+                assert!(kerl.absorb(input_trit_buf.as_slice()).is_ok());
 
-        let mut calculated_hash = TritBuf::<T1B1Buf>::zeros(<Kerl as Sponge>::OUT_LEN);
-        assert!(kerl.squeeze_into(&mut calculated_hash.as_slice_mut()).is_ok());
+                let output_len = expected_hash
+                    .as_trits()
+                    .len();
+                let mut calculated_hash = TritBuf::<T1B1Buf>::zeros(output_len);
+                assert!(kerl.squeeze_into(&mut calculated_hash.as_slice_mut()).is_ok());
 
-        let calculated_hash = calculated_hash.encode::<T3B1Buf>();
+                let calculated_hash = calculated_hash.encode::<T3B1Buf>();
 
-        assert_eq!(calculated_hash.as_slice(), expected_hash.as_trits());
+                assert_eq!(calculated_hash.as_slice(), expected_hash.as_trits());
+            }
+        };
+
+        ( $( $test_name:ident: $input_trytes:expr => $output_trytes:expr ),+ $(,)?) => {
+            $(
+                test_kerl!($test_name, $input_trytes, $output_trytes);
+            )+
+        }
     }
+
+    test_kerl!(
+        from_iota_go_normal_trytes_1:
+        "HHPELNTNJIOKLYDUW9NDULWPHCWFRPTDIUWLYUHQWWJVPAKKGKOAZFJPQJBLNDPALCVXGJLRBFSHATF9C"
+        =>
+        "DMJWZTDJTASXZTHZFXFZXWMNFHRTKWFUPCQJXEBJCLRZOM9LPVJSTCLFLTQTDGMLVUHOVJHBBUYFD9AXX",
+        from_iota_go_normal_trytes_2:
+        "QAUGQZQKRAW9GKEFIBUD9BMJQOABXBTFELCT9GVSZCPTZOSFBSHPQRWJLLWURPXKNAOWCSVWUBNDSWMPW"
+        =>
+        "HOVOHFEPCIGTOFEAZVXAHQRFFRTPQEEKANKFKIHUKSGRICVADWDMBINDYKRCCIWBEOPXXIKMLNSOHEAQZ",
+        from_iota_go_normal_trytes_3:
+        "MWBLYBSRKEKLDHUSRDSDYZRNV9DDCPN9KENGXIYTLDWPJPKBHQBOALSDH9LEJVACJAKJYPCFTJEROARRW"
+        =>
+        "KXBKXQUZBYZFSYSPDPCNILVUSXOEHQWWWFKZPFCQ9ABGIIQBNLSWLPIMV9LYNQDDYUS9L9GNUIYKYAGVZ",
+        from_iota_go_output_with_non_zero_243rd_trit:
+        "GYOMKVTSNHVJNCNFBBAH9AAMXLPLLLROQY99QN9DLSJUHDPBLCFFAIQXZA9BKMBJCYSFHFPXAHDWZFEIZ"
+        =>
+        "OXJCNFHUNAHWDLKKPELTBFUCVW9KLXKOGWERKTJXQMXTKFKNWNNXYD9DMJJABSEIONOSJTTEVKVDQEWTW",
+        from_iota_go_input_with_243_trits:
+        "EMIDYNHBWMBCXVDEFOFWINXTERALUKYYPPHKP9JJFGJEIUY9MUDVNFZHMMWZUYUSWAIOWEVTHNWMHANBH"
+        =>
+        "EJEAOOZYSAWFPZQESYDHZCGYNSTWXUMVJOVDWUNZJXDGWCLUFGIMZRMGCAZGKNPLBRLGUNYWKLJTYEAQX",
+        from_iota_go_output_with_more_than_243_trits:
+        "9MIDYNHBWMBCXVDEFOFWINXTERALUKYYPPHKP9JJFGJEIUY9MUDVNFZHMMWZUYUSWAIOWEVTHNWMHANBH"
+        =>
+        "G9JYBOMPUXHYHKSNRNMMSSZCSHOFYOYNZRSZMAAYWDYEIMVVOGKPJBVBM9TDPULSFUNMTVXRKFIDOHUXXVYDLFSZYZTWQYTE9SPYYWYTXJYQ9IFGYOLZXWZBKWZN9QOOTBQMWMUBLEWUEEASRHRTNIQWJQNDWRYLCA",
+        from_iota_go_input_and_output_with_more_than_243_trits:
+        "G9JYBOMPUXHYHKSNRNMMSSZCSHOFYOYNZRSZMAAYWDYEIMVVOGKPJBVBM9TDPULSFUNMTVXRKFIDOHUXXVYDLFSZYZTWQYTE9SPYYWYTXJYQ9IFGYOLZXWZBKWZN9QOOTBQMWMUBLEWUEEASRHRTNIQWJQNDWRYLCA"
+        =>
+        "LUCKQVACOGBFYSPPVSSOXJEKNSQQRQKPZC9NXFSMQNRQCGGUL9OHVVKBDSKEQEBKXRNUJSRXYVHJTXBPDWQGNSCDCBAIRHAQCOWZEBSNHIJIGPZQITIBJQ9LNTDIBTCQ9EUWKHFLGFUVGGUWJONK9GBCDUIMAYMMQX",
+    );
 }

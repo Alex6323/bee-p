@@ -37,24 +37,18 @@ use futures::{
 use log::warn;
 
 pub(crate) struct SenderContext {
-    pub(crate) milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
-    pub(crate) transaction_broadcast: (
-        mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
-        oneshot::Sender<()>,
-    ),
-    pub(crate) transaction_request: (mpsc::Sender<SenderWorkerEvent<TransactionRequest>>, oneshot::Sender<()>),
-    pub(crate) heartbeat: (mpsc::Sender<SenderWorkerEvent<Heartbeat>>, oneshot::Sender<()>),
+    pub(crate) milestone_request: (mpsc::Sender<MilestoneRequest>, oneshot::Sender<()>),
+    pub(crate) transaction_broadcast: (mpsc::Sender<TransactionBroadcast>, oneshot::Sender<()>),
+    pub(crate) transaction_request: (mpsc::Sender<TransactionRequest>, oneshot::Sender<()>),
+    pub(crate) heartbeat: (mpsc::Sender<Heartbeat>, oneshot::Sender<()>),
 }
 
 impl SenderContext {
     pub(crate) fn new(
-        milestone_request: (mpsc::Sender<SenderWorkerEvent<MilestoneRequest>>, oneshot::Sender<()>),
-        transaction_broadcast: (
-            mpsc::Sender<SenderWorkerEvent<TransactionBroadcast>>,
-            oneshot::Sender<()>,
-        ),
-        transaction_request: (mpsc::Sender<SenderWorkerEvent<TransactionRequest>>, oneshot::Sender<()>),
-        heartbeat: (mpsc::Sender<SenderWorkerEvent<Heartbeat>>, oneshot::Sender<()>),
+        milestone_request: (mpsc::Sender<MilestoneRequest>, oneshot::Sender<()>),
+        transaction_broadcast: (mpsc::Sender<TransactionBroadcast>, oneshot::Sender<()>),
+        transaction_request: (mpsc::Sender<TransactionRequest>, oneshot::Sender<()>),
+        heartbeat: (mpsc::Sender<Heartbeat>, oneshot::Sender<()>),
     ) -> Self {
         Self {
             milestone_request,
@@ -64,8 +58,6 @@ impl SenderContext {
         }
     }
 }
-
-pub(crate) type SenderWorkerEvent<M> = M;
 
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
@@ -118,7 +110,7 @@ macro_rules! implement_sender_worker {
 
             pub(crate) async fn run(
                 mut self,
-                events_receiver: mpsc::Receiver<SenderWorkerEvent<$type>>,
+                events_receiver: mpsc::Receiver<$type>,
                 shutdown_receiver: oneshot::Receiver<()>,
             ) {
                 let mut events_fused = events_receiver.fuse();
