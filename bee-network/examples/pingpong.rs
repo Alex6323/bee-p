@@ -80,7 +80,7 @@ async fn notification_handler(mut events: Events, mut network: Network, msg: Str
                     .await
                     .expect("error sinding SendBytes command");
             }
-            Event::BytesReceived { epid, bytes, .. } => {
+            Event::MessageReceived { epid, bytes, .. } => {
                 info!(
                     "[.....] Received message '{}' ({})",
                     Utf8Message::from_bytes(&bytes),

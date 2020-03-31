@@ -205,16 +205,15 @@ impl EndpointWorker {
                             // NOTE: 'try_connect' will check if 'epid' is part of the contact list
                             try_connect(epid, &mut contacts, &mut connected, None, &mut self.notifier).await?;
                         }
-                        Event::BytesSent { epid, num } => {
-                            publisher.send(Event::BytesSent {
+                        Event::MessageSent { epid, num_bytes } => {
+                            publisher.send(Event::MessageSent {
                                 epid,
-                                num,
+                                num_bytes,
                             }).await?
                         },
-                        Event::BytesReceived { epid, addr, bytes } => {
-                            publisher.send(Event::BytesReceived {
+                        Event::MessageReceived { epid, bytes } => {
+                            publisher.send(Event::MessageReceived {
                                 epid,
-                                addr,
                                 bytes,
                             }).await?
                         },
