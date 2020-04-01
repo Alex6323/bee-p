@@ -3,6 +3,7 @@ use crate::{Trit, TritBuf};
 
 pub trait RawEncoding {
     type Trit: Trit;
+    type Buf: RawEncodingBuf<Slice=Self>;
 
     /// Get an empty slice of this encoding
     fn empty() -> &'static Self;
