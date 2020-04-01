@@ -46,6 +46,7 @@ use std::{
     collections::HashMap,
     ptr,
     sync::{
+        atomic::AtomicU32,
         Arc,
         Mutex,
     },
@@ -86,6 +87,8 @@ pub struct Protocol {
         Mutex<Option<oneshot::Sender<()>>>,
     ),
     pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
+    pub(crate) first_solid_milestone_index: AtomicU32,
+    pub(crate) last_solid_milestone_index: AtomicU32,
 }
 
 impl Protocol {
@@ -137,6 +140,8 @@ impl Protocol {
                 Mutex::new(Some(milestone_validator_worker_shutdown_tx)),
             ),
             contexts: RwLock::new(HashMap::new()),
+            first_solid_milestone_index: AtomicU32::new(0),
+            last_solid_milestone_index: AtomicU32::new(0),
         };
 
         unsafe {
