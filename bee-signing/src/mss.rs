@@ -3,7 +3,6 @@ use crate::{
     PrivateKeyGenerator,
     PublicKey,
     RecoverableSignature,
-    Seed,
     Signature,
 };
 use bee_crypto::Sponge;
@@ -174,13 +173,14 @@ where
         let ots_signature = ots_private_key
             .sign(message)
             .map_err(|_| Self::Error::FailedUnderlyingSignatureGeneration)?;
-        let mut state = vec![0; ots_signature.size() + 6561];
+        // let mut state = vec![0; ots_signature.size() + 6561];
+        let mut state: TritBuf = TritBuf::zeros(ots_signature.size() + 6561);
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
         let mut sibling_index;
         let mut i = 0;
 
         // TODO PAD TO 6561
-        state[0..ots_signature.size()].copy_from_slice(ots_signature.trits().as_i8_slice());
+        state[0..ots_signature.size()].copy_from(ots_signature.trits());
 
         while tree_index != 0 {
             if tree_index % 2 != 0 {
@@ -192,13 +192,13 @@ where
             }
 
             state[ots_signature.size() + i * 243..ots_signature.size() + (i + 1) * 243]
-                .copy_from_slice(self.tree[sibling_index * 243..(sibling_index + 1) * 243].as_i8_slice());
+                .copy_from(&self.tree[sibling_index * 243..(sibling_index + 1) * 243]);
             i = i + 1;
         }
 
         self.index = self.index + 1;
 
-        Ok(Self::Signature::from_buf(TritBuf::from_i8_unchecked(&state)).index(self.index - 1))
+        Ok(Self::Signature::from_buf(state).index(self.index - 1))
     }
 }
 
@@ -314,12 +314,15 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
 mod tests {
 
     use super::*;
-    use crate::iota_seed::IotaSeed;
-    use crate::wots::{
-        WotsPrivateKeyGenerator,
-        WotsPrivateKeyGeneratorBuilder,
-        WotsPublicKey,
-        WotsSecurityLevel,
+    use crate::{
+        iota_seed::IotaSeed,
+        seed::Seed,
+        wots::{
+            WotsPrivateKeyGenerator,
+            WotsPrivateKeyGeneratorBuilder,
+            WotsPublicKey,
+            WotsSecurityLevel,
+        },
     };
     use bee_crypto::{
         CurlP27,

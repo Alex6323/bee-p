@@ -1,5 +1,7 @@
-use std::convert::TryFrom;
-use std::slice;
+use std::{
+    convert::TryFrom,
+    slice,
+};
 
 pub mod bigint;
 pub mod raw;

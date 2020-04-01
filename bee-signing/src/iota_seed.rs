@@ -14,11 +14,6 @@ use std::marker::PhantomData;
 // TODO Put constants in a separate file
 
 // TODO: documentation
-pub const MIN_TRIT_VALUE: i8 = -1;
-// TODO: documentation
-pub const MAX_TRIT_VALUE: i8 = 1;
-
-// TODO: documentation
 pub struct IotaSeed<S> {
     seed: TritBuf,
     _sponge: PhantomData<S>,
