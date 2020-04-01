@@ -1,5 +1,3 @@
-pub const TRYTE_ZERO: char = '9';
-
 pub const TRANSACTION_TRIT_LEN: usize = 8019;
 pub const TRANSACTION_TRYT_LEN: usize = TRANSACTION_TRIT_LEN / 3; //2673
 pub const TRANSACTION_BYTE_LEN: usize = TRANSACTION_TRIT_LEN / 5 + 1; //1604

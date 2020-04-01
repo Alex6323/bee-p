@@ -1,16 +1,23 @@
-use crate::bundle::Bundle;
-use crate::constants::IOTA_SUPPLY;
-use crate::transaction::{
-    Hash,
-    Index,
-    TransactionBuilder,
-    TransactionBuilderError,
-    TransactionBuilders,
-    TransactionField,
-    Transactions,
+use crate::{
+    bundle::{
+        Bundle,
+        Transactions,
+    },
+    constants::IOTA_SUPPLY,
+    transaction::{
+        Hash,
+        Index,
+        TransactionBuilder,
+        TransactionBuilderError,
+        TransactionBuilders,
+        TransactionField,
+    },
 };
 
-use bee_crypto::Sponge;
+use bee_crypto::{
+    Kerl,
+    Sponge,
+};
 use bee_ternary::TritBuf;
 
 use std::marker::PhantomData;
@@ -45,7 +52,7 @@ pub struct StagedOutgoingBundleBuilder<E, S> {
 }
 
 // TODO default to Kerl
-pub type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<bee_crypto::CurlP81, OutgoingRaw>;
+pub type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Kerl, OutgoingRaw>;
 
 impl<E, S> StagedOutgoingBundleBuilder<E, S>
 where
@@ -57,7 +64,7 @@ where
         // TODO Impl
         let mut sponge = E::default();
 
-        for builder in &self.builders.0 {
+        for _builder in &self.builders.0 {
             // TODO sponge.absorb(builder.essence());
         }
 
@@ -188,8 +195,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
     // TODO TEST
     pub fn attach_local(
         self,
-        trunk: Hash,
-        branch: Hash,
+        _trunk: Hash,
+        _branch: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
@@ -202,8 +209,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
     // TODO TEST
     pub fn attach_remote(
         self,
-        trunk: Hash,
-        branch: Hash,
+        _trunk: Hash,
+        _branch: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {

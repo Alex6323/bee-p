@@ -12,7 +12,6 @@ pub mod t4b1;
 pub mod t5b1;
 pub mod trit;
 pub mod tryte;
-pub mod util;
 
 #[cfg(feature = "serde1")]
 mod serde;

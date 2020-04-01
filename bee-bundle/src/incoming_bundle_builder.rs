@@ -1,5 +1,8 @@
 use crate::{
-    bundle::Bundle,
+    bundle::{
+        Bundle,
+        Transactions,
+    },
     constants::{
         ADDRESS,
         IOTA_SUPPLY,
@@ -7,11 +10,13 @@ use crate::{
     transaction::{
         Transaction,
         TransactionField,
-        Transactions,
     },
 };
 
-use bee_crypto::Sponge;
+use bee_crypto::{
+    Kerl,
+    Sponge,
+};
 use bee_signing::{
     PublicKey,
     Signature,
@@ -19,7 +24,6 @@ use bee_signing::{
 };
 use bee_ternary::{
     trit::Btrit,
-    T1B1Buf,
     TritBuf,
 };
 
@@ -52,9 +56,7 @@ pub struct StagedIncomingBundleBuilder<E, P, S> {
     stage: PhantomData<S>,
 }
 
-// TODO default kerl
-pub type IncomingBundleBuilder =
-    StagedIncomingBundleBuilder<bee_crypto::CurlP81, WotsPublicKey<bee_crypto::CurlP81>, IncomingRaw>;
+pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
 
 impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
 where
@@ -82,7 +84,7 @@ where
         // TODO Impl
         let mut sponge = E::default();
 
-        for builder in &self.transactions.0 {
+        for _builder in &self.transactions.0 {
             // sponge.absorb(builder.address.0);
         }
 
@@ -151,7 +153,8 @@ where
                 Err(IncomingBundleBuilderError::InvalidAddress)?;
             }
 
-            if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().as_bytes().to_vec()) {
+            if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec())
+            {
                 Err(IncomingBundleBuilderError::InvalidBundleHash)?;
             }
 

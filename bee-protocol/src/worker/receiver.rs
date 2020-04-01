@@ -29,12 +29,16 @@ use crate::{
 };
 
 use bee_network::{
-    Command::SendBytes,
+    Command::SendMessage,
     Network,
+    Origin,
 };
 
 use std::{
-    sync::Arc,
+    sync::{
+        atomic::Ordering,
+        Arc,
+    },
     time::{
         SystemTime,
         UNIX_EPOCH,
@@ -92,9 +96,9 @@ impl ReceiverWorker {
             network,
             peer,
             metrics,
-            transaction_worker: Protocol::get().transaction_worker.clone(),
-            transaction_responder_worker: Protocol::get().transaction_responder_worker.clone(),
-            milestone_responder_worker: Protocol::get().milestone_responder_worker.clone(),
+            transaction_worker: Protocol::get().transaction_worker.0.clone(),
+            transaction_responder_worker: Protocol::get().transaction_responder_worker.0.clone(),
+            milestone_responder_worker: Protocol::get().milestone_responder_worker.0.clone(),
         }
     }
 
@@ -108,15 +112,20 @@ impl ReceiverWorker {
         let mut shutdown_fused = shutdown_receiver.fuse();
 
         // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
-        self.network
-            .send(SendBytes {
+        if let Err(e) = self
+            .network
+            .send(SendMessage {
                 epid: self.peer.epid,
                 // TODO port
                 bytes: Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS)
                     .into_full_bytes(),
                 responder: None,
             })
-            .await;
+            .await
+        {
+            // TODO then what ?
+            warn!("[Peer({})] Failed to send handshake: {:?}.", self.peer.epid, e);
+        }
 
         loop {
             select! {
@@ -152,13 +161,7 @@ impl ReceiverWorker {
                     state: ReceiverWorkerMessageState::Header,
                 });
 
-                // TODO check actual port
-                if handshake.port != handshake.port {
-                    warn!(
-                        "[Peer({})] Invalid handshake port: {} != {}.",
-                        self.peer.epid, handshake.port, handshake.port
-                    );
-                } else if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
+                if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
                     warn!(
                         "[Peer({})] Invalid handshake timestamp, difference of {}ms.",
                         self.peer.epid,
@@ -174,7 +177,24 @@ impl ReceiverWorker {
                 } else if let Err(version) = supported_version(&handshake.supported_messages) {
                     warn!("[Peer({})] Unsupported protocol version: {}.", self.peer.epid, version);
                 } else {
-                    // TODO check duplicate connection
+                    match self.peer.origin {
+                        Origin::Outbound => {
+                            // TODO use Port instead or deref
+                            if handshake.port != *self.peer.address.port() {
+                                warn!(
+                                    "[Peer({})] Invalid handshake port: {} != {}.",
+                                    self.peer.epid, handshake.port, handshake.port
+                                );
+                            }
+                        }
+                        Origin::Inbound => {
+                            // TODO check if whitelisted
+                        }
+                        Origin::Unbound => {
+                            error!("[Peer({})] Unbound peer origin.", self.peer.epid);
+                        }
+                    }
+
                     info!("[Peer({})] Handshake completed.", self.peer.epid);
 
                     Protocol::senders_add(self.network.clone(), self.peer.clone(), self.metrics.clone()).await;
@@ -314,7 +334,14 @@ impl ReceiverWorker {
                 self.metrics.heartbeat_received_inc();
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
-                    Ok(_) => {}
+                    Ok(message) => {
+                        self.peer
+                            .first_solid_milestone_index
+                            .store(message.first_solid_milestone_index, Ordering::Relaxed);
+                        self.peer
+                            .last_solid_milestone_index
+                            .store(message.last_solid_milestone_index, Ordering::Relaxed);
+                    }
                     Err(e) => {
                         warn!("[Peer({})] Reading Heartbeat failed: {:?}.", self.peer.epid, e);
                     }

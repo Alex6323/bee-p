@@ -45,7 +45,11 @@ use bee_network::{
 use std::{
     collections::HashMap,
     ptr,
-    sync::Arc,
+    sync::{
+        atomic::AtomicU32,
+        Arc,
+        Mutex,
+    },
 };
 
 use async_std::{
@@ -61,13 +65,30 @@ use log::warn;
 static mut PROTOCOL: *const Protocol = ptr::null();
 
 pub struct Protocol {
-    pub(crate) transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
-    pub(crate) transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
-    pub(crate) milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
-    pub(crate) transaction_requester_worker: mpsc::Sender<TransactionRequesterWorkerEvent>,
-    pub(crate) milestone_requester_worker: mpsc::Sender<MilestoneRequesterWorkerEvent>,
-    pub(crate) milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
+    pub(crate) transaction_worker: (mpsc::Sender<TransactionWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
+    pub(crate) transaction_responder_worker: (
+        mpsc::Sender<TransactionResponderWorkerEvent>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
+    pub(crate) milestone_responder_worker: (
+        mpsc::Sender<MilestoneResponderWorkerEvent>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
+    pub(crate) transaction_requester_worker: (
+        mpsc::Sender<TransactionRequesterWorkerEvent>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
+    pub(crate) milestone_requester_worker: (
+        mpsc::Sender<MilestoneRequesterWorkerEvent>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
+    pub(crate) milestone_validator_worker: (
+        mpsc::Sender<MilestoneValidatorWorkerEvent>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
     pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
+    pub(crate) first_solid_milestone_index: AtomicU32,
+    pub(crate) last_solid_milestone_index: AtomicU32,
 }
 
 impl Protocol {
@@ -78,42 +99,124 @@ impl Protocol {
         }
 
         // TODO conf
-        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = mpsc::channel(1000);
+        let (transaction_worker_tx, transaction_worker_rx) = mpsc::channel(1000);
+        let (transaction_worker_shutdown_tx, transaction_worker_shutdown_rx) = oneshot::channel();
         // TODO conf
-        let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
+        let (transaction_responder_worker_tx, transaction_responder_worker_rx) = mpsc::channel(1000);
+        let (transaction_responder_worker_shutdown_tx, transaction_responder_worker_shutdown_rx) = oneshot::channel();
         // TODO conf
-        let (transaction_responder_worker_sender, transaction_responder_worker_receiver) = mpsc::channel(1000);
+        let (milestone_responder_worker_tx, milestone_responder_worker_rx) = mpsc::channel(1000);
+        let (milestone_responder_worker_shutdown_tx, milestone_responder_worker_shutdown_rx) = oneshot::channel();
         // TODO conf
-        let (milestone_responder_worker_sender, milestone_responder_worker_receiver) = mpsc::channel(1000);
+        let (transaction_requester_worker_tx, transaction_requester_worker_rx) = mpsc::channel(1000);
+        let (transaction_requester_worker_shutdown_tx, transaction_requester_worker_shutdown_rx) = oneshot::channel();
         // TODO conf
-        let (transaction_requester_worker_sender, transaction_requester_worker_receiver) = mpsc::channel(1000);
+        let (milestone_requester_worker_tx, milestone_requester_worker_rx) = mpsc::channel(1000);
+        let (milestone_requester_worker_shutdown_tx, milestone_requester_worker_shutdown_rx) = oneshot::channel();
         // TODO conf
-        let (milestone_requester_worker_sender, milestone_requester_worker_receiver) = mpsc::channel(1000);
+        let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::channel(1000);
+        let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
         let protocol = Protocol {
-            transaction_worker: transaction_worker_sender,
-            transaction_responder_worker: transaction_responder_worker_sender,
-            milestone_responder_worker: milestone_responder_worker_sender,
-            transaction_requester_worker: transaction_requester_worker_sender,
-            milestone_requester_worker: milestone_requester_worker_sender,
-            milestone_validator_worker: milestone_validator_worker_sender,
+            transaction_worker: (transaction_worker_tx, Mutex::new(Some(transaction_worker_shutdown_tx))),
+            transaction_responder_worker: (
+                transaction_responder_worker_tx,
+                Mutex::new(Some(transaction_responder_worker_shutdown_tx)),
+            ),
+            milestone_responder_worker: (
+                milestone_responder_worker_tx,
+                Mutex::new(Some(milestone_responder_worker_shutdown_tx)),
+            ),
+            transaction_requester_worker: (
+                transaction_requester_worker_tx,
+                Mutex::new(Some(transaction_requester_worker_shutdown_tx)),
+            ),
+            milestone_requester_worker: (
+                milestone_requester_worker_tx,
+                Mutex::new(Some(milestone_requester_worker_shutdown_tx)),
+            ),
+            milestone_validator_worker: (
+                milestone_validator_worker_tx,
+                Mutex::new(Some(milestone_validator_worker_shutdown_tx)),
+            ),
             contexts: RwLock::new(HashMap::new()),
+            first_solid_milestone_index: AtomicU32::new(0),
+            last_solid_milestone_index: AtomicU32::new(0),
         };
 
         unsafe {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
-        spawn(MilestoneValidatorWorker::new(milestone_validator_worker_receiver).run());
-        spawn(TransactionWorker::new(transaction_worker_receiver).run());
-        spawn(TransactionResponderWorker::new(transaction_responder_worker_receiver).run());
-        spawn(MilestoneResponderWorker::new(milestone_responder_worker_receiver).run());
-        spawn(TransactionRequesterWorker::new(transaction_requester_worker_receiver).run());
-        spawn(MilestoneRequesterWorker::new(milestone_requester_worker_receiver).run());
+        spawn(TransactionWorker::new(transaction_worker_rx, transaction_worker_shutdown_rx).run());
+        spawn(
+            TransactionResponderWorker::new(
+                transaction_responder_worker_rx,
+                transaction_responder_worker_shutdown_rx,
+            )
+            .run(),
+        );
+        spawn(
+            MilestoneResponderWorker::new(milestone_responder_worker_rx, milestone_responder_worker_shutdown_rx).run(),
+        );
+        spawn(
+            TransactionRequesterWorker::new(
+                transaction_requester_worker_rx,
+                transaction_requester_worker_shutdown_rx,
+            )
+            .run(),
+        );
+        spawn(
+            MilestoneRequesterWorker::new(milestone_requester_worker_rx, milestone_requester_worker_shutdown_rx).run(),
+        );
+        spawn(
+            MilestoneValidatorWorker::new(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx).run(),
+        );
     }
 
     pub fn shutdown() {
-        //shutdown main workers
+        if let Ok(mut shutdown) = Protocol::get().transaction_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down TransactionWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().transaction_responder_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down TransactionResponderWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().milestone_responder_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down MilestoneResponderWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().transaction_requester_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down TransactionRequesterWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().milestone_requester_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down MilestoneRequesterWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().milestone_validator_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down MilestoneValidatorWorker failed: {:?}.", e);
+                }
+            }
+        }
     }
 
     pub(crate) fn get() -> &'static Protocol {

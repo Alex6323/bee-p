@@ -29,7 +29,6 @@ pub use transaction::{
     TransactionBuilderError,
     TransactionBuilders,
     TransactionField,
-    Transactions,
     Value,
 };
 
@@ -39,4 +38,7 @@ pub use constants::{
     NONCE_TRIT_LEN,
     PAYLOAD_TRIT_LEN,
     TAG_TRIT_LEN,
+    TRANSACTION_BYTE_LEN,
+    TRANSACTION_TRIT_LEN,
+    TRANSACTION_TRYT_LEN,
 };

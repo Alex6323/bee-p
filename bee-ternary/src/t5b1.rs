@@ -1,6 +1,11 @@
+use crate::{
+    Btrit,
+    RawEncoding,
+    RawEncodingBuf,
+    ShiftTernary,
+    Utrit,
+};
 use std::ops::Range;
-use crate::{Btrit, Utrit, RawEncoding, RawEncodingBuf, ShiftTernary};
-use std::borrow::BorrowMut;
 
 const TPB: usize = 5;
 const BAL: i8 = 121;
@@ -55,11 +60,19 @@ impl RawEncoding for T5B1 {
     }
 
     fn as_i8_slice(&self) -> &[i8] {
-        unsafe { std::slice::from_raw_parts(self.ptr(0) as *const _, (self.len() + self.len_offset().1 + TPB - 1) / TPB) }
+        unsafe {
+            std::slice::from_raw_parts(
+                self.ptr(0) as *const _,
+                (self.len() + self.len_offset().1 + TPB - 1) / TPB,
+            )
+        }
     }
 
     unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
-        unsafe { std::slice::from_raw_parts_mut(self.ptr(0) as *mut _, (self.len() + self.len_offset().1 + TPB - 1) / TPB)}
+        std::slice::from_raw_parts_mut(
+            self.ptr(0) as *mut _,
+            (self.len() + self.len_offset().1 + TPB - 1) / TPB,
+        )
     }
 
     unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {
@@ -74,22 +87,32 @@ impl RawEncoding for T5B1 {
     }
 
     unsafe fn slice_unchecked(&self, range: Range<usize>) -> &Self {
-        &*Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start)
+        &*Self::make(
+            self.ptr(range.start),
+            (self.len_offset().1 + range.start) % TPB,
+            range.end - range.start,
+        )
     }
 
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self {
-        &mut *(Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start) as *mut Self)
+        &mut *(Self::make(
+            self.ptr(range.start),
+            (self.len_offset().1 + range.start) % TPB,
+            range.end - range.start,
+        ) as *mut Self)
     }
 
-    fn is_valid(b: &i8) -> bool { *b >= -BAL && *b <= BAL }
+    fn is_valid(b: &i8) -> bool {
+        *b >= -BAL && *b <= BAL
+    }
 
     unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self {
-        debug_assert!(num_trits <= b.len()*TPB);
+        debug_assert!(num_trits <= b.len() * TPB);
         &*Self::make(b.as_ptr() as *const _, 0, num_trits)
     }
 
     unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self {
-        debug_assert!(num_trits <= b.len()*TPB);
+        debug_assert!(num_trits <= b.len() * TPB);
         &mut *(Self::make(b.as_ptr() as *const _, 0, num_trits) as *mut _)
     }
 }
