@@ -20,7 +20,7 @@ use crate::{
     },
     errors::{
         ConnectionError,
-        ConnectionSuccess as S,
+        ConnectionResult,
     },
     events::{
         Event,
@@ -41,7 +41,7 @@ use futures::{
 use log::*;
 
 /// Tries to connect to an endpoint.
-pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier) -> S {
+pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier) -> ConnectionResult<()> {
     debug!("[TCP  ] Trying to connect to {}...", epid);
 
     match TcpStream::connect(**addr).await {
@@ -71,7 +71,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
     }
 }
 
-pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> S {
+pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> ConnectionResult<()> {
     debug!("[TCP  ] Spawning TCP connection workers...");
 
     let addr: Address = conn.remote_addr.into();

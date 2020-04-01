@@ -1,6 +1,6 @@
 use crate::{
     endpoint::origin::Origin,
-    errors::ConnectionResult as R,
+    errors::ConnectionResult,
 };
 
 use async_std::{
@@ -22,7 +22,7 @@ pub struct TcpConnection {
 }
 
 impl TcpConnection {
-    pub fn new(stream: TcpStream, origin: Origin) -> R<Self> {
+    pub fn new(stream: TcpStream, origin: Origin) -> ConnectionResult<Self> {
         let local_addr = stream.local_addr()?;
         let remote_addr = stream.peer_addr()?;
         let stream = Arc::new(stream);

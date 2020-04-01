@@ -16,10 +16,6 @@ pub enum ConnectionError {
     #[error(display = "Async IO error")]
     AsyncIo(#[source] async_std::io::Error),
 
-    /*
-    #[error(display = "IO error")]
-    Io(#[error(source, no_from)] std::io::Error),
-    */
     #[error(display = "Error sending bytes")]
     SendingBytesFailed(#[source] SendError),
 
@@ -34,7 +30,6 @@ pub enum ConnectionError {
 }
 
 pub type ConnectionResult<T> = std::result::Result<T, ConnectionError>;
-pub type ConnectionSuccess = ConnectionResult<()>;
 
 #[derive(Debug, Error)]
 pub enum SendError {
