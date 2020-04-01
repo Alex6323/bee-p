@@ -2,6 +2,7 @@
 mod iota_seed;
 mod mss;
 mod scheme;
+mod seed;
 mod wots;
 
 pub use iota_seed::IotaSeed;
@@ -17,9 +18,9 @@ pub use scheme::{
     PrivateKeyGenerator,
     PublicKey,
     RecoverableSignature,
-    Seed,
     Signature,
 };
+pub use seed::Seed;
 pub use wots::{
     WotsPrivateKey,
     WotsPrivateKeyGenerator,
