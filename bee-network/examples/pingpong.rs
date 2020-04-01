@@ -59,9 +59,11 @@ async fn notification_handler(mut events: Events, mut network: Network, msg: Str
 
     while let Some(event) = events.next().await {
         info!("[.....] Received {}.", event);
+
         match event {
             Event::EndpointAdded { epid, total } => {
                 info!("[.....] Added endpoint {} ({}).", epid, total);
+
                 network
                     .send(Connect { epid, responder: None })
                     .await
@@ -78,7 +80,7 @@ async fn notification_handler(mut events: Events, mut network: Network, msg: Str
                         responder: None,
                     })
                     .await
-                    .expect("error sinding SendBytes command");
+                    .expect("error sending SendMessage command");
             }
             Event::MessageReceived { epid, bytes, .. } => {
                 info!(
