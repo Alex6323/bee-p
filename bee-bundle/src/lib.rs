@@ -29,7 +29,6 @@ pub use transaction::{
     TransactionBuilderError,
     TransactionBuilders,
     TransactionField,
-    Transactions,
     Value,
 };
 

@@ -1,5 +1,8 @@
 use crate::{
-    bundle::Bundle,
+    bundle::{
+        Bundle,
+        Transactions,
+    },
     constants::IOTA_SUPPLY,
     transaction::{
         Hash,
@@ -8,7 +11,6 @@ use crate::{
         TransactionBuilderError,
         TransactionBuilders,
         TransactionField,
-        Transactions,
     },
 };
 

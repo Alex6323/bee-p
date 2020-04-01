@@ -1,5 +1,8 @@
 use crate::{
-    bundle::Bundle,
+    bundle::{
+        Bundle,
+        Transactions,
+    },
     constants::{
         ADDRESS,
         IOTA_SUPPLY,
@@ -7,7 +10,6 @@ use crate::{
     transaction::{
         Transaction,
         TransactionField,
-        Transactions,
     },
 };
 
