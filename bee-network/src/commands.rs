@@ -15,6 +15,7 @@ use std::fmt;
 // TODO: we don't need this to be generic atm; just use `bool` for now
 /// Receiver half of the notification channel.
 pub type Responder<T> = oneshot::Sender<T>;
+
 /// Sender half of the notification channel.
 pub type Requester<T> = oneshot::Receiver<T>;
 
@@ -31,7 +32,7 @@ pub enum Command {
         /// `Url` of the `Endpoint`.
         url: Url,
 
-        /// Success responder.
+        /// Result responder.
         responder: Option<Responder<bool>>,
     },
 
@@ -40,7 +41,7 @@ pub enum Command {
         /// The id of the `Endpoint` to remove.
         epid: EndpointId,
 
-        /// Success responder.
+        /// Result responder.
         responder: Option<Responder<bool>>,
     },
 
@@ -49,7 +50,7 @@ pub enum Command {
         /// The id of the `Endpoint` to connect.
         epid: EndpointId,
 
-        /// Sucess responder.
+        /// Result responder.
         responder: Option<Responder<bool>>,
     },
 
@@ -58,43 +59,41 @@ pub enum Command {
         /// The id of the `Endpoint` to disconnect from.
         epid: EndpointId,
 
-        /// Success responder.
+        /// Result responder.
         responder: Option<Responder<bool>>,
     },
 
-    // TODO: rename to `SendMessage`
     /// Sends a message to a connected `Endpoint`.
-    SendBytes {
+    SendMessage {
         /// The id of the `Endpoint` to send the message to.
         epid: EndpointId,
 
         /// The raw bytes of the message.
         bytes: Vec<u8>,
 
-        /// Success responder.
+        /// Result responder.
         responder: Option<Responder<bool>>,
     },
 
-    // TODO: rename to `MulticastMessage`
     /// Sends a message to multiple connected `Endpoint`s.
-    MulticastBytes {
+    MulticastMessage {
         ///  The ids of `Endpoint`s to connect to.
         epids: Vec<EndpointId>,
 
         /// The raw bytes of the message.
         bytes: Vec<u8>,
 
-        /// Success responder.
+        /// Result responder.
         responder: Option<Responder<bool>>,
     },
 
     // TODO: rename to `BroadcastMessage`
     /// Sends a message to all connected `Endpoint`s.
-    BroadcastBytes {
+    BroadcastMessage {
         /// The raw bytes of the message.
         bytes: Vec<u8>,
 
-        /// Success responder.
+        /// Result responder.
         responder: Option<Responder<bool>>,
     },
 }
@@ -110,13 +109,13 @@ impl fmt::Display for Command {
 
             Command::Disconnect { epid, .. } => write!(f, "Command::Disconnect {{ {} }}", epid),
 
-            Command::SendBytes { epid, .. } => write!(f, "Command::SendBytes {{ {} }}", epid),
+            Command::SendMessage { epid, .. } => write!(f, "Command::SendMessage {{ {} }}", epid),
 
-            Command::MulticastBytes { epids, .. } => {
-                write!(f, "Command::MulticastBytes {{ {} receivers }}", epids.len())
+            Command::MulticastMessage { epids, .. } => {
+                write!(f, "Command::MulticastMessage {{ {} receivers }}", epids.len())
             }
 
-            Command::BroadcastBytes { .. } => write!(f, "Command::BroadcastBytes"),
+            Command::BroadcastMessage { .. } => write!(f, "Command::BroadcastMessage"),
         }
     }
 }

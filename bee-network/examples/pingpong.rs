@@ -72,7 +72,7 @@ async fn notification_handler(mut events: Events, mut network: Network, msg: Str
 
                 let msg = Utf8Message::new(&msg);
                 network
-                    .send(SendBytes {
+                    .send(SendMessage {
                         epid,
                         bytes: msg.as_bytes(),
                         responder: None,
@@ -141,7 +141,7 @@ fn spam(mut network: Network, msg: Utf8Message, num: usize, interval: u64) {
         for _ in 0..num {
             task::sleep(std::time::Duration::from_millis(interval)).await;
             network
-                .send(BroadcastBytes {
+                .send(BroadcastMessage {
                     bytes: msg.as_bytes(),
                     responder: None,
                 })

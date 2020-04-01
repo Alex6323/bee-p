@@ -139,7 +139,7 @@ impl EndpointWorker {
                             }
 
                         },
-                        Command::SendBytes { epid, bytes, responder } => {
+                        Command::SendMessage { epid, bytes, responder } => {
                             let res = send_bytes(&epid, bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
@@ -148,7 +148,7 @@ impl EndpointWorker {
                                 };
                             }
                         },
-                        Command::MulticastBytes { epids, bytes, responder } => {
+                        Command::MulticastMessage { epids, bytes, responder } => {
                             let res = multicast_bytes(&epids, bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
@@ -157,7 +157,7 @@ impl EndpointWorker {
                                 };
                             }
                         },
-                        Command::BroadcastBytes { bytes, responder } => {
+                        Command::BroadcastMessage { bytes, responder } => {
                             let res = broadcast_bytes(bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
