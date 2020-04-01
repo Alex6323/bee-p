@@ -32,12 +32,19 @@ pub trait PrivateKeyGenerator {
     ///
     /// ```
     /// use bee_crypto::Kerl;
-    /// use bee_signing::PrivateKeyGenerator;
-    /// use bee_signing::{IotaSeed, Seed};
-    /// use bee_signing::{WotsPrivateKeyGeneratorBuilder, WotsSecurityLevel};
+    /// use bee_signing::{
+    ///     IotaSeed,
+    ///     PrivateKeyGenerator,
+    ///     Seed,
+    ///     WotsPrivateKeyGeneratorBuilder,
+    ///     WotsSecurityLevel,
+    /// };
     ///
     /// let seed = IotaSeed::<Kerl>::new();
-    /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(WotsSecurityLevel::Medium).build().unwrap();
+    /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+    ///     .security_level(WotsSecurityLevel::Medium)
+    ///     .build()
+    ///     .unwrap();
     /// let private_key = private_key_generator.generate(&seed, 0);
     /// ```
     fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error>;
@@ -57,13 +64,20 @@ pub trait PrivateKey {
     ///
     /// ```
     /// # use bee_crypto::Kerl;
-    /// # use bee_signing::PrivateKeyGenerator;
-    /// # use bee_signing::{IotaSeed, Seed};
-    /// # use bee_signing::{WotsPrivateKeyGeneratorBuilder, WotsSecurityLevel};
+    /// # use bee_signing::{
+    ///     IotaSeed,
+    ///     PrivateKeyGenerator,
+    ///     Seed,
+    ///     WotsPrivateKeyGeneratorBuilder,
+    ///     WotsSecurityLevel,
+    /// };
     /// use bee_signing::PrivateKey;
     ///
     /// # let seed = IotaSeed::<Kerl>::new();
-    /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(WotsSecurityLevel::Medium).build().unwrap();
+    /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+    ///     .security_level(WotsSecurityLevel::Medium)
+    ///     .build()
+    ///     .unwrap();
     /// # let private_key = private_key_generator.generate(&seed, 0).unwrap();
     /// let public_key = private_key.generate_public_key();
     /// ```
@@ -79,14 +93,24 @@ pub trait PrivateKey {
     ///
     /// ```
     /// # use bee_crypto::Kerl;
-    /// # use bee_signing::PrivateKeyGenerator;
-    /// # use bee_signing::{IotaSeed, Seed};
-    /// # use bee_signing::{WotsPrivateKeyGeneratorBuilder, WotsSecurityLevel};
+    /// # use bee_signing::{
+    ///     IotaSeed,
+    ///     PrivateKeyGenerator,
+    ///     Seed,
+    ///     WotsPrivateKeyGeneratorBuilder,
+    ///     WotsSecurityLevel,
+    /// };
     /// use bee_signing::PrivateKey;
-    /// use bee_ternary::{TryteBuf, T1B1Buf};
+    /// use bee_ternary::{
+    ///     T1B1Buf,
+    ///     TryteBuf,
+    /// };
     ///
     /// # let seed = IotaSeed::<Kerl>::new();
-    /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default().security_level(WotsSecurityLevel::Medium).build().unwrap();
+    /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+    ///     .security_level(WotsSecurityLevel::Medium)
+    ///     .build()
+    ///     .unwrap();
     /// # let mut private_key = private_key_generator.generate(&seed, 0).unwrap();
     /// let message = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
     /// let message_trits = TryteBuf::try_from_str(message).unwrap().as_trits().encode::<T1B1Buf>();
