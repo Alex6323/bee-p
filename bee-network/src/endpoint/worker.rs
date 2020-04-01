@@ -402,7 +402,7 @@ async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> Re
 }
 
 #[inline(always)]
-async fn multicast_bytes(recipients: &Vec<EpId>, bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
+async fn multicast_bytes(recipients: &[EpId], bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
     Ok(outbox.multicast(bytes, recipients).await?)
 }
 

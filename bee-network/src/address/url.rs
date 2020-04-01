@@ -15,12 +15,12 @@ pub enum Protocol {
 }
 
 impl Protocol {
-    pub fn is_tcp(&self) -> bool {
-        *self == Protocol::Tcp
+    pub fn is_tcp(self) -> bool {
+        self == Protocol::Tcp
     }
 
-    pub fn is_udp(&self) -> bool {
-        *self == Protocol::Udp
+    pub fn is_udp(self) -> bool {
+        self == Protocol::Udp
     }
 }
 
@@ -35,8 +35,8 @@ pub enum Url {
     Udp(Address),
 }
 
-const TCP: &'static str = "tcp";
-const UDP: &'static str = "udp";
+const TCP: &str = "tcp";
+const UDP: &str = "udp";
 
 impl Url {
     /// Creates a new `Url`.
@@ -64,7 +64,7 @@ impl Url {
                 _ => Err(AddressError::UnsupportedProtocol),
             }
         } else {
-            return Err(AddressError::UrlParseFailure);
+            Err(AddressError::UrlParseFailure)
         }
     }
 

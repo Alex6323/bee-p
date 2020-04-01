@@ -72,7 +72,7 @@ impl Outbox {
     ///
     /// NOTE: The multicast is considered to be successful, if at least
     /// one send is successful.
-    pub async fn multicast(&mut self, bytes: Vec<u8>, recipients: &Vec<EpId>) -> Result<bool> {
+    pub async fn multicast(&mut self, bytes: Vec<u8>, recipients: &[EpId]) -> Result<bool> {
         let bytes = Arc::new(bytes);
         let mut num_sends = 0;
 
