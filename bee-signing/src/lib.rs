@@ -5,6 +5,13 @@ mod scheme;
 mod wots;
 
 pub use iota_seed::IotaSeed;
+pub use mss::{
+    MssPrivateKey,
+    MssPrivateKeyGenerator,
+    MssPrivateKeyGeneratorBuilder,
+    MssPublicKey,
+    MssSignature,
+};
 pub use scheme::{
     PrivateKey,
     PrivateKeyGenerator,
