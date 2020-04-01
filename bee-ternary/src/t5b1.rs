@@ -69,12 +69,10 @@ impl RawEncoding for T5B1 {
     }
 
     unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.ptr(0) as *mut _,
-                (self.len() + self.len_offset().1 + TPB - 1) / TPB,
-            )
-        }
+        std::slice::from_raw_parts_mut(
+            self.ptr(0) as *mut _,
+            (self.len() + self.len_offset().1 + TPB - 1) / TPB,
+        )
     }
 
     unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {
