@@ -14,7 +14,7 @@ use crate::{
 };
 
 use bee_network::{
-    Command::SendBytes,
+    Command::SendMessage,
     EndpointId,
     Network,
 };
@@ -122,7 +122,7 @@ macro_rules! implement_sender_worker {
                             if let Some(message) = message {
                                 match self
                                     .network
-                                    .send(SendBytes {
+                                    .send(SendMessage {
                                         epid: self.peer.epid,
                                         bytes: message.into_full_bytes(),
                                         responder: None,

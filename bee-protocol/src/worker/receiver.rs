@@ -29,7 +29,7 @@ use crate::{
 };
 
 use bee_network::{
-    Command::SendBytes,
+    Command::SendMessage,
     Network,
     Origin,
 };
@@ -114,7 +114,7 @@ impl ReceiverWorker {
         // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
         if let Err(e) = self
             .network
-            .send(SendBytes {
+            .send(SendMessage {
                 epid: self.peer.epid,
                 // TODO port
                 bytes: Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS)
