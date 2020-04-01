@@ -75,13 +75,13 @@ use sqlx::{
 
 use crate::sqlx::sql_statements::*;
 
-struct TransactionWrapper(pub bee_bundle::Transaction);
-struct MilestoneWrapper(pub Milestone);
-struct StateDeltaWrapper(pub StateDeltaMap);
+struct TransactionWrapper(bee_bundle::Transaction);
+struct MilestoneWrapper(Milestone);
+struct StateDeltaWrapper(StateDeltaMap);
 struct AttachmentData {
-    pub hash: Hash,
-    pub trunk: Hash,
-    pub branch: Hash,
+    hash: Hash,
+    trunk: Hash,
+    branch: Hash,
 }
 
 const FAILED_ESTABLISHING_CONNECTION: &str = "failed to establish connection.";
