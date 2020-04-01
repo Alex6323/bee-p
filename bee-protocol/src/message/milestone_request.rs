@@ -68,8 +68,6 @@ mod tests {
         HEADER_SIZE,
     };
 
-    use std::convert::TryInto;
-
     const INDEX: MilestoneIndex = 0x81f7df7c;
 
     #[test]

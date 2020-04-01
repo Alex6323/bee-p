@@ -10,34 +10,37 @@ mod tests {
     const BEE_TEST_DB_USER: &str = "test_db_user";
     const BEE_TEST_DB_NAME: &str = "test_db";
 
-    use crate::sqlx::SqlxBackendStorage;
-    use crate::storage::{
-        HashesToApprovers,
-        MissingHashesToRCApprovers,
-        StateDeltaMap,
-        StorageBackend,
+    use crate::{
+        sqlx::SqlxBackendStorage,
+        storage::{
+            HashesToApprovers,
+            MissingHashesToRCApprovers,
+            StorageBackend,
+        },
     };
 
-    use futures::executor::block_on;
-    use futures::future::join_all;
+    use futures::{
+        executor::block_on,
+        future::join_all,
+    };
 
-    use std::collections::{
-        HashMap,
-        HashSet,
+    use std::{
+        collections::{
+            HashMap,
+            HashSet,
+        },
+        io::{
+            self,
+            Write,
+        },
+        panic,
+        process::Command,
+        rc::Rc,
+        time::Instant,
     };
-    use std::io::{
-        self,
-        Write,
-    };
-    use std::panic;
-    use std::process::Command;
-    use std::rc::Rc;
-    use std::time::Instant;
 
     use bee_bundle::{
-        Address,
         Hash,
-        Payload,
         TransactionField,
     };
 
@@ -111,7 +114,7 @@ mod tests {
         assert_eq!(tx.branch(), found_tx.branch());
         assert_eq!(tx.tag(), found_tx.tag());
         assert_eq!(tx.obsolete_tag(), found_tx.obsolete_tag());
-        assert_eq!(tx.nonce().as_bytes(), found_tx.nonce().as_bytes());
+        assert_eq!(tx.nonce(), found_tx.nonce());
     }
 
     fn test_insert_one_milestone() {
@@ -125,7 +128,7 @@ mod tests {
         let found_milestone = res.unwrap();
         block_on(storage.destroy_connection()).unwrap();
 
-        assert_eq!(milestone.hash.as_bytes(), found_milestone.hash.as_bytes());
+        assert_eq!(milestone.hash, found_milestone.hash);
     }
 
     fn test_delete_one_transaction() {
@@ -155,7 +158,7 @@ mod tests {
         block_on(storage.insert_milestone(milestone.clone())).unwrap();
         let res = block_on(storage.find_milestone(milestone.hash.clone()));
         let found_milestone = res.unwrap();
-        assert_eq!(milestone.hash.as_bytes(), found_milestone.hash.as_bytes());
+        assert_eq!(milestone.hash, found_milestone.hash);
         let mut milestones_to_delete = HashSet::new();
         milestones_to_delete.insert(milestone.hash);
         let res = block_on(storage.delete_milestones(&milestones_to_delete));
