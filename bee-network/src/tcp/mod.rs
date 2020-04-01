@@ -141,10 +141,8 @@ async fn reader(epid: EpId, stream: Arc<TcpStream>, mut notifier: Notifier, mut 
                 match num_read {
                     Ok(num_read) => {
                         if num_read == 0 {
-                            warn!("[TCP  ] Received an empty message (0 bytes).");
-                            //continue;
+                            trace!("[TCP  ] EOF (0 byte message).");
 
-                            // TODO: this can probably be spawned
                             if notifier.send(Event::LostConnection { epid }).await.is_err() {
                                 warn!("[TCP  ] Failed to send 'LostConnection' notification.");
                             }
