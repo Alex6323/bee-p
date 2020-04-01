@@ -118,11 +118,8 @@ async fn writer(epid: EpId, stream: Arc<TcpStream>, bytes_rx: BytesReceiver, sd:
         }
     }
 
-    match sd.send(()) {
-        Ok(_) => (),
-        Err(_) => {
-            warn!("[TCP  ] Failed to send shutdown signal to reader task.");
-        }
+    if sd.send(()).is_err() {
+        trace!("[TCP  ] Reader task shut down before writer task.");
     }
 
     debug!("[TCP  ] Connection writer event loop for {} stopped.", epid);
@@ -141,12 +138,13 @@ async fn reader(epid: EpId, stream: Arc<TcpStream>, mut notifier: Notifier, mut 
                 match num_read {
                     Ok(num_read) => {
                         if num_read == 0 {
-                            trace!("[TCP  ] EOF (0 byte message).");
+                            trace!("[TCP  ] Received EOF (0 byte message).");
 
                             if notifier.send(Event::LostConnection { epid }).await.is_err() {
                                 warn!("[TCP  ] Failed to send 'LostConnection' notification.");
                             }
 
+                            // NOTE: local reader shut down first (we were disconnected)
                             break;
                         } else {
                             let mut bytes = vec![0u8; num_read];
@@ -164,6 +162,7 @@ async fn reader(epid: EpId, stream: Arc<TcpStream>, mut notifier: Notifier, mut 
                 }
             },
             shutdown = shutdown.fuse() => {
+                // NOTE: local writer shut down first (we disconnected)
                 break;
             }
         }
