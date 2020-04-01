@@ -7,16 +7,14 @@
 extern crate bincode;
 extern crate bytemuck;
 
+mod errors;
 mod sql_statements;
 
 use bytemuck::cast_slice;
 
-use std::{
-    error::Error as StdError,
-    fmt,
-};
-
 use sqlx::Error as SqlxError;
+
+use errors::SqlxBackendError;
 
 use crate::storage::{
     Connection,
@@ -60,69 +58,124 @@ use std::collections::{
     HashSet,
 };
 
-use std::rc::Rc;
+use std::{
+    rc::Rc,
+    slice,
+    vec,
+};
 
 use async_trait::async_trait;
 use futures::executor::block_on;
 use sqlx::{
+    postgres::PgQueryAs,
+    FromRow,
     PgPool,
     Row,
 };
 
 use crate::sqlx::sql_statements::*;
 
-pub const FAILED_ESTABLISHING_CONNECTION: &str = "failed to establish connection.";
-pub const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
-
-#[derive(Debug, Clone)]
-pub enum SqlxBackendError {
-    ConnectionBackendError(String),
-    EnvError(std::env::VarError),
-    SqlxError(String),
-    Bincode(String),
-    UnknownError,
-    //...
+struct TransactionWrapper(pub bee_bundle::Transaction);
+struct MilestoneWrapper(pub Milestone);
+struct StateDeltaWrapper(pub StateDeltaMap);
+struct AttachmentData {
+    pub hash: Hash,
+    pub trunk: Hash,
+    pub branch: Hash,
 }
 
-impl fmt::Display for SqlxBackendError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            SqlxBackendError::ConnectionBackendError(ref reason) => write!(f, "Connection error: {:?}", reason),
-            SqlxBackendError::EnvError(ref reason) => write!(f, "Connection error: {:?}", reason),
-            SqlxBackendError::SqlxError(ref reason) => write!(f, "Sqlx core error: {:?}", reason),
-            SqlxBackendError::Bincode(ref reason) => write!(f, "Bincode error: {:?}", reason),
-            SqlxBackendError::UnknownError => write!(f, "Unknown error"),
-        }
+const FAILED_ESTABLISHING_CONNECTION: &str = "failed to establish connection.";
+const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
+
+impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for TransactionWrapper {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
+        let value: i64 = row.get::<i32, _>(TRANSACTION_COL_VALUE) as i64;
+        let index: usize = row.get::<i16, _>(TRANSACTION_COL_CURRENT_INDEX) as usize;
+        let last_index: usize = row.get::<i16, _>(TRANSACTION_COL_LAST_INDEX) as usize;
+        let attachment_ts: u64 = row.get::<i32, _>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP) as u64;
+        let attachment_lbts: u64 = row.get::<i32, _>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_LOWER) as u64;
+        let attachment_ubts: u64 = row.get::<i32, _>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER) as u64;
+        let timestamp: u64 = row.get::<i32, _>(TRANSACTION_COL_TIMESTAMP) as u64;
+
+        let payload_tritbuf = decode_bytes(
+            row.get::<Vec<u8>, _>(TRANSACTION_COL_PAYLOAD).as_slice(),
+            PAYLOAD_TRIT_LEN,
+        );
+        let address_tritbuf = decode_bytes(
+            row.get::<Vec<u8>, _>(TRANSACTION_COL_ADDRESS).as_slice(),
+            ADDRESS_TRIT_LEN,
+        );
+        let obs_tag_tritbuf = decode_bytes(
+            row.get::<Vec<u8>, _>(TRANSACTION_COL_OBSOLETE_TAG).as_slice(),
+            TAG_TRIT_LEN,
+        );
+        let bundle_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_BUNDLE).as_slice(), HASH_TRIT_LEN);
+        let trunk_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(), HASH_TRIT_LEN);
+        let branch_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(), HASH_TRIT_LEN);
+        let tag_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_TAG).as_slice(), TAG_TRIT_LEN);
+        let nonce_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_NONCE).as_slice(), NONCE_TRIT_LEN);
+
+        let builder = bee_bundle::TransactionBuilder::new()
+            .with_payload(Payload::from_inner_unchecked(payload_tritbuf))
+            .with_address(Address::from_inner_unchecked(address_tritbuf))
+            .with_value(Value::from_inner_unchecked(value))
+            .with_obsolete_tag(Tag::from_inner_unchecked(obs_tag_tritbuf))
+            .with_timestamp(Timestamp::from_inner_unchecked(timestamp))
+            .with_index(Index::from_inner_unchecked(index))
+            .with_last_index(Index::from_inner_unchecked(last_index))
+            .with_bundle(Hash::from_inner_unchecked(bundle_tritbuf))
+            .with_trunk(Hash::from_inner_unchecked(trunk_tritbuf))
+            .with_branch(Hash::from_inner_unchecked(branch_tritbuf))
+            .with_tag(Tag::from_inner_unchecked(tag_tritbuf))
+            .with_attachment_ts(Timestamp::from_inner_unchecked(attachment_ts))
+            .with_attachment_lbts(Timestamp::from_inner_unchecked(attachment_lbts))
+            .with_attachment_ubts(Timestamp::from_inner_unchecked(attachment_ubts))
+            .with_nonce(Nonce::from_inner_unchecked(nonce_tritbuf));
+
+        // TODO(thibault) handle error!
+        let tx = builder.build().unwrap();
+
+        Ok(Self(tx))
     }
 }
 
-// Allow this type to be treated like an error
-impl StdError for SqlxBackendError {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        match self {
-            _ => None,
-        }
+impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for MilestoneWrapper {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
+        let hash_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(MILESTONE_COL_HASH).as_slice(), HASH_TRIT_LEN);
+
+        Ok(Self(Milestone {
+            hash: Hash::from_inner_unchecked(hash_tritbuf),
+            index: row.get::<i32, _>(MILESTONE_COL_ID) as u32,
+        }))
     }
 }
 
-impl From<std::env::VarError> for SqlxBackendError {
-    #[inline]
-    fn from(err: std::env::VarError) -> Self {
-        SqlxBackendError::EnvError(err)
+impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for StateDeltaWrapper {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
+        let delta_str = row.get::<String, _>(MILESTONE_COL_DELTA);
+        let delta: StateDeltaMap = bincode::deserialize(&delta_str.as_bytes()).unwrap();
+        Ok(Self(delta))
     }
 }
 
-impl From<SqlxError> for SqlxBackendError {
-    #[inline]
-    fn from(err: SqlxError) -> Self {
-        SqlxBackendError::SqlxError(String::from(err.to_string()))
-    }
-}
+impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for AttachmentData {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
+        let hash = Hash::from_inner_unchecked(decode_bytes(
+            row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
+            HASH_TRIT_LEN,
+        ));
 
-impl From<std::boxed::Box<bincode::ErrorKind>> for SqlxBackendError {
-    #[inline]
-    fn from(err: std::boxed::Box<bincode::ErrorKind>) -> Self {
-        SqlxBackendError::Bincode(String::from(err.as_ref().to_string()))
+        let trunk = Hash::from_inner_unchecked(decode_bytes(
+            row.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(),
+            HASH_TRIT_LEN,
+        ));
+
+        let branch = Hash::from_inner_unchecked(decode_bytes(
+            row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(),
+            HASH_TRIT_LEN,
+        ));
+
+        Ok(AttachmentData { hash, trunk, branch })
     }
 }
 
@@ -204,34 +257,22 @@ impl StorageBackend for SqlxBackendStorage {
         let mut hash_to_approvers = HashMap::new();
 
         loop {
-            let rows = block_on(
-                sqlx::query(SELECT_HASH_BRANCH_TRUNK_LIMIT_STATEMENT)
+            let rows: Vec<AttachmentData> = block_on(
+                sqlx::query_as(SELECT_HASH_BRANCH_TRUNK_LIMIT_STATEMENT)
                     .bind(start)
                     .bind(MAX_RECORDS_AT_ONCE)
-                    .fetch_all(&mut pool),
+                    .fetch_all(pool),
             )?;
 
-            for (_, row) in rows.iter().enumerate() {
+            for (_, attachment_data) in rows.iter().enumerate() {
                 hash_to_approvers
-                    .entry(Hash::from_inner_unchecked(decode_bytes(
-                        row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(),
-                        HASH_TRIT_LEN,
-                    )))
+                    .entry(attachment_data.branch.clone())
                     .or_insert(HashSet::new())
-                    .insert(Hash::from_inner_unchecked(decode_bytes(
-                        row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
-                        HASH_TRIT_LEN,
-                    )));
+                    .insert(attachment_data.hash.clone());
                 hash_to_approvers
-                    .entry(Hash::from_inner_unchecked(decode_bytes(
-                        row.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(),
-                        HASH_TRIT_LEN,
-                    )))
+                    .entry(attachment_data.trunk.clone())
                     .or_insert(HashSet::new())
-                    .insert(Hash::from_inner_unchecked(decode_bytes(
-                        row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
-                        HASH_TRIT_LEN,
-                    )));
+                    .insert(attachment_data.hash.clone());
             }
 
             if rows.len() < MAX_RECORDS_AT_ONCE as usize {
@@ -262,51 +303,29 @@ impl StorageBackend for SqlxBackendStorage {
 
         let mut missing_to_approvers = HashMap::new();
         loop {
-            let rows = block_on(
-                sqlx::query(SELECT_HASH_BRANCH_TRUNK_LIMIT_STATEMENT)
+            let rows: Vec<AttachmentData> = block_on(
+                sqlx::query_as(SELECT_HASH_BRANCH_TRUNK_LIMIT_STATEMENT)
                     .bind(start)
                     .bind(end)
-                    .fetch_all(&mut pool),
+                    .fetch_all(pool),
             )?;
 
-            for (_, row) in rows.iter().enumerate() {
-                let branch = Hash::from_inner_unchecked(decode_bytes(
-                    row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(),
-                    HASH_TRIT_LEN,
-                ));
-                let trunk = Hash::from_inner_unchecked(decode_bytes(
-                    row.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(),
-                    HASH_TRIT_LEN,
-                ));
+            for (_, attachment_data) in rows.iter().enumerate() {
                 let mut optional_approver_rc = None;
 
-                if !all_hashes.contains(&branch) {
-                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(Hash::from_inner_unchecked(decode_bytes(
-                        row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
-                        HASH_TRIT_LEN,
-                    ))));
+                if !all_hashes.contains(&attachment_data.branch) {
+                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(attachment_data.hash.clone()));
                     missing_to_approvers
-                        .entry(Hash::from_inner_unchecked(decode_bytes(
-                            row.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(),
-                            HASH_TRIT_LEN,
-                        )))
+                        .entry(attachment_data.branch.clone())
                         .or_insert(HashSet::new())
                         .insert(optional_approver_rc.clone().unwrap());
                 }
 
-                if !all_hashes.contains(&trunk) {
-                    let approver_rc: Rc<bee_bundle::Hash> = optional_approver_rc.map_or(
-                        Rc::new(Hash::from_inner_unchecked(decode_bytes(
-                            row.get::<Vec<u8>, _>(TRANSACTION_COL_HASH).as_slice(),
-                            HASH_TRIT_LEN,
-                        ))),
-                        |rc| rc.clone(),
-                    );
+                if !all_hashes.contains(&attachment_data.trunk) {
+                    let approver_rc: Rc<bee_bundle::Hash> =
+                        optional_approver_rc.map_or(Rc::new(attachment_data.hash.clone()), |rc| rc.clone());
                     missing_to_approvers
-                        .entry(Hash::from_inner_unchecked(decode_bytes(
-                            row.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(),
-                            HASH_TRIT_LEN,
-                        )))
+                        .entry(attachment_data.trunk.clone())
                         .or_insert(HashSet::new())
                         .insert(approver_rc.clone());
                 }
@@ -369,58 +388,12 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
 
         let _user_id: i32 = 0;
-        let rec = sqlx::query(FIND_TRANSACTION_BY_HASH_STATEMENT)
+        let tx_wrapper: TransactionWrapper = sqlx::query_as(FIND_TRANSACTION_BY_HASH_STATEMENT)
             .bind(encode_buffer(tx_hash.to_inner().encode::<T5B1Buf>()))
             .fetch_one(&mut pool)
             .await?;
 
-        let value: i64 = rec.get::<i32, _>(TRANSACTION_COL_VALUE) as i64;
-        let index: usize = rec.get::<i16, _>(TRANSACTION_COL_CURRENT_INDEX) as usize;
-        let last_index: usize = rec.get::<i16, _>(TRANSACTION_COL_LAST_INDEX) as usize;
-        let attachment_ts: u64 = rec.get::<i32, _>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP) as u64;
-        let attachment_lbts: u64 = rec.get::<i32, _>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_LOWER) as u64;
-        let attachment_ubts: u64 = rec.get::<i32, _>(TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER) as u64;
-        let timestamp: u64 = rec.get::<i32, _>(TRANSACTION_COL_TIMESTAMP) as u64;
-
-        let payload_tritbuf = decode_bytes(
-            rec.get::<Vec<u8>, _>(TRANSACTION_COL_PAYLOAD).as_slice(),
-            PAYLOAD_TRIT_LEN,
-        );
-        let address_tritbuf = decode_bytes(
-            rec.get::<Vec<u8>, _>(TRANSACTION_COL_ADDRESS).as_slice(),
-            ADDRESS_TRIT_LEN,
-        );
-        let obs_tag_tritbuf = decode_bytes(
-            rec.get::<Vec<u8>, _>(TRANSACTION_COL_OBSOLETE_TAG).as_slice(),
-            TAG_TRIT_LEN,
-        );
-        let bundle_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(TRANSACTION_COL_BUNDLE).as_slice(), HASH_TRIT_LEN);
-        let trunk_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(TRANSACTION_COL_TRUNK).as_slice(), HASH_TRIT_LEN);
-        let branch_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(TRANSACTION_COL_BRANCH).as_slice(), HASH_TRIT_LEN);
-        let tag_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(TRANSACTION_COL_TAG).as_slice(), TAG_TRIT_LEN);
-        let nonce_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(TRANSACTION_COL_NONCE).as_slice(), NONCE_TRIT_LEN);
-
-        let builder = bee_bundle::TransactionBuilder::new()
-            .with_payload(Payload::from_inner_unchecked(payload_tritbuf))
-            .with_address(Address::from_inner_unchecked(address_tritbuf))
-            .with_value(Value::from_inner_unchecked(value))
-            .with_obsolete_tag(Tag::from_inner_unchecked(obs_tag_tritbuf))
-            .with_timestamp(Timestamp::from_inner_unchecked(timestamp))
-            .with_index(Index::from_inner_unchecked(index))
-            .with_last_index(Index::from_inner_unchecked(last_index))
-            .with_bundle(Hash::from_inner_unchecked(bundle_tritbuf))
-            .with_trunk(Hash::from_inner_unchecked(trunk_tritbuf))
-            .with_branch(Hash::from_inner_unchecked(branch_tritbuf))
-            .with_tag(Tag::from_inner_unchecked(tag_tritbuf))
-            .with_attachment_ts(Timestamp::from_inner_unchecked(attachment_ts))
-            .with_attachment_lbts(Timestamp::from_inner_unchecked(attachment_lbts))
-            .with_attachment_ubts(Timestamp::from_inner_unchecked(attachment_ubts))
-            .with_nonce(Nonce::from_inner_unchecked(nonce_tritbuf));
-
-        // TODO(thibault) handle error!
-        let tx = builder.build().unwrap();
-
-        Ok(tx)
+        Ok(tx_wrapper.0)
     }
 
     async fn update_transactions_set_solid(
@@ -438,8 +411,10 @@ impl StorageBackend for SqlxBackendStorage {
         transaction_hashes.iter().for_each(|hash| {
             let _ = sqlx::query(UPDATE_SET_SOLID_STATEMENT)
                 .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
-                .fetch_one(&mut conn_transaction);
+                .execute(&mut conn_transaction);
         });
+
+        conn_transaction.commit().await?;
 
         Ok(())
     }
@@ -461,7 +436,7 @@ impl StorageBackend for SqlxBackendStorage {
             let _ = sqlx::query(UPDATE_SNAPSHOT_INDEX_STATEMENT)
                 .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
                 .bind(snapshot_index as i32)
-                .fetch_one(&mut conn_transaction);
+                .execute(&mut conn_transaction);
         });
 
         conn_transaction.commit().await?;
@@ -482,9 +457,9 @@ impl StorageBackend for SqlxBackendStorage {
         let mut conn_transaction = pool.begin().await?;
 
         for hash in transaction_hashes.iter() {
-            let _ = sqlx::query(DELETE_TRANSACTION_STATEMENT)
+            sqlx::query(DELETE_TRANSACTION_STATEMENT)
                 .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
-                .fetch_all(&mut conn_transaction)
+                .execute(&mut conn_transaction)
                 .await?;
         }
 
@@ -561,19 +536,11 @@ impl StorageBackend for SqlxBackendStorage {
 
         let _user_id: i32 = 0;
 
-        let rec = sqlx::query(FIND_MILESTONE_BY_HASH_STATEMENT)
+        let milestone_wrapper: MilestoneWrapper = sqlx::query_as(FIND_MILESTONE_BY_HASH_STATEMENT)
             .bind(encode_buffer(milestone_hash.to_inner().encode::<T5B1Buf>()))
             .fetch_one(&mut pool)
             .await?;
-
-        let hash_tritbuf = decode_bytes(rec.get::<Vec<u8>, _>(MILESTONE_COL_HASH).as_slice(), HASH_TRIT_LEN);
-
-        let milestone = Milestone {
-            hash: Hash::from_inner_unchecked(hash_tritbuf),
-            index: rec.get::<i32, _>(MILESTONE_COL_ID) as MilestoneIndex,
-        };
-
-        Ok(milestone)
+        Ok(milestone_wrapper.0)
     }
 
     async fn delete_milestones(&self, milestone_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), SqlxBackendError> {
@@ -586,9 +553,9 @@ impl StorageBackend for SqlxBackendStorage {
         let mut conn_transaction = pool.begin().await?;
 
         for hash in milestone_hashes.iter() {
-            let _row = sqlx::query(DELETE_MILESTONE_BY_HASH_STATEMENT)
+            sqlx::query(DELETE_MILESTONE_BY_HASH_STATEMENT)
                 .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
-                .fetch_all(&mut conn_transaction)
+                .execute(&mut conn_transaction)
                 .await?;
         }
 
@@ -631,14 +598,11 @@ impl StorageBackend for SqlxBackendStorage {
             .as_ref()
             .expect(CONNECTION_NOT_INITIALIZED);
 
-        let rec = sqlx::query(LOAD_DELTA_STATEMENT_BY_INDEX)
+        let state_delta_wrapper: StateDeltaWrapper = sqlx::query_as(LOAD_DELTA_STATEMENT_BY_INDEX)
             .bind(index as i32)
             .fetch_one(&mut pool)
             .await?;
 
-        let delta = rec.get::<String, _>(MILESTONE_COL_DELTA);
-        let decoded: StateDeltaMap = bincode::deserialize(&delta.as_bytes())?;
-
-        Ok(decoded)
+        Ok(state_delta_wrapper.0)
     }
 }

@@ -15,6 +15,7 @@ mod tests {
         storage::{
             HashesToApprovers,
             MissingHashesToRCApprovers,
+            StateDeltaMap,
             StorageBackend,
         },
     };
