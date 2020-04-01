@@ -11,7 +11,10 @@ use crate::{
     },
 };
 
-use bee_crypto::Sponge;
+use bee_crypto::{
+    Kerl,
+    Sponge,
+};
 use bee_signing::{
     PublicKey,
     Signature,
@@ -51,9 +54,7 @@ pub struct StagedIncomingBundleBuilder<E, P, S> {
     stage: PhantomData<S>,
 }
 
-// TODO default kerl
-pub type IncomingBundleBuilder =
-    StagedIncomingBundleBuilder<bee_crypto::CurlP81, WotsPublicKey<bee_crypto::CurlP81>, IncomingRaw>;
+pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
 
 impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
 where

@@ -12,7 +12,10 @@ use crate::{
     },
 };
 
-use bee_crypto::Sponge;
+use bee_crypto::{
+    Kerl,
+    Sponge,
+};
 use bee_ternary::TritBuf;
 
 use std::marker::PhantomData;
@@ -47,7 +50,7 @@ pub struct StagedOutgoingBundleBuilder<E, S> {
 }
 
 // TODO default to Kerl
-pub type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<bee_crypto::CurlP81, OutgoingRaw>;
+pub type OutgoingBundleBuilder = StagedOutgoingBundleBuilder<Kerl, OutgoingRaw>;
 
 impl<E, S> StagedOutgoingBundleBuilder<E, S>
 where
