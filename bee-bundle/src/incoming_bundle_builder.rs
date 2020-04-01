@@ -150,7 +150,8 @@ where
                 Err(IncomingBundleBuilderError::InvalidAddress)?;
             }
 
-            if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().as_bytes().to_vec()) {
+            if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec())
+            {
                 Err(IncomingBundleBuilderError::InvalidBundleHash)?;
             }
 

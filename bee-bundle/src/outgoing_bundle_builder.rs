@@ -190,8 +190,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
     // TODO TEST
     pub fn attach_local(
         self,
-        trunk: Hash,
-        branch: Hash,
+        _trunk: Hash,
+        _branch: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
@@ -204,8 +204,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
     // TODO TEST
     pub fn attach_remote(
         self,
-        trunk: Hash,
-        branch: Hash,
+        _trunk: Hash,
+        _branch: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
