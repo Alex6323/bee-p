@@ -102,7 +102,9 @@ impl EndpointWorker {
                             let res = add_endpoint(&mut contacts, url, &mut self.notifier).await?;
 
                             if let Some(responder) = responder {
-                                responder.send(res);
+                                if responder.send(res).is_err() {
+                                    warn!("[Endp ] Error sending command response");
+                                };
                             }
                         },
                         Command::RemoveEndpoint { epid, responder } => {
@@ -110,7 +112,9 @@ impl EndpointWorker {
                                 &mut self.notifier).await?;
 
                             if let Some(responder) = responder {
-                                responder.send(res);
+                                if responder.send(res).is_err() {
+                                    warn!("[Endp ] Error sending command response");
+                                };
                             }
                         },
                         Command::Connect { epid, responder } => {
@@ -120,7 +124,9 @@ impl EndpointWorker {
                             let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
 
                             if let Some(responder) = responder {
-                                responder.send(is_disconnected);
+                                if responder.send(is_disconnected).is_err() {
+                                    warn!("[Endp ] Error sending command response");
+                                };
                             }
 
                             if is_disconnected {
@@ -137,21 +143,27 @@ impl EndpointWorker {
                             let res = send_bytes(&epid, bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
-                                responder.send(res);
+                                if responder.send(res).is_err() {
+                                    warn!("[Endp ] Error sending command response");
+                                };
                             }
                         },
                         Command::MulticastBytes { epids, bytes, responder } => {
                             let res = multicast_bytes(&epids, bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
-                                responder.send(res);
+                                if responder.send(res).is_err() {
+                                    warn!("[Endp ] Error sending command response");
+                                };
                             }
                         },
                         Command::BroadcastBytes { bytes, responder } => {
                             let res = broadcast_bytes(bytes, &mut outbox).await?;
 
                             if let Some(responder) = responder {
-                                responder.send(res);
+                                if responder.send(res).is_err() {
+                                    warn!("[Endp ] Error sending command response");
+                                };
                             }
                         },
                     }
@@ -169,10 +181,10 @@ impl EndpointWorker {
 
                     match event {
                         Event::EndpointAdded { epid, total } => {
-                            publisher.send(Event::EndpointAdded { epid, total }).await;
+                            publisher.send(Event::EndpointAdded { epid, total }).await?;
                         },
                         Event::EndpointRemoved { epid, total } => {
-                            publisher.send(Event::EndpointRemoved { epid, total }).await;
+                            publisher.send(Event::EndpointRemoved { epid, total }).await?;
                         },
                         Event::NewConnection { ep, origin, sender } => {
                             let epid = ep.id;

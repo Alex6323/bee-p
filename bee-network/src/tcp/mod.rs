@@ -84,14 +84,7 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
 
     spawn(writer(ep.id, conn.stream.clone(), receiver, shutdown_sender));
-
-    spawn(reader(
-        ep.id,
-        addr,
-        conn.stream.clone(),
-        notifier.clone(),
-        shutdown_receiver,
-    ));
+    spawn(reader(ep.id, conn.stream.clone(), notifier.clone(), shutdown_receiver));
 
     Ok(notifier.send(Event::NewConnection { ep, origin, sender }).await?)
 }
@@ -135,13 +128,7 @@ async fn writer(epid: EpId, stream: Arc<TcpStream>, bytes_rx: BytesReceiver, sd:
     debug!("[TCP  ] Connection writer event loop for {} stopped.", epid);
 }
 
-async fn reader(
-    epid: EpId,
-    addr: Address,
-    stream: Arc<TcpStream>,
-    mut notifier: Notifier,
-    mut sd: oneshot::Receiver<()>,
-) {
+async fn reader(epid: EpId, stream: Arc<TcpStream>, mut notifier: Notifier, mut sd: oneshot::Receiver<()>) {
     debug!("[TCP  ] Starting connection reader event loop for {}...", epid);
 
     let mut stream = &*stream;
@@ -158,23 +145,17 @@ async fn reader(
                             //continue;
 
                             // TODO: this can probably be spawned
-                            notifier.send(Event::LostConnection {
-                                epid,
-                            }).await;
+                            if notifier.send(Event::LostConnection { epid }).await.is_err() {
+                                warn!("[TCP  ] Failed to send 'LostConnection' notification.");
+                            }
 
                             break;
                         } else {
                             let mut bytes = vec![0u8; num_read];
                             bytes.copy_from_slice(&buffer[0..num_read]);
 
-                            match notifier.send(Event::MessageReceived {
-                                epid,
-                                bytes,
-                            }).await {
-                                Ok(_) => (),
-                                Err(e) => {
-                                    error!("[TCP  ] Failed notifying about bytes received: {:?}.", e);
-                                }
+                            if notifier.send(Event::MessageReceived { epid, bytes }).await.is_err() {
+                                warn!("[TCP  ] Failed to send 'MessageReceived' notification.");
                             }
                         }
                     },

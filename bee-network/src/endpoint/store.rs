@@ -38,6 +38,8 @@ impl Endpoints {
         self.inner.remove(id).is_some()
     }
 
+    // TODO: see if we need this API in the future.
+    #[allow(dead_code)]
     pub fn get(&self, id: &EndpointId) -> Option<&Endpoint> {
         self.inner.get(id)
     }
@@ -46,10 +48,14 @@ impl Endpoints {
         self.inner.get_mut(id)
     }
 
+    // TODO: see if we need this API in the future.
+    #[allow(dead_code)]
     pub fn iter(&self) -> Iter<EndpointId, Endpoint> {
         self.inner.iter()
     }
 
+    // TODO: see if we need this API in the future.
+    #[allow(dead_code)]
     pub fn iter_mut(&mut self) -> IterMut<EndpointId, Endpoint> {
         self.inner.iter_mut()
     }
