@@ -31,6 +31,7 @@ use crate::{
 use bee_network::{
     Command::SendBytes,
     Network,
+    Origin,
 };
 
 use std::{
@@ -157,13 +158,7 @@ impl ReceiverWorker {
                     state: ReceiverWorkerMessageState::Header,
                 });
 
-                // TODO check actual port
-                if handshake.port != handshake.port {
-                    warn!(
-                        "[Peer({})] Invalid handshake port: {} != {}.",
-                        self.peer.epid, handshake.port, handshake.port
-                    );
-                } else if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
+                if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
                     warn!(
                         "[Peer({})] Invalid handshake timestamp, difference of {}ms.",
                         self.peer.epid,
@@ -179,7 +174,24 @@ impl ReceiverWorker {
                 } else if let Err(version) = supported_version(&handshake.supported_messages) {
                     warn!("[Peer({})] Unsupported protocol version: {}.", self.peer.epid, version);
                 } else {
-                    // TODO check duplicate connection
+                    match self.peer.origin {
+                        Origin::Outbound => {
+                            // TODO use Port instead or deref
+                            if handshake.port != *self.peer.address.port() {
+                                warn!(
+                                    "[Peer({})] Invalid handshake port: {} != {}.",
+                                    self.peer.epid, handshake.port, handshake.port
+                                );
+                            }
+                        }
+                        Origin::Inbound => {
+                            // TODO check if whitelisted
+                        }
+                        Origin::Unbound => {
+                            error!("[Peer({})] Unbound peer origin.", self.peer.epid);
+                        }
+                    }
+
                     info!("[Peer({})] Handshake completed.", self.peer.epid);
 
                     Protocol::senders_add(self.network.clone(), self.peer.clone(), self.metrics.clone()).await;
