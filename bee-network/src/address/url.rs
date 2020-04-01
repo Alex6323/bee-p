@@ -47,14 +47,11 @@ impl Url {
         }
     }
 
-
     /// Creates a `Url` from a string slice.
     ///
     /// NOTE: This function expects an input of the format: tcp://example.com:15600.
     pub async fn from_str_with_port(url: &str) -> AddressResult<Self> {
-
         if let Ok(url) = ExternUrl::parse(url) {
-
             let host = url.host_str().ok_or(AddressError::UrlDestructFailure)?;
             let port = url.port().ok_or(AddressError::UrlDestructFailure)?;
 
@@ -66,7 +63,6 @@ impl Url {
                 UDP => Ok(Url::new(addr, Protocol::Udp)),
                 _ => Err(AddressError::UnsupportedProtocol),
             }
-
         } else {
             return Err(AddressError::UrlParseFailure);
         }

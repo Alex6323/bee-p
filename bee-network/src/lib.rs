@@ -17,6 +17,7 @@
 pub use address::{
     url::Url,
     Address,
+    Port,
 };
 pub use commands::{
     response_channel,
