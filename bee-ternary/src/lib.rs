@@ -366,15 +366,6 @@ impl<T: RawEncodingBuf> TritBuf<T> {
     pub fn as_slice_mut(&mut self) -> &mut Trits<T::Slice> {
         unsafe { &mut *(self.0.as_slice_mut() as *mut T::Slice as *mut Trits<T::Slice>) }
     }
-
-    #[deprecated]
-    pub fn into_encoding<U>(self) -> TritBuf<U>
-    where
-        U: RawEncodingBuf,
-        U::Slice: RawEncoding<Trit = <T::Slice as RawEncoding>::Trit>,
-    {
-        T::into_encoding(self)
-    }
 }
 
 impl<T> TritBuf<T1B1Buf<T>>
