@@ -35,7 +35,10 @@ use bee_network::{
 };
 
 use std::{
-    sync::Arc,
+    sync::{
+        atomic::Ordering,
+        Arc,
+    },
     time::{
         SystemTime,
         UNIX_EPOCH,
@@ -331,7 +334,14 @@ impl ReceiverWorker {
                 self.metrics.heartbeat_received_inc();
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
-                    Ok(_) => {}
+                    Ok(message) => {
+                        self.peer
+                            .first_solid_milestone_index
+                            .store(message.first_solid_milestone_index, Ordering::Relaxed);
+                        self.peer
+                            .last_solid_milestone_index
+                            .store(message.last_solid_milestone_index, Ordering::Relaxed);
+                    }
                     Err(e) => {
                         warn!("[Peer({})] Reading Heartbeat failed: {:?}.", self.peer.epid, e);
                     }

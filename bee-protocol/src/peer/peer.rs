@@ -1,11 +1,13 @@
-use crate::{
-    message::Heartbeat,
-    peer::PeerMetrics,
-};
+use crate::peer::PeerMetrics;
 use bee_network::{
     Address,
     EndpointId,
     Origin,
+};
+
+use std::sync::atomic::{
+    AtomicU32,
+    Ordering,
 };
 
 pub struct Peer {
@@ -13,7 +15,9 @@ pub struct Peer {
     pub(crate) address: Address,
     pub(crate) origin: Origin,
     pub(crate) metrics: PeerMetrics,
-    pub(crate) heartbeat: Heartbeat,
+    // TODO  MilestoneIndex atomic ?
+    pub(crate) first_solid_milestone_index: AtomicU32,
+    pub(crate) last_solid_milestone_index: AtomicU32,
 }
 
 impl Peer {
@@ -23,7 +27,8 @@ impl Peer {
             address,
             origin,
             metrics: PeerMetrics::default(),
-            heartbeat: Heartbeat::default(),
+            first_solid_milestone_index: AtomicU32::new(0),
+            last_solid_milestone_index: AtomicU32::new(0),
         }
     }
 }
