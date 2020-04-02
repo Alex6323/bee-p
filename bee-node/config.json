@@ -30,7 +30,7 @@
   "protocol": {
     "coordinator": {
       "publicKey": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
-      "sponge": "kerl",
+      "sponge_type": "kerl",
       "securityLevel": 2,
       "depth": 23
     },
