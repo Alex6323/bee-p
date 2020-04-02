@@ -1,4 +1,10 @@
 use crate::{
+    conf::{
+        HEARTBEAT_SEND_BOUND,
+        MILESTONE_REQUEST_SEND_BOUND,
+        TRANSACTION_BROADCAST_SEND_BOUND,
+        TRANSACTION_REQUEST_SEND_BOUND,
+    },
     message::{
         Heartbeat,
         MilestoneRequest,
@@ -13,12 +19,6 @@ use crate::{
     peer::{
         Peer,
         PeerMetrics,
-    },
-    protocol::{
-        HEARTBEAT_SEND_BOUND,
-        MILESTONE_REQUEST_SEND_BOUND,
-        TRANSACTION_BROADCAST_SEND_BOUND,
-        TRANSACTION_REQUEST_SEND_BOUND,
     },
     worker::{
         MilestoneRequesterWorker,

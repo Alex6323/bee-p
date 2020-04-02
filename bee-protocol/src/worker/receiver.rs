@@ -1,4 +1,9 @@
 use crate::{
+    conf::{
+        slice_eq,
+        COORDINATOR_BYTES,
+        MINIMUM_WEIGHT_MAGNITUDE,
+    },
     message::{
         Handshake,
         Header,
@@ -14,11 +19,8 @@ use crate::{
         PeerMetrics,
     },
     protocol::{
-        slice_eq,
         supported_version,
         Protocol,
-        COORDINATOR_BYTES,
-        MINIMUM_WEIGHT_MAGNITUDE,
         SUPPORTED_VERSIONS,
     },
     worker::{

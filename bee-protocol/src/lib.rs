@@ -1,3 +1,4 @@
+mod conf;
 mod message;
 mod milestone;
 mod peer;
