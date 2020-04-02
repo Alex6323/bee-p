@@ -7,7 +7,7 @@ mod tangle;
 mod vertex;
 
 use solidifier::SolidifierState;
-use tangle::Tangle;
+pub use tangle::Tangle;
 
 use async_std::{
     sync::channel,

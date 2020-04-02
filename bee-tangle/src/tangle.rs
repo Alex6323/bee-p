@@ -1,3 +1,5 @@
+//! Module that provides the [`Tangle`] struct and some static functions.
+
 use crate::{
     vertex::{
         Vertex,
@@ -14,23 +16,30 @@ use dashmap::DashMap;
 
 use bee_bundle::Transaction;
 
+/// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
     vertices: DashMap<TransactionId, Vertex>,
     unsolid_new: Sender<Hash>,
 }
 
 impl Tangle {
-    pub fn new(unsolid_new: Sender<Hash>) -> Self {
+    /// Constructor.
+    pub(crate) fn new(unsolid_new: Sender<Hash>) -> Self {
         Self {
             vertices: DashMap::new(),
             unsolid_new,
         }
     }
 
-    pub async fn insert(&'static self, hash: Hash, v: Vertex) -> Option<VertexRef> {
-        let meta = v.meta;
+    /// Inserts a transaction.
+    pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<VertexRef> {
+        todo!("insert_transaction")
+    }
 
-        if self.vertices.insert(hash, v).is_none() {
+    async fn insert(&'static self, hash: Hash, vertex: Vertex) -> Option<VertexRef> {
+        let meta = vertex.meta;
+
+        if self.vertices.insert(hash, vertex).is_none() {
             self.unsolid_new.send(hash).await;
             Some(VertexRef { meta, tangle: self })
         } else {
@@ -38,11 +47,17 @@ impl Tangle {
         }
     }
 
-    pub async fn solidify(&'static self, _id: TransactionId) -> Option<()> {
+    async fn solidify(&'static self, _id: TransactionId) -> Option<()> {
         todo!()
     }
 
+    /// Returns meta data about transaction, if it's available in the local Tangle.
     pub async fn get_meta(&'static self, _id: TransactionId) -> Option<VertexMeta> {
+        todo!()
+    }
+
+    /// Returns a reference to a transaction, if it's available in the local Tangle.
+    pub async fn get_body(&'static self, _id: TransactionId) -> Option<&Transaction> {
         todo!()
     }
 
@@ -53,10 +68,7 @@ impl Tangle {
         todo!()
     }
 
-    pub async fn get_body(&'static self, _id: TransactionId) -> Option<&Transaction> {
-        todo!()
-    }
-
+    /// Returns a [`VertexRef`] linked to a transaction, if it's available in the local Tangle.
     pub async fn get(&'static self, id: TransactionId) -> Option<VertexRef> {
         Some(VertexRef {
             meta: self.get_meta(id).await?,
@@ -64,14 +76,17 @@ impl Tangle {
         })
     }
 
+    /// Returns whether the transaction is stored in the local Tangle.
     pub async fn contains(&'static self, id: TransactionId) -> bool {
         self.get_meta(id).await.is_some()
     }
 
+    ///  Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
     pub async fn get_milestone(&'static self, _idx: MilestoneIndex) -> Option<VertexRef> {
         todo!()
     }
 
+    /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
     pub async fn get_latest_milestone(&'static self, _idx: MilestoneIndex) -> Option<VertexRef> {
         todo!()
     }
