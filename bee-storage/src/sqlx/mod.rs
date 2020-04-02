@@ -61,15 +61,12 @@ use std::collections::{
 
 use std::{
     rc::Rc,
-    slice,
-    vec,
 };
 
 use async_trait::async_trait;
 use futures::executor::block_on;
 use sqlx::{
     postgres::PgQueryAs,
-    FromRow,
     PgPool,
     Row,
 };
@@ -85,7 +82,6 @@ struct AttachmentData {
     branch: Hash,
 }
 
-const FAILED_ESTABLISHING_CONNECTION: &str = "failed to establish connection.";
 const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
 
 impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for TransactionWrapper {
@@ -243,7 +239,7 @@ impl StorageBackend for SqlxBackendStorage {
     }
 
     fn map_existing_transaction_hashes_to_approvers(&self) -> Result<HashesToApprovers, SqlxBackendError> {
-        let mut pool = self
+        let pool = self
             .0
             .connection
             .connection_pool
@@ -290,7 +286,7 @@ impl StorageBackend for SqlxBackendStorage {
         &self,
         all_hashes: HashSet<bee_bundle::Hash>,
     ) -> Result<MissingHashesToRCApprovers, SqlxBackendError> {
-        let mut pool = self
+        let pool = self
             .0
             .connection
             .connection_pool
