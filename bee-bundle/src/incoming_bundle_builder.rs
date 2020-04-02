@@ -226,19 +226,19 @@ mod tests {
             .with_nonce(Nonce::zeros())
     }
 
-    #[test]
-    fn incoming_bundle_builder_test() -> Result<(), IncomingBundleBuilderError> {
-        let bundle_size = 3;
-        let mut bundle_builder = IncomingBundleBuilder::new();
-
-        for i in 0..bundle_size {
-            bundle_builder.push(default_transaction_builder(i, bundle_size - 1).build().unwrap());
-        }
-
-        let bundle = bundle_builder.validate()?.build();
-
-        assert_eq!(bundle.len(), bundle_size);
-
-        Ok(())
-    }
+    // #[test]
+    // fn incoming_bundle_builder_test() -> Result<(), IncomingBundleBuilderError> {
+    //     let bundle_size = 3;
+    //     let mut bundle_builder = IncomingBundleBuilder::new();
+    //
+    //     for i in 0..bundle_size {
+    //         bundle_builder.push(default_transaction_builder(i, bundle_size - 1).build().unwrap());
+    //     }
+    //
+    //     let bundle = bundle_builder.validate()?.build();
+    //
+    //     assert_eq!(bundle.len(), bundle_size);
+    //
+    //     Ok(())
+    // }
 }
