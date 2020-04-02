@@ -61,15 +61,12 @@ use std::collections::{
 
 use std::{
     rc::Rc,
-    slice,
-    vec,
 };
 
 use async_trait::async_trait;
 use futures::executor::block_on;
 use sqlx::{
     postgres::PgQueryAs,
-    FromRow,
     PgPool,
     Row,
 };
@@ -85,7 +82,6 @@ struct AttachmentData {
     branch: Hash,
 }
 
-const FAILED_ESTABLISHING_CONNECTION: &str = "failed to establish connection.";
 const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
 
 impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for TransactionWrapper {
@@ -220,31 +216,30 @@ impl Connection<SqlxBackendConnection> for SqlxBackendConnection {
 #[derive(Clone, Debug)]
 pub struct SqlxBackendStorage(Storage<SqlxBackendConnection>);
 
-impl SqlxBackendStorage {
-    pub fn new() -> Self {
+//TODO - handle errors
+#[async_trait]
+impl StorageBackend for SqlxBackendStorage {
+    type StorageError = SqlxBackendError;
+
+    fn new() -> Self {
         let stor = Storage {
             connection: SqlxBackendConnection::new(),
         };
         SqlxBackendStorage(stor)
     }
 
-    pub async fn establish_connection(&mut self, url: &str) -> Result<(), SqlxBackendError> {
+    async fn establish_connection(&mut self, url: &str) -> Result<(), SqlxBackendError> {
         let _res = self.0.connection.establish_connection(url).await?;
         Ok(())
     }
-    pub async fn destroy_connection(&mut self) -> Result<(), SqlxBackendError> {
+
+    async fn destroy_connection(&mut self) -> Result<(), SqlxBackendError> {
         let _res = self.0.connection.destroy_connection().await?;
         Ok(())
     }
-}
-
-//TODO - handle errors
-#[async_trait]
-impl StorageBackend for SqlxBackendStorage {
-    type StorageError = SqlxBackendError;
 
     fn map_existing_transaction_hashes_to_approvers(&self) -> Result<HashesToApprovers, SqlxBackendError> {
-        let mut pool = self
+        let pool = self
             .0
             .connection
             .connection_pool
@@ -291,7 +286,7 @@ impl StorageBackend for SqlxBackendStorage {
         &self,
         all_hashes: HashSet<bee_bundle::Hash>,
     ) -> Result<MissingHashesToRCApprovers, SqlxBackendError> {
-        let mut pool = self
+        let pool = self
             .0
             .connection
             .connection_pool
