@@ -16,6 +16,8 @@ use crate::{
         PeerMetrics,
     },
     worker::{
+        BroadcasterWorker,
+        BroadcasterWorkerEvent,
         MilestoneRequesterWorker,
         MilestoneRequesterWorkerEvent,
         MilestoneResponderWorker,
@@ -51,15 +53,19 @@ use async_std::{
     sync::RwLock,
     task::spawn,
 };
-use futures::channel::{
-    mpsc,
-    oneshot,
+use futures::{
+    channel::{
+        mpsc,
+        oneshot,
+    },
+    sink::SinkExt,
 };
 use log::warn;
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
 pub struct Protocol {
+    pub(crate) network: Network,
     pub(crate) conf: ProtocolConf,
     pub(crate) transaction_worker: (mpsc::Sender<TransactionWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) transaction_responder_worker: (
@@ -82,13 +88,14 @@ pub struct Protocol {
         mpsc::Sender<MilestoneValidatorWorkerEvent>,
         Mutex<Option<oneshot::Sender<()>>>,
     ),
+    pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
     pub(crate) first_solid_milestone_index: AtomicU32,
     pub(crate) last_solid_milestone_index: AtomicU32,
 }
 
 impl Protocol {
-    pub fn init(conf: ProtocolConf) {
+    pub fn init(network: Network, conf: ProtocolConf) {
         if unsafe { !PROTOCOL.is_null() } {
             warn!("[Protocol ] Already initialized.");
             return;
@@ -117,7 +124,11 @@ impl Protocol {
             mpsc::channel(conf.milestone_validator_worker_bound);
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
+        let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(conf.broadcaster_worker_bound);
+        let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
+
         let protocol = Protocol {
+            network: network.clone(),
             conf,
             transaction_worker: (transaction_worker_tx, Mutex::new(Some(transaction_worker_shutdown_tx))),
             transaction_responder_worker: (
@@ -140,6 +151,7 @@ impl Protocol {
                 milestone_validator_worker_tx,
                 Mutex::new(Some(milestone_validator_worker_shutdown_tx)),
             ),
+            broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             contexts: RwLock::new(HashMap::new()),
             first_solid_milestone_index: AtomicU32::new(0),
             last_solid_milestone_index: AtomicU32::new(0),
@@ -173,6 +185,7 @@ impl Protocol {
         spawn(
             MilestoneValidatorWorker::new(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx).run(),
         );
+        spawn(BroadcasterWorker::new(network, broadcaster_worker_rx, broadcaster_worker_shutdown_rx).run());
     }
 
     pub fn shutdown() {
@@ -218,6 +231,13 @@ impl Protocol {
                 }
             }
         }
+        if let Ok(mut shutdown) = Protocol::get().broadcaster_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down BroadcasterWorker failed: {:?}.", e);
+                }
+            }
+        }
     }
 
     pub(crate) fn get() -> &'static Protocol {
@@ -228,17 +248,15 @@ impl Protocol {
         }
     }
 
-    pub fn register(
-        network: Network,
-        peer: Arc<Peer>,
-        metrics: Arc<PeerMetrics>,
-    ) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
+    pub fn register(peer: Arc<Peer>, metrics: Arc<PeerMetrics>) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
         //TODO check if not already added ?
         // ReceiverWorker
         let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().conf.receiver_worker_bound);
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
-        spawn(ReceiverWorker::new(network, peer, metrics).run(receiver_rx, receiver_shutdown_rx));
+        spawn(
+            ReceiverWorker::new(Protocol::get().network.clone(), peer, metrics).run(receiver_rx, receiver_shutdown_rx),
+        );
 
         (receiver_tx, receiver_shutdown_tx)
     }
@@ -346,8 +364,18 @@ impl Protocol {
         SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(transaction)).await;
     }
 
+    // TODO explain why different
     pub async fn broadcast_transaction(transaction: &[u8]) {
-        SenderWorker::<TransactionBroadcast>::broadcast(TransactionBroadcast::new(transaction)).await;
+        if let Err(e) = Protocol::get()
+            .broadcaster_worker
+            // TODO try to avoid
+            .0
+            .clone()
+            .send(TransactionBroadcast::new(transaction))
+            .await
+        {
+            warn!("[Protocol ] Broadcasting transaction failed: {}.", e);
+        }
     }
 
     //  TODO constant

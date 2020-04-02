@@ -22,6 +22,7 @@ const CONF_TRANSACTION_REQUESTER_WORKER_BOUND: (&str, usize) =
     ("protocol.channels.transactionRequesterWorkerBound", 1000);
 const CONF_MILESTONE_REQUESTER_WORKER_BOUND: (&str, usize) = ("protocol.channels.milestoneRequesterWorkerBound", 1000);
 const CONF_RECEIVER_WORKER_BOUND: (&str, usize) = ("protocol.channels.receiverWorkerBound", 1000);
+const CONF_BROADCASTER_WORKER_BOUND: (&str, usize) = ("protocol.channels.broadcasterWorkerBound", 1000);
 
 // TODO Impl in term of CONF_COO_PUBLIC_KEY
 pub(crate) const COORDINATOR_BYTES: [u8; 49] = [
@@ -48,6 +49,7 @@ pub struct ProtocolConfBuilder {
     transaction_requester_worker_bound: Option<usize>,
     milestone_requester_worker_bound: Option<usize>,
     receiver_worker_bound: Option<usize>,
+    broadcaster_worker_bound: Option<usize>,
 }
 
 impl ProtocolConfBuilder {
@@ -148,6 +150,11 @@ impl ProtocolConfBuilder {
         self
     }
 
+    pub fn broadcaster_worker_bound(mut self, broadcaster_worker_bound: usize) -> Self {
+        self.broadcaster_worker_bound.replace(broadcaster_worker_bound);
+        self
+    }
+
     pub fn build(self) -> ProtocolConf {
         ProtocolConf {
             coo_public_key: self.coo_public_key.unwrap_or(CONF_COO_PUBLIC_KEY.1.to_owned()),
@@ -184,6 +191,7 @@ impl ProtocolConfBuilder {
                 .milestone_requester_worker_bound
                 .unwrap_or(CONF_MILESTONE_REQUESTER_WORKER_BOUND.1),
             receiver_worker_bound: self.receiver_worker_bound.unwrap_or(CONF_RECEIVER_WORKER_BOUND.1),
+            broadcaster_worker_bound: self.broadcaster_worker_bound.unwrap_or(CONF_BROADCASTER_WORKER_BOUND.1),
         }
     }
 }
@@ -206,6 +214,7 @@ pub struct ProtocolConf {
     pub(crate) transaction_requester_worker_bound: usize,
     pub(crate) milestone_requester_worker_bound: usize,
     pub(crate) receiver_worker_bound: usize,
+    pub(crate) broadcaster_worker_bound: usize,
 }
 
 // TODO move out of here

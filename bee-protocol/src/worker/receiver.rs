@@ -104,7 +104,7 @@ impl ReceiverWorker {
     }
 
     pub async fn run(mut self, bytes_receiver: mpsc::Receiver<Vec<u8>>, shutdown_receiver: oneshot::Receiver<()>) {
-        info!("[Peer({})] Receiver worker running.", self.peer.epid);
+        info!("[Peer({})] Running.", self.peer.epid);
 
         let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
             state: ReceiverWorkerMessageState::Header,
@@ -144,7 +144,7 @@ impl ReceiverWorker {
             }
         }
 
-        info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
+        info!("[Peer({})] Stopped.", self.peer.epid);
 
         Protocol::senders_remove(&self.peer.epid).await;
     }

@@ -47,6 +47,7 @@
       "transactionRequesterWorkerBound": 1000,
       "milestoneRequesterWorkerBound": 1000,
       "receiverWorkerBound": 1000,
+      "broadcasterWorkerBound": 1000,
     }
   },
 

@@ -80,8 +80,7 @@ impl Node {
 
     async fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
         let peer = Arc::new(Peer::new(epid, address, origin));
-        let (receiver_tx, receiver_shutdown_tx) =
-            Protocol::register(self.network.clone(), peer.clone(), self.metrics.clone());
+        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(peer.clone(), self.metrics.clone());
 
         self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx, peer));
     }
@@ -131,7 +130,7 @@ impl Node {
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
         let protocol_conf = ProtocolConfBuilder::new().build();
-        Protocol::init(protocol_conf);
+        Protocol::init(self.network.clone(), protocol_conf);
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf
