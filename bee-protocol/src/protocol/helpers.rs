@@ -16,6 +16,8 @@ use futures::sink::SinkExt;
 use log::warn;
 
 impl Protocol {
+    // Heartbeat
+
     pub async fn send_heartbeat(
         epid: EndpointId,
         first_solid_milestone_index: MilestoneIndex,
@@ -36,13 +38,25 @@ impl Protocol {
             .await;
     }
 
+    // MilestoneRequest
+
     pub async fn send_milestone_request(epid: EndpointId, index: MilestoneIndex) {
         SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+    }
+
+    pub async fn send_latest_milestone_request(epid: EndpointId) {
+        Protocol::send_milestone_request(epid, 0).await;
     }
 
     pub async fn broadcast_milestone_request(index: MilestoneIndex) {
         SenderWorker::<MilestoneRequest>::broadcast(MilestoneRequest::new(index)).await;
     }
+
+    pub async fn broadcast_latest_milestone_request() {
+        Protocol::broadcast_milestone_request(0).await;
+    }
+
+    // TransactionBroadcast
 
     pub async fn send_transaction(epid: EndpointId, transaction: &[u8]) {
         SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(transaction)).await;
@@ -62,7 +76,7 @@ impl Protocol {
         }
     }
 
-    //  TODO constant
+    // TransactionRequest
 
     pub async fn send_transaction_request(epid: EndpointId, hash: [u8; 49]) {
         SenderWorker::<TransactionRequest>::send(&epid, TransactionRequest::new(hash)).await;
