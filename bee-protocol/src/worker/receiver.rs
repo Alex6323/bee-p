@@ -7,7 +7,6 @@ use crate::{
         Handshake,
         Header,
         Heartbeat,
-        LegacyGossip,
         Message,
         MilestoneRequest,
         TransactionBroadcast,

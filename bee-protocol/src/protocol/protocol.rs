@@ -282,7 +282,7 @@ impl Protocol {
 
         // SenderWorker TransactionRequest
         let (transaction_request_tx, transaction_request_rx) =
-            mpsc::channel(Protocol::get().conf.transaction_responder_worker_bound);
+            mpsc::channel(Protocol::get().conf.transaction_request_worker_bound);
         let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
 
         spawn(
