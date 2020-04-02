@@ -52,12 +52,9 @@ use async_std::{
     sync::RwLock,
     task::spawn,
 };
-use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
-    sink::SinkExt,
+use futures::channel::{
+    mpsc,
+    oneshot,
 };
 use log::warn;
 

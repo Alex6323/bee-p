@@ -383,6 +383,14 @@ impl Transaction {
     pub fn nonce(&self) -> &Nonce {
         &self.nonce
     }
+
+    pub fn is_tail(&self) -> bool {
+        self.index == Index(0)
+    }
+
+    pub fn is_head(&self) -> bool {
+        self.index == self.last_index
+    }
 }
 
 /// Transaction builder
