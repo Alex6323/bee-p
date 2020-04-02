@@ -11,7 +11,7 @@ use bee_bundle::{
 };
 
 use bee_crypto::{
-    CurlP27,
+    Kerl,
     Sponge
 };
 
@@ -61,9 +61,11 @@ impl TransactionWorker {
     pub(crate) fn new(receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) -> Self {
 
         let coordinator_address = {
-            let t5b1_coo_i8 = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
-            let t1b1_coo_buf = Trits::<T5B1>::try_from_raw(t5b1_coo_i8,243).unwrap().to_buf::<T1B1Buf>();
-            Address::from_inner_unchecked(t1b1_coo_buf)
+            let t5b1_bytes = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
+            let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_bytes, 243).unwrap();
+            let t5b1_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
+            let t1b1_buf: TritBuf<T1B1Buf> = t5b1_buf.encode::<T1B1Buf>();
+            Address::from_inner_unchecked(t1b1_buf)
         };
 
         Self {
@@ -81,6 +83,7 @@ impl TransactionWorker {
         let mut receiver_fused = self.receiver.fuse();
         let mut shutdown_fused = self.shutdown.fuse();
 
+        let mut kerl = Kerl::new();
         let mut tangle = TemporaryTangle::new();
 
         loop {
@@ -94,10 +97,10 @@ impl TransactionWorker {
                         let transaction_buf: TritBuf<T1B1Buf> = {
 
                             // transform &[u8] to &[i8]
-                            let t5b1_transaction: &[i8] = unsafe { &*(&transaction_broadcast.transaction[..] as *const [u8] as *const [i8]) };
+                            let t5b1_bytes: &[i8] = unsafe { &*(&transaction_broadcast.transaction[..] as *const [u8] as *const [i8]) };
 
                             // get T5B1 trits
-                            let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_transaction, 8019).unwrap();
+                            let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_bytes, 8019).unwrap();
 
                             // get T5B1 trit_buf
                             let t5b1_trit_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
@@ -120,8 +123,7 @@ impl TransactionWorker {
                         };
 
                         // calculate transaction hash
-                        let mut curlp27 = CurlP27::new();
-                        let tx_hash: Hash = Hash::from_inner_unchecked(curlp27.digest(&transaction_buf).unwrap());
+                        let tx_hash: Hash = Hash::from_inner_unchecked(kerl.digest(&transaction_buf).unwrap());
 
                         info!("[TransactionWorker ] Received transaction {}.", tx_hash);
 
@@ -224,8 +226,8 @@ fn test_tangle_insert() {
     let trit_buf: &TritBuf<T1B1Buf> = transaction.address().to_inner();
 
     // calculate hash of transaction
-    let mut curlp27 = CurlP27::new();
-    let tx_hash: Hash = Hash::from_inner_unchecked(curlp27.digest(&trit_buf).unwrap());
+    let mut kerl = Kerl::new();
+    let tx_hash: Hash = Hash::from_inner_unchecked(kerl.digest(&trit_buf).unwrap());
 
     //store transaction in the tangle
     tangle.insert(tx_hash.clone(), transaction);
@@ -235,21 +237,53 @@ fn test_tangle_insert() {
 }
 
 #[test]
-fn test_identify_coo_address() {
+fn test_coo_try_from_inner() {
 
-    use bee_bundle::*;
+    use bee_bundle::Address;
 
-    // convert bytes of coordinator address to i8 slice
-    let t5b1_coo: &[i8] = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
-    //
-    let t5b1_coo_buf: TritBuf<T5B1Buf> = Trits::<T5B1>::try_from_raw(t5b1_coo, 243).unwrap().to_buf();
+    let t5b1_bytes = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
+    let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_bytes, 243).unwrap();
+    let t5b1_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
+    let t1b1_buf: TritBuf<T1B1Buf> = t5b1_buf.encode::<T1B1Buf>();
 
-    let t1b1_coo_buf: TritBuf<T1B1Buf> = t5b1_coo_buf.encode::<T1B1Buf>();
+    let _ = Address::try_from_inner(t1b1_buf).expect("can not parse coordinator address");
 
-    // build address
-    let address: Address = Address::try_from_inner(t1b1_coo_buf).unwrap();
+}
 
-    assert_eq!(243, address.as_bytes().len());
+#[test]
+fn test_match_coo_address() {
+
+    use bee_ternary::TryteBuf;
+    use bee_ternary::T3B1Buf;
+    use bee_ternary::T3B1;
+
+    let coordinator_address = {
+        let t5b1_bytes = unsafe { &*(&COORDINATOR_BYTES[..] as *const [u8] as *const [i8]) };
+        let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_bytes, 243).unwrap();
+        let t5b1_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
+        let t1b1_buf: TritBuf<T1B1Buf> = t5b1_buf.encode::<T1B1Buf>();
+        Address::from_inner_unchecked(t1b1_buf)
+    };
+
+    let string = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9";
+    let t3b1_tryte_buf = TryteBuf::try_from_str(string).expect("can not parse coordinator address");
+    let t3b1_trits: &Trits<T3B1> = t3b1_tryte_buf.as_trits();
+    let t3b1_buf: TritBuf<T3B1Buf> = t3b1_trits.to_buf::<T3B1Buf>();
+    let t1b1_buf: TritBuf<T1B1Buf> = t3b1_buf.encode::<T1B1Buf>();
+
+    let built_address = Address::try_from_inner(t1b1_buf).expect("can not parse coordinator address");
+
+    assert_eq!(coordinator_address, built_address);
+
+}
+
+#[test]
+fn test_match_index() {
+
+    use bee_bundle::Index;
+
+    let index = Index::try_from_inner(0).expect("can not parse index");
+    assert!(&index.to_inner().eq(&(0 as usize)))
 
 }
 
@@ -276,3 +310,4 @@ fn test_tx_worker() {
     block_on(TransactionWorker::new(transaction_worker_receiver, shutdown_receiver).run());
 
 }
+

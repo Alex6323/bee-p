@@ -45,6 +45,7 @@ impl Default for Kerl {
     }
 }
 
+#[derive(Debug)]
 pub enum Error {
     NotMultipleOfHashLength,
     TernaryBinaryConversion(bee_ternary::bigint::common::Error),
