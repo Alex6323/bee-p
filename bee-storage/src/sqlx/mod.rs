@@ -8,7 +8,8 @@ extern crate bincode;
 extern crate bytemuck;
 
 mod errors;
-mod sql_statements;
+mod statements;
+mod test;
 
 use bytemuck::cast_slice;
 
@@ -73,7 +74,7 @@ use sqlx::{
     Row,
 };
 
-use crate::sqlx::sql_statements::*;
+use crate::sqlx::statements::*;
 
 struct TransactionWrapper(bee_bundle::Transaction);
 struct MilestoneWrapper(Milestone);
