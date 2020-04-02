@@ -1,4 +1,3 @@
-extern crate bee_bundle;
 extern crate rand;
 
 #[cfg(test)]
@@ -52,8 +51,8 @@ mod tests {
     }
 
     fn run_test<T>(test: T) -> ()
-        where
-            T: FnOnce() -> () + panic::UnwindSafe,
+    where
+        T: FnOnce() -> () + panic::UnwindSafe,
     {
         setup_db();
 
