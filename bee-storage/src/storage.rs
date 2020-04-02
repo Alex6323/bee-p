@@ -42,14 +42,19 @@ pub struct StateDeltaMap {
 
 #[async_trait]
 pub trait Connection<Conn> {
-    type StorageError;
+    type StorageError: Debug;
     async fn establish_connection(&mut self, url: &str) -> Result<(), Self::StorageError>;
     async fn destroy_connection(&mut self) -> Result<(), Self::StorageError>;
 }
 
 #[async_trait]
 pub trait StorageBackend {
-    type StorageError;
+    type StorageError: Debug;
+
+    fn new() -> Self;
+
+    async fn establish_connection(&mut self, url: &str) -> Result<(), Self::StorageError>;
+    async fn destroy_connection(&mut self) -> Result<(), Self::StorageError>;
     //This method is heavy weighted and will be used to populate Tangle struct on initialization
     //**Operations over transaction's schema**//
     fn map_existing_transaction_hashes_to_approvers(&self) -> Result<HashesToApprovers, Self::StorageError>;

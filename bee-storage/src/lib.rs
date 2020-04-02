@@ -1,6 +1,6 @@
 mod sqlx;
 mod storage;
-mod test_util;
+mod test;
 
 pub use crate::storage::{
     Connection,
@@ -16,7 +16,7 @@ pub use crate::sqlx::{
     SqlxBackendStorage,
 };
 
-pub use crate::test_util::{
-    StorageTest,
+pub use crate::test::{
     StorageTestRunner,
+    TestableStorage,
 };

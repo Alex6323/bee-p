@@ -5,7 +5,7 @@ use std::{
     fmt,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum SqlxBackendError {
     ConnectionBackendError(String),
     EnvError(std::env::VarError),

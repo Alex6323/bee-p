@@ -220,28 +220,27 @@ impl Connection<SqlxBackendConnection> for SqlxBackendConnection {
 #[derive(Clone, Debug)]
 pub struct SqlxBackendStorage(Storage<SqlxBackendConnection>);
 
-impl SqlxBackendStorage {
-    pub fn new() -> Self {
+//TODO - handle errors
+#[async_trait]
+impl StorageBackend for SqlxBackendStorage {
+    type StorageError = SqlxBackendError;
+
+    fn new() -> Self {
         let stor = Storage {
             connection: SqlxBackendConnection::new(),
         };
         SqlxBackendStorage(stor)
     }
 
-    pub async fn establish_connection(&mut self, url: &str) -> Result<(), SqlxBackendError> {
+    async fn establish_connection(&mut self, url: &str) -> Result<(), SqlxBackendError> {
         let _res = self.0.connection.establish_connection(url).await?;
         Ok(())
     }
-    pub async fn destroy_connection(&mut self) -> Result<(), SqlxBackendError> {
+
+    async fn destroy_connection(&mut self) -> Result<(), SqlxBackendError> {
         let _res = self.0.connection.destroy_connection().await?;
         Ok(())
     }
-}
-
-//TODO - handle errors
-#[async_trait]
-impl StorageBackend for SqlxBackendStorage {
-    type StorageError = SqlxBackendError;
 
     fn map_existing_transaction_hashes_to_approvers(&self) -> Result<HashesToApprovers, SqlxBackendError> {
         let mut pool = self
