@@ -2,7 +2,7 @@ mod sqlx;
 mod storage;
 mod test;
 
-pub use crate::storage::{
+pub use storage::{
     Connection,
     HashesToApprovers,
     MissingHashesToRCApprovers,
@@ -16,7 +16,7 @@ pub use crate::sqlx::{
     SqlxBackendStorage,
 };
 
-pub use crate::test::{
+use crate::test::{
     StorageTestRunner,
     TestableStorage,
 };
