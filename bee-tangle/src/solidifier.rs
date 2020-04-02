@@ -10,13 +10,23 @@ use async_std::{
 
 use bee_bundle::Hash;
 
-pub struct SoldifierState {
+pub struct SolidifierState {
     vert_to_approvers: HashMap<Hash, Vec<Hash>>,
     missing_to_approvers: HashMap<Hash, Vec<Arc<Hash>>>,
     unsolid_new: Receiver<Hash>,
 }
 
-pub async fn worker(mut state: SoldifierState) {
+impl SolidifierState {
+    pub fn new(unsolid_new: Receiver<Hash>) -> Self {
+        Self {
+            vert_to_approvers: HashMap::new(),
+            missing_to_approvers: HashMap::new(),
+            unsolid_new,
+        }
+    }
+}
+
+pub async fn run(mut state: SolidifierState) {
     while let Some(hash) = state.unsolid_new.next().await {
         // Solidification algorithm here, write back to TANGLE
     }
