@@ -250,28 +250,20 @@ impl ReceiverWorker {
     }
 
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), ReceiverWorkerError> {
-        // TODO metrics
         match header.message_type {
             Handshake::ID => {
                 warn!("[Peer({})] Ignoring unexpected Handshake.", self.peer.epid);
-
-                self.peer.metrics.handshake_received_inc();
-                self.metrics.handshake_received_inc();
                 // TODO handle here instead of dedicated state ?
-            }
-
-            LegacyGossip::ID => {
-                warn!("[Peer({})] Ignoring unsupported LegacyGossip.", self.peer.epid);
             }
 
             MilestoneRequest::ID => {
                 debug!("[Peer({})] Reading MilestoneRequest...", self.peer.epid);
 
-                self.peer.metrics.milestone_request_received_inc();
-                self.metrics.milestone_request_received_inc();
-
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
+                        self.peer.metrics.milestone_request_received_inc();
+                        self.metrics.milestone_request_received_inc();
+
                         self.milestone_responder_worker
                             .send(MilestoneResponderWorkerEvent {
                                 epid: self.peer.epid,
@@ -282,6 +274,9 @@ impl ReceiverWorker {
                     }
                     Err(e) => {
                         warn!("[Peer({})] Reading MilestoneRequest failed: {:?}.", self.peer.epid, e);
+
+                        self.peer.metrics.invalid_messages_received_inc();
+                        self.metrics.invalid_messages_received_inc();
                     }
                 }
             }
@@ -289,11 +284,11 @@ impl ReceiverWorker {
             TransactionBroadcast::ID => {
                 debug!("[Peer({})] Reading TransactionBroadcast...", self.peer.epid);
 
-                self.peer.metrics.transaction_broadcast_received_inc();
-                self.metrics.transaction_broadcast_received_inc();
-
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
+                        self.peer.metrics.transaction_broadcast_received_inc();
+                        self.metrics.transaction_broadcast_received_inc();
+
                         self.transaction_worker
                             .send(message)
                             .await
@@ -304,6 +299,9 @@ impl ReceiverWorker {
                             "[Peer({})] Reading TransactionBroadcast failed: {:?}.",
                             self.peer.epid, e
                         );
+
+                        self.peer.metrics.invalid_messages_received_inc();
+                        self.metrics.invalid_messages_received_inc();
                     }
                 }
             }
@@ -311,11 +309,11 @@ impl ReceiverWorker {
             TransactionRequest::ID => {
                 debug!("[Peer({})] Reading TransactionRequest...", self.peer.epid);
 
-                self.peer.metrics.transaction_request_received_inc();
-                self.metrics.transaction_request_received_inc();
-
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
+                        self.peer.metrics.transaction_request_received_inc();
+                        self.metrics.transaction_request_received_inc();
+
                         self.transaction_responder_worker
                             .send(TransactionResponderWorkerEvent {
                                 epid: self.peer.epid,
@@ -326,6 +324,9 @@ impl ReceiverWorker {
                     }
                     Err(e) => {
                         warn!("[Peer({})] Reading TransactionRequest failed: {:?}.", self.peer.epid, e);
+
+                        self.peer.metrics.invalid_messages_received_inc();
+                        self.metrics.invalid_messages_received_inc();
                     }
                 }
             }
@@ -333,11 +334,11 @@ impl ReceiverWorker {
             Heartbeat::ID => {
                 debug!("[Peer({})] Reading Heartbeat...", self.peer.epid);
 
-                self.peer.metrics.heartbeat_received_inc();
-                self.metrics.heartbeat_received_inc();
-
                 match Heartbeat::from_full_bytes(&header, bytes) {
                     Ok(message) => {
+                        self.peer.metrics.heartbeat_received_inc();
+                        self.metrics.heartbeat_received_inc();
+
                         self.peer
                             .first_solid_milestone_index
                             .store(message.first_solid_milestone_index, Ordering::Relaxed);
@@ -347,12 +348,18 @@ impl ReceiverWorker {
                     }
                     Err(e) => {
                         warn!("[Peer({})] Reading Heartbeat failed: {:?}.", self.peer.epid, e);
+
+                        self.peer.metrics.invalid_messages_received_inc();
+                        self.metrics.invalid_messages_received_inc();
                     }
                 }
             }
 
             _ => {
-                // _ => Err(MessageError::InvalidMessageType(message_type)),
+                warn!("[Peer({})] Ignoring unsupported message.", self.peer.epid);
+
+                self.peer.metrics.invalid_messages_received_inc();
+                self.metrics.invalid_messages_received_inc();
             }
         };
 
