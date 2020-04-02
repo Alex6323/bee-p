@@ -2,7 +2,6 @@ use crate::{
     conf::{
         slice_eq,
         COORDINATOR_BYTES,
-        MINIMUM_WEIGHT_MAGNITUDE,
     },
     message::{
         Handshake,
@@ -119,7 +118,7 @@ impl ReceiverWorker {
             .send(SendMessage {
                 epid: self.peer.epid,
                 // TODO port
-                bytes: Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS)
+                bytes: Handshake::new(1337, &COORDINATOR_BYTES, Protocol::get().conf.mwm, &SUPPORTED_VERSIONS)
                     .into_full_bytes(),
                 responder: None,
             })
@@ -171,10 +170,12 @@ impl ReceiverWorker {
                     );
                 } else if !slice_eq(&handshake.coordinator, &COORDINATOR_BYTES) {
                     warn!("[Peer({})] Invalid handshake coordinator.", self.peer.epid);
-                } else if handshake.minimum_weight_magnitude != MINIMUM_WEIGHT_MAGNITUDE {
+                } else if handshake.minimum_weight_magnitude != Protocol::get().conf.mwm {
                     warn!(
                         "[Peer({})] Invalid handshake MWM: {} != {}.",
-                        self.peer.epid, handshake.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE
+                        self.peer.epid,
+                        handshake.minimum_weight_magnitude,
+                        Protocol::get().conf.mwm
                     );
                 } else if let Err(version) = supported_version(&handshake.supported_messages) {
                     warn!("[Peer({})] Unsupported protocol version: {}.", self.peer.epid, version);

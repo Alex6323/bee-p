@@ -16,6 +16,7 @@ use bee_protocol::{
     Peer,
     PeerMetrics,
     Protocol,
+    ProtocolConfBuilder,
 };
 use bee_snapshot::{
     SnapshotMetadata,
@@ -129,7 +130,8 @@ impl Node {
 
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
-        Protocol::init();
+        let protocol_conf = ProtocolConfBuilder::new().build();
+        Protocol::init(protocol_conf);
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf
