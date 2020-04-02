@@ -7,39 +7,14 @@ mod tests {
 
     use crate::{
         sqlx::SqlxBackendStorage,
-        storage::{
-            HashesToApprovers,
-            MissingHashesToRCApprovers,
-            StateDeltaMap,
-            StorageBackend,
-        },
-    };
-
-    use futures::{
-        executor::block_on,
-        future::join_all,
     };
 
     use std::{
-        collections::{
-            HashMap,
-            HashSet,
-        },
         io::{
             self,
             Write,
         },
-        panic,
         process::Command,
-        rc::Rc,
-        time::Instant,
-    };
-
-    use bee_bundle::{
-        Address,
-        Hash,
-        Payload,
-        TransactionField,
     };
 
     use crate::test::{
