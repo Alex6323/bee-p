@@ -1,27 +1,34 @@
-use std::{
-    collections::HashMap,
-    sync::{
-        Arc,
-        atomic::{AtomicPtr, Ordering},
-    },
-    ptr,
+mod solidifier;
+mod tangle;
+mod vertex;
+
+use tangle::Tangle;
+
+use async_std::sync::{
+    channel,
+    Receiver,
+    Sender,
 };
-use async_std::{prelude::*, sync::{channel, Sender, Receiver}};
-use dashmap::DashMap;
+
 use bee_bundle::{
     Hash,
     Transaction,
 };
 
+use std::{
+    ptr,
+    sync::atomic::{
+        AtomicPtr,
+        Ordering,
+    },
+};
+
 pub type TransactionId = Hash;
 pub type MilestoneIndex = usize;
 
-pub struct Vertex {
-    meta: VertexMeta,
-    transaction: Transaction,
-}
-
 static TANGLE: AtomicPtr<Tangle> = AtomicPtr::new(ptr::null_mut());
+
+const SOLIDIFIER_CHAN_CAPACITY: usize = 1000;
 
 pub fn tangle() -> &'static Tangle {
     let tangle = TANGLE.load(Ordering::Relaxed);
@@ -32,120 +39,10 @@ pub fn tangle() -> &'static Tangle {
     }
 }
 
-pub fn init_tangle() {
-    TANGLE.store(Box::into_raw(Tangle::new().into()), Ordering::Acquire);
-}
+pub fn init() {
+    let (sender, receiver) = channel::<Hash>(SOLIDIFIER_CHAN_CAPACITY);
 
-pub struct Tangle {
-    vertices: DashMap<TransactionId, Vertex>,
-    unsolid_new: Sender<Hash>,
-}
-
-impl Tangle {
-    pub fn new() -> Self {
-        Self {
-            vertices: DashMap::new(),
-            unsolid_new: panic!(),
-        }
-    }
-
-    pub async fn insert(&'static self, hash: Hash, v: Vertex) -> Option<VertexRef> {
-        let meta = v.meta;
-        if self.vertices.insert(hash, v).is_none() {
-            self.unsolid_new.send(hash).await;
-            Some(VertexRef {
-                meta,
-                tangle: self,
-            })
-        } else {
-            None
-        }
-    }
-
-    pub async fn solidify(&'static self, id: TransactionId) -> Option<()> {
-        todo!()
-    }
-
-    pub async fn get_meta(&'static self, id: TransactionId) -> Option<VertexMeta> {
-        todo!()
-    }
-
-    /// This function is *eventually consistent* - if `true` is returned, solidification has
-    /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
-    /// or solidification information has not yet been fully propagated.
-    pub async fn is_solid(&'static self, id: TransactionId) -> Option<bool> {
-        todo!()
-    }
-
-    pub async fn get_body(&'static self, id: TransactionId) -> Option<&Transaction> {
-        todo!()
-    }
-
-    pub async fn get(&'static self, id: TransactionId) -> Option<VertexRef> {
-        Some(VertexRef {
-            meta: self.get_meta(id).await?,
-            tangle: self,
-        })
-    }
-
-    pub async fn contains(&'static self, id: TransactionId) -> bool {
-        self.get_meta(id).await.is_some()
-    }
-
-    // Milestone stuff
-
-    pub async fn get_milestone(&'static self, idx: MilestoneIndex) -> Option<VertexRef> {
-        todo!()
-    }
-
-    pub async fn get_latest_milestone(&'static self, idx: MilestoneIndex) -> Option<VertexRef> {
-        todo!()
-    }
-}
-
-// Solidifier
-
-pub struct SoldifierState {
-    vert_to_approvers: HashMap<Hash, Vec<Hash>>,
-    missing_to_approvers: HashMap<Hash, Vec<Arc<Hash>>>,
-    unsolid_new: Receiver<Hash>,
-}
-
-impl SoldifierState {
-    pub async fn worker(mut state: SoldifierState) {
-        while let Some(hash) = state.unsolid_new.next().await {
-            // Solidification algorithm here, write back to TANGLE
-        }
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct VertexMeta {
-    id: TransactionId,
-    trunk: TransactionId,
-    branch: TransactionId,
-}
-
-// VertexRef API
-
-#[derive(Copy, Clone)]
-pub struct VertexRef {
-    meta: VertexMeta,
-    tangle: &'static Tangle,
-}
-
-impl VertexRef {
-    pub async fn get_body(&self) -> Option<&Transaction> {
-        self.tangle.get_body(self.meta.id).await
-    }
-
-    pub async fn get_trunk(&self) -> Option<Self> {
-        self.tangle.get(self.meta.trunk).await
-    }
-
-    pub async fn get_branch(&self) -> Option<Self> {
-        self.tangle.get(self.meta.branch).await
-    }
+    TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Acquire);
 }
 
 /*
