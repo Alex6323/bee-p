@@ -6,7 +6,6 @@ use crate::{
         VertexMeta,
         VertexRef,
     },
-    Hash,
     MilestoneIndex,
     TransactionId,
 };
@@ -14,12 +13,18 @@ use crate::{
 use async_std::sync::Sender;
 use dashmap::DashMap;
 
-use bee_bundle::Transaction;
+use bee_bundle::{
+    Hash,
+    Transaction,
+};
+
+type DashSet<T> = DashMap<T, ()>;
 
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
     vertices: DashMap<TransactionId, Vertex>,
     unsolid_new: Sender<Hash>,
+    solid_entry_points: DashSet<Hash>,
 }
 
 impl Tangle {
@@ -28,6 +33,7 @@ impl Tangle {
         Self {
             vertices: DashMap::new(),
             unsolid_new,
+            solid_entry_points: DashSet::new(),
         }
     }
 
@@ -89,6 +95,21 @@ impl Tangle {
     /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
     pub async fn get_latest_milestone(&'static self, _idx: MilestoneIndex) -> Option<VertexRef> {
         todo!()
+    }
+
+    /// Adds `hash` to the set of solid entry points.
+    pub fn add_solid_entry_point(&self, hash: Hash) {
+        self.solid_entry_points.insert(hash, ());
+    }
+
+    /// Removes `hash` from the set of solid entry points.
+    pub fn rmv_solid_entry_point(&self, hash: Hash) {
+        self.solid_entry_points.remove(&hash);
+    }
+
+    /// Returns whether the transaction associated `hash` is a solid entry point.
+    pub fn is_solid_entry_point(&self, hash: &Hash) -> bool {
+        self.solid_entry_points.contains_key(hash)
     }
 }
 
