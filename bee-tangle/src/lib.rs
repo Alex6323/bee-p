@@ -40,7 +40,12 @@ pub fn init() {
 
     let solidifier_state = SolidifierState::new(receiver);
 
-    TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
+    let tangle = TANGLE.load(Ordering::Relaxed);
+    if !tangle.is_null() {
+        panic!("Already initialized");
+    } else {
+        TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
+    }
 
     spawn(solidifier::run(solidifier_state));
 }
@@ -52,5 +57,46 @@ pub fn tangle() -> &'static Tangle {
         panic!("Tangle cannot be null");
     } else {
         unsafe { &*tangle }
+    }
+}
+
+/// Deallocates the Tangle singleton.
+pub fn exit() {
+    let tangle = TANGLE.swap(ptr::null_mut(), Ordering::Relaxed);
+    if tangle.is_null() {
+        return;
+    } else {
+        let _ = unsafe { Box::from_raw(tangle) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn init_and_exit() {
+        init();
+        let _ = tangle();
+        exit();
+    }
+
+    #[test]
+    #[should_panic]
+    #[ignore]
+    fn double_init_should_panic() {
+        init();
+        init();
+        let _ = tangle();
+        exit();
+    }
+
+    #[test]
+    #[ignore]
+    fn double_exit_should_not_double_free() {
+        init();
+        let _ = tangle();
+        exit();
+        exit();
     }
 }
