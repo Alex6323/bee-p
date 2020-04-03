@@ -40,7 +40,7 @@ pub fn init() {
 
     let solidifier_state = SolidifierState::new(receiver);
 
-    TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Acquire);
+    TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
 
     spawn(solidifier::run(solidifier_state));
 }
