@@ -42,6 +42,28 @@ impl Bundle {
         // Safe to unwrap because empty bundles can't be built
         self.get(0).unwrap().bundle()
     }
+
+    // TODO TEST
+    pub fn tail(&self) -> &Transaction {
+        // Safe to unwrap because empty bundles can't be built
+        self.get(0).unwrap()
+    }
+
+    // TODO TEST
+    pub fn head(&self) -> &Transaction {
+        // Safe to unwrap because empty bundles can't be built
+        self.get(self.len() - 1).unwrap()
+    }
+
+    // TODO TEST
+    pub fn trunk(&self) -> &Hash {
+        self.head().trunk()
+    }
+
+    // TODO TEST
+    pub fn branch(&self) -> &Hash {
+        self.head().branch()
+    }
 }
 
 impl IntoIterator for Bundle {
