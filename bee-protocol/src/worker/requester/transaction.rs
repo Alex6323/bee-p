@@ -1,46 +1,56 @@
-use crate::message::{
-    Message,
-    TransactionRequest,
+use crate::{
+    milestone::MilestoneIndex,
+    protocol::Protocol,
 };
 
+use bee_bundle::Hash;
+
+use std::cmp::Ordering;
+
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::oneshot,
     future::FutureExt,
     select,
-    stream::StreamExt,
 };
 use log::info;
 
-// TODO use proper hash type
-pub(crate) type TransactionRequesterWorkerEvent = [u8; 49];
+#[derive(Eq, PartialEq)]
+pub(crate) struct TransactionRequesterWorkerEntry(MilestoneIndex, Hash);
+
+// TODO check that this is the right order
+impl PartialOrd for TransactionRequesterWorkerEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl Ord for TransactionRequesterWorkerEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
 
 pub(crate) struct TransactionRequesterWorker {
-    receiver: mpsc::Receiver<TransactionRequesterWorkerEvent>,
     shutdown: oneshot::Receiver<()>,
 }
 
 impl TransactionRequesterWorker {
-    pub(crate) fn new(
-        receiver: mpsc::Receiver<TransactionRequesterWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Self {
-        Self { receiver, shutdown }
+    pub(crate) fn new(shutdown: oneshot::Receiver<()>) -> Self {
+        Self { shutdown }
     }
 
     pub(crate) async fn run(self) {
         info!("[TransactionRequesterWorker ] Running.");
 
-        let mut receiver_fused = self.receiver.fuse();
         let mut shutdown_fused = self.shutdown.fuse();
 
         loop {
             select! {
-                hash = receiver_fused.next() => {
-                    if let Some(hash) = hash {
-                        let _bytes = TransactionRequest::new(hash).into_full_bytes();
+                // TODO impl fused stream
+                entry = Protocol::get().transaction_requester_worker.pop().fuse() => {
+                    if let TransactionRequesterWorkerEntry(_, _hash) = entry {
+                        // TODO convert hash to bytes
+                        // let _bytes = TransactionRequest::new(hash).into_full_bytes();
                         // TODO we don't have any peer_id here
                     }
                 },

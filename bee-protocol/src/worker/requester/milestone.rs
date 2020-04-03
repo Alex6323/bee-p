@@ -1,49 +1,54 @@
 use crate::{
-    message::{
-        Message,
-        MilestoneRequest,
-    },
     milestone::MilestoneIndex,
+    protocol::Protocol,
 };
 
+use std::cmp::Ordering;
+
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::oneshot,
     future::FutureExt,
     select,
-    stream::StreamExt,
 };
 use log::info;
 
-pub(crate) type MilestoneRequesterWorkerEvent = MilestoneIndex;
+#[derive(Eq, PartialEq)]
+pub(crate) struct MilestoneRequesterWorkerEntry(MilestoneIndex);
+
+// TODO check that this is the right order
+impl PartialOrd for MilestoneRequesterWorkerEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl Ord for MilestoneRequesterWorkerEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
 
 pub(crate) struct MilestoneRequesterWorker {
-    receiver: mpsc::Receiver<MilestoneRequesterWorkerEvent>,
     shutdown: oneshot::Receiver<()>,
 }
 
 impl MilestoneRequesterWorker {
-    pub(crate) fn new(
-        receiver: mpsc::Receiver<MilestoneRequesterWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Self {
-        Self { receiver, shutdown }
+    pub(crate) fn new(shutdown: oneshot::Receiver<()>) -> Self {
+        Self { shutdown }
     }
 
     pub(crate) async fn run(self) {
         info!("[MilestoneRequesterWorker ] Running.");
 
-        let mut receiver_fused = self.receiver.fuse();
         let mut shutdown_fused = self.shutdown.fuse();
 
         loop {
             select! {
-                index = receiver_fused.next() => {
-                    if let Some(index) = index {
-                        let _bytes = MilestoneRequest::new(index).into_full_bytes();
-                        // TODO we don't have any peer_id here
+                // TODO impl fused stream
+                entry = Protocol::get().milestone_requester_worker.pop().fuse() => {
+                    if let MilestoneRequesterWorkerEntry(index) = entry {
+                //         let _bytes = MilestoneRequest::new(index).into_full_bytes();
+                //         // TODO we don't have any peer_id here
                     }
                 },
                 _ = shutdown_fused => {

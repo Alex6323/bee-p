@@ -1,11 +1,13 @@
 mod milestone;
 mod transaction;
+mod wait_priority_queue;
 
 pub(crate) use milestone::{
     MilestoneRequesterWorker,
-    MilestoneRequesterWorkerEvent,
+    MilestoneRequesterWorkerEntry,
 };
 pub(crate) use transaction::{
     TransactionRequesterWorker,
-    TransactionRequesterWorkerEvent,
+    TransactionRequesterWorkerEntry,
 };
+pub(crate) use wait_priority_queue::WaitPriorityQueue;

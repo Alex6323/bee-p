@@ -12,9 +12,10 @@ pub(crate) use broadcaster::{
 pub(crate) use receiver::ReceiverWorker;
 pub(crate) use requester::{
     MilestoneRequesterWorker,
-    MilestoneRequesterWorkerEvent,
+    MilestoneRequesterWorkerEntry,
     TransactionRequesterWorker,
-    TransactionRequesterWorkerEvent,
+    TransactionRequesterWorkerEntry,
+    WaitPriorityQueue,
 };
 pub(crate) use responder::{
     MilestoneResponderWorker,
