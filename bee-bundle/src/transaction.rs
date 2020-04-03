@@ -21,9 +21,17 @@ use bee_ternary::{
     T1B1Buf,
     TritBuf,
     Trits,
+    Tryte,
+    T1B1,
 };
 
-use std::hash;
+use std::{
+    cmp::PartialEq,
+    convert::TryFrom,
+    fmt,
+    hash,
+    iter,
+};
 
 #[derive(Debug)]
 pub enum TransactionFieldError {
@@ -32,11 +40,9 @@ pub enum TransactionFieldError {
 }
 
 pub trait TransactionField: Sized + TransactionFieldType {
-    type Inner;
-
-    fn try_from_inner(buffer: Self::Inner) -> Result<Self, TransactionFieldError>;
-
-    fn from_inner_unchecked(buffer: Self::Inner) -> Self;
+    type Inner: ToOwned + ?Sized;
+    fn try_from_inner(buffer: <Self::Inner as ToOwned>::Owned) -> Result<Self, TransactionFieldError>;
+    fn from_inner_unchecked(buffer: <Self::Inner as ToOwned>::Owned) -> Self;
 
     fn to_inner(&self) -> &Self::Inner;
 
@@ -145,12 +151,20 @@ impl Index {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Hash(TritBuf<T1B1Buf>);
+#[derive(Copy, Clone)]
+pub struct Hash(pub [i8; 243]);
 
 impl Hash {
     pub fn zeros() -> Self {
-        Self(TritBuf::zeros(BUNDLE.trit_offset.length))
+        Self([0; 243])
+    }
+
+    pub fn as_bytes(&self) -> &[i8] {
+        &self.0
+    }
+
+    pub fn as_trits(&self) -> &Trits<T1B1> {
+        unsafe { Trits::from_raw_unchecked(self.as_bytes(), 243) }
     }
 
     pub fn trit_len() -> usize {
@@ -158,7 +172,69 @@ impl Hash {
     }
 }
 
+impl PartialEq for Hash {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b)
+    }
+}
 impl Eq for Hash {}
+
+/*
+TODO: Implement this when we need it
+use serde::ser::{Serialize, Serializer};
+impl Serialize for Hash {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.collect_seq(&self.0[..])
+    }
+}
+*/
+
+impl fmt::Debug for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.as_trits())
+    }
+}
+
+impl hash::Hash for Hash {
+    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+        self.0.hash(hasher)
+    }
+}
+
+impl TransactionFieldType for Hash {
+    type InnerType = TritBuf<T1B1Buf>;
+
+    fn is_trits_type() -> bool {
+        true
+    }
+}
+
+impl TransactionField for Hash {
+    type Inner = Trits<T1B1>;
+
+    fn to_inner(&self) -> &Self::Inner {
+        self.as_trits()
+    }
+
+    fn trit_len() -> usize {
+        243
+    }
+
+    fn try_from_inner(buf: <Self::Inner as ToOwned>::Owned) -> Result<Self, TransactionFieldError> {
+        if buf.len() != Self::trit_len() {
+            Err(TransactionFieldError::FieldWrongLength)?
+        }
+
+        Ok(Self::from_inner_unchecked(buf))
+    }
+
+    fn from_inner_unchecked(buf: <Self::Inner as ToOwned>::Owned) -> Self {
+        let mut trits = [0; 243];
+        trits.copy_from_slice(buf.as_i8_slice());
+
+        Self(trits)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Nonce(TritBuf<T1B1Buf>);
@@ -249,9 +325,9 @@ macro_rules! impl_hash_trait {
     }
 }
 
-impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Hash, Tag, Nonce);
-impl_transaction_field!(Payload, Address, Hash, Tag, Nonce, Index, Value, Timestamp);
-impl_hash_trait!(Hash, Address);
+impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Tag, Nonce);
+impl_transaction_field!(Payload, Address, Tag, Nonce, Index, Value, Timestamp);
+impl_hash_trait!(Address);
 
 #[derive(Debug)]
 pub enum TransactionError {
@@ -259,7 +335,6 @@ pub enum TransactionError {
     TransactionBuilderError(TransactionBuilderError),
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct Transaction {
     pub(crate) payload: Payload,
     pub(crate) address: Address,
@@ -303,14 +378,14 @@ impl Transaction {
             .with_tag(Tag(trits
                 [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
                 .to_buf()))
-            .with_attachment_ts(Timestamp::from_inner_unchecked(0))
-            .with_bundle(Hash(
+            .with_attachment_ts(Timestamp(0))
+            .with_bundle(Hash::from_inner_unchecked(
                 trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
-            .with_trunk(Hash(
+            .with_trunk(Hash::from_inner_unchecked(
                 trits[TRUNK.trit_offset.start..TRUNK.trit_offset.start + TRUNK.trit_offset.length].to_buf(),
             ))
-            .with_branch(Hash(
+            .with_branch(Hash::from_inner_unchecked(
                 trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
             ))
             .with_attachment_lbts(Timestamp::from_inner_unchecked(0))

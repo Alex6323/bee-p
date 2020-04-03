@@ -50,6 +50,7 @@ fn insert(x: i8, elem: usize, trit: Btrit) -> i8 {
 
 impl RawEncoding for T5B1 {
     type Trit = Btrit;
+    type Buf = T5B1Buf;
 
     fn empty() -> &'static Self {
         unsafe { &*Self::make(&[] as *const _, 0, 0) }

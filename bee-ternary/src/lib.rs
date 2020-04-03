@@ -36,6 +36,7 @@ use std::{
         IndexMut,
         Range,
     },
+    borrow::{Borrow, BorrowMut},
 };
 
 // Reexports
@@ -310,6 +311,14 @@ impl<T: RawEncoding + ?Sized> IndexMut<Range<usize>> for Trits<T> {
     }
 }
 
+impl<T: RawEncoding + ?Sized> ToOwned for Trits<T> {
+    type Owned = TritBuf<T::Buf>;
+
+    fn to_owned(&self) -> Self::Owned {
+        self.to_buf()
+    }
+}
+
 #[derive(Clone)]
 #[repr(transparent)]
 pub struct TritBuf<T: RawEncodingBuf = T1B1Buf<Btrit>>(T);
@@ -448,4 +457,12 @@ impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
         }
         write!(f, "]")
     }
+}
+
+impl<T: RawEncodingBuf> Borrow<Trits<T::Slice>> for TritBuf<T> {
+    fn borrow(&self) -> &Trits<T::Slice> { self.as_slice() }
+}
+
+impl<T: RawEncodingBuf> BorrowMut<Trits<T::Slice>> for TritBuf<T> {
+    fn borrow_mut(&mut self) -> &mut Trits<T::Slice> { self.as_slice_mut() }
 }
