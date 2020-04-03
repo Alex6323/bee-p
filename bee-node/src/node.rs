@@ -129,6 +129,8 @@ impl Node {
 
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
+        bee_tangle::init();
+
         let protocol_conf = ProtocolConfBuilder::new().build();
         Protocol::init(self.network.clone(), protocol_conf);
 
