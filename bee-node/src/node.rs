@@ -22,6 +22,7 @@ use bee_snapshot::{
     SnapshotMetadata,
     SnapshotState,
 };
+use bee_tangle::tangle;
 
 use std::{
     collections::HashMap,
@@ -146,8 +147,12 @@ impl Node {
                     snapshot_metadata.solid_entry_points().len(),
                     snapshot_metadata.seen_milestones().len(),
                 );
-                // TODO deal with SEPs
-                // TODO deal with SMs
+                for solid_entry_point in snapshot_metadata.solid_entry_points() {
+                    tangle().add_solid_entry_point(*solid_entry_point);
+                }
+                for seen_milestone in snapshot_metadata.seen_milestones() {
+                    // TODO request ?
+                }
             }
             // TODO exit ?
             Err(e) => error!("[Node ] Failed to read snapshot metadata file: {:?}.", e),

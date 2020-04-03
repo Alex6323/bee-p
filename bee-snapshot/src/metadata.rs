@@ -1,13 +1,19 @@
+use bee_bundle::{
+    Hash,
+    TransactionField,
+};
 use bee_ternary::{
     T1B1Buf,
     TritBuf,
     TryteBuf,
 };
 
-use std::fs::File;
-use std::io::{
-    BufRead,
-    BufReader,
+use std::{
+    fs::File,
+    io::{
+        BufRead,
+        BufReader,
+    },
 };
 
 #[derive(Debug)]
@@ -27,8 +33,8 @@ pub struct SnapshotMetadata {
     hash: TritBuf<T1B1Buf>,
     index: u64,
     timestamp: u64,
-    solid_entry_points: Vec<TritBuf<T1B1Buf>>,
-    seen_milestones: Vec<TritBuf<T1B1Buf>>,
+    solid_entry_points: Vec<Hash>,
+    seen_milestones: Vec<Hash>,
 }
 
 impl SnapshotMetadata {
@@ -96,7 +102,8 @@ impl SnapshotMetadata {
                             // TODO what to do with index ?
                             // TODO check trytes size
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
-                                Ok(buf) => buf.as_trits().encode::<T1B1Buf>(),
+                                Ok(buf) => Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>())
+                                    .map_err(|_| SnapshotMetadataError::InvalidSolidEntryPointHash)?,
                                 Err(_) => Err(SnapshotMetadataError::InvalidSolidEntryPointHash)?,
                             }
                         }
@@ -116,7 +123,8 @@ impl SnapshotMetadata {
                             // TODO what to do with index ?
                             // TODO check trytes size
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
-                                Ok(buf) => buf.as_trits().encode::<T1B1Buf>(),
+                                Ok(buf) => Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>())
+                                    .map_err(|_| SnapshotMetadataError::InvalidSeenMilestoneHash)?,
                                 Err(_) => Err(SnapshotMetadataError::InvalidSeenMilestoneHash)?,
                             }
                         }
@@ -149,11 +157,11 @@ impl SnapshotMetadata {
         self.timestamp
     }
 
-    pub fn solid_entry_points(&self) -> &Vec<TritBuf<T1B1Buf>> {
+    pub fn solid_entry_points(&self) -> &Vec<Hash> {
         &self.solid_entry_points
     }
 
-    pub fn seen_milestones(&self) -> &Vec<TritBuf<T1B1Buf>> {
+    pub fn seen_milestones(&self) -> &Vec<Hash> {
         &self.seen_milestones
     }
 }
