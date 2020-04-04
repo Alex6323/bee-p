@@ -21,16 +21,13 @@ use bee_ternary::{
     T1B1Buf,
     TritBuf,
     Trits,
-    Tryte,
     T1B1,
 };
 
 use std::{
     cmp::PartialEq,
-    convert::TryFrom,
     fmt,
     hash,
-    iter,
 };
 
 #[derive(Debug)]
