@@ -3,11 +3,27 @@ use crate::{
     TransactionId,
 };
 
-use bee_bundle::Transaction;
+use bee_bundle::{
+    Hash,
+    Transaction,
+};
 
 pub struct Vertex {
     pub(crate) meta: VertexMeta,
-    _transaction: Transaction,
+    transaction: Transaction,
+}
+
+impl Vertex {
+    pub fn from(transaction: Transaction, hash: Hash) -> Self {
+        Self {
+            meta: VertexMeta {
+                id: hash,
+                trunk: *transaction.trunk(),
+                branch: *transaction.branch(),
+            },
+            transaction,
+        }
+    }
 }
 
 #[derive(Copy, Clone)]

@@ -1,4 +1,4 @@
-//! Module that provides the [`Tangle`] struct and some static functions.
+//! Module that provides the [`Tangle`] struct.
 
 use crate::{
     vertex::{
@@ -39,12 +39,15 @@ impl Tangle {
 
     /// Inserts a transaction.
     pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<VertexRef> {
-        todo!("insert_transaction")
+        let vertex = Vertex::from(transaction, hash);
+
+        self.insert(hash, vertex).await
     }
 
     async fn insert(&'static self, hash: Hash, vertex: Vertex) -> Option<VertexRef> {
         let meta = vertex.meta;
 
+        // TODO: not sure if we want replacement of vertices
         if self.vertices.insert(hash, vertex).is_none() {
             self.unsolid_new.send(hash).await;
             Some(VertexRef { meta, tangle: self })
