@@ -41,6 +41,19 @@ use crate::{
 
 mod constants;
 
+pub use constants::{
+    BTRIT_ZERO,
+    BTRIT_ONE,
+    BTRIT_NEG_ONE,
+    BTRIT_MAX,
+    BTRIT_MIN,
+    UTRIT_ZERO,
+    UTRIT_ONE,
+    UTRIT_TWO,
+    UTRIT_U384_MAX,
+    UTRIT_U384_MAX_HALF,
+};
+
 def_and_impl_ternary!(T242, 242);
 
 impl<T: Trit> T242<T> {
@@ -52,17 +65,21 @@ impl<T: Trit> T242<T> {
 }
 
 impl T242<Btrit> {
-    pub fn from_i384_be_u8repr_ignoring_msd(value: I384<BigEndian, U8Repr>) -> Self {
+    pub fn from_i384_ignoring_mst(value: I384<BigEndian, U8Repr>) -> Self {
         let value: I384<LittleEndian, U8Repr> = value.into();
-        let value: I384<LittleEndian, U32Repr> = value.into();
+        let mut value: I384<LittleEndian, U32Repr> = value.into();
+
+        value.zero_most_significant_trit();
+
         let mut unsigned_binary = value.as_u384();
         unsigned_binary.add_inplace(*u384::LE_U32_HALF_MAX_T242);
+
         let t243_utrit: T243<Utrit> = unsigned_binary.into();
         let t243_btrit = t243_utrit.into_shifted();
         t243_btrit.into_t242()
     }
     
-    fn try_from_i384(value: I384<LittleEndian, U32Repr>) -> Result<Self, Error> {
+    pub fn try_from_i384(value: I384<LittleEndian, U32Repr>) -> Result<Self, Error> {
         let mut unsigned_binary = value.as_u384();
         unsigned_binary.add_inplace(*u384::LE_U32_HALF_MAX_T242);
         if unsigned_binary > *u384::LE_U32_MAX_T242 {
@@ -72,6 +89,26 @@ impl T242<Btrit> {
         let signed_ternary = unsigned_ternary.into_shifted();
         Ok(signed_ternary.into_t242())
     }
+}
+
+impl T242<Utrit> {
+    pub fn from_u384_be_u8repr_ignoring_msd(value: U384<BigEndian, U8Repr>) -> Self {
+        let value: U384<LittleEndian, U8Repr> = value.into();
+        let value: U384<LittleEndian, U32Repr> = value.into();
+        let t243_utrit: T243<Utrit> = value.into();
+        t243_utrit.into_t242()
+    }
+
+    // fn try_from_i384(value: I384<LittleEndian, U32Repr>) -> Result<Self, Error> {
+    //     let mut unsigned_binary = value.as_u384();
+    //     unsigned_binary.add_inplace(*u384::LE_U32_HALF_MAX_T242);
+    //     if unsigned_binary > *u384::LE_U32_MAX_T242 {
+    //         Err(Error::BinaryExceedsTernaryRange)?
+    //     }
+    //     let unsigned_ternary: T243<Utrit> = unsigned_binary.into();
+    //     let signed_ternary = unsigned_ternary.into_shifted();
+    //     Ok(signed_ternary.into_t242())
+    // }
 }
 
 impl TryFrom<I384<BigEndian, U8Repr>> for T242<Btrit> {

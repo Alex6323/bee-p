@@ -54,6 +54,20 @@ macro_rules! def_and_impl_ternary {
         }
 
         impl $ident<Btrit> {
+            pub fn increment_inplace(&mut self) -> bool {
+                for trit in self.inner_mut().iter_mut() {
+                    match trit.checked_increment() {
+                        Some(increment) => {
+                            *trit = increment;
+                            return false
+                        }
+
+                        None => *trit = Btrit::NegOne,
+                    }
+                }
+                true
+            }
+
             pub fn one() -> Self {
                 let mut t243 = Self::zero();
                 t243.0.set(0, Btrit::PlusOne);
@@ -90,6 +104,20 @@ macro_rules! def_and_impl_ternary {
         }
 
         impl $ident<Utrit> {
+            pub fn increment_inplace(&mut self) -> bool {
+                for trit in self.inner_mut().iter_mut() {
+                    match trit.checked_increment() {
+                        Some(increment) => {
+                            *trit = increment;
+                            return false
+                        }
+
+                        None => *trit = Utrit::Zero,
+                    }
+                }
+                true
+            }
+
             pub fn one() -> Self {
                 let mut t243 = Self::zero();
                 t243.0.set(0, Utrit::One);

@@ -1,9 +1,11 @@
 use lazy_static::lazy_static;
+use std::convert::TryFrom;
 
 use crate::{
     Utrit,
     bigint::{
         T242,
+        T243,
         common::{
             BigEndian,
             LittleEndian,
@@ -33,6 +35,18 @@ lazy_static! {
     pub static ref LE_U32_HALF_MAX_T242: U384<LittleEndian, U32Repr> = {
         let ut242 = T242::half_max();
         U384::<LittleEndian, U32Repr>::from(ut242)
+    };
+
+    pub static ref LE_U32_NEG_HALF_MAX_T242: U384<LittleEndian, U32Repr> = {
+        let mut bigint = U384::<LittleEndian, U32Repr>::zero();
+        bigint.sub_inplace(*LE_U32_HALF_MAX_T242);
+        bigint
+    };
+
+    pub static ref LE_U32_ONLY_T243_OCCUPIED: U384<LittleEndian, U32Repr> = {
+        let mut t243 = T243::<Utrit>::zero();
+        t243.inner_mut().set(242, Utrit::One);
+        U384::<LittleEndian, U32Repr>::try_from(t243).unwrap()
     };
 
     pub static ref LE_U32_MAX_T242: U384<LittleEndian, U32Repr> = {

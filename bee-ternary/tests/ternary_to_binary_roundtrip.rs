@@ -9,7 +9,9 @@ use bee_ternary::{
         I384,
         U384,
         common::{
+            BigEndian,
             LittleEndian,
+            U8Repr,
             U32Repr,
         },
     },

@@ -39,7 +39,7 @@ pub use constants::{
 
     UTRIT_ZERO,
     UTRIT_ONE,
-    UTRIT_NEG_ONE,
+    UTRIT_TWO,
 
     UTRIT_U384_MAX,
     UTRIT_U384_MAX_HALF,

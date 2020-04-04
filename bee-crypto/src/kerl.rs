@@ -117,7 +117,7 @@ impl Sponge for Kerl {
             std::mem::swap(&mut self.keccak, &mut keccak);
 
             keccak.finalize(&mut self.binary_buffer.inner_mut()[..]);
-            let ternary_value = T242::from_i384_be_u8repr_ignoring_msd(self.binary_buffer).into_t243();
+            let ternary_value = T242::from_i384_ignoring_mst(self.binary_buffer).into_t243();
 
             trit_chunk.copy_from(&ternary_value.inner_ref());
             self.binary_buffer.not_inplace();
@@ -206,5 +206,9 @@ mod tests {
         "G9JYBOMPUXHYHKSNRNMMSSZCSHOFYOYNZRSZMAAYWDYEIMVVOGKPJBVBM9TDPULSFUNMTVXRKFIDOHUXXVYDLFSZYZTWQYTE9SPYYWYTXJYQ9IFGYOLZXWZBKWZN9QOOTBQMWMUBLEWUEEASRHRTNIQWJQNDWRYLCA"
         =>
         "LUCKQVACOGBFYSPPVSSOXJEKNSQQRQKPZC9NXFSMQNRQCGGUL9OHVVKBDSKEQEBKXRNUJSRXYVHJTXBPDWQGNSCDCBAIRHAQCOWZEBSNHIJIGPZQITIBJQ9LNTDIBTCQ9EUWKHFLGFUVGGUWJONK9GBCDUIMAYMMQX",
+        negative_byte_input:
+        "DJ9WGAKRZOMH9KVRCHGCDCREXZVDKY9FXAXVSLELYADXHQCQQSMQYAEEBTEIWTQDUZIOFSFLBQQA9RUPX"
+        =>
+        "XRZCRWFXU9UYRKFQRKWROIRGEVGTUGUBKDYGPWDTUXXOFVXWRTQBRRGGUSIEMPAISTUEYEZJXXEPUTY9D",
     );
 }

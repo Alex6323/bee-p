@@ -48,6 +48,8 @@ pub use constants::{
     LE_U32_2,
     LE_U32_HALF_MAX,
     LE_U32_HALF_MAX_T242,
+    LE_U32_NEG_HALF_MAX_T242,
+    LE_U32_ONLY_T243_OCCUPIED,
     LE_U32_MAX,
     LE_U32_MAX_T242,
     LE_U8_0,
@@ -61,6 +63,12 @@ pub use constants::{
 pub struct U384<E, T> {
     pub(crate) inner: T,
     _phantom: PhantomData<E>,
+}
+
+impl<E, T> U384<E, T> {
+    pub fn inner_ref(&self) -> &T {
+        &self.inner
+    }
 }
 
 impl<E: fmt::Debug, R: BinaryRepresentation, D> fmt::Debug for U384<E, R>
@@ -103,13 +111,15 @@ impl U384<BigEndian, U32Repr> {
 
     /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
     /// from the least significant one).
-    pub fn add_integer_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
+    pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
-        let (sum, mut overflown) = self.inner[0].overflowing_add(other);
-        self.inner[0] = sum;
-
         let mut i = self.inner.len() - 1;
+
+        let (sum, mut overflown) = self.inner[i].overflowing_add(other);
+        self.inner[i] = sum;
+
+        i -= 1;
 
         while overflown {
             let (sum, still_overflown) = self.inner[i].overflowing_add(1u32);
@@ -145,7 +155,7 @@ impl U384<BigEndian, U32Repr> {
     /// This function is defined in terms of `overflowing_add` by making use of the following identity
     /// (in terms of Two's complement, and where `!` is logical bitwise negation):
     ///
-    /// !x = -x -1 => -x = !x + 1
+    /// !x = -x - 1 => -x = !x + 1
     pub fn sub_inplace(&mut self, other: Self) {
         let self_iter = self.inner.iter_mut().rev();
         let other_iter = other.inner.iter().rev();
@@ -221,7 +231,7 @@ impl U384<LittleEndian, U32Repr> {
 
     /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
     /// from the least significant one).
-    pub fn add_integer_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
+    pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
         let (sum, mut overflown) = self.inner[0].overflowing_add(other);
@@ -361,8 +371,7 @@ impl U384<LittleEndian, U32Repr> {
                 accumulator_extent += 1;
             }
 
-            // Adding `1u32` to the trit shifts it into the unbalanced, unsigned range.
-            let new_extent = accumulator.add_integer_inplace(*binary_trit as u32);
+            let new_extent = accumulator.add_digit_inplace(*binary_trit as u32);
             if new_extent > accumulator_extent {
                 accumulator_extent = new_extent;
             }

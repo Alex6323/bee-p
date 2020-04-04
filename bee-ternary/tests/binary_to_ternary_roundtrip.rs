@@ -5,7 +5,6 @@ use bee_ternary::{
     Utrit,
     bigint::{
         common::{
-            // BigEndian,
             LittleEndian,
             U32Repr,
         },
@@ -14,6 +13,7 @@ use bee_ternary::{
         U384,
     },
 };
+
 
 // #[test]
 // fn ut243_all_ones_as_u384_to_self() {

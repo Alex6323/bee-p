@@ -211,22 +211,23 @@ impl PartialOrd for I384<BigEndian, U8Repr> {
         // u8 if the two MSU8s are equal. If they are not equal, then an early return will be
         // triggered.
 
+        const NEGBIT: u8 = 0x80;
         const UMAX: u8 = std::u8::MAX;
         let numbers_negative = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less
-            Some((s @ 0x70..=UMAX, o @ 0x70..=UMAX)) if s > o => return Some(Less),
+            Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
             // Case 2: both numbers are negative, s is greater
-            Some((s @ 0x70..=UMAX, o @ 0x70..=UMAX)) if s < o => return Some(Greater),
+            Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
             // Case 3: both numbers are negative, but equal
-            Some((0x70..=UMAX, 0x70..=UMAX)) => true,
+            Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true,
 
             // Case 4: only s is negative
-            Some((0x70..=UMAX, _)) => return Some(Less),
+            Some((NEGBIT..=UMAX, _)) => return Some(Less),
 
             // Case 5: only o is negative
-            Some((_, 0x70..=UMAX)) => return Some(Greater),
+            Some((_, NEGBIT..=UMAX)) => return Some(Greater),
 
             // Case 6: both are positive
             Some((s, o)) if s > o => return Some(Greater),
@@ -309,13 +310,15 @@ impl I384<BigEndian, U32Repr> {
 
     /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
     /// from the least significant one).
-    pub fn add_integer_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
+    pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
-        let (sum, mut overflown) = self.inner[0].overflowing_add(other);
-        self.inner[0] = sum;
-
         let mut i = self.inner.len() - 1;
+
+        let (sum, mut overflown) = self.inner[i].overflowing_add(other);
+        self.inner[i] = sum;
+
+        i -= 1;
 
         while overflown {
             let (sum, still_overflown) = self.inner[i].overflowing_add(1u32);
@@ -345,11 +348,11 @@ impl I384<BigEndian, U32Repr> {
     }
 
     pub fn is_positive(&self) -> bool {
-        (self.inner[LEN_IN_U32 - 1] & 0x7000_0000) == 0x7000_0000
+        (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x0000_0000
     }
 
     pub fn is_negative(&self) -> bool {
-        !self.is_positive()
+        (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x8000_0000
     }
 
     /// Applies logical not to all elements in a `&[u32]`, modfiying them in place.
@@ -472,22 +475,23 @@ impl PartialOrd for I384<BigEndian, U32Repr> {
         // u32 if the two MSU32s are equal. If they are not equal, then an early return will be
         // triggered.
 
+        const NEGBIT: u32 = 0x8000_0000;
         const UMAX: u32 = std::u32::MAX;
         let numbers_negative = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less
-            Some((s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX)) if s > o => return Some(Less),
+            Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
             // Case 2: both numbers are negative, s is greater
-            Some((s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX)) if s < o => return Some(Greater),
+            Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
             // Case 3: both numbers are negative, but equal
-            Some((0x7000_0000..=UMAX, 0x7000_0000..=UMAX)) => true,
+            Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true,
 
             // Case 4: only s is negative
-            Some((0x7000_0000..=UMAX, _)) => return Some(Less),
+            Some((NEGBIT..=UMAX, _)) => return Some(Less),
 
             // Case 5: only o is negative
-            Some((_, 0x7000_0000..=UMAX)) => return Some(Greater),
+            Some((_, NEGBIT..=UMAX)) => return Some(Greater),
 
             // Case 6: both are positive
             Some((s, o)) if s > o => return Some(Greater),
@@ -592,22 +596,23 @@ impl PartialOrd for I384<LittleEndian, U8Repr> {
         // u8 if the two MSU8s are equal. If they are not equal, then an early return will be
         // triggered.
 
+        const NEGBIT: u8 = 0x80;
         const UMAX: u8 = std::u8::MAX;
         let numbers_negative = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less
-            Some((s @ 0x70..=UMAX, o @ 0x70..=UMAX)) if s > o => return Some(Less),
+            Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
             // Case 2: both numbers are negative, s is greater
-            Some((s @ 0x70..=UMAX, o @ 0x70..=UMAX)) if s < o => return Some(Greater),
+            Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
             // Case 3: both numbers are negative, but equal
-            Some((0x70..=UMAX, 0x70..=UMAX)) => true,
+            Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true,
 
             // Case 4: only s is negative
-            Some((0x70..=UMAX, _)) => return Some(Less),
+            Some((NEGBIT..=UMAX, _)) => return Some(Less),
 
             // Case 5: only o is negative
-            Some((_, 0x70..=UMAX)) => return Some(Greater),
+            Some((_, NEGBIT..=UMAX)) => return Some(Greater),
 
             // Case 6: both are positive
             Some((s, o)) if s > o => return Some(Greater),
@@ -661,7 +666,7 @@ impl I384<LittleEndian, U32Repr> {
 
     /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
     /// from the least significant one).
-    pub fn add_integer_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
+    pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
         let (sum, mut overflown) = self.inner[0].overflowing_add(other);
@@ -697,11 +702,11 @@ impl I384<LittleEndian, U32Repr> {
     }
 
     pub fn is_positive(&self) -> bool {
-        (self.inner[LEN_IN_U32 - 1] & 0x7000_0000) == 0x7000_0000
+        (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x0000_0000
     }
 
     pub fn is_negative(&self) -> bool {
-        !self.is_positive()
+        (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x8000_0000
     }
 
     /// Applies logical not to all elements in a `&[u32]`, modfiying them in place.
@@ -775,6 +780,17 @@ impl I384<LittleEndian, U32Repr> {
         let u384_integer = U384::<LittleEndian, U32Repr>::try_from_t243(unbalanced_trits)?;
         Ok(u384_integer.shift_into_i384())
     }
+
+    pub fn zero_most_significant_trit(&mut self) {
+        let half_max = u384::LE_U32_HALF_MAX_T242.as_i384();
+        let neg_half_max = u384::LE_U32_NEG_HALF_MAX_T242.as_i384();
+
+        if *self > u384::LE_U32_HALF_MAX_T242.as_i384() {
+            self.sub_inplace(u384::LE_U32_ONLY_T243_OCCUPIED.as_i384());
+        } else if *self < u384::LE_U32_NEG_HALF_MAX_T242.as_i384() {
+            self.add_inplace(u384::LE_U32_ONLY_T243_OCCUPIED.as_i384());
+        }
+    }
 }
 
 impl_default!((I384<LittleEndian, U32Repr>), LEN_IN_U32);
@@ -824,29 +840,33 @@ impl PartialOrd for I384<LittleEndian, U32Repr> {
         // u32 if the two MSU32s are equal. If they are not equal, then an early return will be
         // triggered.
 
+        const NEGBIT: u32 = 0x8000_0000;
         const UMAX: u32 = std::u32::MAX;
-        let numbers_negative = match zipped_iter.next() {
+
+        // twos_complement is `true` if both bigints are negative
+        let twos_complement = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less
-            Some((s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX)) if s > o => return Some(Less),
+            Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
             // Case 2: both numbers are negative, s is greater
-            Some((s @ 0x7000_0000..=UMAX, o @ 0x7000_0000..=UMAX)) if s < o => return Some(Greater),
+            Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
             // Case 3: both numbers are negative, but equal
-            Some((0x7000_0000..=UMAX, 0x7000_0000..=UMAX)) => true,
+            Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true ,
 
             // Case 4: only s is negative
-            Some((0x7000_0000..=UMAX, _)) => return Some(Less),
+            Some((NEGBIT..=UMAX, _)) => return Some(Less),
 
             // Case 5: only o is negative
-            Some((_, 0x7000_0000..=UMAX)) => return Some(Greater),
+            Some((_, NEGBIT..=UMAX)) => return Some(Greater),
 
-            // Case 6: both are positive
+            // Case 6: both are positive, s is greater
             Some((s, o)) if s > o => return Some(Greater),
 
+            // Case 7: both are positive, o is greater
             Some((s, o)) if s < o => return Some(Less),
 
-            // Fallthrough case; only happens if s == o
+            // Fallthrough case; only happens if s == o and positive
             Some(_) => false,
 
             // The array inside `I384` always has a length larger zero, so the first element is
@@ -855,7 +875,7 @@ impl PartialOrd for I384<LittleEndian, U32Repr> {
         };
 
         // Create two separate loops as to avoid repeatedly checking `numbers_negative`.
-        if numbers_negative {
+        if twos_complement {
             for (s, o) in zipped_iter {
                 if s > o {
                     return Some(Less);
