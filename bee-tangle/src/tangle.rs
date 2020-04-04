@@ -216,14 +216,27 @@ impl Tangle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::*;
+
+    use bee_test::transaction::create_random_tx;
 
     use async_std::sync::channel;
+    use bee_bundle::{
+        TransactionField,
+        Value,
+    };
+    use serial_test::serial;
 
     #[test]
-    fn new_tangle() {
-        let (sender, _receiver) = channel::<Hash>(1000);
+    #[serial]
+    fn insert_and_contains() {
+        init();
+        let tangle = tangle();
 
-        let _ = Tangle::new(sender);
+        let (hash, transaction) = create_random_tx();
+
+        tangle.insert_transaction(transaction, hash);
+        exit();
     }
 }
 

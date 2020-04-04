@@ -1,6 +1,7 @@
 //! `bee-tangle`
 
 #![deny(missing_docs)]
+#![allow(dead_code, unused_imports, unused_variables)]
 
 mod solidifier;
 mod tangle;
@@ -19,6 +20,7 @@ use bee_bundle::Hash;
 use std::{
     ptr,
     sync::atomic::{
+        AtomicBool,
         AtomicPtr,
         Ordering,
     },
@@ -31,23 +33,26 @@ pub type TransactionId = Hash;
 pub type MilestoneIndex = usize;
 
 static TANGLE: AtomicPtr<Tangle> = AtomicPtr::new(ptr::null_mut());
+static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 const SOLIDIFIER_CHAN_CAPACITY: usize = 1000;
 
 /// Initializes the Tangle singleton.
 pub fn init() {
-    let (sender, receiver) = channel::<Hash>(SOLIDIFIER_CHAN_CAPACITY);
+    if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
+        let (sender, receiver) = channel::<Hash>(SOLIDIFIER_CHAN_CAPACITY);
 
-    let solidifier_state = SolidifierState::new(receiver);
+        let solidifier_state = SolidifierState::new(receiver);
 
-    let tangle = TANGLE.load(Ordering::Relaxed);
-    if !tangle.is_null() {
-        panic!("Already initialized");
-    } else {
-        TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
+        let tangle = TANGLE.load(Ordering::Relaxed);
+        if !tangle.is_null() {
+            panic!("Already initialized");
+        } else {
+            TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
+        }
+
+        spawn(solidifier::run(solidifier_state));
     }
-
-    spawn(solidifier::run(solidifier_state));
 }
 
 /// Returns the singleton instance of the Tangle.
@@ -62,19 +67,23 @@ pub fn tangle() -> &'static Tangle {
 
 /// Deallocates the Tangle singleton.
 pub fn exit() {
-    let tangle = TANGLE.swap(ptr::null_mut(), Ordering::Relaxed);
-    if tangle.is_null() {
-        return;
-    } else {
-        let _ = unsafe { Box::from_raw(tangle) };
+    if INITIALIZED.compare_and_swap(true, false, Ordering::Relaxed) {
+        let tangle = TANGLE.swap(ptr::null_mut(), Ordering::Relaxed);
+        if tangle.is_null() {
+            return;
+        } else {
+            let _ = unsafe { Box::from_raw(tangle) };
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn init_and_exit() {
         init();
         let _ = tangle();
@@ -82,18 +91,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    #[ignore]
-    fn double_init_should_panic() {
+    #[serial]
+    fn double_init_double_exit() {
         init();
-        init();
-        let _ = tangle();
-        exit();
-    }
-
-    #[test]
-    #[ignore]
-    fn double_exit_should_not_double_free() {
         init();
         let _ = tangle();
         exit();
