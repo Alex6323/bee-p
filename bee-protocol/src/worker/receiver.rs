@@ -102,14 +102,14 @@ impl ReceiverWorker {
         }
     }
 
-    pub async fn run(mut self, bytes_receiver: mpsc::Receiver<Vec<u8>>, shutdown_receiver: oneshot::Receiver<()>) {
+    pub async fn run(mut self, receiver: mpsc::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
         info!("[Peer({})] Running.", self.peer.epid);
 
         let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
             state: ReceiverWorkerMessageState::Header,
         });
-        let mut bytes_fused = bytes_receiver.fuse();
-        let mut shutdown_fused = shutdown_receiver.fuse();
+        let mut receiver_fused = receiver.fuse();
+        let mut shutdown_fused = shutdown.fuse();
 
         // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
         if let Err(e) = self
@@ -129,7 +129,7 @@ impl ReceiverWorker {
 
         loop {
             select! {
-                event = bytes_fused.next() => {
+                event = receiver_fused.next() => {
                     if let Some(event) = event {
                         state = match state {
                             ReceiverWorkerState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,

@@ -29,28 +29,22 @@ pub(crate) type BroadcasterWorkerEvent = TransactionBroadcast;
 
 pub(crate) struct BroadcasterWorker {
     network: Network,
-    receiver: mpsc::Receiver<BroadcasterWorkerEvent>,
-    shutdown: oneshot::Receiver<()>,
 }
 
 impl BroadcasterWorker {
-    pub(crate) fn new(
-        network: Network,
-        receiver: mpsc::Receiver<BroadcasterWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Self {
-        Self {
-            network,
-            receiver,
-            shutdown,
-        }
+    pub(crate) fn new(network: Network) -> Self {
+        Self { network }
     }
 
-    pub(crate) async fn run(mut self) {
+    pub(crate) async fn run(
+        mut self,
+        receiver: mpsc::Receiver<BroadcasterWorkerEvent>,
+        shutdown: oneshot::Receiver<()>,
+    ) {
         info!("[BroadcasterWorker ] Running.");
 
-        let mut receiver_fused = self.receiver.fuse();
-        let mut shutdown_fused = self.shutdown.fuse();
+        let mut receiver_fused = receiver.fuse();
+        let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {

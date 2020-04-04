@@ -13,24 +13,22 @@ use log::info;
 
 pub(crate) type MilestoneValidatorWorkerEvent = Hash;
 
-pub(crate) struct MilestoneValidatorWorker {
-    receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
-    shutdown: oneshot::Receiver<()>,
-}
+pub(crate) struct MilestoneValidatorWorker {}
 
 impl MilestoneValidatorWorker {
-    pub(crate) fn new(
-        receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Self {
-        Self { receiver, shutdown }
+    pub(crate) fn new() -> Self {
+        Self {}
     }
 
-    pub(crate) async fn run(self) {
+    pub(crate) async fn run(
+        self,
+        receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
+        shutdown: oneshot::Receiver<()>,
+    ) {
         info!("[MilestoneValidatorWorker ] Running.");
 
-        let mut receiver_fused = self.receiver.fuse();
-        let mut shutdown_fused = self.shutdown.fuse();
+        let mut receiver_fused = receiver.fuse();
+        let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {

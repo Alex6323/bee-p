@@ -142,23 +142,20 @@ impl Protocol {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
-        spawn(TransactionWorker::new(transaction_worker_rx, transaction_worker_shutdown_rx).run());
+        spawn(TransactionWorker::new().run(transaction_worker_rx, transaction_worker_shutdown_rx));
+        spawn(TransactionResponderWorker::new().run(
+            transaction_responder_worker_rx,
+            transaction_responder_worker_shutdown_rx,
+        ));
         spawn(
-            TransactionResponderWorker::new(
-                transaction_responder_worker_rx,
-                transaction_responder_worker_shutdown_rx,
-            )
-            .run(),
+            MilestoneResponderWorker::new().run(milestone_responder_worker_rx, milestone_responder_worker_shutdown_rx),
         );
+        spawn(TransactionRequesterWorker::new().run(transaction_requester_worker_shutdown_rx));
+        spawn(MilestoneRequesterWorker::new().run(milestone_requester_worker_shutdown_rx));
         spawn(
-            MilestoneResponderWorker::new(milestone_responder_worker_rx, milestone_responder_worker_shutdown_rx).run(),
+            MilestoneValidatorWorker::new().run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
         );
-        spawn(TransactionRequesterWorker::new(transaction_requester_worker_shutdown_rx).run());
-        spawn(MilestoneRequesterWorker::new(milestone_requester_worker_shutdown_rx).run());
-        spawn(
-            MilestoneValidatorWorker::new(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx).run(),
-        );
-        spawn(BroadcasterWorker::new(network, broadcaster_worker_rx, broadcaster_worker_shutdown_rx).run());
+        spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
     }
 
     pub fn shutdown() {

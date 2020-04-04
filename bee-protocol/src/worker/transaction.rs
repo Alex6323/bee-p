@@ -13,21 +13,18 @@ use log::info;
 
 pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
-pub(crate) struct TransactionWorker {
-    receiver: mpsc::Receiver<TransactionWorkerEvent>,
-    shutdown: oneshot::Receiver<()>,
-}
+pub(crate) struct TransactionWorker {}
 
 impl TransactionWorker {
-    pub(crate) fn new(receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) -> Self {
-        Self { receiver, shutdown }
+    pub(crate) fn new() -> Self {
+        Self {}
     }
 
-    pub(crate) async fn run(self) {
+    pub(crate) async fn run(self, receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) {
         info!("[TransactionWorker ] Running.");
 
-        let mut receiver_fused = self.receiver.fuse();
-        let mut shutdown_fused = self.shutdown.fuse();
+        let mut receiver_fused = receiver.fuse();
+        let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {
