@@ -782,9 +782,6 @@ impl I384<LittleEndian, U32Repr> {
     }
 
     pub fn zero_most_significant_trit(&mut self) {
-        let half_max = u384::LE_U32_HALF_MAX_T242.as_i384();
-        let neg_half_max = u384::LE_U32_NEG_HALF_MAX_T242.as_i384();
-
         if *self > u384::LE_U32_HALF_MAX_T242.as_i384() {
             self.sub_inplace(u384::LE_U32_ONLY_T243_OCCUPIED.as_i384());
         } else if *self < u384::LE_U32_NEG_HALF_MAX_T242.as_i384() {
