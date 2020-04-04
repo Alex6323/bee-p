@@ -1,7 +1,4 @@
-use bee_ternary::{
-    T1B1Buf,
-    TritBuf,
-};
+use bee_bundle::Hash;
 
 use futures::{
     channel::{
@@ -14,7 +11,7 @@ use futures::{
 };
 use log::info;
 
-pub(crate) type MilestoneValidatorWorkerEvent = TritBuf<T1B1Buf>;
+pub(crate) type MilestoneValidatorWorkerEvent = Hash;
 
 pub(crate) struct MilestoneValidatorWorker {
     receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
