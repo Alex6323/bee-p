@@ -252,6 +252,7 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 mod tests {
 
     use super::*;
+
     use bee_crypto::{
         CurlP27,
         CurlP81,
@@ -265,72 +266,70 @@ mod tests {
     const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
     const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
 
-    // #[test]
-    // fn wots_generator_missing_security_level_test() {
-    //     match WotsPrivateKeyGeneratorBuilder::<Kerl>::default().build() {
-    //         Ok(_) => unreachable!(),
-    //         Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
-    //     }
-    // }
-    //
-    // #[test]
-    // fn wots_generator_valid_test() {
-    //     let security_levels = vec![
-    //         WotsSecurityLevel::Low,
-    //         WotsSecurityLevel::Medium,
-    //         WotsSecurityLevel::High,
-    //     ];
-    //
-    //     for security in security_levels {
-    //         assert_eq!(
-    //             WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-    //                 .security_level(security)
-    //                 .build()
-    //                 .is_ok(),
-    //             true
-    //         );
-    //     }
-    // }
-    //
-    // fn wots_generic_complete_test<S: Sponge + Default>() {
-    //     let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
-    //     let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
-    //     let seed = IotaSeed::<S>::from_buf(seed_trits).unwrap();
-    //     let security_levels = vec![
-    //         WotsSecurityLevel::Low,
-    //         WotsSecurityLevel::Medium,
-    //         WotsSecurityLevel::High,
-    //     ];
-    //
-    //     for security in security_levels {
-    //         for index in 0..5 {
-    //             let private_key_generator = WotsPrivateKeyGeneratorBuilder::<S>::default()
-    //                 .security_level(security)
-    //                 .build()
-    //                 .unwrap();
-    //             let mut private_key = private_key_generator.generate(&seed, index).unwrap();
-    //             let public_key = private_key.generate_public_key().unwrap();
-    //             let signature = private_key.sign(message_trits.as_i8_slice()).unwrap();
-    //             let recovered_public_key = signature.recover_public_key(message_trits.as_i8_slice()).unwrap();
-    //             assert_eq!(public_key.as_bytes(), recovered_public_key.as_bytes());
-    //             let valid = public_key.verify(message_trits.as_i8_slice(), &signature).unwrap();
-    //             assert!(valid);
-    //         }
-    //     }
-    // }
-    //
-    // #[test]
-    // fn wots_kerl_complete_test() {
-    //     wots_generic_complete_test::<Kerl>();
-    // }
-    //
-    // #[test]
-    // fn wots_curl27_complete_test() {
-    //     wots_generic_complete_test::<CurlP27>();
-    // }
-    //
-    // #[test]
-    // fn wots_curl81_complete_test() {
-    //     wots_generic_complete_test::<CurlP81>();
-    // }
+    #[test]
+    fn wots_generator_missing_security_level_test() {
+        match WotsPrivateKeyGeneratorBuilder::<Kerl>::default().build() {
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
+        }
+    }
+
+    #[test]
+    fn wots_generator_valid_test() {
+        let security_levels = vec![
+            WotsSecurityLevel::Low,
+            WotsSecurityLevel::Medium,
+            WotsSecurityLevel::High,
+        ];
+        for security in security_levels {
+            assert_eq!(
+                WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                    .security_level(security)
+                    .build()
+                    .is_ok(),
+                true
+            );
+        }
+    }
+
+    fn wots_generic_complete_test<S: Sponge + Default>() {
+        let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
+        let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
+        let seed = IotaSeed::<S>::from_buf(seed_trits).unwrap();
+        let security_levels = vec![
+            WotsSecurityLevel::Low,
+            WotsSecurityLevel::Medium,
+            WotsSecurityLevel::High,
+        ];
+        for security in security_levels {
+            for index in 0..5 {
+                let private_key_generator = WotsPrivateKeyGeneratorBuilder::<S>::default()
+                    .security_level(security)
+                    .build()
+                    .unwrap();
+                let mut private_key = private_key_generator.generate(&seed, index).unwrap();
+                let public_key = private_key.generate_public_key().unwrap();
+                let signature = private_key.sign(message_trits.as_i8_slice()).unwrap();
+                let recovered_public_key = signature.recover_public_key(message_trits.as_i8_slice()).unwrap();
+                assert_eq!(public_key.as_bytes(), recovered_public_key.as_bytes());
+                let valid = public_key.verify(message_trits.as_i8_slice(), &signature).unwrap();
+                assert!(valid);
+            }
+        }
+    }
+
+    #[test]
+    fn wots_kerl_complete_test() {
+        wots_generic_complete_test::<Kerl>();
+    }
+
+    #[test]
+    fn wots_curl27_complete_test() {
+        wots_generic_complete_test::<CurlP27>();
+    }
+
+    #[test]
+    fn wots_curl81_complete_test() {
+        wots_generic_complete_test::<CurlP81>();
+    }
 }

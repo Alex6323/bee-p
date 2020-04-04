@@ -3,13 +3,15 @@ use byteorder::{
     ByteOrder,
 };
 
-use std::cmp::Ordering;
-use std::convert::{
-    TryFrom,
-    TryInto,
+use std::{
+    cmp::Ordering,
+    convert::{
+        TryFrom,
+        TryInto,
+    },
+    fmt,
+    marker::PhantomData,
 };
-use std::fmt;
-use std::marker::PhantomData;
 
 use crate::{
     bigint::{
@@ -849,7 +851,7 @@ impl PartialOrd for I384<LittleEndian, U32Repr> {
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
             // Case 3: both numbers are negative, but equal
-            Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true ,
+            Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true,
 
             // Case 4: only s is negative
             Some((NEGBIT..=UMAX, _)) => return Some(Less),
