@@ -15,12 +15,12 @@ pub enum Protocol {
 }
 
 impl Protocol {
-    pub fn is_tcp(&self) -> bool {
-        *self == Protocol::Tcp
+    pub fn is_tcp(self) -> bool {
+        self == Protocol::Tcp
     }
 
-    pub fn is_udp(&self) -> bool {
-        *self == Protocol::Udp
+    pub fn is_udp(self) -> bool {
+        self == Protocol::Udp
     }
 }
 
@@ -35,6 +35,9 @@ pub enum Url {
     Udp(Address),
 }
 
+const TCP: &str = "tcp";
+const UDP: &str = "udp";
+
 impl Url {
     /// Creates a new `Url`.
     pub fn new(addr: Address, proto: Protocol) -> Self {
@@ -48,30 +51,20 @@ impl Url {
     ///
     /// NOTE: This function expects an input of the format: tcp://example.com:15600.
     pub async fn from_str_with_port(url: &str) -> AddressResult<Self> {
-
         if let Ok(url) = ExternUrl::parse(url) {
-            let protocol = url.scheme();
-            let addr = url.host_str();
-            let port = url.port();
+            let host = url.host_str().ok_or(AddressError::UrlDestructFailure)?;
+            let port = url.port().ok_or(AddressError::UrlDestructFailure)?;
 
-            if addr.is_none() || port.is_none() {
-                return Err(AddressError::UrlDestructFailure);
-            } else {
-                let addr = addr.unwrap();
-                let port = &port.unwrap().to_string()[..];
+            let host_port = &format!("{}:{}", host, port)[..];
+            let addr = Address::from_host_addr(host_port).await?;
 
-                let addr_port = &format!("{}:{}", addr, port)[..];
-                let addr = Address::from_host_addr(addr_port).await?;
-
-                match protocol {
-                    "tcp" => Ok(Url::new(addr, Protocol::Tcp)),
-                    "udp" => Ok(Url::new(addr, Protocol::Udp)),
-                    _ => Err(AddressError::UnsupportedProtocol),
-                }
+            match url.scheme() {
+                TCP => Ok(Url::new(addr, Protocol::Tcp)),
+                UDP => Ok(Url::new(addr, Protocol::Udp)),
+                _ => Err(AddressError::UnsupportedProtocol),
             }
-
         } else {
-            return Err(AddressError::UrlParseFailure);
+            Err(AddressError::UrlParseFailure)
         }
     }
 

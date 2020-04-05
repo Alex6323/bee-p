@@ -5,3 +5,12 @@ authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
+bee-bundle = { path = "../bee-bundle" }
+
+async-std = { version = "1.5", features = ["unstable"] }
+dashmap = "3.7"
+
+[dev-dependencies]
+bee-crypto = { path = "../bee-crypto" }
+bee-test = { path = "../bee-test" }
+serial_test = "0.4.0"

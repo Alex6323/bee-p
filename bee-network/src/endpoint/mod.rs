@@ -29,9 +29,7 @@ impl From<Address> for EndpointId {
 impl From<Url> for EndpointId {
     fn from(url: Url) -> Self {
         match url {
-            Url::Tcp(socket_addr) | Url::Udp(socket_addr) => Self {
-                inner: socket_addr.into(),
-            },
+            Url::Tcp(socket_addr) | Url::Udp(socket_addr) => Self { inner: socket_addr },
         }
     }
 }

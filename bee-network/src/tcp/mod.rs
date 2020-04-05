@@ -20,7 +20,7 @@ use crate::{
     },
     errors::{
         ConnectionError,
-        ConnectionSuccess as S,
+        ConnectionResult,
     },
     events::{
         Event,
@@ -41,7 +41,7 @@ use futures::{
 use log::*;
 
 /// Tries to connect to an endpoint.
-pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier) -> S {
+pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier) -> ConnectionResult<()> {
     debug!("[TCP  ] Trying to connect to {}...", epid);
 
     match TcpStream::connect(**addr).await {
@@ -71,7 +71,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
     }
 }
 
-pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> S {
+pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> ConnectionResult<()> {
     debug!("[TCP  ] Spawning TCP connection workers...");
 
     let addr: Address = conn.remote_addr.into();
@@ -84,14 +84,7 @@ pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: 
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
 
     spawn(writer(ep.id, conn.stream.clone(), receiver, shutdown_sender));
-
-    spawn(reader(
-        ep.id,
-        addr,
-        conn.stream.clone(),
-        notifier.clone(),
-        shutdown_receiver,
-    ));
+    spawn(reader(ep.id, conn.stream.clone(), notifier.clone(), shutdown_receiver));
 
     Ok(notifier.send(Event::NewConnection { ep, origin, sender }).await?)
 }
@@ -125,23 +118,14 @@ async fn writer(epid: EpId, stream: Arc<TcpStream>, bytes_rx: BytesReceiver, sd:
         }
     }
 
-    match sd.send(()) {
-        Ok(_) => (),
-        Err(_) => {
-            warn!("[TCP  ] Failed to send shutdown signal to reader task.");
-        }
+    if sd.send(()).is_err() {
+        trace!("[TCP  ] Reader task shut down before writer task.");
     }
 
     debug!("[TCP  ] Connection writer event loop for {} stopped.", epid);
 }
 
-async fn reader(
-    epid: EpId,
-    addr: Address,
-    stream: Arc<TcpStream>,
-    mut notifier: Notifier,
-    mut sd: oneshot::Receiver<()>,
-) {
+async fn reader(epid: EpId, stream: Arc<TcpStream>, mut notifier: Notifier, mut sd: oneshot::Receiver<()>) {
     debug!("[TCP  ] Starting connection reader event loop for {}...", epid);
 
     let mut stream = &*stream;
@@ -154,27 +138,20 @@ async fn reader(
                 match num_read {
                     Ok(num_read) => {
                         if num_read == 0 {
-                            warn!("[TCP  ] Received an empty message (0 bytes).");
-                            //continue;
+                            trace!("[TCP  ] Received EOF (0 byte message).");
 
-                            // TODO: this can probably be spawned
-                            notifier.send(Event::LostConnection {
-                                epid,
-                            }).await;
+                            if notifier.send(Event::LostConnection { epid }).await.is_err() {
+                                warn!("[TCP  ] Failed to send 'LostConnection' notification.");
+                            }
 
+                            // NOTE: local reader shut down first (we were disconnected)
                             break;
                         } else {
                             let mut bytes = vec![0u8; num_read];
                             bytes.copy_from_slice(&buffer[0..num_read]);
 
-                            match notifier.send(Event::MessageReceived {
-                                epid,
-                                bytes,
-                            }).await {
-                                Ok(_) => (),
-                                Err(e) => {
-                                    error!("[TCP  ] Failed notifying about bytes received: {:?}.", e);
-                                }
+                            if notifier.send(Event::MessageReceived { epid, bytes }).await.is_err() {
+                                warn!("[TCP  ] Failed to send 'MessageReceived' notification.");
                             }
                         }
                     },
@@ -185,6 +162,7 @@ async fn reader(
                 }
             },
             shutdown = shutdown.fuse() => {
+                // NOTE: local writer shut down first (we disconnected)
                 break;
             }
         }

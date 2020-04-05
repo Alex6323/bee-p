@@ -19,21 +19,20 @@ pub const MILESTONE_COL_ID: &str = "id";
 pub const MILESTONE_COL_HASH: &str = "hash";
 pub const MILESTONE_COL_DELTA: &str = "delta";
 
-pub const INSERT_TRANSACTION_STATEMENT : &str =            r#"
+pub const INSERT_TRANSACTION_STATEMENT: &str = r#"
         INSERT INTO transactions (payload, address, value, obsolete_tag, timestamp, current_index, last_index, bundle, trunk, branch, tag
         ,attachment_timestamp, attachment_timestamp_lower, attachment_timestamp_upper, nonce, hash)
         VALUES ( $1, $2 , $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                 "#;
 
-pub const FIND_TRANSACTION_BY_HASH_STATEMENT : &str =         r#"
+pub const FIND_TRANSACTION_BY_HASH_STATEMENT: &str = r#"
 SELECT payload, address, value, obsolete_tag, timestamp, current_index, last_index, bundle, trunk, branch, tag
         ,attachment_timestamp, attachment_timestamp_lower, attachment_timestamp_upper, nonce, hash
 FROM transactions
 WHERE hash=$1
         "#;
 
-
-pub const SELECT_HASH_BRANCH_TRUNK_LIMIT_STATEMENT: &str =         r#"
+pub const SELECT_HASH_BRANCH_TRUNK_LIMIT_STATEMENT: &str = r#"
 SELECT hash, branch, trunk
 FROM transactions
  OFFSET $1 LIMIT $2
@@ -49,9 +48,9 @@ RETURNING hash
         "#;
 */
 
-pub const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str =   r#"UPDATE transactions set snapshot_index =$1 WHERE hash hash=$2"#;
+pub const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash hash=$2"#;
 
-pub const UPDATE_SET_SOLID_STATEMENT: &str =   r#"UPDATE transactions set snapshot_index =$1 WHERE hash=$2"#;
+pub const UPDATE_SET_SOLID_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash=$2"#;
 
 pub const DELETE_TRANSACTION_STATEMENT: &str = r#"DELETE FROM transactions WHERE hash =$1"#;
 
@@ -60,13 +59,13 @@ pub const INSERT_MILESTONE_STATEMENT: &str = r#"
         VALUES ($1, $2)
                 "#;
 
-pub const FIND_MILESTONE_BY_HASH_STATEMENT : &str =         r#"
+pub const FIND_MILESTONE_BY_HASH_STATEMENT: &str = r#"
 SELECT id, hash
 FROM milestones
 WHERE hash=$1
         "#;
 
-pub const DELETE_MILESTONE_BY_HASH_STATEMENT : &str = r#"DELETE FROM milestones WHERE hash =$1"#;
+pub const DELETE_MILESTONE_BY_HASH_STATEMENT: &str = r#"DELETE FROM milestones WHERE hash =$1"#;
 
 pub const STORE_DELTA_STATEMENT: &str = r#"UPDATE milestones SET delta =$1 WHERE id =$2"#;
 

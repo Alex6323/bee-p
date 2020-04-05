@@ -5,4 +5,5 @@ authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
+bee-bundle = { path = "../bee-bundle" }
 bee-ternary = { path = "../bee-ternary" }

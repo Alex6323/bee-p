@@ -1,15 +1,21 @@
+mod broadcaster;
 mod receiver;
 mod requester;
 mod responder;
 mod sender;
 mod transaction;
 
+pub(crate) use broadcaster::{
+    BroadcasterWorker,
+    BroadcasterWorkerEvent,
+};
 pub(crate) use receiver::ReceiverWorker;
 pub(crate) use requester::{
     MilestoneRequesterWorker,
-    MilestoneRequesterWorkerEvent,
+    MilestoneRequesterWorkerEntry,
     TransactionRequesterWorker,
-    TransactionRequesterWorkerEvent,
+    TransactionRequesterWorkerEntry,
+    WaitPriorityQueue,
 };
 pub(crate) use responder::{
     MilestoneResponderWorker,

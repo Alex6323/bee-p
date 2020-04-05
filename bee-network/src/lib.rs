@@ -17,6 +17,7 @@
 pub use address::{
     url::Url,
     Address,
+    Port,
 };
 pub use commands::{
     response_channel,
@@ -76,10 +77,10 @@ pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
         internal_events,
         epw_shutdown,
         internal_event_sender.clone(),
-        event_sender.clone(),
+        event_sender,
     );
 
-    let tcp_worker = TcpWorker::new(binding_addr, internal_event_sender.clone(), tcp_shutdown);
+    let tcp_worker = TcpWorker::new(binding_addr, internal_event_sender, tcp_shutdown);
     //let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
 
     shutdown.add_notifier(epw_sd_sender);

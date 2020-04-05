@@ -4,10 +4,12 @@ use bee_ternary::{
     TryteBuf,
 };
 
-use std::fs::File;
-use std::io::{
-    BufRead,
-    BufReader,
+use std::{
+    fs::File,
+    io::{
+        BufRead,
+        BufReader,
+    },
 };
 
 // TODO export ?

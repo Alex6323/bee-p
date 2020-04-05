@@ -47,6 +47,7 @@ where
     T: Trit,
 {
     type Trit = T;
+    type Buf = T1B1Buf<T>;
 
     fn empty() -> &'static Self {
         unsafe { &*Self::make(&[] as *const _, 0, 0) }

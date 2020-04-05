@@ -18,7 +18,7 @@ bincode = "1.2.1"
 futures = "0.3.1"
 num_cpus = "1.12.0"
 rand = "0.7.3"
-sqlx = {version = "0.2.6", features = [ "postgres" ]}
+sqlx = {version = "0.3.2", features = [ "postgres" ]}
 bytemuck = "1.2.0"
 
 [lib]

@@ -18,7 +18,12 @@ use bee_ternary::{
 
 use rand::Rng;
 
-pub fn rand_trits_field<T: TransactionField<Inner = TritBuf>>() -> T {
+pub fn rand_trits_field<T: TransactionField>() -> T
+// Bit weird, but these constraints permit generating random trits for any transaction field type
+    where
+        T::Inner: ToOwned<Owned=TritBuf>,
+        TritBuf: std::borrow::Borrow<T::Inner>,
+{
     const TRIT_SET: &[i8] = &[-1, 0, 1];
     let mut rng = rand::thread_rng();
 

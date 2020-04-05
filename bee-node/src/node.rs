@@ -1,4 +1,5 @@
 use bee_network::{
+    Address,
     Command::Connect,
     EndpointId,
     Event,
@@ -15,11 +16,13 @@ use bee_protocol::{
     Peer,
     PeerMetrics,
     Protocol,
+    ProtocolConfBuilder,
 };
 use bee_snapshot::{
     SnapshotMetadata,
     SnapshotState,
 };
+use bee_tangle::tangle;
 
 use std::{
     collections::HashMap,
@@ -76,10 +79,9 @@ impl Node {
         info!("[Node ] Endpoint {} has been removed.", epid);
     }
 
-    async fn endpoint_connected_handler(&mut self, epid: EndpointId, origin: Origin) {
-        let peer = Arc::new(Peer::new(epid, origin));
-        let (receiver_tx, receiver_shutdown_tx) =
-            Protocol::register(self.network.clone(), peer.clone(), self.metrics.clone());
+    async fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
+        let peer = Arc::new(Peer::new(epid, address, origin));
+        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(peer.clone(), self.metrics.clone());
 
         self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx, peer));
     }
@@ -113,7 +115,9 @@ impl Node {
             match event {
                 Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
                 Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
-                Event::EndpointConnected { epid, origin, .. } => self.endpoint_connected_handler(epid, origin).await,
+                Event::EndpointConnected {
+                    epid, origin, address, ..
+                } => self.endpoint_connected_handler(epid, address, origin).await,
                 Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
                 Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
                 _ => warn!("[Node ] Unsupported event {}.", event),
@@ -126,7 +130,10 @@ impl Node {
 
         block_on(StaticPeerManager::new(self.network.clone()).run());
 
-        Protocol::init();
+        bee_tangle::init();
+
+        let protocol_conf = ProtocolConfBuilder::new().build();
+        Protocol::init(self.network.clone(), protocol_conf);
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf
@@ -140,8 +147,12 @@ impl Node {
                     snapshot_metadata.solid_entry_points().len(),
                     snapshot_metadata.seen_milestones().len(),
                 );
-                // TODO deal with SEPs
-                // TODO deal with SMs
+                for solid_entry_point in snapshot_metadata.solid_entry_points() {
+                    tangle().add_solid_entry_point(*solid_entry_point);
+                }
+                for seen_milestone in snapshot_metadata.seen_milestones() {
+                    // TODO request ?
+                }
             }
             // TODO exit ?
             Err(e) => error!("[Node ] Failed to read snapshot metadata file: {:?}.", e),

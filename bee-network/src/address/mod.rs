@@ -16,6 +16,7 @@ use std::{
     ops,
 };
 
+/// A wrapper around a `u16` describing a network port number to increase type safety.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Port(pub u16);
 

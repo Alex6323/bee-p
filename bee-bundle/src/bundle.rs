@@ -1,8 +1,28 @@
 use crate::transaction::{
     Hash,
     Transaction,
-    Transactions,
 };
+
+#[derive(Default)]
+pub struct Transactions(pub(crate) Vec<Transaction>);
+
+impl Transactions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn get(&self, index: usize) -> Option<&Transaction> {
+        self.0.get(index)
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn push(&mut self, transaction: Transaction) {
+        self.0.push(transaction);
+    }
+}
 
 pub struct Bundle(pub(crate) Transactions);
 
@@ -21,6 +41,28 @@ impl Bundle {
     pub fn hash(&self) -> &Hash {
         // Safe to unwrap because empty bundles can't be built
         self.get(0).unwrap().bundle()
+    }
+
+    // TODO TEST
+    pub fn tail(&self) -> &Transaction {
+        // Safe to unwrap because empty bundles can't be built
+        self.get(0).unwrap()
+    }
+
+    // TODO TEST
+    pub fn head(&self) -> &Transaction {
+        // Safe to unwrap because empty bundles can't be built
+        self.get(self.len() - 1).unwrap()
+    }
+
+    // TODO TEST
+    pub fn trunk(&self) -> &Hash {
+        self.head().trunk()
+    }
+
+    // TODO TEST
+    pub fn branch(&self) -> &Hash {
+        self.head().branch()
     }
 }
 

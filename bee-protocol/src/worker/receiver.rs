@@ -1,9 +1,12 @@
 use crate::{
+    conf::{
+        slice_eq,
+        COORDINATOR_BYTES,
+    },
     message::{
         Handshake,
         Header,
         Heartbeat,
-        LegacyGossip,
         Message,
         MilestoneRequest,
         TransactionBroadcast,
@@ -14,11 +17,8 @@ use crate::{
         PeerMetrics,
     },
     protocol::{
-        slice_eq,
         supported_version,
         Protocol,
-        COORDINATOR_BYTES,
-        MINIMUM_WEIGHT_MAGNITUDE,
         SUPPORTED_VERSIONS,
     },
     worker::{
@@ -29,12 +29,16 @@ use crate::{
 };
 
 use bee_network::{
-    Command::SendBytes,
+    Command::SendMessage,
     Network,
+    Origin,
 };
 
 use std::{
-    sync::Arc,
+    sync::{
+        atomic::Ordering,
+        Arc,
+    },
     time::{
         SystemTime,
         UNIX_EPOCH,
@@ -99,7 +103,7 @@ impl ReceiverWorker {
     }
 
     pub async fn run(mut self, bytes_receiver: mpsc::Receiver<Vec<u8>>, shutdown_receiver: oneshot::Receiver<()>) {
-        info!("[Peer({})] Receiver worker running.", self.peer.epid);
+        info!("[Peer({})] Running.", self.peer.epid);
 
         let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
             state: ReceiverWorkerMessageState::Header,
@@ -110,10 +114,10 @@ impl ReceiverWorker {
         // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
         if let Err(e) = self
             .network
-            .send(SendBytes {
+            .send(SendMessage {
                 epid: self.peer.epid,
                 // TODO port
-                bytes: Handshake::new(1337, &COORDINATOR_BYTES, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS)
+                bytes: Handshake::new(1337, &COORDINATOR_BYTES, Protocol::get().conf.mwm, &SUPPORTED_VERSIONS)
                     .into_full_bytes(),
                 responder: None,
             })
@@ -139,7 +143,7 @@ impl ReceiverWorker {
             }
         }
 
-        info!("[Peer({})] Receiver worker shut down.", self.peer.epid);
+        info!("[Peer({})] Stopped.", self.peer.epid);
 
         Protocol::senders_remove(&self.peer.epid).await;
     }
@@ -157,13 +161,7 @@ impl ReceiverWorker {
                     state: ReceiverWorkerMessageState::Header,
                 });
 
-                // TODO check actual port
-                if handshake.port != handshake.port {
-                    warn!(
-                        "[Peer({})] Invalid handshake port: {} != {}.",
-                        self.peer.epid, handshake.port, handshake.port
-                    );
-                } else if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
+                if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
                     warn!(
                         "[Peer({})] Invalid handshake timestamp, difference of {}ms.",
                         self.peer.epid,
@@ -171,15 +169,34 @@ impl ReceiverWorker {
                     );
                 } else if !slice_eq(&handshake.coordinator, &COORDINATOR_BYTES) {
                     warn!("[Peer({})] Invalid handshake coordinator.", self.peer.epid);
-                } else if handshake.minimum_weight_magnitude != MINIMUM_WEIGHT_MAGNITUDE {
+                } else if handshake.minimum_weight_magnitude != Protocol::get().conf.mwm {
                     warn!(
                         "[Peer({})] Invalid handshake MWM: {} != {}.",
-                        self.peer.epid, handshake.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE
+                        self.peer.epid,
+                        handshake.minimum_weight_magnitude,
+                        Protocol::get().conf.mwm
                     );
                 } else if let Err(version) = supported_version(&handshake.supported_messages) {
                     warn!("[Peer({})] Unsupported protocol version: {}.", self.peer.epid, version);
                 } else {
-                    // TODO check duplicate connection
+                    match self.peer.origin {
+                        Origin::Outbound => {
+                            // TODO use Port instead or deref
+                            if handshake.port != *self.peer.address.port() {
+                                warn!(
+                                    "[Peer({})] Invalid handshake port: {} != {}.",
+                                    self.peer.epid, handshake.port, handshake.port
+                                );
+                            }
+                        }
+                        Origin::Inbound => {
+                            // TODO check if whitelisted
+                        }
+                        Origin::Unbound => {
+                            error!("[Peer({})] Unbound peer origin.", self.peer.epid);
+                        }
+                    }
+
                     info!("[Peer({})] Handshake completed.", self.peer.epid);
 
                     Protocol::senders_add(self.network.clone(), self.peer.clone(), self.metrics.clone()).await;
@@ -232,28 +249,20 @@ impl ReceiverWorker {
     }
 
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), ReceiverWorkerError> {
-        // TODO metrics
         match header.message_type {
             Handshake::ID => {
                 warn!("[Peer({})] Ignoring unexpected Handshake.", self.peer.epid);
-
-                self.peer.metrics.handshake_received_inc();
-                self.metrics.handshake_received_inc();
                 // TODO handle here instead of dedicated state ?
-            }
-
-            LegacyGossip::ID => {
-                warn!("[Peer({})] Ignoring unsupported LegacyGossip.", self.peer.epid);
             }
 
             MilestoneRequest::ID => {
                 debug!("[Peer({})] Reading MilestoneRequest...", self.peer.epid);
 
-                self.peer.metrics.milestone_request_received_inc();
-                self.metrics.milestone_request_received_inc();
-
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
+                        self.peer.metrics.milestone_request_received_inc();
+                        self.metrics.milestone_request_received_inc();
+
                         self.milestone_responder_worker
                             .send(MilestoneResponderWorkerEvent {
                                 epid: self.peer.epid,
@@ -264,6 +273,9 @@ impl ReceiverWorker {
                     }
                     Err(e) => {
                         warn!("[Peer({})] Reading MilestoneRequest failed: {:?}.", self.peer.epid, e);
+
+                        self.peer.metrics.invalid_messages_received_inc();
+                        self.metrics.invalid_messages_received_inc();
                     }
                 }
             }
@@ -271,11 +283,11 @@ impl ReceiverWorker {
             TransactionBroadcast::ID => {
                 debug!("[Peer({})] Reading TransactionBroadcast...", self.peer.epid);
 
-                self.peer.metrics.transaction_broadcast_received_inc();
-                self.metrics.transaction_broadcast_received_inc();
-
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
+                        self.peer.metrics.transaction_broadcast_received_inc();
+                        self.metrics.transaction_broadcast_received_inc();
+
                         self.transaction_worker
                             .send(message)
                             .await
@@ -286,6 +298,9 @@ impl ReceiverWorker {
                             "[Peer({})] Reading TransactionBroadcast failed: {:?}.",
                             self.peer.epid, e
                         );
+
+                        self.peer.metrics.invalid_messages_received_inc();
+                        self.metrics.invalid_messages_received_inc();
                     }
                 }
             }
@@ -293,11 +308,11 @@ impl ReceiverWorker {
             TransactionRequest::ID => {
                 debug!("[Peer({})] Reading TransactionRequest...", self.peer.epid);
 
-                self.peer.metrics.transaction_request_received_inc();
-                self.metrics.transaction_request_received_inc();
-
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
+                        self.peer.metrics.transaction_request_received_inc();
+                        self.metrics.transaction_request_received_inc();
+
                         self.transaction_responder_worker
                             .send(TransactionResponderWorkerEvent {
                                 epid: self.peer.epid,
@@ -308,6 +323,9 @@ impl ReceiverWorker {
                     }
                     Err(e) => {
                         warn!("[Peer({})] Reading TransactionRequest failed: {:?}.", self.peer.epid, e);
+
+                        self.peer.metrics.invalid_messages_received_inc();
+                        self.metrics.invalid_messages_received_inc();
                     }
                 }
             }
@@ -315,19 +333,32 @@ impl ReceiverWorker {
             Heartbeat::ID => {
                 debug!("[Peer({})] Reading Heartbeat...", self.peer.epid);
 
-                self.peer.metrics.heartbeat_received_inc();
-                self.metrics.heartbeat_received_inc();
-
                 match Heartbeat::from_full_bytes(&header, bytes) {
-                    Ok(_) => {}
+                    Ok(message) => {
+                        self.peer.metrics.heartbeat_received_inc();
+                        self.metrics.heartbeat_received_inc();
+
+                        self.peer
+                            .first_solid_milestone_index
+                            .store(message.first_solid_milestone_index, Ordering::Relaxed);
+                        self.peer
+                            .last_solid_milestone_index
+                            .store(message.last_solid_milestone_index, Ordering::Relaxed);
+                    }
                     Err(e) => {
                         warn!("[Peer({})] Reading Heartbeat failed: {:?}.", self.peer.epid, e);
+
+                        self.peer.metrics.invalid_messages_received_inc();
+                        self.metrics.invalid_messages_received_inc();
                     }
                 }
             }
 
             _ => {
-                // _ => Err(MessageError::InvalidMessageType(message_type)),
+                warn!("[Peer({})] Ignoring unsupported message.", self.peer.epid);
+
+                self.peer.metrics.invalid_messages_received_inc();
+                self.metrics.invalid_messages_received_inc();
             }
         };
 

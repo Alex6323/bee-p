@@ -14,11 +14,6 @@ use std::marker::PhantomData;
 // TODO Put constants in a separate file
 
 // TODO: documentation
-pub const MIN_TRIT_VALUE: i8 = -1;
-// TODO: documentation
-pub const MAX_TRIT_VALUE: i8 = 1;
-
-// TODO: documentation
 pub struct IotaSeed<S> {
     seed: TritBuf,
     _sponge: PhantomData<S>,
@@ -28,7 +23,6 @@ pub struct IotaSeed<S> {
 #[derive(Debug, PartialEq)]
 pub enum IotaSeedError {
     InvalidLength(usize),
-    InvalidTrit(i8),
 }
 
 impl<S: Sponge + Default> Seed for IotaSeed<S> {
@@ -146,6 +140,25 @@ mod tests {
     }
 
     #[test]
+    fn iota_seed_subseed_kerl_test() {
+        iota_seed_subseed_generic_test::<Kerl>(
+            IOTA_SEED,
+            &[
+                "APSNZAPLANAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY",
+                "PXQMW9VMXGYTEPYPIASGPQ9CAQUQWNSUIIVHFIEAB9C9DHNNCWSNJKSBEAKYIBCYOZDDTQANEKPGJPVIY",
+                "ZUJWIFUVFGOGDNMTFDVZGTWVCBVIK9XQQDQEKJSKBXNGLFLLIPTVUHHPCPKNMBFMATPYJVOH9QTEVOYTW",
+                "OCHUZGFIX9VXXMBJXPKAPZHXIOCLAEKREMCKQIYQPXQQLRTOEUQRCZIYVSLUTJQGISGDRDSCERBOEEI9C",
+                "GWTMVQWHHCYFXVHGUYYZHUNXICJLMSOZVBAZOIZIWGBRAXMFDUBLP9NVIFEFFRARYIHNGPEBLNUECABKW",
+                "XWIYCHCVZEXOPXCQEJUGPMGVAIYBULVHWDD9YWMAZNJQEISHOBMYFHZKCBT9GWCSRQSFURKF9I9ITWEUC",
+                "XRBHXHE9IVEDFHQPNNMYOPXOLPXRBSYCGQNMRFKYENRJZLZAVMFLUCWWCNBFPKOSHF9UPMFFEWAWAHJP9",
+                "IP9DGBVAPNHHDP9CXOBYRLTYVJCQYUUWNWGNFUSDRKFIIAVPYPQDASDULPJBBEBOQATDHV9PVXYIJFQTA",
+                "XSGWTBAECBMTKEHXNYAVSYRPLASPJSHPIWROHRLDFUEKISEMCMXYGRZMPZCEAKZ9UKQBA9LEQFXWEMZPD",
+                "JXCAHDZVVCMGIGWJFFVDRFCHKBVAWTSLWIPZYGBECFXJQPDNDYJTEYCBHSRPDMPFEPWZUMDEIPIBW9SI9",
+            ],
+        );
+    }
+
+    #[test]
     fn iota_seed_subseed_curl27_test() {
         iota_seed_subseed_generic_test::<CurlP27>(
             IOTA_SEED,
@@ -183,46 +196,15 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn iota_seed_subseed_kerl_test() {
-    //     iota_seed_subseed_generic_test::<Kerl>(
-    //         IOTA_SEED,
-    //         &[
-    //             "APSNZAPLANAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY",
-    //             "PXQMW9VMXGYTEPYPIASGPQ9CAQUQWNSUIIVHFIEAB9C9DHNNCWSNJKSBEAKYIBCYOZDDTQANEKPGJPVIY",
-    //             "ZUJWIFUVFGOGDNMTFDVZGTWVCBVIK9XQQDQEKJSKBXNGLFLLIPTVUHHPCPKNMBFMATPYJVOH9QTEVOYTW",
-    //             "OCHUZGFIX9VXXMBJXPKAPZHXIOCLAEKREMCKQIYQPXQQLRTOEUQRCZIYVSLUTJQGISGDRDSCERBOEEI9C",
-    //             "GWTMVQWHHCYFXVHGUYYZHUNXICJLMSOZVBAZOIZIWGBRAXMFDUBLP9NVIFEFFRARYIHNGPEBLNUECABKW",
-    //             "XWIYCHCVZEXOPXCQEJUGPMGVAIYBULVHWDD9YWMAZNJQEISHOBMYFHZKCBT9GWCSRQSFURKF9I9ITWEUC",
-    //             "XRBHXHE9IVEDFHQPNNMYOPXOLPXRBSYCGQNMRFKYENRJZLZAVMFLUCWWCNBFPKOSHF9UPMFFEWAWAHJP9",
-    //             "IP9DGBVAPNHHDP9CXOBYRLTYVJCQYUUWNWGNFUSDRKFIIAVPYPQDASDULPJBBEBOQATDHV9PVXYIJFQTA",
-    //             "XSGWTBAECBMTKEHXNYAVSYRPLASPJSHPIWROHRLDFUEKISEMCMXYGRZMPZCEAKZ9UKQBA9LEQFXWEMZPD",
-    //             "JXCAHDZVVCMGIGWJFFVDRFCHKBVAWTSLWIPZYGBECFXJQPDNDYJTEYCBHSRPDMPFEPWZUMDEIPIBW9SI9",
-    //         ],
-    //     );
-    // }
-
     #[test]
     fn iota_seed_from_bytes_invalid_length_test() {
-        let iota_seed_bytes = [0; 42];
+        let buf = TritBuf::zeros(42);
 
-        match IotaSeed::<CurlP27>::from_buf(TritBuf::from_i8_unchecked(&iota_seed_bytes)) {
+        match IotaSeed::<CurlP27>::from_buf(buf) {
             Err(IotaSeedError::InvalidLength(len)) => assert_eq!(len, 42),
             _ => unreachable!(),
         }
     }
-
-    // #[test]
-    // fn iota_seed_from_bytes_invalid_trit_test() {
-    //     let iota_seed_bytes = &mut IOTA_SEED.trits();
-    //
-    //     iota_seed_bytes[100] = 42;
-    //
-    //     match IotaSeed::<CurlP27>::from_buf(TritBuf::from_i8_unchecked(&iota_seed_bytes)) {
-    //         Err(IotaSeedError::InvalidTrit(byte)) => assert_eq!(byte, 42),
-    //         _ => unreachable!(),
-    //     }
-    // }
 
     #[test]
     fn iota_seed_to_bytes_from_bytes_test() {
