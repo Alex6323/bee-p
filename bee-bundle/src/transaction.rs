@@ -207,6 +207,7 @@ impl TransactionFieldType for Hash {
 }
 
 impl TransactionField for Hash {
+    // TODO why Trits and not TritBuf ?
     type Inner = Trits<T1B1>;
 
     fn to_inner(&self) -> &Self::Inner {
