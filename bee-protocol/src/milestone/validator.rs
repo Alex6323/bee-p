@@ -1,4 +1,17 @@
-use bee_bundle::Hash;
+use crate::{
+    milestone::{
+        Milestone,
+        MilestoneBuilder,
+        MilestoneBuilderError,
+    },
+    protocol::Protocol,
+};
+
+use bee_bundle::{
+    Hash,
+    TransactionField,
+};
+use bee_tangle::tangle;
 
 use futures::{
     channel::{
@@ -9,7 +22,17 @@ use futures::{
     select,
     stream::StreamExt,
 };
-use log::info;
+use log::{
+    info,
+    warn,
+};
+
+#[derive(Debug)]
+pub(crate) enum MilestoneValidatorWorkerError {
+    UnknownTail,
+    IncompleteBundle,
+    InvalidMilestone(MilestoneBuilderError),
+}
 
 pub(crate) type MilestoneValidatorWorkerEvent = Hash;
 
@@ -20,6 +43,37 @@ impl MilestoneValidatorWorker {
         Self {}
     }
 
+    async fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
+        let mut builder = MilestoneBuilder::new(tail_hash);
+
+        let tail = match tangle().get_body(tail_hash).await {
+            Some(tail) => tail,
+            None => Err(MilestoneValidatorWorkerError::UnknownTail)?,
+        };
+
+        // TODO clone :(
+        // builder.push(tail.clone());
+
+        let mut transaction = tail;
+        // TODO bound ?
+        for _ in 0..*tail.last_index().to_inner() {
+            transaction = match tangle().get_body(*transaction.trunk()).await {
+                Some(transaction) => transaction,
+                None => Err(MilestoneValidatorWorkerError::IncompleteBundle)?,
+            };
+
+            // TODO clone :(
+            // builder.push(tail.clone());
+        }
+
+        Ok(builder
+            .depth(Protocol::get().conf.coo_depth)
+            .validate()
+            .map_err(|e| MilestoneValidatorWorkerError::InvalidMilestone(e))?
+            .build())
+    }
+
+    // TODO PriorityQueue ?
     pub(crate) async fn run(
         self,
         receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
@@ -32,8 +86,19 @@ impl MilestoneValidatorWorker {
 
         loop {
             select! {
-                _hash = receiver_fused.next() => {
-                    if let Some(_hash) = _hash {
+                tail_hash = receiver_fused.next() => {
+                    if let Some(tail_hash) = tail_hash {
+                        match self.validate_milestone(tail_hash).await {
+                            Ok(milestone) => {
+                                // TODO only log if > latest milestone
+                                info!("[MilestoneValidatorWorker ] New milestone #{}.", milestone.index);
+
+                                // TODO update tangle milestone
+                            },
+                            Err(e) => {
+                                warn!("[MilestoneValidatorWorker ] Invalid milestone bundle: {:?}.", e);
+                            }
+                        }
                     }
                 },
                 _ = shutdown_fused => {
@@ -45,3 +110,6 @@ impl MilestoneValidatorWorker {
         info!("[MilestoneValidatorWorker ] Stopped.");
     }
 }
+
+#[cfg(test)]
+mod tests {}
