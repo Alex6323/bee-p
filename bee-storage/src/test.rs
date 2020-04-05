@@ -21,16 +21,13 @@ use std::{
 };
 
 use bee_bundle::{
-    Address,
     Hash,
-    Payload,
     TransactionField,
 };
 
 use crate::storage::{
     HashesToApprovers,
     MissingHashesToRCApprovers,
-    StateDeltaMap,
 };
 
 pub trait TestableStorage {
@@ -66,14 +63,13 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         let mut storage = T::new();
 
         block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
-        let mut milestone = bee_test::transaction::create_random_milestone();
-        milestone.index = 1;
-        block_on(storage.insert_milestone(milestone.clone())).unwrap();
-        let res = block_on(storage.find_milestone(milestone.hash.clone()));
+        let milestone = bee_test::milestone::create_random_milestone(1);
+        block_on(storage.insert_milestone(bee_test::milestone::clone_ms(&milestone))).unwrap();
+        let res = block_on(storage.find_milestone(milestone.hash().clone()));
         let found_milestone = res.unwrap();
         block_on(storage.destroy_connection()).unwrap();
 
-        assert_eq!(milestone.hash, found_milestone.hash);
+        assert_eq!(milestone.hash(), found_milestone.hash());
     }
 
     fn test_delete_one_transaction() {
@@ -98,14 +94,14 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         let mut storage = T::new();
 
         block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
-        let mut milestone = bee_test::transaction::create_random_milestone();
-        milestone.index = 2;
-        block_on(storage.insert_milestone(milestone.clone())).unwrap();
-        let res = block_on(storage.find_milestone(milestone.hash.clone()));
+        let milestone = bee_test::milestone::create_random_milestone(2);
+        block_on(storage.insert_milestone(bee_test::milestone::clone_ms(&milestone))).unwrap();
+        let res = block_on(storage.find_milestone(milestone.hash().clone()));
         let found_milestone = res.unwrap();
-        assert_eq!(milestone.hash, found_milestone.hash);
+        assert_eq!(milestone.hash(), found_milestone.hash());
         let mut milestones_to_delete = HashSet::new();
-        milestones_to_delete.insert(milestone.hash);
+        // TODO Delete by index ?
+        milestones_to_delete.insert(milestone.hash().clone());
         let res = block_on(storage.delete_milestones(&milestones_to_delete));
         assert!(res.is_ok());
         let res = block_on(storage.find_milestone(milestones_to_delete.iter().last().unwrap().to_owned()));

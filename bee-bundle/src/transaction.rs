@@ -252,7 +252,8 @@ macro_rules! impl_transaction_field {
             impl TransactionField for $field_name {
 
                 type Inner = <$field_name as TransactionFieldType>::InnerType;
-                fn to_inner(&self) -> &Self::Inner{
+
+                fn to_inner(&self) -> &Self::Inner {
                     &self.0
                 }
 
@@ -263,7 +264,7 @@ macro_rules! impl_transaction_field {
                     Ok(Self::from_inner_unchecked(val))
                 }
 
-                fn from_inner_unchecked(val: Self::Inner) -> Self{
+                fn from_inner_unchecked(val: Self::Inner) -> Self {
                     Self(val)
                 }
 
