@@ -9,6 +9,7 @@ bee-bundle = { path = "../bee-bundle" }
 bee-common = { path = "../bee-common" }
 bee-crypto = { path = "../bee-crypto" }
 bee-network = { path = "../bee-network" }
+bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { path = "../bee-ternary" }
 
 async-std = "1.5.0"
