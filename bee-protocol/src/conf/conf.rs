@@ -4,7 +4,7 @@ const CONF_COO_PUBLIC_KEY: (&str, &str) = (
 );
 const CONF_COO_SPONGE_TYPE: (&str, &str) = ("protocol.coordinator.sponge", "kerl");
 const CONF_COO_SECURITY: (&str, u8) = ("protocol.coordinator.securityLevel", 2);
-const CONF_COO_DEPTH: (&str, u8) = ("protocol.coordinator.depth", 23);
+const CONF_COO_DEPTH: (&str, u8) = ("protocol.coordinator.depth", 24);
 const CONF_MWM: (&str, u8) = ("protocol.mwm", 14);
 const CONF_MILESTONE_REQUEST_SEND_WORKER_BOUND: (&str, usize) =
     ("protocol.channels.milestoneRequestSendWorkerBound", 1000);
