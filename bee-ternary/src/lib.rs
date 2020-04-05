@@ -22,6 +22,10 @@ use crate::raw::{
 };
 use std::{
     any,
+    borrow::{
+        Borrow,
+        BorrowMut,
+    },
     cmp::{
         self,
         Ordering,
@@ -36,7 +40,6 @@ use std::{
         IndexMut,
         Range,
     },
-    borrow::{Borrow, BorrowMut},
 };
 
 // Reexports
@@ -70,6 +73,8 @@ pub use crate::{
     tryte::{
         Tryte,
         TryteBuf,
+        MAX_TRYTE_VALUE,
+        MIN_TRYTE_VALUE,
     },
 };
 
@@ -460,9 +465,13 @@ impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
 }
 
 impl<T: RawEncodingBuf> Borrow<Trits<T::Slice>> for TritBuf<T> {
-    fn borrow(&self) -> &Trits<T::Slice> { self.as_slice() }
+    fn borrow(&self) -> &Trits<T::Slice> {
+        self.as_slice()
+    }
 }
 
 impl<T: RawEncodingBuf> BorrowMut<Trits<T::Slice>> for TritBuf<T> {
-    fn borrow_mut(&mut self) -> &mut Trits<T::Slice> { self.as_slice_mut() }
+    fn borrow_mut(&mut self) -> &mut Trits<T::Slice> {
+        self.as_slice_mut()
+    }
 }
