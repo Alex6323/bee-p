@@ -179,6 +179,12 @@ impl PartialEq for Hash {
 }
 impl Eq for Hash {}
 
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.as_trits())
+    }
+}
+
 /*
 TODO: Implement this when we need it
 use serde::ser::{Serialize, Serializer};
