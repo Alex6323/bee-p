@@ -48,9 +48,11 @@ use futures::{
 
 use log::info;
 
-use twox_hash::XxHash64;
 use std::collections::{HashSet, VecDeque};
 use std::hash::BuildHasherDefault;
+use std::hash::Hasher;
+
+use twox_hash::XxHash64;
 
 pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
@@ -92,7 +94,7 @@ impl TransactionWorker {
 
             info!("[TransactionWorker ] Processing received data...");
 
-            if !cache.insert(TransactionBuf(transaction_broadcast.transaction.clone())) {
+            if !cache.insert(xx_hash(transaction_broadcast.transaction.as_slice())) {
                 info!("[TransactionWorker ] Data already received.");
                 continue;
             }
@@ -101,7 +103,7 @@ impl TransactionWorker {
             let transaction_buf: TritBuf<T1B1Buf> = {
 
                 // transform &[u8] to &[i8]
-                let t5b1_bytes: &[i8] = unsafe { &*(&transaction_broadcast.transaction[..] as *const [u8] as *const [i8]) };
+                let t5b1_bytes: &[i8] = unsafe { &*(transaction_broadcast.transaction.as_slice() as *const [u8] as *const [i8]) };
 
                 // get T5B1 trits
                 let t5b1_trits_result: Result<&Trits<T5B1>, Error> = Trits::<T5B1>::try_from_raw(t5b1_bytes, t5b1_bytes.len() * 5 - 1);
@@ -157,14 +159,47 @@ impl TransactionWorker {
     }
 }
 
-#[derive(Hash, Clone, Debug, PartialEq)]
-struct TransactionBuf(Vec<u8>);
-impl Eq for TransactionBuf {}
+fn xx_hash(buf: &[u8]) -> u64 {
+    let mut hasher = XxHash64::default();
+    hasher.write(buf);
+    hasher.finish()
+}
+
+struct CustomHasher {
+    result: Option<u64>,
+}
+
+impl CustomHasher {
+    fn finish(&self) -> u64 {
+        self.result.unwrap()
+    }
+    fn write(&mut self, i: u64) {
+        self.result = Some(i);
+    }
+}
+
+impl Default for CustomHasher {
+    fn default() -> Self {
+        Self { result: None }
+    }
+}
+
+impl Hasher for CustomHasher {
+    fn finish(&self) -> u64 {
+        CustomHasher::finish(self)
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        unreachable!();
+    }
+    fn write_u64(&mut self, i: u64) {
+        CustomHasher::write(self, i);
+    }
+}
 
 struct TinyTransactionCache {
     max_capacity: usize,
-    cache: HashSet<TransactionBuf, BuildHasherDefault<XxHash64>>,
-    order: VecDeque<TransactionBuf>,
+    cache: HashSet<u64, BuildHasherDefault<CustomHasher>>,
+    order: VecDeque<u64>,
 }
 
 impl TinyTransactionCache {
@@ -177,7 +212,7 @@ impl TinyTransactionCache {
         }
     }
 
-    pub fn insert(&mut self, hash: TransactionBuf) -> bool {
+    pub fn insert(&mut self, hash: u64) -> bool {
 
         if self.contains(&hash) {
             return false;
@@ -195,7 +230,7 @@ impl TinyTransactionCache {
 
     }
 
-    fn contains(&self, hash: &TransactionBuf) -> bool {
+    fn contains(&self, hash: &u64) -> bool {
         self.cache.contains(hash)
     }
 
@@ -209,10 +244,12 @@ impl TinyTransactionCache {
 fn test_cache_insert() {
 
     let mut cache = TinyTransactionCache::new(10);
-    let buf = TransactionBuf(vec![1,2,3]);
-    let buf_clone = buf.clone();
-    assert_eq!(cache.insert((buf)), true);
-    assert_eq!(cache.insert(buf_clone), false);
+
+    let first_buf = &[1,2,3];
+    let second_buf = &[1,2,3];
+
+    assert_eq!(cache.insert(xx_hash(first_buf)), true);
+    assert_eq!(cache.insert(xx_hash(second_buf)), false);
 
 }
 
@@ -221,13 +258,14 @@ fn test_cache_max_capacity() {
 
     let mut cache = TinyTransactionCache::new(1);
 
-    let first_buf = TransactionBuf(vec![1,2,3]);
-    let second_buf = TransactionBuf(vec![4,5,6]);
+    let first_buf = &[1,2,3];
+    let second_buf = &[3,4,5];
     let second_buf_clone = second_buf.clone();
-    assert_eq!(cache.insert((first_buf)), true);
-    assert_eq!(cache.insert(second_buf), true);
+
+    assert_eq!(cache.insert(xx_hash(first_buf)), true);
+    assert_eq!(cache.insert(xx_hash(second_buf)), true);
     assert_eq!(cache.len(), 1);
-    assert_eq!(cache.insert(second_buf_clone), false);
+    assert_eq!(cache.insert(xx_hash(&second_buf_clone)), false);
 
 }
 
@@ -258,4 +296,3 @@ fn test_tx_worker() {
     //assert!(result);
 
 }
-
