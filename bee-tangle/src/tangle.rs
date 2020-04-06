@@ -10,12 +10,20 @@ use crate::{
     TransactionId,
 };
 
-use async_std::sync::Sender;
+use async_std::sync::{
+    Arc,
+    Sender,
+};
 use dashmap::DashMap;
 
 use bee_bundle::{
     Hash,
     Transaction,
+};
+
+use std::sync::atomic::{
+    AtomicU32,
+    Ordering,
 };
 
 type DashSet<T> = DashMap<T, ()>;
@@ -25,6 +33,9 @@ pub struct Tangle {
     vertices: DashMap<TransactionId, Vertex>,
     unsolid_new: Sender<Hash>,
     solid_entry_points: DashSet<Hash>,
+    first_solid_milestone: Arc<AtomicU32>,
+    last_solid_milestone: Arc<AtomicU32>,
+    last_milestone: Arc<AtomicU32>,
 }
 
 impl Tangle {
@@ -34,6 +45,9 @@ impl Tangle {
             vertices: DashMap::new(),
             unsolid_new,
             solid_entry_points: DashSet::new(),
+            first_solid_milestone: Arc::new(AtomicU32::new(0)),
+            last_solid_milestone: Arc::new(AtomicU32::new(0)),
+            last_milestone: Arc::new(AtomicU32::new(0)),
         }
     }
 
@@ -113,6 +127,21 @@ impl Tangle {
     /// Returns whether the transaction associated `hash` is a solid entry point.
     pub fn is_solid_entry_point(&self, hash: &Hash) -> bool {
         self.solid_entry_points.contains_key(hash)
+    }
+
+    /// Sets the first solid milestone index to `new_index`.
+    pub fn update_first_solid_milestone_index(&self, new_index: u32) {
+        self.first_solid_milestone.store(new_index, Ordering::Relaxed);
+    }
+
+    /// Sets the last solid milestone index to `new_index`.
+    pub fn update_last_solid_milestone_index(&self, new_index: u32) {
+        self.last_solid_milestone.store(new_index, Ordering::Relaxed);
+    }
+
+    /// Sets the last milestone index to `new_index`.
+    pub fn update_last_milestone_index(&self, new_index: u32) {
+        self.last_milestone.store(new_index, Ordering::Relaxed);
     }
 }
 
