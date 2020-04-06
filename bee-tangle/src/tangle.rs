@@ -28,8 +28,6 @@ use std::sync::atomic::{
     Ordering,
 };
 
-//type DashSet<T> = DashMap<T, ()>;
-
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
     vertices: DashMap<Hash, Vertex>,
