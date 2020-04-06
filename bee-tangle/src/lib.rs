@@ -103,4 +103,19 @@ mod tests {
         drop();
         drop();
     }
+
+    #[test]
+    #[should_panic]
+    #[serial]
+    fn drop_without_init_should_panic() {
+        drop();
+    }
+
+    #[test]
+    #[should_panic]
+    #[serial]
+    fn get_without_init_should_panic() {
+        let _ = tangle();
+        drop();
+    }
 }
