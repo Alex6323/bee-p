@@ -23,8 +23,6 @@ use std::convert::{
     Into,
 };
 
-use std::panic;
-
 const RADIX: u8 = 3;
 const NUM_TRITS_FOR_NUM_TYPE: usize = 27;
 const MAX_TRITS_IN_I64: usize = (0.63 * 64 as f32) as usize + 1; // (log2/log3)*64
@@ -71,6 +69,7 @@ impl From<i64> for TritBuf<T1B1Buf> {
                 curr_trit = -curr_trit;
             }
 
+            //This can not fail because curr_trit is "some_value % 3 - 1" which is always within range
             buf.set(pos, Btrit::try_from(curr_trit).unwrap());
 
             value_abs = value_abs + 1;
@@ -83,17 +82,22 @@ impl From<i64> for TritBuf<T1B1Buf> {
     }
 }
 
+pub enum TritsI64ConversionError{
+    AbsValueTooBig
+}
+
 //TODO - generalize over all encodings
 //Impl copied from:
 // [https://github.com/iotaledger/iota_common/blob/1b56a5282933fb674181001630e7b2e2c33b5eea/common/trinary/trit_long.c#L31]
-impl From<TritBuf<T1B1Buf>> for i64 {
-    fn from(trits: TritBuf<T1B1Buf>) -> i64 {
+impl TryFrom<TritBuf<T1B1Buf>> for i64 {
+    type Error = TritsI64ConversionError;
+    fn try_from(trits: TritBuf<T1B1Buf>) -> Result<Self,Self::Error> {
         if trits.len() == 0 {
-            return 0;
+            return Ok(0);
         }
 
         if trits.len() > MAX_TRITS_IN_I64 {
-            panic!("Can not convert buffer of len: {} to an i64 type", trits.len());
+            return Err(TritsI64ConversionError::AbsValueTooBig);
         }
 
         let mut accum: i64 = 0;
@@ -111,7 +115,7 @@ impl From<TritBuf<T1B1Buf>> for i64 {
                 if accum_i128 > 0 && accum_i128 > i64::max_value() as i128
                     || accum_i128 < 0 && accum_i128 < i64::min_value() as i128 - 1
                 {
-                    panic!("Can not convert to an i64 type from buffer: {:?}", trits);
+                    return Err(TritsI64ConversionError::AbsValueTooBig);
                 }
                 accum = accum_i128 as i64;
             }
@@ -126,7 +130,7 @@ impl From<TritBuf<T1B1Buf>> for i64 {
             }
         }
 
-        accum
+        Ok(accum)
     }
 }
 
@@ -145,7 +149,7 @@ mod tests {
     fn convert_1_to_trits() {
         let num = 1;
         let buff = TritBuf::<T1B1Buf>::try_from(num);
-        let converted_num = i64::try_from(buff.unwrap()).unwrap();
+        let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
         assert_eq!(converted_num, num);
     }
 
@@ -153,7 +157,7 @@ mod tests {
     fn convert_neg_1_to_trits() {
         let num = -1;
         let buff = TritBuf::<T1B1Buf>::try_from(num);
-        let converted_num = i64::try_from(buff.unwrap()).unwrap();
+        let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
         assert_eq!(converted_num, num);
     }
 
@@ -161,7 +165,7 @@ mod tests {
     fn convert_i64_max_to_trits() {
         let num = std::i64::MAX;
         let buff = TritBuf::<T1B1Buf>::try_from(num);
-        let converted_num = i64::try_from(buff.unwrap()).unwrap();
+        let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
         assert_eq!(converted_num, num);
     }
 
@@ -169,7 +173,7 @@ mod tests {
     fn convert_i64_min_to_trits() {
         let num = std::i64::MIN;
         let buff = TritBuf::<T1B1Buf>::try_from(num);
-        let converted_num = i64::try_from(buff.unwrap()).unwrap();
+        let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
         assert_eq!(converted_num, num);
     }
 
@@ -178,7 +182,7 @@ mod tests {
         let now = Instant::now();
         for num in -100000..100000 {
             let buff = TritBuf::<T1B1Buf>::try_from(num);
-            let converted_num = i64::try_from(buff.unwrap()).unwrap();
+            let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
             assert_eq!(converted_num, num);
         }
         let message = format!("\nconvert_range_to_trits Elapsed: {}\n", now.elapsed().as_secs_f64());
@@ -186,9 +190,8 @@ mod tests {
     }
 
     #[test]
-    fn panic_on_num_too_big() {
+    fn error_on_num_too_big() {
         let buff = TritBuf::<T1B1Buf>::filled(MAX_TRITS_IN_I64, Btrit::PlusOne);
-        let res = panic::catch_unwind ( || i64::try_from(buff));
-        assert_eq!(res.is_ok(), false);
+        assert_eq!(i64::try_from(buff).is_ok(), false);
     }
 }
