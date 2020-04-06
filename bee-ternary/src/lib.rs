@@ -78,6 +78,7 @@ pub use crate::{
     },
 };
 
+pub mod num_conversions;
 #[derive(Debug)]
 pub enum Error {
     InvalidRepr,
