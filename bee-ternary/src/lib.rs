@@ -4,6 +4,7 @@ use std::{
 };
 
 pub mod bigint;
+pub mod num_conversions;
 pub mod raw;
 pub mod t1b1;
 pub mod t2b1;
@@ -78,7 +79,6 @@ pub use crate::{
     },
 };
 
-pub mod num_conversions;
 #[derive(Debug)]
 pub enum Error {
     InvalidRepr,

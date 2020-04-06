@@ -31,8 +31,6 @@ fn min_trits(value: u64) -> usize {
     let mut num = 1;
     let mut vp: u64 = 1;
 
-    let mut value = value;
-    let mut num = 1;
     while value > vp {
         vp = vp * RADIX as u64 + 1;
         num = num + 1;
@@ -82,7 +80,9 @@ impl From<i64> for TritBuf<T1B1Buf> {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum TritsI64ConversionError {
+    EmptyTrits,
     AbsValueTooBig,
 }
 
@@ -91,21 +91,23 @@ pub enum TritsI64ConversionError {
 // [https://github.com/iotaledger/iota_common/blob/1b56a5282933fb674181001630e7b2e2c33b5eea/common/trinary/trit_long.c#L31]
 impl TryFrom<TritBuf<T1B1Buf>> for i64 {
     type Error = TritsI64ConversionError;
+
     fn try_from(trits: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
         if trits.len() == 0 {
-            return Ok(0);
+            Err(TritsI64ConversionError::EmptyTrits)?;
         }
 
         if trits.len() > MAX_TRITS_IN_I64 {
+            // TODO test
             for index in MAX_TRITS_IN_I64..trits.len() {
                 if trits.get(index).unwrap() != Btrit::Zero {
-                    return Err(TritsI64ConversionError::AbsValueTooBig);
+                    Err(TritsI64ConversionError::AbsValueTooBig)?;
                 }
             }
         }
 
         let mut accum: i64 = 0;
-        let mut end = trits.len();
+        let end = trits.len();
 
         if trits.len() >= MAX_TRITS_IN_I64 {
             let mut accum_i128: i128 = 0;
@@ -119,7 +121,7 @@ impl TryFrom<TritBuf<T1B1Buf>> for i64 {
                 if accum_i128 > 0 && accum_i128 > i64::max_value() as i128
                     || accum_i128 < 0 && accum_i128 < i64::min_value() as i128 - 1
                 {
-                    return Err(TritsI64ConversionError::AbsValueTooBig);
+                    Err(TritsI64ConversionError::AbsValueTooBig)?;
                 }
                 accum = accum_i128 as i64;
             }
@@ -152,10 +154,19 @@ mod tests {
     };
 
     #[test]
+    fn error_empty_trits() {
+        let buff = TritBuf::<T1B1Buf>::zeros(0);
+        match i64::try_from(buff) {
+            Ok(_) => unreachable!(),
+            Err(e) => assert_eq!(e, TritsI64ConversionError::EmptyTrits),
+        }
+    }
+
+    #[test]
     fn convert_1_to_trits() {
         let num = 1;
         let buff = TritBuf::<T1B1Buf>::try_from(num);
-        let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
+        let converted_num = i64::try_from(buff.unwrap()).unwrap();
         assert_eq!(converted_num, num);
     }
 
@@ -163,7 +174,7 @@ mod tests {
     fn convert_neg_1_to_trits() {
         let num = -1;
         let buff = TritBuf::<T1B1Buf>::try_from(num);
-        let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
+        let converted_num = i64::try_from(buff.unwrap()).unwrap();
         assert_eq!(converted_num, num);
     }
 
@@ -171,7 +182,7 @@ mod tests {
     fn convert_i64_max_to_trits() {
         let num = std::i64::MAX;
         let buff = TritBuf::<T1B1Buf>::try_from(num);
-        let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
+        let converted_num = i64::try_from(buff.unwrap()).unwrap();
         assert_eq!(converted_num, num);
     }
 
@@ -179,7 +190,7 @@ mod tests {
     fn convert_i64_min_to_trits() {
         let num = std::i64::MIN;
         let buff = TritBuf::<T1B1Buf>::try_from(num);
-        let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
+        let converted_num = i64::try_from(buff.unwrap()).unwrap();
         assert_eq!(converted_num, num);
     }
 
@@ -188,7 +199,7 @@ mod tests {
         let now = Instant::now();
         for num in -100000..100000 {
             let buff = TritBuf::<T1B1Buf>::try_from(num);
-            let converted_num = i64::try_from(buff.unwrap()).ok().unwrap();
+            let converted_num = i64::try_from(buff.unwrap()).unwrap();
             assert_eq!(converted_num, num);
         }
         let message = format!("\nconvert_range_to_trits Elapsed: {}\n", now.elapsed().as_secs_f64());
