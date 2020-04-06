@@ -27,8 +27,9 @@ use bee_ternary::{
     T1B1Buf
 };
 
+use crate::ProtocolConfBuilder;
 use crate::protocol::{
-    Protocol
+    Protocol,
 };
 
 use crate::message::TransactionBroadcast;
@@ -47,10 +48,9 @@ use futures::{
 
 use log::info;
 
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::vec_deque::VecDeque;
-use crate::ProtocolConfBuilder;
+use twox_hash::XxHash64;
+use std::collections::{HashSet, VecDeque};
+use std::hash::BuildHasherDefault;
 
 pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
@@ -70,6 +70,7 @@ impl TransactionWorker {
         let mut shutdown_fused = shutdown.fuse();
 
         let mut curl = CurlP81::new();
+        let mut cache = TinyTransactionCache::new(10000);
 
         loop {
 
@@ -90,6 +91,11 @@ impl TransactionWorker {
             };
 
             info!("[TransactionWorker ] Processing received data...");
+
+            if !cache.insert(TransactionBuf(transaction_broadcast.transaction.clone())) {
+                info!("[TransactionWorker ] Data already received.");
+                continue;
+            }
 
             // convert received transaction bytes into T1B1 buffer
             let transaction_buf: TritBuf<T1B1Buf> = {
@@ -149,6 +155,80 @@ impl TransactionWorker {
         info!("[TransactionWorker ] Stopped.");
 
     }
+}
+
+#[derive(Hash, Clone, Debug, PartialEq)]
+struct TransactionBuf(Vec<u8>);
+impl Eq for TransactionBuf {}
+
+struct TinyTransactionCache {
+    max_capacity: usize,
+    cache: HashSet<TransactionBuf, BuildHasherDefault<XxHash64>>,
+    order: VecDeque<TransactionBuf>,
+}
+
+impl TinyTransactionCache {
+
+    pub fn new(max_capacity: usize) -> Self {
+        Self {
+            max_capacity,
+            cache: HashSet::default(),
+            order: VecDeque::new()
+        }
+    }
+
+    pub fn insert(&mut self, hash: TransactionBuf) -> bool {
+
+        if self.contains(&hash) {
+            return false;
+        }
+
+        if self.cache.len() >= self.max_capacity {
+            let first  = self.order.pop_front().unwrap();
+            self.cache.remove(&first);
+        }
+
+        self.cache.insert(hash.clone());
+        self.order.push_back(hash);
+
+        true
+
+    }
+
+    fn contains(&self, hash: &TransactionBuf) -> bool {
+        self.cache.contains(hash)
+    }
+
+    pub fn len(&self) -> usize {
+        self.cache.len()
+    }
+
+}
+
+#[test]
+fn test_cache_insert() {
+
+    let mut cache = TinyTransactionCache::new(10);
+    let buf = TransactionBuf(vec![1,2,3]);
+    let buf_clone = buf.clone();
+    assert_eq!(cache.insert((buf)), true);
+    assert_eq!(cache.insert(buf_clone), false);
+
+}
+
+#[test]
+fn test_cache_max_capacity() {
+
+    let mut cache = TinyTransactionCache::new(1);
+
+    let first_buf = TransactionBuf(vec![1,2,3]);
+    let second_buf = TransactionBuf(vec![4,5,6]);
+    let second_buf_clone = second_buf.clone();
+    assert_eq!(cache.insert((first_buf)), true);
+    assert_eq!(cache.insert(second_buf), true);
+    assert_eq!(cache.len(), 1);
+    assert_eq!(cache.insert(second_buf_clone), false);
+
 }
 
 #[test]
