@@ -1,16 +1,18 @@
 //! Module that provides the [`Tangle`] struct.
 
 use crate::{
+    milestone::MilestoneIndex,
     vertex::{
         Vertex,
         VertexMeta,
         VertexRef,
     },
-    MilestoneIndex,
-    TransactionId,
 };
 
-use async_std::sync::Sender;
+use async_std::sync::{
+    Arc,
+    Sender,
+};
 use dashmap::DashMap;
 
 use bee_bundle::{
@@ -18,32 +20,46 @@ use bee_bundle::{
     Transaction,
 };
 
+use std::sync::atomic::{
+    AtomicU32,
+    Ordering,
+};
+
 type DashSet<T> = DashMap<T, ()>;
 
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
-    vertices: DashMap<TransactionId, Vertex>,
+    vertices: DashMap<Hash, Vertex>,
     unsolid_new: Sender<Hash>,
     solid_entry_points: DashSet<Hash>,
+    first_solid_milestone: Arc<AtomicU32>,
+    last_solid_milestone: Arc<AtomicU32>,
+    last_milestone: Arc<AtomicU32>,
 }
 
 impl Tangle {
-    /// Constructor.
+    /// Creates a new `Tangle`.
     pub(crate) fn new(unsolid_new: Sender<Hash>) -> Self {
         Self {
             vertices: DashMap::new(),
             unsolid_new,
             solid_entry_points: DashSet::new(),
+            first_solid_milestone: Arc::new(AtomicU32::new(0)),
+            last_solid_milestone: Arc::new(AtomicU32::new(0)),
+            last_milestone: Arc::new(AtomicU32::new(0)),
         }
     }
 
     /// Inserts a transaction.
+    ///
+    /// TODO: there is no guarantee `hash` belongs to `transaction`. User responsibility?
     pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<VertexRef> {
         let vertex = Vertex::from(transaction, hash);
 
         self.insert(hash, vertex).await
     }
 
+    #[inline(always)]
     async fn insert(&'static self, hash: Hash, vertex: Vertex) -> Option<VertexRef> {
         let meta = vertex.meta;
 
@@ -56,38 +72,37 @@ impl Tangle {
         }
     }
 
-    async fn solidify(&'static self, _id: TransactionId) -> Option<()> {
+    /// Returns whether the transaction is stored in the Tangle.
+    pub fn contains_transaction(&'static self, hash: &Hash) -> bool {
+        self.vertices.contains_key(hash)
+    }
+
+    async fn solidify(&'static self, _hash: Hash) -> Option<()> {
         todo!()
     }
 
-    /// Returns meta data about transaction, if it's available in the local Tangle.
-    pub async fn get_meta(&'static self, _id: TransactionId) -> Option<VertexMeta> {
-        todo!()
+    async fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
+        self.vertices.get(hash).map(|v| v.meta)
     }
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
-    pub async fn get_body(&'static self, _id: TransactionId) -> Option<&Transaction> {
+    pub async fn get_body(&'static self, _hash: &Hash) -> Option<&Transaction> {
         todo!()
     }
 
     /// This function is *eventually consistent* - if `true` is returned, solidification has
     /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
     /// or solidification information has not yet been fully propagated.
-    pub async fn is_solid(&'static self, _id: TransactionId) -> Option<bool> {
+    pub async fn is_solid(&'static self, _hash: Hash) -> Option<bool> {
         todo!()
     }
 
     /// Returns a [`VertexRef`] linked to a transaction, if it's available in the local Tangle.
-    pub async fn get(&'static self, id: TransactionId) -> Option<VertexRef> {
+    pub async fn get(&'static self, hash: &Hash) -> Option<VertexRef> {
         Some(VertexRef {
-            meta: self.get_meta(id).await?,
+            meta: self.get_meta(&hash).await?,
             tangle: self,
         })
-    }
-
-    /// Returns whether the transaction is stored in the local Tangle.
-    pub async fn contains(&'static self, id: TransactionId) -> bool {
-        self.get_meta(id).await.is_some()
     }
 
     ///  Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
@@ -101,18 +116,53 @@ impl Tangle {
     }
 
     /// Adds `hash` to the set of solid entry points.
-    pub fn add_solid_entry_point(&self, hash: Hash) {
+    pub fn add_solid_entry_point(&'static self, hash: Hash) {
         self.solid_entry_points.insert(hash, ());
     }
 
     /// Removes `hash` from the set of solid entry points.
-    pub fn rmv_solid_entry_point(&self, hash: Hash) {
+    pub fn rmv_solid_entry_point(&'static self, hash: Hash) {
         self.solid_entry_points.remove(&hash);
     }
 
     /// Returns whether the transaction associated `hash` is a solid entry point.
-    pub fn is_solid_entry_point(&self, hash: &Hash) -> bool {
+    pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
         self.solid_entry_points.contains_key(hash)
+    }
+
+    /// Updates the first solid milestone index to `new_index`.
+    pub fn update_first_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
+        self.first_solid_milestone.store(*new_index, Ordering::Relaxed);
+    }
+
+    /// Updates the last solid milestone index to `new_index`.
+    pub fn update_last_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
+        self.last_solid_milestone.store(*new_index, Ordering::Relaxed);
+    }
+
+    /// Updates the last milestone index to `new_index`.
+    pub fn update_last_milestone_index(&'static self, new_index: MilestoneIndex) {
+        self.last_milestone.store(*new_index, Ordering::Relaxed);
+    }
+
+    /// Retreives the first solid milestone index.
+    pub fn get_first_solid_milestone_index(&'static self) -> MilestoneIndex {
+        self.first_solid_milestone.load(Ordering::Relaxed).into()
+    }
+
+    /// Retreives the last solid milestone index.
+    pub fn get_last_solid_milestone_index(&'static self) -> MilestoneIndex {
+        self.last_solid_milestone.load(Ordering::Relaxed).into()
+    }
+
+    /// Retreives the last milestone index.
+    pub fn get_last_milestone_index(&'static self) -> MilestoneIndex {
+        self.last_milestone.load(Ordering::Relaxed).into()
+    }
+
+    /// Returns the current size of the Tangle.
+    pub fn size(&'static self) -> usize {
+        self.vertices.len()
     }
 }
 
@@ -227,6 +277,8 @@ mod tests {
     };
     use serial_test::serial;
 
+    use async_std::task::block_on;
+
     #[test]
     #[serial]
     fn insert_and_contains() {
@@ -235,7 +287,46 @@ mod tests {
 
         let (hash, transaction) = create_random_tx();
 
-        tangle.insert_transaction(transaction, hash);
+        assert!(block_on(tangle.insert_transaction(transaction, hash)).is_some());
+        assert_eq!(1, tangle.size());
+        assert!(tangle.contains_transaction(&hash));
+
+        exit();
+    }
+
+    #[test]
+    #[serial]
+    fn update_and_get_first_solid_milestone_index() {
+        init();
+        let tangle = tangle();
+
+        tangle.update_first_solid_milestone_index(1368160.into());
+
+        assert_eq!(1368160, *tangle.get_first_solid_milestone_index());
+        exit();
+    }
+
+    #[test]
+    #[serial]
+    fn update_and_get_last_solid_milestone_index() {
+        init();
+        let tangle = tangle();
+
+        tangle.update_last_solid_milestone_index(1368167.into());
+
+        assert_eq!(1368167, *tangle.get_last_solid_milestone_index());
+        exit();
+    }
+
+    #[test]
+    #[serial]
+    fn update_and_get_last_milestone_index() {
+        init();
+        let tangle = tangle();
+
+        tangle.update_last_milestone_index(1368168.into());
+
+        assert_eq!(1368168, *tangle.get_last_milestone_index());
         exit();
     }
 }

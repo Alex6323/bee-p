@@ -1,7 +1,4 @@
-use crate::{
-    tangle::Tangle,
-    TransactionId,
-};
+use crate::tangle::Tangle;
 
 use bee_bundle::{
     Hash,
@@ -28,9 +25,9 @@ impl Vertex {
 
 #[derive(Copy, Clone)]
 pub struct VertexMeta {
-    id: TransactionId,
-    trunk: TransactionId,
-    branch: TransactionId,
+    id: Hash,
+    trunk: Hash,
+    branch: Hash,
 }
 
 #[derive(Copy, Clone)]
@@ -41,15 +38,15 @@ pub struct VertexRef {
 
 impl VertexRef {
     pub async fn get_body(&self) -> Option<&Transaction> {
-        self.tangle.get_body(self.meta.id).await
+        self.tangle.get_body(&self.meta.id).await
     }
 
     pub async fn get_trunk(&self) -> Option<Self> {
-        self.tangle.get(self.meta.trunk).await
+        self.tangle.get(&self.meta.trunk).await
     }
 
     pub async fn get_branch(&self) -> Option<Self> {
-        self.tangle.get(self.meta.branch).await
+        self.tangle.get(&self.meta.branch).await
     }
 }
 
