@@ -141,16 +141,16 @@ impl TransactionWorker {
             // calculate transaction hash
             let tx_hash: Hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
 
-            info!("[TransactionWorker ] Received transaction {}.", tx_hash);
+            info!("[TransactionWorker ] Received transaction {}.", &tx_hash);
 
             // check if transactions is already present in the tangle before doing any further work
-            //if  tangle().contains(tx_hash.clone()).await {
-                //info!("[TransactionWorker ] Transaction {} already present in the tangle.", &tx_hash);
-                //continue;
-            //}
+            if  tangle().contains_transaction(&tx_hash) {
+                info!("[TransactionWorker ] Transaction {} already present in the tangle.", &tx_hash);
+                continue;
+            }
 
             // store transaction
-            tangle().insert_transaction(built_transaction, tx_hash);
+            tangle().insert_transaction(built_transaction, tx_hash).await;
 
         }
 
@@ -286,13 +286,12 @@ fn test_tx_worker() {
     spawn(async move {
         use std::time::Duration;
         use async_std::task;
-        task::sleep(Duration::from_secs(1)).await;
+        task::sleep(Duration::from_secs(2)).await;
         shutdown_sender.send(()).unwrap();
     });
 
     block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
 
-    //let result = block_on(tangle().contains(Hash::zeros()));
-    //assert!(result);
+    assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
 
 }

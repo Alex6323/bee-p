@@ -15,7 +15,6 @@ bee-ternary = { path = "../bee-ternary" }
 
 async-std = "1.5.0"
 futures = "0.3.4"
-digest = "0.5.2"
 log = "0.4.8"
 twox-hash = "1.5.0"
 
