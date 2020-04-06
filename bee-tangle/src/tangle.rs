@@ -291,7 +291,7 @@ mod tests {
         assert_eq!(1, tangle.size());
         assert!(tangle.contains_transaction(&hash));
 
-        exit();
+        drop();
     }
 
     #[test]
@@ -303,7 +303,7 @@ mod tests {
         tangle.update_first_solid_milestone_index(1368160.into());
 
         assert_eq!(1368160, *tangle.get_first_solid_milestone_index());
-        exit();
+        drop();
     }
 
     #[test]
@@ -315,7 +315,7 @@ mod tests {
         tangle.update_last_solid_milestone_index(1368167.into());
 
         assert_eq!(1368167, *tangle.get_last_solid_milestone_index());
-        exit();
+        drop();
     }
 
     #[test]
@@ -327,7 +327,7 @@ mod tests {
         tangle.update_last_milestone_index(1368168.into());
 
         assert_eq!(1368168, *tangle.get_last_milestone_index());
-        exit();
+        drop();
     }
 }
 
