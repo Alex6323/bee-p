@@ -53,28 +53,20 @@ use crate::ProtocolConfBuilder;
 
 pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
-pub(crate) struct TransactionWorker {
-    receiver: mpsc::Receiver<TransactionWorkerEvent>,
-    shutdown: oneshot::Receiver<()>,
-}
+pub(crate) struct TransactionWorker;
 
 impl TransactionWorker {
 
-    pub(crate) fn new(receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) -> Self {
-
-        Self {
-            receiver,
-            shutdown,
-        }
-
+    pub(crate) fn new() -> Self {
+        Self {}
     }
 
-    pub(crate) async fn run(mut self) {
+    pub(crate) async fn run(self, receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) {
 
         info!("[TransactionWorker ] Running.");
 
-        let mut receiver_fused = self.receiver.fuse();
-        let mut shutdown_fused = self.shutdown.fuse();
+        let mut receiver_fused = receiver.fuse();
+        let mut shutdown_fused = shutdown.fuse();
 
         let mut kerl = Kerl::new();
 
@@ -102,7 +94,7 @@ impl TransactionWorker {
                 let t5b1_bytes: &[i8] = unsafe { &*(&transaction_broadcast.transaction[..] as *const [u8] as *const [i8]) };
 
                 // get T5B1 trits
-                let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_bytes, 8019).unwrap();
+                let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_bytes, t5b1_bytes.len() * 5 - 1).unwrap();
 
                 // get T5B1 trit_buf
                 let t5b1_trit_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
@@ -166,7 +158,7 @@ fn test_tx_worker() {
         shutdown_sender.send(()).unwrap();
     });
 
-    block_on(TransactionWorker::new(transaction_worker_receiver, shutdown_receiver).run());
+    block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
 
     //let result = block_on(tangle().contains(Hash::zeros()));
     //assert!(result);
