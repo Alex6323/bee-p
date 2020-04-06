@@ -87,7 +87,7 @@ impl Tangle {
     }
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
-    pub async fn get_body(&'static self, _hash: &Hash) -> Option<&Transaction> {
+    pub async fn get_transaction(&'static self, _hash: &Hash) -> Option<&Transaction> {
         todo!()
     }
 
