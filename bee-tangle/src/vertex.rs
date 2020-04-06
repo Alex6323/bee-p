@@ -38,15 +38,15 @@ pub struct VertexRef {
 
 impl VertexRef {
     pub async fn get_body(&self) -> Option<&Transaction> {
-        self.tangle.get_body(self.meta.id).await
+        self.tangle.get_body(&self.meta.id).await
     }
 
     pub async fn get_trunk(&self) -> Option<Self> {
-        self.tangle.get(self.meta.trunk).await
+        self.tangle.get(&self.meta.trunk).await
     }
 
     pub async fn get_branch(&self) -> Option<Self> {
-        self.tangle.get(self.meta.branch).await
+        self.tangle.get(&self.meta.branch).await
     }
 }
 

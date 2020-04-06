@@ -77,21 +77,16 @@ impl Tangle {
         self.vertices.contains_key(hash)
     }
 
-    async fn contains(&'static self, hash: Hash) -> bool {
-        self.get_meta(hash).await.is_some()
-    }
-
     async fn solidify(&'static self, _hash: Hash) -> Option<()> {
         todo!()
     }
 
-    /// Returns meta data about transaction, if it's available in the local Tangle.
-    async fn get_meta(&'static self, _hash: Hash) -> Option<VertexMeta> {
-        todo!()
+    async fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
+        self.vertices.get(hash).map(|v| v.meta)
     }
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
-    pub async fn get_body(&'static self, _hash: Hash) -> Option<&Transaction> {
+    pub async fn get_body(&'static self, _hash: &Hash) -> Option<&Transaction> {
         todo!()
     }
 
@@ -103,9 +98,9 @@ impl Tangle {
     }
 
     /// Returns a [`VertexRef`] linked to a transaction, if it's available in the local Tangle.
-    pub async fn get(&'static self, hash: Hash) -> Option<VertexRef> {
+    pub async fn get(&'static self, hash: &Hash) -> Option<VertexRef> {
         Some(VertexRef {
-            meta: self.get_meta(hash).await?,
+            meta: self.get_meta(&hash).await?,
             tangle: self,
         })
     }
@@ -121,48 +116,53 @@ impl Tangle {
     }
 
     /// Adds `hash` to the set of solid entry points.
-    pub fn add_solid_entry_point(&self, hash: Hash) {
+    pub fn add_solid_entry_point(&'static self, hash: Hash) {
         self.solid_entry_points.insert(hash, ());
     }
 
     /// Removes `hash` from the set of solid entry points.
-    pub fn rmv_solid_entry_point(&self, hash: Hash) {
+    pub fn rmv_solid_entry_point(&'static self, hash: Hash) {
         self.solid_entry_points.remove(&hash);
     }
 
     /// Returns whether the transaction associated `hash` is a solid entry point.
-    pub fn is_solid_entry_point(&self, hash: &Hash) -> bool {
+    pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
         self.solid_entry_points.contains_key(hash)
     }
 
     /// Updates the first solid milestone index to `new_index`.
-    pub fn update_first_solid_milestone_index(&self, new_index: MilestoneIndex) {
+    pub fn update_first_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
         self.first_solid_milestone.store(*new_index, Ordering::Relaxed);
     }
 
     /// Updates the last solid milestone index to `new_index`.
-    pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
+    pub fn update_last_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
         self.last_solid_milestone.store(*new_index, Ordering::Relaxed);
     }
 
     /// Updates the last milestone index to `new_index`.
-    pub fn update_last_milestone_index(&self, new_index: MilestoneIndex) {
+    pub fn update_last_milestone_index(&'static self, new_index: MilestoneIndex) {
         self.last_milestone.store(*new_index, Ordering::Relaxed);
     }
 
     /// Retreives the first solid milestone index.
-    pub fn get_first_solid_milestone_index(&self) -> MilestoneIndex {
+    pub fn get_first_solid_milestone_index(&'static self) -> MilestoneIndex {
         self.first_solid_milestone.load(Ordering::Relaxed).into()
     }
 
     /// Retreives the last solid milestone index.
-    pub fn get_last_solid_milestone_index(&self) -> MilestoneIndex {
+    pub fn get_last_solid_milestone_index(&'static self) -> MilestoneIndex {
         self.last_solid_milestone.load(Ordering::Relaxed).into()
     }
 
     /// Retreives the last milestone index.
-    pub fn get_last_milestone_index(&self) -> MilestoneIndex {
+    pub fn get_last_milestone_index(&'static self) -> MilestoneIndex {
         self.last_milestone.load(Ordering::Relaxed).into()
+    }
+
+    /// Returns the current size of the Tangle.
+    pub fn size(&'static self) -> usize {
+        self.vertices.len()
     }
 }
 
@@ -277,6 +277,8 @@ mod tests {
     };
     use serial_test::serial;
 
+    use async_std::task::block_on;
+
     #[test]
     #[serial]
     fn insert_and_contains() {
@@ -285,7 +287,10 @@ mod tests {
 
         let (hash, transaction) = create_random_tx();
 
-        tangle.insert_transaction(transaction, hash);
+        assert!(block_on(tangle.insert_transaction(transaction, hash)).is_some());
+        assert_eq!(1, tangle.size());
+        assert!(tangle.contains_transaction(&hash));
+
         exit();
     }
 
