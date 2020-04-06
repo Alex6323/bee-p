@@ -38,7 +38,7 @@ impl Protocol {
         last_solid_milestone_index: MilestoneIndex,
     ) {
         for epid in Protocol::get().contexts.read().await.keys() {
-            Protocol::send_heartbeat(*epid, first_solid_milestone_index, last_solid_milestone_index);
+            Protocol::send_heartbeat(*epid, first_solid_milestone_index, last_solid_milestone_index).await;
         }
     }
 
