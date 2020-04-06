@@ -138,7 +138,7 @@ fn decode_hash(buff: &[u8]) -> Hash {
         ptr::copy(
             trits.as_i8_slice().as_ptr(),
             cast_slice_mut(hash.0.as_mut()).as_mut_ptr(),
-            243,
+            HASH_TRIT_LEN,
         )
     };
 
@@ -460,6 +460,56 @@ impl StorageBackend for RocksDbBackendStorage {
         db.write_opt(batch, &write_options)?;
 
         Ok(())
+    }
+
+    async fn get_transactions_solid_state(
+        &self,
+        transaction_hashes: Vec<Hash>,
+    ) -> Result<Vec<bool>, Self::StorageError> {
+        let mut solid_states = vec![false; transaction_hashes.len()];
+        let db = self.0.connection.db.as_ref().unwrap();
+        let transaction_hash_to_solid_cf = db.cf_handle(TRANSACTION_HASH_TO_SOLID_COLUMN_FAMILY).unwrap();
+
+        for (index, hash) in transaction_hashes.iter().enumerate() {
+            if db
+                .get_cf(
+                    &transaction_hash_to_solid_cf,
+                    cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice()),
+                )
+                .is_ok()
+            {
+                //We assume the presence of a value means the transaction is solid
+                solid_states[index] = true;
+            }
+        }
+
+        Ok(solid_states)
+    }
+
+    async fn get_transactions_snapshot_index(
+        &self,
+        transaction_hashes: Vec<Hash>,
+    ) -> Result<Vec<u32>, Self::StorageError> {
+        let mut solid_states = vec![0 as u32; transaction_hashes.len()];
+        let db = self.0.connection.db.as_ref().unwrap();
+        let transaction_hash_to_snapshot_index_cf =
+            db.cf_handle(TRANSACTION_HASH_TO_SNAPSHOT_INDEX_COLUMN_FAMILY).unwrap();
+        let mut u32_buffer: [u8; 4] = [0, 0, 0, 0];
+
+        for (index, hash) in transaction_hashes.iter().enumerate() {
+            let res = db.get_cf(
+                &transaction_hash_to_snapshot_index_cf,
+                cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice()),
+            );
+            if res.is_ok() {
+                //We assume the absence of a value means the transaction is not known to be confirmed
+                let transaction_snapshot_index_buffer = res.unwrap().unwrap();
+                unsafe { ptr::copy(transaction_snapshot_index_buffer.as_ptr(), u32_buffer.as_mut_ptr(), 4) };
+                solid_states[index] = unsafe { mem::transmute::<[u8; 4], u32>(u32_buffer) };
+            }
+        }
+
+        Ok(solid_states)
     }
 
     async fn delete_transactions(

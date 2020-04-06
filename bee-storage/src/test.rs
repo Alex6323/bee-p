@@ -329,6 +329,42 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
 
         block_on(storage.destroy_connection()).unwrap();
     }
+
+    fn test_store_and_load_state_delta() {
+        let mut storage = T::new();
+        block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
+        let mut state_delta = StateDeltaMap {
+            address_to_delta: HashMap::new(),
+        };
+        let mut addresses = HashSet::new();
+        const NUM_BALANCES: usize = 1;
+
+        for _i in 0..NUM_BALANCES {
+            let address = bee_test::transaction::rand_trits_field::<Address>();
+            addresses.insert(address.clone());
+            state_delta.address_to_delta.insert(address.clone(), _i as i64);
+        }
+
+        for _i in 0..NUM_BALANCES {
+            let address = bee_test::transaction::rand_trits_field::<Address>();
+            addresses.insert(address.clone());
+            state_delta.address_to_delta.insert(address.clone(), _i as i64 * -1);
+        }
+
+        let now = Instant::now();
+        block_on(storage.insert_state_delta(state_delta, 0)).unwrap();
+        let message = format!(
+            "\n{}: test_store_and_load_state_delta milliseconds elapsed: {}\n",
+            T::test_name(),
+            now.elapsed().as_millis()
+        );
+        io::stdout().write_all(message.as_bytes()).unwrap();
+
+        let res = block_on(storage.load_state_delta(0));
+        assert!(res.is_ok());
+
+        block_on(storage.destroy_connection()).unwrap();
+    }
 }
 
 impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
@@ -356,6 +392,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             Self::test_delete_one_milestone();
             Self::test_insert_transactions_concurrent();
             Self::test_insert_transactions_batch();
+            //Self::test_store_and_load_state_delta()
         })
     }
 }

@@ -143,8 +143,8 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for MilestoneWrapper {
 
 impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for StateDeltaWrapper {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
-        let delta_str = row.get::<String, _>(MILESTONE_COL_DELTA);
-        let delta: StateDeltaMap = bincode::deserialize(&delta_str.as_bytes()).unwrap();
+        let delta_vec = row.get::<Vec<u8>, _>(MILESTONE_COL_DELTA);
+        let delta: StateDeltaMap = bincode::deserialize(&delta_vec).unwrap();
         Ok(Self(delta))
     }
 }
@@ -409,6 +409,32 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
+    async fn get_transactions_solid_state(
+        &self,
+        transaction_hashes: Vec<Hash>,
+    ) -> Result<Vec<bool>, Self::StorageError> {
+        let pool = self
+            .0
+            .connection
+            .connection_pool
+            .as_ref()
+            .expect(CONNECTION_NOT_INITIALIZED);
+        let mut conn_transaction = pool.begin().await?;
+
+        let solid_states = vec![false; transaction_hashes.len()];
+
+        todo!();
+
+        Ok(solid_states)
+    }
+
+    async fn get_transactions_snapshot_index(
+        &self,
+        transaction_hashes: Vec<Hash>,
+    ) -> Result<Vec<u32>, Self::StorageError> {
+        todo!();
+    }
+
     async fn update_transactions_set_snapshot_index(
         &self,
         transaction_hashes: HashSet<bee_bundle::Hash>,
@@ -588,11 +614,15 @@ impl StorageBackend for SqlxBackendStorage {
             .as_ref()
             .expect(CONNECTION_NOT_INITIALIZED);
 
-        let state_delta_wrapper: StateDeltaWrapper = sqlx::query_as(LOAD_DELTA_STATEMENT_BY_INDEX)
+        //FIXME @tsvisabo
+
+        let state_delta_wrapper: MilestoneWrapper = sqlx::query_as(LOAD_DELTA_STATEMENT_BY_INDEX)
             .bind(index as i32)
             .fetch_one(&mut pool)
             .await?;
 
-        Ok(state_delta_wrapper.0)
+        Ok(StateDeltaMap {
+            address_to_delta: HashMap::new(),
+        })
     }
 }

@@ -50,7 +50,7 @@ RETURNING hash
 
 pub const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash hash=$2"#;
 
-pub const UPDATE_SET_SOLID_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash=$2"#;
+pub const UPDATE_SET_SOLID_STATEMENT: &str = r#"UPDATE transactions set solid =$1 WHERE hash=$2"#;
 
 pub const DELETE_TRANSACTION_STATEMENT: &str = r#"DELETE FROM transactions WHERE hash =$1"#;
 
@@ -59,10 +59,26 @@ pub const INSERT_MILESTONE_STATEMENT: &str = r#"
         VALUES ($1, $2)
                 "#;
 
+pub const SELECT_SOLID_BY_HASH_STATEMENT: &str = r#"
+SELECT solid
+FROM transactions
+WHERE hash =$1"#;
+
+pub const SELECT_SNAPSHOT_INDEX_BY_HASH_STATEMENT: &str = r#"
+SELECT snapshot_index
+FROM transactions
+WHERE hash =$1"#;
+
 pub const FIND_MILESTONE_BY_HASH_STATEMENT: &str = r#"
 SELECT id, hash
 FROM milestones
 WHERE hash=$1
+        "#;
+
+pub const FIND_MILESTONE_BY_INDEX_STATEMENT: &str = r#"
+SELECT id, hash
+FROM milestones
+WHERE id=$1
         "#;
 
 pub const DELETE_MILESTONE_BY_HASH_STATEMENT: &str = r#"DELETE FROM milestones WHERE hash =$1"#;
@@ -70,8 +86,7 @@ pub const DELETE_MILESTONE_BY_HASH_STATEMENT: &str = r#"DELETE FROM milestones W
 pub const STORE_DELTA_STATEMENT: &str = r#"UPDATE milestones SET delta =$1 WHERE id =$2"#;
 
 pub const LOAD_DELTA_STATEMENT_BY_INDEX: &str = r#"
-SELECT hash,delta
+SELECT delta
 FROM milestones
-WHERE id = $1
-RETURNING
-hash, delta"#;
+WHERE id=$1
+        "#;
