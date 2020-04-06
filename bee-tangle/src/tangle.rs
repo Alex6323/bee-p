@@ -35,9 +35,9 @@ pub struct Tangle {
     vertices: DashMap<Hash, Vertex>,
     unsolid_new: Sender<Hash>,
     solid_entry_points: DashSet<Hash>,
-    first_solid_milestone: Arc<AtomicU32>,
-    last_solid_milestone: Arc<AtomicU32>,
-    last_milestone: Arc<AtomicU32>,
+    first_solid_milestone: AtomicU32,
+    last_solid_milestone: AtomicU32,
+    last_milestone: AtomicU32,
 }
 
 impl Tangle {
@@ -47,9 +47,9 @@ impl Tangle {
             vertices: DashMap::new(),
             unsolid_new,
             solid_entry_points: DashSet::new(),
-            first_solid_milestone: Arc::new(AtomicU32::new(0)),
-            last_solid_milestone: Arc::new(AtomicU32::new(0)),
-            last_milestone: Arc::new(AtomicU32::new(0)),
+            first_solid_milestone: AtomicU32::new(0),
+            last_solid_milestone: AtomicU32::new(0),
+            last_milestone: AtomicU32::new(0),
         }
     }
 
