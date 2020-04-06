@@ -18,6 +18,7 @@ use bee_crypto::{
 use bee_tangle::tangle;
 
 use bee_ternary::{
+    Error,
     Trits,
     TritBuf,
     T1B1,
@@ -77,7 +78,10 @@ impl TransactionWorker {
                 transaction_broadcast = receiver_fused.next() => match transaction_broadcast {
 
                     Some(transaction_broadcast) => transaction_broadcast,
-                    None => break,
+                    None => {
+                        info!("[TransactionWorker ] Unable to receive transactions from channel.");
+                        break;
+                    },
 
                 },
 
@@ -94,13 +98,23 @@ impl TransactionWorker {
                 let t5b1_bytes: &[i8] = unsafe { &*(&transaction_broadcast.transaction[..] as *const [u8] as *const [i8]) };
 
                 // get T5B1 trits
-                let t5b1_trits: &Trits<T5B1> = Trits::<T5B1>::try_from_raw(t5b1_bytes, t5b1_bytes.len() * 5 - 1).unwrap();
+                let t5b1_trits_result: Result<&Trits<T5B1>, Error> = Trits::<T5B1>::try_from_raw(t5b1_bytes, t5b1_bytes.len() * 5 - 1);
 
-                // get T5B1 trit_buf
-                let t5b1_trit_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
+                match t5b1_trits_result {
+                    Ok(t5b1_trits) => {
 
-                // get T1B1 trit_buf from TB51 trit_buf
-                t5b1_trit_buf.encode::<T1B1Buf>()
+                        // get T5B1 trit_buf
+                        let t5b1_trit_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
+
+                        // get T1B1 trit_buf from TB51 trit_buf
+                        t5b1_trit_buf.encode::<T1B1Buf>()
+
+                    },
+                    Err(_) => {
+                        info!("[TransactionWorker ] Can not decode T5B1 from received data.");
+                        continue;
+                    }
+                }
 
             };
 
