@@ -1,5 +1,3 @@
-extern crate rand;
-
 #[cfg(test)]
 mod tests {
     const BEE_TEST_DB_USER: &str = "test_db_user";
@@ -60,6 +58,10 @@ mod tests {
                 "postgres://{}:dummy_password@localhost/{}",
                 BEE_TEST_DB_USER, BEE_TEST_DB_NAME
             )
+        }
+
+        fn test_name() -> String {
+            String::from("sqlx")
         }
     }
 

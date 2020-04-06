@@ -18,6 +18,7 @@ use sqlx::Error as SqlxError;
 use errors::SqlxBackendError;
 
 use crate::storage::{
+    AttachmentData,
     Connection,
     HashesToApprovers,
     MissingHashesToRCApprovers,
@@ -74,11 +75,6 @@ use crate::sqlx::statements::*;
 struct TransactionWrapper(bee_bundle::Transaction);
 struct MilestoneWrapper(Milestone);
 struct StateDeltaWrapper(StateDeltaMap);
-struct AttachmentData {
-    hash: Hash,
-    trunk: Hash,
-    branch: Hash,
-}
 
 const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
 

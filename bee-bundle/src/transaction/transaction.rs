@@ -32,12 +32,14 @@ use bee_ternary::{
     T1B1,
 };
 
+
 use std::{
     cmp::PartialEq,
     convert::TryFrom,
     fmt,
     hash,
 };
+
 
 #[derive(Debug)]
 pub enum TransactionFieldError {
@@ -273,6 +275,7 @@ macro_rules! impl_transaction_field {
                     &self.0
                 }
 
+                #[inline]
                 fn try_from_inner(val: Self::Inner) -> Result<Self, TransactionFieldError> {
                     if $field_name::is_trits_type() && val.num_trits() != $field_name::trit_len() {
                         Err(TransactionFieldError::FieldWrongLength)?
@@ -280,10 +283,11 @@ macro_rules! impl_transaction_field {
                     Ok(Self::from_inner_unchecked(val))
                 }
 
-                fn from_inner_unchecked(val: Self::Inner) -> Self {
+                fn from_inner_unchecked(val: Self::Inner) -> Self{
                     Self(val)
                 }
 
+                #[inline]
                 fn trit_len() -> usize {
                    Self::trit_len()
                 }

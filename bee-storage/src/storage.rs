@@ -40,6 +40,12 @@ pub struct StateDeltaMap {
     address_to_delta: HashMap<Address, i64>,
 }
 
+pub struct AttachmentData {
+    pub hash: Hash,
+    pub trunk: Hash,
+    pub branch: Hash,
+}
+
 #[async_trait]
 pub trait Connection<Conn> {
     type StorageError: Debug;
@@ -52,6 +58,8 @@ pub trait StorageBackend {
     type StorageError: Debug;
 
     fn new() -> Self;
+
+    //TODO - add methods to get solid state and snpahost_index of transactions
 
     async fn establish_connection(&mut self, url: &str) -> Result<(), Self::StorageError>;
     async fn destroy_connection(&mut self) -> Result<(), Self::StorageError>;

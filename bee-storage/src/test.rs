@@ -31,6 +31,7 @@ use crate::storage::{
 };
 
 pub trait TestableStorage {
+    fn test_name() -> String;
     fn setup() -> ();
     fn teardown() -> ();
     fn test_db_url() -> String;
@@ -53,6 +54,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         assert_eq!(tx.payload().to_inner().len(), found_tx.payload().to_inner().len());
         assert_eq!(tx.bundle(), found_tx.bundle());
         assert_eq!(tx.trunk(), found_tx.trunk());
+        assert_eq!(tx.address(), found_tx.address());
         assert_eq!(tx.branch(), found_tx.branch());
         assert_eq!(tx.tag(), found_tx.tag());
         assert_eq!(tx.obsolete_tag(), found_tx.obsolete_tag());
@@ -149,7 +151,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         assert_eq!(tx.nonce(), found_tx.nonce());
         let mut last_tx_hash = tx_hash.clone();
 
-        for _i in 0..2000 {
+        for _i in 0..1200 {
             let (tx_hash, tx) =
                 bee_test::transaction::create_random_attached_tx(last_tx_hash.clone(), last_tx_hash.clone());
             let mut approvers = HashSet::new();
@@ -162,7 +164,14 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             last_tx_hash = tx_hash.clone();
         }
 
+        let now = Instant::now();
         let hash_to_approvers_observed = storage.map_existing_transaction_hashes_to_approvers().unwrap();
+        let message = format!(
+            "\n{}: test_map_hashes_to_approvers milliseconds elapsed: {}\n",
+            T::test_name(),
+            now.elapsed().as_millis()
+        );
+        io::stdout().write_all(message.as_bytes()).unwrap();
 
         let maps_equal = hash_to_approvers_expected.iter().all(|(k, _v)| {
             hash_to_approvers_expected.get_key_value(&k).unwrap()
@@ -187,7 +196,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         let mut last_tx_hash = tx_hash.clone();
         let mut all_transactions_hashes = HashSet::new();
 
-        for i in 0..2000 {
+        for i in 0..1200 {
             let missing_tx_hash_trunk = bee_test::transaction::rand_trits_field::<Hash>();
             let missing_tx_hash_branch = bee_test::transaction::rand_trits_field::<Hash>();
             let (tx_hash, tx) = match i % 3 {
@@ -236,9 +245,16 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             last_tx_hash = tx_hash.clone();
         }
 
+        let now = Instant::now();
         let missing_hash_to_approvers_observed = storage
             .map_missing_transaction_hashes_to_approvers(all_transactions_hashes)
             .unwrap();
+        let message = format!(
+            "\n{}: test_map_missing_transaction_hashes_to_approvers milliseconds elapsed: {}\n",
+            T::test_name(),
+            now.elapsed().as_millis()
+        );
+        io::stdout().write_all(message.as_bytes()).unwrap();
 
         let maps_are_equal = missing_hash_to_approvers_expected.iter().all(|(k, _v)| {
             missing_hash_to_approvers_expected.get_key_value(&k).unwrap()
@@ -255,7 +271,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
         let mut hashes_transaction_seq = Vec::new();
         let mut hashes = HashSet::new();
-        const NUM_TRANSACTIONS: usize = 1000;
+        const NUM_TRANSACTIONS: usize = 2000;
 
         let mut futures = Vec::new();
         for _i in 0..NUM_TRANSACTIONS {
@@ -269,12 +285,13 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             let f = storage.insert_transaction(hash, tx);
             futures.push(f);
         }
-
         block_on(join_all(futures));
         let message = format!(
-            "\ntest_insert_transactions_concurrent Elapsed: {}\n",
-            now.elapsed().as_secs()
+            "\n{}: test_insert_transactions_concurrent milliseconds elapsed: {}\n",
+            T::test_name(),
+            now.elapsed().as_millis()
         );
+
         io::stdout().write_all(message.as_bytes()).unwrap();
         for h in hashes {
             let res = block_on(storage.find_transaction(h));
@@ -299,8 +316,9 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         let now = Instant::now();
         block_on(storage.insert_transactions(hashes_to_transactions)).unwrap();
         let message = format!(
-            "\ntest_insert_transactions_batch Elapsed: {}\n",
-            now.elapsed().as_secs()
+            "\n{}: test_insert_transactions_batch milliseconds elapsed: {}\n",
+            T::test_name(),
+            now.elapsed().as_millis()
         );
         io::stdout().write_all(message.as_bytes()).unwrap();
 
@@ -330,12 +348,12 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
     pub fn run_all_tests() {
         StorageTestRunner::<T>::run_test(|| {
             Self::test_insert_one_transaction();
-            Self::test_insert_one_milestone();
             Self::test_delete_one_transaction();
-            Self::test_delete_one_milestone();
             Self::test_transaction_multiple_delete();
             Self::test_map_hashes_to_approvers();
             Self::test_map_missing_transaction_hashes_to_approvers();
+            Self::test_insert_one_milestone();
+            Self::test_delete_one_milestone();
             Self::test_insert_transactions_concurrent();
             Self::test_insert_transactions_batch();
         })
