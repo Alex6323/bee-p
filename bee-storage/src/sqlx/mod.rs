@@ -13,7 +13,10 @@ mod test;
 
 use bytemuck::cast_slice;
 
-use sqlx::Error as SqlxError;
+use sqlx::{
+    Error as SqlxError,
+    QueryAs,
+};
 
 use errors::SqlxBackendError;
 
@@ -75,6 +78,8 @@ use crate::sqlx::statements::*;
 struct TransactionWrapper(bee_bundle::Transaction);
 struct MilestoneWrapper(Milestone);
 struct StateDeltaWrapper(StateDeltaMap);
+struct SolidStateWrapper(bool);
+struct SnapshotIndexWrapper(u32);
 
 const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
 
@@ -167,6 +172,20 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for AttachmentData {
         ));
 
         Ok(AttachmentData { hash, trunk, branch })
+    }
+}
+
+impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SolidStateWrapper {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
+        let solid: i8 = row.get::<i8, _>(TRANSACTION_COL_SOLID);
+        Ok(Self { 0: solid != 0 })
+    }
+}
+
+impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SnapshotIndexWrapper {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
+        let index: u32 = row.get::<u32, _>(TRANSACTION_COL_SNAPSHOT_INDEX);
+        Ok(Self { 0: index })
     }
 }
 
@@ -421,9 +440,20 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-        let solid_states = vec![false; transaction_hashes.len()];
+        let mut solid_states = vec![false; transaction_hashes.len()];
 
-        todo!();
+        let statement = select_solid_states_by_hashes_statement(transaction_hashes.len());
+        let mut query = sqlx::query_as(&statement);
+
+        for hash in transaction_hashes {
+            query = query.bind(hash.as_bytes())
+        }
+
+        let solid_state_wrapper_vec: Vec<SolidStateWrapper> = query.fetch_all(&mut conn_transaction).await?;
+
+        for solid_state_wrapper in solid_state_wrapper_vec {
+            solid_states.push(solid_state_wrapper.0);
+        }
 
         Ok(solid_states)
     }
@@ -432,7 +462,30 @@ impl StorageBackend for SqlxBackendStorage {
         &self,
         transaction_hashes: Vec<Hash>,
     ) -> Result<Vec<u32>, Self::StorageError> {
-        todo!();
+        let pool = self
+            .0
+            .connection
+            .connection_pool
+            .as_ref()
+            .expect(CONNECTION_NOT_INITIALIZED);
+        let mut conn_transaction = pool.begin().await?;
+
+        let mut snapshot_indexes: Vec<u32> = vec![0; transaction_hashes.len()];
+
+        let statement = select_snapshot_indexes_by_hashes_statement(transaction_hashes.len());
+        let mut query = sqlx::query_as(&statement);
+
+        for hash in transaction_hashes {
+            query = query.bind(hash.as_bytes())
+        }
+
+        let snapshot_index_wrapper_vec: Vec<SnapshotIndexWrapper> = query.fetch_all(&mut conn_transaction).await?;
+
+        for snapshot_index_wrapper in snapshot_index_wrapper_vec {
+            snapshot_indexes.push(snapshot_index_wrapper.0);
+        }
+
+        Ok(snapshot_indexes)
     }
 
     async fn update_transactions_set_snapshot_index(
@@ -597,7 +650,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         sqlx::query(STORE_DELTA_STATEMENT)
             .bind(encoded)
-            .bind(index as i32)
+            .bind(index as u32)
             .execute(&mut conn_transaction)
             .await?;
 
@@ -614,15 +667,11 @@ impl StorageBackend for SqlxBackendStorage {
             .as_ref()
             .expect(CONNECTION_NOT_INITIALIZED);
 
-        //FIXME @tsvisabo
-
-        let state_delta_wrapper: MilestoneWrapper = sqlx::query_as(LOAD_DELTA_STATEMENT_BY_INDEX)
-            .bind(index as i32)
+        let state_delta_wrapper: StateDeltaWrapper = sqlx::query_as(LOAD_DELTA_STATEMENT_BY_INDEX)
+            .bind(index as u32)
             .fetch_one(&mut pool)
             .await?;
 
-        Ok(StateDeltaMap {
-            address_to_delta: HashMap::new(),
-        })
+        Ok(state_delta_wrapper.0)
     }
 }

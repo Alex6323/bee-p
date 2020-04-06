@@ -642,7 +642,7 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let state_delta_cf = db.cf_handle(STATE_DELTA_COLUMN_FAMILY).unwrap();
-        //TODO - handle error
+        //TODO - handle error, assert the milestone exists?
         let encoded: Vec<u8> = bincode::serialize(&state_delta).unwrap();
 
         db.put_cf(

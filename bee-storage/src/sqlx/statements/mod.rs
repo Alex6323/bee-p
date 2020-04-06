@@ -1,3 +1,5 @@
+use itertools::*;
+
 pub const TRANSACTION_COL_HASH: &str = "hash";
 pub const TRANSACTION_COL_VALUE: &str = "value";
 pub const TRANSACTION_COL_CURRENT_INDEX: &str = "current_index";
@@ -14,6 +16,8 @@ pub const TRANSACTION_COL_TIMESTAMP: &str = "timestamp";
 pub const TRANSACTION_COL_ATTACHMENT_TIMESTAMP: &str = "attachment_timestamp";
 pub const TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER: &str = "attachment_timestamp_upper";
 pub const TRANSACTION_COL_ATTACHMENT_TIMESTAMP_LOWER: &str = "attachment_timestamp_lower";
+pub const TRANSACTION_COL_SOLID: &str = "solid";
+pub const TRANSACTION_COL_SNAPSHOT_INDEX: &str = "snapshot_index";
 
 pub const MILESTONE_COL_ID: &str = "id";
 pub const MILESTONE_COL_HASH: &str = "hash";
@@ -59,15 +63,15 @@ pub const INSERT_MILESTONE_STATEMENT: &str = r#"
         VALUES ($1, $2)
                 "#;
 
-pub const SELECT_SOLID_BY_HASH_STATEMENT: &str = r#"
+pub const SELECT_SOLID_BY_HASHES_STATEMENT: &str = r#"
 SELECT solid
 FROM transactions
-WHERE hash =$1"#;
+WHERE hash in ({})"#;
 
 pub const SELECT_SNAPSHOT_INDEX_BY_HASH_STATEMENT: &str = r#"
 SELECT snapshot_index
 FROM transactions
-WHERE hash =$1"#;
+WHERE hash in {}"#;
 
 pub const FIND_MILESTONE_BY_HASH_STATEMENT: &str = r#"
 SELECT id, hash
@@ -90,3 +94,34 @@ SELECT delta
 FROM milestones
 WHERE id=$1
         "#;
+
+pub fn select_solid_states_by_hashes_statement(num_hashes: usize) -> String {
+    format!(
+        r#"
+                SELECT solid
+                FROM transactions
+                WHERE hash in ({})"#,
+        placeholders(num_hashes, 1)
+    )
+}
+
+pub fn select_snapshot_indexes_by_hashes_statement(num_hashes: usize) -> String {
+    format!(
+        r#"
+                SELECT snapshot_index
+                FROM transactions
+                WHERE hash in ({})"#,
+        placeholders(num_hashes, 1)
+    )
+}
+
+fn placeholders(rows: usize, columns: usize) -> String {
+    (0..rows)
+        .format_with(",", |i, f| {
+            f(&format_args!(
+                "({})",
+                (1..=columns).format_with(",", |j, f| f(&format_args!("${}", j + (i * columns))))
+            ))
+        })
+        .to_string()
+}
