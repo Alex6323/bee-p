@@ -37,8 +37,9 @@ impl Protocol {
         first_solid_milestone_index: MilestoneIndex,
         last_solid_milestone_index: MilestoneIndex,
     ) {
-        SenderWorker::<Heartbeat>::broadcast(Heartbeat::new(first_solid_milestone_index, last_solid_milestone_index))
-            .await;
+        for epid in Protocol::get().contexts.read().await.keys() {
+            Protocol::send_heartbeat(*epid, first_solid_milestone_index, last_solid_milestone_index);
+        }
     }
 
     // MilestoneRequest

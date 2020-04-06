@@ -93,21 +93,6 @@ macro_rules! implement_sender_worker {
                 };
             }
 
-            pub(crate) async fn broadcast(message: $type) {
-                for context in Protocol::get().contexts.read().await.values() {
-                    if let Err(e) = context
-                        .$sender
-                        .0
-                        // TODO avoid clone ?
-                        .clone()
-                        .send(message.clone())
-                        .await
-                    {
-                        warn!("[SenderWorker ] Sending message failed: {:?}.", e);
-                    }
-                }
-            }
-
             pub(crate) async fn run(
                 mut self,
                 events_receiver: mpsc::Receiver<$type>,
