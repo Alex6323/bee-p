@@ -43,7 +43,6 @@ use std::{
     collections::HashMap,
     ptr,
     sync::{
-        atomic::AtomicU32,
         Arc,
         Mutex,
     },
@@ -81,8 +80,6 @@ pub struct Protocol {
     ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
-    pub(crate) first_solid_milestone_index: AtomicU32,
-    pub(crate) last_solid_milestone_index: AtomicU32,
 }
 
 impl Protocol {
@@ -134,8 +131,6 @@ impl Protocol {
             ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             contexts: RwLock::new(HashMap::new()),
-            first_solid_milestone_index: AtomicU32::new(0),
-            last_solid_milestone_index: AtomicU32::new(0),
         };
 
         unsafe {
