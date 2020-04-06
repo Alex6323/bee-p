@@ -11,7 +11,7 @@ use bee_bundle::{
 };
 
 use bee_crypto::{
-    Kerl,
+    CurlP81,
     Sponge
 };
 
@@ -68,7 +68,7 @@ impl TransactionWorker {
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
 
-        let mut kerl = Kerl::new();
+        let mut curl = CurlP81::new();
 
         loop {
 
@@ -117,7 +117,7 @@ impl TransactionWorker {
             };
 
             // calculate transaction hash
-            let tx_hash: Hash = Hash::from_inner_unchecked(kerl.digest(&transaction_buf).unwrap());
+            let tx_hash: Hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
 
             info!("[TransactionWorker ] Received transaction {}.", tx_hash);
 
