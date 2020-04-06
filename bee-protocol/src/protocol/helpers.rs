@@ -1,18 +1,18 @@
 use crate::{
     message::{
         Heartbeat,
-        MilestoneRequest,
         TransactionBroadcast,
-        TransactionRequest,
     },
     milestone::MilestoneIndex,
     protocol::Protocol,
     worker::{
         MilestoneRequesterWorkerEntry,
         SenderWorker,
+        TransactionRequesterWorkerEntry,
     },
 };
 
+use bee_bundle::Hash;
 use bee_network::EndpointId;
 
 use futures::sink::SinkExt;
@@ -75,11 +75,9 @@ impl Protocol {
 
     // TransactionRequest
 
-    pub async fn send_transaction_request(epid: EndpointId, hash: [u8; 49]) {
-        SenderWorker::<TransactionRequest>::send(&epid, TransactionRequest::new(hash)).await;
-    }
-
-    pub async fn broadcast_transaction_request(hash: [u8; 49]) {
-        SenderWorker::<TransactionRequest>::broadcast(TransactionRequest::new(hash)).await;
+    pub async fn request_transaction(hash: Hash, index: MilestoneIndex) {
+        Protocol::get()
+            .transaction_requester_worker
+            .insert(TransactionRequesterWorkerEntry(hash, index));
     }
 }

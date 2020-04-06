@@ -45,6 +45,7 @@ impl MilestoneRequesterWorker {
                 // TODO impl fused stream
                 entry = Protocol::get().milestone_requester_worker.pop().fuse() => {
                     if let MilestoneRequesterWorkerEntry(index) = entry {
+                        // TODO Use sender worker
                 //         let _bytes = MilestoneRequest::new(index).into_full_bytes();
                 //         // TODO we don't have any peer_id here
                     }

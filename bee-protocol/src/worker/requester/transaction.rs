@@ -15,18 +15,18 @@ use futures::{
 use log::info;
 
 #[derive(Eq, PartialEq)]
-pub(crate) struct TransactionRequesterWorkerEntry(MilestoneIndex, Hash);
+pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
 
 // TODO check that this is the right order
 impl PartialOrd for TransactionRequesterWorkerEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        self.1.partial_cmp(&other.1)
     }
 }
 
 impl Ord for TransactionRequesterWorkerEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
+        self.1.cmp(&other.1)
     }
 }
 
@@ -46,7 +46,8 @@ impl TransactionRequesterWorker {
             select! {
                 // TODO impl fused stream
                 entry = Protocol::get().transaction_requester_worker.pop().fuse() => {
-                    if let TransactionRequesterWorkerEntry(_, _hash) = entry {
+                    if let TransactionRequesterWorkerEntry(_hash, _index) = entry {
+                        //  TODO use sender worker
                         // TODO cheeck that neighbor may have the tx (by the index)
                         // TODO convert hash to bytes
                         // let _bytes = TransactionRequest::new(hash).into_full_bytes();
