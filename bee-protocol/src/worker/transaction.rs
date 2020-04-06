@@ -199,7 +199,7 @@ impl Hasher for CustomHasher {
 struct TinyTransactionCache {
     max_capacity: usize,
     cache: HashSet<u64, BuildHasherDefault<CustomHasher>>,
-    order: VecDeque<u64>,
+    elem_order: VecDeque<u64>,
 }
 
 impl TinyTransactionCache {
@@ -208,7 +208,7 @@ impl TinyTransactionCache {
         Self {
             max_capacity,
             cache: HashSet::default(),
-            order: VecDeque::new()
+            elem_order: VecDeque::new()
         }
     }
 
@@ -219,12 +219,12 @@ impl TinyTransactionCache {
         }
 
         if self.cache.len() >= self.max_capacity {
-            let first  = self.order.pop_front().unwrap();
+            let first  = self.elem_order.pop_front().unwrap();
             self.cache.remove(&first);
         }
 
         self.cache.insert(hash.clone());
-        self.order.push_back(hash);
+        self.elem_order.push_back(hash);
 
         true
 
@@ -241,7 +241,7 @@ impl TinyTransactionCache {
 }
 
 #[test]
-fn test_cache_insert() {
+fn test_cache_insert_same_elements() {
 
     let mut cache = TinyTransactionCache::new(10);
 
@@ -250,6 +250,21 @@ fn test_cache_insert() {
 
     assert_eq!(cache.insert(xx_hash(first_buf)), true);
     assert_eq!(cache.insert(xx_hash(second_buf)), false);
+    assert_eq!(cache.len(), 1);
+
+}
+
+#[test]
+fn test_cache_insert_different_elements() {
+
+    let mut cache = TinyTransactionCache::new(10);
+
+    let first_buf = &[1,2,3];
+    let second_buf = &[3,4,5];
+
+    assert_eq!(cache.insert(xx_hash(first_buf)), true);
+    assert_eq!(cache.insert(xx_hash(second_buf)), true);
+    assert_eq!(cache.len(), 2);
 
 }
 
@@ -286,7 +301,7 @@ fn test_tx_worker() {
     spawn(async move {
         use std::time::Duration;
         use async_std::task;
-        task::sleep(Duration::from_secs(2)).await;
+        task::sleep(Duration::from_secs(1)).await;
         shutdown_sender.send(()).unwrap();
     });
 
