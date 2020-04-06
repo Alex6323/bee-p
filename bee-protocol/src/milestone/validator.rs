@@ -90,10 +90,11 @@ impl MilestoneValidatorWorker {
                     if let Some(tail_hash) = tail_hash {
                         match self.validate_milestone(tail_hash).await {
                             Ok(milestone) => {
-                                // TODO only log if > latest milestone
-                                info!("[MilestoneValidatorWorker ] New milestone #{}.", milestone.index);
-
-                                // TODO update tangle milestone
+                                // TODO deref ? Why not .into() ?
+                                if milestone.index > *tangle().get_last_milestone_index() {
+                                    info!("[MilestoneValidatorWorker ] New milestone #{}.", milestone.index);
+                                    tangle().update_last_milestone_index(milestone.index.into());
+                                }
                             },
                             Err(e) => {
                                 warn!("[MilestoneValidatorWorker ] Invalid milestone bundle: {:?}.", e);
