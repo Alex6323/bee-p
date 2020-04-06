@@ -7,7 +7,10 @@ use crate::{
     },
     milestone::MilestoneIndex,
     protocol::Protocol,
-    worker::SenderWorker,
+    worker::{
+        MilestoneRequesterWorkerEntry,
+        SenderWorker,
+    },
 };
 
 use bee_network::EndpointId;
@@ -40,20 +43,14 @@ impl Protocol {
 
     // MilestoneRequest
 
-    pub async fn send_milestone_request(epid: EndpointId, index: MilestoneIndex) {
-        SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+    pub fn request_milestone(index: MilestoneIndex) {
+        Protocol::get()
+            .milestone_requester_worker
+            .insert(MilestoneRequesterWorkerEntry(index));
     }
 
-    pub async fn send_latest_milestone_request(epid: EndpointId) {
-        Protocol::send_milestone_request(epid, 0).await;
-    }
-
-    pub async fn broadcast_milestone_request(index: MilestoneIndex) {
-        SenderWorker::<MilestoneRequest>::broadcast(MilestoneRequest::new(index)).await;
-    }
-
-    pub async fn broadcast_latest_milestone_request() {
-        Protocol::broadcast_milestone_request(0).await;
+    pub fn request_latest_milestone() {
+        Protocol::request_milestone(0);
     }
 
     // TransactionBroadcast

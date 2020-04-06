@@ -13,7 +13,7 @@ use futures::{
 use log::info;
 
 #[derive(Eq, PartialEq)]
-pub(crate) struct MilestoneRequesterWorkerEntry(MilestoneIndex);
+pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex);
 
 // TODO check that this is the right order
 impl PartialOrd for MilestoneRequesterWorkerEntry {

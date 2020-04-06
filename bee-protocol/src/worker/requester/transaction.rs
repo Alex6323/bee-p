@@ -47,6 +47,7 @@ impl TransactionRequesterWorker {
                 // TODO impl fused stream
                 entry = Protocol::get().transaction_requester_worker.pop().fuse() => {
                     if let TransactionRequesterWorkerEntry(_, _hash) = entry {
+                        // TODO cheeck that neighbor may have the tx (by the index)
                         // TODO convert hash to bytes
                         // let _bytes = TransactionRequest::new(hash).into_full_bytes();
                         // TODO we don't have any peer_id here
