@@ -3,12 +3,15 @@
 #![deny(missing_docs)]
 #![allow(dead_code, unused_imports, unused_variables)]
 
+pub use milestone::MilestoneIndex;
+pub use tangle::Tangle;
+
+mod milestone;
 mod solidifier;
 mod tangle;
 mod vertex;
 
 use solidifier::SolidifierState;
-pub use tangle::Tangle;
 
 use async_std::{
     sync::channel,
@@ -28,9 +31,6 @@ use std::{
 
 /// A temporary redefinition of `bee-bundle::Hash`.
 pub type TransactionId = Hash;
-
-/// A redefinition of a `usize`.
-pub type MilestoneIndex = usize;
 
 static TANGLE: AtomicPtr<Tangle> = AtomicPtr::new(ptr::null_mut());
 static INITIALIZED: AtomicBool = AtomicBool::new(false);

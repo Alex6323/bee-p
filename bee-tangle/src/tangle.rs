@@ -1,12 +1,12 @@
 //! Module that provides the [`Tangle`] struct.
 
 use crate::{
+    milestone::MilestoneIndex,
     vertex::{
         Vertex,
         VertexMeta,
         VertexRef,
     },
-    MilestoneIndex,
     TransactionId,
 };
 
@@ -130,18 +130,18 @@ impl Tangle {
     }
 
     /// Sets the first solid milestone index to `new_index`.
-    pub fn update_first_solid_milestone_index(&self, new_index: u32) {
-        self.first_solid_milestone.store(new_index, Ordering::Relaxed);
+    pub fn update_first_solid_milestone_index(&self, new_index: MilestoneIndex) {
+        self.first_solid_milestone.store(*new_index, Ordering::Relaxed);
     }
 
     /// Sets the last solid milestone index to `new_index`.
-    pub fn update_last_solid_milestone_index(&self, new_index: u32) {
-        self.last_solid_milestone.store(new_index, Ordering::Relaxed);
+    pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
+        self.last_solid_milestone.store(*new_index, Ordering::Relaxed);
     }
 
     /// Sets the last milestone index to `new_index`.
-    pub fn update_last_milestone_index(&self, new_index: u32) {
-        self.last_milestone.store(new_index, Ordering::Relaxed);
+    pub fn update_last_milestone_index(&self, new_index: MilestoneIndex) {
+        self.last_milestone.store(*new_index, Ordering::Relaxed);
     }
 }
 
