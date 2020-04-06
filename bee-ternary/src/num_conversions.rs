@@ -82,8 +82,8 @@ impl From<i64> for TritBuf<T1B1Buf> {
     }
 }
 
-pub enum TritsI64ConversionError{
-    AbsValueTooBig
+pub enum TritsI64ConversionError {
+    AbsValueTooBig,
 }
 
 //TODO - generalize over all encodings
@@ -91,7 +91,7 @@ pub enum TritsI64ConversionError{
 // [https://github.com/iotaledger/iota_common/blob/1b56a5282933fb674181001630e7b2e2c33b5eea/common/trinary/trit_long.c#L31]
 impl TryFrom<TritBuf<T1B1Buf>> for i64 {
     type Error = TritsI64ConversionError;
-    fn try_from(trits: TritBuf<T1B1Buf>) -> Result<Self,Self::Error> {
+    fn try_from(trits: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
         if trits.len() == 0 {
             return Ok(0);
         }
@@ -139,11 +139,13 @@ mod tests {
     use super::*;
     use crate::T1B1Buf;
 
-    use std::io::{
-        self,
-        Write,
+    use std::{
+        io::{
+            self,
+            Write,
+        },
+        time::Instant,
     };
-    use std::time::Instant;
 
     #[test]
     fn convert_1_to_trits() {
