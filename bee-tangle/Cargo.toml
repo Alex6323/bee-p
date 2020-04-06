@@ -8,7 +8,7 @@ edition = "2018"
 bee-bundle = { path = "../bee-bundle" }
 
 async-std = { version = "1.5", features = ["unstable"] }
-dashmap = "3.7"
+dashmap = "3.10"
 
 [dev-dependencies]
 bee-crypto = { path = "../bee-crypto" }

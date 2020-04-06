@@ -13,7 +13,10 @@ use async_std::sync::{
     Arc,
     Sender,
 };
-use dashmap::DashMap;
+use dashmap::{
+    DashMap,
+    DashSet,
+};
 
 use bee_bundle::{
     Hash,
@@ -25,7 +28,7 @@ use std::sync::atomic::{
     Ordering,
 };
 
-type DashSet<T> = DashMap<T, ()>;
+//type DashSet<T> = DashMap<T, ()>;
 
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
@@ -117,7 +120,7 @@ impl Tangle {
 
     /// Adds `hash` to the set of solid entry points.
     pub fn add_solid_entry_point(&'static self, hash: Hash) {
-        self.solid_entry_points.insert(hash, ());
+        self.solid_entry_points.insert(hash);
     }
 
     /// Removes `hash` from the set of solid entry points.
@@ -127,7 +130,7 @@ impl Tangle {
 
     /// Returns whether the transaction associated `hash` is a solid entry point.
     pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
-        self.solid_entry_points.contains_key(hash)
+        self.solid_entry_points.contains(hash)
     }
 
     /// Updates the first solid milestone index to `new_index`.
