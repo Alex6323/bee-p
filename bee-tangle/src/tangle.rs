@@ -129,19 +129,34 @@ impl Tangle {
         self.solid_entry_points.contains_key(hash)
     }
 
-    /// Sets the first solid milestone index to `new_index`.
+    /// Updates the first solid milestone index to `new_index`.
     pub fn update_first_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.first_solid_milestone.store(*new_index, Ordering::Relaxed);
     }
 
-    /// Sets the last solid milestone index to `new_index`.
+    /// Updates the last solid milestone index to `new_index`.
     pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.last_solid_milestone.store(*new_index, Ordering::Relaxed);
     }
 
-    /// Sets the last milestone index to `new_index`.
+    /// Updates the last milestone index to `new_index`.
     pub fn update_last_milestone_index(&self, new_index: MilestoneIndex) {
         self.last_milestone.store(*new_index, Ordering::Relaxed);
+    }
+
+    /// Retreives the first solid milestone index.
+    pub fn get_first_solid_milestone_index(&self) -> MilestoneIndex {
+        self.first_solid_milestone.load(Ordering::Relaxed).into()
+    }
+
+    /// Retreives the last solid milestone index.
+    pub fn get_last_solid_milestone_index(&self) -> MilestoneIndex {
+        self.last_solid_milestone.load(Ordering::Relaxed).into()
+    }
+
+    /// Retreives the last milestone index.
+    pub fn get_last_milestone_index(&self) -> MilestoneIndex {
+        self.last_milestone.load(Ordering::Relaxed).into()
     }
 }
 
@@ -265,6 +280,42 @@ mod tests {
         let (hash, transaction) = create_random_tx();
 
         tangle.insert_transaction(transaction, hash);
+        exit();
+    }
+
+    #[test]
+    #[serial]
+    fn update_and_get_first_solid_milestone_index() {
+        init();
+        let tangle = tangle();
+
+        tangle.update_first_solid_milestone_index(1368160.into());
+
+        assert_eq!(1368160, *tangle.get_first_solid_milestone_index());
+        exit();
+    }
+
+    #[test]
+    #[serial]
+    fn update_and_get_last_solid_milestone_index() {
+        init();
+        let tangle = tangle();
+
+        tangle.update_last_solid_milestone_index(1368167.into());
+
+        assert_eq!(1368167, *tangle.get_last_solid_milestone_index());
+        exit();
+    }
+
+    #[test]
+    #[serial]
+    fn update_and_get_last_milestone_index() {
+        init();
+        let tangle = tangle();
+
+        tangle.update_last_milestone_index(1368168.into());
+
+        assert_eq!(1368168, *tangle.get_last_milestone_index());
         exit();
     }
 }
