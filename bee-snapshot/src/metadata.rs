@@ -31,7 +31,7 @@ pub enum SnapshotMetadataError {
 // TODO use a Hash type instead of TritBuf<T1B1Buf>
 pub struct SnapshotMetadata {
     hash: TritBuf<T1B1Buf>,
-    index: u64,
+    index: u32,
     timestamp: u64,
     solid_entry_points: Vec<Hash>,
     seen_milestones: Vec<Hash>,
@@ -59,7 +59,7 @@ impl SnapshotMetadata {
                 line.clear();
                 let index = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
-                        .parse::<u64>()
+                        .parse::<u32>()
                         .map_err(|e| SnapshotMetadataError::InvalidSnapshotMetadataIndex(e)),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
@@ -149,7 +149,7 @@ impl SnapshotMetadata {
         &self.hash
     }
 
-    pub fn index(&self) -> u64 {
+    pub fn index(&self) -> u32 {
         self.index
     }
 

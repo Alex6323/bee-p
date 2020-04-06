@@ -147,6 +147,7 @@ impl Node {
                     snapshot_metadata.solid_entry_points().len(),
                     snapshot_metadata.seen_milestones().len(),
                 );
+                tangle().update_first_solid_milestone_index(snapshot_metadata.index().into());
                 for solid_entry_point in snapshot_metadata.solid_entry_points() {
                     tangle().add_solid_entry_point(*solid_entry_point);
                 }
