@@ -97,13 +97,17 @@ impl TryFrom<TritBuf<T1B1Buf>> for i64 {
         }
 
         if trits.len() > MAX_TRITS_IN_I64 {
-            return Err(TritsI64ConversionError::AbsValueTooBig);
+            for index in MAX_TRITS_IN_I64..trits.len() {
+                if trits.get(index).unwrap() != Btrit::Zero {
+                    return Err(TritsI64ConversionError::AbsValueTooBig);
+                }
+            }
         }
 
         let mut accum: i64 = 0;
         let mut end = trits.len();
 
-        if trits.len() == MAX_TRITS_IN_I64 {
+        if trits.len() >= MAX_TRITS_IN_I64 {
             let mut accum_i128: i128 = 0;
             for index in (0..end).rev() {
                 let trit_value = match trits.get(index).unwrap() {
