@@ -29,9 +29,6 @@ use std::{
     },
 };
 
-/// A temporary redefinition of `bee-bundle::Hash`.
-pub type TransactionId = Hash;
-
 static TANGLE: AtomicPtr<Tangle> = AtomicPtr::new(ptr::null_mut());
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 

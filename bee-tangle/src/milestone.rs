@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-/// A wrapper a round a `u32` that represents a milestone index.
+/// A wrapper around a `u32` that represents a milestone index.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct MilestoneIndex(u32);
 

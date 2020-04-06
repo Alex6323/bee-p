@@ -1,7 +1,4 @@
-use crate::{
-    tangle::Tangle,
-    TransactionId,
-};
+use crate::tangle::Tangle;
 
 use bee_bundle::{
     Hash,
@@ -28,9 +25,9 @@ impl Vertex {
 
 #[derive(Copy, Clone)]
 pub struct VertexMeta {
-    id: TransactionId,
-    trunk: TransactionId,
-    branch: TransactionId,
+    id: Hash,
+    trunk: Hash,
+    branch: Hash,
 }
 
 #[derive(Copy, Clone)]

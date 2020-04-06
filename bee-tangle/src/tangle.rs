@@ -7,7 +7,6 @@ use crate::{
         VertexMeta,
         VertexRef,
     },
-    TransactionId,
 };
 
 use async_std::sync::{
@@ -30,7 +29,7 @@ type DashSet<T> = DashMap<T, ()>;
 
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
-    vertices: DashMap<TransactionId, Vertex>,
+    vertices: DashMap<Hash, Vertex>,
     unsolid_new: Sender<Hash>,
     solid_entry_points: DashSet<Hash>,
     first_solid_milestone: Arc<AtomicU32>,
@@ -39,7 +38,7 @@ pub struct Tangle {
 }
 
 impl Tangle {
-    /// Constructor.
+    /// Creates a new `Tangle`.
     pub(crate) fn new(unsolid_new: Sender<Hash>) -> Self {
         Self {
             vertices: DashMap::new(),
@@ -52,12 +51,15 @@ impl Tangle {
     }
 
     /// Inserts a transaction.
+    ///
+    /// TODO: there is no guarantee `hash` belongs to `transaction`. User responsibility?
     pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<VertexRef> {
         let vertex = Vertex::from(transaction, hash);
 
         self.insert(hash, vertex).await
     }
 
+    #[inline(always)]
     async fn insert(&'static self, hash: Hash, vertex: Vertex) -> Option<VertexRef> {
         let meta = vertex.meta;
 
@@ -70,38 +72,42 @@ impl Tangle {
         }
     }
 
-    async fn solidify(&'static self, _id: TransactionId) -> Option<()> {
+    /// Returns whether the transaction is stored in the Tangle.
+    pub fn contains_transaction(&'static self, hash: &Hash) -> bool {
+        self.vertices.contains_key(hash)
+    }
+
+    async fn contains(&'static self, hash: Hash) -> bool {
+        self.get_meta(hash).await.is_some()
+    }
+
+    async fn solidify(&'static self, _hash: Hash) -> Option<()> {
         todo!()
     }
 
     /// Returns meta data about transaction, if it's available in the local Tangle.
-    pub async fn get_meta(&'static self, _id: TransactionId) -> Option<VertexMeta> {
+    async fn get_meta(&'static self, _hash: Hash) -> Option<VertexMeta> {
         todo!()
     }
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
-    pub async fn get_body(&'static self, _id: TransactionId) -> Option<&Transaction> {
+    pub async fn get_body(&'static self, _hash: Hash) -> Option<&Transaction> {
         todo!()
     }
 
     /// This function is *eventually consistent* - if `true` is returned, solidification has
     /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
     /// or solidification information has not yet been fully propagated.
-    pub async fn is_solid(&'static self, _id: TransactionId) -> Option<bool> {
+    pub async fn is_solid(&'static self, _hash: Hash) -> Option<bool> {
         todo!()
     }
 
     /// Returns a [`VertexRef`] linked to a transaction, if it's available in the local Tangle.
-    pub async fn get(&'static self, id: TransactionId) -> Option<VertexRef> {
+    pub async fn get(&'static self, hash: Hash) -> Option<VertexRef> {
         Some(VertexRef {
-            meta: self.get_meta(id).await?,
+            meta: self.get_meta(hash).await?,
             tangle: self,
         })
-    }
-
-    /// Returns whether the transaction is stored in the local Tangle.
-    pub async fn contains(&'static self, id: TransactionId) -> bool {
-        self.get_meta(id).await.is_some()
     }
 
     ///  Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
