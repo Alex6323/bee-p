@@ -5,9 +5,7 @@ mod tests {
     const BEE_TEST_DB_USER: &str = "test_db_user";
     const BEE_TEST_DB_NAME: &str = "test_db";
 
-    use crate::{
-        sqlx::SqlxBackendStorage,
-    };
+    use crate::sqlx::SqlxBackendStorage;
 
     use std::{
         io::{

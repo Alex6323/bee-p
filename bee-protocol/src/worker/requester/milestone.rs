@@ -28,19 +28,17 @@ impl Ord for MilestoneRequesterWorkerEntry {
     }
 }
 
-pub(crate) struct MilestoneRequesterWorker {
-    shutdown: oneshot::Receiver<()>,
-}
+pub(crate) struct MilestoneRequesterWorker {}
 
 impl MilestoneRequesterWorker {
-    pub(crate) fn new(shutdown: oneshot::Receiver<()>) -> Self {
-        Self { shutdown }
+    pub(crate) fn new() -> Self {
+        Self {}
     }
 
-    pub(crate) async fn run(self) {
+    pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {
         info!("[MilestoneRequesterWorker ] Running.");
 
-        let mut shutdown_fused = self.shutdown.fuse();
+        let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {

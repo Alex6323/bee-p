@@ -215,7 +215,6 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
     fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
         let mut hash = TritBuf::zeros(243);
-        // let mut digests = vec![0; (self.state.len() / 6561) * 243];
         let mut digests: TritBuf = TritBuf::zeros((self.state.len() / 6561) * 243);
         let mut state = self.state.clone();
 

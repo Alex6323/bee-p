@@ -59,9 +59,7 @@ use std::collections::{
     HashSet,
 };
 
-use std::{
-    rc::Rc,
-};
+use std::rc::Rc;
 
 use async_trait::async_trait;
 use futures::executor::block_on;
@@ -140,10 +138,10 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for MilestoneWrapper {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
         let hash_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(MILESTONE_COL_HASH).as_slice(), HASH_TRIT_LEN);
 
-        Ok(Self(Milestone {
-            hash: Hash::from_inner_unchecked(hash_tritbuf),
-            index: row.get::<i32, _>(MILESTONE_COL_ID) as u32,
-        }))
+        Ok(Self(Milestone::new(
+            Hash::from_inner_unchecked(hash_tritbuf),
+            row.get::<i32, _>(MILESTONE_COL_ID) as u32,
+        )))
     }
 }
 
@@ -512,8 +510,8 @@ impl StorageBackend for SqlxBackendStorage {
         let mut conn_transaction = pool.begin().await?;
 
         sqlx::query(INSERT_MILESTONE_STATEMENT)
-            .bind(milestone.index as i32)
-            .bind(encode_buffer(milestone.hash.to_inner().encode::<T5B1Buf>()))
+            .bind(milestone.index() as i32)
+            .bind(encode_buffer(milestone.hash().to_inner().encode::<T5B1Buf>()))
             .execute(&mut conn_transaction)
             .await?;
 

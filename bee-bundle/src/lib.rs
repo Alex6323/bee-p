@@ -7,7 +7,10 @@ mod incoming_bundle_builder;
 mod outgoing_bundle_builder;
 mod transaction;
 
-pub use crate::bundle::Bundle;
+pub use crate::bundle::{
+    Bundle,
+    Transactions,
+};
 pub use incoming_bundle_builder::{
     IncomingBundleBuilder,
     IncomingBundleBuilderError,

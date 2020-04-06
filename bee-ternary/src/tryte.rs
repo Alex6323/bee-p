@@ -13,6 +13,9 @@ use std::{
     },
 };
 
+pub const MIN_TRYTE_VALUE: i8 = -13;
+pub const MAX_TRYTE_VALUE: i8 = 13;
+
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 #[repr(i8)]
 pub enum Tryte {

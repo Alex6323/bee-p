@@ -24,24 +24,22 @@ pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) message: MilestoneRequest,
 }
 
-pub(crate) struct MilestoneResponderWorker {
-    receiver: mpsc::Receiver<MilestoneResponderWorkerEvent>,
-    shutdown: oneshot::Receiver<()>,
-}
+pub(crate) struct MilestoneResponderWorker {}
 
 impl MilestoneResponderWorker {
-    pub(crate) fn new(
-        receiver: mpsc::Receiver<MilestoneResponderWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Self {
-        Self { receiver, shutdown }
+    pub(crate) fn new() -> Self {
+        Self {}
     }
 
-    pub(crate) async fn run(self) {
+    pub(crate) async fn run(
+        self,
+        receiver: mpsc::Receiver<MilestoneResponderWorkerEvent>,
+        shutdown: oneshot::Receiver<()>,
+    ) {
         info!("[MilestoneResponderWorker ] Running.");
 
-        let mut receiver_fused = self.receiver.fuse();
-        let mut shutdown_fused = self.shutdown.fuse();
+        let mut receiver_fused = receiver.fuse();
+        let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {

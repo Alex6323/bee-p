@@ -15,8 +15,3 @@ pub use crate::sqlx::{
     SqlxBackendConnection,
     SqlxBackendStorage,
 };
-
-use crate::test::{
-    StorageTestRunner,
-    TestableStorage,
-};

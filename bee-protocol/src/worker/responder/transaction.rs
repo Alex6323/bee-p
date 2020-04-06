@@ -24,24 +24,22 @@ pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) message: TransactionRequest,
 }
 
-pub(crate) struct TransactionResponderWorker {
-    receiver: mpsc::Receiver<TransactionResponderWorkerEvent>,
-    shutdown: oneshot::Receiver<()>,
-}
+pub(crate) struct TransactionResponderWorker {}
 
 impl TransactionResponderWorker {
-    pub(crate) fn new(
-        receiver: mpsc::Receiver<TransactionResponderWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Self {
-        Self { receiver, shutdown }
+    pub(crate) fn new() -> Self {
+        Self {}
     }
 
-    pub(crate) async fn run(self) {
+    pub(crate) async fn run(
+        self,
+        receiver: mpsc::Receiver<TransactionResponderWorkerEvent>,
+        shutdown: oneshot::Receiver<()>,
+    ) {
         info!("[TransactionResponderWorker ] Running.");
 
-        let mut receiver_fused = self.receiver.fuse();
-        let mut shutdown_fused = self.shutdown.fuse();
+        let mut receiver_fused = receiver.fuse();
+        let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {
