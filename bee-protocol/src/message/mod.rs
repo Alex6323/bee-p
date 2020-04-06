@@ -16,7 +16,6 @@ pub(crate) use header::{
     HEADER_TYPE_SIZE,
 };
 pub(crate) use heartbeat::Heartbeat;
-pub(crate) use legacy_gossip::LegacyGossip;
 pub(crate) use message::Message;
 pub(crate) use milestone_request::MilestoneRequest;
 pub(crate) use transaction_broadcast::TransactionBroadcast;
