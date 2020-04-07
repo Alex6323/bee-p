@@ -184,17 +184,6 @@ where
         }
     }
 
-    pub fn copy_raw_bytes(&mut self, trits: &Trits<T>, start: usize, end: usize) {
-        assert!(self.len() > start && self.len() >= end);
-        unsafe {
-            ptr::copy(
-                trits.as_i8_slice().as_ptr(),
-                self.as_i8_slice_mut().as_mut_ptr().offset(start as isize),
-                end,
-            );
-        }
-    }
-
     pub fn fill(&mut self, trit: T::Trit) {
         for i in 0..self.len() {
             self.set(i, trit);
@@ -247,6 +236,17 @@ impl<T: Trit> Trits<T1B1<T>> {
             *this = b;
             Some(a)
         })
+    }
+
+    pub fn copy_raw_bytes(&mut self, trits: &Trits<T1B1>, start: usize, end: usize) {
+        assert!(self.len() > start && self.len() >= end);
+        unsafe {
+            ptr::copy(
+                trits.as_i8_slice().as_ptr(),
+                self.as_i8_slice_mut().as_mut_ptr().offset(start as isize),
+                end,
+            );
+        }
     }
 
     // Helper
