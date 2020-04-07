@@ -237,69 +237,75 @@ fn xx_hash(buf: &[u8]) -> u64 {
     hasher.finish()
 }
 
-#[test]
-fn test_cache_insert_same_elements() {
-    let mut cache = TinyHashCache::new(10);
+#[cfg(test)]
+mod tests {
 
-    let first_buf = &[1, 2, 3];
-    let second_buf = &[1, 2, 3];
+    use super::*;
 
-    assert_eq!(cache.insert(xx_hash(first_buf)), true);
-    assert_eq!(cache.insert(xx_hash(second_buf)), false);
-    assert_eq!(cache.len(), 1);
-}
+    #[test]
+    fn test_cache_insert_same_elements() {
+        let mut cache = TinyHashCache::new(10);
 
-#[test]
-fn test_cache_insert_different_elements() {
-    let mut cache = TinyHashCache::new(10);
+        let first_buf = &[1, 2, 3];
+        let second_buf = &[1, 2, 3];
 
-    let first_buf = &[1, 2, 3];
-    let second_buf = &[3, 4, 5];
+        assert_eq!(cache.insert(xx_hash(first_buf)), true);
+        assert_eq!(cache.insert(xx_hash(second_buf)), false);
+        assert_eq!(cache.len(), 1);
+    }
 
-    assert_eq!(cache.insert(xx_hash(first_buf)), true);
-    assert_eq!(cache.insert(xx_hash(second_buf)), true);
-    assert_eq!(cache.len(), 2);
-}
+    #[test]
+    fn test_cache_insert_different_elements() {
+        let mut cache = TinyHashCache::new(10);
 
-#[test]
-fn test_cache_max_capacity() {
-    let mut cache = TinyHashCache::new(1);
+        let first_buf = &[1, 2, 3];
+        let second_buf = &[3, 4, 5];
 
-    let first_buf = &[1, 2, 3];
-    let second_buf = &[3, 4, 5];
-    let second_buf_clone = second_buf.clone();
+        assert_eq!(cache.insert(xx_hash(first_buf)), true);
+        assert_eq!(cache.insert(xx_hash(second_buf)), true);
+        assert_eq!(cache.len(), 2);
+    }
 
-    assert_eq!(cache.insert(xx_hash(first_buf)), true);
-    assert_eq!(cache.insert(xx_hash(second_buf)), true);
-    assert_eq!(cache.len(), 1);
-    assert_eq!(cache.insert(xx_hash(&second_buf_clone)), false);
-}
+    #[test]
+    fn test_cache_max_capacity() {
+        let mut cache = TinyHashCache::new(1);
 
-#[test]
-fn test_tx_worker_with_compressed_buffer() {
-    bee_tangle::init();
+        let first_buf = &[1, 2, 3];
+        let second_buf = &[3, 4, 5];
+        let second_buf_clone = second_buf.clone();
 
-    assert_eq!(tangle().size(), 0);
+        assert_eq!(cache.insert(xx_hash(first_buf)), true);
+        assert_eq!(cache.insert(xx_hash(second_buf)), true);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.insert(xx_hash(&second_buf_clone)), false);
+    }
 
-    let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
-    let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
+    #[test]
+    fn test_tx_worker_with_compressed_buffer() {
+        bee_tangle::init();
 
-    let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
-    spawn(async move {
-        let tx: [u8; 1024] = [0; 1024];
-        let message = TransactionBroadcast::new(&tx);
-        transaction_worker_sender_clone.send(message).await.unwrap();
-    });
+        assert_eq!(tangle().size(), 0);
 
-    spawn(async move {
-        use async_std::task;
-        use std::time::Duration;
-        task::sleep(Duration::from_secs(1)).await;
-        shutdown_sender.send(()).unwrap();
-    });
+        let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
+        let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
 
-    block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
+        let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
+        spawn(async move {
+            let tx: [u8; 1024] = [0; 1024];
+            let message = TransactionBroadcast::new(&tx);
+            transaction_worker_sender_clone.send(message).await.unwrap();
+        });
 
-    assert_eq!(tangle().size(), 1);
-    assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
+        spawn(async move {
+            use async_std::task;
+            use std::time::Duration;
+            task::sleep(Duration::from_secs(1)).await;
+            shutdown_sender.send(()).unwrap();
+        });
+
+        block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
+
+        assert_eq!(tangle().size(), 1);
+        assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
+    }
 }
