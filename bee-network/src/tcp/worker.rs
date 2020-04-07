@@ -41,7 +41,7 @@ impl TcpWorker {
 
         let listener = TcpListener::bind(*self.binding_addr).await?;
 
-        debug!("[TCP  ] Accepting connections on {}.", listener.local_addr()?);
+        info!("[TCP  ] Accepting connections on {}.", listener.local_addr()?);
 
         let mut incoming = listener.incoming().fuse();
         let shutdown = &mut self.shutdown;
@@ -74,7 +74,7 @@ impl TcpWorker {
                                     continue;
                                 }
 
-                                debug!(
+                                info!(
                                     "[TCP  ] Sucessfully established connection to {} ({}).",
                                     conn.remote_addr,
                                     Origin::Inbound
@@ -86,8 +86,8 @@ impl TcpWorker {
                                 }
                             }
                             Err(e) => {
-                                error!("[TCP  ] Connection attempt failed (Endpoint offline?).");
-                                error!("[TCP  ] Error was: {:?}.", e);
+                                error!("[TCP  ] Accepting connection failed.");
+                                error!("[TCP  ] Error was: {:?}.", e.kind());
                             },
                         }
                     } else {

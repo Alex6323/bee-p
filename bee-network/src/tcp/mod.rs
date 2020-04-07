@@ -42,7 +42,7 @@ use log::*;
 
 /// Tries to connect to an endpoint.
 pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier) -> ConnectionResult<()> {
-    debug!("[TCP  ] Trying to connect to {}...", epid);
+    info!("[TCP  ] Trying to connect to {}...", epid);
 
     match TcpStream::connect(**addr).await {
         Ok(stream) => {
@@ -55,7 +55,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
                 }
             };
 
-            debug!(
+            info!(
                 "[TCP  ] Sucessfully established connection to {} ({}).",
                 conn.remote_addr,
                 Origin::Outbound
@@ -64,8 +64,8 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
             Ok(spawn_connection_workers(conn, notifier).await?)
         }
         Err(e) => {
-            warn!("[TCP  ] Connection attempt failed (Endpoint offline?).");
-            warn!("[TCP  ] Error was: {:?}.", e);
+            warn!("[TCP  ] Connecting to {} failed (Endpoint offline?).", epid);
+            warn!("[TCP  ] Error was: {:?}.", e.kind());
             Err(ConnectionError::ConnectionAttemptFailed)
         }
     }
