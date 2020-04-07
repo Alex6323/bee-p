@@ -4,7 +4,6 @@ use async_std::task::{
 };
 
 use bee_bundle::{
-    Address,
     Hash,
     Transaction,
     TransactionField
@@ -23,19 +22,12 @@ use bee_ternary::{
     Error,
     Trits,
     TritBuf,
-    T1B1,
     T5B1,
     T5B1Buf,
     T1B1Buf
 };
 
-use crate::ProtocolConfBuilder;
-use crate::protocol::{
-    Protocol,
-};
-
 use crate::message::TransactionBroadcast;
-use crate::milestone::MilestoneValidatorWorkerEvent;
 
 use futures::{
     channel::{
@@ -50,7 +42,10 @@ use futures::{
 
 use log::info;
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{
+    HashSet,
+    VecDeque
+};
 use std::hash::BuildHasherDefault;
 use std::hash::Hasher;
 
