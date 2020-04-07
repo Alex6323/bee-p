@@ -149,8 +149,7 @@ mod tests {
         assert!(address.is_ok());
 
         let address = address.unwrap();
-        assert!(address.is_ipv4());
-        assert_eq!("127.0.0.1:15600", address.to_string());
-        assert_eq!(Port(15600), address.port());
+        assert!(address.is_ipv4() || address.is_ipv6());
+        assert_eq!(15600, *address.port());
     }
 }
