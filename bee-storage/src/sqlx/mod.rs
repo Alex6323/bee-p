@@ -177,7 +177,7 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for AttachmentData {
 
 impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SolidStateWrapper {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
-        let solid = row.get::<i16, _>(TRANSACTION_COL_SOLID) ;
+        let solid = row.get::<i16, _>(TRANSACTION_COL_SOLID);
         Ok(Self { 0: solid != 0 })
     }
 }
@@ -192,7 +192,7 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SnapshotIndexWrapper {
 //TODO - Encoded data is T5B1, decodeds to T1B1,should be generic
 fn decode_bytes(u8_slice: &[u8], num_trits: usize) -> TritBuf {
     let decoded_column_i8_slice: &[i8] = cast_slice(u8_slice);
-    unsafe { Trits::<T5B1>::from_raw_unchecked(decoded_column_i8_slice, num_trits).to_buf::<T1B1Buf>() }
+    unsafe { Trits::<T5B1>::from_raw_unchecked(decoded_column_i8_slice, num_trits).encode::<T1B1Buf>() }
 }
 
 fn encode_buffer(buffer: TritBuf<T5B1Buf>) -> Vec<u8> {
@@ -418,11 +418,11 @@ impl StorageBackend for SqlxBackendStorage {
         let mut conn_transaction = pool.begin().await?;
 
         for hash in transaction_hashes.iter() {
-                let _ = sqlx::query(UPDATE_SET_SOLID_STATEMENT)
-                    .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
-                    .execute(&mut conn_transaction).await;
-
-        };
+            let _ = sqlx::query(UPDATE_SET_SOLID_STATEMENT)
+                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
+                .execute(&mut conn_transaction)
+                .await;
+        }
 
         conn_transaction.commit().await?;
 
@@ -447,7 +447,7 @@ impl StorageBackend for SqlxBackendStorage {
         let mut query = sqlx::query_as(&statement);
 
         for hash in transaction_hashes {
-            query = query.bind(encode_buffer(hash.to_inner().to_buf::<T5B1Buf>()))
+            query = query.bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
         }
 
         let solid_state_wrapper_vec: Vec<SolidStateWrapper> = query.fetch_all(&mut conn_transaction).await?;
@@ -505,8 +505,9 @@ impl StorageBackend for SqlxBackendStorage {
             let _ = sqlx::query(UPDATE_SNAPSHOT_INDEX_STATEMENT)
                 .bind(snapshot_index as i32)
                 .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
-                .execute(&mut conn_transaction).await?;
-        };
+                .execute(&mut conn_transaction)
+                .await?;
+        }
 
         conn_transaction.commit().await?;
 

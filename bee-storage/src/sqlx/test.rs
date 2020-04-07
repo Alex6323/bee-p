@@ -37,7 +37,7 @@ mod tests {
         }
 
         fn teardown() -> () {
-               let output = Command::new("src/sqlx/schemes/postgres/cleanup.sh")
+            let output = Command::new("src/sqlx/schemes/postgres/cleanup.sh")
                 .arg(BEE_TEST_DB_USER)
                 .arg(BEE_TEST_DB_NAME)
                 .output()
