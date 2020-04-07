@@ -21,6 +21,7 @@ use bee_ternary::{
 };
 
 use rand::Rng;
+use bee_protocol::Milestone;
 
 pub fn rand_trits_field<T: TransactionField>() -> T
 // Bit weird, but these constraints permit generating random trits for any transaction field type
@@ -65,9 +66,10 @@ pub fn clone_tx(tx: &Transaction) -> Transaction {
     builder.build().unwrap()
 }
 
-pub fn create_random_tx() -> (Hash, Transaction) {
-    let builder = TransactionBuilder::new()
-        .with_payload(rand_trits_field::<Payload>())
+
+pub fn create_random_tx() -> (bee_bundle::Hash, bee_bundle::Transaction) {
+    let builder = bee_bundle::TransactionBuilder::new()
+        .with_payload(Payload::zeros())
         .with_address(rand_trits_field::<Address>())
         .with_value(Value::from_inner_unchecked(0))
         .with_obsolete_tag(rand_trits_field::<Tag>())
