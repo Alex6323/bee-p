@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn issue_fire_and_forget_command() {
         let (mut sender, mut receiver) = command_channel();
-        let url = block_on(Url::from_str_with_port("tcp://localhost:15600")).unwrap();
+        let url = block_on(Url::from_str("tcp://localhost:15600")).unwrap();
         let mut received_command = false;
 
         spawn(async move {
@@ -174,7 +174,7 @@ mod tests {
     fn issue_command_that_responds() {
         let (mut sender, mut receiver) = command_channel();
         let (responder, requester) = response_channel::<bool>();
-        let url = block_on(Url::from_str_with_port("tcp://localhost:15600")).unwrap();
+        let url = block_on(Url::from_str("tcp://localhost:15600")).unwrap();
         let mut received_command = false;
         let mut received_response = false;
 
