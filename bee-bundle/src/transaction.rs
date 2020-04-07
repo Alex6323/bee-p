@@ -386,6 +386,7 @@ impl Transaction {
 
         let value =
             i64::try_from(trits[VALUE.trit_offset.start..VALUE.trit_offset.start + VALUE.trit_offset.length].to_buf())?;
+
         let timestamp = i64::try_from(
             trits[TIMESTAMP.trit_offset.start..TIMESTAMP.trit_offset.start + TIMESTAMP.trit_offset.length].to_buf(),
         )? as u64;
@@ -450,121 +451,83 @@ impl Transaction {
         Ok(transaction)
     }
 
-    #[inline]
-    fn to_trits_allocated(&self, mut buf: &mut Trits<T1B1>) {
-        unsafe {
-            ptr::copy(
-                self.payload().to_inner().as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(PAYLOAD.trit_offset.start as isize),
-                PAYLOAD.trit_offset.length,
-            );
+    fn into_trits_allocated(&self, mut buf: &mut Trits<T1B1>) {
+        buf.copy_range(
+            self.payload().to_inner(),
+            PAYLOAD.trit_offset.start,
+            PAYLOAD.trit_offset.length,
+        );
+        buf.copy_range(
+            self.address().to_inner(),
+            ADDRESS.trit_offset.start,
+            ADDRESS.trit_offset.length,
+        );
+        buf.copy_range(
+            self.obsolete_tag().to_inner(),
+            OBSOLETE_TAG.trit_offset.start,
+            OBSOLETE_TAG.trit_offset.length,
+        );
 
-            ptr::copy(
-                self.address().to_inner().as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(ADDRESS.trit_offset.start as isize),
-                ADDRESS.trit_offset.length,
-            );
+        buf.copy_range(
+            self.bundle().to_inner(),
+            BUNDLE.trit_offset.start,
+            BUNDLE.trit_offset.length,
+        );
 
-            ptr::copy(
-                self.obsolete_tag().to_inner().as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(OBSOLETE_TAG.trit_offset.start as isize),
-                OBSOLETE_TAG.trit_offset.length,
-            );
+        buf.copy_range(
+            self.branch().to_inner(),
+            BRANCH.trit_offset.start,
+            BRANCH.trit_offset.length,
+        );
 
-            ptr::copy(
-                self.bundle().to_inner().as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(BUNDLE.trit_offset.start as isize),
-                BUNDLE.trit_offset.length,
-            );
+        buf.copy_range(
+            self.trunk().to_inner(),
+            TRUNK.trit_offset.start,
+            TRUNK.trit_offset.length,
+        );
 
-            ptr::copy(
-                self.branch().to_inner().as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(BRANCH.trit_offset.start as isize),
-                BRANCH.trit_offset.length,
-            );
+        buf.copy_range(self.tag().to_inner(), TAG.trit_offset.start, TAG.trit_offset.length);
 
-            ptr::copy(
-                self.trunk().to_inner().as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(TRUNK.trit_offset.start as isize),
-                TRUNK.trit_offset.length,
-            );
+        buf.copy_range(
+            self.nonce().to_inner(),
+            NONCE.trit_offset.start,
+            NONCE.trit_offset.length,
+        );
 
-            ptr::copy(
-                self.tag().to_inner().as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(TAG.trit_offset.start as isize),
-                TAG.trit_offset.length,
-            );
+        let value_buf = TritBuf::<T1B1Buf>::try_from(self.value().to_inner().to_owned()).unwrap();
 
-            ptr::copy(
-                self.nonce().to_inner().as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(NONCE.trit_offset.start as isize),
-                NONCE.trit_offset.length,
-            );
+        buf.copy_range(value_buf.as_slice(), VALUE.trit_offset.start, value_buf.len());
 
-            let value_buf = TritBuf::<T1B1Buf>::try_from(self.value().to_inner().to_owned()).unwrap();
-            ptr::copy(
-                value_buf.as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(VALUE.trit_offset.start as isize),
-                value_buf.len(),
-            );
+        let timestamp_buf = TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
 
-            let timestamp_buf = TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
-            ptr::copy(
-                timestamp_buf.as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(TIMESTAMP.trit_offset.start as isize),
-                timestamp_buf.len(),
-            );
+        buf.copy_range(
+            timestamp_buf.as_slice(),
+            TIMESTAMP.trit_offset.start,
+            timestamp_buf.len(),
+        );
 
-            let attachment_ts_buf =
-                TritBuf::<T1B1Buf>::try_from(self.attachment_ts().to_inner().to_owned() as i64).unwrap();
-            ptr::copy(
-                attachment_ts_buf.as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(ATTACHMENT_TS.trit_offset.start as isize),
-                attachment_ts_buf.len(),
-            );
+        let attachment_ts_buf =
+            TritBuf::<T1B1Buf>::try_from(self.attachment_ts().to_inner().to_owned() as i64).unwrap();
 
-            let attachment_lbts_buf =
-                TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
-            ptr::copy(
-                attachment_lbts_buf.as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(ATTACHMENT_LBTS.trit_offset.start as isize),
-                attachment_lbts_buf.len(),
-            );
+        buf.copy_range(
+            attachment_ts_buf.as_slice(),
+            ATTACHMENT_TS.trit_offset.start,
+            attachment_ts_buf.len(),
+        );
 
-            let attachment_ubts_buf =
-                TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
-            ptr::copy(
-                attachment_ubts_buf.as_i8_slice().as_ptr(),
-                buf.as_i8_slice_mut()
-                    .as_mut_ptr()
-                    .offset(ATTACHMENT_UBTS.trit_offset.start as isize),
-                attachment_ubts_buf.len(),
-            );
-        }
+        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
+        buf.copy_range(
+            attachment_lbts_buf.as_slice(),
+            ATTACHMENT_LBTS.trit_offset.start,
+            attachment_lbts_buf.len(),
+        );
+
+        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
+        buf.copy_range(
+            attachment_ubts_buf.as_slice(),
+            ATTACHMENT_UBTS.trit_offset.start,
+            attachment_ubts_buf.len(),
+        );
     }
 
     pub fn payload(&self) -> &Payload {
@@ -822,5 +785,47 @@ mod tests {
             .with_nonce(Nonce::zeros())
             .build()
             .unwrap();
+    }
+
+    #[test]
+    fn test_from_and_into_trits() {
+        let tx = TransactionBuilder::new()
+            .with_payload(Payload::zeros())
+            .with_address(Address::zeros())
+            .with_value(Value(0))
+            .with_obsolete_tag(Tag::zeros())
+            .with_timestamp(Timestamp(0))
+            .with_index(Index(0))
+            .with_last_index(Index(0))
+            .with_tag(Tag::zeros())
+            .with_attachment_ts(Timestamp(0))
+            .with_bundle(Hash::zeros())
+            .with_trunk(Hash::zeros())
+            .with_branch(Hash::zeros())
+            .with_attachment_lbts(Timestamp(0))
+            .with_attachment_ubts(Timestamp(0))
+            .with_nonce(Nonce::zeros())
+            .build()
+            .unwrap();
+
+        let raw_tx_bytes: &mut [i8] = &mut [0 as i8; TRANSACTION_TRIT_LEN];
+        let mut tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
+
+        tx.into_trits_allocated(tx_trits);
+        let tx2 = Transaction::from_trits(tx_trits).unwrap();
+
+        assert_eq!(tx.payload, tx2.payload);
+        assert_eq!(tx.bundle, tx2.bundle);
+        assert_eq!(tx.trunk, tx2.trunk);
+        assert_eq!(tx.branch, tx2.branch);
+        assert_eq!(tx.nonce, tx2.nonce);
+        assert_eq!(tx.tag, tx2.tag);
+        assert_eq!(tx.obsolete_tag, tx2.obsolete_tag);
+        assert_eq!(tx.value, tx2.value);
+        assert_eq!(tx.timestamp, tx2.timestamp);
+        assert_eq!(tx.attachment_ts, tx2.attachment_ts);
+        assert_eq!(tx.attachment_ubts, tx2.attachment_ubts);
+        assert_eq!(tx.index, tx2.index);
+        assert_eq!(tx.last_index, tx2.last_index);
     }
 }

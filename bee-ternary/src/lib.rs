@@ -40,6 +40,7 @@ use std::{
         IndexMut,
         Range,
     },
+    ptr,
 };
 
 // Reexports
@@ -180,6 +181,20 @@ where
             unsafe {
                 self.set_unchecked(i, trit);
             }
+        }
+    }
+
+    //start and end are actually byte positions, and only for T1B1 they are the same as trits pos
+    pub fn copy_range(&mut self, trits: &Trits<T>, start : usize, end : usize) {
+        assert!(self.len() > start && self.len() >= end);
+        unsafe {
+            ptr::copy(
+                trits.as_i8_slice().as_ptr(),
+                self.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(start as isize),
+                end,
+            );
         }
     }
 
