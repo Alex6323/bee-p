@@ -1,10 +1,15 @@
 use crate::constants::{
     ADDRESS,
     ADDRESS_TRIT_LEN,
+    ATTACHMENT_LBTS,
+    ATTACHMENT_TS,
+    ATTACHMENT_UBTS,
     BRANCH,
     BUNDLE,
     HASH_TRIT_LEN,
+    INDEX,
     IOTA_SUPPLY,
+    LAST_INDEX,
     NONCE,
     NONCE_TRIT_LEN,
     OBSOLETE_TAG,
@@ -12,10 +17,14 @@ use crate::constants::{
     PAYLOAD_TRIT_LEN,
     TAG,
     TAG_TRIT_LEN,
+    TIMESTAMP,
+    TRANSACTION_TRIT_LEN,
     TRUNK,
+    VALUE,
 };
 
 use bee_ternary::{
+    num_conversions,
     raw::RawEncoding,
     Btrit,
     T1B1Buf,
@@ -26,8 +35,10 @@ use bee_ternary::{
 
 use std::{
     cmp::PartialEq,
+    convert::TryFrom,
     fmt,
     hash,
+    ptr,
 };
 
 #[derive(Debug)]
@@ -337,7 +348,14 @@ impl_hash_trait!(Address);
 #[derive(Debug)]
 pub enum TransactionError {
     TransactionDeserializationError,
+    TransactionInvalidValue,
     TransactionBuilderError(TransactionBuilderError),
+}
+
+impl From<num_conversions::TritsI64ConversionError> for TransactionError {
+    fn from(err: num_conversions::TritsI64ConversionError) -> Self {
+        TransactionError::TransactionInvalidValue
+    }
 }
 
 pub struct Transaction {
@@ -366,6 +384,34 @@ impl Transaction {
     pub fn from_trits(buffer: &Trits<impl RawEncoding<Trit = Btrit> + ?Sized>) -> Result<Self, TransactionError> {
         let trits = buffer.encode::<T1B1Buf>();
 
+        let value =
+            i64::try_from(trits[VALUE.trit_offset.start..VALUE.trit_offset.start + VALUE.trit_offset.length].to_buf())?;
+        let timestamp = i64::try_from(
+            trits[TIMESTAMP.trit_offset.start..TIMESTAMP.trit_offset.start + TIMESTAMP.trit_offset.length].to_buf(),
+        )? as u64;
+        let index =
+            i64::try_from(trits[INDEX.trit_offset.start..INDEX.trit_offset.start + INDEX.trit_offset.length].to_buf())?
+                as usize;
+        let last_index = i64::try_from(
+            trits[LAST_INDEX.trit_offset.start..LAST_INDEX.trit_offset.start + LAST_INDEX.trit_offset.length].to_buf(),
+        )? as usize;
+
+        let attachment_ts = i64::try_from(
+            trits[ATTACHMENT_TS.trit_offset.start..ATTACHMENT_TS.trit_offset.start + ATTACHMENT_TS.trit_offset.length]
+                .to_buf(),
+        )? as u64;
+
+        let attachment_lbts = i64::try_from(
+            trits[ATTACHMENT_LBTS.trit_offset.start
+                ..ATTACHMENT_LBTS.trit_offset.start + ATTACHMENT_LBTS.trit_offset.length]
+                .to_buf(),
+        )? as u64;
+        let attachment_ubts = i64::try_from(
+            trits[ATTACHMENT_UBTS.trit_offset.start
+                ..ATTACHMENT_UBTS.trit_offset.start + ATTACHMENT_UBTS.trit_offset.length]
+                .to_buf(),
+        )? as u64;
+
         let transaction = Self::builder()
             .with_payload(Payload(
                 trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.start + PAYLOAD.trit_offset.length].to_buf(),
@@ -373,17 +419,17 @@ impl Transaction {
             .with_address(Address(
                 trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.start + ADDRESS.trit_offset.length].to_buf(),
             ))
-            .with_value(Value::from_inner_unchecked(0))
+            .with_value(Value::from_inner_unchecked(value))
             .with_obsolete_tag(Tag(trits[OBSOLETE_TAG.trit_offset.start
                 ..OBSOLETE_TAG.trit_offset.start + OBSOLETE_TAG.trit_offset.length]
                 .to_buf()))
-            .with_timestamp(Timestamp::from_inner_unchecked(0))
-            .with_index(Index::from_inner_unchecked(0))
-            .with_last_index(Index::from_inner_unchecked(0))
+            .with_timestamp(Timestamp::from_inner_unchecked(timestamp))
+            .with_index(Index::from_inner_unchecked(index))
+            .with_last_index(Index::from_inner_unchecked(last_index))
             .with_tag(Tag(trits
                 [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
                 .to_buf()))
-            .with_attachment_ts(Timestamp(0))
+            .with_attachment_ts(Timestamp(attachment_ts))
             .with_bundle(Hash::from_inner_unchecked(
                 trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
@@ -393,8 +439,8 @@ impl Transaction {
             .with_branch(Hash::from_inner_unchecked(
                 trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
             ))
-            .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
-            .with_attachment_ubts(Timestamp::from_inner_unchecked(0))
+            .with_attachment_lbts(Timestamp::from_inner_unchecked(attachment_lbts))
+            .with_attachment_ubts(Timestamp::from_inner_unchecked(attachment_ubts))
             .with_nonce(Nonce(
                 trits[NONCE.trit_offset.start..NONCE.trit_offset.start + NONCE.trit_offset.length].to_buf(),
             ))
@@ -402,6 +448,123 @@ impl Transaction {
             .map_err(|e| TransactionError::TransactionBuilderError(e))?;
 
         Ok(transaction)
+    }
+
+    #[inline]
+    fn to_trits_allocated(&self, mut buf: &mut Trits<T1B1>) {
+        unsafe {
+            ptr::copy(
+                self.payload().to_inner().as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(PAYLOAD.trit_offset.start as isize),
+                PAYLOAD.trit_offset.length,
+            );
+
+            ptr::copy(
+                self.address().to_inner().as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(ADDRESS.trit_offset.start as isize),
+                ADDRESS.trit_offset.length,
+            );
+
+            ptr::copy(
+                self.obsolete_tag().to_inner().as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(OBSOLETE_TAG.trit_offset.start as isize),
+                OBSOLETE_TAG.trit_offset.length,
+            );
+
+            ptr::copy(
+                self.bundle().to_inner().as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(BUNDLE.trit_offset.start as isize),
+                BUNDLE.trit_offset.length,
+            );
+
+            ptr::copy(
+                self.branch().to_inner().as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(BRANCH.trit_offset.start as isize),
+                BRANCH.trit_offset.length,
+            );
+
+            ptr::copy(
+                self.trunk().to_inner().as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(TRUNK.trit_offset.start as isize),
+                TRUNK.trit_offset.length,
+            );
+
+            ptr::copy(
+                self.tag().to_inner().as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(TAG.trit_offset.start as isize),
+                TAG.trit_offset.length,
+            );
+
+            ptr::copy(
+                self.nonce().to_inner().as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(NONCE.trit_offset.start as isize),
+                NONCE.trit_offset.length,
+            );
+
+            let value_buf = TritBuf::<T1B1Buf>::try_from(self.value().to_inner().to_owned()).unwrap();
+            ptr::copy(
+                value_buf.as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(VALUE.trit_offset.start as isize),
+                value_buf.len(),
+            );
+
+            let timestamp_buf = TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
+            ptr::copy(
+                timestamp_buf.as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(TIMESTAMP.trit_offset.start as isize),
+                timestamp_buf.len(),
+            );
+
+            let attachment_ts_buf =
+                TritBuf::<T1B1Buf>::try_from(self.attachment_ts().to_inner().to_owned() as i64).unwrap();
+            ptr::copy(
+                attachment_ts_buf.as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(ATTACHMENT_TS.trit_offset.start as isize),
+                attachment_ts_buf.len(),
+            );
+
+            let attachment_lbts_buf =
+                TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
+            ptr::copy(
+                attachment_lbts_buf.as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(ATTACHMENT_LBTS.trit_offset.start as isize),
+                attachment_lbts_buf.len(),
+            );
+
+            let attachment_ubts_buf =
+                TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
+            ptr::copy(
+                attachment_ubts_buf.as_i8_slice().as_ptr(),
+                buf.as_i8_slice_mut()
+                    .as_mut_ptr()
+                    .offset(ATTACHMENT_UBTS.trit_offset.start as isize),
+                attachment_ubts_buf.len(),
+            );
+        }
     }
 
     pub fn payload(&self) -> &Payload {

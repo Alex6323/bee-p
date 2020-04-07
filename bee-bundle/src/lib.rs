@@ -38,6 +38,7 @@ pub use transaction::{
 pub use constants::{
     ADDRESS_TRIT_LEN,
     HASH_TRIT_LEN,
+    IOTA_SUPPLY,
     NONCE_TRIT_LEN,
     PAYLOAD_TRIT_LEN,
     TAG_TRIT_LEN,
