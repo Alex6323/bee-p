@@ -1,7 +1,3 @@
-use crate::raw::{
-    RawEncoding,
-    RawEncodingBuf,
-};
 use std::convert::TryFrom;
 
 pub use crate::{
@@ -18,13 +14,9 @@ pub use crate::{
     TritBuf,
 };
 
-use std::convert::{
-    From,
-    Into,
-};
+use std::convert::From;
 
 const RADIX: u8 = 3;
-const NUM_TRITS_FOR_NUM_TYPE: usize = 27;
 const MAX_TRITS_IN_I64: usize = (0.63 * 64 as f32) as usize + 1; // (log2/log3)*64
 
 fn min_trits(value: u64) -> usize {
@@ -57,7 +49,6 @@ impl From<i64> for TritBuf<T1B1Buf> {
         let size = min_trits(value_abs);
         let mut buf = Self::zeros(size);
 
-        let mut last_pos = 0;
         for pos in 0..size {
             if value_abs == 0 {
                 break;
@@ -72,8 +63,6 @@ impl From<i64> for TritBuf<T1B1Buf> {
 
             value_abs = value_abs + 1;
             value_abs = value_abs / RADIX as u64;
-
-            last_pos = pos;
         }
 
         buf

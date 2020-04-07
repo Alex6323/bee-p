@@ -44,7 +44,7 @@ impl MilestoneValidatorWorker {
     }
 
     async fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
-        let mut builder = MilestoneBuilder::new(tail_hash);
+        let builder = MilestoneBuilder::new(tail_hash);
 
         let tail = match tangle().get_transaction(&tail_hash).await {
             Some(tail) => tail,
