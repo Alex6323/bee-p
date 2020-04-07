@@ -37,8 +37,8 @@ pub struct VertexRef {
 }
 
 impl VertexRef {
-    pub async fn get_body(&self) -> Option<&Transaction> {
-        self.tangle.get_body(&self.meta.id).await
+    pub async fn get_transaction(&self) -> Option<&Transaction> {
+        self.tangle.get_transaction(&self.meta.id).await
     }
 
     pub async fn get_trunk(&self) -> Option<Self> {

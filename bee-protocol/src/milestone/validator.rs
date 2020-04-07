@@ -46,7 +46,7 @@ impl MilestoneValidatorWorker {
     async fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
         let mut builder = MilestoneBuilder::new(tail_hash);
 
-        let tail = match tangle().get_body(&tail_hash).await {
+        let tail = match tangle().get_transaction(&tail_hash).await {
             Some(tail) => tail,
             None => Err(MilestoneValidatorWorkerError::UnknownTail)?,
         };
@@ -57,7 +57,7 @@ impl MilestoneValidatorWorker {
         let mut transaction = tail;
         // TODO bound ?
         for _ in 0..*tail.last_index().to_inner() {
-            transaction = match tangle().get_body(transaction.trunk()).await {
+            transaction = match tangle().get_transaction(transaction.trunk()).await {
                 Some(transaction) => transaction,
                 None => Err(MilestoneValidatorWorkerError::IncompleteBundle)?,
             };

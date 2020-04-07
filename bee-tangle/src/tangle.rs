@@ -13,7 +13,10 @@ use async_std::sync::{
     Arc,
     Sender,
 };
-use dashmap::DashMap;
+use dashmap::{
+    DashMap,
+    DashSet,
+};
 
 use bee_bundle::{
     Hash,
@@ -25,16 +28,14 @@ use std::sync::atomic::{
     Ordering,
 };
 
-type DashSet<T> = DashMap<T, ()>;
-
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
     vertices: DashMap<Hash, Vertex>,
     unsolid_new: Sender<Hash>,
     solid_entry_points: DashSet<Hash>,
-    first_solid_milestone: Arc<AtomicU32>,
-    last_solid_milestone: Arc<AtomicU32>,
-    last_milestone: Arc<AtomicU32>,
+    first_solid_milestone: AtomicU32,
+    last_solid_milestone: AtomicU32,
+    last_milestone: AtomicU32,
 }
 
 impl Tangle {
@@ -44,9 +45,9 @@ impl Tangle {
             vertices: DashMap::new(),
             unsolid_new,
             solid_entry_points: DashSet::new(),
-            first_solid_milestone: Arc::new(AtomicU32::new(0)),
-            last_solid_milestone: Arc::new(AtomicU32::new(0)),
-            last_milestone: Arc::new(AtomicU32::new(0)),
+            first_solid_milestone: AtomicU32::new(0),
+            last_solid_milestone: AtomicU32::new(0),
+            last_milestone: AtomicU32::new(0),
         }
     }
 
@@ -86,7 +87,7 @@ impl Tangle {
     }
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
-    pub async fn get_body(&'static self, _hash: &Hash) -> Option<&Transaction> {
+    pub async fn get_transaction(&'static self, _hash: &Hash) -> Option<&Transaction> {
         todo!()
     }
 
@@ -117,7 +118,7 @@ impl Tangle {
 
     /// Adds `hash` to the set of solid entry points.
     pub fn add_solid_entry_point(&'static self, hash: Hash) {
-        self.solid_entry_points.insert(hash, ());
+        self.solid_entry_points.insert(hash);
     }
 
     /// Removes `hash` from the set of solid entry points.
@@ -127,7 +128,7 @@ impl Tangle {
 
     /// Returns whether the transaction associated `hash` is a solid entry point.
     pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
-        self.solid_entry_points.contains_key(hash)
+        self.solid_entry_points.contains(hash)
     }
 
     /// Updates the first solid milestone index to `new_index`.
@@ -291,7 +292,7 @@ mod tests {
         assert_eq!(1, tangle.size());
         assert!(tangle.contains_transaction(&hash));
 
-        exit();
+        drop();
     }
 
     #[test]
@@ -303,7 +304,7 @@ mod tests {
         tangle.update_first_solid_milestone_index(1368160.into());
 
         assert_eq!(1368160, *tangle.get_first_solid_milestone_index());
-        exit();
+        drop();
     }
 
     #[test]
@@ -315,7 +316,7 @@ mod tests {
         tangle.update_last_solid_milestone_index(1368167.into());
 
         assert_eq!(1368167, *tangle.get_last_solid_milestone_index());
-        exit();
+        drop();
     }
 
     #[test]
@@ -327,7 +328,7 @@ mod tests {
         tangle.update_last_milestone_index(1368168.into());
 
         assert_eq!(1368168, *tangle.get_last_milestone_index());
-        exit();
+        drop();
     }
 }
 

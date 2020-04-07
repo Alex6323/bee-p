@@ -41,14 +41,12 @@ pub fn init() {
 
         let solidifier_state = SolidifierState::new(receiver);
 
-        let tangle = TANGLE.load(Ordering::Relaxed);
-        if !tangle.is_null() {
-            panic!("Already initialized");
-        } else {
-            TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
-        }
+        TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
 
         spawn(solidifier::run(solidifier_state));
+    } else {
+        drop();
+        panic!("Already initialized");
     }
 }
 
@@ -62,8 +60,8 @@ pub fn tangle() -> &'static Tangle {
     }
 }
 
-/// Deallocates the Tangle singleton.
-pub fn exit() {
+/// Drops the Tangle singleton.
+pub fn drop() {
     if INITIALIZED.compare_and_swap(true, false, Ordering::Relaxed) {
         let tangle = TANGLE.swap(ptr::null_mut(), Ordering::Relaxed);
         if tangle.is_null() {
@@ -71,6 +69,8 @@ pub fn exit() {
         } else {
             let _ = unsafe { Box::from_raw(tangle) };
         }
+    } else {
+        panic!("Already dropped");
     }
 }
 
@@ -81,19 +81,41 @@ mod tests {
 
     #[test]
     #[serial]
-    fn init_and_exit() {
+    fn init_get_and_drop() {
         init();
         let _ = tangle();
-        exit();
+        drop();
     }
 
     #[test]
+    #[should_panic]
     #[serial]
-    fn double_init_double_exit() {
+    fn double_init_should_panic() {
         init();
         init();
+    }
+
+    #[test]
+    #[should_panic]
+    #[serial]
+    fn double_drop_should_panic() {
+        init();
+        drop();
+        drop();
+    }
+
+    #[test]
+    #[should_panic]
+    #[serial]
+    fn drop_without_init_should_panic() {
+        drop();
+    }
+
+    #[test]
+    #[should_panic]
+    #[serial]
+    fn get_without_init_should_panic() {
         let _ = tangle();
-        exit();
-        exit();
+        drop();
     }
 }
