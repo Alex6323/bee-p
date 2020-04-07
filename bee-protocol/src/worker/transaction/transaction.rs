@@ -15,10 +15,8 @@ use bee_crypto::{
 };
 use bee_tangle::tangle;
 use bee_ternary::{
-    Error,
     T1B1Buf,
     T5B1Buf,
-    TritBuf,
     Trits,
     T5B1,
 };
@@ -58,7 +56,7 @@ impl TransactionWorker {
         let mut cache = TinyHashCache::new(10000);
 
         loop {
-            let transaction_broadcast: TransactionBroadcast = select! {
+            let transaction_broadcast = select! {
 
                 transaction_broadcast = receiver_fused.next() => match transaction_broadcast {
 
@@ -82,7 +80,7 @@ impl TransactionWorker {
             }
 
             // convert received transaction bytes into T1B1 buffer
-            let transaction_buf: TritBuf<T1B1Buf> = {
+            let transaction_buf = {
                 let mut raw_bytes = transaction_broadcast.transaction;
                 while raw_bytes.len() < constants::TRANSACTION_BYTE_LEN {
                     raw_bytes.push(0);
@@ -92,13 +90,12 @@ impl TransactionWorker {
                 let t5b1_bytes: &[i8] = unsafe { &*(raw_bytes.as_slice() as *const [u8] as *const [i8]) };
 
                 // get T5B1 trits
-                let t5b1_trits_result: Result<&Trits<T5B1>, Error> =
-                    Trits::<T5B1>::try_from_raw(t5b1_bytes, t5b1_bytes.len() * 5 - 1);
+                let t5b1_trits_result = Trits::<T5B1>::try_from_raw(t5b1_bytes, t5b1_bytes.len() * 5 - 1);
 
                 match t5b1_trits_result {
                     Ok(t5b1_trits) => {
                         // get T5B1 trit_buf
-                        let t5b1_trit_buf: TritBuf<T5B1Buf> = t5b1_trits.to_buf::<T5B1Buf>();
+                        let t5b1_trit_buf = t5b1_trits.to_buf::<T5B1Buf>();
 
                         // get T1B1 trit_buf from TB51 trit_buf
                         t5b1_trit_buf.encode::<T1B1Buf>()
@@ -111,10 +108,7 @@ impl TransactionWorker {
             };
 
             // build transaction
-            let transaction_result = Transaction::from_trits(&transaction_buf);
-
-            // validate transaction result
-            let built_transaction = match transaction_result {
+            let built_transaction = match Transaction::from_trits(&transaction_buf) {
                 Ok(tx) => tx,
                 Err(_) => {
                     warn!("[TransactionWorker ] Can not build transaction from received data.");
@@ -123,7 +117,7 @@ impl TransactionWorker {
             };
 
             // calculate transaction hash
-            let tx_hash: Hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
+            let tx_hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
 
             debug!("[TransactionWorker ] Received transaction {}.", &tx_hash);
 
