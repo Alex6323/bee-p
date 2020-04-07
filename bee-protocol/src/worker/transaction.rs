@@ -293,24 +293,28 @@ fn test_tx_worker() {
 
     bee_tangle::init();
 
-    let (mut transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
+    assert_eq!(tangle().size(), 0);
+
+    let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
     let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
 
+    let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
     spawn(async move {
         let tx: [u8; 1604] = [0; 1604];
         let message = TransactionBroadcast::new(&tx);
-        transaction_worker_sender.send(message).await.unwrap();
+        transaction_worker_sender_clone.send(message).await.unwrap();
     });
 
     spawn(async move {
-        use std::time::Duration;
         use async_std::task;
+        use std::time::Duration;
         task::sleep(Duration::from_secs(1)).await;
         shutdown_sender.send(()).unwrap();
     });
 
     block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
 
+    assert_eq!(tangle().size(), 1);
     assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
 
 }
