@@ -84,30 +84,29 @@ mod tests {
     use async_std::task::block_on;
 
     #[test]
-    fn create_conn_id_from_address() {
-        let addr = block_on(Address::from_host_addr("localhost:16000")).unwrap();
+    fn create_epid_from_address() {
+        let addr = block_on(Address::from_addr_str("127.0.0.1:16000")).unwrap();
 
-        let conn_id: EndpointId = addr.into();
+        let epid: EndpointId = addr.into();
 
-        assert_eq!("127.0.0.1:16000", conn_id.to_string());
+        assert_eq!("127.0.0.1:16000", epid.to_string());
     }
 
     #[test]
-    fn create_conn_id_from_url() {
-        let url = block_on(Url::from_str_with_port("tcp://localhost:16000")).unwrap();
+    fn create_epid_from_url() {
+        let url = block_on(Url::from_url_str("tcp://[::1]:16000")).unwrap();
 
-        let conn_id: EndpointId = url.into();
-
-        assert_eq!("127.0.0.1:16000", conn_id.to_string());
+        let epid: EndpointId = url.into();
+        assert_eq!("[::1]:16000", epid.to_string());
     }
 
     #[test]
-    fn create_conn_from_url() {
-        let url = block_on(Url::from_str_with_port("udp://localhost:16000")).unwrap();
+    fn create_endpoint_from_url() {
+        let url = block_on(Url::from_url_str("udp://[::1]:16000")).unwrap();
         let ep = Endpoint::from_url(url);
 
-        assert_eq!("127.0.0.1:16000", ep.id.to_string());
+        assert_eq!("[::1]:16000", ep.id.to_string());
         assert_eq!(Protocol::Udp, ep.protocol);
-        assert_eq!("127.0.0.1:16000", ep.address.to_string());
+        assert_eq!("[::1]:16000", ep.address.to_string());
     }
 }

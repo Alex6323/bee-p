@@ -1,15 +1,23 @@
-use crate::message::TransactionBroadcast;
+use async_std::task::{
+    block_on,
+    spawn,
+};
 
 use bee_bundle::{
     Hash,
     Transaction,
     TransactionField,
 };
+
+use bee_common::constants;
+
 use bee_crypto::{
     CurlP81,
     Sponge,
 };
+
 use bee_tangle::tangle;
+
 use bee_ternary::{
     Error,
     T1B1Buf,
@@ -18,6 +26,21 @@ use bee_ternary::{
     Trits,
     T5B1,
 };
+
+use crate::message::TransactionBroadcast;
+
+use futures::{
+    channel::{
+        mpsc,
+        oneshot,
+    },
+    future::FutureExt,
+    prelude::*,
+    select,
+    stream::StreamExt,
+};
+
+use log::info;
 
 use std::{
     collections::{
@@ -29,18 +52,6 @@ use std::{
         Hasher,
     },
 };
-
-use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-};
-
-use log::info;
 
 use twox_hash::XxHash64;
 
@@ -60,7 +71,7 @@ impl TransactionWorker {
         let mut shutdown_fused = shutdown.fuse();
 
         let mut curl = CurlP81::new();
-        let mut cache = TinyTransactionCache::new(10000);
+        let mut cache = TinyHashCache::new(10000);
 
         loop {
             let transaction_broadcast: TransactionBroadcast = select! {
@@ -88,9 +99,13 @@ impl TransactionWorker {
 
             // convert received transaction bytes into T1B1 buffer
             let transaction_buf: TritBuf<T1B1Buf> = {
+                let mut raw_bytes = transaction_broadcast.transaction;
+                while raw_bytes.len() < constants::TRANSACTION_BYTE_LEN {
+                    raw_bytes.push(0);
+                }
+
                 // transform &[u8] to &[i8]
-                let t5b1_bytes: &[i8] =
-                    unsafe { &*(transaction_broadcast.transaction.as_slice() as *const [u8] as *const [i8]) };
+                let t5b1_bytes: &[i8] = unsafe { &*(raw_bytes.as_slice() as *const [u8] as *const [i8]) };
 
                 // get T5B1 trits
                 let t5b1_trits_result: Result<&Trits<T5B1>, Error> =
@@ -145,13 +160,6 @@ impl TransactionWorker {
     }
 }
 
-fn xx_hash(buf: &[u8]) -> u64 {
-    let mut hasher = XxHash64::default();
-
-    hasher.write(buf);
-    hasher.finish()
-}
-
 struct CustomHasher {
     result: Option<u64>,
 }
@@ -161,7 +169,7 @@ impl CustomHasher {
         self.result.unwrap()
     }
     fn write(&mut self, i: u64) {
-        self.result = Some(i);
+        self.result.replace(i);
     }
 }
 
@@ -175,28 +183,26 @@ impl Hasher for CustomHasher {
     fn finish(&self) -> u64 {
         CustomHasher::finish(self)
     }
-
-    fn write(&mut self, _bytes: &[u8]) {
-        unreachable!();
-    }
-
-    fn write_u64(&mut self, i: u64) {
+    fn write(&mut self, bytes: &[u8]) {
+        use std::convert::TryInto;
+        let (int_bytes, _rest) = bytes.split_at(std::mem::size_of::<u64>());
+        let i = u64::from_ne_bytes(int_bytes.try_into().unwrap());
         CustomHasher::write(self, i);
     }
 }
 
-struct TinyTransactionCache {
+struct TinyHashCache {
     max_capacity: usize,
     cache: HashSet<u64, BuildHasherDefault<CustomHasher>>,
-    order: VecDeque<u64>,
+    elem_order: VecDeque<u64>,
 }
 
-impl TinyTransactionCache {
+impl TinyHashCache {
     pub fn new(max_capacity: usize) -> Self {
         Self {
             max_capacity,
             cache: HashSet::default(),
-            order: VecDeque::new(),
+            elem_order: VecDeque::new(),
         }
     }
 
@@ -206,12 +212,12 @@ impl TinyTransactionCache {
         }
 
         if self.cache.len() >= self.max_capacity {
-            let first = self.order.pop_front().unwrap();
+            let first = self.elem_order.pop_front().unwrap();
             self.cache.remove(&first);
         }
 
         self.cache.insert(hash.clone());
-        self.order.push_back(hash);
+        self.elem_order.push_back(hash);
 
         true
     }
@@ -225,64 +231,75 @@ impl TinyTransactionCache {
     }
 }
 
-#[cfg(test)]
-mod tests {
+fn xx_hash(buf: &[u8]) -> u64 {
+    let mut hasher = XxHash64::default();
+    hasher.write(buf);
+    hasher.finish()
+}
 
-    use super::*;
+#[test]
+fn test_cache_insert_same_elements() {
+    let mut cache = TinyHashCache::new(10);
 
-    use async_std::task::{
-        block_on,
-        spawn,
-    };
-    use futures::sink::SinkExt;
+    let first_buf = &[1, 2, 3];
+    let second_buf = &[1, 2, 3];
 
-    #[test]
-    fn test_cache_insert() {
-        let mut cache = TinyTransactionCache::new(10);
+    assert_eq!(cache.insert(xx_hash(first_buf)), true);
+    assert_eq!(cache.insert(xx_hash(second_buf)), false);
+    assert_eq!(cache.len(), 1);
+}
 
-        let first_buf = &[1, 2, 3];
-        let second_buf = &[1, 2, 3];
+#[test]
+fn test_cache_insert_different_elements() {
+    let mut cache = TinyHashCache::new(10);
 
-        assert_eq!(cache.insert(xx_hash(first_buf)), true);
-        assert_eq!(cache.insert(xx_hash(second_buf)), false);
-    }
+    let first_buf = &[1, 2, 3];
+    let second_buf = &[3, 4, 5];
 
-    #[test]
-    fn test_cache_max_capacity() {
-        let mut cache = TinyTransactionCache::new(1);
+    assert_eq!(cache.insert(xx_hash(first_buf)), true);
+    assert_eq!(cache.insert(xx_hash(second_buf)), true);
+    assert_eq!(cache.len(), 2);
+}
 
-        let first_buf = &[1, 2, 3];
-        let second_buf = &[3, 4, 5];
-        let second_buf_clone = second_buf.clone();
+#[test]
+fn test_cache_max_capacity() {
+    let mut cache = TinyHashCache::new(1);
 
-        assert_eq!(cache.insert(xx_hash(first_buf)), true);
-        assert_eq!(cache.insert(xx_hash(second_buf)), true);
-        assert_eq!(cache.len(), 1);
-        assert_eq!(cache.insert(xx_hash(&second_buf_clone)), false);
-    }
+    let first_buf = &[1, 2, 3];
+    let second_buf = &[3, 4, 5];
+    let second_buf_clone = second_buf.clone();
 
-    #[test]
-    fn test_tx_worker() {
-        bee_tangle::init();
+    assert_eq!(cache.insert(xx_hash(first_buf)), true);
+    assert_eq!(cache.insert(xx_hash(second_buf)), true);
+    assert_eq!(cache.len(), 1);
+    assert_eq!(cache.insert(xx_hash(&second_buf_clone)), false);
+}
 
-        let (mut transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
-        let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
+#[test]
+fn test_tx_worker_with_compressed_buffer() {
+    bee_tangle::init();
 
-        spawn(async move {
-            let tx: [u8; 1604] = [0; 1604];
-            let message = TransactionBroadcast::new(&tx);
-            transaction_worker_sender.send(message).await.unwrap();
-        });
+    assert_eq!(tangle().size(), 0);
 
-        spawn(async move {
-            use async_std::task;
-            use std::time::Duration;
-            task::sleep(Duration::from_secs(2)).await;
-            shutdown_sender.send(()).unwrap();
-        });
+    let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
+    let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
 
-        block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
+    let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
+    spawn(async move {
+        let tx: [u8; 1024] = [0; 1024];
+        let message = TransactionBroadcast::new(&tx);
+        transaction_worker_sender_clone.send(message).await.unwrap();
+    });
 
-        assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
-    }
+    spawn(async move {
+        use async_std::task;
+        use std::time::Duration;
+        task::sleep(Duration::from_secs(1)).await;
+        shutdown_sender.send(()).unwrap();
+    });
+
+    block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
+
+    assert_eq!(tangle().size(), 1);
+    assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
 }

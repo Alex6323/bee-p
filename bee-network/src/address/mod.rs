@@ -36,24 +36,24 @@ pub struct Address {
 
 impl Address {
     /// Creates an `Address` from an `Ipv4Addr` and a `Port`.
-    pub fn from_v4_addr_and_port(addr: Ipv4Addr, port: Port) -> Self {
+    pub fn from_v4_addr_and_port(address: Ipv4Addr, port: Port) -> Self {
         Self {
-            inner: SocketAddr::new(IpAddr::V4(addr), *port),
+            inner: SocketAddr::new(IpAddr::V4(address), *port),
         }
     }
 
     /// Creates an `Address` from an `Ipv6Addr` and a `Port`.
-    pub fn from_v6_addr_and_port(addr: Ipv6Addr, port: Port) -> Self {
+    pub fn from_v6_addr_and_port(address: Ipv6Addr, port: Port) -> Self {
         Self {
-            inner: SocketAddr::new(IpAddr::V6(addr), *port),
+            inner: SocketAddr::new(IpAddr::V6(address), *port),
         }
     }
 
     /// Creates an `Address` from a host address string (e.g. "example.com:15600").
     ///
     /// NOTE: This operation is async, and can fail if the host name can't be resolved.
-    pub async fn from_host_addr(host_addr: &str) -> AddressResult<Self> {
-        let address = host_addr.to_socket_addrs().await?.next();
+    pub async fn from_addr_str(address: &str) -> AddressResult<Self> {
+        let address = address.to_socket_addrs().await?.next();
 
         match address {
             Some(address) => Ok(address.into()),
@@ -144,12 +144,18 @@ mod tests {
     }
 
     #[test]
-    fn create_address_from_hostname() {
-        let address = block_on(Address::from_host_addr("localhost:15600"));
+    fn create_address_from_str() {
+        let address = block_on(Address::from_addr_str("localhost:15600"));
         assert!(address.is_ok());
 
         let address = address.unwrap();
         assert!(address.is_ipv4() || address.is_ipv6());
         assert_eq!(15600, *address.port());
+    }
+
+    #[test]
+    fn create_address_without_port_should_panic() {
+        let address = block_on(Address::from_addr_str("localhost"));
+        assert!(address.is_err());
     }
 }

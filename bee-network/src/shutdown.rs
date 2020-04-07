@@ -34,7 +34,7 @@ impl Shutdown {
 
     /// Executes the shutdown.
     pub async fn execute(self) {
-        whitelist::free();
+        whitelist::drop();
 
         let mut tasks = self.tasks;
 

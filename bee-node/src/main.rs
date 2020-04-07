@@ -19,7 +19,7 @@ fn main() {
 
     info!("[Main ] Welcome to {} {}!", BEE_NAME, BEE_VERSION);
 
-    let addr = block_on(Address::from_host_addr("localhost:1337")).unwrap();
+    let addr = block_on(Address::from_addr_str("localhost:1337")).unwrap();
     let (network, shutdown, receiver) = bee_network::init(addr);
 
     let mut node = Node::new(network, shutdown, receiver);

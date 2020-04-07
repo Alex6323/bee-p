@@ -44,7 +44,7 @@ impl ConfigBuilder {
         Config {
             host_addr: self
                 .host_addr
-                .unwrap_or_else(|| block_on(Address::from_host_addr("localhost:1337")).unwrap()),
+                .unwrap_or_else(|| block_on(Address::from_addr_str("localhost:1337")).unwrap()),
             peers: self.peers,
         }
     }
