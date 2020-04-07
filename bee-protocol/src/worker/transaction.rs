@@ -10,6 +10,8 @@ use bee_bundle::{
     TransactionField
 };
 
+use bee_common::constants;
+
 use bee_crypto::{
     CurlP81,
     Sponge
@@ -102,8 +104,13 @@ impl TransactionWorker {
             // convert received transaction bytes into T1B1 buffer
             let transaction_buf: TritBuf<T1B1Buf> = {
 
+                let mut raw_bytes = transaction_broadcast.transaction;
+                while raw_bytes.len() < constants::TRANSACTION_BYTE_LEN {
+                    raw_bytes.push(0);
+                }
+
                 // transform &[u8] to &[i8]
-                let t5b1_bytes: &[i8] = unsafe { &*(transaction_broadcast.transaction.as_slice() as *const [u8] as *const [i8]) };
+                let t5b1_bytes: &[i8] = unsafe { &*(raw_bytes.as_slice() as *const [u8] as *const [i8]) };
 
                 // get T5B1 trits
                 let t5b1_trits_result: Result<&Trits<T5B1>, Error> = Trits::<T5B1>::try_from_raw(t5b1_bytes, t5b1_bytes.len() * 5 - 1);
@@ -157,12 +164,6 @@ impl TransactionWorker {
         info!("[TransactionWorker ] Stopped.");
 
     }
-}
-
-fn xx_hash(buf: &[u8]) -> u64 {
-    let mut hasher = XxHash64::default();
-    hasher.write(buf);
-    hasher.finish()
 }
 
 struct CustomHasher {
@@ -240,6 +241,12 @@ impl TinyTransactionCache {
         self.cache.len()
     }
 
+}
+
+fn xx_hash(buf: &[u8]) -> u64 {
+    let mut hasher = XxHash64::default();
+    hasher.write(buf);
+    hasher.finish()
 }
 
 #[test]
