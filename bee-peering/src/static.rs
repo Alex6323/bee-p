@@ -27,7 +27,7 @@ impl StaticPeerManager {
             .network
             .send(AddEndpoint {
                 // TODO handle error / unwrap
-                url: block_on(Url::from_str(endpoint)).unwrap(),
+                url: block_on(Url::from_url_str(endpoint)).unwrap(),
                 responder: None,
             })
             .await

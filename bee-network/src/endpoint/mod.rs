@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn create_epid_from_address() {
-        let addr = block_on(Address::from_str("127.0.0.1:16000")).unwrap();
+        let addr = block_on(Address::from_addr_str("127.0.0.1:16000")).unwrap();
 
         let epid: EndpointId = addr.into();
 
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn create_epid_from_url() {
-        let url = block_on(Url::from_str("tcp://[::1]:16000")).unwrap();
+        let url = block_on(Url::from_url_str("tcp://[::1]:16000")).unwrap();
 
         let epid: EndpointId = url.into();
         assert_eq!("[::1]:16000", epid.to_string());
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn create_endpoint_from_url() {
-        let url = block_on(Url::from_str("udp://[::1]:16000")).unwrap();
+        let url = block_on(Url::from_url_str("udp://[::1]:16000")).unwrap();
         let ep = Endpoint::from_url(url);
 
         assert_eq!("[::1]:16000", ep.id.to_string());

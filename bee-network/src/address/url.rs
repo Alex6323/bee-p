@@ -50,13 +50,13 @@ impl Url {
     /// Creates a `Url` from a string slice.
     ///
     /// NOTE: This function expects an input of the format: tcp://example.com:15600.
-    pub async fn from_str(url: &str) -> AddressResult<Self> {
+    pub async fn from_url_str(url: &str) -> AddressResult<Self> {
         if let Ok(url) = ExternUrl::parse(url) {
             let host = url.host_str().ok_or(AddressError::UrlDestructFailure)?;
             let port = url.port().ok_or(AddressError::UrlDestructFailure)?;
 
             let host_port = &format!("{}:{}", host, port)[..];
-            let addr = Address::from_str(host_port).await?;
+            let addr = Address::from_addr_str(host_port).await?;
 
             match url.scheme() {
                 TCP => Ok(Url::new(addr, Protocol::Tcp)),
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn create_tcp_url_from_address_and_protocol() {
-        let addr = block_on(Address::from_str("127.0.0.1:15600"));
+        let addr = block_on(Address::from_addr_str("127.0.0.1:15600"));
         let addr = addr.expect("parsing address failed");
 
         let url = Url::new(addr, Protocol::Tcp);
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn create_udp_url_from_address_and_protocol() {
-        let addr = block_on(Address::from_str("127.0.0.1:15600"));
+        let addr = block_on(Address::from_addr_str("127.0.0.1:15600"));
         let addr = addr.expect("parsing address failed");
 
         let url = Url::new(addr, Protocol::Udp);
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn create_tcp_url_from_str() {
-        let url = block_on(Url::from_str("tcp://127.0.0.1:15600"));
+        let url = block_on(Url::from_url_str("tcp://127.0.0.1:15600"));
         let url = url.expect("parsing url failed");
 
         assert_eq!(Protocol::Tcp, url.protocol());
@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn create_udp_url_from_str() {
-        let url = block_on(Url::from_str("udp://127.0.0.1:15600"));
+        let url = block_on(Url::from_url_str("udp://127.0.0.1:15600"));
         let url = url.expect("parsing url failed");
 
         assert_eq!(Protocol::Udp, url.protocol());
@@ -138,8 +138,8 @@ mod tests {
     }
 
     #[test]
-    fn create_tcp_ipv6_url_from_str_with_port() {
-        let url = block_on(Url::from_str("tcp://[::1]:15600"));
+    fn create_ipv6_url_from_str() {
+        let url = block_on(Url::from_url_str("tcp://[::1]:15600"));
         let url = url.expect("parsing url failed");
 
         assert!(url.address().is_ipv6());

@@ -25,11 +25,11 @@ impl Args {
     pub fn make_config(&self) -> Config {
         let mut peers = vec![];
         for peer in &self.peers {
-            peers.push(block_on(Url::from_str(&peer)).unwrap());
+            peers.push(block_on(Url::from_url_str(&peer)).unwrap());
         }
 
         Config {
-            host_addr: block_on(Address::from_str(&self.bind.clone()[..])).unwrap(),
+            host_addr: block_on(Address::from_addr_str(&self.bind.clone()[..])).unwrap(),
             peers,
         }
     }

@@ -52,7 +52,7 @@ impl Address {
     /// Creates an `Address` from a host address string (e.g. "example.com:15600").
     ///
     /// NOTE: This operation is async, and can fail if the host name can't be resolved.
-    pub async fn from_str(address: &str) -> AddressResult<Self> {
+    pub async fn from_addr_str(address: &str) -> AddressResult<Self> {
         let address = address.to_socket_addrs().await?.next();
 
         match address {
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn create_address_from_str() {
-        let address = block_on(Address::from_str("localhost:15600"));
+        let address = block_on(Address::from_addr_str("localhost:15600"));
         assert!(address.is_ok());
 
         let address = address.unwrap();
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn create_address_without_port_should_panic() {
-        let address = block_on(Address::from_str("localhost"));
+        let address = block_on(Address::from_addr_str("localhost"));
         assert!(address.is_err());
     }
 }

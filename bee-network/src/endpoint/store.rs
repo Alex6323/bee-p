@@ -79,7 +79,7 @@ mod tests {
         let mut store = Endpoints::new();
         assert_eq!(0, store.num(), "Incorrect store size");
 
-        let url = block_on(Url::from_str("udp://localhost:16000")).unwrap();
+        let url = block_on(Url::from_url_str("udp://localhost:16000")).unwrap();
         let ep = Endpoint::from_url(url);
         let ep_id = ep.id;
 
@@ -94,10 +94,10 @@ mod tests {
     fn iterate_store() {
         let mut store = Endpoints::new();
 
-        let url1 = block_on(Url::from_str("udp://localhost:16000")).unwrap();
+        let url1 = block_on(Url::from_url_str("udp://localhost:16000")).unwrap();
         let ep1 = Endpoint::from_url(url1);
 
-        let url2 = block_on(Url::from_str("udp://localhost:17000")).unwrap();
+        let url2 = block_on(Url::from_url_str("udp://localhost:17000")).unwrap();
         let ep2 = Endpoint::from_url(url2);
 
         assert!(store.insert(ep1), "Insertion failed");
@@ -121,7 +121,7 @@ mod tests {
     fn get_endpoint_from_store() {
         let mut store = Endpoints::new();
 
-        let url1 = block_on(Url::from_str("udp://localhost:16000")).unwrap();
+        let url1 = block_on(Url::from_url_str("udp://localhost:16000")).unwrap();
         let ep1 = Endpoint::from_url(url1);
         let ep1_id = ep1.id;
 
@@ -134,7 +134,7 @@ mod tests {
     fn get_mutable_endpoint_from_store() {
         let mut store = Endpoints::new();
 
-        let url1 = block_on(Url::from_str("udp://localhost:16000")).unwrap();
+        let url1 = block_on(Url::from_url_str("udp://localhost:16000")).unwrap();
         let ep1 = Endpoint::from_url(url1);
         let ep1_id = ep1.id;
 
