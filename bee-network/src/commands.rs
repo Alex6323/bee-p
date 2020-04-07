@@ -143,10 +143,12 @@ mod tests {
     };
     use futures::sink::SinkExt;
 
+    const URL: &str = "tcp://127.0.0.1:15600";
+
     #[test]
     fn issue_fire_and_forget_command() {
         let (mut sender, mut receiver) = command_channel();
-        let url = block_on(Url::from_url_str("tcp://localhost:15600")).unwrap();
+        let url = block_on(Url::from_url_str(URL)).unwrap();
         let mut received_command = false;
 
         spawn(async move {
@@ -160,7 +162,7 @@ mod tests {
             while let Some(command) = receiver.next().await {
                 match command {
                     Command::AddEndpoint { url, .. } => {
-                        assert_eq!("tcp://127.0.0.1:15600", url.to_string(), "Unexpected URL");
+                        assert_eq!(URL, url.to_string(), "Unexpected URL");
                         received_command = true;
                     }
                     _ => assert!(false, "Wrong command received"),
@@ -174,7 +176,7 @@ mod tests {
     fn issue_command_that_responds() {
         let (mut sender, mut receiver) = command_channel();
         let (responder, requester) = response_channel::<bool>();
-        let url = block_on(Url::from_url_str("tcp://localhost:15600")).unwrap();
+        let url = block_on(Url::from_url_str(URL)).unwrap();
         let mut received_command = false;
         let mut received_response = false;
 
@@ -194,7 +196,7 @@ mod tests {
             while let Some(command) = receiver.next().await {
                 match command {
                     Command::AddEndpoint { url, responder } => {
-                        assert_eq!("tcp://127.0.0.1:15600", url.to_string(), "Unexpected URL");
+                        assert_eq!(URL, url.to_string(), "Unexpected URL");
                         received_command = true;
 
                         if let Some(responder) = responder {
