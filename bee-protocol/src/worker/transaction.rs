@@ -69,7 +69,7 @@ impl TransactionWorker {
         let mut shutdown_fused = shutdown.fuse();
 
         let mut curl = CurlP81::new();
-        let mut cache = TinyTransactionCache::new(10000);
+        let mut cache = TinyHashCache::new(10000);
 
         loop {
 
@@ -194,13 +194,13 @@ impl Hasher for CustomHasher {
 
 }
 
-struct TinyTransactionCache {
+struct TinyHashCache {
     max_capacity: usize,
     cache: HashSet<u64, BuildHasherDefault<CustomHasher>>,
     elem_order: VecDeque<u64>,
 }
 
-impl TinyTransactionCache {
+impl TinyHashCache {
 
     pub fn new(max_capacity: usize) -> Self {
         Self {
@@ -247,7 +247,7 @@ fn xx_hash(buf: &[u8]) -> u64 {
 #[test]
 fn test_cache_insert_same_elements() {
 
-    let mut cache = TinyTransactionCache::new(10);
+    let mut cache = TinyHashCache::new(10);
 
     let first_buf = &[1,2,3];
     let second_buf = &[1,2,3];
@@ -261,7 +261,7 @@ fn test_cache_insert_same_elements() {
 #[test]
 fn test_cache_insert_different_elements() {
 
-    let mut cache = TinyTransactionCache::new(10);
+    let mut cache = TinyHashCache::new(10);
 
     let first_buf = &[1,2,3];
     let second_buf = &[3,4,5];
@@ -275,7 +275,7 @@ fn test_cache_insert_different_elements() {
 #[test]
 fn test_cache_max_capacity() {
 
-    let mut cache = TinyTransactionCache::new(1);
+    let mut cache = TinyHashCache::new(1);
 
     let first_buf = &[1,2,3];
     let second_buf = &[3,4,5];
