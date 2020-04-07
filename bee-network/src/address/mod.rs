@@ -113,7 +113,7 @@ mod tests {
 
         assert!(address.is_ipv4());
         assert_eq!("127.0.0.1:15600", address.to_string());
-        assert_eq!(Port(15600), address.port());
+        assert_eq!(15600, *address.port());
     }
 
     #[test]
@@ -122,25 +122,25 @@ mod tests {
 
         assert!(address.is_ipv6());
         assert_eq!("[::1]:15600", address.to_string());
-        assert_eq!(Port(15600), address.port());
+        assert_eq!(15600, *address.port());
     }
 
     #[test]
     fn create_address_from_v4_socket_addr() {
-        let address: Address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), *Port(15600)).into();
+        let address: Address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 15600).into();
 
         assert!(address.is_ipv4());
         assert_eq!("127.0.0.1:15600", address.to_string());
-        assert_eq!(Port(15600), address.port());
+        assert_eq!(15600, *address.port());
     }
 
     #[test]
     fn create_address_from_v6_socket_addr() {
-        let address: Address = SocketAddr::new(IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)), *Port(15600)).into();
+        let address: Address = SocketAddr::new(IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)), 15600).into();
 
         assert!(address.is_ipv6());
         assert_eq!("[::1]:15600", address.to_string());
-        assert_eq!(Port(15600), address.port());
+        assert_eq!(15600, *address.port());
     }
 
     #[test]
