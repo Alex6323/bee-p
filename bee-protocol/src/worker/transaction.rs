@@ -225,52 +225,64 @@ impl TinyTransactionCache {
     }
 }
 
-#[test]
-fn test_cache_insert() {
-    let mut cache = TinyTransactionCache::new(10);
+#[cfg(test)]
+mod tests {
 
-    let first_buf = &[1, 2, 3];
-    let second_buf = &[1, 2, 3];
+    use super::*;
 
-    assert_eq!(cache.insert(xx_hash(first_buf)), true);
-    assert_eq!(cache.insert(xx_hash(second_buf)), false);
-}
+    use async_std::task::{
+        block_on,
+        spawn,
+    };
+    use futures::sink::SinkExt;
 
-#[test]
-fn test_cache_max_capacity() {
-    let mut cache = TinyTransactionCache::new(1);
+    #[test]
+    fn test_cache_insert() {
+        let mut cache = TinyTransactionCache::new(10);
 
-    let first_buf = &[1, 2, 3];
-    let second_buf = &[3, 4, 5];
-    let second_buf_clone = second_buf.clone();
+        let first_buf = &[1, 2, 3];
+        let second_buf = &[1, 2, 3];
 
-    assert_eq!(cache.insert(xx_hash(first_buf)), true);
-    assert_eq!(cache.insert(xx_hash(second_buf)), true);
-    assert_eq!(cache.len(), 1);
-    assert_eq!(cache.insert(xx_hash(&second_buf_clone)), false);
-}
+        assert_eq!(cache.insert(xx_hash(first_buf)), true);
+        assert_eq!(cache.insert(xx_hash(second_buf)), false);
+    }
 
-#[test]
-fn test_tx_worker() {
-    bee_tangle::init();
+    #[test]
+    fn test_cache_max_capacity() {
+        let mut cache = TinyTransactionCache::new(1);
 
-    let (mut transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
-    let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
+        let first_buf = &[1, 2, 3];
+        let second_buf = &[3, 4, 5];
+        let second_buf_clone = second_buf.clone();
 
-    spawn(async move {
-        let tx: [u8; 1604] = [0; 1604];
-        let message = TransactionBroadcast::new(&tx);
-        transaction_worker_sender.send(message).await.unwrap();
-    });
+        assert_eq!(cache.insert(xx_hash(first_buf)), true);
+        assert_eq!(cache.insert(xx_hash(second_buf)), true);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.insert(xx_hash(&second_buf_clone)), false);
+    }
 
-    spawn(async move {
-        use async_std::task;
-        use std::time::Duration;
-        task::sleep(Duration::from_secs(2)).await;
-        shutdown_sender.send(()).unwrap();
-    });
+    #[test]
+    fn test_tx_worker() {
+        bee_tangle::init();
 
-    block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
+        let (mut transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
+        let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
 
-    assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
+        spawn(async move {
+            let tx: [u8; 1604] = [0; 1604];
+            let message = TransactionBroadcast::new(&tx);
+            transaction_worker_sender.send(message).await.unwrap();
+        });
+
+        spawn(async move {
+            use async_std::task;
+            use std::time::Duration;
+            task::sleep(Duration::from_secs(2)).await;
+            shutdown_sender.send(()).unwrap();
+        });
+
+        block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
+
+        assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
+    }
 }
