@@ -128,11 +128,6 @@ impl TransactionWorker {
 
             };
 
-            if transaction_buf.len() > constants::TRANSACTION_TRIT_LEN {
-                info!("[TransactionWorker ] Received buffer is bigger then allowed size.");
-                continue;
-            }
-
             // build transaction
             let transaction_result = Transaction::from_trits(&transaction_buf);
 
@@ -294,7 +289,7 @@ fn test_cache_max_capacity() {
 }
 
 #[test]
-fn test_tx_worker() {
+fn test_tx_worker_with_compressed_buffer() {
 
     bee_tangle::init();
 
@@ -303,12 +298,10 @@ fn test_tx_worker() {
     let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
     let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
 
-    let tx: [u8; 1024] = [0; 1024];
-    assert_eq!(tx.len() <= constants::TRANSACTION_BYTE_LEN, true);
-    let message = TransactionBroadcast::new(&tx);
-
     let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
     spawn(async move {
+        let tx: [u8; 1024] = [0; 1024];
+        let message = TransactionBroadcast::new(&tx);
         transaction_worker_sender_clone.send(message).await.unwrap();
     });
 
