@@ -81,12 +81,12 @@ mod tests {
 
         let url = block_on(Url::from_url_str("udp://localhost:16000")).unwrap();
         let ep = Endpoint::from_url(url);
-        let ep_id = ep.id;
+        let epid = ep.id;
 
         assert!(store.insert(ep), "Insertion failed");
         assert_eq!(1, store.num(), "Incorrect store size");
 
-        assert!(store.remove(&ep_id));
+        assert!(store.remove(&epid));
         assert_eq!(0, store.num(), "Incorrect store size");
     }
 
@@ -123,11 +123,11 @@ mod tests {
 
         let url1 = block_on(Url::from_url_str("udp://localhost:16000")).unwrap();
         let ep1 = Endpoint::from_url(url1);
-        let ep1_id = ep1.id;
+        let epid1 = ep1.id;
 
         store.insert(ep1);
 
-        assert!(store.get(&ep1_id).is_some(), "Getting endpoint from store failed");
+        assert!(store.get(&epid1).is_some(), "Getting endpoint from store failed");
     }
 
     #[test]
@@ -136,13 +136,13 @@ mod tests {
 
         let url1 = block_on(Url::from_url_str("udp://localhost:16000")).unwrap();
         let ep1 = Endpoint::from_url(url1);
-        let ep1_id = ep1.id;
+        let epid1 = ep1.id;
 
         store.insert(ep1);
 
-        assert!(store.get_mut(&ep1_id).is_some(), "Getting endpoint from store failed");
+        assert!(store.get_mut(&epid1).is_some(), "Getting endpoint from store failed");
 
-        if let Some(ep1) = store.get_mut(&ep1_id) {
+        if let Some(ep1) = store.get_mut(&epid1) {
             assert_eq!(Protocol::Udp, ep1.protocol);
             ep1.protocol = Protocol::Tcp;
             assert_eq!(Protocol::Tcp, ep1.protocol);
