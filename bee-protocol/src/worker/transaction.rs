@@ -1,23 +1,16 @@
-use async_std::task::{
-    block_on,
-    spawn,
-};
+use crate::message::TransactionBroadcast;
 
 use bee_bundle::{
     Hash,
     Transaction,
     TransactionField,
 };
-
 use bee_common::constants;
-
 use bee_crypto::{
     CurlP81,
     Sponge,
 };
-
 use bee_tangle::tangle;
-
 use bee_ternary::{
     Error,
     T1B1Buf,
@@ -26,21 +19,6 @@ use bee_ternary::{
     Trits,
     T5B1,
 };
-
-use crate::message::TransactionBroadcast;
-
-use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
-    future::FutureExt,
-    prelude::*,
-    select,
-    stream::StreamExt,
-};
-
-use log::info;
 
 use std::{
     collections::{
@@ -53,6 +31,20 @@ use std::{
     },
 };
 
+use futures::{
+    channel::{
+        mpsc,
+        oneshot,
+    },
+    future::FutureExt,
+    select,
+    stream::StreamExt,
+};
+use log::{
+    debug,
+    info,
+    warn,
+};
 use twox_hash::XxHash64;
 
 pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
@@ -71,6 +63,7 @@ impl TransactionWorker {
         let mut shutdown_fused = shutdown.fuse();
 
         let mut curl = CurlP81::new();
+        // TODO conf
         let mut cache = TinyHashCache::new(10000);
 
         loop {
@@ -80,7 +73,7 @@ impl TransactionWorker {
 
                     Some(transaction_broadcast) => transaction_broadcast,
                     None => {
-                        info!("[TransactionWorker ] Unable to receive transactions from channel.");
+                        debug!("[TransactionWorker ] Unable to receive transactions from channel.");
                         break;
                     },
 
@@ -90,10 +83,10 @@ impl TransactionWorker {
 
             };
 
-            info!("[TransactionWorker ] Processing received data...");
+            debug!("[TransactionWorker ] Processing received data...");
 
             if !cache.insert(xx_hash(transaction_broadcast.transaction.as_slice())) {
-                info!("[TransactionWorker ] Data already received.");
+                debug!("[TransactionWorker ] Data already received.");
                 continue;
             }
 
@@ -120,7 +113,7 @@ impl TransactionWorker {
                         t5b1_trit_buf.encode::<T1B1Buf>()
                     }
                     Err(_) => {
-                        info!("[TransactionWorker ] Can not decode T5B1 from received data.");
+                        warn!("[TransactionWorker ] Can not decode T5B1 from received data.");
                         continue;
                     }
                 }
@@ -133,7 +126,7 @@ impl TransactionWorker {
             let built_transaction = match transaction_result {
                 Ok(tx) => tx,
                 Err(_) => {
-                    info!("[TransactionWorker ] Can not build transaction from received data.");
+                    warn!("[TransactionWorker ] Can not build transaction from received data.");
                     continue;
                 }
             };
@@ -141,11 +134,11 @@ impl TransactionWorker {
             // calculate transaction hash
             let tx_hash: Hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
 
-            info!("[TransactionWorker ] Received transaction {}.", &tx_hash);
+            debug!("[TransactionWorker ] Received transaction {}.", &tx_hash);
 
             // check if transactions is already present in the tangle before doing any further work
             if tangle().contains_transaction(&tx_hash) {
-                info!(
+                debug!(
                     "[TransactionWorker ] Transaction {} already present in the tangle.",
                     &tx_hash
                 );
@@ -241,6 +234,12 @@ fn xx_hash(buf: &[u8]) -> u64 {
 mod tests {
 
     use super::*;
+
+    use async_std::task::{
+        block_on,
+        spawn,
+    };
+    use futures::sink::SinkExt;
 
     #[test]
     fn test_cache_insert_same_elements() {
