@@ -52,9 +52,9 @@ RETURNING hash
         "#;
 */
 
-pub const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash hash=$2"#;
+pub const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash=$2"#;
 
-pub const UPDATE_SET_SOLID_STATEMENT: &str = r#"UPDATE transactions set solid =$1 WHERE hash=$2"#;
+pub const UPDATE_SET_SOLID_STATEMENT: &str = r#"UPDATE transactions set solid=1 WHERE hash=$1"#;
 
 pub const DELETE_TRANSACTION_STATEMENT: &str = r#"DELETE FROM transactions WHERE hash =$1"#;
 

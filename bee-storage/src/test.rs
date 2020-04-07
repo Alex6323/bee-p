@@ -50,7 +50,6 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         let res = block_on(storage.find_transaction(tx_hash));
         let found_tx = res.unwrap();
 
-        block_on(storage.get_transactions_solid_state(vec![]));
         block_on(storage.destroy_connection()).unwrap();
 
         assert_eq!(tx.payload().to_inner().len(), found_tx.payload().to_inner().len());
@@ -61,6 +60,39 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         assert_eq!(tx.tag(), found_tx.tag());
         assert_eq!(tx.obsolete_tag(), found_tx.obsolete_tag());
         assert_eq!(tx.nonce(), found_tx.nonce());
+    }
+    fn test_transaction_update_solid() {
+        let mut storage = T::new();
+
+        block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
+        let (tx_hash, tx) = bee_test::transaction::create_random_tx();
+        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
+        let res = block_on(storage.find_transaction(tx_hash));
+        let found_tx = res.unwrap();
+        let solid_state_res = block_on(storage.get_transactions_solid_state(vec![tx_hash]));
+        assert_eq!(solid_state_res.unwrap()[0], false);
+        block_on(storage.update_transactions_set_solid(vec![tx_hash].into_iter().collect())).unwrap();
+
+        let solid_state_res = block_on(storage.get_transactions_solid_state(vec![tx_hash]));
+        assert_eq!(solid_state_res.unwrap()[0], true);
+        block_on(storage.destroy_connection()).unwrap();
+    }
+
+    fn test_transaction_snapshot_index() {
+        let mut storage = T::new();
+
+        block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
+        let (tx_hash, tx) = bee_test::transaction::create_random_tx();
+        block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
+        let res = block_on(storage.find_transaction(tx_hash));
+        let found_tx = res.unwrap();
+        let snapshot_index_res = block_on(storage.get_transactions_snapshot_index(vec![tx_hash]));
+        assert_eq!(snapshot_index_res.unwrap()[0], 0);
+        block_on(storage.update_transactions_set_snapshot_index(vec![tx_hash].into_iter().collect(), 1)).unwrap();
+
+        let snapshot_index_res = block_on(storage.get_transactions_snapshot_index(vec![tx_hash]));
+        assert_eq!(snapshot_index_res.unwrap()[0], 1);
+        block_on(storage.destroy_connection()).unwrap();
     }
 
     fn test_insert_one_milestone() {
@@ -400,7 +432,9 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             Self::test_delete_one_milestone();
             Self::test_insert_transactions_concurrent();
             Self::test_insert_transactions_batch();
-            Self::test_store_and_load_state_delta()
+            Self::test_store_and_load_state_delta();
+            Self::test_transaction_update_solid();
+            Self::test_transaction_snapshot_index();
         })
     }
 }

@@ -236,7 +236,7 @@ impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
         let cf_transaction_solid =
             ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_SOLID_COLUMN_FAMILY, Options::default());
         let cf_transaction_snapshot_index =
-            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_SOLID_COLUMN_FAMILY, Options::default());
+            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_SNAPSHOT_INDEX_COLUMN_FAMILY, Options::default());
 
         let cf_transaction_trunk =
             ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY, Options::default());
@@ -475,8 +475,8 @@ impl StorageBackend for RocksDbBackendStorage {
                 .get_cf(
                     &transaction_hash_to_solid_cf,
                     cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice()),
-                )
-                .is_ok()
+                )?
+                .is_some()
             {
                 //We assume the presence of a value means the transaction is solid
                 solid_states[index] = true;
@@ -500,10 +500,10 @@ impl StorageBackend for RocksDbBackendStorage {
             let res = db.get_cf(
                 &transaction_hash_to_snapshot_index_cf,
                 cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice()),
-            );
-            if res.is_ok() {
+            )?;
+            if res.is_some() {
                 //We assume the absence of a value means the transaction is not known to be confirmed
-                let transaction_snapshot_index_buffer = res.unwrap().unwrap();
+                let transaction_snapshot_index_buffer = res.unwrap();
                 unsafe { ptr::copy(transaction_snapshot_index_buffer.as_ptr(), u32_buffer.as_mut_ptr(), 4) };
                 solid_states[index] = unsafe { mem::transmute::<[u8; 4], u32>(u32_buffer) };
             }

@@ -177,14 +177,14 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for AttachmentData {
 
 impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SolidStateWrapper {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
-        let solid: i8 = row.get::<i8, _>(TRANSACTION_COL_SOLID);
+        let solid = row.get::<i16, _>(TRANSACTION_COL_SOLID) ;
         Ok(Self { 0: solid != 0 })
     }
 }
 
 impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SnapshotIndexWrapper {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
-        let index: u32 = row.get::<u32, _>(TRANSACTION_COL_SNAPSHOT_INDEX);
+        let index: u32 = row.get::<i32, _>(TRANSACTION_COL_SNAPSHOT_INDEX) as u32;
         Ok(Self { 0: index })
     }
 }
@@ -417,11 +417,12 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-        transaction_hashes.iter().for_each(|hash| {
-            let _ = sqlx::query(UPDATE_SET_SOLID_STATEMENT)
-                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
-                .execute(&mut conn_transaction);
-        });
+        for hash in transaction_hashes.iter() {
+                let _ = sqlx::query(UPDATE_SET_SOLID_STATEMENT)
+                    .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
+                    .execute(&mut conn_transaction).await;
+
+        };
 
         conn_transaction.commit().await?;
 
@@ -446,13 +447,12 @@ impl StorageBackend for SqlxBackendStorage {
         let mut query = sqlx::query_as(&statement);
 
         for hash in transaction_hashes {
-            query = query.bind(hash.as_bytes())
+            query = query.bind(encode_buffer(hash.to_inner().to_buf::<T5B1Buf>()))
         }
 
         let solid_state_wrapper_vec: Vec<SolidStateWrapper> = query.fetch_all(&mut conn_transaction).await?;
-
-        for solid_state_wrapper in solid_state_wrapper_vec {
-            solid_states.push(solid_state_wrapper.0);
+        for (index, solid_state_wrapper) in solid_state_wrapper_vec.iter().enumerate() {
+            solid_states[index] = solid_state_wrapper.0;
         }
 
         Ok(solid_states)
@@ -476,13 +476,13 @@ impl StorageBackend for SqlxBackendStorage {
         let mut query = sqlx::query_as(&statement);
 
         for hash in transaction_hashes {
-            query = query.bind(hash.as_bytes())
+            query = query.bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
         }
 
         let snapshot_index_wrapper_vec: Vec<SnapshotIndexWrapper> = query.fetch_all(&mut conn_transaction).await?;
 
-        for snapshot_index_wrapper in snapshot_index_wrapper_vec {
-            snapshot_indexes.push(snapshot_index_wrapper.0);
+        for (index, snapshot_index_wrapper) in snapshot_index_wrapper_vec.iter().enumerate() {
+            snapshot_indexes[index] = snapshot_index_wrapper.0;
         }
 
         Ok(snapshot_indexes)
@@ -501,12 +501,12 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-        transaction_hashes.iter().for_each(|hash| {
+        for hash in transaction_hashes.iter() {
             let _ = sqlx::query(UPDATE_SNAPSHOT_INDEX_STATEMENT)
-                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
                 .bind(snapshot_index as i32)
-                .execute(&mut conn_transaction);
-        });
+                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
+                .execute(&mut conn_transaction).await?;
+        };
 
         conn_transaction.commit().await?;
 
