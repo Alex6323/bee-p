@@ -430,7 +430,7 @@ impl Transaction {
             .with_tag(Tag(trits
                 [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
                 .to_buf()))
-            .with_attachment_ts(Timestamp(attachment_ts))
+            .with_attachment_ts(Timestamp::from_inner_unchecked(attachment_ts))
             .with_bundle(Hash::from_inner_unchecked(
                 trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
@@ -494,7 +494,7 @@ impl Transaction {
             NONCE.trit_offset.length,
         );
 
-        let value_buf = TritBuf::<T1B1Buf>::try_from(self.value().to_inner().to_owned()).unwrap();
+        let value_buf = TritBuf::<T1B1Buf>::try_from(*self.value().to_inner()).unwrap();
 
         buf.copy_raw_bytes(value_buf.as_slice(), VALUE.trit_offset.start, value_buf.len());
 
