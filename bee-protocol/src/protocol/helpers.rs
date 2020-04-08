@@ -47,6 +47,7 @@ impl Protocol {
     pub fn request_milestone(index: MilestoneIndex) {
         Protocol::get()
             .milestone_requester_worker
+            .0
             .insert(MilestoneRequesterWorkerEntry(index));
     }
 
@@ -79,6 +80,7 @@ impl Protocol {
     pub async fn request_transaction(hash: Hash, index: MilestoneIndex) {
         Protocol::get()
             .transaction_requester_worker
+            .0
             .insert(TransactionRequesterWorkerEntry(hash, index));
     }
 }

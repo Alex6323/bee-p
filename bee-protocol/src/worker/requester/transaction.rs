@@ -45,7 +45,7 @@ impl TransactionRequesterWorker {
         loop {
             select! {
                 // TODO impl fused stream
-                entry = Protocol::get().transaction_requester_worker.pop().fuse() => {
+                entry = Protocol::get().transaction_requester_worker.0.pop().fuse() => {
                     if let TransactionRequesterWorkerEntry(_hash, _index) = entry {
                         //  TODO use sender worker
                         // TODO cheeck that neighbor may have the tx (by the index)
