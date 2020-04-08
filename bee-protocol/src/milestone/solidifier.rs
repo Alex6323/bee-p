@@ -1,7 +1,4 @@
-use crate::{
-    milestone::MilestoneIndex,
-    protocol::Protocol,
-};
+use crate::protocol::Protocol;
 
 use bee_bundle::Hash;
 use bee_tangle::tangle;
@@ -44,17 +41,14 @@ impl MilestoneSolidifierWorker {
             select! {
                 event = receiver_fused.next() => {
                     if let Some(MilestoneSolidifierWorkerEvent()) = event {
-                        // TODO impl Ord to avoid deref
-                        while *tangle().get_last_solid_milestone_index() < *tangle().get_last_milestone_index() {
-                            // TODO a bit cumbersome...
-                            let target_milestone_index : bee_tangle::MilestoneIndex =
-                                (*tangle().get_last_solid_milestone_index() + 1).into();
+                        while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
+                            let target_milestone_index = *tangle().get_last_solid_milestone_index() + 1;
 
-                            match tangle().get_milestone_hash(&target_milestone_index) {
+                            match tangle().get_milestone_hash(&(target_milestone_index.into())) {
                                 Some(target_milestone_hash) => self.solidify(target_milestone_hash),
                                 None => {
                                     // There is a gap, request the milestone
-                                    Protocol::request_milestone(*target_milestone_index);
+                                    Protocol::request_milestone(target_milestone_index);
                                     break
                                 }
                             }

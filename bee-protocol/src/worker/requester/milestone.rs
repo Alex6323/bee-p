@@ -47,9 +47,7 @@ impl MilestoneRequesterWorker {
                 // TODO impl fused stream
                 entry = Protocol::get().milestone_requester_worker.0.pop().fuse() => {
                     if let MilestoneRequesterWorkerEntry(index) = entry {
-                        // TODO a bit cumbersome...
-                        let index : bee_tangle::MilestoneIndex = index.into();
-                        if tangle().contains_milestone(&index) {
+                        if tangle().contains_milestone(&(index.into())) {
                             continue;
                         }
                         // TODO Use sender worker
