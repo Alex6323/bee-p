@@ -12,21 +12,21 @@ use std::{
 use twox_hash::XxHash64;
 
 struct CustomHasher {
-    result: Option<u64>,
+    result: u64,
 }
 
 impl CustomHasher {
     fn finish(&self) -> u64 {
-        self.result.unwrap()
+        self.result
     }
     fn write(&mut self, i: u64) {
-        self.result.replace(i);
+        self.result = i;
     }
 }
 
 impl Default for CustomHasher {
     fn default() -> Self {
-        Self { result: None }
+        Self { result: 17241709254077376921 }
     }
 }
 
