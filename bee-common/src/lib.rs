@@ -7,7 +7,3 @@ mod types;
 pub use errors::Errors;
 pub use logger::*;
 pub use types::*;
-
-// ONLY TEMPORARY
-// re-export iota-constants
-pub use iota_constants;
