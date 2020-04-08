@@ -84,6 +84,7 @@ impl TransactionWorker {
 
                 // define max buffer and copy received transaction bytes into it
                 let mut u8_t5b1_buf = [0u8; TRANSACTION_BYTE_LEN];
+                // NOTE: following copying relies on validly sized input data
                 u8_t5b1_buf[..transaction_broadcast.transaction.len()].copy_from_slice(&transaction_broadcast.transaction);
 
                 // transform [u8] to &[i8]
