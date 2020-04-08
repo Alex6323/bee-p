@@ -13,7 +13,7 @@ use futures::{
 };
 use log::info;
 
-pub(crate) struct MilestoneSolidifierWorkerEvent(Hash, MilestoneIndex);
+pub(crate) struct MilestoneSolidifierWorkerEvent();
 
 pub(crate) struct MilestoneSolidifierWorker {}
 
@@ -35,7 +35,7 @@ impl MilestoneSolidifierWorker {
         loop {
             select! {
                 event = receiver_fused.next() => {
-                    if let Some(MilestoneSolidifierWorkerEvent(_hash, _index)) = event {
+                    if let Some(MilestoneSolidifierWorkerEvent()) = event {
                     }
                 },
                 _ = shutdown_fused => {
