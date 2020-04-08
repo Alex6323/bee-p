@@ -3,12 +3,18 @@
 mod common;
 use self::common::*;
 
-use rand::prelude::*;
-use serde::{*, de::DeserializeOwned};
-use bee_ternary::{*, raw::*};
+use bee_ternary::{
+    raw::*,
+    *,
+};
+use serde::{
+    de::DeserializeOwned,
+    *,
+};
 
 fn serialize_generic<T: raw::RawEncodingBuf>()
-    where <T::Slice as RawEncoding>::Trit: Serialize
+where
+    <T::Slice as RawEncoding>::Trit: Serialize,
 {
     let (a, a_i8) = gen_buf::<T>(0..1000);
     assert_eq!(
@@ -18,7 +24,8 @@ fn serialize_generic<T: raw::RawEncodingBuf>()
 }
 
 fn serialize_generic_unbalanced<T: raw::RawEncodingBuf>()
-    where <T::Slice as RawEncoding>::Trit: Serialize
+where
+    <T::Slice as RawEncoding>::Trit: Serialize,
 {
     let (a, a_i8) = gen_buf_unbalanced::<T>(0..1000);
     assert_eq!(
@@ -28,21 +35,31 @@ fn serialize_generic_unbalanced<T: raw::RawEncodingBuf>()
 }
 
 fn deserialize_generic<T: raw::RawEncodingBuf>()
-    where <T::Slice as RawEncoding>::Trit: DeserializeOwned
+where
+    <T::Slice as RawEncoding>::Trit: DeserializeOwned,
 {
     let (a, a_i8) = gen_buf::<T>(0..1000);
     assert_eq!(
-        serde_json::from_str::<TritBuf<T>>(&format!("[{}]", a_i8.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(","))).unwrap(),
+        serde_json::from_str::<TritBuf<T>>(&format!(
+            "[{}]",
+            a_i8.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(",")
+        ))
+        .unwrap(),
         a,
     );
 }
 
 fn deserialize_generic_unbalanced<T: raw::RawEncodingBuf>()
-    where <T::Slice as RawEncoding>::Trit: DeserializeOwned
+where
+    <T::Slice as RawEncoding>::Trit: DeserializeOwned,
 {
     let (a, a_i8) = gen_buf_unbalanced::<T>(0..1000);
     assert_eq!(
-        serde_json::from_str::<TritBuf<T>>(&format!("[{}]", a_i8.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(","))).unwrap(),
+        serde_json::from_str::<TritBuf<T>>(&format!(
+            "[{}]",
+            a_i8.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(",")
+        ))
+        .unwrap(),
         a,
     );
 }

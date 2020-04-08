@@ -1,20 +1,18 @@
 use std::convert::TryInto;
 
 use bee_ternary::{
-    Utrit,
-    Btrit,
     bigint::{
-        T242,
-        T243,
-        I384,
-        U384,
         common::{
-            BigEndian,
             LittleEndian,
-            U8Repr,
             U32Repr,
         },
+        I384,
+        T242,
+        T243,
+        U384,
     },
+    Btrit,
+    Utrit,
 };
 
 #[test]
