@@ -1,3 +1,5 @@
+use crate::milestone::MilestoneIndex;
+
 use bee_bundle::Hash;
 
 use futures::{
@@ -11,7 +13,7 @@ use futures::{
 };
 use log::info;
 
-pub(crate) type MilestoneSolidifierWorkerEvent = Hash;
+pub(crate) struct MilestoneSolidifierWorkerEvent(Hash, MilestoneIndex);
 
 pub(crate) struct MilestoneSolidifierWorker {}
 
@@ -32,8 +34,8 @@ impl MilestoneSolidifierWorker {
 
         loop {
             select! {
-                tail_hash = receiver_fused.next() => {
-                    if let Some(tail_hash) = tail_hash {
+                event = receiver_fused.next() => {
+                    if let Some(MilestoneSolidifierWorkerEvent(_hash, _index)) = event {
                     }
                 },
                 _ = shutdown_fused => {
