@@ -33,6 +33,7 @@ pub struct Tangle {
     vertices: DashMap<Hash, Vertex>,
     unsolid_new: Sender<Hash>,
     solid_entry_points: DashSet<Hash>,
+    milestones: DashMap<MilestoneIndex, Hash>,
     first_solid_milestone: AtomicU32,
     last_solid_milestone: AtomicU32,
     last_milestone: AtomicU32,
@@ -45,6 +46,7 @@ impl Tangle {
             vertices: DashMap::new(),
             unsolid_new,
             solid_entry_points: DashSet::new(),
+            milestones: DashMap::new(),
             first_solid_milestone: AtomicU32::new(0),
             last_solid_milestone: AtomicU32::new(0),
             last_milestone: AtomicU32::new(0),
@@ -107,8 +109,14 @@ impl Tangle {
     }
 
     ///  Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
-    pub async fn get_milestone(&'static self, _idx: MilestoneIndex) -> Option<VertexRef> {
-        todo!()
+    pub async fn get_milestone(&'static self, index: &MilestoneIndex) -> Option<VertexRef> {
+        match self.get_milestone_hash(index) {
+            None => None,
+            Some(hash) => Some(VertexRef {
+                meta: self.get_meta(&hash).await?,
+                tangle: self,
+            }),
+        }
     }
 
     /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
@@ -129,6 +137,29 @@ impl Tangle {
     /// Returns whether the transaction associated `hash` is a solid entry point.
     pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
         self.solid_entry_points.contains(hash)
+    }
+
+    /// Adds the `hash` of a milestone identified by its milestone `index`.
+    pub fn add_milestone_hash(&'static self, index: MilestoneIndex, hash: Hash) {
+        self.milestones.insert(index, hash);
+    }
+
+    /// Removes the hash of a milestone.
+    pub fn remove_milestone_hash(&'static self, index: &MilestoneIndex, hash: Hash) {
+        self.milestones.remove(index);
+    }
+
+    /// Returns the hash of a milestone.
+    pub fn get_milestone_hash(&'static self, index: &MilestoneIndex) -> Option<Hash> {
+        match self.milestones.get(index) {
+            None => None,
+            Some(v) => Some(*v),
+        }
+    }
+
+    /// Returns whether the milestone index maps to a know milestone hash.
+    pub fn contains_milestone(&'static self, index: &MilestoneIndex) -> bool {
+        self.milestones.contains_key(index)
     }
 
     /// Updates the first solid milestone index to `new_index`.
