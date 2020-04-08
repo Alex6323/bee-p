@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 /// A wrapper around a `u32` that represents a milestone index.
-#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct MilestoneIndex(u32);
 
 impl Deref for MilestoneIndex {
