@@ -7,6 +7,8 @@ use crate::{
         TransactionRequest,
     },
     milestone::{
+        MilestoneSolidifierWorker,
+        MilestoneSolidifierWorkerEvent,
         MilestoneValidatorWorker,
         MilestoneValidatorWorkerEvent,
     },
@@ -78,6 +80,10 @@ pub struct Protocol {
         mpsc::Sender<MilestoneValidatorWorkerEvent>,
         Mutex<Option<oneshot::Sender<()>>>,
     ),
+    pub(crate) milestone_solidifier_worker: (
+        mpsc::Sender<MilestoneSolidifierWorkerEvent>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
 }
@@ -108,6 +114,10 @@ impl Protocol {
             mpsc::channel(conf.milestone_validator_worker_bound);
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
+        let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) =
+            mpsc::channel(conf.milestone_solidifier_worker_bound);
+        let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
+
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(conf.broadcaster_worker_bound);
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
 
@@ -129,6 +139,10 @@ impl Protocol {
                 milestone_validator_worker_tx,
                 Mutex::new(Some(milestone_validator_worker_shutdown_tx)),
             ),
+            milestone_solidifier_worker: (
+                milestone_solidifier_worker_tx,
+                Mutex::new(Some(milestone_solidifier_worker_shutdown_tx)),
+            ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             contexts: RwLock::new(HashMap::new()),
         };
@@ -149,6 +163,10 @@ impl Protocol {
         spawn(MilestoneRequesterWorker::new().run(milestone_requester_worker_shutdown_rx));
         spawn(
             MilestoneValidatorWorker::new().run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+        );
+        spawn(
+            MilestoneSolidifierWorker::new()
+                .run(milestone_solidifier_worker_rx, milestone_solidifier_worker_shutdown_rx),
         );
         spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
     }
@@ -194,6 +212,13 @@ impl Protocol {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
                     warn!("[Protocol ] Shutting down MilestoneValidatorWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().milestone_solidifier_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down MilestoneSolidifierWorker failed: {:?}.", e);
                 }
             }
         }

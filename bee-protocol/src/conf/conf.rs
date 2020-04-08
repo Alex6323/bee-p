@@ -14,6 +14,8 @@ const CONF_TRANSACTION_REQUEST_SEND_WORKER_BOUND: (&str, usize) =
     ("protocol.channels.transactionRequestSendWorkerBound", 1000);
 const CONF_HEARTBEAT_SEND_WORKER_BOUND: (&str, usize) = ("protocol.channels.heartbeatSendWorkerBound", 1000);
 const CONF_MILESTONE_VALIDATOR_WORKER_BOUND: (&str, usize) = ("protocol.channels.milestoneValidatorWorkerBound", 1000);
+const CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND: (&str, usize) =
+    ("protocol.channels.milestoneSolidifierWorkerBound", 1000);
 const CONF_TRANSACTION_WORKER_BOUND: (&str, usize) = ("protocol.channels.transactionWorkerBound", 1000);
 const CONF_TRANSACTION_RESPONDER_WORKER_BOUND: (&str, usize) =
     ("protocol.channels.transactionResponderWorkerBound", 1000);
@@ -43,6 +45,7 @@ pub struct ProtocolConfBuilder {
     transaction_request_send_worker_bound: Option<usize>,
     heartbeat_send_worker_bound: Option<usize>,
     milestone_validator_worker_bound: Option<usize>,
+    milestone_solidifier_worker_bound: Option<usize>,
     transaction_worker_bound: Option<usize>,
     transaction_responder_worker_bound: Option<usize>,
     milestone_responder_worker_bound: Option<usize>,
@@ -116,6 +119,12 @@ impl ProtocolConfBuilder {
         self
     }
 
+    pub fn milestone_solidifier_worker_bound(mut self, milestone_solidifier_worker_bound: usize) -> Self {
+        self.milestone_solidifier_worker_bound
+            .replace(milestone_solidifier_worker_bound);
+        self
+    }
+
     pub fn transaction_worker_bound(mut self, transaction_worker_bound: usize) -> Self {
         self.transaction_worker_bound.replace(transaction_worker_bound);
         self
@@ -177,6 +186,9 @@ impl ProtocolConfBuilder {
             milestone_validator_worker_bound: self
                 .milestone_validator_worker_bound
                 .unwrap_or(CONF_MILESTONE_VALIDATOR_WORKER_BOUND.1),
+            milestone_solidifier_worker_bound: self
+                .milestone_solidifier_worker_bound
+                .unwrap_or(CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND.1),
             transaction_worker_bound: self.transaction_worker_bound.unwrap_or(CONF_TRANSACTION_WORKER_BOUND.1),
             transaction_responder_worker_bound: self
                 .transaction_responder_worker_bound
@@ -208,6 +220,7 @@ pub struct ProtocolConf {
     pub(crate) transaction_request_send_worker_bound: usize,
     pub(crate) heartbeat_send_worker_bound: usize,
     pub(crate) milestone_validator_worker_bound: usize,
+    pub(crate) milestone_solidifier_worker_bound: usize,
     pub(crate) transaction_worker_bound: usize,
     pub(crate) transaction_responder_worker_bound: usize,
     pub(crate) milestone_responder_worker_bound: usize,
