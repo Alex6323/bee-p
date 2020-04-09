@@ -10,6 +10,7 @@
 mod curlp;
 mod kerl;
 mod sponge;
+mod sponge_type;
 
 pub use curlp::{
     CurlP27,
@@ -17,3 +18,4 @@ pub use curlp::{
 };
 pub use kerl::Kerl;
 pub use sponge::Sponge;
+pub use sponge_type::SpongeType;
