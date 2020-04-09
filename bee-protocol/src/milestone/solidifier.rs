@@ -28,6 +28,28 @@ impl MilestoneSolidifierWorker {
         false
     }
 
+    async fn process_target(&self, target_milestone_index: u32) -> bool {
+        match tangle().get_milestone_hash(&(target_milestone_index.into())) {
+            Some(target_milestone_hash) => match self.solidify(target_milestone_hash) {
+                true => {
+                    tangle().update_last_solid_milestone_index(target_milestone_index.into());
+                    Protocol::broadcast_heartbeat(
+                        *tangle().get_first_solid_milestone_index(),
+                        *tangle().get_last_solid_milestone_index(),
+                    )
+                    .await;
+                    true
+                }
+                false => false,
+            },
+            None => {
+                // There is a gap, request the milestone
+                Protocol::request_milestone(target_milestone_index);
+                false
+            }
+        }
+    }
+
     pub(crate) async fn run(
         self,
         receiver: mpsc::Receiver<MilestoneSolidifierWorkerEvent>,
@@ -43,25 +65,8 @@ impl MilestoneSolidifierWorker {
                 event = receiver_fused.next() => {
                     if let Some(MilestoneSolidifierWorkerEvent()) = event {
                         while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
-                            let target_milestone_index = *tangle().get_last_solid_milestone_index() + 1;
-
-                            match tangle().get_milestone_hash(&(target_milestone_index.into())) {
-                                Some(target_milestone_hash) => match self.solidify(target_milestone_hash) {
-                                    true => {
-                                        tangle().update_last_solid_milestone_index(target_milestone_index.into());
-                                        Protocol::broadcast_heartbeat(
-                                            *tangle().get_first_solid_milestone_index(),
-                                            *tangle().get_last_solid_milestone_index(),
-                                        ).await;
-                                    },
-                                    false => {
-                                    }
-                                }
-                                None => {
-                                    // There is a gap, request the milestone
-                                    Protocol::request_milestone(target_milestone_index);
-                                    break
-                                }
+                            if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
+                                break;
                             }
                         }
                     }
