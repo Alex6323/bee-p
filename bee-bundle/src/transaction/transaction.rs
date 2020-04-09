@@ -18,7 +18,6 @@ use crate::constants::{
     TAG,
     TAG_TRIT_LEN,
     TIMESTAMP,
-    TRANSACTION_TRIT_LEN,
     TRUNK,
     VALUE,
 };
@@ -38,7 +37,6 @@ use std::{
     convert::TryFrom,
     fmt,
     hash,
-    ptr,
 };
 
 #[derive(Debug)]
@@ -353,7 +351,7 @@ pub enum TransactionError {
 }
 
 impl From<num_conversions::TritsI64ConversionError> for TransactionError {
-    fn from(err: num_conversions::TritsI64ConversionError) -> Self {
+    fn from(_: num_conversions::TritsI64ConversionError) -> Self {
         TransactionError::TransactionInvalidValue
     }
 }
@@ -452,7 +450,7 @@ impl Transaction {
         Ok(transaction)
     }
 
-    fn into_trits_allocated(&self, mut buf: &mut Trits<T1B1>) {
+    fn into_trits_allocated(&self, buf: &mut Trits<T1B1>) {
         buf.copy_raw_bytes(
             self.payload().to_inner(),
             PAYLOAD.trit_offset.start,
@@ -765,6 +763,8 @@ impl TransactionBuilders {
 mod tests {
     use super::*;
 
+    use crate::constants::TRANSACTION_TRIT_LEN;
+
     #[test]
     fn create_transaction_from_builder() {
         let _ = TransactionBuilder::new()
@@ -809,7 +809,7 @@ mod tests {
             .unwrap();
 
         let raw_tx_bytes: &mut [i8] = &mut [0 as i8; TRANSACTION_TRIT_LEN];
-        let mut tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
+        let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
 
         tx.into_trits_allocated(tx_trits);
         let tx2 = Transaction::from_trits(tx_trits).unwrap();
