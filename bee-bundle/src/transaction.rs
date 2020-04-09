@@ -340,6 +340,7 @@ pub enum TransactionError {
     TransactionBuilderError(TransactionBuilderError),
 }
 
+#[derive(Clone)]
 pub struct Transaction {
     pub(crate) payload: Payload,
     pub(crate) address: Address,
