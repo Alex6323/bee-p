@@ -11,7 +11,6 @@ pub use crate::bundle::{
     IncomingBundleBuilderError,
     OutgoingBundleBuilder,
     OutgoingBundleBuilderError,
-    Transactions,
 };
 pub use constants::{
     ADDRESS_TRIT_LEN,
@@ -36,5 +35,6 @@ pub use transaction::{
     TransactionBuilderError,
     TransactionBuilders,
     TransactionField,
+    Transactions,
     Value,
 };

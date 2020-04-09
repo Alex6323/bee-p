@@ -1,4 +1,5 @@
 mod transaction;
+mod transactions;
 
 pub use transaction::{
     Address,
@@ -15,3 +16,4 @@ pub use transaction::{
     TransactionField,
     Value,
 };
+pub use transactions::Transactions;
