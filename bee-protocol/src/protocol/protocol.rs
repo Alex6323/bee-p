@@ -37,10 +37,12 @@ use crate::{
     },
 };
 
+use bee_crypto::Kerl;
 use bee_network::{
     EndpointId,
     Network,
 };
+use bee_signing::WotsPublicKey;
 
 use std::{
     collections::HashMap,
@@ -181,9 +183,10 @@ impl Protocol {
         );
         spawn(TransactionRequesterWorker::new().run(transaction_requester_worker_shutdown_rx));
         spawn(MilestoneRequesterWorker::new().run(milestone_requester_worker_shutdown_rx));
-        spawn(
-            MilestoneValidatorWorker::new().run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
-        );
+
+        // TODO conf
+        let milestone_validator_worker = MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new();
+        spawn(milestone_validator_worker.run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx));
         spawn(
             MilestoneSolidifierWorker::new()
                 .run(milestone_solidifier_worker_rx, milestone_solidifier_worker_shutdown_rx),

@@ -7,11 +7,18 @@ use crate::{
     protocol::Protocol,
 };
 
-use bee_bundle::{
-    Hash,
-    TransactionField,
+use bee_bundle::Hash;
+use bee_crypto::{
+    Kerl,
+    Sponge,
+};
+use bee_signing::{
+    PublicKey,
+    RecoverableSignature,
 };
 use bee_tangle::tangle;
+
+use std::marker::PhantomData;
 
 use futures::{
     channel::{
@@ -36,15 +43,26 @@ pub(crate) enum MilestoneValidatorWorkerError {
 
 pub(crate) type MilestoneValidatorWorkerEvent = Hash;
 
-pub(crate) struct MilestoneValidatorWorker {}
+pub(crate) struct MilestoneValidatorWorker<M, P> {
+    mss_sponge: PhantomData<M>,
+    public_key: PhantomData<P>,
+}
 
-impl MilestoneValidatorWorker {
+impl<M, P> MilestoneValidatorWorker<M, P>
+where
+    M: Sponge + Default,
+    P: PublicKey,
+    <P as PublicKey>::Signature: RecoverableSignature,
+{
     pub(crate) fn new() -> Self {
-        Self {}
+        Self {
+            mss_sponge: PhantomData,
+            public_key: PhantomData,
+        }
     }
 
     async fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
-        let mut builder = MilestoneBuilder::new(tail_hash);
+        let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
         let mut transaction = tangle()
             .get_transaction(&tail_hash)
             .await
