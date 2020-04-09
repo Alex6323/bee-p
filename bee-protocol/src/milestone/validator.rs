@@ -44,26 +44,21 @@ impl MilestoneValidatorWorker {
     }
 
     async fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
-        let builder = MilestoneBuilder::new(tail_hash);
+        let mut builder = MilestoneBuilder::new(tail_hash);
+        let mut transaction = tangle()
+            .get_transaction(&tail_hash)
+            .await
+            .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
-        let tail = match tangle().get_transaction(&tail_hash).await {
-            Some(tail) => tail,
-            None => Err(MilestoneValidatorWorkerError::UnknownTail)?,
-        };
+        builder.push(transaction.clone());
 
-        // TODO clone :(
-        // builder.push(tail.clone());
+        for _ in 0..Protocol::get().conf.coo_security_level + 1 {
+            transaction = tangle()
+                .get_transaction(transaction.trunk())
+                .await
+                .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
-        let mut transaction = tail;
-        // TODO bound ?
-        for _ in 0..*tail.last_index().to_inner() {
-            transaction = match tangle().get_transaction(transaction.trunk()).await {
-                Some(transaction) => transaction,
-                None => Err(MilestoneValidatorWorkerError::IncompleteBundle)?,
-            };
-
-            // TODO clone :(
-            // builder.push(tail.clone());
+            builder.push(transaction.clone());
         }
 
         Ok(builder

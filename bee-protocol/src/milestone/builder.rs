@@ -95,7 +95,6 @@ where
     }
 
     // TODO add address func
-    // TODO check size of bundle == coo sec level
 
     fn validate_signatures(&self) -> Result<(), MilestoneBuilderError> {
         let mut signature_buf = TritBuf::zeros(self.transactions.len() * Payload::trit_len());
