@@ -1,8 +1,10 @@
+use bee_crypto::SpongeType;
+
 const CONF_COO_PUBLIC_KEY: (&str, &str) = (
     "protocol.coordinator.publicKey",
     "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
 );
-const CONF_COO_SPONGE_TYPE: (&str, &str) = ("protocol.coordinator.sponge", "kerl");
+const CONF_COO_SPONGE_TYPE: (&str, SpongeType) = ("protocol.coordinator.sponge", SpongeType::Kerl);
 const CONF_COO_SECURITY: (&str, u8) = ("protocol.coordinator.securityLevel", 2);
 const CONF_COO_DEPTH: (&str, u8) = ("protocol.coordinator.depth", 24);
 const CONF_MWM: (&str, u8) = ("protocol.mwm", 14);
@@ -35,8 +37,7 @@ pub(crate) const COORDINATOR_BYTES: [u8; 49] = [
 #[derive(Default)]
 pub struct ProtocolConfBuilder {
     coo_public_key: Option<String>,
-    // TODO sponge type type ?
-    coo_sponge_type: Option<String>,
+    coo_sponge_type: Option<SpongeType>,
     coo_security_level: Option<u8>,
     coo_depth: Option<u8>,
     mwm: Option<u8>,
@@ -70,7 +71,7 @@ impl ProtocolConfBuilder {
         self
     }
 
-    pub fn coo_sponge_type(mut self, coo_sponge_type: String) -> Self {
+    pub fn coo_sponge_type(mut self, coo_sponge_type: SpongeType) -> Self {
         self.coo_sponge_type.replace(coo_sponge_type);
         self
     }
@@ -167,7 +168,7 @@ impl ProtocolConfBuilder {
     pub fn build(self) -> ProtocolConf {
         ProtocolConf {
             coo_public_key: self.coo_public_key.unwrap_or(CONF_COO_PUBLIC_KEY.1.to_owned()),
-            coo_sponge_type: self.coo_sponge_type.unwrap_or(CONF_COO_SPONGE_TYPE.1.to_owned()),
+            coo_sponge_type: self.coo_sponge_type.unwrap_or(CONF_COO_SPONGE_TYPE.1),
             coo_security_level: self.coo_security_level.unwrap_or(CONF_COO_SECURITY.1),
             coo_depth: self.coo_depth.unwrap_or(CONF_COO_DEPTH.1),
             mwm: self.mwm.unwrap_or(CONF_MWM.1),
@@ -210,8 +211,7 @@ impl ProtocolConfBuilder {
 
 pub struct ProtocolConf {
     pub(crate) coo_public_key: String,
-    // TODO sponge type type ?
-    pub(crate) coo_sponge_type: String,
+    pub(crate) coo_sponge_type: SpongeType,
     pub(crate) coo_security_level: u8,
     pub(crate) coo_depth: u8,
     pub(crate) mwm: u8,

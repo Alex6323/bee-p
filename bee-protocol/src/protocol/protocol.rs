@@ -37,7 +37,12 @@ use crate::{
     },
 };
 
-use bee_crypto::Kerl;
+use bee_crypto::{
+    CurlP27,
+    CurlP81,
+    Kerl,
+    SpongeType,
+};
 use bee_network::{
     EndpointId,
     Network,
@@ -184,9 +189,21 @@ impl Protocol {
         spawn(TransactionRequesterWorker::new().run(transaction_requester_worker_shutdown_rx));
         spawn(MilestoneRequesterWorker::new().run(milestone_requester_worker_shutdown_rx));
 
-        // TODO conf
-        let milestone_validator_worker = MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new();
-        spawn(milestone_validator_worker.run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx));
+        match Protocol::get().conf.coo_sponge_type {
+            SpongeType::Kerl => spawn(
+                MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new()
+                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            ),
+            SpongeType::CurlP27 => spawn(
+                MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new()
+                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            ),
+            SpongeType::CurlP81 => spawn(
+                MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new()
+                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            ),
+        };
+
         spawn(
             MilestoneSolidifierWorker::new()
                 .run(milestone_solidifier_worker_rx, milestone_solidifier_worker_shutdown_rx),
