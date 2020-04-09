@@ -23,8 +23,9 @@ impl MilestoneSolidifierWorker {
         Self {}
     }
 
-    fn solidify(&self, hash: Hash) {
+    fn solidify(&self, hash: Hash) -> bool {
         // TODO Tangle traversal
+        false
     }
 
     pub(crate) async fn run(
@@ -45,7 +46,17 @@ impl MilestoneSolidifierWorker {
                             let target_milestone_index = *tangle().get_last_solid_milestone_index() + 1;
 
                             match tangle().get_milestone_hash(&(target_milestone_index.into())) {
-                                Some(target_milestone_hash) => self.solidify(target_milestone_hash),
+                                Some(target_milestone_hash) => match self.solidify(target_milestone_hash) {
+                                    true => {
+                                        tangle().update_last_solid_milestone_index(target_milestone_index.into());
+                                        Protocol::broadcast_heartbeat(
+                                            *tangle().get_first_solid_milestone_index(),
+                                            *tangle().get_last_solid_milestone_index(),
+                                        ).await;
+                                    },
+                                    false => {
+                                    }
+                                }
                                 None => {
                                     // There is a gap, request the milestone
                                     Protocol::request_milestone(target_milestone_index);
