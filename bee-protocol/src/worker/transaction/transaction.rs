@@ -109,17 +109,18 @@ impl TransactionWorker {
 
             // build transaction
             let built_transaction = match Transaction::from_trits(&transaction_buf) {
-                Ok(tx) => tx,
-                Err(_) => {
-                    warn!("[TransactionWorker ] Can not build transaction from received data.");
+                Ok(transaction) => transaction,
+                Err(e) => {
+                    warn!(
+                        "[TransactionWorker ] Can not build transaction from received data: {:?}",
+                        e
+                    );
                     continue;
                 }
             };
 
             // calculate transaction hash
             let tx_hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
-
-            debug!("[TransactionWorker ] Received transaction {}.", &tx_hash);
 
             // check if transactions is already present in the tangle before doing any further work
             if tangle().contains_transaction(&tx_hash) {
