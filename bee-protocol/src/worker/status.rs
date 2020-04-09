@@ -1,8 +1,10 @@
-use futures::{
-    channel::oneshot,
-    future::FutureExt,
-    select,
+use std::time::Duration;
+
+use async_std::{
+    future::ready,
+    prelude::*,
 };
+use futures::channel::mpsc::Receiver;
 use log::info;
 
 pub(crate) struct StatusWorker {}
@@ -12,15 +14,20 @@ impl StatusWorker {
         Self {}
     }
 
-    pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {
+    pub(crate) async fn run(self, mut shutdown: Receiver<()>) {
         info!("[StatusWorker ] Running.");
 
-        let mut shutdown_fused = shutdown.fuse();
-
         loop {
-            select! {
-                _ = shutdown_fused => {
+            match ready(None)
+                .delay(Duration::from_millis(5000))
+                .race(shutdown.next())
+                .await
+            {
+                Some(_) => {
                     break;
+                }
+                None => {
+                    info!("[StatusWorker ] Status.");
                 }
             }
         }

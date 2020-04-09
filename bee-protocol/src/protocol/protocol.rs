@@ -55,9 +55,12 @@ use async_std::{
     sync::RwLock,
     task::spawn,
 };
-use futures::channel::{
-    mpsc,
-    oneshot,
+use futures::{
+    channel::{
+        mpsc,
+        oneshot,
+    },
+    sink::SinkExt,
 };
 use log::warn;
 
@@ -92,7 +95,7 @@ pub struct Protocol {
         Mutex<Option<oneshot::Sender<()>>>,
     ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
-    pub(crate) status_worker: Mutex<Option<oneshot::Sender<()>>>,
+    pub(crate) status_worker: mpsc::Sender<()>,
     pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
 }
 
@@ -129,7 +132,7 @@ impl Protocol {
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(conf.broadcaster_worker_bound);
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
 
-        let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();
+        let (status_worker_shutdown_tx, status_worker_shutdown_rx) = mpsc::channel(1);
 
         let protocol = Protocol {
             network: network.clone(),
@@ -160,7 +163,7 @@ impl Protocol {
                 Mutex::new(Some(milestone_solidifier_worker_shutdown_tx)),
             ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
-            status_worker: Mutex::new(Some(status_worker_shutdown_tx)),
+            status_worker: status_worker_shutdown_tx,
             contexts: RwLock::new(HashMap::new()),
         };
 
@@ -189,7 +192,7 @@ impl Protocol {
         spawn(StatusWorker::new().run(status_worker_shutdown_rx));
     }
 
-    pub fn shutdown() {
+    pub async fn shutdown() {
         if let Ok(mut shutdown) = Protocol::get().transaction_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
@@ -246,12 +249,8 @@ impl Protocol {
                 }
             }
         }
-        if let Ok(mut shutdown) = Protocol::get().status_worker.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down StatusWorker failed: {:?}.", e);
-                }
-            }
+        if let Err(e) = Protocol::get().status_worker.clone().send(()).await {
+            warn!("[Protocol ] Shutting down StatusWorker failed: {:?}.", e);
         }
     }
 
