@@ -498,7 +498,7 @@ impl Transaction {
 
         buf.copy_raw_bytes(value_buf.as_slice(), VALUE.trit_offset.start, value_buf.len());
 
-        let timestamp_buf = TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
+        let timestamp_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
 
         buf.copy_raw_bytes(
             timestamp_buf.as_slice(),
@@ -507,7 +507,7 @@ impl Transaction {
         );
 
         let attachment_ts_buf =
-            TritBuf::<T1B1Buf>::try_from(self.attachment_ts().to_inner().to_owned() as i64).unwrap();
+            TritBuf::<T1B1Buf>::try_from(*self.attachment_ts().to_inner() as i64).unwrap();
 
         buf.copy_raw_bytes(
             attachment_ts_buf.as_slice(),
@@ -515,14 +515,14 @@ impl Transaction {
             attachment_ts_buf.len(),
         );
 
-        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
+        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
         buf.copy_raw_bytes(
             attachment_lbts_buf.as_slice(),
             ATTACHMENT_LBTS.trit_offset.start,
             attachment_lbts_buf.len(),
         );
 
-        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(self.timestamp().to_inner().to_owned() as i64).unwrap();
+        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
         buf.copy_raw_bytes(
             attachment_ubts_buf.as_slice(),
             ATTACHMENT_UBTS.trit_offset.start,
