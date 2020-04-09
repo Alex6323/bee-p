@@ -1,8 +1,12 @@
 use crate::transaction::{
+    Address,
     Hash,
     Transaction,
+    TransactionField,
     Transactions,
 };
+
+use std::collections::HashMap;
 
 pub struct Bundle(pub(crate) Transactions);
 
@@ -43,6 +47,19 @@ impl Bundle {
     // TODO TEST
     pub fn branch(&self) -> &Hash {
         self.head().branch()
+    }
+
+    // TODO TEST
+    pub fn ledger_diff(&self) -> HashMap<Address, i64> {
+        let mut diff = HashMap::new();
+
+        for transaction in self {
+            if *transaction.value.to_inner() != 0 {
+                *diff.entry(transaction.address().clone()).or_insert(0) += *transaction.value.to_inner();
+            }
+        }
+
+        diff
     }
 }
 
