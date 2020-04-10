@@ -38,21 +38,23 @@ use log::{
 
 pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
-pub(crate) struct TransactionWorker;
+pub(crate) struct TransactionWorker {
+    cache_size: usize,
+}
 
 impl TransactionWorker {
-    pub(crate) fn new() -> Self {
-        Self {}
+    pub(crate) fn new(cache_size: usize) -> Self {
+        Self { cache_size }
     }
 
-    pub(crate) async fn run(self, receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>, hash_cache_max_capacity: usize) {
+    pub(crate) async fn run(self, receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) {
         info!("[TransactionWorker ] Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
 
         let mut curl = CurlP81::new();
-        let mut cache = TinyHashCache::new(hash_cache_max_capacity);
+        let mut cache = TinyHashCache::new(self.cache_size);
 
         loop {
             let transaction_broadcast = select! {
@@ -80,11 +82,11 @@ impl TransactionWorker {
 
             // convert received transaction bytes into T1B1 buffer
             let transaction_buf = {
-
                 // define max buffer and copy received transaction bytes into it
                 let mut u8_t5b1_buf = [0u8; TRANSACTION_BYTE_LEN];
                 // NOTE: following copying relies on validly sized input data
-                u8_t5b1_buf[..transaction_broadcast.transaction.len()].copy_from_slice(&transaction_broadcast.transaction);
+                u8_t5b1_buf[..transaction_broadcast.transaction.len()]
+                    .copy_from_slice(&transaction_broadcast.transaction);
 
                 // transform [u8] to &[i8]
                 let i8_t5b1_slice = unsafe { &*(&u8_t5b1_buf as *const [u8] as *const [i8]) };
@@ -178,5 +180,4 @@ mod tests {
         assert_eq!(tangle().size(), 1);
         assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
     }
-
 }

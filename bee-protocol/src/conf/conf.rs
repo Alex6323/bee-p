@@ -19,6 +19,7 @@ const CONF_MILESTONE_VALIDATOR_WORKER_BOUND: (&str, usize) = ("protocol.channels
 const CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND: (&str, usize) =
     ("protocol.channels.milestoneSolidifierWorkerBound", 1000);
 const CONF_TRANSACTION_WORKER_BOUND: (&str, usize) = ("protocol.channels.transactionWorkerBound", 1000);
+const CONF_TRANSACTION_WORKER_CACHE: (&str, usize) = ("protocol.channels.transactionWorkerCache", 10000);
 const CONF_TRANSACTION_RESPONDER_WORKER_BOUND: (&str, usize) =
     ("protocol.channels.transactionResponderWorkerBound", 1000);
 const CONF_MILESTONE_RESPONDER_WORKER_BOUND: (&str, usize) = ("protocol.channels.milestoneResponderWorkerBound", 1000);
@@ -27,7 +28,6 @@ const CONF_TRANSACTION_REQUESTER_WORKER_BOUND: (&str, usize) =
 const CONF_MILESTONE_REQUESTER_WORKER_BOUND: (&str, usize) = ("protocol.channels.milestoneRequesterWorkerBound", 1000);
 const CONF_RECEIVER_WORKER_BOUND: (&str, usize) = ("protocol.channels.receiverWorkerBound", 1000);
 const CONF_BROADCASTER_WORKER_BOUND: (&str, usize) = ("protocol.channels.broadcasterWorkerBound", 1000);
-const CONF_HASH_CACHE_MAX_CAPACITY: (&str, usize) = ("worker.transaction.hashCache.maxCapacity", 10000);
 
 // TODO Impl in term of CONF_COO_PUBLIC_KEY
 pub(crate) const COORDINATOR_BYTES: [u8; 49] = [
@@ -49,13 +49,13 @@ pub struct ProtocolConfBuilder {
     milestone_validator_worker_bound: Option<usize>,
     milestone_solidifier_worker_bound: Option<usize>,
     transaction_worker_bound: Option<usize>,
+    transaction_worker_cache: Option<usize>,
     transaction_responder_worker_bound: Option<usize>,
     milestone_responder_worker_bound: Option<usize>,
     transaction_requester_worker_bound: Option<usize>,
     milestone_requester_worker_bound: Option<usize>,
     receiver_worker_bound: Option<usize>,
     broadcaster_worker_bound: Option<usize>,
-    hash_cache_max_capacity: Option<usize>
 }
 
 impl ProtocolConfBuilder {
@@ -133,6 +133,11 @@ impl ProtocolConfBuilder {
         self
     }
 
+    pub fn transaction_worker_cache(mut self, transaction_worker_cache: usize) -> Self {
+        self.transaction_worker_cache.replace(transaction_worker_cache);
+        self
+    }
+
     pub fn transaction_responder_worker_bound(mut self, transaction_responder_worker_bound: usize) -> Self {
         self.transaction_responder_worker_bound
             .replace(transaction_responder_worker_bound);
@@ -193,6 +198,7 @@ impl ProtocolConfBuilder {
                 .milestone_solidifier_worker_bound
                 .unwrap_or(CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND.1),
             transaction_worker_bound: self.transaction_worker_bound.unwrap_or(CONF_TRANSACTION_WORKER_BOUND.1),
+            transaction_worker_cache: self.transaction_worker_cache.unwrap_or(CONF_TRANSACTION_WORKER_CACHE.1),
             transaction_responder_worker_bound: self
                 .transaction_responder_worker_bound
                 .unwrap_or(CONF_TRANSACTION_RESPONDER_WORKER_BOUND.1),
@@ -207,7 +213,6 @@ impl ProtocolConfBuilder {
                 .unwrap_or(CONF_MILESTONE_REQUESTER_WORKER_BOUND.1),
             receiver_worker_bound: self.receiver_worker_bound.unwrap_or(CONF_RECEIVER_WORKER_BOUND.1),
             broadcaster_worker_bound: self.broadcaster_worker_bound.unwrap_or(CONF_BROADCASTER_WORKER_BOUND.1),
-            hash_cache_max_capacity: self.hash_cache_max_capacity.unwrap_or(CONF_HASH_CACHE_MAX_CAPACITY.1),
         }
     }
 }
@@ -225,13 +230,13 @@ pub struct ProtocolConf {
     pub(crate) milestone_validator_worker_bound: usize,
     pub(crate) milestone_solidifier_worker_bound: usize,
     pub(crate) transaction_worker_bound: usize,
+    pub(crate) transaction_worker_cache: usize,
     pub(crate) transaction_responder_worker_bound: usize,
     pub(crate) milestone_responder_worker_bound: usize,
     pub(crate) transaction_requester_worker_bound: usize,
     pub(crate) milestone_requester_worker_bound: usize,
     pub(crate) receiver_worker_bound: usize,
     pub(crate) broadcaster_worker_bound: usize,
-    pub(crate) hash_cache_max_capacity: usize,
 }
 
 // TODO move out of here

@@ -178,7 +178,10 @@ impl Protocol {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
-        spawn(TransactionWorker::new().run(transaction_worker_rx, transaction_worker_shutdown_rx, Protocol::get().conf.hash_cache_max_capacity));
+        spawn(
+            TransactionWorker::new(Protocol::get().conf.transaction_worker_cache)
+                .run(transaction_worker_rx, transaction_worker_shutdown_rx),
+        );
         spawn(TransactionResponderWorker::new().run(
             transaction_responder_worker_rx,
             transaction_responder_worker_shutdown_rx,
