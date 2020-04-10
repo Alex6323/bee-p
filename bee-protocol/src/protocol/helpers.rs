@@ -3,7 +3,10 @@ use crate::{
         Heartbeat,
         TransactionBroadcast,
     },
-    milestone::MilestoneIndex,
+    milestone::{
+        MilestoneIndex,
+        MilestoneSolidifierWorkerEvent,
+    },
     protocol::Protocol,
     worker::{
         MilestoneRequesterWorkerEntry,
@@ -47,6 +50,7 @@ impl Protocol {
     pub fn request_milestone(index: MilestoneIndex) {
         Protocol::get()
             .milestone_requester_worker
+            .0
             .insert(MilestoneRequesterWorkerEntry(index));
     }
 
@@ -79,6 +83,22 @@ impl Protocol {
     pub async fn request_transaction(hash: Hash, index: MilestoneIndex) {
         Protocol::get()
             .transaction_requester_worker
+            .0
             .insert(TransactionRequesterWorkerEntry(hash, index));
+    }
+
+    // MilestoneSolidifier
+
+    pub async fn trigger_milestone_solidification() {
+        if let Err(e) = Protocol::get()
+            .milestone_solidifier_worker
+            // TODO try to avoid clone
+            .0
+            .clone()
+            .send(MilestoneSolidifierWorkerEvent())
+            .await
+        {
+            warn!("[Protocol ] Triggering milestone solidification failed: {}.", e);
+        }
     }
 }

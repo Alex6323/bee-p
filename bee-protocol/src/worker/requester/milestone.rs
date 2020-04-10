@@ -3,6 +3,8 @@ use crate::{
     protocol::Protocol,
 };
 
+use bee_tangle::tangle;
+
 use std::cmp::Ordering;
 
 use futures::{
@@ -43,8 +45,11 @@ impl MilestoneRequesterWorker {
         loop {
             select! {
                 // TODO impl fused stream
-                entry = Protocol::get().milestone_requester_worker.pop().fuse() => {
+                entry = Protocol::get().milestone_requester_worker.0.pop().fuse() => {
                     if let MilestoneRequesterWorkerEntry(index) = entry {
+                        if tangle().contains_milestone(&(index.into())) {
+                            continue;
+                        }
                         // TODO Use sender worker
                 //         let _bytes = MilestoneRequest::new(index).into_full_bytes();
                 //         // TODO we don't have any peer_id here

@@ -7,11 +7,18 @@ use crate::{
     protocol::Protocol,
 };
 
-use bee_bundle::{
-    Hash,
-    TransactionField,
+use bee_bundle::Hash;
+use bee_crypto::{
+    Kerl,
+    Sponge,
+};
+use bee_signing::{
+    PublicKey,
+    RecoverableSignature,
 };
 use bee_tangle::tangle;
+
+use std::marker::PhantomData;
 
 use futures::{
     channel::{
@@ -36,34 +43,40 @@ pub(crate) enum MilestoneValidatorWorkerError {
 
 pub(crate) type MilestoneValidatorWorkerEvent = Hash;
 
-pub(crate) struct MilestoneValidatorWorker {}
+pub(crate) struct MilestoneValidatorWorker<M, P> {
+    mss_sponge: PhantomData<M>,
+    public_key: PhantomData<P>,
+}
 
-impl MilestoneValidatorWorker {
+impl<M, P> MilestoneValidatorWorker<M, P>
+where
+    M: Sponge + Default,
+    P: PublicKey,
+    <P as PublicKey>::Signature: RecoverableSignature,
+{
     pub(crate) fn new() -> Self {
-        Self {}
+        Self {
+            mss_sponge: PhantomData,
+            public_key: PhantomData,
+        }
     }
 
     async fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
-        let builder = MilestoneBuilder::new(tail_hash);
+        let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
+        let mut transaction = tangle()
+            .get_transaction(&tail_hash)
+            .await
+            .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
-        let tail = match tangle().get_transaction(&tail_hash).await {
-            Some(tail) => tail,
-            None => Err(MilestoneValidatorWorkerError::UnknownTail)?,
-        };
+        builder.push(transaction.clone());
 
-        // TODO clone :(
-        // builder.push(tail.clone());
+        for _ in 0..Protocol::get().conf.coo_security_level + 1 {
+            transaction = tangle()
+                .get_transaction(transaction.trunk())
+                .await
+                .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
-        let mut transaction = tail;
-        // TODO bound ?
-        for _ in 0..*tail.last_index().to_inner() {
-            transaction = match tangle().get_transaction(transaction.trunk()).await {
-                Some(transaction) => transaction,
-                None => Err(MilestoneValidatorWorkerError::IncompleteBundle)?,
-            };
-
-            // TODO clone :(
-            // builder.push(tail.clone());
+            builder.push(transaction.clone());
         }
 
         Ok(builder
@@ -94,6 +107,9 @@ impl MilestoneValidatorWorker {
                                 if milestone.index > *tangle().get_last_milestone_index() {
                                     info!("[MilestoneValidatorWorker ] New milestone #{}.", milestone.index);
                                     tangle().update_last_milestone_index(milestone.index.into());
+                                }
+                                if milestone.index == *tangle().get_last_solid_milestone_index() + 1 {
+                                    Protocol::trigger_milestone_solidification().await;
                                 }
                             },
                             Err(e) => {

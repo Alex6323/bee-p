@@ -7,6 +7,8 @@ use crate::{
         TransactionRequest,
     },
     milestone::{
+        MilestoneSolidifierWorker,
+        MilestoneSolidifierWorkerEvent,
         MilestoneValidatorWorker,
         MilestoneValidatorWorkerEvent,
     },
@@ -24,6 +26,7 @@ use crate::{
         ReceiverWorker,
         SenderContext,
         SenderWorker,
+        StatusWorker,
         TransactionRequesterWorker,
         TransactionRequesterWorkerEntry,
         TransactionResponderWorker,
@@ -34,10 +37,17 @@ use crate::{
     },
 };
 
+use bee_crypto::{
+    CurlP27,
+    CurlP81,
+    Kerl,
+    SpongeType,
+};
 use bee_network::{
     EndpointId,
     Network,
 };
+use bee_signing::WotsPublicKey;
 
 use std::{
     collections::HashMap,
@@ -52,9 +62,12 @@ use async_std::{
     sync::RwLock,
     task::spawn,
 };
-use futures::channel::{
-    mpsc,
-    oneshot,
+use futures::{
+    channel::{
+        mpsc,
+        oneshot,
+    },
+    sink::SinkExt,
 };
 use log::warn;
 
@@ -72,13 +85,24 @@ pub struct Protocol {
         mpsc::Sender<MilestoneResponderWorkerEvent>,
         Mutex<Option<oneshot::Sender<()>>>,
     ),
-    pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
-    pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
+    pub(crate) transaction_requester_worker: (
+        WaitPriorityQueue<TransactionRequesterWorkerEntry>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
+    pub(crate) milestone_requester_worker: (
+        WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
     pub(crate) milestone_validator_worker: (
         mpsc::Sender<MilestoneValidatorWorkerEvent>,
         Mutex<Option<oneshot::Sender<()>>>,
     ),
+    pub(crate) milestone_solidifier_worker: (
+        mpsc::Sender<MilestoneSolidifierWorkerEvent>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
+    pub(crate) status_worker: mpsc::Sender<()>,
     pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
 }
 
@@ -108,8 +132,14 @@ impl Protocol {
             mpsc::channel(conf.milestone_validator_worker_bound);
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
+        let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) =
+            mpsc::channel(conf.milestone_solidifier_worker_bound);
+        let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
+
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(conf.broadcaster_worker_bound);
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
+
+        let (status_worker_shutdown_tx, status_worker_shutdown_rx) = mpsc::channel(1);
 
         let protocol = Protocol {
             network: network.clone(),
@@ -123,13 +153,24 @@ impl Protocol {
                 milestone_responder_worker_tx,
                 Mutex::new(Some(milestone_responder_worker_shutdown_tx)),
             ),
-            transaction_requester_worker: WaitPriorityQueue::default(),
-            milestone_requester_worker: WaitPriorityQueue::default(),
+            transaction_requester_worker: (
+                WaitPriorityQueue::default(),
+                Mutex::new(Some(transaction_requester_worker_shutdown_tx)),
+            ),
+            milestone_requester_worker: (
+                WaitPriorityQueue::default(),
+                Mutex::new(Some(milestone_requester_worker_shutdown_tx)),
+            ),
             milestone_validator_worker: (
                 milestone_validator_worker_tx,
                 Mutex::new(Some(milestone_validator_worker_shutdown_tx)),
             ),
+            milestone_solidifier_worker: (
+                milestone_solidifier_worker_tx,
+                Mutex::new(Some(milestone_solidifier_worker_shutdown_tx)),
+            ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
+            status_worker: status_worker_shutdown_tx,
             contexts: RwLock::new(HashMap::new()),
         };
 
@@ -147,13 +188,31 @@ impl Protocol {
         );
         spawn(TransactionRequesterWorker::new().run(transaction_requester_worker_shutdown_rx));
         spawn(MilestoneRequesterWorker::new().run(milestone_requester_worker_shutdown_rx));
+
+        match Protocol::get().conf.coo_sponge_type {
+            SpongeType::Kerl => spawn(
+                MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new()
+                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            ),
+            SpongeType::CurlP27 => spawn(
+                MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new()
+                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            ),
+            SpongeType::CurlP81 => spawn(
+                MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new()
+                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            ),
+        };
+
         spawn(
-            MilestoneValidatorWorker::new().run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            MilestoneSolidifierWorker::new()
+                .run(milestone_solidifier_worker_rx, milestone_solidifier_worker_shutdown_rx),
         );
         spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
+        spawn(StatusWorker::new().run(status_worker_shutdown_rx));
     }
 
-    pub fn shutdown() {
+    pub async fn shutdown() {
         if let Ok(mut shutdown) = Protocol::get().transaction_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
@@ -175,25 +234,31 @@ impl Protocol {
                 }
             }
         }
-        // TODO shutdown WaitPriorityQueue!
-        // if let Ok(mut shutdown) = Protocol::get().transaction_requester_worker.1.lock() {
-        //     if let Some(shutdown) = shutdown.take() {
-        //         if let Err(e) = shutdown.send(()) {
-        //             warn!("[Protocol ] Shutting down TransactionRequesterWorker failed: {:?}.", e);
-        //         }
-        //     }
-        // }
-        // if let Ok(mut shutdown) = Protocol::get().milestone_requester_worker.1.lock() {
-        //     if let Some(shutdown) = shutdown.take() {
-        //         if let Err(e) = shutdown.send(()) {
-        //             warn!("[Protocol ] Shutting down MilestoneRequesterWorker failed: {:?}.", e);
-        //         }
-        //     }
-        // }
+        if let Ok(mut shutdown) = Protocol::get().transaction_requester_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down TransactionRequesterWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().milestone_requester_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down MilestoneRequesterWorker failed: {:?}.", e);
+                }
+            }
+        }
         if let Ok(mut shutdown) = Protocol::get().milestone_validator_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
                     warn!("[Protocol ] Shutting down MilestoneValidatorWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().milestone_solidifier_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down MilestoneSolidifierWorker failed: {:?}.", e);
                 }
             }
         }
@@ -203,6 +268,9 @@ impl Protocol {
                     warn!("[Protocol ] Shutting down BroadcasterWorker failed: {:?}.", e);
                 }
             }
+        }
+        if let Err(e) = Protocol::get().status_worker.clone().send(()).await {
+            warn!("[Protocol ] Shutting down StatusWorker failed: {:?}.", e);
         }
     }
 

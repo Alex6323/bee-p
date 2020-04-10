@@ -1,5 +1,3 @@
-use bee_tangle::Tangle;
-
 fn main() {
     bee_tangle::init();
 

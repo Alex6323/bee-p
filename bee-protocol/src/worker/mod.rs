@@ -3,6 +3,7 @@ mod receiver;
 mod requester;
 mod responder;
 mod sender;
+mod status;
 mod transaction;
 
 pub(crate) use broadcaster::{
@@ -27,6 +28,7 @@ pub(crate) use sender::{
     SenderContext,
     SenderWorker,
 };
+pub(crate) use status::StatusWorker;
 pub(crate) use transaction::{
     TransactionWorker,
     TransactionWorkerEvent,

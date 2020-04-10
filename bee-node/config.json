@@ -41,6 +41,7 @@
       "transactionRequestSendWorkerBound": 1000,
       "heartbeatSendWorkerBound": 1000,
       "milestoneValidatorWorkerBound": 1000,
+      "milestoneSolidifierWorkerBound": 1000,
       "transactionWorkerBound": 1000,
       "transactionResponderWorkerBound": 1000,
       "milestoneResponderWorkerBound": 1000,

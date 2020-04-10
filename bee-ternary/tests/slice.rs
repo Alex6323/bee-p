@@ -6,9 +6,8 @@ use std::convert::{
 mod common;
 use self::common::*;
 
-use std::ops::Range;
-use rand::prelude::*;
 use bee_ternary::*;
+use rand::prelude::*;
 
 fn get_generic<T: raw::RawEncodingBuf + Clone>() {
     println!("{}", std::any::type_name::<T>());

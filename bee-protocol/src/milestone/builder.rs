@@ -62,8 +62,7 @@ pub struct StagedMilestoneBuilder<E, M, P, S> {
     stage: PhantomData<S>,
 }
 
-pub type ConfigurableMilestoneBuilder<E, M, P> = StagedMilestoneBuilder<E, M, P, IncomingRaw>;
-pub type MilestoneBuilder = ConfigurableMilestoneBuilder<Kerl, Kerl, WotsPublicKey<Kerl>>;
+pub type MilestoneBuilder<E = Kerl, M = Kerl, P = WotsPublicKey<Kerl>> = StagedMilestoneBuilder<E, M, P, IncomingRaw>;
 
 impl<E, M, P> StagedMilestoneBuilder<E, M, P, IncomingRaw>
 where
@@ -191,7 +190,7 @@ mod tests {
     ) {
         let ms_hash_trits =
             Hash::try_from_inner(TryteBuf::try_from_str(ms_hash).unwrap().as_trits().encode::<T1B1Buf>()).unwrap();
-        let mut builder = ConfigurableMilestoneBuilder::<Kerl, S, WotsPublicKey<S>>::new(ms_hash_trits);
+        let mut builder = MilestoneBuilder::<Kerl, S, WotsPublicKey<S>>::new(ms_hash_trits);
 
         for ms_tx in ms_tx_array {
             let ms_tx_trits = TryteBuf::try_from_str(ms_tx).unwrap().as_trits().encode::<T1B1Buf>();
