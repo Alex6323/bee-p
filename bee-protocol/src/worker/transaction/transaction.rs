@@ -45,15 +45,14 @@ impl TransactionWorker {
         Self {}
     }
 
-    pub(crate) async fn run(self, receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) {
+    pub(crate) async fn run(self, receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>, hash_cache_max_capacity: usize) {
         info!("[TransactionWorker ] Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
 
         let mut curl = CurlP81::new();
-        // TODO conf
-        let mut cache = TinyHashCache::new(10000);
+        let mut cache = TinyHashCache::new(hash_cache_max_capacity);
 
         loop {
             let transaction_broadcast = select! {
@@ -174,7 +173,7 @@ mod tests {
             shutdown_sender.send(()).unwrap();
         });
 
-        block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver));
+        block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver, 10000));
 
         assert_eq!(tangle().size(), 1);
         assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);

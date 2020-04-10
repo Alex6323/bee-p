@@ -27,6 +27,7 @@ const CONF_TRANSACTION_REQUESTER_WORKER_BOUND: (&str, usize) =
 const CONF_MILESTONE_REQUESTER_WORKER_BOUND: (&str, usize) = ("protocol.channels.milestoneRequesterWorkerBound", 1000);
 const CONF_RECEIVER_WORKER_BOUND: (&str, usize) = ("protocol.channels.receiverWorkerBound", 1000);
 const CONF_BROADCASTER_WORKER_BOUND: (&str, usize) = ("protocol.channels.broadcasterWorkerBound", 1000);
+const CONF_HASH_CACHE_MAX_CAPACITY: (&str, usize) = ("worker.transaction.hashCache.maxCapacity", 10000);
 
 // TODO Impl in term of CONF_COO_PUBLIC_KEY
 pub(crate) const COORDINATOR_BYTES: [u8; 49] = [
@@ -54,6 +55,7 @@ pub struct ProtocolConfBuilder {
     milestone_requester_worker_bound: Option<usize>,
     receiver_worker_bound: Option<usize>,
     broadcaster_worker_bound: Option<usize>,
+    hash_cache_max_capacity: Option<usize>
 }
 
 impl ProtocolConfBuilder {
@@ -205,6 +207,7 @@ impl ProtocolConfBuilder {
                 .unwrap_or(CONF_MILESTONE_REQUESTER_WORKER_BOUND.1),
             receiver_worker_bound: self.receiver_worker_bound.unwrap_or(CONF_RECEIVER_WORKER_BOUND.1),
             broadcaster_worker_bound: self.broadcaster_worker_bound.unwrap_or(CONF_BROADCASTER_WORKER_BOUND.1),
+            hash_cache_max_capacity: self.hash_cache_max_capacity.unwrap_or(CONF_HASH_CACHE_MAX_CAPACITY.1),
         }
     }
 }
@@ -228,6 +231,7 @@ pub struct ProtocolConf {
     pub(crate) milestone_requester_worker_bound: usize,
     pub(crate) receiver_worker_bound: usize,
     pub(crate) broadcaster_worker_bound: usize,
+    pub(crate) hash_cache_max_capacity: usize,
 }
 
 // TODO move out of here
