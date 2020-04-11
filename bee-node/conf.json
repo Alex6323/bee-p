@@ -9,16 +9,12 @@
     "server": {
       "type": "TCP",
       "host": "localhost",
-      "port": 1337,
+      "port": 1337
     }
   },
 
   "node": {
-    "logLevel": "debug",
-    "snapshot": {
-      "stateFilePath": "./data/mainnet.snapshot.state",
-      "metaFilePath": "./data/mainnet.snapshot.meta",
-    }
+    "logLevel": "info"
   },
 
   "peering": {
@@ -49,7 +45,7 @@
       "transactionRequesterWorkerBound": 1000,
       "milestoneRequesterWorkerBound": 1000,
       "receiverWorkerBound": 1000,
-      "broadcasterWorkerBound": 1000,
+      "broadcasterWorkerBound": 1000
     }
   },
 
@@ -57,6 +53,8 @@
   },
 
   "snapshot": {
+    "stateFilePath": "./data/mainnet.snapshot.state",
+    "metaFilePath": "./data/mainnet.snapshot.meta"
   },
 
   "storage": {
