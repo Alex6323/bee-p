@@ -1,3 +1,12 @@
+use crate::{
+    conf::NodeConf,
+    constants::{
+        BEE_NAME,
+        BEE_VERSION,
+    },
+};
+
+use bee_common::logger;
 use bee_network::{
     Address,
     Command::Connect,
@@ -41,6 +50,7 @@ use futures::{
 use log::*;
 
 pub struct Node {
+    conf: NodeConf,
     network: Network,
     shutdown: Shutdown,
     events: EventSubscriber,
@@ -50,11 +60,12 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
+    pub fn new(conf: NodeConf, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
         Self {
-            network: network,
-            shutdown: shutdown,
-            events: events,
+            conf,
+            network,
+            shutdown,
+            events,
             peers: HashMap::new(),
             metrics: Arc::new(PeerMetrics::new()),
         }
@@ -126,6 +137,9 @@ impl Node {
     }
 
     pub async fn init(&mut self) {
+        logger::init(self.conf.log_level);
+
+        info!("[Node ] Welcome to {} {}!", BEE_NAME, BEE_VERSION);
         info!("[Node ] Initializing...");
 
         block_on(StaticPeerManager::new(self.network.clone()).run());

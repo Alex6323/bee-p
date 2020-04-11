@@ -1,0 +1,34 @@
+logLevel  = "info"
+
+[network]
+[network.server]
+type  = "TCP"
+host  = "localhost"
+port  = 1337
+
+[protocol]
+mwm = 14
+[protocol.coordinator]
+publicKey     = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9"
+sponge_type   = "kerl"
+securityLevel = 2
+depth         = 24
+[protocol.channels]
+milestoneRequestSendWorkerBound     = 1000
+transactionBroadcastSendWorkerBound = 1000
+transactionRequestSendWorkerBound   = 1000
+heartbeatSendWorkerBound            = 1000
+milestoneValidatorWorkerBound       = 1000
+milestoneSolidifierWorkerBound      = 1000
+transactionWorkerBound              = 1000
+transactionWorkerCache              = 10000
+transactionResponderWorkerBound     = 1000
+milestoneResponderWorkerBound       = 1000
+transactionRequesterWorkerBound     = 1000
+milestoneRequesterWorkerBound       = 1000
+receiverWorkerBound                 = 1000
+broadcasterWorkerBound              = 1000
+
+[snapshot]
+stateFilePath = "./data/mainnet.snapshot.state"
+metaFilePath  = "./data/mainnet.snapshot.meta"
