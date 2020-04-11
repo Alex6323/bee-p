@@ -1,3 +1,5 @@
+# Duplicate this file to conf.toml to use it
+
 logLevel  = "info"
 
 [network]
