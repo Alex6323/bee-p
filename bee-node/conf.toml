@@ -6,6 +6,10 @@ type  = "TCP"
 host  = "localhost"
 port  = 1337
 
+[peering]
+[peering.static]
+peers = []
+
 [protocol]
 mwm = 14
 [protocol.workers]

@@ -25,7 +25,6 @@ use bee_protocol::{
     Peer,
     PeerMetrics,
     Protocol,
-    ProtocolConfBuilder,
 };
 use bee_snapshot::{
     SnapshotMetadata,

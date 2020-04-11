@@ -1,3 +1,7 @@
+use bee_peering::{
+    PeeringConf,
+    PeeringConfBuilder,
+};
 use bee_protocol::{
     ProtocolConf,
     ProtocolConfBuilder,
@@ -13,6 +17,7 @@ const CONF_LOG_LEVEL: &str = "info";
 #[serde(rename_all = "camelCase")]
 pub struct NodeConfBuilder {
     log_level: Option<String>,
+    peering: PeeringConfBuilder,
     protocol: ProtocolConfBuilder,
 }
 
@@ -38,6 +43,7 @@ impl NodeConfBuilder {
 
         NodeConf {
             log_level,
+            peering: self.peering.build(),
             protocol: self.protocol.build(),
         }
     }
@@ -45,5 +51,6 @@ impl NodeConfBuilder {
 
 pub struct NodeConf {
     pub(crate) log_level: log::LevelFilter,
+    pub(crate) peering: PeeringConf,
     pub(crate) protocol: ProtocolConf,
 }
