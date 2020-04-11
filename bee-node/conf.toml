@@ -8,12 +8,7 @@ port  = 1337
 
 [protocol]
 mwm = 14
-[protocol.coordinator]
-publicKey     = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9"
-sponge_type   = "kerl"
-securityLevel = 2
-depth         = 24
-[protocol.channels]
+[protocol.workers]
 milestoneRequestSendWorkerBound     = 1000
 transactionBroadcastSendWorkerBound = 1000
 transactionRequestSendWorkerBound   = 1000
@@ -28,6 +23,11 @@ transactionRequesterWorkerBound     = 1000
 milestoneRequesterWorkerBound       = 1000
 receiverWorkerBound                 = 1000
 broadcasterWorkerBound              = 1000
+[protocol.coordinator]
+depth         = 24
+publicKey     = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9"
+securityLevel = 2
+spongeType    = "kerl"
 
 [snapshot]
 stateFilePath = "./data/mainnet.snapshot.state"

@@ -113,15 +113,15 @@ impl Protocol {
             return;
         }
 
-        let (transaction_worker_tx, transaction_worker_rx) = mpsc::channel(conf.transaction_worker_bound);
+        let (transaction_worker_tx, transaction_worker_rx) = mpsc::channel(conf.workers.transaction_worker_bound);
         let (transaction_worker_shutdown_tx, transaction_worker_shutdown_rx) = oneshot::channel();
 
         let (transaction_responder_worker_tx, transaction_responder_worker_rx) =
-            mpsc::channel(conf.transaction_responder_worker_bound);
+            mpsc::channel(conf.workers.transaction_responder_worker_bound);
         let (transaction_responder_worker_shutdown_tx, transaction_responder_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_responder_worker_tx, milestone_responder_worker_rx) =
-            mpsc::channel(conf.milestone_responder_worker_bound);
+            mpsc::channel(conf.workers.milestone_responder_worker_bound);
         let (milestone_responder_worker_shutdown_tx, milestone_responder_worker_shutdown_rx) = oneshot::channel();
 
         let (transaction_requester_worker_shutdown_tx, transaction_requester_worker_shutdown_rx) = oneshot::channel();
@@ -129,14 +129,14 @@ impl Protocol {
         let (milestone_requester_worker_shutdown_tx, milestone_requester_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_validator_worker_tx, milestone_validator_worker_rx) =
-            mpsc::channel(conf.milestone_validator_worker_bound);
+            mpsc::channel(conf.workers.milestone_validator_worker_bound);
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) =
-            mpsc::channel(conf.milestone_solidifier_worker_bound);
+            mpsc::channel(conf.workers.milestone_solidifier_worker_bound);
         let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
 
-        let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(conf.broadcaster_worker_bound);
+        let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(conf.workers.broadcaster_worker_bound);
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
 
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = mpsc::channel(1);
@@ -179,7 +179,7 @@ impl Protocol {
         }
 
         spawn(
-            TransactionWorker::new(Protocol::get().conf.transaction_worker_cache)
+            TransactionWorker::new(Protocol::get().conf.workers.transaction_worker_cache)
                 .run(transaction_worker_rx, transaction_worker_shutdown_rx),
         );
         spawn(TransactionResponderWorker::new().run(
@@ -192,7 +192,7 @@ impl Protocol {
         spawn(TransactionRequesterWorker::new().run(transaction_requester_worker_shutdown_rx));
         spawn(MilestoneRequesterWorker::new().run(milestone_requester_worker_shutdown_rx));
 
-        match Protocol::get().conf.coo_sponge_type {
+        match Protocol::get().conf.coordinator.sponge_type {
             SpongeType::Kerl => spawn(
                 MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new()
                     .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
@@ -288,7 +288,7 @@ impl Protocol {
     pub fn register(peer: Arc<Peer>, metrics: Arc<PeerMetrics>) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
         //TODO check if not already added ?
         // ReceiverWorker
-        let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().conf.receiver_worker_bound);
+        let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().conf.workers.receiver_worker_bound);
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
         spawn(
@@ -303,7 +303,7 @@ impl Protocol {
 
         // SenderWorker MilestoneRequest
         let (milestone_request_tx, milestone_request_rx) =
-            mpsc::channel(Protocol::get().conf.milestone_request_send_worker_bound);
+            mpsc::channel(Protocol::get().conf.workers.milestone_request_send_worker_bound);
         let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
 
         spawn(
@@ -313,7 +313,7 @@ impl Protocol {
 
         // SenderWorker TransactionBroadcast
         let (transaction_broadcast_tx, transaction_broadcast_rx) =
-            mpsc::channel(Protocol::get().conf.transaction_broadcast_send_worker_bound);
+            mpsc::channel(Protocol::get().conf.workers.transaction_broadcast_send_worker_bound);
         let (transaction_broadcast_shutdown_tx, transaction_broadcast_shutdown_rx) = oneshot::channel();
 
         spawn(
@@ -323,7 +323,7 @@ impl Protocol {
 
         // SenderWorker TransactionRequest
         let (transaction_request_tx, transaction_request_rx) =
-            mpsc::channel(Protocol::get().conf.transaction_request_send_worker_bound);
+            mpsc::channel(Protocol::get().conf.workers.transaction_request_send_worker_bound);
         let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
 
         spawn(
@@ -332,7 +332,7 @@ impl Protocol {
         );
 
         // SenderWorker Heartbeat
-        let (heartbeat_tx, heartbeat_rx) = mpsc::channel(Protocol::get().conf.heartbeat_send_worker_bound);
+        let (heartbeat_tx, heartbeat_rx) = mpsc::channel(Protocol::get().conf.workers.heartbeat_send_worker_bound);
         let (heartbeat_shutdown_tx, heartbeat_shutdown_rx) = oneshot::channel();
 
         spawn(

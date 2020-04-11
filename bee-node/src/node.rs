@@ -146,8 +146,7 @@ impl Node {
 
         bee_tangle::init();
 
-        let protocol_conf = ProtocolConfBuilder::new().build();
-        Protocol::init(self.network.clone(), protocol_conf);
+        Protocol::init(self.network.clone(), self.conf.protocol.clone());
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf

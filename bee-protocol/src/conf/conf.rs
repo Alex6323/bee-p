@@ -1,33 +1,26 @@
 use bee_crypto::SpongeType;
 
-const CONF_COO_PUBLIC_KEY: (&str, &str) = (
-    "protocol.coordinator.publicKey",
-    "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
-);
-const CONF_COO_SPONGE_TYPE: (&str, SpongeType) = ("protocol.coordinator.sponge", SpongeType::Kerl);
-const CONF_COO_SECURITY: (&str, u8) = ("protocol.coordinator.securityLevel", 2);
-const CONF_COO_DEPTH: (&str, u8) = ("protocol.coordinator.depth", 24);
-const CONF_MWM: (&str, u8) = ("protocol.mwm", 14);
-const CONF_MILESTONE_REQUEST_SEND_WORKER_BOUND: (&str, usize) =
-    ("protocol.channels.milestoneRequestSendWorkerBound", 1000);
-const CONF_TRANSACTION_BROADCAST_SEND_WORKER_BOUND: (&str, usize) =
-    ("protocol.channels.transactionBroadcastSendWorkerBound", 1000);
-const CONF_TRANSACTION_REQUEST_SEND_WORKER_BOUND: (&str, usize) =
-    ("protocol.channels.transactionRequestSendWorkerBound", 1000);
-const CONF_HEARTBEAT_SEND_WORKER_BOUND: (&str, usize) = ("protocol.channels.heartbeatSendWorkerBound", 1000);
-const CONF_MILESTONE_VALIDATOR_WORKER_BOUND: (&str, usize) = ("protocol.channels.milestoneValidatorWorkerBound", 1000);
-const CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND: (&str, usize) =
-    ("protocol.channels.milestoneSolidifierWorkerBound", 1000);
-const CONF_TRANSACTION_WORKER_BOUND: (&str, usize) = ("protocol.channels.transactionWorkerBound", 1000);
-const CONF_TRANSACTION_WORKER_CACHE: (&str, usize) = ("protocol.channels.transactionWorkerCache", 10000);
-const CONF_TRANSACTION_RESPONDER_WORKER_BOUND: (&str, usize) =
-    ("protocol.channels.transactionResponderWorkerBound", 1000);
-const CONF_MILESTONE_RESPONDER_WORKER_BOUND: (&str, usize) = ("protocol.channels.milestoneResponderWorkerBound", 1000);
-const CONF_TRANSACTION_REQUESTER_WORKER_BOUND: (&str, usize) =
-    ("protocol.channels.transactionRequesterWorkerBound", 1000);
-const CONF_MILESTONE_REQUESTER_WORKER_BOUND: (&str, usize) = ("protocol.channels.milestoneRequesterWorkerBound", 1000);
-const CONF_RECEIVER_WORKER_BOUND: (&str, usize) = ("protocol.channels.receiverWorkerBound", 1000);
-const CONF_BROADCASTER_WORKER_BOUND: (&str, usize) = ("protocol.channels.broadcasterWorkerBound", 1000);
+use serde::Deserialize;
+
+const CONF_MWM: u8 = 14;
+const CONF_COO_DEPTH: u8 = 24;
+const CONF_COO_PUBLIC_KEY: &str = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9";
+const CONF_COO_SECURITY: u8 = 2;
+const CONF_COO_SPONGE_TYPE: &str = "kerl";
+const CONF_MILESTONE_REQUEST_SEND_WORKER_BOUND: usize = 1000;
+const CONF_TRANSACTION_BROADCAST_SEND_WORKER_BOUND: usize = 1000;
+const CONF_TRANSACTION_REQUEST_SEND_WORKER_BOUND: usize = 1000;
+const CONF_HEARTBEAT_SEND_WORKER_BOUND: usize = 1000;
+const CONF_MILESTONE_VALIDATOR_WORKER_BOUND: usize = 1000;
+const CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND: usize = 1000;
+const CONF_TRANSACTION_WORKER_BOUND: usize = 1000;
+const CONF_TRANSACTION_WORKER_CACHE: usize = 10000;
+const CONF_TRANSACTION_RESPONDER_WORKER_BOUND: usize = 1000;
+const CONF_MILESTONE_RESPONDER_WORKER_BOUND: usize = 1000;
+const CONF_TRANSACTION_REQUESTER_WORKER_BOUND: usize = 1000;
+const CONF_MILESTONE_REQUESTER_WORKER_BOUND: usize = 1000;
+const CONF_RECEIVER_WORKER_BOUND: usize = 1000;
+const CONF_BROADCASTER_WORKER_BOUND: usize = 1000;
 
 // TODO Impl in term of CONF_COO_PUBLIC_KEY
 pub(crate) const COORDINATOR_BYTES: [u8; 49] = [
@@ -35,13 +28,18 @@ pub(crate) const COORDINATOR_BYTES: [u8; 49] = [
     22, 199, 188, 1, 45, 11, 107, 190, 49, 84, 147, 176, 184, 108, 223, 189, 17, 167, 184, 240, 213, 170, 111, 34, 0,
 ];
 
-#[derive(Default)]
-pub struct ProtocolConfBuilder {
-    coo_public_key: Option<String>,
-    coo_sponge_type: Option<SpongeType>,
-    coo_security_level: Option<u8>,
-    coo_depth: Option<u8>,
-    mwm: Option<u8>,
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProtocolCoordinatorConfBuilder {
+    depth: Option<u8>,
+    public_key: Option<String>,
+    security_level: Option<u8>,
+    sponge_type: Option<String>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProtocolWorkersConfBuilder {
     milestone_request_send_worker_bound: Option<usize>,
     transaction_broadcast_send_worker_bound: Option<usize>,
     transaction_request_send_worker_bound: Option<usize>,
@@ -58,34 +56,17 @@ pub struct ProtocolConfBuilder {
     broadcaster_worker_bound: Option<usize>,
 }
 
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProtocolConfBuilder {
+    mwm: Option<u8>,
+    coordinator: ProtocolCoordinatorConfBuilder,
+    workers: ProtocolWorkersConfBuilder,
+}
+
 impl ProtocolConfBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub fn load_file(self) -> Self {
-        // TODO load all fields
-        self
-    }
-
-    pub fn coo_public_key(mut self, coo_public_key: String) -> Self {
-        self.coo_public_key.replace(coo_public_key);
-        self
-    }
-
-    pub fn coo_sponge_type(mut self, coo_sponge_type: SpongeType) -> Self {
-        self.coo_sponge_type.replace(coo_sponge_type);
-        self
-    }
-
-    pub fn coo_security_level(mut self, coo_security_level: u8) -> Self {
-        self.coo_security_level.replace(coo_security_level);
-        self
-    }
-
-    pub fn coo_depth(mut self, coo_depth: u8) -> Self {
-        self.coo_depth.replace(coo_depth);
-        self
     }
 
     pub fn mwm(mut self, mwm: u8) -> Self {
@@ -93,136 +74,206 @@ impl ProtocolConfBuilder {
         self
     }
 
+    pub fn coo_depth(mut self, coo_depth: u8) -> Self {
+        self.coordinator.depth.replace(coo_depth);
+        self
+    }
+
+    pub fn coo_public_key(mut self, coo_public_key: String) -> Self {
+        self.coordinator.public_key.replace(coo_public_key);
+        self
+    }
+
+    pub fn coo_security_level(mut self, coo_security_level: u8) -> Self {
+        self.coordinator.security_level.replace(coo_security_level);
+        self
+    }
+
+    pub fn coo_sponge_type(mut self, coo_sponge_type: &str) -> Self {
+        self.coordinator.sponge_type.replace(coo_sponge_type.to_string());
+        self
+    }
+
     pub fn milestone_request_send_worker_bound(mut self, milestone_request_send_worker_bound: usize) -> Self {
-        self.transaction_broadcast_send_worker_bound
+        self.workers
+            .transaction_broadcast_send_worker_bound
             .replace(milestone_request_send_worker_bound);
         self
     }
 
     pub fn transaction_broadcast_send_worker_bound(mut self, transaction_broadcast_send_worker_bound: usize) -> Self {
-        self.transaction_broadcast_send_worker_bound
+        self.workers
+            .transaction_broadcast_send_worker_bound
             .replace(transaction_broadcast_send_worker_bound);
         self
     }
 
     pub fn transaction_request_send_worker_bound(mut self, transaction_request_send_worker_bound: usize) -> Self {
-        self.transaction_request_send_worker_bound
+        self.workers
+            .transaction_request_send_worker_bound
             .replace(transaction_request_send_worker_bound);
         self
     }
 
     pub fn heartbeat_send_worker_bound(mut self, heartbeat_send_worker_bound: usize) -> Self {
-        self.heartbeat_send_worker_bound.replace(heartbeat_send_worker_bound);
+        self.workers
+            .heartbeat_send_worker_bound
+            .replace(heartbeat_send_worker_bound);
         self
     }
 
     pub fn milestone_validator_worker_bound(mut self, milestone_validator_worker_bound: usize) -> Self {
-        self.milestone_validator_worker_bound
+        self.workers
+            .milestone_validator_worker_bound
             .replace(milestone_validator_worker_bound);
         self
     }
 
     pub fn milestone_solidifier_worker_bound(mut self, milestone_solidifier_worker_bound: usize) -> Self {
-        self.milestone_solidifier_worker_bound
+        self.workers
+            .milestone_solidifier_worker_bound
             .replace(milestone_solidifier_worker_bound);
         self
     }
 
     pub fn transaction_worker_bound(mut self, transaction_worker_bound: usize) -> Self {
-        self.transaction_worker_bound.replace(transaction_worker_bound);
+        self.workers.transaction_worker_bound.replace(transaction_worker_bound);
         self
     }
 
     pub fn transaction_worker_cache(mut self, transaction_worker_cache: usize) -> Self {
-        self.transaction_worker_cache.replace(transaction_worker_cache);
+        self.workers.transaction_worker_cache.replace(transaction_worker_cache);
         self
     }
 
     pub fn transaction_responder_worker_bound(mut self, transaction_responder_worker_bound: usize) -> Self {
-        self.transaction_responder_worker_bound
+        self.workers
+            .transaction_responder_worker_bound
             .replace(transaction_responder_worker_bound);
         self
     }
 
     pub fn milestone_responder_worker_bound(mut self, milestone_responder_worker_bound: usize) -> Self {
-        self.milestone_responder_worker_bound
+        self.workers
+            .milestone_responder_worker_bound
             .replace(milestone_responder_worker_bound);
         self
     }
 
     pub fn transaction_requester_worker_bound(mut self, transaction_requester_worker_bound: usize) -> Self {
-        self.transaction_requester_worker_bound
+        self.workers
+            .transaction_requester_worker_bound
             .replace(transaction_requester_worker_bound);
         self
     }
 
     pub fn milestone_requester_worker_bound(mut self, milestone_requester_worker_bound: usize) -> Self {
-        self.milestone_requester_worker_bound
+        self.workers
+            .milestone_requester_worker_bound
             .replace(milestone_requester_worker_bound);
         self
     }
 
     pub fn receiver_worker_bound(mut self, receiver_worker_bound: usize) -> Self {
-        self.receiver_worker_bound.replace(receiver_worker_bound);
+        self.workers.receiver_worker_bound.replace(receiver_worker_bound);
         self
     }
 
     pub fn broadcaster_worker_bound(mut self, broadcaster_worker_bound: usize) -> Self {
-        self.broadcaster_worker_bound.replace(broadcaster_worker_bound);
+        self.workers.broadcaster_worker_bound.replace(broadcaster_worker_bound);
         self
     }
 
     pub fn build(self) -> ProtocolConf {
+        let coo_sponge_type = match self
+            .coordinator
+            .sponge_type
+            .unwrap_or(CONF_COO_SPONGE_TYPE.to_owned())
+            .as_str()
+        {
+            "kerl" => SpongeType::Kerl,
+            "curl27" => SpongeType::CurlP27,
+            "curl81" => SpongeType::CurlP81,
+            _ => SpongeType::Kerl,
+        };
+
         ProtocolConf {
-            coo_public_key: self.coo_public_key.unwrap_or(CONF_COO_PUBLIC_KEY.1.to_owned()),
-            coo_sponge_type: self.coo_sponge_type.unwrap_or(CONF_COO_SPONGE_TYPE.1),
-            coo_security_level: self.coo_security_level.unwrap_or(CONF_COO_SECURITY.1),
-            coo_depth: self.coo_depth.unwrap_or(CONF_COO_DEPTH.1),
-            mwm: self.mwm.unwrap_or(CONF_MWM.1),
-            milestone_request_send_worker_bound: self
-                .milestone_request_send_worker_bound
-                .unwrap_or(CONF_MILESTONE_REQUEST_SEND_WORKER_BOUND.1),
-            transaction_broadcast_send_worker_bound: self
-                .transaction_broadcast_send_worker_bound
-                .unwrap_or(CONF_TRANSACTION_BROADCAST_SEND_WORKER_BOUND.1),
-            transaction_request_send_worker_bound: self
-                .transaction_request_send_worker_bound
-                .unwrap_or(CONF_TRANSACTION_REQUEST_SEND_WORKER_BOUND.1),
-            heartbeat_send_worker_bound: self
-                .heartbeat_send_worker_bound
-                .unwrap_or(CONF_HEARTBEAT_SEND_WORKER_BOUND.1),
-            milestone_validator_worker_bound: self
-                .milestone_validator_worker_bound
-                .unwrap_or(CONF_MILESTONE_VALIDATOR_WORKER_BOUND.1),
-            milestone_solidifier_worker_bound: self
-                .milestone_solidifier_worker_bound
-                .unwrap_or(CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND.1),
-            transaction_worker_bound: self.transaction_worker_bound.unwrap_or(CONF_TRANSACTION_WORKER_BOUND.1),
-            transaction_worker_cache: self.transaction_worker_cache.unwrap_or(CONF_TRANSACTION_WORKER_CACHE.1),
-            transaction_responder_worker_bound: self
-                .transaction_responder_worker_bound
-                .unwrap_or(CONF_TRANSACTION_RESPONDER_WORKER_BOUND.1),
-            milestone_responder_worker_bound: self
-                .milestone_responder_worker_bound
-                .unwrap_or(CONF_MILESTONE_RESPONDER_WORKER_BOUND.1),
-            transaction_requester_worker_bound: self
-                .transaction_requester_worker_bound
-                .unwrap_or(CONF_TRANSACTION_REQUESTER_WORKER_BOUND.1),
-            milestone_requester_worker_bound: self
-                .milestone_requester_worker_bound
-                .unwrap_or(CONF_MILESTONE_REQUESTER_WORKER_BOUND.1),
-            receiver_worker_bound: self.receiver_worker_bound.unwrap_or(CONF_RECEIVER_WORKER_BOUND.1),
-            broadcaster_worker_bound: self.broadcaster_worker_bound.unwrap_or(CONF_BROADCASTER_WORKER_BOUND.1),
+            mwm: self.mwm.unwrap_or(CONF_MWM),
+            coordinator: ProtocolCoordinatorConf {
+                depth: self.coordinator.depth.unwrap_or(CONF_COO_DEPTH),
+                public_key: self.coordinator.public_key.unwrap_or(CONF_COO_PUBLIC_KEY.to_owned()),
+                security_level: self.coordinator.security_level.unwrap_or(CONF_COO_SECURITY),
+                sponge_type: coo_sponge_type,
+            },
+            workers: ProtocolWorkersConf {
+                milestone_request_send_worker_bound: self
+                    .workers
+                    .milestone_request_send_worker_bound
+                    .unwrap_or(CONF_MILESTONE_REQUEST_SEND_WORKER_BOUND),
+                transaction_broadcast_send_worker_bound: self
+                    .workers
+                    .transaction_broadcast_send_worker_bound
+                    .unwrap_or(CONF_TRANSACTION_BROADCAST_SEND_WORKER_BOUND),
+                transaction_request_send_worker_bound: self
+                    .workers
+                    .transaction_request_send_worker_bound
+                    .unwrap_or(CONF_TRANSACTION_REQUEST_SEND_WORKER_BOUND),
+                heartbeat_send_worker_bound: self
+                    .workers
+                    .heartbeat_send_worker_bound
+                    .unwrap_or(CONF_HEARTBEAT_SEND_WORKER_BOUND),
+                milestone_validator_worker_bound: self
+                    .workers
+                    .milestone_validator_worker_bound
+                    .unwrap_or(CONF_MILESTONE_VALIDATOR_WORKER_BOUND),
+                milestone_solidifier_worker_bound: self
+                    .workers
+                    .milestone_solidifier_worker_bound
+                    .unwrap_or(CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND),
+                transaction_worker_bound: self
+                    .workers
+                    .transaction_worker_bound
+                    .unwrap_or(CONF_TRANSACTION_WORKER_BOUND),
+                transaction_worker_cache: self
+                    .workers
+                    .transaction_worker_cache
+                    .unwrap_or(CONF_TRANSACTION_WORKER_CACHE),
+                transaction_responder_worker_bound: self
+                    .workers
+                    .transaction_responder_worker_bound
+                    .unwrap_or(CONF_TRANSACTION_RESPONDER_WORKER_BOUND),
+                milestone_responder_worker_bound: self
+                    .workers
+                    .milestone_responder_worker_bound
+                    .unwrap_or(CONF_MILESTONE_RESPONDER_WORKER_BOUND),
+                transaction_requester_worker_bound: self
+                    .workers
+                    .transaction_requester_worker_bound
+                    .unwrap_or(CONF_TRANSACTION_REQUESTER_WORKER_BOUND),
+                milestone_requester_worker_bound: self
+                    .workers
+                    .milestone_requester_worker_bound
+                    .unwrap_or(CONF_MILESTONE_REQUESTER_WORKER_BOUND),
+                receiver_worker_bound: self.workers.receiver_worker_bound.unwrap_or(CONF_RECEIVER_WORKER_BOUND),
+                broadcaster_worker_bound: self
+                    .workers
+                    .broadcaster_worker_bound
+                    .unwrap_or(CONF_BROADCASTER_WORKER_BOUND),
+            },
         }
     }
 }
 
-pub struct ProtocolConf {
-    pub(crate) coo_public_key: String,
-    pub(crate) coo_sponge_type: SpongeType,
-    pub(crate) coo_security_level: u8,
-    pub(crate) coo_depth: u8,
-    pub(crate) mwm: u8,
+#[derive(Clone)]
+pub struct ProtocolCoordinatorConf {
+    pub(crate) depth: u8,
+    pub(crate) public_key: String,
+    pub(crate) security_level: u8,
+    pub(crate) sponge_type: SpongeType,
+}
+
+#[derive(Clone)]
+pub struct ProtocolWorkersConf {
     pub(crate) milestone_request_send_worker_bound: usize,
     pub(crate) transaction_broadcast_send_worker_bound: usize,
     pub(crate) transaction_request_send_worker_bound: usize,
@@ -237,6 +288,13 @@ pub struct ProtocolConf {
     pub(crate) milestone_requester_worker_bound: usize,
     pub(crate) receiver_worker_bound: usize,
     pub(crate) broadcaster_worker_bound: usize,
+}
+
+#[derive(Clone)]
+pub struct ProtocolConf {
+    pub(crate) mwm: u8,
+    pub(crate) coordinator: ProtocolCoordinatorConf,
+    pub(crate) workers: ProtocolWorkersConf,
 }
 
 // TODO move out of here

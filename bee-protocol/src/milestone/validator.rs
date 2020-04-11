@@ -70,7 +70,7 @@ where
 
         builder.push(transaction.clone());
 
-        for _ in 0..Protocol::get().conf.coo_security_level + 1 {
+        for _ in 0..Protocol::get().conf.coordinator.security_level + 1 {
             transaction = tangle()
                 .get_transaction(transaction.trunk())
                 .await
@@ -80,7 +80,7 @@ where
         }
 
         Ok(builder
-            .depth(Protocol::get().conf.coo_depth)
+            .depth(Protocol::get().conf.coordinator.depth)
             .validate()
             .map_err(|e| MilestoneValidatorWorkerError::InvalidMilestone(e))?
             .build())

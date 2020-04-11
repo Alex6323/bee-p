@@ -1,13 +1,19 @@
+use bee_protocol::{
+    ProtocolConf,
+    ProtocolConfBuilder,
+};
+
 use log;
 use serde::Deserialize;
 
 pub(crate) const CONF_PATH: &str = "./conf.toml";
 const CONF_LOG_LEVEL: &str = "info";
 
-#[derive(Default, Deserialize, Debug)]
+#[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeConfBuilder {
     log_level: Option<String>,
+    protocol: ProtocolConfBuilder,
 }
 
 impl NodeConfBuilder {
@@ -21,7 +27,7 @@ impl NodeConfBuilder {
     }
 
     pub fn build(self) -> NodeConf {
-        let log_level = match self.log_level.unwrap_or(CONF_LOG_LEVEL.to_string()).as_str() {
+        let log_level = match self.log_level.unwrap_or(CONF_LOG_LEVEL.to_owned()).as_str() {
             "trace" => log::LevelFilter::Trace,
             "debug" => log::LevelFilter::Debug,
             "info" => log::LevelFilter::Info,
@@ -30,10 +36,14 @@ impl NodeConfBuilder {
             _ => log::LevelFilter::Info,
         };
 
-        NodeConf { log_level }
+        NodeConf {
+            log_level,
+            protocol: self.protocol.build(),
+        }
     }
 }
 
 pub struct NodeConf {
     pub(crate) log_level: log::LevelFilter,
+    pub(crate) protocol: ProtocolConf,
 }
