@@ -27,7 +27,7 @@ impl StaticPeeringConfBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct StaticPeeringConf {
     pub(crate) peers: Vec<String>,
 }

@@ -141,7 +141,7 @@ impl Node {
         info!("[Node ] Welcome to {} {}!", BEE_NAME, BEE_VERSION);
         info!("[Node ] Initializing...");
 
-        block_on(StaticPeerManager::new(self.network.clone()).run());
+        block_on(StaticPeerManager::new(self.conf.peering.r#static.clone(), self.network.clone()).run());
 
         bee_tangle::init();
 

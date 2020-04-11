@@ -24,5 +24,5 @@ impl PeeringConfBuilder {
 }
 
 pub struct PeeringConf {
-    pub(crate) r#static: StaticPeeringConf,
+    pub r#static: StaticPeeringConf,
 }
