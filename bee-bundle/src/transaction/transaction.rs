@@ -18,6 +18,7 @@ use crate::constants::{
     TAG,
     TAG_TRIT_LEN,
     TIMESTAMP,
+    TRANSACTION_TRIT_LEN,
     TRUNK,
     VALUE,
 };
@@ -32,14 +33,12 @@ use bee_ternary::{
     T1B1,
 };
 
-
 use std::{
     cmp::PartialEq,
     convert::TryFrom,
     fmt,
     hash,
 };
-
 
 #[derive(Debug)]
 pub enum TransactionFieldError {
@@ -602,7 +601,9 @@ impl Transaction {
         self.index == self.last_index
     }
 
-    pub const fn trits_len() -> usize { TRANSACTION_TRIT_LEN }
+    pub const fn trits_len() -> usize {
+        TRANSACTION_TRIT_LEN
+    }
 }
 
 /// Transaction builder
