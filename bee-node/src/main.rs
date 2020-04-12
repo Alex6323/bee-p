@@ -26,7 +26,7 @@ fn main() {
     let conf = conf_builder.build();
 
     let addr = block_on(Address::from_addr_str("localhost:1337")).unwrap();
-    let (network, shutdown, receiver) = bee_network::init(addr);
+    let (network, shutdown, receiver) = bee_network::init(conf.network.clone(), addr);
 
     let mut node = Node::new(conf, network, shutdown, receiver);
 

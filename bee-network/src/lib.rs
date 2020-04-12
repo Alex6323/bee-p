@@ -25,6 +25,10 @@ pub use commands::{
     Requester,
     Responder,
 };
+pub use conf::{
+    NetworkConf,
+    NetworkConfBuilder,
+};
 pub use endpoint::{
     origin::Origin,
     Endpoint,
@@ -47,6 +51,7 @@ mod network;
 mod shutdown;
 mod tcp;
 //mod udp;
+mod conf;
 mod utils;
 
 use endpoint::{
@@ -61,7 +66,7 @@ use async_std::task::spawn;
 use futures::channel::oneshot;
 
 /// Initializes the network layer.
-pub fn init(binding_addr: Address) -> (Network, Shutdown, Events) {
+pub fn init(_conf: NetworkConf, binding_addr: Address) -> (Network, Shutdown, Events) {
     let (command_sender, commands) = commands::command_channel();
     let (event_sender, events) = events::event_channel();
     let (internal_event_sender, internal_events) = events::event_channel();

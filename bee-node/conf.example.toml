@@ -6,7 +6,7 @@ logLevel  = "info"
 [network.server]
 type  = "TCP"
 host  = "localhost"
-port  = 1337
+port  = 15600
 
 [peering]
 [peering.static]
