@@ -21,7 +21,6 @@ use bee_ternary::{
 };
 
 use rand::Rng;
-use bee_protocol::Milestone;
 
 pub fn rand_trits_field<T: TransactionField>() -> T
 // Bit weird, but these constraints permit generating random trits for any transaction field type

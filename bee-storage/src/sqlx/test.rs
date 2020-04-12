@@ -13,12 +13,16 @@ mod tests {
         process::Command,
     };
 
-    use crate::test::{
+    use crate::test::tests::{
         StorageTestRunner,
         TestableStorage,
     };
 
     impl TestableStorage for SqlxBackendStorage {
+        fn test_name() -> String {
+            String::from("sqlx")
+        }
+
         fn setup() -> () {
             let output = Command::new("src/sqlx/schemes/postgres/setup.sh")
                 .arg("src/sqlx/schemes/postgres/schema.sql")
@@ -58,10 +62,6 @@ mod tests {
                 "postgres://{}:dummy_password@localhost/{}",
                 BEE_TEST_DB_USER, BEE_TEST_DB_NAME
             )
-        }
-
-        fn test_name() -> String {
-            String::from("sqlx")
         }
     }
 

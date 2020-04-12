@@ -18,25 +18,16 @@ use bee_protocol::{
 };
 
 use bee_bundle::{
-    Address,
     Hash,
-    Index,
-    Nonce,
-    Payload,
-    Tag,
-    Timestamp,
     Transaction,
     TransactionField,
-    Value,
 };
 
 use bee_ternary::{
-    num_conversions,
     T1B1Buf,
     T5B1Buf,
     TritBuf,
     Trits,
-    T1B1,
     T5B1,
 };
 
@@ -48,31 +39,20 @@ use std::{
     mem,
     ptr,
     rc::Rc,
-    slice,
-};
-
-use serde::{
-    Deserialize,
-    Serialize,
 };
 
 use errors::RocksDbBackendError;
 
 use async_trait::async_trait;
 
-use self::rocksdb::{
-    ColumnFamily,
-    DBCompactionStyle,
-};
 use bytemuck::{
     cast_slice,
     cast_slice_mut,
 };
 use rocksdb::{
     ColumnFamilyDescriptor,
-    DBCompactionStyle::Universal,
+    DBCompactionStyle,
     DBCompressionType,
-    Error,
     IteratorMode,
     Options,
     WriteOptions,
@@ -92,7 +72,7 @@ const MILESTONE_CF_HASH_TO_DELTA: &str = "milestone_hash_to_delta";
 fn decode_transaction(buff: &[u8]) -> Transaction {
     let trits =
         unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(buff), Transaction::trits_len()) }.encode::<T1B1Buf>();
-    Transaction::from_trits(&trits.to_owned()).unwrap()
+    Transaction::from_trits(&trits).unwrap()
 }
 
 #[inline]
@@ -248,13 +228,11 @@ impl StorageBackend for RocksDbBackendStorage {
                     .unwrap(),
             )
         {
-            let mut optional_approver_rc = None;
-
             let approvee = decode_hash(value.as_ref());
             let approver = decode_hash(key.as_ref());
 
             if !all_hashes.contains(&approvee) {
-                optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(approver));
+                let optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(approver));
                 missing_to_approvers
                     .entry(approvee)
                     .or_insert(HashSet::new())
@@ -491,7 +469,7 @@ impl StorageBackend for RocksDbBackendStorage {
         db.put_cf(
             &milestone_cf_hash_to_index,
             cast_slice(hash_buf.as_i8_slice()),
-            unsafe { milestone.index().to_le_bytes() },
+            milestone.index().to_le_bytes(),
         )?;
 
         db.put_cf(

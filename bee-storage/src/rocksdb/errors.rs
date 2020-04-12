@@ -3,15 +3,11 @@ use std::{
     fmt,
 };
 
-use rocksdb::Error;
-
 #[derive(Debug, Clone)]
 pub enum RocksDbBackendError {
     ConnectionBackendError(String),
     RocksDBError(String),
     TransactionDoesNotExist,
-    UnknownError,
-    //...
 }
 
 impl fmt::Display for RocksDbBackendError {
@@ -20,7 +16,6 @@ impl fmt::Display for RocksDbBackendError {
             RocksDbBackendError::ConnectionBackendError(ref reason) => write!(f, "Connection error: {:?}", reason),
             RocksDbBackendError::RocksDBError(ref reason) => write!(f, "RocksDB core error: {:?}", reason),
             RocksDbBackendError::TransactionDoesNotExist => write!(f, "Transaction does not exist"),
-            RocksDbBackendError::UnknownError => write!(f, "Unknown error"),
         }
     }
 }

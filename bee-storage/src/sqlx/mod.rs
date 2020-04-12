@@ -13,10 +13,7 @@ mod test;
 
 use bytemuck::cast_slice;
 
-use sqlx::{
-    Error as SqlxError,
-    QueryAs,
-};
+use sqlx::Error as SqlxError;
 
 use errors::SqlxBackendError;
 

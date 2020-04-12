@@ -1,4 +1,4 @@
-use itertools::*;
+use itertools::Itertools;
 
 pub const TRANSACTION_COL_HASH: &str = "hash";
 pub const TRANSACTION_COL_VALUE: &str = "value";
@@ -63,26 +63,10 @@ pub const INSERT_MILESTONE_STATEMENT: &str = r#"
         VALUES ($1, $2)
                 "#;
 
-pub const SELECT_SOLID_BY_HASHES_STATEMENT: &str = r#"
-SELECT solid
-FROM transactions
-WHERE hash in ({})"#;
-
-pub const SELECT_SNAPSHOT_INDEX_BY_HASH_STATEMENT: &str = r#"
-SELECT snapshot_index
-FROM transactions
-WHERE hash in {}"#;
-
 pub const FIND_MILESTONE_BY_HASH_STATEMENT: &str = r#"
 SELECT id, hash
 FROM milestones
 WHERE hash=$1
-        "#;
-
-pub const FIND_MILESTONE_BY_INDEX_STATEMENT: &str = r#"
-SELECT id, hash
-FROM milestones
-WHERE id=$1
         "#;
 
 pub const DELETE_MILESTONE_BY_HASH_STATEMENT: &str = r#"DELETE FROM milestones WHERE hash =$1"#;
