@@ -53,16 +53,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
 
         block_on(storage.destroy_connection()).unwrap();
 
-        assert_eq!(tx.payload(), found_tx.payload());
-        assert_eq!(tx.bundle(), found_tx.bundle());
-        assert_eq!(tx.trunk(), found_tx.trunk());
-        assert_eq!(tx.address(), found_tx.address());
-        assert_eq!(tx.branch(), found_tx.branch());
-        assert_eq!(tx.tag(), found_tx.tag());
-        assert_eq!(tx.obsolete_tag(), found_tx.obsolete_tag());
-        assert_eq!(tx.nonce(), found_tx.nonce());
-        assert_eq!(tx.value(), found_tx.value());
-        assert_eq!(tx.timestamp(), found_tx.timestamp() );
+        assert_eq!(tx, found_tx);
     }
     fn test_transaction_update_solid() {
         let mut storage = T::new();
@@ -119,7 +110,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
-        assert_eq!(tx.nonce(), found_tx.nonce());
+        assert_eq!(tx, found_tx);
         let mut transactions_to_delete = HashSet::new();
         transactions_to_delete.insert(tx_hash);
         let res = block_on(storage.delete_transactions(&transactions_to_delete));
@@ -160,7 +151,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
-            assert_eq!(tx.nonce(), found_tx.nonce());
+            assert_eq!(tx, found_tx);
             hashes.insert(tx_hash);
         }
 
@@ -185,7 +176,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
-        assert_eq!(tx.nonce(), found_tx.nonce());
+        assert_eq!(tx, found_tx);
         let mut last_tx_hash = tx_hash.clone();
 
         for _i in 0..1200 {
@@ -197,7 +188,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
-            assert_eq!(tx.nonce(), found_tx.nonce());
+            assert_eq!(tx, found_tx);
             last_tx_hash = tx_hash.clone();
         }
 
@@ -229,7 +220,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
         let res = block_on(storage.find_transaction(tx_hash.clone()));
         let found_tx = res.unwrap();
-        assert_eq!(tx.nonce(), found_tx.nonce());
+        assert_eq!(tx, found_tx);
         let mut last_tx_hash = tx_hash.clone();
         let mut all_transactions_hashes = HashSet::new();
 
@@ -277,7 +268,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash.clone()));
             let found_tx = res.unwrap();
-            assert_eq!(tx.nonce(), found_tx.nonce());
+            assert_eq!(tx, found_tx);
             all_transactions_hashes.insert(tx_hash.clone());
             last_tx_hash = tx_hash.clone();
         }

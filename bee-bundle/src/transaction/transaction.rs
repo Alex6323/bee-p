@@ -360,7 +360,7 @@ impl From<num_conversions::TritsI64ConversionError> for TransactionError {
     }
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Transaction {
     pub(crate) payload: Payload,
     pub(crate) address: Address,
@@ -378,6 +378,8 @@ pub struct Transaction {
     pub(crate) attachment_ubts: Timestamp,
     pub(crate) nonce: Nonce,
 }
+
+impl Eq for Transaction {}
 
 impl Transaction {
     pub fn builder() -> TransactionBuilder {
