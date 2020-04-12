@@ -52,6 +52,7 @@ impl StaticPeerManager {
 impl PeerManager for StaticPeerManager {
     async fn run(mut self) {
         // TODO conf file watcher
+        //TODO use limit
         for peer in self.conf.peers.clone() {
             self.add_endpoint(&peer).await;
         }

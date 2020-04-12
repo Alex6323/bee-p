@@ -10,7 +10,8 @@ port  = 15600
 
 [peering]
 [peering.static]
-peers = [ "tcp://[::1]:15600" ]
+limit     = 5
+peers     = [ "tcp://[::1]:15600" ]
 
 [protocol]
 mwm = 14
