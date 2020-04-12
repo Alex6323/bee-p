@@ -28,22 +28,16 @@ use bee_bundle::{
     Transaction,
     TransactionField,
     Value,
-    HASH_TRIT_LEN,
-    NONCE_TRIT_LEN,
-    PAYLOAD_TRIT_LEN,
-    TAG_TRIT_LEN,
     TRANSACTION_TRIT_LEN,
 };
 
 use bee_ternary::{
     num_conversions,
     T1B1Buf,
-    T3B1Buf,
     T5B1Buf,
     TritBuf,
     Trits,
     T1B1,
-    T3B1,
     T5B1,
 };
 
@@ -52,24 +46,10 @@ use std::{
         HashMap,
         HashSet,
     },
-    io,
-    io::{
-        stdout,
-        Write,
-    },
     mem,
     ptr,
     rc::Rc,
     slice,
-    sync::{
-        atomic::{
-            AtomicPtr,
-            AtomicUsize,
-            Ordering,
-        },
-        Arc,
-    },
-    time::Instant,
 };
 
 use serde::{
@@ -80,7 +60,6 @@ use serde::{
 use errors::RocksDbBackendError;
 
 use async_trait::async_trait;
-use futures::executor::block_on;
 
 use self::rocksdb::{
     ColumnFamily,
@@ -101,14 +80,14 @@ use rocksdb::{
     DB,
 };
 
-const TRANSACTION_HASH_COLUMN_FAMILY: &str = "transaction_hash";
-const TRANSACTION_HASH_TO_SOLID_COLUMN_FAMILY: &str = "transaction_hash_to_solid";
-const TRANSACTION_HASH_TO_SNAPSHOT_INDEX_COLUMN_FAMILY: &str = "transaction_hash_to_snapshot_index";
-const TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY: &str = "transaction_hash_to_trunk";
-const TRANSACTION_HASH_TO_BRANCH_COLUMN_FAMILY: &str = "transaction_hash_to_branch";
-const MILESTONE_HASH_COLUMN_FAMILY: &str = "milestone_hash";
-const MILESTONE_INDEX_COLUMN_FAMILY: &str = "milestone_index";
-const STATE_DELTA_COLUMN_FAMILY: &str = "milestone_hash";
+const TRANSACTION_CF_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
+const TRANSACTION_CF_HASH_TO_SOLID: &str = "transaction_hash_to_solid";
+const TRANSACTION_CF_HASH_TO_SNAPSHOT_INDEX: &str = "transaction_hash_to_snapshot_index";
+const TRANSACTION_CF_HASH_TO_TRUNK: &str = "transaction_hash_to_trunk";
+const TRANSACTION_CF_HASH_TO_BRANCH: &str = "transaction_hash_to_branch";
+const MILESTONE_CF_HASH_TO_INDEX: &str = "milestone_hash_to_index";
+const MILESTONE_CF_INDEX_TO_HASH: &str = "milestone_index_to_hash";
+const MILESTONE_CF_HASH_TO_DELTA: &str = "milestone_hash_to_delta";
 
 #[inline]
 fn decode_transaction(buff: &[u8]) -> Transaction {
@@ -120,12 +99,12 @@ fn decode_transaction(buff: &[u8]) -> Transaction {
 #[inline]
 fn decode_hash(buff: &[u8]) -> Hash {
     let mut hash = Hash::zeros();
-    let trits = unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(buff), HASH_TRIT_LEN) }.encode::<T1B1Buf>();
+    let trits = unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(buff), Hash::trit_len()) }.encode::<T1B1Buf>();
     unsafe {
         ptr::copy(
             trits.as_i8_slice().as_ptr(),
             cast_slice_mut(hash.0.as_mut()).as_mut_ptr(),
-            HASH_TRIT_LEN,
+            Hash::trit_len(),
         )
     };
 
@@ -149,21 +128,22 @@ impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
     async fn establish_connection(&mut self, url: &str) -> Result<(), RocksDbBackendError> {
         let mut cf_opts = Options::default();
         cf_opts.set_max_write_buffer_number(16);
-        let cf_transaction = ColumnFamilyDescriptor::new(TRANSACTION_HASH_COLUMN_FAMILY, Options::default());
-        let cf_transaction_solid =
-            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_SOLID_COLUMN_FAMILY, Options::default());
-        let cf_transaction_snapshot_index =
-            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_SNAPSHOT_INDEX_COLUMN_FAMILY, Options::default());
+        let transaction_cf_hash_to_trnsaction =
+            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_TRANSACTION, Options::default());
+        let transaction_cf_hash_to_solid =
+            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_SOLID, Options::default());
+        let transaction_cf_hash_to_snapshot_index =
+            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_SNAPSHOT_INDEX, Options::default());
 
-        let cf_transaction_trunk =
-            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY, Options::default());
+        let transaction_cf_hash_to_trunk =
+            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_TRUNK, Options::default());
 
-        let cf_transaction_branch =
-            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_BRANCH_COLUMN_FAMILY, Options::default());
+        let transaction_cf_hash_to_branch =
+            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_BRANCH, Options::default());
 
-        let cf_milestone_hash = ColumnFamilyDescriptor::new(MILESTONE_HASH_COLUMN_FAMILY, Options::default());
-        let cf_milestone_index = ColumnFamilyDescriptor::new(MILESTONE_INDEX_COLUMN_FAMILY, Options::default());
-        let cf_state_delta = ColumnFamilyDescriptor::new(STATE_DELTA_COLUMN_FAMILY, Options::default());
+        let milestone_cf_hash_to_index = ColumnFamilyDescriptor::new(MILESTONE_CF_HASH_TO_INDEX, Options::default());
+        let milestone_cf_index_to_hash = ColumnFamilyDescriptor::new(MILESTONE_CF_INDEX_TO_HASH, Options::default());
+        let milestone_cf_hash_to_delta = ColumnFamilyDescriptor::new(MILESTONE_CF_HASH_TO_DELTA, Options::default());
         let mut opts = Options::default();
         //TODO - figure this out
         opts.create_missing_column_families(true);
@@ -180,14 +160,14 @@ impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
                 &opts,
                 url,
                 vec![
-                    cf_transaction,
-                    cf_transaction_solid,
-                    cf_transaction_trunk,
-                    cf_transaction_branch,
-                    cf_transaction_snapshot_index,
-                    cf_milestone_hash,
-                    cf_milestone_index,
-                    cf_state_delta,
+                    transaction_cf_hash_to_trnsaction,
+                    transaction_cf_hash_to_solid,
+                    transaction_cf_hash_to_trunk,
+                    transaction_cf_hash_to_branch,
+                    transaction_cf_hash_to_snapshot_index,
+                    milestone_cf_hash_to_index,
+                    milestone_cf_index_to_hash,
+                    milestone_cf_hash_to_delta,
                 ],
             )
             .unwrap(),
@@ -230,13 +210,13 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let mut hash_to_approvers = HashMap::new();
 
-        let cf_trunk = db.cf_handle(TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY).unwrap();
-        let cf_branch = db.cf_handle(TRANSACTION_HASH_TO_BRANCH_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
+        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
 
         for (key, value) in db
-            .iterator_cf(&cf_trunk, IteratorMode::Start)
+            .iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start)
             .unwrap()
-            .chain(db.iterator_cf(&cf_branch, IteratorMode::Start).unwrap())
+            .chain(db.iterator_cf(&transaction_cf_hash_to_branch, IteratorMode::Start).unwrap())
         {
             let approvee = decode_hash(value.as_ref());
             let approver = decode_hash(key.as_ref());
@@ -256,12 +236,12 @@ impl StorageBackend for RocksDbBackendStorage {
         let db = self.0.connection.db.as_ref().unwrap();
 
         let mut missing_to_approvers = HashMap::new();
-        let cf_trunk = db.cf_handle(TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY).unwrap();
-        let cf_branch = db.cf_handle(TRANSACTION_HASH_TO_BRANCH_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
+        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
         for (key, value) in db
-            .iterator_cf(&cf_trunk, IteratorMode::Start)
+            .iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start)
             .unwrap()
-            .chain(db.iterator_cf(&cf_branch, IteratorMode::Start).unwrap())
+            .chain(db.iterator_cf(&transaction_cf_hash_to_branch, IteratorMode::Start).unwrap())
         {
             let mut optional_approver_rc = None;
 
@@ -290,25 +270,25 @@ impl StorageBackend for RocksDbBackendStorage {
         let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
 
         tx.into_trits_allocated(tx_trits);
-        let transaction_cf = db.cf_handle(TRANSACTION_HASH_COLUMN_FAMILY).unwrap();
-        let transaction_trunk_cf = db.cf_handle(TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY).unwrap();
-        let transaction_branch_cf = db.cf_handle(TRANSACTION_HASH_TO_BRANCH_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
+        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
+        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
 
         let hash_buf = tx_hash.to_inner().encode::<T5B1Buf>();
         db.put_cf(
-            &transaction_cf,
+            &transaction_cf_hash_to_transaction,
             cast_slice(hash_buf.as_i8_slice()),
             cast_slice(tx_trits.encode::<T5B1Buf>().as_i8_slice()),
         )?;
 
         db.put_cf(
-            &transaction_trunk_cf,
+            &transaction_cf_hash_to_trunk,
             cast_slice(hash_buf.as_i8_slice()),
             cast_slice(tx.trunk().to_inner().encode::<T5B1Buf>().as_i8_slice()),
         )?;
 
         db.put_cf(
-            &transaction_branch_cf,
+            &transaction_cf_hash_to_branch,
             cast_slice(hash_buf.as_i8_slice()),
             cast_slice(tx.branch().to_inner().encode::<T5B1Buf>().as_i8_slice()),
         )?;
@@ -321,8 +301,8 @@ impl StorageBackend for RocksDbBackendStorage {
         tx_hash: bee_bundle::Hash,
     ) -> Result<bee_bundle::Transaction, RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
-        let cf = db.cf_handle(TRANSACTION_HASH_COLUMN_FAMILY).unwrap();
-        let res = db.get_cf(&cf, cast_slice(tx_hash.to_inner().encode::<T5B1Buf>().as_i8_slice()))?;
+        let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
+        let res = db.get_cf(&transaction_cf_hash_to_transaction, cast_slice(tx_hash.to_inner().encode::<T5B1Buf>().as_i8_slice()))?;
 
         if res.is_none() {
             return Err(RocksDbBackendError::TransactionDoesNotExist);
@@ -337,10 +317,10 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let mut batch = rocksdb::WriteBatch::default();
-        let transaction_solid_cf = db.cf_handle(TRANSACTION_HASH_TO_SOLID_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_solid = db.cf_handle(TRANSACTION_CF_HASH_TO_SOLID).unwrap();
         for hash in transaction_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
-            batch.put_cf(&transaction_solid_cf, cast_slice(hash_buf.as_i8_slice()), unsafe {
+            batch.put_cf(&transaction_cf_hash_to_solid, cast_slice(hash_buf.as_i8_slice()), unsafe {
                 mem::transmute::<bool, [u8; 1]>(true)
             })?;
         }
@@ -361,11 +341,11 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let mut batch = rocksdb::WriteBatch::default();
-        let transaction_snapshot_index_cf = db.cf_handle(TRANSACTION_HASH_TO_SNAPSHOT_INDEX_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_snapshot_index = db.cf_handle(TRANSACTION_CF_HASH_TO_SNAPSHOT_INDEX).unwrap();
         for hash in transaction_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
             batch.put_cf(
-                &transaction_snapshot_index_cf,
+                &transaction_cf_hash_to_snapshot_index,
                 cast_slice(hash_buf.as_i8_slice()),
                 snapshot_index.to_le_bytes(),
             )?;
@@ -386,12 +366,12 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<Vec<bool>, Self::StorageError> {
         let mut solid_states = vec![false; transaction_hashes.len()];
         let db = self.0.connection.db.as_ref().unwrap();
-        let transaction_hash_to_solid_cf = db.cf_handle(TRANSACTION_HASH_TO_SOLID_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_solid = db.cf_handle(TRANSACTION_CF_HASH_TO_SOLID).unwrap();
 
         for (index, hash) in transaction_hashes.iter().enumerate() {
             if db
                 .get_cf(
-                    &transaction_hash_to_solid_cf,
+                    &transaction_cf_hash_to_solid,
                     cast_slice(hash.to_inner().encode::<T5B1Buf>().as_i8_slice()),
                 )?
                 .is_some()
@@ -410,13 +390,12 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<Vec<u32>, Self::StorageError> {
         let mut solid_states = vec![0 as u32; transaction_hashes.len()];
         let db = self.0.connection.db.as_ref().unwrap();
-        let transaction_hash_to_snapshot_index_cf =
-            db.cf_handle(TRANSACTION_HASH_TO_SNAPSHOT_INDEX_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_snapshot_index = db.cf_handle(TRANSACTION_CF_HASH_TO_SNAPSHOT_INDEX).unwrap();
         let mut u32_buffer: [u8; 4] = [0, 0, 0, 0];
 
         for (index, hash) in transaction_hashes.iter().enumerate() {
             let res = db.get_cf(
-                &transaction_hash_to_snapshot_index_cf,
+                &transaction_cf_hash_to_snapshot_index,
                 cast_slice(hash.to_inner().encode::<T5B1Buf>().as_i8_slice()),
             )?;
             if res.is_some() {
@@ -436,11 +415,11 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let mut batch = rocksdb::WriteBatch::default();
-        let transaction_cf = db.cf_handle(TRANSACTION_HASH_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
 
         for hash in transaction_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
-            batch.delete_cf(&transaction_cf, cast_slice(hash_buf.as_i8_slice()))?;
+            batch.delete_cf(&transaction_cf_hash_to_transaction, cast_slice(hash_buf.as_i8_slice()))?;
         }
 
         let mut write_options = WriteOptions::default();
@@ -457,9 +436,9 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<(), Self::StorageError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let mut batch = rocksdb::WriteBatch::default();
-        let transaction_cf = db.cf_handle(TRANSACTION_HASH_COLUMN_FAMILY).unwrap();
-        let transaction_trunk_cf = db.cf_handle(TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY).unwrap();
-        let transaction_branch_cf = db.cf_handle(TRANSACTION_HASH_TO_BRANCH_COLUMN_FAMILY).unwrap();
+        let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
+        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
+        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
 
         let raw_tx_bytes: &mut [i8] = &mut [0 as i8; TRANSACTION_TRIT_LEN];
         let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
@@ -468,19 +447,19 @@ impl StorageBackend for RocksDbBackendStorage {
             tx.into_trits_allocated(tx_trits);
             let hash_buf = tx_hash.to_inner().encode::<T5B1Buf>();
             batch.put_cf(
-                &transaction_cf,
+                &transaction_cf_hash_to_transaction,
                 cast_slice(hash_buf.as_i8_slice()),
                 cast_slice(tx_trits.encode::<T5B1Buf>().as_i8_slice()),
             )?;
 
             batch.put_cf(
-                &transaction_trunk_cf,
+                &transaction_cf_hash_to_trunk,
                 cast_slice(hash_buf.as_i8_slice()),
                 cast_slice(tx.trunk().to_inner().encode::<T5B1Buf>().as_i8_slice()),
             )?;
 
             batch.put_cf(
-                &transaction_branch_cf,
+                &transaction_cf_hash_to_branch,
                 cast_slice(hash_buf.as_i8_slice()),
                 cast_slice(tx.branch().to_inner().encode::<T5B1Buf>().as_i8_slice()),
             )?;
@@ -497,16 +476,16 @@ impl StorageBackend for RocksDbBackendStorage {
     async fn insert_milestone(&self, milestone: Milestone) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
 
-        let milestone_hash_cf = db.cf_handle(MILESTONE_HASH_COLUMN_FAMILY).unwrap();
-        let milestone_index_cf = db.cf_handle(MILESTONE_INDEX_COLUMN_FAMILY).unwrap();
+        let milestone_cf_hash_to_index = db.cf_handle(MILESTONE_CF_HASH_TO_INDEX).unwrap();
+        let milestone_cf_index_to_hash = db.cf_handle(MILESTONE_CF_INDEX_TO_HASH).unwrap();
 
         let hash_buf = milestone.hash().to_inner().encode::<T5B1Buf>();
-        db.put_cf(&milestone_hash_cf, cast_slice(hash_buf.as_i8_slice()), unsafe {
+        db.put_cf(&milestone_cf_hash_to_index, cast_slice(hash_buf.as_i8_slice()), unsafe {
             milestone.index().to_le_bytes()
         })?;
 
         db.put_cf(
-            &milestone_index_cf,
+            &milestone_cf_index_to_hash,
             milestone.index().to_le_bytes(),
             cast_slice(hash_buf.as_i8_slice()),
         )?;
@@ -515,9 +494,9 @@ impl StorageBackend for RocksDbBackendStorage {
 
     async fn find_milestone(&self, milestone_hash: bee_bundle::Hash) -> Result<Milestone, RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
-        let cf = db.cf_handle(MILESTONE_HASH_COLUMN_FAMILY).unwrap();
+        let milestone_cf_hash_to_index = db.cf_handle(MILESTONE_CF_HASH_TO_INDEX).unwrap();
         let res = db.get_cf(
-            &cf,
+            &milestone_cf_hash_to_index,
             cast_slice(milestone_hash.to_inner().encode::<T5B1Buf>().as_i8_slice()),
         )?;
 
@@ -533,12 +512,12 @@ impl StorageBackend for RocksDbBackendStorage {
     async fn delete_milestones(&self, milestone_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
 
-        let milestone_hash_cf = db.cf_handle(MILESTONE_HASH_COLUMN_FAMILY).unwrap();
+        let milestone_cf_hash_to_index = db.cf_handle(MILESTONE_CF_HASH_TO_INDEX).unwrap();
         let mut batch = rocksdb::WriteBatch::default();
 
         for hash in milestone_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
-            batch.delete_cf(&milestone_hash_cf, cast_slice(hash_buf.as_i8_slice()))?;
+            batch.delete_cf(&milestone_cf_hash_to_index, cast_slice(hash_buf.as_i8_slice()))?;
         }
 
         let mut write_options = WriteOptions::default();
@@ -556,19 +535,19 @@ impl StorageBackend for RocksDbBackendStorage {
         index: MilestoneIndex,
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
-        let state_delta_cf = db.cf_handle(STATE_DELTA_COLUMN_FAMILY).unwrap();
+        let milestone_cf_hash_to_delta = db.cf_handle(MILESTONE_CF_HASH_TO_DELTA).unwrap();
         //TODO - handle error, assert the milestone exists?
         let encoded: Vec<u8> = bincode::serialize(&state_delta).unwrap();
 
-        db.put_cf(&state_delta_cf, index.to_le_bytes(), encoded)?;
+        db.put_cf(&milestone_cf_hash_to_delta, index.to_le_bytes(), encoded)?;
         Ok(())
     }
 
     async fn load_state_delta(&self, index: MilestoneIndex) -> Result<StateDeltaMap, RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
-        let state_delta_cf = db.cf_handle(STATE_DELTA_COLUMN_FAMILY).unwrap();
+        let milestone_cf_hash_to_delta = db.cf_handle(MILESTONE_CF_HASH_TO_DELTA).unwrap();
 
-        let res = db.get_cf(&state_delta_cf, index.to_le_bytes())?;
+        let res = db.get_cf(&milestone_cf_hash_to_delta, index.to_le_bytes())?;
 
         Ok(bincode::deserialize(&res.unwrap()).unwrap())
     }
