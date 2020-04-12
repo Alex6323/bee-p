@@ -342,7 +342,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
         let mut hashes_to_transactions = HashMap::new();
         let mut hashes = HashSet::new();
-        const NUM_TRANSACTIONS: usize = 1000;
+        const NUM_TRANSACTIONS: usize = 2048;
 
         for _i in 0..NUM_TRANSACTIONS {
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
@@ -354,6 +354,46 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         block_on(storage.insert_transactions(hashes_to_transactions)).unwrap();
         let message = format!(
             "\n{}: test_insert_transactions_batch milliseconds elapsed: {}\n",
+            T::test_name(),
+            now.elapsed().as_millis()
+        );
+        io::stdout().write_all(message.as_bytes()).unwrap();
+
+        for h in hashes {
+            let res = block_on(storage.find_transaction(h));
+            assert!(res.is_ok());
+        }
+
+        block_on(storage.destroy_connection()).unwrap();
+    }
+
+    fn test_insert_transactions_batch_concurrent() {
+        let mut storage = T::new();
+        block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
+        let mut batches = Vec::new();
+        let mut hashes = HashSet::new();
+        const NUM_TRANSACTIONS: usize = 2048;
+
+        for _i in 0..num_cpus::get() {
+            let mut hashes_to_transactions_batch = HashMap::new();
+            for _i in 0..NUM_TRANSACTIONS / num_cpus::get() {
+                let (tx_hash, tx) = bee_test::transaction::create_random_tx();
+                hashes.insert(tx_hash.clone());
+                hashes_to_transactions_batch.insert(tx_hash, tx);
+            }
+            batches.push(hashes_to_transactions_batch);
+        }
+
+        let mut futures = Vec::new();
+        let now = Instant::now();
+        for b in batches {
+            let f = storage.insert_transactions(b);
+            futures.push(f);
+        }
+
+        block_on(join_all(futures));
+        let message = format!(
+            "\n{}: test_insert_transactions_batch_concurrent milliseconds elapsed: {}\n",
             T::test_name(),
             now.elapsed().as_millis()
         );
@@ -380,7 +420,6 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         };
         let mut addresses = HashSet::new();
         const NUM_BALANCES: usize = 1000;
-
         for _i in 0..NUM_BALANCES {
             let address = bee_test::transaction::rand_trits_field::<Address>();
             addresses.insert(address.clone());
@@ -426,7 +465,7 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
     pub fn run_all_tests() {
         StorageTestRunner::<T>::run_test(|| {
             Self::test_insert_one_transaction();
-            /*  Self::test_delete_one_transaction();
+            Self::test_delete_one_transaction();
             Self::test_transaction_multiple_delete();
             Self::test_map_hashes_to_approvers();
             Self::test_map_missing_transaction_hashes_to_approvers();
@@ -434,9 +473,10 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
             Self::test_delete_one_milestone();
             Self::test_insert_transactions_concurrent();
             Self::test_insert_transactions_batch();
+            Self::test_insert_transactions_batch_concurrent();
             Self::test_store_and_load_state_delta();
             Self::test_transaction_update_solid();
-            Self::test_transaction_snapshot_index();*/
+            Self::test_transaction_snapshot_index();
         })
     }
 }

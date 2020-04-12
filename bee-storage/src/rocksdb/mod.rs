@@ -3,8 +3,6 @@ extern crate rocksdb;
 mod errors;
 mod test;
 
-use std::convert::TryFrom;
-
 use crate::storage::{
     Connection,
     HashesToApprovers,
@@ -30,28 +28,11 @@ use bee_bundle::{
     Transaction,
     TransactionField,
     Value,
-    ADDRESS,
-    ADDRESS_TRIT_LEN,
-    ATTACHMENT_LBTS,
-    ATTACHMENT_TS,
-    ATTACHMENT_UBTS,
-    BRANCH,
-    BUNDLE,
     HASH_TRIT_LEN,
-    IOTA_SUPPLY,
-    NONCE,
     NONCE_TRIT_LEN,
-    OBSOLETE_TAG,
-    PAYLOAD,
     PAYLOAD_TRIT_LEN,
-    TAG,
     TAG_TRIT_LEN,
-    TIMESTAMP,
-    TRANSACTION_BYTE_LEN,
     TRANSACTION_TRIT_LEN,
-    TRANSACTION_TRYT_LEN,
-    TRUNK,
-    VALUE,
 };
 
 use bee_ternary::{
@@ -151,121 +132,6 @@ fn decode_hash(buff: &[u8]) -> Hash {
     };
 
     hash
-}
-
-#[inline]
-fn encode_transaction(tx: &Transaction, mut buf: &mut Trits<T1B1>) {
-    //TODO - Index, Value and Timestamp
-    unsafe {
-        ptr::copy(
-            tx.payload().to_inner().as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(PAYLOAD.trit_offset.start as isize),
-            PAYLOAD.trit_offset.length,
-        );
-
-        ptr::copy(
-            tx.address().to_inner().as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(ADDRESS.trit_offset.start as isize),
-            ADDRESS.trit_offset.length,
-        );
-
-        ptr::copy(
-            tx.obsolete_tag().to_inner().as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(OBSOLETE_TAG.trit_offset.start as isize),
-            OBSOLETE_TAG.trit_offset.length,
-        );
-
-        ptr::copy(
-            tx.bundle().to_inner().as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(BUNDLE.trit_offset.start as isize),
-            BUNDLE.trit_offset.length,
-        );
-
-        ptr::copy(
-            tx.branch().to_inner().as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(BRANCH.trit_offset.start as isize),
-            BRANCH.trit_offset.length,
-        );
-
-        ptr::copy(
-            tx.trunk().to_inner().as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(TRUNK.trit_offset.start as isize),
-            TRUNK.trit_offset.length,
-        );
-
-        ptr::copy(
-            tx.tag().to_inner().as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(TAG.trit_offset.start as isize),
-            TAG.trit_offset.length,
-        );
-
-        ptr::copy(
-            tx.nonce().to_inner().as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(NONCE.trit_offset.start as isize),
-            NONCE.trit_offset.length,
-        );
-
-        let value_buf = TritBuf::<T1B1Buf>::try_from(tx.value().to_inner().to_owned()).unwrap();
-        ptr::copy(
-            value_buf.as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(VALUE.trit_offset.start as isize),
-            value_buf.len(),
-        );
-
-        let timestamp_buf = TritBuf::<T1B1Buf>::try_from(tx.timestamp().to_inner().to_owned() as i64).unwrap();
-        ptr::copy(
-            timestamp_buf.as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(TIMESTAMP.trit_offset.start as isize),
-            timestamp_buf.len(),
-        );
-
-        let attachment_ts_buf = TritBuf::<T1B1Buf>::try_from(tx.attachment_ts().to_inner().to_owned() as i64).unwrap();
-        ptr::copy(
-            attachment_ts_buf.as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(ATTACHMENT_TS.trit_offset.start as isize),
-            attachment_ts_buf.len(),
-        );
-
-        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(tx.timestamp().to_inner().to_owned() as i64).unwrap();
-        ptr::copy(
-            attachment_lbts_buf.as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(ATTACHMENT_LBTS.trit_offset.start as isize),
-            attachment_lbts_buf.len(),
-        );
-
-        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(tx.timestamp().to_inner().to_owned() as i64).unwrap();
-        ptr::copy(
-            attachment_ubts_buf.as_i8_slice().as_ptr(),
-            buf.as_i8_slice_mut()
-                .as_mut_ptr()
-                .offset(ATTACHMENT_UBTS.trit_offset.start as isize),
-            attachment_ubts_buf.len(),
-        );
-    }
 }
 
 pub struct RocksDBBackendConnection {
@@ -425,7 +291,7 @@ impl StorageBackend for RocksDbBackendStorage {
         let raw_tx_bytes: &mut [i8] = &mut [0 as i8; TRANSACTION_TRIT_LEN];
         let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
 
-        encode_transaction(&tx, tx_trits);
+        tx.into_trits_allocated( tx_trits);
         let transaction_cf = db.cf_handle(TRANSACTION_HASH_COLUMN_FAMILY).unwrap();
         let transaction_trunk_cf = db.cf_handle(TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY).unwrap();
         let transaction_branch_cf = db.cf_handle(TRANSACTION_HASH_TO_BRANCH_COLUMN_FAMILY).unwrap();
@@ -601,7 +467,7 @@ impl StorageBackend for RocksDbBackendStorage {
         let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
 
         for (tx_hash, tx) in transactions {
-            encode_transaction(&tx, tx_trits);
+            tx.into_trits_allocated(tx_trits);
             let hash_buf = tx_hash.to_inner().encode::<T5B1Buf>();
             batch.put_cf(
                 &transaction_cf,

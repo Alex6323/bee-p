@@ -454,7 +454,7 @@ impl Transaction {
         Ok(transaction)
     }
 
-    fn into_trits_allocated(&self, buf: &mut Trits<T1B1>) {
+    pub fn into_trits_allocated(&self, mut buf: &mut Trits<T1B1>) {
         buf.copy_raw_bytes(
             self.payload().to_inner(),
             PAYLOAD.trit_offset.start,
