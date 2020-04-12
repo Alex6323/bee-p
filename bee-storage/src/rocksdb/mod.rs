@@ -105,8 +105,6 @@ impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
     type StorageError = RocksDbBackendError;
 
     async fn establish_connection(&mut self, url: &str) -> Result<(), RocksDbBackendError> {
-        let mut cf_opts = Options::default();
-        cf_opts.set_max_write_buffer_number(16);
         let transaction_cf_hash_to_trnsaction =
             ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_TRANSACTION, Options::default());
         let transaction_cf_hash_to_solid =
@@ -125,6 +123,7 @@ impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
         let milestone_cf_hash_to_delta = ColumnFamilyDescriptor::new(MILESTONE_CF_HASH_TO_DELTA, Options::default());
         let mut opts = Options::default();
         //TODO - figure this out
+        opts.set_max_write_buffer_number(4);
         opts.create_missing_column_families(true);
         opts.create_if_missing(true);
         opts.set_compaction_style(DBCompactionStyle::Universal);
