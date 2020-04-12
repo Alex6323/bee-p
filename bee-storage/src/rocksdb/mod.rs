@@ -47,12 +47,12 @@ use bee_ternary::{
     T5B1,
 };
 
-use std::collections::{
-    HashMap,
-    HashSet,
-};
-
 use std::{
+    collections::{
+        HashMap,
+        HashSet,
+    },
+    io,
     io::{
         stdout,
         Write,
@@ -71,8 +71,6 @@ use std::{
     },
     time::Instant,
 };
-
-use std::io;
 
 use serde::{
     Deserialize,
@@ -291,7 +289,7 @@ impl StorageBackend for RocksDbBackendStorage {
         let raw_tx_bytes: &mut [i8] = &mut [0 as i8; TRANSACTION_TRIT_LEN];
         let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
 
-        tx.into_trits_allocated( tx_trits);
+        tx.into_trits_allocated(tx_trits);
         let transaction_cf = db.cf_handle(TRANSACTION_HASH_COLUMN_FAMILY).unwrap();
         let transaction_trunk_cf = db.cf_handle(TRANSACTION_HASH_TO_TRUNK_COLUMN_FAMILY).unwrap();
         let transaction_branch_cf = db.cf_handle(TRANSACTION_HASH_TO_BRANCH_COLUMN_FAMILY).unwrap();
@@ -369,7 +367,7 @@ impl StorageBackend for RocksDbBackendStorage {
             batch.put_cf(
                 &transaction_snapshot_index_cf,
                 cast_slice(hash_buf.as_i8_slice()),
-                unsafe { mem::transmute::<u32, [u8; 4]>(snapshot_index) },
+                snapshot_index.to_le_bytes(),
             )?;
         }
 
@@ -425,7 +423,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 //We assume the absence of a value means the transaction is not known to be confirmed
                 let transaction_snapshot_index_buffer = res.unwrap();
                 unsafe { ptr::copy(transaction_snapshot_index_buffer.as_ptr(), u32_buffer.as_mut_ptr(), 4) };
-                solid_states[index] = unsafe { mem::transmute::<[u8; 4], u32>(u32_buffer) };
+                solid_states[index] = u32::from_le_bytes(u32_buffer);
             }
         }
 
@@ -504,12 +502,12 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let hash_buf = milestone.hash().to_inner().encode::<T5B1Buf>();
         db.put_cf(&milestone_hash_cf, cast_slice(hash_buf.as_i8_slice()), unsafe {
-            mem::transmute::<u32, [u8; 4]>(milestone.index())
+            milestone.index().to_le_bytes()
         })?;
 
         db.put_cf(
             &milestone_index_cf,
-            unsafe { mem::transmute::<u32, [u8; 4]>(milestone.index()) },
+            milestone.index().to_le_bytes(),
             cast_slice(hash_buf.as_i8_slice()),
         )?;
         Ok(())
@@ -529,9 +527,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let mut index_buf: [u8; 4] = [0; 4];
         unsafe { ptr::copy(res.unwrap().as_slice().as_ptr(), index_buf.as_mut_ptr(), 4) };
-        Ok(Milestone::new(milestone_hash, unsafe {
-            mem::transmute::<[u8; 4], u32>(index_buf)
-        }))
+        Ok(Milestone::new(milestone_hash, u32::from_le_bytes(index_buf)))
     }
 
     async fn delete_milestones(&self, milestone_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), RocksDbBackendError> {
@@ -564,11 +560,7 @@ impl StorageBackend for RocksDbBackendStorage {
         //TODO - handle error, assert the milestone exists?
         let encoded: Vec<u8> = bincode::serialize(&state_delta).unwrap();
 
-        db.put_cf(
-            &state_delta_cf,
-            unsafe { mem::transmute::<u32, [u8; 4]>(index) },
-            encoded,
-        )?;
+        db.put_cf(&state_delta_cf, index.to_le_bytes(), encoded)?;
         Ok(())
     }
 
@@ -576,7 +568,7 @@ impl StorageBackend for RocksDbBackendStorage {
         let db = self.0.connection.db.as_ref().unwrap();
         let state_delta_cf = db.cf_handle(STATE_DELTA_COLUMN_FAMILY).unwrap();
 
-        let res = db.get_cf(&state_delta_cf, unsafe { mem::transmute::<u32, [u8; 4]>(index) })?;
+        let res = db.get_cf(&state_delta_cf, index.to_le_bytes())?;
 
         Ok(bincode::deserialize(&res.unwrap()).unwrap())
     }
