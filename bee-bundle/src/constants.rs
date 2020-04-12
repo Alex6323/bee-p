@@ -67,21 +67,21 @@ pub const INDEX_TRIT_LEN: usize = 27;
 pub const HASH_TRIT_LEN: usize = 243;
 pub const NONCE_TRIT_LEN: usize = 81;
 
-pub const PAYLOAD: Field = offsets_from_trits!(0, PAYLOAD_TRIT_LEN);
-pub const ADDRESS: Field = offsets_from_previous_field!(PAYLOAD, ADDRESS_TRIT_LEN);
-pub const VALUE: Field = offsets_from_previous_field!(ADDRESS, VALUE_TRIT_LEN);
-pub const OBSOLETE_TAG: Field = offsets_from_previous_field!(VALUE, TAG_TRIT_LEN);
-pub const TIMESTAMP: Field = offsets_from_previous_field!(OBSOLETE_TAG, TIMESTAMP_TRIT_LEN);
-pub const INDEX: Field = offsets_from_previous_field!(TIMESTAMP, INDEX_TRIT_LEN);
-pub const LAST_INDEX: Field = offsets_from_previous_field!(INDEX, INDEX_TRIT_LEN);
-pub const BUNDLE: Field = offsets_from_previous_field!(LAST_INDEX, HASH_TRIT_LEN);
-pub const TRUNK: Field = offsets_from_previous_field!(BUNDLE, HASH_TRIT_LEN);
-pub const BRANCH: Field = offsets_from_previous_field!(TRUNK, HASH_TRIT_LEN);
-pub const TAG: Field = offsets_from_previous_field!(BRANCH, TAG_TRIT_LEN);
-pub const ATTACHMENT_TS: Field = offsets_from_previous_field!(TAG, TIMESTAMP_TRIT_LEN);
-pub const ATTACHMENT_LBTS: Field = offsets_from_previous_field!(ATTACHMENT_TS, TIMESTAMP_TRIT_LEN);
-pub const ATTACHMENT_UBTS: Field = offsets_from_previous_field!(ATTACHMENT_LBTS, TIMESTAMP_TRIT_LEN);
-pub const NONCE: Field = offsets_from_previous_field!(ATTACHMENT_UBTS, NONCE_TRIT_LEN);
+pub(crate) const PAYLOAD: Field = offsets_from_trits!(0, PAYLOAD_TRIT_LEN);
+pub(crate) const ADDRESS: Field = offsets_from_previous_field!(PAYLOAD, ADDRESS_TRIT_LEN);
+pub(crate) const VALUE: Field = offsets_from_previous_field!(ADDRESS, VALUE_TRIT_LEN);
+pub(crate) const OBSOLETE_TAG: Field = offsets_from_previous_field!(VALUE, TAG_TRIT_LEN);
+pub(crate) const TIMESTAMP: Field = offsets_from_previous_field!(OBSOLETE_TAG, TIMESTAMP_TRIT_LEN);
+pub(crate) const INDEX: Field = offsets_from_previous_field!(TIMESTAMP, INDEX_TRIT_LEN);
+pub(crate) const LAST_INDEX: Field = offsets_from_previous_field!(INDEX, INDEX_TRIT_LEN);
+pub(crate) const BUNDLE: Field = offsets_from_previous_field!(LAST_INDEX, HASH_TRIT_LEN);
+pub(crate) const TRUNK: Field = offsets_from_previous_field!(BUNDLE, HASH_TRIT_LEN);
+pub(crate) const BRANCH: Field = offsets_from_previous_field!(TRUNK, HASH_TRIT_LEN);
+pub(crate) const TAG: Field = offsets_from_previous_field!(BRANCH, TAG_TRIT_LEN);
+pub(crate) const ATTACHMENT_TS: Field = offsets_from_previous_field!(TAG, TIMESTAMP_TRIT_LEN);
+pub(crate) const ATTACHMENT_LBTS: Field = offsets_from_previous_field!(ATTACHMENT_TS, TIMESTAMP_TRIT_LEN);
+pub(crate) const ATTACHMENT_UBTS: Field = offsets_from_previous_field!(ATTACHMENT_LBTS, TIMESTAMP_TRIT_LEN);
+pub(crate) const NONCE: Field = offsets_from_previous_field!(ATTACHMENT_UBTS, NONCE_TRIT_LEN);
 
 #[cfg(test)]
 mod tests {
