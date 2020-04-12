@@ -492,7 +492,7 @@ impl StorageBackend for RocksDbBackendStorage {
         }
 
         let mut index_buf: [u8; 4] = [0; 4];
-        unsafe { ptr::copy(res.unwrap().as_slice().as_ptr(), index_buf.as_mut_ptr(), 4) };
+        index_buf.copy_from_slice(res.unwrap().as_slice());
         Ok(Milestone::new(milestone_hash, u32::from_le_bytes(index_buf)))
     }
 
