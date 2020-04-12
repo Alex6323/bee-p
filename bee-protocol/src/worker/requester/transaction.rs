@@ -4,6 +4,7 @@ use crate::{
 };
 
 use bee_bundle::Hash;
+use bee_tangle::tangle;
 
 use std::cmp::Ordering;
 
@@ -46,9 +47,12 @@ impl TransactionRequesterWorker {
             select! {
                 // TODO impl fused stream
                 entry = Protocol::get().transaction_requester_worker.0.pop().fuse() => {
-                    if let TransactionRequesterWorkerEntry(_hash, _index) = entry {
-                        //  TODO use sender worker
-                        // TODO cheeck that neighbor may have the tx (by the index)
+                    if let TransactionRequesterWorkerEntry(hash, _index) = entry {
+                        if tangle().is_solid_entry_point(&hash) || tangle().contains_transaction(&hash) {
+                            continue;
+                        }
+                        // TODO use sender worker
+                        // TODO check that neighbor may have the tx (by the index)
                         // TODO convert hash to bytes
                         // let _bytes = TransactionRequest::new(hash).into_full_bytes();
                         // TODO we don't have any peer_id here
