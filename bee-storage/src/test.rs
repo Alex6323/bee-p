@@ -45,7 +45,7 @@ pub mod tests {
     }
 
     impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
-        #[cfg(test)]
+ 
         fn test_insert_one_transaction() {
             let mut storage = T::new();
 
@@ -60,7 +60,6 @@ pub mod tests {
             assert_eq!(tx, found_tx);
         }
 
-        #[cfg(test)]
         fn test_transaction_update_solid() {
             let mut storage = T::new();
 
@@ -79,7 +78,6 @@ pub mod tests {
             block_on(storage.destroy_connection()).unwrap();
         }
 
-        #[cfg(test)]
         fn test_transaction_snapshot_index() {
             let mut storage = T::new();
 
@@ -98,7 +96,6 @@ pub mod tests {
             block_on(storage.destroy_connection()).unwrap();
         }
 
-        #[cfg(test)]
         fn test_insert_one_milestone() {
             let mut storage = T::new();
 
@@ -112,7 +109,6 @@ pub mod tests {
             assert_eq!(milestone.hash(), found_milestone.hash());
         }
 
-        #[cfg(test)]
         fn test_delete_one_transaction() {
             let mut storage = T::new();
 
@@ -131,7 +127,6 @@ pub mod tests {
             assert!(res.is_err());
         }
 
-        #[cfg(test)]
         fn test_delete_one_milestone() {
             let mut storage = T::new();
 
@@ -151,7 +146,6 @@ pub mod tests {
             assert!(res.is_err());
         }
 
-        #[cfg(test)]
         fn test_transaction_multiple_delete() {
             let mut storage = T::new();
 
@@ -179,7 +173,6 @@ pub mod tests {
             block_on(storage.destroy_connection()).unwrap();
         }
 
-        #[cfg(test)]
         fn test_map_hashes_to_approvers() {
             let mut storage = T::new();
 
@@ -224,7 +217,6 @@ pub mod tests {
             block_on(storage.destroy_connection()).unwrap();
         }
 
-        #[cfg(test)]
         fn test_map_missing_transaction_hashes_to_approvers() {
             let mut storage = T::new();
 
@@ -311,7 +303,6 @@ pub mod tests {
             assert!(maps_are_equal);
         }
 
-        #[cfg(test)]
         fn test_insert_transactions_concurrent() {
             let mut storage = T::new();
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
@@ -346,7 +337,6 @@ pub mod tests {
             block_on(storage.destroy_connection()).unwrap();
         }
 
-        #[cfg(test)]
         fn test_insert_transactions_batch() {
             let mut storage = T::new();
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
@@ -384,7 +374,6 @@ pub mod tests {
             block_on(storage.destroy_connection()).unwrap();
         }
 
-        #[cfg(test)]
         fn test_insert_transactions_batch_concurrent() {
             let mut storage = T::new();
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
@@ -425,7 +414,6 @@ pub mod tests {
             block_on(storage.destroy_connection()).unwrap();
         }
 
-        #[cfg(test)]
         fn test_store_and_load_state_delta() {
             let mut storage = T::new();
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
@@ -467,7 +455,6 @@ pub mod tests {
         }
     }
 
-    #[cfg(test)]
     impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         pub fn run_test<F>(test: F) -> ()
         where
@@ -482,7 +469,6 @@ pub mod tests {
             assert!(result.is_ok())
         }
 
-        #[cfg(test)]
         pub fn run_all_tests() {
             StorageTestRunner::<T>::run_test(|| {
                 Self::test_insert_one_transaction();
