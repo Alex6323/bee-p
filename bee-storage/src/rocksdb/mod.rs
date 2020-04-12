@@ -215,7 +215,10 @@ impl StorageBackend for RocksDbBackendStorage {
         for (key, value) in db
             .iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start)
             .unwrap()
-            .chain(db.iterator_cf(&transaction_cf_hash_to_branch, IteratorMode::Start).unwrap())
+            .chain(
+                db.iterator_cf(&transaction_cf_hash_to_branch, IteratorMode::Start)
+                    .unwrap(),
+            )
         {
             let approvee = decode_hash(value.as_ref());
             let approver = decode_hash(key.as_ref());
@@ -240,7 +243,10 @@ impl StorageBackend for RocksDbBackendStorage {
         for (key, value) in db
             .iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start)
             .unwrap()
-            .chain(db.iterator_cf(&transaction_cf_hash_to_branch, IteratorMode::Start).unwrap())
+            .chain(
+                db.iterator_cf(&transaction_cf_hash_to_branch, IteratorMode::Start)
+                    .unwrap(),
+            )
         {
             let mut optional_approver_rc = None;
 
@@ -342,7 +348,10 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<bee_bundle::Transaction, RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
-        let res = db.get_cf(&transaction_cf_hash_to_transaction, cast_slice(tx_hash.to_inner().encode::<T5B1Buf>().as_i8_slice()))?;
+        let res = db.get_cf(
+            &transaction_cf_hash_to_transaction,
+            cast_slice(tx_hash.to_inner().encode::<T5B1Buf>().as_i8_slice()),
+        )?;
 
         if res.is_none() {
             return Err(RocksDbBackendError::TransactionDoesNotExist);
@@ -360,9 +369,11 @@ impl StorageBackend for RocksDbBackendStorage {
         let transaction_cf_hash_to_solid = db.cf_handle(TRANSACTION_CF_HASH_TO_SOLID).unwrap();
         for hash in transaction_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
-            batch.put_cf(&transaction_cf_hash_to_solid, cast_slice(hash_buf.as_i8_slice()), unsafe {
-                mem::transmute::<bool, [u8; 1]>(true)
-            })?;
+            batch.put_cf(
+                &transaction_cf_hash_to_solid,
+                cast_slice(hash_buf.as_i8_slice()),
+                unsafe { mem::transmute::<bool, [u8; 1]>(true) },
+            )?;
         }
 
         let mut write_options = WriteOptions::default();
@@ -477,9 +488,11 @@ impl StorageBackend for RocksDbBackendStorage {
         let milestone_cf_index_to_hash = db.cf_handle(MILESTONE_CF_INDEX_TO_HASH).unwrap();
 
         let hash_buf = milestone.hash().to_inner().encode::<T5B1Buf>();
-        db.put_cf(&milestone_cf_hash_to_index, cast_slice(hash_buf.as_i8_slice()), unsafe {
-            milestone.index().to_le_bytes()
-        })?;
+        db.put_cf(
+            &milestone_cf_hash_to_index,
+            cast_slice(hash_buf.as_i8_slice()),
+            unsafe { milestone.index().to_le_bytes() },
+        )?;
 
         db.put_cf(
             &milestone_cf_index_to_hash,
