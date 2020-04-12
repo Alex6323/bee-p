@@ -601,6 +601,8 @@ impl Transaction {
     pub fn is_head(&self) -> bool {
         self.index == self.last_index
     }
+
+    pub const fn trits_len() -> usize { TRANSACTION_TRIT_LEN }
 }
 
 /// Transaction builder

@@ -344,16 +344,23 @@ impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         let now = Instant::now();
         block_on(storage.insert_transactions(hashes_to_transactions)).unwrap();
         let message = format!(
-            "\n{}: test_insert_transactions_batch milliseconds elapsed: {}\n",
+            "\n{}: test_insert_transactions_batch milliseconds elapsed (insert operation): {}\n",
             T::test_name(),
             now.elapsed().as_millis()
         );
         io::stdout().write_all(message.as_bytes()).unwrap();
 
+        let now = Instant::now();
         for h in hashes {
             let res = block_on(storage.find_transaction(h));
             assert!(res.is_ok());
         }
+        let message = format!(
+            "\n{}: test_insert_transactions_batch milliseconds elapsed (find operation): {}\n",
+            T::test_name(),
+            now.elapsed().as_millis()
+        );
+        io::stdout().write_all(message.as_bytes()).unwrap();
 
         block_on(storage.destroy_connection()).unwrap();
     }

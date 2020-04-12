@@ -28,7 +28,6 @@ use bee_bundle::{
     Transaction,
     TransactionField,
     Value,
-    TRANSACTION_TRIT_LEN,
 };
 
 use bee_ternary::{
@@ -92,7 +91,7 @@ const MILESTONE_CF_HASH_TO_DELTA: &str = "milestone_hash_to_delta";
 #[inline]
 fn decode_transaction(buff: &[u8]) -> Transaction {
     let trits =
-        unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(buff), TRANSACTION_TRIT_LEN) }.encode::<T1B1Buf>();
+        unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(buff), Transaction::trits_len()) }.encode::<T1B1Buf>();
     Transaction::from_trits(&trits.to_owned()).unwrap()
 }
 
@@ -266,10 +265,10 @@ impl StorageBackend for RocksDbBackendStorage {
         tx: bee_bundle::Transaction,
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
-        let raw_tx_bytes: &mut [i8] = &mut [0 as i8; TRANSACTION_TRIT_LEN];
-        let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
 
-        tx.into_trits_allocated(tx_trits);
+        let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trits_len());
+
+        tx.into_trits_allocated(tx_trit_buf.as_slice_mut());
         let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
         let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
         let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
@@ -278,7 +277,7 @@ impl StorageBackend for RocksDbBackendStorage {
         db.put_cf(
             &transaction_cf_hash_to_transaction,
             cast_slice(hash_buf.as_i8_slice()),
-            cast_slice(tx_trits.encode::<T5B1Buf>().as_i8_slice()),
+            cast_slice(tx_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
         )?;
 
         db.put_cf(
@@ -293,6 +292,47 @@ impl StorageBackend for RocksDbBackendStorage {
             cast_slice(tx.branch().to_inner().encode::<T5B1Buf>().as_i8_slice()),
         )?;
 
+        Ok(())
+    }
+
+    async fn insert_transactions(
+        &self,
+        transactions: HashMap<bee_bundle::Hash, bee_bundle::Transaction>,
+    ) -> Result<(), Self::StorageError> {
+        let db = self.0.connection.db.as_ref().unwrap();
+        let mut batch = rocksdb::WriteBatch::default();
+        let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
+        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
+        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
+
+        let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trits_len());
+        for (tx_hash, tx) in transactions {
+            tx.into_trits_allocated(tx_trit_buf.as_slice_mut());
+            let hash_buf = tx_hash.to_inner().encode::<T5B1Buf>();
+            batch.put_cf(
+                &transaction_cf_hash_to_transaction,
+                cast_slice(hash_buf.as_i8_slice()),
+                cast_slice(tx_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
+            )?;
+
+            batch.put_cf(
+                &transaction_cf_hash_to_trunk,
+                cast_slice(hash_buf.as_i8_slice()),
+                cast_slice(tx.trunk().to_inner().encode::<T5B1Buf>().as_i8_slice()),
+            )?;
+
+            batch.put_cf(
+                &transaction_cf_hash_to_branch,
+                cast_slice(hash_buf.as_i8_slice()),
+                cast_slice(tx.branch().to_inner().encode::<T5B1Buf>().as_i8_slice()),
+            )?;
+        }
+
+        let mut write_options = WriteOptions::default();
+        write_options.set_sync(false);
+        write_options.disable_wal(true);
+
+        db.write_opt(batch, &write_options)?;
         Ok(())
     }
 
@@ -420,49 +460,6 @@ impl StorageBackend for RocksDbBackendStorage {
         for hash in transaction_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
             batch.delete_cf(&transaction_cf_hash_to_transaction, cast_slice(hash_buf.as_i8_slice()))?;
-        }
-
-        let mut write_options = WriteOptions::default();
-        write_options.set_sync(false);
-        write_options.disable_wal(true);
-
-        db.write_opt(batch, &write_options)?;
-        Ok(())
-    }
-
-    async fn insert_transactions(
-        &self,
-        transactions: HashMap<bee_bundle::Hash, bee_bundle::Transaction>,
-    ) -> Result<(), Self::StorageError> {
-        let db = self.0.connection.db.as_ref().unwrap();
-        let mut batch = rocksdb::WriteBatch::default();
-        let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
-        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
-        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
-
-        let raw_tx_bytes: &mut [i8] = &mut [0 as i8; TRANSACTION_TRIT_LEN];
-        let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
-
-        for (tx_hash, tx) in transactions {
-            tx.into_trits_allocated(tx_trits);
-            let hash_buf = tx_hash.to_inner().encode::<T5B1Buf>();
-            batch.put_cf(
-                &transaction_cf_hash_to_transaction,
-                cast_slice(hash_buf.as_i8_slice()),
-                cast_slice(tx_trits.encode::<T5B1Buf>().as_i8_slice()),
-            )?;
-
-            batch.put_cf(
-                &transaction_cf_hash_to_trunk,
-                cast_slice(hash_buf.as_i8_slice()),
-                cast_slice(tx.trunk().to_inner().encode::<T5B1Buf>().as_i8_slice()),
-            )?;
-
-            batch.put_cf(
-                &transaction_cf_hash_to_branch,
-                cast_slice(hash_buf.as_i8_slice()),
-                cast_slice(tx.branch().to_inner().encode::<T5B1Buf>().as_i8_slice()),
-            )?;
         }
 
         let mut write_options = WriteOptions::default();
