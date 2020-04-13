@@ -162,24 +162,14 @@ impl Tangle {
         self.milestones.contains_key(index)
     }
 
-    /// Updates the first solid milestone index to `new_index`.
-    pub fn update_first_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
-        self.first_solid_milestone.store(*new_index, Ordering::Relaxed);
-    }
-
-    /// Updates the last solid milestone index to `new_index`.
-    pub fn update_last_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
-        self.last_solid_milestone.store(*new_index, Ordering::Relaxed);
-    }
-
-    /// Updates the last milestone index to `new_index`.
-    pub fn update_last_milestone_index(&'static self, new_index: MilestoneIndex) {
-        self.last_milestone.store(*new_index, Ordering::Relaxed);
-    }
-
     /// Retreives the first solid milestone index.
     pub fn get_first_solid_milestone_index(&'static self) -> MilestoneIndex {
         self.first_solid_milestone.load(Ordering::Relaxed).into()
+    }
+
+    /// Updates the first solid milestone index to `new_index`.
+    pub fn update_first_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
+        self.first_solid_milestone.store(*new_index, Ordering::Relaxed);
     }
 
     /// Retreives the last solid milestone index.
@@ -187,9 +177,24 @@ impl Tangle {
         self.last_solid_milestone.load(Ordering::Relaxed).into()
     }
 
+    /// Updates the last solid milestone index to `new_index`.
+    pub fn update_last_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
+        self.last_solid_milestone.store(*new_index, Ordering::Relaxed);
+    }
+
     /// Retreives the last milestone index.
     pub fn get_last_milestone_index(&'static self) -> MilestoneIndex {
         self.last_milestone.load(Ordering::Relaxed).into()
+    }
+
+    /// Updates the last milestone index to `new_index`.
+    pub fn update_last_milestone_index(&'static self, new_index: MilestoneIndex) {
+        self.last_milestone.store(*new_index, Ordering::Relaxed);
+    }
+
+    /// Checks if the tangle is synced or not
+    pub fn is_synced(&'static self) -> bool {
+        self.get_last_solid_milestone_index() == self.get_last_milestone_index()
     }
 
     /// Returns the current size of the Tangle.
