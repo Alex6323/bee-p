@@ -174,7 +174,7 @@ mod tests {
             shutdown_sender.send(()).unwrap();
         });
 
-        block_on(TransactionWorker::new().run(transaction_worker_receiver, shutdown_receiver, 10000));
+        block_on(TransactionWorker::new(10000).run(transaction_worker_receiver, shutdown_receiver));
 
         assert_eq!(tangle().size(), 1);
         assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
