@@ -110,7 +110,7 @@ impl TransactionWorker {
             };
 
             // build transaction
-            let built_transaction = match Transaction::from_trits(&transaction_buf) {
+            let transaction = match Transaction::from_trits(&transaction_buf) {
                 Ok(transaction) => transaction,
                 Err(e) => {
                     warn!(
@@ -122,19 +122,18 @@ impl TransactionWorker {
             };
 
             // calculate transaction hash
-            let tx_hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
-
-            // check if transactions is already present in the tangle before doing any further work
-            if tangle().contains_transaction(&tx_hash) {
-                debug!(
-                    "[TransactionWorker ] Transaction {} already present in the tangle.",
-                    &tx_hash
-                );
-                continue;
-            }
+            let hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
 
             // store transaction
-            tangle().insert_transaction(built_transaction, tx_hash).await;
+            match tangle().insert_transaction(transaction, hash).await {
+                Some(_) => {}
+                None => {
+                    debug!(
+                        "[TransactionWorker ] Transaction {} already present in the tangle.",
+                        &hash
+                    );
+                }
+            }
         }
 
         info!("[TransactionWorker ] Stopped.");
