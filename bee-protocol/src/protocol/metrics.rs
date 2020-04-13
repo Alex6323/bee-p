@@ -9,6 +9,7 @@ pub struct ProtocolMetrics {
     stale_transactions_received: AtomicU32,
     random_transactions_received: AtomicU32,
     new_transactions_received: AtomicU32,
+    known_transactions_received: AtomicU32,
 
     invalid_messages_received: AtomicU32,
 
@@ -60,6 +61,14 @@ impl ProtocolMetrics {
 
     pub fn new_transactions_received_inc(&self) -> u32 {
         self.new_transactions_received.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn known_transactions_received(&self) -> u32 {
+        self.known_transactions_received.load(Ordering::Relaxed)
+    }
+
+    pub fn known_transactions_received_inc(&self) -> u32 {
+        self.known_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn invalid_messages_received(&self) -> u32 {
@@ -148,16 +157,19 @@ mod tests {
         assert_eq!(metrics.stale_transactions_received(), 0);
         assert_eq!(metrics.random_transactions_received(), 0);
         assert_eq!(metrics.new_transactions_received(), 0);
+        assert_eq!(metrics.known_transactions_received(), 0);
 
         metrics.invalid_transactions_received_inc();
         metrics.stale_transactions_received_inc();
         metrics.random_transactions_received_inc();
         metrics.new_transactions_received_inc();
+        metrics.known_transactions_received_inc();
 
         assert_eq!(metrics.invalid_transactions_received(), 1);
         assert_eq!(metrics.stale_transactions_received(), 1);
         assert_eq!(metrics.random_transactions_received(), 1);
         assert_eq!(metrics.new_transactions_received(), 1);
+        assert_eq!(metrics.known_transactions_received(), 1);
     }
 
     #[test]
