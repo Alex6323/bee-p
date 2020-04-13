@@ -18,6 +18,7 @@ use sqlx::Error as SqlxError;
 use errors::SqlxBackendError;
 
 use crate::storage::{
+    AttachmentData,
     Connection,
     HashesToApprovers,
     MissingHashesToRCApprovers,
@@ -74,11 +75,8 @@ use crate::sqlx::statements::*;
 struct TransactionWrapper(bee_bundle::Transaction);
 struct MilestoneWrapper(Milestone);
 struct StateDeltaWrapper(StateDeltaMap);
-struct AttachmentData {
-    hash: Hash,
-    trunk: Hash,
-    branch: Hash,
-}
+struct SolidStateWrapper(bool);
+struct SnapshotIndexWrapper(u32);
 
 const CONNECTION_NOT_INITIALIZED: &str = "connection was not established and therefor is uninitialized.";
 
@@ -147,8 +145,8 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for MilestoneWrapper {
 
 impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for StateDeltaWrapper {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
-        let delta_str = row.get::<String, _>(MILESTONE_COL_DELTA);
-        let delta: StateDeltaMap = bincode::deserialize(&delta_str.as_bytes()).unwrap();
+        let delta_vec = row.get::<Vec<u8>, _>(MILESTONE_COL_DELTA);
+        let delta: StateDeltaMap = bincode::deserialize(&delta_vec).unwrap();
         Ok(Self(delta))
     }
 }
@@ -174,10 +172,24 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for AttachmentData {
     }
 }
 
+impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SolidStateWrapper {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
+        let solid = row.get::<i16, _>(TRANSACTION_COL_SOLID);
+        Ok(Self { 0: solid != 0 })
+    }
+}
+
+impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SnapshotIndexWrapper {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
+        let index: u32 = row.get::<i32, _>(TRANSACTION_COL_SNAPSHOT_INDEX) as u32;
+        Ok(Self { 0: index })
+    }
+}
+
 //TODO - Encoded data is T5B1, decodeds to T1B1,should be generic
 fn decode_bytes(u8_slice: &[u8], num_trits: usize) -> TritBuf {
     let decoded_column_i8_slice: &[i8] = cast_slice(u8_slice);
-    unsafe { Trits::<T5B1>::from_raw_unchecked(decoded_column_i8_slice, num_trits).to_buf::<T1B1Buf>() }
+    unsafe { Trits::<T5B1>::from_raw_unchecked(decoded_column_i8_slice, num_trits).encode::<T1B1Buf>() }
 }
 
 fn encode_buffer(buffer: TritBuf<T5B1Buf>) -> Vec<u8> {
@@ -402,15 +414,75 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-        transaction_hashes.iter().for_each(|hash| {
+        for hash in transaction_hashes.iter() {
             let _ = sqlx::query(UPDATE_SET_SOLID_STATEMENT)
                 .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
-                .execute(&mut conn_transaction);
-        });
+                .execute(&mut conn_transaction)
+                .await;
+        }
 
         conn_transaction.commit().await?;
 
         Ok(())
+    }
+
+    async fn get_transactions_solid_state(
+        &self,
+        transaction_hashes: Vec<Hash>,
+    ) -> Result<Vec<bool>, Self::StorageError> {
+        let pool = self
+            .0
+            .connection
+            .connection_pool
+            .as_ref()
+            .expect(CONNECTION_NOT_INITIALIZED);
+        let mut conn_transaction = pool.begin().await?;
+
+        let mut solid_states = vec![false; transaction_hashes.len()];
+
+        let statement = select_solid_states_by_hashes_statement(transaction_hashes.len());
+        let mut query = sqlx::query_as(&statement);
+
+        for hash in transaction_hashes {
+            query = query.bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
+        }
+
+        let solid_state_wrapper_vec: Vec<SolidStateWrapper> = query.fetch_all(&mut conn_transaction).await?;
+        for (index, solid_state_wrapper) in solid_state_wrapper_vec.iter().enumerate() {
+            solid_states[index] = solid_state_wrapper.0;
+        }
+
+        Ok(solid_states)
+    }
+
+    async fn get_transactions_snapshot_index(
+        &self,
+        transaction_hashes: Vec<Hash>,
+    ) -> Result<Vec<u32>, Self::StorageError> {
+        let pool = self
+            .0
+            .connection
+            .connection_pool
+            .as_ref()
+            .expect(CONNECTION_NOT_INITIALIZED);
+        let mut conn_transaction = pool.begin().await?;
+
+        let mut snapshot_indexes: Vec<u32> = vec![0; transaction_hashes.len()];
+
+        let statement = select_snapshot_indexes_by_hashes_statement(transaction_hashes.len());
+        let mut query = sqlx::query_as(&statement);
+
+        for hash in transaction_hashes {
+            query = query.bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
+        }
+
+        let snapshot_index_wrapper_vec: Vec<SnapshotIndexWrapper> = query.fetch_all(&mut conn_transaction).await?;
+
+        for (index, snapshot_index_wrapper) in snapshot_index_wrapper_vec.iter().enumerate() {
+            snapshot_indexes[index] = snapshot_index_wrapper.0;
+        }
+
+        Ok(snapshot_indexes)
     }
 
     async fn update_transactions_set_snapshot_index(
@@ -426,12 +498,13 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-        transaction_hashes.iter().for_each(|hash| {
+        for hash in transaction_hashes.iter() {
             let _ = sqlx::query(UPDATE_SNAPSHOT_INDEX_STATEMENT)
-                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
                 .bind(snapshot_index as i32)
-                .execute(&mut conn_transaction);
-        });
+                .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
+                .execute(&mut conn_transaction)
+                .await?;
+        }
 
         conn_transaction.commit().await?;
 
@@ -575,7 +648,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         sqlx::query(STORE_DELTA_STATEMENT)
             .bind(encoded)
-            .bind(index as i32)
+            .bind(index as u32)
             .execute(&mut conn_transaction)
             .await?;
 
@@ -593,7 +666,7 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
 
         let state_delta_wrapper: StateDeltaWrapper = sqlx::query_as(LOAD_DELTA_STATEMENT_BY_INDEX)
-            .bind(index as i32)
+            .bind(index as u32)
             .fetch_one(&mut pool)
             .await?;
 

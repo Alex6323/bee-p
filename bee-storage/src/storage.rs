@@ -36,8 +36,13 @@ pub type MissingHashesToRCApprovers = HashMap<Hash, HashSet<Rc<Hash>>>;
 //another way to decide on a check point where to store an address's delta if we want to snapshot
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct StateDeltaMap {
-    #[serde(flatten)]
-    address_to_delta: HashMap<Address, i64>,
+    pub address_to_delta: HashMap<Address, i64>,
+}
+
+pub struct AttachmentData {
+    pub hash: Hash,
+    pub trunk: Hash,
+    pub branch: Hash,
 }
 
 #[async_trait]
@@ -52,7 +57,6 @@ pub trait StorageBackend {
     type StorageError: Debug;
 
     fn new() -> Self;
-
     async fn establish_connection(&mut self, url: &str) -> Result<(), Self::StorageError>;
     async fn destroy_connection(&mut self) -> Result<(), Self::StorageError>;
     //This method is heavy weighted and will be used to populate Tangle struct on initialization
@@ -77,6 +81,16 @@ pub trait StorageBackend {
         transaction_hashes: HashSet<Hash>,
         snapshot_index: MilestoneIndex,
     ) -> Result<(), Self::StorageError>;
+
+    async fn get_transactions_solid_state(
+        &self,
+        transaction_hashes: Vec<Hash>,
+    ) -> Result<Vec<bool>, Self::StorageError>;
+
+    async fn get_transactions_snapshot_index(
+        &self,
+        transaction_hashes: Vec<Hash>,
+    ) -> Result<Vec<u32>, Self::StorageError>;
 
     //**Operations over milestone's schema**//
 

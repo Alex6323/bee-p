@@ -14,6 +14,7 @@ use crate::{
         PAYLOAD,
         TAG,
         TIMESTAMP,
+        TRANSACTION_TRIT_LEN,
         TRUNK,
         VALUE,
     },
@@ -55,7 +56,7 @@ impl From<num_conversions::TritsI64ConversionError> for TransactionError {
     }
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Transaction {
     pub(crate) payload: Payload,
     pub(crate) address: Address,
@@ -73,6 +74,8 @@ pub struct Transaction {
     pub(crate) attachment_ubts: Timestamp,
     pub(crate) nonce: Nonce,
 }
+
+impl Eq for Transaction {}
 
 impl Transaction {
     pub fn builder() -> TransactionBuilder {
@@ -149,7 +152,7 @@ impl Transaction {
         Ok(transaction)
     }
 
-    fn into_trits_allocated(&self, buf: &mut Trits<T1B1>) {
+    pub fn into_trits_allocated(&self, buf: &mut Trits<T1B1>) {
         buf.copy_raw_bytes(
             self.payload().to_inner(),
             PAYLOAD.trit_offset.start,
@@ -293,6 +296,10 @@ impl Transaction {
 
     pub fn is_head(&self) -> bool {
         self.index == self.last_index
+    }
+
+    pub const fn trits_len() -> usize {
+        TRANSACTION_TRIT_LEN
     }
 }
 
