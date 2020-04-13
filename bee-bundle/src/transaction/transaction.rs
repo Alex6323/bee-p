@@ -18,6 +18,7 @@ use crate::constants::{
     TAG,
     TAG_TRIT_LEN,
     TIMESTAMP,
+    TRANSACTION_TRIT_LEN,
     TRUNK,
     VALUE,
 };
@@ -273,6 +274,7 @@ macro_rules! impl_transaction_field {
                     &self.0
                 }
 
+                #[inline]
                 fn try_from_inner(val: Self::Inner) -> Result<Self, TransactionFieldError> {
                     if $field_name::is_trits_type() && val.num_trits() != $field_name::trit_len() {
                         Err(TransactionFieldError::FieldWrongLength)?
@@ -280,10 +282,11 @@ macro_rules! impl_transaction_field {
                     Ok(Self::from_inner_unchecked(val))
                 }
 
-                fn from_inner_unchecked(val: Self::Inner) -> Self {
+                fn from_inner_unchecked(val: Self::Inner) -> Self{
                     Self(val)
                 }
 
+                #[inline]
                 fn trit_len() -> usize {
                    Self::trit_len()
                 }
@@ -356,7 +359,7 @@ impl From<num_conversions::TritsI64ConversionError> for TransactionError {
     }
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Transaction {
     pub(crate) payload: Payload,
     pub(crate) address: Address,
@@ -374,6 +377,8 @@ pub struct Transaction {
     pub(crate) attachment_ubts: Timestamp,
     pub(crate) nonce: Nonce,
 }
+
+impl Eq for Transaction {}
 
 impl Transaction {
     pub fn builder() -> TransactionBuilder {
@@ -450,7 +455,7 @@ impl Transaction {
         Ok(transaction)
     }
 
-    fn into_trits_allocated(&self, buf: &mut Trits<T1B1>) {
+    pub fn into_trits_allocated(&self, mut buf: &mut Trits<T1B1>) {
         buf.copy_raw_bytes(
             self.payload().to_inner(),
             PAYLOAD.trit_offset.start,
@@ -594,6 +599,10 @@ impl Transaction {
 
     pub fn is_head(&self) -> bool {
         self.index == self.last_index
+    }
+
+    pub const fn trits_len() -> usize {
+        TRANSACTION_TRIT_LEN
     }
 }
 

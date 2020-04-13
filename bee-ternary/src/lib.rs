@@ -238,13 +238,13 @@ impl<T: Trit> Trits<T1B1<T>> {
         })
     }
 
-    pub fn copy_raw_bytes(&mut self, trits: &Trits<T1B1>, start: usize, end: usize) {
-        assert!(self.len() > start && self.len() >= end);
+    pub fn copy_raw_bytes(&mut self, trits: &Trits<T1B1>, offset: usize, count: usize) {
+        assert!(self.len() >= offset + count);
         unsafe {
             ptr::copy(
                 trits.as_i8_slice().as_ptr(),
-                self.as_i8_slice_mut().as_mut_ptr().offset(start as isize),
-                end,
+                self.as_i8_slice_mut().as_mut_ptr().offset(offset as isize),
+                count,
             );
         }
     }

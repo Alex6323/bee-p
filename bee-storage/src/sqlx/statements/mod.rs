@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 pub const TRANSACTION_COL_HASH: &str = "hash";
 pub const TRANSACTION_COL_VALUE: &str = "value";
 pub const TRANSACTION_COL_CURRENT_INDEX: &str = "current_index";
@@ -14,6 +16,8 @@ pub const TRANSACTION_COL_TIMESTAMP: &str = "timestamp";
 pub const TRANSACTION_COL_ATTACHMENT_TIMESTAMP: &str = "attachment_timestamp";
 pub const TRANSACTION_COL_ATTACHMENT_TIMESTAMP_UPPER: &str = "attachment_timestamp_upper";
 pub const TRANSACTION_COL_ATTACHMENT_TIMESTAMP_LOWER: &str = "attachment_timestamp_lower";
+pub const TRANSACTION_COL_SOLID: &str = "solid";
+pub const TRANSACTION_COL_SNAPSHOT_INDEX: &str = "snapshot_index";
 
 pub const MILESTONE_COL_ID: &str = "id";
 pub const MILESTONE_COL_HASH: &str = "hash";
@@ -48,9 +52,9 @@ RETURNING hash
         "#;
 */
 
-pub const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash hash=$2"#;
+pub const UPDATE_SNAPSHOT_INDEX_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash=$2"#;
 
-pub const UPDATE_SET_SOLID_STATEMENT: &str = r#"UPDATE transactions set snapshot_index =$1 WHERE hash=$2"#;
+pub const UPDATE_SET_SOLID_STATEMENT: &str = r#"UPDATE transactions set solid=1 WHERE hash=$1"#;
 
 pub const DELETE_TRANSACTION_STATEMENT: &str = r#"DELETE FROM transactions WHERE hash =$1"#;
 
@@ -70,8 +74,38 @@ pub const DELETE_MILESTONE_BY_HASH_STATEMENT: &str = r#"DELETE FROM milestones W
 pub const STORE_DELTA_STATEMENT: &str = r#"UPDATE milestones SET delta =$1 WHERE id =$2"#;
 
 pub const LOAD_DELTA_STATEMENT_BY_INDEX: &str = r#"
-SELECT hash,delta
+SELECT delta
 FROM milestones
-WHERE id = $1
-RETURNING
-hash, delta"#;
+WHERE id=$1
+        "#;
+
+pub fn select_solid_states_by_hashes_statement(num_hashes: usize) -> String {
+    format!(
+        r#"
+                SELECT solid
+                FROM transactions
+                WHERE hash in ({})"#,
+        placeholders(num_hashes, 1)
+    )
+}
+
+pub fn select_snapshot_indexes_by_hashes_statement(num_hashes: usize) -> String {
+    format!(
+        r#"
+                SELECT snapshot_index
+                FROM transactions
+                WHERE hash in ({})"#,
+        placeholders(num_hashes, 1)
+    )
+}
+
+fn placeholders(rows: usize, columns: usize) -> String {
+    (0..rows)
+        .format_with(",", |i, f| {
+            f(&format_args!(
+                "({})",
+                (1..=columns).format_with(",", |j, f| f(&format_args!("${}", j + (i * columns))))
+            ))
+        })
+        .to_string()
+}

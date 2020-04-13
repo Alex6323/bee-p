@@ -1,5 +1,3 @@
-extern crate rand;
-
 #[cfg(test)]
 mod tests {
     const BEE_TEST_DB_USER: &str = "test_db_user";
@@ -15,12 +13,16 @@ mod tests {
         process::Command,
     };
 
-    use crate::test::{
+    use crate::test::tests::{
         StorageTestRunner,
         TestableStorage,
     };
 
     impl TestableStorage for SqlxBackendStorage {
+        fn test_name() -> String {
+            String::from("sqlx")
+        }
+
         fn setup() -> () {
             let output = Command::new("src/sqlx/schemes/postgres/setup.sh")
                 .arg("src/sqlx/schemes/postgres/schema.sql")

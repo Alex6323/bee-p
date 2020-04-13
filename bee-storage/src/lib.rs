@@ -1,8 +1,10 @@
+mod rocksdb;
 mod sqlx;
 mod storage;
 mod test;
 
 pub use storage::{
+    AttachmentData,
     Connection,
     HashesToApprovers,
     MissingHashesToRCApprovers,
