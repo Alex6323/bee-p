@@ -14,7 +14,14 @@ use std::{
 };
 
 pub(crate) struct WaitPriorityQueue<T: Ord + Eq> {
+    // TODO use an RWLock ?
     inner: Mutex<(BinaryHeap<T>, VecDeque<Waker>)>,
+}
+
+impl<T: Ord + Eq> WaitPriorityQueue<T> {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.inner.lock().unwrap().0.is_empty()
+    }
 }
 
 impl<T: Ord + Eq> Default for WaitPriorityQueue<T> {

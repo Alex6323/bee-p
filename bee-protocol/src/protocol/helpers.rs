@@ -58,6 +58,10 @@ impl Protocol {
         Protocol::request_milestone(0);
     }
 
+    pub fn milestone_requester_is_empty() -> bool {
+        Protocol::get().milestone_requester_worker.0.is_empty()
+    }
+
     // TransactionBroadcast
 
     pub async fn send_transaction(epid: EndpointId, transaction: &[u8]) {
@@ -85,6 +89,10 @@ impl Protocol {
             .transaction_requester_worker
             .0
             .insert(TransactionRequesterWorkerEntry(hash, index));
+    }
+
+    pub fn transaction_requester_is_empty() -> bool {
+        Protocol::get().transaction_requester_worker.0.is_empty()
     }
 
     // MilestoneSolidifier
