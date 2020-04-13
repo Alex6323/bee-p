@@ -1,7 +1,8 @@
+mod fields;
 mod transaction;
 mod transactions;
 
-pub use transaction::{
+pub use fields::{
     Address,
     Hash,
     Index,
@@ -9,11 +10,13 @@ pub use transaction::{
     Payload,
     Tag,
     Timestamp,
+    TransactionField,
+    Value,
+};
+pub use transaction::{
     Transaction,
     TransactionBuilder,
     TransactionBuilderError,
     TransactionBuilders,
-    TransactionField,
-    Value,
 };
 pub use transactions::Transactions;
