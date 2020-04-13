@@ -5,7 +5,6 @@ use std::{
 
 #[derive(Debug, Clone)]
 pub enum RocksDbBackendError {
-    ConnectionBackendError(String),
     RocksDBError(String),
     TransactionDoesNotExist,
 }
@@ -13,7 +12,6 @@ pub enum RocksDbBackendError {
 impl fmt::Display for RocksDbBackendError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            RocksDbBackendError::ConnectionBackendError(ref reason) => write!(f, "Connection error: {:?}", reason),
             RocksDbBackendError::RocksDBError(ref reason) => write!(f, "RocksDB core error: {:?}", reason),
             RocksDbBackendError::TransactionDoesNotExist => write!(f, "Transaction does not exist"),
         }

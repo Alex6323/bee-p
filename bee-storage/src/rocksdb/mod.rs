@@ -168,22 +168,19 @@ impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
         opts.increase_parallelism(num_cpus::get() as i32);
         opts.set_compression_type(DBCompressionType::Zlib);
 
-        self.db = Some(
-            DB::open_cf_descriptors(
-                &opts,
-                url,
-                vec![
-                    transaction_cf_hash_to_trnsaction,
-                    transaction_cf_hash_to_solid,
-                    transaction_cf_hash_to_aprovees,
-                    transaction_cf_hash_to_snapshot_index,
-                    milestone_cf_hash_to_index,
-                    milestone_cf_index_to_hash,
-                    milestone_cf_hash_to_delta,
-                ],
-            )
-            .unwrap(),
-        );
+        self.db = Some(DB::open_cf_descriptors(
+            &opts,
+            url,
+            vec![
+                transaction_cf_hash_to_trnsaction,
+                transaction_cf_hash_to_solid,
+                transaction_cf_hash_to_aprovees,
+                transaction_cf_hash_to_snapshot_index,
+                milestone_cf_hash_to_index,
+                milestone_cf_index_to_hash,
+                milestone_cf_hash_to_delta,
+            ],
+        )?);
 
         Ok(())
     }
@@ -251,10 +248,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let mut missing_to_approvers = HashMap::new();
         let transaction_cf_hash_to_aprovees = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
-        for (key, value) in db
-            .iterator_cf(&transaction_cf_hash_to_aprovees, IteratorMode::Start)
-            .unwrap()
-        {
+        for (key, value) in db.iterator_cf(&transaction_cf_hash_to_aprovees, IteratorMode::Start)? {
             let (trunk, branch) = decode_aprovees(value.as_ref());
             let approver = decode_hash(key.as_ref());
 
@@ -305,10 +299,15 @@ impl StorageBackend for RocksDbBackendStorage {
         };
         aprovees.into_trits_allocated(aprovees_trit_buf.borrow_mut());
 
-        db.put_cf(
+        let mut write_options = WriteOptions::default();
+        write_options.set_sync(false);
+        write_options.disable_wal(true);
+
+        db.put_cf_opt(
             &transaction_cf_hash_to_aprovees,
             cast_slice(hash_buf.as_i8_slice()),
             cast_slice(aprovees_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
+            &write_options,
         )?;
 
         Ok(())
