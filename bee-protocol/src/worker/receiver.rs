@@ -1,8 +1,5 @@
 use crate::{
-    conf::{
-        slice_eq,
-        COORDINATOR_BYTES,
-    },
+    conf::slice_eq,
     message::{
         Handshake,
         Header,
@@ -112,8 +109,13 @@ impl ReceiverWorker {
             .send(SendMessage {
                 epid: self.peer.epid,
                 // TODO port
-                bytes: Handshake::new(1337, &COORDINATOR_BYTES, Protocol::get().conf.mwm, &SUPPORTED_VERSIONS)
-                    .into_full_bytes(),
+                bytes: Handshake::new(
+                    1337,
+                    &Protocol::get().conf.coordinator.public_key_bytes,
+                    Protocol::get().conf.mwm,
+                    &SUPPORTED_VERSIONS,
+                )
+                .into_full_bytes(),
                 responder: None,
             })
             .await
@@ -162,7 +164,10 @@ impl ReceiverWorker {
                         self.peer.epid,
                         ((timestamp - handshake.timestamp) as i64).abs()
                     );
-                } else if !slice_eq(&handshake.coordinator, &COORDINATOR_BYTES) {
+                } else if !slice_eq(
+                    &handshake.coordinator,
+                    &Protocol::get().conf.coordinator.public_key_bytes,
+                ) {
                     warn!("[Peer({})] Invalid handshake coordinator.", self.peer.epid);
                 } else if handshake.minimum_weight_magnitude != Protocol::get().conf.mwm {
                     warn!(

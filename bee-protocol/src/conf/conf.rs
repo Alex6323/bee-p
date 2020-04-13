@@ -1,5 +1,15 @@
+use bee_bundle::{
+    Address,
+    TransactionField,
+};
 use bee_crypto::SpongeType;
+use bee_ternary::{
+    T1B1Buf,
+    T5B1Buf,
+    TryteBuf,
+};
 
+use bytemuck::cast_slice;
 use serde::Deserialize;
 
 const CONF_MWM: u8 = 14;
@@ -21,12 +31,6 @@ const CONF_TRANSACTION_REQUESTER_WORKER_BOUND: usize = 1000;
 const CONF_MILESTONE_REQUESTER_WORKER_BOUND: usize = 1000;
 const CONF_RECEIVER_WORKER_BOUND: usize = 1000;
 const CONF_BROADCASTER_WORKER_BOUND: usize = 1000;
-
-// TODO Impl in term of CONF_COO_PUBLIC_KEY
-pub(crate) const COORDINATOR_BYTES: [u8; 49] = [
-    234, 56, 202, 174, 238, 197, 195, 253, 109, 14, 137, 227, 44, 144, 151, 188, 192, 45, 220, 236, 64, 168, 220, 197,
-    22, 199, 188, 1, 45, 11, 107, 190, 49, 84, 147, 176, 184, 108, 223, 189, 17, 167, 184, 240, 213, 170, 111, 34, 0,
-];
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -197,11 +201,31 @@ impl ProtocolConfBuilder {
             _ => SpongeType::Kerl,
         };
 
+        let coo_public_key_default = Address::from_inner_unchecked(
+            TryteBuf::try_from_str(CONF_COO_PUBLIC_KEY)
+                .unwrap()
+                .as_trits()
+                .encode::<T1B1Buf>(),
+        );
+
+        let coo_public_key =
+            match TryteBuf::try_from_str(&self.coordinator.public_key.unwrap_or(CONF_COO_PUBLIC_KEY.to_owned())) {
+                Ok(trytes) => match Address::try_from_inner(trytes.as_trits().encode::<T1B1Buf>()) {
+                    Ok(coo_public_key) => coo_public_key,
+                    Err(_) => coo_public_key_default,
+                },
+                Err(_) => coo_public_key_default,
+            };
+
+        let mut public_key_bytes = [0u8; 49];
+        public_key_bytes.copy_from_slice(cast_slice(coo_public_key.to_inner().encode::<T5B1Buf>().as_i8_slice()));
+
         ProtocolConf {
             mwm: self.mwm.unwrap_or(CONF_MWM),
             coordinator: ProtocolCoordinatorConf {
                 depth: self.coordinator.depth.unwrap_or(CONF_COO_DEPTH),
-                public_key: self.coordinator.public_key.unwrap_or(CONF_COO_PUBLIC_KEY.to_owned()),
+                public_key: coo_public_key,
+                public_key_bytes,
                 security_level: self.coordinator.security_level.unwrap_or(CONF_COO_SECURITY),
                 sponge_type: coo_sponge_type,
             },
@@ -267,7 +291,8 @@ impl ProtocolConfBuilder {
 #[derive(Clone)]
 pub struct ProtocolCoordinatorConf {
     pub(crate) depth: u8,
-    pub(crate) public_key: String,
+    pub(crate) public_key: Address,
+    pub(crate) public_key_bytes: [u8; 49],
     pub(crate) security_level: u8,
     pub(crate) sponge_type: SpongeType,
 }

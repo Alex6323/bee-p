@@ -14,6 +14,7 @@ bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { path = "../bee-ternary" }
 
 async-std = "1.5.0"
+bytemuck = "1.2.0"
 futures = "0.3.4"
 log = "0.4.8"
 serde = { version = "1.0.104", features = ["derive" ] }

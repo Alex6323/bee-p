@@ -1,9 +1,6 @@
 mod conf;
 
-pub(crate) use conf::{
-    slice_eq,
-    COORDINATOR_BYTES,
-};
+pub(crate) use conf::slice_eq;
 
 pub use conf::{
     ProtocolConf,
