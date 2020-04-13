@@ -12,10 +12,8 @@ use crate::{
         MilestoneValidatorWorker,
         MilestoneValidatorWorkerEvent,
     },
-    peer::{
-        Peer,
-        PeerMetrics,
-    },
+    peer::Peer,
+    protocol::ProtocolMetrics,
     worker::{
         BroadcasterWorker,
         BroadcasterWorkerEvent,
@@ -74,8 +72,9 @@ use log::warn;
 static mut PROTOCOL: *const Protocol = ptr::null();
 
 pub struct Protocol {
-    pub(crate) network: Network,
     pub(crate) conf: ProtocolConf,
+    pub(crate) network: Network,
+    pub(crate) metrics: ProtocolMetrics,
     pub(crate) transaction_worker: (mpsc::Sender<TransactionWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) transaction_responder_worker: (
         mpsc::Sender<TransactionResponderWorkerEvent>,
@@ -107,7 +106,7 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub fn init(network: Network, conf: ProtocolConf) {
+    pub fn init(conf: ProtocolConf, network: Network) {
         if unsafe { !PROTOCOL.is_null() } {
             warn!("[Protocol ] Already initialized.");
             return;
@@ -142,8 +141,9 @@ impl Protocol {
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = mpsc::channel(1);
 
         let protocol = Protocol {
-            network: network.clone(),
             conf,
+            network: network.clone(),
+            metrics: ProtocolMetrics::new(),
             transaction_worker: (transaction_worker_tx, Mutex::new(Some(transaction_worker_shutdown_tx))),
             transaction_responder_worker: (
                 transaction_responder_worker_tx,
@@ -285,20 +285,18 @@ impl Protocol {
         }
     }
 
-    pub fn register(peer: Arc<Peer>, metrics: Arc<PeerMetrics>) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
+    pub fn register(peer: Arc<Peer>) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
         //TODO check if not already added ?
         // ReceiverWorker
         let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().conf.workers.receiver_worker_bound);
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
-        spawn(
-            ReceiverWorker::new(Protocol::get().network.clone(), peer, metrics).run(receiver_rx, receiver_shutdown_rx),
-        );
+        spawn(ReceiverWorker::new(Protocol::get().network.clone(), peer).run(receiver_rx, receiver_shutdown_rx));
 
         (receiver_tx, receiver_shutdown_tx)
     }
 
-    pub(crate) async fn senders_add(network: Network, peer: Arc<Peer>, metrics: Arc<PeerMetrics>) {
+    pub(crate) async fn senders_add(network: Network, peer: Arc<Peer>) {
         //TODO check if not already added
 
         // SenderWorker MilestoneRequest
@@ -307,7 +305,7 @@ impl Protocol {
         let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
 
         spawn(
-            SenderWorker::<MilestoneRequest>::new(network.clone(), peer.clone(), metrics.clone())
+            SenderWorker::<MilestoneRequest>::new(network.clone(), peer.clone())
                 .run(milestone_request_rx, milestone_request_shutdown_rx),
         );
 
@@ -317,7 +315,7 @@ impl Protocol {
         let (transaction_broadcast_shutdown_tx, transaction_broadcast_shutdown_rx) = oneshot::channel();
 
         spawn(
-            SenderWorker::<TransactionBroadcast>::new(network.clone(), peer.clone(), metrics.clone())
+            SenderWorker::<TransactionBroadcast>::new(network.clone(), peer.clone())
                 .run(transaction_broadcast_rx, transaction_broadcast_shutdown_rx),
         );
 
@@ -327,7 +325,7 @@ impl Protocol {
         let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
 
         spawn(
-            SenderWorker::<TransactionRequest>::new(network.clone(), peer.clone(), metrics.clone())
+            SenderWorker::<TransactionRequest>::new(network.clone(), peer.clone())
                 .run(transaction_request_rx, transaction_request_shutdown_rx),
         );
 
@@ -335,10 +333,7 @@ impl Protocol {
         let (heartbeat_tx, heartbeat_rx) = mpsc::channel(Protocol::get().conf.workers.heartbeat_send_worker_bound);
         let (heartbeat_shutdown_tx, heartbeat_shutdown_rx) = oneshot::channel();
 
-        spawn(
-            SenderWorker::<Heartbeat>::new(network.clone(), peer.clone(), metrics.clone())
-                .run(heartbeat_rx, heartbeat_shutdown_rx),
-        );
+        spawn(SenderWorker::<Heartbeat>::new(network.clone(), peer.clone()).run(heartbeat_rx, heartbeat_shutdown_rx));
 
         let context = SenderContext::new(
             (milestone_request_tx, milestone_request_shutdown_tx),

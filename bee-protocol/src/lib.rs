@@ -13,8 +13,8 @@ pub use milestone::{
     Milestone,
     MilestoneIndex,
 };
-pub use peer::{
-    Peer,
-    PeerMetrics,
+pub use peer::Peer;
+pub use protocol::{
+    Protocol,
+    ProtocolMetrics,
 };
-pub use protocol::Protocol;

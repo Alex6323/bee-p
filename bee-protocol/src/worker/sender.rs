@@ -6,10 +6,7 @@ use crate::{
         TransactionBroadcast,
         TransactionRequest,
     },
-    peer::{
-        Peer,
-        PeerMetrics,
-    },
+    peer::Peer,
     protocol::Protocol,
 };
 
@@ -62,18 +59,16 @@ impl SenderContext {
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
     peer: Arc<Peer>,
-    metrics: Arc<PeerMetrics>,
     _message_type: PhantomData<M>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
-            pub(crate) fn new(network: Network, peer: Arc<Peer>, metrics: Arc<PeerMetrics>) -> Self {
+            pub(crate) fn new(network: Network, peer: Arc<Peer>) -> Self {
                 Self {
                     network,
                     peer,
-                    metrics,
                     _message_type: PhantomData,
                 }
             }
@@ -116,7 +111,7 @@ macro_rules! implement_sender_worker {
                                 {
                                     Ok(_) => {
                                         self.peer.metrics.$incrementor();
-                                        self.metrics.$incrementor();
+                                        Protocol::get().metrics.$incrementor();
                                     }
                                     Err(e) => {
                                         warn!(

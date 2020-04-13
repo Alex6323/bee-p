@@ -23,7 +23,6 @@ use bee_peering::{
 };
 use bee_protocol::{
     Peer,
-    PeerMetrics,
     Protocol,
 };
 use bee_snapshot::{
@@ -55,7 +54,6 @@ pub struct Node {
     events: EventSubscriber,
     // TODO real type ?
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>, Arc<Peer>)>,
-    metrics: Arc<PeerMetrics>,
 }
 
 impl Node {
@@ -66,7 +64,6 @@ impl Node {
             shutdown,
             events,
             peers: HashMap::new(),
-            metrics: Arc::new(PeerMetrics::new()),
         }
     }
 
@@ -91,7 +88,7 @@ impl Node {
 
     async fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
         let peer = Arc::new(Peer::new(epid, address, origin));
-        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(peer.clone(), self.metrics.clone());
+        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(peer.clone());
 
         self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx, peer));
     }
@@ -145,7 +142,7 @@ impl Node {
 
         bee_tangle::init();
 
-        Protocol::init(self.network.clone(), self.conf.protocol.clone());
+        Protocol::init(self.conf.protocol.clone(), self.network.clone());
 
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf
