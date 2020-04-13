@@ -58,15 +58,28 @@ use rocksdb::{
     WriteOptions,
     DB,
 };
+use std::borrow::BorrowMut;
 
 const TRANSACTION_CF_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
 const TRANSACTION_CF_HASH_TO_SOLID: &str = "transaction_hash_to_solid";
 const TRANSACTION_CF_HASH_TO_SNAPSHOT_INDEX: &str = "transaction_hash_to_snapshot_index";
-const TRANSACTION_CF_HASH_TO_TRUNK: &str = "transaction_hash_to_trunk";
-const TRANSACTION_CF_HASH_TO_BRANCH: &str = "transaction_hash_to_branch";
+const TRANSACTION_CF_HASH_TO_APROVEES: &str = "transaction_hash_to_aprovees";
 const MILESTONE_CF_HASH_TO_INDEX: &str = "milestone_hash_to_index";
 const MILESTONE_CF_INDEX_TO_HASH: &str = "milestone_index_to_hash";
 const MILESTONE_CF_HASH_TO_DELTA: &str = "milestone_hash_to_delta";
+
+struct Approvees<'a> {
+    trunk: &'a Hash,
+    branch: &'a Hash,
+}
+
+impl<'a> Approvees<'a> {
+    fn into_trits_allocated(&self, buf: &mut TritBuf<T1B1Buf>) {
+        buf.copy_raw_bytes(self.trunk.as_trits(), 0, Hash::trit_len());
+
+        buf.copy_raw_bytes(self.branch.as_trits(), Hash::trit_len(), Hash::trit_len());
+    }
+}
 
 #[inline]
 fn decode_transaction(buff: &[u8]) -> Transaction {
@@ -88,6 +101,31 @@ fn decode_hash(buff: &[u8]) -> Hash {
     };
 
     hash
+}
+
+#[inline]
+fn decode_aprovees(buff: &[u8]) -> (Hash, Hash) {
+    let mut trunk = Hash::zeros();
+    let mut branch = Hash::zeros();
+    let trits =
+        unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(buff), Hash::trit_len() * 2) }.encode::<T1B1Buf>();
+    unsafe {
+        ptr::copy(
+            trits.as_i8_slice().as_ptr(),
+            cast_slice_mut(trunk.0.as_mut()).as_mut_ptr(),
+            Hash::trit_len(),
+        )
+    };
+
+    unsafe {
+        ptr::copy(
+            trits.as_i8_slice().as_ptr().offset(Hash::trit_len() as isize),
+            cast_slice_mut(branch.0.as_mut()).as_mut_ptr(),
+            Hash::trit_len(),
+        )
+    };
+
+    (trunk, branch)
 }
 
 pub struct RocksDBBackendConnection {
@@ -112,11 +150,8 @@ impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
         let transaction_cf_hash_to_snapshot_index =
             ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_SNAPSHOT_INDEX, Options::default());
 
-        let transaction_cf_hash_to_trunk =
-            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_TRUNK, Options::default());
-
-        let transaction_cf_hash_to_branch =
-            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_BRANCH, Options::default());
+        let transaction_cf_hash_to_aprovees =
+            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_APROVEES, Options::default());
 
         let milestone_cf_hash_to_index = ColumnFamilyDescriptor::new(MILESTONE_CF_HASH_TO_INDEX, Options::default());
         let milestone_cf_index_to_hash = ColumnFamilyDescriptor::new(MILESTONE_CF_INDEX_TO_HASH, Options::default());
@@ -140,8 +175,7 @@ impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
                 vec![
                     transaction_cf_hash_to_trnsaction,
                     transaction_cf_hash_to_solid,
-                    transaction_cf_hash_to_trunk,
-                    transaction_cf_hash_to_branch,
+                    transaction_cf_hash_to_aprovees,
                     transaction_cf_hash_to_snapshot_index,
                     milestone_cf_hash_to_index,
                     milestone_cf_index_to_hash,
@@ -188,21 +222,20 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let mut hash_to_approvers = HashMap::new();
 
-        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
-        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
+        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
 
         for (key, value) in db
             .iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start)
             .unwrap()
-            .chain(
-                db.iterator_cf(&transaction_cf_hash_to_branch, IteratorMode::Start)
-                    .unwrap(),
-            )
         {
-            let approvee = decode_hash(value.as_ref());
+            let (trunk, branch) = decode_aprovees(value.as_ref());
             let approver = decode_hash(key.as_ref());
             hash_to_approvers
-                .entry(approvee)
+                .entry(trunk)
+                .or_insert(HashSet::new())
+                .insert(approver);
+            hash_to_approvers
+                .entry(branch)
                 .or_insert(HashSet::new())
                 .insert(approver);
         }
@@ -217,23 +250,26 @@ impl StorageBackend for RocksDbBackendStorage {
         let db = self.0.connection.db.as_ref().unwrap();
 
         let mut missing_to_approvers = HashMap::new();
-        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
-        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
+        let transaction_cf_hash_to_aprovees = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
         for (key, value) in db
-            .iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start)
+            .iterator_cf(&transaction_cf_hash_to_aprovees, IteratorMode::Start)
             .unwrap()
-            .chain(
-                db.iterator_cf(&transaction_cf_hash_to_branch, IteratorMode::Start)
-                    .unwrap(),
-            )
         {
-            let approvee = decode_hash(value.as_ref());
+            let (trunk, branch) = decode_aprovees(value.as_ref());
             let approver = decode_hash(key.as_ref());
 
-            if !all_hashes.contains(&approvee) {
+            if !all_hashes.contains(&trunk) {
                 let optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(approver));
                 missing_to_approvers
-                    .entry(approvee)
+                    .entry(trunk)
+                    .or_insert(HashSet::new())
+                    .insert(optional_approver_rc.clone().unwrap());
+            }
+
+            if !all_hashes.contains(&branch) {
+                let optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(approver));
+                missing_to_approvers
+                    .entry(branch)
                     .or_insert(HashSet::new())
                     .insert(optional_approver_rc.clone().unwrap());
             }
@@ -250,11 +286,11 @@ impl StorageBackend for RocksDbBackendStorage {
         let db = self.0.connection.db.as_ref().unwrap();
 
         let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trits_len());
+        let mut aprovees_trit_buf = TritBuf::<T1B1Buf>::zeros(Hash::trit_len() * 2);
 
         tx.into_trits_allocated(tx_trit_buf.as_slice_mut());
         let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
-        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
-        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
+        let transaction_cf_hash_to_aprovees = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
 
         let hash_buf = tx_hash.to_inner().encode::<T5B1Buf>();
         db.put_cf(
@@ -263,16 +299,16 @@ impl StorageBackend for RocksDbBackendStorage {
             cast_slice(tx_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
         )?;
 
-        db.put_cf(
-            &transaction_cf_hash_to_trunk,
-            cast_slice(hash_buf.as_i8_slice()),
-            cast_slice(tx.trunk().to_inner().encode::<T5B1Buf>().as_i8_slice()),
-        )?;
+        let aprovees = Approvees {
+            trunk: tx.trunk(),
+            branch: tx.branch(),
+        };
+        aprovees.into_trits_allocated(aprovees_trit_buf.borrow_mut());
 
         db.put_cf(
-            &transaction_cf_hash_to_branch,
+            &transaction_cf_hash_to_aprovees,
             cast_slice(hash_buf.as_i8_slice()),
-            cast_slice(tx.branch().to_inner().encode::<T5B1Buf>().as_i8_slice()),
+            cast_slice(aprovees_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
         )?;
 
         Ok(())
@@ -285,10 +321,11 @@ impl StorageBackend for RocksDbBackendStorage {
         let db = self.0.connection.db.as_ref().unwrap();
         let mut batch = rocksdb::WriteBatch::default();
         let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
-        let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_TRUNK).unwrap();
-        let transaction_cf_hash_to_branch = db.cf_handle(TRANSACTION_CF_HASH_TO_BRANCH).unwrap();
+        let transaction_cf_hash_to_aprovees = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
 
         let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trits_len());
+        let mut aprovees_trit_buf = TritBuf::<T1B1Buf>::zeros(Hash::trit_len() * 2);
+
         for (tx_hash, tx) in transactions {
             tx.into_trits_allocated(tx_trit_buf.as_slice_mut());
             let hash_buf = tx_hash.to_inner().encode::<T5B1Buf>();
@@ -298,16 +335,16 @@ impl StorageBackend for RocksDbBackendStorage {
                 cast_slice(tx_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
             )?;
 
-            batch.put_cf(
-                &transaction_cf_hash_to_trunk,
-                cast_slice(hash_buf.as_i8_slice()),
-                cast_slice(tx.trunk().to_inner().encode::<T5B1Buf>().as_i8_slice()),
-            )?;
+            let aprovees = Approvees {
+                trunk: tx.trunk(),
+                branch: tx.branch(),
+            };
+            aprovees.into_trits_allocated(aprovees_trit_buf.borrow_mut());
 
             batch.put_cf(
-                &transaction_cf_hash_to_branch,
+                &transaction_cf_hash_to_aprovees,
                 cast_slice(hash_buf.as_i8_slice()),
-                cast_slice(tx.branch().to_inner().encode::<T5B1Buf>().as_i8_slice()),
+                cast_slice(aprovees_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
             )?;
         }
 

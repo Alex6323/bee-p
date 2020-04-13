@@ -45,7 +45,6 @@ pub mod tests {
     }
 
     impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
-
         fn test_insert_one_transaction() {
             let mut storage = T::new();
 
