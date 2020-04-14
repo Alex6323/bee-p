@@ -206,6 +206,7 @@ forward_sponge_impl!(CurlP27, CurlP81);
 mod tests {
     use super::*;
     use bee_ternary::{
+        T1B1,
         T1B1Buf,
         T3B1Buf,
         TryteBuf,
@@ -305,11 +306,15 @@ KXRVLFETGUTUWBCNCC9DWO99JQTEI9YXVOZHWELSYP9SG9KN9WCKXOVTEFHFH9EFZJKFYCZKQPPBXYSG
     fn verify_curlp27_hash_trits() {
         let mut curlp27 = CurlP27::new();
 
-        let input_trits = TritBuf::<T1B1Buf>::from_i8_unchecked(INPUT_TRITS);
-        let expected_hash = TritBuf::<T1B1Buf>::from_i8_unchecked(EXPECTED_CURLP27_HASH_TRITS);
+        let input_trits = unsafe {
+            Trits::<T1B1>::from_raw_unchecked(INPUT_TRITS, INPUT_TRITS.len())
+        };
+        let expected_hash = unsafe {
+            Trits::<T1B1>::from_raw_unchecked(EXPECTED_CURLP27_HASH_TRITS, EXPECTED_CURLP27_HASH_TRITS.len())
+        };
 
         let calculated_hash = curlp27.digest(&input_trits);
         assert!(calculated_hash.is_ok(), "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail");
-        assert_eq!(expected_hash, calculated_hash.unwrap());
+        assert_eq!(expected_hash, &*calculated_hash.unwrap());
     }
 }
