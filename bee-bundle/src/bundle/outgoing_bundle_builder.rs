@@ -5,8 +5,8 @@ use crate::{
         Hash,
         Index,
         TransactionBuilder,
-        TransactionBuilderError,
         TransactionBuilders,
+        TransactionError,
         TransactionField,
         Transactions,
     },
@@ -26,7 +26,7 @@ pub enum OutgoingBundleBuilderError {
     UnsignedInput,
     InvalidValue(i64),
     MissingTransactionBuilderField(&'static str),
-    FailedTransactionBuild(TransactionBuilderError),
+    TransactionError(TransactionError),
 }
 
 pub trait OutgoingBundleBuilderStage {}
@@ -228,7 +228,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
             transactions.push(
                 transaction_builder
                     .build()
-                    .map_err(|e| OutgoingBundleBuilderError::FailedTransactionBuild(e))?,
+                    .map_err(|e| OutgoingBundleBuilderError::TransactionError(e))?,
             );
         }
 

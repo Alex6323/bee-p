@@ -45,15 +45,9 @@ use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub enum TransactionError {
-    TransactionDeserializationError,
-    TransactionInvalidValue,
-    TransactionBuilderError(TransactionBuilderError),
-}
-
-impl From<num_conversions::TritsI64ConversionError> for TransactionError {
-    fn from(_: num_conversions::TritsI64ConversionError) -> Self {
-        TransactionError::TransactionInvalidValue
-    }
+    InvalidNumericField(&'static str, num_conversions::TritsI64ConversionError),
+    MissingField(&'static str),
+    InvalidValue(i64),
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -85,35 +79,6 @@ impl Transaction {
     pub fn from_trits(buffer: &Trits<impl RawEncoding<Trit = Btrit> + ?Sized>) -> Result<Self, TransactionError> {
         let trits = buffer.encode::<T1B1Buf>();
 
-        let value =
-            i64::try_from(trits[VALUE.trit_offset.start..VALUE.trit_offset.start + VALUE.trit_offset.length].to_buf())?;
-
-        let timestamp = i64::try_from(
-            trits[TIMESTAMP.trit_offset.start..TIMESTAMP.trit_offset.start + TIMESTAMP.trit_offset.length].to_buf(),
-        )? as u64;
-        let index =
-            i64::try_from(trits[INDEX.trit_offset.start..INDEX.trit_offset.start + INDEX.trit_offset.length].to_buf())?
-                as usize;
-        let last_index = i64::try_from(
-            trits[LAST_INDEX.trit_offset.start..LAST_INDEX.trit_offset.start + LAST_INDEX.trit_offset.length].to_buf(),
-        )? as usize;
-
-        let attachment_ts = i64::try_from(
-            trits[ATTACHMENT_TS.trit_offset.start..ATTACHMENT_TS.trit_offset.start + ATTACHMENT_TS.trit_offset.length]
-                .to_buf(),
-        )? as u64;
-
-        let attachment_lbts = i64::try_from(
-            trits[ATTACHMENT_LBTS.trit_offset.start
-                ..ATTACHMENT_LBTS.trit_offset.start + ATTACHMENT_LBTS.trit_offset.length]
-                .to_buf(),
-        )? as u64;
-        let attachment_ubts = i64::try_from(
-            trits[ATTACHMENT_UBTS.trit_offset.start
-                ..ATTACHMENT_UBTS.trit_offset.start + ATTACHMENT_UBTS.trit_offset.length]
-                .to_buf(),
-        )? as u64;
-
         let transaction = Self::builder()
             .with_payload(Payload(
                 trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.start + PAYLOAD.trit_offset.length].to_buf(),
@@ -121,17 +86,46 @@ impl Transaction {
             .with_address(Address(
                 trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.start + ADDRESS.trit_offset.length].to_buf(),
             ))
-            .with_value(Value::from_inner_unchecked(value))
+            .with_value(Value::from_inner_unchecked(
+                i64::try_from(
+                    trits[VALUE.trit_offset.start..VALUE.trit_offset.start + VALUE.trit_offset.length].to_buf(),
+                )
+                .map_err(|e| TransactionError::InvalidNumericField("value", e))?,
+            ))
             .with_obsolete_tag(Tag(trits[OBSOLETE_TAG.trit_offset.start
                 ..OBSOLETE_TAG.trit_offset.start + OBSOLETE_TAG.trit_offset.length]
                 .to_buf()))
-            .with_timestamp(Timestamp::from_inner_unchecked(timestamp))
-            .with_index(Index::from_inner_unchecked(index))
-            .with_last_index(Index::from_inner_unchecked(last_index))
+            .with_timestamp(Timestamp::from_inner_unchecked(
+                i64::try_from(
+                    trits[TIMESTAMP.trit_offset.start..TIMESTAMP.trit_offset.start + TIMESTAMP.trit_offset.length]
+                        .to_buf(),
+                )
+                .map_err(|e| TransactionError::InvalidNumericField("timestamp", e))? as u64,
+            ))
+            .with_index(Index::from_inner_unchecked(
+                i64::try_from(
+                    trits[INDEX.trit_offset.start..INDEX.trit_offset.start + INDEX.trit_offset.length].to_buf(),
+                )
+                .map_err(|e| TransactionError::InvalidNumericField("index", e))? as usize,
+            ))
+            .with_last_index(Index::from_inner_unchecked(
+                i64::try_from(
+                    trits[LAST_INDEX.trit_offset.start..LAST_INDEX.trit_offset.start + LAST_INDEX.trit_offset.length]
+                        .to_buf(),
+                )
+                .map_err(|e| TransactionError::InvalidNumericField("last_index", e))? as usize,
+            ))
             .with_tag(Tag(trits
                 [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
                 .to_buf()))
-            .with_attachment_ts(Timestamp::from_inner_unchecked(attachment_ts))
+            .with_attachment_ts(Timestamp::from_inner_unchecked(
+                i64::try_from(
+                    trits[ATTACHMENT_TS.trit_offset.start
+                        ..ATTACHMENT_TS.trit_offset.start + ATTACHMENT_TS.trit_offset.length]
+                        .to_buf(),
+                )
+                .map_err(|e| TransactionError::InvalidNumericField("attachment_ts", e))? as u64,
+            ))
             .with_bundle(Hash::from_inner_unchecked(
                 trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
@@ -141,13 +135,26 @@ impl Transaction {
             .with_branch(Hash::from_inner_unchecked(
                 trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
             ))
-            .with_attachment_lbts(Timestamp::from_inner_unchecked(attachment_lbts))
-            .with_attachment_ubts(Timestamp::from_inner_unchecked(attachment_ubts))
+            .with_attachment_lbts(Timestamp::from_inner_unchecked(
+                i64::try_from(
+                    trits[ATTACHMENT_LBTS.trit_offset.start
+                        ..ATTACHMENT_LBTS.trit_offset.start + ATTACHMENT_LBTS.trit_offset.length]
+                        .to_buf(),
+                )
+                .map_err(|e| TransactionError::InvalidNumericField("attachment_lbts", e))? as u64,
+            ))
+            .with_attachment_ubts(Timestamp::from_inner_unchecked(
+                i64::try_from(
+                    trits[ATTACHMENT_UBTS.trit_offset.start
+                        ..ATTACHMENT_UBTS.trit_offset.start + ATTACHMENT_UBTS.trit_offset.length]
+                        .to_buf(),
+                )
+                .map_err(|e| TransactionError::InvalidNumericField("attachment_ubts", e))? as u64,
+            ))
             .with_nonce(Nonce(
                 trits[NONCE.trit_offset.start..NONCE.trit_offset.start + NONCE.trit_offset.length].to_buf(),
             ))
-            .build()
-            .map_err(|e| TransactionError::TransactionBuilderError(e))?;
+            .build()?;
 
         Ok(transaction)
     }
@@ -305,12 +312,6 @@ impl Transaction {
 
 /// Transaction builder
 
-#[derive(Debug)]
-pub enum TransactionBuilderError {
-    MissingField(&'static str),
-    InvalidValue(i64),
-}
-
 #[derive(Default)]
 pub struct TransactionBuilder {
     pub(crate) payload: Option<Payload>,
@@ -409,45 +410,37 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Transaction, TransactionBuilderError> {
-        let value = self
-            .value
-            .as_ref()
-            .ok_or(TransactionBuilderError::MissingField("value"))?
-            .0;
+    pub fn build(self) -> Result<Transaction, TransactionError> {
+        let value = self.value.as_ref().ok_or(TransactionError::MissingField("value"))?.0;
 
         if value.abs() > IOTA_SUPPLY {
-            Err(TransactionBuilderError::InvalidValue(value))?;
+            Err(TransactionError::InvalidValue(value))?;
         }
 
         Ok(Transaction {
-            payload: self.payload.ok_or(TransactionBuilderError::MissingField("payload"))?,
-            address: self.address.ok_or(TransactionBuilderError::MissingField("address"))?,
+            payload: self.payload.ok_or(TransactionError::MissingField("payload"))?,
+            address: self.address.ok_or(TransactionError::MissingField("address"))?,
             value: Value(value),
             obsolete_tag: self
                 .obsolete_tag
-                .ok_or(TransactionBuilderError::MissingField("obsolete_tag"))?,
-            timestamp: self
-                .timestamp
-                .ok_or(TransactionBuilderError::MissingField("timestamp"))?,
-            index: self.index.ok_or(TransactionBuilderError::MissingField("index"))?,
-            last_index: self
-                .last_index
-                .ok_or(TransactionBuilderError::MissingField("last_index"))?,
-            tag: self.tag.ok_or(TransactionBuilderError::MissingField("tag"))?,
-            bundle: self.bundle.ok_or(TransactionBuilderError::MissingField("bundle"))?,
-            trunk: self.trunk.ok_or(TransactionBuilderError::MissingField("trunk"))?,
-            branch: self.branch.ok_or(TransactionBuilderError::MissingField("branch"))?,
+                .ok_or(TransactionError::MissingField("obsolete_tag"))?,
+            timestamp: self.timestamp.ok_or(TransactionError::MissingField("timestamp"))?,
+            index: self.index.ok_or(TransactionError::MissingField("index"))?,
+            last_index: self.last_index.ok_or(TransactionError::MissingField("last_index"))?,
+            tag: self.tag.ok_or(TransactionError::MissingField("tag"))?,
+            bundle: self.bundle.ok_or(TransactionError::MissingField("bundle"))?,
+            trunk: self.trunk.ok_or(TransactionError::MissingField("trunk"))?,
+            branch: self.branch.ok_or(TransactionError::MissingField("branch"))?,
             attachment_ts: self
                 .attachment_ts
-                .ok_or(TransactionBuilderError::MissingField("attachment_ts"))?,
+                .ok_or(TransactionError::MissingField("attachment_ts"))?,
             attachment_lbts: self
                 .attachment_lbts
-                .ok_or(TransactionBuilderError::MissingField("attachment_lbts"))?,
+                .ok_or(TransactionError::MissingField("attachment_lbts"))?,
             attachment_ubts: self
                 .attachment_ubts
-                .ok_or(TransactionBuilderError::MissingField("attachment_ubts"))?,
-            nonce: self.nonce.ok_or(TransactionBuilderError::MissingField("nonce"))?,
+                .ok_or(TransactionError::MissingField("attachment_ubts"))?,
+            nonce: self.nonce.ok_or(TransactionError::MissingField("nonce"))?,
         })
     }
 }

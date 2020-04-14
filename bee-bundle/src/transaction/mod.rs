@@ -16,7 +16,7 @@ pub use fields::{
 pub use transaction::{
     Transaction,
     TransactionBuilder,
-    TransactionBuilderError,
     TransactionBuilders,
+    TransactionError,
 };
 pub use transactions::Transactions;
