@@ -13,6 +13,7 @@ mod sponge;
 mod sponge_type;
 
 pub use curlp::{
+    CurlP,
     CurlP27,
     CurlP81,
 };
