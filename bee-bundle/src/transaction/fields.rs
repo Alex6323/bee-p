@@ -158,6 +158,19 @@ impl Hash {
         unsafe { Trits::from_raw_unchecked(self.as_bytes(), 243) }
     }
 
+    pub fn weight(&self) -> u8 {
+        let mut weight = 0u8;
+
+        for i in (0..self.0.len()).rev() {
+            if self.0[i] != 0 {
+                break;
+            }
+            weight = weight + 1;
+        }
+
+        weight
+    }
+
     pub fn trit_len() -> usize {
         HASH_TRIT_LEN
     }
@@ -317,3 +330,20 @@ macro_rules! impl_hash_trait {
 impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Tag, Nonce);
 impl_transaction_field!(Payload, Address, Tag, Nonce, Index, Value, Timestamp);
 impl_hash_trait!(Address);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hash_weigth() {
+        for i in 0..20 {
+            let mut trits = [0i8; 243];
+            trits[243 - i - 1] = 1;
+            unsafe {
+                let hash = Hash::try_from_inner(Trits::<T1B1>::from_raw_unchecked(&trits, 243).to_buf()).unwrap();
+                assert_eq!(hash.weight(), i as u8);
+            }
+        }
+    }
+}
