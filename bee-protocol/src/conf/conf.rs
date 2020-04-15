@@ -230,6 +230,7 @@ impl ProtocolConfBuilder {
                 sponge_type: coo_sponge_type,
             },
             workers: ProtocolWorkersConf {
+                null_address: Address::zeros(),
                 milestone_request_send_worker_bound: self
                     .workers
                     .milestone_request_send_worker_bound
@@ -299,6 +300,7 @@ pub struct ProtocolCoordinatorConf {
 
 #[derive(Clone)]
 pub struct ProtocolWorkersConf {
+    pub(crate) null_address: Address,
     pub(crate) milestone_request_send_worker_bound: usize,
     pub(crate) transaction_broadcast_send_worker_bound: usize,
     pub(crate) transaction_request_send_worker_bound: usize,
