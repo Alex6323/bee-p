@@ -1,6 +1,6 @@
 use crate::{
     message::TransactionBroadcast,
-    util::uncompress_bytes,
+    util::uncompress_transaction_bytes,
     worker::transaction::TinyHashCache,
 };
 
@@ -82,7 +82,7 @@ impl TransactionWorker {
 
             // convert received transaction bytes into T1B1 buffer
             let transaction_buf = {
-                let u8_t5b1_buf = uncompress_bytes(&transaction_broadcast.transaction);
+                let u8_t5b1_buf = uncompress_transaction_bytes(&transaction_broadcast.transaction);
 
                 // transform [u8] to &[i8]
                 let i8_t5b1_slice = unsafe { &*(&u8_t5b1_buf as *const [u8] as *const [i8]) };
