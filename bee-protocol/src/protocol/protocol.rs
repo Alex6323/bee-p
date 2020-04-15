@@ -14,6 +14,7 @@ use crate::{
     },
     peer::Peer,
     protocol::ProtocolMetrics,
+    util::WaitPriorityQueue,
     worker::{
         BroadcasterWorker,
         BroadcasterWorkerEvent,
@@ -31,7 +32,6 @@ use crate::{
         TransactionResponderWorkerEvent,
         TransactionWorker,
         TransactionWorkerEvent,
-        WaitPriorityQueue,
     },
 };
 
