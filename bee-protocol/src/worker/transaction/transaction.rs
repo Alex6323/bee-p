@@ -39,100 +39,101 @@ use log::{
 pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
 
 pub(crate) struct TransactionWorker {
-    cache_size: usize,
+    cache: TinyHashCache,
+    curl: CurlP81,
 }
 
 impl TransactionWorker {
     pub(crate) fn new(cache_size: usize) -> Self {
-        Self { cache_size }
+        Self {
+            cache: TinyHashCache::new(cache_size),
+            curl: CurlP81::new(),
+        }
     }
 
-    pub(crate) async fn run(self, receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) {
+    pub(crate) async fn run(
+        mut self,
+        receiver: mpsc::Receiver<TransactionWorkerEvent>,
+        shutdown: oneshot::Receiver<()>,
+    ) {
         info!("[TransactionWorker ] Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
 
-        let mut curl = CurlP81::new();
-        let mut cache = TinyHashCache::new(self.cache_size);
-
         loop {
-            let transaction_broadcast = select! {
-
-                transaction_broadcast = receiver_fused.next() => match transaction_broadcast {
-
-                    Some(transaction_broadcast) => transaction_broadcast,
-                    None => {
-                        debug!("[TransactionWorker ] Unable to receive transactions from channel.");
-                        break;
-                    },
-
+            select! {
+                event = receiver_fused.next() => {
+                    if let Some(transaction_broadcast) = event {
+                        self.process_transaction_brodcast(transaction_broadcast).await;
+                    }
                 },
-
                 _ = shutdown_fused => break
 
-            };
-
-            debug!("[TransactionWorker ] Processing received data...");
-
-            if !cache.insert(&transaction_broadcast.transaction) {
-                debug!("[TransactionWorker ] Data already received.");
-                continue;
-            }
-
-            // convert received transaction bytes into T1B1 buffer
-            let transaction_buf = {
-                let u8_t5b1_buf = uncompress_transaction_bytes(&transaction_broadcast.transaction);
-
-                // transform [u8] to &[i8]
-                let i8_t5b1_slice = unsafe { &*(&u8_t5b1_buf as *const [u8] as *const [i8]) };
-
-                // get T5B1 trits
-                let t5b1_trits_result = Trits::<T5B1>::try_from_raw(i8_t5b1_slice, i8_t5b1_slice.len() * 5 - 1);
-
-                match t5b1_trits_result {
-                    Ok(t5b1_trits) => {
-                        // get T5B1 trit_buf
-                        let t5b1_trit_buf = t5b1_trits.to_buf::<T5B1Buf>();
-
-                        // get T1B1 trit_buf from TB51 trit_buf
-                        t5b1_trit_buf.encode::<T1B1Buf>()
-                    }
-                    Err(_) => {
-                        warn!("[TransactionWorker ] Can not decode T5B1 from received data.");
-                        continue;
-                    }
-                }
-            };
-
-            // build transaction
-            let transaction = match Transaction::from_trits(&transaction_buf) {
-                Ok(transaction) => transaction,
-                Err(e) => {
-                    warn!(
-                        "[TransactionWorker ] Can not build transaction from received data: {:?}",
-                        e
-                    );
-                    continue;
-                }
-            };
-
-            // calculate transaction hash
-            let hash = Hash::from_inner_unchecked(curl.digest(&transaction_buf).unwrap());
-
-            // store transaction
-            match tangle().insert_transaction(transaction, hash).await {
-                Some(_) => {}
-                None => {
-                    debug!(
-                        "[TransactionWorker ] Transaction {} already present in the tangle.",
-                        &hash
-                    );
-                }
             }
         }
 
         info!("[TransactionWorker ] Stopped.");
+    }
+
+    async fn process_transaction_brodcast(&mut self, transaction_broadcast: TransactionBroadcast) {
+        debug!("[TransactionWorker ] Processing received data...");
+
+        if !self.cache.insert(&transaction_broadcast.transaction) {
+            debug!("[TransactionWorker ] Data already received.");
+            return;
+        }
+
+        // convert received transaction bytes into T1B1 buffer
+        let transaction_buf = {
+            let u8_t5b1_buf = uncompress_transaction_bytes(&transaction_broadcast.transaction);
+
+            // transform [u8] to &[i8]
+            let i8_t5b1_slice = unsafe { &*(&u8_t5b1_buf as *const [u8] as *const [i8]) };
+
+            // get T5B1 trits
+            let t5b1_trits_result = Trits::<T5B1>::try_from_raw(i8_t5b1_slice, i8_t5b1_slice.len() * 5 - 1);
+
+            match t5b1_trits_result {
+                Ok(t5b1_trits) => {
+                    // get T5B1 trit_buf
+                    let t5b1_trit_buf = t5b1_trits.to_buf::<T5B1Buf>();
+
+                    // get T1B1 trit_buf from TB51 trit_buf
+                    t5b1_trit_buf.encode::<T1B1Buf>()
+                }
+                Err(_) => {
+                    warn!("[TransactionWorker ] Can not decode T5B1 from received data.");
+                    return;
+                }
+            }
+        };
+
+        // build transaction
+        let transaction = match Transaction::from_trits(&transaction_buf) {
+            Ok(transaction) => transaction,
+            Err(e) => {
+                warn!(
+                    "[TransactionWorker ] Can not build transaction from received data: {:?}",
+                    e
+                );
+                return;
+            }
+        };
+
+        // calculate transaction hash
+        let hash = Hash::from_inner_unchecked(self.curl.digest(&transaction_buf).unwrap());
+
+        // store transaction
+        match tangle().insert_transaction(transaction, hash).await {
+            Some(_) => {}
+            None => {
+                debug!(
+                    "[TransactionWorker ] Transaction {} already present in the tangle.",
+                    &hash
+                );
+            }
+        }
     }
 }
 
