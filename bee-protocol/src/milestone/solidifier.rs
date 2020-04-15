@@ -44,7 +44,7 @@ impl MilestoneSolidifierWorker {
             },
             None => {
                 // There is a gap, request the milestone
-                Protocol::request_milestone(target_milestone_index);
+                Protocol::request_milestone(target_milestone_index, None);
                 false
             }
         }

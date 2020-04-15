@@ -1,8 +1,11 @@
 use crate::{
+    message::MilestoneRequest,
     milestone::MilestoneIndex,
     protocol::Protocol,
+    worker::SenderWorker,
 };
 
+use bee_network::EndpointId;
 use bee_tangle::tangle;
 
 use std::cmp::Ordering;
@@ -15,7 +18,7 @@ use futures::{
 use log::info;
 
 #[derive(Eq, PartialEq)]
-pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex);
+pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
 // TODO check that this is the right order
 impl PartialOrd for MilestoneRequesterWorkerEntry {
@@ -46,13 +49,16 @@ impl MilestoneRequesterWorker {
             select! {
                 // TODO impl fused stream
                 entry = Protocol::get().milestone_requester_worker.0.pop().fuse() => {
-                    if let MilestoneRequesterWorkerEntry(index) = entry {
+                    if let MilestoneRequesterWorkerEntry(index, _opt_epid) = entry {
                         if tangle().contains_milestone(&(index.into())) {
                             continue;
                         }
-                        // TODO Use sender worker
-                //         let _bytes = MilestoneRequest::new(index).into_full_bytes();
-                //         // TODO we don't have any peer_id here
+                        // let epid = match opt_epid {
+                        //     Some(epid) => epid,
+                        //     // TODO random epid ?
+                        //     None => ()
+                        // };
+                        // SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
                     }
                 },
                 _ = shutdown_fused => {

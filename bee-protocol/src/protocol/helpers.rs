@@ -47,15 +47,15 @@ impl Protocol {
 
     // MilestoneRequest
 
-    pub fn request_milestone(index: MilestoneIndex) {
+    pub fn request_milestone(index: MilestoneIndex, epid: Option<EndpointId>) {
         Protocol::get()
             .milestone_requester_worker
             .0
-            .insert(MilestoneRequesterWorkerEntry(index));
+            .insert(MilestoneRequesterWorkerEntry(index, epid));
     }
 
-    pub fn request_latest_milestone() {
-        Protocol::request_milestone(0);
+    pub fn request_last_milestone(epid: Option<EndpointId>) {
+        Protocol::request_milestone(0, epid);
     }
 
     pub fn milestone_requester_is_empty() -> bool {
