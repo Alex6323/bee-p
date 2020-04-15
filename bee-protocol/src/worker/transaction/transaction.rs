@@ -1,5 +1,6 @@
 use crate::{
     message::TransactionBroadcast,
+    protocol::Protocol,
     util::uncompress_transaction_bytes,
     worker::transaction::TinyHashCache,
 };
@@ -123,6 +124,11 @@ impl TransactionWorker {
 
         // calculate transaction hash
         let hash = Hash::from_inner_unchecked(self.curl.digest(&transaction_buf).unwrap());
+
+        if hash.weight() < Protocol::get().conf.mwm {
+            debug!("[TransactionWorker ] Insufficient weight magnitude: {}.", hash.weight());
+            return;
+        }
 
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
