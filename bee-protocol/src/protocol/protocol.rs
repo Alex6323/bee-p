@@ -14,6 +14,7 @@ use crate::{
     },
     peer::Peer,
     protocol::ProtocolMetrics,
+    util::WaitPriorityQueue,
     worker::{
         BroadcasterWorker,
         BroadcasterWorkerEvent,
@@ -31,7 +32,6 @@ use crate::{
         TransactionResponderWorkerEvent,
         TransactionWorker,
         TransactionWorkerEvent,
-        WaitPriorityQueue,
     },
 };
 
@@ -60,6 +60,7 @@ use async_std::{
     sync::RwLock,
     task::spawn,
 };
+use dashmap::DashMap;
 use futures::{
     channel::{
         mpsc,
@@ -102,7 +103,7 @@ pub struct Protocol {
     ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) status_worker: mpsc::Sender<()>,
-    pub(crate) contexts: RwLock<HashMap<EndpointId, SenderContext>>,
+    pub(crate) contexts: DashMap<EndpointId, SenderContext>,
 }
 
 impl Protocol {
@@ -171,7 +172,7 @@ impl Protocol {
             ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             status_worker: status_worker_shutdown_tx,
-            contexts: RwLock::new(HashMap::new()),
+            contexts: DashMap::new(),
         };
 
         unsafe {
@@ -342,11 +343,11 @@ impl Protocol {
             (heartbeat_tx, heartbeat_shutdown_tx),
         );
 
-        Protocol::get().contexts.write().await.insert(peer.epid, context);
+        Protocol::get().contexts.insert(peer.epid, context);
     }
 
     pub(crate) async fn senders_remove(epid: &EndpointId) {
-        if let Some(context) = Protocol::get().contexts.write().await.remove(epid) {
+        if let Some((_, context)) = Protocol::get().contexts.remove(epid) {
             if let Err(_) = context.milestone_request.1.send(()) {
                 warn!("[Protocol ] Shutting down MilestoneRequest SenderWorker failed.");
             }

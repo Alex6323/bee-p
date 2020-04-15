@@ -27,6 +27,7 @@ use bee_network::{
     Network,
     Origin,
 };
+use bee_tangle::tangle;
 
 use std::{
     sync::{
@@ -145,7 +146,7 @@ impl ReceiverWorker {
         Protocol::senders_remove(&self.peer.epid).await;
     }
 
-    async fn check_handshake(&self, header: Header, bytes: &[u8]) -> ReceiverWorkerState {
+    async fn check_handshake(&self, header: &Header, bytes: &[u8]) -> Result<(), ReceiverWorkerError> {
         debug!("[Peer({})] Reading Handshake...", self.peer.epid);
 
         match Handshake::from_full_bytes(&header, bytes) {
@@ -154,9 +155,6 @@ impl ReceiverWorker {
                     .duration_since(UNIX_EPOCH)
                     .expect("Clock may have gone backwards")
                     .as_millis() as u64;
-                let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceiverWorkerMessageState::Header,
-                });
 
                 if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
                     warn!(
@@ -201,21 +199,23 @@ impl ReceiverWorker {
 
                     Protocol::senders_add(self.network.clone(), self.peer.clone()).await;
 
-                    state = ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                        state: ReceiverWorkerMessageState::Header,
-                        buffer: Vec::new(),
-                    });
+                    Protocol::send_heartbeat(
+                        self.peer.epid,
+                        *tangle().get_first_solid_milestone_index(),
+                        *tangle().get_last_solid_milestone_index(),
+                    )
+                    .await;
+
+                    Protocol::request_last_milestone(Some(self.peer.epid));
                 }
 
-                state
+                Ok(())
             }
 
             Err(e) => {
                 warn!("[Peer({})] Reading Handshake failed: {:?}.", self.peer.epid, e);
-
-                ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceiverWorkerMessageState::Header,
-                })
+                // TODO replace
+                Err(ReceiverWorkerError::FailedSend)
             }
         }
     }
@@ -234,7 +234,15 @@ impl ReceiverWorker {
                     let header = Header::from_bytes(&bytes[0..3]);
 
                     if bytes.len() > 3 {
-                        self.check_handshake(header, &bytes[3..bytes.len()]).await
+                        match self.check_handshake(&header, &bytes[3..bytes.len()]).await {
+                            Ok(_) => ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                                state: ReceiverWorkerMessageState::Header,
+                                buffer: Vec::new(),
+                            }),
+                            Err(_) => ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                                state: ReceiverWorkerMessageState::Header,
+                            }),
+                        }
                     } else {
                         ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
                             state: ReceiverWorkerMessageState::Payload(header),
@@ -242,7 +250,15 @@ impl ReceiverWorker {
                     }
                 }
                 ReceiverWorkerMessageState::Payload(header) => {
-                    self.check_handshake(header, &bytes[..bytes.len()]).await
+                    match self.check_handshake(&header, &bytes[..bytes.len()]).await {
+                        Ok(_) => ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+                            state: ReceiverWorkerMessageState::Header,
+                            buffer: Vec::new(),
+                        }),
+                        Err(_) => ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                            state: ReceiverWorkerMessageState::Header,
+                        }),
+                    }
                 }
             }
         }

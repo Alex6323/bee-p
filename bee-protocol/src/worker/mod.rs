@@ -16,7 +16,6 @@ pub(crate) use requester::{
     MilestoneRequesterWorkerEntry,
     TransactionRequesterWorker,
     TransactionRequesterWorkerEntry,
-    WaitPriorityQueue,
 };
 pub(crate) use responder::{
     MilestoneResponderWorker,

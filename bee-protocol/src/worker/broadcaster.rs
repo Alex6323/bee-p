@@ -52,11 +52,11 @@ impl BroadcasterWorker {
                     if let Some(transaction) = transaction {
                         let bytes = transaction.into_full_bytes();
 
-                        for epid in Protocol::get().contexts.read().await.keys() {
+                        for entry in Protocol::get().contexts.iter() {
                             match self
                                 .network
                                 .send(SendMessage {
-                                    epid: *epid,
+                                    epid: *entry.key(),
                                     bytes: bytes.clone(),
                                     responder: None,
                                 })
@@ -65,7 +65,8 @@ impl BroadcasterWorker {
                                     // TODO metrics
                                 },
                                 Err(e) => {
-                                    warn!("[BroadcasterWorker({}) ] Sending message failed: {}.", epid, e);
+                                    warn!("[BroadcasterWorker ] Broadcasting message to {:?} failed: {:?}.",
+                                    *entry.key(), e);
                                 }
                             };
                         }

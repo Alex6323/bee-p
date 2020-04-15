@@ -1,8 +1,11 @@
+#![recursion_limit = "256"]
+
 mod conf;
 mod message;
 mod milestone;
 mod peer;
 mod protocol;
+mod util;
 mod worker;
 
 pub use conf::{
