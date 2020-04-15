@@ -205,6 +205,8 @@ impl ReceiverWorker {
                         *tangle().get_last_solid_milestone_index(),
                     )
                     .await;
+
+                    Protocol::request_last_milestone(Some(self.peer.epid));
                 }
 
                 Ok(())
