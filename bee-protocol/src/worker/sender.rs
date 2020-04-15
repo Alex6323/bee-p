@@ -74,7 +74,7 @@ macro_rules! implement_sender_worker {
             }
 
             pub(crate) async fn send(epid: &EndpointId, message: $type) {
-                if let Some(context) = Protocol::get().contexts.read().await.get(&epid) {
+                if let Some(context) = Protocol::get().contexts.get(&epid) {
                     if let Err(e) = context
                         .$sender
                         .0

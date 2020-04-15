@@ -22,29 +22,6 @@ use futures::sink::SinkExt;
 use log::warn;
 
 impl Protocol {
-    // Heartbeat
-
-    pub async fn send_heartbeat(
-        epid: EndpointId,
-        first_solid_milestone_index: MilestoneIndex,
-        last_solid_milestone_index: MilestoneIndex,
-    ) {
-        SenderWorker::<Heartbeat>::send(
-            &epid,
-            Heartbeat::new(first_solid_milestone_index, last_solid_milestone_index),
-        )
-        .await;
-    }
-
-    pub async fn broadcast_heartbeat(
-        first_solid_milestone_index: MilestoneIndex,
-        last_solid_milestone_index: MilestoneIndex,
-    ) {
-        for epid in Protocol::get().contexts.read().await.keys() {
-            Protocol::send_heartbeat(*epid, first_solid_milestone_index, last_solid_milestone_index).await;
-        }
-    }
-
     // MilestoneRequest
 
     pub fn request_milestone(index: MilestoneIndex, epid: Option<EndpointId>) {
@@ -93,6 +70,29 @@ impl Protocol {
 
     pub fn transaction_requester_is_empty() -> bool {
         Protocol::get().transaction_requester_worker.0.is_empty()
+    }
+
+    // Heartbeat
+
+    pub async fn send_heartbeat(
+        epid: EndpointId,
+        first_solid_milestone_index: MilestoneIndex,
+        last_solid_milestone_index: MilestoneIndex,
+    ) {
+        SenderWorker::<Heartbeat>::send(
+            &epid,
+            Heartbeat::new(first_solid_milestone_index, last_solid_milestone_index),
+        )
+        .await;
+    }
+
+    pub async fn broadcast_heartbeat(
+        first_solid_milestone_index: MilestoneIndex,
+        last_solid_milestone_index: MilestoneIndex,
+    ) {
+        for entry in Protocol::get().contexts.iter() {
+            Protocol::send_heartbeat(*entry.key(), first_solid_milestone_index, last_solid_milestone_index).await;
+        }
     }
 
     // MilestoneSolidifier
