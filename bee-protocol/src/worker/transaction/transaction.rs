@@ -1,5 +1,6 @@
 use crate::{
     message::TransactionBroadcast,
+    util::uncompress_bytes,
     worker::transaction::TinyHashCache,
 };
 
@@ -8,7 +9,6 @@ use bee_bundle::{
     Transaction,
     TransactionField,
 };
-use bee_common::constants::TRANSACTION_BYTE_LEN;
 use bee_crypto::{
     CurlP81,
     Sponge,
@@ -47,20 +47,6 @@ impl TransactionWorker {
         Self { cache_size }
     }
 
-    // TODO put in a separate module ?
-    // TODO constants
-    fn uncompress_bytes(&self, bytes: &[u8]) -> [u8; TRANSACTION_BYTE_LEN] {
-        // define max buffer and copy received transaction bytes into it
-        let mut uncompressed_bytes = [0u8; TRANSACTION_BYTE_LEN];
-        // NOTE: following copying relies on validly sized input data
-        let payload_size = bytes.len() - 292;
-
-        uncompressed_bytes[..payload_size].copy_from_slice(&bytes[..payload_size]);
-        uncompressed_bytes[1312..].copy_from_slice(&bytes[payload_size..]);
-
-        uncompressed_bytes
-    }
-
     pub(crate) async fn run(self, receiver: mpsc::Receiver<TransactionWorkerEvent>, shutdown: oneshot::Receiver<()>) {
         info!("[TransactionWorker ] Running.");
 
@@ -96,7 +82,7 @@ impl TransactionWorker {
 
             // convert received transaction bytes into T1B1 buffer
             let transaction_buf = {
-                let u8_t5b1_buf = self.uncompress_bytes(&transaction_broadcast.transaction);
+                let u8_t5b1_buf = uncompress_bytes(&transaction_broadcast.transaction);
 
                 // transform [u8] to &[i8]
                 let i8_t5b1_slice = unsafe { &*(&u8_t5b1_buf as *const [u8] as *const [i8]) };
