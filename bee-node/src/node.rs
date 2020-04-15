@@ -105,10 +105,7 @@ impl Node {
     async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
         if let Some(peer) = self.peers.get_mut(&epid) {
             if let Err(e) = peer.0.send(bytes).await {
-                warn!(
-                    "[Node ] Sending ReceiverWorkerEvent::Message to {} failed: {}.",
-                    epid, e
-                );
+                warn!("[Node ] Sending PeerWorkerEvent::Message to {} failed: {}.", epid, e);
             }
         }
     }

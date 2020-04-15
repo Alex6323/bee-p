@@ -22,7 +22,7 @@ use crate::{
         MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker,
         MilestoneResponderWorkerEvent,
-        ReceiverWorker,
+        PeerWorker,
         SenderContext,
         SenderWorker,
         StatusWorker,
@@ -48,7 +48,6 @@ use bee_network::{
 use bee_signing::WotsPublicKey;
 
 use std::{
-    collections::HashMap,
     ptr,
     sync::{
         Arc,
@@ -56,10 +55,7 @@ use std::{
     },
 };
 
-use async_std::{
-    sync::RwLock,
-    task::spawn,
-};
+use async_std::task::spawn;
 use dashmap::DashMap;
 use futures::{
     channel::{
@@ -288,11 +284,11 @@ impl Protocol {
 
     pub fn register(peer: Arc<Peer>) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
         //TODO check if not already added ?
-        // ReceiverWorker
+        // PeerWorker
         let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().conf.workers.receiver_worker_bound);
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
-        spawn(ReceiverWorker::new(Protocol::get().network.clone(), peer).run(receiver_rx, receiver_shutdown_rx));
+        spawn(PeerWorker::new(Protocol::get().network.clone(), peer).run(receiver_rx, receiver_shutdown_rx));
 
         (receiver_tx, receiver_shutdown_tx)
     }

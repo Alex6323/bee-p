@@ -1,5 +1,5 @@
 mod broadcaster;
-mod receiver;
+mod peer;
 mod requester;
 mod responder;
 mod sender;
@@ -10,7 +10,7 @@ pub(crate) use broadcaster::{
     BroadcasterWorker,
     BroadcasterWorkerEvent,
 };
-pub(crate) use receiver::ReceiverWorker;
+pub(crate) use peer::PeerWorker;
 pub(crate) use requester::{
     MilestoneRequesterWorker,
     MilestoneRequesterWorkerEntry,

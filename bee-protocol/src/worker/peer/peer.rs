@@ -53,30 +53,30 @@ use futures::{
 use log::*;
 
 #[derive(Debug)]
-pub(crate) enum ReceiverWorkerError {
+pub(crate) enum PeerWorkerError {
     FailedSend,
 }
 
-enum ReceiverWorkerMessageState {
+enum PeerWorkerMessageState {
     Header,
     Payload(Header),
 }
 
 struct AwaitingHandshakeContext {
-    state: ReceiverWorkerMessageState,
+    state: PeerWorkerMessageState,
 }
 
 struct AwaitingMessageContext {
-    state: ReceiverWorkerMessageState,
+    state: PeerWorkerMessageState,
     buffer: Vec<u8>,
 }
 
-enum ReceiverWorkerState {
+enum PeerWorkerState {
     AwaitingHandshake(AwaitingHandshakeContext),
     AwaitingMessage(AwaitingMessageContext),
 }
 
-pub struct ReceiverWorker {
+pub struct PeerWorker {
     network: Network,
     peer: Arc<Peer>,
     transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
@@ -84,7 +84,7 @@ pub struct ReceiverWorker {
     milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
 }
 
-impl ReceiverWorker {
+impl PeerWorker {
     pub fn new(network: Network, peer: Arc<Peer>) -> Self {
         Self {
             network,
@@ -96,10 +96,10 @@ impl ReceiverWorker {
     }
 
     pub async fn run(mut self, receiver: mpsc::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
-        info!("[Peer({})] Running.", self.peer.epid);
+        info!("[PeerWorker({})] Running.", self.peer.epid);
 
-        let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-            state: ReceiverWorkerMessageState::Header,
+        let mut state = PeerWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+            state: PeerWorkerMessageState::Header,
         });
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -122,7 +122,7 @@ impl ReceiverWorker {
             .await
         {
             // TODO then what ?
-            warn!("[Peer({})] Failed to send handshake: {:?}.", self.peer.epid, e);
+            warn!("[PeerWorker({})] Failed to send handshake: {:?}.", self.peer.epid, e);
         }
 
         loop {
@@ -130,8 +130,8 @@ impl ReceiverWorker {
                 event = receiver_fused.next() => {
                     if let Some(event) = event {
                         state = match state {
-                            ReceiverWorkerState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,
-                            ReceiverWorkerState::AwaitingMessage(context) => self.message_handler(context, event).await,
+                            PeerWorkerState::AwaitingHandshake(context) => self.handshake_handler(context, event).await,
+                            PeerWorkerState::AwaitingMessage(context) => self.message_handler(context, event).await,
                         }
                     }
                 },
@@ -141,13 +141,13 @@ impl ReceiverWorker {
             }
         }
 
-        info!("[Peer({})] Stopped.", self.peer.epid);
+        info!("[PeerWorker({})] Stopped.", self.peer.epid);
 
         Protocol::senders_remove(&self.peer.epid).await;
     }
 
-    async fn check_handshake(&self, header: &Header, bytes: &[u8]) -> Result<(), ReceiverWorkerError> {
-        debug!("[Peer({})] Reading Handshake...", self.peer.epid);
+    async fn check_handshake(&self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
+        debug!("[PeerWorker({})] Reading Handshake...", self.peer.epid);
 
         match Handshake::from_full_bytes(&header, bytes) {
             Ok(handshake) => {
@@ -158,7 +158,7 @@ impl ReceiverWorker {
 
                 if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
                     warn!(
-                        "[Peer({})] Invalid handshake timestamp, difference of {}ms.",
+                        "[PeerWorker({})] Invalid handshake timestamp, difference of {}ms.",
                         self.peer.epid,
                         ((timestamp - handshake.timestamp) as i64).abs()
                     );
@@ -166,23 +166,26 @@ impl ReceiverWorker {
                     &handshake.coordinator,
                     &Protocol::get().conf.coordinator.public_key_bytes,
                 ) {
-                    warn!("[Peer({})] Invalid handshake coordinator.", self.peer.epid);
+                    warn!("[PeerWorker({})] Invalid handshake coordinator.", self.peer.epid);
                 } else if handshake.minimum_weight_magnitude != Protocol::get().conf.mwm {
                     warn!(
-                        "[Peer({})] Invalid handshake MWM: {} != {}.",
+                        "[PeerWorker({})] Invalid handshake MWM: {} != {}.",
                         self.peer.epid,
                         handshake.minimum_weight_magnitude,
                         Protocol::get().conf.mwm
                     );
                 } else if let Err(version) = supported_version(&handshake.supported_messages) {
-                    warn!("[Peer({})] Unsupported protocol version: {}.", self.peer.epid, version);
+                    warn!(
+                        "[PeerWorker({})] Unsupported protocol version: {}.",
+                        self.peer.epid, version
+                    );
                 } else {
                     match self.peer.origin {
                         Origin::Outbound => {
                             // TODO use Port instead or deref
                             if handshake.port != *self.peer.address.port() {
                                 warn!(
-                                    "[Peer({})] Invalid handshake port: {} != {}.",
+                                    "[PeerWorker({})] Invalid handshake port: {} != {}.",
                                     self.peer.epid, handshake.port, handshake.port
                                 );
                             }
@@ -191,11 +194,11 @@ impl ReceiverWorker {
                             // TODO check if whitelisted
                         }
                         Origin::Unbound => {
-                            error!("[Peer({})] Unbound peer origin.", self.peer.epid);
+                            error!("[PeerWorker({})] Unbound peer origin.", self.peer.epid);
                         }
                     }
 
-                    info!("[Peer({})] Handshake completed.", self.peer.epid);
+                    info!("[PeerWorker({})] Handshake completed.", self.peer.epid);
 
                     Protocol::senders_add(self.network.clone(), self.peer.clone()).await;
 
@@ -213,50 +216,50 @@ impl ReceiverWorker {
             }
 
             Err(e) => {
-                warn!("[Peer({})] Reading Handshake failed: {:?}.", self.peer.epid, e);
+                warn!("[PeerWorker({})] Reading Handshake failed: {:?}.", self.peer.epid, e);
                 // TODO replace
-                Err(ReceiverWorkerError::FailedSend)
+                Err(PeerWorkerError::FailedSend)
             }
         }
     }
 
-    async fn handshake_handler(&mut self, context: AwaitingHandshakeContext, bytes: Vec<u8>) -> ReceiverWorkerState {
+    async fn handshake_handler(&mut self, context: AwaitingHandshakeContext, bytes: Vec<u8>) -> PeerWorkerState {
         // TODO needed ?
         if bytes.len() < 3 {
-            ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                state: ReceiverWorkerMessageState::Header,
+            PeerWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                state: PeerWorkerMessageState::Header,
             })
         } else {
             match context.state {
-                ReceiverWorkerMessageState::Header => {
-                    debug!("[Peer({})] Reading Header...", self.peer.epid);
+                PeerWorkerMessageState::Header => {
+                    debug!("[PeerWorker({})] Reading Header...", self.peer.epid);
 
                     let header = Header::from_bytes(&bytes[0..3]);
 
                     if bytes.len() > 3 {
                         match self.check_handshake(&header, &bytes[3..bytes.len()]).await {
-                            Ok(_) => ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                                state: ReceiverWorkerMessageState::Header,
+                            Ok(_) => PeerWorkerState::AwaitingMessage(AwaitingMessageContext {
+                                state: PeerWorkerMessageState::Header,
                                 buffer: Vec::new(),
                             }),
-                            Err(_) => ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                                state: ReceiverWorkerMessageState::Header,
+                            Err(_) => PeerWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                                state: PeerWorkerMessageState::Header,
                             }),
                         }
                     } else {
-                        ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                            state: ReceiverWorkerMessageState::Payload(header),
+                        PeerWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                            state: PeerWorkerMessageState::Payload(header),
                         })
                     }
                 }
-                ReceiverWorkerMessageState::Payload(header) => {
+                PeerWorkerMessageState::Payload(header) => {
                     match self.check_handshake(&header, &bytes[..bytes.len()]).await {
-                        Ok(_) => ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
-                            state: ReceiverWorkerMessageState::Header,
+                        Ok(_) => PeerWorkerState::AwaitingMessage(AwaitingMessageContext {
+                            state: PeerWorkerMessageState::Header,
                             buffer: Vec::new(),
                         }),
-                        Err(_) => ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                            state: ReceiverWorkerMessageState::Header,
+                        Err(_) => PeerWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
+                            state: PeerWorkerMessageState::Header,
                         }),
                     }
                 }
@@ -264,15 +267,15 @@ impl ReceiverWorker {
         }
     }
 
-    async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), ReceiverWorkerError> {
+    async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
         match header.message_type {
             Handshake::ID => {
-                warn!("[Peer({})] Ignoring unexpected Handshake.", self.peer.epid);
+                warn!("[PeerWorker({})] Ignoring unexpected Handshake.", self.peer.epid);
                 // TODO handle here instead of dedicated state ?
             }
 
             MilestoneRequest::ID => {
-                debug!("[Peer({})] Reading MilestoneRequest...", self.peer.epid);
+                debug!("[PeerWorker({})] Reading MilestoneRequest...", self.peer.epid);
 
                 match MilestoneRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -285,10 +288,13 @@ impl ReceiverWorker {
                                 message: message,
                             })
                             .await
-                            .map_err(|_| ReceiverWorkerError::FailedSend)?;
+                            .map_err(|_| PeerWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!("[Peer({})] Reading MilestoneRequest failed: {:?}.", self.peer.epid, e);
+                        warn!(
+                            "[PeerWorker({})] Reading MilestoneRequest failed: {:?}.",
+                            self.peer.epid, e
+                        );
 
                         self.peer.metrics.invalid_messages_received_inc();
                         Protocol::get().metrics.invalid_messages_received_inc();
@@ -297,7 +303,7 @@ impl ReceiverWorker {
             }
 
             TransactionBroadcast::ID => {
-                debug!("[Peer({})] Reading TransactionBroadcast...", self.peer.epid);
+                debug!("[PeerWorker({})] Reading TransactionBroadcast...", self.peer.epid);
 
                 match TransactionBroadcast::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -307,11 +313,11 @@ impl ReceiverWorker {
                         self.transaction_worker
                             .send(message)
                             .await
-                            .map_err(|_| ReceiverWorkerError::FailedSend)?;
+                            .map_err(|_| PeerWorkerError::FailedSend)?;
                     }
                     Err(e) => {
                         warn!(
-                            "[Peer({})] Reading TransactionBroadcast failed: {:?}.",
+                            "[PeerWorker({})] Reading TransactionBroadcast failed: {:?}.",
                             self.peer.epid, e
                         );
 
@@ -322,7 +328,7 @@ impl ReceiverWorker {
             }
 
             TransactionRequest::ID => {
-                debug!("[Peer({})] Reading TransactionRequest...", self.peer.epid);
+                debug!("[PeerWorker({})] Reading TransactionRequest...", self.peer.epid);
 
                 match TransactionRequest::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -335,10 +341,13 @@ impl ReceiverWorker {
                                 message: message,
                             })
                             .await
-                            .map_err(|_| ReceiverWorkerError::FailedSend)?;
+                            .map_err(|_| PeerWorkerError::FailedSend)?;
                     }
                     Err(e) => {
-                        warn!("[Peer({})] Reading TransactionRequest failed: {:?}.", self.peer.epid, e);
+                        warn!(
+                            "[PeerWorker({})] Reading TransactionRequest failed: {:?}.",
+                            self.peer.epid, e
+                        );
 
                         self.peer.metrics.invalid_messages_received_inc();
                         Protocol::get().metrics.invalid_messages_received_inc();
@@ -347,7 +356,7 @@ impl ReceiverWorker {
             }
 
             Heartbeat::ID => {
-                debug!("[Peer({})] Reading Heartbeat...", self.peer.epid);
+                debug!("[PeerWorker({})] Reading Heartbeat...", self.peer.epid);
 
                 match Heartbeat::from_full_bytes(&header, bytes) {
                     Ok(message) => {
@@ -362,7 +371,7 @@ impl ReceiverWorker {
                             .store(message.last_solid_milestone_index, Ordering::Relaxed);
                     }
                     Err(e) => {
-                        warn!("[Peer({})] Reading Heartbeat failed: {:?}.", self.peer.epid, e);
+                        warn!("[PeerWorker({})] Reading Heartbeat failed: {:?}.", self.peer.epid, e);
 
                         self.peer.metrics.invalid_messages_received_inc();
                         Protocol::get().metrics.invalid_messages_received_inc();
@@ -371,7 +380,7 @@ impl ReceiverWorker {
             }
 
             _ => {
-                warn!("[Peer({})] Ignoring unsupported message.", self.peer.epid);
+                warn!("[PeerWorker({})] Ignoring unsupported message.", self.peer.epid);
 
                 self.peer.metrics.invalid_messages_received_inc();
                 Protocol::get().metrics.invalid_messages_received_inc();
@@ -381,11 +390,7 @@ impl ReceiverWorker {
         Ok(())
     }
 
-    async fn message_handler(
-        &mut self,
-        mut context: AwaitingMessageContext,
-        mut bytes: Vec<u8>,
-    ) -> ReceiverWorkerState {
+    async fn message_handler(&mut self, mut context: AwaitingMessageContext, mut bytes: Vec<u8>) -> PeerWorkerState {
         let mut offset = 0;
         let mut remaining = true;
 
@@ -397,20 +402,20 @@ impl ReceiverWorker {
 
         while remaining {
             context.state = match context.state {
-                ReceiverWorkerMessageState::Header => {
+                PeerWorkerMessageState::Header => {
                     if offset + 3 <= context.buffer.len() {
-                        debug!("[Peer({})] Reading Header...", self.peer.epid);
+                        debug!("[PeerWorker({})] Reading Header...", self.peer.epid);
                         let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
                         offset = offset + 3;
 
-                        ReceiverWorkerMessageState::Payload(header)
+                        PeerWorkerMessageState::Payload(header)
                     } else {
                         remaining = false;
 
-                        ReceiverWorkerMessageState::Header
+                        PeerWorkerMessageState::Header
                     }
                 }
-                ReceiverWorkerMessageState::Payload(header) => {
+                PeerWorkerMessageState::Payload(header) => {
                     if (offset + header.message_length as usize) <= context.buffer.len() {
                         if let Err(e) = self
                             .process_message(
@@ -419,22 +424,22 @@ impl ReceiverWorker {
                             )
                             .await
                         {
-                            error!("[Peer({})] Processing message failed: {:?}.", self.peer.epid, e);
+                            error!("[PeerWorker({})] Processing message failed: {:?}.", self.peer.epid, e);
                         }
 
                         offset = offset + header.message_length as usize;
 
-                        ReceiverWorkerMessageState::Header
+                        PeerWorkerMessageState::Header
                     } else {
                         remaining = false;
 
-                        ReceiverWorkerMessageState::Payload(header)
+                        PeerWorkerMessageState::Payload(header)
                     }
                 }
             };
         }
 
-        ReceiverWorkerState::AwaitingMessage(AwaitingMessageContext {
+        PeerWorkerState::AwaitingMessage(AwaitingMessageContext {
             state: context.state,
             buffer: context.buffer[offset..].to_vec(),
         })
