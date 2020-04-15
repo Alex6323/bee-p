@@ -60,7 +60,7 @@ where
     S: OutgoingBundleBuilderStage,
 {
     // TODO TEST
-    fn set_bundle_hash(&mut self) -> Result<(), OutgoingBundleBuilderError> {
+    fn calculate_bundle_hash(&mut self) -> Result<(), OutgoingBundleBuilderError> {
         let mut sponge = E::default();
         let mut tag = match self.builders.0.get(0) {
             Some(builder) => match builder.obsolete_tag.clone() {
@@ -186,7 +186,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
             Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
         }
 
-        self.set_bundle_hash()?;
+        self.calculate_bundle_hash()?;
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSealed> {
             builders: self.builders,
