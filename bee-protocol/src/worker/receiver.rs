@@ -27,6 +27,7 @@ use bee_network::{
     Network,
     Origin,
 };
+use bee_tangle::tangle;
 
 use std::{
     sync::{
@@ -154,9 +155,6 @@ impl ReceiverWorker {
                     .duration_since(UNIX_EPOCH)
                     .expect("Clock may have gone backwards")
                     .as_millis() as u64;
-                let mut state = ReceiverWorkerState::AwaitingHandshake(AwaitingHandshakeContext {
-                    state: ReceiverWorkerMessageState::Header,
-                });
 
                 if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
                     warn!(
@@ -200,6 +198,13 @@ impl ReceiverWorker {
                     info!("[Peer({})] Handshake completed.", self.peer.epid);
 
                     Protocol::senders_add(self.network.clone(), self.peer.clone()).await;
+
+                    Protocol::send_heartbeat(
+                        self.peer.epid,
+                        *tangle().get_first_solid_milestone_index(),
+                        *tangle().get_last_solid_milestone_index(),
+                    )
+                    .await;
                 }
 
                 Ok(())
