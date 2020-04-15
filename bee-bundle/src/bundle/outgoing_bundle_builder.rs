@@ -4,6 +4,7 @@ use crate::{
     transaction::{
         Hash,
         Index,
+        Tag,
         TransactionBuilder,
         TransactionBuilders,
         TransactionError,
@@ -16,7 +17,8 @@ use bee_crypto::{
     Kerl,
     Sponge,
 };
-use bee_ternary::TritBuf;
+use bee_ternary::Btrit;
+use bee_signing::normalize_hash;
 
 use std::marker::PhantomData;
 
@@ -58,17 +60,78 @@ where
     S: OutgoingBundleBuilderStage,
 {
     // TODO TEST
-    fn calculate_hash(&self) -> TritBuf {
-        // TODO Impl
+    fn set_bundle_hash(&mut self) -> Result<(), OutgoingBundleBuilderError> {
         let mut sponge = E::default();
+        let mut tag = match self.builders.0.get(0) {
+            Some(builder) => match builder.obsolete_tag.clone() {
+                Some(tag) => tag.to_inner().to_owned(),
+                _ => {
+                    return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
+                        "Missing obselete tag",
+                    ))
+                }
+            },
+            _ => return Err(OutgoingBundleBuilderError::Empty),
+        };
 
-        for _builder in &self.builders.0 {
-            // TODO sponge.absorb(builder.essence());
+        let hash = loop {
+            sponge.reset();
+
+            for builder in &self.builders.0 {
+                let _ = sponge.absorb(&builder.essence());
+            }
+
+            let hash = sponge
+                .squeeze()
+                .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."));
+
+            let hash = normalize_hash(&hash);
+            let mut has_m_bug = false;
+            for trits in hash.chunks(3) {
+                let mut is_m = true;
+
+                for trit in trits.iter() {
+                    if *trit != Btrit::PlusOne {
+                        is_m = false;
+                        break;
+                    }
+                }
+
+                if is_m {
+                    has_m_bug = true;
+                    break;
+                }
+            }
+
+            if !has_m_bug {
+                break Hash::from_inner_unchecked(hash);
+            } else {
+                // obsolete_tag + 1
+                for i in 0..tag.len() {
+                    // Safe to unwrap since it's in the rage of tag
+                    match tag.get(i).unwrap() {
+                        Btrit::NegOne => {
+                            tag.set(i, Btrit::Zero);
+                            break;
+                        },
+                        Btrit::Zero => {
+                            tag.set(i, Btrit::PlusOne);
+                            break;
+                        },
+                        Btrit::PlusOne => tag.set(i, Btrit::NegOne),
+                    };
+                }
+                // Safe to unwrap because we already check first tx exists.
+                self.builders.0.get_mut(0).unwrap().tag = Some(Tag::from_inner_unchecked(tag.clone()));
+            }
+        };
+
+        for builder in &mut self.builders.0 {
+            builder.obsolete_tag = Some(Tag::from_inner_unchecked(tag.clone()));
+            builder.bundle = Some(hash.clone());
         }
 
-        sponge
-            .squeeze()
-            .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."))
+        Ok(())
     }
 }
 
@@ -122,6 +185,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
         if sum != 0 {
             Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
         }
+
+        self.set_bundle_hash()?;
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSealed> {
             builders: self.builders,
@@ -180,7 +245,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
 
     // TODO TEST
     pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
-        // TODO Impl
+
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
