@@ -17,8 +17,8 @@ use bee_crypto::{
     Kerl,
     Sponge,
 };
-use bee_ternary::Btrit;
 use bee_signing::normalize_hash;
+use bee_ternary::Btrit;
 
 use std::marker::PhantomData;
 
@@ -113,11 +113,11 @@ where
                         Btrit::NegOne => {
                             tag.set(i, Btrit::Zero);
                             break;
-                        },
+                        }
                         Btrit::Zero => {
                             tag.set(i, Btrit::PlusOne);
                             break;
-                        },
+                        }
                         Btrit::PlusOne => tag.set(i, Btrit::NegOne),
                     };
                 }
@@ -245,7 +245,6 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
 
     // TODO TEST
     pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
-
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
