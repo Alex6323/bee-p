@@ -132,7 +132,7 @@ impl TransactionWorker {
 
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
-            Some(_) => {}
+            Some(_) => Protocol::broadcast_transaction_message(None, transaction_broadcast).await,
             None => {
                 debug!(
                     "[TransactionWorker ] Transaction {} already present in the tangle.",
