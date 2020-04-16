@@ -62,9 +62,9 @@ where
     // TODO TEST
     fn calculate_bundle_hash(&mut self) -> Result<(), OutgoingBundleBuilderError> {
         let mut sponge = E::default();
-        let mut tag = match self.builders.0.get(0) {
+        let mut obsolete_tag = match self.builders.0.get(0) {
             Some(builder) => match builder.obsolete_tag.clone() {
-                Some(tag) => tag.to_inner().to_owned(),
+                Some(obsolete_tag) => obsolete_tag.to_inner().to_owned(),
                 _ => {
                     return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
                         "obsolete_tag",
@@ -107,27 +107,27 @@ where
                 break Hash::from_inner_unchecked(hash);
             } else {
                 // obsolete_tag + 1
-                for i in 0..tag.len() {
+                for i in 0..obsolete_tag.len() {
                     // Safe to unwrap since it's in the rage of tag
-                    match tag.get(i).unwrap() {
+                    match obsolete_tag.get(i).unwrap() {
                         Btrit::NegOne => {
-                            tag.set(i, Btrit::Zero);
+                            obsolete_tag.set(i, Btrit::Zero);
                             break;
                         }
                         Btrit::Zero => {
-                            tag.set(i, Btrit::PlusOne);
+                            obsolete_tag.set(i, Btrit::PlusOne);
                             break;
                         }
-                        Btrit::PlusOne => tag.set(i, Btrit::NegOne),
+                        Btrit::PlusOne => obsolete_tag.set(i, Btrit::NegOne),
                     };
                 }
                 // Safe to unwrap because we already check first tx exists.
-                self.builders.0.get_mut(0).unwrap().tag = Some(Tag::from_inner_unchecked(tag.clone()));
+                self.builders.0.get_mut(0).unwrap().obsolete_tag = Some(Tag::from_inner_unchecked(obsolete_tag.clone()));
             }
         };
 
         for builder in &mut self.builders.0 {
-            builder.obsolete_tag = Some(Tag::from_inner_unchecked(tag.clone()));
+            builder.obsolete_tag = Some(Tag::from_inner_unchecked(obsolete_tag.clone()));
             builder.bundle = Some(hash.clone());
         }
 
