@@ -1,9 +1,6 @@
 use crate::{
     bundle::Bundle,
-    constants::{
-        ADDRESS,
-        IOTA_SUPPLY,
-    },
+    constants::IOTA_SUPPLY,
     transaction::{
         Transaction,
         TransactionField,
@@ -20,10 +17,7 @@ use bee_signing::{
     Signature,
     WotsPublicKey,
 };
-use bee_ternary::{
-    trit::Btrit,
-    TritBuf,
-};
+use bee_ternary::TritBuf;
 
 use std::marker::PhantomData;
 
@@ -34,7 +28,6 @@ pub enum IncomingBundleBuilderError {
     InvalidLastIndex(usize),
     InvalidValue(i64),
     InvalidSignature,
-    InvalidAddress,
     InvalidBundleHash,
     InvalidBranchInconsistency,
 }
@@ -138,17 +131,6 @@ where
             sum += *transaction.value.to_inner();
             if sum.abs() > IOTA_SUPPLY {
                 Err(IncomingBundleBuilderError::InvalidValue(sum))?;
-            }
-
-            if *transaction.value.to_inner() != 0
-                && transaction
-                    .address()
-                    .to_inner()
-                    .get(ADDRESS.trit_offset.length - 1)
-                    .unwrap()
-                    != Btrit::Zero
-            {
-                Err(IncomingBundleBuilderError::InvalidAddress)?;
             }
 
             if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec())

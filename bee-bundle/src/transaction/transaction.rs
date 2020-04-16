@@ -48,6 +48,7 @@ pub enum TransactionError {
     InvalidNumericField(&'static str, num_conversions::TritsI64ConversionError),
     MissingField(&'static str),
     InvalidValue(i64),
+    InvalidAddress,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -412,14 +413,19 @@ impl TransactionBuilder {
 
     pub fn build(self) -> Result<Transaction, TransactionError> {
         let value = self.value.as_ref().ok_or(TransactionError::MissingField("value"))?.0;
+        let address = self.address.ok_or(TransactionError::MissingField("address"))?;
 
         if value.abs() > IOTA_SUPPLY {
             Err(TransactionError::InvalidValue(value))?;
         }
 
+        if value != 0 && address.to_inner().get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero {
+            Err(TransactionError::InvalidAddress)?;
+        }
+
         Ok(Transaction {
             payload: self.payload.ok_or(TransactionError::MissingField("payload"))?,
-            address: self.address.ok_or(TransactionError::MissingField("address"))?,
+            address,
             value: Value(value),
             obsolete_tag: self
                 .obsolete_tag
