@@ -21,7 +21,7 @@ use log::info;
 
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
-    pub(crate) message: TransactionRequest,
+    pub(crate) request: TransactionRequest,
 }
 
 pub(crate) struct TransactionResponderWorker {}

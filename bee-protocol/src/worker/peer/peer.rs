@@ -285,7 +285,7 @@ impl PeerWorker {
                         self.milestone_responder_worker
                             .send(MilestoneResponderWorkerEvent {
                                 epid: self.peer.epid,
-                                message: message,
+                                request: message,
                             })
                             .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
@@ -341,7 +341,7 @@ impl PeerWorker {
                         self.transaction_responder_worker
                             .send(TransactionResponderWorkerEvent {
                                 epid: self.peer.epid,
-                                message: message,
+                                request: message,
                             })
                             .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
