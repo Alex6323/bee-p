@@ -3,6 +3,7 @@ use crate::{
         MilestoneRequest,
         TransactionBroadcast,
     },
+    util::compress_transaction_bytes,
     worker::SenderWorker,
 };
 
@@ -52,9 +53,14 @@ impl MilestoneResponderWorker {
                 Some(transaction) => {
                     let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trits_len());
                     transaction.into_trits_allocated(&mut trits);
+                    // TODO dedicated channel ? Priority Queue ?
+                    // TODO compress bytes
                     SenderWorker::<TransactionBroadcast>::send(
                         &epid,
-                        TransactionBroadcast::new(cast_slice(trits.encode::<T5B1Buf>().as_i8_slice())),
+                        // TODO try to compress lower in the pipeline ?
+                        TransactionBroadcast::new(&compress_transaction_bytes(cast_slice(
+                            trits.encode::<T5B1Buf>().as_i8_slice(),
+                        ))),
                     )
                     .await;
                 }
