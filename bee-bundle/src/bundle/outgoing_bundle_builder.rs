@@ -67,7 +67,7 @@ where
                 Some(tag) => tag.to_inner().to_owned(),
                 _ => {
                     return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
-                        "Missing obsolete tag",
+                        "obsolete_tag",
                     ))
                 }
             },
