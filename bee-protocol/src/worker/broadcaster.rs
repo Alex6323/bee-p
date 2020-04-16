@@ -8,6 +8,7 @@ use crate::{
 
 use bee_network::{
     Command::SendMessage,
+    EndpointId,
     Network,
 };
 
@@ -25,7 +26,7 @@ use log::{
     warn,
 };
 
-pub(crate) type BroadcasterWorkerEvent = TransactionBroadcast;
+pub(crate) struct BroadcasterWorkerEvent(pub(crate) Option<EndpointId>, pub(crate) TransactionBroadcast);
 
 pub(crate) struct BroadcasterWorker {
     network: Network,
@@ -34,6 +35,36 @@ pub(crate) struct BroadcasterWorker {
 impl BroadcasterWorker {
     pub(crate) fn new(network: Network) -> Self {
         Self { network }
+    }
+
+    async fn broadcast(&mut self, from: Option<EndpointId>, bytes: Vec<u8>) {
+        for entry in Protocol::get().contexts.iter() {
+            if match from {
+                Some(from) => from != *entry.key(),
+                None => true,
+            } {
+                match self
+                    .network
+                    .send(SendMessage {
+                        epid: *entry.key(),
+                        bytes: bytes.clone(),
+                        responder: None,
+                    })
+                    .await
+                {
+                    Ok(_) => {
+                        // TODO metrics
+                    }
+                    Err(e) => {
+                        warn!(
+                            "[BroadcasterWorker ] Broadcasting transaction to {:?} failed: {:?}.",
+                            *entry.key(),
+                            e
+                        );
+                    }
+                };
+            }
+        }
     }
 
     pub(crate) async fn run(
@@ -49,27 +80,8 @@ impl BroadcasterWorker {
         loop {
             select! {
                 transaction = receiver_fused.next() => {
-                    if let Some(transaction) = transaction {
-                        let bytes = transaction.into_full_bytes();
-
-                        for entry in Protocol::get().contexts.iter() {
-                            match self
-                                .network
-                                .send(SendMessage {
-                                    epid: *entry.key(),
-                                    bytes: bytes.clone(),
-                                    responder: None,
-                                })
-                                .await {
-                                Ok(_) => {
-                                    // TODO metrics
-                                },
-                                Err(e) => {
-                                    warn!("[BroadcasterWorker ] Broadcasting message to {:?} failed: {:?}.",
-                                    *entry.key(), e);
-                                }
-                            };
-                        }
+                    if let Some(BroadcasterWorkerEvent(from, transaction)) = transaction {
+                        self.broadcast(from, transaction.into_full_bytes()).await;
                     }
                 },
                 _ = shutdown_fused => {

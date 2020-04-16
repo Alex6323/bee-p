@@ -9,6 +9,7 @@ use crate::{
     },
     protocol::Protocol,
     worker::{
+        BroadcasterWorkerEvent,
         MilestoneRequesterWorkerEntry,
         SenderWorker,
         TransactionRequesterWorkerEntry,
@@ -24,15 +25,15 @@ use log::warn;
 impl Protocol {
     // MilestoneRequest
 
-    pub fn request_milestone(index: MilestoneIndex, epid: Option<EndpointId>) {
+    pub fn request_milestone(index: MilestoneIndex, to_epid: Option<EndpointId>) {
         Protocol::get()
             .milestone_requester_worker
             .0
-            .insert(MilestoneRequesterWorkerEntry(index, epid));
+            .insert(MilestoneRequesterWorkerEntry(index, to_epid));
     }
 
-    pub fn request_last_milestone(epid: Option<EndpointId>) {
-        Protocol::request_milestone(0, epid);
+    pub fn request_last_milestone(to_epid: Option<EndpointId>) {
+        Protocol::request_milestone(0, to_epid);
     }
 
     pub fn milestone_requester_is_empty() -> bool {
@@ -41,18 +42,21 @@ impl Protocol {
 
     // TransactionBroadcast
 
-    pub async fn send_transaction(epid: EndpointId, transaction: &[u8]) {
-        SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(transaction)).await;
+    pub async fn send_transaction(to_epid: EndpointId, transaction: &[u8]) {
+        SenderWorker::<TransactionBroadcast>::send(&to_epid, TransactionBroadcast::new(transaction)).await;
     }
 
-    // TODO explain why different
-    pub async fn broadcast_transaction(transaction: &[u8]) {
+    // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
+    pub async fn broadcast_transaction(from_epid: Option<EndpointId>, transaction: &[u8]) {
         if let Err(e) = Protocol::get()
             .broadcaster_worker
-            // TODO try to avoid
             .0
+            // TODO try to avoid
             .clone()
-            .send(TransactionBroadcast::new(transaction))
+            .send(BroadcasterWorkerEvent(
+                from_epid,
+                TransactionBroadcast::new(transaction),
+            ))
             .await
         {
             warn!("[Protocol ] Broadcasting transaction failed: {}.", e);
@@ -75,12 +79,12 @@ impl Protocol {
     // Heartbeat
 
     pub async fn send_heartbeat(
-        epid: EndpointId,
+        to_epid: EndpointId,
         first_solid_milestone_index: MilestoneIndex,
         last_solid_milestone_index: MilestoneIndex,
     ) {
         SenderWorker::<Heartbeat>::send(
-            &epid,
+            &to_epid,
             Heartbeat::new(first_solid_milestone_index, last_solid_milestone_index),
         )
         .await;
