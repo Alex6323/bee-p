@@ -40,6 +40,15 @@ impl MilestoneRequesterWorker {
         Self {}
     }
 
+    fn process_request(&self, _index: MilestoneIndex, _epid: Option<EndpointId>) {
+        // let epid = match opt_epid {
+        //     Some(epid) => epid,
+        //     // TODO random epid ?
+        //     None => ()
+        // };
+        // SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+    }
+
     pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {
         info!("[MilestoneRequesterWorker ] Running.");
 
@@ -49,16 +58,11 @@ impl MilestoneRequesterWorker {
             select! {
                 // TODO impl fused stream
                 entry = Protocol::get().milestone_requester_worker.0.pop().fuse() => {
-                    if let MilestoneRequesterWorkerEntry(index, _opt_epid) = entry {
-                        if tangle().contains_milestone(&(index.into())) {
-                            continue;
+                    if let MilestoneRequesterWorkerEntry(index, epid) = entry {
+                        if !tangle().contains_milestone(&(index.into())) {
+                            self.process_request(index, epid);
                         }
-                        // let epid = match opt_epid {
-                        //     Some(epid) => epid,
-                        //     // TODO random epid ?
-                        //     None => ()
-                        // };
-                        // SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+
                     }
                 },
                 _ = shutdown_fused => {
