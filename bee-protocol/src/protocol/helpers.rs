@@ -25,15 +25,15 @@ use log::warn;
 impl Protocol {
     // MilestoneRequest
 
-    pub fn request_milestone(index: MilestoneIndex, to_epid: Option<EndpointId>) {
+    pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
         Protocol::get()
             .milestone_requester_worker
             .0
-            .insert(MilestoneRequesterWorkerEntry(index, to_epid));
+            .insert(MilestoneRequesterWorkerEntry(index, to));
     }
 
-    pub fn request_last_milestone(to_epid: Option<EndpointId>) {
-        Protocol::request_milestone(0, to_epid);
+    pub fn request_last_milestone(to: Option<EndpointId>) {
+        Protocol::request_milestone(0, to);
     }
 
     pub fn milestone_requester_is_empty() -> bool {
@@ -42,13 +42,13 @@ impl Protocol {
 
     // TransactionBroadcast
 
-    pub async fn send_transaction(to_epid: EndpointId, transaction: &[u8]) {
-        SenderWorker::<TransactionBroadcast>::send(&to_epid, TransactionBroadcast::new(transaction)).await;
+    pub async fn send_transaction(to: EndpointId, transaction: &[u8]) {
+        SenderWorker::<TransactionBroadcast>::send(&to, TransactionBroadcast::new(transaction)).await;
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
     pub(crate) async fn broadcast_transaction_message(
-        from_epid: Option<EndpointId>,
+        from: Option<EndpointId>,
         transaction_broadcast: TransactionBroadcast,
     ) {
         if let Err(e) = Protocol::get()
@@ -56,7 +56,10 @@ impl Protocol {
             .0
             // TODO try to avoid
             .clone()
-            .send(BroadcasterWorkerEvent(from_epid, transaction_broadcast))
+            .send(BroadcasterWorkerEvent {
+                from: from,
+                transaction_broadcast,
+            })
             .await
         {
             warn!("[Protocol ] Broadcasting transaction failed: {}.", e);
@@ -64,8 +67,8 @@ impl Protocol {
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
-    pub async fn broadcast_transaction(from_epid: Option<EndpointId>, transaction: &[u8]) {
-        Protocol::broadcast_transaction_message(from_epid, TransactionBroadcast::new(transaction)).await;
+    pub async fn broadcast_transaction(from: Option<EndpointId>, transaction: &[u8]) {
+        Protocol::broadcast_transaction_message(from, TransactionBroadcast::new(transaction)).await;
     }
 
     // TransactionRequest
@@ -84,12 +87,12 @@ impl Protocol {
     // Heartbeat
 
     pub async fn send_heartbeat(
-        to_epid: EndpointId,
+        to: EndpointId,
         first_solid_milestone_index: MilestoneIndex,
         last_solid_milestone_index: MilestoneIndex,
     ) {
         SenderWorker::<Heartbeat>::send(
-            &to_epid,
+            &to,
             Heartbeat::new(first_solid_milestone_index, last_solid_milestone_index),
         )
         .await;

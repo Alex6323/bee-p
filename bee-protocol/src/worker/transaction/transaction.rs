@@ -14,6 +14,7 @@ use bee_crypto::{
     CurlP81,
     Sponge,
 };
+use bee_network::EndpointId;
 use bee_tangle::tangle;
 use bee_ternary::{
     T1B1Buf,
@@ -37,7 +38,10 @@ use log::{
     warn,
 };
 
-pub(crate) type TransactionWorkerEvent = TransactionBroadcast;
+pub(crate) struct TransactionWorkerEvent {
+    pub(crate) from: EndpointId,
+    pub(crate) transaction_broadcast: TransactionBroadcast,
+}
 
 pub(crate) struct TransactionWorker {
     cache: TinyHashCache,
@@ -65,8 +69,8 @@ impl TransactionWorker {
         loop {
             select! {
                 event = receiver_fused.next() => {
-                    if let Some(transaction_broadcast) = event {
-                        self.process_transaction_brodcast(transaction_broadcast).await;
+                    if let Some(TransactionWorkerEvent{from, transaction_broadcast}) = event {
+                        self.process_transaction_brodcast(from, transaction_broadcast).await;
                     }
                 },
                 _ = shutdown_fused => break
@@ -77,7 +81,7 @@ impl TransactionWorker {
         info!("[TransactionWorker ] Stopped.");
     }
 
-    async fn process_transaction_brodcast(&mut self, transaction_broadcast: TransactionBroadcast) {
+    async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_broadcast: TransactionBroadcast) {
         debug!("[TransactionWorker ] Processing received data...");
 
         if !self.cache.insert(&transaction_broadcast.transaction) {
@@ -132,7 +136,7 @@ impl TransactionWorker {
 
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
-            Some(_) => Protocol::broadcast_transaction_message(None, transaction_broadcast).await,
+            Some(_) => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
             None => {
                 debug!(
                     "[TransactionWorker ] Transaction {} already present in the tangle.",

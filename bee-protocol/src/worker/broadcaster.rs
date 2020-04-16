@@ -26,7 +26,10 @@ use log::{
     warn,
 };
 
-pub(crate) struct BroadcasterWorkerEvent(pub(crate) Option<EndpointId>, pub(crate) TransactionBroadcast);
+pub(crate) struct BroadcasterWorkerEvent {
+    pub(crate) from: Option<EndpointId>,
+    pub(crate) transaction_broadcast: TransactionBroadcast,
+}
 
 pub(crate) struct BroadcasterWorker {
     network: Network,
@@ -80,8 +83,8 @@ impl BroadcasterWorker {
         loop {
             select! {
                 transaction = receiver_fused.next() => {
-                    if let Some(BroadcasterWorkerEvent(from, transaction)) = transaction {
-                        self.broadcast(from, transaction.into_full_bytes()).await;
+                    if let Some(BroadcasterWorkerEvent{from, transaction_broadcast}) = transaction {
+                        self.broadcast(from, transaction_broadcast.into_full_bytes()).await;
                     }
                 },
                 _ = shutdown_fused => {

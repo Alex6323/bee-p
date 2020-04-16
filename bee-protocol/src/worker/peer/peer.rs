@@ -311,7 +311,10 @@ impl PeerWorker {
                         Protocol::get().metrics.transaction_broadcast_received_inc();
 
                         self.transaction_worker
-                            .send(message)
+                            .send(TransactionWorkerEvent {
+                                from: self.peer.epid,
+                                transaction_broadcast: message,
+                            })
                             .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
                     }
