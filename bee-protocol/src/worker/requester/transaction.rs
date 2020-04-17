@@ -1,10 +1,8 @@
 use crate::{
-    message::{
-        Message,
-        TransactionRequest,
-    },
+    message::TransactionRequest,
     milestone::MilestoneIndex,
     protocol::Protocol,
+    worker::SenderWorker,
 };
 
 use bee_bundle::Hash;
@@ -20,6 +18,7 @@ use futures::{
     select,
 };
 use log::info;
+use rand::Rng;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
@@ -44,14 +43,23 @@ impl TransactionRequesterWorker {
         Self {}
     }
 
-    fn process_request(&self, hash: Hash, _index: MilestoneIndex) {
-        let _bytes =
-            TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())).into_full_bytes();
-
-        // TODO use sender worker
+    async fn process_request(&self, hash: Hash, _index: MilestoneIndex) {
         // TODO check that neighbor may have the tx (by the index)
-        // TODO convert hash to bytes
-        // TODO we don't have any peer_id here
+
+        match Protocol::get()
+            .contexts
+            .iter()
+            .nth(rand::thread_rng().gen_range(0, Protocol::get().contexts.len()))
+        {
+            Some(entry) => {
+                SenderWorker::<TransactionRequest>::send(
+                    entry.key(),
+                    TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
+                )
+                .await;
+            }
+            None => return,
+        }
     }
 
     pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {

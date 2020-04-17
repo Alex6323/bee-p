@@ -16,6 +16,7 @@ use futures::{
     select,
 };
 use log::info;
+use rand::Rng;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
@@ -40,15 +41,22 @@ impl MilestoneRequesterWorker {
         Self {}
     }
 
-    fn process_request(&self, index: MilestoneIndex, _epid: Option<EndpointId>) {
-        let _request = MilestoneRequest::new(index);
+    async fn process_request(&self, index: MilestoneIndex, epid: Option<EndpointId>) {
+        let epid = match epid {
+            Some(epid) => epid,
+            None => {
+                match Protocol::get()
+                    .contexts
+                    .iter()
+                    .nth(rand::thread_rng().gen_range(0, Protocol::get().contexts.len()))
+                {
+                    Some(entry) => *entry.key(),
+                    None => return,
+                }
+            }
+        };
 
-        // let epid = match opt_epid {
-        //     Some(epid) => epid,
-        //     // TODO random epid ?
-        //     None => ()
-        // };
-        // SenderWorker::<MilestoneRequest>::send(&epid, ).await;
+        SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
     }
 
     pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {
