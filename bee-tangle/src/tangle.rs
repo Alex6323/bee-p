@@ -3,6 +3,7 @@
 use crate::{
     milestone::MilestoneIndex,
     vertex::{
+        TransactionRef,
         Vertex,
         VertexMeta,
         VertexRef,
@@ -89,8 +90,8 @@ impl Tangle {
     }
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
-    pub fn get_transaction(&'static self, hash: &Hash) -> Option<Arc<Transaction>> {
-        self.vertices.get(hash).map(|v| v.get_transaction_ref())
+    pub fn get_transaction(&'static self, hash: &Hash) -> Option<TransactionRef> {
+        self.vertices.get(hash).map(|v| v.get_transaction())
     }
 
     /// This function is *eventually consistent* - if `true` is returned, solidification has
