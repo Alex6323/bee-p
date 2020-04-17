@@ -38,6 +38,14 @@ impl TransactionRequesterWorker {
         Self {}
     }
 
+    fn process_request(&self, _hash: Hash, _index: MilestoneIndex) {
+        // TODO use sender worker
+        // TODO check that neighbor may have the tx (by the index)
+        // TODO convert hash to bytes
+        // let _bytes = TransactionRequest::new(hash).into_full_bytes();
+        // TODO we don't have any peer_id here
+    }
+
     pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {
         info!("[TransactionRequesterWorker ] Running.");
 
@@ -47,15 +55,10 @@ impl TransactionRequesterWorker {
             select! {
                 // TODO impl fused stream
                 entry = Protocol::get().transaction_requester_worker.0.pop().fuse() => {
-                    if let TransactionRequesterWorkerEntry(hash, _index) = entry {
-                        if tangle().is_solid_entry_point(&hash) || tangle().contains_transaction(&hash) {
-                            continue;
+                    if let TransactionRequesterWorkerEntry(hash, index) = entry {
+                        if !tangle().is_solid_entry_point(&hash) && !tangle().contains_transaction(&hash) {
+                            self.process_request(hash, index);
                         }
-                        // TODO use sender worker
-                        // TODO check that neighbor may have the tx (by the index)
-                        // TODO convert hash to bytes
-                        // let _bytes = TransactionRequest::new(hash).into_full_bytes();
-                        // TODO we don't have any peer_id here
                     }
                 },
                 _ = shutdown_fused => {

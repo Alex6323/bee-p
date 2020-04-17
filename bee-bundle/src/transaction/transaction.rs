@@ -306,7 +306,7 @@ impl Transaction {
         self.index == self.last_index
     }
 
-    pub const fn trits_len() -> usize {
+    pub const fn trit_len() -> usize {
         TRANSACTION_TRIT_LEN
     }
 }

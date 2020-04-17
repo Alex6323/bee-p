@@ -3,11 +3,20 @@ use crate::{
         MilestoneRequest,
         TransactionBroadcast,
     },
+    util::compress_transaction_bytes,
     worker::SenderWorker,
 };
 
+use bee_bundle::Transaction;
 use bee_network::EndpointId;
+use bee_tangle::tangle;
+use bee_ternary::{
+    T1B1Buf,
+    T5B1Buf,
+    TritBuf,
+};
 
+use bytemuck::cast_slice;
 use futures::{
     channel::{
         mpsc,
@@ -21,7 +30,7 @@ use log::info;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,
-    pub(crate) message: MilestoneRequest,
+    pub(crate) request: MilestoneRequest,
 }
 
 pub(crate) struct MilestoneResponderWorker {}
@@ -29,6 +38,36 @@ pub(crate) struct MilestoneResponderWorker {}
 impl MilestoneResponderWorker {
     pub(crate) fn new() -> Self {
         Self {}
+    }
+
+    async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
+        let index = match request.index {
+            0 => tangle().get_last_milestone_index(),
+            _ => request.index.into(),
+        };
+
+        // TODO use get_milestone when fixed
+        // TODO send complete ms bundle ?
+        match tangle().get_milestone_hash(&index) {
+            Some(hash) => match tangle().get_transaction(&hash) {
+                Some(transaction) => {
+                    let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
+                    transaction.into_trits_allocated(&mut trits);
+                    // TODO dedicated channel ? Priority Queue ?
+                    // TODO compress bytes
+                    SenderWorker::<TransactionBroadcast>::send(
+                        &epid,
+                        // TODO try to compress lower in the pipeline ?
+                        TransactionBroadcast::new(&compress_transaction_bytes(cast_slice(
+                            trits.encode::<T5B1Buf>().as_i8_slice(),
+                        ))),
+                    )
+                    .await;
+                }
+                None => return,
+            },
+            None => return,
+        }
     }
 
     pub(crate) async fn run(
@@ -44,20 +83,8 @@ impl MilestoneResponderWorker {
         loop {
             select! {
                 event = receiver_fused.next() => {
-                    if let Some(MilestoneResponderWorkerEvent { epid, .. }) = event {
-                        // TODO
-                        // let index = if message.index == 0 {
-                        //     tangle.get_latest_milestone_index()
-                        // } else {
-                        //     message.index
-                        // }
-                        // if let Some(transaction) = tangle.get_milestone(index) {
-                        //     (epid, Some(TransactionBroadcast::new(transaction.to_trits::<T5B1>()))
-                        // }
-                        // (epid, None)
-
-                        SenderWorker::<TransactionBroadcast>::send(&epid, TransactionBroadcast::new(&[0; 500])).await;
-                        // TODO send complete ms bundle ?
+                    if let Some(MilestoneResponderWorkerEvent { epid, request }) = event {
+                        self.process_request(epid, request).await;
                     }
                 },
                 _ = shutdown_fused => {
