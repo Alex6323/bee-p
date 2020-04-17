@@ -37,6 +37,7 @@ use log::{
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
     UnknownTail,
+    NotATail,
     IncompleteBundle,
     InvalidMilestone(MilestoneBuilderError),
 }
@@ -67,6 +68,10 @@ where
         let mut transaction = tangle()
             .get_transaction(&tail_hash)
             .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
+
+        if !transaction.is_tail() {
+            Err(MilestoneValidatorWorkerError::NotATail)?;
+        }
 
         builder.push((*transaction).clone());
 
@@ -100,6 +105,7 @@ where
             select! {
                 tail_hash = receiver_fused.next() => {
                     if let Some(tail_hash) = tail_hash {
+                        // TODO split
                         match self.validate_milestone(tail_hash).await {
                             Ok(milestone) => {
                                 tangle().add_milestone_hash(milestone.index.into(), milestone.hash);
