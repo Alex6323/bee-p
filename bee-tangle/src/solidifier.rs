@@ -28,14 +28,20 @@ impl SolidifierState {
 
 pub async fn run(mut state: SolidifierState) {
     while let Some(hash) = state.unsolid_new.next().await {
-        // Solidification algorithm here, write back to TANGLE
+        let vertics = &mut state.vert_to_approvers;
+
+        let mut stack = vec![hash];
+
+        while let Some(curr_hash) = stack.pop() {
+            //
+        }
     }
 }
 
 /*
 /// Attempt to perform solidification upon a node (and its approvers). This method is private
 /// because it is automatically run whenever the tangle is updated with new information
-fn try_solidify(&mut self, root: TxHash) {
+fn try_solidify(&mut self, root: Hash) {
     // Prevent borrow errors by borrowing the fields independently
     let vertices = &mut self.vertices;
     let txs_to_approvers = &self.txs_to_approvers;
@@ -52,9 +58,7 @@ fn try_solidify(&mut self, root: TxHash) {
                 // For each of the current root's approvees...
                 .iter()
                 // ...ensure that they are all solid...
-                .all(|a| {
-                    vertices.get(&a).map(|a| a.is_solid()).unwrap_or(false) || a.is_genesis()
-                })
+                .all(|a| vertices.get(&a).map(|a| a.is_solid()).unwrap_or(false) || a.is_genesis())
             {
                 // We can now solidify the current root since we know all approvees are solid
                 vertices
@@ -72,9 +76,7 @@ fn try_solidify(&mut self, root: TxHash) {
                 {
                     // Push the approver to the stack as the next vertex to consider
                     stack.push(*approver);
-                }
-            }
-        }
+                })
     }
 }
 */

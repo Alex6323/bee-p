@@ -84,13 +84,13 @@ impl Tangle {
         todo!()
     }
 
-    async fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
+    fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
         self.vertices.get(hash).map(|v| v.meta)
     }
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
-    pub async fn get_transaction(&'static self, _hash: &Hash) -> Option<&Transaction> {
-        todo!()
+    pub fn get_transaction(&'static self, hash: &Hash) -> Option<Arc<Transaction>> {
+        self.vertices.get(hash).map(|v| v.get_transaction_ref())
     }
 
     /// This function is *eventually consistent* - if `true` is returned, solidification has
@@ -101,26 +101,26 @@ impl Tangle {
     }
 
     /// Returns a [`VertexRef`] linked to a transaction, if it's available in the local Tangle.
-    pub async fn get(&'static self, hash: &Hash) -> Option<VertexRef> {
+    pub fn get(&'static self, hash: &Hash) -> Option<VertexRef> {
         Some(VertexRef {
-            meta: self.get_meta(&hash).await?,
+            meta: self.get_meta(&hash)?,
             tangle: self,
         })
     }
 
     ///  Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
-    pub async fn get_milestone(&'static self, index: &MilestoneIndex) -> Option<VertexRef> {
+    pub fn get_milestone(&'static self, index: &MilestoneIndex) -> Option<VertexRef> {
         match self.get_milestone_hash(index) {
             None => None,
             Some(hash) => Some(VertexRef {
-                meta: self.get_meta(&hash).await?,
+                meta: self.get_meta(&hash)?,
                 tangle: self,
             }),
         }
     }
 
     /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
-    pub async fn get_latest_milestone(&'static self, _idx: MilestoneIndex) -> Option<VertexRef> {
+    pub fn get_latest_milestone(&'static self, _idx: MilestoneIndex) -> Option<VertexRef> {
         todo!()
     }
 

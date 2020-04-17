@@ -1,5 +1,7 @@
 use crate::tangle::Tangle;
 
+use std::sync::Arc;
+
 use bee_bundle::{
     Hash,
     Transaction,
@@ -7,7 +9,7 @@ use bee_bundle::{
 
 pub struct Vertex {
     pub(crate) meta: VertexMeta,
-    transaction: Transaction,
+    transaction: Arc<Transaction>,
 }
 
 impl Vertex {
@@ -18,8 +20,12 @@ impl Vertex {
                 trunk: *transaction.trunk(),
                 branch: *transaction.branch(),
             },
-            transaction,
+            transaction: Arc::new(transaction),
         }
+    }
+
+    pub fn get_transaction_ref(&self) -> Arc<Transaction> {
+        Arc::clone(&self.transaction)
     }
 }
 
@@ -37,16 +43,16 @@ pub struct VertexRef {
 }
 
 impl VertexRef {
-    pub async fn get_transaction(&self) -> Option<&Transaction> {
-        self.tangle.get_transaction(&self.meta.id).await
+    pub fn get_transaction(&self) -> Option<Arc<Transaction>> {
+        self.tangle.get_transaction(&self.meta.id)
     }
 
-    pub async fn get_trunk(&self) -> Option<Self> {
-        self.tangle.get(&self.meta.trunk).await
+    pub fn get_trunk(&self) -> Option<Self> {
+        self.tangle.get(&self.meta.trunk)
     }
 
-    pub async fn get_branch(&self) -> Option<Self> {
-        self.tangle.get(&self.meta.branch).await
+    pub fn get_branch(&self) -> Option<Self> {
+        self.tangle.get(&self.meta.branch)
     }
 }
 

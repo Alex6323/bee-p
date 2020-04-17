@@ -143,6 +143,12 @@ impl TransactionWorker {
                     &hash
                 );
             }
+<<<<<<< bfd61b982745cdab1f743e114311e71aa5f54c4d
+=======
+
+            // store transaction
+            tangle().insert_transaction(built_transaction, tx_hash);
+>>>>>>> Implement 'get_transaction' API
         }
     }
 }
