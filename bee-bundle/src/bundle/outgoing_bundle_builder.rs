@@ -300,6 +300,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         for payload in signature_fragments {
             let builder = self.builders.0.get_mut(input_index).unwrap();
             builder.payload = Some(payload);
+            input_index += 1;
         }
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
@@ -392,22 +393,46 @@ mod tests {
     // TODO Also check to attach if value ?
     #[test]
     fn outgoing_bundle_builder_value_test() -> Result<(), OutgoingBundleBuilderError> {
-        use bee_signing::Seed;
+        use bee_signing::{
+            PublicKey,
+            RecoverableSignature,
+            Seed,
+            WotsSignature,
+        };
         let bundle_size = 3;
         let mut bundle_builder = OutgoingBundleBuilder::new();
+        let seed = IotaSeed::<Kerl>::new();
+        let subseed = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(WotsSecurityLevel::Low)
+            .build()
+            .unwrap()
+            .generate(&seed, 0)
+            .unwrap();
+        let address = Address::from_inner_unchecked(subseed.generate_public_key().unwrap().trits().to_owned());
 
-        for i in 0..bundle_size {
-            bundle_builder.push(default_transaction_builder(i, bundle_size - 1));
-        }
+        // Transfer
+        bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(1)));
+        // Input
+        bundle_builder.push(
+            default_transaction_builder(1, bundle_size - 1)
+                .with_address(address.clone())
+                .with_value(Value::from_inner_unchecked(-1)),
+        );
+        bundle_builder.push(default_transaction_builder(2, bundle_size - 1));
 
         let bundle = bundle_builder
             .seal()?
-            .sign(&IotaSeed::new(), Vec::new(), WotsSecurityLevel::Low)?
+            .sign(&seed, vec![(0, address.clone())], WotsSecurityLevel::Low)?
             .attach_local(Hash::zeros(), Hash::zeros())?
             .build()?;
 
         assert_eq!(bundle.len(), bundle_size);
-
+        // Validate signature
+        let input = bundle.0.get(1).unwrap();
+        let res = WotsSignature::<Kerl>::from_buf(input.payload.to_inner().to_owned())
+            .recover_public_key(input.bundle.to_inner().as_i8_slice()).unwrap();
+        assert_eq!(address.to_inner().as_slice(), res.trits());
+        
         Ok(())
     }
 
