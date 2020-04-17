@@ -37,8 +37,8 @@ use std::{
 #[derive(Debug)]
 pub enum MilestoneBuilderError {
     Empty,
-    SignatureError(MssError),
     InvalidSignature,
+    SignatureError(MssError),
     InvalidIndex(TritsI64ConversionError),
 }
 

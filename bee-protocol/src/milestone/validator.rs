@@ -75,7 +75,7 @@ where
 
         builder.push((*transaction).clone());
 
-        for _ in 0..Protocol::get().conf.coordinator.security_level + 1 {
+        for _ in 0..Protocol::get().conf.coordinator.security_level {
             transaction = tangle()
                 .get_transaction(transaction.trunk())
                 .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
