@@ -31,12 +31,14 @@ use futures::{
     future::FutureExt,
     select,
     stream::StreamExt,
+    SinkExt,
 };
 use log::{
     debug,
     info,
     warn,
 };
+use std::ops::Deref;
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -60,6 +62,7 @@ impl TransactionWorker {
         mut self,
         receiver: mpsc::Receiver<TransactionWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
+        mut milestone_validator_worker_tx: mpsc::Sender<Hash>,
     ) {
         info!("[TransactionWorker ] Running.");
 
@@ -70,7 +73,7 @@ impl TransactionWorker {
             select! {
                 event = receiver_fused.next() => {
                     if let Some(TransactionWorkerEvent{from, transaction_broadcast}) = event {
-                        self.process_transaction_brodcast(from, transaction_broadcast).await;
+                        self.process_transaction_brodcast(from, transaction_broadcast, &mut milestone_validator_worker_tx).await;
                     }
                 },
                 _ = shutdown_fused => break
@@ -81,7 +84,7 @@ impl TransactionWorker {
         info!("[TransactionWorker ] Stopped.");
     }
 
-    async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_broadcast: TransactionBroadcast) {
+    async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_broadcast: TransactionBroadcast, milestone_validator_worker_tx: &mut mpsc::Sender<Hash>) {
         debug!("[TransactionWorker ] Processing received data...");
 
         if !self.cache.insert(&transaction_broadcast.transaction) {
@@ -136,7 +139,23 @@ impl TransactionWorker {
 
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
-            Some(_) => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
+            Some(vertex_ref) => {
+                Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await;
+
+                let transaction = vertex_ref.get_transaction().unwrap();
+                if transaction.address().eq(&Protocol::get().conf.coordinator.public_key) || transaction.address().eq(&Protocol::get().conf.workers.null_address) {
+                    if transaction.is_tail() {
+                        milestone_validator_worker_tx.send(hash).await.unwrap();
+                    } else {
+                        let tail = Some(Hash::zeros()); // TODO: will be replaced with filter-functionality once available in bee-tangle
+                        match tail {
+                            Some(tail) => milestone_validator_worker_tx.send(hash).await.unwrap(),
+                            None => return
+                        }
+                    }
+                }
+
+            },
             None => {
                 debug!(
                     "[TransactionWorker ] Transaction {} already present in the tangle.",
@@ -152,34 +171,45 @@ mod tests {
 
     use super::*;
 
-    use bee_network::Address;
-
     use async_std::task::{
         block_on,
         spawn,
     };
+    use bee_network::{
+        Address,
+        NetworkConfBuilder,
+        Url
+    };
+    use crate::ProtocolConfBuilder;
     use futures::sink::SinkExt;
 
     #[test]
     fn test_tx_worker_with_compressed_buffer() {
+
+        // build network
+        let network_config = NetworkConfBuilder::default().build();
+        let addr = block_on(Address::from_addr_str("localhost:1337")).unwrap();
+        let (network, shutdown, receiver) = bee_network::init(network_config, addr);
+
+        // init protocol
+        let protocol_config = ProtocolConfBuilder::default().build();
+        Protocol::init(protocol_config, network);
+
         bee_tangle::init();
 
         assert_eq!(tangle().size(), 0);
 
         let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
         let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
+        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = mpsc::channel(1000);
 
         let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
             let message = TransactionBroadcast::new(&tx);
-            transaction_worker_sender_clone
-                .send(TransactionWorkerEvent {
-                    from: EndpointId::from(block_on(Address::from_addr_str("127.0.0.1:1337")).unwrap()),
-                    transaction_broadcast: message,
-                })
-                .await
-                .unwrap();
+            let epid: EndpointId = block_on(Url::from_url_str("tcp://[::1]:16000")).unwrap().into();
+            let event = TransactionWorkerEvent { from: epid, transaction_broadcast: message };
+            transaction_worker_sender_clone.send(event).await.unwrap();
         });
 
         spawn(async move {
@@ -189,7 +219,7 @@ mod tests {
             shutdown_sender.send(()).unwrap();
         });
 
-        block_on(TransactionWorker::new(10000).run(transaction_worker_receiver, shutdown_receiver));
+        block_on(TransactionWorker::new(10000).run(transaction_worker_receiver, shutdown_receiver, milestone_validator_worker_sender));
 
         assert_eq!(tangle().size(), 1);
         assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);

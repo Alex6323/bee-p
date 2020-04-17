@@ -5,9 +5,23 @@ use bee_bundle::{
     Transaction,
 };
 
+use async_std::sync::Arc;
+
+/// A wrapper around `bee_bundle::Transaction` that allows sharing it across threads.
+#[derive(Clone)]
+pub struct TransactionRef(Arc<Transaction>);
+
+impl std::ops::Deref for TransactionRef {
+    type Target = Transaction;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
 pub struct Vertex {
     pub(crate) meta: VertexMeta,
-    transaction: Transaction,
+    transaction: Arc<Transaction>,
 }
 
 impl Vertex {
@@ -18,8 +32,12 @@ impl Vertex {
                 trunk: *transaction.trunk(),
                 branch: *transaction.branch(),
             },
-            transaction,
+            transaction: Arc::new(transaction),
         }
+    }
+
+    pub fn get_transaction(&self) -> TransactionRef {
+        TransactionRef(Arc::clone(&self.transaction))
     }
 }
 
@@ -37,16 +55,16 @@ pub struct VertexRef {
 }
 
 impl VertexRef {
-    pub async fn get_transaction(&self) -> Option<&Transaction> {
-        self.tangle.get_transaction(&self.meta.id).await
+    pub fn get_transaction(&self) -> Option<TransactionRef> {
+        self.tangle.get_transaction(&self.meta.id)
     }
 
-    pub async fn get_trunk(&self) -> Option<Self> {
-        self.tangle.get(&self.meta.trunk).await
+    pub fn get_trunk(&self) -> Option<Self> {
+        self.tangle.get(&self.meta.trunk)
     }
 
-    pub async fn get_branch(&self) -> Option<Self> {
-        self.tangle.get(&self.meta.branch).await
+    pub fn get_branch(&self) -> Option<Self> {
+        self.tangle.get(&self.meta.branch)
     }
 }
 

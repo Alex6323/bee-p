@@ -66,18 +66,16 @@ where
         let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
         let mut transaction = tangle()
             .get_transaction(&tail_hash)
-            .await
             .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
-        builder.push(transaction.clone());
+        builder.push((*transaction).clone());
 
         for _ in 0..Protocol::get().conf.coordinator.security_level + 1 {
             transaction = tangle()
                 .get_transaction(transaction.trunk())
-                .await
                 .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
-            builder.push(transaction.clone());
+            builder.push((*transaction).clone());
         }
 
         Ok(builder

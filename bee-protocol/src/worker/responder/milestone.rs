@@ -49,7 +49,7 @@ impl MilestoneResponderWorker {
         // TODO use get_milestone when fixed
         // TODO send complete ms bundle ?
         match tangle().get_milestone_hash(&index) {
-            Some(hash) => match tangle().get_transaction(&hash).await {
+            Some(hash) => match tangle().get_transaction(&hash) {
                 Some(transaction) => {
                     let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
                     transaction.into_trits_allocated(&mut trits);

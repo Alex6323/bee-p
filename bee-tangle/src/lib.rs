@@ -5,6 +5,7 @@
 
 pub use milestone::MilestoneIndex;
 pub use tangle::Tangle;
+pub use vertex::TransactionRef;
 
 mod milestone;
 mod solidifier;
