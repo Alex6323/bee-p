@@ -152,6 +152,8 @@ mod tests {
 
     use super::*;
 
+    use bee_network::Address;
+
     use async_std::task::{
         block_on,
         spawn,
@@ -171,7 +173,13 @@ mod tests {
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
             let message = TransactionBroadcast::new(&tx);
-            transaction_worker_sender_clone.send(message).await.unwrap();
+            transaction_worker_sender_clone
+                .send(TransactionWorkerEvent {
+                    from: EndpointId::from(block_on(Address::from_addr_str("127.0.0.1:1337")).unwrap()),
+                    transaction_broadcast: message,
+                })
+                .await
+                .unwrap();
         });
 
         spawn(async move {
