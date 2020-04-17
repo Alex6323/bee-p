@@ -2,13 +2,13 @@ use crate::{
     bundle::Bundle,
     constants::{
         IOTA_SUPPLY,
-        PAYLOAD_TRIT_LEN
+        PAYLOAD_TRIT_LEN,
     },
     transaction::{
-        Payload,
         Address,
         Hash,
         Index,
+        Payload,
         Tag,
         TransactionBuilder,
         TransactionBuilders,
@@ -26,8 +26,8 @@ use bee_signing::{
     normalize_hash,
     IotaSeed,
     PrivateKey,
-    Signature,
     PrivateKeyGenerator,
+    Signature,
     WotsPrivateKeyGeneratorBuilder,
     WotsSecurityLevel,
 };
@@ -77,7 +77,7 @@ where
     fn calculate_bundle_hash(&mut self) -> Result<(), OutgoingBundleBuilderError> {
         let mut sponge = E::default();
         let mut obsolete_tag = match self.builders.0.get(0) {
-            Some(builder) => match builder.obsolete_tag.clone() {
+            Some(builder) => match builder.obsolete_tag.as_ref() {
                 Some(obsolete_tag) => obsolete_tag.to_inner().to_owned(),
                 _ => {
                     return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
@@ -266,7 +266,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         security: WotsSecurityLevel,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
         // Safe to unwrap because bundle is sealed
-        let message = self.builders.0.get(0).unwrap().bundle.clone().unwrap();
+        let message = self.builders.0.get(0).unwrap().bundle.as_ref().unwrap();
         let key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(security)
             .build()
@@ -281,7 +281,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?
                 .sign(message.to_inner().as_i8_slice())
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
-            
+
             // Split signature into fragments
             for fragment in signature.trits().chunks(PAYLOAD_TRIT_LEN) {
                 signature_fragments.push(Payload::from_inner_unchecked(fragment.to_owned()));
@@ -291,10 +291,10 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         // Find the first input tx
         let mut input_index = 0;
         for i in &self.builders.0 {
-            if i.value.clone().unwrap().to_inner() < &0 {
-                input_index = i.index.clone().unwrap().to_inner().to_owned();
+            if i.value.as_ref().unwrap().to_inner() < &0 {
+                input_index = i.index.as_ref().unwrap().to_inner().to_owned();
             }
-        };
+        }
 
         // We assume input tx are placed in order and have correct amount based on security level
         for payload in signature_fragments {
