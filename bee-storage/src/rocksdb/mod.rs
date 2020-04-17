@@ -84,7 +84,7 @@ impl<'a> Approvees<'a> {
 #[inline]
 fn decode_transaction(buff: &[u8]) -> Transaction {
     let trits =
-        unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(buff), Transaction::trits_len()) }.encode::<T1B1Buf>();
+        unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(buff), Transaction::trit_len()) }.encode::<T1B1Buf>();
     Transaction::from_trits(&trits).unwrap()
 }
 
@@ -279,7 +279,7 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
 
-        let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trits_len());
+        let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
         let mut aprovees_trit_buf = TritBuf::<T1B1Buf>::zeros(Hash::trit_len() * 2);
 
         tx.into_trits_allocated(tx_trit_buf.as_slice_mut());
@@ -322,7 +322,7 @@ impl StorageBackend for RocksDbBackendStorage {
         let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
         let transaction_cf_hash_to_aprovees = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
 
-        let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trits_len());
+        let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
         let mut aprovees_trit_buf = TritBuf::<T1B1Buf>::zeros(Hash::trit_len() * 2);
 
         for (tx_hash, tx) in transactions {

@@ -51,7 +51,7 @@ impl MilestoneResponderWorker {
         match tangle().get_milestone_hash(&index) {
             Some(hash) => match tangle().get_transaction(&hash).await {
                 Some(transaction) => {
-                    let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trits_len());
+                    let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
                     transaction.into_trits_allocated(&mut trits);
                     // TODO dedicated channel ? Priority Queue ?
                     // TODO compress bytes
