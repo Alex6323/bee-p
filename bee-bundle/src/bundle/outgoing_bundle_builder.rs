@@ -1,7 +1,12 @@
 use crate::{
     bundle::Bundle,
-    constants::IOTA_SUPPLY,
+    constants::{
+        IOTA_SUPPLY,
+        PAYLOAD_TRIT_LEN
+    },
     transaction::{
+        Payload,
+        Address,
         Hash,
         Index,
         Tag,
@@ -17,7 +22,15 @@ use bee_crypto::{
     Kerl,
     Sponge,
 };
-use bee_signing::normalize_hash;
+use bee_signing::{
+    normalize_hash,
+    IotaSeed,
+    PrivateKey,
+    Signature,
+    PrivateKeyGenerator,
+    WotsPrivateKeyGeneratorBuilder,
+    WotsSecurityLevel,
+};
 use bee_ternary::Btrit;
 
 use std::marker::PhantomData;
@@ -29,6 +42,7 @@ pub enum OutgoingBundleBuilderError {
     InvalidValue(i64),
     MissingTransactionBuilderField(&'static str),
     TransactionError(TransactionError),
+    FailedSigningOperation,
 }
 
 pub trait OutgoingBundleBuilderStage {}
@@ -122,7 +136,8 @@ where
                     };
                 }
                 // Safe to unwrap because we already check first tx exists.
-                self.builders.0.get_mut(0).unwrap().obsolete_tag = Some(Tag::from_inner_unchecked(obsolete_tag.clone()));
+                self.builders.0.get_mut(0).unwrap().obsolete_tag =
+                    Some(Tag::from_inner_unchecked(obsolete_tag.clone()));
             }
         };
 
@@ -244,7 +259,49 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     }
 
     // TODO TEST
-    pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
+    pub fn sign(
+        mut self,
+        seed: &IotaSeed<Kerl>,
+        inputs: Vec<(u64, Address)>,
+        security: WotsSecurityLevel,
+    ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
+        // Safe to unwrap because bundle is sealed
+        let message = self.builders.0.get(0).unwrap().bundle.clone().unwrap();
+        let key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(security)
+            .build()
+            // Safe to unwrap because security level is provided
+            .unwrap();
+        let mut signature_fragments: Vec<Payload> = Vec::new();
+
+        for (index, _) in inputs {
+            // Create subseed and then sign the message
+            let signature = key_generator
+                .generate(seed, index)
+                .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?
+                .sign(message.to_inner().as_i8_slice())
+                .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
+            
+            // Split signature into fragments
+            for fragment in signature.trits().chunks(PAYLOAD_TRIT_LEN) {
+                signature_fragments.push(Payload::from_inner_unchecked(fragment.to_owned()));
+            }
+        }
+
+        // Find the first input tx
+        let mut input_index = 0;
+        for i in &self.builders.0 {
+            if i.value.clone().unwrap().to_inner() < &0 {
+                input_index = i.index.clone().unwrap().to_inner().to_owned();
+            }
+        };
+
+        // We assume input tx are placed in order and have correct amount based on security level
+        for payload in signature_fragments {
+            let builder = self.builders.0.get_mut(input_index).unwrap();
+            builder.payload = Some(payload);
+        }
+
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -335,6 +392,7 @@ mod tests {
     // TODO Also check to attach if value ?
     #[test]
     fn outgoing_bundle_builder_value_test() -> Result<(), OutgoingBundleBuilderError> {
+        use bee_signing::Seed;
         let bundle_size = 3;
         let mut bundle_builder = OutgoingBundleBuilder::new();
 
@@ -344,7 +402,7 @@ mod tests {
 
         let bundle = bundle_builder
             .seal()?
-            .sign()?
+            .sign(&IotaSeed::new(), Vec::new(), WotsSecurityLevel::Low)?
             .attach_local(Hash::zeros(), Hash::zeros())?
             .build()?;
 
