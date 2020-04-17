@@ -14,8 +14,12 @@ pub(crate) struct TransactionRequest {
 }
 
 impl TransactionRequest {
-    pub(crate) fn new(hash: [u8; TRANSACTION_REQUEST_HASH_SIZE]) -> Self {
-        Self { hash: hash }
+    pub(crate) fn new(hash: &[u8]) -> Self {
+        let mut new = Self::default();
+
+        new.hash.copy_from_slice(hash);
+
+        new
     }
 }
 
@@ -93,7 +97,7 @@ mod tests {
 
     #[test]
     fn size_test() {
-        let message = TransactionRequest::new(HASH);
+        let message = TransactionRequest::new(&HASH);
 
         assert_eq!(message.size(), TRANSACTION_REQUEST_CONSTANT_SIZE);
     }
@@ -104,7 +108,7 @@ mod tests {
 
     #[test]
     fn to_from_test() {
-        let message_from = TransactionRequest::new(HASH);
+        let message_from = TransactionRequest::new(&HASH);
         let mut bytes = vec![0u8; message_from.size()];
 
         message_from.to_bytes(&mut bytes);
@@ -113,7 +117,7 @@ mod tests {
 
     #[test]
     fn full_to_from_test() {
-        let message_from = TransactionRequest::new(HASH);
+        let message_from = TransactionRequest::new(&HASH);
         let bytes = message_from.into_full_bytes();
 
         to_from_eq(

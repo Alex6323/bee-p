@@ -40,13 +40,15 @@ impl MilestoneRequesterWorker {
         Self {}
     }
 
-    fn process_request(&self, _index: MilestoneIndex, _epid: Option<EndpointId>) {
+    fn process_request(&self, index: MilestoneIndex, _epid: Option<EndpointId>) {
+        let _request = MilestoneRequest::new(index);
+
         // let epid = match opt_epid {
         //     Some(epid) => epid,
         //     // TODO random epid ?
         //     None => ()
         // };
-        // SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+        // SenderWorker::<MilestoneRequest>::send(&epid, ).await;
     }
 
     pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {

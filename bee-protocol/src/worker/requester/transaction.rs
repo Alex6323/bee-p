@@ -1,13 +1,19 @@
 use crate::{
+    message::{
+        Message,
+        TransactionRequest,
+    },
     milestone::MilestoneIndex,
     protocol::Protocol,
 };
 
 use bee_bundle::Hash;
 use bee_tangle::tangle;
+use bee_ternary::T5B1Buf;
 
 use std::cmp::Ordering;
 
+use bytemuck::cast_slice;
 use futures::{
     channel::oneshot,
     future::FutureExt,
@@ -38,11 +44,13 @@ impl TransactionRequesterWorker {
         Self {}
     }
 
-    fn process_request(&self, _hash: Hash, _index: MilestoneIndex) {
+    fn process_request(&self, hash: Hash, _index: MilestoneIndex) {
+        let _bytes =
+            TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())).into_full_bytes();
+
         // TODO use sender worker
         // TODO check that neighbor may have the tx (by the index)
         // TODO convert hash to bytes
-        // let _bytes = TransactionRequest::new(hash).into_full_bytes();
         // TODO we don't have any peer_id here
     }
 
