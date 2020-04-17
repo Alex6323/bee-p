@@ -38,6 +38,7 @@ use log::{
     info,
     warn,
 };
+use std::ops::Deref;
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -141,8 +142,7 @@ impl TransactionWorker {
             Some(vertex_ref) => {
                 Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await;
 
-                /*
-                let transaction = vertex_ref.get_transaction().await.unwrap(); // TODO: get_transaction() of tangle needs implementation
+                let transaction = vertex_ref.get_transaction().unwrap();
                 if transaction.address().eq(&Protocol::get().conf.coordinator.public_key) || transaction.address().eq(&Protocol::get().conf.workers.null_address) {
                     if transaction.is_tail() {
                         milestone_validator_worker_tx.send(hash).await.unwrap();
@@ -153,7 +153,7 @@ impl TransactionWorker {
                             None => return
                         }
                     }
-                }*/
+                }
 
             },
             None => {
