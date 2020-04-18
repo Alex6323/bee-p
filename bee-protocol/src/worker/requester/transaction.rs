@@ -18,7 +18,11 @@ use futures::{
     select,
 };
 use log::info;
-use rand::Rng;
+use rand::{
+    Rng,
+    SeedableRng,
+};
+use rand_pcg::Pcg32;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
@@ -36,20 +40,24 @@ impl Ord for TransactionRequesterWorkerEntry {
     }
 }
 
-pub(crate) struct TransactionRequesterWorker {}
+pub(crate) struct TransactionRequesterWorker {
+    rng: Pcg32,
+}
 
 impl TransactionRequesterWorker {
     pub(crate) fn new() -> Self {
-        Self {}
+        Self {
+            rng: Pcg32::from_entropy(),
+        }
     }
 
-    async fn process_request(&self, hash: Hash, _index: MilestoneIndex) {
+    async fn process_request(&mut self, hash: Hash, _index: MilestoneIndex) {
         // TODO check that neighbor may have the tx (by the index)
 
         match Protocol::get()
             .contexts
             .iter()
-            .nth(rand::thread_rng().gen_range(0, Protocol::get().contexts.len()))
+            .nth(self.rng.gen_range(0, Protocol::get().contexts.len()))
         {
             Some(entry) => {
                 SenderWorker::<TransactionRequest>::send(
@@ -62,7 +70,7 @@ impl TransactionRequesterWorker {
         }
     }
 
-    pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {
+    pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
         info!("[TransactionRequesterWorker ] Running.");
 
         let mut shutdown_fused = shutdown.fuse();
@@ -73,7 +81,7 @@ impl TransactionRequesterWorker {
                 entry = Protocol::get().transaction_requester_worker.0.pop().fuse() => {
                     if let TransactionRequesterWorkerEntry(hash, index) = entry {
                         if !tangle().is_solid_entry_point(&hash) && !tangle().contains_transaction(&hash) {
-                            self.process_request(hash, index);
+                            self.process_request(hash, index).await;
                         }
                     }
                 },

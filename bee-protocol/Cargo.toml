@@ -19,6 +19,7 @@ dashmap = "3.11"
 futures = "0.3.4"
 log = "0.4.8"
 rand = "0.7.3"
+rand_pcg = "0.2.1"
 serde = { version = "1.0.104", features = ["derive" ] }
 twox-hash = "1.5.0"
 

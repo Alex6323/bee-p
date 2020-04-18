@@ -16,7 +16,11 @@ use futures::{
     select,
 };
 use log::info;
-use rand::Rng;
+use rand::{
+    Rng,
+    SeedableRng,
+};
+use rand_pcg::Pcg32;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
@@ -34,21 +38,25 @@ impl Ord for MilestoneRequesterWorkerEntry {
     }
 }
 
-pub(crate) struct MilestoneRequesterWorker {}
+pub(crate) struct MilestoneRequesterWorker {
+    rng: Pcg32,
+}
 
 impl MilestoneRequesterWorker {
     pub(crate) fn new() -> Self {
-        Self {}
+        Self {
+            rng: Pcg32::from_entropy(),
+        }
     }
 
-    async fn process_request(&self, index: MilestoneIndex, epid: Option<EndpointId>) {
+    async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
         let epid = match epid {
             Some(epid) => epid,
             None => {
                 match Protocol::get()
                     .contexts
                     .iter()
-                    .nth(rand::thread_rng().gen_range(0, Protocol::get().contexts.len()))
+                    .nth(self.rng.gen_range(0, Protocol::get().contexts.len()))
                 {
                     Some(entry) => *entry.key(),
                     None => return,
@@ -59,7 +67,7 @@ impl MilestoneRequesterWorker {
         SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
     }
 
-    pub(crate) async fn run(self, shutdown: oneshot::Receiver<()>) {
+    pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
         info!("[MilestoneRequesterWorker ] Running.");
 
         let mut shutdown_fused = shutdown.fuse();
@@ -70,7 +78,7 @@ impl MilestoneRequesterWorker {
                 entry = Protocol::get().milestone_requester_worker.0.pop().fuse() => {
                     if let MilestoneRequesterWorkerEntry(index, epid) = entry {
                         if !tangle().contains_milestone(&(index.into())) {
-                            self.process_request(index, epid);
+                            self.process_request(index, epid).await;
                         }
 
                     }

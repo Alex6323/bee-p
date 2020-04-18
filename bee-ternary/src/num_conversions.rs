@@ -96,6 +96,7 @@ impl TryFrom<TritBuf<T1B1Buf>> for i64 {
         }
 
         let mut accum: i64 = 0;
+        // TODO change end if ending 0s
         let end = trits.len();
 
         if trits.len() >= MAX_TRITS_IN_I64 {
