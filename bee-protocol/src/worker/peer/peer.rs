@@ -1,5 +1,4 @@
 use crate::{
-    conf::slice_eq,
     message::{
         Handshake,
         Header,
@@ -11,11 +10,11 @@ use crate::{
     },
     peer::Peer,
     protocol::{
-        supported_version,
         Protocol,
         SUPPORTED_VERSIONS,
     },
     worker::{
+        peer::validate_handshake,
         MilestoneResponderWorkerEvent,
         TransactionResponderWorkerEvent,
         TransactionWorkerEvent,
@@ -25,19 +24,12 @@ use crate::{
 use bee_network::{
     Command::SendMessage,
     Network,
-    Origin,
 };
 use bee_tangle::tangle;
 
-use std::{
-    sync::{
-        atomic::Ordering,
-        Arc,
-    },
-    time::{
-        SystemTime,
-        UNIX_EPOCH,
-    },
+use std::sync::{
+    atomic::Ordering,
+    Arc,
 };
 
 use futures::{
@@ -137,85 +129,39 @@ impl PeerWorker {
         Protocol::senders_remove(&self.peer.epid).await;
     }
 
-    async fn check_handshake(&mut self, handshake: Handshake) {
-        debug!("[PeerWorker({})] Reading Handshake...", self.peer.epid);
-
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Clock may have gone backwards")
-            .as_millis() as u64;
-
-        if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
-            warn!(
-                "[PeerWorker({})] Invalid handshake timestamp, difference of {}ms.",
-                self.peer.epid,
-                ((timestamp - handshake.timestamp) as i64).abs()
-            );
-        } else if !slice_eq(
-            &handshake.coordinator,
-            &Protocol::get().conf.coordinator.public_key_bytes,
-        ) {
-            warn!("[PeerWorker({})] Invalid handshake coordinator.", self.peer.epid);
-        } else if handshake.minimum_weight_magnitude != Protocol::get().conf.mwm {
-            warn!(
-                "[PeerWorker({})] Invalid handshake MWM: {} != {}.",
-                self.peer.epid,
-                handshake.minimum_weight_magnitude,
-                Protocol::get().conf.mwm
-            );
-        } else if let Err(version) = supported_version(&handshake.supported_messages) {
-            warn!(
-                "[PeerWorker({})] Unsupported protocol version: {}.",
-                self.peer.epid, version
-            );
-        } else {
-            match self.peer.origin {
-                Origin::Outbound => {
-                    // TODO use Port instead or deref
-                    if handshake.port != *self.peer.address.port() {
-                        warn!(
-                            "[PeerWorker({})] Invalid handshake port: {} != {}.",
-                            self.peer.epid, handshake.port, handshake.port
-                        );
-                    }
-                }
-                Origin::Inbound => {
-                    // TODO check if whitelisted
-                }
-                Origin::Unbound => {
-                    error!("[PeerWorker({})] Unbound peer origin.", self.peer.epid);
-                }
-            }
-
-            info!("[PeerWorker({})] Handshake completed.", self.peer.epid);
-
-            Protocol::senders_add(self.network.clone(), self.peer.clone()).await;
-
-            Protocol::send_heartbeat(
-                self.peer.epid,
-                *tangle().get_first_solid_milestone_index(),
-                *tangle().get_last_solid_milestone_index(),
-            )
-            .await;
-
-            Protocol::request_last_milestone(Some(self.peer.epid));
-
-            self.handshaked = true;
-        }
-    }
-
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
         match self.handshaked {
             false => match header.message_type {
-                Handshake::ID => match Handshake::from_full_bytes(&header, bytes) {
-                    Ok(handshake) => self.check_handshake(handshake).await,
-                    Err(e) => {
-                        warn!("[PeerWorker({})] Reading Handshake failed: {:?}.", self.peer.epid, e);
+                Handshake::ID => {
+                    debug!("[PeerWorker({})] Reading Handshake...", self.peer.epid);
+                    match Handshake::from_full_bytes(&header, bytes) {
+                        Ok(handshake) => match validate_handshake(&self.peer, handshake) {
+                            Ok(_) => {
+                                info!("[PeerWorker({})] Handshake completed.", self.peer.epid);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                                Protocol::senders_add(self.network.clone(), self.peer.clone()).await;
+
+                                Protocol::send_heartbeat(
+                                    self.peer.epid,
+                                    *tangle().get_first_solid_milestone_index(),
+                                    *tangle().get_last_solid_milestone_index(),
+                                )
+                                .await;
+
+                                Protocol::request_last_milestone(Some(self.peer.epid));
+
+                                self.handshaked = true;
+                            }
+                            Err(e) => {}
+                        },
+                        Err(e) => {
+                            warn!("[PeerWorker({})] Reading Handshake failed: {:?}.", self.peer.epid, e);
+
+                            self.peer.metrics.invalid_messages_received_inc();
+                            Protocol::get().metrics.invalid_messages_received_inc();
+                        }
                     }
-                },
+                }
                 _ => {
                     warn!(
                         "[PeerWorker({})] Ignoring message until fully handshaked.",
