@@ -84,7 +84,12 @@ impl TransactionWorker {
         info!("[TransactionWorker ] Stopped.");
     }
 
-    async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_broadcast: TransactionBroadcast, milestone_validator_worker_tx: &mut mpsc::Sender<Hash>) {
+    async fn process_transaction_brodcast(
+        &mut self,
+        from: EndpointId,
+        transaction_broadcast: TransactionBroadcast,
+        milestone_validator_worker_tx: &mut mpsc::Sender<Hash>,
+    ) {
         debug!("[TransactionWorker ] Processing received data...");
 
         if !self.cache.insert(&transaction_broadcast.transaction) {
@@ -143,19 +148,20 @@ impl TransactionWorker {
                 Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await;
 
                 let transaction = vertex_ref.get_transaction().unwrap();
-                if transaction.address().eq(&Protocol::get().conf.coordinator.public_key) || transaction.address().eq(&Protocol::get().conf.workers.null_address) {
+                if transaction.address().eq(&Protocol::get().conf.coordinator.public_key)
+                    || transaction.address().eq(&Protocol::get().conf.workers.null_address)
+                {
                     if transaction.is_tail() {
                         milestone_validator_worker_tx.send(hash).await.unwrap();
                     } else {
                         let tail = Some(Hash::zeros()); // TODO: will be replaced with filter-functionality once available in bee-tangle
                         match tail {
                             Some(tail) => milestone_validator_worker_tx.send(hash).await.unwrap(),
-                            None => return
+                            None => return,
                         }
                     }
                 }
-
-            },
+            }
             None => {
                 debug!(
                     "[TransactionWorker ] Transaction {} already present in the tangle.",
@@ -171,6 +177,7 @@ mod tests {
 
     use super::*;
 
+    use crate::ProtocolConfBuilder;
     use async_std::task::{
         block_on,
         spawn,
@@ -178,14 +185,12 @@ mod tests {
     use bee_network::{
         Address,
         NetworkConfBuilder,
-        Url
+        Url,
     };
-    use crate::ProtocolConfBuilder;
     use futures::sink::SinkExt;
 
     #[test]
     fn test_tx_worker_with_compressed_buffer() {
-
         // build network
         let network_config = NetworkConfBuilder::default().build();
         let addr = block_on(Address::from_addr_str("localhost:1337")).unwrap();
@@ -208,7 +213,10 @@ mod tests {
             let tx: [u8; 1024] = [0; 1024];
             let message = TransactionBroadcast::new(&tx);
             let epid: EndpointId = block_on(Url::from_url_str("tcp://[::1]:16000")).unwrap().into();
-            let event = TransactionWorkerEvent { from: epid, transaction_broadcast: message };
+            let event = TransactionWorkerEvent {
+                from: epid,
+                transaction_broadcast: message,
+            };
             transaction_worker_sender_clone.send(event).await.unwrap();
         });
 
@@ -219,7 +227,11 @@ mod tests {
             shutdown_sender.send(()).unwrap();
         });
 
-        block_on(TransactionWorker::new(10000).run(transaction_worker_receiver, shutdown_receiver, milestone_validator_worker_sender));
+        block_on(TransactionWorker::new(10000).run(
+            transaction_worker_receiver,
+            shutdown_receiver,
+            milestone_validator_worker_sender,
+        ));
 
         assert_eq!(tangle().size(), 1);
         assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
