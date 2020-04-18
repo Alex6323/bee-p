@@ -103,7 +103,7 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub fn init(conf: ProtocolConf, network: Network) {
+    pub async fn init(conf: ProtocolConf, network: Network) {
         if unsafe { !PROTOCOL.is_null() } {
             warn!("[Protocol ] Already initialized.");
             return;
@@ -176,8 +176,11 @@ impl Protocol {
         }
 
         spawn(
-            TransactionWorker::new(Protocol::get().conf.workers.transaction_worker_cache)
-                .run(transaction_worker_rx, transaction_worker_shutdown_rx, Protocol::get().milestone_validator_worker.0.clone()),
+            TransactionWorker::new(Protocol::get().conf.workers.transaction_worker_cache).run(
+                transaction_worker_rx,
+                transaction_worker_shutdown_rx,
+                Protocol::get().milestone_validator_worker.0.clone(),
+            ),
         );
         spawn(TransactionResponderWorker::new().run(
             transaction_responder_worker_rx,
@@ -210,6 +213,9 @@ impl Protocol {
         );
         spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
         spawn(StatusWorker::new().run(status_worker_shutdown_rx));
+
+        // TODO move to a new protocol::run ?
+        Protocol::trigger_milestone_solidification().await;
     }
 
     pub async fn shutdown() {

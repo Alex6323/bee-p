@@ -139,8 +139,6 @@ impl Node {
 
         bee_tangle::init();
 
-        Protocol::init(self.conf.protocol.clone(), self.network.clone());
-
         info!("[Node ] Reading snapshot metadata file...");
         // TODO conf
         match SnapshotMetadata::new("./data/mainnet.snapshot.meta") {
@@ -154,6 +152,8 @@ impl Node {
                     snapshot_metadata.seen_milestones().len(),
                 );
                 tangle().update_first_solid_milestone_index(snapshot_metadata.index().into());
+                // TODO get from database
+                tangle().update_last_solid_milestone_index(snapshot_metadata.index().into());
                 for solid_entry_point in snapshot_metadata.solid_entry_points() {
                     tangle().add_solid_entry_point(*solid_entry_point);
                 }
@@ -178,6 +178,8 @@ impl Node {
             // TODO exit ?
             Err(e) => error!("[Node ] Failed to read snapshot state file: {:?}.", e),
         }
+
+        Protocol::init(self.conf.protocol.clone(), self.network.clone()).await;
 
         info!("[Node ] Initialized.");
     }
