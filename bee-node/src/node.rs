@@ -37,6 +37,10 @@ use std::{
 };
 
 use async_std::task::block_on;
+use chrono::{
+    offset::TimeZone,
+    Utc,
+};
 use futures::{
     channel::{
         mpsc,
@@ -139,15 +143,14 @@ impl Node {
 
         bee_tangle::init();
 
-        info!("[Node ] Reading snapshot metadata file...");
+        info!("[Node ] Reading snapshot metadata...");
         // TODO conf
         match SnapshotMetadata::new("./data/mainnet.snapshot.meta") {
             Ok(snapshot_metadata) => {
-                // TODO convert timestamp to date for better UX
                 info!(
-                    "[Node ] Snapshot metadata file read with index {}, timestamp {}, {} solid entry points and {} seen milestones.",
+                    "[Node ] Read snapshot metadata from {} with index {}, {} solid entry points and {} seen milestones.",
+                    Utc.timestamp(snapshot_metadata.timestamp() as i64, 0).to_rfc2822(),
                     snapshot_metadata.index(),
-                    snapshot_metadata.timestamp(),
                     snapshot_metadata.solid_entry_points().len(),
                     snapshot_metadata.seen_milestones().len(),
                 );
@@ -165,12 +168,12 @@ impl Node {
             Err(e) => error!("[Node ] Failed to read snapshot metadata file: {:?}.", e),
         }
 
-        info!("[Node ] Reading snapshot state file...");
+        info!("[Node ] Reading snapshot state...");
         // TODO conf
         match SnapshotState::new("./data/mainnet.snapshot.state") {
             Ok(snapshot_state) => {
                 info!(
-                    "[Node ] Snapshot state file read with {} entries and correct supply.",
+                    "[Node ] Read snapshot state with {} entries and correct supply.",
                     snapshot_state.entries().len()
                 );
                 // TODO deal with entries
