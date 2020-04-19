@@ -1,6 +1,7 @@
 use crate::{
     conf::NodeConf,
     constants::{
+        BEE_GIT_COMMIT,
         BEE_NAME,
         BEE_VERSION,
     },
@@ -136,7 +137,7 @@ impl Node {
     pub async fn init(&mut self) {
         logger::init(self.conf.log_level);
 
-        info!("[Node ] Welcome to {} {}!", BEE_NAME, BEE_VERSION);
+        info!("[Node ] {} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("[Node ] Initializing...");
 
         block_on(StaticPeerManager::new(self.conf.peering.r#static.clone(), self.network.clone()).run());
