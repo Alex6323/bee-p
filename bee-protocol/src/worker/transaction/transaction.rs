@@ -38,7 +38,6 @@ use log::{
     info,
     warn,
 };
-use std::ops::Deref;
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -77,7 +76,6 @@ impl TransactionWorker {
                     }
                 },
                 _ = shutdown_fused => break
-
             }
         }
 
@@ -156,7 +154,7 @@ impl TransactionWorker {
                     } else {
                         let tail = Some(Hash::zeros()); // TODO: will be replaced with filter-functionality once available in bee-tangle
                         match tail {
-                            Some(tail) => milestone_validator_worker_tx.send(hash).await.unwrap(),
+                            Some(tail) => milestone_validator_worker_tx.send(tail).await.unwrap(),
                             None => return,
                         }
                     }
@@ -194,7 +192,7 @@ mod tests {
         // build network
         let network_config = NetworkConfBuilder::default().build();
         let addr = block_on(Address::from_addr_str("localhost:1337")).unwrap();
-        let (network, shutdown, receiver) = bee_network::init(network_config, addr);
+        let (network, _shutdown, _receiver) = bee_network::init(network_config, addr);
 
         // init protocol
         let protocol_config = ProtocolConfBuilder::default().build();
@@ -205,8 +203,8 @@ mod tests {
         assert_eq!(tangle().size(), 0);
 
         let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
-        let (mut shutdown_sender, shutdown_receiver) = oneshot::channel();
-        let (milestone_validator_worker_sender, milestone_validator_worker_receiver) = mpsc::channel(1000);
+        let (shutdown_sender, shutdown_receiver) = oneshot::channel();
+        let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::channel(1000);
 
         let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
         spawn(async move {

@@ -26,7 +26,9 @@ impl CustomHasher {
 
 impl Default for CustomHasher {
     fn default() -> Self {
-        Self { result: 17241709254077376921 }
+        Self {
+            result: 17241709254077376921,
+        }
     }
 }
 
@@ -79,7 +81,7 @@ impl TinyHashCache {
         self.cache.contains(hash)
     }
 
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.cache.len()
     }
 }
