@@ -27,10 +27,7 @@ use bee_network::{
 };
 use bee_tangle::tangle;
 
-use std::sync::{
-    atomic::Ordering,
-    Arc,
-};
+use std::sync::Arc;
 
 use futures::{
     channel::{
@@ -164,7 +161,7 @@ impl PeerWorker {
                 }
                 _ => {
                     warn!(
-                        "[PeerWorker({})] Ignoring message until fully handshaked.",
+                        "[PeerWorker({})] Ignoring messages until fully handshaked.",
                         self.peer.epid
                     );
 
@@ -174,16 +171,10 @@ impl PeerWorker {
             },
             true => {
                 match header.message_type {
-                    Handshake::ID => {
-                        warn!("[PeerWorker({})] Ignoring unexpected Handshake.", self.peer.epid);
-                        // TODO handle here instead of dedicated state ?
-                    }
                     MilestoneRequest::ID => {
                         debug!("[PeerWorker({})] Reading MilestoneRequest...", self.peer.epid);
                         match MilestoneRequest::from_full_bytes(&header, bytes) {
                             Ok(message) => {
-                                self.peer.metrics.milestone_request_received_inc();
-                                Protocol::get().metrics.milestone_request_received_inc();
                                 self.milestone_responder_worker
                                     .send(MilestoneResponderWorkerEvent {
                                         epid: self.peer.epid,
@@ -191,12 +182,16 @@ impl PeerWorker {
                                     })
                                     .await
                                     .map_err(|_| PeerWorkerError::FailedSend)?;
+
+                                self.peer.metrics.milestone_request_received_inc();
+                                Protocol::get().metrics.milestone_request_received_inc();
                             }
                             Err(e) => {
                                 warn!(
                                     "[PeerWorker({})] Reading MilestoneRequest failed: {:?}.",
                                     self.peer.epid, e
                                 );
+
                                 self.peer.metrics.invalid_messages_received_inc();
                                 Protocol::get().metrics.invalid_messages_received_inc();
                             }
@@ -206,8 +201,6 @@ impl PeerWorker {
                         debug!("[PeerWorker({})] Reading TransactionBroadcast...", self.peer.epid);
                         match TransactionBroadcast::from_full_bytes(&header, bytes) {
                             Ok(message) => {
-                                self.peer.metrics.transaction_broadcast_received_inc();
-                                Protocol::get().metrics.transaction_broadcast_received_inc();
                                 self.transaction_worker
                                     .send(TransactionWorkerEvent {
                                         from: self.peer.epid,
@@ -215,12 +208,16 @@ impl PeerWorker {
                                     })
                                     .await
                                     .map_err(|_| PeerWorkerError::FailedSend)?;
+
+                                self.peer.metrics.transaction_broadcast_received_inc();
+                                Protocol::get().metrics.transaction_broadcast_received_inc();
                             }
                             Err(e) => {
                                 warn!(
                                     "[PeerWorker({})] Reading TransactionBroadcast failed: {:?}.",
                                     self.peer.epid, e
                                 );
+
                                 self.peer.metrics.invalid_messages_received_inc();
                                 Protocol::get().metrics.invalid_messages_received_inc();
                             }
@@ -230,8 +227,6 @@ impl PeerWorker {
                         debug!("[PeerWorker({})] Reading TransactionRequest...", self.peer.epid);
                         match TransactionRequest::from_full_bytes(&header, bytes) {
                             Ok(message) => {
-                                self.peer.metrics.transaction_request_received_inc();
-                                Protocol::get().metrics.transaction_request_received_inc();
                                 self.transaction_responder_worker
                                     .send(TransactionResponderWorkerEvent {
                                         epid: self.peer.epid,
@@ -239,12 +234,16 @@ impl PeerWorker {
                                     })
                                     .await
                                     .map_err(|_| PeerWorkerError::FailedSend)?;
+
+                                self.peer.metrics.transaction_request_received_inc();
+                                Protocol::get().metrics.transaction_request_received_inc();
                             }
                             Err(e) => {
                                 warn!(
                                     "[PeerWorker({})] Reading TransactionRequest failed: {:?}.",
                                     self.peer.epid, e
                                 );
+
                                 self.peer.metrics.invalid_messages_received_inc();
                                 Protocol::get().metrics.invalid_messages_received_inc();
                             }
@@ -254,17 +253,17 @@ impl PeerWorker {
                         debug!("[PeerWorker({})] Reading Heartbeat...", self.peer.epid);
                         match Heartbeat::from_full_bytes(&header, bytes) {
                             Ok(message) => {
+                                self.peer
+                                    .set_first_solid_milestone_index(message.first_solid_milestone_index);
+                                self.peer
+                                    .set_last_solid_milestone_index(message.last_solid_milestone_index);
+
                                 self.peer.metrics.heartbeat_received_inc();
                                 Protocol::get().metrics.heartbeat_received_inc();
-                                self.peer
-                                    .first_solid_milestone_index
-                                    .store(message.first_solid_milestone_index, Ordering::Relaxed);
-                                self.peer
-                                    .last_solid_milestone_index
-                                    .store(message.last_solid_milestone_index, Ordering::Relaxed);
                             }
                             Err(e) => {
                                 warn!("[PeerWorker({})] Reading Heartbeat failed: {:?}.", self.peer.epid, e);
+
                                 self.peer.metrics.invalid_messages_received_inc();
                                 Protocol::get().metrics.invalid_messages_received_inc();
                             }
@@ -272,6 +271,7 @@ impl PeerWorker {
                     }
                     _ => {
                         warn!("[PeerWorker({})] Ignoring unsupported message.", self.peer.epid);
+
                         self.peer.metrics.invalid_messages_received_inc();
                         Protocol::get().metrics.invalid_messages_received_inc();
                     }
