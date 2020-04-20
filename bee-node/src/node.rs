@@ -145,8 +145,7 @@ impl Node {
         bee_tangle::init();
 
         info!("[Node ] Reading snapshot metadata...");
-        // TODO conf
-        match SnapshotMetadata::new("./data/mainnet.snapshot.meta") {
+        match SnapshotMetadata::new(self.conf.snapshot.meta_file_path()) {
             Ok(snapshot_metadata) => {
                 info!(
                     "[Node ] Read snapshot metadata from {} with index {}, {} solid entry points and {} seen milestones.",
@@ -166,12 +165,15 @@ impl Node {
                 }
             }
             // TODO exit ?
-            Err(e) => error!("[Node ] Failed to read snapshot metadata file: {:?}.", e),
+            Err(e) => error!(
+                "[Node ] Failed to read snapshot metadata file \"{}\": {:?}.",
+                self.conf.snapshot.meta_file_path(),
+                e
+            ),
         }
 
         info!("[Node ] Reading snapshot state...");
-        // TODO conf
-        match SnapshotState::new("./data/mainnet.snapshot.state") {
+        match SnapshotState::new(self.conf.snapshot.state_file_path()) {
             Ok(snapshot_state) => {
                 info!(
                     "[Node ] Read snapshot state with {} entries and correct supply.",
@@ -180,7 +182,11 @@ impl Node {
                 // TODO deal with entries
             }
             // TODO exit ?
-            Err(e) => error!("[Node ] Failed to read snapshot state file: {:?}.", e),
+            Err(e) => error!(
+                "[Node ] Failed to read snapshot state file \"{}\": {:?}.",
+                self.conf.snapshot.state_file_path(),
+                e
+            ),
         }
 
         Protocol::init(self.conf.protocol.clone(), self.network.clone()).await;

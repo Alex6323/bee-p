@@ -20,7 +20,8 @@ depth         = 24
 publicKey     = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9"
 securityLevel = 2
 spongeType    = "kerl"
+[protocol.workers]
 
 [snapshot]
-stateFilePath = "./data/mainnet.snapshot.state"
 metaFilePath  = "./data/mainnet.snapshot.meta"
+stateFilePath = "./data/mainnet.snapshot.state"
