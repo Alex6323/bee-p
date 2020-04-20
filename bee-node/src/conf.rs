@@ -10,6 +10,10 @@ use bee_protocol::{
     ProtocolConf,
     ProtocolConfBuilder,
 };
+use bee_snapshot::{
+    SnapshotConf,
+    SnapshotConfBuilder,
+};
 
 use log;
 use serde::Deserialize;
@@ -24,6 +28,7 @@ pub struct NodeConfBuilder {
     network: NetworkConfBuilder,
     peering: PeeringConfBuilder,
     protocol: ProtocolConfBuilder,
+    snapshot: SnapshotConfBuilder,
 }
 
 impl NodeConfBuilder {
@@ -51,6 +56,7 @@ impl NodeConfBuilder {
             network: self.network.build(),
             peering: self.peering.build(),
             protocol: self.protocol.build(),
+            snapshot: self.snapshot.build(),
         }
     }
 }
@@ -60,4 +66,5 @@ pub struct NodeConf {
     pub(crate) network: NetworkConf,
     pub(crate) peering: PeeringConf,
     pub(crate) protocol: ProtocolConf,
+    pub(crate) snapshot: SnapshotConf,
 }

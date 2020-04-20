@@ -1,6 +1,7 @@
 use crate::{
     conf::NodeConf,
     constants::{
+        BEE_GIT_COMMIT,
         BEE_NAME,
         BEE_VERSION,
     },
@@ -37,6 +38,10 @@ use std::{
 };
 
 use async_std::task::block_on;
+use chrono::{
+    offset::TimeZone,
+    Utc,
+};
 use futures::{
     channel::{
         mpsc,
@@ -132,22 +137,20 @@ impl Node {
     pub async fn init(&mut self) {
         logger::init(self.conf.log_level);
 
-        info!("[Node ] Welcome to {} {}!", BEE_NAME, BEE_VERSION);
+        info!("[Node ] {} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("[Node ] Initializing...");
 
         block_on(StaticPeerManager::new(self.conf.peering.r#static.clone(), self.network.clone()).run());
 
         bee_tangle::init();
 
-        info!("[Node ] Reading snapshot metadata file...");
-        // TODO conf
-        match SnapshotMetadata::new("./data/mainnet.snapshot.meta") {
+        info!("[Node ] Reading snapshot metadata...");
+        match SnapshotMetadata::new(self.conf.snapshot.meta_file_path()) {
             Ok(snapshot_metadata) => {
-                // TODO convert timestamp to date for better UX
                 info!(
-                    "[Node ] Snapshot metadata file read with index {}, timestamp {}, {} solid entry points and {} seen milestones.",
+                    "[Node ] Read snapshot metadata from {} with index {}, {} solid entry points and {} seen milestones.",
+                    Utc.timestamp(snapshot_metadata.timestamp() as i64, 0).to_rfc2822(),
                     snapshot_metadata.index(),
-                    snapshot_metadata.timestamp(),
                     snapshot_metadata.solid_entry_points().len(),
                     snapshot_metadata.seen_milestones().len(),
                 );
@@ -162,21 +165,28 @@ impl Node {
                 }
             }
             // TODO exit ?
-            Err(e) => error!("[Node ] Failed to read snapshot metadata file: {:?}.", e),
+            Err(e) => error!(
+                "[Node ] Failed to read snapshot metadata file \"{}\": {:?}.",
+                self.conf.snapshot.meta_file_path(),
+                e
+            ),
         }
 
-        info!("[Node ] Reading snapshot state file...");
-        // TODO conf
-        match SnapshotState::new("./data/mainnet.snapshot.state") {
+        info!("[Node ] Reading snapshot state...");
+        match SnapshotState::new(self.conf.snapshot.state_file_path()) {
             Ok(snapshot_state) => {
                 info!(
-                    "[Node ] Snapshot state file read with {} entries and correct supply.",
+                    "[Node ] Read snapshot state with {} entries and correct supply.",
                     snapshot_state.entries().len()
                 );
                 // TODO deal with entries
             }
             // TODO exit ?
-            Err(e) => error!("[Node ] Failed to read snapshot state file: {:?}.", e),
+            Err(e) => error!(
+                "[Node ] Failed to read snapshot state file \"{}\": {:?}.",
+                self.conf.snapshot.state_file_path(),
+                e
+            ),
         }
 
         Protocol::init(self.conf.protocol.clone(), self.network.clone()).await;

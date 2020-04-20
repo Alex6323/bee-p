@@ -7,3 +7,5 @@ edition = "2018"
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
 bee-ternary = { path = "../bee-ternary" }
+
+serde = { version = "1.0.104", features = ["derive" ] }
