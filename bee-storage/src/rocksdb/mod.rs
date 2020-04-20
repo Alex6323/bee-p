@@ -139,7 +139,7 @@ impl RocksDBBackendConnection {
 }
 
 #[async_trait]
-impl Connection<RocksDBBackendConnection> for RocksDBBackendConnection {
+impl Connection for RocksDBBackendConnection {
     type StorageError = RocksDbBackendError;
 
     async fn establish_connection(&mut self, url: &str) -> Result<(), RocksDbBackendError> {
