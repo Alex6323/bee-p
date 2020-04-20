@@ -1,22 +1,20 @@
 mod errors;
-mod handshake;
 mod header;
-mod heartbeat;
-mod legacy_gossip;
 mod message;
-mod milestone_request;
-mod transaction_broadcast;
-mod transaction_request;
+mod v0;
+mod v2;
 
 pub(crate) use errors::MessageError;
-pub(crate) use handshake::Handshake;
 pub(crate) use header::{
     Header,
     HEADER_SIZE,
     HEADER_TYPE_SIZE,
 };
-pub(crate) use heartbeat::Heartbeat;
 pub(crate) use message::Message;
-pub(crate) use milestone_request::MilestoneRequest;
-pub(crate) use transaction_broadcast::TransactionBroadcast;
-pub(crate) use transaction_request::TransactionRequest;
+pub(crate) use v0::Handshake;
+pub(crate) use v2::{
+    Heartbeat,
+    MilestoneRequest,
+    TransactionBroadcast,
+    TransactionRequest,
+};
