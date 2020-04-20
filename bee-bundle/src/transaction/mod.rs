@@ -1,7 +1,11 @@
+mod builder;
 mod fields;
 mod transaction;
-mod transactions;
 
+pub use builder::{
+    TransactionBuilder,
+    TransactionBuilders,
+};
 pub use fields::{
     Address,
     Hash,
@@ -15,8 +19,6 @@ pub use fields::{
 };
 pub use transaction::{
     Transaction,
-    TransactionBuilder,
-    TransactionBuilders,
     TransactionError,
+    Transactions,
 };
-pub use transactions::Transactions;
