@@ -1,3 +1,5 @@
+use bee_tangle::tangle;
+
 use std::time::Duration;
 
 use async_std::{
@@ -14,6 +16,23 @@ impl StatusWorker {
         Self {}
     }
 
+    fn status(&self) {
+        let first_solid_milestone_index: u32 = *tangle().get_first_solid_milestone_index();
+        let last_solid_milestone_index: u32 = *tangle().get_last_solid_milestone_index();
+        let last_milestone_index: u32 = *tangle().get_last_milestone_index();
+
+        // TODO Threshold
+        if last_solid_milestone_index == last_milestone_index {
+            info!("[StatusWorker ] Synchronized.");
+        } else {
+            // TODO %
+            info!(
+                "[StatusWorker ] Synchronizing {}..{}..{}.",
+                first_solid_milestone_index, last_solid_milestone_index, last_milestone_index
+            );
+        }
+    }
+
     pub(crate) async fn run(self, mut shutdown: Receiver<()>) {
         info!("[StatusWorker ] Running.");
 
@@ -26,9 +45,7 @@ impl StatusWorker {
                 Some(_) => {
                     break;
                 }
-                None => {
-                    info!("[StatusWorker ] Status.");
-                }
+                None => self.status(),
             }
         }
 
