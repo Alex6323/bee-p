@@ -46,7 +46,7 @@ pub struct AttachmentData {
 }
 
 #[async_trait]
-pub trait Connection<Conn> {
+pub trait Connection {
     type StorageError: Debug;
     async fn establish_connection(&mut self, url: &str) -> Result<(), Self::StorageError>;
     async fn destroy_connection(&mut self) -> Result<(), Self::StorageError>;
@@ -114,6 +114,6 @@ pub trait StorageBackend {
 }
 
 #[derive(Clone, Debug)]
-pub struct Storage<Conn: Connection<Conn>> {
+pub struct Storage<Conn: Connection> {
     pub connection: Conn,
 }

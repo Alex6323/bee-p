@@ -208,7 +208,7 @@ impl SqlxBackendConnection {
 }
 
 #[async_trait]
-impl Connection<SqlxBackendConnection> for SqlxBackendConnection {
+impl Connection for SqlxBackendConnection {
     type StorageError = SqlxBackendError;
 
     async fn establish_connection(&mut self, url: &str) -> Result<(), SqlxBackendError> {
