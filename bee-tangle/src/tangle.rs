@@ -241,20 +241,20 @@ impl Tangle {
             if filter(&approvee) {
                 approvees.push(start);
                 collected.push(approvee);
-            }
 
-            while let Some(approvee_hash) = approvees.pop() {
-                if let Some(approvers_ref) = self.approvers.get(&approvee_hash) {
-                    for approver_hash in approvers_ref.value() {
-                        if let Some(approver_ref) = self.vertices.get(approver_hash) {
-                            let approver = approver_ref.value().get_transaction();
+                while let Some(approvee_hash) = approvees.pop() {
+                    if let Some(approvers_ref) = self.approvers.get(&approvee_hash) {
+                        for approver_hash in approvers_ref.value() {
+                            if let Some(approver_ref) = self.vertices.get(approver_hash) {
+                                let approver = approver_ref.value().get_transaction();
 
-                            if *approver.trunk() == approvee_hash && filter(&approver) {
-                                approvees.push(*approver_hash);
-                                collected.push(approver);
-                                // NOTE: For simplicity reasons we break here, and assume, that there can't be
-                                // a second approver that passes the filter
-                                break;
+                                if *approver.trunk() == approvee_hash && filter(&approver) {
+                                    approvees.push(*approver_hash);
+                                    collected.push(approver);
+                                    // NOTE: For simplicity reasons we break here, and assume, that there can't be
+                                    // a second approver that passes the filter
+                                    break;
+                                }
                             }
                         }
                     }
@@ -292,6 +292,11 @@ impl Tangle {
 
         collected
     }
+
+    #[cfg(test)]
+    fn num_approvers(&'static self, hash: &Hash) -> usize {
+        self.approvers.get(hash).map_or(0, |r| r.value().len())
+    }
 }
 
 #[cfg(test)]
@@ -299,7 +304,10 @@ mod tests {
     use super::*;
     use crate::*;
 
-    use bee_test::transaction::create_random_tx;
+    use bee_test::transaction::{
+        create_random_attached_tx,
+        create_random_tx,
+    };
 
     use async_std::sync::channel;
     use bee_bundle::{
@@ -358,6 +366,104 @@ mod tests {
         tangle.update_last_milestone_index(1368168.into());
 
         assert_eq!(1368168, *tangle.get_last_milestone_index());
+        drop();
+    }
+
+    #[test]
+    #[serial]
+    fn walk_trunk_approvers() {
+        init();
+
+        // a   b
+        // |\ /
+        // | c
+        // |/|
+        // d |
+        //  \|
+        //   e
+        //
+        // Trunk path from 'a':
+        // a --(trunk)-> d --(trunk)-> e
+
+        let tangle = tangle();
+
+        let (a_hash, a) = create_random_tx();
+        let (b_hash, b) = create_random_tx();
+        let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone()); // branch, trunk
+        let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
+        let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
+
+        block_on(async {
+            tangle.insert_transaction(a.clone(), a_hash.clone()).await;
+            tangle.insert_transaction(b.clone(), b_hash.clone()).await;
+            tangle.insert_transaction(c.clone(), c_hash.clone()).await;
+            tangle.insert_transaction(d.clone(), d_hash.clone()).await;
+            tangle.insert_transaction(e.clone(), e_hash.clone()).await;
+        });
+
+        assert_eq!(5, tangle.size());
+        assert_eq!(2, tangle.num_approvers(&a_hash));
+        assert_eq!(1, tangle.num_approvers(&b_hash));
+        assert_eq!(2, tangle.num_approvers(&c_hash));
+        assert_eq!(1, tangle.num_approvers(&d_hash));
+        assert_eq!(0, tangle.num_approvers(&e_hash));
+
+        let txs = tangle.trunk_walk_approvers(a_hash, |tx| true);
+
+        assert_eq!(3, txs.len());
+        assert_eq!(a.address(), txs[0].address());
+        assert_eq!(d.address(), txs[1].address());
+        assert_eq!(e.address(), txs[2].address());
+
+        drop();
+    }
+
+    #[test]
+    #[serial]
+    fn walk_trunk_approvees() {
+        init();
+
+        // a   b
+        // |\ /
+        // | c
+        // |/|
+        // d |
+        //  \|
+        //   e
+        //
+        // Trunk path from 'e':
+        // a <-(trunk)-- d <-(trunk)-- e
+
+        let tangle = tangle();
+
+        let (a_hash, a) = create_random_tx();
+        let (b_hash, b) = create_random_tx();
+        let (c_hash, c) = create_random_attached_tx(b_hash.clone(), a_hash.clone()); // branch, trunk
+        let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
+        let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
+
+        block_on(async {
+            tangle.insert_transaction(a.clone(), a_hash).await;
+            tangle.insert_transaction(b.clone(), b_hash).await;
+            tangle.insert_transaction(c.clone(), c_hash).await;
+            tangle.insert_transaction(d.clone(), d_hash).await;
+            tangle.insert_transaction(e.clone(), e_hash).await;
+        });
+
+        assert_eq!(5, tangle.size());
+        assert_eq!(2, tangle.num_approvers(&a_hash));
+        assert_eq!(1, tangle.num_approvers(&b_hash));
+        assert_eq!(2, tangle.num_approvers(&c_hash));
+        assert_eq!(1, tangle.num_approvers(&d_hash));
+        assert_eq!(0, tangle.num_approvers(&e_hash));
+
+        let txs = tangle.trunk_walk_approvees(e_hash, |tx| true);
+
+        assert_eq!(3, txs.len());
+        assert_eq!(e.address(), txs[0].address());
+        assert_eq!(d.address(), txs[1].address());
+        assert_eq!(a.address(), txs[2].address());
+
         drop();
     }
 }
