@@ -15,6 +15,7 @@ use async_std::sync::{
     Sender,
 };
 use dashmap::{
+    mapref::entry::Entry,
     DashMap,
     DashSet,
 };
@@ -32,6 +33,7 @@ use std::sync::atomic::{
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
     vertices: DashMap<Hash, Vertex>,
+    approvers: DashMap<Hash, Vec<Hash>>,
     unsolid_new: Sender<Hash>,
     solid_entry_points: DashSet<Hash>,
     milestones: DashMap<MilestoneIndex, Hash>,
@@ -45,6 +47,7 @@ impl Tangle {
     pub(crate) fn new(unsolid_new: Sender<Hash>) -> Self {
         Self {
             vertices: DashMap::new(),
+            approvers: DashMap::new(),
             unsolid_new,
             solid_entry_points: DashSet::new(),
             milestones: DashMap::new(),
@@ -58,18 +61,35 @@ impl Tangle {
     ///
     /// TODO: there is no guarantee `hash` belongs to `transaction`. User responsibility?
     pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<VertexRef> {
+        match self.approvers.entry(*transaction.trunk()) {
+            Entry::Occupied(mut entry) => {
+                let values = entry.get_mut();
+                values.push(hash.clone());
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(vec![hash.clone()]);
+                ()
+            }
+        }
+
+        match self.approvers.entry(*transaction.branch()) {
+            Entry::Occupied(mut entry) => {
+                let values = entry.get_mut();
+                values.push(hash.clone());
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(vec![hash.clone()]);
+                ()
+            }
+        }
+
         let vertex = Vertex::from(transaction, hash);
-
-        self.insert(hash, vertex).await
-    }
-
-    #[inline(always)]
-    async fn insert(&'static self, hash: Hash, vertex: Vertex) -> Option<VertexRef> {
         let meta = vertex.meta;
 
         // TODO: not sure if we want replacement of vertices
         if self.vertices.insert(hash, vertex).is_none() {
             self.unsolid_new.send(hash).await;
+
             Some(VertexRef { meta, tangle: self })
         } else {
             None
@@ -131,7 +151,7 @@ impl Tangle {
     }
 
     /// Removes `hash` from the set of solid entry points.
-    pub fn rmv_solid_entry_point(&'static self, hash: Hash) {
+    pub fn remove_solid_entry_point(&'static self, hash: Hash) {
         self.solid_entry_points.remove(&hash);
     }
 
@@ -201,6 +221,76 @@ impl Tangle {
     /// Returns the current size of the Tangle.
     pub fn size(&'static self) -> usize {
         self.vertices.len()
+    }
+
+    /// Starts a walk beginning at a `start` vertex identified by its associated transaction hash
+    /// traversing its children/approvers for as long as those satisfy a given `filter`.
+    ///
+    /// Returns a list of descendents of `start`. It is ensured, that all elements of that list
+    /// are connected through the trunk.
+    pub fn trunk_walk_approvers<F>(&'static self, start: Hash, filter: F) -> Vec<TransactionRef>
+    where
+        F: Fn(&TransactionRef) -> bool,
+    {
+        let mut approvees = vec![];
+        let mut collected = vec![];
+
+        if let Some(approvee_ref) = self.vertices.get(&start) {
+            let approvee = approvee_ref.value().get_transaction();
+
+            if filter(&approvee) {
+                approvees.push(start);
+                collected.push(approvee);
+            }
+
+            while let Some(approvee_hash) = approvees.pop() {
+                if let Some(approvers_ref) = self.approvers.get(&approvee_hash) {
+                    for approver_hash in approvers_ref.value() {
+                        if let Some(approver_ref) = self.vertices.get(approver_hash) {
+                            let approver = approver_ref.value().get_transaction();
+
+                            if *approver.trunk() == approvee_hash && filter(&approver) {
+                                approvees.push(*approver_hash);
+                                collected.push(approver);
+                                // NOTE: For simplicity reasons we break here, and assume, that there can't be
+                                // a second approver that passes the filter
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        collected
+    }
+
+    /// Starts a walk beginning at a `start` vertex identified by its associated transaction hash
+    /// traversing its ancestors/approvees for as long as those satisfy a given `filter`.
+    ///
+    /// Returns a list of ancestors of `start`. It is ensured, that all elements of that list
+    /// are connected through the trunk.
+    pub fn trunk_walk_approvees<F>(&'static self, start: Hash, filter: F) -> Vec<TransactionRef>
+    where
+        F: Fn(&TransactionRef) -> bool,
+    {
+        let mut approvers = vec![start];
+        let mut collected = vec![];
+
+        while let Some(approver_hash) = approvers.pop() {
+            if let Some(approver_ref) = self.vertices.get(&approver_hash) {
+                let approver = approver_ref.value().get_transaction();
+
+                if !filter(&approver) {
+                    break;
+                } else {
+                    approvers.push(approver.trunk().clone());
+                    collected.push(approver);
+                }
+            }
+        }
+
+        collected
     }
 }
 
