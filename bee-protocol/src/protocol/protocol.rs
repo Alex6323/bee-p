@@ -35,6 +35,7 @@ use crate::{
     },
 };
 
+use bee_bundle::Hash;
 use bee_crypto::{
     CurlP27,
     CurlP81,
@@ -56,7 +57,10 @@ use std::{
 };
 
 use async_std::task::spawn;
-use dashmap::DashMap;
+use dashmap::{
+    DashMap,
+    DashSet,
+};
 use futures::{
     channel::{
         mpsc,
@@ -100,6 +104,7 @@ pub struct Protocol {
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) status_worker: mpsc::Sender<()>,
     pub(crate) contexts: DashMap<EndpointId, SenderContext>,
+    pub(crate) requested: DashSet<Hash>,
 }
 
 impl Protocol {
@@ -169,6 +174,7 @@ impl Protocol {
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             status_worker: status_worker_shutdown_tx,
             contexts: DashMap::new(),
+            requested: DashSet::new(),
         };
 
         unsafe {

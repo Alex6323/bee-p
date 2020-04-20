@@ -53,6 +53,7 @@ impl TransactionRequesterWorker {
 
     async fn process_request(&mut self, hash: Hash, _index: MilestoneIndex) {
         // TODO check that neighbor may have the tx (by the index)
+        Protocol::get().requested.insert(hash);
 
         match Protocol::get()
             .contexts
