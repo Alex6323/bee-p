@@ -306,6 +306,15 @@ impl Transaction {
         self.index == self.last_index
     }
 
+    // TODO rename ?
+    // TODO return type ?
+    pub fn get_timestamp(&self) -> u64 {
+        match self.attachment_ts.to_inner() {
+            0 => *self.timestamp.to_inner(),
+            _ => *self.attachment_ts.to_inner() / 1000,
+        }
+    }
+
     pub const fn trit_len() -> usize {
         TRANSACTION_TRIT_LEN
     }
