@@ -189,6 +189,8 @@ mod tests {
 
     #[test]
     fn test_tx_worker_with_compressed_buffer() {
+        bee_tangle::init();
+
         // build network
         let network_config = NetworkConfBuilder::default().build();
         let addr = block_on(Address::from_addr_str("localhost:1337")).unwrap();
@@ -196,9 +198,7 @@ mod tests {
 
         // init protocol
         let protocol_config = ProtocolConfBuilder::default().build();
-        Protocol::init(protocol_config, network);
-
-        bee_tangle::init();
+        block_on(Protocol::init(protocol_config, network));
 
         assert_eq!(tangle().size(), 0);
 
