@@ -149,28 +149,42 @@ impl TransactionWorker {
                 if transaction.address().eq(&Protocol::get().conf.coordinator.public_key)
                     || transaction.address().eq(&Protocol::get().conf.workers.null_address)
                 {
-                    if transaction.is_tail() {
-                        milestone_validator_worker_tx.send(hash).await.unwrap();
-                    } else {
-
-                        let chain = tangle().trunk_walk_approvers(hash, |tx_ref| {
-                            tx_ref.bundle() == transaction.bundle()
-                        });
-
-                        match chain.last() {
-                            Some((tx_ref, hash)) => {
-                                if tx_ref.is_tail() {
-                                    milestone_validator_worker_tx.send(*hash).await.unwrap();
-                                    debug!("[TransactionWorker ] Sent tail to the transaction validator.");
+                    let tail = {
+                        if transaction.is_tail() {
+                            Some(hash)
+                        } else {
+                            let chain = tangle().trunk_walk_approvers(hash, |tx_ref| {
+                                tx_ref.bundle() == transaction.bundle()
+                            });
+                            match chain.last() {
+                                Some((tx_ref, hash)) => {
+                                    if tx_ref.is_tail() {
+                                        Some(*hash)
+                                    } else {
+                                        None
+                                    }
                                 }
-                            }
-                            None => {
-                                debug!("[TransactionWorker ] Can not find tail in the tangle.");
-                                return
+                                None => None
                             }
                         }
+                    };
 
+                    match tail {
+                        Some(tail) => {
+                            milestone_validator_worker_tx.send(tail).await.unwrap();
+                            debug!(
+                                "[TransactionWorker ] Sent tail of potential milestone candidate to the milestone validator: {}",
+                                tail
+                            );
+                        }
+                        None => {
+                            debug!(
+                                "[TransactionWorker ] Tail of potential milestone bundle not present yet: {}",
+                                transaction.bundle()
+                            );
+                        }
                     }
+
                 }
             }
             None => {
