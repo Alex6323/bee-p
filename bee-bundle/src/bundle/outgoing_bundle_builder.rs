@@ -262,22 +262,22 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     pub fn sign(
         mut self,
         seed: &IotaSeed<Kerl>,
-        inputs: Vec<(u64, Address)>,
-        security: WotsSecurityLevel,
+        inputs: &[(u64, Address, WotsSecurityLevel)],
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
         // Safe to unwrap because bundle is sealed
         let message = self.builders.0.get(0).unwrap().bundle.as_ref().unwrap();
-        let key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-            .security_level(security)
-            .build()
-            // Safe to unwrap because security level is provided
-            .unwrap();
+
         let mut signature_fragments: Vec<Payload> = Vec::new();
 
-        for (index, _) in inputs {
+        for (index, _, security) in inputs {
+            let key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(*security)
+                .build()
+                // Safe to unwrap because security level is provided
+                .unwrap();
             // Create subseed and then sign the message
             let signature = key_generator
-                .generate(seed, index)
+                .generate(seed, *index)
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?
                 .sign(message.to_inner().as_i8_slice())
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
@@ -370,6 +370,16 @@ mod tests {
         Timestamp,
         Value,
     };
+    use bee_signing::{
+        PublicKey,
+        RecoverableSignature,
+        Seed,
+        WotsSignature,
+    };
+    use bee_ternary::{
+        T1B1Buf,
+        TritBuf,
+    };
 
     fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
         TransactionBuilder::new()
@@ -390,20 +400,12 @@ mod tests {
             .with_nonce(Nonce::zeros())
     }
 
-    // TODO Also check to attach if value ?
-    #[test]
-    fn outgoing_bundle_builder_value_test() -> Result<(), OutgoingBundleBuilderError> {
-        use bee_signing::{
-            PublicKey,
-            RecoverableSignature,
-            Seed,
-            WotsSignature,
-        };
-        let bundle_size = 3;
+    fn bundle_builder_signature_check(security: WotsSecurityLevel) -> Result<(), OutgoingBundleBuilderError> {
+        let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
         let seed = IotaSeed::<Kerl>::new();
         let subseed = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
-            .security_level(WotsSecurityLevel::Low)
+            .security_level(security)
             .build()
             .unwrap()
             .generate(&seed, 0)
@@ -412,28 +414,130 @@ mod tests {
 
         // Transfer
         bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(1)));
+
         // Input
         bundle_builder.push(
             default_transaction_builder(1, bundle_size - 1)
                 .with_address(address.clone())
                 .with_value(Value::from_inner_unchecked(-1)),
         );
-        bundle_builder.push(default_transaction_builder(2, bundle_size - 1));
+        bundle_builder.push(default_transaction_builder(2, bundle_size - 1).with_address(address.clone()));
+        bundle_builder.push(default_transaction_builder(3, bundle_size - 1).with_address(address.clone()));
 
+        // Build bundle and sign
         let bundle = bundle_builder
             .seal()?
-            .sign(&seed, vec![(0, address.clone())], WotsSecurityLevel::Low)?
+            .sign(&seed, &[(0, address.clone(), security)])?
             .attach_local(Hash::zeros(), Hash::zeros())?
             .build()?;
-
         assert_eq!(bundle.len(), bundle_size);
+
         // Validate signature
-        let input = bundle.0.get(1).unwrap();
-        let res = WotsSignature::<Kerl>::from_buf(input.payload.to_inner().to_owned())
-            .recover_public_key(input.bundle.to_inner().as_i8_slice()).unwrap();
+        let security = match security {
+            WotsSecurityLevel::Low => 1,
+            WotsSecurityLevel::Medium => 2,
+            WotsSecurityLevel::High => 3,
+        };
+        let mut signature = TritBuf::<T1B1Buf>::zeros(PAYLOAD_TRIT_LEN * security);
+        let mut offset = 0;
+        for i in 1..security + 1 {
+            let input = bundle.0.get(i).unwrap();
+            signature.copy_raw_bytes(&input.payload.to_inner().to_owned(), offset, PAYLOAD_TRIT_LEN);
+            offset += PAYLOAD_TRIT_LEN;
+        }
+        let res = WotsSignature::<Kerl>::from_buf(signature)
+            .recover_public_key(bundle.0.get(1).unwrap().bundle.to_inner().as_i8_slice())
+            .unwrap();
         assert_eq!(address.to_inner().as_slice(), res.trits());
-        
+
         Ok(())
+    }
+
+    fn bundle_builder_different_security_check() -> Result<(), OutgoingBundleBuilderError> {
+        let bundle_size = 4;
+        let mut bundle_builder = OutgoingBundleBuilder::new();
+        let seed = IotaSeed::<Kerl>::new();
+        let address_low = Address::from_inner_unchecked(
+            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(WotsSecurityLevel::Low)
+                .build()
+                .unwrap()
+                .generate(&seed, 0)
+                .unwrap()
+                .generate_public_key()
+                .unwrap()
+                .trits()
+                .to_owned(),
+        );
+        let address_medium = Address::from_inner_unchecked(
+            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(WotsSecurityLevel::Medium)
+                .build()
+                .unwrap()
+                .generate(&seed, 1)
+                .unwrap()
+                .generate_public_key()
+                .unwrap()
+                .trits()
+                .to_owned(),
+        );
+
+        // Transfer
+        bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(1)));
+
+        // Input
+        bundle_builder.push(
+            default_transaction_builder(1, bundle_size - 1)
+                .with_address(address_low.clone())
+                .with_value(Value::from_inner_unchecked(-1)),
+        );
+        bundle_builder.push(default_transaction_builder(2, bundle_size - 1).with_address(address_medium.clone()));
+        bundle_builder.push(default_transaction_builder(3, bundle_size - 1).with_address(address_medium.clone()));
+
+        // Build bundle and sign
+        let bundle = bundle_builder
+            .seal()?
+            .sign(
+                &seed,
+                &[
+                    (0, address_low.clone(), WotsSecurityLevel::Low),
+                    (0, address_medium.clone(), WotsSecurityLevel::Medium),
+                ],
+            )?
+            .attach_local(Hash::zeros(), Hash::zeros())?
+            .build()?;
+        assert_eq!(bundle.len(), bundle_size);
+
+        // Validate signature
+        let res_low = WotsSignature::<Kerl>::from_buf(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
+            .recover_public_key(bundle.0.get(1).unwrap().bundle.to_inner().as_i8_slice())
+            .unwrap();
+        assert_eq!(address_low.to_inner().as_slice(), res_low.trits());
+
+        let mut signature = TritBuf::<T1B1Buf>::zeros(PAYLOAD_TRIT_LEN * 2);
+        let mut offset = 0;
+        for i in 2..4 {
+            let input = bundle.0.get(i).unwrap();
+            signature.copy_raw_bytes(&input.payload.to_inner().to_owned(), offset, PAYLOAD_TRIT_LEN);
+            offset += PAYLOAD_TRIT_LEN;
+        }
+        let res_medium = WotsSignature::<Kerl>::from_buf(signature)
+            .recover_public_key(bundle.0.get(2).unwrap().bundle.to_inner().as_i8_slice())
+            .unwrap();
+        assert_eq!(address_medium.to_inner().as_slice(), res_medium.trits());
+
+        Ok(())
+    }
+
+    // TODO Also check to attach if value ?
+    #[test]
+    fn outgoing_bundle_builder_value_test() -> Result<(), OutgoingBundleBuilderError> {
+        // Check each security
+        bundle_builder_signature_check(WotsSecurityLevel::Low)?;
+        bundle_builder_signature_check(WotsSecurityLevel::Medium)?;
+        bundle_builder_signature_check(WotsSecurityLevel::High)?;
+        // Check inputs have different security
+        bundle_builder_different_security_check()
     }
 
     // TODO Also check to sign if data ?

@@ -1,7 +1,12 @@
 use crate::{
     constants::{
         ADDRESS,
+        INDEX,
         IOTA_SUPPLY,
+        LAST_INDEX,
+        OBSOLETE_TAG,
+        TIMESTAMP,
+        VALUE,
     },
     transaction::{
         Address,
@@ -18,7 +23,11 @@ use crate::{
     },
 };
 
-use bee_ternary::Btrit;
+use bee_ternary::{
+    Btrit,
+    T1B1Buf,
+    TritBuf,
+};
 
 #[derive(Default)]
 pub struct TransactionBuilder {
@@ -42,6 +51,49 @@ pub struct TransactionBuilder {
 impl TransactionBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn essence(&self) -> TritBuf {
+        let mut essence = TritBuf::<T1B1Buf>::zeros(
+            ADDRESS.trit_offset.length
+                + VALUE.trit_offset.length
+                + OBSOLETE_TAG.trit_offset.length
+                + TIMESTAMP.trit_offset.length
+                + INDEX.trit_offset.length
+                + LAST_INDEX.trit_offset.length,
+        );
+        let address = self.address.as_ref().unwrap();
+        let value = TritBuf::from(*self.value.as_ref().unwrap().to_inner());
+        let obsolete_tag = self.obsolete_tag.as_ref().unwrap();
+        let timestamp = TritBuf::from(*self.timestamp.as_ref().unwrap().to_inner() as i64);
+        let index = TritBuf::from(*self.index.as_ref().unwrap().to_inner() as i64);
+        let last_index = TritBuf::from(*self.last_index.as_ref().unwrap().to_inner() as i64);
+
+        let mut start = 0;
+        let mut end = ADDRESS.trit_offset.length;
+        essence[start..end].copy_from(address.to_inner());
+
+        start += ADDRESS.trit_offset.length;
+        end = start + value.len();
+        essence[start..end].copy_from(&value);
+
+        start += VALUE.trit_offset.length;
+        end = start + OBSOLETE_TAG.trit_offset.length;
+        essence[start..end].copy_from(obsolete_tag.to_inner());
+
+        start += OBSOLETE_TAG.trit_offset.length;
+        end = start + timestamp.len();
+        essence[start..end].copy_from(&timestamp);
+
+        start += TIMESTAMP.trit_offset.length;
+        end = start + index.len();
+        essence[start..end].copy_from(&index);
+
+        start += INDEX.trit_offset.length;
+        end = start + last_index.len();
+        essence[start..end].copy_from(&last_index);
+
+        essence
     }
 
     pub fn with_payload(mut self, payload: Payload) -> Self {
