@@ -32,10 +32,10 @@ impl MilestoneSolidifierWorker {
         match tangle().get_milestone_hash(&(target_milestone_index.into())) {
             Some(target_milestone_hash) => match self.solidify(target_milestone_hash) {
                 true => {
-                    tangle().update_last_solid_milestone_index(target_milestone_index.into());
+                    tangle().update_solid_milestone_index(target_milestone_index.into());
                     Protocol::broadcast_heartbeat(
-                        *tangle().get_first_solid_milestone_index(),
-                        *tangle().get_last_solid_milestone_index(),
+                        *tangle().get_solid_milestone_index(),
+                        *tangle().get_snapshot_milestone_index(),
                     )
                     .await;
                     true
@@ -64,8 +64,8 @@ impl MilestoneSolidifierWorker {
             select! {
                 event = receiver_fused.next() => {
                     if let Some(MilestoneSolidifierWorkerEvent()) = event {
-                        while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
-                            if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
+                        while tangle().get_solid_milestone_index() < tangle().get_last_milestone_index() {
+                            if !self.process_target(*tangle().get_solid_milestone_index() + 1).await {
                                 break;
                             }
                         }

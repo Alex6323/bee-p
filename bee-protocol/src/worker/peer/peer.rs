@@ -140,8 +140,8 @@ impl PeerWorker {
 
                                 Protocol::send_heartbeat(
                                     self.peer.epid,
-                                    *tangle().get_first_solid_milestone_index(),
-                                    *tangle().get_last_solid_milestone_index(),
+                                    *tangle().get_solid_milestone_index(),
+                                    *tangle().get_snapshot_milestone_index(),
                                 )
                                 .await;
 
@@ -253,10 +253,8 @@ impl PeerWorker {
                         debug!("[PeerWorker({})] Reading Heartbeat...", self.peer.epid);
                         match Heartbeat::from_full_bytes(&header, bytes) {
                             Ok(message) => {
-                                self.peer
-                                    .set_first_solid_milestone_index(message.first_solid_milestone_index);
-                                self.peer
-                                    .set_last_solid_milestone_index(message.last_solid_milestone_index);
+                                self.peer.set_solid_milestone_index(message.solid_milestone_index);
+                                self.peer.set_snapshot_milestone_index(message.snapshot_milestone_index);
 
                                 self.peer.metrics.heartbeat_received_inc();
                                 Protocol::get().metrics.heartbeat_received_inc();

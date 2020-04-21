@@ -164,9 +164,9 @@ impl Node {
                     snapshot_metadata.solid_entry_points().len(),
                     snapshot_metadata.seen_milestones().len(),
                 );
-                tangle().update_first_solid_milestone_index(snapshot_metadata.index().into());
+                tangle().update_solid_milestone_index(snapshot_metadata.index().into());
                 // TODO get from database
-                tangle().update_last_solid_milestone_index(snapshot_metadata.index().into());
+                tangle().update_snapshot_milestone_index(snapshot_metadata.index().into());
                 // TODO get from database
                 tangle().update_last_milestone_index(snapshot_metadata.index().into());
                 tangle().add_solid_entry_point(Hash::zeros());

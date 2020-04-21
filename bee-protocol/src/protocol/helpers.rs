@@ -88,22 +88,15 @@ impl Protocol {
 
     pub async fn send_heartbeat(
         to: EndpointId,
-        first_solid_milestone_index: MilestoneIndex,
-        last_solid_milestone_index: MilestoneIndex,
+        solid_milestone_index: MilestoneIndex,
+        snapshot_milestone_index: MilestoneIndex,
     ) {
-        SenderWorker::<Heartbeat>::send(
-            &to,
-            Heartbeat::new(first_solid_milestone_index, last_solid_milestone_index),
-        )
-        .await;
+        SenderWorker::<Heartbeat>::send(&to, Heartbeat::new(solid_milestone_index, snapshot_milestone_index)).await;
     }
 
-    pub async fn broadcast_heartbeat(
-        first_solid_milestone_index: MilestoneIndex,
-        last_solid_milestone_index: MilestoneIndex,
-    ) {
+    pub async fn broadcast_heartbeat(solid_milestone_index: MilestoneIndex, snapshot_milestone_index: MilestoneIndex) {
         for entry in Protocol::get().contexts.iter() {
-            Protocol::send_heartbeat(*entry.key(), first_solid_milestone_index, last_solid_milestone_index).await;
+            Protocol::send_heartbeat(*entry.key(), solid_milestone_index, snapshot_milestone_index).await;
         }
     }
 

@@ -12,22 +12,21 @@ use std::{
     ops::Range,
 };
 
-const HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
-const HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
-const HEARTBEAT_CONSTANT_SIZE: usize =
-    HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE;
+const HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
+const HEARTBEAT_SNAPSHOT_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
+const HEARTBEAT_CONSTANT_SIZE: usize = HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE + HEARTBEAT_SNAPSHOT_MILESTONE_INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct Heartbeat {
-    pub(crate) first_solid_milestone_index: MilestoneIndex,
-    pub(crate) last_solid_milestone_index: MilestoneIndex,
+    pub(crate) solid_milestone_index: MilestoneIndex,
+    pub(crate) snapshot_milestone_index: MilestoneIndex,
 }
 
 impl Heartbeat {
-    pub(crate) fn new(first_solid_milestone_index: MilestoneIndex, last_solid_milestone_index: MilestoneIndex) -> Self {
+    pub(crate) fn new(solid_milestone_index: MilestoneIndex, snapshot_milestone_index: MilestoneIndex) -> Self {
         Self {
-            first_solid_milestone_index: first_solid_milestone_index,
-            last_solid_milestone_index: last_solid_milestone_index,
+            solid_milestone_index: solid_milestone_index,
+            snapshot_milestone_index: snapshot_milestone_index,
         }
     }
 }
@@ -47,15 +46,15 @@ impl Message for Heartbeat {
         let mut message = Self::default();
         let mut offset = 0;
 
-        message.first_solid_milestone_index = MilestoneIndex::from_be_bytes(
-            bytes[offset..offset + HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
+        message.solid_milestone_index = MilestoneIndex::from_be_bytes(
+            bytes[offset..offset + HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
-        offset += HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE;
+        offset += HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE;
 
-        message.last_solid_milestone_index = MilestoneIndex::from_be_bytes(
-            bytes[offset..offset + HEARTBEAT_LAST_SOLID_MILESTONE_INDEX_SIZE]
+        message.snapshot_milestone_index = MilestoneIndex::from_be_bytes(
+            bytes[offset..offset + HEARTBEAT_SNAPSHOT_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
@@ -68,10 +67,8 @@ impl Message for Heartbeat {
     }
 
     fn to_bytes(self, bytes: &mut [u8]) {
-        bytes[0..HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE]
-            .copy_from_slice(&self.first_solid_milestone_index.to_be_bytes());
-        bytes[HEARTBEAT_FIRST_SOLID_MILESTONE_INDEX_SIZE..]
-            .copy_from_slice(&self.last_solid_milestone_index.to_be_bytes());
+        bytes[0..HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE].copy_from_slice(&self.solid_milestone_index.to_be_bytes());
+        bytes[HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE..].copy_from_slice(&self.snapshot_milestone_index.to_be_bytes());
     }
 }
 
@@ -115,8 +112,8 @@ mod tests {
     }
 
     fn to_from_eq(message: Heartbeat) {
-        assert_eq!(message.first_solid_milestone_index, FIRST_SOLID_MILESTONE_INDEX);
-        assert_eq!(message.last_solid_milestone_index, LAST_SOLID_MILESTONE_INDEX);
+        assert_eq!(message.solid_milestone_index, FIRST_SOLID_MILESTONE_INDEX);
+        assert_eq!(message.snapshot_milestone_index, LAST_SOLID_MILESTONE_INDEX);
     }
 
     #[test]

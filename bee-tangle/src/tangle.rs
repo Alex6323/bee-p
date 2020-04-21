@@ -39,9 +39,9 @@ pub struct Tangle {
 
     unsolid_new: Sender<Hash>,
 
-    first_solid_milestone: AtomicU32,
-    last_solid_milestone: AtomicU32,
-    last_milestone: AtomicU32,
+    solid_milestone_index: AtomicU32,
+    snapshot_milestone_index: AtomicU32,
+    last_milestone_index: AtomicU32,
 }
 
 impl Tangle {
@@ -53,9 +53,9 @@ impl Tangle {
             unsolid_new,
             solid_entry_points: DashSet::new(),
             milestones: DashMap::new(),
-            first_solid_milestone: AtomicU32::new(0),
-            last_solid_milestone: AtomicU32::new(0),
-            last_milestone: AtomicU32::new(0),
+            solid_milestone_index: AtomicU32::new(0),
+            snapshot_milestone_index: AtomicU32::new(0),
+            last_milestone_index: AtomicU32::new(0),
         }
     }
 
@@ -185,39 +185,39 @@ impl Tangle {
         self.milestones.contains_key(index)
     }
 
-    /// Retreives the first solid milestone index.
-    pub fn get_first_solid_milestone_index(&'static self) -> MilestoneIndex {
-        self.first_solid_milestone.load(Ordering::Relaxed).into()
+    /// Retreives the solid milestone index.
+    pub fn get_solid_milestone_index(&'static self) -> MilestoneIndex {
+        self.solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    /// Updates the first solid milestone index to `new_index`.
-    pub fn update_first_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
-        self.first_solid_milestone.store(*new_index, Ordering::Relaxed);
+    /// Updates the solid milestone index to `new_index`.
+    pub fn update_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
+        self.solid_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    /// Retreives the last solid milestone index.
-    pub fn get_last_solid_milestone_index(&'static self) -> MilestoneIndex {
-        self.last_solid_milestone.load(Ordering::Relaxed).into()
+    /// Retreives the snapshot milestone index.
+    pub fn get_snapshot_milestone_index(&'static self) -> MilestoneIndex {
+        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    /// Updates the last solid milestone index to `new_index`.
-    pub fn update_last_solid_milestone_index(&'static self, new_index: MilestoneIndex) {
-        self.last_solid_milestone.store(*new_index, Ordering::Relaxed);
+    /// Updates the snapshot milestone index to `new_index`.
+    pub fn update_snapshot_milestone_index(&'static self, new_index: MilestoneIndex) {
+        self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
     /// Retreives the last milestone index.
     pub fn get_last_milestone_index(&'static self) -> MilestoneIndex {
-        self.last_milestone.load(Ordering::Relaxed).into()
+        self.last_milestone_index.load(Ordering::Relaxed).into()
     }
 
     /// Updates the last milestone index to `new_index`.
     pub fn update_last_milestone_index(&'static self, new_index: MilestoneIndex) {
-        self.last_milestone.store(*new_index, Ordering::Relaxed);
+        self.last_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
     /// Checks if the tangle is synced or not
     pub fn is_synced(&'static self) -> bool {
-        self.get_last_solid_milestone_index() == self.get_last_milestone_index()
+        self.get_solid_milestone_index() == self.get_last_milestone_index()
     }
 
     /// Returns the current size of the Tangle.

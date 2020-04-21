@@ -17,18 +17,19 @@ impl StatusWorker {
     }
 
     fn status(&self) {
-        let first_solid_milestone_index: u32 = *tangle().get_first_solid_milestone_index();
-        let last_solid_milestone_index: u32 = *tangle().get_last_solid_milestone_index();
+        let snapshot_milestone_index: u32 = *tangle().get_snapshot_milestone_index();
+        let solid_milestone_index: u32 = *tangle().get_solid_milestone_index();
         let last_milestone_index: u32 = *tangle().get_last_milestone_index();
 
         // TODO Threshold
-        if last_solid_milestone_index == last_milestone_index {
+        // TODO use tangle synced method
+        if solid_milestone_index == last_milestone_index {
             info!("[StatusWorker ] Synchronized.");
         } else {
             // TODO %
             info!(
                 "[StatusWorker ] Synchronizing {}..{}..{}.",
-                first_solid_milestone_index, last_solid_milestone_index, last_milestone_index
+                snapshot_milestone_index, solid_milestone_index, last_milestone_index
             );
         }
     }

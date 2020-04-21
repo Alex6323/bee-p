@@ -19,8 +19,8 @@ pub struct Peer {
     pub(crate) address: Address,
     pub(crate) origin: Origin,
     pub(crate) metrics: ProtocolMetrics,
-    pub(crate) first_solid_milestone_index: AtomicU32,
-    pub(crate) last_solid_milestone_index: AtomicU32,
+    pub(crate) solid_milestone_index: AtomicU32,
+    pub(crate) snapshot_milestone_index: AtomicU32,
 }
 
 impl Peer {
@@ -30,24 +30,24 @@ impl Peer {
             address,
             origin,
             metrics: ProtocolMetrics::default(),
-            first_solid_milestone_index: AtomicU32::new(0),
-            last_solid_milestone_index: AtomicU32::new(0),
+            solid_milestone_index: AtomicU32::new(0),
+            snapshot_milestone_index: AtomicU32::new(0),
         }
     }
 
-    pub(crate) fn set_first_solid_milestone_index(&self, index: MilestoneIndex) {
-        self.first_solid_milestone_index.store(index, Ordering::Relaxed);
+    pub(crate) fn set_solid_milestone_index(&self, index: MilestoneIndex) {
+        self.solid_milestone_index.store(index, Ordering::Relaxed);
     }
 
-    pub(crate) fn first_solid_milestone_index(&self) -> MilestoneIndex {
-        self.first_solid_milestone_index.load(Ordering::Relaxed)
+    pub(crate) fn solid_milestone_index(&self) -> MilestoneIndex {
+        self.solid_milestone_index.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn set_last_solid_milestone_index(&self, index: MilestoneIndex) {
-        self.last_solid_milestone_index.store(index, Ordering::Relaxed);
+    pub(crate) fn set_snapshot_milestone_index(&self, index: MilestoneIndex) {
+        self.snapshot_milestone_index.store(index, Ordering::Relaxed);
     }
 
-    pub(crate) fn last_solid_milestone_index(&self) -> MilestoneIndex {
-        self.last_solid_milestone_index.load(Ordering::Relaxed)
+    pub(crate) fn snapshot_milestone_index(&self) -> MilestoneIndex {
+        self.snapshot_milestone_index.load(Ordering::Relaxed)
     }
 }
