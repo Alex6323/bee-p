@@ -259,6 +259,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     }
 
     // TODO TEST
+    // TODO Right now this method receive inputs have same order as address in bundle.
+    // We probably want to check it is the right input for the address.
     pub fn sign(
         mut self,
         seed: &IotaSeed<Kerl>,
