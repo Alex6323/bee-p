@@ -115,9 +115,8 @@ where
                                     info!("[MilestoneValidatorWorker ] New milestone #{}.", milestone.index);
                                     tangle().update_last_milestone_index(milestone.index.into());
                                 }
-                                if milestone.index == *tangle().get_last_solid_milestone_index() + 1 {
-                                    Protocol::trigger_milestone_solidification().await;
-                                }
+                                // TODO only trigger if index == last solid index ?
+                                Protocol::trigger_milestone_solidification().await;
                             },
                             Err(e) => {
                                 match e {
