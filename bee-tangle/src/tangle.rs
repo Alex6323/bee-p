@@ -228,7 +228,7 @@ impl Tangle {
     ///
     /// Returns a list of descendents of `start`. It is ensured, that all elements of that list
     /// are connected through the trunk.
-    pub fn trunk_walk_approvers<F>(&'static self, start: Hash, filter: F) -> Vec<TransactionRef>
+    pub fn trunk_walk_approvers<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
     where
         F: Fn(&TransactionRef) -> bool,
     {
@@ -236,11 +236,12 @@ impl Tangle {
         let mut collected = vec![];
 
         if let Some(approvee_ref) = self.vertices.get(&start) {
-            let approvee = approvee_ref.value().get_transaction();
+            let approvee_vtx = approvee_ref.value();
+            let approvee = approvee_vtx.get_transaction();
 
             if filter(&approvee) {
                 approvees.push(start);
-                collected.push(approvee);
+                collected.push((approvee, approvee_vtx.get_id()));
 
                 while let Some(approvee_hash) = approvees.pop() {
                     if let Some(approvers_ref) = self.approvers.get(&approvee_hash) {
@@ -250,7 +251,7 @@ impl Tangle {
 
                                 if *approver.trunk() == approvee_hash && filter(&approver) {
                                     approvees.push(*approver_hash);
-                                    collected.push(approver);
+                                    collected.push((approver, approver_ref.value().get_id()));
                                     // NOTE: For simplicity reasons we break here, and assume, that there can't be
                                     // a second approver that passes the filter
                                     break;
@@ -270,7 +271,7 @@ impl Tangle {
     ///
     /// Returns a list of ancestors of `start`. It is ensured, that all elements of that list
     /// are connected through the trunk.
-    pub fn trunk_walk_approvees<F>(&'static self, start: Hash, filter: F) -> Vec<TransactionRef>
+    pub fn trunk_walk_approvees<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
     where
         F: Fn(&TransactionRef) -> bool,
     {
@@ -279,13 +280,14 @@ impl Tangle {
 
         while let Some(approver_hash) = approvers.pop() {
             if let Some(approver_ref) = self.vertices.get(&approver_hash) {
-                let approver = approver_ref.value().get_transaction();
+                let approver_vtx = approver_ref.value();
+                let approver = approver_vtx.get_transaction();
 
                 if !filter(&approver) {
                     break;
                 } else {
                     approvers.push(approver.trunk().clone());
-                    collected.push(approver);
+                    collected.push((approver, approver_vtx.get_id()));
                 }
             }
         }
@@ -411,9 +413,9 @@ mod tests {
         let txs = tangle.trunk_walk_approvers(a_hash, |tx| true);
 
         assert_eq!(3, txs.len());
-        assert_eq!(a.address(), txs[0].address());
-        assert_eq!(d.address(), txs[1].address());
-        assert_eq!(e.address(), txs[2].address());
+        assert_eq!(a.address(), txs[0].0.address());
+        assert_eq!(d.address(), txs[1].0.address());
+        assert_eq!(e.address(), txs[2].0.address());
 
         drop();
     }
@@ -460,9 +462,9 @@ mod tests {
         let txs = tangle.trunk_walk_approvees(e_hash, |tx| true);
 
         assert_eq!(3, txs.len());
-        assert_eq!(e.address(), txs[0].address());
-        assert_eq!(d.address(), txs[1].address());
-        assert_eq!(a.address(), txs[2].address());
+        assert_eq!(e.address(), txs[0].0.address());
+        assert_eq!(d.address(), txs[1].0.address());
+        assert_eq!(a.address(), txs[2].0.address());
 
         drop();
     }
