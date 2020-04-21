@@ -14,13 +14,13 @@ pub struct LedgerWorkerEvent {}
 pub struct LedgerWorker {}
 
 impl LedgerWorker {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {}
     }
 
     fn process(&self) {}
 
-    pub(crate) async fn run(self, receiver: mpsc::Receiver<LedgerWorkerEvent>, shutdown: oneshot::Receiver<()>) {
+    pub async fn run(self, receiver: mpsc::Receiver<LedgerWorkerEvent>, shutdown: oneshot::Receiver<()>) {
         info!("[LedgerWorker ] Running.");
 
         let mut receiver_fused = receiver.fuse();

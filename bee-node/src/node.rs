@@ -9,6 +9,10 @@ use crate::{
 
 use bee_bundle::Hash;
 use bee_common::logger;
+use bee_ledger::{
+    LedgerWorker,
+    LedgerWorkerEvent,
+};
 use bee_network::{
     Address,
     Command::Connect,
@@ -38,7 +42,10 @@ use std::{
     sync::Arc,
 };
 
-use async_std::task::block_on;
+use async_std::task::{
+    block_on,
+    spawn,
+};
 use chrono::{
     offset::TimeZone,
     Utc,
@@ -58,6 +65,7 @@ pub struct Node {
     network: Network,
     shutdown: Shutdown,
     events: EventSubscriber,
+    ledger: Option<(mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>)>,
     // TODO real type ?
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>, Arc<Peer>)>,
 }
@@ -69,6 +77,7 @@ impl Node {
             network,
             shutdown,
             events,
+            ledger: None,
             peers: HashMap::new(),
         }
     }
@@ -194,6 +203,12 @@ impl Node {
         }
 
         Protocol::init(self.conf.protocol.clone(), self.network.clone()).await;
+
+        // TODO conf
+        let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
+        let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
+        self.ledger.replace((ledger_worker_tx, ledger_worker_shutdown_tx));
+        spawn(LedgerWorker::new().run(ledger_worker_rx, ledger_worker_shutdown_rx));
 
         info!("[Node ] Initialized.");
     }
