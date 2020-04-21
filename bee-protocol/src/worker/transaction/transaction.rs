@@ -153,9 +153,8 @@ impl TransactionWorker {
                         if transaction.is_tail() {
                             Some(hash)
                         } else {
-                            let chain = tangle().trunk_walk_approvers(hash, |tx_ref| {
-                                tx_ref.bundle() == transaction.bundle()
-                            });
+                            let chain =
+                                tangle().trunk_walk_approvers(hash, |tx_ref| tx_ref.bundle() == transaction.bundle());
                             match chain.last() {
                                 Some((tx_ref, hash)) => {
                                     if tx_ref.is_tail() {
@@ -164,7 +163,7 @@ impl TransactionWorker {
                                         None
                                     }
                                 }
-                                None => None
+                                None => None,
                             }
                         }
                     };
@@ -173,7 +172,7 @@ impl TransactionWorker {
                         Some(tail) => {
                             milestone_validator_worker_tx.send(tail).await.unwrap();
                             debug!(
-                                "[TransactionWorker ] Sent tail of potential milestone candidate to the milestone validator: {}",
+                                "[TransactionWorker ] Tail of potential milestone bundle sent for validation: {}",
                                 tail
                             );
                         }
@@ -184,7 +183,6 @@ impl TransactionWorker {
                             );
                         }
                     }
-
                 }
             }
             None => {
