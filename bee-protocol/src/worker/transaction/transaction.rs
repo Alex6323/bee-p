@@ -152,11 +152,24 @@ impl TransactionWorker {
                     if transaction.is_tail() {
                         milestone_validator_worker_tx.send(hash).await.unwrap();
                     } else {
-                        let tail = Some(Hash::zeros()); // TODO: will be replaced with filter-functionality once available in bee-tangle
-                        match tail {
-                            Some(tail) => milestone_validator_worker_tx.send(tail).await.unwrap(),
-                            None => return,
+
+                        let chain = tangle().trunk_walk_approvers(hash, |tx_ref| {
+                            tx_ref.bundle() == transaction.bundle()
+                        });
+
+                        match chain.last() {
+                            Some((tx_ref, hash)) => {
+                                if tx_ref.is_tail() {
+                                    milestone_validator_worker_tx.send(*hash).await.unwrap();
+                                    debug!("[TransactionWorker ] Sent tail to the transaction validator.");
+                                }
+                            }
+                            None => {
+                                debug!("[TransactionWorker ] Can not find tail in the tangle.");
+                                return
+                            }
                         }
+
                     }
                 }
             }
