@@ -75,6 +75,7 @@ where
 
         builder.push((*transaction).clone());
 
+        // TODO use walker
         for _ in 0..Protocol::get().conf.coordinator.security_level {
             transaction = tangle()
                 .get_transaction(transaction.trunk())
@@ -119,7 +120,10 @@ where
                                 }
                             },
                             Err(e) => {
-                                warn!("[MilestoneValidatorWorker ] Invalid milestone bundle: {:?}.", e);
+                                match e {
+                                    MilestoneValidatorWorkerError::IncompleteBundle => {},
+                                    _ => warn!("[MilestoneValidatorWorker ] Invalid milestone bundle: {:?}.", e)
+                                }
                             }
                         }
                     }
