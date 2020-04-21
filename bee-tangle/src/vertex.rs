@@ -19,7 +19,7 @@ impl std::ops::Deref for TransactionRef {
     }
 }
 
-pub struct Vertex {
+pub(crate) struct Vertex {
     pub(crate) meta: VertexMeta,
     transaction: Arc<Transaction>,
 }
@@ -38,6 +38,10 @@ impl Vertex {
 
     pub fn get_transaction(&self) -> TransactionRef {
         TransactionRef(Arc::clone(&self.transaction))
+    }
+
+    pub fn get_id(&self) -> Hash {
+        self.meta.id
     }
 }
 

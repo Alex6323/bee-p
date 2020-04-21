@@ -228,7 +228,7 @@ impl Tangle {
     ///
     /// Returns a list of descendents of `start`. It is ensured, that all elements of that list
     /// are connected through the trunk.
-    pub fn trunk_walk_approvers<F>(&'static self, start: Hash, filter: F) -> Vec<TransactionRef>
+    pub fn trunk_walk_approvers<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
     where
         F: Fn(&TransactionRef) -> bool,
     {
@@ -236,25 +236,26 @@ impl Tangle {
         let mut collected = vec![];
 
         if let Some(approvee_ref) = self.vertices.get(&start) {
-            let approvee = approvee_ref.value().get_transaction();
+            let approvee_vtx = approvee_ref.value();
+            let approvee = approvee_vtx.get_transaction();
 
             if filter(&approvee) {
                 approvees.push(start);
-                collected.push(approvee);
-            }
+                collected.push((approvee, approvee_vtx.get_id()));
 
-            while let Some(approvee_hash) = approvees.pop() {
-                if let Some(approvers_ref) = self.approvers.get(&approvee_hash) {
-                    for approver_hash in approvers_ref.value() {
-                        if let Some(approver_ref) = self.vertices.get(approver_hash) {
-                            let approver = approver_ref.value().get_transaction();
+                while let Some(approvee_hash) = approvees.pop() {
+                    if let Some(approvers_ref) = self.approvers.get(&approvee_hash) {
+                        for approver_hash in approvers_ref.value() {
+                            if let Some(approver_ref) = self.vertices.get(approver_hash) {
+                                let approver = approver_ref.value().get_transaction();
 
-                            if *approver.trunk() == approvee_hash && filter(&approver) {
-                                approvees.push(*approver_hash);
-                                collected.push(approver);
-                                // NOTE: For simplicity reasons we break here, and assume, that there can't be
-                                // a second approver that passes the filter
-                                break;
+                                if *approver.trunk() == approvee_hash && filter(&approver) {
+                                    approvees.push(*approver_hash);
+                                    collected.push((approver, approver_ref.value().get_id()));
+                                    // NOTE: For simplicity reasons we break here, and assume, that there can't be
+                                    // a second approver that passes the filter
+                                    break;
+                                }
                             }
                         }
                     }
@@ -270,7 +271,7 @@ impl Tangle {
     ///
     /// Returns a list of ancestors of `start`. It is ensured, that all elements of that list
     /// are connected through the trunk.
-    pub fn trunk_walk_approvees<F>(&'static self, start: Hash, filter: F) -> Vec<TransactionRef>
+    pub fn trunk_walk_approvees<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
     where
         F: Fn(&TransactionRef) -> bool,
     {
@@ -279,124 +280,36 @@ impl Tangle {
 
         while let Some(approver_hash) = approvers.pop() {
             if let Some(approver_ref) = self.vertices.get(&approver_hash) {
-                let approver = approver_ref.value().get_transaction();
+                let approver_vtx = approver_ref.value();
+                let approver = approver_vtx.get_transaction();
 
                 if !filter(&approver) {
                     break;
                 } else {
                     approvers.push(approver.trunk().clone());
-                    collected.push(approver);
+                    collected.push((approver, approver_vtx.get_id()));
                 }
             }
         }
 
         collected
     }
+
+    #[cfg(test)]
+    fn num_approvers(&'static self, hash: &Hash) -> usize {
+        self.approvers.get(hash).map_or(0, |r| r.value().len())
+    }
 }
-
-/*
-/// The main Tangle structure. Usually, this type is used as a singleton.
-#[derive(Default)]
-pub struct Tangle {
-    vertices: HashMap<TxHash, Vertex>,
-    txs_to_approvers: HashMap<TxHash, Vec<TxHash>>,
-    missing_to_approvers: HashMap<TxHash, Vec<Rc<TxHash>>>,
-}
-
-impl Tangle {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn contains(&self, hash: TxHash) -> bool {
-        self.vertices.contains_key(&hash)
-    }
-
-    /// Get an immutable handle to the transaction with the given hash.
-    pub fn get(&self, hash: TxHash) -> Option<VertexRef> {
-        if self.contains(hash) {
-            Some(VertexRef {
-                hash: hash,
-                tangle: self,
-            })
-        } else {
-            None
-        }
-    }
-
-    /// Get a mutable handle to the transaction with the given hash.
-    pub fn get_mut(&mut self, hash: TxHash) -> Option<VertexRefMut> {
-        if self.contains(hash) {
-            Some(VertexRefMut {
-                hash: hash,
-                tangle: self,
-            })
-        } else {
-            None
-        }
-    }
-
-    /// Insert a vertex into the Tangle, automatically triggering the solidification algorithm.
-    pub fn insert(&mut self, vert: Vertex) -> VertexRefMut {
-        let new_hash = vert.hash;
-        let new_approvees = vert.approvee_hashes();
-
-        // Don't re-insert a vertex
-        if !self.contains(new_hash) {
-            // Perform the tangle insertion
-            self.vertices.insert(new_hash, vert);
-            new_approvees
-                .iter()
-                .for_each(|a| self.txs_to_approvers.entry(*a).or_default().push(new_hash));
-
-            // Does the new vertex approve vertices that we don't yet know about?
-            if new_approvees
-                // Do any of the new vertex's approvees...
-                .iter()
-                // ...not exist yet?
-                .any(|approvee| !self.contains(*approvee))
-            {
-                let new_rc = Rc::new(new_hash);
-                // For each approvee of the inserted vertex...
-                let vertices = &self.vertices;
-                let missing_to_approvers = &mut self.missing_to_approvers;
-                new_approvees
-                    .iter()
-                    // ...check to see whether it's missing from the tangle...
-                    .filter(|approvee| !vertices.contains_key(*approvee))
-                    // ...and remember that visiting it is work we need to do later...
-                    .for_each(|approvee| {
-                        missing_to_approvers
-                            .entry(*approvee)
-                            .or_default()
-                            // ...by associating it with the missing approvee.
-                            .push(new_rc.clone())
-                    });
-            }
-
-            // Attempt to propagate solidification information based on the new
-            // information the inserted vertex has provided us with. We do this
-            // by checking to see whether any approvers were waiting upon this vertex.
-            self.missing_to_approvers
-                .remove(&new_hash)
-                .into_iter()
-                .flatten()
-                .filter_map(|hash| Rc::try_unwrap(hash).ok())
-                .for_each(|hash| self.try_solidify(hash));
-        }
-
-        self.get_mut(new_hash).unwrap() // Can't fail, we just inserted it
-    }
-
-}
-*/
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::*;
 
-    use bee_test::transaction::create_random_tx;
+    use bee_test::transaction::{
+        create_random_attached_tx,
+        create_random_tx,
+    };
 
     use async_std::sync::channel;
     use bee_bundle::{
@@ -457,30 +370,102 @@ mod tests {
         assert_eq!(1368168, *tangle.get_last_milestone_index());
         drop();
     }
-}
 
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /*
     #[test]
-    fn mutate() {
-        let mut tangle = Tangle::default();
+    #[serial]
+    fn walk_trunk_approvers() {
+        init();
 
-        let hash = unimplemented!();
+        // a   b
+        // |\ /
+        // | c
+        // |/|
+        // d |
+        //  \|
+        //   e
+        //
+        // Trunk path from 'a':
+        // a --(trunk)-> d --(trunk)-> e
 
-        let vertex = tangle.get_mut(hash);
+        let tangle = tangle();
 
-        vertex.set_solid();
+        let (a_hash, a) = create_random_tx();
+        let (b_hash, b) = create_random_tx();
+        let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone()); // branch, trunk
+        let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
+        let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
 
-        vertex.do_for(|vertex| {
-            println!("Solid: {:?}", vertex.is_solid());
-            println!("Trunk: {:?}", vertex.trunk_hash());
-            println!("Branch: {:?}", vertex.branch_hash());
+        block_on(async {
+            tangle.insert_transaction(a.clone(), a_hash.clone()).await;
+            tangle.insert_transaction(b.clone(), b_hash.clone()).await;
+            tangle.insert_transaction(c.clone(), c_hash.clone()).await;
+            tangle.insert_transaction(d.clone(), d_hash.clone()).await;
+            tangle.insert_transaction(e.clone(), e_hash.clone()).await;
         });
+
+        assert_eq!(5, tangle.size());
+        assert_eq!(2, tangle.num_approvers(&a_hash));
+        assert_eq!(1, tangle.num_approvers(&b_hash));
+        assert_eq!(2, tangle.num_approvers(&c_hash));
+        assert_eq!(1, tangle.num_approvers(&d_hash));
+        assert_eq!(0, tangle.num_approvers(&e_hash));
+
+        let txs = tangle.trunk_walk_approvers(a_hash, |tx| true);
+
+        assert_eq!(3, txs.len());
+        assert_eq!(a.address(), txs[0].0.address());
+        assert_eq!(d.address(), txs[1].0.address());
+        assert_eq!(e.address(), txs[2].0.address());
+
+        drop();
     }
-    */
+
+    #[test]
+    #[serial]
+    fn walk_trunk_approvees() {
+        init();
+
+        // a   b
+        // |\ /
+        // | c
+        // |/|
+        // d |
+        //  \|
+        //   e
+        //
+        // Trunk path from 'e':
+        // a <-(trunk)-- d <-(trunk)-- e
+
+        let tangle = tangle();
+
+        let (a_hash, a) = create_random_tx();
+        let (b_hash, b) = create_random_tx();
+        let (c_hash, c) = create_random_attached_tx(b_hash.clone(), a_hash.clone()); // branch, trunk
+        let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
+        let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
+
+        block_on(async {
+            tangle.insert_transaction(a.clone(), a_hash).await;
+            tangle.insert_transaction(b.clone(), b_hash).await;
+            tangle.insert_transaction(c.clone(), c_hash).await;
+            tangle.insert_transaction(d.clone(), d_hash).await;
+            tangle.insert_transaction(e.clone(), e_hash).await;
+        });
+
+        assert_eq!(5, tangle.size());
+        assert_eq!(2, tangle.num_approvers(&a_hash));
+        assert_eq!(1, tangle.num_approvers(&b_hash));
+        assert_eq!(2, tangle.num_approvers(&c_hash));
+        assert_eq!(1, tangle.num_approvers(&d_hash));
+        assert_eq!(0, tangle.num_approvers(&e_hash));
+
+        let txs = tangle.trunk_walk_approvees(e_hash, |tx| true);
+
+        assert_eq!(3, txs.len());
+        assert_eq!(e.address(), txs[0].0.address());
+        assert_eq!(d.address(), txs[1].0.address());
+        assert_eq!(a.address(), txs[2].0.address());
+
+        drop();
+    }
 }
-*/
