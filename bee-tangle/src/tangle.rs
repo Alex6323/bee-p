@@ -34,9 +34,11 @@ use std::sync::atomic::{
 pub struct Tangle {
     vertices: DashMap<Hash, Vertex>,
     approvers: DashMap<Hash, Vec<Hash>>,
-    unsolid_new: Sender<Hash>,
-    solid_entry_points: DashSet<Hash>,
     milestones: DashMap<MilestoneIndex, Hash>,
+    solid_entry_points: DashSet<Hash>,
+
+    unsolid_new: Sender<Hash>,
+
     first_solid_milestone: AtomicU32,
     last_solid_milestone: AtomicU32,
     last_milestone: AtomicU32,
@@ -96,6 +98,11 @@ impl Tangle {
         }
     }
 
+    /// Returns a reference to a transaction, if it's available in the local Tangle.
+    pub fn get_transaction(&'static self, hash: &Hash) -> Option<TransactionRef> {
+        self.vertices.get(hash).map(|v| v.get_transaction())
+    }
+
     /// Returns whether the transaction is stored in the Tangle.
     pub fn contains_transaction(&'static self, hash: &Hash) -> bool {
         self.vertices.contains_key(hash)
@@ -109,11 +116,6 @@ impl Tangle {
         self.vertices.get(hash).map(|v| v.meta)
     }
 
-    /// Returns a reference to a transaction, if it's available in the local Tangle.
-    pub fn get_transaction(&'static self, hash: &Hash) -> Option<TransactionRef> {
-        self.vertices.get(hash).map(|v| v.get_transaction())
-    }
-
     /// This function is *eventually consistent* - if `true` is returned, solidification has
     /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
     /// or solidification information has not yet been fully propagated.
@@ -122,7 +124,7 @@ impl Tangle {
     }
 
     /// Returns a [`VertexRef`] linked to a transaction, if it's available in the local Tangle.
-    pub fn get(&'static self, hash: &Hash) -> Option<VertexRef> {
+    pub fn get_vertex(&'static self, hash: &Hash) -> Option<VertexRef> {
         Some(VertexRef {
             meta: self.get_meta(&hash)?,
             tangle: self,
@@ -295,6 +297,44 @@ impl Tangle {
         collected
     }
 
+    /// Walks all approvers given a starting hash `root`.
+    pub fn walk_approvees_depth_first<Mapping, Follow, Missing>(
+        &'static self,
+        root: Hash,
+        mut map: Mapping,
+        should_follow: Follow,
+        mut on_missing: Missing,
+    ) where
+        Mapping: FnMut(&TransactionRef),
+        Follow: Fn(&TransactionRef) -> bool,
+        Missing: FnMut(&Hash),
+    {
+        let mut non_analyzed_hashes = Vec::new();
+        let mut analyzed_hashes = std::collections::HashSet::new();
+
+        non_analyzed_hashes.push(root);
+
+        while let Some(hash) = non_analyzed_hashes.pop() {
+            if !analyzed_hashes.contains(&hash) {
+                match self.get_transaction(&hash) {
+                    Some(transaction) => {
+                        map(&transaction);
+                        if should_follow(&transaction) {
+                            non_analyzed_hashes.push(*transaction.branch());
+                            non_analyzed_hashes.push(*transaction.trunk());
+                        }
+                    }
+                    None => {
+                        if !self.is_solid_entry_point(&hash) {
+                            on_missing(&hash);
+                        }
+                    }
+                }
+                analyzed_hashes.insert(hash);
+            }
+        }
+    }
+
     #[cfg(test)]
     fn num_approvers(&'static self, hash: &Hash) -> usize {
         self.approvers.get(hash).map_or(0, |r| r.value().len())
@@ -375,42 +415,9 @@ mod tests {
     #[serial]
     fn walk_trunk_approvers() {
         init();
+        let (Transactions { a, d, e, .. }, Hashes { a_hash, .. }) = create_test_tangle();
 
-        // a   b
-        // |\ /
-        // | c
-        // |/|
-        // d |
-        //  \|
-        //   e
-        //
-        // Trunk path from 'a':
-        // a --(trunk)-> d --(trunk)-> e
-
-        let tangle = tangle();
-
-        let (a_hash, a) = create_random_tx();
-        let (b_hash, b) = create_random_tx();
-        let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone()); // branch, trunk
-        let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
-        let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
-
-        block_on(async {
-            tangle.insert_transaction(a.clone(), a_hash.clone()).await;
-            tangle.insert_transaction(b.clone(), b_hash.clone()).await;
-            tangle.insert_transaction(c.clone(), c_hash.clone()).await;
-            tangle.insert_transaction(d.clone(), d_hash.clone()).await;
-            tangle.insert_transaction(e.clone(), e_hash.clone()).await;
-        });
-
-        assert_eq!(5, tangle.size());
-        assert_eq!(2, tangle.num_approvers(&a_hash));
-        assert_eq!(1, tangle.num_approvers(&b_hash));
-        assert_eq!(2, tangle.num_approvers(&c_hash));
-        assert_eq!(1, tangle.num_approvers(&d_hash));
-        assert_eq!(0, tangle.num_approvers(&e_hash));
-
-        let txs = tangle.trunk_walk_approvers(a_hash, |tx| true);
+        let txs = tangle().trunk_walk_approvers(a_hash, |tx| true);
 
         assert_eq!(3, txs.len());
         assert_eq!(a.address(), txs[0].0.address());
@@ -424,7 +431,67 @@ mod tests {
     #[serial]
     fn walk_trunk_approvees() {
         init();
+        let (Transactions { a, d, e, .. }, Hashes { e_hash, .. }) = create_test_tangle();
 
+        let txs = tangle().trunk_walk_approvees(e_hash, |tx| true);
+
+        assert_eq!(3, txs.len());
+        assert_eq!(e.address(), txs[0].0.address());
+        assert_eq!(d.address(), txs[1].0.address());
+        assert_eq!(a.address(), txs[2].0.address());
+
+        drop();
+    }
+
+    #[test]
+    #[serial]
+    fn walk_approvees() {
+        init();
+        let (Transactions { a, d, e, .. }, Hashes { e_hash, .. }) = create_test_tangle();
+
+        drop();
+    }
+
+    #[test]
+    #[serial]
+    fn walk_approvees_depth_first() {
+        init();
+        let (Transactions { a, b, c, d, e, .. }, Hashes { e_hash, .. }) = create_test_tangle();
+
+        let mut addresses = vec![];
+
+        tangle().walk_approvees_depth_first(
+            e_hash,
+            |tx_ref| addresses.push(tx_ref.address().clone()),
+            |tx_ref| true,
+            |tx_hash| (),
+        );
+
+        assert_eq!(*e.address(), addresses[0]);
+        assert_eq!(*d.address(), addresses[1]);
+        assert_eq!(*a.address(), addresses[2]);
+        assert_eq!(*c.address(), addresses[3]);
+        assert_eq!(*b.address(), addresses[4]);
+        drop();
+    }
+
+    struct Transactions {
+        pub a: Transaction,
+        pub b: Transaction,
+        pub c: Transaction,
+        pub d: Transaction,
+        pub e: Transaction,
+    }
+
+    struct Hashes {
+        pub a_hash: Hash,
+        pub b_hash: Hash,
+        pub c_hash: Hash,
+        pub d_hash: Hash,
+        pub e_hash: Hash,
+    }
+
+    fn create_test_tangle() -> (Transactions, Hashes) {
         // a   b
         // |\ /
         // | c
@@ -434,13 +501,13 @@ mod tests {
         //   e
         //
         // Trunk path from 'e':
-        // a <-(trunk)-- d <-(trunk)-- e
+        // e --(trunk)-> d --(trunk)-> a
 
         let tangle = tangle();
 
         let (a_hash, a) = create_random_tx();
         let (b_hash, b) = create_random_tx();
-        let (c_hash, c) = create_random_attached_tx(b_hash.clone(), a_hash.clone()); // branch, trunk
+        let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone()); // branch, trunk
         let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
         let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
 
@@ -459,13 +526,15 @@ mod tests {
         assert_eq!(1, tangle.num_approvers(&d_hash));
         assert_eq!(0, tangle.num_approvers(&e_hash));
 
-        let txs = tangle.trunk_walk_approvees(e_hash, |tx| true);
-
-        assert_eq!(3, txs.len());
-        assert_eq!(e.address(), txs[0].0.address());
-        assert_eq!(d.address(), txs[1].0.address());
-        assert_eq!(a.address(), txs[2].0.address());
-
-        drop();
+        (
+            Transactions { a, b, c, d, e },
+            Hashes {
+                a_hash,
+                b_hash,
+                c_hash,
+                d_hash,
+                e_hash,
+            },
+        )
     }
 }

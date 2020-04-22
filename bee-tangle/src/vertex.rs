@@ -46,10 +46,10 @@ impl Vertex {
 }
 
 #[derive(Copy, Clone)]
-pub struct VertexMeta {
-    id: Hash,
-    trunk: Hash,
-    branch: Hash,
+pub(crate) struct VertexMeta {
+    pub(crate) id: Hash,
+    pub(crate) trunk: Hash,
+    pub(crate) branch: Hash,
 }
 
 #[derive(Copy, Clone)]
@@ -64,11 +64,11 @@ impl VertexRef {
     }
 
     pub fn get_trunk(&self) -> Option<Self> {
-        self.tangle.get(&self.meta.trunk)
+        self.tangle.get_vertex(&self.meta.trunk)
     }
 
     pub fn get_branch(&self) -> Option<Self> {
-        self.tangle.get(&self.meta.branch)
+        self.tangle.get_vertex(&self.meta.branch)
     }
 }
 
