@@ -277,11 +277,11 @@ impl Tangle {
         entry_point: Hash,
         map: FnMap,
         branch: FnBranch,
-        missing: FnMissing,
+        mut missing: FnMissing,
     ) where
         FnMap: Fn(&TransactionRef),
         FnBranch: Fn(&TransactionRef) -> bool,
-        FnMissing: Fn(&Hash),
+        FnMissing: FnMut(&Hash),
     {
         // TODO genesis hash ?
         let mut non_analyzed_hashes = Vec::new();

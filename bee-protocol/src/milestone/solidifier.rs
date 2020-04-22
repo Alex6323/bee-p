@@ -3,6 +3,8 @@ use crate::protocol::Protocol;
 use bee_bundle::Hash;
 use bee_tangle::tangle;
 
+use std::collections::HashSet;
+
 use futures::{
     channel::{
         mpsc,
@@ -23,16 +25,35 @@ impl MilestoneSolidifierWorker {
         Self {}
     }
 
-    fn solidify(&self, hash: Hash) -> bool {
-        // TODO Tangle traversal
-        false
+    async fn solidify(&self, hash: Hash, target_index: u32) -> bool {
+        let mut missing_hashes = HashSet::new();
+
+        tangle().dfs_to_past(
+            hash,
+            |_| {},
+            |transaction| true,
+            |missing_hash| {
+                missing_hashes.insert(*missing_hash);
+            },
+        );
+
+        match missing_hashes.is_empty() {
+            true => true,
+            false => {
+                for missing_hash in missing_hashes {
+                    Protocol::request_transaction(missing_hash, target_index).await;
+                }
+
+                false
+            }
+        }
     }
 
-    async fn process_target(&self, target_milestone_index: u32) -> bool {
-        match tangle().get_milestone_hash(&(target_milestone_index.into())) {
-            Some(target_milestone_hash) => match self.solidify(target_milestone_hash) {
+    async fn process_target(&self, target_index: u32) -> bool {
+        match tangle().get_milestone_hash(&(target_index.into())) {
+            Some(target_hash) => match self.solidify(target_hash, target_index).await {
                 true => {
-                    tangle().update_solid_milestone_index(target_milestone_index.into());
+                    tangle().update_solid_milestone_index(target_index.into());
                     Protocol::broadcast_heartbeat(
                         *tangle().get_solid_milestone_index(),
                         *tangle().get_snapshot_milestone_index(),
@@ -44,7 +65,7 @@ impl MilestoneSolidifierWorker {
             },
             None => {
                 // There is a gap, request the milestone
-                Protocol::request_milestone(target_milestone_index, None);
+                Protocol::request_milestone(target_index, None);
                 false
             }
         }
