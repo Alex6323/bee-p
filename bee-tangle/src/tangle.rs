@@ -271,43 +271,6 @@ impl Tangle {
         collected
     }
 
-    /// TODO doc
-    pub fn dfs_to_past<FnMap, FnBranch, FnMissing>(
-        &'static self,
-        entry_point: Hash,
-        map: FnMap,
-        branch: FnBranch,
-        mut missing: FnMissing,
-    ) where
-        FnMap: Fn(&TransactionRef),
-        FnBranch: Fn(&TransactionRef) -> bool,
-        FnMissing: FnMut(&Hash),
-    {
-        // TODO genesis hash ?
-        let mut non_analyzed_hashes = Vec::new();
-        let mut analyzed_hashes = HashSet::new();
-
-        non_analyzed_hashes.push(entry_point);
-
-        while let Some(hash) = non_analyzed_hashes.pop() {
-            if !analyzed_hashes.contains(&hash) {
-                match self.get_transaction(&hash) {
-                    Some(transaction) => {
-                        map(&transaction);
-                        if branch(&transaction) {
-                            non_analyzed_hashes.push(*transaction.branch());
-                            non_analyzed_hashes.push(*transaction.trunk());
-                        }
-                    }
-                    None => {
-                        missing(&hash);
-                    }
-                }
-                analyzed_hashes.insert(hash);
-            }
-        }
-    }
-
     /// Starts a walk beginning at a `start` vertex identified by its associated transaction hash
     /// traversing its ancestors/approvees for as long as those satisfy a given `filter`.
     ///
