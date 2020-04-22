@@ -28,7 +28,7 @@ impl MilestoneSolidifierWorker {
     async fn solidify(&self, hash: Hash, target_index: u32) -> bool {
         let mut missing_hashes = HashSet::new();
 
-        tangle().dfs_to_past(
+        tangle().walk_approvees_depth_first(
             hash,
             |_| {},
             |transaction| true,
