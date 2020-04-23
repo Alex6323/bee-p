@@ -6,7 +6,6 @@ use crate::{
         TransactionRef,
         Vertex,
         VertexMeta,
-        VertexRef,
     },
 };
 
@@ -35,9 +34,15 @@ use dashmap::{
 
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
+    /// A map between each vertex and the hash of the transaction the respective vertex represents.
     vertices: DashMap<Hash, Vertex>,
+
+    /// A map between the hash of a transaction and the hashes of its approvers.
     approvers: DashMap<Hash, Vec<Hash>>,
+
+    /// A map between the milestone index and hash of the milestone transaction.
     milestones: DashMap<MilestoneIndex, Hash>,
+
     solid_entry_points: DashSet<Hash>,
 
     unsolid_new: Sender<Hash>,
@@ -66,7 +71,7 @@ impl Tangle {
     ///
     /// Note: The method assumes that `hash` -> `transaction` is injective, otherwise unexpected behavior could
     /// occur.
-    pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<VertexRef> {
+    pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<TransactionRef> {
         match self.approvers.entry(*transaction.trunk()) {
             Entry::Occupied(mut entry) => {
                 let values = entry.get_mut();
@@ -90,13 +95,13 @@ impl Tangle {
         }
 
         let vertex = Vertex::from(transaction, hash);
-        let meta = vertex.meta;
+        let tx_ref = vertex.get_transaction();
 
         // TODO: not sure if we want replacement of vertices
         if self.vertices.insert(hash, vertex).is_none() {
             self.unsolid_new.send(hash).await;
 
-            Some(VertexRef { meta, tangle: self })
+            Some(tx_ref)
         } else {
             None
         }
@@ -112,22 +117,26 @@ impl Tangle {
         self.vertices.contains_key(hash)
     }
 
-    /// This function is *eventually consistent* - if `true` is returned, solidification has
-    /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
-    /// or solidification information has not yet been fully propagated.
-    pub async fn is_solid(&'static self, _hash: Hash) -> Option<bool> {
-        todo!()
-    }
-
-    /// Returns a [`VertexRef`] linked to a transaction, if it's available in the local Tangle.
+    /*
+    /// TODO
     pub fn get_vertex(&'static self, hash: &Hash) -> Option<VertexRef> {
         Some(VertexRef {
             meta: self.get_meta(&hash)?,
             tangle: self,
         })
     }
+    */
 
-    ///  Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
+    /*
+    /// This function is _eventually consistent_ - if `true` is returned, solidification has
+    /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
+    /// or solidification information has not yet been fully propagated.
+    pub async fn is_solid(&'static self, _hash: Hash) -> Option<bool> {
+        todo!()
+    }
+    */
+
+    /*
     pub fn get_milestone(&'static self, index: &MilestoneIndex) -> Option<VertexRef> {
         match self.get_milestone_hash(index) {
             None => None,
@@ -137,9 +146,10 @@ impl Tangle {
             }),
         }
     }
+    */
 
     /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
-    pub fn get_latest_milestone(&'static self, _idx: MilestoneIndex) -> Option<VertexRef> {
+    pub fn get_latest_milestone(&'static self) -> Option<TransactionRef> {
         todo!()
     }
 
