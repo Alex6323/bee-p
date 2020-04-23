@@ -17,7 +17,7 @@ pub use crate::{
 use std::convert::From;
 
 const RADIX: u8 = 3;
-const MAX_TRITS_IN_I64: usize = (0.63 * 64 as f32) as usize + 1; // (log2/log3)*64
+const MAX_TRITS_IN_I64: usize = (0.63 * 64_f32) as usize + 1; // (log2/log3)*64
 
 fn min_trits(value: u64) -> usize {
     let mut num = 1;
@@ -25,7 +25,7 @@ fn min_trits(value: u64) -> usize {
 
     while value > vp {
         vp = vp * RADIX as u64 + 1;
-        num = num + 1;
+        num += 1;
     }
 
     num
@@ -61,8 +61,8 @@ impl From<i64> for TritBuf<T1B1Buf> {
             //This can not fail because curr_trit is "some_value % 3 - 1" which is always within range
             buf.set(pos, Btrit::try_from(curr_trit).unwrap());
 
-            value_abs = value_abs + 1;
-            value_abs = value_abs / RADIX as u64;
+            value_abs += 1;
+            value_abs /= RADIX as u64;
         }
 
         buf
@@ -83,14 +83,14 @@ impl TryFrom<TritBuf<T1B1Buf>> for i64 {
 
     fn try_from(trits: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
         if trits.len() == 0 {
-            Err(TritsI64ConversionError::EmptyTrits)?;
+            return Err(TritsI64ConversionError::EmptyTrits);
         }
 
         if trits.len() > MAX_TRITS_IN_I64 {
             // TODO test
             for index in MAX_TRITS_IN_I64..trits.len() {
                 if trits.get(index).unwrap() != Btrit::Zero {
-                    Err(TritsI64ConversionError::AbsValueTooBig)?;
+                    return Err(TritsI64ConversionError::AbsValueTooBig);
                 }
             }
         }
@@ -111,7 +111,7 @@ impl TryFrom<TritBuf<T1B1Buf>> for i64 {
                 if accum_i128 > 0 && accum_i128 > i64::max_value() as i128
                     || accum_i128 < 0 && accum_i128 < i64::min_value() as i128 - 1
                 {
-                    Err(TritsI64ConversionError::AbsValueTooBig)?;
+                    return Err(TritsI64ConversionError::AbsValueTooBig);
                 }
                 accum = accum_i128 as i64;
             }

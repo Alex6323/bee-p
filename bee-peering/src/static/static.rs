@@ -30,14 +30,7 @@ impl StaticPeerManager {
         // TODO block ?
         match block_on(Url::from_url_str(url)) {
             Ok(url) => {
-                if let Err(e) = self
-                    .network
-                    .send(AddEndpoint {
-                        url: url,
-                        responder: None,
-                    })
-                    .await
-                {
+                if let Err(e) = self.network.send(AddEndpoint { url, responder: None }).await {
                     warn!("[StaticPeerManager ] Failed to add endpoint \"{}\": {}", url, e);
                 }
             }

@@ -11,11 +11,12 @@ use log::info;
 
 pub struct LedgerWorkerEvent {}
 
+#[derive(Default)]
 pub struct LedgerWorker {}
 
 impl LedgerWorker {
     pub fn new() -> Self {
-        Self {}
+        Self::default()
     }
 
     fn process(&self) {}
