@@ -1,5 +1,7 @@
 use crate::tangle::Tangle;
 
+use std::ops::Deref;
+
 use bee_bundle::{
     Hash,
     Transaction,
@@ -7,11 +9,11 @@ use bee_bundle::{
 
 use async_std::sync::Arc;
 
-/// A wrapper around `bee_bundle::Transaction` that allows sharing it across threads.
+/// A wrapper around `bee_bundle::Transaction` that allows sharing it safely across threads.
 #[derive(Clone)]
 pub struct TransactionRef(Arc<Transaction>);
 
-impl std::ops::Deref for TransactionRef {
+impl Deref for TransactionRef {
     type Target = Transaction;
 
     fn deref(&self) -> &Self::Target {
@@ -20,34 +22,23 @@ impl std::ops::Deref for TransactionRef {
 }
 
 pub(crate) struct Vertex {
-    pub(crate) meta: VertexMeta,
+    pub(crate) id: Hash,
     transaction: Arc<Transaction>,
 }
 
 impl Vertex {
     pub fn from(transaction: Transaction, hash: Hash) -> Self {
         Self {
-            meta: VertexMeta {
-                id: hash,
-                trunk: *transaction.trunk(),
-                branch: *transaction.branch(),
-            },
+            id: hash,
             transaction: Arc::new(transaction),
         }
+    }
+
+    pub fn get_id(&self) -> Hash {
+        self.id
     }
 
     pub fn get_transaction(&self) -> TransactionRef {
         TransactionRef(Arc::clone(&self.transaction))
     }
-
-    pub fn get_id(&self) -> Hash {
-        self.meta.id
-    }
-}
-
-#[derive(Copy, Clone)]
-pub(crate) struct VertexMeta {
-    pub(crate) id: Hash,
-    pub(crate) trunk: Hash,
-    pub(crate) branch: Hash,
 }

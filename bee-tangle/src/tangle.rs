@@ -5,7 +5,6 @@ use crate::{
     vertex::{
         TransactionRef,
         Vertex,
-        VertexMeta,
     },
 };
 
@@ -345,9 +344,11 @@ impl Tangle {
         todo!()
     }
 
+    /*
     fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
         self.vertices.get(hash).map(|v| v.meta)
     }
+    */
 
     #[cfg(test)]
     fn num_approvers(&'static self, hash: &Hash) -> usize {
