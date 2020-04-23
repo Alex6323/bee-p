@@ -1,4 +1,5 @@
 mod broadcaster;
+mod milestone;
 mod peer;
 mod requester;
 mod responder;
@@ -9,6 +10,12 @@ mod transaction;
 pub(crate) use broadcaster::{
     BroadcasterWorker,
     BroadcasterWorkerEvent,
+};
+pub(crate) use milestone::{
+    MilestoneSolidifierWorker,
+    MilestoneSolidifierWorkerEvent,
+    MilestoneValidatorWorker,
+    MilestoneValidatorWorkerEvent,
 };
 pub(crate) use peer::PeerWorker;
 pub(crate) use requester::{

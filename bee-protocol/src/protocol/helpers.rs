@@ -3,14 +3,12 @@ use crate::{
         Heartbeat,
         TransactionBroadcast,
     },
-    milestone::{
-        MilestoneIndex,
-        MilestoneSolidifierWorkerEvent,
-    },
+    milestone::MilestoneIndex,
     protocol::Protocol,
     worker::{
         BroadcasterWorkerEvent,
         MilestoneRequesterWorkerEntry,
+        MilestoneSolidifierWorkerEvent,
         SenderWorker,
         TransactionRequesterWorkerEntry,
     },
