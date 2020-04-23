@@ -38,7 +38,7 @@ const SOLIDIFIER_CHAN_CAPACITY: usize = 1000;
 /// Initializes the Tangle singleton.
 pub fn init() {
     if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
-        let (sender, receiver) = channel::<Hash>(SOLIDIFIER_CHAN_CAPACITY);
+        let (sender, receiver) = flume::bounded::<Hash>(SOLIDIFIER_CHAN_CAPACITY);
 
         let solidifier_state = SolidifierState::new(receiver);
 

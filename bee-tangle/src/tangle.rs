@@ -21,15 +21,15 @@ use std::{
     },
 };
 
-use async_std::sync::{
-    Arc,
-    Sender,
-};
+use async_std::sync::Arc;
+
 use dashmap::{
     mapref::entry::Entry,
     DashMap,
     DashSet,
 };
+
+use flume::Sender;
 
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
@@ -45,7 +45,8 @@ pub struct Tangle {
     /// A set of hashes representing transactions deemed solid entry points.
     solid_entry_points: DashSet<Hash>,
 
-    unsolid_new: Sender<Hash>,
+    /// The sender side of a channel between the Tangle and the (gossip) solidifier.
+    solidifier_chan: Sender<Hash>,
 
     solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
@@ -54,11 +55,11 @@ pub struct Tangle {
 
 impl Tangle {
     /// Creates a new `Tangle`.
-    pub(crate) fn new(unsolid_new: Sender<Hash>) -> Self {
+    pub(crate) fn new(solidifier_chan: Sender<Hash>) -> Self {
         Self {
             vertices: DashMap::new(),
             approvers: DashMap::new(),
-            unsolid_new,
+            solidifier_chan,
             solid_entry_points: DashSet::new(),
             milestones: DashMap::new(),
             solid_milestone_index: AtomicU32::new(0),
@@ -99,7 +100,10 @@ impl Tangle {
 
         // TODO: not sure if we want replacement of vertices
         if self.vertices.insert(hash, vertex).is_none() {
-            self.unsolid_new.send(hash).await;
+            match self.solidifier_chan.send(hash) {
+                Ok(()) => (),
+                Err(e) => todo!("log warning"),
+            }
 
             Some(tx_ref)
         } else {

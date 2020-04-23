@@ -2,11 +2,10 @@ use std::collections::HashMap;
 
 use async_std::{
     prelude::*,
-    sync::{
-        Arc,
-        Receiver,
-    },
+    sync::Arc,
 };
+
+use flume::Receiver;
 
 use bee_bundle::Hash;
 
