@@ -65,9 +65,7 @@ pub fn tangle() -> &'static Tangle {
 pub fn drop() {
     if INITIALIZED.compare_and_swap(true, false, Ordering::Relaxed) {
         let tangle = TANGLE.swap(ptr::null_mut(), Ordering::Relaxed);
-        if tangle.is_null() {
-            return;
-        } else {
+        if !tangle.is_null() {
             let _ = unsafe { Box::from_raw(tangle) };
         }
     } else {

@@ -76,22 +76,20 @@ impl Tangle {
         match self.approvers.entry(*transaction.trunk()) {
             Entry::Occupied(mut entry) => {
                 let values = entry.get_mut();
-                values.push(hash.clone());
+                values.push(hash);
             }
             Entry::Vacant(entry) => {
-                entry.insert(vec![hash.clone()]);
-                ()
+                entry.insert(vec![hash]);
             }
         }
 
         match self.approvers.entry(*transaction.branch()) {
             Entry::Occupied(mut entry) => {
                 let values = entry.get_mut();
-                values.push(hash.clone());
+                values.push(hash);
             }
             Entry::Vacant(entry) => {
-                entry.insert(vec![hash.clone()]);
-                ()
+                entry.insert(vec![hash]);
             }
         }
 
@@ -166,8 +164,8 @@ impl Tangle {
     }
 
     /// Returns whether the milestone index maps to a know milestone hash.
-    pub fn contains_milestone(&'static self, index: &MilestoneIndex) -> bool {
-        self.milestones.contains_key(index)
+    pub fn contains_milestone(&'static self, index: MilestoneIndex) -> bool {
+        self.milestones.contains_key(&index)
     }
 
     /// Retreives the solid milestone index.
@@ -501,6 +499,7 @@ mod tests {
         pub e_hash: Hash,
     }
 
+    #[allow(clippy::many_single_char_names)]
     fn create_test_tangle() -> (Transactions, Hashes) {
         // a   b
         // |\ /
