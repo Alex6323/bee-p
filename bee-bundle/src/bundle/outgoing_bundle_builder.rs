@@ -295,6 +295,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         for i in &self.builders.0 {
             if i.value.as_ref().unwrap().to_inner() < &0 {
                 input_index = i.index.as_ref().unwrap().to_inner().to_owned();
+                break;
             }
         }
 
@@ -485,7 +486,7 @@ mod tests {
         );
 
         // Transfer
-        bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(1)));
+        bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(2)));
 
         // Input
         bundle_builder.push(
@@ -493,7 +494,11 @@ mod tests {
                 .with_address(address_low.clone())
                 .with_value(Value::from_inner_unchecked(-1)),
         );
-        bundle_builder.push(default_transaction_builder(2, bundle_size - 1).with_address(address_medium.clone()));
+        bundle_builder.push(
+            default_transaction_builder(2, bundle_size - 1)
+                .with_address(address_medium.clone())
+                .with_value(Value::from_inner_unchecked(-1))
+        );
         bundle_builder.push(default_transaction_builder(3, bundle_size - 1).with_address(address_medium.clone()));
 
         // Build bundle and sign
@@ -503,7 +508,7 @@ mod tests {
                 &seed,
                 &[
                     (0, address_low.clone(), WotsSecurityLevel::Low),
-                    (0, address_medium.clone(), WotsSecurityLevel::Medium),
+                    (1, address_medium.clone(), WotsSecurityLevel::Medium),
                 ],
             )?
             .attach_local(Hash::zeros(), Hash::zeros())?
