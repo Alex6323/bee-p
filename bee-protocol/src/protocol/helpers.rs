@@ -8,9 +8,9 @@ use crate::{
     worker::{
         BroadcasterWorkerEvent,
         MilestoneRequesterWorkerEntry,
-        MilestoneSolidifierWorkerEvent,
         SenderWorker,
         TransactionRequesterWorkerEntry,
+        TransactionSolidifierWorkerEvent,
     },
 };
 
@@ -98,18 +98,18 @@ impl Protocol {
         }
     }
 
-    // MilestoneSolidifier
+    // TransactionSolidifier
 
-    pub async fn trigger_milestone_solidification() {
+    pub async fn trigger_transaction_solidification() {
         if let Err(e) = Protocol::get()
-            .milestone_solidifier_worker
+            .transaction_solidifier_worker
             // TODO try to avoid clone
             .0
             .clone()
-            .send(MilestoneSolidifierWorkerEvent())
+            .send(TransactionSolidifierWorkerEvent())
             .await
         {
-            warn!("[Protocol ] Triggering milestone solidification failed: {}.", e);
+            warn!("[Protocol ] Triggering transaction solidification failed: {}.", e);
         }
     }
 }

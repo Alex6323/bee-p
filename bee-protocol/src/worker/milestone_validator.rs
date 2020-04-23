@@ -116,7 +116,7 @@ where
                                     tangle().update_last_milestone_index(milestone.index.into());
                                 }
                                 // TODO only trigger if index == last solid index ?
-                                Protocol::trigger_milestone_solidification().await;
+                                Protocol::trigger_transaction_solidification().await;
                             },
                             Err(e) => {
                                 match e {

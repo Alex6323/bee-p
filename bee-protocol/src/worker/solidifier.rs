@@ -16,11 +16,11 @@ use futures::{
 };
 use log::info;
 
-pub(crate) struct MilestoneSolidifierWorkerEvent();
+pub(crate) struct TransactionSolidifierWorkerEvent();
 
-pub(crate) struct MilestoneSolidifierWorker {}
+pub(crate) struct TransactionSolidifierWorker {}
 
-impl MilestoneSolidifierWorker {
+impl TransactionSolidifierWorker {
     pub(crate) fn new() -> Self {
         Self {}
     }
@@ -74,10 +74,10 @@ impl MilestoneSolidifierWorker {
 
     pub(crate) async fn run(
         self,
-        receiver: mpsc::Receiver<MilestoneSolidifierWorkerEvent>,
+        receiver: mpsc::Receiver<TransactionSolidifierWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[MilestoneSolidifierWorker ] Running.");
+        info!("[TransactionSolidifierWorker ] Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -85,7 +85,7 @@ impl MilestoneSolidifierWorker {
         loop {
             select! {
                 event = receiver_fused.next() => {
-                    if let Some(MilestoneSolidifierWorkerEvent()) = event {
+                    if let Some(TransactionSolidifierWorkerEvent()) = event {
                         while tangle().get_solid_milestone_index() < tangle().get_last_milestone_index() {
                             if !self.process_target(*tangle().get_solid_milestone_index() + 1).await {
                                 break;
@@ -99,7 +99,7 @@ impl MilestoneSolidifierWorker {
             }
         }
 
-        info!("[MilestoneSolidifierWorker ] Stopped.");
+        info!("[TransactionSolidifierWorker ] Stopped.");
     }
 }
 

@@ -22,7 +22,7 @@ const CONF_TRANSACTION_BROADCAST_SEND_WORKER_BOUND: usize = 1000;
 const CONF_TRANSACTION_REQUEST_SEND_WORKER_BOUND: usize = 1000;
 const CONF_HEARTBEAT_SEND_WORKER_BOUND: usize = 1000;
 const CONF_MILESTONE_VALIDATOR_WORKER_BOUND: usize = 1000;
-const CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND: usize = 1000;
+const CONF_TRANSACTION_SOLIDIFIER_WORKER_BOUND: usize = 1000;
 const CONF_TRANSACTION_WORKER_BOUND: usize = 1000;
 const CONF_TRANSACTION_WORKER_CACHE: usize = 10000;
 const CONF_TRANSACTION_RESPONDER_WORKER_BOUND: usize = 1000;
@@ -49,7 +49,7 @@ struct ProtocolWorkersConfBuilder {
     transaction_request_send_worker_bound: Option<usize>,
     heartbeat_send_worker_bound: Option<usize>,
     milestone_validator_worker_bound: Option<usize>,
-    milestone_solidifier_worker_bound: Option<usize>,
+    transaction_solidifier_worker_bound: Option<usize>,
     transaction_worker_bound: Option<usize>,
     transaction_worker_cache: Option<usize>,
     transaction_responder_worker_bound: Option<usize>,
@@ -133,10 +133,10 @@ impl ProtocolConfBuilder {
         self
     }
 
-    pub fn milestone_solidifier_worker_bound(mut self, milestone_solidifier_worker_bound: usize) -> Self {
+    pub fn transaction_solidifier_worker_bound(mut self, transaction_solidifier_worker_bound: usize) -> Self {
         self.workers
-            .milestone_solidifier_worker_bound
-            .replace(milestone_solidifier_worker_bound);
+            .transaction_solidifier_worker_bound
+            .replace(transaction_solidifier_worker_bound);
         self
     }
 
@@ -251,10 +251,10 @@ impl ProtocolConfBuilder {
                     .workers
                     .milestone_validator_worker_bound
                     .unwrap_or(CONF_MILESTONE_VALIDATOR_WORKER_BOUND),
-                milestone_solidifier_worker_bound: self
+                transaction_solidifier_worker_bound: self
                     .workers
-                    .milestone_solidifier_worker_bound
-                    .unwrap_or(CONF_MILESTONE_SOLIDIFIER_WORKER_BOUND),
+                    .transaction_solidifier_worker_bound
+                    .unwrap_or(CONF_TRANSACTION_SOLIDIFIER_WORKER_BOUND),
                 transaction_worker_bound: self
                     .workers
                     .transaction_worker_bound
@@ -306,7 +306,7 @@ pub struct ProtocolWorkersConf {
     pub(crate) transaction_request_send_worker_bound: usize,
     pub(crate) heartbeat_send_worker_bound: usize,
     pub(crate) milestone_validator_worker_bound: usize,
-    pub(crate) milestone_solidifier_worker_bound: usize,
+    pub(crate) transaction_solidifier_worker_bound: usize,
     pub(crate) transaction_worker_bound: usize,
     pub(crate) transaction_worker_cache: usize,
     pub(crate) transaction_responder_worker_bound: usize,

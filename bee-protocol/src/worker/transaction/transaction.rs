@@ -144,7 +144,7 @@ impl TransactionWorker {
         match tangle().insert_transaction(transaction, hash).await {
             Some(vertex_ref) => {
                 if let Some(_) = Protocol::get().requested.remove(&hash) {
-                    Protocol::trigger_milestone_solidification().await;
+                    Protocol::trigger_transaction_solidification().await;
                 }
                 Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await;
 
