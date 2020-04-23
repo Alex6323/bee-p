@@ -64,7 +64,8 @@ impl Tangle {
 
     /// Inserts a transaction.
     ///
-    /// TODO: there is no guarantee `hash` belongs to `transaction`. User responsibility?
+    /// Note: The method assumes that `hash` -> `transaction` is injective, otherwise unexpected behavior could
+    /// occur.
     pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<VertexRef> {
         match self.approvers.entry(*transaction.trunk()) {
             Entry::Occupied(mut entry) => {
@@ -109,14 +110,6 @@ impl Tangle {
     /// Returns whether the transaction is stored in the Tangle.
     pub fn contains_transaction(&'static self, hash: &Hash) -> bool {
         self.vertices.contains_key(hash)
-    }
-
-    async fn solidify(&'static self, _hash: Hash) -> Option<()> {
-        todo!()
-    }
-
-    fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
-        self.vertices.get(hash).map(|v| v.meta)
     }
 
     /// This function is *eventually consistent* - if `true` is returned, solidification has
@@ -336,6 +329,14 @@ impl Tangle {
                 analyzed_hashes.insert(hash);
             }
         }
+    }
+
+    async fn solidify(&'static self, _hash: Hash) -> Option<()> {
+        todo!()
+    }
+
+    fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
+        self.vertices.get(hash).map(|v| v.meta)
     }
 
     #[cfg(test)]
