@@ -1,7 +1,4 @@
-use crate::{
-    milestone::MilestoneIndex,
-    protocol::Protocol,
-};
+use crate::protocol::Protocol;
 
 use bee_bundle::Hash;
 use bee_tangle::tangle;
@@ -19,7 +16,7 @@ use futures::{
 };
 use log::info;
 
-pub(crate) struct TransactionSolidifierWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
+pub(crate) struct TransactionSolidifierWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct TransactionSolidifierWorker {}
 
@@ -28,9 +25,7 @@ impl TransactionSolidifierWorker {
         Self {}
     }
 
-    // TODO is the index even needed ? We request one milestone at a time ? No PriorityQueue ?
-
-    async fn solidify(&self, hash: Hash, index: u32) -> bool {
+    async fn solidify(&self, hash: Hash, target_index: u32) -> bool {
         let mut missing_hashes = HashSet::new();
 
         tangle().walk_approvees_depth_first(
@@ -47,9 +42,31 @@ impl TransactionSolidifierWorker {
             true => true,
             false => {
                 for missing_hash in missing_hashes {
-                    Protocol::request_transaction(missing_hash, index).await;
+                    Protocol::request_transaction(missing_hash, target_index).await;
                 }
 
+                false
+            }
+        }
+    }
+
+    async fn process_target(&self, target_index: u32) -> bool {
+        match tangle().get_milestone_hash(&(target_index.into())) {
+            Some(target_hash) => match self.solidify(target_hash, target_index).await {
+                true => {
+                    tangle().update_solid_milestone_index(target_index.into());
+                    Protocol::broadcast_heartbeat(
+                        *tangle().get_solid_milestone_index(),
+                        *tangle().get_snapshot_milestone_index(),
+                    )
+                    .await;
+                    true
+                }
+                false => false,
+            },
+            None => {
+                // There is a gap, request the milestone
+                Protocol::request_milestone(target_index, None);
                 false
             }
         }
@@ -68,8 +85,12 @@ impl TransactionSolidifierWorker {
         loop {
             select! {
                 event = receiver_fused.next() => {
-                    if let Some(TransactionSolidifierWorkerEvent(hash, index)) = event {
-                        self.solidify(hash, index).await;
+                    if let Some(TransactionSolidifierWorkerEvent(hash)) = event {
+                        while tangle().get_solid_milestone_index() < tangle().get_last_milestone_index() {
+                            if !self.process_target(*tangle().get_solid_milestone_index() + 1).await {
+                                break;
+                            }
+                        }
                     }
                 },
                 _ = shutdown_fused => {

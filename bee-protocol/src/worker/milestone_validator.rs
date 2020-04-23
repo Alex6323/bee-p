@@ -116,7 +116,8 @@ where
                                     tangle().update_last_milestone_index(milestone.index.into());
                                 }
                                 // TODO only trigger if index == last solid index ?
-                                Protocol::trigger_transaction_solidification().await;
+                                // TODO trigger only if requester is empty ? And unsynced ?
+                                // Protocol::trigger_transaction_solidification(milestone.hash).await;
                             },
                             Err(e) => {
                                 match e {

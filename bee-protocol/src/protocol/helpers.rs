@@ -100,13 +100,13 @@ impl Protocol {
 
     // TransactionSolidifier
 
-    pub async fn trigger_transaction_solidification() {
+    pub async fn trigger_transaction_solidification(hash: Hash, index: MilestoneIndex) {
         if let Err(e) = Protocol::get()
             .transaction_solidifier_worker
             // TODO try to avoid clone
             .0
             .clone()
-            .send(TransactionSolidifierWorkerEvent())
+            .send(TransactionSolidifierWorkerEvent(hash, index))
             .await
         {
             warn!("[Protocol ] Triggering transaction solidification failed: {}.", e);

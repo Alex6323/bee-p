@@ -6,6 +6,7 @@ use crate::{
         TransactionBroadcast,
         TransactionRequest,
     },
+    milestone::MilestoneIndex,
     peer::Peer,
     protocol::ProtocolMetrics,
     util::WaitPriorityQueue,
@@ -55,10 +56,7 @@ use std::{
 };
 
 use async_std::task::spawn;
-use dashmap::{
-    DashMap,
-    DashSet,
-};
+use dashmap::DashMap;
 use futures::{
     channel::{
         mpsc,
@@ -102,7 +100,7 @@ pub struct Protocol {
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) status_worker: mpsc::Sender<()>,
     pub(crate) contexts: DashMap<EndpointId, SenderContext>,
-    pub(crate) requested: DashSet<Hash>,
+    pub(crate) requested: DashMap<Hash, MilestoneIndex>,
 }
 
 impl Protocol {
@@ -172,7 +170,7 @@ impl Protocol {
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             status_worker: status_worker_shutdown_tx,
             contexts: DashMap::new(),
-            requested: DashSet::new(),
+            requested: DashMap::new(),
         };
 
         unsafe {
@@ -217,9 +215,6 @@ impl Protocol {
         ));
         spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
         spawn(StatusWorker::new().run(status_worker_shutdown_rx));
-
-        // TODO move to a new protocol::run ?
-        Protocol::trigger_transaction_solidification().await;
     }
 
     pub async fn shutdown() {
