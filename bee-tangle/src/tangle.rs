@@ -116,70 +116,49 @@ impl Tangle {
         self.vertices.contains_key(hash)
     }
 
-    /*
-    /// TODO
-    pub fn get_vertex(&'static self, hash: &Hash) -> Option<VertexRef> {
-        Some(VertexRef {
-            meta: self.get_meta(&hash)?,
-            tangle: self,
-        })
-    }
-    */
-
-    /*
-    /// This function is _eventually consistent_ - if `true` is returned, solidification has
+    /// Returns whether the transaction associated with `hash` is solid.
+    ///
+    /// Note: This function is _eventually consistent_ - if `true` is returned, solidification has
     /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
     /// or solidification information has not yet been fully propagated.
-    pub async fn is_solid(&'static self, _hash: Hash) -> Option<bool> {
-        todo!()
-    }
-    */
-
-    /*
-    pub fn get_milestone(&'static self, index: &MilestoneIndex) -> Option<VertexRef> {
-        match self.get_milestone_hash(index) {
-            None => None,
-            Some(hash) => Some(VertexRef {
-                meta: self.get_meta(&hash)?,
-                tangle: self,
-            }),
+    pub fn is_solid_transaction(&'static self, hash: &Hash) -> std::result::Result<bool, ()> {
+        if self.is_solid_entry_point(hash) {
+            Ok(true)
+        } else {
+            if let Some(tx) = self.get_transaction(hash) {
+                todo!("handle solid and unsolid cases")
+            } else {
+                Err(())
+            }
         }
-    }
-    */
-
-    /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
-    pub fn get_latest_milestone(&'static self) -> Option<TransactionRef> {
-        todo!()
-    }
-
-    /// Adds `hash` to the set of solid entry points.
-    pub fn add_solid_entry_point(&'static self, hash: Hash) {
-        self.solid_entry_points.insert(hash);
-    }
-
-    /// Removes `hash` from the set of solid entry points.
-    pub fn remove_solid_entry_point(&'static self, hash: Hash) {
-        self.solid_entry_points.remove(&hash);
-    }
-
-    /// Returns whether the transaction associated `hash` is a solid entry point.
-    pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
-        self.solid_entry_points.contains(hash)
     }
 
     /// Adds the `hash` of a milestone identified by its milestone `index`.
-    pub fn add_milestone_hash(&'static self, index: MilestoneIndex, hash: Hash) {
+    pub fn add_milestone(&'static self, index: MilestoneIndex, hash: Hash) {
         self.milestones.insert(index, hash);
     }
 
     /// Removes the hash of a milestone.
-    pub fn remove_milestone_hash(&'static self, index: &MilestoneIndex, hash: Hash) {
-        self.milestones.remove(index);
+    pub fn remove_milestone(&'static self, index: MilestoneIndex) {
+        self.milestones.remove(&index);
+    }
+
+    /// Returns the milestone transaction corresponding to the given milestone `index`.
+    pub fn get_milestone(&'static self, index: MilestoneIndex) -> Option<TransactionRef> {
+        match self.get_milestone_hash(index) {
+            None => None,
+            Some(hash) => self.get_transaction(&hash),
+        }
+    }
+
+    /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
+    pub fn get_latest_milestone(&'static self) -> Option<TransactionRef> {
+        todo!("get the last milestone index, get the transaction hash from it, and query the Tangle for it")
     }
 
     /// Returns the hash of a milestone.
-    pub fn get_milestone_hash(&'static self, index: &MilestoneIndex) -> Option<Hash> {
-        match self.milestones.get(index) {
+    pub fn get_milestone_hash(&'static self, index: MilestoneIndex) -> Option<Hash> {
+        match self.milestones.get(&index) {
             None => None,
             Some(v) => Some(*v),
         }
@@ -218,6 +197,21 @@ impl Tangle {
     /// Updates the last milestone index to `new_index`.
     pub fn update_last_milestone_index(&'static self, new_index: MilestoneIndex) {
         self.last_milestone_index.store(*new_index, Ordering::Relaxed);
+    }
+
+    /// Adds `hash` to the set of solid entry points.
+    pub fn add_solid_entry_point(&'static self, hash: Hash) {
+        self.solid_entry_points.insert(hash);
+    }
+
+    /// Removes `hash` from the set of solid entry points.
+    pub fn remove_solid_entry_point(&'static self, hash: Hash) {
+        self.solid_entry_points.remove(&hash);
+    }
+
+    /// Returns whether the transaction associated `hash` is a solid entry point.
+    pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
+        self.solid_entry_points.contains(hash)
     }
 
     /// Checks if the tangle is synced or not

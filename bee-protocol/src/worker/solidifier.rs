@@ -51,7 +51,7 @@ impl TransactionSolidifierWorker {
     }
 
     async fn process_target(&self, target_index: u32) -> bool {
-        match tangle().get_milestone_hash(&(target_index.into())) {
+        match tangle().get_milestone_hash(target_index.into()) {
             Some(target_hash) => match self.solidify(target_hash, target_index).await {
                 true => {
                     tangle().update_solid_milestone_index(target_index.into());

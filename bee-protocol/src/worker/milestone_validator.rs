@@ -109,7 +109,7 @@ where
                         // TODO split
                         match self.validate_milestone(tail_hash).await {
                             Ok(milestone) => {
-                                tangle().add_milestone_hash(milestone.index.into(), milestone.hash);
+                                tangle().add_milestone(milestone.index.into(), milestone.hash);
                                 // TODO deref ? Why not .into() ?
                                 if milestone.index > *tangle().get_last_milestone_index() {
                                     info!("[MilestoneValidatorWorker ] New milestone #{}.", milestone.index);
