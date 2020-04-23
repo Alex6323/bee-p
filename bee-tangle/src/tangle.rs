@@ -42,6 +42,7 @@ pub struct Tangle {
     /// A map between the milestone index and hash of the milestone transaction.
     milestones: DashMap<MilestoneIndex, Hash>,
 
+    /// A set of hashes representing transactions deemed solid entry points.
     solid_entry_points: DashSet<Hash>,
 
     unsolid_new: Sender<Hash>,
