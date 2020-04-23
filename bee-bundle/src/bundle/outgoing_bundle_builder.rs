@@ -1,9 +1,15 @@
 use crate::{
     bundle::Bundle,
-    constants::IOTA_SUPPLY,
+    constants::{
+        IOTA_SUPPLY,
+        PAYLOAD_TRIT_LEN,
+    },
     transaction::{
+        Address,
         Hash,
         Index,
+        Payload,
+        Tag,
         TransactionBuilder,
         TransactionBuilders,
         TransactionError,
@@ -16,7 +22,16 @@ use bee_crypto::{
     Kerl,
     Sponge,
 };
-use bee_ternary::TritBuf;
+use bee_signing::{
+    normalize_hash,
+    IotaSeed,
+    PrivateKey,
+    PrivateKeyGenerator,
+    Signature,
+    WotsPrivateKeyGeneratorBuilder,
+    WotsSecurityLevel,
+};
+use bee_ternary::Btrit;
 
 use std::marker::PhantomData;
 
@@ -27,6 +42,7 @@ pub enum OutgoingBundleBuilderError {
     InvalidValue(i64),
     MissingTransactionBuilderField(&'static str),
     TransactionError(TransactionError),
+    FailedSigningOperation,
 }
 
 pub trait OutgoingBundleBuilderStage {}
@@ -58,17 +74,83 @@ where
     S: OutgoingBundleBuilderStage,
 {
     // TODO TEST
-    fn calculate_hash(&self) -> TritBuf {
-        // TODO Impl
+    fn calculate_bundle_hash(&mut self) -> Result<(), OutgoingBundleBuilderError> {
         let mut sponge = E::default();
+        let mut obsolete_tag = match self.builders.0.get(0) {
+            Some(builder) => match builder.obsolete_tag.as_ref() {
+                Some(obsolete_tag) => obsolete_tag.to_inner().to_owned(),
+                _ => {
+                    return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField(
+                        "obsolete_tag",
+                    ))
+                }
+            },
+            _ => return Err(OutgoingBundleBuilderError::Empty),
+        };
 
-        for _builder in &self.builders.0 {
-            // TODO sponge.absorb(builder.essence());
+        let hash = loop {
+            sponge.reset();
+
+            for builder in &self.builders.0 {
+                let _ = sponge.absorb(&builder.essence());
+            }
+
+            let hash = sponge
+                .squeeze()
+                .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."));
+
+            let hash = normalize_hash(&hash);
+            let mut has_m_bug = false;
+            for trits in hash.chunks(3) {
+                let mut is_m = true;
+
+                for trit in trits.iter() {
+                    if *trit != Btrit::PlusOne {
+                        is_m = false;
+                        break;
+                    }
+                }
+
+                if is_m {
+                    has_m_bug = true;
+                    break;
+                }
+            }
+
+            if !has_m_bug {
+                break Hash::from_inner_unchecked(hash);
+            } else {
+                // obsolete_tag + 1
+                // TODO we may want to move this operation to the ternary crate
+                for i in 0..obsolete_tag.len() {
+                    // Safe to unwrap since it's in the range of tag
+                    match obsolete_tag.get(i).unwrap() {
+                        Btrit::NegOne => {
+                            obsolete_tag.set(i, Btrit::Zero);
+                            break;
+                        }
+                        Btrit::Zero => {
+                            obsolete_tag.set(i, Btrit::PlusOne);
+                            break;
+                        }
+                        Btrit::PlusOne => obsolete_tag.set(i, Btrit::NegOne),
+                    };
+                }
+                // Safe to unwrap because we already check first tx exists.
+                self.builders
+                    .0
+                    .get_mut(0)
+                    .unwrap()
+                    .obsolete_tag
+                    .replace(Tag::from_inner_unchecked(obsolete_tag.clone()));
+            }
+        };
+
+        for builder in &mut self.builders.0 {
+            builder.bundle.replace(hash.clone());
         }
 
-        sponge
-            .squeeze()
-            .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."))
+        Ok(())
     }
 }
 
@@ -122,6 +204,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
         if sum != 0 {
             Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
         }
+
+        self.calculate_bundle_hash()?;
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSealed> {
             builders: self.builders,
@@ -179,8 +263,53 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     }
 
     // TODO TEST
-    pub fn sign(self) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
-        // TODO Impl
+    // TODO Right now this method receive inputs have same order as address in bundle.
+    // We probably want to check it is the right input for the address.
+    pub fn sign(
+        mut self,
+        seed: &IotaSeed<Kerl>,
+        inputs: &[(u64, Address, WotsSecurityLevel)],
+    ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
+        // Safe to unwrap because bundle is sealed
+        let message = self.builders.0.get(0).unwrap().bundle.as_ref().unwrap();
+
+        let mut signature_fragments: Vec<Payload> = Vec::new();
+
+        for (index, _, security) in inputs {
+            let key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(*security)
+                .build()
+                // Safe to unwrap because security level is provided
+                .unwrap();
+            // Create subseed and then sign the message
+            let signature = key_generator
+                .generate(seed, *index)
+                .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?
+                .sign(message.to_inner().as_i8_slice())
+                .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
+
+            // Split signature into fragments
+            for fragment in signature.trits().chunks(PAYLOAD_TRIT_LEN) {
+                signature_fragments.push(Payload::from_inner_unchecked(fragment.to_owned()));
+            }
+        }
+
+        // Find the first input tx
+        let mut input_index = 0;
+        for i in &self.builders.0 {
+            if i.value.as_ref().unwrap().to_inner() < &0 {
+                input_index = i.index.as_ref().unwrap().to_inner().to_owned();
+                break;
+            }
+        }
+
+        // We assume input tx are placed in order and have correct amount based on security level
+        for payload in signature_fragments {
+            let builder = self.builders.0.get_mut(input_index).unwrap();
+            builder.payload = Some(payload);
+            input_index += 1;
+        }
+
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
             essence_sponge: PhantomData,
@@ -248,6 +377,16 @@ mod tests {
         Timestamp,
         Value,
     };
+    use bee_signing::{
+        PublicKey,
+        RecoverableSignature,
+        Seed,
+        WotsSignature,
+    };
+    use bee_ternary::{
+        T1B1Buf,
+        TritBuf,
+    };
 
     fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
         TransactionBuilder::new()
@@ -268,25 +407,148 @@ mod tests {
             .with_nonce(Nonce::zeros())
     }
 
+    fn bundle_builder_signature_check(security: WotsSecurityLevel) -> Result<(), OutgoingBundleBuilderError> {
+        let bundle_size = 4;
+        let mut bundle_builder = OutgoingBundleBuilder::new();
+        let seed = IotaSeed::<Kerl>::new();
+        let privkey = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            .security_level(security)
+            .build()
+            .unwrap()
+            .generate(&seed, 0)
+            .unwrap();
+        let address = Address::from_inner_unchecked(privkey.generate_public_key().unwrap().trits().to_owned());
+
+        // Transfer
+        bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(1)));
+
+        // Input
+        bundle_builder.push(
+            default_transaction_builder(1, bundle_size - 1)
+                .with_address(address.clone())
+                .with_value(Value::from_inner_unchecked(-1)),
+        );
+        bundle_builder.push(default_transaction_builder(2, bundle_size - 1).with_address(address.clone()));
+        bundle_builder.push(default_transaction_builder(3, bundle_size - 1).with_address(address.clone()));
+
+        // Build bundle and sign
+        let bundle = bundle_builder
+            .seal()?
+            .sign(&seed, &[(0, address.clone(), security)])?
+            .attach_local(Hash::zeros(), Hash::zeros())?
+            .build()?;
+        assert_eq!(bundle.len(), bundle_size);
+
+        // Validate signature
+        let security = match security {
+            WotsSecurityLevel::Low => 1,
+            WotsSecurityLevel::Medium => 2,
+            WotsSecurityLevel::High => 3,
+        };
+        let mut signature = TritBuf::<T1B1Buf>::zeros(PAYLOAD_TRIT_LEN * security);
+        let mut offset = 0;
+        for i in 1..security + 1 {
+            let input = bundle.0.get(i).unwrap();
+            signature.copy_raw_bytes(&input.payload.to_inner().to_owned(), offset, PAYLOAD_TRIT_LEN);
+            offset += PAYLOAD_TRIT_LEN;
+        }
+        let res = WotsSignature::<Kerl>::from_buf(signature)
+            .recover_public_key(bundle.0.get(1).unwrap().bundle.to_inner().as_i8_slice())
+            .unwrap();
+        assert_eq!(address.to_inner().as_slice(), res.trits());
+
+        Ok(())
+    }
+
+    fn bundle_builder_different_security_check() -> Result<(), OutgoingBundleBuilderError> {
+        let bundle_size = 4;
+        let mut bundle_builder = OutgoingBundleBuilder::new();
+        let seed = IotaSeed::<Kerl>::new();
+        let address_low = Address::from_inner_unchecked(
+            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(WotsSecurityLevel::Low)
+                .build()
+                .unwrap()
+                .generate(&seed, 0)
+                .unwrap()
+                .generate_public_key()
+                .unwrap()
+                .trits()
+                .to_owned(),
+        );
+        let address_medium = Address::from_inner_unchecked(
+            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(WotsSecurityLevel::Medium)
+                .build()
+                .unwrap()
+                .generate(&seed, 1)
+                .unwrap()
+                .generate_public_key()
+                .unwrap()
+                .trits()
+                .to_owned(),
+        );
+
+        // Transfer
+        bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(2)));
+
+        // Input
+        bundle_builder.push(
+            default_transaction_builder(1, bundle_size - 1)
+                .with_address(address_low.clone())
+                .with_value(Value::from_inner_unchecked(-1)),
+        );
+        bundle_builder.push(
+            default_transaction_builder(2, bundle_size - 1)
+                .with_address(address_medium.clone())
+                .with_value(Value::from_inner_unchecked(-1)),
+        );
+        bundle_builder.push(default_transaction_builder(3, bundle_size - 1).with_address(address_medium.clone()));
+
+        // Build bundle and sign
+        let bundle = bundle_builder
+            .seal()?
+            .sign(
+                &seed,
+                &[
+                    (0, address_low.clone(), WotsSecurityLevel::Low),
+                    (1, address_medium.clone(), WotsSecurityLevel::Medium),
+                ],
+            )?
+            .attach_local(Hash::zeros(), Hash::zeros())?
+            .build()?;
+        assert_eq!(bundle.len(), bundle_size);
+
+        // Validate signature
+        let res_low = WotsSignature::<Kerl>::from_buf(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
+            .recover_public_key(bundle.0.get(1).unwrap().bundle.to_inner().as_i8_slice())
+            .unwrap();
+        assert_eq!(address_low.to_inner().as_slice(), res_low.trits());
+
+        let mut signature = TritBuf::<T1B1Buf>::zeros(PAYLOAD_TRIT_LEN * 2);
+        let mut offset = 0;
+        for i in 2..4 {
+            let input = bundle.0.get(i).unwrap();
+            signature.copy_raw_bytes(&input.payload.to_inner().to_owned(), offset, PAYLOAD_TRIT_LEN);
+            offset += PAYLOAD_TRIT_LEN;
+        }
+        let res_medium = WotsSignature::<Kerl>::from_buf(signature)
+            .recover_public_key(bundle.0.get(2).unwrap().bundle.to_inner().as_i8_slice())
+            .unwrap();
+        assert_eq!(address_medium.to_inner().as_slice(), res_medium.trits());
+
+        Ok(())
+    }
+
     // TODO Also check to attach if value ?
     #[test]
     fn outgoing_bundle_builder_value_test() -> Result<(), OutgoingBundleBuilderError> {
-        let bundle_size = 3;
-        let mut bundle_builder = OutgoingBundleBuilder::new();
-
-        for i in 0..bundle_size {
-            bundle_builder.push(default_transaction_builder(i, bundle_size - 1));
-        }
-
-        let bundle = bundle_builder
-            .seal()?
-            .sign()?
-            .attach_local(Hash::zeros(), Hash::zeros())?
-            .build()?;
-
-        assert_eq!(bundle.len(), bundle_size);
-
-        Ok(())
+        // Check each security
+        bundle_builder_signature_check(WotsSecurityLevel::Low)?;
+        bundle_builder_signature_check(WotsSecurityLevel::Medium)?;
+        bundle_builder_signature_check(WotsSecurityLevel::High)?;
+        // Check inputs have different security
+        bundle_builder_different_security_check()
     }
 
     // TODO Also check to sign if data ?
