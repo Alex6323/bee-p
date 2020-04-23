@@ -34,10 +34,10 @@ use flume::Sender;
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
     /// A map between each vertex and the hash of the transaction the respective vertex represents.
-    vertices: DashMap<Hash, Vertex>,
+    pub(crate) vertices: DashMap<Hash, Vertex>,
 
     /// A map between the hash of a transaction and the hashes of its approvers.
-    approvers: DashMap<Hash, Vec<Hash>>,
+    pub(crate) approvers: DashMap<Hash, Vec<Hash>>,
 
     /// A map between the milestone index and hash of the milestone transaction.
     milestones: DashMap<MilestoneIndex, Hash>,
@@ -46,7 +46,7 @@ pub struct Tangle {
     solid_entry_points: DashSet<Hash>,
 
     /// The sender side of a channel between the Tangle and the (gossip) solidifier.
-    solidifier_chan: Sender<Hash>,
+    solidifier_send: Sender<Hash>,
 
     solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
@@ -55,11 +55,11 @@ pub struct Tangle {
 
 impl Tangle {
     /// Creates a new `Tangle`.
-    pub(crate) fn new(solidifier_chan: Sender<Hash>) -> Self {
+    pub(crate) fn new(solidifier_send: Sender<Hash>) -> Self {
         Self {
             vertices: DashMap::new(),
             approvers: DashMap::new(),
-            solidifier_chan,
+            solidifier_send,
             solid_entry_points: DashSet::new(),
             milestones: DashMap::new(),
             solid_milestone_index: AtomicU32::new(0),
@@ -100,7 +100,7 @@ impl Tangle {
 
         // TODO: not sure if we want replacement of vertices
         if self.vertices.insert(hash, vertex).is_none() {
-            match self.solidifier_chan.send(hash) {
+            match self.solidifier_send.send(hash) {
                 Ok(()) => (),
                 Err(e) => todo!("log warning"),
             }
@@ -126,11 +126,11 @@ impl Tangle {
     /// Note: This function is _eventually consistent_ - if `true` is returned, solidification has
     /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
     /// or solidification information has not yet been fully propagated.
-    pub fn is_solid_transaction(&'static self, hash: &Hash) -> std::result::Result<bool, ()> {
+    pub fn is_solid_transaction(&'static self, hash: &Hash) -> bool {
         if self.is_solid_entry_point(hash) {
-            Ok(true)
+            true
         } else {
-            self.vertices.get(hash).map(|r| r.value().is_solid()).ok_or(())
+            self.vertices.get(hash).map(|r| r.value().is_solid()).unwrap_or(false)
         }
     }
 
