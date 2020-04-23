@@ -1,5 +1,7 @@
 use crate::tangle::Tangle;
 
+use bitflags::bitflags;
+
 use std::ops::Deref;
 
 use bee_bundle::{
@@ -21,9 +23,22 @@ impl Deref for TransactionRef {
     }
 }
 
+bitflags! {
+    pub(crate) struct Flags: u8 {
+        const IS_SOLID = 0x01;
+    }
+}
+
+impl Flags {
+    pub fn clear(&mut self) {
+        self.bits = 0;
+    }
+}
+
 pub(crate) struct Vertex {
     id: Hash,
     inner: TransactionRef,
+    flags: Flags,
 }
 
 impl Vertex {
@@ -31,6 +46,7 @@ impl Vertex {
         Self {
             id: hash,
             inner: TransactionRef(Arc::new(transaction)),
+            flags: Flags::empty(),
         }
     }
 
@@ -40,5 +56,30 @@ impl Vertex {
 
     pub fn get_ref_to_inner(&self) -> TransactionRef {
         self.inner.clone()
+    }
+
+    pub fn set_solid(&mut self) {
+        self.flags = Flags::IS_SOLID;
+    }
+
+    pub fn is_solid(&self) -> bool {
+        self.flags == Flags::IS_SOLID
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bee_test::transaction::create_random_tx;
+
+    #[test]
+    fn set_and_is_solid() {
+        let (hash, tx) = create_random_tx();
+
+        let mut vtx = Vertex::from(tx, hash);
+        assert!(!vtx.is_solid());
+
+        vtx.set_solid();
+        assert!(vtx.is_solid())
     }
 }

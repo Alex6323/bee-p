@@ -125,11 +125,7 @@ impl Tangle {
         if self.is_solid_entry_point(hash) {
             Ok(true)
         } else {
-            if let Some(tx) = self.get_transaction(hash) {
-                todo!("handle solid and unsolid cases")
-            } else {
-                Err(())
-            }
+            self.vertices.get(hash).map(|r| r.value().is_solid()).ok_or(())
         }
     }
 
