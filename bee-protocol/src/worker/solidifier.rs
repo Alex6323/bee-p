@@ -37,6 +37,7 @@ impl MilestoneSolidifierWorker {
             },
         );
 
+        // TODO refactor with async closures when stabilized
         match missing_hashes.is_empty() {
             true => true,
             false => {
