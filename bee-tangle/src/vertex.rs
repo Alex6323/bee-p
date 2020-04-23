@@ -22,15 +22,15 @@ impl Deref for TransactionRef {
 }
 
 pub(crate) struct Vertex {
-    pub(crate) id: Hash,
-    transaction: Arc<Transaction>,
+    id: Hash,
+    inner: TransactionRef,
 }
 
 impl Vertex {
     pub fn from(transaction: Transaction, hash: Hash) -> Self {
         Self {
             id: hash,
-            transaction: Arc::new(transaction),
+            inner: TransactionRef(Arc::new(transaction)),
         }
     }
 
@@ -38,7 +38,7 @@ impl Vertex {
         self.id
     }
 
-    pub fn get_transaction(&self) -> TransactionRef {
-        TransactionRef(Arc::clone(&self.transaction))
+    pub fn get_ref_to_inner(&self) -> TransactionRef {
+        self.inner.clone()
     }
 }

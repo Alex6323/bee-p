@@ -94,7 +94,7 @@ impl Tangle {
         }
 
         let vertex = Vertex::from(transaction, hash);
-        let tx_ref = vertex.get_transaction();
+        let tx_ref = vertex.get_ref_to_inner();
 
         // TODO: not sure if we want replacement of vertices
         if self.vertices.insert(hash, vertex).is_none() {
@@ -108,7 +108,7 @@ impl Tangle {
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
     pub fn get_transaction(&'static self, hash: &Hash) -> Option<TransactionRef> {
-        self.vertices.get(hash).map(|v| v.get_transaction())
+        self.vertices.get(hash).map(|v| v.get_ref_to_inner())
     }
 
     /// Returns whether the transaction is stored in the Tangle.
@@ -238,7 +238,7 @@ impl Tangle {
 
         if let Some(approvee_ref) = self.vertices.get(&start) {
             let approvee_vtx = approvee_ref.value();
-            let approvee = approvee_vtx.get_transaction();
+            let approvee = approvee_vtx.get_ref_to_inner();
 
             if filter(&approvee) {
                 approvees.push(start);
@@ -248,7 +248,7 @@ impl Tangle {
                     if let Some(approvers_ref) = self.approvers.get(&approvee_hash) {
                         for approver_hash in approvers_ref.value() {
                             if let Some(approver_ref) = self.vertices.get(approver_hash) {
-                                let approver = approver_ref.value().get_transaction();
+                                let approver = approver_ref.value().get_ref_to_inner();
 
                                 if *approver.trunk() == approvee_hash && filter(&approver) {
                                     approvees.push(*approver_hash);
@@ -282,7 +282,7 @@ impl Tangle {
         while let Some(approver_hash) = approvers.pop() {
             if let Some(approver_ref) = self.vertices.get(&approver_hash) {
                 let approver_vtx = approver_ref.value();
-                let approver = approver_vtx.get_transaction();
+                let approver = approver_vtx.get_ref_to_inner();
 
                 if !filter(&approver) {
                     break;
