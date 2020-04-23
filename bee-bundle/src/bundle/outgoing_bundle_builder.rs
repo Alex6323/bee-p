@@ -121,8 +121,9 @@ where
                 break Hash::from_inner_unchecked(hash);
             } else {
                 // obsolete_tag + 1
+                // TODO we may want to move this operation to the ternary crate
                 for i in 0..obsolete_tag.len() {
-                    // Safe to unwrap since it's in the rage of tag
+                    // Safe to unwrap since it's in the range of tag
                     match obsolete_tag.get(i).unwrap() {
                         Btrit::NegOne => {
                             obsolete_tag.set(i, Btrit::Zero);
@@ -136,14 +137,17 @@ where
                     };
                 }
                 // Safe to unwrap because we already check first tx exists.
-                self.builders.0.get_mut(0).unwrap().obsolete_tag =
-                    Some(Tag::from_inner_unchecked(obsolete_tag.clone()));
+                self.builders
+                    .0
+                    .get_mut(0)
+                    .unwrap()
+                    .obsolete_tag
+                    .replace(Tag::from_inner_unchecked(obsolete_tag.clone()));
             }
         };
 
         for builder in &mut self.builders.0 {
-            builder.obsolete_tag = Some(Tag::from_inner_unchecked(obsolete_tag.clone()));
-            builder.bundle = Some(hash.clone());
+            builder.bundle.replace(hash.clone());
         }
 
         Ok(())
@@ -407,13 +411,13 @@ mod tests {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
         let seed = IotaSeed::<Kerl>::new();
-        let subseed = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+        let privkey = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(security)
             .build()
             .unwrap()
             .generate(&seed, 0)
             .unwrap();
-        let address = Address::from_inner_unchecked(subseed.generate_public_key().unwrap().trits().to_owned());
+        let address = Address::from_inner_unchecked(privkey.generate_public_key().unwrap().trits().to_owned());
 
         // Transfer
         bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(1)));
@@ -497,7 +501,7 @@ mod tests {
         bundle_builder.push(
             default_transaction_builder(2, bundle_size - 1)
                 .with_address(address_medium.clone())
-                .with_value(Value::from_inner_unchecked(-1))
+                .with_value(Value::from_inner_unchecked(-1)),
         );
         bundle_builder.push(default_transaction_builder(3, bundle_size - 1).with_address(address_medium.clone()));
 
