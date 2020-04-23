@@ -5,8 +5,6 @@ use crate::{
     vertex::{
         TransactionRef,
         Vertex,
-        VertexMeta,
-        VertexRef,
     },
 };
 
@@ -23,24 +21,32 @@ use std::{
     },
 };
 
-use async_std::sync::{
-    Arc,
-    Sender,
-};
+use async_std::sync::Arc;
+
 use dashmap::{
     mapref::entry::Entry,
     DashMap,
     DashSet,
 };
 
+use flume::Sender;
+
 /// A datastructure based on a directed acyclic graph (DAG).
 pub struct Tangle {
-    vertices: DashMap<Hash, Vertex>,
-    approvers: DashMap<Hash, Vec<Hash>>,
+    /// A map between each vertex and the hash of the transaction the respective vertex represents.
+    pub(crate) vertices: DashMap<Hash, Vertex>,
+
+    /// A map between the hash of a transaction and the hashes of its approvers.
+    pub(crate) approvers: DashMap<Hash, Vec<Hash>>,
+
+    /// A map between the milestone index and hash of the milestone transaction.
     milestones: DashMap<MilestoneIndex, Hash>,
+
+    /// A set of hashes representing transactions deemed solid entry points.
     solid_entry_points: DashSet<Hash>,
 
-    unsolid_new: Sender<Hash>,
+    /// The sender side of a channel between the Tangle and the (gossip) solidifier.
+    solidifier_send: Sender<Hash>,
 
     solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
@@ -49,11 +55,11 @@ pub struct Tangle {
 
 impl Tangle {
     /// Creates a new `Tangle`.
-    pub(crate) fn new(unsolid_new: Sender<Hash>) -> Self {
+    pub(crate) fn new(solidifier_send: Sender<Hash>) -> Self {
         Self {
             vertices: DashMap::new(),
             approvers: DashMap::new(),
-            unsolid_new,
+            solidifier_send,
             solid_entry_points: DashSet::new(),
             milestones: DashMap::new(),
             solid_milestone_index: AtomicU32::new(0),
@@ -64,38 +70,40 @@ impl Tangle {
 
     /// Inserts a transaction.
     ///
-    /// TODO: there is no guarantee `hash` belongs to `transaction`. User responsibility?
-    pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<VertexRef> {
+    /// Note: The method assumes that `hash` -> `transaction` is injective, otherwise unexpected behavior could
+    /// occur.
+    pub async fn insert_transaction(&'static self, transaction: Transaction, hash: Hash) -> Option<TransactionRef> {
         match self.approvers.entry(*transaction.trunk()) {
             Entry::Occupied(mut entry) => {
                 let values = entry.get_mut();
-                values.push(hash.clone());
+                values.push(hash);
             }
             Entry::Vacant(entry) => {
-                entry.insert(vec![hash.clone()]);
-                ()
+                entry.insert(vec![hash]);
             }
         }
 
         match self.approvers.entry(*transaction.branch()) {
             Entry::Occupied(mut entry) => {
                 let values = entry.get_mut();
-                values.push(hash.clone());
+                values.push(hash);
             }
             Entry::Vacant(entry) => {
-                entry.insert(vec![hash.clone()]);
-                ()
+                entry.insert(vec![hash]);
             }
         }
 
         let vertex = Vertex::from(transaction, hash);
-        let meta = vertex.meta;
+        let tx_ref = vertex.get_ref_to_inner();
 
         // TODO: not sure if we want replacement of vertices
         if self.vertices.insert(hash, vertex).is_none() {
-            self.unsolid_new.send(hash).await;
+            match self.solidifier_send.send(hash) {
+                Ok(()) => (),
+                Err(e) => todo!("log warning"),
+            }
 
-            Some(VertexRef { meta, tangle: self })
+            Some(tx_ref)
         } else {
             None
         }
@@ -103,7 +111,7 @@ impl Tangle {
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
     pub fn get_transaction(&'static self, hash: &Hash) -> Option<TransactionRef> {
-        self.vertices.get(hash).map(|v| v.get_transaction())
+        self.vertices.get(hash).map(|v| v.get_ref_to_inner())
     }
 
     /// Returns whether the transaction is stored in the Tangle.
@@ -111,81 +119,53 @@ impl Tangle {
         self.vertices.contains_key(hash)
     }
 
-    async fn solidify(&'static self, _hash: Hash) -> Option<()> {
-        todo!()
-    }
-
-    fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
-        self.vertices.get(hash).map(|v| v.meta)
-    }
-
-    /// This function is *eventually consistent* - if `true` is returned, solidification has
+    /// Returns whether the transaction associated with `hash` is solid.
+    ///
+    /// Note: This function is _eventually consistent_ - if `true` is returned, solidification has
     /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
     /// or solidification information has not yet been fully propagated.
-    pub async fn is_solid(&'static self, _hash: Hash) -> Option<bool> {
-        todo!()
-    }
-
-    /// Returns a [`VertexRef`] linked to a transaction, if it's available in the local Tangle.
-    pub fn get_vertex(&'static self, hash: &Hash) -> Option<VertexRef> {
-        Some(VertexRef {
-            meta: self.get_meta(&hash)?,
-            tangle: self,
-        })
-    }
-
-    ///  Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
-    pub fn get_milestone(&'static self, index: &MilestoneIndex) -> Option<VertexRef> {
-        match self.get_milestone_hash(index) {
-            None => None,
-            Some(hash) => Some(VertexRef {
-                meta: self.get_meta(&hash)?,
-                tangle: self,
-            }),
+    pub fn is_solid_transaction(&'static self, hash: &Hash) -> bool {
+        if self.is_solid_entry_point(hash) {
+            true
+        } else {
+            self.vertices.get(hash).map(|r| r.value().is_solid()).unwrap_or(false)
         }
     }
 
-    /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
-    pub fn get_latest_milestone(&'static self, _idx: MilestoneIndex) -> Option<VertexRef> {
-        todo!()
-    }
-
-    /// Adds `hash` to the set of solid entry points.
-    pub fn add_solid_entry_point(&'static self, hash: Hash) {
-        self.solid_entry_points.insert(hash);
-    }
-
-    /// Removes `hash` from the set of solid entry points.
-    pub fn remove_solid_entry_point(&'static self, hash: Hash) {
-        self.solid_entry_points.remove(&hash);
-    }
-
-    /// Returns whether the transaction associated `hash` is a solid entry point.
-    pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
-        self.solid_entry_points.contains(hash)
-    }
-
     /// Adds the `hash` of a milestone identified by its milestone `index`.
-    pub fn add_milestone_hash(&'static self, index: MilestoneIndex, hash: Hash) {
+    pub fn add_milestone(&'static self, index: MilestoneIndex, hash: Hash) {
         self.milestones.insert(index, hash);
     }
 
     /// Removes the hash of a milestone.
-    pub fn remove_milestone_hash(&'static self, index: &MilestoneIndex, hash: Hash) {
-        self.milestones.remove(index);
+    pub fn remove_milestone(&'static self, index: MilestoneIndex) {
+        self.milestones.remove(&index);
+    }
+
+    /// Returns the milestone transaction corresponding to the given milestone `index`.
+    pub fn get_milestone(&'static self, index: MilestoneIndex) -> Option<TransactionRef> {
+        match self.get_milestone_hash(index) {
+            None => None,
+            Some(hash) => self.get_transaction(&hash),
+        }
+    }
+
+    /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
+    pub fn get_latest_milestone(&'static self) -> Option<TransactionRef> {
+        todo!("get the last milestone index, get the transaction hash from it, and query the Tangle for it")
     }
 
     /// Returns the hash of a milestone.
-    pub fn get_milestone_hash(&'static self, index: &MilestoneIndex) -> Option<Hash> {
-        match self.milestones.get(index) {
+    pub fn get_milestone_hash(&'static self, index: MilestoneIndex) -> Option<Hash> {
+        match self.milestones.get(&index) {
             None => None,
             Some(v) => Some(*v),
         }
     }
 
     /// Returns whether the milestone index maps to a know milestone hash.
-    pub fn contains_milestone(&'static self, index: &MilestoneIndex) -> bool {
-        self.milestones.contains_key(index)
+    pub fn contains_milestone(&'static self, index: MilestoneIndex) -> bool {
+        self.milestones.contains_key(&index)
     }
 
     /// Retreives the solid milestone index.
@@ -218,6 +198,21 @@ impl Tangle {
         self.last_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
+    /// Adds `hash` to the set of solid entry points.
+    pub fn add_solid_entry_point(&'static self, hash: Hash) {
+        self.solid_entry_points.insert(hash);
+    }
+
+    /// Removes `hash` from the set of solid entry points.
+    pub fn remove_solid_entry_point(&'static self, hash: Hash) {
+        self.solid_entry_points.remove(&hash);
+    }
+
+    /// Returns whether the transaction associated `hash` is a solid entry point.
+    pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
+        self.solid_entry_points.contains(hash)
+    }
+
     /// Checks if the tangle is synced or not
     pub fn is_synced(&'static self) -> bool {
         self.get_solid_milestone_index() == self.get_last_milestone_index()
@@ -242,7 +237,7 @@ impl Tangle {
 
         if let Some(approvee_ref) = self.vertices.get(&start) {
             let approvee_vtx = approvee_ref.value();
-            let approvee = approvee_vtx.get_transaction();
+            let approvee = approvee_vtx.get_ref_to_inner();
 
             if filter(&approvee) {
                 approvees.push(start);
@@ -252,7 +247,7 @@ impl Tangle {
                     if let Some(approvers_ref) = self.approvers.get(&approvee_hash) {
                         for approver_hash in approvers_ref.value() {
                             if let Some(approver_ref) = self.vertices.get(approver_hash) {
-                                let approver = approver_ref.value().get_transaction();
+                                let approver = approver_ref.value().get_ref_to_inner();
 
                                 if *approver.trunk() == approvee_hash && filter(&approver) {
                                     approvees.push(*approver_hash);
@@ -286,7 +281,7 @@ impl Tangle {
         while let Some(approver_hash) = approvers.pop() {
             if let Some(approver_ref) = self.vertices.get(&approver_hash) {
                 let approver_vtx = approver_ref.value();
-                let approver = approver_vtx.get_transaction();
+                let approver = approver_vtx.get_ref_to_inner();
 
                 if !filter(&approver) {
                     break;
@@ -337,6 +332,16 @@ impl Tangle {
             }
         }
     }
+
+    async fn solidify(&'static self, _hash: Hash) -> Option<()> {
+        todo!()
+    }
+
+    /*
+    fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
+        self.vertices.get(hash).map(|v| v.meta)
+    }
+    */
 
     #[cfg(test)]
     fn num_approvers(&'static self, hash: &Hash) -> usize {
@@ -494,6 +499,7 @@ mod tests {
         pub e_hash: Hash,
     }
 
+    #[allow(clippy::many_single_char_names)]
     fn create_test_tangle() -> (Transactions, Hashes) {
         // a   b
         // |\ /

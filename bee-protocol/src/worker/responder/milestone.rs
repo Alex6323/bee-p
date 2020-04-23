@@ -46,26 +46,22 @@ impl MilestoneResponderWorker {
             _ => request.index.into(),
         };
 
-        // TODO use get_milestone when fixed
         // TODO send complete ms bundle ?
-        match tangle().get_milestone_hash(&index) {
-            Some(hash) => match tangle().get_transaction(&hash) {
-                Some(transaction) => {
-                    let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-                    transaction.into_trits_allocated(&mut trits);
-                    // TODO dedicated channel ? Priority Queue ?
-                    // TODO compress bytes
-                    SenderWorker::<TransactionBroadcast>::send(
-                        &epid,
-                        // TODO try to compress lower in the pipeline ?
-                        TransactionBroadcast::new(&compress_transaction_bytes(cast_slice(
-                            trits.encode::<T5B1Buf>().as_i8_slice(),
-                        ))),
-                    )
-                    .await;
-                }
-                None => return,
-            },
+        match tangle().get_milestone(index) {
+            Some(transaction) => {
+                let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
+                transaction.into_trits_allocated(&mut trits);
+                // TODO dedicated channel ? Priority Queue ?
+                // TODO compress bytes
+                SenderWorker::<TransactionBroadcast>::send(
+                    &epid,
+                    // TODO try to compress lower in the pipeline ?
+                    TransactionBroadcast::new(&compress_transaction_bytes(cast_slice(
+                        trits.encode::<T5B1Buf>().as_i8_slice(),
+                    ))),
+                )
+                .await;
+            }
             None => return,
         }
     }

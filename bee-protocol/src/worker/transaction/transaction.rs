@@ -142,13 +142,12 @@ impl TransactionWorker {
 
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
-            Some(vertex_ref) => {
+            Some(transaction) => {
                 if let Some((hash, index)) = Protocol::get().requested.remove(&hash) {
                     Protocol::trigger_transaction_solidification(hash, index).await;
                 }
                 Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await;
 
-                let transaction = vertex_ref.get_transaction().unwrap();
                 if transaction.address().eq(&Protocol::get().conf.coordinator.public_key)
                     || transaction.address().eq(&Protocol::get().conf.workers.null_address)
                 {

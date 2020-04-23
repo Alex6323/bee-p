@@ -77,7 +77,7 @@ impl MilestoneRequesterWorker {
                 // TODO impl fused stream
                 entry = Protocol::get().milestone_requester_worker.0.pop().fuse() => {
                     if let MilestoneRequesterWorkerEntry(index, epid) = entry {
-                        if !tangle().contains_milestone(&(index.into())) {
+                        if !tangle().contains_milestone(index.into()) {
                             self.process_request(index, epid).await;
                         }
 
