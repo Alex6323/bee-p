@@ -380,25 +380,25 @@ mod tests {
 
     #[test]
     #[serial]
-    fn update_and_get_first_solid_milestone_index() {
+    fn update_and_get_snapshot_milestone_index() {
         init();
         let tangle = tangle();
 
-        tangle.update_first_solid_milestone_index(1368160.into());
+        tangle.update_snapshot_milestone_index(1368160.into());
 
-        assert_eq!(1368160, *tangle.get_first_solid_milestone_index());
+        assert_eq!(1368160, *tangle.get_snapshot_milestone_index());
         drop();
     }
 
     #[test]
     #[serial]
-    fn update_and_get_last_solid_milestone_index() {
+    fn update_and_get_solid_milestone_index() {
         init();
         let tangle = tangle();
 
-        tangle.update_last_solid_milestone_index(1368167.into());
+        tangle.update_solid_milestone_index(1368167.into());
 
-        assert_eq!(1368167, *tangle.get_last_solid_milestone_index());
+        assert_eq!(1368167, *tangle.get_solid_milestone_index());
         drop();
     }
 
