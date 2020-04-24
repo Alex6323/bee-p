@@ -85,6 +85,25 @@ impl MilestoneSolidifierWorker {
         }
     }
 
+    async fn solidify_milestone(&self) {
+        let target_index = *tangle().get_solid_milestone_index() + 1;
+
+        if let Some(target_hash) = tangle().get_milestone_hash(target_index.into()) {
+            match tangle().is_solid_transaction(&target_hash) {
+                true => {
+                    // TODO set confirmation index + trigger ledger
+                    tangle().update_solid_milestone_index(target_index.into());
+                    Protocol::broadcast_heartbeat(
+                        *tangle().get_solid_milestone_index(),
+                        *tangle().get_snapshot_milestone_index(),
+                    )
+                    .await;
+                }
+                false => Protocol::trigger_transaction_solidification(target_hash, target_index).await,
+            };
+        };
+    }
+
     pub(crate) async fn run(
         self,
         receiver: mpsc::Receiver<MilestoneSolidifierWorkerEvent>,
@@ -100,6 +119,7 @@ impl MilestoneSolidifierWorker {
                 event = receiver_fused.next() => {
                     if let Some(MilestoneSolidifierWorkerEvent()) = event {
                         self.request_milestones();
+                        self.solidify_milestone().await;
                         // while tangle().get_solid_milestone_index() < tangle().get_last_milestone_index() {
                         //     if !self.process_target(*tangle().get_solid_milestone_index() + 1).await {
                         //         break;
