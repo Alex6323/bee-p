@@ -227,14 +227,14 @@ impl Transaction {
             attachment_ts_buf.len(),
         );
 
-        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
+        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_lbts().to_inner() as i64).unwrap();
         buf.copy_raw_bytes(
             attachment_lbts_buf.as_slice(),
             ATTACHMENT_LBTS.trit_offset.start,
             attachment_lbts_buf.len(),
         );
 
-        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
+        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_ubts().to_inner() as i64).unwrap();
         buf.copy_raw_bytes(
             attachment_ubts_buf.as_slice(),
             ATTACHMENT_UBTS.trit_offset.start,
