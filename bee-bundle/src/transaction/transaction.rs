@@ -203,6 +203,14 @@ impl Transaction {
 
         buf.copy_raw_bytes(value_buf.as_slice(), VALUE.trit_offset.start, value_buf.len());
 
+        let index_buf = TritBuf::<T1B1Buf>::try_from(*self.index().to_inner() as i64).unwrap();
+
+        buf.copy_raw_bytes(index_buf.as_slice(), INDEX.trit_offset.start, index_buf.len());
+
+        let last_index_buf = TritBuf::<T1B1Buf>::try_from(*self.last_index().to_inner() as i64).unwrap();
+
+        buf.copy_raw_bytes(last_index_buf.as_slice(), LAST_INDEX.trit_offset.start, last_index_buf.len());
+
         let timestamp_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
 
         buf.copy_raw_bytes(
@@ -219,14 +227,14 @@ impl Transaction {
             attachment_ts_buf.len(),
         );
 
-        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
+        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_lbts().to_inner() as i64).unwrap();
         buf.copy_raw_bytes(
             attachment_lbts_buf.as_slice(),
             ATTACHMENT_LBTS.trit_offset.start,
             attachment_lbts_buf.len(),
         );
 
-        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
+        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_ubts().to_inner() as i64).unwrap();
         buf.copy_raw_bytes(
             attachment_ubts_buf.as_slice(),
             ATTACHMENT_UBTS.trit_offset.start,
