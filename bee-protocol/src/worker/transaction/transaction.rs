@@ -143,12 +143,12 @@ impl TransactionWorker {
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
             Some(transaction) => {
+                if !tangle().is_synced() && Protocol::get().requested.len() == 0 {
+                    Protocol::trigger_milestone_solidification().await;
+                }
                 match Protocol::get().requested.remove(&hash) {
                     Some((hash, index)) => {
                         Protocol::trigger_transaction_solidification(hash, index).await;
-                        if !tangle().is_synced() && Protocol::get().requested.len() == 0 {
-                            Protocol::trigger_milestone_solidification().await;
-                        }
                     }
                     None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
                 };
