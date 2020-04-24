@@ -36,7 +36,7 @@ impl TransactionSolidifierWorker {
         tangle().walk_approvees_depth_first(
             hash,
             |_| {},
-            |transaction| true,
+            |vertex| !vertex.is_solid(),
             |missing_hash| {
                 missing_hashes.insert(*missing_hash);
             },

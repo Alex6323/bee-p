@@ -36,7 +36,7 @@ impl Flags {
     }
 }
 
-pub(crate) struct Vertex {
+pub struct Vertex {
     id: Hash,
     inner: TransactionRef,
     flags: Flags,

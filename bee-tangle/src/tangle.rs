@@ -305,7 +305,7 @@ impl Tangle {
         mut on_missing: Missing,
     ) where
         Mapping: FnMut(&TransactionRef),
-        Follow: Fn(&TransactionRef) -> bool,
+        Follow: Fn(&Vertex) -> bool,
         Missing: FnMut(&Hash),
     {
         let mut non_analyzed_hashes = Vec::new();
@@ -315,10 +315,14 @@ impl Tangle {
 
         while let Some(hash) = non_analyzed_hashes.pop() {
             if !analyzed_hashes.contains(&hash) {
-                match self.get_transaction(&hash) {
-                    Some(transaction) => {
+                match self.vertices.get(&hash) {
+                    Some(vertex) => {
+                        let vertex = vertex.value();
+                        let transaction = vertex.get_ref_to_inner();
+
                         map(&transaction);
-                        if should_follow(&transaction) {
+
+                        if should_follow(vertex) {
                             non_analyzed_hashes.push(*transaction.branch());
                             non_analyzed_hashes.push(*transaction.trunk());
                         }
