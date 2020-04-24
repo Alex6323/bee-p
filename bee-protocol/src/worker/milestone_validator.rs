@@ -30,8 +30,8 @@ use futures::{
     stream::StreamExt,
 };
 use log::{
+    debug,
     info,
-    warn,
 };
 
 #[derive(Debug)]
@@ -122,7 +122,7 @@ where
                             Err(e) => {
                                 match e {
                                     MilestoneValidatorWorkerError::IncompleteBundle => {},
-                                    _ => warn!("[MilestoneValidatorWorker ] Invalid milestone bundle: {:?}.", e)
+                                    _ => debug!("[MilestoneValidatorWorker ] Invalid milestone bundle: {:?}.", e)
                                 }
                             }
                         }
