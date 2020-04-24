@@ -93,7 +93,8 @@ impl Tangle {
             }
         }
 
-        let vertex = Vertex::from(transaction, hash);
+        let mut vertex = Vertex::from(transaction, hash);
+
         let tx_ref = vertex.get_ref_to_inner();
 
         // TODO: not sure if we want replacement of vertices

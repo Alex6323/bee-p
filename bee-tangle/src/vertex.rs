@@ -26,6 +26,7 @@ impl Deref for TransactionRef {
 bitflags! {
     pub(crate) struct Flags: u8 {
         const IS_SOLID = 0x01;
+        const IS_TAIL = 0x02;
     }
 }
 
@@ -43,10 +44,16 @@ pub(crate) struct Vertex {
 
 impl Vertex {
     pub fn from(transaction: Transaction, hash: Hash) -> Self {
+        let flags = if transaction.is_tail() {
+            Flags::IS_TAIL
+        } else {
+            Flags::empty()
+        };
+
         Self {
             id: hash,
             inner: TransactionRef(Arc::new(transaction)),
-            flags: Flags::empty(),
+            flags,
         }
     }
 
@@ -64,6 +71,14 @@ impl Vertex {
 
     pub fn is_solid(&self) -> bool {
         self.flags == Flags::IS_SOLID
+    }
+
+    pub fn set_tail(&mut self) {
+        self.flags = Flags::IS_TAIL;
+    }
+
+    pub fn is_tail(&self) -> bool {
+        self.flags == Flags::IS_TAIL
     }
 }
 
