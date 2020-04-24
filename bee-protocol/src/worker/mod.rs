@@ -34,6 +34,8 @@ pub(crate) use sender::{
     SenderWorker,
 };
 pub(crate) use solidifier::{
+    MilestoneSolidifierWorker,
+    MilestoneSolidifierWorkerEvent,
     TransactionSolidifierWorker,
     TransactionSolidifierWorkerEvent,
 };

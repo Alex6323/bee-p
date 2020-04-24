@@ -17,6 +17,8 @@ use crate::{
         MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker,
         MilestoneResponderWorkerEvent,
+        MilestoneSolidifierWorker,
+        MilestoneSolidifierWorkerEvent,
         MilestoneValidatorWorker,
         MilestoneValidatorWorkerEvent,
         PeerWorker,
@@ -97,6 +99,10 @@ pub struct Protocol {
         mpsc::Sender<TransactionSolidifierWorkerEvent>,
         Mutex<Option<oneshot::Sender<()>>>,
     ),
+    pub(crate) milestone_solidifier_worker: (
+        mpsc::Sender<MilestoneSolidifierWorkerEvent>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) status_worker: mpsc::Sender<()>,
     pub(crate) contexts: DashMap<EndpointId, SenderContext>,
@@ -133,6 +139,10 @@ impl Protocol {
             mpsc::channel(conf.workers.transaction_solidifier_worker_bound);
         let (transaction_solidifier_worker_shutdown_tx, transaction_solidifier_worker_shutdown_rx) = oneshot::channel();
 
+        let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) =
+            mpsc::channel(conf.workers.milestone_solidifier_worker_bound);
+        let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
+
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(conf.workers.broadcaster_worker_bound);
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
 
@@ -166,6 +176,10 @@ impl Protocol {
             transaction_solidifier_worker: (
                 transaction_solidifier_worker_tx,
                 Mutex::new(Some(transaction_solidifier_worker_shutdown_tx)),
+            ),
+            milestone_solidifier_worker: (
+                milestone_solidifier_worker_tx,
+                Mutex::new(Some(milestone_solidifier_worker_shutdown_tx)),
             ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             status_worker: status_worker_shutdown_tx,
@@ -213,8 +227,14 @@ impl Protocol {
             transaction_solidifier_worker_rx,
             transaction_solidifier_worker_shutdown_rx,
         ));
+        spawn(
+            MilestoneSolidifierWorker::new()
+                .run(milestone_solidifier_worker_rx, milestone_solidifier_worker_shutdown_rx),
+        );
         spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
         spawn(StatusWorker::new().run(status_worker_shutdown_rx));
+
+        Protocol::trigger_milestone_solidification().await;
     }
 
     pub async fn shutdown() {
@@ -264,6 +284,13 @@ impl Protocol {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
                     warn!("[Protocol ] Shutting down TransactionSolidifierWorker failed: {:?}.", e);
+                }
+            }
+        }
+        if let Ok(mut shutdown) = Protocol::get().milestone_solidifier_worker.1.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("[Protocol ] Shutting down MilestoneSolidifierWorker failed: {:?}.", e);
                 }
             }
         }

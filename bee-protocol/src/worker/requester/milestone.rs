@@ -50,6 +50,7 @@ impl MilestoneRequesterWorker {
     }
 
     async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
+        // TODO check that it has the milestone
         let epid = match epid {
             Some(epid) => epid,
             None => {
