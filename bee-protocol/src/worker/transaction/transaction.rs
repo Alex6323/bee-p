@@ -35,6 +35,7 @@ use futures::{
 };
 use log::{
     debug,
+    error,
     info,
     warn,
 };
@@ -175,21 +176,14 @@ impl TransactionWorker {
                         }
                     };
 
-                    match tail {
-                        Some(tail) => {
-                            milestone_validator_worker_tx.send(tail).await.unwrap();
-                            debug!(
-                                "[TransactionWorker ] Tail of potential milestone bundle sent for validation: {}",
-                                tail
+                    if let Some(tail) = tail {
+                        if let Err(e) = milestone_validator_worker_tx.send(tail).await {
+                            error!(
+                                "[TransactionWorker ] Sending tail to milestone validation failed: {:?}.",
+                                e
                             );
                         }
-                        None => {
-                            debug!(
-                                "[TransactionWorker ] Tail of potential milestone bundle not present yet: {}",
-                                transaction.bundle()
-                            );
-                        }
-                    }
+                    };
                 }
             }
             None => {
