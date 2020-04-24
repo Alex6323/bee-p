@@ -233,8 +233,6 @@ impl Protocol {
         );
         spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
         spawn(StatusWorker::new().run(status_worker_shutdown_rx));
-
-        Protocol::trigger_milestone_solidification().await;
     }
 
     pub async fn shutdown() {
