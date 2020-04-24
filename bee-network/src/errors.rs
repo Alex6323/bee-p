@@ -43,8 +43,6 @@ pub enum SendError {
 pub enum RecvError {
     #[error(display = "Receiving Error")]
     Io(#[source] async_std::io::Error),
-    //#[error(display = "Reading 0 bytes from stream")]
-    //ZeroBytesReceived,
 }
 
 //pub type RecvResult<T> = std::result::Result<T, RecvError>;

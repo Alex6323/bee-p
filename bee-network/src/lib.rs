@@ -25,9 +25,9 @@ pub use commands::{
     Requester,
     Responder,
 };
-pub use conf::{
-    NetworkConf,
-    NetworkConfBuilder,
+pub use config::{
+    NetworkConfig,
+    NetworkConfigBuilder,
 };
 pub use endpoint::{
     origin::Origin,
@@ -51,7 +51,7 @@ mod network;
 mod shutdown;
 mod tcp;
 //mod udp;
-mod conf;
+mod config;
 mod utils;
 
 use endpoint::{
@@ -66,7 +66,7 @@ use async_std::task::spawn;
 use futures::channel::oneshot;
 
 /// Initializes the network layer.
-pub fn init(_conf: NetworkConf, binding_addr: Address) -> (Network, Shutdown, Events) {
+pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
     let (command_sender, commands) = commands::command_channel();
     let (event_sender, events) = events::event_channel();
     let (internal_event_sender, internal_events) = events::event_channel();
@@ -85,7 +85,7 @@ pub fn init(_conf: NetworkConf, binding_addr: Address) -> (Network, Shutdown, Ev
         event_sender,
     );
 
-    let tcp_worker = TcpWorker::new(binding_addr, internal_event_sender, tcp_shutdown);
+    let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender, tcp_shutdown);
     //let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
 
     shutdown.add_notifier(epw_sd_sender);
