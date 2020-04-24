@@ -14,7 +14,7 @@ const DEFAULT_BINDING_PORT: u16 = 15600;
 const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
 /// Network configuration.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct NetworkConfig {
     pub(crate) binding_port: u16,
     pub(crate) binding_addr: IpAddr,
@@ -39,7 +39,6 @@ impl NetworkConfig {
 
 /// Network configuration builder.
 #[derive(Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct NetworkConfigBuilder {
     binding_port: Option<u16>,
     binding_addr: Option<IpAddr>,

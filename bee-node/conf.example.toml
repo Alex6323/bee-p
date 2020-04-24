@@ -3,10 +3,8 @@
 logLevel  = "info"
 
 [network]
-[network.server]
-type  = "TCP"
-host  = "localhost"
-port  = 15600
+binding_addr  = "0.0.0.0"
+binding_port  = 1337
 
 [peering]
 [peering.static]
@@ -15,11 +13,13 @@ peers     = [ "tcp://[::1]:15600" ]
 
 [protocol]
 mwm = 14
+
 [protocol.coordinator]
 depth         = 24
 publicKey     = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9"
 securityLevel = 2
 spongeType    = "kerl"
+
 [protocol.workers]
 
 [snapshot]
