@@ -27,25 +27,25 @@ impl SolidifierState {
     }
 
     fn propagate(&self, hash: Hash) {
-        let mut non_analyzed_hashes = vec![hash];
-        let mut analyzed_hashes = HashSet::new();
+        let mut stack = vec![hash];
+        let mut already_solid = HashSet::new();
 
-        while let Some(hash) = non_analyzed_hashes.pop() {
-            if !analyzed_hashes.contains(&hash) {
+        while let Some(hash) = stack.pop() {
+            if !already_solid.contains(&hash) {
                 if let Some(v) = tangle().vertices.get(&hash).map(|r| r.value().get_ref_to_inner()) {
                     if tangle().is_solid_transaction(v.trunk()) && tangle().is_solid_transaction(v.branch()) {
                         // NOTE: unwrap should be safe since we just added it to the Tangle
                         tangle().vertices.get_mut(&hash).unwrap().set_solid();
+                        already_solid.insert(hash);
 
                         if let Some(approvers) = tangle().approvers.get(&hash) {
                             let approvers = approvers.value();
                             for approver in approvers {
-                                non_analyzed_hashes.push(*approver);
+                                stack.push(*approver);
                             }
                         }
                     }
                 }
-                analyzed_hashes.insert(hash);
             }
         }
     }
