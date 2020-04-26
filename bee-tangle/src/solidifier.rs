@@ -27,7 +27,7 @@ impl SolidifierState {
 
 /// Attempt to perform solidification upon a vertex (and its approvers).
 pub async fn run(mut state: SolidifierState) {
-    while let Some(hash) = state.solidifier_recv.next().await {
+    while let Ok(hash) = state.solidifier_recv.recv_async().await {
         let mut stack = vec![hash];
 
         while let Some(hash) = stack.pop() {
