@@ -93,7 +93,7 @@ impl Tangle {
             }
         }
 
-        let mut vertex = Vertex::from(transaction, hash);
+        let vertex = Vertex::from(transaction, hash);
 
         let tx_ref = vertex.get_ref_to_inner();
 
