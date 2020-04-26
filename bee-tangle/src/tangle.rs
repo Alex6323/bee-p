@@ -83,13 +83,15 @@ impl Tangle {
             }
         }
 
-        match self.approvers.entry(*transaction.branch()) {
-            Entry::Occupied(mut entry) => {
-                let values = entry.get_mut();
-                values.push(hash);
-            }
-            Entry::Vacant(entry) => {
-                entry.insert(vec![hash]);
+        if transaction.trunk() != transaction.branch() {
+            match self.approvers.entry(*transaction.branch()) {
+                Entry::Occupied(mut entry) => {
+                    let values = entry.get_mut();
+                    values.push(hash);
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![hash]);
+                }
             }
         }
 
