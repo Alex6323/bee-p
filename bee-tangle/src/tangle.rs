@@ -309,7 +309,7 @@ impl Tangle {
         Missing: FnMut(&Hash),
     {
         let mut non_analyzed_hashes = Vec::new();
-        let mut analyzed_hashes = std::collections::HashSet::new();
+        let mut analyzed_hashes = HashSet::new();
 
         non_analyzed_hashes.push(root);
 

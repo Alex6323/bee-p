@@ -40,11 +40,9 @@ pub fn init() {
     if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
         let (sender, receiver) = flume::bounded::<Hash>(SOLIDIFIER_CHAN_CAPACITY);
 
-        let solidifier_state = SolidifierState::new(receiver);
-
         TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
 
-        spawn(solidifier::run(solidifier_state));
+        spawn(SolidifierState::new(receiver).run());
     } else {
         drop();
         panic!("Already initialized");
