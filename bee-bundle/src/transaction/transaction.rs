@@ -209,7 +209,11 @@ impl Transaction {
 
         let last_index_buf = TritBuf::<T1B1Buf>::try_from(*self.last_index().to_inner() as i64).unwrap();
 
-        buf.copy_raw_bytes(last_index_buf.as_slice(), LAST_INDEX.trit_offset.start, last_index_buf.len());
+        buf.copy_raw_bytes(
+            last_index_buf.as_slice(),
+            LAST_INDEX.trit_offset.start,
+            last_index_buf.len(),
+        );
 
         let timestamp_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
 

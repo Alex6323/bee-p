@@ -452,7 +452,7 @@ mod tests {
             offset += PAYLOAD_TRIT_LEN;
         }
         let res = WotsSignature::<Kerl>::from_buf(signature)
-            .recover_public_key(bundle.0.get(1).unwrap().bundle.to_inner().as_i8_slice())
+            .recover_public_key(normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
         assert_eq!(address.to_inner().as_slice(), res.trits());
 
@@ -520,7 +520,7 @@ mod tests {
 
         // Validate signature
         let res_low = WotsSignature::<Kerl>::from_buf(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
-            .recover_public_key(bundle.0.get(1).unwrap().bundle.to_inner().as_i8_slice())
+            .recover_public_key(normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
         assert_eq!(address_low.to_inner().as_slice(), res_low.trits());
 
@@ -532,7 +532,7 @@ mod tests {
             offset += PAYLOAD_TRIT_LEN;
         }
         let res_medium = WotsSignature::<Kerl>::from_buf(signature)
-            .recover_public_key(bundle.0.get(2).unwrap().bundle.to_inner().as_i8_slice())
+            .recover_public_key(normalize_hash(bundle.0.get(2).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
         assert_eq!(address_medium.to_inner().as_slice(), res_medium.trits());
 
