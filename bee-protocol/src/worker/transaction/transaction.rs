@@ -208,7 +208,7 @@ mod tests {
     };
     use bee_network::{
         Address,
-        NetworkConfBuilder,
+        NetworkConfigBuilder,
         Url,
     };
     use futures::sink::SinkExt;
@@ -218,9 +218,8 @@ mod tests {
         bee_tangle::init();
 
         // build network
-        let network_config = NetworkConfBuilder::default().build();
-        let addr = block_on(Address::from_addr_str("localhost:1337")).unwrap();
-        let (network, _shutdown, _receiver) = bee_network::init(network_config, addr);
+        let network_config = NetworkConfigBuilder::default().build();
+        let (network, _shutdown, _receiver) = bee_network::init(network_config);
 
         // init protocol
         let protocol_config = ProtocolConfBuilder::default().build();
