@@ -1,27 +1,23 @@
-use crate::{
-    message::{
-        Message,
-        MessageError,
-    },
-    milestone::MilestoneIndex,
+use crate::message::{
+    Message,
+    MessageError,
 };
 
 use std::{
     convert::TryInto,
-    mem::size_of,
     ops::Range,
 };
 
-const MILESTONE_REQUEST_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
-const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
+const INDEX_SIZE: usize = 4;
+const CONSTANT_SIZE: usize = INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct MilestoneRequest {
-    pub(crate) index: MilestoneIndex,
+    pub(crate) index: u32,
 }
 
 impl MilestoneRequest {
-    pub(crate) fn new(index: MilestoneIndex) -> Self {
+    pub(crate) fn new(index: u32) -> Self {
         Self { index: index }
     }
 }
@@ -30,18 +26,18 @@ impl Message for MilestoneRequest {
     const ID: u8 = 0x03;
 
     fn size_range() -> Range<usize> {
-        (MILESTONE_REQUEST_CONSTANT_SIZE)..(MILESTONE_REQUEST_CONSTANT_SIZE + 1)
+        (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
+            return Err(MessageError::InvalidPayloadLength(bytes.len()));
         }
 
         let mut message = Self::default();
 
-        message.index = MilestoneIndex::from_be_bytes(
-            bytes[0..MILESTONE_REQUEST_INDEX_SIZE]
+        message.index = u32::from_be_bytes(
+            bytes[0..INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
@@ -50,7 +46,7 @@ impl Message for MilestoneRequest {
     }
 
     fn size(&self) -> usize {
-        MILESTONE_REQUEST_CONSTANT_SIZE
+        CONSTANT_SIZE
     }
 
     fn to_bytes(self, bytes: &mut [u8]) {
@@ -68,7 +64,12 @@ mod tests {
         HEADER_SIZE,
     };
 
-    const INDEX: MilestoneIndex = 0x81f7df7c;
+    const INDEX: u32 = 0x81f7df7c;
+
+    #[test]
+    fn id_test() {
+        assert_eq!(MilestoneRequest::ID, 3);
+    }
 
     #[test]
     fn size_range_test() {
@@ -93,7 +94,7 @@ mod tests {
     fn size_test() {
         let message = MilestoneRequest::new(INDEX);
 
-        assert_eq!(message.size(), MILESTONE_REQUEST_CONSTANT_SIZE);
+        assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
     fn to_from_eq(message: MilestoneRequest) {

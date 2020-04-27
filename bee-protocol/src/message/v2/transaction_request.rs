@@ -5,12 +5,12 @@ use crate::message::{
 
 use std::ops::Range;
 
-const TRANSACTION_REQUEST_HASH_SIZE: usize = 49;
-const TRANSACTION_REQUEST_CONSTANT_SIZE: usize = TRANSACTION_REQUEST_HASH_SIZE;
+const HASH_SIZE: usize = 49;
+const CONSTANT_SIZE: usize = HASH_SIZE;
 
 #[derive(Clone)]
 pub(crate) struct TransactionRequest {
-    pub(crate) hash: [u8; TRANSACTION_REQUEST_HASH_SIZE],
+    pub(crate) hash: [u8; HASH_SIZE],
 }
 
 impl TransactionRequest {
@@ -25,9 +25,7 @@ impl TransactionRequest {
 
 impl Default for TransactionRequest {
     fn default() -> Self {
-        Self {
-            hash: [0; TRANSACTION_REQUEST_HASH_SIZE],
-        }
+        Self { hash: [0; HASH_SIZE] }
     }
 }
 
@@ -35,23 +33,23 @@ impl Message for TransactionRequest {
     const ID: u8 = 0x05;
 
     fn size_range() -> Range<usize> {
-        (TRANSACTION_REQUEST_CONSTANT_SIZE)..(TRANSACTION_REQUEST_CONSTANT_SIZE + 1)
+        (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
+            return Err(MessageError::InvalidPayloadLength(bytes.len()));
         }
 
         let mut message = Self::default();
 
-        message.hash.copy_from_slice(&bytes[0..TRANSACTION_REQUEST_HASH_SIZE]);
+        message.hash.copy_from_slice(&bytes[0..HASH_SIZE]);
 
         Ok(message)
     }
 
     fn size(&self) -> usize {
-        TRANSACTION_REQUEST_CONSTANT_SIZE
+        CONSTANT_SIZE
     }
 
     fn to_bytes(self, bytes: &mut [u8]) {
@@ -71,10 +69,15 @@ mod tests {
 
     use bee_test::slices::slice_eq;
 
-    const HASH: [u8; TRANSACTION_REQUEST_HASH_SIZE] = [
+    const HASH: [u8; HASH_SIZE] = [
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
         21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
     ];
+
+    #[test]
+    fn id_test() {
+        assert_eq!(TransactionRequest::ID, 5);
+    }
 
     #[test]
     fn size_range_test() {
@@ -99,7 +102,7 @@ mod tests {
     fn size_test() {
         let message = TransactionRequest::new(&HASH);
 
-        assert_eq!(message.size(), TRANSACTION_REQUEST_CONSTANT_SIZE);
+        assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
     fn to_from_eq(message: TransactionRequest) {

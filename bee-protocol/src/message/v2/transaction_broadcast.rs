@@ -5,8 +5,8 @@ use crate::message::{
 
 use std::ops::Range;
 
-const TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE: usize = 292;
-const TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE: usize = 1604;
+const VARIABLE_MIN_SIZE: usize = 292;
+const VARIABLE_MAX_SIZE: usize = 1604;
 
 #[derive(Clone, Default)]
 pub(crate) struct TransactionBroadcast {
@@ -25,12 +25,12 @@ impl Message for TransactionBroadcast {
     const ID: u8 = 0x04;
 
     fn size_range() -> Range<usize> {
-        (TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE)..(TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE + 1)
+        (VARIABLE_MIN_SIZE)..(VARIABLE_MAX_SIZE + 1)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
+            return Err(MessageError::InvalidPayloadLength(bytes.len()));
         }
 
         let mut message = Self::default();
@@ -84,6 +84,11 @@ mod tests {
         209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230,
         231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244,
     ];
+
+    #[test]
+    fn id_test() {
+        assert_eq!(TransactionBroadcast::ID, 4);
+    }
 
     #[test]
     fn size_range_test() {

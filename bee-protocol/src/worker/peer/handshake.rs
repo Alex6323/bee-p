@@ -53,7 +53,7 @@ pub(crate) fn validate_handshake(peer: &Peer, handshake: Handshake) -> Result<()
         ))?
     }
 
-    if let Err(version) = supported_version(&handshake.supported_messages) {
+    if let Err(version) = supported_version(&handshake.supported_versions) {
         Err(HandshakeError::UnsupportedVersion(version))?
     }
 

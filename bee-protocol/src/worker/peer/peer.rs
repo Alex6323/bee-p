@@ -150,7 +150,9 @@ impl PeerWorker {
 
                                 self.handshaked = true;
                             }
-                            Err(e) => {}
+                            Err(_) => {
+                                // TODO handle
+                            }
                         },
                         Err(e) => {
                             warn!("[PeerWorker({})] Reading Handshake failed: {:?}.", self.peer.epid, e);

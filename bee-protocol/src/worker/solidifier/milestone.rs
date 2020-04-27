@@ -1,9 +1,6 @@
 use crate::protocol::Protocol;
 
-use bee_bundle::Hash;
 use bee_tangle::tangle;
-
-use std::collections::HashSet;
 
 use futures::{
     channel::{
