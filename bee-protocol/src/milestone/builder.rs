@@ -204,7 +204,7 @@ mod tests {
                 assert_eq!(*ms.hash(), ms_hash_trits);
                 assert_eq!(ms.index(), index);
             }
-            Err(e) => unreachable!(),
+            Err(_) => unreachable!(),
         }
     }
 

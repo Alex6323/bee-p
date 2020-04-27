@@ -207,7 +207,6 @@ mod tests {
         spawn,
     };
     use bee_network::{
-        Address,
         NetworkConfigBuilder,
         Url,
     };
