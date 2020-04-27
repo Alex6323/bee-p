@@ -1,8 +1,8 @@
-mod conf;
+mod config;
 mod r#static;
 
-pub use conf::{
-    StaticPeeringConf,
-    StaticPeeringConfBuilder,
+pub use config::{
+    StaticPeeringConfig,
+    StaticPeeringConfigBuilder,
 };
 pub use r#static::StaticPeerManager;

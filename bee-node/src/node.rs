@@ -1,5 +1,5 @@
 use crate::{
-    conf::NodeConf,
+    config::NodeConfig,
     constants::{
         BEE_GIT_COMMIT,
         BEE_NAME,
@@ -61,7 +61,7 @@ use futures::{
 use log::*;
 
 pub struct Node {
-    conf: NodeConf,
+    config: NodeConfig,
     network: Network,
     shutdown: Shutdown,
     events: EventSubscriber,
@@ -71,9 +71,9 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(conf: NodeConf, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
+    pub fn new(config: NodeConfig, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
         Self {
-            conf,
+            config,
             network,
             shutdown,
             events,
@@ -145,17 +145,17 @@ impl Node {
     }
 
     pub async fn init(&mut self) {
-        logger::init(self.conf.log_level);
+        logger::init(self.config.log_level);
 
         info!("[Node ] {} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("[Node ] Initializing...");
 
-        block_on(StaticPeerManager::new(self.conf.peering.r#static.clone(), self.network.clone()).run());
+        block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone()).run());
 
         bee_tangle::init();
 
         info!("[Node ] Reading snapshot metadata...");
-        match SnapshotMetadata::new(self.conf.snapshot.meta_file_path()) {
+        match SnapshotMetadata::new(self.config.snapshot.meta_file_path()) {
             Ok(snapshot_metadata) => {
                 info!(
                     "[Node ] Read snapshot metadata from {} with index {}, {} solid entry points and {} seen milestones.",
@@ -178,13 +178,13 @@ impl Node {
             // TODO exit ?
             Err(e) => error!(
                 "[Node ] Failed to read snapshot metadata file \"{}\": {:?}.",
-                self.conf.snapshot.meta_file_path(),
+                self.config.snapshot.meta_file_path(),
                 e
             ),
         }
 
         info!("[Node ] Reading snapshot state...");
-        match SnapshotState::new(self.conf.snapshot.state_file_path()) {
+        match SnapshotState::new(self.config.snapshot.state_file_path()) {
             Ok(snapshot_state) => {
                 info!(
                     "[Node ] Read snapshot state with {} entries and correct supply.",
@@ -195,14 +195,14 @@ impl Node {
             // TODO exit ?
             Err(e) => error!(
                 "[Node ] Failed to read snapshot state file \"{}\": {:?}.",
-                self.conf.snapshot.state_file_path(),
+                self.config.snapshot.state_file_path(),
                 e
             ),
         }
 
-        Protocol::init(self.conf.protocol.clone(), self.network.clone()).await;
+        Protocol::init(self.config.protocol.clone(), self.network.clone()).await;
 
-        // TODO conf
+        // TODO config
         let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
         let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
         self.ledger.replace((ledger_worker_tx, ledger_worker_shutdown_tx));

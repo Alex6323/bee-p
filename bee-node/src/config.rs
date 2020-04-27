@@ -3,35 +3,35 @@ use bee_network::{
     NetworkConfigBuilder,
 };
 use bee_peering::{
-    PeeringConf,
-    PeeringConfBuilder,
+    PeeringConfig,
+    PeeringConfigBuilder,
 };
 use bee_protocol::{
-    ProtocolConf,
-    ProtocolConfBuilder,
+    ProtocolConfig,
+    ProtocolConfigBuilder,
 };
 use bee_snapshot::{
-    SnapshotConf,
-    SnapshotConfBuilder,
+    SnapshotConfig,
+    SnapshotConfigBuilder,
 };
 
 use log;
 use serde::Deserialize;
 
-pub(crate) const CONF_PATH: &str = "./conf.toml";
-const CONF_LOG_LEVEL: &str = "info";
+pub(crate) const CONFIG_PATH: &str = "./config.toml";
+const CONFIG_LOG_LEVEL: &str = "info";
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NodeConfBuilder {
+pub struct NodeConfigBuilder {
     log_level: Option<String>,
     network: NetworkConfigBuilder,
-    peering: PeeringConfBuilder,
-    protocol: ProtocolConfBuilder,
-    snapshot: SnapshotConfBuilder,
+    peering: PeeringConfigBuilder,
+    protocol: ProtocolConfigBuilder,
+    snapshot: SnapshotConfigBuilder,
 }
 
-impl NodeConfBuilder {
+impl NodeConfigBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -41,8 +41,8 @@ impl NodeConfBuilder {
         self
     }
 
-    pub fn build(self) -> NodeConf {
-        let log_level = match self.log_level.unwrap_or(CONF_LOG_LEVEL.to_owned()).as_str() {
+    pub fn build(self) -> NodeConfig {
+        let log_level = match self.log_level.unwrap_or(CONFIG_LOG_LEVEL.to_owned()).as_str() {
             "trace" => log::LevelFilter::Trace,
             "debug" => log::LevelFilter::Debug,
             "info" => log::LevelFilter::Info,
@@ -51,7 +51,7 @@ impl NodeConfBuilder {
             _ => log::LevelFilter::Info,
         };
 
-        NodeConf {
+        NodeConfig {
             log_level,
             network: self.network.build(),
             peering: self.peering.build(),
@@ -61,10 +61,10 @@ impl NodeConfBuilder {
     }
 }
 
-pub struct NodeConf {
+pub struct NodeConfig {
     pub(crate) log_level: log::LevelFilter,
     pub(crate) network: NetworkConfig,
-    pub(crate) peering: PeeringConf,
-    pub(crate) protocol: ProtocolConf,
-    pub(crate) snapshot: SnapshotConf,
+    pub(crate) peering: PeeringConfig,
+    pub(crate) protocol: ProtocolConfig,
+    pub(crate) snapshot: SnapshotConfig,
 }

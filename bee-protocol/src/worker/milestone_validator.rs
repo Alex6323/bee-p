@@ -76,7 +76,7 @@ where
         builder.push((*transaction).clone());
 
         // TODO use walker
-        for _ in 0..Protocol::get().conf.coordinator.security_level {
+        for _ in 0..Protocol::get().config.coordinator.security_level {
             transaction = tangle()
                 .get_transaction(transaction.trunk())
                 .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
@@ -85,7 +85,7 @@ where
         }
 
         Ok(builder
-            .depth(Protocol::get().conf.coordinator.depth)
+            .depth(Protocol::get().config.coordinator.depth)
             .validate()
             .map_err(|e| MilestoneValidatorWorkerError::InvalidMilestone(e))?
             .build())

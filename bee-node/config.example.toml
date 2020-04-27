@@ -1,4 +1,4 @@
-# Duplicate this file to conf.toml to use it
+# Duplicate this file to config.toml to use it
 
 logLevel  = "info"
 

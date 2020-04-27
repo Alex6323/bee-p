@@ -1,6 +1,6 @@
 #![recursion_limit = "256"]
 
-mod conf;
+mod config;
 mod message;
 mod milestone;
 mod peer;
@@ -8,9 +8,9 @@ mod protocol;
 mod util;
 mod worker;
 
-pub use conf::{
-    ProtocolConf,
-    ProtocolConfBuilder,
+pub use config::{
+    ProtocolConfig,
+    ProtocolConfigBuilder,
 };
 pub use milestone::{
     Milestone,

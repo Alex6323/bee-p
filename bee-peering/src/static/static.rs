@@ -1,5 +1,5 @@
 use crate::{
-    r#static::conf::StaticPeeringConf,
+    r#static::config::StaticPeeringConfig,
     PeerManager,
 };
 
@@ -13,17 +13,17 @@ use async_std::task::block_on;
 use async_trait::async_trait;
 use log::warn;
 
-// Manages a peer list and watches a conf file for changes
+// Manages a peer list and watches a config file for changes
 // Sends changes (peer added/removed) to the network
 
 pub struct StaticPeerManager {
-    conf: StaticPeeringConf,
+    config: StaticPeeringConfig,
     network: Network,
 }
 
 impl StaticPeerManager {
-    pub fn new(conf: StaticPeeringConf, network: Network) -> Self {
-        Self { conf, network }
+    pub fn new(config: StaticPeeringConfig, network: Network) -> Self {
+        Self { config, network }
     }
 
     async fn add_endpoint(&mut self, url: &str) {
@@ -44,9 +44,9 @@ impl StaticPeerManager {
 #[async_trait]
 impl PeerManager for StaticPeerManager {
     async fn run(mut self) {
-        // TODO conf file watcher
+        // TODO config file watcher
         //TODO use limit
-        for peer in self.conf.peers.clone() {
+        for peer in self.config.peers.clone() {
             self.add_endpoint(&peer).await;
         }
     }

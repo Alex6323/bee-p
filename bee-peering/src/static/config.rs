@@ -2,17 +2,17 @@ use serde::Deserialize;
 
 // TODO add acceptAnyConnection
 
-const CONF_LIMIT: u8 = 5;
-const CONF_PEERS: Vec<String> = Vec::new();
+const CONFIG_LIMIT: u8 = 5;
+const CONFIG_PEERS: Vec<String> = Vec::new();
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StaticPeeringConfBuilder {
+pub struct StaticPeeringConfigBuilder {
     pub(crate) limit: Option<u8>,
     pub(crate) peers: Option<Vec<String>>,
 }
 
-impl StaticPeeringConfBuilder {
+impl StaticPeeringConfigBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -29,16 +29,16 @@ impl StaticPeeringConfBuilder {
         self.peers.unwrap().push(peer.to_owned());
     }
 
-    pub fn build(self) -> StaticPeeringConf {
-        StaticPeeringConf {
-            limit: self.limit.unwrap_or(CONF_LIMIT),
-            peers: self.peers.unwrap_or(CONF_PEERS),
+    pub fn build(self) -> StaticPeeringConfig {
+        StaticPeeringConfig {
+            limit: self.limit.unwrap_or(CONFIG_LIMIT),
+            peers: self.peers.unwrap_or(CONFIG_PEERS),
         }
     }
 }
 
 #[derive(Clone)]
-pub struct StaticPeeringConf {
+pub struct StaticPeeringConfig {
     pub(crate) limit: u8,
     pub(crate) peers: Vec<String>,
 }

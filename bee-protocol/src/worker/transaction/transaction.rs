@@ -136,7 +136,7 @@ impl TransactionWorker {
         // calculate transaction hash
         let hash = Hash::from_inner_unchecked(self.curl.digest(&transaction_buf).unwrap());
 
-        if hash.weight() < Protocol::get().conf.mwm {
+        if hash.weight() < Protocol::get().config.mwm {
             debug!("[TransactionWorker ] Insufficient weight magnitude: {}.", hash.weight());
             return;
         }
@@ -154,8 +154,8 @@ impl TransactionWorker {
                     None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
                 };
 
-                if transaction.address().eq(&Protocol::get().conf.coordinator.public_key)
-                    || transaction.address().eq(&Protocol::get().conf.workers.null_address)
+                if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
+                    || transaction.address().eq(&Protocol::get().config.workers.null_address)
                 {
                     let tail = {
                         if transaction.is_tail() {
@@ -201,7 +201,7 @@ mod tests {
 
     use super::*;
 
-    use crate::ProtocolConfBuilder;
+    use crate::ProtocolConfigBuilder;
     use async_std::task::{
         block_on,
         spawn,
@@ -222,7 +222,7 @@ mod tests {
         let (network, _shutdown, _receiver) = bee_network::init(network_config);
 
         // init protocol
-        let protocol_config = ProtocolConfBuilder::default().build();
+        let protocol_config = ProtocolConfigBuilder::default().build();
         block_on(Protocol::init(protocol_config, network));
 
         assert_eq!(tangle().size(), 0);

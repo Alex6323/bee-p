@@ -1,5 +1,5 @@
 use crate::{
-    conf::slice_eq,
+    config::slice_eq,
     message::Handshake,
     peer::Peer,
     protocol::{
@@ -40,15 +40,15 @@ pub(crate) fn validate_handshake(peer: &Peer, handshake: Handshake) -> Result<()
     }
 
     if !slice_eq(
-        &Protocol::get().conf.coordinator.public_key_bytes,
+        &Protocol::get().config.coordinator.public_key_bytes,
         &handshake.coordinator,
     ) {
         Err(HandshakeError::CoordinatorMismatch)?
     }
 
-    if Protocol::get().conf.mwm != handshake.minimum_weight_magnitude {
+    if Protocol::get().config.mwm != handshake.minimum_weight_magnitude {
         Err(HandshakeError::MwmMismatch(
-            Protocol::get().conf.mwm,
+            Protocol::get().config.mwm,
             handshake.minimum_weight_magnitude,
         ))?
     }

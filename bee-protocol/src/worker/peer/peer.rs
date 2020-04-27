@@ -95,8 +95,8 @@ impl PeerWorker {
                 // TODO port
                 bytes: Handshake::new(
                     1337,
-                    &Protocol::get().conf.coordinator.public_key_bytes,
-                    Protocol::get().conf.mwm,
+                    &Protocol::get().config.coordinator.public_key_bytes,
+                    Protocol::get().config.mwm,
                     &SUPPORTED_VERSIONS,
                 )
                 .into_full_bytes(),

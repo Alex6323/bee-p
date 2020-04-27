@@ -18,8 +18,8 @@ use bee_network::{
     Event,
     EventSubscriber as Events,
     Network,
-    NetworkConf,
-    NetworkConfBuilder,
+    NetworkConfig,
+    NetworkConfigBuilder,
     Origin,
     Shutdown,
     Url,
@@ -43,7 +43,7 @@ fn main() {
 
     logger::init(log::LevelFilter::Info);
 
-    let (network, shutdown, events) = bee_network::init(NetworkConfBuilder::new().build(), config.host_addr.clone());
+    let (network, shutdown, events) = bee_network::init(NetworkConfigBuilder::new().build());
 
     let mut node = Node::builder()
         .with_network(network.clone())
