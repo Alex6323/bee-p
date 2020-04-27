@@ -1,29 +1,25 @@
-use crate::{
-    message::{
-        Message,
-        MessageError,
-    },
-    milestone::MilestoneIndex,
+use crate::message::{
+    Message,
+    MessageError,
 };
 
 use std::{
     convert::TryInto,
-    mem::size_of,
     ops::Range,
 };
 
-const SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
-const SNAPSHOT_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
+const SOLID_MILESTONE_INDEX_SIZE: usize = 4;
+const SNAPSHOT_MILESTONE_INDEX_SIZE: usize = 4;
 const CONSTANT_SIZE: usize = SOLID_MILESTONE_INDEX_SIZE + SNAPSHOT_MILESTONE_INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct Heartbeat {
-    pub(crate) solid_milestone_index: MilestoneIndex,
-    pub(crate) snapshot_milestone_index: MilestoneIndex,
+    pub(crate) solid_milestone_index: u32,
+    pub(crate) snapshot_milestone_index: u32,
 }
 
 impl Heartbeat {
-    pub(crate) fn new(solid_milestone_index: MilestoneIndex, snapshot_milestone_index: MilestoneIndex) -> Self {
+    pub(crate) fn new(solid_milestone_index: u32, snapshot_milestone_index: u32) -> Self {
         Self {
             solid_milestone_index: solid_milestone_index,
             snapshot_milestone_index: snapshot_milestone_index,
@@ -46,14 +42,14 @@ impl Message for Heartbeat {
         let mut message = Self::default();
         let mut offset = 0;
 
-        message.solid_milestone_index = MilestoneIndex::from_be_bytes(
+        message.solid_milestone_index = u32::from_be_bytes(
             bytes[offset..offset + SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
         offset += SOLID_MILESTONE_INDEX_SIZE;
 
-        message.snapshot_milestone_index = MilestoneIndex::from_be_bytes(
+        message.snapshot_milestone_index = u32::from_be_bytes(
             bytes[offset..offset + SNAPSHOT_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
@@ -82,8 +78,8 @@ mod tests {
         HEADER_SIZE,
     };
 
-    const FIRST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x3dc297b4;
-    const LAST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x01181f9b;
+    const FIRST_SOLID_MILESTONE_INDEX: u32 = 0x3dc297b4;
+    const LAST_SOLID_MILESTONE_INDEX: u32 = 0x01181f9b;
 
     #[test]
     fn id_test() {
