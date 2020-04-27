@@ -21,14 +21,14 @@ pub(crate) trait Message {
         Self: std::marker::Sized,
     {
         if header.message_type != Self::ID {
-            Err(MessageError::InvalidAdvertisedType(header.message_type, Self::ID))?;
+            return Err(MessageError::InvalidAdvertisedType(header.message_type, Self::ID));
         }
 
         if header.message_length as usize != payload.len() {
-            Err(MessageError::InvalidAdvertisedLength(
+            return Err(MessageError::InvalidAdvertisedLength(
                 header.message_length as usize,
                 payload.len(),
-            ))?;
+            ));
         }
 
         Self::from_bytes(payload)

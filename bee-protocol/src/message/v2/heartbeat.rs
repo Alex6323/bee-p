@@ -36,7 +36,7 @@ impl Message for Heartbeat {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         if !Self::size_range().contains(&bytes.len()) {
-            Err(MessageError::InvalidPayloadLength(bytes.len()))?;
+            return Err(MessageError::InvalidPayloadLength(bytes.len()));
         }
 
         let mut message = Self::default();
