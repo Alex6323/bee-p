@@ -75,6 +75,11 @@ mod tests {
     ];
 
     #[test]
+    fn id_test() {
+        assert_eq!(TransactionRequest::ID, 5);
+    }
+
+    #[test]
     fn size_range_test() {
         assert_eq!(TransactionRequest::size_range().contains(&48), false);
         assert_eq!(TransactionRequest::size_range().contains(&49), true);

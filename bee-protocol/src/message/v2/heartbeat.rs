@@ -86,6 +86,11 @@ mod tests {
     const LAST_SOLID_MILESTONE_INDEX: MilestoneIndex = 0x01181f9b;
 
     #[test]
+    fn id_test() {
+        assert_eq!(Heartbeat::ID, 6);
+    }
+
+    #[test]
     fn size_range_test() {
         assert_eq!(Heartbeat::size_range().contains(&7), false);
         assert_eq!(Heartbeat::size_range().contains(&8), true);

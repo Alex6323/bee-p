@@ -153,6 +153,11 @@ mod tests {
     const SUPPORTED_VERSIONS: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     #[test]
+    fn id_test() {
+        assert_eq!(Handshake::ID, 1);
+    }
+
+    #[test]
     fn size_range_test() {
         assert_eq!(Handshake::size_range().contains(&60), false);
         assert_eq!(Handshake::size_range().contains(&61), true);

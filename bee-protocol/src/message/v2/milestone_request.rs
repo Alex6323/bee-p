@@ -71,6 +71,11 @@ mod tests {
     const INDEX: MilestoneIndex = 0x81f7df7c;
 
     #[test]
+    fn id_test() {
+        assert_eq!(MilestoneRequest::ID, 3);
+    }
+
+    #[test]
     fn size_range_test() {
         assert_eq!(MilestoneRequest::size_range().contains(&3), false);
         assert_eq!(MilestoneRequest::size_range().contains(&4), true);

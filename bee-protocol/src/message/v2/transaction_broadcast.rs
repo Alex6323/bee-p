@@ -86,6 +86,11 @@ mod tests {
     ];
 
     #[test]
+    fn id_test() {
+        assert_eq!(TransactionBroadcast::ID, 4);
+    }
+
+    #[test]
     fn size_range_test() {
         assert_eq!(TransactionBroadcast::size_range().contains(&291), false);
         assert_eq!(TransactionBroadcast::size_range().contains(&292), true);

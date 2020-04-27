@@ -110,6 +110,11 @@ mod tests {
     ];
 
     #[test]
+    fn id_test() {
+        assert_eq!(LegacyGossip::ID, 2);
+    }
+
+    #[test]
     fn size_range_test() {
         assert_eq!(LegacyGossip::size_range().contains(&340), false);
         assert_eq!(LegacyGossip::size_range().contains(&341), true);
