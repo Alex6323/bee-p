@@ -99,9 +99,8 @@ where
                 .squeeze()
                 .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."));
 
-            let hash = normalize_hash(&hash);
             let mut has_m_bug = false;
-            for trits in hash.chunks(3) {
+            for trits in normalize_hash(&hash).chunks(3) {
                 let mut is_m = true;
 
                 for trit in trits.iter() {
@@ -271,7 +270,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         inputs: &[(u64, Address, WotsSecurityLevel)],
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
         // Safe to unwrap because bundle is sealed
-        let message = self.builders.0.get(0).unwrap().bundle.as_ref().unwrap();
+        let message = normalize_hash(self.builders.0.get(0).unwrap().bundle.as_ref().unwrap().to_inner());
 
         let mut signature_fragments: Vec<Payload> = Vec::new();
 
@@ -285,7 +284,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
             let signature = key_generator
                 .generate(seed, *index)
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?
-                .sign(message.to_inner().as_i8_slice())
+                .sign(message.as_i8_slice())
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
 
             // Split signature into fragments
