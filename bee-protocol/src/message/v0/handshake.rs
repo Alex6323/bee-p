@@ -29,7 +29,7 @@ pub(crate) struct Handshake {
     pub(crate) timestamp: u64,
     pub(crate) coordinator: [u8; HANDSHAKE_COORDINATOR_SIZE],
     pub(crate) minimum_weight_magnitude: u8,
-    pub(crate) supported_messages: Vec<u8>,
+    pub(crate) supported_versions: Vec<u8>,
 }
 
 impl Handshake {
@@ -37,7 +37,7 @@ impl Handshake {
         port: u16,
         coordinator: &[u8; HANDSHAKE_COORDINATOR_SIZE],
         minimum_weight_magnitude: u8,
-        supported_messages: &[u8],
+        supported_versions: &[u8],
     ) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -52,7 +52,7 @@ impl Handshake {
             timestamp: timestamp,
             coordinator: self_coordinator,
             minimum_weight_magnitude: minimum_weight_magnitude,
-            supported_messages: supported_messages.to_vec(),
+            supported_versions: supported_versions.to_vec(),
         }
     }
 }
@@ -64,7 +64,7 @@ impl Default for Handshake {
             timestamp: 0,
             coordinator: [0; HANDSHAKE_COORDINATOR_SIZE],
             minimum_weight_magnitude: 0,
-            supported_messages: Vec::default(),
+            supported_versions: Vec::default(),
         }
     }
 }
@@ -111,13 +111,13 @@ impl Message for Handshake {
         );
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE;
 
-        message.supported_messages = bytes[offset..].to_vec();
+        message.supported_versions = bytes[offset..].to_vec();
 
         Ok(message)
     }
 
     fn size(&self) -> usize {
-        HANDSHAKE_CONSTANT_SIZE + self.supported_messages.len()
+        HANDSHAKE_CONSTANT_SIZE + self.supported_versions.len()
     }
 
     fn to_bytes(self, bytes: &mut [u8]) {
@@ -132,7 +132,7 @@ impl Message for Handshake {
         bytes[offset..offset + HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE]
             .copy_from_slice(&self.minimum_weight_magnitude.to_be_bytes());
         offset += HANDSHAKE_MINIMUM_WEIGHT_MAGNITUDE_SIZE;
-        bytes[offset..].copy_from_slice(&self.supported_messages);
+        bytes[offset..].copy_from_slice(&self.supported_versions);
     }
 }
 
@@ -154,7 +154,7 @@ mod tests {
         21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
     ];
     const MINIMUM_WEIGHT_MAGNITUDE: u8 = 0x6e;
-    const SUPPORTED_MESSAGES: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const SUPPORTED_VERSIONS: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     #[test]
     fn size_range_test() {
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn size_test() {
-        let message = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_MESSAGES);
+        let message = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
 
         assert_eq!(message.size(), HANDSHAKE_CONSTANT_SIZE + 10);
     }
@@ -190,12 +190,12 @@ mod tests {
         assert_eq!(message.port, PORT);
         assert_eq!(slice_eq(&message.coordinator, &COORDINATOR), true);
         assert_eq!(message.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
-        assert_eq!(slice_eq(&message.supported_messages, &SUPPORTED_MESSAGES), true);
+        assert_eq!(slice_eq(&message.supported_versions, &SUPPORTED_VERSIONS), true);
     }
 
     #[test]
     fn to_from_test() {
-        let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_MESSAGES);
+        let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
         let mut bytes = vec![0u8; message_from.size()];
 
         message_from.to_bytes(&mut bytes);
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn full_to_from_test() {
-        let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_MESSAGES);
+        let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
         let bytes = message_from.into_full_bytes();
 
         to_from_eq(
