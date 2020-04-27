@@ -12,8 +12,8 @@ use std::{
     ops::Range,
 };
 
-const MILESTONE_REQUEST_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
-const MILESTONE_REQUEST_CONSTANT_SIZE: usize = MILESTONE_REQUEST_INDEX_SIZE;
+const INDEX_SIZE: usize = size_of::<MilestoneIndex>();
+const CONSTANT_SIZE: usize = INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct MilestoneRequest {
@@ -30,7 +30,7 @@ impl Message for MilestoneRequest {
     const ID: u8 = 0x03;
 
     fn size_range() -> Range<usize> {
-        (MILESTONE_REQUEST_CONSTANT_SIZE)..(MILESTONE_REQUEST_CONSTANT_SIZE + 1)
+        (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
@@ -41,7 +41,7 @@ impl Message for MilestoneRequest {
         let mut message = Self::default();
 
         message.index = MilestoneIndex::from_be_bytes(
-            bytes[0..MILESTONE_REQUEST_INDEX_SIZE]
+            bytes[0..INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
@@ -50,7 +50,7 @@ impl Message for MilestoneRequest {
     }
 
     fn size(&self) -> usize {
-        MILESTONE_REQUEST_CONSTANT_SIZE
+        CONSTANT_SIZE
     }
 
     fn to_bytes(self, bytes: &mut [u8]) {
@@ -93,7 +93,7 @@ mod tests {
     fn size_test() {
         let message = MilestoneRequest::new(INDEX);
 
-        assert_eq!(message.size(), MILESTONE_REQUEST_CONSTANT_SIZE);
+        assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
     fn to_from_eq(message: MilestoneRequest) {

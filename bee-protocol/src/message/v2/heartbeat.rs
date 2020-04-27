@@ -12,9 +12,9 @@ use std::{
     ops::Range,
 };
 
-const HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
-const HEARTBEAT_SNAPSHOT_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
-const HEARTBEAT_CONSTANT_SIZE: usize = HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE + HEARTBEAT_SNAPSHOT_MILESTONE_INDEX_SIZE;
+const SOLID_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
+const SNAPSHOT_MILESTONE_INDEX_SIZE: usize = size_of::<MilestoneIndex>();
+const CONSTANT_SIZE: usize = SOLID_MILESTONE_INDEX_SIZE + SNAPSHOT_MILESTONE_INDEX_SIZE;
 
 #[derive(Clone, Default)]
 pub(crate) struct Heartbeat {
@@ -35,7 +35,7 @@ impl Message for Heartbeat {
     const ID: u8 = 0x06;
 
     fn size_range() -> Range<usize> {
-        (HEARTBEAT_CONSTANT_SIZE)..(HEARTBEAT_CONSTANT_SIZE + 1)
+        (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
@@ -47,14 +47,14 @@ impl Message for Heartbeat {
         let mut offset = 0;
 
         message.solid_milestone_index = MilestoneIndex::from_be_bytes(
-            bytes[offset..offset + HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE]
+            bytes[offset..offset + SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
-        offset += HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE;
+        offset += SOLID_MILESTONE_INDEX_SIZE;
 
         message.snapshot_milestone_index = MilestoneIndex::from_be_bytes(
-            bytes[offset..offset + HEARTBEAT_SNAPSHOT_MILESTONE_INDEX_SIZE]
+            bytes[offset..offset + SNAPSHOT_MILESTONE_INDEX_SIZE]
                 .try_into()
                 .map_err(|_| MessageError::InvalidPayloadField)?,
         );
@@ -63,12 +63,12 @@ impl Message for Heartbeat {
     }
 
     fn size(&self) -> usize {
-        HEARTBEAT_CONSTANT_SIZE
+        CONSTANT_SIZE
     }
 
     fn to_bytes(self, bytes: &mut [u8]) {
-        bytes[0..HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE].copy_from_slice(&self.solid_milestone_index.to_be_bytes());
-        bytes[HEARTBEAT_SOLID_MILESTONE_INDEX_SIZE..].copy_from_slice(&self.snapshot_milestone_index.to_be_bytes());
+        bytes[0..SOLID_MILESTONE_INDEX_SIZE].copy_from_slice(&self.solid_milestone_index.to_be_bytes());
+        bytes[SOLID_MILESTONE_INDEX_SIZE..].copy_from_slice(&self.snapshot_milestone_index.to_be_bytes());
     }
 }
 
@@ -108,7 +108,7 @@ mod tests {
     fn size_test() {
         let message = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
 
-        assert_eq!(message.size(), HEARTBEAT_CONSTANT_SIZE);
+        assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
     fn to_from_eq(message: Heartbeat) {

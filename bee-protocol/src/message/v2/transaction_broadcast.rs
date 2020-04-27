@@ -5,8 +5,8 @@ use crate::message::{
 
 use std::ops::Range;
 
-const TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE: usize = 292;
-const TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE: usize = 1604;
+const VARIABLE_MIN_SIZE: usize = 292;
+const VARIABLE_MAX_SIZE: usize = 1604;
 
 #[derive(Clone, Default)]
 pub(crate) struct TransactionBroadcast {
@@ -25,7 +25,7 @@ impl Message for TransactionBroadcast {
     const ID: u8 = 0x04;
 
     fn size_range() -> Range<usize> {
-        (TRANSACTION_BROADCAST_VARIABLE_MIN_SIZE)..(TRANSACTION_BROADCAST_VARIABLE_MAX_SIZE + 1)
+        (VARIABLE_MIN_SIZE)..(VARIABLE_MAX_SIZE + 1)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
