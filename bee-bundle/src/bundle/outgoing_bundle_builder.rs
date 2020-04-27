@@ -100,7 +100,7 @@ where
                 .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."));
 
             let mut has_m_bug = false;
-            for trits in hash.chunks(3) {
+            for trits in normalize_hash(&hash).chunks(3) {
                 let mut is_m = true;
 
                 for trit in trits.iter() {
