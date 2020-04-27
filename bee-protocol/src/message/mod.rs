@@ -2,6 +2,7 @@ mod errors;
 mod header;
 mod message;
 mod v0;
+mod v1;
 mod v2;
 
 pub(crate) use errors::MessageError;
