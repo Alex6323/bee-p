@@ -61,25 +61,26 @@ mod tests {
 
     use crate::message::{
         Header,
+        Tlv,
         HEADER_SIZE,
     };
 
     const INDEX: u32 = 0x81f7df7c;
 
     #[test]
-    fn id_test() {
+    fn id() {
         assert_eq!(MilestoneRequest::ID, 3);
     }
 
     #[test]
-    fn size_range_test() {
+    fn size_range() {
         assert_eq!(MilestoneRequest::size_range().contains(&3), false);
         assert_eq!(MilestoneRequest::size_range().contains(&4), true);
         assert_eq!(MilestoneRequest::size_range().contains(&5), false);
     }
 
     #[test]
-    fn from_bytes_invalid_length_test() {
+    fn from_bytes_invalid_length() {
         match MilestoneRequest::from_bytes(&[0; 3]) {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 3),
             _ => unreachable!(),
@@ -91,7 +92,7 @@ mod tests {
     }
 
     #[test]
-    fn size_test() {
+    fn size() {
         let message = MilestoneRequest::new(INDEX);
 
         assert_eq!(message.size(), CONSTANT_SIZE);
@@ -102,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn to_from_test() {
+    fn to_from() {
         let message_from = MilestoneRequest::new(INDEX);
         let mut bytes = vec![0u8; message_from.size()];
 
@@ -111,12 +112,12 @@ mod tests {
     }
 
     #[test]
-    fn full_to_from_test() {
+    fn tlv() {
         let message_from = MilestoneRequest::new(INDEX);
-        let bytes = message_from.into_full_bytes();
+        let bytes = Tlv::into_bytes(message_from);
 
         to_from_eq(
-            MilestoneRequest::from_full_bytes(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
+            Tlv::from_bytes::<MilestoneRequest>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
                 .unwrap(),
         );
     }

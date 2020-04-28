@@ -64,6 +64,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        Tlv,
         HEADER_SIZE,
     };
 
@@ -75,19 +76,19 @@ mod tests {
     ];
 
     #[test]
-    fn id_test() {
+    fn id() {
         assert_eq!(TransactionRequest::ID, 5);
     }
 
     #[test]
-    fn size_range_test() {
+    fn size_range() {
         assert_eq!(TransactionRequest::size_range().contains(&48), false);
         assert_eq!(TransactionRequest::size_range().contains(&49), true);
         assert_eq!(TransactionRequest::size_range().contains(&50), false);
     }
 
     #[test]
-    fn from_bytes_invalid_length_test() {
+    fn from_bytes_invalid_length() {
         match TransactionRequest::from_bytes(&[0; 48]) {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 48),
             _ => unreachable!(),
@@ -99,7 +100,7 @@ mod tests {
     }
 
     #[test]
-    fn size_test() {
+    fn size() {
         let message = TransactionRequest::new(&HASH);
 
         assert_eq!(message.size(), CONSTANT_SIZE);
@@ -110,7 +111,7 @@ mod tests {
     }
 
     #[test]
-    fn to_from_test() {
+    fn to_from() {
         let message_from = TransactionRequest::new(&HASH);
         let mut bytes = vec![0u8; message_from.size()];
 
@@ -119,12 +120,12 @@ mod tests {
     }
 
     #[test]
-    fn full_to_from_test() {
+    fn tlv() {
         let message_from = TransactionRequest::new(&HASH);
-        let bytes = message_from.into_full_bytes();
+        let bytes = Tlv::into_bytes(message_from);
 
         to_from_eq(
-            TransactionRequest::from_full_bytes(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
+            Tlv::from_bytes::<TransactionRequest>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
                 .unwrap(),
         );
     }

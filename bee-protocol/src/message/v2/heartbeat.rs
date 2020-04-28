@@ -75,6 +75,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        Tlv,
         HEADER_SIZE,
     };
 
@@ -82,19 +83,19 @@ mod tests {
     const LAST_SOLID_MILESTONE_INDEX: u32 = 0x01181f9b;
 
     #[test]
-    fn id_test() {
+    fn id() {
         assert_eq!(Heartbeat::ID, 6);
     }
 
     #[test]
-    fn size_range_test() {
+    fn size_range() {
         assert_eq!(Heartbeat::size_range().contains(&7), false);
         assert_eq!(Heartbeat::size_range().contains(&8), true);
         assert_eq!(Heartbeat::size_range().contains(&9), false);
     }
 
     #[test]
-    fn from_bytes_invalid_length_test() {
+    fn from_bytes_invalid_length() {
         match Heartbeat::from_bytes(&[0; 7]) {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 7),
             _ => unreachable!(),
@@ -106,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    fn size_test() {
+    fn size() {
         let message = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
 
         assert_eq!(message.size(), CONSTANT_SIZE);
@@ -118,7 +119,7 @@ mod tests {
     }
 
     #[test]
-    fn to_from_test() {
+    fn to_from() {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
         let mut bytes = vec![0u8; message_from.size()];
 
@@ -127,12 +128,12 @@ mod tests {
     }
 
     #[test]
-    fn full_to_from_test() {
+    fn tlv() {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
-        let bytes = message_from.into_full_bytes();
+        let bytes = Tlv::into_bytes(message_from);
 
         to_from_eq(
-            Heartbeat::from_full_bytes(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
+            Tlv::from_bytes::<Heartbeat>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
         );
     }
 }

@@ -139,6 +139,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        Tlv,
         HEADER_SIZE,
     };
 
@@ -153,12 +154,12 @@ mod tests {
     const SUPPORTED_VERSIONS: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     #[test]
-    fn id_test() {
+    fn id() {
         assert_eq!(Handshake::ID, 1);
     }
 
     #[test]
-    fn size_range_test() {
+    fn size_range() {
         assert_eq!(Handshake::size_range().contains(&60), false);
         assert_eq!(Handshake::size_range().contains(&61), true);
         assert_eq!(Handshake::size_range().contains(&62), true);
@@ -169,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn from_bytes_invalid_length_test() {
+    fn from_bytes_invalid_length() {
         match Handshake::from_bytes(&[0; 60]) {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 60),
             _ => unreachable!(),
@@ -181,7 +182,7 @@ mod tests {
     }
 
     #[test]
-    fn size_test() {
+    fn size() {
         let message = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
 
         assert_eq!(message.size(), CONSTANT_SIZE + 10);
@@ -195,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    fn to_from_test() {
+    fn to_from() {
         let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
         let mut bytes = vec![0u8; message_from.size()];
 
@@ -204,12 +205,12 @@ mod tests {
     }
 
     #[test]
-    fn full_to_from_test() {
+    fn tlv() {
         let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
-        let bytes = message_from.into_full_bytes();
+        let bytes = Tlv::into_bytes(message_from);
 
         to_from_eq(
-            Handshake::from_full_bytes(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
+            Tlv::from_bytes::<Handshake>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
         );
     }
 }

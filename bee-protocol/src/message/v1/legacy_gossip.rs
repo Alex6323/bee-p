@@ -76,6 +76,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        Tlv,
         HEADER_SIZE,
     };
 
@@ -110,12 +111,12 @@ mod tests {
     ];
 
     #[test]
-    fn id_test() {
+    fn id() {
         assert_eq!(LegacyGossip::ID, 2);
     }
 
     #[test]
-    fn size_range_test() {
+    fn size_range() {
         assert_eq!(LegacyGossip::size_range().contains(&340), false);
         assert_eq!(LegacyGossip::size_range().contains(&341), true);
         assert_eq!(LegacyGossip::size_range().contains(&342), true);
@@ -126,7 +127,7 @@ mod tests {
     }
 
     #[test]
-    fn from_bytes_invalid_length_test() {
+    fn from_bytes_invalid_length() {
         match LegacyGossip::from_bytes(&[0; 340]) {
             Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 340),
             _ => unreachable!(),
@@ -138,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn size_test() {
+    fn size() {
         let message = LegacyGossip::new(&TRANSACTION, REQUEST);
 
         assert_eq!(message.size(), CONSTANT_SIZE + 500);
@@ -150,7 +151,7 @@ mod tests {
     }
 
     #[test]
-    fn to_from_test() {
+    fn to_from() {
         let message_from = LegacyGossip::new(&TRANSACTION, REQUEST);
         let mut bytes = vec![0u8; message_from.size()];
 
@@ -159,12 +160,13 @@ mod tests {
     }
 
     #[test]
-    fn full_to_from_test() {
+    fn tlv() {
         let message_from = LegacyGossip::new(&TRANSACTION, REQUEST);
-        let bytes = message_from.into_full_bytes();
+        let bytes = Tlv::into_bytes(message_from);
 
         to_from_eq(
-            LegacyGossip::from_full_bytes(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
+            Tlv::from_bytes::<LegacyGossip>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
+                .unwrap(),
         );
     }
 }
