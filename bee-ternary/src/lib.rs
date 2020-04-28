@@ -98,10 +98,12 @@ where
     }
 
     pub unsafe fn from_raw_unchecked(raw: &[i8], num_trits: usize) -> &Self {
+        debug_assert!(raw.iter().all(T::is_valid));
         &*(T::from_raw_unchecked(raw, num_trits) as *const _ as *const _)
     }
 
     pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8], num_trits: usize) -> &mut Self {
+        debug_assert!(raw.iter().all(T::is_valid));
         &mut *(T::from_raw_unchecked(raw, num_trits) as *const _ as *mut _)
     }
 
@@ -125,19 +127,25 @@ where
         self.0.len()
     }
 
+    /// Will panic if slice is not byte-aligned
+    // TODO: Evaluate whether this API makes sense to be `unsafe`
     pub fn as_i8_slice(&self) -> &[i8] {
         self.0.as_i8_slice()
     }
 
+    /// Will panic if slice is not byte-aligned
+    // TODO: Evaluate whether this API makes sense to be `unsafe`
     pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
         self.0.as_i8_slice_mut()
     }
 
     pub unsafe fn get_unchecked(&self, index: usize) -> T::Trit {
+        debug_assert!(index < self.len());
         self.0.get_unchecked(index)
     }
 
     pub unsafe fn set_unchecked(&mut self, index: usize, trit: T::Trit) {
+        debug_assert!(index < self.len());
         self.0.set_unchecked(index, trit);
     }
 
@@ -267,6 +275,22 @@ impl<T: Trit> Trits<T1B1<T>> {
 
     pub fn iter_mut<'a>(&'a mut self) -> slice::IterMut<'a, T> {
         self.as_raw_slice_mut().iter_mut()
+    }
+}
+
+impl Trits<T3B1> {
+    /// Will panic if the trit slice is not a multiple of 3 in length, or if the trit slice is not
+    /// byte-aligned.
+    pub fn as_trytes(&self) -> &[Tryte] {
+        assert!(self.len() % 3 == 0);
+        unsafe { &*(self.as_i8_slice() as *const _ as *const _) }
+    }
+
+    /// Will panic if the trit slice is not a multiple of 3 in length, or if the trit slice is not
+    /// byte-aligned.
+    pub fn as_trytes_mut(&mut self) -> &mut [Tryte] {
+        assert!(self.len() % 3 == 0);
+        unsafe { &mut *(self.as_i8_slice_mut() as *mut _ as *mut _) }
     }
 }
 

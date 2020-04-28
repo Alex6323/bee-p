@@ -94,6 +94,17 @@ impl TryFrom<char> for Tryte {
     }
 }
 
+impl TryFrom<i8> for Tryte {
+    type Error = Error;
+
+    fn try_from(x: i8) -> Result<Self, Self::Error> {
+        match x {
+            -13..=13 => Ok(unsafe { std::mem::transmute(x) }),
+            _ => Err(Error::InvalidRepr),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct TryteBuf {
     inner: Vec<Tryte>,

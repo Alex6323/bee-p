@@ -61,6 +61,7 @@ impl RawEncoding for T5B1 {
     }
 
     fn as_i8_slice(&self) -> &[i8] {
+        assert!(self.len_offset().1 == 0);
         unsafe {
             std::slice::from_raw_parts(
                 self.ptr(0) as *const _,
@@ -70,6 +71,7 @@ impl RawEncoding for T5B1 {
     }
 
     unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
+        assert!(self.len_offset().1 == 0);
         std::slice::from_raw_parts_mut(
             self.ptr(0) as *mut _,
             (self.len() + self.len_offset().1 + TPB - 1) / TPB,
