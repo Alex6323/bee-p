@@ -3,6 +3,7 @@ use crate::{
         Heartbeat,
         Message,
         MilestoneRequest,
+        Tlv,
         TransactionBroadcast,
         TransactionRequest,
     },
@@ -104,7 +105,7 @@ macro_rules! implement_sender_worker {
                                     .network
                                     .send(SendMessage {
                                         epid: self.peer.epid,
-                                        bytes: message.into_full_bytes(),
+                                        bytes: Tlv::into_bytes(message),
                                         responder: None,
                                     })
                                     .await

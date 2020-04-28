@@ -5,6 +5,7 @@ use crate::{
         Heartbeat,
         Message,
         MilestoneRequest,
+        Tlv,
         TransactionBroadcast,
         TransactionRequest,
     },
@@ -93,13 +94,12 @@ impl PeerWorker {
             .send(SendMessage {
                 epid: self.peer.epid,
                 // TODO port
-                bytes: Handshake::new(
+                bytes: Tlv::into_bytes(Handshake::new(
                     1337,
                     &Protocol::get().config.coordinator.public_key_bytes,
                     Protocol::get().config.mwm,
                     &SUPPORTED_VERSIONS,
-                )
-                .into_full_bytes(),
+                )),
                 responder: None,
             })
             .await
@@ -131,7 +131,7 @@ impl PeerWorker {
             false => match header.message_type {
                 Handshake::ID => {
                     debug!("[PeerWorker({})] Reading Handshake...", self.peer.epid);
-                    match Handshake::from_full_bytes(&header, bytes) {
+                    match Tlv::from_bytes::<Handshake>(&header, bytes) {
                         Ok(handshake) => match validate_handshake(&self.peer, handshake) {
                             Ok(_) => {
                                 info!("[PeerWorker({})] Handshake completed.", self.peer.epid);
@@ -176,7 +176,7 @@ impl PeerWorker {
                 match header.message_type {
                     MilestoneRequest::ID => {
                         debug!("[PeerWorker({})] Reading MilestoneRequest...", self.peer.epid);
-                        match MilestoneRequest::from_full_bytes(&header, bytes) {
+                        match Tlv::from_bytes::<MilestoneRequest>(&header, bytes) {
                             Ok(message) => {
                                 self.milestone_responder_worker
                                     .send(MilestoneResponderWorkerEvent {
@@ -202,7 +202,7 @@ impl PeerWorker {
                     }
                     TransactionBroadcast::ID => {
                         debug!("[PeerWorker({})] Reading TransactionBroadcast...", self.peer.epid);
-                        match TransactionBroadcast::from_full_bytes(&header, bytes) {
+                        match Tlv::from_bytes::<TransactionBroadcast>(&header, bytes) {
                             Ok(message) => {
                                 self.transaction_worker
                                     .send(TransactionWorkerEvent {
@@ -228,7 +228,7 @@ impl PeerWorker {
                     }
                     TransactionRequest::ID => {
                         debug!("[PeerWorker({})] Reading TransactionRequest...", self.peer.epid);
-                        match TransactionRequest::from_full_bytes(&header, bytes) {
+                        match Tlv::from_bytes::<TransactionRequest>(&header, bytes) {
                             Ok(message) => {
                                 self.transaction_responder_worker
                                     .send(TransactionResponderWorkerEvent {
@@ -254,7 +254,7 @@ impl PeerWorker {
                     }
                     Heartbeat::ID => {
                         debug!("[PeerWorker({})] Reading Heartbeat...", self.peer.epid);
-                        match Heartbeat::from_full_bytes(&header, bytes) {
+                        match Tlv::from_bytes::<Heartbeat>(&header, bytes) {
                             Ok(message) => {
                                 self.peer.set_solid_milestone_index(message.solid_milestone_index);
                                 self.peer.set_snapshot_milestone_index(message.snapshot_milestone_index);
