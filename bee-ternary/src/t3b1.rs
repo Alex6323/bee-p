@@ -61,10 +61,12 @@ impl RawEncoding for T3B1 {
     }
 
     fn as_i8_slice(&self) -> &[i8] {
+        assert!(self.len_offset().1 == 0);
         unsafe { &*(Self::make(self.ptr(0), 0, (self.len() as f32/TPB as f32).ceil() as usize) as *const _) }
     }
 
     unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
+        assert!(self.len_offset().1 == 0);
         &mut *(Self::make(self.ptr(0), 0, (self.len() as f32/TPB as f32).ceil() as usize) as *mut _)
     }
 
