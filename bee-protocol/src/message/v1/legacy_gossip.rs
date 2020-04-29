@@ -1,7 +1,4 @@
-use crate::message::{
-    Message,
-    MessageError,
-};
+use crate::message::Message;
 
 use std::ops::Range;
 
@@ -41,11 +38,7 @@ impl Message for LegacyGossip {
         (CONSTANT_SIZE + VARIABLE_MIN_SIZE)..(CONSTANT_SIZE + VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
-        if !Self::size_range().contains(&bytes.len()) {
-            return Err(MessageError::InvalidPayloadLength(bytes.len()));
-        }
-
+    fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
         let mut offset = 0;
 
@@ -56,7 +49,7 @@ impl Message for LegacyGossip {
 
         message.hash.copy_from_slice(&bytes[offset..offset + HASH_SIZE]);
 
-        Ok(message)
+        message
     }
 
     fn size(&self) -> usize {
@@ -76,6 +69,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        MessageError,
         Tlv,
         HEADER_SIZE,
     };
@@ -127,18 +121,6 @@ mod tests {
     }
 
     #[test]
-    fn from_bytes_invalid_length() {
-        match LegacyGossip::from_bytes(&[0; 340]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 340),
-            _ => unreachable!(),
-        }
-        match LegacyGossip::from_bytes(&[0; 1654]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 1654),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
     fn size() {
         let message = LegacyGossip::new(&TRANSACTION, REQUEST);
 
@@ -156,7 +138,31 @@ mod tests {
         let mut bytes = vec![0u8; message_from.size()];
 
         message_from.to_bytes(&mut bytes);
-        to_from_eq(LegacyGossip::from_bytes(&bytes).unwrap());
+        to_from_eq(LegacyGossip::from_bytes(&bytes));
+    }
+
+    #[test]
+    fn tlv_invalid_length() {
+        match Tlv::from_bytes::<LegacyGossip>(
+            &Header {
+                message_type: LegacyGossip::ID,
+                message_length: 340,
+            },
+            &[0; 340],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 340),
+            _ => unreachable!(),
+        }
+        match Tlv::from_bytes::<LegacyGossip>(
+            &Header {
+                message_type: LegacyGossip::ID,
+                message_length: 1654,
+            },
+            &[0; 1654],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 1654),
+            _ => unreachable!(),
+        }
     }
 
     #[test]

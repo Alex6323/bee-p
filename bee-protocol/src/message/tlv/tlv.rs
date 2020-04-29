@@ -21,7 +21,11 @@ impl Tlv {
             ));
         }
 
-        M::from_bytes(payload)
+        if !M::size_range().contains(&payload.len()) {
+            return Err(MessageError::InvalidPayloadLength(payload.len()));
+        }
+
+        Ok(M::from_bytes(payload))
     }
 
     pub(crate) fn into_bytes<M: Message>(message: M) -> Vec<u8> {

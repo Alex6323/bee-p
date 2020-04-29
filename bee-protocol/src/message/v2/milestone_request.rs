@@ -1,7 +1,4 @@
-use crate::message::{
-    Message,
-    MessageError,
-};
+use crate::message::Message;
 
 use std::{
     convert::TryInto,
@@ -29,20 +26,12 @@ impl Message for MilestoneRequest {
         (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
-        if !Self::size_range().contains(&bytes.len()) {
-            return Err(MessageError::InvalidPayloadLength(bytes.len()));
-        }
-
+    fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
 
-        message.index = u32::from_be_bytes(
-            bytes[0..INDEX_SIZE]
-                .try_into()
-                .map_err(|_| MessageError::InvalidPayloadField)?,
-        );
+        message.index = u32::from_be_bytes(bytes[0..INDEX_SIZE].try_into().expect("Invalid buffer size"));
 
-        Ok(message)
+        message
     }
 
     fn size(&self) -> usize {
@@ -61,6 +50,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        MessageError,
         Tlv,
         HEADER_SIZE,
     };
@@ -80,18 +70,6 @@ mod tests {
     }
 
     #[test]
-    fn from_bytes_invalid_length() {
-        match MilestoneRequest::from_bytes(&[0; 3]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 3),
-            _ => unreachable!(),
-        }
-        match MilestoneRequest::from_bytes(&[0; 5]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 5),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
     fn size() {
         let message = MilestoneRequest::new(INDEX);
 
@@ -108,7 +86,31 @@ mod tests {
         let mut bytes = vec![0u8; message_from.size()];
 
         message_from.to_bytes(&mut bytes);
-        to_from_eq(MilestoneRequest::from_bytes(&bytes).unwrap());
+        to_from_eq(MilestoneRequest::from_bytes(&bytes));
+    }
+
+    #[test]
+    fn tlv_invalid_length() {
+        match Tlv::from_bytes::<MilestoneRequest>(
+            &Header {
+                message_type: MilestoneRequest::ID,
+                message_length: 3,
+            },
+            &[0; 3],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 3),
+            _ => unreachable!(),
+        }
+        match Tlv::from_bytes::<MilestoneRequest>(
+            &Header {
+                message_type: MilestoneRequest::ID,
+                message_length: 5,
+            },
+            &[0; 5],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 5),
+            _ => unreachable!(),
+        }
     }
 
     #[test]

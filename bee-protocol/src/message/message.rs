@@ -7,9 +7,7 @@ pub(crate) trait Message {
 
     fn size_range() -> Range<usize>;
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError>
-    where
-        Self: std::marker::Sized;
+    fn from_bytes(bytes: &[u8]) -> Self;
 
     fn size(&self) -> usize;
 

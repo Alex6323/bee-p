@@ -1,7 +1,4 @@
-use crate::message::{
-    Message,
-    MessageError,
-};
+use crate::message::Message;
 
 use std::{
     convert::TryInto,
@@ -34,28 +31,24 @@ impl Message for Heartbeat {
         (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
-        if !Self::size_range().contains(&bytes.len()) {
-            return Err(MessageError::InvalidPayloadLength(bytes.len()));
-        }
-
+    fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
         let mut offset = 0;
 
         message.solid_milestone_index = u32::from_be_bytes(
             bytes[offset..offset + SOLID_MILESTONE_INDEX_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidPayloadField)?,
+                .expect("Invalid buffer size"),
         );
         offset += SOLID_MILESTONE_INDEX_SIZE;
 
         message.snapshot_milestone_index = u32::from_be_bytes(
             bytes[offset..offset + SNAPSHOT_MILESTONE_INDEX_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidPayloadField)?,
+                .expect("Invalid buffer size"),
         );
 
-        Ok(message)
+        message
     }
 
     fn size(&self) -> usize {
@@ -75,6 +68,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        MessageError,
         Tlv,
         HEADER_SIZE,
     };
@@ -95,18 +89,6 @@ mod tests {
     }
 
     #[test]
-    fn from_bytes_invalid_length() {
-        match Heartbeat::from_bytes(&[0; 7]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 7),
-            _ => unreachable!(),
-        }
-        match Heartbeat::from_bytes(&[0; 9]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 9),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
     fn size() {
         let message = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
 
@@ -124,7 +106,31 @@ mod tests {
         let mut bytes = vec![0u8; message_from.size()];
 
         message_from.to_bytes(&mut bytes);
-        to_from_eq(Heartbeat::from_bytes(&bytes).unwrap());
+        to_from_eq(Heartbeat::from_bytes(&bytes));
+    }
+
+    #[test]
+    fn tlv_invalid_length() {
+        match Tlv::from_bytes::<Heartbeat>(
+            &Header {
+                message_type: Heartbeat::ID,
+                message_length: 7,
+            },
+            &[0; 7],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 7),
+            _ => unreachable!(),
+        }
+        match Tlv::from_bytes::<Heartbeat>(
+            &Header {
+                message_type: Heartbeat::ID,
+                message_length: 9,
+            },
+            &[0; 9],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 9),
+            _ => unreachable!(),
+        }
     }
 
     #[test]

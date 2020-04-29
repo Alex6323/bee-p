@@ -1,7 +1,4 @@
-use crate::message::{
-    Message,
-    MessageError,
-};
+use crate::message::Message;
 
 use std::{
     convert::TryInto,
@@ -73,25 +70,21 @@ impl Message for Handshake {
         (CONSTANT_SIZE + VARIABLE_MIN_SIZE)..(CONSTANT_SIZE + VARIABLE_MAX_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
-        if !Self::size_range().contains(&bytes.len()) {
-            return Err(MessageError::InvalidPayloadLength(bytes.len()));
-        }
-
+    fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
         let mut offset = 0;
 
         message.port = u16::from_be_bytes(
             bytes[offset..offset + PORT_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidPayloadField)?,
+                .expect("Invalid buffer size"),
         );
         offset += PORT_SIZE;
 
         message.timestamp = u64::from_be_bytes(
             bytes[offset..offset + TIMESTAMP_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidPayloadField)?,
+                .expect("Invalid buffer size"),
         );
         offset += TIMESTAMP_SIZE;
 
@@ -103,13 +96,13 @@ impl Message for Handshake {
         message.minimum_weight_magnitude = u8::from_be_bytes(
             bytes[offset..offset + MINIMUM_WEIGHT_MAGNITUDE_SIZE]
                 .try_into()
-                .map_err(|_| MessageError::InvalidPayloadField)?,
+                .expect("Invalid buffer size"),
         );
         offset += MINIMUM_WEIGHT_MAGNITUDE_SIZE;
 
         message.supported_versions = bytes[offset..].to_vec();
 
-        Ok(message)
+        message
     }
 
     fn size(&self) -> usize {
@@ -139,6 +132,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        MessageError,
         Tlv,
         HEADER_SIZE,
     };
@@ -170,18 +164,6 @@ mod tests {
     }
 
     #[test]
-    fn from_bytes_invalid_length() {
-        match Handshake::from_bytes(&[0; 60]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 60),
-            _ => unreachable!(),
-        }
-        match Handshake::from_bytes(&[0; 93]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 93),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
     fn size() {
         let message = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
 
@@ -201,7 +183,31 @@ mod tests {
         let mut bytes = vec![0u8; message_from.size()];
 
         message_from.to_bytes(&mut bytes);
-        to_from_eq(Handshake::from_bytes(&bytes).unwrap());
+        to_from_eq(Handshake::from_bytes(&bytes));
+    }
+
+    #[test]
+    fn tlv_invalid_length() {
+        match Tlv::from_bytes::<Handshake>(
+            &Header {
+                message_type: Handshake::ID,
+                message_length: 60,
+            },
+            &[0; 60],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 60),
+            _ => unreachable!(),
+        }
+        match Tlv::from_bytes::<Handshake>(
+            &Header {
+                message_type: Handshake::ID,
+                message_length: 93,
+            },
+            &[0; 93],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 93),
+            _ => unreachable!(),
+        }
     }
 
     #[test]

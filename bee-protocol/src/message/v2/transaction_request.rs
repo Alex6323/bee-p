@@ -1,7 +1,4 @@
-use crate::message::{
-    Message,
-    MessageError,
-};
+use crate::message::Message;
 
 use std::ops::Range;
 
@@ -36,16 +33,12 @@ impl Message for TransactionRequest {
         (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
-        if !Self::size_range().contains(&bytes.len()) {
-            return Err(MessageError::InvalidPayloadLength(bytes.len()));
-        }
-
+    fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
 
         message.hash.copy_from_slice(&bytes[0..HASH_SIZE]);
 
-        Ok(message)
+        message
     }
 
     fn size(&self) -> usize {
@@ -64,6 +57,7 @@ mod tests {
 
     use crate::message::{
         Header,
+        MessageError,
         Tlv,
         HEADER_SIZE,
     };
@@ -88,18 +82,6 @@ mod tests {
     }
 
     #[test]
-    fn from_bytes_invalid_length() {
-        match TransactionRequest::from_bytes(&[0; 48]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 48),
-            _ => unreachable!(),
-        }
-        match TransactionRequest::from_bytes(&[0; 50]) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 50),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
     fn size() {
         let message = TransactionRequest::new(&HASH);
 
@@ -116,7 +98,31 @@ mod tests {
         let mut bytes = vec![0u8; message_from.size()];
 
         message_from.to_bytes(&mut bytes);
-        to_from_eq(TransactionRequest::from_bytes(&bytes).unwrap());
+        to_from_eq(TransactionRequest::from_bytes(&bytes));
+    }
+
+    #[test]
+    fn tlv_invalid_length() {
+        match Tlv::from_bytes::<TransactionRequest>(
+            &Header {
+                message_type: TransactionRequest::ID,
+                message_length: 48,
+            },
+            &[0; 48],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 48),
+            _ => unreachable!(),
+        }
+        match Tlv::from_bytes::<TransactionRequest>(
+            &Header {
+                message_type: TransactionRequest::ID,
+                message_length: 50,
+            },
+            &[0; 50],
+        ) {
+            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 50),
+            _ => unreachable!(),
+        }
     }
 
     #[test]
