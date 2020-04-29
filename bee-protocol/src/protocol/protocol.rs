@@ -162,11 +162,11 @@ impl Protocol {
                 Mutex::new(Some(milestone_responder_worker_shutdown_tx)),
             ),
             transaction_requester_worker: (
-                WaitPriorityQueue::default(),
+                Default::default(),
                 Mutex::new(Some(transaction_requester_worker_shutdown_tx)),
             ),
             milestone_requester_worker: (
-                WaitPriorityQueue::default(),
+                Default::default(),
                 Mutex::new(Some(milestone_requester_worker_shutdown_tx)),
             ),
             milestone_validator_worker: (
@@ -183,8 +183,8 @@ impl Protocol {
             ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             status_worker: status_worker_shutdown_tx,
-            contexts: DashMap::new(),
-            requested: DashMap::new(),
+            contexts: Default::default(),
+            requested: Default::default(),
         };
 
         unsafe {

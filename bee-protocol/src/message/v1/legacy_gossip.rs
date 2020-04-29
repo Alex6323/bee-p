@@ -28,7 +28,7 @@ impl LegacyGossip {
 impl Default for LegacyGossip {
     fn default() -> Self {
         Self {
-            transaction: Vec::default(),
+            transaction: Default::default(),
             hash: [0; HASH_SIZE],
         }
     }

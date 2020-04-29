@@ -61,7 +61,7 @@ impl Default for Handshake {
             timestamp: 0,
             coordinator: [0; COORDINATOR_SIZE],
             minimum_weight_magnitude: 0,
-            supported_versions: Vec::default(),
+            supported_versions: Default::default(),
         }
     }
 }

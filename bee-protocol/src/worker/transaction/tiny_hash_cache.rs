@@ -54,8 +54,8 @@ impl TinyHashCache {
     pub fn new(max_capacity: usize) -> Self {
         Self {
             max_capacity,
-            cache: HashSet::default(),
-            elem_order: VecDeque::new(),
+            cache: Default::default(),
+            elem_order: Default::default(),
         }
     }
 
