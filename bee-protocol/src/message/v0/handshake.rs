@@ -72,35 +72,20 @@ impl Message for Handshake {
 
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
-        let mut offset = 0;
 
-        message.port = u16::from_be_bytes(
-            bytes[offset..offset + PORT_SIZE]
-                .try_into()
-                .expect("Invalid buffer size"),
-        );
-        offset += PORT_SIZE;
+        let (bytes, next) = bytes.split_at(PORT_SIZE);
+        message.port = u16::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
-        message.timestamp = u64::from_be_bytes(
-            bytes[offset..offset + TIMESTAMP_SIZE]
-                .try_into()
-                .expect("Invalid buffer size"),
-        );
-        offset += TIMESTAMP_SIZE;
+        let (bytes, next) = next.split_at(TIMESTAMP_SIZE);
+        message.timestamp = u64::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
-        message
-            .coordinator
-            .copy_from_slice(&bytes[offset..offset + COORDINATOR_SIZE]);
-        offset += COORDINATOR_SIZE;
+        let (bytes, next) = next.split_at(COORDINATOR_SIZE);
+        message.coordinator.copy_from_slice(bytes);
 
-        message.minimum_weight_magnitude = u8::from_be_bytes(
-            bytes[offset..offset + MINIMUM_WEIGHT_MAGNITUDE_SIZE]
-                .try_into()
-                .expect("Invalid buffer size"),
-        );
-        offset += MINIMUM_WEIGHT_MAGNITUDE_SIZE;
+        let (bytes, next) = next.split_at(MINIMUM_WEIGHT_MAGNITUDE_SIZE);
+        message.minimum_weight_magnitude = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
-        message.supported_versions = bytes[offset..].to_vec();
+        message.supported_versions = next.to_vec();
 
         message
     }
@@ -110,18 +95,19 @@ impl Message for Handshake {
     }
 
     fn to_bytes(self, bytes: &mut [u8]) {
-        let mut offset = 0;
+        let (bytes, next) = bytes.split_at_mut(PORT_SIZE);
+        bytes.copy_from_slice(&self.port.to_be_bytes());
 
-        bytes[offset..offset + PORT_SIZE].copy_from_slice(&self.port.to_be_bytes());
-        offset += PORT_SIZE;
-        bytes[offset..offset + TIMESTAMP_SIZE].copy_from_slice(&self.timestamp.to_be_bytes());
-        offset += TIMESTAMP_SIZE;
-        bytes[offset..offset + COORDINATOR_SIZE].copy_from_slice(&self.coordinator);
-        offset += COORDINATOR_SIZE;
-        bytes[offset..offset + MINIMUM_WEIGHT_MAGNITUDE_SIZE]
-            .copy_from_slice(&self.minimum_weight_magnitude.to_be_bytes());
-        offset += MINIMUM_WEIGHT_MAGNITUDE_SIZE;
-        bytes[offset..].copy_from_slice(&self.supported_versions);
+        let (bytes, next) = next.split_at_mut(TIMESTAMP_SIZE);
+        bytes.copy_from_slice(&self.timestamp.to_be_bytes());
+
+        let (bytes, next) = next.split_at_mut(COORDINATOR_SIZE);
+        bytes.copy_from_slice(&self.coordinator);
+
+        let (bytes, next) = next.split_at_mut(MINIMUM_WEIGHT_MAGNITUDE_SIZE);
+        bytes.copy_from_slice(&self.minimum_weight_magnitude.to_be_bytes());
+
+        next.copy_from_slice(&self.supported_versions);
     }
 }
 

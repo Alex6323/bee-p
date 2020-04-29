@@ -40,14 +40,11 @@ impl Message for LegacyGossip {
 
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
-        let mut offset = 0;
 
-        message
-            .transaction
-            .extend_from_slice(&bytes[offset..offset + bytes.len() - HASH_SIZE]);
-        offset += bytes.len() - HASH_SIZE;
+        let (bytes, next) = bytes.split_at(bytes.len() - HASH_SIZE);
+        message.transaction.extend_from_slice(bytes);
 
-        message.hash.copy_from_slice(&bytes[offset..offset + HASH_SIZE]);
+        message.hash.copy_from_slice(next);
 
         message
     }

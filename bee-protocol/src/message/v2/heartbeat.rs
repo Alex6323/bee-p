@@ -33,20 +33,12 @@ impl Message for Heartbeat {
 
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
-        let mut offset = 0;
 
-        message.solid_milestone_index = u32::from_be_bytes(
-            bytes[offset..offset + SOLID_MILESTONE_INDEX_SIZE]
-                .try_into()
-                .expect("Invalid buffer size"),
-        );
-        offset += SOLID_MILESTONE_INDEX_SIZE;
+        let (bytes, next) = bytes.split_at(SOLID_MILESTONE_INDEX_SIZE);
+        message.solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
-        message.snapshot_milestone_index = u32::from_be_bytes(
-            bytes[offset..offset + SNAPSHOT_MILESTONE_INDEX_SIZE]
-                .try_into()
-                .expect("Invalid buffer size"),
-        );
+        let (bytes, _) = next.split_at(SNAPSHOT_MILESTONE_INDEX_SIZE);
+        message.snapshot_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         message
     }
