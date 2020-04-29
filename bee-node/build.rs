@@ -14,6 +14,6 @@ fn main() -> Result<(), BuildError> {
             );
             Ok(())
         }
-        Err(_) => return Err(BuildError::GitCommit),
+        Err(_) => Err(BuildError::GitCommit),
     }
 }

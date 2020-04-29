@@ -1,5 +1,6 @@
-mod errors;
+// TODO document
 
+mod errors;
 mod message;
 mod tlv;
 mod v0;
