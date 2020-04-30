@@ -112,7 +112,7 @@ mod tests {
             },
             &[0; 48],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 48),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 48),
             _ => unreachable!(),
         }
         match Tlv::from_bytes::<TransactionRequest>(
@@ -122,7 +122,7 @@ mod tests {
             },
             &[0; 50],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 50),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 50),
             _ => unreachable!(),
         }
     }

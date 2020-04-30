@@ -100,7 +100,7 @@ mod tests {
             },
             &[0; 3],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 3),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 3),
             _ => unreachable!(),
         }
         match Tlv::from_bytes::<MilestoneRequest>(
@@ -110,7 +110,7 @@ mod tests {
             },
             &[0; 5],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 5),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 5),
             _ => unreachable!(),
         }
     }

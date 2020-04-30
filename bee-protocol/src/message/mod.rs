@@ -13,7 +13,6 @@ pub(crate) use tlv::{
     Header,
     Tlv,
     HEADER_SIZE,
-    HEADER_TYPE_SIZE,
 };
 pub(crate) use v0::Handshake;
 pub(crate) use v2::{

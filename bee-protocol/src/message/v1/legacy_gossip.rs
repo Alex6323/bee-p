@@ -149,7 +149,7 @@ mod tests {
             },
             &[0; 340],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 340),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 340),
             _ => unreachable!(),
         }
         match Tlv::from_bytes::<LegacyGossip>(
@@ -159,7 +159,7 @@ mod tests {
             },
             &[0; 1654],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 1654),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 1654),
             _ => unreachable!(),
         }
     }

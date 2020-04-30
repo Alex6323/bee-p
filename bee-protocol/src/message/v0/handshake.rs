@@ -183,7 +183,7 @@ mod tests {
             },
             &[0; 60],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 60),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 60),
             _ => unreachable!(),
         }
         match Tlv::from_bytes::<Handshake>(
@@ -193,7 +193,7 @@ mod tests {
             },
             &[0; 93],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 93),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 93),
             _ => unreachable!(),
         }
     }

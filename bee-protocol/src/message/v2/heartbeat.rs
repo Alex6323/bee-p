@@ -112,7 +112,7 @@ mod tests {
             },
             &[0; 7],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 7),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 7),
             _ => unreachable!(),
         }
         match Tlv::from_bytes::<Heartbeat>(
@@ -122,7 +122,7 @@ mod tests {
             },
             &[0; 9],
         ) {
-            Err(MessageError::InvalidPayloadLength(length)) => assert_eq!(length, 9),
+            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 9),
             _ => unreachable!(),
         }
     }

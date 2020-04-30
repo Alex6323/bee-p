@@ -5,7 +5,7 @@ use std::ops::Range;
 /// A trait describing the behavior of a protocol message.
 ///
 /// This trait is protocol agnostic and only provides serialization and deserialization to and from bytes buffers.
-/// It should not be used as is but rather be paired with a higher layer - like a type-length-value protocol - and as
+/// It should not be used as is but rather be paired with a higher layer - like a type-length-value encoding - and as
 /// such doesn not provide any safety check on inputs/outputs.
 pub(crate) trait Message {
     /// The unique identifier of the message within the protocol.
@@ -18,7 +18,7 @@ pub(crate) trait Message {
     ///
     /// # Arguments
     ///
-    /// * `bytes` - The bytes buffer to deserialize from.
+    /// * `bytes`   -   The bytes buffer to deserialize from.
     ///
     /// # Panics
     ///
@@ -33,7 +33,7 @@ pub(crate) trait Message {
     ///
     /// # Arguments
     ///
-    /// * `bytes` - The bytes buffer to serialize into.
+    /// * `bytes`   -   The bytes buffer to serialize into.
     ///
     /// # Panics
     ///
