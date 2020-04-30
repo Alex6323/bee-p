@@ -96,7 +96,7 @@ impl Message for Handshake {
         CONSTANT_SIZE + self.supported_versions.len()
     }
 
-    fn to_bytes(self, bytes: &mut [u8]) {
+    fn into_bytes(self, bytes: &mut [u8]) {
         let (bytes, next) = bytes.split_at_mut(PORT_SIZE);
         bytes.copy_from_slice(&self.port.to_be_bytes());
 
@@ -158,20 +158,20 @@ mod tests {
         assert_eq!(message.size(), CONSTANT_SIZE + 10);
     }
 
-    fn to_from_eq(message: Handshake) {
+    fn into_from_eq(message: Handshake) {
         assert_eq!(message.port, PORT);
-        assert_eq!(slice_eq(&message.coordinator, &COORDINATOR), true);
+        assert!(slice_eq(&message.coordinator, &COORDINATOR));
         assert_eq!(message.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
-        assert_eq!(slice_eq(&message.supported_versions, &SUPPORTED_VERSIONS), true);
+        assert!(slice_eq(&message.supported_versions, &SUPPORTED_VERSIONS));
     }
 
     #[test]
-    fn to_from() {
+    fn into_from() {
         let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
         let mut bytes = vec![0u8; message_from.size()];
 
-        message_from.to_bytes(&mut bytes);
-        to_from_eq(Handshake::from_bytes(&bytes));
+        message_from.into_bytes(&mut bytes);
+        into_from_eq(Handshake::from_bytes(&bytes));
     }
 
     #[test]
@@ -203,7 +203,7 @@ mod tests {
         let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
         let bytes = Tlv::into_bytes(message_from);
 
-        to_from_eq(
+        into_from_eq(
             Tlv::from_bytes::<Handshake>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
         );
     }

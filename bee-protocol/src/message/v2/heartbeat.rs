@@ -49,7 +49,7 @@ impl Message for Heartbeat {
         CONSTANT_SIZE
     }
 
-    fn to_bytes(self, bytes: &mut [u8]) {
+    fn into_bytes(self, bytes: &mut [u8]) {
         bytes[0..SOLID_MILESTONE_INDEX_SIZE].copy_from_slice(&self.solid_milestone_index.to_be_bytes());
         bytes[SOLID_MILESTONE_INDEX_SIZE..].copy_from_slice(&self.snapshot_milestone_index.to_be_bytes());
     }
@@ -89,18 +89,18 @@ mod tests {
         assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
-    fn to_from_eq(message: Heartbeat) {
+    fn into_from_eq(message: Heartbeat) {
         assert_eq!(message.solid_milestone_index, FIRST_SOLID_MILESTONE_INDEX);
         assert_eq!(message.snapshot_milestone_index, LAST_SOLID_MILESTONE_INDEX);
     }
 
     #[test]
-    fn to_from() {
+    fn into_from() {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
         let mut bytes = vec![0u8; message_from.size()];
 
-        message_from.to_bytes(&mut bytes);
-        to_from_eq(Heartbeat::from_bytes(&bytes));
+        message_from.into_bytes(&mut bytes);
+        into_from_eq(Heartbeat::from_bytes(&bytes));
     }
 
     #[test]
@@ -132,7 +132,7 @@ mod tests {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
         let bytes = Tlv::into_bytes(message_from);
 
-        to_from_eq(
+        into_from_eq(
             Tlv::from_bytes::<Heartbeat>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
         );
     }

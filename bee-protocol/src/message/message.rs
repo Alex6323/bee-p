@@ -39,5 +39,5 @@ pub(crate) trait Message {
     ///
     /// Panics if the provided buffer has an invalid size.
     /// The size of the buffer should be equal to the one returned by the `size` method.
-    fn to_bytes(self, bytes: &mut [u8]);
+    fn into_bytes(self, bytes: &mut [u8]);
 }

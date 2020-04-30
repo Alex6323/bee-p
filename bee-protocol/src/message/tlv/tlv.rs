@@ -34,7 +34,7 @@ impl Tlv {
 
         bytes[0] = M::ID;
         bytes[HEADER_TYPE_SIZE..HEADER_SIZE].copy_from_slice(&(size as u16).to_be_bytes());
-        message.to_bytes(&mut bytes[HEADER_SIZE..]);
+        message.into_bytes(&mut bytes[HEADER_SIZE..]);
 
         bytes
     }

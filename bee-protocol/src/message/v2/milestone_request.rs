@@ -40,7 +40,7 @@ impl Message for MilestoneRequest {
         CONSTANT_SIZE
     }
 
-    fn to_bytes(self, bytes: &mut [u8]) {
+    fn into_bytes(self, bytes: &mut [u8]) {
         bytes.copy_from_slice(&self.index.to_be_bytes())
     }
 }
@@ -78,17 +78,17 @@ mod tests {
         assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
-    fn to_from_eq(message: MilestoneRequest) {
+    fn into_from_eq(message: MilestoneRequest) {
         assert_eq!(message.index, INDEX);
     }
 
     #[test]
-    fn to_from() {
+    fn into_from() {
         let message_from = MilestoneRequest::new(INDEX);
         let mut bytes = vec![0u8; message_from.size()];
 
-        message_from.to_bytes(&mut bytes);
-        to_from_eq(MilestoneRequest::from_bytes(&bytes));
+        message_from.into_bytes(&mut bytes);
+        into_from_eq(MilestoneRequest::from_bytes(&bytes));
     }
 
     #[test]
@@ -120,7 +120,7 @@ mod tests {
         let message_from = MilestoneRequest::new(INDEX);
         let bytes = Tlv::into_bytes(message_from);
 
-        to_from_eq(
+        into_from_eq(
             Tlv::from_bytes::<MilestoneRequest>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
                 .unwrap(),
         );
