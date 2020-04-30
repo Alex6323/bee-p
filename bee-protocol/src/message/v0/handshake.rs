@@ -1,3 +1,5 @@
+//! Handshake message of the protocol version 0
+
 use crate::message::Message;
 
 use std::{

@@ -1,3 +1,5 @@
+//! Messages of the protocol version 2
+
 mod heartbeat;
 mod milestone_request;
 mod transaction_broadcast;

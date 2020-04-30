@@ -1,3 +1,5 @@
+//! LegacyGossip message of the protocol version 1
+
 use crate::message::Message;
 
 use std::ops::Range;

@@ -1,3 +1,5 @@
+//! TransactionBroadcast message of the protocol version 2
+
 use crate::message::Message;
 
 use std::ops::Range;
