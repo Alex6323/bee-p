@@ -60,13 +60,6 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{
-        Header,
-        MessageError,
-        Tlv,
-        HEADER_SIZE,
-    };
-
     const FIRST_SOLID_MILESTONE_INDEX: u32 = 0x3dc297b4;
     const LAST_SOLID_MILESTONE_INDEX: u32 = 0x01181f9b;
 
@@ -89,51 +82,14 @@ mod tests {
         assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
-    fn into_from_eq(message: Heartbeat) {
-        assert_eq!(message.solid_milestone_index, FIRST_SOLID_MILESTONE_INDEX);
-        assert_eq!(message.snapshot_milestone_index, LAST_SOLID_MILESTONE_INDEX);
-    }
-
     #[test]
     fn into_from() {
         let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
         let mut bytes = vec![0u8; message_from.size()];
-
         message_from.into_bytes(&mut bytes);
-        into_from_eq(Heartbeat::from_bytes(&bytes));
-    }
+        let message_to = Heartbeat::from_bytes(&bytes);
 
-    #[test]
-    fn tlv_invalid_length() {
-        match Tlv::from_bytes::<Heartbeat>(
-            &Header {
-                message_type: Heartbeat::ID,
-                message_length: 7,
-            },
-            &[0; 7],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 7),
-            _ => unreachable!(),
-        }
-        match Tlv::from_bytes::<Heartbeat>(
-            &Header {
-                message_type: Heartbeat::ID,
-                message_length: 9,
-            },
-            &[0; 9],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 9),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
-    fn tlv() {
-        let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
-        let bytes = Tlv::into_bytes(message_from);
-
-        into_from_eq(
-            Tlv::from_bytes::<Heartbeat>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
-        );
+        assert_eq!(message_to.solid_milestone_index, FIRST_SOLID_MILESTONE_INDEX);
+        assert_eq!(message_to.snapshot_milestone_index, LAST_SOLID_MILESTONE_INDEX);
     }
 }

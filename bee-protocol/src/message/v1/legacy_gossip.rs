@@ -66,13 +66,6 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{
-        Header,
-        MessageError,
-        Tlv,
-        HEADER_SIZE,
-    };
-
     use bee_test::slices::slice_eq;
 
     const TRANSACTION: [u8; 500] = [
@@ -126,52 +119,14 @@ mod tests {
         assert_eq!(message.size(), CONSTANT_SIZE + 500);
     }
 
-    fn into_from_eq(message: LegacyGossip) {
-        assert!(slice_eq(&message.transaction, &TRANSACTION));
-        assert!(slice_eq(&message.hash, &REQUEST));
-    }
-
     #[test]
     fn into_from() {
         let message_from = LegacyGossip::new(&TRANSACTION, REQUEST);
         let mut bytes = vec![0u8; message_from.size()];
-
         message_from.into_bytes(&mut bytes);
-        into_from_eq(LegacyGossip::from_bytes(&bytes));
-    }
+        let message_to = LegacyGossip::from_bytes(&bytes);
 
-    #[test]
-    fn tlv_invalid_length() {
-        match Tlv::from_bytes::<LegacyGossip>(
-            &Header {
-                message_type: LegacyGossip::ID,
-                message_length: 340,
-            },
-            &[0; 340],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 340),
-            _ => unreachable!(),
-        }
-        match Tlv::from_bytes::<LegacyGossip>(
-            &Header {
-                message_type: LegacyGossip::ID,
-                message_length: 1654,
-            },
-            &[0; 1654],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 1654),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
-    fn tlv() {
-        let message_from = LegacyGossip::new(&TRANSACTION, REQUEST);
-        let bytes = Tlv::into_bytes(message_from);
-
-        into_from_eq(
-            Tlv::from_bytes::<LegacyGossip>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
-                .unwrap(),
-        );
+        assert!(slice_eq(&message_to.transaction, &TRANSACTION));
+        assert!(slice_eq(&message_to.hash, &REQUEST));
     }
 }

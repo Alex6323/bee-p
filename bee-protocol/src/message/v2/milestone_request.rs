@@ -50,13 +50,6 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{
-        Header,
-        MessageError,
-        Tlv,
-        HEADER_SIZE,
-    };
-
     const INDEX: u32 = 0x81f7df7c;
 
     #[test]
@@ -78,51 +71,13 @@ mod tests {
         assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
-    fn into_from_eq(message: MilestoneRequest) {
-        assert_eq!(message.index, INDEX);
-    }
-
     #[test]
     fn into_from() {
         let message_from = MilestoneRequest::new(INDEX);
         let mut bytes = vec![0u8; message_from.size()];
-
         message_from.into_bytes(&mut bytes);
-        into_from_eq(MilestoneRequest::from_bytes(&bytes));
-    }
+        let message_to = MilestoneRequest::from_bytes(&bytes);
 
-    #[test]
-    fn tlv_invalid_length() {
-        match Tlv::from_bytes::<MilestoneRequest>(
-            &Header {
-                message_type: MilestoneRequest::ID,
-                message_length: 3,
-            },
-            &[0; 3],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 3),
-            _ => unreachable!(),
-        }
-        match Tlv::from_bytes::<MilestoneRequest>(
-            &Header {
-                message_type: MilestoneRequest::ID,
-                message_length: 5,
-            },
-            &[0; 5],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 5),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
-    fn tlv() {
-        let message_from = MilestoneRequest::new(INDEX);
-        let bytes = Tlv::into_bytes(message_from);
-
-        into_from_eq(
-            Tlv::from_bytes::<MilestoneRequest>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
-                .unwrap(),
-        );
+        assert_eq!(message_to.index, INDEX);
     }
 }

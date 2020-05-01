@@ -118,13 +118,6 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{
-        Header,
-        MessageError,
-        Tlv,
-        HEADER_SIZE,
-    };
-
     use bee_test::slices::slice_eq;
 
     const PORT: u16 = 0xcd98;
@@ -158,53 +151,16 @@ mod tests {
         assert_eq!(message.size(), CONSTANT_SIZE + 10);
     }
 
-    fn into_from_eq(message: Handshake) {
-        assert_eq!(message.port, PORT);
-        assert!(slice_eq(&message.coordinator, &COORDINATOR));
-        assert_eq!(message.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
-        assert!(slice_eq(&message.supported_versions, &SUPPORTED_VERSIONS));
-    }
-
     #[test]
     fn into_from() {
         let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
         let mut bytes = vec![0u8; message_from.size()];
-
         message_from.into_bytes(&mut bytes);
-        into_from_eq(Handshake::from_bytes(&bytes));
-    }
+        let message_to = Handshake::from_bytes(&bytes);
 
-    #[test]
-    fn tlv_invalid_length() {
-        match Tlv::from_bytes::<Handshake>(
-            &Header {
-                message_type: Handshake::ID,
-                message_length: 60,
-            },
-            &[0; 60],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 60),
-            _ => unreachable!(),
-        }
-        match Tlv::from_bytes::<Handshake>(
-            &Header {
-                message_type: Handshake::ID,
-                message_length: 93,
-            },
-            &[0; 93],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 93),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
-    fn tlv() {
-        let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
-        let bytes = Tlv::into_bytes(message_from);
-
-        into_from_eq(
-            Tlv::from_bytes::<Handshake>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..]).unwrap(),
-        );
+        assert_eq!(message_to.port, PORT);
+        assert!(slice_eq(&message_to.coordinator, &COORDINATOR));
+        assert_eq!(message_to.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
+        assert!(slice_eq(&message_to.supported_versions, &SUPPORTED_VERSIONS));
     }
 }

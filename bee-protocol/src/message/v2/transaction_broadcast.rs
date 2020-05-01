@@ -49,13 +49,6 @@ mod tests {
 
     use super::*;
 
-    use crate::message::{
-        Header,
-        MessageError,
-        Tlv,
-        HEADER_SIZE,
-    };
-
     use bee_test::slices::slice_eq;
 
     const TRANSACTION: [u8; 500] = [
@@ -105,51 +98,13 @@ mod tests {
         assert_eq!(message.size(), 500);
     }
 
-    fn into_from_eq(message: TransactionBroadcast) {
-        assert!(slice_eq(&message.transaction, &TRANSACTION));
-    }
-
     #[test]
     fn into_from() {
         let message_from = TransactionBroadcast::new(&TRANSACTION);
         let mut bytes = vec![0u8; message_from.size()];
-
         message_from.into_bytes(&mut bytes);
-        into_from_eq(TransactionBroadcast::from_bytes(&bytes));
-    }
+        let message_to = TransactionBroadcast::from_bytes(&bytes);
 
-    #[test]
-    fn tlv_invalid_length() {
-        match Tlv::from_bytes::<TransactionBroadcast>(
-            &Header {
-                message_type: TransactionBroadcast::ID,
-                message_length: 291,
-            },
-            &[0; 291],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 291),
-            _ => unreachable!(),
-        }
-        match Tlv::from_bytes::<TransactionBroadcast>(
-            &Header {
-                message_type: TransactionBroadcast::ID,
-                message_length: 1605,
-            },
-            &[0; 1605],
-        ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, 1605),
-            _ => unreachable!(),
-        }
-    }
-
-    #[test]
-    fn tlv() {
-        let message_from = TransactionBroadcast::new(&TRANSACTION);
-        let bytes = Tlv::into_bytes(message_from);
-
-        into_from_eq(
-            Tlv::from_bytes::<TransactionBroadcast>(&Header::from_bytes(&bytes[0..HEADER_SIZE]), &bytes[HEADER_SIZE..])
-                .unwrap(),
-        );
+        assert!(slice_eq(&message_to.transaction, &TRANSACTION));
     }
 }
