@@ -1,3 +1,7 @@
+use bee_bundle::Address;
+
+use std::collections::HashMap;
+
 use futures::{
     channel::{
         mpsc,
@@ -12,7 +16,9 @@ use log::info;
 pub struct LedgerWorkerEvent {}
 
 #[derive(Default)]
-pub struct LedgerWorker {}
+pub struct LedgerWorker {
+    ledger: HashMap<Address, i64>,
+}
 
 impl LedgerWorker {
     pub fn new() -> Self {

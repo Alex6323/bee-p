@@ -5,5 +5,7 @@ authors = ["Bee developers"]
 edition = "2018"
 
 [dependencies]
+bee-bundle = { path = "../bee-bundle" }
+
 futures = "0.3.4"
 log = "0.4.8"
