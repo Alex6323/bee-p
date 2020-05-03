@@ -19,11 +19,11 @@ use std::{
 #[derive(Debug)]
 pub enum SnapshotMetadataError {
     IOError(std::io::Error),
-    InvalidSnapshotMetadataHash,
-    InvalidSnapshotMetadataIndex(std::num::ParseIntError),
-    InvalidSnapshotMetadataTimestamp(std::num::ParseIntError),
-    InvalidSolidEntryPointNumber(std::num::ParseIntError),
-    InvalidSeenMilestoneNumber(std::num::ParseIntError),
+    InvalidHash,
+    InvalidIndex(std::num::ParseIntError),
+    InvalidTimestamp(std::num::ParseIntError),
+    InvalidSolidEntryPointsNumber(std::num::ParseIntError),
+    InvalidSeenMilestonesNumber(std::num::ParseIntError),
     InvalidSolidEntryPointHash,
     InvalidSeenMilestoneHash,
 }
@@ -43,16 +43,15 @@ impl SnapshotMetadata {
             Ok(file) => {
                 let mut reader = BufReader::new(file);
                 let mut line = String::new();
-                // TODO check read_line return value
 
                 // Parsing snapshot metadata hash
                 // TODO check trytes size
                 let hash = match reader.read_line(&mut line) {
                     Ok(_) => match TryteBuf::try_from_str(&line[..line.len() - 1]) {
                         Ok(buf) => buf.as_trits().encode::<T1B1Buf>(),
-                        Err(_) => Err(SnapshotMetadataError::InvalidSnapshotMetadataHash)?,
+                        Err(_) => return Err(SnapshotMetadataError::InvalidHash),
                     },
-                    Err(e) => Err(SnapshotMetadataError::IOError(e))?,
+                    Err(e) => return Err(SnapshotMetadataError::IOError(e)),
                 };
 
                 // Parsing snapshot metadata index
@@ -60,7 +59,7 @@ impl SnapshotMetadata {
                 let index = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<u32>()
-                        .map_err(|e| SnapshotMetadataError::InvalidSnapshotMetadataIndex(e)),
+                        .map_err(|e| SnapshotMetadataError::InvalidIndex(e)),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -69,7 +68,7 @@ impl SnapshotMetadata {
                 let timestamp = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<u64>()
-                        .map_err(|e| SnapshotMetadataError::InvalidSnapshotMetadataTimestamp(e)),
+                        .map_err(|e| SnapshotMetadataError::InvalidTimestamp(e)),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -78,7 +77,7 @@ impl SnapshotMetadata {
                 let solid_entry_points_num = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<usize>()
-                        .map_err(|e| SnapshotMetadataError::InvalidSolidEntryPointNumber(e)),
+                        .map_err(|e| SnapshotMetadataError::InvalidSolidEntryPointsNumber(e)),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -87,7 +86,7 @@ impl SnapshotMetadata {
                 let seen_milestones_num = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<usize>()
-                        .map_err(|e| SnapshotMetadataError::InvalidSeenMilestoneNumber(e)),
+                        .map_err(|e| SnapshotMetadataError::InvalidSeenMilestonesNumber(e)),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -100,14 +99,13 @@ impl SnapshotMetadata {
                             let tokens: Vec<&str> = line.split(";").collect();
                             // TODO check size of tokens
                             // TODO what to do with index ?
-                            // TODO check trytes size
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
                                 Ok(buf) => Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>())
                                     .map_err(|_| SnapshotMetadataError::InvalidSolidEntryPointHash)?,
-                                Err(_) => Err(SnapshotMetadataError::InvalidSolidEntryPointHash)?,
+                                Err(_) => return Err(SnapshotMetadataError::InvalidSolidEntryPointHash),
                             }
                         }
-                        Err(e) => Err(SnapshotMetadataError::IOError(e))?,
+                        Err(e) => return Err(SnapshotMetadataError::IOError(e)),
                     };
                     solid_entry_points.push(hash);
                 }
@@ -121,14 +119,13 @@ impl SnapshotMetadata {
                             let tokens: Vec<&str> = line.split(";").collect();
                             // TODO check size of tokens
                             // TODO what to do with index ?
-                            // TODO check trytes size
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
                                 Ok(buf) => Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>())
                                     .map_err(|_| SnapshotMetadataError::InvalidSeenMilestoneHash)?,
-                                Err(_) => Err(SnapshotMetadataError::InvalidSeenMilestoneHash)?,
+                                Err(_) => return Err(SnapshotMetadataError::InvalidSeenMilestoneHash),
                             }
                         }
-                        Err(e) => Err(SnapshotMetadataError::IOError(e))?,
+                        Err(e) => return Err(SnapshotMetadataError::IOError(e)),
                     };
                     seen_milestones.push(hash);
                 }

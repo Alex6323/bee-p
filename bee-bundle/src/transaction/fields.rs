@@ -223,7 +223,7 @@ impl TransactionField for Hash {
 
     fn try_from_inner(buf: <Self::Inner as ToOwned>::Owned) -> Result<Self, TransactionFieldError> {
         if buf.len() != Self::trit_len() {
-            Err(TransactionFieldError::FieldWrongLength)?
+            return Err(TransactionFieldError::FieldWrongLength);
         }
 
         Ok(Self::from_inner_unchecked(buf))
@@ -263,7 +263,7 @@ macro_rules! impl_transaction_field {
 
                 fn try_from_inner(val: Self::Inner) -> Result<Self, TransactionFieldError> {
                     if $field_name::is_trits_type() && val.num_trits() != $field_name::trit_len() {
-                        Err(TransactionFieldError::FieldWrongLength)?
+                        return Err(TransactionFieldError::FieldWrongLength);
                     }
                     Ok(Self::from_inner_unchecked(val))
                 }
