@@ -18,12 +18,12 @@ use log::{
 
 pub enum LedgerWorkerEvent {
     ApplyDiff(HashMap<Address, i64>),
-    GetBalance(Address, oneshot::Sender<Option<i64>>),
+    GetBalance(Address, oneshot::Sender<Option<u64>>),
 }
 
 #[derive(Default)]
 pub struct LedgerWorker {
-    ledger: HashMap<Address, i64>,
+    state: HashMap<Address, u64>,
 }
 
 impl LedgerWorker {
@@ -33,11 +33,11 @@ impl LedgerWorker {
 
     fn apply_diff(&mut self, diff: HashMap<Address, i64>) {
         for (key, value) in diff {
-            self.ledger
+            self.state
                 .entry(key)
                 .and_modify(|balance| {
-                    if *balance + value >= 0 {
-                        *balance += value;
+                    if *balance as i64 + value >= 0 {
+                        *balance = (*balance as i64 + value) as u64;
                     } else {
                         warn!("[LedgerWorker ] Ignoring conflicting diff.");
                     }
@@ -46,8 +46,8 @@ impl LedgerWorker {
         }
     }
 
-    fn get_balance(&self, address: Address, sender: oneshot::Sender<Option<i64>>) {
-        if let Err(e) = sender.send(self.ledger.get(&address).cloned()) {
+    fn get_balance(&self, address: Address, sender: oneshot::Sender<Option<u64>>) {
+        if let Err(e) = sender.send(self.state.get(&address).cloned()) {
             warn!("[LedgerWorker ] Failed to send balance: {:?}.", e);
         }
     }
