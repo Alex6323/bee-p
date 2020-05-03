@@ -4,7 +4,6 @@ use bee_bundle::{
 };
 use bee_ternary::{
     T1B1Buf,
-    TritBuf,
     TryteBuf,
 };
 
@@ -30,7 +29,7 @@ pub enum SnapshotMetadataError {
 
 // TODO use a Hash type instead of TritBuf<T1B1Buf>
 pub struct SnapshotMetadata {
-    hash: TritBuf<T1B1Buf>,
+    hash: Hash,
     index: u32,
     timestamp: u64,
     solid_entry_points: Vec<Hash>,
@@ -45,14 +44,14 @@ impl SnapshotMetadata {
                 let mut line = String::new();
 
                 // Parsing snapshot metadata hash
-                // TODO check trytes size
                 let hash = match reader.read_line(&mut line) {
                     Ok(_) => match TryteBuf::try_from_str(&line[..line.len() - 1]) {
-                        Ok(buf) => buf.as_trits().encode::<T1B1Buf>(),
-                        Err(_) => return Err(SnapshotMetadataError::InvalidHash),
+                        Ok(buf) => Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>())
+                            .map_err(|_| SnapshotMetadataError::InvalidHash),
+                        Err(_) => Err(SnapshotMetadataError::InvalidHash),
                     },
-                    Err(e) => return Err(SnapshotMetadataError::IOError(e)),
-                };
+                    Err(e) => Err(SnapshotMetadataError::IOError(e)),
+                }?;
 
                 // Parsing snapshot metadata index
                 line.clear();
@@ -101,12 +100,12 @@ impl SnapshotMetadata {
                             // TODO what to do with index ?
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
                                 Ok(buf) => Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>())
-                                    .map_err(|_| SnapshotMetadataError::InvalidSolidEntryPointHash)?,
-                                Err(_) => return Err(SnapshotMetadataError::InvalidSolidEntryPointHash),
+                                    .map_err(|_| SnapshotMetadataError::InvalidSolidEntryPointHash),
+                                Err(_) => Err(SnapshotMetadataError::InvalidSolidEntryPointHash),
                             }
                         }
-                        Err(e) => return Err(SnapshotMetadataError::IOError(e)),
-                    };
+                        Err(e) => Err(SnapshotMetadataError::IOError(e)),
+                    }?;
                     solid_entry_points.push(hash);
                 }
 
@@ -121,12 +120,12 @@ impl SnapshotMetadata {
                             // TODO what to do with index ?
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
                                 Ok(buf) => Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>())
-                                    .map_err(|_| SnapshotMetadataError::InvalidSeenMilestoneHash)?,
-                                Err(_) => return Err(SnapshotMetadataError::InvalidSeenMilestoneHash),
+                                    .map_err(|_| SnapshotMetadataError::InvalidSeenMilestoneHash),
+                                Err(_) => Err(SnapshotMetadataError::InvalidSeenMilestoneHash),
                             }
                         }
-                        Err(e) => return Err(SnapshotMetadataError::IOError(e)),
-                    };
+                        Err(e) => Err(SnapshotMetadataError::IOError(e)),
+                    }?;
                     seen_milestones.push(hash);
                 }
 
@@ -142,7 +141,7 @@ impl SnapshotMetadata {
         }
     }
 
-    pub fn hash(&self) -> &TritBuf<T1B1Buf> {
+    pub fn hash(&self) -> &Hash {
         &self.hash
     }
 
