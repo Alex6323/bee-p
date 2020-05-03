@@ -184,21 +184,24 @@ impl Node {
         }
 
         info!("[Node ] Reading snapshot state...");
-        match SnapshotState::new(self.config.snapshot.state_file_path()) {
+        let snapshot_state = match SnapshotState::new(self.config.snapshot.state_file_path()) {
             Ok(snapshot_state) => {
                 info!(
                     "[Node ] Read snapshot state with {} entries and correct supply.",
                     snapshot_state.state().len()
                 );
-                // TODO deal with entries
+                snapshot_state
             }
             // TODO exit ?
-            Err(e) => error!(
-                "[Node ] Failed to read snapshot state file \"{}\": {:?}.",
-                self.config.snapshot.state_file_path(),
-                e
-            ),
-        }
+            Err(e) => {
+                error!(
+                    "[Node ] Failed to read snapshot state file \"{}\": {:?}.",
+                    self.config.snapshot.state_file_path(),
+                    e
+                );
+                panic!("TODO")
+            }
+        };
 
         Protocol::init(self.config.protocol.clone(), self.network.clone()).await;
 
@@ -206,7 +209,7 @@ impl Node {
         let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
         let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
         self.ledger.replace((ledger_worker_tx, ledger_worker_shutdown_tx));
-        spawn(LedgerWorker::new().run(ledger_worker_rx, ledger_worker_shutdown_rx));
+        spawn(LedgerWorker::new(snapshot_state.into_state()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
 
         info!("[Node ] Initialized.");
     }

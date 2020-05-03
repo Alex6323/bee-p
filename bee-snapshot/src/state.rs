@@ -77,4 +77,8 @@ impl SnapshotState {
     pub fn state(&self) -> &HashMap<Address, u64> {
         &self.state
     }
+
+    pub fn into_state(self) -> HashMap<Address, u64> {
+        self.state
+    }
 }

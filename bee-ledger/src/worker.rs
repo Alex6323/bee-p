@@ -27,8 +27,8 @@ pub struct LedgerWorker {
 }
 
 impl LedgerWorker {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(state: HashMap<Address, u64>) -> Self {
+        Self { state }
     }
 
     fn apply_diff(&mut self, diff: HashMap<Address, i64>) {
