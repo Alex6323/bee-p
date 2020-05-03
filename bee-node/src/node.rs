@@ -109,7 +109,7 @@ impl Node {
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
-        //TODO unregister ?
+        // TODO unregister ?
         if let Some((_, shutdown, _)) = self.peers.remove(&epid) {
             if let Err(_) = shutdown.send(()) {
                 warn!("[Node ] Sending shutdown to {} failed.", epid);
@@ -188,7 +188,7 @@ impl Node {
             Ok(snapshot_state) => {
                 info!(
                     "[Node ] Read snapshot state with {} entries and correct supply.",
-                    snapshot_state.entries().len()
+                    snapshot_state.state().len()
                 );
                 // TODO deal with entries
             }
