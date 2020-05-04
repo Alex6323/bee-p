@@ -55,8 +55,11 @@ impl Tlv {
         let mut bytes = vec![0u8; HEADER_SIZE + size];
         let (header, payload) = bytes.split_at_mut(HEADER_SIZE);
 
-        header[0] = M::ID;
-        header[1..].copy_from_slice(&(size as u16).to_be_bytes());
+        Header {
+            message_type: M::ID,
+            message_length: size as u16,
+        }
+        .to_bytes(header);
         message.into_bytes(payload);
 
         bytes
