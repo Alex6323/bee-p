@@ -1,6 +1,13 @@
 //! Type-length-value encoding/decoding.
 
-use crate::message::{Header, Message, MessageError, HEADER_SIZE};
+use crate::message::{Header, Message, HEADER_SIZE};
+
+#[derive(Debug)]
+pub(crate) enum TlvError {
+    InvalidAdvertisedType(u8, u8),
+    InvalidAdvertisedLength(usize, usize),
+    InvalidLength(usize),
+}
 
 /// Since the following methods have very common names, `from_bytes` and `into_bytes`, the sole purpose of this struct
 /// is to give them a proper namespace to avoid confusion.
@@ -19,20 +26,20 @@ impl Tlv {
     /// * The advertised message type doesn't match the required message type.
     /// * The advertised message length doesn't match the buffer length.
     /// * The buffer length is not within the allowed size range of the required message type.
-    pub(crate) fn from_bytes<M: Message>(header: &Header, bytes: &[u8]) -> Result<M, MessageError> {
+    pub(crate) fn from_bytes<M: Message>(header: &Header, bytes: &[u8]) -> Result<M, TlvError> {
         if header.message_type != M::ID {
-            return Err(MessageError::InvalidAdvertisedType(header.message_type, M::ID));
+            return Err(TlvError::InvalidAdvertisedType(header.message_type, M::ID));
         }
 
         if header.message_length as usize != bytes.len() {
-            return Err(MessageError::InvalidAdvertisedLength(
+            return Err(TlvError::InvalidAdvertisedLength(
                 header.message_length as usize,
                 bytes.len(),
             ));
         }
 
         if !M::size_range().contains(&bytes.len()) {
-            return Err(MessageError::InvalidLength(bytes.len()));
+            return Err(TlvError::InvalidLength(bytes.len()));
         }
 
         Ok(M::from_bytes(bytes))
@@ -79,7 +86,7 @@ mod tests {
             },
             &Vec::with_capacity(M::size_range().start),
         ) {
-            Err(MessageError::InvalidAdvertisedType(advertised_type, actual_type)) => {
+            Err(TlvError::InvalidAdvertisedType(advertised_type, actual_type)) => {
                 assert_eq!(advertised_type, M::ID + 1);
                 assert_eq!(actual_type, M::ID);
             }
@@ -95,7 +102,7 @@ mod tests {
             },
             &vec![0u8; M::size_range().start + 1],
         ) {
-            Err(MessageError::InvalidAdvertisedLength(advertised_length, actual_length)) => {
+            Err(TlvError::InvalidAdvertisedLength(advertised_length, actual_length)) => {
                 assert_eq!(advertised_length, M::size_range().start);
                 assert_eq!(actual_length, M::size_range().start + 1);
             }
@@ -111,7 +118,7 @@ mod tests {
             },
             &vec![0u8; M::size_range().start - 1],
         ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, M::size_range().start - 1),
+            Err(TlvError::InvalidLength(length)) => assert_eq!(length, M::size_range().start - 1),
             _ => unreachable!(),
         }
 
@@ -122,7 +129,7 @@ mod tests {
             },
             &vec![0u8; M::size_range().end],
         ) {
-            Err(MessageError::InvalidLength(length)) => assert_eq!(length, M::size_range().end),
+            Err(TlvError::InvalidLength(length)) => assert_eq!(length, M::size_range().end),
             _ => unreachable!(),
         }
     }
