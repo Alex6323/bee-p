@@ -1,11 +1,10 @@
+use crate::protocol::Protocol;
+
 use bee_tangle::tangle;
 
 use std::time::Duration;
 
-use async_std::{
-    future::ready,
-    prelude::*,
-};
+use async_std::{future::ready, prelude::*};
 use futures::channel::mpsc::Receiver;
 use log::info;
 
@@ -23,15 +22,19 @@ impl StatusWorker {
 
         // TODO Threshold
         // TODO use tangle synced method
-        if solid_milestone_index == last_milestone_index {
-            info!("[StatusWorker ] Synchronized.");
+        let mut status = if solid_milestone_index == last_milestone_index {
+            String::from("Synchronized")
         } else {
             // TODO %
-            info!(
-                "[StatusWorker ] Synchronizing {}..{}..{}.",
+            format!(
+                "Synchronizing {}..{}..{}",
                 snapshot_milestone_index, solid_milestone_index, last_milestone_index
-            );
-        }
+            )
+        };
+
+        status = format!("{} Requested {}", status, Protocol::get().requested.len());
+
+        info!("[StatusWorker ] {}.", status);
     }
 
     pub(crate) async fn run(self, mut shutdown: Receiver<()>) {
