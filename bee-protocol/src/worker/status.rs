@@ -25,10 +25,11 @@ impl StatusWorker {
         let mut status = if solid_milestone_index == last_milestone_index {
             String::from("Synchronized")
         } else {
-            // TODO %
+            let progress = ((solid_milestone_index - snapshot_milestone_index) as f32 * 100.0
+                / (last_milestone_index - snapshot_milestone_index) as f32) as u8;
             format!(
-                "Synchronizing {}..{}..{}",
-                snapshot_milestone_index, solid_milestone_index, last_milestone_index
+                "Synchronizing {}..{}..{} ({}%)",
+                snapshot_milestone_index, solid_milestone_index, last_milestone_index, progress
             )
         };
 
