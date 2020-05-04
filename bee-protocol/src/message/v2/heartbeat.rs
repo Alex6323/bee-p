@@ -2,10 +2,7 @@
 
 use crate::message::Message;
 
-use std::{
-    convert::TryInto,
-    ops::Range,
-};
+use std::{convert::TryInto, ops::Range};
 
 const SOLID_MILESTONE_INDEX_SIZE: usize = 4;
 const SNAPSHOT_MILESTONE_INDEX_SIZE: usize = 4;

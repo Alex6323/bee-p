@@ -1,11 +1,6 @@
 //! Type-length-value encoding/decoding.
 
-use crate::message::{
-    Header,
-    Message,
-    MessageError,
-    HEADER_SIZE,
-};
+use crate::message::{Header, Message, MessageError, HEADER_SIZE};
 
 /// Since the following methods have very common names, `from_bytes` and `into_bytes`, the sole purpose of this struct
 /// is to give them a proper namespace to avoid confusion.
@@ -67,13 +62,7 @@ mod tests {
     use super::*;
 
     use crate::message::{
-        v1::LegacyGossip,
-        Handshake,
-        Heartbeat,
-        Message,
-        MilestoneRequest,
-        TransactionBroadcast,
-        TransactionRequest,
+        v1::LegacyGossip, Handshake, Heartbeat, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
     };
 
     use bee_test::slices::slice_eq;

@@ -5,10 +5,7 @@ use crate::message::Message;
 use std::{
     convert::TryInto,
     ops::Range,
-    time::{
-        SystemTime,
-        UNIX_EPOCH,
-    },
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 const PORT_SIZE: usize = 2;
