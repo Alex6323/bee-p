@@ -25,6 +25,7 @@ bitflags! {
         const SOLID = 0b0000_0001;
         const TAIL = 0b0000_0010;
         const REQUESTED = 0b0000_0100;
+        const MILESTONE = 0b0000_1000;
     }
 }
 
@@ -75,6 +76,14 @@ impl Vertex {
 
     pub fn set_requested(&mut self) {
         self.flags.insert(Flags::REQUESTED);
+    }
+
+    pub fn is_milestone(&self) -> bool {
+        self.flags.contains(Flags::MILESTONE)
+    }
+
+    pub fn set_milestone(&mut self) {
+        self.flags.insert(Flags::MILESTONE);
     }
 }
 
