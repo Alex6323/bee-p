@@ -14,7 +14,10 @@ mod vertex;
 
 use solidifier::SolidifierState;
 
-use async_std::{sync::channel, task::spawn};
+use async_std::{
+    sync::{channel, Arc, Barrier},
+    task::spawn,
+};
 
 use bee_bundle::Hash;
 
@@ -31,11 +34,16 @@ const SOLIDIFIER_CHAN_CAPACITY: usize = 1000;
 /// Initializes the Tangle singleton.
 pub fn init() {
     if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
-        let (sender, receiver) = flume::bounded::<Hash>(SOLIDIFIER_CHAN_CAPACITY);
+        let (sender, receiver) = flume::bounded::<Option<Hash>>(SOLIDIFIER_CHAN_CAPACITY);
 
-        TANGLE.store(Box::into_raw(Tangle::new(sender).into()), Ordering::Relaxed);
+        let drop_barrier = async_std::sync::Arc::new(Barrier::new(2));
 
-        spawn(SolidifierState::new(receiver).run());
+        TANGLE.store(
+            Box::into_raw(Tangle::new(sender, drop_barrier.clone()).into()),
+            Ordering::Relaxed,
+        );
+
+        spawn(SolidifierState::new(receiver, drop_barrier).run());
     } else {
         drop();
         panic!("Already initialized");
@@ -55,6 +63,8 @@ pub fn tangle() -> &'static Tangle {
 /// Drops the Tangle singleton.
 pub fn drop() {
     if INITIALIZED.compare_and_swap(true, false, Ordering::Relaxed) {
+        tangle().shutdown();
+
         let tangle = TANGLE.swap(ptr::null_mut(), Ordering::Relaxed);
         if !tangle.is_null() {
             let _ = unsafe { Box::from_raw(tangle) };

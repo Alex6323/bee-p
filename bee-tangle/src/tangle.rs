@@ -12,7 +12,10 @@ use std::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
-use async_std::sync::Arc;
+use async_std::{
+    sync::{Arc, Barrier},
+    task::block_on,
+};
 
 use dashmap::{mapref::entry::Entry, DashMap, DashSet};
 
@@ -33,16 +36,18 @@ pub struct Tangle {
     solid_entry_points: DashSet<Hash>,
 
     /// The sender side of a channel between the Tangle and the (gossip) solidifier.
-    solidifier_send: Sender<Hash>,
+    solidifier_send: Sender<Option<Hash>>,
 
     solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
     last_milestone_index: AtomicU32,
+
+    drop_barrier: Arc<Barrier>,
 }
 
 impl Tangle {
     /// Creates a new `Tangle`.
-    pub(crate) fn new(solidifier_send: Sender<Hash>) -> Self {
+    pub(crate) fn new(solidifier_send: Sender<Option<Hash>>, drop_barrier: Arc<Barrier>) -> Self {
         Self {
             vertices: DashMap::new(),
             approvers: DashMap::new(),
@@ -52,6 +57,7 @@ impl Tangle {
             solid_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
             last_milestone_index: AtomicU32::new(0),
+            drop_barrier,
         }
     }
 
@@ -88,7 +94,7 @@ impl Tangle {
 
         // TODO: not sure if we want replacement of vertices
         if self.vertices.insert(hash, vertex).is_none() {
-            match self.solidifier_send.send(hash) {
+            match self.solidifier_send.send(Some(hash)) {
                 Ok(()) => (),
                 Err(e) => todo!("log warning"),
             }
@@ -97,6 +103,12 @@ impl Tangle {
         } else {
             None
         }
+    }
+
+    pub(crate) fn shutdown(&self) {
+        // `None` will cause the worker to finish
+        self.solidifier_send.send(None).expect("error sending shutdown signal");
+        block_on(self.drop_barrier.wait());
     }
 
     /// Returns a reference to a transaction, if it's available in the local Tangle.
