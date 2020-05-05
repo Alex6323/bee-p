@@ -22,8 +22,9 @@ impl Deref for TransactionRef {
 
 bitflags! {
     pub(crate) struct Flags: u8 {
-        const SOLID = 0b00000001;
-        const TAIL = 0b00000010;
+        const SOLID = 0b0000_0001;
+        const TAIL = 0b0000_0010;
+        const REQUESTED = 0b0000_0100;
     }
 }
 
@@ -56,16 +57,24 @@ impl Vertex {
         self.inner.clone()
     }
 
-    pub fn set_solid(&mut self) {
-        self.flags.insert(Flags::SOLID);
-    }
-
     pub fn is_solid(&self) -> bool {
         self.flags.contains(Flags::SOLID)
     }
 
+    pub fn set_solid(&mut self) {
+        self.flags.insert(Flags::SOLID);
+    }
+
     pub fn is_tail(&self) -> bool {
         self.flags.contains(Flags::TAIL)
+    }
+
+    pub fn is_requested(&self) -> bool {
+        self.flags.contains(Flags::REQUESTED)
+    }
+
+    pub fn set_requested(&mut self) {
+        self.flags.insert(Flags::REQUESTED);
     }
 }
 
