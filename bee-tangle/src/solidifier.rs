@@ -53,14 +53,9 @@ impl SolidifierState {
     pub async fn run(mut self) {
         while let Ok(hash) = self.solidifier_recv.recv_async().await {
             if let Some(hash) = hash {
-                // println!("solidif: before propagate");
                 self.propagate(hash);
-            // println!("solidif: after propagate");
             } else {
-                // println!("solidif: before drop_barrier.wait");
-                // block_on(self.drop_barrier.wait());
                 self.drop_barrier.wait().await;
-                // println!("solidif: after drop_barrier.wait");
                 break;
             }
         }
