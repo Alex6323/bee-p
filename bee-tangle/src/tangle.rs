@@ -137,6 +137,9 @@ impl Tangle {
     /// Adds the `hash` of a milestone identified by its milestone `index`.
     pub fn add_milestone(&'static self, index: MilestoneIndex, hash: Hash) {
         self.milestones.insert(index, hash);
+        if let Some(mut vertex) = self.vertices.get_mut(&hash) {
+            vertex.set_milestone();
+        }
     }
 
     /// Removes the hash of a milestone.

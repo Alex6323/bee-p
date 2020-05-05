@@ -1,38 +1,22 @@
 use crate::{
-    milestone::{
-        Milestone,
-        MilestoneBuilder,
-        MilestoneBuilderError,
-    },
+    milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
 };
 
 use bee_bundle::Hash;
-use bee_crypto::{
-    Kerl,
-    Sponge,
-};
-use bee_signing::{
-    PublicKey,
-    RecoverableSignature,
-};
+use bee_crypto::{Kerl, Sponge};
+use bee_signing::{PublicKey, RecoverableSignature};
 use bee_tangle::tangle;
 
 use std::marker::PhantomData;
 
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     stream::StreamExt,
 };
-use log::{
-    debug,
-    info,
-};
+use log::{debug, info};
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -109,6 +93,7 @@ where
                         // TODO split
                         match self.validate_milestone(tail_hash).await {
                             Ok(milestone) => {
+                                // TODO check multiple triggers
                                 tangle().add_milestone(milestone.index.into(), milestone.hash);
                                 // TODO deref ? Why not .into() ?
                                 if milestone.index > *tangle().get_last_milestone_index() {
