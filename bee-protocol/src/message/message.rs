@@ -1,12 +1,12 @@
-//! Protocol message trait.
+//! Message trait.
 
 use std::ops::Range;
 
-/// A trait describing the behavior of a protocol message.
+/// A trait describing the behavior of a message.
 ///
 /// This trait is protocol agnostic and only provides serialization and deserialization to and from bytes buffers.
 /// It should not be used as is but rather be paired with a higher layer - like a type-length-value encoding - and as
-/// such doesn not provide any safety check on inputs/outputs.
+/// such does not provide any safety check on inputs/outputs.
 pub(crate) trait Message {
     /// The unique identifier of the message within the protocol.
     const ID: u8;

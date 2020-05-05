@@ -7,8 +7,10 @@ use std::ops::Range;
 const HASH_SIZE: usize = 49;
 const CONSTANT_SIZE: usize = HASH_SIZE;
 
+/// A message to request a transaction.
 #[derive(Clone)]
 pub(crate) struct TransactionRequest {
+    /// The hash of the requested transaction.
     pub(crate) hash: [u8; HASH_SIZE],
 }
 

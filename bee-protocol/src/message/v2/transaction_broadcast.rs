@@ -7,8 +7,10 @@ use std::ops::Range;
 const VARIABLE_MIN_SIZE: usize = 292;
 const VARIABLE_MAX_SIZE: usize = 1604;
 
+/// A message to broadcast a transaction.
 #[derive(Clone, Default)]
 pub(crate) struct TransactionBroadcast {
+    /// The transaction to broadcast. Can be compressed.
     pub(crate) transaction: Vec<u8>,
 }
 

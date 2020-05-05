@@ -16,12 +16,21 @@ const CONSTANT_SIZE: usize = PORT_SIZE + TIMESTAMP_SIZE + COORDINATOR_SIZE + MIN
 const VARIABLE_MIN_SIZE: usize = 1;
 const VARIABLE_MAX_SIZE: usize = 32;
 
+/// A message that allows two nodes to pair.
+///
+/// Contains useful information to verify that the pairing node is operating on the same configuration.
+/// Any difference in configuration will end up in the connection being closed and the nodes not pairing.
 #[derive(Clone)]
 pub(crate) struct Handshake {
+    /// Protocol port of the node.
     pub(crate) port: u16,
+    /// Timestamp - in ms - when the message was created by the node.
     pub(crate) timestamp: u64,
+    /// Public key of the coordinator being tracked by the node.
     pub(crate) coordinator: [u8; COORDINATOR_SIZE],
+    /// Minimum Weight Magnitude of the node.
     pub(crate) minimum_weight_magnitude: u8,
+    /// Protocol versions supported by the node.
     pub(crate) supported_versions: Vec<u8>,
 }
 
@@ -155,6 +164,7 @@ mod tests {
         message_from.into_bytes(&mut bytes);
         let message_to = Handshake::from_bytes(&bytes);
 
+        // TODO test timestamp
         assert_eq!(message_to.port, PORT);
         assert!(slice_eq(&message_to.coordinator, &COORDINATOR));
         assert_eq!(message_to.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);

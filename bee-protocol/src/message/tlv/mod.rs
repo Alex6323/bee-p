@@ -1,4 +1,4 @@
-//! Type-length-value encoding on top of the protocol messages.
+//! Type-length-value encoding on top of the messages.
 
 mod header;
 mod tlv;
