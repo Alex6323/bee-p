@@ -4,10 +4,7 @@ use bitflags::bitflags;
 
 use std::ops::Deref;
 
-use bee_bundle::{
-    Hash,
-    Transaction,
-};
+use bee_bundle::{Hash, Transaction};
 
 use async_std::sync::Arc;
 

@@ -14,20 +14,13 @@ mod vertex;
 
 use solidifier::SolidifierState;
 
-use async_std::{
-    sync::channel,
-    task::spawn,
-};
+use async_std::{sync::channel, task::spawn};
 
 use bee_bundle::Hash;
 
 use std::{
     ptr,
-    sync::atomic::{
-        AtomicBool,
-        AtomicPtr,
-        Ordering,
-    },
+    sync::atomic::{AtomicBool, AtomicPtr, Ordering},
 };
 
 static TANGLE: AtomicPtr<Tangle> = AtomicPtr::new(ptr::null_mut());

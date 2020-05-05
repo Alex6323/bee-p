@@ -2,32 +2,19 @@
 
 use crate::{
     milestone::MilestoneIndex,
-    vertex::{
-        TransactionRef,
-        Vertex,
-    },
+    vertex::{TransactionRef, Vertex},
 };
 
-use bee_bundle::{
-    Hash,
-    Transaction,
-};
+use bee_bundle::{Hash, Transaction};
 
 use std::{
     collections::HashSet,
-    sync::atomic::{
-        AtomicU32,
-        Ordering,
-    },
+    sync::atomic::{AtomicU32, Ordering},
 };
 
 use async_std::sync::Arc;
 
-use dashmap::{
-    mapref::entry::Entry,
-    DashMap,
-    DashSet,
-};
+use dashmap::{mapref::entry::Entry, DashMap, DashSet};
 
 use flume::Sender;
 
@@ -344,11 +331,9 @@ impl Tangle {
         todo!()
     }
 
-    /*
-    fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
-        self.vertices.get(hash).map(|v| v.meta)
-    }
-    */
+    // fn get_meta(&'static self, hash: &Hash) -> Option<VertexMeta> {
+    // self.vertices.get(hash).map(|v| v.meta)
+    // }
 
     #[cfg(test)]
     fn num_approvers(&'static self, hash: &Hash) -> usize {
@@ -361,16 +346,10 @@ mod tests {
     use super::*;
     use crate::*;
 
-    use bee_test::transaction::{
-        create_random_attached_tx,
-        create_random_tx,
-    };
+    use bee_test::transaction::{create_random_attached_tx, create_random_tx};
 
     use async_std::sync::channel;
-    use bee_bundle::{
-        TransactionField,
-        Value,
-    };
+    use bee_bundle::{TransactionField, Value};
     use serial_test::serial;
 
     use async_std::task::block_on;

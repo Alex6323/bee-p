@@ -1,19 +1,10 @@
-use crate::{
-    tangle,
-    Tangle,
-};
+use crate::{tangle, Tangle};
 
 use bee_bundle::Hash;
 
-use std::collections::{
-    HashMap,
-    HashSet,
-};
+use std::collections::{HashMap, HashSet};
 
-use async_std::{
-    prelude::*,
-    sync::Arc,
-};
+use async_std::{prelude::*, sync::Arc};
 use dashmap::DashMap;
 use flume::Receiver;
 
