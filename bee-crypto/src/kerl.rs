@@ -1,21 +1,11 @@
-use tiny_keccak::{
-    Hasher,
-    Keccak,
-};
+use tiny_keccak::{Hasher, Keccak};
 
 use bee_ternary::{
     bigint::{
-        common::{
-            BigEndian,
-            U8Repr,
-        },
-        I384,
-        T242,
-        T243,
+        common::{BigEndian, U8Repr},
+        I384, T242, T243,
     },
-    Btrit,
-    Trits,
-    T1B1,
+    Btrit, Trits, T1B1,
 };
 
 use crate::Sponge;
@@ -72,7 +62,7 @@ impl Sponge for Kerl {
     /// data was copied, and will be reused for the next transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
         if input.len() % Self::IN_LEN != 0 {
-            Err(Error::NotMultipleOfHashLength)?
+            return Err(Error::NotMultipleOfHashLength);
         }
 
         for trits_chunk in input.chunks(Self::IN_LEN) {
@@ -107,7 +97,7 @@ impl Sponge for Kerl {
     /// into it.
     fn squeeze_into(&mut self, buf: &mut Trits<T1B1>) -> Result<(), Self::Error> {
         if buf.len() % Self::OUT_LEN != 0 {
-            Err(Error::NotMultipleOfHashLength)?
+            return Err(Error::NotMultipleOfHashLength);
         }
 
         for trit_chunk in buf.chunks_mut(Self::OUT_LEN) {
@@ -131,12 +121,7 @@ impl Sponge for Kerl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bee_ternary::{
-        T1B1Buf,
-        T3B1Buf,
-        TritBuf,
-        TryteBuf,
-    };
+    use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, TryteBuf};
 
     macro_rules! test_kerl {
         ($test_name:ident, $input_trytes:expr, $output_trytes:expr) => {

@@ -1,16 +1,7 @@
-use crate::{
-    PrivateKey,
-    PrivateKeyGenerator,
-    PublicKey,
-    RecoverableSignature,
-    Signature,
-};
+use crate::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature};
 
 use bee_crypto::Sponge;
-use bee_ternary::{
-    TritBuf,
-    Trits,
-};
+use bee_ternary::{TritBuf, Trits};
 
 use std::marker::PhantomData;
 
@@ -80,15 +71,15 @@ where
         let depth = match self.depth {
             Some(depth) => match depth {
                 0..=20 => depth,
-                _ => Err(MssError::InvalidDepth(depth))?,
+                _ => return Err(MssError::InvalidDepth(depth)),
             },
-            None => Err(MssError::MissingDepth)?,
+            None => return Err(MssError::MissingDepth),
         };
         let generator = self.generator.ok_or(MssError::MissingGenerator)?;
 
         Ok(MssPrivateKeyGenerator {
-            depth: depth,
-            generator: generator,
+            depth,
+            generator,
             _sponge: PhantomData,
         })
     }
@@ -148,8 +139,8 @@ where
         Ok(MssPrivateKey {
             depth: self.depth,
             index: 0,
-            keys: keys,
-            tree: tree,
+            keys,
+            tree,
             _sponge: PhantomData,
         })
     }
@@ -187,7 +178,7 @@ where
         while tree_index != 0 {
             if tree_index % 2 != 0 {
                 sibling_index = tree_index + 1;
-                tree_index = tree_index / 2;
+                tree_index /= 2;
             } else {
                 sibling_index = tree_index - 1;
                 tree_index = (tree_index - 1) / 2;
@@ -198,7 +189,7 @@ where
             i = i + 1;
         }
 
-        self.index = self.index + 1;
+        self.index += 1;
 
         Ok(Self::Signature::from_buf(state).index(self.index - 1))
     }
@@ -319,23 +310,11 @@ mod tests {
 
     use crate::{
         seed::Seed,
-        wots::{
-            WotsPrivateKeyGenerator,
-            WotsPrivateKeyGeneratorBuilder,
-            WotsPublicKey,
-            WotsSecurityLevel,
-        },
+        wots::{WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey, WotsSecurityLevel},
     };
 
-    use bee_crypto::{
-        CurlP27,
-        CurlP81,
-        Kerl,
-    };
-    use bee_ternary::{
-        T1B1Buf,
-        TryteBuf,
-    };
+    use bee_crypto::{CurlP27, CurlP81, Kerl};
+    use bee_ternary::{T1B1Buf, TryteBuf};
 
     #[test]
     fn mss_generator_missing_depth_test() {

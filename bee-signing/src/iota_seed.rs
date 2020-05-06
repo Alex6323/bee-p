@@ -1,12 +1,7 @@
 use crate::Seed;
 
 use bee_crypto::Sponge;
-use bee_ternary::{
-    Btrit,
-    Trit,
-    TritBuf,
-    Trits,
-};
+use bee_ternary::{Btrit, Trit, TritBuf, Trits};
 
 use rand::Rng;
 use std::marker::PhantomData;
@@ -44,7 +39,7 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
     // TODO: documentation
     fn from_buf(buf: TritBuf) -> Result<Self, Self::Error> {
         if buf.len() != 243 {
-            Err(Self::Error::InvalidLength(buf.len()))?;
+            return Err(Self::Error::InvalidLength(buf.len()));
         }
 
         Ok(Self {
@@ -99,15 +94,8 @@ mod tests {
 
     use super::*;
 
-    use bee_crypto::{
-        CurlP27,
-        CurlP81,
-        Kerl,
-    };
-    use bee_ternary::{
-        T1B1Buf,
-        TryteBuf,
-    };
+    use bee_crypto::{CurlP27, CurlP81, Kerl};
+    use bee_ternary::{T1B1Buf, TryteBuf};
 
     const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
 

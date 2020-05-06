@@ -12,11 +12,7 @@ mod kerl;
 mod sponge;
 mod sponge_type;
 
-pub use curlp::{
-    CurlP,
-    CurlP27,
-    CurlP81,
-};
+pub use curlp::{CurlP, CurlP27, CurlP81};
 pub use kerl::Kerl;
 pub use sponge::Sponge;
 pub use sponge_type::SpongeType;

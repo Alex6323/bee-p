@@ -1,37 +1,25 @@
-use std::convert::TryFrom;
 use bee_ternary::{
-    T1B1Buf,
-    TritBuf,
-    TryteBuf,
     bigint::{
-        T243,
-        I384,
-        common::{
-            BigEndian,
-            U8Repr,
-        },
+        common::{BigEndian, U8Repr},
+        I384, T243,
     },
+    T1B1Buf, TritBuf, TryteBuf,
 };
+use std::convert::TryFrom;
 
 #[test]
 fn trytes_to_i384_be_u8_1() {
-    const INPUT_TRYTES: &'static str = "EMIDYNHBWMBCXVDEFOFWINXTERALUKYYPPHKP9JJFGJEIUY9MUDVNFZHMMWZUYUSWAIOWEVTHNWMHANBH";
+    const INPUT_TRYTES: &str = "EMIDYNHBWMBCXVDEFOFWINXTERALUKYYPPHKP9JJFGJEIUY9MUDVNFZHMMWZUYUSWAIOWEVTHNWMHANBH";
 
     const TRYTES_AS_I384_BE_U8: [u8; 48] = [
-        236,  51,  87, 194, 177, 242, 107, 101,
-        103, 168,   5,  66, 166,  81,  89, 243,
-        253, 197, 196, 167, 255,  13,   7, 255,
-         82, 193,  78, 211, 157, 243, 205, 238,
-        142,  59,  98,  37,  11,   4,  89,  43,
-        160, 190, 239, 144, 158,  28,  67,  19
+        236, 51, 87, 194, 177, 242, 107, 101, 103, 168, 5, 66, 166, 81, 89, 243, 253, 197, 196, 167, 255, 13, 7, 255,
+        82, 193, 78, 211, 157, 243, 205, 238, 142, 59, 98, 37, 11, 4, 89, 43, 160, 190, 239, 144, 158, 28, 67, 19,
     ];
 
     let trytes = TryteBuf::try_from_str(INPUT_TRYTES);
     assert!(trytes.is_ok());
     let trytes = trytes.unwrap();
-    let trit_buf: TritBuf<T1B1Buf> = trytes
-        .as_trits()
-        .encode();
+    let trit_buf: TritBuf<T1B1Buf> = trytes.as_trits().encode();
     let t243 = T243::from_trit_buf(trit_buf);
     let t242 = t243.into_t242();
 
@@ -45,23 +33,17 @@ fn trytes_to_i384_be_u8_1() {
 
 #[test]
 fn trytes_to_i384_be_u8_2() {
-    const INPUT_TRYTES: &'static str = "DJ9WGAKRZOMH9KVRCHGCDCREXZVDKY9FXAXVSLELYADXHQCQQSMQYAEEBTEIWTQDUZIOFSFLBQQA9RUPX";
+    const INPUT_TRYTES: &str = "DJ9WGAKRZOMH9KVRCHGCDCREXZVDKY9FXAXVSLELYADXHQCQQSMQYAEEBTEIWTQDUZIOFSFLBQQA9RUPX";
 
     const TRYTES_AS_I384_BE_U8: [u8; 48] = [
-        184,  83, 213,  85, 177, 195,  33,  31,
-         86, 245, 168, 205, 110, 156, 207, 177,
-        122, 174, 237,  75, 210,  56,  85,  12,
-        191,  10, 209,  77,  84, 232, 148, 185,
-        210,  97,  59,  96, 214,  31, 247, 230,
-         30,  67, 122,  93, 101, 171,  72, 105,
+        184, 83, 213, 85, 177, 195, 33, 31, 86, 245, 168, 205, 110, 156, 207, 177, 122, 174, 237, 75, 210, 56, 85, 12,
+        191, 10, 209, 77, 84, 232, 148, 185, 210, 97, 59, 96, 214, 31, 247, 230, 30, 67, 122, 93, 101, 171, 72, 105,
     ];
 
     let trytes = TryteBuf::try_from_str(INPUT_TRYTES);
     assert!(trytes.is_ok());
     let trytes = trytes.unwrap();
-    let trit_buf: TritBuf<T1B1Buf> = trytes
-        .as_trits()
-        .encode();
+    let trit_buf: TritBuf<T1B1Buf> = trytes.as_trits().encode();
     let t243 = T243::from_trit_buf(trit_buf);
     let t242 = t243.into_t242();
 

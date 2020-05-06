@@ -1,14 +1,5 @@
-use crate::{
-    PrivateKey,
-    PrivateKeyGenerator,
-    PublicKey,
-    Seed,
-    Signature,
-};
-use bee_ternary::{
-    TritBuf,
-    Trits,
-};
+use crate::{PrivateKey, PrivateKeyGenerator, PublicKey, Seed, Signature};
+use bee_ternary::{TritBuf, Trits};
 use rand::rngs::OsRng;
 use std::convert::Infallible;
 

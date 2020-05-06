@@ -53,4 +53,3 @@ pub enum Error {
     BinaryExceedsTernaryRange,
     TernaryExceedsBinaryRange,
 }
-

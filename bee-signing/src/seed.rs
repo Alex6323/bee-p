@@ -1,7 +1,4 @@
-use bee_ternary::{
-    TritBuf,
-    Trits,
-};
+use bee_ternary::{TritBuf, Trits};
 
 pub trait Seed {
     type Error;

@@ -10,39 +10,17 @@
 use std::cmp::Ordering;
 
 use crate::{
-    raw::RawEncoding,
-    ShiftTernary,
-    Trit,
-    Trits,
-    TritBuf,
-    T1B1Buf,
-    Btrit,
-    Utrit,
     bigint::{
-        common::{
-            BigEndian,
-            LittleEndian,
-            U8Repr,
-            U32Repr,
-        },
-        I384,
-        T242,
-        U384,
+        common::{BigEndian, LittleEndian, U32Repr, U8Repr},
+        I384, T242, U384,
     },
+    raw::RawEncoding,
+    Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Trits, Utrit,
 };
 
 mod constants;
 pub use constants::{
-    BTRIT_ZERO,
-    BTRIT_ONE,
-    BTRIT_NEG_ONE,
-
-    UTRIT_ZERO,
-    UTRIT_ONE,
-    UTRIT_TWO,
-
-    UTRIT_U384_MAX,
-    UTRIT_U384_MAX_HALF,
+    BTRIT_NEG_ONE, BTRIT_ONE, BTRIT_ZERO, UTRIT_ONE, UTRIT_TWO, UTRIT_U384_MAX, UTRIT_U384_MAX_HALF, UTRIT_ZERO,
 };
 
 def_and_impl_ternary!(T243, 243);
@@ -99,7 +77,7 @@ impl<T: Trit> From<T242<T>> for T243<T> {
 impl From<I384<BigEndian, U8Repr>> for T243<Btrit> {
     fn from(value: I384<BigEndian, U8Repr>) -> Self {
         let be_u32 = Into::<I384<BigEndian, U32Repr>>::into(value);
-        let le_u32= Into::<I384<LittleEndian, U32Repr>>::into(be_u32);
+        let le_u32 = Into::<I384<LittleEndian, U32Repr>>::into(be_u32);
         le_u32.into()
     }
 }

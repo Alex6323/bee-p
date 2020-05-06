@@ -1,16 +1,8 @@
 use std::convert::TryFrom;
 
 pub use crate::{
-    t1b1::{
-        T1B1Buf,
-        T1B1,
-    },
-    trit::{
-        Btrit,
-        ShiftTernary,
-        Trit,
-        Utrit,
-    },
+    t1b1::{T1B1Buf, T1B1},
+    trit::{Btrit, ShiftTernary, Trit, Utrit},
     TritBuf,
 };
 
@@ -31,8 +23,8 @@ fn min_trits(value: u64) -> usize {
     num
 }
 
-//TODO - generalize over all encodings
-//Impl copied from:
+// TODO - generalize over all encodings
+// Impl copied from:
 // [https://github.com/iotaledger/iota_common/blob/master/common/trinary/trit_long.c#L62]
 impl From<i64> for TritBuf<T1B1Buf> {
     fn from(value: i64) -> Self {
@@ -58,7 +50,7 @@ impl From<i64> for TritBuf<T1B1Buf> {
                 curr_trit = -curr_trit;
             }
 
-            //This can not fail because curr_trit is "some_value % 3 - 1" which is always within range
+            // This can not fail because curr_trit is "some_value % 3 - 1" which is always within range
             buf.set(pos, Btrit::try_from(curr_trit).unwrap());
 
             value_abs += 1;
@@ -75,8 +67,8 @@ pub enum TritsI64ConversionError {
     AbsValueTooBig,
 }
 
-//TODO - generalize over all encodings
-//Impl copied from:
+// TODO - generalize over all encodings
+// Impl copied from:
 // [https://github.com/iotaledger/iota_common/blob/1b56a5282933fb674181001630e7b2e2c33b5eea/common/trinary/trit_long.c#L31]
 impl TryFrom<TritBuf<T1B1Buf>> for i64 {
     type Error = TritsI64ConversionError;
@@ -136,10 +128,7 @@ mod tests {
     use crate::T1B1Buf;
 
     use std::{
-        io::{
-            self,
-            Write,
-        },
+        io::{self, Write},
         time::Instant,
     };
 
@@ -187,7 +176,7 @@ mod tests {
     #[test]
     fn convert_range_to_trits() {
         let now = Instant::now();
-        for num in -100000..100000 {
+        for num in -100_000..100_000 {
             let buff = TritBuf::<T1B1Buf>::try_from(num);
             let converted_num = i64::try_from(buff.unwrap()).unwrap();
             assert_eq!(converted_num, num);

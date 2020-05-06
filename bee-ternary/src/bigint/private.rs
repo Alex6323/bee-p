@@ -1,7 +1,4 @@
-use crate::bigint::common::{
-    BigEndian,
-    LittleEndian,
-};
+use crate::bigint::common::{BigEndian, LittleEndian};
 
 pub trait Sealed {}
 

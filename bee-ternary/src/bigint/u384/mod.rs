@@ -1,30 +1,12 @@
-use byteorder::{
-    self,
-    ByteOrder,
-};
-use std::cmp::Ordering;
-use std::convert::TryFrom;
-use std::fmt;
-use std::marker::PhantomData;
+use byteorder::{self, ByteOrder};
+use std::{cmp::Ordering, convert::TryFrom, fmt, marker::PhantomData};
 
 use crate::{
     bigint::{
-        common::{
-            BigEndian,
-            BinaryRepresentation,
-            Error,
-            LittleEndian,
-            U32Repr,
-            U8Repr,
-        },
+        common::{BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr},
         t243,
-        utils::{
-            OverflowingAddExt,
-            SplitInteger,
-        },
-        I384,
-        T242,
-        T243,
+        utils::{OverflowingAddExt, SplitInteger},
+        I384, T242, T243,
     },
     Utrit,
 };
@@ -32,31 +14,9 @@ use crate::{
 mod constants;
 
 pub use constants::{
-    BE_U32_0,
-    BE_U32_1,
-    BE_U32_2,
-    BE_U32_HALF_MAX,
-    BE_U32_HALF_MAX_T242,
-    BE_U32_MAX,
-    BE_U8_0,
-    BE_U8_1,
-    BE_U8_2,
-    // BE_U8_HALF_MAX,
-    BE_U8_MAX,
-    LE_U32_0,
-    LE_U32_1,
-    LE_U32_2,
-    LE_U32_HALF_MAX,
-    LE_U32_HALF_MAX_T242,
-    LE_U32_NEG_HALF_MAX_T242,
-    LE_U32_ONLY_T243_OCCUPIED,
-    LE_U32_MAX,
-    LE_U32_MAX_T242,
-    LE_U8_0,
-    LE_U8_1,
-    LE_U8_2,
-    // LE_U8_HALF_MAX,
-    LE_U8_MAX,
+    BE_U32_0, BE_U32_1, BE_U32_2, BE_U32_HALF_MAX, BE_U32_HALF_MAX_T242, BE_U32_MAX, BE_U8_0, BE_U8_1, BE_U8_2,
+    BE_U8_MAX, LE_U32_0, LE_U32_1, LE_U32_2, LE_U32_HALF_MAX, LE_U32_HALF_MAX_T242, LE_U32_MAX, LE_U32_MAX_T242,
+    LE_U32_NEG_HALF_MAX_T242, LE_U32_ONLY_T243_OCCUPIED, LE_U8_0, LE_U8_1, LE_U8_2, LE_U8_MAX,
 };
 
 #[derive(Clone, Copy)]
@@ -333,7 +293,7 @@ impl U384<LittleEndian, U32Repr> {
     /// ```
     pub fn try_from_t243(trits: T243<Utrit>) -> Result<Self, Error> {
         if trits > *t243::UTRIT_U384_MAX {
-            Err(Error::TernaryExceedsBinaryRange)?
+            return Err(Error::TernaryExceedsBinaryRange);
         }
 
         // The accumulator is a little endian bigint using `u32` as an internal representation

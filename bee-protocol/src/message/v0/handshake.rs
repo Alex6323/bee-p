@@ -50,10 +50,10 @@ impl Handshake {
         self_coordinator.copy_from_slice(coordinator);
 
         Self {
-            port: port,
-            timestamp: timestamp,
+            port,
+            timestamp,
             coordinator: self_coordinator,
-            minimum_weight_magnitude: minimum_weight_magnitude,
+            minimum_weight_magnitude,
             supported_versions: supported_versions.to_vec(),
         }
     }

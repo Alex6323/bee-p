@@ -59,7 +59,7 @@ macro_rules! def_and_impl_ternary {
                     match trit.checked_increment() {
                         Some(increment) => {
                             *trit = increment;
-                            return false
+                            return false;
                         }
 
                         None => *trit = Btrit::NegOne,
@@ -109,7 +109,7 @@ macro_rules! def_and_impl_ternary {
                     match trit.checked_increment() {
                         Some(increment) => {
                             *trit = increment;
-                            return false
+                            return false;
                         }
 
                         None => *trit = Utrit::Zero,
@@ -172,10 +172,10 @@ macro_rules! def_and_impl_ternary {
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 use Ordering::Equal;
                 for (a, b) in self.0.trits().zip(other.0.trits()).rev() {
-                     match a.cmp(&b) {
-                         Equal => continue,
-                         other_ordering => return Some(other_ordering),
-                     }
+                    match a.cmp(&b) {
+                        Equal => continue,
+                        other_ordering => return Some(other_ordering),
+                    }
                 }
                 Some(Equal)
             }

@@ -16,7 +16,7 @@ macro_rules! test_binary_op {
 }
 
 macro_rules! test_binary_op_calc_result {
-    ( $( [ 
+    ( $( [
          $testname:ident,
          $lft_binop:ident, $lft_fst:ident, $lft_snd:ident,
          $rgt_binop:ident, $rgt_fst:ident, $rgt_snd:ident
@@ -49,7 +49,7 @@ macro_rules! endianness_roundtrip_test_function {
             let roundtripped = Into::<Root<$src_endian, $repr>>::into(converted);
             assert_eq!(roundtripped, original);
         }
-    }
+    };
 }
 
 macro_rules! test_endianness_roundtrip {
@@ -100,7 +100,7 @@ macro_rules! endianness_toggle_test_function {
             let converted = Into::<Root<$dst_endian, $repr>>::into(original);
             assert_eq!(converted, target);
         }
-    }
+    };
 }
 
 macro_rules! test_endianness_toggle {
@@ -164,7 +164,7 @@ macro_rules! repr_roundtrip_test_function {
             let roundtripped = Into::<Root<$endianness, $src_repr>>::into(converted);
             assert_eq!(roundtripped, original);
         }
-    }
+    };
 }
 
 macro_rules! test_repr_roundtrip {

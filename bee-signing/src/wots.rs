@@ -1,18 +1,7 @@
-use crate::{
-    IotaSeed,
-    PrivateKey,
-    PrivateKeyGenerator,
-    PublicKey,
-    RecoverableSignature,
-    Seed,
-    Signature,
-};
+use crate::{IotaSeed, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature};
 
 use bee_crypto::Sponge;
-use bee_ternary::{
-    TritBuf,
-    Trits,
-};
+use bee_ternary::{TritBuf, Trits};
 
 use std::marker::PhantomData;
 
@@ -94,7 +83,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
             .map_err(|_| Self::Error::FailedSpongeOperation)?;
 
         Ok(Self::PrivateKey {
-            state: state,
+            state,
             _sponge: PhantomData,
         })
     }
@@ -167,7 +156,7 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
 
     // TODO: enforce hash size ?
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
-        Ok(&signature.recover_public_key(message)?.state == &self.state)
+        Ok(signature.recover_public_key(message)?.state == self.state)
     }
 
     fn from_buf(state: TritBuf) -> Self {
@@ -252,15 +241,8 @@ mod tests {
 
     use super::*;
 
-    use bee_crypto::{
-        CurlP27,
-        CurlP81,
-        Kerl,
-    };
-    use bee_ternary::{
-        T1B1Buf,
-        TryteBuf,
-    };
+    use bee_crypto::{CurlP27, CurlP81, Kerl};
+    use bee_ternary::{T1B1Buf, TryteBuf};
 
     const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
     const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";

@@ -1,23 +1,14 @@
-use bee_bundle::{
-    Address,
-    TransactionField,
-};
-use bee_ternary::{
-    T1B1Buf,
-    TryteBuf,
-};
+use bee_bundle::{Address, TransactionField};
+use bee_ternary::{T1B1Buf, TryteBuf};
 
 use std::{
     collections::HashMap,
     fs::File,
-    io::{
-        BufRead,
-        BufReader,
-    },
+    io::{BufRead, BufReader},
 };
 
 // TODO export ?
-pub const IOTA_SUPPLY: u64 = 2779530283277761;
+pub const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 #[derive(Debug)]
 pub enum SnapshotStateError {

@@ -1,14 +1,8 @@
-use byteorder::{
-    self,
-    ByteOrder,
-};
+use byteorder::{self, ByteOrder};
 
 use std::{
     cmp::Ordering,
-    convert::{
-        TryFrom,
-        TryInto,
-    },
+    convert::{TryFrom, TryInto},
     fmt,
     marker::PhantomData,
 };
@@ -16,54 +10,21 @@ use std::{
 use crate::{
     bigint::{
         common::{
-            BigEndian,
-            BinaryRepresentation,
-            Error,
-            LittleEndian,
-            U32Repr,
-            U8Repr,
-            BINARY_LEN_IN_U32 as LEN_IN_U32,
+            BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr, BINARY_LEN_IN_U32 as LEN_IN_U32,
             BINARY_LEN_IN_U8 as LEN_IN_U8,
         },
         u384,
         utils::OverflowingAddExt,
-        T242,
-        T243,
-        U384,
+        T242, T243, U384,
     },
     Btrit,
 };
 
 mod constants;
 pub use constants::{
-    BE_U32_0,
-    BE_U32_1,
-    BE_U32_2,
-    BE_U32_MAX,
-    BE_U32_MIN,
-    BE_U32_NEG_1,
-    BE_U32_NEG_2,
-    BE_U8_0,
-    BE_U8_1,
-    BE_U8_2,
-    BE_U8_MAX,
-    BE_U8_MIN,
-    BE_U8_NEG_1,
-    BE_U8_NEG_2,
-    LE_U32_0,
-    LE_U32_1,
-    LE_U32_2,
-    LE_U32_MAX,
-    LE_U32_MIN,
-    LE_U32_NEG_1,
-    LE_U32_NEG_2,
-    LE_U8_0,
-    LE_U8_1,
-    LE_U8_2,
-    LE_U8_MAX,
-    LE_U8_MIN,
-    LE_U8_NEG_1,
-    LE_U8_NEG_2,
+    BE_U32_0, BE_U32_1, BE_U32_2, BE_U32_MAX, BE_U32_MIN, BE_U32_NEG_1, BE_U32_NEG_2, BE_U8_0, BE_U8_1, BE_U8_2,
+    BE_U8_MAX, BE_U8_MIN, BE_U8_NEG_1, BE_U8_NEG_2, LE_U32_0, LE_U32_1, LE_U32_2, LE_U32_MAX, LE_U32_MIN, LE_U32_NEG_1,
+    LE_U32_NEG_2, LE_U8_0, LE_U8_1, LE_U8_2, LE_U8_MAX, LE_U8_MIN, LE_U8_NEG_1, LE_U8_NEG_2,
 };
 
 /// A biginteger encoding a signed integer with 384 bits.

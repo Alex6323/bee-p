@@ -1,10 +1,7 @@
-use std::convert::{
-    Infallible,
-    TryInto,
-};
+use std::convert::{Infallible, TryInto};
 
 use crate::Sponge;
-use bee_ternary::{Btrit, Trits, TritBuf};
+use bee_ternary::{Btrit, TritBuf, Trits};
 
 /// The length of a hash as returned by the hash functions implemented in this RFC (in
 /// units of binary-coded, balanced trits).
@@ -13,7 +10,7 @@ const HASH_LEN: usize = 243;
 /// The length internal state of the `CurlP` sponge construction (in units of binary-coded,
 /// balanced trits).
 const STATE_LEN: usize = HASH_LEN * 3;
-const HALF_STATE_LEN: usize =STATE_LEN / 2;
+const HALF_STATE_LEN: usize = STATE_LEN / 2;
 
 const TRUTH_TABLE: [i8; 11] = [1, 0, -1, 2, 1, -1, 0, 2, -1, 1, 0];
 
@@ -60,22 +57,31 @@ impl CurlP {
 
             // Unwrapping here and below is acceptable because we have verified that
             // `calculate_truth_table_index` and `TRUTH_TABLE` always yield a value in {-1, 0, 1}
-            output.set(0, TRUTH_TABLE[
-                calculate_truth_table_index(input, 0, HALF_STATE_LEN)
-            ].try_into().unwrap());
+            output.set(
+                0,
+                TRUTH_TABLE[calculate_truth_table_index(input, 0, HALF_STATE_LEN)]
+                    .try_into()
+                    .unwrap(),
+            );
 
             for state_index in 0..HALF_STATE_LEN {
                 let left_idx = HALF_STATE_LEN - state_index;
                 let right_idx = STATE_LEN - state_index - 1;
 
-                output.set(2 * state_index + 1, TRUTH_TABLE[
-                    calculate_truth_table_index(input, left_idx, right_idx)
-                ].try_into().unwrap());
+                output.set(
+                    2 * state_index + 1,
+                    TRUTH_TABLE[calculate_truth_table_index(input, left_idx, right_idx)]
+                        .try_into()
+                        .unwrap(),
+                );
 
                 let left_idx = left_idx - 1;
-                output.set(2 * state_index + 2, TRUTH_TABLE[
-                    calculate_truth_table_index(input, right_idx, left_idx)
-                ].try_into().unwrap());
+                output.set(
+                    2 * state_index + 2,
+                    TRUTH_TABLE[calculate_truth_table_index(input, right_idx, left_idx)]
+                        .try_into()
+                        .unwrap(),
+                );
             }
         }
 
@@ -117,9 +123,7 @@ impl Sponge for CurlP {
 
     /// Reset the internal state by overwriting it with zeros.
     fn reset(&mut self) {
-        self
-            .state
-            .fill(Btrit::Zero);
+        self.state.fill(Btrit::Zero);
     }
 
     /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill
@@ -205,40 +209,29 @@ forward_sponge_impl!(CurlP27, CurlP81);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bee_ternary::{
-        T1B1,
-        T1B1Buf,
-        T3B1Buf,
-        TryteBuf,
-    };
+    use bee_ternary::{T1B1Buf, T3B1Buf, TryteBuf, T1B1};
 
     const INPUT_TRITS: &[i8] = &[
-        -1,  1, -1, -1,  1, -1,  1,  1,  0, -1,  0,  0,  1,  0,  1,  0,  0,  0, -1, -1, -1, -1,  0,  0,
-        -1,  0,  0,  1,  0,  0, -1,  0,  0,  1, -1, -1,  1, -1,  1, -1, -1,  1,  0,  1,  0,  0,  0,  1,
-        -1,  0, -1,  1, -1, -1,  0,  0,  0, -1,  0,  0,  1, -1, -1,  0,  0,  0, -1,  0,  0,  0, -1, -1,
-         0,  1,  1, -1,  1,  1,  1,  1, -1,  0, -1,  0, -1,  0, -1,  0, -1, -1, -1, -1,  0,  1, -1,  0,
-        -1, -1,  0,  0,  0,  0,  0,  1,  1,  0,  1, -1,  0, -1, -1, -1,  0,  0,  1,  0, -1, -1, -1, -1,
-         0, -1, -1, -1,  0, -1,  0,  0, -1,  1,  1, -1, -1,  1,  1, -1,  1, -1,  1,  0, -1,  1, -1, -1,
-        -1,  0,  1,  1,  0, -1,  0,  1,  0,  0,  1,  1,  0,  0, -1, -1,  1,  0,  0,  0,  0, -1,  1,  0,
-         1,  0,  0,  0,  1, -1,  1, -1,  0,  0, -1,  1,  1, -1,  0,  0,  1, -1,  0,  1,  0, -1,  1, -1,
-         0,  0,  1, -1, -1, -1,  0,  1,  0, -1, -1,  0,  1,  0,  0,  0,  1, -1,  1, -1,  0,  1, -1, -1,
-         0,  0,  0, -1, -1,  1,  1,  0,  1, -1,  0,  0,  0, -1,  0, -1,  0, -1, -1, -1, -1,  0,  1, -1,
-        -1,  0,  1,
+        -1, 1, -1, -1, 1, -1, 1, 1, 0, -1, 0, 0, 1, 0, 1, 0, 0, 0, -1, -1, -1, -1, 0, 0, -1, 0, 0, 1, 0, 0, -1, 0, 0,
+        1, -1, -1, 1, -1, 1, -1, -1, 1, 0, 1, 0, 0, 0, 1, -1, 0, -1, 1, -1, -1, 0, 0, 0, -1, 0, 0, 1, -1, -1, 0, 0, 0,
+        -1, 0, 0, 0, -1, -1, 0, 1, 1, -1, 1, 1, 1, 1, -1, 0, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, 0, 1, -1, 0, -1, -1,
+        0, 0, 0, 0, 0, 1, 1, 0, 1, -1, 0, -1, -1, -1, 0, 0, 1, 0, -1, -1, -1, -1, 0, -1, -1, -1, 0, -1, 0, 0, -1, 1, 1,
+        -1, -1, 1, 1, -1, 1, -1, 1, 0, -1, 1, -1, -1, -1, 0, 1, 1, 0, -1, 0, 1, 0, 0, 1, 1, 0, 0, -1, -1, 1, 0, 0, 0,
+        0, -1, 1, 0, 1, 0, 0, 0, 1, -1, 1, -1, 0, 0, -1, 1, 1, -1, 0, 0, 1, -1, 0, 1, 0, -1, 1, -1, 0, 0, 1, -1, -1,
+        -1, 0, 1, 0, -1, -1, 0, 1, 0, 0, 0, 1, -1, 1, -1, 0, 1, -1, -1, 0, 0, 0, -1, -1, 1, 1, 0, 1, -1, 0, 0, 0, -1,
+        0, -1, 0, -1, -1, -1, -1, 0, 1, -1, -1, 0, 1,
     ];
 
     const EXPECTED_CURLP27_HASH_TRITS: &[i8] = &[
-        -1, -1, -1, -1,  0,  0,  1,  1, -1,  1,  1,  0, -1,  1,  0,  1,  0,  0,  1,  0, -1,  1,  1, -1,
-        -1, -1,  0,  1,  0,  1, -1, -1,  1, -1, -1, -1, -1,  1,  1,  1,  1, -1,  1,  1,  1, -1,  0,  1,
-        -1,  1,  0,  0,  1, -1,  1, -1,  1,  0,  1,  0,  0,  1, -1,  1,  1, -1,  0,  0,  1,  1, -1,  0,
-         1,  0, -1,  0,  0,  1, -1, -1, -1,  0,  0, -1,  1,  0,  0, -1,  1,  1,  1,  0,  1,  0,  1,  0,
-         1,  0,  1, -1,  1,  0, -1,  1,  0,  1,  1,  0,  0, -1,  1, -1,  1,  0, -1,  0,  1,  0,  1, -1,
-         1, -1,  0,  1,  0,  1,  1,  1, -1,  0,  1, -1,  0,  0,  0,  1,  0, -1,  0, -1,  0, -1, -1,  1,
-        -1,  1,  1,  0, -1,  1,  0, -1,  1,  0,  1, -1,  0,  0,  0, -1,  0,  0, -1,  0, -1, -1,  0,  0,
-        -1, -1,  1,  1, -1, -1, -1,  0, -1,  0, -1, -1,  1, -1, -1, -1, -1,  0,  1,  0,  0,  1,  0,  1,
-         1,  0,  1, -1,  1,  0,  1, -1, -1, -1, -1,  1,  0,  0, -1,  1,  1,  1, -1,  1,  0, -1,  0,  1,
-        -1,  1,  1,  1,  0,  1,  1,  0, -1,  0,  1,  1, -1,  0, -1,  0,  1,  0,  0,  1,  1,  1, -1,  0,
-         1, -1,  0,
-];
+        -1, -1, -1, -1, 0, 0, 1, 1, -1, 1, 1, 0, -1, 1, 0, 1, 0, 0, 1, 0, -1, 1, 1, -1, -1, -1, 0, 1, 0, 1, -1, -1, 1,
+        -1, -1, -1, -1, 1, 1, 1, 1, -1, 1, 1, 1, -1, 0, 1, -1, 1, 0, 0, 1, -1, 1, -1, 1, 0, 1, 0, 0, 1, -1, 1, 1, -1,
+        0, 0, 1, 1, -1, 0, 1, 0, -1, 0, 0, 1, -1, -1, -1, 0, 0, -1, 1, 0, 0, -1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, -1,
+        1, 0, -1, 1, 0, 1, 1, 0, 0, -1, 1, -1, 1, 0, -1, 0, 1, 0, 1, -1, 1, -1, 0, 1, 0, 1, 1, 1, -1, 0, 1, -1, 0, 0,
+        0, 1, 0, -1, 0, -1, 0, -1, -1, 1, -1, 1, 1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 0, 0, -1, 0, 0, -1, 0, -1, -1, 0,
+        0, -1, -1, 1, 1, -1, -1, -1, 0, -1, 0, -1, -1, 1, -1, -1, -1, -1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, -1, 1, 0, 1,
+        -1, -1, -1, -1, 1, 0, 0, -1, 1, 1, 1, -1, 1, 0, -1, 0, 1, -1, 1, 1, 1, 0, 1, 1, 0, -1, 0, 1, 1, -1, 0, -1, 0,
+        1, 0, 0, 1, 1, 1, -1, 0, 1, -1, 0,
+    ];
 
     const INPUT_TRYTES: &str = "\
 RSWWSFXPQJUBJROQBRQZWZXZJWMUBVIVMHPPTYSNW9YQIQQF9RCSJJCVZG9ZWITXNCSBBDHEEKDRBHVTWCZ9SZOOZHVB\
@@ -285,19 +278,18 @@ KXRVLFETGUTUWBCNCC9DWO99JQTEI9YXVOZHWELSYP9SG9KN9WCKXOVTEFHFH9EFZJKFYCZKQPPBXYSG
         assert!(input_trytes.is_ok());
         let input_trytes = input_trytes.unwrap();
 
-        let input_trit_buf = input_trytes
-            .as_trits()
-            .encode::<T1B1Buf>();
+        let input_trit_buf = input_trytes.as_trits().encode::<T1B1Buf>();
 
         let expected_hash = TryteBuf::try_from_str(EXPECTED_CURLP27_HASH_TRYTES);
         assert!(expected_hash.is_ok());
         let expected_hash = expected_hash.unwrap();
 
         let calculated_hash = curlp27.digest(&input_trit_buf);
-        assert!(calculated_hash.is_ok(), "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail");
-        let calculated_hash = calculated_hash
-            .unwrap()
-            .encode::<T3B1Buf>();
+        assert!(
+            calculated_hash.is_ok(),
+            "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail"
+        );
+        let calculated_hash = calculated_hash.unwrap().encode::<T3B1Buf>();
 
         assert_eq!(calculated_hash.as_slice(), expected_hash.as_trits());
     }
@@ -306,15 +298,16 @@ KXRVLFETGUTUWBCNCC9DWO99JQTEI9YXVOZHWELSYP9SG9KN9WCKXOVTEFHFH9EFZJKFYCZKQPPBXYSG
     fn verify_curlp27_hash_trits() {
         let mut curlp27 = CurlP27::new();
 
-        let input_trits = unsafe {
-            Trits::<T1B1>::from_raw_unchecked(INPUT_TRITS, INPUT_TRITS.len())
-        };
+        let input_trits = unsafe { Trits::<T1B1>::from_raw_unchecked(INPUT_TRITS, INPUT_TRITS.len()) };
         let expected_hash = unsafe {
             Trits::<T1B1>::from_raw_unchecked(EXPECTED_CURLP27_HASH_TRITS, EXPECTED_CURLP27_HASH_TRITS.len())
         };
 
         let calculated_hash = curlp27.digest(&input_trits);
-        assert!(calculated_hash.is_ok(), "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail");
+        assert!(
+            calculated_hash.is_ok(),
+            "<CurlP27 as Sponge>::Error is Infallible and this assert should never fail"
+        );
         assert_eq!(expected_hash, &*calculated_hash.unwrap());
     }
 }

@@ -9,49 +9,23 @@
 
 use std::{
     cmp::Ordering,
-    convert::{
-        TryFrom,
-        TryInto,
-    },
+    convert::{TryFrom, TryInto},
 };
 
 use crate::{
-    raw::RawEncoding,
-    ShiftTernary,
-    Trit,
-    Trits,
-    TritBuf,
-    T1B1Buf,
-    Btrit,
-    Utrit,
     bigint::{
-        u384,
-        common::{
-            BigEndian,
-            Error,
-            LittleEndian,
-            U8Repr,
-            U32Repr,
-        },
-        I384,
-        T243,
-        U384,
+        common::{BigEndian, Error, LittleEndian, U32Repr, U8Repr},
+        u384, I384, T243, U384,
     },
+    raw::RawEncoding,
+    Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Trits, Utrit,
 };
 
 mod constants;
 
 pub use constants::{
-    BTRIT_ZERO,
-    BTRIT_ONE,
-    BTRIT_NEG_ONE,
-    BTRIT_MAX,
-    BTRIT_MIN,
-    UTRIT_ZERO,
-    UTRIT_ONE,
-    UTRIT_TWO,
-    UTRIT_U384_MAX,
-    UTRIT_U384_MAX_HALF,
+    BTRIT_MAX, BTRIT_MIN, BTRIT_NEG_ONE, BTRIT_ONE, BTRIT_ZERO, UTRIT_ONE, UTRIT_TWO, UTRIT_U384_MAX,
+    UTRIT_U384_MAX_HALF, UTRIT_ZERO,
 };
 
 def_and_impl_ternary!(T242, 242);
@@ -78,12 +52,11 @@ impl T242<Btrit> {
         let t243_btrit = t243_utrit.into_shifted();
         t243_btrit.into_t242()
     }
-    
     pub fn try_from_i384(value: I384<LittleEndian, U32Repr>) -> Result<Self, Error> {
         let mut unsigned_binary = value.as_u384();
         unsigned_binary.add_inplace(*u384::LE_U32_HALF_MAX_T242);
         if unsigned_binary > *u384::LE_U32_MAX_T242 {
-            Err(Error::BinaryExceedsTernaryRange)?
+            return Err(Error::BinaryExceedsTernaryRange);
         }
         let unsigned_ternary: T243<Utrit> = unsigned_binary.into();
         let signed_ternary = unsigned_ternary.into_shifted();

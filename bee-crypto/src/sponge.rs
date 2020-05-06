@@ -1,7 +1,4 @@
-use bee_ternary::{
-    TritBuf,
-    Trits,
-};
+use bee_ternary::{TritBuf, Trits};
 
 /// The common interface of cryptographic hash functions that follow the sponge construction,
 /// and that absorb and return binary-coded, balanced ternary.

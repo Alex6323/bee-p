@@ -1,13 +1,11 @@
-use crate::constants::{HASH_LEN, STATE_LEN, NUM_ROUNDS};
+use crate::constants::{HASH_LEN, NUM_ROUNDS, STATE_LEN};
 
 use bee_common::constants::NONCE_TRIT_LEN as NONCE_LEN;
 
-use crate::constants::*;
-use crate::cores::Cores;
-use crate::powcurlstate::PowCurlState;
-use crate::difficulty::Difficulty;
-use crate::input::InputTrits;
-use crate::nonce::NonceTrits;
+use crate::{
+    constants::*, cores::Cores, difficulty::Difficulty, input::InputTrits, nonce::NonceTrits,
+    powcurlstate::PowCurlState,
+};
 
 use std::sync::{Arc, RwLock};
 

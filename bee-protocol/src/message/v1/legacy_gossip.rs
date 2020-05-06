@@ -22,7 +22,7 @@ impl LegacyGossip {
     pub(crate) fn new(transaction: &[u8], hash: [u8; HASH_SIZE]) -> Self {
         Self {
             transaction: transaction.to_vec(),
-            hash: hash,
+            hash,
         }
     }
 }
