@@ -1,44 +1,23 @@
 use crate::{
-    message::TransactionBroadcast,
+    message::{uncompress_transaction_bytes, TransactionBroadcast},
     protocol::Protocol,
-    util::uncompress_transaction_bytes,
     worker::transaction::TinyHashCache,
 };
 
-use bee_bundle::{
-    Hash,
-    Transaction,
-    TransactionField,
-};
-use bee_crypto::{
-    CurlP81,
-    Sponge,
-};
+use bee_bundle::{Hash, Transaction, TransactionField};
+use bee_crypto::{CurlP81, Sponge};
 use bee_network::EndpointId;
 use bee_tangle::tangle;
-use bee_ternary::{
-    T1B1Buf,
-    T5B1Buf,
-    Trits,
-    T5B1,
-};
+use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     stream::StreamExt,
     SinkExt,
 };
-use log::{
-    debug,
-    error,
-    info,
-    warn,
-};
+use log::{debug, error, info, warn};
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -202,14 +181,8 @@ mod tests {
     use super::*;
 
     use crate::ProtocolConfigBuilder;
-    use async_std::task::{
-        block_on,
-        spawn,
-    };
-    use bee_network::{
-        NetworkConfigBuilder,
-        Url,
-    };
+    use async_std::task::{block_on, spawn};
+    use bee_network::{NetworkConfigBuilder, Url};
     use futures::sink::SinkExt;
 
     #[test]

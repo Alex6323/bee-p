@@ -3,6 +3,7 @@ use bee_common::constants::TRANSACTION_BYTE_LEN;
 const NON_PAYLOAD_SIZE: usize = 292;
 const MAX_PAYLOAD_SIZE: usize = 1312;
 
+// TODO should be sized ?
 pub(crate) fn compress_transaction_bytes(bytes: &[u8]) -> Vec<u8> {
     let mut trimmed_size = 0;
 

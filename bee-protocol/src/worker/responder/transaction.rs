@@ -1,33 +1,16 @@
 use crate::{
-    message::{
-        TransactionBroadcast,
-        TransactionRequest,
-    },
-    util::compress_transaction_bytes,
+    message::{compress_transaction_bytes, TransactionBroadcast, TransactionRequest},
     worker::SenderWorker,
 };
 
-use bee_bundle::{
-    Hash,
-    Transaction,
-    TransactionField,
-};
+use bee_bundle::{Hash, Transaction, TransactionField};
 use bee_network::EndpointId;
 use bee_tangle::tangle;
-use bee_ternary::{
-    T1B1Buf,
-    T5B1Buf,
-    TritBuf,
-    Trits,
-    T5B1,
-};
+use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 
 use bytemuck::cast_slice;
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     stream::StreamExt,
