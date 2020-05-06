@@ -1,5 +1,6 @@
-const VERSION_STING: u8 = 1 << 1;
-pub(crate) const SUPPORTED_VERSIONS: [u8; 1] = [VERSION_STING];
+use crate::message::{v0::MESSAGES_VERSION_0, v2::MESSAGES_VERSION_2};
+
+pub(crate) const MESSAGES_VERSIONS: [u8; 1] = [MESSAGES_VERSION_0 | MESSAGES_VERSION_2];
 
 fn common_supported_version(own_supported_versions: &[u8], supported_versions: &[u8]) -> Result<u8, u8> {
     let mut highest_supported_version: u8 = 0;
@@ -36,14 +37,14 @@ fn common_supported_version(own_supported_versions: &[u8], supported_versions: &
             }
         }
 
-        Err(highest + ((supported_versions.len() - 1) as u8 * 8))?;
+        return Err(highest + ((supported_versions.len() - 1) as u8 * 8));
     }
 
     Ok(highest_supported_version)
 }
 
-pub(crate) fn supported_version(supported_versions: &[u8]) -> Result<u8, u8> {
-    common_supported_version(&SUPPORTED_VERSIONS, supported_versions)
+pub(crate) fn messages_supported_version(supported_versions: &[u8]) -> Result<u8, u8> {
+    common_supported_version(&MESSAGES_VERSIONS, supported_versions)
 }
 
 #[cfg(test)]

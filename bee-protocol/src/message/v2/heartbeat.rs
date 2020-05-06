@@ -16,9 +16,9 @@ const CONSTANT_SIZE: usize = SOLID_MILESTONE_INDEX_SIZE + SNAPSHOT_MILESTONE_IND
 /// It also helps other nodes to know if they can ask it a specific transaction.
 #[derive(Clone, Default)]
 pub(crate) struct Heartbeat {
-    /// The index of the last solid milestone.
+    /// Index of the last solid milestone.
     pub(crate) solid_milestone_index: u32,
-    /// The index of the snapshotted milestone.
+    /// Index of the snapshotted milestone.
     pub(crate) snapshot_milestone_index: u32,
 }
 

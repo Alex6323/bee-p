@@ -1,22 +1,13 @@
 use crate::{
     config::slice_eq,
-    message::Handshake,
+    message::{messages_supported_version, Handshake},
     peer::Peer,
-    protocol::{
-        supported_version,
-        Protocol,
-    },
+    protocol::Protocol,
 };
 
-use bee_network::{
-    Origin,
-    Port,
-};
+use bee_network::{Origin, Port};
 
-use std::time::{
-    SystemTime,
-    UNIX_EPOCH,
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) enum HandshakeError {
     InvalidTimestampDiff(i64),
@@ -53,7 +44,7 @@ pub(crate) fn validate_handshake(peer: &Peer, handshake: Handshake) -> Result<()
         ))?
     }
 
-    if let Err(version) = supported_version(&handshake.supported_versions) {
+    if let Err(version) = messages_supported_version(&handshake.supported_versions) {
         Err(HandshakeError::UnsupportedVersion(version))?
     }
 

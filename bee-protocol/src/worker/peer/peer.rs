@@ -1,40 +1,23 @@
 use crate::{
     message::{
-        Handshake,
-        Header,
-        Heartbeat,
-        Message,
-        MilestoneRequest,
-        Tlv,
-        TransactionBroadcast,
-        TransactionRequest,
+        Handshake, Header, Heartbeat, Message, MilestoneRequest, Tlv, TransactionBroadcast, TransactionRequest,
+        MESSAGES_VERSIONS,
     },
     peer::Peer,
-    protocol::{
-        Protocol,
-        SUPPORTED_VERSIONS,
-    },
+    protocol::Protocol,
     worker::{
-        peer::validate_handshake,
-        MilestoneResponderWorkerEvent,
-        TransactionResponderWorkerEvent,
+        peer::validate_handshake, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent,
         TransactionWorkerEvent,
     },
 };
 
-use bee_network::{
-    Command::SendMessage,
-    Network,
-};
+use bee_network::{Command::SendMessage, Network};
 use bee_tangle::tangle;
 
 use std::sync::Arc;
 
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     sink::SinkExt,
@@ -98,7 +81,7 @@ impl PeerWorker {
                     1337,
                     &Protocol::get().config.coordinator.public_key_bytes,
                     Protocol::get().config.mwm,
-                    &SUPPORTED_VERSIONS,
+                    &MESSAGES_VERSIONS,
                 )),
                 responder: None,
             })
