@@ -1,10 +1,9 @@
 use serde::Deserialize;
 
-const CONFIG_META_FILE_PATH: &str = "./data/mainnet.snapshot.meta";
-const CONFIG_STATE_FILE_PATH: &str = "./data/mainnet.snapshot.state";
+const DEFAULT_META_FILE_PATH: &str = "./data/mainnet.snapshot.meta";
+const DEFAULT_STATE_FILE_PATH: &str = "./data/mainnet.snapshot.state";
 
 #[derive(Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SnapshotConfigBuilder {
     meta_file_path: Option<String>,
     state_file_path: Option<String>,
@@ -27,8 +26,8 @@ impl SnapshotConfigBuilder {
 
     pub fn build(self) -> SnapshotConfig {
         SnapshotConfig {
-            meta_file_path: self.meta_file_path.unwrap_or(CONFIG_META_FILE_PATH.to_string()),
-            state_file_path: self.state_file_path.unwrap_or(CONFIG_STATE_FILE_PATH.to_string()),
+            meta_file_path: self.meta_file_path.unwrap_or(DEFAULT_META_FILE_PATH.to_string()),
+            state_file_path: self.state_file_path.unwrap_or(DEFAULT_STATE_FILE_PATH.to_string()),
         }
     }
 }

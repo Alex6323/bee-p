@@ -2,11 +2,7 @@ mod config;
 mod constants;
 mod node;
 
-use config::{
-    NodeConfigBuilder,
-    CONFIG_PATH,
-};
-
+use config::{NodeConfigBuilder, CONFIG_PATH};
 use node::Node;
 
 use async_std::task::block_on;
@@ -30,7 +26,7 @@ fn main() {
 
     let (network, shutdown, receiver) = bee_network::init(config.network);
 
-    //TODO: proper shutdown
+    // TODO: proper shutdown
     let mut node = Node::new(config, network, shutdown, receiver);
 
     block_on(node.init());

@@ -13,15 +13,13 @@ peers     = [ "tcp://[::1]:15600" ]
 
 [protocol]
 mwm = 14
-
 [protocol.coordinator]
-depth         = 24
-publicKey     = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9"
-securityLevel = 2
-spongeType    = "kerl"
-
+depth           = 24
+public_key      = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9"
+security_level  = 2
+sponge_type     = "kerl"
 [protocol.workers]
 
 [snapshot]
-metaFilePath  = "./data/mainnet.snapshot.meta"
-stateFilePath = "./data/mainnet.snapshot.state"
+meta_file_path  = "./data/mainnet.snapshot.meta"
+state_file_path = "./data/mainnet.snapshot.state"

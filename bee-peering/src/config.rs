@@ -1,12 +1,8 @@
-use crate::r#static::{
-    StaticPeeringConfig,
-    StaticPeeringConfigBuilder,
-};
+use crate::r#static::{StaticPeeringConfig, StaticPeeringConfigBuilder};
 
 use serde::Deserialize;
 
 #[derive(Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct PeeringConfigBuilder {
     r#static: StaticPeeringConfigBuilder,
 }

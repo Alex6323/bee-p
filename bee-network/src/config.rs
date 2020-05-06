@@ -1,41 +1,11 @@
-use crate::address::{
-    Address,
-    Port,
-};
+use crate::address::{Address, Port};
 
 use serde::Deserialize;
 
-use std::net::{
-    IpAddr,
-    Ipv4Addr,
-};
+use std::net::{IpAddr, Ipv4Addr};
 
 const DEFAULT_BINDING_PORT: u16 = 15600;
 const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-
-/// Network configuration.
-#[derive(Clone, Copy, Debug)]
-pub struct NetworkConfig {
-    pub(crate) binding_port: u16,
-    pub(crate) binding_addr: IpAddr,
-}
-
-impl NetworkConfig {
-    /// Returns a builder for this config.
-    pub fn builder() -> NetworkConfigBuilder {
-        NetworkConfigBuilder {
-            binding_port: None,
-            binding_addr: None,
-        }
-    }
-
-    pub(crate) fn socket_addr(&self) -> Address {
-        match self.binding_addr {
-            IpAddr::V4(addr) => Address::from_v4_addr_and_port(addr, Port(self.binding_port)),
-            IpAddr::V6(addr) => Address::from_v6_addr_and_port(addr, Port(self.binding_port)),
-        }
-    }
-}
 
 /// Network configuration builder.
 #[derive(Default, Deserialize)]
@@ -72,6 +42,30 @@ impl NetworkConfigBuilder {
         NetworkConfig {
             binding_port: self.binding_port.unwrap_or(DEFAULT_BINDING_PORT),
             binding_addr: self.binding_addr.unwrap_or(DEFAULT_BINDING_ADDR),
+        }
+    }
+}
+
+/// Network configuration.
+#[derive(Clone, Copy, Debug)]
+pub struct NetworkConfig {
+    pub(crate) binding_port: u16,
+    pub(crate) binding_addr: IpAddr,
+}
+
+impl NetworkConfig {
+    /// Returns a builder for this config.
+    pub fn builder() -> NetworkConfigBuilder {
+        NetworkConfigBuilder {
+            binding_port: None,
+            binding_addr: None,
+        }
+    }
+
+    pub(crate) fn socket_addr(&self) -> Address {
+        match self.binding_addr {
+            IpAddr::V4(addr) => Address::from_v4_addr_and_port(addr, Port(self.binding_port)),
+            IpAddr::V6(addr) => Address::from_v6_addr_and_port(addr, Port(self.binding_port)),
         }
     }
 }

@@ -1,28 +1,15 @@
-use bee_network::{
-    NetworkConfig,
-    NetworkConfigBuilder,
-};
-use bee_peering::{
-    PeeringConfig,
-    PeeringConfigBuilder,
-};
-use bee_protocol::{
-    ProtocolConfig,
-    ProtocolConfigBuilder,
-};
-use bee_snapshot::{
-    SnapshotConfig,
-    SnapshotConfigBuilder,
-};
+use bee_network::{NetworkConfig, NetworkConfigBuilder};
+use bee_peering::{PeeringConfig, PeeringConfigBuilder};
+use bee_protocol::{ProtocolConfig, ProtocolConfigBuilder};
+use bee_snapshot::{SnapshotConfig, SnapshotConfigBuilder};
 
 use log;
 use serde::Deserialize;
 
 pub(crate) const CONFIG_PATH: &str = "./config.toml";
-const CONFIG_LOG_LEVEL: &str = "info";
+const DEFAULT_LOG_LEVEL: &str = "info";
 
 #[derive(Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct NodeConfigBuilder {
     log_level: Option<String>,
     network: NetworkConfigBuilder,
@@ -42,7 +29,7 @@ impl NodeConfigBuilder {
     }
 
     pub fn build(self) -> NodeConfig {
-        let log_level = match self.log_level.unwrap_or(CONFIG_LOG_LEVEL.to_owned()).as_str() {
+        let log_level = match self.log_level.unwrap_or(DEFAULT_LOG_LEVEL.to_owned()).as_str() {
             "trace" => log::LevelFilter::Trace,
             "debug" => log::LevelFilter::Debug,
             "info" => log::LevelFilter::Info,
