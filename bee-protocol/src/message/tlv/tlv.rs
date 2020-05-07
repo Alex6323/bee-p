@@ -23,8 +23,8 @@ impl Tlv {
     ///
     /// # Errors
     ///
-    /// * The advertised message type doesn't match the required message type.
-    /// * The advertised message length doesn't match the buffer length.
+    /// * The advertised message type does not match the required message type.
+    /// * The advertised message length does not match the buffer length.
     /// * The buffer length is not within the allowed size range of the required message type.
     pub(crate) fn from_bytes<M: Message>(header: &Header, bytes: &[u8]) -> Result<M, TlvError> {
         if header.message_type != M::ID {

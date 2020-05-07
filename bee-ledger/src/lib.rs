@@ -1,6 +1,3 @@
 mod worker;
 
-pub use worker::{
-    LedgerWorker,
-    LedgerWorkerEvent,
-};
+pub use worker::{LedgerWorker, LedgerWorkerEvent};

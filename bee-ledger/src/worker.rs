@@ -3,25 +3,18 @@ use bee_bundle::Address;
 use std::collections::HashMap;
 
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     stream::StreamExt,
 };
-use log::{
-    info,
-    warn,
-};
+use log::{info, warn};
 
 pub enum LedgerWorkerEvent {
     ApplyDiff(HashMap<Address, i64>),
     GetBalance(Address, oneshot::Sender<Option<u64>>),
 }
 
-#[derive(Default)]
 pub struct LedgerWorker {
     state: HashMap<Address, u64>,
 }
