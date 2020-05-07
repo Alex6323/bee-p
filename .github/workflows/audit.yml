@@ -7,6 +7,10 @@ on:
     paths:
       - "**/Cargo.lock"
       - "**/Cargo.toml"
+  pull_request:
+    paths:
+      - "**/Cargo.lock"
+      - "**/Cargo.toml"
 
 jobs:
   audit:
