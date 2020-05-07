@@ -1,4 +1,4 @@
-name: Security audit
+name: Audit
 
 on:
   schedule:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   audit:
-    name: Security audit
+    name: Audit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
