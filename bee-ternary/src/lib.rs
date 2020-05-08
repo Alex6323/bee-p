@@ -1,7 +1,4 @@
-use std::{
-    convert::TryFrom,
-    slice,
-};
+use std::{convert::TryFrom, slice};
 
 pub mod bigint;
 pub mod num_conversions;
@@ -17,67 +14,26 @@ pub mod tryte;
 #[cfg(feature = "serde1")]
 mod serde;
 
-use crate::raw::{
-    RawEncoding,
-    RawEncodingBuf,
-};
+use crate::raw::{RawEncoding, RawEncodingBuf};
 use std::{
     any,
-    borrow::{
-        Borrow,
-        BorrowMut,
-    },
-    cmp::{
-        self,
-        Ordering,
-    },
-    fmt,
-    hash,
+    borrow::{Borrow, BorrowMut},
+    cmp::{self, Ordering},
+    fmt, hash,
     iter::FromIterator,
-    ops::{
-        Deref,
-        DerefMut,
-        Index,
-        IndexMut,
-        Range,
-    },
+    ops::{Deref, DerefMut, Index, IndexMut, Range},
     ptr,
 };
 
 // Reexports
 pub use crate::{
-    t1b1::{
-        T1B1Buf,
-        T1B1,
-    },
-    t2b1::{
-        T2B1Buf,
-        T2B1,
-    },
-    t3b1::{
-        T3B1Buf,
-        T3B1,
-    },
-    t4b1::{
-        T4B1Buf,
-        T4B1,
-    },
-    t5b1::{
-        T5B1Buf,
-        T5B1,
-    },
-    trit::{
-        Btrit,
-        ShiftTernary,
-        Trit,
-        Utrit,
-    },
-    tryte::{
-        Tryte,
-        TryteBuf,
-        MAX_TRYTE_VALUE,
-        MIN_TRYTE_VALUE,
-    },
+    t1b1::{T1B1Buf, T1B1},
+    t2b1::{T2B1Buf, T2B1},
+    t3b1::{T3B1Buf, T3B1},
+    t4b1::{T4B1Buf, T4B1},
+    t5b1::{T5B1Buf, T5B1},
+    trit::{Btrit, ShiftTernary, Trit, Utrit},
+    tryte::{Tryte, TryteBuf, MAX_TRYTE_VALUE, MIN_TRYTE_VALUE},
 };
 
 #[derive(Debug)]

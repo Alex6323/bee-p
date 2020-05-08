@@ -1,27 +1,10 @@
 use crate::constants::{
-    ADDRESS,
-    ADDRESS_TRIT_LEN,
-    HASH_TRIT_LEN,
-    NONCE,
-    NONCE_TRIT_LEN,
-    PAYLOAD,
-    PAYLOAD_TRIT_LEN,
-    TAG,
-    TAG_TRIT_LEN,
+    ADDRESS, ADDRESS_TRIT_LEN, HASH_TRIT_LEN, NONCE, NONCE_TRIT_LEN, PAYLOAD, PAYLOAD_TRIT_LEN, TAG, TAG_TRIT_LEN,
 };
 
-use bee_ternary::{
-    T1B1Buf,
-    TritBuf,
-    Trits,
-    T1B1,
-};
+use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
-use std::{
-    cmp::PartialEq,
-    fmt,
-    hash,
-};
+use std::{cmp::PartialEq, fmt, hash};
 
 #[derive(Debug)]
 pub enum TransactionFieldError {
@@ -165,7 +148,7 @@ impl Hash {
             if self.0[i] != 0 {
                 break;
             }
-            weight = weight + 1;
+            weight += 1;
         }
 
         weight

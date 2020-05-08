@@ -1,33 +1,11 @@
 use crate::{
-    constants::{
-        ADDRESS,
-        INDEX,
-        IOTA_SUPPLY,
-        LAST_INDEX,
-        OBSOLETE_TAG,
-        TIMESTAMP,
-        VALUE,
-    },
+    constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
     transaction::{
-        Address,
-        Hash,
-        Index,
-        Nonce,
-        Payload,
-        Tag,
-        Timestamp,
-        Transaction,
-        TransactionError,
-        TransactionField,
-        Value,
+        Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionError, TransactionField, Value,
     },
 };
 
-use bee_ternary::{
-    Btrit,
-    T1B1Buf,
-    TritBuf,
-};
+use bee_ternary::{Btrit, T1B1Buf, TritBuf};
 
 #[derive(Default)]
 pub struct TransactionBuilder {
@@ -175,11 +153,11 @@ impl TransactionBuilder {
         let address = self.address.ok_or(TransactionError::MissingField("address"))?;
 
         if value.abs() > IOTA_SUPPLY {
-            Err(TransactionError::InvalidValue(value))?;
+            return Err(TransactionError::InvalidValue(value));
         }
 
         if value != 0 && address.to_inner().get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero {
-            Err(TransactionError::InvalidAddress)?;
+            return Err(TransactionError::InvalidAddress);
         }
 
         Ok(Transaction {
@@ -229,10 +207,7 @@ mod tests {
 
     use crate::constants::TRANSACTION_TRIT_LEN;
 
-    use bee_ternary::{
-        Trits,
-        T1B1,
-    };
+    use bee_ternary::{Trits, T1B1};
 
     #[test]
     fn create_transaction_from_builder() {

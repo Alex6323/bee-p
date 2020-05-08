@@ -1,6 +1,5 @@
-use std::convert::TryFrom;
-use std::fmt;
-use super::{Trit, Utrit, ShiftTernary};
+use super::{ShiftTernary, Trit, Utrit};
+use std::{convert::TryFrom, fmt};
 
 #[repr(i8)]
 #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -57,7 +56,7 @@ impl TryFrom<i8> for Btrit {
             -1 => Btrit::NegOne,
             0 => Btrit::Zero,
             1 => Btrit::PlusOne,
-            _ => Err(())?,
+            _ => return Err(()),
         };
         Ok(converted)
     }
@@ -70,7 +69,7 @@ impl TryFrom<u8> for Btrit {
         let converted = match x {
             0 => Btrit::Zero,
             1 => Btrit::PlusOne,
-            _ => Err(())?,
+            _ => return Err(()),
         };
         Ok(converted)
     }

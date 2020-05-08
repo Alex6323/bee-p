@@ -64,8 +64,7 @@ impl PearlDiver {
                             break;
                         } else {
                             if {
-                                let exhausted = inner_increment(&mut state_thr);
-                                exhausted
+                                inner_increment(&mut state_thr);
                             } {
                                 break;
                             }
@@ -154,7 +153,7 @@ fn make_prestate(input: &InputTrits) -> PowCurlState {
         offset += 1;
     }
 
-    prestate.set(CHUNK_NONCE_START + 0, H0, L0);
+    prestate.set(CHUNK_NONCE_START, H0, L0);
     prestate.set(CHUNK_NONCE_START + 1, H1, L1);
     prestate.set(CHUNK_NONCE_START + 2, H2, L2);
     prestate.set(CHUNK_NONCE_START + 3, H3, L3);
@@ -173,7 +172,7 @@ unsafe fn transform(pre: &mut PowCurlState, tmp: &mut PowCurlState) {
 
     for _ in 0..(NUM_ROUNDS - 1) {
         for j in 0..STATE_LEN {
-            let index1 = INDICES[j + 0];
+            let index1 = INDICES[j];
             let index2 = INDICES[j + 1];
 
             let alpha = *lpre.offset(index1);
@@ -197,7 +196,7 @@ unsafe fn transform(pre: &mut PowCurlState, tmp: &mut PowCurlState) {
 
     // NOTE: Since we don't compute a new state after that, we stop after 'HASH_LEN'.
     for j in 0..HASH_LEN {
-        let index1 = INDICES[j + 0];
+        let index1 = INDICES[j];
         let index2 = INDICES[j + 1];
 
         let alpha = *lpre.offset(index1);
@@ -237,10 +236,9 @@ fn find_nonce(state: &PowCurlState, difficulty: &Difficulty) -> Option<NonceTrit
 /// Extracts the nonce from the final Curl state and the given slot index.
 fn extract_nonce(state: &PowCurlState, slot: usize) -> NonceTrits {
     let mut nonce = [0; NONCE_LEN];
-    let mut offset = 0;
     let slotmask = 1 << slot;
 
-    for i in CHUNK_NONCE_START..HASH_LEN {
+    for (offset, i) in (CHUNK_NONCE_START..HASH_LEN).enumerate() {
         let (hi, lo) = state.get(i);
 
         match (hi & slotmask, lo & slotmask) {
@@ -248,7 +246,6 @@ fn extract_nonce(state: &PowCurlState, slot: usize) -> NonceTrits {
             (0, 1) => nonce[offset] = -1,
             (_, _) => (),
         }
-        offset += 1;
     }
 
     NonceTrits(nonce)

@@ -1,12 +1,6 @@
-use crate::{
-    address::url::Url,
-    endpoint::EndpointId,
-};
+use crate::{address::url::Url, endpoint::EndpointId};
 
-use futures::channel::{
-    mpsc,
-    oneshot,
-};
+use futures::channel::{mpsc, oneshot};
 
 use std::fmt;
 
@@ -136,10 +130,7 @@ mod tests {
     use super::*;
     use async_std::{
         prelude::*,
-        task::{
-            block_on,
-            spawn,
-        },
+        task::{block_on, spawn},
     };
     use futures::sink::SinkExt;
 
@@ -165,7 +156,7 @@ mod tests {
                         assert_eq!(URL, url.to_string(), "Unexpected URL");
                         received_command = true;
                     }
-                    _ => assert!(false, "Wrong command received"),
+                    _ => unreachable!("Wrong command received"),
                 }
             }
             assert!(received_command, "Command was not received");
@@ -203,7 +194,7 @@ mod tests {
                             responder.send(true).unwrap();
                         }
                     }
-                    _ => assert!(false, "Wrong command received"),
+                    _ => unreachable!("Wrong command received"),
                 }
             }
             assert!(received_command, "Command was not received");
