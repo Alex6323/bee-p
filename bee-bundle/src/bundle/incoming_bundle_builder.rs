@@ -1,22 +1,11 @@
 use crate::{
     bundle::Bundle,
     constants::IOTA_SUPPLY,
-    transaction::{
-        Transaction,
-        TransactionField,
-        Transactions,
-    },
+    transaction::{Transaction, TransactionField, Transactions},
 };
 
-use bee_crypto::{
-    Kerl,
-    Sponge,
-};
-use bee_signing::{
-    PublicKey,
-    Signature,
-    WotsPublicKey,
-};
+use bee_crypto::{Kerl, Sponge};
+use bee_signing::{PublicKey, Signature, WotsPublicKey};
 use bee_ternary::TritBuf;
 
 use std::marker::PhantomData;
@@ -90,10 +79,13 @@ where
         let signature = P::Signature::from_buf(TritBuf::new());
 
         match public_key.verify(&[], &signature) {
-            Ok(valid) => match valid {
-                true => Ok(()),
-                false => Err(IncomingBundleBuilderError::InvalidSignature),
-            },
+            Ok(valid) => {
+                if valid {
+                    Ok(())
+                } else {
+                    Err(IncomingBundleBuilderError::InvalidSignature)
+                }
+            }
             Err(_) => Err(IncomingBundleBuilderError::InvalidSignature),
         }
     }
@@ -104,7 +96,7 @@ where
         let mut sum: i64 = 0;
 
         if self.transactions.len() == 0 {
-            Err(IncomingBundleBuilderError::Empty)?;
+            return Err(IncomingBundleBuilderError::Empty);
         }
 
         let last_index = self.transactions.len() - 1;
@@ -117,36 +109,36 @@ where
 
         for (index, transaction) in self.transactions.0.iter().enumerate() {
             if index != *transaction.index().to_inner() {
-                Err(IncomingBundleBuilderError::InvalidIndex(
+                return Err(IncomingBundleBuilderError::InvalidIndex(
                     *transaction.index().to_inner(),
-                ))?;
+                ));
             }
 
             if last_index != *transaction.last_index().to_inner() {
-                Err(IncomingBundleBuilderError::InvalidLastIndex(
+                return Err(IncomingBundleBuilderError::InvalidLastIndex(
                     *transaction.last_index().to_inner(),
-                ))?;
+                ));
             }
 
             sum += *transaction.value.to_inner();
             if sum.abs() > IOTA_SUPPLY {
-                Err(IncomingBundleBuilderError::InvalidValue(sum))?;
+                return Err(IncomingBundleBuilderError::InvalidValue(sum));
             }
 
             if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec())
             {
-                Err(IncomingBundleBuilderError::InvalidBundleHash)?;
+                return Err(IncomingBundleBuilderError::InvalidBundleHash);
             }
 
             if index > 0 as usize && transaction.branch().ne(first_branch) {
-                Err(IncomingBundleBuilderError::InvalidBranchInconsistency)?;
+                return Err(IncomingBundleBuilderError::InvalidBranchInconsistency);
             }
 
             // TODO - for each transaction's hash check that it is its prev trunk
         }
 
         if sum != 0 {
-            Err(IncomingBundleBuilderError::InvalidValue(sum))?;
+            return Err(IncomingBundleBuilderError::InvalidValue(sum));
         }
 
         self.validate_signatures()?;
@@ -175,17 +167,7 @@ where
 mod tests {
 
     use super::*;
-    use crate::transaction::{
-        Address,
-        Hash,
-        Index,
-        Nonce,
-        Payload,
-        Tag,
-        Timestamp,
-        TransactionBuilder,
-        Value,
-    };
+    use crate::transaction::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, Value};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
         TransactionBuilder::new()

@@ -1,10 +1,4 @@
-use crate::transaction::{
-    Address,
-    Hash,
-    Transaction,
-    TransactionField,
-    Transactions,
-};
+use crate::transaction::{Address, Hash, Transaction, TransactionField, Transactions};
 
 use std::collections::HashMap;
 
@@ -79,7 +73,7 @@ impl<'a> IntoIterator for &'a Bundle {
 
     // TODO TEST
     fn into_iter(self) -> Self::IntoIter {
-        (&(self.0).0).into_iter()
+        (&(self.0).0).iter()
     }
 }
 

@@ -1,34 +1,15 @@
 use crate::{
     bundle::Bundle,
-    constants::{
-        IOTA_SUPPLY,
-        PAYLOAD_TRIT_LEN,
-    },
+    constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
     transaction::{
-        Address,
-        Hash,
-        Index,
-        Payload,
-        Tag,
-        TransactionBuilder,
-        TransactionBuilders,
-        TransactionError,
-        TransactionField,
-        Transactions,
+        Address, Hash, Index, Payload, Tag, TransactionBuilder, TransactionBuilders, TransactionError,
+        TransactionField, Transactions,
     },
 };
 
-use bee_crypto::{
-    Kerl,
-    Sponge,
-};
+use bee_crypto::{Kerl, Sponge};
 use bee_signing::{
-    normalize_hash,
-    IotaSeed,
-    PrivateKey,
-    PrivateKeyGenerator,
-    Signature,
-    WotsPrivateKeyGeneratorBuilder,
+    normalize_hash, IotaSeed, PrivateKey, PrivateKeyGenerator, Signature, WotsPrivateKeyGeneratorBuilder,
     WotsSecurityLevel,
 };
 use bee_ternary::Btrit;
@@ -176,18 +157,18 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
         let last_index = self.builders.len() - 1;
 
         if self.builders.len() == 0 {
-            Err(OutgoingBundleBuilderError::Empty)?;
+            return Err(OutgoingBundleBuilderError::Empty);
         }
 
         for (index, builder) in self.builders.0.iter_mut().enumerate() {
             if builder.payload.is_none() {
-                Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("payload"))?;
+                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("payload"));
             } else if builder.address.is_none() {
-                Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("address"))?;
+                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("address"));
             } else if builder.value.is_none() {
-                Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("value"))?;
+                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("value"));
             } else if builder.tag.is_none() {
-                Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("tag"))?;
+                return Err(OutgoingBundleBuilderError::MissingTransactionBuilderField("tag"));
             }
 
             builder.index.replace(Index::from_inner_unchecked(index));
@@ -196,12 +177,12 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
             // Safe to unwrap since we just checked it's not None
             sum += builder.value.as_ref().unwrap().to_inner();
             if sum.abs() > IOTA_SUPPLY {
-                Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
+                return Err(OutgoingBundleBuilderError::InvalidValue(sum));
             }
         }
 
         if sum != 0 {
-            Err(OutgoingBundleBuilderError::InvalidValue(sum))?;
+            return Err(OutgoingBundleBuilderError::InvalidValue(sum));
         }
 
         self.calculate_bundle_hash()?;
@@ -220,7 +201,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         for builder in &self.builders.0 {
             // Safe to unwrap since we made sure it's not None in `seal`
             if *builder.value.as_ref().unwrap().to_inner() < 0 {
-                Err(OutgoingBundleBuilderError::UnsignedInput)?;
+                return Err(OutgoingBundleBuilderError::UnsignedInput);
             }
         }
 
@@ -368,24 +349,9 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
 mod tests {
 
     use super::*;
-    use crate::transaction::{
-        Address,
-        Nonce,
-        Payload,
-        Tag,
-        Timestamp,
-        Value,
-    };
-    use bee_signing::{
-        PublicKey,
-        RecoverableSignature,
-        Seed,
-        WotsSignature,
-    };
-    use bee_ternary::{
-        T1B1Buf,
-        TritBuf,
-    };
+    use crate::transaction::{Address, Nonce, Payload, Tag, Timestamp, Value};
+    use bee_signing::{PublicKey, RecoverableSignature, Seed, WotsSignature};
+    use bee_ternary::{T1B1Buf, TritBuf};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
         TransactionBuilder::new()

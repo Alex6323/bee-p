@@ -13,24 +13,13 @@
 #![allow(dead_code, unused_imports)]
 
 use bee_network::{
-    Command::*,
-    EndpointId as EpId,
-    Event,
-    EventSubscriber as Events,
-    Network,
-    NetworkConfig,
-    NetworkConfigBuilder,
-    Origin,
-    Shutdown,
-    Url,
+    Command::*, EndpointId as EpId, Event, EventSubscriber as Events, Network, NetworkConfig, NetworkConfigBuilder,
+    Origin, Shutdown, Url,
 };
 
 use common::*;
 
-use async_std::task::{
-    self,
-    block_on,
-};
+use async_std::task::{self, block_on};
 use futures::prelude::*;
 use log::*;
 use structopt::StructOpt;
@@ -50,7 +39,7 @@ fn main() {
         .with_shutdown(shutdown)
         .build();
 
-    task::spawn(notification_handler(events, network.clone(), args.msg.clone()));
+    task::spawn(notification_handler(events, network, args.msg));
 
     block_on(node.init(config));
     block_on(node.shutdown());

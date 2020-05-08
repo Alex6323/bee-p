@@ -186,7 +186,7 @@ where
 
             state[ots_signature.size() + i * 243..ots_signature.size() + (i + 1) * 243]
                 .copy_from(&self.tree[sibling_index * 243..(sibling_index + 1) * 243]);
-            i = i + 1;
+            i += 1;
         }
 
         self.index += 1;
@@ -448,7 +448,7 @@ mod tests {
         let mut mss_private_key = mss_private_key_generator.generate(&seed, 0).unwrap();
         let mss_public_key = mss_private_key.generate_public_key().unwrap();
 
-        for _ in 0..(1 << DEPTH - 1) {
+        for _ in 0..1 << (DEPTH - 1) {
             let mss_signature = mss_private_key.sign(message_trits.as_i8_slice()).unwrap();
             let valid = mss_public_key
                 .verify(message_trits.as_i8_slice(), &mss_signature)
