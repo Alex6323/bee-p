@@ -103,5 +103,5 @@ pub trait StorageBackend {
 
 #[derive(Clone, Debug)]
 pub struct Storage<Conn: Connection> {
-    pub connection: Conn,
+    pub(crate) connection: Conn,
 }
