@@ -1,8 +1,9 @@
 #[cfg(test)]
 pub mod tests {
-    use crate::storage::StorageBackend;
+    use crate::storage::{HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap, StorageBackend};
 
-    use futures::{executor::block_on, future::join_all};
+    use bee_bundle::{Address, Hash};
+    use bee_test::field::rand_trits_field;
 
     use std::{
         collections::{HashMap, HashSet},
@@ -13,9 +14,7 @@ pub mod tests {
         time::Instant,
     };
 
-    use bee_bundle::{Address, Hash};
-
-    use crate::storage::{HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap};
+    use futures::{executor::block_on, future::join_all};
 
     pub trait TestableStorage {
         fn test_name() -> String;
@@ -215,8 +214,8 @@ pub mod tests {
             let mut all_transactions_hashes = HashSet::new();
 
             for i in 0..1200 {
-                let missing_tx_hash_trunk = bee_test::transaction::rand_trits_field::<Hash>();
-                let missing_tx_hash_branch = bee_test::transaction::rand_trits_field::<Hash>();
+                let missing_tx_hash_trunk = rand_trits_field::<Hash>();
+                let missing_tx_hash_branch = rand_trits_field::<Hash>();
                 let (tx_hash, tx) = match i % 3 {
                     0 => bee_test::transaction::create_random_attached_tx(
                         last_tx_hash.clone(),
@@ -411,13 +410,13 @@ pub mod tests {
             let mut addresses = HashSet::new();
             const NUM_BALANCES: usize = 1000;
             for _i in 0..NUM_BALANCES {
-                let address = bee_test::transaction::rand_trits_field::<Address>();
+                let address = rand_trits_field::<Address>();
                 addresses.insert(address.clone());
                 state_delta.address_to_delta.insert(address.clone(), _i as i64);
             }
 
             for _i in 0..NUM_BALANCES {
-                let address = bee_test::transaction::rand_trits_field::<Address>();
+                let address = rand_trits_field::<Address>();
                 addresses.insert(address.clone());
                 state_delta.address_to_delta.insert(address.clone(), _i as i64 * -1);
             }
