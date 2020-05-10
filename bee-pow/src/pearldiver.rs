@@ -63,9 +63,7 @@ impl PearlDiver {
                             *pdstate.write().unwrap() = PearlDiverState::Completed(Some(nonce));
                             break;
                         } else {
-                            if {
-                                inner_increment(&mut state_thr);
-                            } {
+                            if { inner_increment(&mut state_thr) } {
                                 break;
                             }
                         }
