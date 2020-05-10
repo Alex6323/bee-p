@@ -1,5 +1,5 @@
 [package]
-name = "bee-common"
+name = "bee-api"
 version = "0.1.0"
 authors = ["IOTA Stiftung"]
 edition = "2018"
@@ -7,9 +7,6 @@ description = ""
 readme = "README.md"
 repository = "https://github.com/iotaledger/bee"
 license = "Apache-2.0"
-keywords = ["iota", "tangle", "bee", "framework", "common"]
+keywords = ["iota", "tangle", "bee", "framework", "api"]
 
 [dependencies]
-env_logger = "0.7.1"
-log = "0.4.8"
-pretty_env_logger = "0.4.0"

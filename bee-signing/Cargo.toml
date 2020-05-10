@@ -1,8 +1,13 @@
 [package]
 name = "bee-signing"
 version = "0.1.0"
-authors = ["Thibault Martinez <thibault@iota.org>"]
+authors = ["IOTA Stiftung"]
 edition = "2018"
+description = ""
+readme = "README.md"
+repository = "https://github.com/iotaledger/bee"
+license = "Apache-2.0"
+keywords = ["iota", "tangle", "bee", "framework", "signing"]
 
 [dependencies]
 bee-crypto = { path = "../bee-crypto" }
