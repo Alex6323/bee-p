@@ -3,10 +3,7 @@ use crate::protocol::Protocol;
 use bee_tangle::tangle;
 
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     stream::StreamExt,

@@ -6,17 +6,11 @@ mod tests {
     use crate::sqlx::SqlxBackendStorage;
 
     use std::{
-        io::{
-            self,
-            Write,
-        },
+        io::{self, Write},
         process::Command,
     };
 
-    use crate::test::tests::{
-        StorageTestRunner,
-        TestableStorage,
-    };
+    use crate::test::tests::{StorageTestRunner, TestableStorage};
 
     impl TestableStorage for SqlxBackendStorage {
         fn test_name() -> String {

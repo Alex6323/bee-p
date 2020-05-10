@@ -1,60 +1,23 @@
 use crate::{
     config::NodeConfig,
-    constants::{
-        BEE_GIT_COMMIT,
-        BEE_NAME,
-        BEE_VERSION,
-    },
+    constants::{BEE_GIT_COMMIT, BEE_NAME, BEE_VERSION},
 };
 
 use bee_bundle::Hash;
 use bee_common::logger;
-use bee_ledger::{
-    LedgerWorker,
-    LedgerWorkerEvent,
-};
-use bee_network::{
-    Address,
-    Command::Connect,
-    EndpointId,
-    Event,
-    EventSubscriber,
-    Network,
-    Origin,
-    Shutdown,
-};
-use bee_peering::{
-    PeerManager,
-    StaticPeerManager,
-};
-use bee_protocol::{
-    Peer,
-    Protocol,
-};
-use bee_snapshot::{
-    SnapshotMetadata,
-    SnapshotState,
-};
+use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
+use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
+use bee_peering::{PeerManager, StaticPeerManager};
+use bee_protocol::{Peer, Protocol};
+use bee_snapshot::{SnapshotMetadata, SnapshotState};
 use bee_tangle::tangle;
 
-use std::{
-    collections::HashMap,
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
-use async_std::task::{
-    block_on,
-    spawn,
-};
-use chrono::{
-    offset::TimeZone,
-    Utc,
-};
+use async_std::task::{block_on, spawn};
+use chrono::{offset::TimeZone, Utc};
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     sink::SinkExt,
     stream::StreamExt,
 };

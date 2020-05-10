@@ -1,30 +1,17 @@
 use crate::{
-    message::{
-        Tlv,
-        TransactionBroadcast,
-    },
+    message::{Tlv, TransactionBroadcast},
     protocol::Protocol,
 };
 
-use bee_network::{
-    Command::SendMessage,
-    EndpointId,
-    Network,
-};
+use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     stream::StreamExt,
 };
-use log::{
-    info,
-    warn,
-};
+use log::{info, warn};
 
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) from: Option<EndpointId>,

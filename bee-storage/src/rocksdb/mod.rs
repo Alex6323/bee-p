@@ -4,40 +4,18 @@ mod errors;
 mod test;
 
 use crate::storage::{
-    Connection,
-    HashesToApprovers,
-    MissingHashesToRCApprovers,
-    StateDeltaMap,
-    Storage,
-    StorageBackend,
+    Connection, HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap, Storage, StorageBackend,
 };
 
-use bee_protocol::{
-    Milestone,
-    MilestoneIndex,
-};
+use bee_protocol::{Milestone, MilestoneIndex};
 
-use bee_bundle::{
-    Hash,
-    Transaction,
-    TransactionField,
-};
+use bee_bundle::{Hash, Transaction, TransactionField};
 
-use bee_ternary::{
-    T1B1Buf,
-    T5B1Buf,
-    TritBuf,
-    Trits,
-    T5B1,
-};
+use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 
 use std::{
-    collections::{
-        HashMap,
-        HashSet,
-    },
-    mem,
-    ptr,
+    collections::{HashMap, HashSet},
+    mem, ptr,
     rc::Rc,
 };
 
@@ -45,19 +23,8 @@ use errors::RocksDbBackendError;
 
 use async_trait::async_trait;
 
-use bytemuck::{
-    cast_slice,
-    cast_slice_mut,
-};
-use rocksdb::{
-    ColumnFamilyDescriptor,
-    DBCompactionStyle,
-    DBCompressionType,
-    IteratorMode,
-    Options,
-    WriteOptions,
-    DB,
-};
+use bytemuck::{cast_slice, cast_slice_mut};
+use rocksdb::{ColumnFamilyDescriptor, DBCompactionStyle, DBCompressionType, IteratorMode, Options, WriteOptions, DB};
 use std::borrow::BorrowMut;
 
 const TRANSACTION_CF_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
@@ -157,7 +124,7 @@ impl Connection for RocksDBBackendConnection {
         let milestone_cf_index_to_hash = ColumnFamilyDescriptor::new(MILESTONE_CF_INDEX_TO_HASH, Options::default());
         let milestone_cf_hash_to_delta = ColumnFamilyDescriptor::new(MILESTONE_CF_HASH_TO_DELTA, Options::default());
         let mut opts = Options::default();
-        //TODO - figure this out
+        // TODO - figure this out
         opts.set_max_write_buffer_number(4);
         opts.create_missing_column_families(true);
         opts.create_if_missing(true);
@@ -271,7 +238,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
         Ok(missing_to_approvers)
     }
-    //Implement all methods here
+    // Implement all methods here
     async fn insert_transaction(
         &self,
         tx_hash: bee_bundle::Hash,
@@ -440,7 +407,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 )?
                 .is_some()
             {
-                //We assume the presence of a value means the transaction is solid
+                // We assume the presence of a value means the transaction is solid
                 solid_states[index] = true;
             }
         }
@@ -463,7 +430,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 cast_slice(hash.to_inner().encode::<T5B1Buf>().as_i8_slice()),
             )?;
             if res.is_some() {
-                //We assume the absence of a value means the transaction is not known to be confirmed
+                // We assume the absence of a value means the transaction is not known to be confirmed
                 let transaction_snapshot_index_buffer = res.unwrap();
                 unsafe { ptr::copy(transaction_snapshot_index_buffer.as_ptr(), u32_buffer.as_mut_ptr(), 4) };
                 solid_states[index] = u32::from_le_bytes(u32_buffer);
@@ -559,7 +526,7 @@ impl StorageBackend for RocksDbBackendStorage {
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let milestone_cf_hash_to_delta = db.cf_handle(MILESTONE_CF_HASH_TO_DELTA).unwrap();
-        //TODO - handle error, assert the milestone exists?
+        // TODO - handle error, assert the milestone exists?
         let encoded: Vec<u8> = bincode::serialize(&state_delta).unwrap();
 
         db.put_cf(&milestone_cf_hash_to_delta, index.to_le_bytes(), encoded)?;

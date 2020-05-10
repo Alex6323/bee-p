@@ -1,13 +1,6 @@
-use crate::{
-    r#static::config::StaticPeeringConfig,
-    PeerManager,
-};
+use crate::{r#static::config::StaticPeeringConfig, PeerManager};
 
-use bee_network::{
-    Command::AddEndpoint,
-    Network,
-    Url,
-};
+use bee_network::{Command::AddEndpoint, Network, Url};
 
 use async_std::task::block_on;
 use async_trait::async_trait;
@@ -45,7 +38,7 @@ impl StaticPeerManager {
 impl PeerManager for StaticPeerManager {
     async fn run(mut self) {
         // TODO config file watcher
-        //TODO use limit
+        // TODO use limit
         for peer in self.config.peers.clone() {
             self.add_endpoint(&peer).await;
         }

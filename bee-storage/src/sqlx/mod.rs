@@ -1,8 +1,8 @@
-//TODO:
-//Create Readme
-//Tests - sanity and multithreaded + benchmarking
-//Support multiple sql backends via sqlx
-//Get rid of all warnings
+// TODO:
+// Create Readme
+// Tests - sanity and multithreaded + benchmarking
+// Support multiple sql backends via sqlx
+// Get rid of all warnings
 
 extern crate bincode;
 extern crate bytemuck;
@@ -18,57 +18,23 @@ use sqlx::Error as SqlxError;
 use errors::SqlxBackendError;
 
 use crate::storage::{
-    AttachmentData,
-    Connection,
-    HashesToApprovers,
-    MissingHashesToRCApprovers,
-    StateDeltaMap,
-    Storage,
-    StorageBackend,
+    AttachmentData, Connection, HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap, Storage, StorageBackend,
 };
 
 use bee_bundle::{
-    Address,
-    Hash,
-    Index,
-    Nonce,
-    Payload,
-    Tag,
-    Timestamp,
-    TransactionField,
-    Value,
-    ADDRESS_TRIT_LEN,
-    HASH_TRIT_LEN,
-    NONCE_TRIT_LEN,
-    PAYLOAD_TRIT_LEN,
-    TAG_TRIT_LEN,
+    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionField, Value, ADDRESS_TRIT_LEN, HASH_TRIT_LEN,
+    NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN,
 };
-use bee_protocol::{
-    Milestone,
-    MilestoneIndex,
-};
-use bee_ternary::{
-    T1B1Buf,
-    T5B1Buf,
-    TritBuf,
-    Trits,
-    T5B1,
-};
+use bee_protocol::{Milestone, MilestoneIndex};
+use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 
-use std::collections::{
-    HashMap,
-    HashSet,
-};
+use std::collections::{HashMap, HashSet};
 
 use std::rc::Rc;
 
 use async_trait::async_trait;
 use futures::executor::block_on;
-use sqlx::{
-    postgres::PgQueryAs,
-    PgPool,
-    Row,
-};
+use sqlx::{postgres::PgQueryAs, PgPool, Row};
 
 use crate::sqlx::statements::*;
 
@@ -186,7 +152,7 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for SnapshotIndexWrapper {
     }
 }
 
-//TODO - Encoded data is T5B1, decodeds to T1B1,should be generic
+// TODO - Encoded data is T5B1, decodeds to T1B1,should be generic
 fn decode_bytes(u8_slice: &[u8], num_trits: usize) -> TritBuf {
     let decoded_column_i8_slice: &[i8] = cast_slice(u8_slice);
     unsafe { Trits::<T5B1>::from_raw_unchecked(decoded_column_i8_slice, num_trits).encode::<T1B1Buf>() }
@@ -226,7 +192,7 @@ impl Connection for SqlxBackendConnection {
 #[derive(Clone, Debug)]
 pub struct SqlxBackendStorage(Storage<SqlxBackendConnection>);
 
-//TODO - handle errors
+// TODO - handle errors
 #[async_trait]
 impl StorageBackend for SqlxBackendStorage {
     type StorageError = SqlxBackendError;
@@ -346,7 +312,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         Ok(missing_to_approvers)
     }
-    //Implement all methods here
+    // Implement all methods here
     async fn insert_transaction(
         &self,
         tx_hash: bee_bundle::Hash,

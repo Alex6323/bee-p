@@ -1,16 +1,9 @@
 use std::{
-    collections::{
-        BinaryHeap,
-        VecDeque,
-    },
+    collections::{BinaryHeap, VecDeque},
     future::Future,
     pin::Pin,
     sync::Mutex,
-    task::{
-        Context,
-        Poll,
-        Waker,
-    },
+    task::{Context, Poll, Waker},
 };
 
 pub(crate) struct WaitPriorityQueue<T: Ord + Eq> {

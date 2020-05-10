@@ -1,39 +1,27 @@
 extern crate serde;
 
-use bee_bundle::{
-    Address,
-    Hash,
-};
-use bee_protocol::{
-    Milestone,
-    MilestoneIndex,
-};
+use bee_bundle::{Address, Hash};
+use bee_protocol::{Milestone, MilestoneIndex};
 
 use std::{
-    collections::{
-        HashMap,
-        HashSet,
-    },
+    collections::{HashMap, HashSet},
     fmt::Debug,
     rc::Rc,
 };
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use async_trait::async_trait;
 
 // A transaction address. To be replaced later with whatever implementation is required.
-//type TxAddress = String;
+// type TxAddress = String;
 
 pub type HashesToApprovers = HashMap<Hash, HashSet<Hash>>;
 pub type MissingHashesToRCApprovers = HashMap<Hash, HashSet<Rc<Hash>>>;
-//This is a mapping between an iota address and it's balance change
-//practically, a map for total balance change over an addresses will be collected
-//per milestone (snapshot_index), when we no longer have milestones, we will have to find
-//another way to decide on a check point where to store an address's delta if we want to snapshot
+// This is a mapping between an iota address and it's balance change
+// practically, a map for total balance change over an addresses will be collected
+// per milestone (snapshot_index), when we no longer have milestones, we will have to find
+// another way to decide on a check point where to store an address's delta if we want to snapshot
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct StateDeltaMap {
     pub address_to_delta: HashMap<Address, i64>,
@@ -59,11 +47,11 @@ pub trait StorageBackend {
     fn new() -> Self;
     async fn establish_connection(&mut self, url: &str) -> Result<(), Self::StorageError>;
     async fn destroy_connection(&mut self) -> Result<(), Self::StorageError>;
-    //This method is heavy weighted and will be used to populate Tangle struct on initialization
+    // This method is heavy weighted and will be used to populate Tangle struct on initialization
     //**Operations over transaction's schema**//
     fn map_existing_transaction_hashes_to_approvers(&self) -> Result<HashesToApprovers, Self::StorageError>;
 
-    //This method is heavy weighted and will be used to populate Tangle struct on initialization
+    // This method is heavy weighted and will be used to populate Tangle struct on initialization
     fn map_missing_transaction_hashes_to_approvers(
         &self,
         all_hashes: HashSet<Hash>,

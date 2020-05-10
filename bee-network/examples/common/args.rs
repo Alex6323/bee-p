@@ -1,7 +1,4 @@
-use bee_network::{
-    Address,
-    Url,
-};
+use bee_network::{Address, Url};
 
 use super::config::Config;
 

@@ -8,39 +8,21 @@ mod solidifier;
 mod status;
 mod transaction;
 
-pub(crate) use broadcaster::{
-    BroadcasterWorker,
-    BroadcasterWorkerEvent,
-};
-pub(crate) use milestone_validator::{
-    MilestoneValidatorWorker,
-    MilestoneValidatorWorkerEvent,
-};
+pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
+pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidatorWorkerEvent};
 pub(crate) use peer::PeerWorker;
 pub(crate) use requester::{
-    MilestoneRequesterWorker,
-    MilestoneRequesterWorkerEntry,
-    TransactionRequesterWorker,
+    MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, TransactionRequesterWorker,
     TransactionRequesterWorkerEntry,
 };
 pub(crate) use responder::{
-    MilestoneResponderWorker,
-    MilestoneResponderWorkerEvent,
-    TransactionResponderWorker,
+    MilestoneResponderWorker, MilestoneResponderWorkerEvent, TransactionResponderWorker,
     TransactionResponderWorkerEvent,
 };
-pub(crate) use sender::{
-    SenderContext,
-    SenderWorker,
-};
+pub(crate) use sender::{SenderContext, SenderWorker};
 pub(crate) use solidifier::{
-    MilestoneSolidifierWorker,
-    MilestoneSolidifierWorkerEvent,
-    TransactionSolidifierWorker,
+    MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, TransactionSolidifierWorker,
     TransactionSolidifierWorkerEvent,
 };
 pub(crate) use status::StatusWorker;
-pub(crate) use transaction::{
-    TransactionWorker,
-    TransactionWorkerEvent,
-};
+pub(crate) use transaction::{TransactionWorker, TransactionWorkerEvent};

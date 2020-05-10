@@ -1,32 +1,15 @@
 use crate::{
-    message::{
-        Heartbeat,
-        Message,
-        MilestoneRequest,
-        Tlv,
-        TransactionBroadcast,
-        TransactionRequest,
-    },
+    message::{Heartbeat, Message, MilestoneRequest, Tlv, TransactionBroadcast, TransactionRequest},
     peer::Peer,
     protocol::Protocol,
 };
 
-use bee_network::{
-    Command::SendMessage,
-    EndpointId,
-    Network,
-};
+use bee_network::{Command::SendMessage, EndpointId, Network};
 
-use std::{
-    marker::PhantomData,
-    sync::Arc,
-};
+use std::{marker::PhantomData, sync::Arc};
 
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     sink::SinkExt,

@@ -1,24 +1,9 @@
 extern crate rand;
 
 use bee_bundle::{
-    Address,
-    Hash,
-    Index,
-    Nonce,
-    Payload,
-    Tag,
-    Timestamp,
-    Transaction,
-    TransactionBuilder,
-    TransactionField,
-    Value,
+    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder, TransactionField, Value,
 };
-use bee_ternary::{
-    T1B1Buf,
-    TritBuf,
-    Trits,
-    T1B1,
-};
+use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
 use rand::Rng;
 
@@ -64,7 +49,6 @@ pub fn clone_tx(tx: &Transaction) -> Transaction {
 
     builder.build().unwrap()
 }
-
 
 pub fn create_random_tx() -> (bee_bundle::Hash, bee_bundle::Transaction) {
     let builder = bee_bundle::TransactionBuilder::new()

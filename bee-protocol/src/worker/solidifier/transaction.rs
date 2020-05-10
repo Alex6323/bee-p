@@ -1,7 +1,4 @@
-use crate::{
-    milestone::MilestoneIndex,
-    protocol::Protocol,
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol};
 
 use bee_bundle::Hash;
 use bee_tangle::tangle;
@@ -9,10 +6,7 @@ use bee_tangle::tangle;
 use std::collections::HashSet;
 
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     future::FutureExt,
     select,
     stream::StreamExt,

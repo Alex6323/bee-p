@@ -1,12 +1,6 @@
 use std::{
-    collections::{
-        HashSet,
-        VecDeque,
-    },
-    hash::{
-        BuildHasherDefault,
-        Hasher,
-    },
+    collections::{HashSet, VecDeque},
+    hash::{BuildHasherDefault, Hasher},
 };
 
 use twox_hash::XxHash64;

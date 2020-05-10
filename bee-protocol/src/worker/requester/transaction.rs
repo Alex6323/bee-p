@@ -1,9 +1,4 @@
-use crate::{
-    message::TransactionRequest,
-    milestone::MilestoneIndex,
-    protocol::Protocol,
-    worker::SenderWorker,
-};
+use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
 
 use bee_bundle::Hash;
 use bee_tangle::tangle;
@@ -12,16 +7,9 @@ use bee_ternary::T5B1Buf;
 use std::cmp::Ordering;
 
 use bytemuck::cast_slice;
-use futures::{
-    channel::oneshot,
-    future::FutureExt,
-    select,
-};
+use futures::{channel::oneshot, future::FutureExt, select};
 use log::info;
-use rand::{
-    Rng,
-    SeedableRng,
-};
+use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
 
 #[derive(Eq, PartialEq)]

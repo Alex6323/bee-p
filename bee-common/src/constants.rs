@@ -1,6 +1,6 @@
 pub const TRANSACTION_TRIT_LEN: usize = 8019;
-pub const TRANSACTION_TRYT_LEN: usize = TRANSACTION_TRIT_LEN / 3; //2673
-pub const TRANSACTION_BYTE_LEN: usize = TRANSACTION_TRIT_LEN / 5 + 1; //1604
+pub const TRANSACTION_TRYT_LEN: usize = TRANSACTION_TRIT_LEN / 3; // 2673
+pub const TRANSACTION_BYTE_LEN: usize = TRANSACTION_TRIT_LEN / 5 + 1; // 1604
 
 pub const PAYLOAD_TRIT_LEN: usize = 6561;
 pub const ADDRESS_TRIT_LEN: usize = 243;

@@ -1,9 +1,6 @@
 use sqlx::Error as SqlxError;
 
-use std::{
-    error::Error as StdError,
-    fmt,
-};
+use std::{error::Error as StdError, fmt};
 
 #[derive(Clone, Debug)]
 pub enum SqlxBackendError {

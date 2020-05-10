@@ -1,6 +1,7 @@
-use bee_common::constants::TRANSACTION_TRIT_LEN as INPUT_LEN;
-use bee_common::constants::TRANSACTION_TRIT_LEN as TRANS_LEN;
-use bee_common::Trit;
+use bee_common::{
+    constants::{TRANSACTION_TRIT_LEN as INPUT_LEN, TRANSACTION_TRIT_LEN as TRANS_LEN},
+    Trit,
+};
 
 pub struct InputTrits(pub(crate) [Trit; INPUT_LEN]);
 

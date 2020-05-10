@@ -1,17 +1,10 @@
 use crate::{
-    message::{
-        Heartbeat,
-        TransactionBroadcast,
-    },
+    message::{Heartbeat, TransactionBroadcast},
     milestone::MilestoneIndex,
     protocol::Protocol,
     worker::{
-        BroadcasterWorkerEvent,
-        MilestoneRequesterWorkerEntry,
-        MilestoneSolidifierWorkerEvent,
-        SenderWorker,
-        TransactionRequesterWorkerEntry,
-        TransactionSolidifierWorkerEvent,
+        BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, MilestoneSolidifierWorkerEvent, SenderWorker,
+        TransactionRequesterWorkerEntry, TransactionSolidifierWorkerEvent,
     },
 };
 

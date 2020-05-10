@@ -2,36 +2,20 @@
 pub mod tests {
     use crate::storage::StorageBackend;
 
-    use futures::{
-        executor::block_on,
-        future::join_all,
-    };
+    use futures::{executor::block_on, future::join_all};
 
     use std::{
-        collections::{
-            HashMap,
-            HashSet,
-        },
-        io::{
-            self,
-            Write,
-        },
+        collections::{HashMap, HashSet},
+        io::{self, Write},
         marker::PhantomData,
         panic,
         rc::Rc,
         time::Instant,
     };
 
-    use bee_bundle::{
-        Address,
-        Hash,
-    };
+    use bee_bundle::{Address, Hash};
 
-    use crate::storage::{
-        HashesToApprovers,
-        MissingHashesToRCApprovers,
-        StateDeltaMap,
-    };
+    use crate::storage::{HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap};
 
     pub trait TestableStorage {
         fn test_name() -> String;
@@ -297,7 +281,7 @@ pub mod tests {
                     == missing_hash_to_approvers_observed.get_key_value(&k).unwrap()
             });
 
-            //TODO - check ref count is equal
+            // TODO - check ref count is equal
             block_on(storage.destroy_connection()).unwrap();
             assert!(maps_are_equal);
         }

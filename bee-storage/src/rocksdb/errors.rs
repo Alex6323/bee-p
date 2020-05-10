@@ -1,7 +1,4 @@
-use std::{
-    error::Error as StdError,
-    fmt,
-};
+use std::{error::Error as StdError, fmt};
 
 #[derive(Debug, Clone)]
 pub enum RocksDbBackendError {

@@ -4,10 +4,7 @@ mod tests {
 
     use crate::rocksdb::RocksDbBackendStorage;
 
-    use crate::test::tests::{
-        StorageTestRunner,
-        TestableStorage,
-    };
+    use crate::test::tests::{StorageTestRunner, TestableStorage};
 
     impl TestableStorage for RocksDbBackendStorage {
         fn test_name() -> String {

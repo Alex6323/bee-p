@@ -1,69 +1,34 @@
 use crate::{
     config::ProtocolConfig,
-    message::{
-        Heartbeat,
-        MilestoneRequest,
-        TransactionBroadcast,
-        TransactionRequest,
-    },
+    message::{Heartbeat, MilestoneRequest, TransactionBroadcast, TransactionRequest},
     milestone::MilestoneIndex,
     peer::Peer,
     protocol::ProtocolMetrics,
     util::WaitPriorityQueue,
     worker::{
-        BroadcasterWorker,
-        BroadcasterWorkerEvent,
-        MilestoneRequesterWorker,
-        MilestoneRequesterWorkerEntry,
-        MilestoneResponderWorker,
-        MilestoneResponderWorkerEvent,
-        MilestoneSolidifierWorker,
-        MilestoneSolidifierWorkerEvent,
-        MilestoneValidatorWorker,
-        MilestoneValidatorWorkerEvent,
-        PeerWorker,
-        SenderContext,
-        SenderWorker,
-        StatusWorker,
-        TransactionRequesterWorker,
-        TransactionRequesterWorkerEntry,
-        TransactionResponderWorker,
-        TransactionResponderWorkerEvent,
-        TransactionSolidifierWorker,
-        TransactionSolidifierWorkerEvent,
-        TransactionWorker,
-        TransactionWorkerEvent,
+        BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
+        MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
+        MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent, PeerWorker,
+        SenderContext, SenderWorker, StatusWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
+        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
+        TransactionSolidifierWorkerEvent, TransactionWorker, TransactionWorkerEvent,
     },
 };
 
 use bee_bundle::Hash;
-use bee_crypto::{
-    CurlP27,
-    CurlP81,
-    Kerl,
-    SpongeType,
-};
-use bee_network::{
-    EndpointId,
-    Network,
-};
+use bee_crypto::{CurlP27, CurlP81, Kerl, SpongeType};
+use bee_network::{EndpointId, Network};
 use bee_signing::WotsPublicKey;
 
 use std::{
     ptr,
-    sync::{
-        Arc,
-        Mutex,
-    },
+    sync::{Arc, Mutex},
 };
 
 use async_std::task::spawn;
 use dashmap::DashMap;
 use futures::{
-    channel::{
-        mpsc,
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     sink::SinkExt,
 };
 use log::warn;
@@ -313,7 +278,7 @@ impl Protocol {
     }
 
     pub fn register(peer: Arc<Peer>) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
-        //TODO check if not already added ?
+        // TODO check if not already added ?
         // PeerWorker
         let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().config.workers.receiver_worker_bound);
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
@@ -324,7 +289,7 @@ impl Protocol {
     }
 
     pub(crate) async fn senders_add(network: Network, peer: Arc<Peer>) {
-        //TODO check if not already added
+        // TODO check if not already added
 
         // SenderWorker MilestoneRequest
         let (milestone_request_tx, milestone_request_rx) =

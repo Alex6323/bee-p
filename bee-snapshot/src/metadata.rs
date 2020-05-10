@@ -1,18 +1,9 @@
-use bee_bundle::{
-    Hash,
-    TransactionField,
-};
-use bee_ternary::{
-    T1B1Buf,
-    TryteBuf,
-};
+use bee_bundle::{Hash, TransactionField};
+use bee_ternary::{T1B1Buf, TryteBuf};
 
 use std::{
     fs::File,
-    io::{
-        BufRead,
-        BufReader,
-    },
+    io::{BufRead, BufReader},
 };
 
 #[derive(Debug)]

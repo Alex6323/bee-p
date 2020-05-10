@@ -1,25 +1,13 @@
-use crate::{
-    message::MilestoneRequest,
-    milestone::MilestoneIndex,
-    protocol::Protocol,
-    worker::SenderWorker,
-};
+use crate::{message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
 
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 
 use std::cmp::Ordering;
 
-use futures::{
-    channel::oneshot,
-    future::FutureExt,
-    select,
-};
+use futures::{channel::oneshot, future::FutureExt, select};
 use log::info;
-use rand::{
-    Rng,
-    SeedableRng,
-};
+use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
 
 #[derive(Eq, PartialEq)]

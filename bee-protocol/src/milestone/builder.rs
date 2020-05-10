@@ -1,38 +1,13 @@
-use crate::milestone::{
-    Milestone,
-    MilestoneIndex,
-};
+use crate::milestone::{Milestone, MilestoneIndex};
 
-use bee_bundle::{
-    Hash,
-    Payload,
-    Transaction,
-    TransactionField,
-    Transactions,
-};
-use bee_crypto::{
-    Kerl,
-    Sponge,
-};
+use bee_bundle::{Hash, Payload, Transaction, TransactionField, Transactions};
+use bee_crypto::{Kerl, Sponge};
 use bee_signing::{
-    normalize_hash,
-    MssError,
-    MssPublicKey,
-    MssSignature,
-    PublicKey,
-    RecoverableSignature,
-    Signature,
-    WotsPublicKey,
+    normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,
 };
-use bee_ternary::{
-    num_conversions::TritsI64ConversionError,
-    TritBuf,
-};
+use bee_ternary::{num_conversions::TritsI64ConversionError, TritBuf};
 
-use std::{
-    convert::TryFrom,
-    marker::PhantomData,
-};
+use std::{convert::TryFrom, marker::PhantomData};
 
 #[derive(Debug)]
 pub enum MilestoneBuilderError {
@@ -177,10 +152,7 @@ mod tests {
     use super::*;
 
     use bee_crypto::CurlP27;
-    use bee_ternary::{
-        T1B1Buf,
-        TryteBuf,
-    };
+    use bee_ternary::{T1B1Buf, TryteBuf};
 
     fn generic_validate_milestone<S: Sponge + Default>(
         ms_hash: &str,

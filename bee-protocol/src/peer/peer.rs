@@ -1,18 +1,8 @@
-use crate::{
-    milestone::MilestoneIndex,
-    protocol::ProtocolMetrics,
-};
+use crate::{milestone::MilestoneIndex, protocol::ProtocolMetrics};
 
-use bee_network::{
-    Address,
-    EndpointId,
-    Origin,
-};
+use bee_network::{Address, EndpointId, Origin};
 
-use std::sync::atomic::{
-    AtomicU32,
-    Ordering,
-};
+use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct Peer {
     pub(crate) epid: EndpointId,

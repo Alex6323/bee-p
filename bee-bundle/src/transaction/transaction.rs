@@ -1,45 +1,12 @@
 use crate::{
     constants::{
-        ADDRESS,
-        ATTACHMENT_LBTS,
-        ATTACHMENT_TS,
-        ATTACHMENT_UBTS,
-        BRANCH,
-        BUNDLE,
-        INDEX,
-        LAST_INDEX,
-        NONCE,
-        OBSOLETE_TAG,
-        PAYLOAD,
-        TAG,
-        TIMESTAMP,
-        TRANSACTION_TRIT_LEN,
-        TRUNK,
-        VALUE,
+        ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
+        OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
     },
-    transaction::{
-        Address,
-        Hash,
-        Index,
-        Nonce,
-        Payload,
-        Tag,
-        Timestamp,
-        TransactionBuilder,
-        TransactionField,
-        Value,
-    },
+    transaction::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, TransactionField, Value},
 };
 
-use bee_ternary::{
-    num_conversions,
-    raw::RawEncoding,
-    Btrit,
-    T1B1Buf,
-    TritBuf,
-    Trits,
-    T1B1,
-};
+use bee_ternary::{num_conversions, raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Trits, T1B1};
 
 use std::convert::TryFrom;
 

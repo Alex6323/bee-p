@@ -2,14 +2,7 @@
 // TODO: beautify datetime output
 
 use env_logger::fmt::Color;
-use log::{
-    debug,
-    error,
-    info,
-    log_enabled,
-    trace,
-    warn,
-};
+use log::{debug, error, info, log_enabled, trace, warn};
 
 use std::io::Write;
 
