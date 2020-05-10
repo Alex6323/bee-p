@@ -70,3 +70,63 @@ impl LedgerWorker {
         info!("[LedgerWorker ] Stopped.");
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    use bee_test::field::rand_trits_field;
+
+    use async_std::task::{block_on, spawn};
+    use futures::sink::SinkExt;
+    use rand::Rng;
+
+    #[test]
+    fn get_balances() {
+        let mut rng = rand::thread_rng();
+        let mut state = HashMap::new();
+        let (mut tx, rx) = mpsc::channel(100);
+        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
+
+        for _ in 0..100 {
+            state.insert(rand_trits_field::<Address>(), rng.gen_range(0, 100_000_000));
+        }
+
+        spawn(LedgerWorker::new(state.clone()).run(rx, shutdown_rx));
+
+        for (address, balance) in state {
+            let (get_balance_tx, get_balance_rx) = oneshot::channel();
+            block_on(tx.send(LedgerWorkerEvent::GetBalance(address, get_balance_tx))).unwrap();
+            let value = block_on(get_balance_rx).unwrap().unwrap();
+            assert_eq!(balance, value)
+        }
+    }
+
+    #[test]
+    fn get_balances_not_found() {
+        let mut rng = rand::thread_rng();
+        let mut state = HashMap::new();
+        let (mut tx, rx) = mpsc::channel(100);
+        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
+
+        for _ in 0..100 {
+            state.insert(rand_trits_field::<Address>(), rng.gen_range(0, 100_000_000));
+        }
+
+        spawn(LedgerWorker::new(state.clone()).run(rx, shutdown_rx));
+
+        for _ in 0..100 {
+            let (get_balance_tx, get_balance_rx) = oneshot::channel();
+            block_on(tx.send(LedgerWorkerEvent::GetBalance(
+                rand_trits_field::<Address>(),
+                get_balance_tx,
+            )))
+            .unwrap();
+            let value = block_on(get_balance_rx).unwrap();
+            assert!(value.is_none());
+        }
+    }
+
+    // TODO test LedgerWorkerEvent::ApplyDiff
+}

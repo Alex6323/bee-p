@@ -14,3 +14,9 @@ bee-bundle = { path = "../bee-bundle" }
 
 futures = "0.3.4"
 log = "0.4.8"
+
+[dev-dependencies]
+bee-test = { path = "../bee-test" }
+
+async-std = "1.4.0"
+rand = "0.7.3"
