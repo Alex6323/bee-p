@@ -4,7 +4,7 @@ use std::ops::Range;
 
 /// A trait describing the behavior of a message.
 ///
-/// This trait is protocol agnostic and only provides serialization and deserialization to and from bytes buffers.
+/// This trait is protocol agnostic and only provides serialization and deserialization to and from byte buffers.
 /// It should not be used as is but rather be paired with a higher layer - like a type-length-value encoding - and as
 /// such does not provide any safety check on inputs/outputs.
 pub(crate) trait Message {
@@ -14,11 +14,11 @@ pub(crate) trait Message {
     /// Returns the size range of the message as it can be compressed.
     fn size_range() -> Range<usize>;
 
-    /// Deserializes a bytes buffer into a message.
+    /// Deserializes a byte buffer into a message.
     ///
     /// # Arguments
     ///
-    /// * `bytes`   -   The bytes buffer to deserialize from.
+    /// * `bytes`   -   The byte buffer to deserialize from.
     ///
     /// # Panics
     ///
@@ -29,11 +29,11 @@ pub(crate) trait Message {
     /// Returns the size of the message.
     fn size(&self) -> usize;
 
-    /// Serializes a message into a bytes buffer.
+    /// Serializes a message into a byte buffer.
     ///
     /// # Arguments
     ///
-    /// * `bytes`   -   The bytes buffer to serialize into.
+    /// * `bytes`   -   The byte buffer to serialize into.
     ///
     /// # Panics
     ///

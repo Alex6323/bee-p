@@ -14,12 +14,12 @@ pub(crate) enum TlvError {
 pub(crate) struct Tlv {}
 
 impl Tlv {
-    /// Deserializes a TLV header and a bytes buffer into a message.
+    /// Deserializes a TLV header and a byte buffer into a message.
     ///
     /// # Arguments
     ///
     /// * `header`  -   The TLV header to deserialize from.
-    /// * `bytes`   -   The bytes buffer to deserialize from.
+    /// * `bytes`   -   The byte buffer to deserialize from.
     ///
     /// # Errors
     ///
@@ -45,7 +45,7 @@ impl Tlv {
         Ok(M::from_bytes(bytes))
     }
 
-    /// Serializes a TLV header and a message into a bytes buffer.
+    /// Serializes a TLV header and a message into a byte buffer.
     ///
     /// # Arguments
     ///
