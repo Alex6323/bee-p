@@ -151,7 +151,7 @@ mod tests {
             ep1.protocol = Protocol::Tcp;
             assert_eq!(Protocol::Tcp, ep1.protocol);
         } else {
-            assert!(false, "Getting mutable endpoint from store failed");
+            panic!("Getting mutable endpoint from store failed");
         }
     }
 }
