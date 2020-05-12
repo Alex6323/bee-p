@@ -357,7 +357,7 @@ impl Tangle {
     }
 
     /// Walks all approvers in a post order DFS way through trunk then branch.
-    pub fn walk_post_order_dfs<Mapping, Follow, Missing>(
+    pub fn walk_approvers_post_order_dfs<Mapping, Follow, Missing>(
         &'static self,
         root: Hash,
         mut map: Mapping,
@@ -378,25 +378,17 @@ impl Tangle {
                 Some(vertex) => {
                     let vertex = vertex.value();
                     let transaction = vertex.get_ref_to_inner();
-                    // TODO simplify ?
 
                     // TODO add follow
-                    if (self.is_solid_entry_point(transaction.trunk()) || analyzed_hashes.contains(transaction.trunk()))
-                        && (self.is_solid_entry_point(transaction.branch())
-                            || analyzed_hashes.contains(transaction.branch()))
-                    {
+                    if analyzed_hashes.contains(transaction.trunk()) && analyzed_hashes.contains(transaction.branch()) {
                         map(hash, &transaction);
                         analyzed_hashes.insert(hash.clone());
                         non_analyzed_hashes.pop();
                     // TODO add follow
-                    } else if !self.is_solid_entry_point(transaction.trunk())
-                        && !analyzed_hashes.contains(transaction.trunk())
-                    {
+                    } else if !analyzed_hashes.contains(transaction.trunk()) {
                         non_analyzed_hashes.push(*transaction.trunk());
                     // TODO add follow
-                    } else if !self.is_solid_entry_point(transaction.branch())
-                        && !analyzed_hashes.contains(transaction.branch())
-                    {
+                    } else if !analyzed_hashes.contains(transaction.branch()) {
                         non_analyzed_hashes.push(*transaction.branch());
                     }
                 }
@@ -404,6 +396,8 @@ impl Tangle {
                     if !self.is_solid_entry_point(hash) {
                         on_missing(hash);
                     }
+                    analyzed_hashes.insert(hash.clone());
+                    non_analyzed_hashes.pop();
                 }
             }
         }
@@ -610,7 +604,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn walk_post_order_dfs() {
+    fn walk_approvers_post_order_dfs() {
         // Example from https://github.com/iotaledger/protocol-rfcs/blob/master/text/0005-white-flag/0005-white-flag.md
 
         init();
@@ -720,7 +714,7 @@ mod tests {
 
         let mut hashes = Vec::new();
 
-        tangle.walk_post_order_dfs(
+        tangle.walk_approvers_post_order_dfs(
             v_hash,
             |hash, _transaction| {
                 hashes.push(*hash);
