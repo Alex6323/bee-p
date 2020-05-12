@@ -49,7 +49,7 @@ impl LedgerWorker {
                         warn!("[LedgerWorker ] Ignoring conflicting diff.");
                     }
                 })
-                .or_default();
+                .or_insert(value as u64);
         }
     }
 
@@ -139,6 +139,32 @@ mod tests {
             .unwrap();
             let value = block_on(get_balance_rx).unwrap();
             assert!(value.is_none());
+        }
+    }
+
+    #[test]
+    fn apply_diff_on_not_found() {
+        let mut rng = rand::thread_rng();
+        let mut diff = HashMap::new();
+        let (mut tx, rx) = mpsc::channel(100);
+        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
+
+        for _ in 0..100 {
+            diff.insert(rand_trits_field::<Address>(), rng.gen_range(0, 100_000_000));
+        }
+
+        block_on(tx.send(LedgerWorkerEvent::ApplyDiff(
+            diff.clone()
+        )))
+        .unwrap();
+
+        spawn(LedgerWorker::new(HashMap::new()).run(rx, shutdown_rx));
+
+        for (address, balance) in diff {
+            let (get_balance_tx, get_balance_rx) = oneshot::channel();
+            block_on(tx.send(LedgerWorkerEvent::GetBalance(address, get_balance_tx))).unwrap();
+            let value = block_on(get_balance_rx).unwrap().unwrap();
+            assert_eq!(balance as u64, value)
         }
     }
 
