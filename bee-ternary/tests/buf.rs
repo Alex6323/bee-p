@@ -1,10 +1,24 @@
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::convert::TryInto;
 
 mod common;
 use self::common::*;
 
-use rand::prelude::*;
 use bee_ternary::*;
+use rand::prelude::*;
 
 fn create_generic<T: raw::RawEncodingBuf>() {
     assert!(TritBuf::<T>::new().len() == 0);
@@ -40,7 +54,10 @@ fn push_pop_generic<T: raw::RawEncodingBuf>() {
                 a.push(trit.try_into().unwrap_or_else(|_| unreachable!()));
                 b.push(trit);
             } else {
-                assert_eq!(a.pop(), b.pop().map(|x| x.try_into().unwrap_or_else(|_| unreachable!())));
+                assert_eq!(
+                    a.pop(),
+                    b.pop().map(|x| x.try_into().unwrap_or_else(|_| unreachable!()))
+                );
             }
             // println!("{:?}", a);
             // println!("{:?}", b);
@@ -58,7 +75,10 @@ fn push_pop_generic_unbalanced<T: raw::RawEncodingBuf>() {
                 a.push(trit.try_into().unwrap_or_else(|_| unreachable!()));
                 b.push(trit);
             } else {
-                assert_eq!(a.pop(), b.pop().map(|x| x.try_into().unwrap_or_else(|_| unreachable!())));
+                assert_eq!(
+                    a.pop(),
+                    b.pop().map(|x| x.try_into().unwrap_or_else(|_| unreachable!()))
+                );
             }
             // println!("{:?}", a);
             // println!("{:?}", b);

@@ -1,16 +1,19 @@
-use crate::{
-    Btrit,
-    RawEncoding,
-    RawEncodingBuf,
-    Trit,
-    trit::ShiftTernary,
-};
-use std::{
-    convert::TryInto,
-    hash,
-    marker::PhantomData,
-    ops::Range,
-};
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use crate::{trit::ShiftTernary, Btrit, RawEncoding, RawEncodingBuf, Trit};
+use std::{convert::TryInto, hash, marker::PhantomData, ops::Range};
 
 #[repr(transparent)]
 pub struct T1B1<T: Trit = Btrit> {
@@ -112,16 +115,14 @@ where
         // This puts the inner buffer into an incorrect state!
         let mut trit_buf = self;
         unsafe {
-            trit_buf
-                .as_slice_mut()
-                .as_i8_slice_mut()
-                .iter_mut()
-                .for_each(|t| {
-                    // Unwrapping is safe because the bytes are coming from
-                    // within the trit buffer.
-                    let trit: T = (*t).try_into().unwrap_or_else(|_| unreachable!("Unreachable because input bytes are guaranteed to be correct"));
-                    let shifted_trit = trit.shift();
-                    *t = shifted_trit.into();
+            trit_buf.as_slice_mut().as_i8_slice_mut().iter_mut().for_each(|t| {
+                // Unwrapping is safe because the bytes are coming from
+                // within the trit buffer.
+                let trit: T = (*t)
+                    .try_into()
+                    .unwrap_or_else(|_| unreachable!("Unreachable because input bytes are guaranteed to be correct"));
+                let shifted_trit = trit.shift();
+                *t = shifted_trit.into();
             });
         }
 
@@ -132,12 +133,7 @@ where
         let len = raw_trits.len();
         let cap = raw_trits.capacity();
 
-        let raw_shifted_trits = unsafe {
-            Vec::from_raw_parts (
-                p as *const i8 as *mut _,
-                len,
-                cap,
-        )};
+        let raw_shifted_trits = unsafe { Vec::from_raw_parts(p as *const i8 as *mut _, len, cap) };
 
         T1B1Buf {
             _phantom: PhantomData,
@@ -145,7 +141,6 @@ where
         }
     }
 }
-
 
 impl<T: Trit> T1B1Buf<T> {
     pub fn into_inner(self) -> Vec<T> {

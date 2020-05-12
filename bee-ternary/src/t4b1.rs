@@ -1,5 +1,19 @@
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use crate::{Btrit, RawEncoding, RawEncodingBuf, ShiftTernary, Utrit};
 use std::ops::Range;
-use crate::{Btrit, Utrit, RawEncoding, RawEncodingBuf, ShiftTernary};
 
 const TPB: usize = 4;
 const BAL: i8 = 40;
@@ -76,22 +90,32 @@ impl RawEncoding for T4B1 {
     }
 
     unsafe fn slice_unchecked(&self, range: Range<usize>) -> &Self {
-        &*Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start)
+        &*Self::make(
+            self.ptr(range.start),
+            (self.len_offset().1 + range.start) % TPB,
+            range.end - range.start,
+        )
     }
 
     unsafe fn slice_unchecked_mut(&mut self, range: Range<usize>) -> &mut Self {
-        &mut *(Self::make(self.ptr(range.start), (self.len_offset().1 + range.start) % TPB, range.end - range.start) as *mut Self)
+        &mut *(Self::make(
+            self.ptr(range.start),
+            (self.len_offset().1 + range.start) % TPB,
+            range.end - range.start,
+        ) as *mut Self)
     }
 
-    fn is_valid(b: &i8) -> bool { *b >= -BAL && *b <= BAL }
+    fn is_valid(b: &i8) -> bool {
+        *b >= -BAL && *b <= BAL
+    }
 
     unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self {
-        debug_assert!(num_trits <= b.len()*TPB);
+        debug_assert!(num_trits <= b.len() * TPB);
         &*Self::make(b.as_ptr() as *const _, 0, num_trits)
     }
 
     unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self {
-        debug_assert!(num_trits <= b.len()*TPB);
+        debug_assert!(num_trits <= b.len() * TPB);
         &mut *(Self::make(b.as_ptr() as *const _, 0, num_trits) as *mut _)
     }
 }

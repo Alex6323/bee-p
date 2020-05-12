@@ -1,20 +1,25 @@
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 pub mod errors;
 pub mod url;
 
 use errors::*;
 
-use async_std::net::{
-    IpAddr,
-    Ipv4Addr,
-    Ipv6Addr,
-    SocketAddr,
-    ToSocketAddrs,
-};
+use async_std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 
-use std::{
-    fmt,
-    ops,
-};
+use std::{fmt, ops};
 
 /// A wrapper around a `u16` describing a network port number to increase type safety.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -1,29 +1,26 @@
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use super::whitelist;
 
 use crate::{
-    address::url::{
-        Protocol,
-        Url,
-    },
-    commands::{
-        Command,
-        CommandReceiver as Commands,
-        Responder,
-    },
+    address::url::{Protocol, Url},
+    commands::{Command, CommandReceiver as Commands, Responder},
     constants::CONNECT_INTERVAL,
-    endpoint::{
-        outbox::Outbox,
-        store::Endpoints,
-        Endpoint as Ep,
-        EndpointId as EpId,
-    },
+    endpoint::{outbox::Outbox, store::Endpoints, Endpoint as Ep, EndpointId as EpId},
     errors::Result,
-    events::{
-        Event,
-        EventPublisher as Notifier,
-        EventPublisher as Publisher,
-        EventSubscriber as Events,
-    },
+    events::{Event, EventPublisher as Notifier, EventPublisher as Publisher, EventSubscriber as Events},
     shutdown::ShutdownListener as Shutdown,
     tcp,
     utils::time,
@@ -31,16 +28,9 @@ use crate::{
 
 use async_std::{
     prelude::*,
-    task::{
-        self,
-        spawn,
-    },
+    task::{self, spawn},
 };
-use futures::{
-    select,
-    sink::SinkExt,
-    FutureExt,
-};
+use futures::{select, sink::SinkExt, FutureExt};
 use log::*;
 
 use std::time::Duration;
@@ -315,7 +305,7 @@ async fn try_connect(
 ) -> Result<bool> {
     // Try to find the endpoint in our servers list.
     if let Some(ep) = contacts.get_mut(&epid) {
-        //if ep.is_connected() {
+        // if ep.is_connected() {
         if connected.contains(&ep.id) {
             if let Some(responder) = responder {
                 match responder.send(false) {

@@ -1,3 +1,17 @@
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! # bee-network
 //!
 //! Network layer for Bee.
@@ -14,30 +28,11 @@
 #![deny(missing_docs)]
 #![recursion_limit = "1024"]
 
-pub use address::{
-    url::Url,
-    Address,
-    Port,
-};
-pub use commands::{
-    response_channel,
-    Command,
-    Requester,
-    Responder,
-};
-pub use config::{
-    NetworkConfig,
-    NetworkConfigBuilder,
-};
-pub use endpoint::{
-    origin::Origin,
-    Endpoint,
-    EndpointId,
-};
-pub use events::{
-    Event,
-    EventSubscriber,
-};
+pub use address::{url::Url, Address, Port};
+pub use commands::{response_channel, Command, Requester, Responder};
+pub use config::{NetworkConfig, NetworkConfigBuilder};
+pub use endpoint::{origin::Origin, Endpoint, EndpointId};
+pub use events::{Event, EventSubscriber};
 
 pub use network::Network;
 pub use shutdown::Shutdown;
@@ -51,17 +46,14 @@ mod events;
 mod network;
 mod shutdown;
 mod tcp;
-//mod udp;
+// mod udp;
 mod config;
 mod utils;
 
-use endpoint::{
-    whitelist,
-    worker::EndpointWorker as EpWorker,
-};
+use endpoint::{whitelist, worker::EndpointWorker as EpWorker};
 use events::EventSubscriber as Events;
 use tcp::worker::TcpWorker;
-//use udp::worker::UdpWorker;
+// use udp::worker::UdpWorker;
 
 use async_std::task::spawn;
 use futures::channel::oneshot;
@@ -76,7 +68,7 @@ pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
 
     let (epw_sd_sender, epw_shutdown) = oneshot::channel();
     let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
-    //let (udp_sd_sender, udp_shutdown) = oneshot::channel();
+    // let (udp_sd_sender, udp_shutdown) = oneshot::channel();
 
     let ep_worker = EpWorker::new(
         commands,
@@ -87,15 +79,15 @@ pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
     );
 
     let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender, tcp_shutdown);
-    //let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
+    // let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
 
     shutdown.add_notifier(epw_sd_sender);
     shutdown.add_notifier(tcp_sd_sender);
-    //shutdown.add_notifier(udp_sd_sender);
+    // shutdown.add_notifier(udp_sd_sender);
 
     shutdown.add_task(spawn(ep_worker.run()));
     shutdown.add_task(spawn(tcp_worker.run()));
-    //shutdown.add_task(spawn(udp_worker.run()));
+    // shutdown.add_task(spawn(udp_worker.run()));
 
     whitelist::init();
 

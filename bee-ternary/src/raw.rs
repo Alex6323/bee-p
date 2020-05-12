@@ -1,9 +1,23 @@
-use std::ops::Range;
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{Trit, TritBuf};
+use std::ops::Range;
 
 pub trait RawEncoding {
     type Trit: Trit;
-    type Buf: RawEncodingBuf<Slice=Self>;
+    type Buf: RawEncodingBuf<Slice = Self>;
 
     /// Get an empty slice of this encoding
     fn empty() -> &'static Self;
@@ -41,12 +55,14 @@ pub trait RawEncodingBuf {
     type Slice: RawEncoding + ?Sized;
 
     /// Create a new empty buffer
-    fn new() -> Self where Self: Sized;
+    fn new() -> Self
+    where
+        Self: Sized;
 
     /// Create a new buffer containing the given trits
     fn from_trits(trits: &[<Self::Slice as RawEncoding>::Trit]) -> Self
     where
-        Self: Sized
+        Self: Sized,
     {
         let mut this = Self::new();
         for trit in trits {
@@ -77,7 +93,7 @@ pub trait RawEncodingBuf {
         // if TypeId::of::<Self>() == TypeId::of::<T>() {
         //     unsafe { std::mem::transmute(this) }
         // } else {
-            this.trits().collect()
+        this.trits().collect()
         // }
     }
 }
