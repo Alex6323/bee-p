@@ -1,5 +1,5 @@
 use crate::{
-    message::{Tlv, TransactionBroadcast},
+    message::{tlv_into_bytes, TransactionBroadcast},
     protocol::Protocol,
 };
 
@@ -71,7 +71,7 @@ impl BroadcasterWorker {
             select! {
                 transaction = receiver_fused.next() => {
                     if let Some(BroadcasterWorkerEvent{from, transaction_broadcast}) = transaction {
-                        self.broadcast(from, Tlv::into_bytes(transaction_broadcast)).await;
+                        self.broadcast(from, tlv_into_bytes(transaction_broadcast)).await;
                     }
                 },
                 _ = shutdown_fused => {

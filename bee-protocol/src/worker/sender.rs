@@ -1,5 +1,5 @@
 use crate::{
-    message::{Heartbeat, Message, MilestoneRequest, Tlv, TransactionBroadcast, TransactionRequest},
+    message::{tlv_into_bytes, Heartbeat, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest},
     peer::Peer,
     protocol::Protocol,
 };
@@ -88,7 +88,7 @@ macro_rules! implement_sender_worker {
                                     .network
                                     .send(SendMessage {
                                         epid: self.peer.epid,
-                                        bytes: Tlv::into_bytes(message),
+                                        bytes: tlv_into_bytes(message),
                                         responder: None,
                                     })
                                     .await

@@ -9,61 +9,55 @@ pub(crate) enum TlvError {
     InvalidLength(usize),
 }
 
-/// Since the following methods have very common names, `from_bytes` and `into_bytes`, the sole purpose of this struct
-/// is to give them a proper namespace to avoid confusion.
-pub(crate) struct Tlv {}
-
-impl Tlv {
-    /// Deserializes a TLV header and a byte buffer into a message.
-    ///
-    /// # Arguments
-    ///
-    /// * `header`  -   The TLV header to deserialize from.
-    /// * `bytes`   -   The byte buffer to deserialize from.
-    ///
-    /// # Errors
-    ///
-    /// * The advertised message type does not match the required message type.
-    /// * The advertised message length does not match the buffer length.
-    /// * The buffer length is not within the allowed size range of the required message type.
-    pub(crate) fn from_bytes<M: Message>(header: &Header, bytes: &[u8]) -> Result<M, TlvError> {
-        if header.message_type != M::ID {
-            return Err(TlvError::InvalidAdvertisedType(header.message_type, M::ID));
-        }
-
-        if header.message_length as usize != bytes.len() {
-            return Err(TlvError::InvalidAdvertisedLength(
-                header.message_length as usize,
-                bytes.len(),
-            ));
-        }
-
-        if !M::size_range().contains(&bytes.len()) {
-            return Err(TlvError::InvalidLength(bytes.len()));
-        }
-
-        Ok(M::from_bytes(bytes))
+/// Deserializes a TLV header and a byte buffer into a message.
+///
+/// # Arguments
+///
+/// * `header`  -   The TLV header to deserialize from.
+/// * `bytes`   -   The byte buffer to deserialize from.
+///
+/// # Errors
+///
+/// * The advertised message type does not match the required message type.
+/// * The advertised message length does not match the buffer length.
+/// * The buffer length is not within the allowed size range of the required message type.
+pub(crate) fn tlv_from_bytes<M: Message>(header: &Header, bytes: &[u8]) -> Result<M, TlvError> {
+    if header.message_type != M::ID {
+        return Err(TlvError::InvalidAdvertisedType(header.message_type, M::ID));
     }
 
-    /// Serializes a TLV header and a message into a byte buffer.
-    ///
-    /// # Arguments
-    ///
-    /// * `message` -   The message to serialize.
-    pub(crate) fn into_bytes<M: Message>(message: M) -> Vec<u8> {
-        let size = message.size();
-        let mut bytes = vec![0u8; HEADER_SIZE + size];
-        let (header, payload) = bytes.split_at_mut(HEADER_SIZE);
-
-        Header {
-            message_type: M::ID,
-            message_length: size as u16,
-        }
-        .to_bytes(header);
-        message.into_bytes(payload);
-
-        bytes
+    if header.message_length as usize != bytes.len() {
+        return Err(TlvError::InvalidAdvertisedLength(
+            header.message_length as usize,
+            bytes.len(),
+        ));
     }
+
+    if !M::size_range().contains(&bytes.len()) {
+        return Err(TlvError::InvalidLength(bytes.len()));
+    }
+
+    Ok(M::from_bytes(bytes))
+}
+
+/// Serializes a TLV header and a message into a byte buffer.
+///
+/// # Arguments
+///
+/// * `message` -   The message to serialize.
+pub(crate) fn tlv_into_bytes<M: Message>(message: M) -> Vec<u8> {
+    let size = message.size();
+    let mut bytes = vec![0u8; HEADER_SIZE + size];
+    let (header, payload) = bytes.split_at_mut(HEADER_SIZE);
+
+    Header {
+        message_type: M::ID,
+        message_length: size as u16,
+    }
+    .to_bytes(header);
+    message.into_bytes(payload);
+
+    bytes
 }
 
 #[cfg(test)]
@@ -82,7 +76,7 @@ mod tests {
     use std::convert::TryInto;
 
     fn invalid_advertised_type_generic<M: Message>() {
-        match Tlv::from_bytes::<M>(
+        match tlv_from_bytes::<M>(
             &Header {
                 message_type: M::ID + 1,
                 message_length: M::size_range().start as u16,
@@ -98,7 +92,7 @@ mod tests {
     }
 
     fn invalid_advertised_length_generic<M: Message>() {
-        match Tlv::from_bytes::<M>(
+        match tlv_from_bytes::<M>(
             &Header {
                 message_type: M::ID,
                 message_length: M::size_range().start as u16,
@@ -114,7 +108,7 @@ mod tests {
     }
 
     fn length_out_of_range_generic<M: Message>() {
-        match Tlv::from_bytes::<M>(
+        match tlv_from_bytes::<M>(
             &Header {
                 message_type: M::ID,
                 message_length: M::size_range().start as u16 - 1,
@@ -125,7 +119,7 @@ mod tests {
             _ => unreachable!(),
         }
 
-        match Tlv::from_bytes::<M>(
+        match tlv_from_bytes::<M>(
             &Header {
                 message_type: M::ID,
                 message_length: M::size_range().end as u16,
@@ -143,7 +137,7 @@ mod tests {
         for _ in 0..1000 {
             let length = rng.gen_range(M::size_range().start, M::size_range().end);
             let bytes_from: Vec<u8> = (0..length).map(|_| rand::random::<u8>()).collect();
-            let message = Tlv::from_bytes::<M>(
+            let message = tlv_from_bytes::<M>(
                 &Header {
                     message_type: M::ID,
                     message_length: length as u16,
@@ -151,7 +145,7 @@ mod tests {
                 &bytes_from,
             )
             .unwrap();
-            let bytes_to = Tlv::into_bytes(message);
+            let bytes_to = tlv_into_bytes(message);
 
             assert_eq!(bytes_to[0], M::ID);
             assert_eq!(u16::from_be_bytes(bytes_to[1..3].try_into().unwrap()), length as u16);
