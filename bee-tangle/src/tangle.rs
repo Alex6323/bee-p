@@ -359,38 +359,36 @@ impl Tangle {
 
         non_analyzed_hashes.push(root);
 
-        // TODO try to replace cloned
-        while let Some(hash) = non_analyzed_hashes.last().cloned() {
-            match self.vertices.get(&hash) {
+        while let Some(hash) = non_analyzed_hashes.last() {
+            match self.vertices.get(hash) {
                 Some(vertex) => {
                     let vertex = vertex.value();
                     let transaction = vertex.get_ref_to_inner();
                     // TODO simplify ?
 
                     // TODO add follow
-                    if (self.is_solid_entry_point(&transaction.trunk())
-                        || analyzed_hashes.contains(transaction.trunk()))
-                        && (self.is_solid_entry_point(&transaction.branch())
+                    if (self.is_solid_entry_point(transaction.trunk()) || analyzed_hashes.contains(transaction.trunk()))
+                        && (self.is_solid_entry_point(transaction.branch())
                             || analyzed_hashes.contains(transaction.branch()))
                     {
-                        map(&hash, &transaction);
-                        analyzed_hashes.insert(hash);
+                        map(hash, &transaction);
+                        analyzed_hashes.insert(hash.clone());
                         non_analyzed_hashes.pop();
                     // TODO add follow
-                    } else if !self.is_solid_entry_point(&transaction.trunk())
+                    } else if !self.is_solid_entry_point(transaction.trunk())
                         && !analyzed_hashes.contains(transaction.trunk())
                     {
                         non_analyzed_hashes.push(*transaction.trunk());
                     // TODO add follow
-                    } else if !self.is_solid_entry_point(&transaction.branch())
+                    } else if !self.is_solid_entry_point(transaction.branch())
                         && !analyzed_hashes.contains(transaction.branch())
                     {
                         non_analyzed_hashes.push(*transaction.branch());
                     }
                 }
                 None => {
-                    if !self.is_solid_entry_point(&hash) {
-                        on_missing(&hash);
+                    if !self.is_solid_entry_point(hash) {
+                        on_missing(hash);
                     }
                 }
             }
