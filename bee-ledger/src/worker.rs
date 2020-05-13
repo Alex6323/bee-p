@@ -153,10 +153,7 @@ mod tests {
             diff.insert(rand_trits_field::<Address>(), rng.gen_range(0, 100_000_000));
         }
 
-        block_on(tx.send(LedgerWorkerEvent::ApplyDiff(
-            diff.clone()
-        )))
-        .unwrap();
+        block_on(tx.send(LedgerWorkerEvent::ApplyDiff(diff.clone()))).unwrap();
 
         spawn(LedgerWorker::new(HashMap::new()).run(rx, shutdown_rx));
 
