@@ -1,6 +1,6 @@
 # Duplicate this file to config.toml to use it
 
-logLevel  = "info"
+log_level = "info"
 
 [network]
 binding_addr  = "0.0.0.0"
