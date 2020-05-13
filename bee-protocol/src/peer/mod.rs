@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod handshaked_peer;
+mod manager;
 mod peer;
 
-pub use peer::Peer;
+pub(crate) use handshaked_peer::HandshakedPeer;
+pub(crate) use manager::PeerManager;
+pub(crate) use peer::Peer;

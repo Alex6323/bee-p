@@ -101,7 +101,7 @@ impl Protocol {
     }
 
     pub async fn broadcast_heartbeat(solid_milestone_index: MilestoneIndex, snapshot_milestone_index: MilestoneIndex) {
-        for entry in Protocol::get().contexts.iter() {
+        for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
             Protocol::send_heartbeat(*entry.key(), solid_milestone_index, snapshot_milestone_index).await;
         }
     }

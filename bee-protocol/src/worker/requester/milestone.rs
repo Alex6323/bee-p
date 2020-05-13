@@ -52,7 +52,7 @@ impl MilestoneRequesterWorker {
     }
 
     async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
-        if Protocol::get().contexts.is_empty() {
+        if Protocol::get().peer_manager.handshaked_peers.is_empty() {
             return;
         }
 
@@ -60,11 +60,10 @@ impl MilestoneRequesterWorker {
         let epid = match epid {
             Some(epid) => epid,
             None => {
-                match Protocol::get()
-                    .contexts
-                    .iter()
-                    .nth(self.rng.gen_range(0, Protocol::get().contexts.len()))
-                {
+                match Protocol::get().peer_manager.handshaked_peers.iter().nth(
+                    self.rng
+                        .gen_range(0, Protocol::get().peer_manager.handshaked_peers.len()),
+                ) {
                     Some(entry) => *entry.key(),
                     None => return,
                 }

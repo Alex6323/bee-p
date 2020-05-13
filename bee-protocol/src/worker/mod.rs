@@ -24,7 +24,7 @@ mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidatorWorkerEvent};
-pub(crate) use peer::PeerWorker;
+pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, TransactionRequesterWorker,
     TransactionRequesterWorkerEntry,
@@ -33,7 +33,7 @@ pub(crate) use responder::{
     MilestoneResponderWorker, MilestoneResponderWorkerEvent, TransactionResponderWorker,
     TransactionResponderWorkerEvent,
 };
-pub(crate) use sender::{SenderContext, SenderWorker};
+pub(crate) use sender::SenderWorker;
 pub(crate) use solidifier::{
     MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, TransactionSolidifierWorker,
     TransactionSolidifierWorkerEvent,

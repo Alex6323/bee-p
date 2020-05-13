@@ -42,7 +42,7 @@ impl BroadcasterWorker {
     }
 
     async fn broadcast(&mut self, from: Option<EndpointId>, bytes: Vec<u8>) {
-        for entry in Protocol::get().contexts.iter() {
+        for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
             if match from {
                 Some(from) => from != *entry.key(),
                 None => true,

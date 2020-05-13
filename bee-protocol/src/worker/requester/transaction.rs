@@ -54,18 +54,17 @@ impl TransactionRequesterWorker {
     }
 
     async fn process_request(&mut self, hash: Hash, index: MilestoneIndex) {
-        if Protocol::get().contexts.is_empty() {
+        if Protocol::get().peer_manager.handshaked_peers.is_empty() {
             return;
         }
 
         // TODO check that neighbor may have the tx (by the index)
         Protocol::get().requested.insert(hash, index);
 
-        match Protocol::get()
-            .contexts
-            .iter()
-            .nth(self.rng.gen_range(0, Protocol::get().contexts.len()))
-        {
+        match Protocol::get().peer_manager.handshaked_peers.iter().nth(
+            self.rng
+                .gen_range(0, Protocol::get().peer_manager.handshaked_peers.len()),
+        ) {
             Some(entry) => {
                 SenderWorker::<TransactionRequest>::send(
                     entry.key(),

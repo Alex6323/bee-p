@@ -24,5 +24,4 @@ mod worker;
 
 pub use config::{ProtocolConfig, ProtocolConfigBuilder};
 pub use milestone::{Milestone, MilestoneIndex};
-pub use peer::Peer;
 pub use protocol::{Protocol, ProtocolMetrics};

@@ -22,11 +22,11 @@ use bee_common::logger;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
-use bee_protocol::{Peer, Protocol};
+use bee_protocol::Protocol;
 use bee_snapshot::{SnapshotMetadata, SnapshotState};
 use bee_tangle::tangle;
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
@@ -44,7 +44,7 @@ pub struct Node {
     events: EventSubscriber,
     ledger: Option<(mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>)>,
     // TODO real type ?
-    peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>, Arc<Peer>)>,
+    peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }
 
 impl Node {
@@ -79,15 +79,14 @@ impl Node {
     }
 
     async fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
-        let peer = Arc::new(Peer::new(epid, address, origin));
-        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(peer.clone());
+        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(epid, address, origin);
 
-        self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx, peer));
+        self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx));
     }
 
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
         // TODO unregister ?
-        if let Some((_, shutdown, _)) = self.peers.remove(&epid) {
+        if let Some((_, shutdown)) = self.peers.remove(&epid) {
             if let Err(_) = shutdown.send(()) {
                 warn!("[Node ] Sending shutdown to {} failed.", epid);
             }

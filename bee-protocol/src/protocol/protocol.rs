@@ -14,24 +14,23 @@
 
 use crate::{
     config::ProtocolConfig,
-    message::{Heartbeat, MilestoneRequest, TransactionBroadcast, TransactionRequest},
     milestone::MilestoneIndex,
-    peer::Peer,
+    peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
     util::WaitPriorityQueue,
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
-        MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent, PeerWorker,
-        SenderContext, SenderWorker, StatusWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
-        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
-        TransactionSolidifierWorkerEvent, TransactionWorker, TransactionWorkerEvent,
+        MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent, PeerHandshakerWorker,
+        StatusWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
+        TransactionResponderWorkerEvent, TransactionSolidifierWorker, TransactionSolidifierWorkerEvent,
+        TransactionWorker, TransactionWorkerEvent,
     },
 };
 
 use bee_bundle::Hash;
 use bee_crypto::{CurlP27, CurlP81, Kerl, SpongeType};
-use bee_network::{EndpointId, Network};
+use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::WotsPublicKey;
 
 use std::{
@@ -84,7 +83,7 @@ pub struct Protocol {
     ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) status_worker: mpsc::Sender<()>,
-    pub(crate) contexts: DashMap<EndpointId, SenderContext>,
+    pub(crate) peer_manager: PeerManager,
     pub(crate) requested: DashMap<Hash, MilestoneIndex>,
 }
 
@@ -162,7 +161,7 @@ impl Protocol {
             ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             status_worker: status_worker_shutdown_tx,
-            contexts: Default::default(),
+            peer_manager: PeerManager::new(network.clone()),
             requested: Default::default(),
         };
 
@@ -291,80 +290,22 @@ impl Protocol {
         }
     }
 
-    pub fn register(peer: Arc<Peer>) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
+    pub fn register(
+        epid: EndpointId,
+        address: Address,
+        origin: Origin,
+    ) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?
-        // PeerWorker
+
+        let peer = Arc::new(Peer::new(epid, address, origin));
+
         let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().config.workers.receiver_worker_bound);
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
-        spawn(PeerWorker::new(Protocol::get().network.clone(), peer).run(receiver_rx, receiver_shutdown_rx));
+        Protocol::get().peer_manager.add(peer.clone());
+
+        spawn(PeerHandshakerWorker::new(Protocol::get().network.clone(), peer).run(receiver_rx, receiver_shutdown_rx));
 
         (receiver_tx, receiver_shutdown_tx)
-    }
-
-    pub(crate) async fn senders_add(network: Network, peer: Arc<Peer>) {
-        // TODO check if not already added
-
-        // SenderWorker MilestoneRequest
-        let (milestone_request_tx, milestone_request_rx) =
-            mpsc::channel(Protocol::get().config.workers.milestone_request_send_worker_bound);
-        let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
-
-        spawn(
-            SenderWorker::<MilestoneRequest>::new(network.clone(), peer.clone())
-                .run(milestone_request_rx, milestone_request_shutdown_rx),
-        );
-
-        // SenderWorker TransactionBroadcast
-        let (transaction_broadcast_tx, transaction_broadcast_rx) =
-            mpsc::channel(Protocol::get().config.workers.transaction_broadcast_send_worker_bound);
-        let (transaction_broadcast_shutdown_tx, transaction_broadcast_shutdown_rx) = oneshot::channel();
-
-        spawn(
-            SenderWorker::<TransactionBroadcast>::new(network.clone(), peer.clone())
-                .run(transaction_broadcast_rx, transaction_broadcast_shutdown_rx),
-        );
-
-        // SenderWorker TransactionRequest
-        let (transaction_request_tx, transaction_request_rx) =
-            mpsc::channel(Protocol::get().config.workers.transaction_request_send_worker_bound);
-        let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
-
-        spawn(
-            SenderWorker::<TransactionRequest>::new(network.clone(), peer.clone())
-                .run(transaction_request_rx, transaction_request_shutdown_rx),
-        );
-
-        // SenderWorker Heartbeat
-        let (heartbeat_tx, heartbeat_rx) = mpsc::channel(Protocol::get().config.workers.heartbeat_send_worker_bound);
-        let (heartbeat_shutdown_tx, heartbeat_shutdown_rx) = oneshot::channel();
-
-        spawn(SenderWorker::<Heartbeat>::new(network.clone(), peer.clone()).run(heartbeat_rx, heartbeat_shutdown_rx));
-
-        let context = SenderContext::new(
-            (milestone_request_tx, milestone_request_shutdown_tx),
-            (transaction_broadcast_tx, transaction_broadcast_shutdown_tx),
-            (transaction_request_tx, transaction_request_shutdown_tx),
-            (heartbeat_tx, heartbeat_shutdown_tx),
-        );
-
-        Protocol::get().contexts.insert(peer.epid, context);
-    }
-
-    pub(crate) async fn senders_remove(epid: &EndpointId) {
-        if let Some((_, context)) = Protocol::get().contexts.remove(epid) {
-            if let Err(_) = context.milestone_request.1.send(()) {
-                warn!("[Protocol ] Shutting down MilestoneRequest SenderWorker failed.");
-            }
-            if let Err(_) = context.transaction_broadcast.1.send(()) {
-                warn!("[Protocol ] Shutting down TransactionBroadcast SenderWorker failed.");
-            }
-            if let Err(_) = context.transaction_request.1.send(()) {
-                warn!("[Protocol ] Shutting down TransactionRequest SenderWorker failed.");
-            }
-            if let Err(_) = context.heartbeat.1.send(()) {
-                warn!("[Protocol ] Shutting down Heartbeat SenderWorker failed.");
-            }
-        }
     }
 }
