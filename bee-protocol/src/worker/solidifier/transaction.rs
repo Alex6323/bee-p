@@ -48,15 +48,14 @@ impl TransactionSolidifierWorker {
         );
 
         // TODO refactor with async closures when stabilized
-        match missing_hashes.is_empty() {
-            true => true,
-            false => {
-                for missing_hash in missing_hashes {
-                    Protocol::request_transaction(missing_hash, index).await;
-                }
-
-                false
+        if missing_hashes.is_empty() {
+            true
+        } else {
+            for missing_hash in missing_hashes {
+                Protocol::request_transaction(missing_hash, index).await;
             }
+
+            false
         }
     }
 

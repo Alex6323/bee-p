@@ -79,7 +79,7 @@ mod tests {
                         _ => unreachable!(),
                     }
                 }
-                byte = byte << 1;
+                byte <<= 1;
             }
         }
     }

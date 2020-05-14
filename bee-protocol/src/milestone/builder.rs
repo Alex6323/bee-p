@@ -104,17 +104,20 @@ where
             .to_inner();
 
         match public_key.verify(normalize_hash(hash).as_i8_slice(), &signature) {
-            Ok(valid) => match valid {
-                true => Ok(()),
-                false => Err(MilestoneBuilderError::InvalidSignature),
-            },
+            Ok(valid) => {
+                if valid {
+                    Ok(())
+                } else {
+                    Err(MilestoneBuilderError::InvalidSignature)
+                }
+            }
             Err(e) => Err(MilestoneBuilderError::SignatureError(e)),
         }
     }
 
     pub fn validate(mut self) -> Result<StagedMilestoneBuilder<E, M, P, IncomingValidated>, MilestoneBuilderError> {
         if self.transactions.len() == 0 {
-            Err(MilestoneBuilderError::Empty)?;
+            return Err(MilestoneBuilderError::Empty);
         }
 
         // TODO check coo address

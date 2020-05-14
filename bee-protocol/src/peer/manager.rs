@@ -47,7 +47,7 @@ impl PeerManager {
     }
 
     pub(crate) fn handshake(&self, epid: &EndpointId, address: Address) {
-        if let Some(_) = self.peers.remove(epid) {
+        if self.peers.remove(epid).is_some() {
             // TODO check if not already added
 
             // SenderWorker MilestoneRequest
@@ -99,10 +99,7 @@ impl PeerManager {
                 SenderWorker::<TransactionRequest>::new(self.network.clone(), peer.clone())
                     .run(transaction_request_rx, transaction_request_shutdown_rx),
             );
-            spawn(
-                SenderWorker::<Heartbeat>::new(self.network.clone(), peer.clone())
-                    .run(heartbeat_rx, heartbeat_shutdown_rx),
-            );
+            spawn(SenderWorker::<Heartbeat>::new(self.network.clone(), peer).run(heartbeat_rx, heartbeat_shutdown_rx));
         }
     }
 

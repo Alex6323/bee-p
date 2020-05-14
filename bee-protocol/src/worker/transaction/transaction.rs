@@ -134,7 +134,7 @@ impl TransactionWorker {
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
             Some(transaction) => {
-                if !tangle().is_synced() && Protocol::get().requested.len() == 0 {
+                if !tangle().is_synced() && Protocol::get().requested.is_empty() {
                     Protocol::trigger_milestone_solidification().await;
                 }
                 match Protocol::get().requested.remove(&hash) {
@@ -214,7 +214,8 @@ mod tests {
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::channel(1000);
 
-        let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
+        let mut transaction_worker_sender_clone = transaction_worker_sender;
+
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
             let message = TransactionBroadcast::new(&tx);

@@ -22,7 +22,7 @@ pub(crate) fn compress_transaction_bytes(bytes: &[u8]) -> Vec<u8> {
         if bytes[i] != 0 {
             break;
         }
-        trimmed_size = trimmed_size + 1;
+        trimmed_size += 1;
     }
 
     let mut compresses_bytes = vec![0u8; MAX_PAYLOAD_SIZE - trimmed_size + NON_PAYLOAD_SIZE];

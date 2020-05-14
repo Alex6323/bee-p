@@ -65,7 +65,7 @@ where
             .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
         if !transaction.is_tail() {
-            Err(MilestoneValidatorWorkerError::NotATail)?;
+            return Err(MilestoneValidatorWorkerError::NotATail);
         }
 
         builder.push((*transaction).clone());

@@ -67,7 +67,7 @@ impl TinyHashCache {
     pub fn insert(&mut self, bytes: &[u8]) -> bool {
         let hash = xx_hash(bytes);
 
-        if self.contains(&hash) {
+        if self.contains(hash) {
             return false;
         }
 
@@ -82,8 +82,8 @@ impl TinyHashCache {
         true
     }
 
-    fn contains(&self, hash: &u64) -> bool {
-        self.cache.contains(hash)
+    fn contains(&self, hash: u64) -> bool {
+        self.cache.contains(&hash)
     }
 
     fn len(&self) -> usize {
@@ -133,11 +133,10 @@ mod tests {
 
         let first_buf = &[1, 2, 3];
         let second_buf = &[3, 4, 5];
-        let second_buf_clone = second_buf.clone();
 
         assert_eq!(cache.insert(first_buf), true);
         assert_eq!(cache.insert(second_buf), true);
         assert_eq!(cache.len(), 1);
-        assert_eq!(cache.insert(&second_buf_clone), false);
+        assert_eq!(cache.insert(second_buf), false);
     }
 }
