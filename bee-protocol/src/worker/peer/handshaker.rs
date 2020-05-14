@@ -10,16 +10,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS},
+    config::slice_eq,
+    message::{
+        messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
+    },
     peer::Peer,
     protocol::Protocol,
-    worker::{peer::validate_handshake, PeerWorker},
+    worker::PeerWorker,
 };
 
-use bee_network::{Command::SendMessage, Network};
+use bee_network::{Command::SendMessage, Network, Origin, Port};
 use bee_tangle::tangle;
 
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use async_std::task::spawn;
 use futures::{
@@ -29,6 +35,15 @@ use futures::{
     stream::StreamExt,
 };
 use log::{debug, error, info, warn};
+
+pub(crate) enum HandshakeError {
+    InvalidTimestampDiff(i64),
+    CoordinatorMismatch,
+    MwmMismatch(u8, u8),
+    UnsupportedVersion(u8),
+    PortMismatch(u16, u16),
+    UnboundPeer,
+}
 
 #[derive(Debug)]
 pub(crate) enum PeerHandshakerWorkerError {}
@@ -123,11 +138,56 @@ impl PeerHandshakerWorker {
         );
     }
 
+    pub(crate) fn validate_handshake(&self, peer: &Peer, handshake: Handshake) -> Result<(), HandshakeError> {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Clock may have gone backwards")
+            .as_millis() as u64;
+
+        if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
+            Err(HandshakeError::InvalidTimestampDiff(
+                ((timestamp - handshake.timestamp) as i64).abs(),
+            ))?
+        }
+
+        if !slice_eq(
+            &Protocol::get().config.coordinator.public_key_bytes,
+            &handshake.coordinator,
+        ) {
+            Err(HandshakeError::CoordinatorMismatch)?
+        }
+
+        if Protocol::get().config.mwm != handshake.minimum_weight_magnitude {
+            Err(HandshakeError::MwmMismatch(
+                Protocol::get().config.mwm,
+                handshake.minimum_weight_magnitude,
+            ))?
+        }
+
+        if let Err(version) = messages_supported_version(&handshake.supported_versions) {
+            Err(HandshakeError::UnsupportedVersion(version))?
+        }
+
+        match peer.origin {
+            Origin::Outbound => {
+                if peer.address.port() != Port(handshake.port) {
+                    Err(HandshakeError::PortMismatch(*peer.address.port(), handshake.port))?
+                }
+            }
+            Origin::Inbound => {
+                // TODO check if whitelisted
+            }
+            Origin::Unbound => Err(HandshakeError::UnboundPeer)?,
+        }
+
+        Ok(())
+    }
+
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerHandshakerWorkerError> {
         if let Handshake::ID = header.message_type {
             debug!("[PeerHandshakerWorker({})] Reading Handshake...", self.peer.epid);
             match tlv_from_bytes::<Handshake>(&header, bytes) {
-                Ok(handshake) => match validate_handshake(&self.peer, handshake) {
+                Ok(handshake) => match self.validate_handshake(&self.peer, handshake) {
                     Ok(_) => {
                         info!("[PeerHandshakerWorker({})] Handshake completed.", self.peer.epid);
 
