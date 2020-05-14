@@ -199,10 +199,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
 
-        for (key, value) in db
-            .iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start)
-            .unwrap()
-        {
+        for (key, value) in db.iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start) {
             let (trunk, branch) = decode_aprovees(value.as_ref());
             let approver = decode_hash(key.as_ref());
             hash_to_approvers
@@ -226,7 +223,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let mut missing_to_approvers = HashMap::new();
         let transaction_cf_hash_to_aprovees = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
-        for (key, value) in db.iterator_cf(&transaction_cf_hash_to_aprovees, IteratorMode::Start)? {
+        for (key, value) in db.iterator_cf(&transaction_cf_hash_to_aprovees, IteratorMode::Start) {
             let (trunk, branch) = decode_aprovees(value.as_ref());
             let approver = decode_hash(key.as_ref());
 
@@ -310,7 +307,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 &transaction_cf_hash_to_transaction,
                 cast_slice(hash_buf.as_i8_slice()),
                 cast_slice(tx_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
-            )?;
+            );
 
             let aprovees = Approvees {
                 trunk: tx.trunk(),
@@ -322,7 +319,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 &transaction_cf_hash_to_aprovees,
                 cast_slice(hash_buf.as_i8_slice()),
                 cast_slice(aprovees_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
-            )?;
+            );
         }
 
         let mut write_options = WriteOptions::default();
@@ -364,7 +361,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 &transaction_cf_hash_to_solid,
                 cast_slice(hash_buf.as_i8_slice()),
                 unsafe { mem::transmute::<bool, [u8; 1]>(true) },
-            )?;
+            );
         }
 
         let mut write_options = WriteOptions::default();
@@ -390,7 +387,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 &transaction_cf_hash_to_snapshot_index,
                 cast_slice(hash_buf.as_i8_slice()),
                 snapshot_index.to_le_bytes(),
-            )?;
+            );
         }
 
         let mut write_options = WriteOptions::default();
@@ -461,7 +458,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
         for hash in transaction_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
-            batch.delete_cf(&transaction_cf_hash_to_transaction, cast_slice(hash_buf.as_i8_slice()))?;
+            batch.delete_cf(&transaction_cf_hash_to_transaction, cast_slice(hash_buf.as_i8_slice()));
         }
 
         let mut write_options = WriteOptions::default();
@@ -518,7 +515,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
         for hash in milestone_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
-            batch.delete_cf(&milestone_cf_hash_to_index, cast_slice(hash_buf.as_i8_slice()))?;
+            batch.delete_cf(&milestone_cf_hash_to_index, cast_slice(hash_buf.as_i8_slice()));
         }
 
         let mut write_options = WriteOptions::default();

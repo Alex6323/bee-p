@@ -25,9 +25,5 @@ num_cpus = "1.12.0"
 rand = "0.7.3"
 sqlx = {version = "0.3.2", features = [ "postgres" ]}
 bytemuck = "1.2.0"
-rocksdb = "0.13.0"
+rocksdb = "0.14.0"
 itertools = "0.9.0"
-
-[lib]
-name = "bee_storage"
-path = "src/lib.rs"
