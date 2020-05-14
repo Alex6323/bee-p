@@ -19,7 +19,11 @@ use crate::{
     worker::PeerWorker,
 };
 
-use bee_network::{Address, Command::SendMessage, Network, Origin, Port};
+use bee_network::{
+    Address,
+    Command::{Disconnect, SendMessage},
+    Network, Origin, Port,
+};
 use bee_tangle::tangle;
 
 use std::{
@@ -36,6 +40,7 @@ use futures::{
 };
 use log::{debug, error, info, warn};
 
+#[derive(Debug)]
 pub(crate) enum HandshakeError {
     InvalidTimestampDiff(i64),
     CoordinatorMismatch,
@@ -43,6 +48,7 @@ pub(crate) enum HandshakeError {
     UnsupportedVersion(u8),
     PortMismatch(u16, u16),
     UnboundPeer,
+    AlreadyHandshaked,
 }
 
 #[derive(Debug)]
@@ -58,10 +64,16 @@ struct PeerReadContext {
     buffer: Vec<u8>,
 }
 
+enum HandshakeStatus {
+    Awaiting,
+    Done,
+    Duplicate,
+}
+
 pub struct PeerHandshakerWorker {
     network: Network,
     peer: Arc<Peer>,
-    handshaked: bool,
+    status: HandshakeStatus,
 }
 
 impl PeerHandshakerWorker {
@@ -69,12 +81,14 @@ impl PeerHandshakerWorker {
         Self {
             network,
             peer,
-            handshaked: false,
+            status: HandshakeStatus::Awaiting,
         }
     }
 
     pub async fn run(mut self, receiver: mpsc::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
         info!("[PeerHandshakerWorker({})] Running.", self.peer.address);
+
+        // TODO should we have a first check if already connected ?
 
         let mut context = PeerReadContext {
             state: PeerReadState::Header,
@@ -111,8 +125,9 @@ impl PeerHandshakerWorker {
                 event = receiver_fused.next() => {
                     if let Some(event) = event {
                         context = self.message_handler(context, event).await;
-                        if self.handshaked {
-                            break;
+                        match self.status {
+                            HandshakeStatus::Done | HandshakeStatus::Duplicate => break,
+                            _ => continue
                         }
                     }
                 },
@@ -122,23 +137,43 @@ impl PeerHandshakerWorker {
             }
         }
 
-        info!("[PeerHandshakerWorker({})] Stopped.", self.peer.address);
+        match self.status {
+            HandshakeStatus::Done => {
+                spawn(
+                    PeerWorker::new(
+                        Protocol::get()
+                            .peer_manager
+                            .handshaked_peers
+                            .get(&self.peer.epid)
+                            .unwrap()
+                            .value()
+                            .clone(),
+                    )
+                    .run(receiver_fused, shutdown_fused),
+                );
+            }
+            HandshakeStatus::Duplicate => {
+                if let Err(e) = self
+                    .network
+                    .send(Disconnect {
+                        epid: self.peer.epid,
+                        responder: None,
+                    })
+                    .await
+                {
+                    warn!(
+                        "[PeerHandshakerWorker({})] Sending Command::RemoveEndpoint failed: {}.",
+                        self.peer.epid, e
+                    );
+                }
+            }
+            _ => (),
+        }
 
-        spawn(
-            PeerWorker::new(
-                Protocol::get()
-                    .peer_manager
-                    .handshaked_peers
-                    .get(&self.peer.epid)
-                    .unwrap()
-                    .value()
-                    .clone(),
-            )
-            .run(receiver_fused, shutdown_fused),
-        );
+        info!("[PeerHandshakerWorker({})] Stopped.", self.peer.address);
     }
 
-    pub(crate) fn validate_handshake(&self, handshake: Handshake) -> Result<Address, HandshakeError> {
+    pub(crate) fn validate_handshake(&mut self, handshake: Handshake) -> Result<Address, HandshakeError> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Clock may have gone backwards")
@@ -168,21 +203,30 @@ impl PeerHandshakerWorker {
             return Err(HandshakeError::UnsupportedVersion(version));
         }
 
-        match self.peer.origin {
+        let address = match self.peer.origin {
             Origin::Outbound => {
                 if self.peer.address.port() != Port(handshake.port) {
                     return Err(HandshakeError::PortMismatch(*self.peer.address.port(), handshake.port));
                 }
 
-                Ok(self.peer.address)
+                self.peer.address
             }
             Origin::Inbound => {
                 // TODO check if whitelisted
 
-                Ok(Address::from(SocketAddr::new(self.peer.address.ip(), handshake.port)))
+                Address::from(SocketAddr::new(self.peer.address.ip(), handshake.port))
             }
             Origin::Unbound => return Err(HandshakeError::UnboundPeer),
+        };
+
+        for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
+            if peer.address == address {
+                self.status = HandshakeStatus::Duplicate;
+                return Err(HandshakeError::AlreadyHandshaked);
+            }
         }
+
+        Ok(address)
     }
 
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerHandshakerWorkerError> {
@@ -205,10 +249,13 @@ impl PeerHandshakerWorker {
                         Protocol::request_last_milestone(Some(self.peer.epid));
                         Protocol::trigger_milestone_solidification().await;
 
-                        self.handshaked = true;
+                        self.status = HandshakeStatus::Done;
                     }
-                    Err(_) => {
-                        // TODO handle
+                    Err(e) => {
+                        warn!(
+                            "[PeerHandshakerWorker({})] Handshaking failed: {:?}.",
+                            self.peer.address, e
+                        );
                     }
                 },
                 Err(e) => {

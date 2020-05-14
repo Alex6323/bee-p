@@ -40,7 +40,6 @@ pub struct Node {
     shutdown: Shutdown,
     events: EventSubscriber,
     ledger: Option<(mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>)>,
-    // TODO real type ?
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }
 
@@ -59,16 +58,9 @@ impl Node {
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
         info!("[Node ] Endpoint {} has been added.", epid);
 
-        // if let Err(e) = self
-        //     .network
-        //     .send(Connect {
-        //         epid: epid,
-        //         responder: None,
-        //     })
-        //     .await
-        // {
-        //     warn!("[Node ] Sending Command::Connect for {} failed: {}.", epid, e);
-        // }
+        if let Err(e) = self.network.send(Connect { epid, responder: None }).await {
+            warn!("[Node ] Sending Command::Connect for {} failed: {}.", epid, e);
+        }
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
