@@ -17,6 +17,6 @@ bee-ternary = { path = "../bee-ternary" }
 async-std = { version = "1.4.0", features = [ "attributes" ] }
 async-trait = "0.1.22"
 bincode = "1.2.1"
-futures = "0.3.1"
+futures = "0.3.5"
 num_cpus = "1.12.0"
 rand = "0.7.3"

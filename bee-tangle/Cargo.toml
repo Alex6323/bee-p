@@ -20,4 +20,5 @@ flume = "0.7.1"
 [dev-dependencies]
 bee-crypto = { path = "../bee-crypto" }
 bee-test = { path = "../bee-test" }
+
 serial_test = "0.4.0"

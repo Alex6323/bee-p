@@ -12,7 +12,7 @@ keywords = ["iota", "tangle", "bee", "framework", "ledger"]
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
 
-futures = "0.3.4"
+futures = "0.3.5"
 log = "0.4.8"
 
 [dev-dependencies]
