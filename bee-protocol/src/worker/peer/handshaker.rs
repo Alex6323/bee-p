@@ -19,7 +19,7 @@ use crate::{
     worker::PeerWorker,
 };
 
-use bee_network::{Command::SendMessage, Network, Origin, Port};
+use bee_network::{Address, Command::SendMessage, Network, Origin, Port};
 use bee_tangle::tangle;
 
 use std::{
@@ -27,7 +27,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use async_std::task::spawn;
+use async_std::{net::SocketAddr, task::spawn};
 use futures::{
     channel::{mpsc, oneshot},
     future::FutureExt,
@@ -74,7 +74,7 @@ impl PeerHandshakerWorker {
     }
 
     pub async fn run(mut self, receiver: mpsc::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
-        info!("[PeerHandshakerWorker({})] Running.", self.peer.epid);
+        info!("[PeerHandshakerWorker({})] Running.", self.peer.address);
 
         let mut context = PeerReadContext {
             state: PeerReadState::Header,
@@ -102,7 +102,7 @@ impl PeerHandshakerWorker {
             // TODO then what ?
             warn!(
                 "[PeerHandshakerWorker({})] Failed to send handshake: {:?}.",
-                self.peer.epid, e
+                self.peer.address, e
             );
         }
 
@@ -122,7 +122,7 @@ impl PeerHandshakerWorker {
             }
         }
 
-        info!("[PeerHandshakerWorker({})] Stopped.", self.peer.epid);
+        info!("[PeerHandshakerWorker({})] Stopped.", self.peer.address);
 
         spawn(
             PeerWorker::new(
@@ -138,60 +138,62 @@ impl PeerHandshakerWorker {
         );
     }
 
-    pub(crate) fn validate_handshake(&self, peer: &Peer, handshake: Handshake) -> Result<(), HandshakeError> {
+    pub(crate) fn validate_handshake(&self, handshake: Handshake) -> Result<Address, HandshakeError> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Clock may have gone backwards")
             .as_millis() as u64;
 
         if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
-            Err(HandshakeError::InvalidTimestampDiff(
+            return Err(HandshakeError::InvalidTimestampDiff(
                 ((timestamp - handshake.timestamp) as i64).abs(),
-            ))?
+            ));
         }
 
         if !slice_eq(
             &Protocol::get().config.coordinator.public_key_bytes,
             &handshake.coordinator,
         ) {
-            Err(HandshakeError::CoordinatorMismatch)?
+            return Err(HandshakeError::CoordinatorMismatch);
         }
 
         if Protocol::get().config.mwm != handshake.minimum_weight_magnitude {
-            Err(HandshakeError::MwmMismatch(
+            return Err(HandshakeError::MwmMismatch(
                 Protocol::get().config.mwm,
                 handshake.minimum_weight_magnitude,
-            ))?
+            ));
         }
 
         if let Err(version) = messages_supported_version(&handshake.supported_versions) {
-            Err(HandshakeError::UnsupportedVersion(version))?
+            return Err(HandshakeError::UnsupportedVersion(version));
         }
 
-        match peer.origin {
+        match self.peer.origin {
             Origin::Outbound => {
-                if peer.address.port() != Port(handshake.port) {
-                    Err(HandshakeError::PortMismatch(*peer.address.port(), handshake.port))?
+                if self.peer.address.port() != Port(handshake.port) {
+                    return Err(HandshakeError::PortMismatch(*self.peer.address.port(), handshake.port));
                 }
+
+                Ok(self.peer.address)
             }
             Origin::Inbound => {
                 // TODO check if whitelisted
-            }
-            Origin::Unbound => Err(HandshakeError::UnboundPeer)?,
-        }
 
-        Ok(())
+                Ok(Address::from(SocketAddr::new(self.peer.address.ip(), handshake.port)))
+            }
+            Origin::Unbound => return Err(HandshakeError::UnboundPeer),
+        }
     }
 
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerHandshakerWorkerError> {
         if let Handshake::ID = header.message_type {
-            debug!("[PeerHandshakerWorker({})] Reading Handshake...", self.peer.epid);
+            debug!("[PeerHandshakerWorker({})] Reading Handshake...", self.peer.address);
             match tlv_from_bytes::<Handshake>(&header, bytes) {
-                Ok(handshake) => match self.validate_handshake(&self.peer, handshake) {
-                    Ok(_) => {
-                        info!("[PeerHandshakerWorker({})] Handshake completed.", self.peer.epid);
+                Ok(handshake) => match self.validate_handshake(handshake) {
+                    Ok(address) => {
+                        info!("[PeerHandshakerWorker({})] Handshake completed.", self.peer.address);
 
-                        Protocol::get().peer_manager.handshake(&self.peer.epid);
+                        Protocol::get().peer_manager.handshake(&self.peer.epid, address);
 
                         Protocol::send_heartbeat(
                             self.peer.epid,
@@ -212,7 +214,7 @@ impl PeerHandshakerWorker {
                 Err(e) => {
                     warn!(
                         "[PeerHandshakerWorker({})] Reading Handshake failed: {:?}.",
-                        self.peer.epid, e
+                        self.peer.address, e
                     );
 
                     Protocol::get().metrics.invalid_messages_received_inc();
@@ -221,7 +223,7 @@ impl PeerHandshakerWorker {
         } else {
             warn!(
                 "[PeerHandshakerWorker({})] Ignoring messages until fully handshaked.",
-                self.peer.epid
+                self.peer.address
             );
 
             Protocol::get().metrics.invalid_messages_received_inc();
@@ -244,7 +246,7 @@ impl PeerHandshakerWorker {
             context.state = match context.state {
                 PeerReadState::Header => {
                     if offset + 3 <= context.buffer.len() {
-                        debug!("[PeerHandshakerWorker({})] Reading Header...", self.peer.epid);
+                        debug!("[PeerHandshakerWorker({})] Reading Header...", self.peer.address);
                         let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
                         offset = offset + 3;
 
@@ -266,7 +268,7 @@ impl PeerHandshakerWorker {
                         {
                             error!(
                                 "[PeerHandshakerWorker({})] Processing message failed: {:?}.",
-                                self.peer.epid, e
+                                self.peer.address, e
                             );
                         }
 

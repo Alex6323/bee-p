@@ -18,7 +18,7 @@ use crate::{
     worker::SenderWorker,
 };
 
-use bee_network::{EndpointId, Network};
+use bee_network::{Address, EndpointId, Network};
 
 use std::sync::{Arc, Mutex};
 
@@ -46,8 +46,8 @@ impl PeerManager {
         self.peers.insert(peer.epid, peer);
     }
 
-    pub(crate) fn handshake(&self, epid: &EndpointId) {
-        if let Some((_, peer)) = self.peers.remove(epid) {
+    pub(crate) fn handshake(&self, epid: &EndpointId, address: Address) {
+        if let Some(_) = self.peers.remove(epid) {
             // TODO check if not already added
 
             // SenderWorker MilestoneRequest
@@ -72,7 +72,7 @@ impl PeerManager {
 
             let peer = Arc::new(HandshakedPeer::new(
                 *epid,
-                peer.address,
+                address,
                 (milestone_request_tx, Mutex::new(Some(milestone_request_shutdown_tx))),
                 (
                     transaction_broadcast_tx,
