@@ -17,7 +17,7 @@ use std::ops::Range;
 ///
 /// This trait is protocol agnostic and only provides serialization and deserialization to and from byte buffers.
 /// It should not be used as is but rather be paired with a higher layer - like a type-length-value encoding - and as
-/// such does not provide any safety check on inputs/outputs.
+/// such does not provide any bounds check on inputs/outputs buffers.
 pub(crate) trait Message {
     /// The unique identifier of the message within the protocol.
     const ID: u8;
