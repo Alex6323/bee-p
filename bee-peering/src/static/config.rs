@@ -39,7 +39,7 @@ impl StaticPeeringConfigBuilder {
         self.peers.unwrap().push(peer.to_owned());
     }
 
-    pub fn build(self) -> StaticPeeringConfig {
+    pub fn finish(self) -> StaticPeeringConfig {
         StaticPeeringConfig {
             limit: self.limit.unwrap_or(DEFAULT_LIMIT),
             peers: self.peers.unwrap_or(DEFAULT_PEERS),
@@ -51,4 +51,10 @@ impl StaticPeeringConfigBuilder {
 pub struct StaticPeeringConfig {
     pub(crate) limit: u8,
     pub(crate) peers: Vec<String>,
+}
+
+impl StaticPeeringConfig {
+    pub fn build() -> StaticPeeringConfigBuilder {
+        StaticPeeringConfigBuilder::new()
+    }
 }

@@ -35,7 +35,7 @@ impl SnapshotConfigBuilder {
         self
     }
 
-    pub fn build(self) -> SnapshotConfig {
+    pub fn finish(self) -> SnapshotConfig {
         SnapshotConfig {
             meta_file_path: self.meta_file_path.unwrap_or(DEFAULT_META_FILE_PATH.to_string()),
             state_file_path: self.state_file_path.unwrap_or(DEFAULT_STATE_FILE_PATH.to_string()),
@@ -50,6 +50,10 @@ pub struct SnapshotConfig {
 }
 
 impl SnapshotConfig {
+    pub fn build() -> SnapshotConfigBuilder {
+        SnapshotConfigBuilder::new()
+    }
+
     pub fn meta_file_path(&self) -> &String {
         &self.meta_file_path
     }

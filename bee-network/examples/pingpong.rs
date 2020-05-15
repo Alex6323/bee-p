@@ -24,7 +24,7 @@
 #![allow(dead_code, unused_imports)]
 
 use bee_network::{
-    Command::*, EndpointId as EpId, Event, EventSubscriber as Events, Network, NetworkConfig, NetworkConfigBuilder,
+    Command::*, EndpointId as EpId, Event, EventSubscriber as Events, Network, NetworkConfig,
     Origin, Shutdown, Url,
 };
 
@@ -43,7 +43,7 @@ fn main() {
 
     logger::init(log::LevelFilter::Info);
 
-    let (network, shutdown, events) = bee_network::init(NetworkConfigBuilder::new().build());
+    let (network, shutdown, events) = bee_network::init(NetworkConfig::build().finish());
 
     let mut node = Node::builder()
         .with_network(network.clone())

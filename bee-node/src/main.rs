@@ -33,7 +33,7 @@ fn main() {
         }
     };
 
-    let config = config_builder.build();
+    let config = config_builder.finish();
 
     let (network, shutdown, receiver) = bee_network::init(config.network);
 

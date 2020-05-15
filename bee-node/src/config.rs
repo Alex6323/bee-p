@@ -39,7 +39,7 @@ impl NodeConfigBuilder {
         self
     }
 
-    pub fn build(self) -> NodeConfig {
+    pub fn finish(self) -> NodeConfig {
         let log_level = match self.log_level.unwrap_or(DEFAULT_LOG_LEVEL.to_owned()).as_str() {
             "trace" => log::LevelFilter::Trace,
             "debug" => log::LevelFilter::Debug,
@@ -51,10 +51,10 @@ impl NodeConfigBuilder {
 
         NodeConfig {
             log_level,
-            network: self.network.build(),
-            peering: self.peering.build(),
-            protocol: self.protocol.build(),
-            snapshot: self.snapshot.build(),
+            network: self.network.finish(),
+            peering: self.peering.finish(),
+            protocol: self.protocol.finish(),
+            snapshot: self.snapshot.finish(),
         }
     }
 }
@@ -66,4 +66,10 @@ pub struct NodeConfig {
     pub(crate) peering: PeeringConfig,
     pub(crate) protocol: ProtocolConfig,
     pub(crate) snapshot: SnapshotConfig,
+}
+
+impl NodeConfig {
+    pub fn build() -> NodeConfigBuilder {
+        NodeConfigBuilder::new()
+    }
 }

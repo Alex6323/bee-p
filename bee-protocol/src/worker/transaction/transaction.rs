@@ -191,9 +191,11 @@ mod tests {
 
     use super::*;
 
-    use crate::ProtocolConfigBuilder;
+    use crate::ProtocolConfig;
+
+    use bee_network::{NetworkConfig, Url};
+
     use async_std::task::{block_on, spawn};
-    use bee_network::{NetworkConfigBuilder, Url};
     use futures::sink::SinkExt;
 
     #[test]
@@ -201,11 +203,11 @@ mod tests {
         bee_tangle::init();
 
         // build network
-        let network_config = NetworkConfigBuilder::default().build();
+        let network_config = NetworkConfig::build().finish();
         let (network, _shutdown, _receiver) = bee_network::init(network_config);
 
         // init protocol
-        let protocol_config = ProtocolConfigBuilder::default().build();
+        let protocol_config = ProtocolConfig::build().finish();
         block_on(Protocol::init(protocol_config, network));
 
         assert_eq!(tangle().size(), 0);

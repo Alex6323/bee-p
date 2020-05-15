@@ -49,7 +49,7 @@ impl NetworkConfigBuilder {
     }
 
     /// Builds the network config.
-    pub fn build(self) -> NetworkConfig {
+    pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
             binding_port: self.binding_port.unwrap_or(DEFAULT_BINDING_PORT),
             binding_addr: self.binding_addr.unwrap_or(DEFAULT_BINDING_ADDR),
@@ -66,11 +66,8 @@ pub struct NetworkConfig {
 
 impl NetworkConfig {
     /// Returns a builder for this config.
-    pub fn builder() -> NetworkConfigBuilder {
-        NetworkConfigBuilder {
-            binding_port: None,
-            binding_addr: None,
-        }
+    pub fn build() -> NetworkConfigBuilder {
+        NetworkConfigBuilder::new()
     }
 
     pub(crate) fn socket_addr(&self) -> Address {

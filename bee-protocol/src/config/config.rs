@@ -199,7 +199,7 @@ impl ProtocolConfigBuilder {
         self
     }
 
-    pub fn build(self) -> ProtocolConfig {
+    pub fn finish(self) -> ProtocolConfig {
         let coo_sponge_type = match self
             .coordinator
             .sponge_type
@@ -341,6 +341,12 @@ pub struct ProtocolConfig {
     pub(crate) mwm: u8,
     pub(crate) coordinator: ProtocolCoordinatorConfig,
     pub(crate) workers: ProtocolWorkersConfig,
+}
+
+impl ProtocolConfig {
+    pub fn build() -> ProtocolConfigBuilder {
+        ProtocolConfigBuilder::new()
+    }
 }
 
 // TODO move out of here
