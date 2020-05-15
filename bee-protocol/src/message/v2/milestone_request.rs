@@ -19,7 +19,7 @@ const INDEX_SIZE: usize = 4;
 const CONSTANT_SIZE: usize = INDEX_SIZE;
 
 /// A message to request a milestone.
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub(crate) struct MilestoneRequest {
     /// Index of the requested milestone.
     pub(crate) index: u32,

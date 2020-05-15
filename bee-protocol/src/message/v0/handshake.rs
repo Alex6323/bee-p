@@ -31,7 +31,6 @@ const VARIABLE_MAX_SIZE: usize = 32;
 ///
 /// Contains useful information to verify that the pairing node is operating on the same configuration.
 /// Any difference in configuration will end up in the connection being closed and the nodes not pairing.
-#[derive(Clone)]
 pub(crate) struct Handshake {
     /// Protocol port of the node.
     pub(crate) port: u16,

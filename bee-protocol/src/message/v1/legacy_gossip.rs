@@ -21,7 +21,6 @@ const VARIABLE_MIN_SIZE: usize = 292;
 const VARIABLE_MAX_SIZE: usize = 1604;
 
 /// A legacy message to broadcast a transaction and request another one at the same time.
-#[derive(Clone)]
 pub(crate) struct LegacyGossip {
     /// Transaction to broadcast. Can be compressed.
     pub(crate) transaction: Vec<u8>,
