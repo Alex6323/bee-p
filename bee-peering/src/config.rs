@@ -30,6 +30,7 @@ impl PeeringConfigBuilder {
     }
 }
 
+#[derive(Clone)]
 pub struct PeeringConfig {
     pub r#static: StaticPeeringConfig,
 }

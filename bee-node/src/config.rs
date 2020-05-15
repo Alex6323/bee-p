@@ -59,6 +59,7 @@ impl NodeConfigBuilder {
     }
 }
 
+#[derive(Clone)]
 pub struct NodeConfig {
     pub(crate) log_level: log::LevelFilter,
     pub(crate) network: NetworkConfig,
