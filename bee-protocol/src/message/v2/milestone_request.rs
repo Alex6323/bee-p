@@ -60,7 +60,7 @@ mod tests {
 
     use super::*;
 
-    const INDEX: u32 = 0x81f7df7c;
+    const INDEX: u32 = 0x81f7_df7c;
 
     #[test]
     fn id() {

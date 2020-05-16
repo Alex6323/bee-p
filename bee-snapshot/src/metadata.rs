@@ -60,7 +60,7 @@ impl SnapshotMetadata {
                 let index = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<u32>()
-                        .map_err(|e| SnapshotMetadataError::InvalidIndex(e)),
+                        .map_err(SnapshotMetadataError::InvalidIndex),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -69,7 +69,7 @@ impl SnapshotMetadata {
                 let timestamp = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<u64>()
-                        .map_err(|e| SnapshotMetadataError::InvalidTimestamp(e)),
+                        .map_err(SnapshotMetadataError::InvalidTimestamp),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -78,7 +78,7 @@ impl SnapshotMetadata {
                 let solid_entry_points_num = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<usize>()
-                        .map_err(|e| SnapshotMetadataError::InvalidSolidEntryPointsNumber(e)),
+                        .map_err(SnapshotMetadataError::InvalidSolidEntryPointsNumber),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -87,7 +87,7 @@ impl SnapshotMetadata {
                 let seen_milestones_num = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<usize>()
-                        .map_err(|e| SnapshotMetadataError::InvalidSeenMilestonesNumber(e)),
+                        .map_err(SnapshotMetadataError::InvalidSeenMilestonesNumber),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -97,7 +97,7 @@ impl SnapshotMetadata {
                     line.clear();
                     let hash = match reader.read_line(&mut line) {
                         Ok(_) => {
-                            let tokens: Vec<&str> = line.split(";").collect();
+                            let tokens: Vec<&str> = line.split(';').collect();
                             // TODO check size of tokens
                             // TODO what to do with index ?
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
@@ -117,7 +117,7 @@ impl SnapshotMetadata {
                     line.clear();
                     let hash = match reader.read_line(&mut line) {
                         Ok(_) => {
-                            let tokens: Vec<&str> = line.split(";").collect();
+                            let tokens: Vec<&str> = line.split(';').collect();
                             // TODO check size of tokens
                             // TODO what to do with index ?
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {

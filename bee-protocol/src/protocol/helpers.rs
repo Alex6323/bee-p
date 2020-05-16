@@ -60,7 +60,7 @@ impl Protocol {
             // TODO try to avoid
             .clone()
             .send(BroadcasterWorkerEvent {
-                from: from,
+                from,
                 transaction_broadcast,
             })
             .await

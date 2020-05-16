@@ -76,8 +76,8 @@ mod tests {
 
     use super::*;
 
-    const FIRST_SOLID_MILESTONE_INDEX: u32 = 0x3dc297b4;
-    const LAST_SOLID_MILESTONE_INDEX: u32 = 0x01181f9b;
+    const FIRST_SOLID_MILESTONE_INDEX: u32 = 0x3dc2_97b4;
+    const LAST_SOLID_MILESTONE_INDEX: u32 = 0x0118_1f9b;
 
     #[test]
     fn id() {

@@ -22,13 +22,14 @@ mod tests {
             String::from("rocksdb")
         }
 
-        fn setup() -> () {}
-        fn teardown() -> () {
+        fn setup() {}
+
+        fn teardown() {
             rocksdb::DB::destroy(&rocksdb::Options::default(), Self::test_db_url()).unwrap();
         }
 
         fn test_db_url() -> String {
-            format!("{}", BEE_TEST_DB_NAME)
+            String::from(BEE_TEST_DB_NAME)
         }
     }
 

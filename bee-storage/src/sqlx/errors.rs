@@ -38,9 +38,7 @@ impl fmt::Display for SqlxBackendError {
 // Allow this type to be treated like an error
 impl StdError for SqlxBackendError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        match self {
-            _ => None,
-        }
+        None
     }
 }
 
@@ -54,13 +52,13 @@ impl From<std::env::VarError> for SqlxBackendError {
 impl From<SqlxError> for SqlxBackendError {
     #[inline]
     fn from(err: SqlxError) -> Self {
-        SqlxBackendError::SqlxError(String::from(err.to_string()))
+        SqlxBackendError::SqlxError(err.to_string())
     }
 }
 
 impl From<std::boxed::Box<bincode::ErrorKind>> for SqlxBackendError {
     #[inline]
     fn from(err: std::boxed::Box<bincode::ErrorKind>) -> Self {
-        SqlxBackendError::Bincode(String::from(err.as_ref().to_string()))
+        SqlxBackendError::Bincode(err.as_ref().to_string())
     }
 }

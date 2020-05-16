@@ -29,14 +29,12 @@ impl fmt::Display for RocksDbBackendError {
 // Allow this type to be treated like an error
 impl StdError for RocksDbBackendError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        match self {
-            _ => None,
-        }
+        None
     }
 }
 
 impl From<rocksdb::Error> for RocksDbBackendError {
     fn from(err: rocksdb::Error) -> Self {
-        RocksDbBackendError::RocksDBError(String::from(err.to_string()))
+        RocksDbBackendError::RocksDBError(err.to_string())
     }
 }

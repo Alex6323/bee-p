@@ -76,8 +76,8 @@ impl Node {
     async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
         // TODO unregister ?
         if let Some((_, shutdown)) = self.peers.remove(&epid) {
-            if let Err(_) = shutdown.send(()) {
-                warn!("[Node ] Sending shutdown to {} failed.", epid);
+            if let Err(e) = shutdown.send(()) {
+                warn!("[Node ] Sending shutdown to {} failed: {:?}.", epid, e);
             }
         }
     }

@@ -203,7 +203,7 @@ impl ProtocolConfigBuilder {
         let coo_sponge_type = match self
             .coordinator
             .sponge_type
-            .unwrap_or(DEFAULT_COO_SPONGE_TYPE.to_owned())
+            .unwrap_or_else(|| DEFAULT_COO_SPONGE_TYPE.to_owned())
             .as_str()
         {
             "kerl" => SpongeType::Kerl,
@@ -219,14 +219,18 @@ impl ProtocolConfigBuilder {
                 .encode::<T1B1Buf>(),
         );
 
-        let coo_public_key =
-            match TryteBuf::try_from_str(&self.coordinator.public_key.unwrap_or(DEFAULT_COO_PUBLIC_KEY.to_owned())) {
-                Ok(trytes) => match Address::try_from_inner(trytes.as_trits().encode::<T1B1Buf>()) {
-                    Ok(coo_public_key) => coo_public_key,
-                    Err(_) => coo_public_key_default,
-                },
+        let coo_public_key = match TryteBuf::try_from_str(
+            &self
+                .coordinator
+                .public_key
+                .unwrap_or_else(|| DEFAULT_COO_PUBLIC_KEY.to_owned()),
+        ) {
+            Ok(trytes) => match Address::try_from_inner(trytes.as_trits().encode::<T1B1Buf>()) {
+                Ok(coo_public_key) => coo_public_key,
                 Err(_) => coo_public_key_default,
-            };
+            },
+            Err(_) => coo_public_key_default,
+        };
 
         let mut public_key_bytes = [0u8; 49];
         public_key_bytes.copy_from_slice(cast_slice(coo_public_key.to_inner().encode::<T5B1Buf>().as_i8_slice()));

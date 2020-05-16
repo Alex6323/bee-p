@@ -14,7 +14,6 @@ use bee_peering::{PeeringConfig, PeeringConfigBuilder};
 use bee_protocol::{ProtocolConfig, ProtocolConfigBuilder};
 use bee_snapshot::{SnapshotConfig, SnapshotConfigBuilder};
 
-use log;
 use serde::Deserialize;
 
 pub(crate) const CONFIG_PATH: &str = "./config.toml";
@@ -40,7 +39,7 @@ impl NodeConfigBuilder {
     }
 
     pub fn finish(self) -> NodeConfig {
-        let log_level = match self.log_level.unwrap_or(DEFAULT_LOG_LEVEL.to_owned()).as_str() {
+        let log_level = match self.log_level.unwrap_or_else(|| DEFAULT_LOG_LEVEL.to_owned()).as_str() {
             "trace" => log::LevelFilter::Trace,
             "debug" => log::LevelFilter::Debug,
             "info" => log::LevelFilter::Info,

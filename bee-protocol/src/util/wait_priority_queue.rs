@@ -41,7 +41,9 @@ impl<T: Ord + Eq> WaitPriorityQueue<T> {
         let mut inner = self.inner.lock().unwrap();
 
         inner.0.push(entry);
-        inner.1.pop_front().map(Waker::wake);
+        if let Some(waker) = inner.1.pop_front() {
+            Waker::wake(waker)
+        }
     }
 
     pub fn pop(&self) -> impl Future<Output = T> + '_ {

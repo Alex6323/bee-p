@@ -45,7 +45,7 @@ impl SnapshotState {
                 for line in reader.lines() {
                     match line {
                         Ok(line) => {
-                            let tokens: Vec<&str> = line.split(";").collect();
+                            let tokens: Vec<&str> = line.split(';').collect();
                             // TODO check size of tokens
 
                             let hash = match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
@@ -56,7 +56,7 @@ impl SnapshotState {
 
                             let balance = tokens[1][..tokens[1].len()]
                                 .parse::<u64>()
-                                .map_err(|e| SnapshotStateError::InvalidBalance(e))?;
+                                .map_err(SnapshotStateError::InvalidBalance)?;
 
                             state.insert(hash, balance);
 

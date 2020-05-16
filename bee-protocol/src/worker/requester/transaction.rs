@@ -69,7 +69,7 @@ impl TransactionRequesterWorker {
                 )
                 .await;
             }
-            None => return,
+            None => {},
         }
     }
 

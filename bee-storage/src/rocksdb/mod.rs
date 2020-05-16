@@ -184,11 +184,12 @@ impl StorageBackend for RocksDbBackendStorage {
     }
 
     async fn establish_connection(&mut self, url: &str) -> Result<(), RocksDbBackendError> {
-        let _res = self.0.connection.establish_connection(url).await?;
+        self.0.connection.establish_connection(url).await?;
         Ok(())
     }
+
     async fn destroy_connection(&mut self) -> Result<(), RocksDbBackendError> {
-        let _res = self.0.connection.destroy_connection().await?;
+        self.0.connection.destroy_connection().await?;
         Ok(())
     }
 
@@ -204,11 +205,11 @@ impl StorageBackend for RocksDbBackendStorage {
             let approver = decode_hash(key.as_ref());
             hash_to_approvers
                 .entry(trunk)
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .insert(approver);
             hash_to_approvers
                 .entry(branch)
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .insert(approver);
         }
 
@@ -231,7 +232,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 let optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(approver));
                 missing_to_approvers
                     .entry(trunk)
-                    .or_insert(HashSet::new())
+                    .or_insert_with(HashSet::new)
                     .insert(optional_approver_rc.clone().unwrap());
             }
 
@@ -239,7 +240,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 let optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(approver));
                 missing_to_approvers
                     .entry(branch)
-                    .or_insert(HashSet::new())
+                    .or_insert_with(HashSet::new)
                     .insert(optional_approver_rc.clone().unwrap());
             }
         }

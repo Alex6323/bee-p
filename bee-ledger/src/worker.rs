@@ -125,7 +125,7 @@ mod tests {
             state.insert(rand_trits_field::<Address>(), rng.gen_range(0, 100_000_000));
         }
 
-        spawn(LedgerWorker::new(state.clone()).run(rx, shutdown_rx));
+        spawn(LedgerWorker::new(state).run(rx, shutdown_rx));
 
         for _ in 0..100 {
             let (get_balance_tx, get_balance_rx) = oneshot::channel();

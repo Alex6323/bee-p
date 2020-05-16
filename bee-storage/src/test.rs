@@ -29,8 +29,8 @@ pub mod tests {
 
     pub trait TestableStorage {
         fn test_name() -> String;
-        fn setup() -> ();
-        fn teardown() -> ();
+        fn setup();
+        fn teardown();
         fn test_db_url() -> String;
     }
 
@@ -44,7 +44,7 @@ pub mod tests {
 
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
+            block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash));
             let found_tx = res.unwrap();
 
@@ -58,7 +58,7 @@ pub mod tests {
 
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
+            block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash));
             let found_tx = res.unwrap();
             assert_eq!(tx, found_tx);
@@ -76,7 +76,7 @@ pub mod tests {
 
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
+            block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
             let res = block_on(storage.find_transaction(tx_hash));
             let found_tx = res.unwrap();
             assert_eq!(tx, found_tx);
@@ -95,7 +95,7 @@ pub mod tests {
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
             let milestone = bee_test::milestone::create_random_milestone(1);
             block_on(storage.insert_milestone(bee_test::milestone::clone_ms(&milestone))).unwrap();
-            let res = block_on(storage.find_milestone(milestone.hash().clone()));
+            let res = block_on(storage.find_milestone(*milestone.hash()));
             let found_milestone = res.unwrap();
             block_on(storage.destroy_connection()).unwrap();
 
@@ -107,8 +107,8 @@ pub mod tests {
 
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
-            let res = block_on(storage.find_transaction(tx_hash.clone()));
+            block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
+            let res = block_on(storage.find_transaction(tx_hash));
             let found_tx = res.unwrap();
             assert_eq!(tx, found_tx);
             let mut transactions_to_delete = HashSet::new();
@@ -126,12 +126,12 @@ pub mod tests {
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
             let milestone = bee_test::milestone::create_random_milestone(2);
             block_on(storage.insert_milestone(bee_test::milestone::clone_ms(&milestone))).unwrap();
-            let res = block_on(storage.find_milestone(milestone.hash().clone()));
+            let res = block_on(storage.find_milestone(*milestone.hash()));
             let found_milestone = res.unwrap();
             assert_eq!(milestone.hash(), found_milestone.hash());
             let mut milestones_to_delete = HashSet::new();
             // TODO Delete by index ?
-            milestones_to_delete.insert(milestone.hash().clone());
+            milestones_to_delete.insert(*milestone.hash());
             let res = block_on(storage.delete_milestones(&milestones_to_delete));
             assert!(res.is_ok());
             let res = block_on(storage.find_milestone(milestones_to_delete.iter().last().unwrap().to_owned()));
@@ -148,8 +148,8 @@ pub mod tests {
 
             for _i in 0..10 {
                 let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-                block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
-                let res = block_on(storage.find_transaction(tx_hash.clone()));
+                block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
+                let res = block_on(storage.find_transaction(tx_hash));
                 let found_tx = res.unwrap();
                 assert_eq!(tx, found_tx);
                 hashes.insert(tx_hash);
@@ -173,23 +173,22 @@ pub mod tests {
 
             let mut hash_to_approvers_expected = HashesToApprovers::new();
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
-            let res = block_on(storage.find_transaction(tx_hash.clone()));
+            block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
+            let res = block_on(storage.find_transaction(tx_hash));
             let found_tx = res.unwrap();
             assert_eq!(tx, found_tx);
-            let mut last_tx_hash = tx_hash.clone();
+            let mut last_tx_hash = tx_hash;
 
             for _i in 0..1200 {
-                let (tx_hash, tx) =
-                    bee_test::transaction::create_random_attached_tx(last_tx_hash.clone(), last_tx_hash.clone());
+                let (tx_hash, tx) = bee_test::transaction::create_random_attached_tx(last_tx_hash, last_tx_hash);
                 let mut approvers = HashSet::new();
-                approvers.insert(tx_hash.clone());
-                hash_to_approvers_expected.insert(last_tx_hash.clone(), approvers);
-                block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
-                let res = block_on(storage.find_transaction(tx_hash.clone()));
+                approvers.insert(tx_hash);
+                hash_to_approvers_expected.insert(last_tx_hash, approvers);
+                block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
+                let res = block_on(storage.find_transaction(tx_hash));
                 let found_tx = res.unwrap();
                 assert_eq!(tx, found_tx);
-                last_tx_hash = tx_hash.clone();
+                last_tx_hash = tx_hash;
             }
 
             let now = Instant::now();
@@ -217,62 +216,53 @@ pub mod tests {
 
             let mut missing_hash_to_approvers_expected = MissingHashesToRCApprovers::new();
             let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-            block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
-            let res = block_on(storage.find_transaction(tx_hash.clone()));
+            block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
+            let res = block_on(storage.find_transaction(tx_hash));
             let found_tx = res.unwrap();
             assert_eq!(tx, found_tx);
-            let mut last_tx_hash = tx_hash.clone();
+            let mut last_tx_hash = tx_hash;
             let mut all_transactions_hashes = HashSet::new();
 
             for i in 0..1200 {
                 let missing_tx_hash_trunk = rand_trits_field::<Hash>();
                 let missing_tx_hash_branch = rand_trits_field::<Hash>();
                 let (tx_hash, tx) = match i % 3 {
-                    0 => bee_test::transaction::create_random_attached_tx(
-                        last_tx_hash.clone(),
-                        missing_tx_hash_trunk.clone(),
-                    ),
-                    1 => bee_test::transaction::create_random_attached_tx(
-                        missing_tx_hash_branch.clone(),
-                        last_tx_hash.clone(),
-                    ),
-                    2 => bee_test::transaction::create_random_attached_tx(
-                        missing_tx_hash_branch.clone(),
-                        missing_tx_hash_trunk.clone(),
-                    ),
+                    0 => bee_test::transaction::create_random_attached_tx(last_tx_hash, missing_tx_hash_trunk),
+                    1 => bee_test::transaction::create_random_attached_tx(missing_tx_hash_branch, last_tx_hash),
+                    2 => {
+                        bee_test::transaction::create_random_attached_tx(missing_tx_hash_branch, missing_tx_hash_trunk)
+                    }
                     _ => panic!("Residual is incorrect"),
                 };
 
                 match i % 3 {
                     0 => {
                         let mut missing_approvers = HashSet::new();
-                        missing_approvers.insert(Rc::<bee_bundle::Hash>::new(tx_hash.clone()));
-                        missing_hash_to_approvers_expected.insert(missing_tx_hash_trunk.clone(), missing_approvers);
+                        missing_approvers.insert(Rc::<bee_bundle::Hash>::new(tx_hash));
+                        missing_hash_to_approvers_expected.insert(missing_tx_hash_trunk, missing_approvers);
                     }
                     1 => {
                         let mut missing_approvers = HashSet::new();
-                        missing_approvers.insert(Rc::<bee_bundle::Hash>::new(tx_hash.clone()));
-                        missing_hash_to_approvers_expected.insert(missing_tx_hash_branch.clone(), missing_approvers);
+                        missing_approvers.insert(Rc::<bee_bundle::Hash>::new(tx_hash));
+                        missing_hash_to_approvers_expected.insert(missing_tx_hash_branch, missing_approvers);
                     }
                     2 => {
                         let mut missing_approvers_trunk = HashSet::new();
                         let mut missing_approvers_branch = HashSet::new();
-                        let rc = Rc::<bee_bundle::Hash>::new(tx_hash.clone());
+                        let rc = Rc::<bee_bundle::Hash>::new(tx_hash);
                         missing_approvers_trunk.insert(rc.clone());
                         missing_approvers_branch.insert(rc.clone());
-                        missing_hash_to_approvers_expected
-                            .insert(missing_tx_hash_trunk.clone(), missing_approvers_trunk);
-                        missing_hash_to_approvers_expected
-                            .insert(missing_tx_hash_branch.clone(), missing_approvers_branch);
+                        missing_hash_to_approvers_expected.insert(missing_tx_hash_trunk, missing_approvers_trunk);
+                        missing_hash_to_approvers_expected.insert(missing_tx_hash_branch, missing_approvers_branch);
                     }
                     _ => panic!("Residual is incorrect"),
                 };
-                block_on(storage.insert_transaction(tx_hash.clone(), bee_test::transaction::clone_tx(&tx))).unwrap();
-                let res = block_on(storage.find_transaction(tx_hash.clone()));
+                block_on(storage.insert_transaction(tx_hash, bee_test::transaction::clone_tx(&tx))).unwrap();
+                let res = block_on(storage.find_transaction(tx_hash));
                 let found_tx = res.unwrap();
                 assert_eq!(tx, found_tx);
-                all_transactions_hashes.insert(tx_hash.clone());
-                last_tx_hash = tx_hash.clone();
+                all_transactions_hashes.insert(tx_hash);
+                last_tx_hash = tx_hash;
             }
 
             let now = Instant::now();
@@ -306,7 +296,7 @@ pub mod tests {
             let mut futures = Vec::new();
             for _i in 0..NUM_TRANSACTIONS {
                 let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-                hashes.insert(tx_hash.clone());
+                hashes.insert(tx_hash);
                 hashes_transaction_seq.push((tx_hash, tx));
             }
 
@@ -339,7 +329,7 @@ pub mod tests {
 
             for _i in 0..NUM_TRANSACTIONS {
                 let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-                hashes.insert(tx_hash.clone());
+                hashes.insert(tx_hash);
                 hashes_to_transactions.insert(tx_hash, tx);
             }
 
@@ -378,7 +368,7 @@ pub mod tests {
                 let mut hashes_to_transactions_batch = HashMap::new();
                 for _i in 0..NUM_TRANSACTIONS / num_cpus::get() {
                     let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-                    hashes.insert(tx_hash.clone());
+                    hashes.insert(tx_hash);
                     hashes_to_transactions_batch.insert(tx_hash, tx);
                 }
                 batches.push(hashes_to_transactions_batch);
@@ -411,9 +401,9 @@ pub mod tests {
             let mut storage = T::new();
             block_on(storage.establish_connection(T::test_db_url().as_str())).unwrap();
 
-            let milestone = bee_test::milestone::create_random_milestone(100000);
+            let milestone = bee_test::milestone::create_random_milestone(100_000);
             block_on(storage.insert_milestone(bee_test::milestone::clone_ms(&milestone))).unwrap();
-            block_on(storage.find_milestone(milestone.hash().clone())).unwrap();
+            block_on(storage.find_milestone(*milestone.hash())).unwrap();
 
             let mut state_delta = StateDeltaMap {
                 address_to_delta: HashMap::new(),
@@ -426,10 +416,10 @@ pub mod tests {
                 state_delta.address_to_delta.insert(address.clone(), _i as i64);
             }
 
-            for _i in 0..NUM_BALANCES {
+            for i in 0..NUM_BALANCES {
                 let address = rand_trits_field::<Address>();
                 addresses.insert(address.clone());
-                state_delta.address_to_delta.insert(address.clone(), _i as i64 * -1);
+                state_delta.address_to_delta.insert(address.clone(), -(i as i64));
             }
 
             let now = Instant::now();

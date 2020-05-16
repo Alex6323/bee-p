@@ -28,7 +28,7 @@ mod tests {
             String::from("sqlx")
         }
 
-        fn setup() -> () {
+        fn setup() {
             let output = Command::new("src/sqlx/schemes/postgres/setup.sh")
                 .arg("src/sqlx/schemes/postgres/schema.sql")
                 .arg(BEE_TEST_DB_USER)
@@ -45,7 +45,7 @@ mod tests {
             assert!(output.status.success());
         }
 
-        fn teardown() -> () {
+        fn teardown() {
             let output = Command::new("src/sqlx/schemes/postgres/cleanup.sh")
                 .arg(BEE_TEST_DB_USER)
                 .arg(BEE_TEST_DB_NAME)

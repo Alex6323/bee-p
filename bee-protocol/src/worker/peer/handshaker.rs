@@ -295,7 +295,7 @@ impl PeerHandshakerWorker {
                     if offset + 3 <= context.buffer.len() {
                         debug!("[PeerHandshakerWorker({})] Reading Header...", self.peer.address);
                         let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
-                        offset = offset + 3;
+                        offset += 3;
 
                         PeerReadState::Payload(header)
                     } else {
@@ -319,7 +319,7 @@ impl PeerHandshakerWorker {
                             );
                         }
 
-                        offset = offset + header.message_length as usize;
+                        offset += header.message_length as usize;
 
                         PeerReadState::Header
                     } else {

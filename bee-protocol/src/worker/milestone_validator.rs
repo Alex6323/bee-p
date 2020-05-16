@@ -82,7 +82,7 @@ where
         Ok(builder
             .depth(Protocol::get().config.coordinator.depth)
             .validate()
-            .map_err(|e| MilestoneValidatorWorkerError::InvalidMilestone(e))?
+            .map_err(MilestoneValidatorWorkerError::InvalidMilestone)?
             .build())
     }
 

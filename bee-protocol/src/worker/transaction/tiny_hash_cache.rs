@@ -32,7 +32,7 @@ impl CustomHasher {
 impl Default for CustomHasher {
     fn default() -> Self {
         Self {
-            result: 17241709254077376921,
+            result: 17_241_709_254_077_376_921,
         }
     }
 }

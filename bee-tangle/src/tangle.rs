@@ -441,7 +441,7 @@ mod tests {
         init();
         let tangle = tangle();
 
-        tangle.update_snapshot_milestone_index(1368160.into());
+        tangle.update_snapshot_milestone_index(1_368_160.into());
 
         assert_eq!(1368160, *tangle.get_snapshot_milestone_index());
         drop();
@@ -453,9 +453,9 @@ mod tests {
         init();
         let tangle = tangle();
 
-        tangle.update_solid_milestone_index(1368167.into());
+        tangle.update_solid_milestone_index(1_368_167.into());
 
-        assert_eq!(1368167, *tangle.get_solid_milestone_index());
+        assert_eq!(1_368_167, *tangle.get_solid_milestone_index());
         drop();
     }
 
@@ -465,9 +465,9 @@ mod tests {
         init();
         let tangle = tangle();
 
-        tangle.update_last_milestone_index(1368168.into());
+        tangle.update_last_milestone_index(1_368_168.into());
 
-        assert_eq!(1368168, *tangle.get_last_milestone_index());
+        assert_eq!(1_368_168, *tangle.get_last_milestone_index());
         drop();
     }
 
@@ -568,9 +568,9 @@ mod tests {
 
         let (a_hash, a) = create_random_tx();
         let (b_hash, b) = create_random_tx();
-        let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone()); // branch, trunk
-        let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
-        let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
+        let (c_hash, c) = create_random_attached_tx(a_hash, b_hash); // branch, trunk
+        let (d_hash, d) = create_random_attached_tx(c_hash, a_hash);
+        let (e_hash, e) = create_random_attached_tx(c_hash, d_hash);
 
         block_on(async {
             tangle.insert_transaction(a.clone(), a_hash).await;
@@ -715,7 +715,6 @@ mod tests {
             v_hash,
             |hash, _transaction| {
                 hashes.push(*hash);
-                ()
             },
             |_| true,
             |_| (),

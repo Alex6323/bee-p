@@ -37,8 +37,12 @@ impl SnapshotConfigBuilder {
 
     pub fn finish(self) -> SnapshotConfig {
         SnapshotConfig {
-            meta_file_path: self.meta_file_path.unwrap_or(DEFAULT_META_FILE_PATH.to_string()),
-            state_file_path: self.state_file_path.unwrap_or(DEFAULT_STATE_FILE_PATH.to_string()),
+            meta_file_path: self
+                .meta_file_path
+                .unwrap_or_else(|| DEFAULT_META_FILE_PATH.to_string()),
+            state_file_path: self
+                .state_file_path
+                .unwrap_or_else(|| DEFAULT_STATE_FILE_PATH.to_string()),
         }
     }
 }

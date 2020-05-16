@@ -216,12 +216,12 @@ impl StorageBackend for SqlxBackendStorage {
     }
 
     async fn establish_connection(&mut self, url: &str) -> Result<(), SqlxBackendError> {
-        let _res = self.0.connection.establish_connection(url).await?;
+        self.0.connection.establish_connection(url).await?;
         Ok(())
     }
 
     async fn destroy_connection(&mut self) -> Result<(), SqlxBackendError> {
-        let _res = self.0.connection.destroy_connection().await?;
+        self.0.connection.destroy_connection().await?;
         Ok(())
     }
 
@@ -250,11 +250,11 @@ impl StorageBackend for SqlxBackendStorage {
             for (_, attachment_data) in rows.iter().enumerate() {
                 hash_to_approvers
                     .entry(attachment_data.branch.clone())
-                    .or_insert(HashSet::new())
+                    .or_insert_with(HashSet::new)
                     .insert(attachment_data.hash.clone());
                 hash_to_approvers
                     .entry(attachment_data.trunk.clone())
-                    .or_insert(HashSet::new())
+                    .or_insert_with(HashSet::new)
                     .insert(attachment_data.hash.clone());
             }
 
@@ -297,19 +297,19 @@ impl StorageBackend for SqlxBackendStorage {
                 let mut optional_approver_rc = None;
 
                 if !all_hashes.contains(&attachment_data.branch) {
-                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(attachment_data.hash.clone()));
+                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(attachment_data.hash));
                     missing_to_approvers
                         .entry(attachment_data.branch.clone())
-                        .or_insert(HashSet::new())
+                        .or_insert_with(HashSet::new)
                         .insert(optional_approver_rc.clone().unwrap());
                 }
 
                 if !all_hashes.contains(&attachment_data.trunk) {
                     let approver_rc: Rc<bee_bundle::Hash> =
-                        optional_approver_rc.map_or(Rc::new(attachment_data.hash.clone()), |rc| rc.clone());
+                        optional_approver_rc.map_or(Rc::new(attachment_data.hash), |rc| rc);
                     missing_to_approvers
                         .entry(attachment_data.trunk.clone())
-                        .or_insert(HashSet::new())
+                        .or_insert_with(HashSet::new)
                         .insert(approver_rc.clone());
                 }
             }
