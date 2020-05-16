@@ -14,7 +14,6 @@ bee-bundle = { path = "../bee-bundle" }
 bee-common = { path = "../bee-common" }
 bee-ledger = { path = "../bee-ledger" }
 bee-network = { path = "../bee-network" }
-bee-pow = { path = "../bee-pow" }
 bee-peering = { path = "../bee-peering" }
 bee-protocol = { path = "../bee-protocol" }
 bee-snapshot = { path = "../bee-snapshot" }
