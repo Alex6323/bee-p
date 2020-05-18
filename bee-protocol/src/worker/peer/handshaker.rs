@@ -153,6 +153,10 @@ impl PeerHandshakerWorker {
                 );
             }
             HandshakeStatus::Duplicate => {
+                info!(
+                    "[PeerHandshakerWorker({})] Closing duplicate connection.",
+                    self.peer.epid
+                );
                 if let Err(e) = self
                     .network
                     .send(Disconnect {
@@ -162,7 +166,7 @@ impl PeerHandshakerWorker {
                     .await
                 {
                     warn!(
-                        "[PeerHandshakerWorker({})] Sending Command::RemoveEndpoint failed: {}.",
+                        "[PeerHandshakerWorker({})] Disconnecting peer failed: {}.",
                         self.peer.epid, e
                     );
                 }
