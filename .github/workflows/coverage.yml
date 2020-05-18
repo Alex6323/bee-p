@@ -6,7 +6,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install -y clang-6.0 lldb-6.0 lld-6.0 libc++-dev llvm
+      - run: sudo apt-get install -y clang lldb-6.0 lld-6.0 libc++-dev llvm
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
