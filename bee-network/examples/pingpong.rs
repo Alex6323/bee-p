@@ -24,8 +24,7 @@
 #![allow(dead_code, unused_imports)]
 
 use bee_network::{
-    Command::*, EndpointId as EpId, Event, EventSubscriber as Events, Network, NetworkConfig,
-    Origin, Shutdown, Url,
+    Command::*, EndpointId as EpId, Event, EventSubscriber as Events, Network, NetworkConfig, Origin, Shutdown, Url,
 };
 
 use common::*;

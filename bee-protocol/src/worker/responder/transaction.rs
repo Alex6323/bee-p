@@ -57,10 +57,10 @@ impl TransactionResponderWorker {
                         )
                         .await;
                     }
-                    None => {},
+                    None => {}
                 }
             }
-            Err(_) => {},
+            Err(_) => {}
         }
     }
 
