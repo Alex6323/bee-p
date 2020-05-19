@@ -68,7 +68,7 @@ impl From<Tryte> for char {
             0 => '9',
             -13..=-1 => (((tryte as i8 + 13) as u8) + b'N') as char,
             1..=13 => (((tryte as i8 - 1) as u8) + b'A') as char,
-            _ => unreachable!(),
+            x => unreachable!("Tried to decode Tryte with variant {}", x),
         }
     }
 }
@@ -186,5 +186,21 @@ impl fmt::Display for TryteBuf {
             write!(f, "{}", tryte)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::*;
+
+    #[test]
+    fn zeroes() {
+        let _ = TritBuf::<T3B1Buf>::filled(243, Btrit::Zero)
+            .encode::<T3B1Buf>()
+            .as_trytes()
+            .iter()
+            .map(|t| char::from(*t))
+            .collect::<String>();
     }
 }
