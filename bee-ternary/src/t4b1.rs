@@ -35,22 +35,16 @@ impl T4B1 {
 }
 
 fn extract(x: i8, elem: usize) -> Btrit {
-    if elem < TPB {
-        Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8).shift()
-    } else {
-        unreachable!("Attempted to extract invalid element {} from balanced T4B1", elem)
-    }
+    debug_assert!(elem < TPB, "Attempted to extract invalid element {} from balanced T4B1 trit", elem);
+    Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8).shift()
 }
 
 fn insert(x: i8, elem: usize, trit: Btrit) -> i8 {
-    if elem < TPB {
-        let utrit = trit.shift();
-        let ux = x + BAL;
-        let ux = ux + (utrit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
-        ux - BAL
-    } else {
-        unreachable!("Attempted to insert invalid element {} into balanced T4B1", elem)
-    }
+    debug_assert!(elem < TPB, "Attempted to insert invalid element {} into balanced T4B1 trit", elem);
+    let utrit = trit.shift();
+    let ux = x + BAL;
+    let ux = ux + (utrit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
+    ux - BAL
 }
 
 impl RawEncoding for T4B1 {
@@ -67,12 +61,18 @@ impl RawEncoding for T4B1 {
 
     fn as_i8_slice(&self) -> &[i8] {
         assert!(self.len_offset().1 == 0);
-        unsafe { &*(Self::make(self.ptr(0), 0, (self.len() as f32 / TPB as f32).ceil() as usize) as *const _) }
+        unsafe { std::slice::from_raw_parts(
+            self as *const _ as *const _,
+            (self.len() + TPB - 1) / TPB,
+        ) }
     }
 
     unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
         assert!(self.len_offset().1 == 0);
-        &mut *(Self::make(self.ptr(0), 0, (self.len() as f32 / TPB as f32).ceil() as usize) as *mut _)
+        std::slice::from_raw_parts_mut(
+            self as *mut _ as *mut _,
+            (self.len() + TPB - 1) / TPB,
+        )
     }
 
     unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {
@@ -107,12 +107,12 @@ impl RawEncoding for T4B1 {
     }
 
     unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self {
-        debug_assert!(num_trits <= b.len() * TPB);
+        assert!(num_trits <= b.len() * TPB);
         &*Self::make(b.as_ptr() as *const _, 0, num_trits)
     }
 
     unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self {
-        debug_assert!(num_trits <= b.len() * TPB);
+        assert!(num_trits <= b.len() * TPB);
         &mut *(Self::make(b.as_ptr() as *const _, 0, num_trits) as *mut _)
     }
 }
