@@ -19,11 +19,15 @@ use async_std::{future::ready, prelude::*};
 use futures::channel::mpsc::Receiver;
 use log::info;
 
-pub(crate) struct StatusWorker {}
+pub(crate) struct StatusWorker {
+    interval_ms: u64,
+}
 
 impl StatusWorker {
-    pub(crate) fn new() -> Self {
-        Self {}
+    pub(crate) fn new(interval_s: u64) -> Self {
+        Self {
+            interval_ms: interval_s * 1000,
+        }
     }
 
     fn status(&self) {
@@ -54,7 +58,7 @@ impl StatusWorker {
 
         loop {
             match ready(None)
-                .delay(Duration::from_millis(5000))
+                .delay(Duration::from_millis(self.interval_ms))
                 .race(shutdown.next())
                 .await
             {

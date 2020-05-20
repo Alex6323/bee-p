@@ -19,6 +19,7 @@ public_key      = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRI
 security_level  = 2
 sponge_type     = "kerl"
 [protocol.workers]
+status_interval = 10
 
 [snapshot]
 meta_file_path  = "./data/mainnet.snapshot.meta"

@@ -207,7 +207,7 @@ impl Protocol {
                 .run(milestone_solidifier_worker_rx, milestone_solidifier_worker_shutdown_rx),
         );
         spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
-        spawn(StatusWorker::new().run(status_worker_shutdown_rx));
+        spawn(StatusWorker::new(Protocol::get().config.workers.status_interval).run(status_worker_shutdown_rx));
     }
 
     pub async fn shutdown() {

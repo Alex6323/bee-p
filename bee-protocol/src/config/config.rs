@@ -37,6 +37,7 @@ const DEFAULT_TRANSACTION_REQUESTER_WORKER_BOUND: usize = 1000;
 const DEFAULT_MILESTONE_REQUESTER_WORKER_BOUND: usize = 1000;
 const DEFAULT_RECEIVER_WORKER_BOUND: usize = 1000;
 const DEFAULT_BROADCASTER_WORKER_BOUND: usize = 1000;
+const DEFAULT_STATUS_INTERVAL: u64 = 10;
 
 #[derive(Default, Deserialize)]
 struct ProtocolCoordinatorConfigBuilder {
@@ -63,6 +64,7 @@ struct ProtocolWorkersConfigBuilder {
     milestone_requester_worker_bound: Option<usize>,
     receiver_worker_bound: Option<usize>,
     broadcaster_worker_bound: Option<usize>,
+    status_interval: Option<u64>,
 }
 
 #[derive(Default, Deserialize)]
@@ -199,6 +201,11 @@ impl ProtocolConfigBuilder {
         self
     }
 
+    pub fn status_interval(mut self, status_interval: u64) -> Self {
+        self.workers.status_interval.replace(status_interval);
+        self
+    }
+
     pub fn finish(self) -> ProtocolConfig {
         let coo_sponge_type = match self
             .coordinator
@@ -306,6 +313,7 @@ impl ProtocolConfigBuilder {
                     .workers
                     .broadcaster_worker_bound
                     .unwrap_or(DEFAULT_BROADCASTER_WORKER_BOUND),
+                status_interval: self.workers.status_interval.unwrap_or(DEFAULT_STATUS_INTERVAL),
             },
         }
     }
@@ -338,6 +346,7 @@ pub struct ProtocolWorkersConfig {
     pub(crate) milestone_requester_worker_bound: usize,
     pub(crate) receiver_worker_bound: usize,
     pub(crate) broadcaster_worker_bound: usize,
+    pub(crate) status_interval: u64,
 }
 
 #[derive(Clone)]
