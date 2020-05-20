@@ -11,7 +11,10 @@ keywords = ["iota", "tangle", "bee", "framework", "ledger"]
 
 [dependencies]
 bee-bundle = { path = "../bee-bundle" }
+bee-ternary = { path = "../bee-ternary" }
 
+bytemuck = "1.2.0"
+digest = "0.8.1"
 futures = "0.3.5"
 log = "0.4.8"
 
@@ -19,4 +22,6 @@ log = "0.4.8"
 bee-test = { path = "../bee-test" }
 
 async-std = "1.4.0"
+blake2 = "0.8.1"
+hex = "0.4.2"
 rand = "0.7.3"
