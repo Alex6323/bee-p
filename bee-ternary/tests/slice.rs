@@ -105,7 +105,7 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
             }
 
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
 
@@ -145,7 +145,7 @@ fn set_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
             }
 
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
 
@@ -162,7 +162,7 @@ fn chunks_generic<T: raw::RawEncodingBuf + Clone>() {
         for (a, a_i8) in a.chunks(chunk_len).zip(a_i8.chunks(chunk_len)) {
             assert_eq!(a.len(), a_i8.len());
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }
@@ -177,7 +177,7 @@ fn chunks_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
         for (a, a_i8) in a.chunks(chunk_len).zip(a_i8.chunks(chunk_len)) {
             assert_eq!(a.len(), a_i8.len());
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }
@@ -246,7 +246,7 @@ fn chunks_mut() {
         for (a, a_i8) in a.chunks_mut(chunk_len).zip(a_i8.chunks_mut(chunk_len)) {
             assert_eq!(a.len(), a_i8.len());
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }

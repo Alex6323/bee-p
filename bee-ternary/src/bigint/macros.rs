@@ -33,7 +33,7 @@ macro_rules! def_and_impl_ternary {
                 R: RawEncoding<Trit = T>,
             {
                 assert_eq!(trits.len(), LEN);
-                for (x, y) in self.0.iter_mut().zip(trits.trits()) {
+                for (x, y) in self.0.iter_mut().zip(trits.iter()) {
                     *x = y;
                 }
             }
@@ -182,7 +182,7 @@ macro_rules! def_and_impl_ternary {
         impl<T: Trit> PartialOrd for $ident<T> {
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 use Ordering::Equal;
-                for (a, b) in self.0.trits().zip(other.0.trits()).rev() {
+                for (a, b) in self.0.iter().zip(other.0.iter()).rev() {
                     match a.cmp(&b) {
                         Equal => continue,
                         other_ordering => return Some(other_ordering),

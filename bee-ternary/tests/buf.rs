@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 
 mod common;
 use self::common::*;
@@ -25,7 +25,8 @@ fn create_generic<T: raw::RawEncodingBuf>() {
     });
     fuzz(100, || {
         let trits = gen_buf::<T>(0..1000).1;
-        assert!(TritBuf::<T>::from_i8_unchecked(&trits).len() == trits.len());
+        let buf: TritBuf<T> = trits.iter().map(|t| <T::Slice as raw::RawEncoding>::Trit::try_from(*t).ok().unwrap()).collect();
+        assert!(buf.len() == trits.len());
     });
 }
 
@@ -37,7 +38,8 @@ fn create_unbalanced<T: raw::RawEncodingBuf>() {
     });
     fuzz(100, || {
         let trits = gen_buf_unbalanced::<T>(0..1000).1;
-        assert!(TritBuf::<T>::from_i8_unchecked(&trits).len() == trits.len());
+        let buf: TritBuf<T> = trits.iter().map(|t| <T::Slice as raw::RawEncoding>::Trit::try_from(*t).ok().unwrap()).collect();
+        assert!(buf.len() == trits.len());
     });
 }
 

@@ -86,12 +86,12 @@ where
     }
 
     unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self {
-        debug_assert!(num_trits == b.len());
+        assert!(num_trits <= b.len());
         &*Self::make(b.as_ptr() as *const _, 0, num_trits)
     }
 
     unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self {
-        debug_assert!(num_trits == b.len());
+        assert!(num_trits <= b.len());
         &mut *(Self::make(b.as_ptr() as *const _, 0, num_trits) as *mut _)
     }
 }
