@@ -93,7 +93,7 @@ where
         // Safe to unwrap `transactions.get(0)` since we're sure it's not empty
         // Safe to unwrap `self.depth` since we're sure it's not None
         let public_key: MssPublicKey<M, P> =
-            MssPublicKey::<M, P>::from_buf(self.transactions.get(0).unwrap().address().to_inner().clone())
+            MssPublicKey::<M, P>::from_buf(self.transactions.get(0).unwrap().address().to_inner().to_buf())
                 .depth(self.depth.unwrap());
         let signature: MssSignature<M> = MssSignature::<M>::from_buf(signature_buf).index(self.index as u64);
         let hash = self
@@ -128,7 +128,7 @@ where
         // TODO remove clone
         // TODO test invalid index
         // Safe to unwrap
-        self.index = i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner().clone())
+        self.index = i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner().to_buf())
             .map_err(MilestoneBuilderError::InvalidIndex)? as u32;
 
         self.validate_signatures()?;

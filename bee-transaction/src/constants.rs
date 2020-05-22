@@ -9,11 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+#[derive(Copy, Clone)]
 pub struct Offset {
     pub start: usize,
     pub length: usize,
 }
 
+#[derive(Copy, Clone)]
 pub struct Field {
     pub trit_offset: Offset,
     pub tryte_offset: Offset,

@@ -51,9 +51,8 @@ struct Approvees<'a> {
 
 impl<'a> Approvees<'a> {
     fn into_trits_allocated(&self, buf: &mut TritBuf<T1B1Buf>) {
-        buf.copy_raw_bytes(self.trunk.as_trits(), 0, Hash::trit_len());
-
-        buf.copy_raw_bytes(self.branch.as_trits(), Hash::trit_len(), Hash::trit_len());
+        buf[..Hash::trit_len()].copy_from(self.trunk.as_trits());
+        buf[Hash::trit_len()..][..Hash::trit_len()].copy_from(self.branch.as_trits());
     }
 }
 
