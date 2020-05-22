@@ -49,6 +49,12 @@ impl NumTritsOfValue for Trits {
     }
 }
 
+// impl NumTritsOfValue for TritBuf<T1B1Buf> {
+//     fn num_trits(&self) -> usize {
+//         self.len()
+//     }
+// }
+
 impl NumTritsOfValue for i64 {
     fn num_trits(&self) -> usize {
         unimplemented!();
