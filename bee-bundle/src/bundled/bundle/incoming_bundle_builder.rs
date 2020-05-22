@@ -10,9 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundle::Bundle,
+    bundled::{Bundle, Transaction, TransactionField, Transactions},
     constants::IOTA_SUPPLY,
-    transaction::{Transaction, TransactionField, Transactions},
     TransactionVertex,
 };
 
@@ -179,7 +178,8 @@ where
 mod tests {
 
     use super::*;
-    use crate::transaction::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, Value};
+
+    use crate::bundled::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, Value};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
         TransactionBuilder::new()

@@ -10,12 +10,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundle::Bundle,
-    constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
-    transaction::{
-        Address, Hash, Index, Payload, Tag, TransactionBuilder, TransactionBuilders, TransactionError,
+    bundled::{
+        Address, Bundle, Hash, Index, Payload, Tag, TransactionBuilder, TransactionBuilders, TransactionError,
         TransactionField, Transactions,
     },
+    constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
 };
 
 use bee_crypto::{Kerl, Sponge};
@@ -360,7 +359,9 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
 mod tests {
 
     use super::*;
-    use crate::transaction::{Address, Nonce, Payload, Tag, Timestamp, Value};
+
+    use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
+
     use bee_signing::{PublicKey, RecoverableSignature, Seed, WotsSignature};
     use bee_ternary::{T1B1Buf, TritBuf};
 

@@ -9,10 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::Hash;
+mod bundle;
+mod transaction;
 
-pub trait TransactionVertex {
-    fn trunk(&self) -> &Hash;
-
-    fn branch(&self) -> &Hash;
-}
+pub use bundle::{
+    Bundle, IncomingBundleBuilder, IncomingBundleBuilderError, OutgoingBundleBuilder, OutgoingBundleBuilderError,
+};
+pub use transaction::{
+    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder, TransactionBuilders,
+    TransactionError, TransactionField, Transactions, Value,
+};

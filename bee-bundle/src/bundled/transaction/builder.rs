@@ -10,10 +10,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
-    transaction::{
+    bundled::{
         Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionError, TransactionField, Value,
     },
+    constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
 };
 
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};

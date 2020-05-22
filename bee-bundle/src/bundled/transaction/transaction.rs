@@ -10,11 +10,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
+    bundled::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, TransactionField, Value},
     constants::{
         ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
         OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
     },
-    transaction::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, TransactionField, Value},
     TransactionVertex,
 };
 
