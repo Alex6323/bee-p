@@ -16,7 +16,9 @@ mod input;
 mod nonce;
 mod pearldiver;
 mod powcurlstate;
+mod trit;
 
 pub use cores::Cores;
 pub use difficulty::Difficulty;
 pub use pearldiver::*;
+use trit::Trit;

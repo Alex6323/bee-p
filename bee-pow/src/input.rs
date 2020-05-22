@@ -9,10 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::{
-    constants::{TRANSACTION_TRIT_LEN as INPUT_LEN, TRANSACTION_TRIT_LEN as TRANS_LEN},
-    Trit,
-};
+use crate::Trit;
+
+use bee_common::constants::{TRANSACTION_TRIT_LEN as INPUT_LEN, TRANSACTION_TRIT_LEN as TRANS_LEN};
 
 pub struct InputTrits(pub(crate) [Trit; INPUT_LEN]);
 
