@@ -11,7 +11,10 @@
 
 use bee_ternary::*;
 use rand::prelude::*;
-use std::ops::Range;
+use std::{
+    ops::Range,
+    convert::TryFrom,
+};
 
 pub fn gen_trit() -> i8 {
     (thread_rng().gen::<u8>() % 3) as i8 - 1
@@ -20,13 +23,13 @@ pub fn gen_trit() -> i8 {
 pub fn gen_buf<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8>) {
     let len = thread_rng().gen_range(len.start, len.end);
     let trits = (0..len).map(|_| gen_trit()).collect::<Vec<_>>();
-    (TritBuf::<T>::from_i8_unchecked(&trits), trits)
+    (trits.iter().map(|t| <T::Slice as raw::RawEncoding>::Trit::try_from(*t).ok().unwrap()).collect(), trits)
 }
 
 pub fn gen_buf_unbalanced<T: raw::RawEncodingBuf>(len: Range<usize>) -> (TritBuf<T>, Vec<i8>) {
     let len = thread_rng().gen_range(len.start, len.end);
     let trits = (0..len).map(|_| gen_trit() + 1).collect::<Vec<_>>();
-    (TritBuf::<T>::from_i8_unchecked(&trits), trits)
+    (trits.iter().map(|t| <T::Slice as raw::RawEncoding>::Trit::try_from(*t).ok().unwrap()).collect(), trits)
 }
 
 // Not exactly fuzzing, just doing something a lot

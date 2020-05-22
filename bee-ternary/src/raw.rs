@@ -90,7 +90,7 @@ pub trait RawEncodingBuf {
         // if TypeId::of::<Self>() == TypeId::of::<T>() {
         //     unsafe { std::mem::transmute(this) }
         // } else {
-        this.trits().collect()
+        this.iter().collect()
         // }
     }
 }

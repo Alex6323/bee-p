@@ -38,16 +38,22 @@ pub trait NumTritsOfValue {
 }
 
 pub trait TransactionFieldType {
-    type InnerType: NumTritsOfValue;
+    type InnerType: NumTritsOfValue + ?Sized;
 
     fn is_trits_type() -> bool;
 }
 
-impl NumTritsOfValue for TritBuf<T1B1Buf> {
+impl NumTritsOfValue for Trits {
     fn num_trits(&self) -> usize {
         self.len()
     }
 }
+
+// impl NumTritsOfValue for TritBuf<T1B1Buf> {
+//     fn num_trits(&self) -> usize {
+//         self.len()
+//     }
+// }
 
 impl NumTritsOfValue for i64 {
     fn num_trits(&self) -> usize {
@@ -196,7 +202,7 @@ impl hash::Hash for Hash {
 }
 
 impl TransactionFieldType for Hash {
-    type InnerType = TritBuf<T1B1Buf>;
+    type InnerType = Trits<T1B1>;//TritBuf<T1B1Buf>;
 
     fn is_trits_type() -> bool {
         true
@@ -248,21 +254,20 @@ macro_rules! impl_transaction_field {
     ( $($field_name:ident),+ $(,)?) => {
         $(
             impl TransactionField for $field_name {
-
                 type Inner = <$field_name as TransactionFieldType>::InnerType;
 
                 fn to_inner(&self) -> &Self::Inner {
                     &self.0
                 }
 
-                fn try_from_inner(val: Self::Inner) -> Result<Self, TransactionFieldError> {
+                fn try_from_inner(val: <Self::Inner as ToOwned>::Owned) -> Result<Self, TransactionFieldError> {
                     if $field_name::is_trits_type() && val.num_trits() != $field_name::trit_len() {
                         return Err(TransactionFieldError::FieldWrongLength);
                     }
                     Ok(Self::from_inner_unchecked(val))
                 }
 
-                fn from_inner_unchecked(val: Self::Inner) -> Self {
+                fn from_inner_unchecked(val: <Self::Inner as ToOwned>::Owned) -> Self {
                     Self(val)
                 }
 
@@ -278,7 +283,7 @@ macro_rules! impl_transaction_field_type_for_tritbuf_fields {
     ( $($field_name:ident),+ $(,)?) => {
         $(
             impl TransactionFieldType for $field_name {
-                type InnerType = TritBuf<T1B1Buf>;
+                type InnerType = Trits<T1B1>;
                 fn is_trits_type() -> bool {true}
             }
         )+

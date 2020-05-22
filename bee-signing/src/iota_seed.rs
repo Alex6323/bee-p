@@ -12,10 +12,13 @@
 use crate::Seed;
 
 use bee_crypto::Sponge;
-use bee_ternary::{Btrit, Trit, TritBuf, Trits};
+use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    convert::TryFrom,
+};
 
 // TODO Put constants in a separate file
 
@@ -42,7 +45,14 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
         let seed: Vec<i8> = (0..243).map(|_| trits[rng.gen_range(0, trits.len())]).collect();
 
         Self {
-            seed: TritBuf::from_i8_unchecked(&seed),
+            // Hello, future programmer! If you get a type error here, you're probably trying to
+            // make this function generic over an encoding. Be aware that interpreting these raw i8
+            // bytes as trits is a bad idea for encodings other than `T1B1`. In fact, that's why
+            // I put this (currently unnecessary) type annotation here! To produce a warning that
+            // hopefully means you read this text! If you still want to make this generic, the best
+            // option is to just iterate through the `i8`s, convert them each to a trit, and then
+            // collect them into a `TritBuf`
+            seed: unsafe { Trits::<T1B1>::from_raw_unchecked(&seed, 243).to_buf() },
             _sponge: PhantomData,
         }
     }

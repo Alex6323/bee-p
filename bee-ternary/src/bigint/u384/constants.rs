@@ -23,9 +23,8 @@ use crate::{
 use super::U384;
 
 lazy_static! {
-    pub static ref BE_U32_HALF_MAX: U384<BigEndian, U32Repr> = { (*LE_U32_HALF_MAX).into() };
-    pub static ref BE_U32_HALF_MAX_T242: U384<BigEndian, U32Repr> =
-        { Into::<U384<BigEndian, U32Repr>>::into(*LE_U32_HALF_MAX_T242) };
+    pub static ref BE_U32_HALF_MAX: U384<BigEndian, U32Repr> = (*LE_U32_HALF_MAX).into();
+    pub static ref BE_U32_HALF_MAX_T242: U384<BigEndian, U32Repr> = Into::<U384<BigEndian, U32Repr>>::into(*LE_U32_HALF_MAX_T242);
     pub static ref LE_U32_HALF_MAX: U384<LittleEndian, U32Repr> = {
         let mut u384_max = U384::<LittleEndian, U32Repr>::max();
         u384_max.divide_by_two();

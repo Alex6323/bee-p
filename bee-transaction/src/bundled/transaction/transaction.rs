@@ -13,7 +13,7 @@ use crate::{
     bundled::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, TransactionField, Value},
     constants::{
         ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
-        OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
+        OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE, Field,
     },
     TransactionVertex,
 };
@@ -136,93 +136,45 @@ impl Transaction {
     }
 
     pub fn into_trits_allocated(&self, buf: &mut Trits<T1B1>) {
-        buf.copy_raw_bytes(
-            self.payload().to_inner(),
-            PAYLOAD.trit_offset.start,
-            PAYLOAD.trit_offset.length,
-        );
-        buf.copy_raw_bytes(
-            self.address().to_inner(),
-            ADDRESS.trit_offset.start,
-            ADDRESS.trit_offset.length,
-        );
-        buf.copy_raw_bytes(
-            self.obsolete_tag().to_inner(),
-            OBSOLETE_TAG.trit_offset.start,
-            OBSOLETE_TAG.trit_offset.length,
-        );
+        let mut copy_field = |layout: Field, field: &Trits<T1B1>| buf
+            [layout.trit_offset.start..]
+            [..layout.trit_offset.length]
+            .copy_from(&field[0..layout.trit_offset.length]);
 
-        buf.copy_raw_bytes(
-            self.bundle().to_inner(),
-            BUNDLE.trit_offset.start,
-            BUNDLE.trit_offset.length,
-        );
+        copy_field(PAYLOAD, self.payload().to_inner());
+        copy_field(ADDRESS, self.address().to_inner());
+        copy_field(OBSOLETE_TAG, self.obsolete_tag().to_inner());
+        copy_field(BUNDLE, self.bundle().to_inner());
+        copy_field(BRANCH, self.branch().to_inner());
+        copy_field(TRUNK, self.trunk().to_inner());
+        copy_field(TAG, self.tag().to_inner());
+        copy_field(NONCE, self.nonce().to_inner());
 
-        buf.copy_raw_bytes(
-            self.branch().to_inner(),
-            BRANCH.trit_offset.start,
-            BRANCH.trit_offset.length,
-        );
-
-        buf.copy_raw_bytes(
-            self.trunk().to_inner(),
-            TRUNK.trit_offset.start,
-            TRUNK.trit_offset.length,
-        );
-
-        buf.copy_raw_bytes(self.tag().to_inner(), TAG.trit_offset.start, TAG.trit_offset.length);
-
-        buf.copy_raw_bytes(
-            self.nonce().to_inner(),
-            NONCE.trit_offset.start,
-            NONCE.trit_offset.length,
-        );
+        let mut copy_slice = |layout: Field, slice: &Trits<T1B1>| buf
+            [layout.trit_offset.start..]
+            [..slice.len()]
+            .copy_from(slice);
 
         let value_buf = TritBuf::<T1B1Buf>::try_from(*self.value().to_inner()).unwrap();
-
-        buf.copy_raw_bytes(value_buf.as_slice(), VALUE.trit_offset.start, value_buf.len());
+        copy_slice(VALUE, &value_buf);
 
         let index_buf = TritBuf::<T1B1Buf>::try_from(*self.index().to_inner() as i64).unwrap();
-
-        buf.copy_raw_bytes(index_buf.as_slice(), INDEX.trit_offset.start, index_buf.len());
+        copy_slice(INDEX, &index_buf);
 
         let last_index_buf = TritBuf::<T1B1Buf>::try_from(*self.last_index().to_inner() as i64).unwrap();
-
-        buf.copy_raw_bytes(
-            last_index_buf.as_slice(),
-            LAST_INDEX.trit_offset.start,
-            last_index_buf.len(),
-        );
+        copy_slice(LAST_INDEX, &last_index_buf);
 
         let timestamp_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
-
-        buf.copy_raw_bytes(
-            timestamp_buf.as_slice(),
-            TIMESTAMP.trit_offset.start,
-            timestamp_buf.len(),
-        );
+        copy_slice(TIMESTAMP, &timestamp_buf);
 
         let attachment_ts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_ts().to_inner() as i64).unwrap();
-
-        buf.copy_raw_bytes(
-            attachment_ts_buf.as_slice(),
-            ATTACHMENT_TS.trit_offset.start,
-            attachment_ts_buf.len(),
-        );
+        copy_slice(ATTACHMENT_TS, &attachment_ts_buf);
 
         let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_lbts().to_inner() as i64).unwrap();
-        buf.copy_raw_bytes(
-            attachment_lbts_buf.as_slice(),
-            ATTACHMENT_LBTS.trit_offset.start,
-            attachment_lbts_buf.len(),
-        );
+        copy_slice(ATTACHMENT_LBTS, &attachment_lbts_buf);
 
         let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_ubts().to_inner() as i64).unwrap();
-        buf.copy_raw_bytes(
-            attachment_ubts_buf.as_slice(),
-            ATTACHMENT_UBTS.trit_offset.start,
-            attachment_ubts_buf.len(),
-        );
+        copy_slice(ATTACHMENT_UBTS, &attachment_ubts_buf);
     }
 
     pub fn payload(&self) -> &Payload {

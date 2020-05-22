@@ -38,7 +38,7 @@ where
 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for trit in self.trits() {
+        for trit in self.iter() {
             seq.serialize_element(&trit)?;
         }
         seq.end()
@@ -51,7 +51,7 @@ where
 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for trit in self.trits() {
+        for trit in self.iter() {
             seq.serialize_element(&trit)?;
         }
         seq.end()
