@@ -15,6 +15,7 @@ extern crate serde;
 mod bundle;
 mod constants;
 mod transaction;
+mod vertex;
 
 pub use crate::bundle::{
     Bundle, IncomingBundleBuilder, IncomingBundleBuilderError, OutgoingBundleBuilder, OutgoingBundleBuilderError,
@@ -27,3 +28,4 @@ pub use transaction::{
     Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder, TransactionBuilders,
     TransactionError, TransactionField, Transactions, Value,
 };
+pub use vertex::TransactionVertex;

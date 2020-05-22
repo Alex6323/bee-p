@@ -14,7 +14,7 @@ use crate::{
     protocol::Protocol,
 };
 
-use bee_bundle::Hash;
+use bee_bundle::{Hash, TransactionVertex};
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{PublicKey, RecoverableSignature};
 use bee_tangle::tangle;

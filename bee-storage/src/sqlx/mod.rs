@@ -33,8 +33,8 @@ use crate::storage::{
 };
 
 use bee_bundle::{
-    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionField, Value, ADDRESS_TRIT_LEN, HASH_TRIT_LEN,
-    NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN,
+    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionField, TransactionVertex, Value, ADDRESS_TRIT_LEN,
+    HASH_TRIT_LEN, NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN,
 };
 use bee_protocol::{Milestone, MilestoneIndex};
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};

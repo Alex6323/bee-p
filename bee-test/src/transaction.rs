@@ -12,7 +12,8 @@
 use crate::field::rand_trits_field;
 
 use bee_bundle::{
-    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder, TransactionField, Value,
+    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder, TransactionField,
+    TransactionVertex, Value,
 };
 
 pub fn clone_tx(tx: &Transaction) -> Transaction {

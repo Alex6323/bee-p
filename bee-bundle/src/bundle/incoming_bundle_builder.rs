@@ -13,6 +13,7 @@ use crate::{
     bundle::Bundle,
     constants::IOTA_SUPPLY,
     transaction::{Transaction, TransactionField, Transactions},
+    TransactionVertex,
 };
 
 use bee_crypto::{Kerl, Sponge};

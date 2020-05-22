@@ -16,7 +16,7 @@ use crate::{
     vertex::{TransactionRef, Vertex},
 };
 
-use bee_bundle::{Hash, Transaction};
+use bee_bundle::{Hash, Transaction, TransactionVertex};
 
 use std::{
     collections::HashSet,

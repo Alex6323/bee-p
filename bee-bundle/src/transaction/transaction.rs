@@ -15,6 +15,7 @@ use crate::{
         OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
     },
     transaction::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, TransactionField, Value},
+    TransactionVertex,
 };
 
 use bee_ternary::{num_conversions, raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Trits, T1B1};
@@ -256,14 +257,6 @@ impl Transaction {
         &self.bundle
     }
 
-    pub fn trunk(&self) -> &Hash {
-        &self.trunk
-    }
-
-    pub fn branch(&self) -> &Hash {
-        &self.branch
-    }
-
     pub fn tag(&self) -> &Tag {
         &self.tag
     }
@@ -303,6 +296,16 @@ impl Transaction {
 
     pub const fn trit_len() -> usize {
         TRANSACTION_TRIT_LEN
+    }
+}
+
+impl TransactionVertex for Transaction {
+    fn trunk(&self) -> &Hash {
+        &self.trunk
+    }
+
+    fn branch(&self) -> &Hash {
+        &self.branch
     }
 }
 
