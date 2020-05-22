@@ -19,7 +19,7 @@ use crate::{
     },
 };
 
-use bee_bundle::Hash;
+use bee_transaction::Hash;
 use bee_network::EndpointId;
 
 use futures::sink::SinkExt;

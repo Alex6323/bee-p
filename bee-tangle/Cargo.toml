@@ -10,7 +10,7 @@ license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework"]
 
 [dependencies]
-bee-bundle = { path = "../bee-bundle" }
+bee-transaction = { path = "../bee-transaction" }
 
 async-std = { version = "1.5", features = ["unstable"] }
 dashmap = "3.10"

@@ -15,11 +15,11 @@ use bitflags::bitflags;
 
 use std::ops::Deref;
 
-use bee_bundle::{Hash, Transaction};
+use bee_transaction::{Hash, Transaction};
 
 use async_std::sync::Arc;
 
-/// A wrapper around `bee_bundle::Transaction` that allows sharing it safely across threads.
+/// A wrapper around `bee_transaction::Transaction` that allows sharing it safely across threads.
 #[derive(Clone)]
 pub struct TransactionRef(Arc<Transaction>);
 

@@ -13,7 +13,7 @@
 pub mod tests {
     use crate::storage::{HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap, StorageBackend};
 
-    use bee_bundle::{Address, Hash};
+    use bee_transaction::{Address, Hash};
     use bee_test::field::rand_trits_field;
 
     use std::{
@@ -238,18 +238,18 @@ pub mod tests {
                 match i % 3 {
                     0 => {
                         let mut missing_approvers = HashSet::new();
-                        missing_approvers.insert(Rc::<bee_bundle::Hash>::new(tx_hash));
+                        missing_approvers.insert(Rc::<Hash>::new(tx_hash));
                         missing_hash_to_approvers_expected.insert(missing_tx_hash_trunk, missing_approvers);
                     }
                     1 => {
                         let mut missing_approvers = HashSet::new();
-                        missing_approvers.insert(Rc::<bee_bundle::Hash>::new(tx_hash));
+                        missing_approvers.insert(Rc::<Hash>::new(tx_hash));
                         missing_hash_to_approvers_expected.insert(missing_tx_hash_branch, missing_approvers);
                     }
                     2 => {
                         let mut missing_approvers_trunk = HashSet::new();
                         let mut missing_approvers_branch = HashSet::new();
-                        let rc = Rc::<bee_bundle::Hash>::new(tx_hash);
+                        let rc = Rc::<Hash>::new(tx_hash);
                         missing_approvers_trunk.insert(rc.clone());
                         missing_approvers_branch.insert(rc.clone());
                         missing_hash_to_approvers_expected.insert(missing_tx_hash_trunk, missing_approvers_trunk);

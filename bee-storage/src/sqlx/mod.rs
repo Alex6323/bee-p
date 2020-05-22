@@ -32,12 +32,12 @@ use crate::storage::{
     AttachmentData, Connection, HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap, Storage, StorageBackend,
 };
 
-use bee_bundle::{
-    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionField, TransactionVertex, Value, ADDRESS_TRIT_LEN,
-    HASH_TRIT_LEN, NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN,
-};
 use bee_protocol::{Milestone, MilestoneIndex};
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
+use bee_transaction::{
+    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder, TransactionField,
+    TransactionVertex, Value, ADDRESS_TRIT_LEN, HASH_TRIT_LEN, NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN,
+};
 
 use std::collections::{HashMap, HashSet};
 
@@ -49,7 +49,7 @@ use sqlx::{postgres::PgQueryAs, PgPool, Row};
 
 use crate::sqlx::statements::*;
 
-struct TransactionWrapper(bee_bundle::Transaction);
+struct TransactionWrapper(Transaction);
 struct MilestoneWrapper(Milestone);
 struct StateDeltaWrapper(StateDeltaMap);
 struct SolidStateWrapper(bool);
@@ -85,7 +85,7 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for TransactionWrapper {
         let tag_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_TAG).as_slice(), TAG_TRIT_LEN);
         let nonce_tritbuf = decode_bytes(row.get::<Vec<u8>, _>(TRANSACTION_COL_NONCE).as_slice(), NONCE_TRIT_LEN);
 
-        let builder = bee_bundle::TransactionBuilder::new()
+        let builder = TransactionBuilder::new()
             .with_payload(Payload::from_inner_unchecked(payload_tritbuf))
             .with_address(Address::from_inner_unchecked(address_tritbuf))
             .with_value(Value::from_inner_unchecked(value))
@@ -271,7 +271,7 @@ impl StorageBackend for SqlxBackendStorage {
 
     fn map_missing_transaction_hashes_to_approvers(
         &self,
-        all_hashes: HashSet<bee_bundle::Hash>,
+        all_hashes: HashSet<Hash>,
     ) -> Result<MissingHashesToRCApprovers, SqlxBackendError> {
         let pool = self
             .0
@@ -297,7 +297,7 @@ impl StorageBackend for SqlxBackendStorage {
                 let mut optional_approver_rc = None;
 
                 if !all_hashes.contains(&attachment_data.branch) {
-                    optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(attachment_data.hash));
+                    optional_approver_rc = Some(Rc::<Hash>::new(attachment_data.hash));
                     missing_to_approvers
                         .entry(attachment_data.branch.clone())
                         .or_insert_with(HashSet::new)
@@ -305,8 +305,7 @@ impl StorageBackend for SqlxBackendStorage {
                 }
 
                 if !all_hashes.contains(&attachment_data.trunk) {
-                    let approver_rc: Rc<bee_bundle::Hash> =
-                        optional_approver_rc.map_or(Rc::new(attachment_data.hash), |rc| rc);
+                    let approver_rc: Rc<Hash> = optional_approver_rc.map_or(Rc::new(attachment_data.hash), |rc| rc);
                     missing_to_approvers
                         .entry(attachment_data.trunk.clone())
                         .or_insert_with(HashSet::new)
@@ -324,11 +323,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(missing_to_approvers)
     }
     // Implement all methods here
-    async fn insert_transaction(
-        &self,
-        tx_hash: bee_bundle::Hash,
-        tx: bee_bundle::Transaction,
-    ) -> Result<(), SqlxBackendError> {
+    async fn insert_transaction(&self, tx_hash: Hash, tx: Transaction) -> Result<(), SqlxBackendError> {
         let pool = self
             .0
             .connection
@@ -362,7 +357,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn find_transaction(&self, tx_hash: bee_bundle::Hash) -> Result<bee_bundle::Transaction, SqlxBackendError> {
+    async fn find_transaction(&self, tx_hash: Hash) -> Result<Transaction, SqlxBackendError> {
         let mut pool = self
             .0
             .connection
@@ -379,10 +374,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(tx_wrapper.0)
     }
 
-    async fn update_transactions_set_solid(
-        &self,
-        transaction_hashes: HashSet<bee_bundle::Hash>,
-    ) -> Result<(), SqlxBackendError> {
+    async fn update_transactions_set_solid(&self, transaction_hashes: HashSet<Hash>) -> Result<(), SqlxBackendError> {
         let pool = self
             .0
             .connection
@@ -464,7 +456,7 @@ impl StorageBackend for SqlxBackendStorage {
 
     async fn update_transactions_set_snapshot_index(
         &self,
-        transaction_hashes: HashSet<bee_bundle::Hash>,
+        transaction_hashes: HashSet<Hash>,
         snapshot_index: MilestoneIndex,
     ) -> Result<(), SqlxBackendError> {
         let pool = self
@@ -488,10 +480,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn delete_transactions(
-        &self,
-        transaction_hashes: &HashSet<bee_bundle::Hash>,
-    ) -> Result<(), SqlxBackendError> {
+    async fn delete_transactions(&self, transaction_hashes: &HashSet<Hash>) -> Result<(), SqlxBackendError> {
         let pool = self
             .0
             .connection
@@ -512,10 +501,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn insert_transactions(
-        &self,
-        transactions: HashMap<bee_bundle::Hash, bee_bundle::Transaction>,
-    ) -> Result<(), Self::StorageError> {
+    async fn insert_transactions(&self, transactions: HashMap<Hash, Transaction>) -> Result<(), Self::StorageError> {
         let pool = self
             .0
             .connection
@@ -570,7 +556,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(())
     }
 
-    async fn find_milestone(&self, milestone_hash: bee_bundle::Hash) -> Result<Milestone, SqlxBackendError> {
+    async fn find_milestone(&self, milestone_hash: Hash) -> Result<Milestone, SqlxBackendError> {
         let mut pool = self
             .0
             .connection
@@ -587,7 +573,7 @@ impl StorageBackend for SqlxBackendStorage {
         Ok(milestone_wrapper.0)
     }
 
-    async fn delete_milestones(&self, milestone_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), SqlxBackendError> {
+    async fn delete_milestones(&self, milestone_hashes: &HashSet<Hash>) -> Result<(), SqlxBackendError> {
         let pool = self
             .0
             .connection

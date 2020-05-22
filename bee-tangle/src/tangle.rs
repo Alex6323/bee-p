@@ -16,7 +16,7 @@ use crate::{
     vertex::{TransactionRef, Vertex},
 };
 
-use bee_bundle::{Hash, Transaction, TransactionVertex};
+use bee_transaction::{Hash, Transaction, TransactionVertex};
 
 use std::{
     collections::HashSet,
@@ -411,7 +411,7 @@ mod tests {
     use super::*;
     use crate::*;
 
-    use bee_bundle::{TransactionField, Value};
+    use bee_transaction::{TransactionField, Value};
     use bee_test::{
         field::rand_trits_field,
         transaction::{create_random_attached_tx, create_random_tx},

@@ -15,7 +15,7 @@ use crate::{
     worker::transaction::TinyHashCache,
 };
 
-use bee_bundle::{Hash, Transaction, TransactionField};
+use bee_transaction::{Hash, Transaction, TransactionField};
 use bee_crypto::{CurlP81, Sponge};
 use bee_network::EndpointId;
 use bee_tangle::tangle;

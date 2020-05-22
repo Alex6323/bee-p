@@ -25,7 +25,7 @@ use crate::{
     },
 };
 
-use bee_bundle::Hash;
+use bee_transaction::Hash;
 use bee_crypto::{CurlP27, CurlP81, Kerl, SpongeType};
 use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::WotsPublicKey;

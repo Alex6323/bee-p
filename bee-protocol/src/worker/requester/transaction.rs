@@ -11,7 +11,7 @@
 
 use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
 
-use bee_bundle::Hash;
+use bee_transaction::Hash;
 use bee_tangle::tangle;
 use bee_ternary::T5B1Buf;
 

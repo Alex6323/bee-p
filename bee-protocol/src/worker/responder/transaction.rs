@@ -14,7 +14,7 @@ use crate::{
     worker::SenderWorker,
 };
 
-use bee_bundle::{Hash, Transaction, TransactionField};
+use bee_transaction::{Hash, Transaction, TransactionField};
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};

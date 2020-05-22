@@ -30,7 +30,7 @@ use async_std::{
     task::spawn,
 };
 
-use bee_bundle::Hash;
+use bee_transaction::Hash;
 
 use std::{
     ptr,

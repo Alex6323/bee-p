@@ -11,7 +11,7 @@
 
 use crate::milestone::{Milestone, MilestoneIndex};
 
-use bee_bundle::{Hash, Payload, Transaction, TransactionField, TransactionVertex, Transactions};
+use bee_transaction::{Hash, Payload, Transaction, TransactionField, TransactionVertex, Transactions};
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{
     normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,

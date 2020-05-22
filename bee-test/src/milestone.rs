@@ -11,7 +11,7 @@
 
 use crate::field::rand_trits_field;
 
-use bee_bundle::Hash;
+use bee_transaction::Hash;
 use bee_protocol::{Milestone, MilestoneIndex};
 
 pub fn clone_ms(ms: &Milestone) -> Milestone {

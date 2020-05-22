@@ -10,8 +10,8 @@ license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "ledger"]
 
 [dependencies]
-bee-bundle = { path = "../bee-bundle" }
 bee-ternary = { path = "../bee-ternary" }
+bee-transaction = { path = "../bee-transaction" }
 
 bytemuck = "1.2.0"
 digest = "0.8.1"

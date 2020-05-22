@@ -14,7 +14,7 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_NAME, BEE_VERSION},
 };
 
-use bee_bundle::Hash;
+use bee_transaction::Hash;
 use bee_common::logger;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};

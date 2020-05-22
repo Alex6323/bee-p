@@ -11,7 +11,7 @@
 
 extern crate serde;
 
-use bee_bundle::{Address, Hash};
+use bee_transaction::{Address, Hash, Transaction};
 use bee_protocol::{Milestone, MilestoneIndex};
 
 use std::{
@@ -68,12 +68,9 @@ pub trait StorageBackend {
         all_hashes: HashSet<Hash>,
     ) -> Result<MissingHashesToRCApprovers, Self::StorageError>;
 
-    async fn insert_transaction(&self, tx_hash: Hash, tx: bee_bundle::Transaction) -> Result<(), Self::StorageError>;
-    async fn insert_transactions(
-        &self,
-        transactions: HashMap<Hash, bee_bundle::Transaction>,
-    ) -> Result<(), Self::StorageError>;
-    async fn find_transaction(&self, tx_hash: Hash) -> Result<bee_bundle::Transaction, Self::StorageError>;
+    async fn insert_transaction(&self, tx_hash: Hash, tx: Transaction) -> Result<(), Self::StorageError>;
+    async fn insert_transactions(&self, transactions: HashMap<Hash, Transaction>) -> Result<(), Self::StorageError>;
+    async fn find_transaction(&self, tx_hash: Hash) -> Result<Transaction, Self::StorageError>;
     async fn update_transactions_set_solid(&self, transaction_hashes: HashSet<Hash>) -> Result<(), Self::StorageError>;
     async fn update_transactions_set_snapshot_index(
         &self,
