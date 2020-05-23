@@ -9,11 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// TODO: allow specifying a context
 // TODO: beautify datetime output
 
 use env_logger::fmt::Color;
-use log::{debug, error, info, log_enabled, trace, warn};
 
 use std::io::Write;
 
@@ -46,34 +44,4 @@ pub fn init(level_filter: log::LevelFilter) {
         .format_timestamp_secs()
         .filter_level(level_filter)
         .init();
-}
-
-pub fn trace(message: &str) {
-    if log_enabled!(log::Level::Trace) {
-        trace!("{}", message);
-    }
-}
-
-pub fn debug(message: &str) {
-    if log_enabled!(log::Level::Debug) {
-        debug!("{}", message);
-    }
-}
-
-pub fn info(message: &str) {
-    if log_enabled!(log::Level::Info) {
-        info!("{}", message);
-    }
-}
-
-pub fn warn(message: &str) {
-    if log_enabled!(log::Level::Warn) {
-        warn!("{}", message);
-    }
-}
-
-pub fn error(message: &str) {
-    if log_enabled!(log::Level::Error) {
-        error!("{}", message);
-    }
 }
