@@ -71,7 +71,7 @@ impl MilestoneRequesterWorker {
     }
 
     pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
-        info!("[MilestoneRequesterWorker ] Running.");
+        info!("Running.");
 
         let mut shutdown_fused = shutdown.fuse();
 
@@ -92,6 +92,6 @@ impl MilestoneRequesterWorker {
             }
         }
 
-        info!("[MilestoneRequesterWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

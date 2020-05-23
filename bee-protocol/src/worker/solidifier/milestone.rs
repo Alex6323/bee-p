@@ -113,7 +113,7 @@ impl MilestoneSolidifierWorker {
         receiver: mpsc::Receiver<MilestoneSolidifierWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[MilestoneSolidifierWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -137,7 +137,7 @@ impl MilestoneSolidifierWorker {
             }
         }
 
-        info!("[MilestoneSolidifierWorker ] Stopped.");
+        info!("Stopped.");
     }
 }
 

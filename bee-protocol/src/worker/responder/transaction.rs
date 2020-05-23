@@ -14,10 +14,10 @@ use crate::{
     worker::SenderWorker,
 };
 
-use bee_transaction::{Hash, Transaction, TransactionField};
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
+use bee_transaction::{Hash, Transaction, TransactionField};
 
 use bytemuck::cast_slice;
 use futures::{
@@ -69,7 +69,7 @@ impl TransactionResponderWorker {
         receiver: mpsc::Receiver<TransactionResponderWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[TransactionResponderWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -87,6 +87,6 @@ impl TransactionResponderWorker {
             }
         }
 
-        info!("[TransactionResponderWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

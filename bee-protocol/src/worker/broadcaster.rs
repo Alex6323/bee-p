@@ -57,11 +57,7 @@ impl BroadcasterWorker {
                         // TODO metrics
                     }
                     Err(e) => {
-                        warn!(
-                            "[BroadcasterWorker ] Broadcasting transaction to {:?} failed: {:?}.",
-                            *entry.key(),
-                            e
-                        );
+                        warn!("Broadcasting transaction to {:?} failed: {:?}.", *entry.key(), e);
                     }
                 };
             }
@@ -73,7 +69,7 @@ impl BroadcasterWorker {
         receiver: mpsc::Receiver<BroadcasterWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[BroadcasterWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -91,6 +87,6 @@ impl BroadcasterWorker {
             }
         }
 
-        info!("[BroadcasterWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

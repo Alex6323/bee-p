@@ -55,7 +55,8 @@ macro_rules! implement_sender_worker {
                         .send(message)
                         .await
                     {
-                        warn!("[SenderWorker ] Sending message failed: {:?}.", e);
+                        // TODO log actual message type ?
+                        warn!("Sending message to {} failed: {:?}.", epid, e);
                     }
                 };
             }
@@ -86,8 +87,9 @@ macro_rules! implement_sender_worker {
                                         Protocol::get().metrics.$incrementor();
                                     }
                                     Err(e) => {
+                                        // TODO log actual message type ?
                                         warn!(
-                                            "[SenderWorker({}) ] Sending message failed: {}.",
+                                            "Sending message to {} failed: {:?}.",
                                             self.peer.epid, e
                                         );
                                     }

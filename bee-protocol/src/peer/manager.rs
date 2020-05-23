@@ -111,7 +111,7 @@ impl PeerManager {
             if let Ok(mut shutdown) = peer.milestone_request.1.lock() {
                 if let Some(shutdown) = shutdown.take() {
                     if let Err(e) = shutdown.send(()) {
-                        warn!("[Protocol ] Shutting down TransactionWorker failed: {:?}.", e);
+                        warn!("Shutting down TransactionWorker failed: {:?}.", e);
                     }
                 }
             }
@@ -120,16 +120,16 @@ impl PeerManager {
         // TODO
 
         // if let Err(_) = peer.milestone_request.1.send(()) {
-        //     warn!("[Protocol ] Shutting down MilestoneRequest SenderWorker failed.");
+        //     warn!("Shutting down MilestoneRequest SenderWorker failed.");
         // }
         // if let Err(_) = peer.transaction_broadcast.1.send(()) {
-        //     warn!("[Protocol ] Shutting down TransactionBroadcast SenderWorker failed.");
+        //     warn!("Shutting down TransactionBroadcast SenderWorker failed.");
         // }
         // if let Err(_) = peer.transaction_request.1.send(()) {
-        //     warn!("[Protocol ] Shutting down TransactionRequest SenderWorker failed.");
+        //     warn!("Shutting down TransactionRequest SenderWorker failed.");
         // }
         // if let Err(_) = peer.heartbeat.1.send(()) {
-        //     warn!("[Protocol ] Shutting down Heartbeat SenderWorker failed.");
+        //     warn!("Shutting down Heartbeat SenderWorker failed.");
         // }
     }
 }

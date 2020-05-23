@@ -25,10 +25,10 @@ use crate::{
     },
 };
 
-use bee_transaction::Hash;
 use bee_crypto::{CurlP27, CurlP81, Kerl, SpongeType};
 use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::WotsPublicKey;
+use bee_transaction::Hash;
 
 use std::{
     ptr,
@@ -87,7 +87,7 @@ pub struct Protocol {
 impl Protocol {
     pub async fn init(config: ProtocolConfig, network: Network) {
         if unsafe { !PROTOCOL.is_null() } {
-            warn!("[Protocol ] Already initialized.");
+            warn!("Already initialized.");
             return;
         }
 
@@ -214,68 +214,68 @@ impl Protocol {
         if let Ok(mut shutdown) = Protocol::get().transaction_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down TransactionWorker failed: {:?}.", e);
+                    warn!("Shutting down TransactionWorker failed: {:?}.", e);
                 }
             }
         }
         if let Ok(mut shutdown) = Protocol::get().transaction_responder_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down TransactionResponderWorker failed: {:?}.", e);
+                    warn!("Shutting down TransactionResponderWorker failed: {:?}.", e);
                 }
             }
         }
         if let Ok(mut shutdown) = Protocol::get().milestone_responder_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down MilestoneResponderWorker failed: {:?}.", e);
+                    warn!("Shutting down MilestoneResponderWorker failed: {:?}.", e);
                 }
             }
         }
         if let Ok(mut shutdown) = Protocol::get().transaction_requester_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down TransactionRequesterWorker failed: {:?}.", e);
+                    warn!("Shutting down TransactionRequesterWorker failed: {:?}.", e);
                 }
             }
         }
         if let Ok(mut shutdown) = Protocol::get().milestone_requester_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down MilestoneRequesterWorker failed: {:?}.", e);
+                    warn!("Shutting down MilestoneRequesterWorker failed: {:?}.", e);
                 }
             }
         }
         if let Ok(mut shutdown) = Protocol::get().milestone_validator_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down MilestoneValidatorWorker failed: {:?}.", e);
+                    warn!("Shutting down MilestoneValidatorWorker failed: {:?}.", e);
                 }
             }
         }
         if let Ok(mut shutdown) = Protocol::get().transaction_solidifier_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down TransactionSolidifierWorker failed: {:?}.", e);
+                    warn!("Shutting down TransactionSolidifierWorker failed: {:?}.", e);
                 }
             }
         }
         if let Ok(mut shutdown) = Protocol::get().milestone_solidifier_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down MilestoneSolidifierWorker failed: {:?}.", e);
+                    warn!("Shutting down MilestoneSolidifierWorker failed: {:?}.", e);
                 }
             }
         }
         if let Ok(mut shutdown) = Protocol::get().broadcaster_worker.1.lock() {
             if let Some(shutdown) = shutdown.take() {
                 if let Err(e) = shutdown.send(()) {
-                    warn!("[Protocol ] Shutting down BroadcasterWorker failed: {:?}.", e);
+                    warn!("Shutting down BroadcasterWorker failed: {:?}.", e);
                 }
             }
         }
         if let Err(e) = Protocol::get().status_worker.clone().send(()).await {
-            warn!("[Protocol ] Shutting down StatusWorker failed: {:?}.", e);
+            warn!("Shutting down StatusWorker failed: {:?}.", e);
         }
     }
 

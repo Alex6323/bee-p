@@ -19,8 +19,8 @@ use crate::{
     },
 };
 
-use bee_transaction::Hash;
 use bee_network::EndpointId;
+use bee_transaction::Hash;
 
 use futures::sink::SinkExt;
 use log::warn;
@@ -65,7 +65,7 @@ impl Protocol {
             })
             .await
         {
-            warn!("[Protocol ] Broadcasting transaction failed: {}.", e);
+            warn!("Broadcasting transaction failed: {}.", e);
         }
     }
 
@@ -114,7 +114,7 @@ impl Protocol {
             .send(TransactionSolidifierWorkerEvent(hash, index))
             .await
         {
-            warn!("[Protocol ] Triggering transaction solidification failed: {}.", e);
+            warn!("Triggering transaction solidification failed: {}.", e);
         }
     }
 
@@ -127,7 +127,7 @@ impl Protocol {
             .send(MilestoneSolidifierWorkerEvent())
             .await
         {
-            warn!("[Protocol ] Triggering milestone solidification failed: {}.", e);
+            warn!("Triggering milestone solidification failed: {}.", e);
         }
     }
 }

@@ -35,11 +35,11 @@ impl StaticPeerManager {
         match block_on(Url::from_url_str(url)) {
             Ok(url) => {
                 if let Err(e) = self.network.send(AddEndpoint { url, responder: None }).await {
-                    warn!("[StaticPeerManager ] Failed to add endpoint \"{}\": {}", url, e);
+                    warn!("Failed to add endpoint \"{}\": {}", url, e);
                 }
             }
             Err(e) => {
-                warn!("[StaticPeerManager ] Failed to resolve URL \"{}\": {}", url, e);
+                warn!("Failed to resolve URL \"{}\": {}", url, e);
             }
         }
     }

@@ -11,8 +11,8 @@
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol};
 
-use bee_transaction::Hash;
 use bee_tangle::tangle;
+use bee_transaction::Hash;
 
 use std::collections::HashSet;
 
@@ -64,7 +64,7 @@ impl TransactionSolidifierWorker {
         receiver: mpsc::Receiver<TransactionSolidifierWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[TransactionSolidifierWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -82,7 +82,7 @@ impl TransactionSolidifierWorker {
             }
         }
 
-        info!("[TransactionSolidifierWorker ] Stopped.");
+        info!("Stopped.");
     }
 }
 

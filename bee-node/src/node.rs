@@ -14,7 +14,6 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_NAME, BEE_VERSION},
 };
 
-use bee_transaction::Hash;
 use bee_common::logger;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
@@ -22,6 +21,7 @@ use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::Protocol;
 use bee_snapshot::{SnapshotMetadata, SnapshotState};
 use bee_tangle::tangle;
+use bee_transaction::Hash;
 
 use std::collections::HashMap;
 
@@ -56,15 +56,15 @@ impl Node {
     }
 
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
-        info!("[Node ] Endpoint {} has been added.", epid);
+        info!("Endpoint {} has been added.", epid);
 
         if let Err(e) = self.network.send(Connect { epid, responder: None }).await {
-            warn!("[Node ] Sending Command::Connect for {} failed: {}.", epid, e);
+            warn!("Sending Command::Connect for {} failed: {}.", epid, e);
         }
     }
 
     async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
-        info!("[Node ] Endpoint {} has been removed.", epid);
+        info!("Endpoint {} has been removed.", epid);
     }
 
     async fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
@@ -77,7 +77,7 @@ impl Node {
         // TODO unregister ?
         if let Some((_, shutdown)) = self.peers.remove(&epid) {
             if let Err(e) = shutdown.send(()) {
-                warn!("[Node ] Sending shutdown to {} failed: {:?}.", epid, e);
+                warn!("Sending shutdown to {} failed: {:?}.", epid, e);
             }
         }
     }
@@ -85,16 +85,16 @@ impl Node {
     async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
         if let Some(peer) = self.peers.get_mut(&epid) {
             if let Err(e) = peer.0.send(bytes).await {
-                warn!("[Node ] Sending PeerWorkerEvent::Message to {} failed: {}.", epid, e);
+                warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", epid, e);
             }
         }
     }
 
     pub async fn run(mut self) {
-        info!("[Node ] Running.");
+        info!("Running.");
 
         while let Some(event) = self.events.next().await {
-            debug!("[Node ] Received event {}.", event);
+            debug!("Received event {}.", event);
 
             match event {
                 Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
@@ -104,7 +104,7 @@ impl Node {
                 } => self.endpoint_connected_handler(epid, address, origin).await,
                 Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
                 Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
-                _ => warn!("[Node ] Unsupported event {}.", event),
+                _ => warn!("Unsupported event {}.", event),
             }
         }
     }
@@ -112,18 +112,18 @@ impl Node {
     pub async fn init(&mut self) {
         logger::init(self.config.log_level);
 
-        info!("[Node ] {} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
-        info!("[Node ] Initializing...");
+        info!("{} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
+        info!("Initializing...");
 
         block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone()).run());
 
         bee_tangle::init();
 
-        info!("[Node ] Reading snapshot metadata...");
+        info!("Reading snapshot metadata...");
         match SnapshotMetadata::new(self.config.snapshot.meta_file_path()) {
             Ok(snapshot_metadata) => {
                 info!(
-                    "[Node ] Read snapshot metadata from {} with index {}, {} solid entry points and {} seen milestones.",
+                    "Read snapshot metadata from {} with index {}, {} solid entry points and {} seen milestones.",
                     Utc.timestamp(snapshot_metadata.timestamp() as i64, 0).to_rfc2822(),
                     snapshot_metadata.index(),
                     snapshot_metadata.solid_entry_points().len(),
@@ -142,17 +142,17 @@ impl Node {
             }
             // TODO exit ?
             Err(e) => error!(
-                "[Node ] Failed to read snapshot metadata file \"{}\": {:?}.",
+                "Failed to read snapshot metadata file \"{}\": {:?}.",
                 self.config.snapshot.meta_file_path(),
                 e
             ),
         }
 
-        info!("[Node ] Reading snapshot state...");
+        info!("Reading snapshot state...");
         let snapshot_state = match SnapshotState::new(self.config.snapshot.state_file_path()) {
             Ok(snapshot_state) => {
                 info!(
-                    "[Node ] Read snapshot state with {} entries and correct supply.",
+                    "Read snapshot state with {} entries and correct supply.",
                     snapshot_state.state().len()
                 );
                 snapshot_state
@@ -160,7 +160,7 @@ impl Node {
             // TODO exit ?
             Err(e) => {
                 error!(
-                    "[Node ] Failed to read snapshot state file \"{}\": {:?}.",
+                    "Failed to read snapshot state file \"{}\": {:?}.",
                     self.config.snapshot.state_file_path(),
                     e
                 );
@@ -176,7 +176,7 @@ impl Node {
         self.ledger.replace((ledger_worker_tx, ledger_worker_shutdown_tx));
         spawn(LedgerWorker::new(snapshot_state.into_state()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
 
-        info!("[Node ] Initialized.");
+        info!("Initialized.");
     }
 }
 

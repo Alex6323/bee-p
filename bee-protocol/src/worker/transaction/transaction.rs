@@ -15,11 +15,11 @@ use crate::{
     worker::transaction::TinyHashCache,
 };
 
-use bee_transaction::{Hash, Transaction, TransactionField};
 use bee_crypto::{CurlP81, Sponge};
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
+use bee_transaction::{Hash, Transaction, TransactionField};
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -54,7 +54,7 @@ impl TransactionWorker {
         shutdown: oneshot::Receiver<()>,
         mut milestone_validator_worker_tx: mpsc::Sender<Hash>,
     ) {
-        info!("[TransactionWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -70,7 +70,7 @@ impl TransactionWorker {
             }
         }
 
-        info!("[TransactionWorker ] Stopped.");
+        info!("Stopped.");
     }
 
     async fn process_transaction_brodcast(
@@ -79,10 +79,10 @@ impl TransactionWorker {
         transaction_broadcast: TransactionBroadcast,
         milestone_validator_worker_tx: &mut mpsc::Sender<Hash>,
     ) {
-        debug!("[TransactionWorker ] Processing received data...");
+        debug!("Processing received data...");
 
         if !self.cache.insert(&transaction_broadcast.transaction) {
-            debug!("[TransactionWorker ] Data already received.");
+            debug!("Data already received.");
             return;
         }
 
@@ -105,7 +105,7 @@ impl TransactionWorker {
                     t5b1_trit_buf.encode::<T1B1Buf>()
                 }
                 Err(_) => {
-                    warn!("[TransactionWorker ] Can not decode T5B1 from received data.");
+                    warn!("Can not decode T5B1 from received data.");
                     return;
                 }
             }
@@ -115,10 +115,7 @@ impl TransactionWorker {
         let transaction = match Transaction::from_trits(&transaction_buf) {
             Ok(transaction) => transaction,
             Err(e) => {
-                warn!(
-                    "[TransactionWorker ] Can not build transaction from received data: {:?}",
-                    e
-                );
+                warn!("Can not build transaction from received data: {:?}", e);
                 return;
             }
         };
@@ -127,7 +124,7 @@ impl TransactionWorker {
         let hash = Hash::from_inner_unchecked(self.curl.digest(&transaction_buf).unwrap());
 
         if hash.weight() < Protocol::get().config.mwm {
-            debug!("[TransactionWorker ] Insufficient weight magnitude: {}.", hash.weight());
+            debug!("Insufficient weight magnitude: {}.", hash.weight());
             return;
         }
 
@@ -168,19 +165,13 @@ impl TransactionWorker {
 
                     if let Some(tail) = tail {
                         if let Err(e) = milestone_validator_worker_tx.send(tail).await {
-                            error!(
-                                "[TransactionWorker ] Sending tail to milestone validation failed: {:?}.",
-                                e
-                            );
+                            error!("Sending tail to milestone validation failed: {:?}.", e);
                         }
                     };
                 }
             }
             None => {
-                debug!(
-                    "[TransactionWorker ] Transaction {} already present in the tangle.",
-                    &hash
-                );
+                debug!("Transaction {} already present in the tangle.", &hash);
             }
         }
     }

@@ -50,11 +50,11 @@ impl StatusWorker {
 
         status = format!("{} Requested {}", status, Protocol::get().requested.len());
 
-        info!("[StatusWorker ] {}.", status);
+        info!("{}.", status);
     }
 
     pub(crate) async fn run(self, mut shutdown: Receiver<()>) {
-        info!("[StatusWorker ] Running.");
+        info!("Running.");
 
         loop {
             match ready(None)
@@ -69,6 +69,6 @@ impl StatusWorker {
             }
         }
 
-        info!("[StatusWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

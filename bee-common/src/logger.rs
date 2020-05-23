@@ -34,9 +34,15 @@ pub fn init(level_filter: log::LevelFilter) {
             let mut level_style = f.style();
             level_style.set_color(col).set_bold(true);
 
-            writeln!(f, "[{} {:>7}] {}", ts, level_style.value(record.level()), record.args())
+            writeln!(
+                f,
+                "[{}][{:>5}][{}] {}",
+                ts,
+                level_style.value(record.level()),
+                record.target(),
+                record.args()
+            )
         })
-        //.format_timestamp(Some(env_logger::TimestampPrecision::Millis))
         .format_timestamp_secs()
         .filter_level(level_filter)
         .init();

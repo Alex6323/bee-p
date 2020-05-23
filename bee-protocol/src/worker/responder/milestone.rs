@@ -14,10 +14,10 @@ use crate::{
     worker::SenderWorker,
 };
 
-use bee_transaction::Transaction;
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
+use bee_transaction::Transaction;
 
 use bytemuck::cast_slice;
 use futures::{
@@ -71,7 +71,7 @@ impl MilestoneResponderWorker {
         receiver: mpsc::Receiver<MilestoneResponderWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[MilestoneResponderWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -89,6 +89,6 @@ impl MilestoneResponderWorker {
             }
         }
 
-        info!("[MilestoneResponderWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

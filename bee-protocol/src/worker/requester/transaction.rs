@@ -11,9 +11,9 @@
 
 use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
 
-use bee_transaction::Hash;
 use bee_tangle::tangle;
 use bee_ternary::T5B1Buf;
+use bee_transaction::Hash;
 
 use std::cmp::Ordering;
 
@@ -74,7 +74,7 @@ impl TransactionRequesterWorker {
     }
 
     pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
-        info!("[TransactionRequesterWorker ] Running.");
+        info!("Running.");
 
         let mut shutdown_fused = shutdown.fuse();
 
@@ -94,6 +94,6 @@ impl TransactionRequesterWorker {
             }
         }
 
-        info!("[TransactionRequesterWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

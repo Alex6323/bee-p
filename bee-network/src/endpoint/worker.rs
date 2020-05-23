@@ -58,7 +58,7 @@ impl EndpointWorker {
     }
 
     pub async fn run(mut self) -> Result<()> {
-        debug!("[Endp ] Starting endpoint worker...");
+        debug!("Starting endpoint worker...");
 
         let mut contacts = Endpoints::new();
 
@@ -78,11 +78,11 @@ impl EndpointWorker {
                     let command = if let Some(command) = command {
                         command
                     } else {
-                        error!("[Endp ] Command channel unexpectedly closed.");
+                        error!("Command channel unexpectedly closed.");
                         break;
                     };
 
-                    debug!("[Endp ] Received {}.", command);
+                    debug!("Received {}.", command);
 
                     match command {
                         Command::AddEndpoint { url, responder } => {
@@ -90,7 +90,7 @@ impl EndpointWorker {
 
                             if let Some(responder) = responder {
                                 if responder.send(res).is_err() {
-                                    warn!("[Endp ] Error sending command response");
+                                    warn!("Error sending command response.");
                                 };
                             }
                         },
@@ -100,7 +100,7 @@ impl EndpointWorker {
 
                             if let Some(responder) = responder {
                                 if responder.send(res).is_err() {
-                                    warn!("[Endp ] Error sending command response");
+                                    warn!("Error sending command response.");
                                 };
                             }
                         },
@@ -112,7 +112,7 @@ impl EndpointWorker {
 
                             if let Some(responder) = responder {
                                 if responder.send(is_disconnected).is_err() {
-                                    warn!("[Endp ] Error sending command response");
+                                    warn!("Error sending command response.");
                                 };
                             }
 
@@ -131,7 +131,7 @@ impl EndpointWorker {
 
                             if let Some(responder) = responder {
                                 if responder.send(res).is_err() {
-                                    warn!("[Endp ] Error sending command response");
+                                    warn!("Error sending command response.");
                                 };
                             }
                         },
@@ -140,7 +140,7 @@ impl EndpointWorker {
 
                             if let Some(responder) = responder {
                                 if responder.send(res).is_err() {
-                                    warn!("[Endp ] Error sending command response");
+                                    warn!("Error sending command response.");
                                 };
                             }
                         },
@@ -149,7 +149,7 @@ impl EndpointWorker {
 
                             if let Some(responder) = responder {
                                 if responder.send(res).is_err() {
-                                    warn!("[Endp ] Error sending command response");
+                                    warn!("Error sending command response.");
                                 };
                             }
                         },
@@ -160,11 +160,11 @@ impl EndpointWorker {
                     let event = if let Some(event) = event {
                         event
                     } else {
-                        error!("[Endp ] Event channel unexpectedly closed.");
+                        error!("Event channel unexpectedly closed.");
                         break;
                     };
 
-                    debug!("[Endp ] Received {}.", event);
+                    debug!("Received {}.", event);
 
                     match event {
                         Event::EndpointAdded { epid, total } => {
@@ -229,7 +229,7 @@ impl EndpointWorker {
             }
         }
 
-        debug!("[Endp ] Stopped endpoint worker.");
+        debug!("Stopped endpoint worker.");
         Ok(())
     }
 }
@@ -271,7 +271,7 @@ async fn rmv_endpoint(
     let removed_connected = connected.remove(&epid);
 
     if removed_connected && !removed_recipient {
-        warn!("[Endp ] Removed an endpoint that was connected, but couldn't be sent to.");
+        warn!("Removed an endpoint that was connected, but couldn't be sent to.");
     }
 
     if removed_contact || removed_connected {
@@ -308,7 +308,7 @@ async fn try_connect(
                 match responder.send(false) {
                     Ok(_) => (),
                     Err(_) => {
-                        error!("[Endp ] Failed to send command response.");
+                        error!("Failed to send command response.");
                     }
                 }
             }
@@ -322,7 +322,7 @@ async fn try_connect(
                             match responder.send(true) {
                                 Ok(_) => (),
                                 Err(_) => {
-                                    error!("[Endp ] Failed to send command response.");
+                                    error!("Failed to send command response.");
                                 }
                             }
                         }
@@ -343,7 +343,7 @@ async fn try_connect(
                         match responder.send(true) {
                             Ok(_) => (),
                             Err(_) => {
-                                error!("[Endp ] Failed to send response.");
+                                error!("Failed to send response.");
                             }
                         }
                     }
@@ -356,7 +356,7 @@ async fn try_connect(
             match responder.send(false) {
                 Ok(_) => (),
                 Err(_) => {
-                    error!("[Endp ] Failed to send response.");
+                    error!("Failed to send response.");
                 }
             }
         }
@@ -377,7 +377,7 @@ async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox) 
     let removed_connected = connected.remove(&epid);
 
     if removed_connected && !removed_recipient {
-        warn!("[Endp ] Removed an endpoint that was connected, but couldn't be sent to.");
+        warn!("Removed an endpoint that was connected, but couldn't be sent to.");
     }
 
     removed_connected

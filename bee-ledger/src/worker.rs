@@ -43,7 +43,7 @@ impl LedgerWorker {
                     if *balance as i64 + value >= 0 {
                         *balance = (*balance as i64 + value) as u64;
                     } else {
-                        warn!("[LedgerWorker ] Ignoring conflicting diff.");
+                        warn!("Ignoring conflicting diff.");
                     }
                 })
                 .or_insert(value as u64);
@@ -52,12 +52,12 @@ impl LedgerWorker {
 
     fn get_balance(&self, address: Address, sender: oneshot::Sender<Option<u64>>) {
         if let Err(e) = sender.send(self.state.get(&address).cloned()) {
-            warn!("[LedgerWorker ] Failed to send balance: {:?}.", e);
+            warn!("Failed to send balance: {:?}.", e);
         }
     }
 
     pub async fn run(mut self, receiver: mpsc::Receiver<LedgerWorkerEvent>, shutdown: oneshot::Receiver<()>) {
-        info!("[LedgerWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -78,7 +78,7 @@ impl LedgerWorker {
             }
         }
 
-        info!("[LedgerWorker ] Stopped.");
+        info!("Stopped.");
     }
 }
 

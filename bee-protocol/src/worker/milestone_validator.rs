@@ -14,10 +14,10 @@ use crate::{
     protocol::Protocol,
 };
 
-use bee_transaction::{Hash, TransactionVertex};
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{PublicKey, RecoverableSignature};
 use bee_tangle::tangle;
+use bee_transaction::{Hash, TransactionVertex};
 
 use std::marker::PhantomData;
 
@@ -92,7 +92,7 @@ where
         receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[MilestoneValidatorWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -108,7 +108,7 @@ where
                                 tangle().add_milestone(milestone.index.into(), milestone.hash);
                                 // TODO deref ? Why not .into() ?
                                 if milestone.index > *tangle().get_last_milestone_index() {
-                                    info!("[MilestoneValidatorWorker ] New milestone #{}.", milestone.index);
+                                    info!("New milestone #{}.", milestone.index);
                                     tangle().update_last_milestone_index(milestone.index.into());
                                 }
                                 // TODO only trigger if index == last solid index ?
@@ -118,7 +118,7 @@ where
                             Err(e) => {
                                 match e {
                                     MilestoneValidatorWorkerError::IncompleteBundle => {},
-                                    _ => debug!("[MilestoneValidatorWorker ] Invalid milestone bundle: {:?}.", e)
+                                    _ => debug!("Invalid milestone bundle: {:?}.", e)
                                 }
                             }
                         }
@@ -130,7 +130,7 @@ where
             }
         }
 
-        info!("[MilestoneValidatorWorker ] Stopped.");
+        info!("Stopped.");
     }
 }
 

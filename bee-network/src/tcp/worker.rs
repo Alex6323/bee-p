@@ -39,11 +39,11 @@ impl TcpWorker {
     }
 
     pub async fn run(mut self) -> Result<()> {
-        debug!("[TCP  ] Starting TCP worker...");
+        debug!("Starting TCP worker...");
 
         let listener = TcpListener::bind(*self.binding_addr).await?;
 
-        info!("[TCP  ] Accepting connections on {}.", listener.local_addr()?);
+        info!("Accepting connections on {}.", listener.local_addr()?);
 
         let mut incoming = listener.incoming().fuse();
         let shutdown = &mut self.shutdown;
@@ -58,8 +58,7 @@ impl TcpWorker {
                                 let conn = match TcpConnection::new(stream, Origin::Inbound) {
                                     Ok(conn) => conn,
                                     Err(e) => {
-                                        error!["TCP  ] Error creating TCP connection (Stream immediatedly aborted?)."];
-                                        error!["TCP  ] Error was: {:?}.", e];
+                                        error!["Creating TCP connection failed: {:?}.", e];
                                         continue;
                                     }
                                 };
@@ -71,13 +70,13 @@ impl TcpWorker {
 
                                 // Immediatedly drop stream, if it's associated IP address isn't whitelisted
                                 if !whitelist.contains_address(&conn.remote_addr.ip()) {
-                                    warn!("[TCP  ] Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
-                                    warn!("[TCP  ] Connection disallowed.");
+                                    warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
+                                    warn!("Connection disallowed.");
                                     continue;
                                 }
 
                                 info!(
-                                    "[TCP  ] Sucessfully established connection to {} ({}).",
+                                    "Sucessfully established connection to {} ({}).",
                                     conn.remote_addr,
                                     Origin::Inbound
                                 );
@@ -88,8 +87,7 @@ impl TcpWorker {
                                 }
                             }
                             Err(e) => {
-                                error!("[TCP  ] Accepting connection failed.");
-                                error!("[TCP  ] Error was: {:?}.", e.kind());
+                                error!("Accepting connection failed: {:?}.", e);
                             },
                         }
                     } else {
@@ -102,7 +100,7 @@ impl TcpWorker {
             }
         }
 
-        debug!("[TCP  ] Stopped TCP worker.");
+        debug!("Stopped TCP worker.");
         Ok(())
     }
 }
