@@ -110,7 +110,7 @@ impl Node {
     }
 
     pub async fn init(&mut self) {
-        logger::init(self.config.log_level);
+        logger::init(self.config.logger.clone());
 
         info!("{} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");

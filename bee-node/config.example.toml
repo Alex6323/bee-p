@@ -1,15 +1,19 @@
 # Duplicate this file to config.toml to use it
 
-log_level = "info"
+[logger]
+color   = true
+level   = "info"
+stdout  = true
+files   = []
 
 [network]
 binding_addr  = "0.0.0.0"
-binding_port  = 1337
+binding_port  = 15600
 
 [peering]
 [peering.static]
 limit     = 5
-peers     = [ "tcp://[::1]:15600" ]
+peers     = [  ]
 
 [protocol]
 mwm = 14

@@ -10,27 +10,36 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 // TODO: beautify datetime output
+// TODO: log to files
+// TODO: handle stdout true/false
 
-use env_logger::fmt::Color;
+use crate::LoggerConfig;
 
 use std::io::Write;
 
-pub fn init(level_filter: log::LevelFilter) {
+use env_logger::fmt::Color;
+use log::Level;
+
+pub fn init(config: LoggerConfig) {
+    let conf = config.clone();
+
     pretty_env_logger::formatted_timed_builder()
         .format_indent(None)
-        .format(|f, record| {
+        .format(move |f, record| {
             let ts = f.timestamp();
 
-            let col = match record.level() {
-                log::Level::Trace => Color::Magenta,
-                log::Level::Debug => Color::Blue,
-                log::Level::Info => Color::Green,
-                log::Level::Warn => Color::Yellow,
-                log::Level::Error => Color::Red,
-            };
-
             let mut level_style = f.style();
-            level_style.set_color(col).set_bold(true);
+
+            if conf.color {
+                let color = match record.level() {
+                    Level::Trace => Color::Magenta,
+                    Level::Debug => Color::Blue,
+                    Level::Info => Color::Green,
+                    Level::Warn => Color::Yellow,
+                    Level::Error => Color::Red,
+                };
+                level_style.set_color(color).set_bold(true);
+            }
 
             writeln!(
                 f,
@@ -42,6 +51,6 @@ pub fn init(level_filter: log::LevelFilter) {
             )
         })
         .format_timestamp_secs()
-        .filter_level(level_filter)
+        .filter_level(config.level)
         .init();
 }

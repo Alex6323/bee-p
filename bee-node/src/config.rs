@@ -9,6 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_common::{LoggerConfig, LoggerConfigBuilder};
 use bee_network::{NetworkConfig, NetworkConfigBuilder};
 use bee_peering::{PeeringConfig, PeeringConfigBuilder};
 use bee_protocol::{ProtocolConfig, ProtocolConfigBuilder};
@@ -17,11 +18,10 @@ use bee_snapshot::{SnapshotConfig, SnapshotConfigBuilder};
 use serde::Deserialize;
 
 pub(crate) const CONFIG_PATH: &str = "./config.toml";
-const DEFAULT_LOG_LEVEL: &str = "info";
 
 #[derive(Default, Deserialize)]
 pub struct NodeConfigBuilder {
-    log_level: Option<String>,
+    logger: LoggerConfigBuilder,
     network: NetworkConfigBuilder,
     peering: PeeringConfigBuilder,
     protocol: ProtocolConfigBuilder,
@@ -33,23 +33,9 @@ impl NodeConfigBuilder {
         Self::default()
     }
 
-    pub fn log_level(mut self, log_level: &str) -> Self {
-        self.log_level.replace(log_level.to_string());
-        self
-    }
-
     pub fn finish(self) -> NodeConfig {
-        let log_level = match self.log_level.unwrap_or_else(|| DEFAULT_LOG_LEVEL.to_owned()).as_str() {
-            "trace" => log::LevelFilter::Trace,
-            "debug" => log::LevelFilter::Debug,
-            "info" => log::LevelFilter::Info,
-            "warn" => log::LevelFilter::Warn,
-            "error" => log::LevelFilter::Error,
-            _ => log::LevelFilter::Info,
-        };
-
         NodeConfig {
-            log_level,
+            logger: self.logger.finish(),
             network: self.network.finish(),
             peering: self.peering.finish(),
             protocol: self.protocol.finish(),
@@ -60,7 +46,7 @@ impl NodeConfigBuilder {
 
 #[derive(Clone)]
 pub struct NodeConfig {
-    pub(crate) log_level: log::LevelFilter,
+    pub(crate) logger: LoggerConfig,
     pub(crate) network: NetworkConfig,
     pub(crate) peering: PeeringConfig,
     pub(crate) protocol: ProtocolConfig,
