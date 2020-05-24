@@ -13,4 +13,4 @@ mod config;
 mod logger;
 
 pub use config::{LoggerConfig, LoggerConfigBuilder};
-pub use logger::init;
+pub use logger::logger_init;

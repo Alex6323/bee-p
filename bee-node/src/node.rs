@@ -14,7 +14,7 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_NAME, BEE_VERSION},
 };
 
-use bee_common::logger;
+use bee_common::logger_init;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
@@ -110,7 +110,7 @@ impl Node {
     }
 
     pub async fn init(&mut self) {
-        logger::init(self.config.logger.clone());
+        logger_init(self.config.logger.clone()).unwrap();
 
         info!("{} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");

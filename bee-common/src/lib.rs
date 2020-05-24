@@ -12,4 +12,4 @@
 pub mod constants;
 mod logger;
 
-pub use logger::{init, LoggerConfig, LoggerConfigBuilder};
+pub use logger::{logger_init, LoggerConfig, LoggerConfigBuilder};

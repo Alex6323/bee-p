@@ -20,7 +20,10 @@ use std::io::Write;
 use env_logger::fmt::Color;
 use log::Level;
 
-pub fn init(config: LoggerConfig) {
+#[derive(Debug)]
+pub enum LoggerError {}
+
+pub fn logger_init(config: LoggerConfig) -> Result<(), LoggerError> {
     let conf = config.clone();
 
     pretty_env_logger::formatted_timed_builder()
@@ -53,4 +56,6 @@ pub fn init(config: LoggerConfig) {
         .format_timestamp_secs()
         .filter_level(config.level)
         .init();
+
+    Ok(())
 }
