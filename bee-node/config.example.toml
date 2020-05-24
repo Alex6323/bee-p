@@ -1,10 +1,9 @@
 # Duplicate this file to config.toml to use it
 
-[logger]
-color   = true
-level   = "info"
-stdout  = true
-files   = []
+[[logger.outputs]]
+name  = "stdout"
+color = true
+level = "info"
 
 [network]
 binding_addr  = "0.0.0.0"

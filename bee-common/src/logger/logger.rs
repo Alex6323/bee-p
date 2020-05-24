@@ -9,53 +9,76 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// TODO: beautify datetime output
-// TODO: log to files
-// TODO: handle stdout true/false
-
 use crate::LoggerConfig;
 
-use std::io::Write;
-
-use env_logger::fmt::Color;
-use log::Level;
-
 #[derive(Debug)]
-pub enum LoggerError {}
+#[non_exhaustive]
+pub enum LoggerError {
+    File,
+    Apply,
+}
 
 pub fn logger_init(config: LoggerConfig) -> Result<(), LoggerError> {
-    let conf = config.clone();
+    let mut logger = fern::Dispatch::new().format(|out, message, record| {
+        out.finish(format_args!(
+            "{}[{}][{}] {}",
+            chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+            record.target(),
+            record.level(),
+            message
+        ))
+    });
 
-    pretty_env_logger::formatted_timed_builder()
-        .format_indent(None)
-        .format(move |f, record| {
-            let ts = f.timestamp();
+    for output in config.outputs {
+        let mut dispatcher = fern::Dispatch::new().level(output.level);
 
-            let mut level_style = f.style();
+        dispatcher = if output.name == "stdout" {
+            dispatcher.chain(std::io::stdout())
+        } else {
+            dispatcher.chain(fern::log_file(output.name).map_err(|_| LoggerError::File)?)
+        };
 
-            if conf.color {
-                let color = match record.level() {
-                    Level::Trace => Color::Magenta,
-                    Level::Debug => Color::Blue,
-                    Level::Info => Color::Green,
-                    Level::Warn => Color::Yellow,
-                    Level::Error => Color::Red,
-                };
-                level_style.set_color(color).set_bold(true);
-            }
+        logger = logger.chain(dispatcher);
+    }
 
-            writeln!(
-                f,
-                "[{}][{:>5}][{}] {}",
-                ts,
-                level_style.value(record.level()),
-                record.target(),
-                record.args()
-            )
-        })
-        .format_timestamp_secs()
-        .filter_level(config.level)
-        .init();
+    logger.apply().map_err(|_| LoggerError::Apply)?;
 
     Ok(())
 }
+
+// pub fn logger_init(config: LoggerConfig) -> Result<(), LoggerError> {
+//     let conf = config.clone();
+//
+//     pretty_env_logger::formatted_timed_builder()
+//         .format_indent(None)
+//         .format(move |f, record| {
+//             let ts = f.timestamp();
+//
+//             let mut level_style = f.style();
+//
+//             if conf.color {
+//                 let color = match record.level() {
+//                     Level::Trace => Color::Magenta,
+//                     Level::Debug => Color::Blue,
+//                     Level::Info => Color::Green,
+//                     Level::Warn => Color::Yellow,
+//                     Level::Error => Color::Red,
+//                 };
+//                 level_style.set_color(color).set_bold(true);
+//             }
+//
+//             writeln!(
+//                 f,
+//                 "[{}][{:>5}][{}] {}",
+//                 ts,
+//                 level_style.value(record.level()),
+//                 record.target(),
+//                 record.args()
+//             )
+//         })
+//         .format_timestamp_secs()
+//         .filter_level(config.level)
+//         .init();
+//
+//     Ok(())
+// }

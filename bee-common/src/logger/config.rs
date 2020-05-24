@@ -12,22 +12,25 @@
 use log::LevelFilter;
 use serde::Deserialize;
 
+const DEFAULT_NAME: &str = "stdout";
 const DEFAULT_COLOR: bool = true;
-const DEFAULT_FILES: Vec<String> = Vec::new();
 const DEFAULT_LEVEL: &str = "info";
-const DEFAULT_STDOUT: bool = true;
 
 #[derive(Default, Deserialize)]
-pub struct LoggerConfigBuilder {
+pub struct LoggerOutputConfigBuilder {
+    name: Option<String>,
     color: Option<bool>,
-    files: Option<Vec<String>>,
     level: Option<String>,
-    stdout: Option<bool>,
 }
 
-impl LoggerConfigBuilder {
+impl LoggerOutputConfigBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn name(mut self, name: &str) -> Self {
+        self.name.replace(name.to_string());
+        self
     }
 
     pub fn color(mut self, color: bool) -> Self {
@@ -35,24 +38,12 @@ impl LoggerConfigBuilder {
         self
     }
 
-    pub fn add_file(mut self, file: &str) {
-        if self.files.is_none() {
-            self.files.replace(Vec::new());
-        }
-        self.files.unwrap().push(file.to_owned());
-    }
-
-    pub fn log_level(mut self, log_level: &str) -> Self {
-        self.level.replace(log_level.to_string());
+    pub fn level(mut self, level: &str) -> Self {
+        self.level.replace(level.to_string());
         self
     }
 
-    pub fn stdout(mut self, stdout: bool) -> Self {
-        self.stdout.replace(stdout);
-        self
-    }
-
-    pub fn finish(self) -> LoggerConfig {
+    pub fn finish(self) -> LoggerOutputConfig {
         let level = match self.level.unwrap_or_else(|| DEFAULT_LEVEL.to_owned()).as_str() {
             "trace" => LevelFilter::Trace,
             "debug" => LevelFilter::Debug,
@@ -62,21 +53,47 @@ impl LoggerConfigBuilder {
             _ => LevelFilter::Info,
         };
 
-        LoggerConfig {
+        LoggerOutputConfig {
+            name: self.name.unwrap_or_else(|| DEFAULT_NAME.to_owned()),
             color: self.color.unwrap_or(DEFAULT_COLOR),
-            files: self.files.unwrap_or(DEFAULT_FILES),
             level,
-            stdout: self.stdout.unwrap_or(DEFAULT_STDOUT),
         }
     }
 }
 
+#[derive(Default, Deserialize)]
+pub struct LoggerConfigBuilder {
+    outputs: Option<Vec<LoggerOutputConfigBuilder>>,
+}
+
+impl LoggerConfigBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn finish(self) -> LoggerConfig {
+        let mut outputs = Vec::new();
+
+        if let Some(content) = self.outputs {
+            for output in content {
+                outputs.push(output.finish());
+            }
+        }
+
+        LoggerConfig { outputs }
+    }
+}
+
+#[derive(Clone)]
+pub struct LoggerOutputConfig {
+    pub(crate) name: String,
+    pub(crate) color: bool,
+    pub(crate) level: LevelFilter,
+}
+
 #[derive(Clone)]
 pub struct LoggerConfig {
-    pub(crate) color: bool,
-    pub(crate) files: Vec<String>,
-    pub(crate) level: LevelFilter,
-    pub(crate) stdout: bool,
+    pub(crate) outputs: Vec<LoggerOutputConfig>,
 }
 
 impl LoggerConfig {
