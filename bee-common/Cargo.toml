@@ -11,6 +11,6 @@ keywords = ["iota", "tangle", "bee", "framework", "common"]
 
 [dependencies]
 chrono = "0.4.11"
-fern = "0.6.0"
+fern = { version = "0.6.0", features = ["colored"] }
 log = "0.4.8"
 serde = { version = "1.0.104", features = ["derive" ] }

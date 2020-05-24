@@ -12,14 +12,13 @@
 use log::LevelFilter;
 use serde::Deserialize;
 
-const DEFAULT_NAME: &str = "stdout";
 const DEFAULT_COLOR: bool = true;
+const DEFAULT_NAME: &str = "stdout";
 const DEFAULT_LEVEL: &str = "info";
 
 #[derive(Default, Deserialize)]
 pub struct LoggerOutputConfigBuilder {
     name: Option<String>,
-    color: Option<bool>,
     level: Option<String>,
 }
 
@@ -30,11 +29,6 @@ impl LoggerOutputConfigBuilder {
 
     pub fn name(mut self, name: &str) -> Self {
         self.name.replace(name.to_string());
-        self
-    }
-
-    pub fn color(mut self, color: bool) -> Self {
-        self.color.replace(color);
         self
     }
 
@@ -55,7 +49,6 @@ impl LoggerOutputConfigBuilder {
 
         LoggerOutputConfig {
             name: self.name.unwrap_or_else(|| DEFAULT_NAME.to_owned()),
-            color: self.color.unwrap_or(DEFAULT_COLOR),
             level,
         }
     }
@@ -63,12 +56,18 @@ impl LoggerOutputConfigBuilder {
 
 #[derive(Default, Deserialize)]
 pub struct LoggerConfigBuilder {
+    color: Option<bool>,
     outputs: Option<Vec<LoggerOutputConfigBuilder>>,
 }
 
 impl LoggerConfigBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn color(mut self, color: bool) -> Self {
+        self.color.replace(color);
+        self
     }
 
     pub fn finish(self) -> LoggerConfig {
@@ -80,19 +79,22 @@ impl LoggerConfigBuilder {
             }
         }
 
-        LoggerConfig { outputs }
+        LoggerConfig {
+            color: self.color.unwrap_or(DEFAULT_COLOR),
+            outputs,
+        }
     }
 }
 
 #[derive(Clone)]
 pub struct LoggerOutputConfig {
     pub(crate) name: String,
-    pub(crate) color: bool,
     pub(crate) level: LevelFilter,
 }
 
 #[derive(Clone)]
 pub struct LoggerConfig {
+    pub(crate) color: bool,
     pub(crate) outputs: Vec<LoggerOutputConfig>,
 }
 

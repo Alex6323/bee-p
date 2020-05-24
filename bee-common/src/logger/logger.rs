@@ -11,6 +11,8 @@
 
 use crate::LoggerConfig;
 
+use fern::colors::{Color, ColoredLevelConfig};
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum LoggerError {
@@ -19,15 +21,36 @@ pub enum LoggerError {
 }
 
 pub fn logger_init(config: LoggerConfig) -> Result<(), LoggerError> {
-    let mut logger = fern::Dispatch::new().format(|out, message, record| {
-        out.finish(format_args!(
-            "{}[{}][{}] {}",
-            chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
-            record.target(),
-            record.level(),
-            message
-        ))
-    });
+    let timestamp_format = "[%Y-%m-%d][%H:%M:%S]";
+
+    let mut logger = if config.color {
+        let colors = ColoredLevelConfig::new()
+            .trace(Color::BrightMagenta)
+            .debug(Color::BrightBlue)
+            .info(Color::BrightGreen)
+            .warn(Color::BrightYellow)
+            .error(Color::BrightRed);
+
+        fern::Dispatch::new().format(move |out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                chrono::Local::now().format(timestamp_format),
+                record.target(),
+                colors.color(record.level()),
+                message
+            ))
+        })
+    } else {
+        fern::Dispatch::new().format(move |out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                chrono::Local::now().format(timestamp_format),
+                record.target(),
+                record.level(),
+                message
+            ))
+        })
+    };
 
     for output in config.outputs {
         let mut dispatcher = fern::Dispatch::new().level(output.level);
@@ -45,40 +68,3 @@ pub fn logger_init(config: LoggerConfig) -> Result<(), LoggerError> {
 
     Ok(())
 }
-
-// pub fn logger_init(config: LoggerConfig) -> Result<(), LoggerError> {
-//     let conf = config.clone();
-//
-//     pretty_env_logger::formatted_timed_builder()
-//         .format_indent(None)
-//         .format(move |f, record| {
-//             let ts = f.timestamp();
-//
-//             let mut level_style = f.style();
-//
-//             if conf.color {
-//                 let color = match record.level() {
-//                     Level::Trace => Color::Magenta,
-//                     Level::Debug => Color::Blue,
-//                     Level::Info => Color::Green,
-//                     Level::Warn => Color::Yellow,
-//                     Level::Error => Color::Red,
-//                 };
-//                 level_style.set_color(color).set_bold(true);
-//             }
-//
-//             writeln!(
-//                 f,
-//                 "[{}][{:>5}][{}] {}",
-//                 ts,
-//                 level_style.value(record.level()),
-//                 record.target(),
-//                 record.args()
-//             )
-//         })
-//         .format_timestamp_secs()
-//         .filter_level(config.level)
-//         .init();
-//
-//     Ok(())
-// }

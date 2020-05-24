@@ -1,8 +1,9 @@
 # Duplicate this file to config.toml to use it
 
+[logger]
+color = true
 [[logger.outputs]]
 name  = "stdout"
-color = true
 level = "info"
 
 [network]
