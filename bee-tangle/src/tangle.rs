@@ -411,11 +411,11 @@ mod tests {
     use super::*;
     use crate::*;
 
-    use bee_transaction::{TransactionField, Value};
     use bee_test::{
         field::rand_trits_field,
         transaction::{create_random_attached_tx, create_random_tx},
     };
+    use bee_transaction::{TransactionField, Value};
 
     use async_std::{sync::channel, task::block_on};
     use serial_test::serial;

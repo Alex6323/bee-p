@@ -13,8 +13,8 @@
 pub mod tests {
     use crate::storage::{HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap, StorageBackend};
 
-    use bee_transaction::{Address, Hash};
     use bee_test::field::rand_trits_field;
+    use bee_transaction::{Address, Hash};
 
     use std::{
         collections::{HashMap, HashSet},

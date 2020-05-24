@@ -12,8 +12,8 @@
 use crate::{
     bundled::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, TransactionField, Value},
     constants::{
-        ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
-        OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE, Field,
+        Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
+        OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
     },
     TransactionVertex,
 };
@@ -136,10 +136,9 @@ impl Transaction {
     }
 
     pub fn into_trits_allocated(&self, buf: &mut Trits<T1B1>) {
-        let mut copy_field = |layout: Field, field: &Trits<T1B1>| buf
-            [layout.trit_offset.start..]
-            [..layout.trit_offset.length]
-            .copy_from(&field[0..layout.trit_offset.length]);
+        let mut copy_field = |layout: Field, field: &Trits<T1B1>| {
+            buf[layout.trit_offset.start..][..layout.trit_offset.length].copy_from(&field[0..layout.trit_offset.length])
+        };
 
         copy_field(PAYLOAD, self.payload().to_inner());
         copy_field(ADDRESS, self.address().to_inner());
@@ -150,10 +149,8 @@ impl Transaction {
         copy_field(TAG, self.tag().to_inner());
         copy_field(NONCE, self.nonce().to_inner());
 
-        let mut copy_slice = |layout: Field, slice: &Trits<T1B1>| buf
-            [layout.trit_offset.start..]
-            [..slice.len()]
-            .copy_from(slice);
+        let mut copy_slice =
+            |layout: Field, slice: &Trits<T1B1>| buf[layout.trit_offset.start..][..slice.len()].copy_from(slice);
 
         let value_buf = TritBuf::<T1B1Buf>::try_from(*self.value().to_inner()).unwrap();
         copy_slice(VALUE, &value_buf);

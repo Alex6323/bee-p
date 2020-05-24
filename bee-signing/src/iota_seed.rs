@@ -15,10 +15,7 @@ use bee_crypto::Sponge;
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
-use std::{
-    marker::PhantomData,
-    convert::TryFrom,
-};
+use std::{convert::TryFrom, marker::PhantomData};
 
 // TODO Put constants in a separate file
 

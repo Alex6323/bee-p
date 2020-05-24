@@ -14,8 +14,7 @@
 //! # Features
 //!
 //! - Creation of trit and tryte buffers with multiple encodings
-//! - Safe encoding API that allows the efficient manipulation and sharing of trit and tryte
-//!   buffers and slices
+//! - Safe encoding API that allows the efficient manipulation and sharing of trit and tryte buffers and slices
 //! - Mutation of trit buffers and slices
 //! - Ternary BigInt implementation
 //! - Balanced and unbalanced ternary
@@ -298,20 +297,24 @@ where
     pub fn copy_from<U: RawEncoding<Trit = T::Trit> + ?Sized>(&mut self, trits: &Trits<U>) {
         assert!(self.len() == trits.len());
         for (i, trit) in trits.iter().enumerate() {
-            unsafe { self.set_unchecked(i, trit); }
+            unsafe {
+                self.set_unchecked(i, trit);
+            }
         }
     }
 
     /// Fill this mutable trit slice with copied of the given trit.
     pub fn fill(&mut self, trit: T::Trit) {
         for i in 0..self.len() {
-            unsafe { self.set_unchecked(i, trit); }
+            unsafe {
+                self.set_unchecked(i, trit);
+            }
         }
     }
 
     /// Copy the contents of this trit slice into a new [`TritBuf`] with the same encoding. This
     /// function is analogous to `to_vec` method implemented on ordinary slices.
-    pub fn to_buf<U: RawEncodingBuf<Slice=T>>(&self) -> TritBuf<U> {
+    pub fn to_buf<U: RawEncodingBuf<Slice = T>>(&self) -> TritBuf<U> {
         // TODO: A faster impl than this!
         self.iter().collect()
     }
@@ -342,7 +345,6 @@ where
         self.iter().collect()
     }
 }
-
 
 /// These functions are only implemented for trit slices with the [`T1B1`] encoding because other
 /// encodings are compressed and do not support handing out references to their internal trits.
@@ -481,60 +483,84 @@ impl<'a, T: RawEncoding + ?Sized> fmt::Debug for &'a Trits<T> {
 
 impl<T: RawEncoding + ?Sized> Index<Range<usize>> for Trits<T> {
     type Output = Self;
-    fn index(&self, range: Range<usize>) -> &Self::Output { self.subslice(range) }
+    fn index(&self, range: Range<usize>) -> &Self::Output {
+        self.subslice(range)
+    }
 }
 impl<T: RawEncoding + ?Sized> IndexMut<Range<usize>> for Trits<T> {
-    fn index_mut(&mut self, range: Range<usize>) -> &mut Self::Output { self.subslice_mut(range) }
+    fn index_mut(&mut self, range: Range<usize>) -> &mut Self::Output {
+        self.subslice_mut(range)
+    }
 }
 
 // x..
 
 impl<T: RawEncoding + ?Sized> Index<RangeFrom<usize>> for Trits<T> {
     type Output = Self;
-    fn index(&self, range: RangeFrom<usize>) -> &Self::Output { self.subslice(range.start..self.len()) }
+    fn index(&self, range: RangeFrom<usize>) -> &Self::Output {
+        self.subslice(range.start..self.len())
+    }
 }
 impl<T: RawEncoding + ?Sized> IndexMut<RangeFrom<usize>> for Trits<T> {
-    fn index_mut(&mut self, range: RangeFrom<usize>) -> &mut Self::Output { self.subslice_mut(range.start..self.len()) }
+    fn index_mut(&mut self, range: RangeFrom<usize>) -> &mut Self::Output {
+        self.subslice_mut(range.start..self.len())
+    }
 }
 
 // ..
 
 impl<T: RawEncoding + ?Sized> Index<RangeFull> for Trits<T> {
     type Output = Self;
-    fn index(&self, _range: RangeFull) -> &Self::Output { self }
+    fn index(&self, _range: RangeFull) -> &Self::Output {
+        self
+    }
 }
 impl<T: RawEncoding + ?Sized> IndexMut<RangeFull> for Trits<T> {
-    fn index_mut(&mut self, _range: RangeFull) -> &mut Self::Output { self }
+    fn index_mut(&mut self, _range: RangeFull) -> &mut Self::Output {
+        self
+    }
 }
 
 // x..=y
 
 impl<T: RawEncoding + ?Sized> Index<RangeInclusive<usize>> for Trits<T> {
     type Output = Self;
-    fn index(&self, range: RangeInclusive<usize>) -> &Self::Output { self.subslice(*range.start()..*range.end() + 1) }
+    fn index(&self, range: RangeInclusive<usize>) -> &Self::Output {
+        self.subslice(*range.start()..*range.end() + 1)
+    }
 }
 impl<T: RawEncoding + ?Sized> IndexMut<RangeInclusive<usize>> for Trits<T> {
-    fn index_mut(&mut self, range: RangeInclusive<usize>) -> &mut Self::Output { self.subslice_mut(*range.start()..*range.end() + 1) }
+    fn index_mut(&mut self, range: RangeInclusive<usize>) -> &mut Self::Output {
+        self.subslice_mut(*range.start()..*range.end() + 1)
+    }
 }
 
 // ..y
 
 impl<T: RawEncoding + ?Sized> Index<RangeTo<usize>> for Trits<T> {
     type Output = Self;
-    fn index(&self, range: RangeTo<usize>) -> &Self::Output { self.subslice(0..range.end) }
+    fn index(&self, range: RangeTo<usize>) -> &Self::Output {
+        self.subslice(0..range.end)
+    }
 }
 impl<T: RawEncoding + ?Sized> IndexMut<RangeTo<usize>> for Trits<T> {
-    fn index_mut(&mut self, range: RangeTo<usize>) -> &mut Self::Output { self.subslice_mut(0..range.end) }
+    fn index_mut(&mut self, range: RangeTo<usize>) -> &mut Self::Output {
+        self.subslice_mut(0..range.end)
+    }
 }
 
 // ..=y
 
 impl<T: RawEncoding + ?Sized> Index<RangeToInclusive<usize>> for Trits<T> {
     type Output = Self;
-    fn index(&self, range: RangeToInclusive<usize>) -> &Self::Output { self.subslice(0..range.end + 1) }
+    fn index(&self, range: RangeToInclusive<usize>) -> &Self::Output {
+        self.subslice(0..range.end + 1)
+    }
 }
 impl<T: RawEncoding + ?Sized> IndexMut<RangeToInclusive<usize>> for Trits<T> {
-    fn index_mut(&mut self, range: RangeToInclusive<usize>) -> &mut Self::Output { self.subslice_mut(0..range.end + 1) }
+    fn index_mut(&mut self, range: RangeToInclusive<usize>) -> &mut Self::Output {
+        self.subslice_mut(0..range.end + 1)
+    }
 }
 
 impl<T: RawEncoding + ?Sized> ToOwned for Trits<T> {

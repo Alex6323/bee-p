@@ -35,12 +35,20 @@ impl T4B1 {
 }
 
 fn extract(x: i8, elem: usize) -> Btrit {
-    debug_assert!(elem < TPB, "Attempted to extract invalid element {} from balanced T4B1 trit", elem);
+    debug_assert!(
+        elem < TPB,
+        "Attempted to extract invalid element {} from balanced T4B1 trit",
+        elem
+    );
     Utrit::from_u8((((x + BAL) / 3i8.pow(elem as u32)) % 3) as u8).shift()
 }
 
 fn insert(x: i8, elem: usize, trit: Btrit) -> i8 {
-    debug_assert!(elem < TPB, "Attempted to insert invalid element {} into balanced T4B1 trit", elem);
+    debug_assert!(
+        elem < TPB,
+        "Attempted to insert invalid element {} into balanced T4B1 trit",
+        elem
+    );
     let utrit = trit.shift();
     let ux = x + BAL;
     let ux = ux + (utrit.into_u8() as i8 - (ux / 3i8.pow(elem as u32)) % 3) * 3i8.pow(elem as u32);
@@ -61,18 +69,12 @@ impl RawEncoding for T4B1 {
 
     fn as_i8_slice(&self) -> &[i8] {
         assert!(self.len_offset().1 == 0);
-        unsafe { std::slice::from_raw_parts(
-            self as *const _ as *const _,
-            (self.len() + TPB - 1) / TPB,
-        ) }
+        unsafe { std::slice::from_raw_parts(self as *const _ as *const _, (self.len() + TPB - 1) / TPB) }
     }
 
     unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
         assert!(self.len_offset().1 == 0);
-        std::slice::from_raw_parts_mut(
-            self as *mut _ as *mut _,
-            (self.len() + TPB - 1) / TPB,
-        )
+        std::slice::from_raw_parts_mut(self as *mut _ as *mut _, (self.len() + TPB - 1) / TPB)
     }
 
     unsafe fn get_unchecked(&self, index: usize) -> Self::Trit {

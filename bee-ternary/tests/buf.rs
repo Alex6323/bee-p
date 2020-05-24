@@ -25,7 +25,10 @@ fn create_generic<T: raw::RawEncodingBuf>() {
     });
     fuzz(100, || {
         let trits = gen_buf::<T>(0..1000).1;
-        let buf: TritBuf<T> = trits.iter().map(|t| <T::Slice as raw::RawEncoding>::Trit::try_from(*t).ok().unwrap()).collect();
+        let buf: TritBuf<T> = trits
+            .iter()
+            .map(|t| <T::Slice as raw::RawEncoding>::Trit::try_from(*t).ok().unwrap())
+            .collect();
         assert!(buf.len() == trits.len());
     });
 }
@@ -38,7 +41,10 @@ fn create_unbalanced<T: raw::RawEncodingBuf>() {
     });
     fuzz(100, || {
         let trits = gen_buf_unbalanced::<T>(0..1000).1;
-        let buf: TritBuf<T> = trits.iter().map(|t| <T::Slice as raw::RawEncoding>::Trit::try_from(*t).ok().unwrap()).collect();
+        let buf: TritBuf<T> = trits
+            .iter()
+            .map(|t| <T::Slice as raw::RawEncoding>::Trit::try_from(*t).ok().unwrap())
+            .collect();
         assert!(buf.len() == trits.len());
     });
 }

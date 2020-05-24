@@ -202,7 +202,7 @@ impl hash::Hash for Hash {
 }
 
 impl TransactionFieldType for Hash {
-    type InnerType = Trits<T1B1>;//TritBuf<T1B1Buf>;
+    type InnerType = Trits<T1B1>; // TritBuf<T1B1Buf>;
 
     fn is_trits_type() -> bool {
         true

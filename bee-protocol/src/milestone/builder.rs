@@ -11,12 +11,12 @@
 
 use crate::milestone::{Milestone, MilestoneIndex};
 
-use bee_transaction::{Hash, Payload, Transaction, TransactionField, TransactionVertex, Transactions};
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{
     normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,
 };
 use bee_ternary::{num_conversions::TritsI64ConversionError, TritBuf};
+use bee_transaction::{Hash, Payload, Transaction, TransactionField, TransactionVertex, Transactions};
 
 use std::{convert::TryFrom, marker::PhantomData};
 
