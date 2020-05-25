@@ -187,7 +187,7 @@ mod tests {
     const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
 
     // #[test]
-    // fn ed25519_test() {
+    // fn ed25519() {
     //     let seed_trits_1 = &SEED1.trits();
     //     let seed_trits_2 = &SEED2.trits();
     //     let seed = Ed25519Seed::from_buf(TritBuf::from_i8_unchecked(&SEED1.trits())).unwrap();

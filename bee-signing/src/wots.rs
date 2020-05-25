@@ -259,7 +259,7 @@ mod tests {
     const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
 
     #[test]
-    fn wots_generator_missing_security_level_test() {
+    fn wots_generator_missing_security_level() {
         match WotsPrivateKeyGeneratorBuilder::<Kerl>::default().build() {
             Ok(_) => unreachable!(),
             Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
@@ -267,7 +267,7 @@ mod tests {
     }
 
     #[test]
-    fn wots_generator_valid_test() {
+    fn wots_generator_valid() {
         let security_levels = vec![
             WotsSecurityLevel::Low,
             WotsSecurityLevel::Medium,
@@ -284,7 +284,7 @@ mod tests {
         }
     }
 
-    fn wots_generic_complete_test<S: Sponge + Default>() {
+    fn wots_generic_complete<S: Sponge + Default>() {
         let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
         let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
         let seed = IotaSeed::<S>::from_buf(seed_trits).unwrap();
@@ -311,17 +311,17 @@ mod tests {
     }
 
     #[test]
-    fn wots_kerl_complete_test() {
-        wots_generic_complete_test::<Kerl>();
+    fn wots_kerl_complete() {
+        wots_generic_complete::<Kerl>();
     }
 
     #[test]
-    fn wots_curl27_complete_test() {
-        wots_generic_complete_test::<CurlP27>();
+    fn wots_curl27_complete() {
+        wots_generic_complete::<CurlP27>();
     }
 
     #[test]
-    fn wots_curl81_complete_test() {
-        wots_generic_complete_test::<CurlP81>();
+    fn wots_curl81_complete() {
+        wots_generic_complete::<CurlP81>();
     }
 }
