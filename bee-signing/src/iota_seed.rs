@@ -118,7 +118,7 @@ mod tests {
     const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
 
     #[test]
-    fn iota_seed_new_test() {
+    fn iota_seed_new() {
         for _ in 0..10 {
             let iota_seed = IotaSeed::<CurlP27>::new();
             for byte in iota_seed.as_bytes() {
@@ -127,7 +127,7 @@ mod tests {
         }
     }
 
-    fn iota_seed_subseed_generic_test<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
+    fn iota_seed_subseed_generic<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
         let iota_seed_trits = TryteBuf::try_from_str(iota_seed_string)
             .unwrap()
             .as_trits()
@@ -146,8 +146,8 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_subseed_kerl_test() {
-        iota_seed_subseed_generic_test::<Kerl>(
+    fn iota_seed_subseed_kerl() {
+        iota_seed_subseed_generic::<Kerl>(
             IOTA_SEED,
             &[
                 "APSNZAPLANAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY",
@@ -165,8 +165,8 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_subseed_curl27_test() {
-        iota_seed_subseed_generic_test::<CurlP27>(
+    fn iota_seed_subseed_curl27() {
+        iota_seed_subseed_generic::<CurlP27>(
             IOTA_SEED,
             &[
                 "ITTFAEIWTRSFQGZGLGUMLUTHFXYSCLXTFYMGVTTDSNNWFUCKBRPSOBERNLXIYCNCEBKUV9QIXI9BDCKSM",
@@ -184,8 +184,8 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_subseed_curl81_test() {
-        iota_seed_subseed_generic_test::<CurlP81>(
+    fn iota_seed_subseed_curl81() {
+        iota_seed_subseed_generic::<CurlP81>(
             IOTA_SEED,
             &[
                 "PKKJZREHPYHNIBWAPYEXHXEAFZCI99UWZNKBOCCECFTDUXG9YGYDAGRLUBJVKMYNWPRCPYENACHOYSHJO",
@@ -203,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_from_bytes_invalid_length_test() {
+    fn iota_seed_from_bytes_invalid_length() {
         let buf = TritBuf::zeros(42);
 
         match IotaSeed::<CurlP27>::from_buf(buf) {
@@ -213,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_to_bytes_from_bytes_test() {
+    fn iota_seed_to_bytes_from_bytes() {
         for _ in 0..10 {
             let iota_seed_1 = IotaSeed::<CurlP27>::new();
             let iota_seed_2 = IotaSeed::<CurlP27>::from_buf(iota_seed_1.trits().to_buf()).unwrap();
