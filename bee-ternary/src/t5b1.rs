@@ -21,12 +21,12 @@ pub struct T5B1([()]);
 impl T5B1 {
     unsafe fn make(ptr: *const i8, offset: usize, len: usize) -> *const Self {
         let len = (len << 3) | (offset % TPB);
-        std::mem::transmute((ptr.offset((offset / TPB) as isize), len))
+        std::mem::transmute((ptr.add(offset / TPB), len))
     }
 
     unsafe fn ptr(&self, index: usize) -> *const i8 {
         let byte_offset = (self.len_offset().1 + index) / TPB;
-        (self.0.as_ptr() as *const i8).offset(byte_offset as isize)
+        (self.0.as_ptr() as *const i8).add(byte_offset)
     }
 
     fn len_offset(&self) -> (usize, usize) {

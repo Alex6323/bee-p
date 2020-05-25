@@ -17,9 +17,12 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+#[deprecated]
 pub const MIN_TRYTE_VALUE: i8 = -13;
+#[deprecated]
 pub const MAX_TRYTE_VALUE: i8 = 13;
 
+/// A ternary tryte. Equivalent to 3 trits.
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 #[repr(i8)]
 pub enum Tryte {
@@ -53,6 +56,11 @@ pub enum Tryte {
 }
 
 impl Tryte {
+    /// The minimum value that this [`Tryte`] can hold
+    pub const MIN_VALUE: Self = Tryte::N;
+    /// The maximum value that this [`Tryte`] can hold
+    pub const MAX_VALUE: Self = Tryte::M;
+
     pub fn as_trits(&self) -> &Trits<T3B1> {
         unsafe { &*(T3B1::make(self as *const _ as *const _, 0, 3) as *const _) }
     }
@@ -109,42 +117,56 @@ impl TryFrom<i8> for Tryte {
     }
 }
 
+/// A buffer of [`Tryte`]s. Analagous to [`Vec`].
 #[derive(Default)]
 pub struct TryteBuf {
     inner: Vec<Tryte>,
 }
 
 impl TryteBuf {
+    /// Create a new empty buffer.
     pub fn new() -> Self {
-        Self { inner: Vec::new() }
+        Self::default()
     }
 
+    /// Create a new empty buffer with room for `cap` trytes.
     pub fn with_capacity(cap: usize) -> Self {
         Self {
             inner: Vec::with_capacity(cap),
         }
     }
 
+    /// Attempt to parse a string into a tryte buffer.
     pub fn try_from_str(s: &str) -> Result<Self, Error> {
         s.chars().map(Tryte::try_from).collect()
     }
 
+    /// Returns `true` if the buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns the number of trytes in the buffer.
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
+    /// Push a new tryte to the end of the buffer.
     pub fn push(&mut self, tryte: Tryte) {
         self.inner.push(tryte);
     }
 
+    /// Attempt to pop a tryte from the end of the buffer.
     pub fn pop(&mut self) -> Option<Tryte> {
         self.inner.pop()
     }
 
+    /// Safely interpret this tryte buffer as a [`T3B1`] trit slice.
     pub fn as_trits(&self) -> &Trits<T3B1> {
         unsafe { &*(T3B1::make(self.as_ptr() as *const _, 0, self.len() * 3) as *const _) }
     }
 
+    /// Safely interpret this tryte buffer as a mutable [`T3B1`] trit slice.
     pub fn as_trits_mut(&mut self) -> &mut Trits<T3B1> {
         unsafe { &mut *(T3B1::make(self.as_ptr() as *const _, 0, self.len() * 3) as *mut _) }
     }
