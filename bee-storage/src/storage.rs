@@ -12,7 +12,7 @@
 extern crate serde;
 
 use bee_protocol::{Milestone, MilestoneIndex};
-use bee_transaction::{Address, Hash, BundledTransaction as Transaction};
+use bee_transaction::{Address, BundledTransaction as Transaction, Hash};
 
 use std::{
     collections::{HashMap, HashSet},
