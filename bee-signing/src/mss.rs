@@ -16,40 +16,6 @@ use bee_ternary::{TritBuf, Trits};
 
 use std::marker::PhantomData;
 
-#[derive(Default)]
-pub struct MssPrivateKeyGeneratorBuilder<S, G> {
-    depth: Option<u8>,
-    generator: Option<G>,
-    _sponge: PhantomData<S>,
-}
-
-pub struct MssPrivateKeyGenerator<S, G> {
-    depth: u8,
-    generator: G,
-    _sponge: PhantomData<S>,
-}
-
-pub struct MssPrivateKey<S, K> {
-    depth: u8,
-    index: u64,
-    keys: Vec<K>,
-    tree: TritBuf,
-    _sponge: PhantomData<S>,
-}
-
-pub struct MssPublicKey<S, K> {
-    state: TritBuf,
-    depth: u8,
-    _sponge: PhantomData<S>,
-    _key: PhantomData<K>,
-}
-
-pub struct MssSignature<S> {
-    state: TritBuf,
-    index: u64,
-    _sponge: PhantomData<S>,
-}
-
 // TODO: documentation
 #[derive(Debug, PartialEq)]
 pub enum MssError {
@@ -61,6 +27,26 @@ pub enum MssError {
     FailedUnderlyingSignatureGeneration,
     FailedUnderlyingPublicKeyRecovery,
     FailedSpongeOperation,
+}
+
+pub struct MssPrivateKeyGeneratorBuilder<S, G> {
+    depth: Option<u8>,
+    generator: Option<G>,
+    _sponge: PhantomData<S>,
+}
+
+impl<S, G> Default for MssPrivateKeyGeneratorBuilder<S, G>
+where
+    S: Sponge + Default,
+    G: PrivateKeyGenerator,
+{
+    fn default() -> Self {
+        Self {
+            depth: None,
+            generator: None,
+            _sponge: PhantomData,
+        }
+    }
 }
 
 impl<S, G> MssPrivateKeyGeneratorBuilder<S, G>
@@ -94,6 +80,12 @@ where
             _sponge: PhantomData,
         })
     }
+}
+
+pub struct MssPrivateKeyGenerator<S, G> {
+    depth: u8,
+    generator: G,
+    _sponge: PhantomData<S>,
 }
 
 impl<S, G> PrivateKeyGenerator for MssPrivateKeyGenerator<S, G>
@@ -157,6 +149,14 @@ where
     }
 }
 
+pub struct MssPrivateKey<S, K> {
+    depth: u8,
+    index: u64,
+    keys: Vec<K>,
+    tree: TritBuf,
+    _sponge: PhantomData<S>,
+}
+
 impl<S, K> PrivateKey for MssPrivateKey<S, K>
 where
     S: Sponge + Default,
@@ -204,6 +204,13 @@ where
 
         Ok(Self::Signature::from_buf(state).index(self.index - 1))
     }
+}
+
+pub struct MssPublicKey<S, K> {
+    state: TritBuf,
+    depth: u8,
+    _sponge: PhantomData<S>,
+    _key: PhantomData<K>,
 }
 
 impl<S, K> MssPublicKey<S, K>
@@ -281,6 +288,12 @@ where
     fn trits(&self) -> &Trits {
         &self.state
     }
+}
+
+pub struct MssSignature<S> {
+    state: TritBuf,
+    index: u64,
+    _sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> MssSignature<S> {
@@ -437,7 +450,7 @@ mod tests {
     fn mss_wots_generic_roundtrip<S, G>(generator: G)
     where
         S: Sponge + Default,
-        G: PrivateKeyGenerator + Default,
+        G: PrivateKeyGenerator,
         <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature:
             RecoverableSignature,
         <<G as PrivateKeyGenerator>::Seed as Seed>::Error: std::fmt::Debug,

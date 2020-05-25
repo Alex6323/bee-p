@@ -29,38 +29,16 @@ impl Default for WotsSecurityLevel {
     }
 }
 
+#[derive(Debug)]
+pub enum WotsError {
+    MissingSecurityLevel,
+    FailedSpongeOperation,
+}
+
 #[derive(Default)]
 pub struct WotsPrivateKeyGeneratorBuilder<S> {
     security_level: Option<WotsSecurityLevel>,
     _sponge: PhantomData<S>,
-}
-
-#[derive(Default)]
-pub struct WotsPrivateKeyGenerator<S> {
-    security_level: WotsSecurityLevel,
-    _sponge: PhantomData<S>,
-}
-
-pub struct WotsPrivateKey<S> {
-    state: TritBuf,
-    _sponge: PhantomData<S>,
-}
-
-pub struct WotsPublicKey<S> {
-    state: TritBuf,
-    _sponge: PhantomData<S>,
-}
-
-pub struct WotsSignature<S> {
-    state: TritBuf,
-    _sponge: PhantomData<S>,
-}
-
-// TODO: documentation
-#[derive(Debug, PartialEq)]
-pub enum WotsError {
-    MissingSecurityLevel,
-    FailedSpongeOperation,
 }
 
 impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
@@ -75,6 +53,11 @@ impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
             _sponge: PhantomData,
         })
     }
+}
+
+pub struct WotsPrivateKeyGenerator<S> {
+    security_level: WotsSecurityLevel,
+    _sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
@@ -96,6 +79,11 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
             _sponge: PhantomData,
         })
     }
+}
+
+pub struct WotsPrivateKey<S> {
+    state: TritBuf,
+    _sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
@@ -159,6 +147,11 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     }
 }
 
+pub struct WotsPublicKey<S> {
+    state: TritBuf,
+    _sponge: PhantomData<S>,
+}
+
 impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     type Signature = WotsSignature<S>;
     type Error = WotsError;
@@ -182,6 +175,11 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     fn trits(&self) -> &Trits {
         &self.state
     }
+}
+
+pub struct WotsSignature<S> {
+    state: TritBuf,
+    _sponge: PhantomData<S>,
 }
 
 // TODO default impl ?
@@ -260,7 +258,8 @@ mod tests {
     fn wots_generator_missing_security_level() {
         match WotsPrivateKeyGeneratorBuilder::<Kerl>::default().build() {
             Ok(_) => unreachable!(),
-            Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
+            Err(WotsError::MissingSecurityLevel) => (),
+            Err(_) => unreachable!(),
         }
     }
 
