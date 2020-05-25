@@ -6,7 +6,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install -y clang lldb-6.0 lld-6.0 libc++-dev llvm binutils-dev libcurl4-openssl-dev libelf-dev libdw-dev binutils-dev libiberty-dev libusb-1.0-0-dev libcurl3
+      - run: sudo apt-get install -y clang lldb-6.0 lld-6.0 libc++-dev llvm binutils-dev libcurl4-openssl-dev libelf-dev libdw-dev binutils-dev libiberty-dev libusb-1.0-0-dev librocksdb-dev
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
