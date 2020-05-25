@@ -16,8 +16,6 @@ use bee_ternary::{TritBuf, Trits};
 
 use std::marker::PhantomData;
 
-// TODO constants
-
 #[derive(Clone, Copy)]
 pub enum WotsSecurityLevel {
     Low = 1,

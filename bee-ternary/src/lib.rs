@@ -58,7 +58,7 @@
 //! starting index is a multiple of the compression factor. For example a byte-aligned [`T3B1`]
 //! buffer will always start on an index of the *original* buffer that is a multiple of 3.
 
-use std::{convert::TryFrom, slice};
+use std::slice;
 
 /// Functionality pertaining to trit big integers.
 pub mod bigint;
@@ -92,7 +92,6 @@ use std::{
     fmt, hash,
     iter::FromIterator,
     ops::{Deref, DerefMut, Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive},
-    ptr,
 };
 
 // Reexports
