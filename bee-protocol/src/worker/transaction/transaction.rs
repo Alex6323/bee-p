@@ -212,7 +212,7 @@ mod tests {
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
             let message = TransactionBroadcast::new(&tx);
-            let epid: EndpointId = block_on(Url::from_url_str("tcp://[::1]:16000")).unwrap().into();
+            let epid: EndpointId = Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();
             let event = TransactionWorkerEvent {
                 from: epid,
                 transaction_broadcast: message,
