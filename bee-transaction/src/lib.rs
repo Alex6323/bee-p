@@ -17,9 +17,10 @@ mod constants;
 mod vertex;
 
 pub use bundled::{
-    Address, Bundle, Hash, IncomingBundleBuilder, IncomingBundleBuilderError, Index, Nonce, OutgoingBundleBuilder,
-    OutgoingBundleBuilderError, Payload, Tag, Timestamp, Transaction, TransactionBuilder, TransactionBuilders,
-    TransactionError, TransactionField, Transactions, Value,
+    Address, Bundle, BundledTransaction, BundledTransactionBuilder, BundledTransactionBuilders,
+    BundledTransactionError, BundledTransactionField, BundledTransactions, Hash, IncomingBundleBuilder,
+    IncomingBundleBuilderError, Index, Nonce, OutgoingBundleBuilder, OutgoingBundleBuilderError, Payload, Tag,
+    Timestamp, Value,
 };
 pub use constants::{
     ADDRESS_TRIT_LEN, HASH_TRIT_LEN, NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN, TRANSACTION_BYTE_LEN,

@@ -19,7 +19,7 @@ use bee_crypto::{CurlP81, Sponge};
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
-use bee_transaction::{Hash, Transaction, TransactionField};
+use bee_transaction::{BundledTransaction as Transaction, BundledTransactionField, Hash};
 
 use futures::{
     channel::{mpsc, oneshot},

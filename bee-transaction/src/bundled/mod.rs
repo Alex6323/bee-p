@@ -16,6 +16,6 @@ pub use bundle::{
     Bundle, IncomingBundleBuilder, IncomingBundleBuilderError, OutgoingBundleBuilder, OutgoingBundleBuilderError,
 };
 pub use transaction::{
-    Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionBuilder, TransactionBuilders,
-    TransactionError, TransactionField, Transactions, Value,
+    Address, BundledTransaction, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
+    BundledTransactionField, BundledTransactions, Hash, Index, Nonce, Payload, Tag, Timestamp, Value,
 };

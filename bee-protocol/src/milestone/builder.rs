@@ -16,7 +16,10 @@ use bee_signing::{
     normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,
 };
 use bee_ternary::{num_conversions::TritsI64ConversionError, TritBuf};
-use bee_transaction::{Hash, Payload, Transaction, TransactionField, TransactionVertex, Transactions};
+use bee_transaction::{
+    BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Hash, Payload,
+    TransactionVertex,
+};
 
 use std::{convert::TryFrom, marker::PhantomData};
 

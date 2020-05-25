@@ -11,7 +11,7 @@
 
 use bee_crypto::SpongeType;
 use bee_ternary::{T1B1Buf, T5B1Buf, TryteBuf};
-use bee_transaction::{Address, TransactionField};
+use bee_transaction::{Address, BundledTransactionField};
 
 use bytemuck::cast_slice;
 use serde::Deserialize;

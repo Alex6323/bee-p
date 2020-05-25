@@ -16,7 +16,7 @@ use crate::{
     vertex::{TransactionRef, Vertex},
 };
 
-use bee_transaction::{Hash, Transaction, TransactionVertex};
+use bee_transaction::{BundledTransaction as Transaction, Hash, TransactionVertex};
 
 use std::{
     collections::HashSet,
@@ -27,9 +27,7 @@ use async_std::{
     sync::{Arc, Barrier},
     task::block_on,
 };
-
 use dashmap::{mapref::entry::Entry, DashMap, DashSet};
-
 use flume::Sender;
 
 /// A datastructure based on a directed acyclic graph (DAG).
@@ -415,7 +413,7 @@ mod tests {
         field::rand_trits_field,
         transaction::{create_random_attached_tx, create_random_tx},
     };
-    use bee_transaction::{TransactionField, Value};
+    use bee_transaction::{BundledTransactionField, Value};
 
     use async_std::{sync::channel, task::block_on};
     use serial_test::serial;

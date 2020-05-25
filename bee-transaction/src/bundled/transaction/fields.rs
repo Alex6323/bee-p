@@ -18,14 +18,14 @@ use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 use std::{cmp::PartialEq, fmt, hash};
 
 #[derive(Debug)]
-pub enum TransactionFieldError {
+pub enum BundledTransactionFieldError {
     FieldWrongLength,
     FieldDeserializationError,
 }
 
-pub trait TransactionField: Sized + TransactionFieldType {
+pub trait BundledTransactionField: Sized + BundledTransactionFieldType {
     type Inner: ToOwned + ?Sized;
-    fn try_from_inner(buffer: <Self::Inner as ToOwned>::Owned) -> Result<Self, TransactionFieldError>;
+    fn try_from_inner(buffer: <Self::Inner as ToOwned>::Owned) -> Result<Self, BundledTransactionFieldError>;
     fn from_inner_unchecked(buffer: <Self::Inner as ToOwned>::Owned) -> Self;
 
     fn to_inner(&self) -> &Self::Inner;
@@ -37,7 +37,7 @@ pub trait NumTritsOfValue {
     fn num_trits(&self) -> usize;
 }
 
-pub trait TransactionFieldType {
+pub trait BundledTransactionFieldType {
     type InnerType: NumTritsOfValue + ?Sized;
 
     fn is_trits_type() -> bool;
@@ -48,12 +48,6 @@ impl NumTritsOfValue for Trits {
         self.len()
     }
 }
-
-// impl NumTritsOfValue for TritBuf<T1B1Buf> {
-//     fn num_trits(&self) -> usize {
-//         self.len()
-//     }
-// }
 
 impl NumTritsOfValue for i64 {
     fn num_trits(&self) -> usize {
@@ -201,7 +195,7 @@ impl hash::Hash for Hash {
     }
 }
 
-impl TransactionFieldType for Hash {
+impl BundledTransactionFieldType for Hash {
     type InnerType = Trits<T1B1>; // TritBuf<T1B1Buf>;
 
     fn is_trits_type() -> bool {
@@ -209,7 +203,7 @@ impl TransactionFieldType for Hash {
     }
 }
 
-impl TransactionField for Hash {
+impl BundledTransactionField for Hash {
     // TODO why Trits and not TritBuf ?
     type Inner = Trits<T1B1>;
 
@@ -221,9 +215,9 @@ impl TransactionField for Hash {
         243
     }
 
-    fn try_from_inner(buf: <Self::Inner as ToOwned>::Owned) -> Result<Self, TransactionFieldError> {
+    fn try_from_inner(buf: <Self::Inner as ToOwned>::Owned) -> Result<Self, BundledTransactionFieldError> {
         if buf.len() != Self::trit_len() {
-            return Err(TransactionFieldError::FieldWrongLength);
+            return Err(BundledTransactionFieldError::FieldWrongLength);
         }
 
         Ok(Self::from_inner_unchecked(buf))
@@ -253,16 +247,16 @@ impl Nonce {
 macro_rules! impl_transaction_field {
     ( $($field_name:ident),+ $(,)?) => {
         $(
-            impl TransactionField for $field_name {
-                type Inner = <$field_name as TransactionFieldType>::InnerType;
+            impl BundledTransactionField for $field_name {
+                type Inner = <$field_name as BundledTransactionFieldType>::InnerType;
 
                 fn to_inner(&self) -> &Self::Inner {
                     &self.0
                 }
 
-                fn try_from_inner(val: <Self::Inner as ToOwned>::Owned) -> Result<Self, TransactionFieldError> {
+                fn try_from_inner(val: <Self::Inner as ToOwned>::Owned) -> Result<Self, BundledTransactionFieldError> {
                     if $field_name::is_trits_type() && val.num_trits() != $field_name::trit_len() {
-                        return Err(TransactionFieldError::FieldWrongLength);
+                        return Err(BundledTransactionFieldError::FieldWrongLength);
                     }
                     Ok(Self::from_inner_unchecked(val))
                 }
@@ -282,7 +276,7 @@ macro_rules! impl_transaction_field {
 macro_rules! impl_transaction_field_type_for_tritbuf_fields {
     ( $($field_name:ident),+ $(,)?) => {
         $(
-            impl TransactionFieldType for $field_name {
+            impl BundledTransactionFieldType for $field_name {
                 type InnerType = Trits<T1B1>;
                 fn is_trits_type() -> bool {true}
             }
@@ -290,7 +284,7 @@ macro_rules! impl_transaction_field_type_for_tritbuf_fields {
     }
 }
 
-impl TransactionFieldType for Value {
+impl BundledTransactionFieldType for Value {
     type InnerType = i64;
 
     fn is_trits_type() -> bool {
@@ -298,7 +292,7 @@ impl TransactionFieldType for Value {
     }
 }
 
-impl TransactionFieldType for Index {
+impl BundledTransactionFieldType for Index {
     type InnerType = usize;
 
     fn is_trits_type() -> bool {
@@ -306,7 +300,7 @@ impl TransactionFieldType for Index {
     }
 }
 
-impl TransactionFieldType for Timestamp {
+impl BundledTransactionFieldType for Timestamp {
     type InnerType = u64;
 
     fn is_trits_type() -> bool {

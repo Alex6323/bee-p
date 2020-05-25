@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundled::{Bundle, Transaction, TransactionField, Transactions},
+    bundled::{Bundle, BundledTransaction, BundledTransactionField, BundledTransactions},
     constants::IOTA_SUPPLY,
     TransactionVertex,
 };
@@ -41,7 +41,7 @@ pub struct IncomingValidated;
 impl IncomingBundleBuilderStage for IncomingValidated {}
 
 pub struct StagedIncomingBundleBuilder<E, P, S> {
-    transactions: Transactions,
+    transactions: BundledTransactions,
     essence_sponge: PhantomData<E>,
     public_key: PhantomData<P>,
     stage: PhantomData<S>,
@@ -57,7 +57,7 @@ where
     // TODO TEST
     pub fn new() -> Self {
         Self {
-            transactions: Transactions::new(),
+            transactions: BundledTransactions::new(),
             essence_sponge: PhantomData,
             public_key: PhantomData,
             stage: PhantomData,
@@ -65,7 +65,7 @@ where
     }
 
     // TODO TEST
-    pub fn push(&mut self, transaction: Transaction) {
+    pub fn push(&mut self, transaction: BundledTransaction) {
         self.transactions.push(transaction);
     }
 
@@ -179,10 +179,10 @@ mod tests {
 
     use super::*;
 
-    use crate::bundled::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, Value};
+    use crate::bundled::{Address, BundledTransactionBuilder, Hash, Index, Nonce, Payload, Tag, Timestamp, Value};
 
-    fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
-        TransactionBuilder::new()
+    fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
+        BundledTransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
             .with_value(Value::from_inner_unchecked(0))

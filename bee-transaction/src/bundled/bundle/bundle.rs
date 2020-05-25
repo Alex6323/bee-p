@@ -10,17 +10,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundled::{Address, Hash, Transaction, TransactionField, Transactions},
+    bundled::{Address, BundledTransaction, BundledTransactionField, BundledTransactions, Hash},
     TransactionVertex,
 };
 
 use std::collections::HashMap;
 
-pub struct Bundle(pub(crate) Transactions);
+pub struct Bundle(pub(crate) BundledTransactions);
 
 impl Bundle {
     // TODO TEST
-    pub fn get(&self, index: usize) -> Option<&Transaction> {
+    pub fn get(&self, index: usize) -> Option<&BundledTransaction> {
         self.0.get(index)
     }
 
@@ -36,13 +36,13 @@ impl Bundle {
     }
 
     // TODO TEST
-    pub fn tail(&self) -> &Transaction {
+    pub fn tail(&self) -> &BundledTransaction {
         // Safe to unwrap because empty bundles can't be built
         self.get(0).unwrap()
     }
 
     // TODO TEST
-    pub fn head(&self) -> &Transaction {
+    pub fn head(&self) -> &BundledTransaction {
         // Safe to unwrap because empty bundles can't be built
         self.get(self.len() - 1).unwrap()
     }
@@ -72,8 +72,8 @@ impl Bundle {
 }
 
 impl IntoIterator for Bundle {
-    type Item = Transaction;
-    type IntoIter = std::vec::IntoIter<Transaction>;
+    type Item = BundledTransaction;
+    type IntoIter = std::vec::IntoIter<BundledTransaction>;
 
     // TODO TEST
     fn into_iter(self) -> Self::IntoIter {
@@ -82,8 +82,8 @@ impl IntoIterator for Bundle {
 }
 
 impl<'a> IntoIterator for &'a Bundle {
-    type Item = &'a Transaction;
-    type IntoIter = std::slice::Iter<'a, Transaction>;
+    type Item = &'a BundledTransaction;
+    type IntoIter = std::slice::Iter<'a, BundledTransaction>;
 
     // TODO TEST
     fn into_iter(self) -> Self::IntoIter {
@@ -92,7 +92,7 @@ impl<'a> IntoIterator for &'a Bundle {
 }
 
 impl std::ops::Index<usize> for Bundle {
-    type Output = Transaction;
+    type Output = BundledTransaction;
 
     // TODO TEST
     fn index(&self, index: usize) -> &Self::Output {

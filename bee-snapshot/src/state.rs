@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::{T1B1Buf, TryteBuf};
-use bee_transaction::{Address, TransactionField};
+use bee_transaction::{Address, BundledTransactionField};
 
 use std::{
     collections::HashMap,

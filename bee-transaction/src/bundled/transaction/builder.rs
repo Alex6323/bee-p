@@ -11,7 +11,8 @@
 
 use crate::{
     bundled::{
-        Address, Hash, Index, Nonce, Payload, Tag, Timestamp, Transaction, TransactionError, TransactionField, Value,
+        Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Hash, Index, Nonce, Payload,
+        Tag, Timestamp, Value,
     },
     constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
 };
@@ -19,7 +20,7 @@ use crate::{
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};
 
 #[derive(Default)]
-pub struct TransactionBuilder {
+pub struct BundledTransactionBuilder {
     pub(crate) payload: Option<Payload>,
     pub(crate) address: Option<Address>,
     pub(crate) value: Option<Value>,
@@ -37,7 +38,7 @@ pub struct TransactionBuilder {
     pub(crate) nonce: Option<Nonce>,
 }
 
-impl TransactionBuilder {
+impl BundledTransactionBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -159,55 +160,63 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Transaction, TransactionError> {
-        let value = self.value.as_ref().ok_or(TransactionError::MissingField("value"))?.0;
-        let address = self.address.ok_or(TransactionError::MissingField("address"))?;
+    pub fn build(self) -> Result<BundledTransaction, BundledTransactionError> {
+        let value = self
+            .value
+            .as_ref()
+            .ok_or(BundledTransactionError::MissingField("value"))?
+            .0;
+        let address = self.address.ok_or(BundledTransactionError::MissingField("address"))?;
 
         if value.abs() > IOTA_SUPPLY {
-            return Err(TransactionError::InvalidValue(value));
+            return Err(BundledTransactionError::InvalidValue(value));
         }
 
         if value != 0 && address.to_inner().get(ADDRESS.trit_offset.length - 1).unwrap() != Btrit::Zero {
-            return Err(TransactionError::InvalidAddress);
+            return Err(BundledTransactionError::InvalidAddress);
         }
 
-        Ok(Transaction {
-            payload: self.payload.ok_or(TransactionError::MissingField("payload"))?,
+        Ok(BundledTransaction {
+            payload: self.payload.ok_or(BundledTransactionError::MissingField("payload"))?,
             address,
             value: Value(value),
             obsolete_tag: self
                 .obsolete_tag
-                .ok_or(TransactionError::MissingField("obsolete_tag"))?,
-            timestamp: self.timestamp.ok_or(TransactionError::MissingField("timestamp"))?,
-            index: self.index.ok_or(TransactionError::MissingField("index"))?,
-            last_index: self.last_index.ok_or(TransactionError::MissingField("last_index"))?,
-            tag: self.tag.ok_or(TransactionError::MissingField("tag"))?,
-            bundle: self.bundle.ok_or(TransactionError::MissingField("bundle"))?,
-            trunk: self.trunk.ok_or(TransactionError::MissingField("trunk"))?,
-            branch: self.branch.ok_or(TransactionError::MissingField("branch"))?,
+                .ok_or(BundledTransactionError::MissingField("obsolete_tag"))?,
+            timestamp: self
+                .timestamp
+                .ok_or(BundledTransactionError::MissingField("timestamp"))?,
+            index: self.index.ok_or(BundledTransactionError::MissingField("index"))?,
+            last_index: self
+                .last_index
+                .ok_or(BundledTransactionError::MissingField("last_index"))?,
+            tag: self.tag.ok_or(BundledTransactionError::MissingField("tag"))?,
+            bundle: self.bundle.ok_or(BundledTransactionError::MissingField("bundle"))?,
+            trunk: self.trunk.ok_or(BundledTransactionError::MissingField("trunk"))?,
+            branch: self.branch.ok_or(BundledTransactionError::MissingField("branch"))?,
             attachment_ts: self
                 .attachment_ts
-                .ok_or(TransactionError::MissingField("attachment_ts"))?,
+                .ok_or(BundledTransactionError::MissingField("attachment_ts"))?,
             attachment_lbts: self
                 .attachment_lbts
-                .ok_or(TransactionError::MissingField("attachment_lbts"))?,
+                .ok_or(BundledTransactionError::MissingField("attachment_lbts"))?,
             attachment_ubts: self
                 .attachment_ubts
-                .ok_or(TransactionError::MissingField("attachment_ubts"))?,
-            nonce: self.nonce.ok_or(TransactionError::MissingField("nonce"))?,
+                .ok_or(BundledTransactionError::MissingField("attachment_ubts"))?,
+            nonce: self.nonce.ok_or(BundledTransactionError::MissingField("nonce"))?,
         })
     }
 }
 
 #[derive(Default)]
-pub struct TransactionBuilders(pub(crate) Vec<TransactionBuilder>);
+pub struct BundledTransactionBuilders(pub(crate) Vec<BundledTransactionBuilder>);
 
-impl TransactionBuilders {
+impl BundledTransactionBuilders {
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    pub fn push(&mut self, transaction_builder: TransactionBuilder) {
+    pub fn push(&mut self, transaction_builder: BundledTransactionBuilder) {
         self.0.push(transaction_builder);
     }
 }
@@ -222,7 +231,7 @@ mod tests {
 
     #[test]
     fn create_transaction_from_builder() {
-        let _ = TransactionBuilder::new()
+        let _ = BundledTransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
             .with_value(Value(0))
@@ -244,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_from_and_into_trits() {
-        let tx = TransactionBuilder::new()
+        let tx = BundledTransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
             .with_value(Value(0))
@@ -267,7 +276,7 @@ mod tests {
         let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
 
         tx.into_trits_allocated(tx_trits);
-        let tx2 = Transaction::from_trits(tx_trits).unwrap();
+        let tx2 = BundledTransaction::from_trits(tx_trits).unwrap();
 
         assert_eq!(tx.payload, tx2.payload);
         assert_eq!(tx.bundle, tx2.bundle);

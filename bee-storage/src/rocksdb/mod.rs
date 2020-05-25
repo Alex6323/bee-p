@@ -20,7 +20,7 @@ use crate::storage::{
 
 use bee_protocol::{Milestone, MilestoneIndex};
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
-use bee_transaction::{Hash, Transaction, TransactionField, TransactionVertex};
+use bee_transaction::{BundledTransaction as Transaction, BundledTransactionField, Hash, TransactionVertex};
 
 use std::{
     collections::{HashMap, HashSet},

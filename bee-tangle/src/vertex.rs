@@ -11,13 +11,12 @@
 
 use crate::tangle::Tangle;
 
-use bitflags::bitflags;
+use bee_transaction::{BundledTransaction as Transaction, Hash};
 
 use std::ops::Deref;
 
-use bee_transaction::{Hash, Transaction};
-
 use async_std::sync::Arc;
+use bitflags::bitflags;
 
 /// A wrapper around `bee_transaction::Transaction` that allows sharing it safely across threads.
 #[derive(Clone)]

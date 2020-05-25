@@ -11,8 +11,8 @@
 
 use crate::{
     bundled::{
-        Address, Bundle, Hash, Index, Payload, Tag, TransactionBuilder, TransactionBuilders, TransactionError,
-        TransactionField, Transactions,
+        Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
+        BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
     },
     constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
 };
@@ -32,7 +32,7 @@ pub enum OutgoingBundleBuilderError {
     UnsignedInput,
     InvalidValue(i64),
     MissingTransactionBuilderField(&'static str),
-    TransactionError(TransactionError),
+    TransactionError(BundledTransactionError),
     FailedSigningOperation,
 }
 
@@ -51,7 +51,7 @@ pub struct OutgoingAttached;
 impl OutgoingBundleBuilderStage for OutgoingAttached {}
 
 pub struct StagedOutgoingBundleBuilder<E, S> {
-    builders: TransactionBuilders,
+    builders: BundledTransactionBuilders,
     essence_sponge: PhantomData<E>,
     stage: PhantomData<S>,
 }
@@ -148,14 +148,14 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
     // TODO TEST
     pub fn new() -> Self {
         Self {
-            builders: TransactionBuilders::default(),
+            builders: BundledTransactionBuilders::default(),
             essence_sponge: PhantomData,
             stage: PhantomData,
         }
     }
 
     // TODO TEST
-    pub fn push(&mut self, builder: TransactionBuilder) {
+    pub fn push(&mut self, builder: BundledTransactionBuilder) {
         self.builders.push(builder);
     }
 
@@ -341,7 +341,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
 impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
     // TODO TEST
     pub fn build(self) -> Result<Bundle, OutgoingBundleBuilderError> {
-        let mut transactions = Transactions::new();
+        let mut transactions = BundledTransactions::new();
 
         for transaction_builder in self.builders.0 {
             transactions.push(
@@ -365,8 +365,8 @@ mod tests {
     use bee_signing::{PublicKey, RecoverableSignature, Seed, WotsSignature};
     use bee_ternary::{T1B1Buf, TritBuf};
 
-    fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
-        TransactionBuilder::new()
+    fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
+        BundledTransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
             .with_value(Value::from_inner_unchecked(0))

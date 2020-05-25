@@ -10,7 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundled::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, TransactionField, Value},
+    bundled::{
+        Address, BundledTransactionBuilder, BundledTransactionField, Hash, Index, Nonce, Payload, Tag, Timestamp, Value,
+    },
     constants::{
         Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
         OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
@@ -23,7 +25,7 @@ use bee_ternary::{num_conversions, raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Tr
 use std::convert::TryFrom;
 
 #[derive(Debug)]
-pub enum TransactionError {
+pub enum BundledTransactionError {
     InvalidNumericField(&'static str, num_conversions::TritsI64ConversionError),
     MissingField(&'static str),
     InvalidValue(i64),
@@ -31,7 +33,7 @@ pub enum TransactionError {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub struct Transaction {
+pub struct BundledTransaction {
     pub(crate) payload: Payload,
     pub(crate) address: Address,
     pub(crate) value: Value,
@@ -49,13 +51,15 @@ pub struct Transaction {
     pub(crate) nonce: Nonce,
 }
 
-impl Eq for Transaction {}
+impl Eq for BundledTransaction {}
 
-impl Transaction {
-    pub fn from_trits(buffer: &Trits<impl RawEncoding<Trit = Btrit> + ?Sized>) -> Result<Self, TransactionError> {
+impl BundledTransaction {
+    pub fn from_trits(
+        buffer: &Trits<impl RawEncoding<Trit = Btrit> + ?Sized>,
+    ) -> Result<Self, BundledTransactionError> {
         let trits = buffer.encode::<T1B1Buf>();
 
-        let transaction = TransactionBuilder::new()
+        let transaction = BundledTransactionBuilder::new()
             .with_payload(Payload(
                 trits[PAYLOAD.trit_offset.start..PAYLOAD.trit_offset.start + PAYLOAD.trit_offset.length].to_buf(),
             ))
@@ -66,7 +70,7 @@ impl Transaction {
                 i64::try_from(
                     trits[VALUE.trit_offset.start..VALUE.trit_offset.start + VALUE.trit_offset.length].to_buf(),
                 )
-                .map_err(|e| TransactionError::InvalidNumericField("value", e))?,
+                .map_err(|e| BundledTransactionError::InvalidNumericField("value", e))?,
             ))
             .with_obsolete_tag(Tag(trits[OBSOLETE_TAG.trit_offset.start
                 ..OBSOLETE_TAG.trit_offset.start + OBSOLETE_TAG.trit_offset.length]
@@ -76,20 +80,20 @@ impl Transaction {
                     trits[TIMESTAMP.trit_offset.start..TIMESTAMP.trit_offset.start + TIMESTAMP.trit_offset.length]
                         .to_buf(),
                 )
-                .map_err(|e| TransactionError::InvalidNumericField("timestamp", e))? as u64,
+                .map_err(|e| BundledTransactionError::InvalidNumericField("timestamp", e))? as u64,
             ))
             .with_index(Index::from_inner_unchecked(
                 i64::try_from(
                     trits[INDEX.trit_offset.start..INDEX.trit_offset.start + INDEX.trit_offset.length].to_buf(),
                 )
-                .map_err(|e| TransactionError::InvalidNumericField("index", e))? as usize,
+                .map_err(|e| BundledTransactionError::InvalidNumericField("index", e))? as usize,
             ))
             .with_last_index(Index::from_inner_unchecked(
                 i64::try_from(
                     trits[LAST_INDEX.trit_offset.start..LAST_INDEX.trit_offset.start + LAST_INDEX.trit_offset.length]
                         .to_buf(),
                 )
-                .map_err(|e| TransactionError::InvalidNumericField("last_index", e))? as usize,
+                .map_err(|e| BundledTransactionError::InvalidNumericField("last_index", e))? as usize,
             ))
             .with_tag(Tag(trits
                 [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
@@ -100,7 +104,7 @@ impl Transaction {
                         ..ATTACHMENT_TS.trit_offset.start + ATTACHMENT_TS.trit_offset.length]
                         .to_buf(),
                 )
-                .map_err(|e| TransactionError::InvalidNumericField("attachment_ts", e))? as u64,
+                .map_err(|e| BundledTransactionError::InvalidNumericField("attachment_ts", e))? as u64,
             ))
             .with_bundle(Hash::from_inner_unchecked(
                 trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
@@ -117,7 +121,8 @@ impl Transaction {
                         ..ATTACHMENT_LBTS.trit_offset.start + ATTACHMENT_LBTS.trit_offset.length]
                         .to_buf(),
                 )
-                .map_err(|e| TransactionError::InvalidNumericField("attachment_lbts", e))? as u64,
+                .map_err(|e| BundledTransactionError::InvalidNumericField("attachment_lbts", e))?
+                    as u64,
             ))
             .with_attachment_ubts(Timestamp::from_inner_unchecked(
                 i64::try_from(
@@ -125,7 +130,8 @@ impl Transaction {
                         ..ATTACHMENT_UBTS.trit_offset.start + ATTACHMENT_UBTS.trit_offset.length]
                         .to_buf(),
                 )
-                .map_err(|e| TransactionError::InvalidNumericField("attachment_ubts", e))? as u64,
+                .map_err(|e| BundledTransactionError::InvalidNumericField("attachment_ubts", e))?
+                    as u64,
             ))
             .with_nonce(Nonce(
                 trits[NONCE.trit_offset.start..NONCE.trit_offset.start + NONCE.trit_offset.length].to_buf(),
@@ -248,7 +254,7 @@ impl Transaction {
     }
 }
 
-impl TransactionVertex for Transaction {
+impl TransactionVertex for BundledTransaction {
     fn trunk(&self) -> &Hash {
         &self.trunk
     }
@@ -259,14 +265,14 @@ impl TransactionVertex for Transaction {
 }
 
 #[derive(Default)]
-pub struct Transactions(pub(crate) Vec<Transaction>);
+pub struct BundledTransactions(pub(crate) Vec<BundledTransaction>);
 
-impl Transactions {
+impl BundledTransactions {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn get(&self, index: usize) -> Option<&Transaction> {
+    pub fn get(&self, index: usize) -> Option<&BundledTransaction> {
         self.0.get(index)
     }
 
@@ -274,7 +280,7 @@ impl Transactions {
         self.0.len()
     }
 
-    pub fn push(&mut self, transaction: Transaction) {
+    pub fn push(&mut self, transaction: BundledTransaction) {
         self.0.push(transaction);
     }
 }

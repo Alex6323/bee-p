@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::T5B1Buf;
-use bee_transaction::{Hash, TransactionField};
+use bee_transaction::{BundledTransactionField, Hash};
 
 use std::marker::PhantomData;
 
