@@ -17,11 +17,6 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-#[deprecated]
-pub const MIN_TRYTE_VALUE: i8 = -13;
-#[deprecated]
-pub const MAX_TRYTE_VALUE: i8 = 13;
-
 /// A ternary tryte. Equivalent to 3 trits.
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 #[repr(i8)]

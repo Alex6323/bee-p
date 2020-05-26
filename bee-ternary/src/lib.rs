@@ -102,7 +102,7 @@ pub use crate::{
     t4b1::{T4B1Buf, T4B1},
     t5b1::{T5B1Buf, T5B1},
     trit::{Btrit, ShiftTernary, Trit, Utrit},
-    tryte::{Tryte, TryteBuf, MAX_TRYTE_VALUE, MIN_TRYTE_VALUE},
+    tryte::{Tryte, TryteBuf},
 };
 
 /// An error that may be produced as a result of fallible conversions.
