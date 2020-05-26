@@ -46,11 +46,11 @@ mod tests {
         }
 
         fn teardown() {
-            let output = Command::new("src/sqlx/schemes/postgres/cleanup.sh")
+            let output = Command::new("src/sqlx/schemes/postgres/teardown.sh")
                 .arg(BEE_TEST_DB_USER)
                 .arg(BEE_TEST_DB_NAME)
                 .output()
-                .expect("failed to execute cleanup process");
+                .expect("failed to execute teardown process");
 
             io::stdout().write_all(b"TEARING DOWN\n").unwrap();
 
