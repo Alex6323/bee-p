@@ -32,7 +32,7 @@ impl TpsWorker {
         }
     }
 
-    fn status(&mut self) {
+    fn tps(&mut self) {
         let incoming = Protocol::get().metrics.transaction_broadcast_received();
         let new = Protocol::get().metrics.new_transactions_received();
         let outgoing = Protocol::get().metrics.transaction_broadcast_sent();
@@ -61,7 +61,7 @@ impl TpsWorker {
                 Some(_) => {
                     break;
                 }
-                None => self.status(),
+                None => self.tps(),
             }
         }
 
