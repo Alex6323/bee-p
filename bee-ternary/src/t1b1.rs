@@ -20,11 +20,11 @@ pub struct T1B1<T: Trit = Btrit> {
 
 impl<T: Trit> T1B1<T> {
     unsafe fn make(ptr: *const T, offset: usize, len: usize) -> *const Self {
-        std::mem::transmute((ptr.offset(offset as isize), len))
+        std::mem::transmute((ptr.add(offset), len))
     }
 
     unsafe fn ptr(&self, index: usize) -> *const T {
-        (self.inner.as_ptr() as *const T).offset(index as isize)
+        (self.inner.as_ptr() as *const T).add(index)
     }
 
     pub fn as_raw_slice(&self) -> &[T] {

@@ -139,6 +139,13 @@ where
     ///
     /// This function will panic if `num_trits` is more than can be represented with the slice in
     /// the given encoding.
+    ///
+    /// # Safety
+    ///
+    /// This function must only be called with an [`i8`] slice that is valid for this trit encoding
+    /// given the specified `num_trits` length. Right now, this validity is not well-defined and so
+    /// it is suggested that only [`i8`] slices created from existing trit slices or trit buffers
+    /// be used. Calling this function with an invalid [`i8`] slice is undefined behaviour.
     pub unsafe fn from_raw_unchecked(raw: &[i8], num_trits: usize) -> &Self {
         debug_assert!(raw.iter().all(T::is_valid));
         &*(T::from_raw_unchecked(raw, num_trits) as *const _ as *const _)
@@ -153,9 +160,16 @@ where
     ///
     /// This function will panic if `num_trits` is more than can be represented with the slice in
     /// the given encoding.
+    ///
+    /// # Safety
+    ///
+    /// This function must only be called with an [`i8`] slice that is valid for this trit encoding
+    /// given the specified `num_trits` length. Right now, this validity is not well-defined and so
+    /// it is suggested that only [`i8`] slices created from existing trit slices or trit buffers
+    /// be used. Calling this function with an invalid [`i8`] slice is undefined behaviour.
     pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8], num_trits: usize) -> &mut Self {
         debug_assert!(raw.iter().all(T::is_valid));
-        &mut *(T::from_raw_unchecked(raw, num_trits) as *const _ as *mut _)
+        &mut *(T::from_raw_unchecked_mut(raw, num_trits) as *mut _ as *mut _)
     }
 
     /// Interpret an (`std::i8`) slice as a trit slice with the given encoding, checking to ensure
@@ -190,7 +204,12 @@ where
         }
     }
 
-    /// Returns the number of trits in this trit slice,
+    /// Returns `true` if the trit slice is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns the number of trits in this trit slice.
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -210,7 +229,11 @@ where
     /// # Panics
     ///
     /// This function will panic if the slice is not byte-aligned
-    // TODO: Evaluate whether this API makes sense to be `unsafe`
+    ///
+    /// # Safety
+    ///
+    /// This function is marked `unsafe` because modification of the trit slice in a manner that is
+    /// not valid for this encoding is undefined behaviour.
     pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
         self.0.as_i8_slice_mut()
     }
@@ -218,6 +241,15 @@ where
     /// Fetch the trit at the given index of this trit slice without first checking whether the
     /// index is in bounds. Providing an index that is not less than the length of this slice is
     /// undefined behaviour.
+    ///
+    /// This is perhaps the 'least bad' `unsafe` function in this crate: not because any form of
+    /// undefined behaviour is better or worse than another (after all, the point of undefined
+    /// behaviour is that it is undefined) but because it's the easiest to use correctly.
+    ///
+    /// # Safety
+    ///
+    /// An index with a value less then the result of [`Trits::len`] must be used. Any other value
+    /// is undefined behaviour.
     pub unsafe fn get_unchecked(&self, index: usize) -> T::Trit {
         debug_assert!(index < self.len());
         self.0.get_unchecked(index)
@@ -226,6 +258,15 @@ where
     /// Set the trit at the given index of this trit slice without first checking whether the
     /// index is in bounds. Providing an index that is not less than the length of this slice is
     /// undefined behaviour.
+    ///
+    /// This is perhaps the 'least bad' `unsafe` function in this crate: not because any form of
+    /// undefined behaviour is better or worse than another (after all, the point of undefined
+    /// behaviour is that it is undefined) but because it's the easiest to use correctly.
+    ///
+    /// # Safety
+    ///
+    /// An index with a value less then the result of [`Trits::len`] must be used. Any other value
+    /// is undefined behaviour.
     pub unsafe fn set_unchecked(&mut self, index: usize, trit: T::Trit) {
         debug_assert!(index < self.len());
         self.0.set_unchecked(index, trit);
@@ -402,7 +443,7 @@ impl<T: Trit> Trits<T1B1<T>> {
     ///
     /// Using this function is significantly faster than calling [`Trits::set`] in a loop and
     /// should be used where possible.
-    pub fn iter_mut<'a>(&'a mut self) -> slice::IterMut<'a, T> {
+    pub fn iter_mut(&mut self) -> slice::IterMut<T> {
         self.as_raw_slice_mut().iter_mut()
     }
 }
@@ -582,7 +623,7 @@ pub struct TritBuf<T: RawEncodingBuf = T1B1Buf<Btrit>>(T);
 impl<T: RawEncodingBuf> TritBuf<T> {
     /// Create a new empty [`TritBuf`].
     pub fn new() -> Self {
-        Self(T::new())
+        Self::default()
     }
 
     /// Create a new empty [`TritBuf`], backed by the given capacity, `cap`. The resulting
@@ -638,6 +679,12 @@ impl<T: RawEncodingBuf> TritBuf<T> {
     /// explicitly calling this method first.
     pub fn as_slice_mut(&mut self) -> &mut Trits<T::Slice> {
         unsafe { &mut *(self.0.as_slice_mut() as *mut T::Slice as *mut Trits<T::Slice>) }
+    }
+}
+
+impl<T: RawEncodingBuf> Default for TritBuf<T> {
+    fn default() -> Self {
+        Self(T::new())
     }
 }
 
