@@ -19,6 +19,7 @@ use log::info;
 
 pub(crate) struct TpsWorker {
     incoming: u64,
+    new: u64,
     outgoing: u64,
 }
 
@@ -26,22 +27,26 @@ impl TpsWorker {
     pub(crate) fn new() -> Self {
         Self {
             incoming: 0,
+            new: 0,
             outgoing: 0,
         }
     }
 
     fn status(&mut self) {
-        let received = Protocol::get().metrics.transaction_broadcast_received();
-        let sent = Protocol::get().metrics.transaction_broadcast_sent();
+        let incoming = Protocol::get().metrics.transaction_broadcast_received();
+        let new = Protocol::get().metrics.new_transactions_received();
+        let outgoing = Protocol::get().metrics.transaction_broadcast_sent();
 
         info!(
-            "incoming {} outgoing {}",
-            received - self.incoming,
-            sent - self.outgoing
+            "incoming {} new {} outgoing {}",
+            incoming - self.incoming,
+            new - self.new,
+            outgoing - self.outgoing
         );
 
-        self.incoming = received;
-        self.outgoing = sent;
+        self.incoming = incoming;
+        self.new = new;
+        self.outgoing = outgoing;
     }
 
     pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) {

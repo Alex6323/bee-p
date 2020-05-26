@@ -131,6 +131,7 @@ impl TransactionWorker {
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
             Some(transaction) => {
+                Protocol::get().metrics.new_transactions_received_inc();
                 if !tangle().is_synced() && Protocol::get().requested.is_empty() {
                     Protocol::trigger_milestone_solidification().await;
                 }
