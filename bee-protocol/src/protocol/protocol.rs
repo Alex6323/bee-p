@@ -19,9 +19,9 @@ use crate::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
         MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent, PeerHandshakerWorker,
-        StatusWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
-        TransactionResponderWorkerEvent, TransactionSolidifierWorker, TransactionSolidifierWorkerEvent,
-        TransactionWorker, TransactionWorkerEvent,
+        StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
+        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
+        TransactionSolidifierWorkerEvent, TransactionWorker, TransactionWorkerEvent,
     },
 };
 
@@ -80,6 +80,7 @@ pub struct Protocol {
     ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) status_worker: mpsc::Sender<()>,
+    pub(crate) tps_worker: mpsc::Sender<()>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested: DashMap<Hash, MilestoneIndex>,
 }
@@ -123,6 +124,8 @@ impl Protocol {
 
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = mpsc::channel(1);
 
+        let (tps_worker_shutdown_tx, tps_worker_shutdown_rx) = mpsc::channel(1);
+
         let protocol = Protocol {
             config,
             network: network.clone(),
@@ -158,6 +161,7 @@ impl Protocol {
             ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
             status_worker: status_worker_shutdown_tx,
+            tps_worker: tps_worker_shutdown_tx,
             peer_manager: PeerManager::new(network.clone()),
             requested: Default::default(),
         };
@@ -208,6 +212,7 @@ impl Protocol {
         );
         spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
         spawn(StatusWorker::new(Protocol::get().config.workers.status_interval).run(status_worker_shutdown_rx));
+        spawn(TpsWorker::new().run(tps_worker_shutdown_rx));
     }
 
     pub async fn shutdown() {
@@ -276,6 +281,9 @@ impl Protocol {
         }
         if let Err(e) = Protocol::get().status_worker.clone().send(()).await {
             warn!("Shutting down StatusWorker failed: {:?}.", e);
+        }
+        if let Err(e) = Protocol::get().tps_worker.clone().send(()).await {
+            warn!("Shutting down TpsWorker failed: {:?}.", e);
         }
     }
 

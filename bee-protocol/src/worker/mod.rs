@@ -17,6 +17,7 @@ mod responder;
 mod sender;
 mod solidifier;
 mod status;
+mod tps;
 mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
@@ -36,4 +37,5 @@ pub(crate) use solidifier::{
     TransactionSolidifierWorkerEvent,
 };
 pub(crate) use status::StatusWorker;
+pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{TransactionWorker, TransactionWorkerEvent};
