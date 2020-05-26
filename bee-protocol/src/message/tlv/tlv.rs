@@ -86,7 +86,7 @@ mod tests {
 
     use std::convert::TryInto;
 
-    fn invalid_advertised_type_generic<M: Message>() {
+    fn invalid_advertised_type<M: Message>() {
         match tlv_from_bytes::<M>(
             &Header {
                 message_type: M::ID + 1,
@@ -102,7 +102,7 @@ mod tests {
         }
     }
 
-    fn invalid_advertised_length_generic<M: Message>() {
+    fn invalid_advertised_length<M: Message>() {
         match tlv_from_bytes::<M>(
             &Header {
                 message_type: M::ID,
@@ -118,7 +118,7 @@ mod tests {
         }
     }
 
-    fn length_out_of_range_generic<M: Message>() {
+    fn length_out_of_range<M: Message>() {
         match tlv_from_bytes::<M>(
             &Header {
                 message_type: M::ID,
@@ -142,7 +142,7 @@ mod tests {
         }
     }
 
-    fn fuzz_generic<M: Message>() {
+    fn fuzz<M: Message>() {
         let mut rng = rand::thread_rng();
 
         for _ in 0..1000 {
@@ -168,22 +168,22 @@ mod tests {
         ($type:ty, $iat:tt, $ial:tt, $loor:tt, $fuzz:tt) => {
             #[test]
             fn $iat() {
-                invalid_advertised_type_generic::<$type>();
+                invalid_advertised_type::<$type>();
             }
 
             #[test]
             fn $ial() {
-                invalid_advertised_length_generic::<$type>();
+                invalid_advertised_length::<$type>();
             }
 
             #[test]
             fn $loor() {
-                length_out_of_range_generic::<$type>();
+                length_out_of_range::<$type>();
             }
 
             #[test]
             fn $fuzz() {
-                fuzz_generic::<$type>();
+                fuzz::<$type>();
             }
         };
     }
