@@ -11,7 +11,7 @@
 
 //! MilestoneRequest message of the protocol version 2
 
-use crate::{message::Message, milestone::MilestoneIndex};
+use crate::message::Message;
 
 use std::{convert::TryInto, ops::Range};
 
