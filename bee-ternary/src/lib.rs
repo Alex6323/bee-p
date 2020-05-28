@@ -146,7 +146,10 @@ where
     /// it is suggested that only [`i8`] slices created from existing trit slices or trit buffers
     /// be used. Calling this function with an invalid [`i8`] slice is undefined behaviour.
     pub unsafe fn from_raw_unchecked(raw: &[i8], num_trits: usize) -> &Self {
-        debug_assert!(raw.iter().all(T::is_valid), "Invalid i8 slice used to create trit slice");
+        debug_assert!(
+            raw.iter().all(T::is_valid),
+            "Invalid i8 slice used to create trit slice"
+        );
         &*(T::from_raw_unchecked(raw, num_trits) as *const _ as *const _)
     }
 
@@ -167,7 +170,10 @@ where
     /// it is suggested that only [`i8`] slices created from existing trit slices or trit buffers
     /// be used. Calling this function with an invalid [`i8`] slice is undefined behaviour.
     pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8], num_trits: usize) -> &mut Self {
-        debug_assert!(raw.iter().all(T::is_valid), "Invalid i8 slice used to create trit slice");
+        debug_assert!(
+            raw.iter().all(T::is_valid),
+            "Invalid i8 slice used to create trit slice"
+        );
         &mut *(T::from_raw_unchecked_mut(raw, num_trits) as *mut _ as *mut _)
     }
 
@@ -349,7 +355,10 @@ where
     ///
     /// This function will panic if the length of the slices are different
     pub fn copy_from<U: RawEncoding<Trit = T::Trit> + ?Sized>(&mut self, trits: &Trits<U>) {
-        assert!(self.len() == trits.len(), "Source trit slice must be the same length as target");
+        assert!(
+            self.len() == trits.len(),
+            "Source trit slice must be the same length as target"
+        );
         for (i, trit) in trits.iter().enumerate() {
             unsafe {
                 self.set_unchecked(i, trit);
@@ -441,7 +450,10 @@ impl<T: Trit> Trits<T1B1<T>> {
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     fn split_at_mut<'a>(this: &mut &'a mut Self, idx: usize) -> (&'a mut Self, &'a mut Self) {
-        assert!(idx <= this.len(), "Cannot split at an index outside the trit slice bounds");
+        assert!(
+            idx <= this.len(),
+            "Cannot split at an index outside the trit slice bounds"
+        );
         (
             unsafe { &mut *(this.0.slice_unchecked_mut(0..idx) as *mut _ as *mut Self) },
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
