@@ -63,7 +63,7 @@ where
     pub fn new(hash: Hash) -> Self {
         Self {
             hash,
-            index: 0,
+            index: MilestoneIndex(0),
             depth: None,
             transactions: Transactions::new(),
             essence_sponge: PhantomData,
@@ -98,7 +98,7 @@ where
         let public_key: MssPublicKey<M, P> =
             MssPublicKey::<M, P>::from_buf(self.transactions.get(0).unwrap().address().to_inner().to_buf())
                 .depth(self.depth.unwrap());
-        let signature: MssSignature<M> = MssSignature::<M>::from_buf(signature_buf).index(self.index as u64);
+        let signature: MssSignature<M> = MssSignature::<M>::from_buf(signature_buf).index(*self.index as u64);
         let hash = self
             .transactions
             .get(self.transactions.len() - 2)
@@ -131,8 +131,14 @@ where
         // TODO remove clone
         // TODO test invalid index
         // Safe to unwrap
+<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
         self.index = i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner().to_buf())
             .map_err(MilestoneBuilderError::InvalidIndex)? as u32;
+=======
+        self.index = (i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner().clone())
+            .map_err(|e| MilestoneBuilderError::InvalidIndex(e))? as u32)
+            .into();
+>>>>>>> Introduce generic Tangle, Flag API, and traversal module
 
         self.validate_signatures()?;
 

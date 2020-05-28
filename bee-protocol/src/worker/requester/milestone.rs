@@ -9,10 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
+use crate::{
+    message::MilestoneRequest,
+    milestone::{tangle::tangle, MilestoneIndex},
+    protocol::Protocol,
+    worker::SenderWorker,
+};
 
 use bee_network::EndpointId;
-use bee_tangle::tangle;
 
 use std::cmp::Ordering;
 

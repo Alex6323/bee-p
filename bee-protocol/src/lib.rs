@@ -20,5 +20,5 @@ mod util;
 mod worker;
 
 pub use config::{ProtocolConfig, ProtocolConfigBuilder};
-pub use milestone::{Milestone, MilestoneIndex};
+pub use milestone::{tangle::tangle, Milestone, MilestoneIndex};
 pub use protocol::{Protocol, ProtocolMetrics};

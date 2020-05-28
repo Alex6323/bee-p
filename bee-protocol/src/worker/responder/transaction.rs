@@ -11,11 +11,11 @@
 
 use crate::{
     message::{compress_transaction_bytes, TransactionBroadcast, TransactionRequest},
+    milestone::tangle::tangle,
     worker::SenderWorker,
 };
 
 use bee_network::EndpointId;
-use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::{BundledTransaction as Transaction, BundledTransactionField, Hash};
 

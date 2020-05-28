@@ -9,9 +9,18 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
+use crate::{
+    message::TransactionRequest,
+    milestone::{tangle::tangle, MilestoneIndex},
+    protocol::Protocol,
+    worker::SenderWorker,
+};
 
+<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
 use bee_tangle::tangle;
+=======
+use bee_bundle::Hash;
+>>>>>>> Introduce generic Tangle, Flag API, and traversal module
 use bee_ternary::T5B1Buf;
 use bee_transaction::Hash;
 

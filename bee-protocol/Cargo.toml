@@ -19,6 +19,7 @@ bee-ternary = { path = "../bee-ternary" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = "1.5.0"
+bitflags = "1.2.1"
 bytemuck = "1.2.0"
 dashmap = "3.11"
 futures = "0.3.5"

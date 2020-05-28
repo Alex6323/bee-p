@@ -14,17 +14,22 @@ use crate::{
     message::{
         messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
     },
+    milestone::tangle::tangle,
     peer::Peer,
     protocol::Protocol,
     worker::PeerWorker,
 };
 
+<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
 use bee_network::{
     Address,
     Command::{Disconnect, SendMessage},
     Network, Origin, Port,
 };
 use bee_tangle::tangle;
+=======
+use bee_network::{Address, Command::SendMessage, Network, Origin, Port};
+>>>>>>> Introduce generic Tangle, Flag API, and traversal module
 
 use std::{
     sync::Arc,
@@ -236,8 +241,8 @@ impl PeerHandshakerWorker {
 
                         Protocol::send_heartbeat(
                             self.peer.epid,
-                            *tangle().get_solid_milestone_index(),
-                            *tangle().get_snapshot_milestone_index(),
+                            tangle().get_solid_milestone_index(),
+                            tangle().get_snapshot_milestone_index(),
                         )
                         .await;
 

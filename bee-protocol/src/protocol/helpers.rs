@@ -36,7 +36,7 @@ impl Protocol {
     }
 
     pub fn request_last_milestone(to: Option<EndpointId>) {
-        Protocol::request_milestone(0, to);
+        Protocol::request_milestone(MilestoneIndex(0), to);
     }
 
     pub fn milestone_requester_is_empty() -> bool {

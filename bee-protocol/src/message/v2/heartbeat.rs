@@ -11,7 +11,7 @@
 
 //! Heartbeat message of the protocol version 2
 
-use crate::message::Message;
+use crate::{message::Message, milestone::MilestoneIndex as MsIndex};
 
 use std::{convert::TryInto, ops::Range};
 
@@ -28,13 +28,13 @@ const CONSTANT_SIZE: usize = SOLID_MILESTONE_INDEX_SIZE + SNAPSHOT_MILESTONE_IND
 #[derive(Default)]
 pub(crate) struct Heartbeat {
     /// Index of the last solid milestone.
-    pub(crate) solid_milestone_index: u32,
+    pub(crate) solid_milestone_index: MsIndex,
     /// Index of the snapshotted milestone.
-    pub(crate) snapshot_milestone_index: u32,
+    pub(crate) snapshot_milestone_index: MsIndex,
 }
 
 impl Heartbeat {
-    pub(crate) fn new(solid_milestone_index: u32, snapshot_milestone_index: u32) -> Self {
+    pub(crate) fn new(solid_milestone_index: MsIndex, snapshot_milestone_index: MsIndex) -> Self {
         Self {
             solid_milestone_index,
             snapshot_milestone_index,
@@ -53,10 +53,10 @@ impl Message for Heartbeat {
         let mut message = Self::default();
 
         let (bytes, next) = bytes.split_at(SOLID_MILESTONE_INDEX_SIZE);
-        message.solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size")).into();
 
         let (bytes, _) = next.split_at(SNAPSHOT_MILESTONE_INDEX_SIZE);
-        message.snapshot_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.snapshot_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size")).into();
 
         message
     }

@@ -11,13 +11,14 @@
 
 use crate::{
     message::{uncompress_transaction_bytes, TransactionBroadcast},
+    milestone::tangle::{tangle, Flags},
     protocol::Protocol,
     worker::transaction::TinyHashCache,
 };
 
 use bee_crypto::{CurlP81, Sponge};
 use bee_network::EndpointId;
-use bee_tangle::tangle;
+use bee_tangle::traversal;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::{BundledTransaction as Transaction, BundledTransactionField, Hash};
 
@@ -129,39 +130,57 @@ impl TransactionWorker {
         }
 
         // store transaction
+<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
         match tangle().insert_transaction(transaction, hash).await {
             Some(transaction) => {
                 Protocol::get().metrics.new_transactions_received_inc();
                 if !tangle().is_synced() && Protocol::get().requested.is_empty() {
                     Protocol::trigger_milestone_solidification().await;
-                }
-                match Protocol::get().requested.remove(&hash) {
-                    Some((hash, index)) => {
-                        Protocol::trigger_transaction_solidification(hash, index).await;
-                    }
-                    None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
-                };
+=======
+        let (transaction, is_new) = tangle().insert_transaction(transaction, hash, Flags::empty());
 
-                if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
-                    || transaction.address().eq(&Protocol::get().config.workers.null_address)
-                {
-                    let tail = {
-                        if transaction.is_tail() {
-                            Some(hash)
-                        } else {
-                            let chain =
-                                tangle().trunk_walk_approvers(hash, |tx_ref| tx_ref.bundle() == transaction.bundle());
-                            match chain.last() {
-                                Some((tx_ref, hash)) => {
-                                    if tx_ref.is_tail() {
-                                        Some(*hash)
-                                    } else {
-                                        None
-                                    }
+        if is_new {
+            if !tangle().is_synced() && Protocol::get().requested.len() == 0 {
+                Protocol::trigger_milestone_solidification().await;
+            }
+
+            match Protocol::get().requested.remove(&hash) {
+                Some((hash, index)) => {
+                    Protocol::trigger_transaction_solidification(hash, index).await;
+>>>>>>> Introduce generic Tangle, Flag API, and traversal module
+                }
+                None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
+            };
+
+            if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
+                || transaction.address().eq(&Protocol::get().config.workers.null_address)
+            {
+                let tail = {
+                    if transaction.is_tail() {
+                        Some(hash)
+                    } else {
+                        let mut chain = vec![];
+
+                        traversal::trunk_walk_approvers(
+                            &tangle().inner,
+                            hash,
+                            |v| v.get_transaction().bundle() == transaction.bundle(),
+                            |h, v| {
+                                chain.push((*h, v.get_transaction().clone()));
+                            },
+                        );
+
+                        match chain.last() {
+                            Some((h, t)) => {
+                                if t.is_tail() {
+                                    Some(*h)
+                                } else {
+                                    None
                                 }
-                                None => None,
                             }
+                            None => None,
                         }
+<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
                     };
 
                     if let Some(tail) = tail {
@@ -173,7 +192,25 @@ impl TransactionWorker {
             }
             None => {
                 debug!("Transaction {} already present in the tangle.", &hash);
+=======
+                    }
+                };
+
+                if let Some(tail) = tail {
+                    if let Err(e) = milestone_validator_worker_tx.send(tail).await {
+                        error!(
+                            "[TransactionWorker ] Sending tail to milestone validation failed: {:?}.",
+                            e
+                        );
+                    }
+                };
+>>>>>>> Introduce generic Tangle, Flag API, and traversal module
             }
+        } else {
+            debug!(
+                "[TransactionWorker ] Transaction {} already present in the tangle.",
+                &hash
+            );
         }
     }
 }

@@ -489,7 +489,10 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let mut index_buf: [u8; 4] = [0; 4];
         index_buf.copy_from_slice(res.unwrap().as_slice());
-        Ok(Milestone::new(milestone_hash, u32::from_le_bytes(index_buf)))
+        Ok(Milestone::new(
+            milestone_hash,
+            MilestoneIndex(u32::from_le_bytes(index_buf)),
+        ))
     }
 
     async fn delete_milestones(&self, milestone_hashes: &HashSet<Hash>) -> Result<(), RocksDbBackendError> {

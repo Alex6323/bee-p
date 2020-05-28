@@ -11,11 +11,11 @@
 
 use crate::{
     message::{compress_transaction_bytes, MilestoneRequest, TransactionBroadcast},
+    milestone::tangle::tangle,
     worker::SenderWorker,
 };
 
 use bee_network::EndpointId;
-use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::BundledTransaction as Transaction;
 
@@ -41,7 +41,7 @@ impl MilestoneResponderWorker {
     }
 
     async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
-        let index = match request.index {
+        let index = match *request.index {
             0 => tangle().get_last_milestone_index(),
             _ => request.index.into(),
         };

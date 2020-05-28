@@ -11,7 +11,7 @@
 
 //! MilestoneRequest message of the protocol version 2
 
-use crate::message::Message;
+use crate::{message::Message, milestone::MilestoneIndex};
 
 use std::{convert::TryInto, ops::Range};
 
@@ -22,11 +22,11 @@ const CONSTANT_SIZE: usize = INDEX_SIZE;
 #[derive(Default)]
 pub(crate) struct MilestoneRequest {
     /// Index of the requested milestone.
-    pub(crate) index: u32,
+    pub(crate) index: MilestoneIndex,
 }
 
 impl MilestoneRequest {
-    pub(crate) fn new(index: u32) -> Self {
+    pub(crate) fn new(index: MilestoneIndex) -> Self {
         Self { index }
     }
 }
@@ -41,7 +41,7 @@ impl Message for MilestoneRequest {
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
 
-        message.index = u32::from_be_bytes(bytes[0..INDEX_SIZE].try_into().expect("Invalid buffer size"));
+        message.index = u32::from_be_bytes(bytes[0..INDEX_SIZE].try_into().expect("Invalid buffer size")).into();
 
         message
     }
