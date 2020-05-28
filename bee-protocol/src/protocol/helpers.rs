@@ -94,7 +94,7 @@ impl Protocol {
         solid_milestone_index: MilestoneIndex,
         snapshot_milestone_index: MilestoneIndex,
     ) {
-        SenderWorker::<Heartbeat>::send(&to, Heartbeat::new(solid_milestone_index, snapshot_milestone_index)).await;
+        SenderWorker::<Heartbeat>::send(&to, Heartbeat::new(*solid_milestone_index, *snapshot_milestone_index)).await;
     }
 
     pub async fn broadcast_heartbeat(solid_milestone_index: MilestoneIndex, snapshot_milestone_index: MilestoneIndex) {

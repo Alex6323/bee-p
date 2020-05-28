@@ -71,7 +71,7 @@ impl MilestoneRequesterWorker {
             }
         };
 
-        SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+        SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
     }
 
     pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {

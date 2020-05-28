@@ -11,7 +11,7 @@
 
 //! Heartbeat message of the protocol version 2
 
-use crate::{message::Message, milestone::MilestoneIndex as MsIndex};
+use crate::message::Message;
 
 use std::{convert::TryInto, ops::Range};
 
@@ -28,13 +28,13 @@ const CONSTANT_SIZE: usize = SOLID_MILESTONE_INDEX_SIZE + SNAPSHOT_MILESTONE_IND
 #[derive(Default)]
 pub(crate) struct Heartbeat {
     /// Index of the last solid milestone.
-    pub(crate) solid_milestone_index: MsIndex,
+    pub(crate) solid_milestone_index: u32,
     /// Index of the snapshotted milestone.
-    pub(crate) snapshot_milestone_index: MsIndex,
+    pub(crate) snapshot_milestone_index: u32,
 }
 
 impl Heartbeat {
-    pub(crate) fn new(solid_milestone_index: MsIndex, snapshot_milestone_index: MsIndex) -> Self {
+    pub(crate) fn new(solid_milestone_index: u32, snapshot_milestone_index: u32) -> Self {
         Self {
             solid_milestone_index,
             snapshot_milestone_index,

@@ -22,11 +22,11 @@ const CONSTANT_SIZE: usize = INDEX_SIZE;
 #[derive(Default)]
 pub(crate) struct MilestoneRequest {
     /// Index of the requested milestone.
-    pub(crate) index: MilestoneIndex,
+    pub(crate) index: u32,
 }
 
 impl MilestoneRequest {
-    pub(crate) fn new(index: MilestoneIndex) -> Self {
+    pub(crate) fn new(index: u32) -> Self {
         Self { index }
     }
 }
