@@ -20,8 +20,6 @@ use async_std::fs::File;
 use async_std::prelude::*;
 use bytemuck::cast_slice;
 
-use log::debug;
-
 pub struct LocalSnapshot {
     metadata: LocalSnapshotMetadata,
     state: SnapshotState,
