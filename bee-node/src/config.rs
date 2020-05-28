@@ -20,7 +20,7 @@ use serde::Deserialize;
 pub(crate) const CONFIG_PATH: &str = "./config.toml";
 
 #[derive(Default, Deserialize)]
-pub struct NodeConfigBuilder {
+pub(crate) struct NodeConfigBuilder {
     logger: LoggerConfigBuilder,
     network: NetworkConfigBuilder,
     peering: PeeringConfigBuilder,
@@ -29,11 +29,7 @@ pub struct NodeConfigBuilder {
 }
 
 impl NodeConfigBuilder {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn finish(self) -> NodeConfig {
+    pub(crate) fn finish(self) -> NodeConfig {
         NodeConfig {
             logger: self.logger.finish(),
             network: self.network.finish(),
@@ -45,16 +41,10 @@ impl NodeConfigBuilder {
 }
 
 #[derive(Clone)]
-pub struct NodeConfig {
+pub(crate) struct NodeConfig {
     pub(crate) logger: LoggerConfig,
     pub(crate) network: NetworkConfig,
     pub(crate) peering: PeeringConfig,
     pub(crate) protocol: ProtocolConfig,
     pub(crate) snapshot: SnapshotConfig,
-}
-
-impl NodeConfig {
-    pub fn build() -> NodeConfigBuilder {
-        NodeConfigBuilder::new()
-    }
 }

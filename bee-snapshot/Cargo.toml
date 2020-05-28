@@ -13,4 +13,6 @@ keywords = ["iota", "tangle", "bee", "framework", "snapshot"]
 bee-ternary = { path = "../bee-ternary" }
 bee-transaction = { path = "../bee-transaction" }
 
+async-std = "1.4.0"
+bytemuck = "1.2.0"
 serde = { version = "1.0.104", features = ["derive" ] }

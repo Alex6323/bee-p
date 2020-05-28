@@ -9,43 +9,43 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::local::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
-
 use serde::Deserialize;
 
+const DEFAULT_FILE_PATH: &str = "./data/snapshot.bin";
+
 #[derive(Default, Deserialize)]
-pub struct SnapshotConfigBuilder {
-    local: LocalSnapshotConfigBuilder,
+pub struct LocalSnapshotConfigBuilder {
+    file_path: Option<String>,
 }
 
-impl SnapshotConfigBuilder {
+impl LocalSnapshotConfigBuilder {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn local_file_path(mut self, file_path: String) -> Self {
-        self.local = self.local.file_path(file_path);
+    pub fn file_path(mut self, file_path: String) -> Self {
+        self.file_path.replace(file_path);
         self
     }
 
-    pub fn finish(self) -> SnapshotConfig {
-        SnapshotConfig {
-            local: self.local.finish(),
+    pub fn finish(self) -> LocalSnapshotConfig {
+        LocalSnapshotConfig {
+            file_path: self.file_path.unwrap_or_else(|| DEFAULT_FILE_PATH.to_string()),
         }
     }
 }
 
 #[derive(Clone)]
-pub struct SnapshotConfig {
-    local: LocalSnapshotConfig,
+pub struct LocalSnapshotConfig {
+    file_path: String,
 }
 
-impl SnapshotConfig {
-    pub fn build() -> SnapshotConfigBuilder {
-        SnapshotConfigBuilder::new()
+impl LocalSnapshotConfig {
+    pub fn build() -> LocalSnapshotConfigBuilder {
+        LocalSnapshotConfigBuilder::new()
     }
 
-    pub fn local(&self) -> &LocalSnapshotConfig {
-        &self.local
+    pub fn file_path(&self) -> &String {
+        &self.file_path
     }
 }

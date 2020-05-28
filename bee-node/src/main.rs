@@ -25,11 +25,11 @@ fn main() {
         Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
             Ok(config_builder) => config_builder,
             Err(e) => {
-                panic!("[Node ] Error parsing .toml config file.\n{:?}", e);
+                panic!("[Node ] Error parsing config file: {:?}", e);
             }
         },
         Err(e) => {
-            panic!("[Node ] Error reading .toml config file.\n{:?}", e);
+            panic!("[Node ] Error reading config file: {:?}", e);
         }
     };
 

@@ -25,6 +25,5 @@ sponge_type     = "kerl"
 [protocol.workers]
 status_interval = 10
 
-[snapshot]
-meta_file_path  = "./data/mainnet.snapshot.meta"
-state_file_path = "./data/mainnet.snapshot.state"
+[snapshot.local]
+file_path = "./data/snapshot.bin"

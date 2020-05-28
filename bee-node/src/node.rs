@@ -19,7 +19,7 @@ use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::Protocol;
-use bee_snapshot::{SnapshotMetadata, SnapshotState};
+use bee_snapshot::LocalSnapshot;
 use bee_tangle::tangle;
 use bee_transaction::Hash;
 
@@ -32,7 +32,7 @@ use futures::{
     sink::SinkExt,
     stream::StreamExt,
 };
-use log::*;
+use log::{debug, error, info, warn};
 
 pub struct Node {
     config: NodeConfig,
@@ -44,7 +44,7 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(config: NodeConfig, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
+    pub(crate) fn new(config: NodeConfig, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
         Self {
             config,
             network,
@@ -119,52 +119,37 @@ impl Node {
 
         bee_tangle::init();
 
-        info!("Reading snapshot metadata...");
-        match SnapshotMetadata::new(self.config.snapshot.meta_file_path()) {
-            Ok(snapshot_metadata) => {
+        info!("Reading snapshot file...");
+        let snapshot_state = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()).await {
+            Ok(local_snapshot) => {
                 info!(
-                    "Read snapshot metadata from {} with index {}, {} solid entry points and {} seen milestones.",
-                    Utc.timestamp(snapshot_metadata.timestamp() as i64, 0).to_rfc2822(),
-                    snapshot_metadata.index(),
-                    snapshot_metadata.solid_entry_points().len(),
-                    snapshot_metadata.seen_milestones().len(),
+                    "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and {} balances.",
+                    Utc.timestamp(local_snapshot.metadata().timestamp() as i64, 0).to_rfc2822(),
+                    local_snapshot.metadata().index(),
+                    local_snapshot.metadata().solid_entry_points().len(),
+                    local_snapshot.metadata().seen_milestones().len(),
+                    local_snapshot.state().balances().len()
                 );
-                tangle().update_solid_milestone_index(snapshot_metadata.index().into());
+                tangle().update_solid_milestone_index(local_snapshot.metadata().index().into());
                 // TODO get from database
-                tangle().update_snapshot_milestone_index(snapshot_metadata.index().into());
+                tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
                 tangle().add_solid_entry_point(Hash::zeros());
-                for solid_entry_point in snapshot_metadata.solid_entry_points() {
+                for solid_entry_point in local_snapshot.metadata().solid_entry_points() {
                     tangle().add_solid_entry_point(*solid_entry_point);
                 }
-                for seen_milestone in snapshot_metadata.seen_milestones() {
+                for seen_milestone in local_snapshot.metadata().seen_milestones() {
                     // TODO request ?
                 }
+                local_snapshot.into_state()
             }
-            // TODO exit ?
-            Err(e) => error!(
-                "Failed to read snapshot metadata file \"{}\": {:?}.",
-                self.config.snapshot.meta_file_path(),
-                e
-            ),
-        }
-
-        info!("Reading snapshot state...");
-        let snapshot_state = match SnapshotState::new(self.config.snapshot.state_file_path()) {
-            Ok(snapshot_state) => {
-                info!(
-                    "Read snapshot state with {} entries and correct supply.",
-                    snapshot_state.state().len()
-                );
-                snapshot_state
-            }
-            // TODO exit ?
             Err(e) => {
+                // TODO exit ?
                 error!(
-                    "Failed to read snapshot state file \"{}\": {:?}.",
-                    self.config.snapshot.state_file_path(),
+                    "Failed to read snapshot file \"{}\": {:?}.",
+                    self.config.snapshot.local().file_path(),
                     e
                 );
-                panic!("TODO")
+                panic!("TODO");
             }
         };
 
@@ -174,7 +159,7 @@ impl Node {
         let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
         let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
         self.ledger.replace((ledger_worker_tx, ledger_worker_shutdown_tx));
-        spawn(LedgerWorker::new(snapshot_state.into_state()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
+        spawn(LedgerWorker::new(snapshot_state.into_balances()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
 
         info!("Initialized.");
     }

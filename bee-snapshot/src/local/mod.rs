@@ -10,9 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod config;
-mod local;
-mod state;
+mod metadata;
+mod snapshot;
 
-pub use config::{SnapshotConfig, SnapshotConfigBuilder};
-pub use local::{LocalSnapshot, LocalSnapshotMetadata};
-pub use state::SnapshotState;
+pub use config::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
+pub use metadata::LocalSnapshotMetadata;
+pub use snapshot::LocalSnapshot;
