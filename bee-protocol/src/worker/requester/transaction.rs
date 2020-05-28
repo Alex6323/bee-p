@@ -16,11 +16,6 @@ use crate::{
     worker::SenderWorker,
 };
 
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-use bee_tangle::tangle;
-=======
-use bee_bundle::Hash;
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
 use bee_ternary::T5B1Buf;
 use bee_transaction::Hash;
 

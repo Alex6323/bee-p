@@ -18,15 +18,9 @@ use bee_common::logger_init;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-use bee_protocol::Protocol;
-use bee_snapshot::LocalSnapshot;
-use bee_tangle::tangle;
-use bee_transaction::Hash;
-=======
 use bee_protocol::{tangle, Protocol};
-use bee_snapshot::{SnapshotMetadata, SnapshotState};
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
+use bee_snapshot::LocalSnapshot;
+use bee_transaction::Hash;
 
 use std::collections::HashMap;
 
@@ -122,17 +116,9 @@ impl Node {
 
         block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone()).run());
 
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-        bee_tangle::init();
-
         info!("Reading snapshot file...");
         let snapshot_state = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()).await {
             Ok(local_snapshot) => {
-=======
-        info!("[Node ] Reading snapshot metadata...");
-        match SnapshotMetadata::new(self.config.snapshot.meta_file_path()) {
-            Ok(snapshot_metadata) => {
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
                 info!(
                     "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and {} balances.",
                     Utc.timestamp(local_snapshot.metadata().timestamp() as i64, 0).to_rfc2822(),

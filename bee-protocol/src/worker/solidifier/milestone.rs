@@ -96,18 +96,6 @@ impl MilestoneSolidifierWorker {
         let target_index = tangle().get_solid_milestone_index() + 1.into();
 
         if let Some(target_hash) = tangle().get_milestone_hash(target_index.into()) {
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-            if tangle().is_solid_transaction(&target_hash) {
-                // TODO set confirmation index + trigger ledger
-                tangle().update_solid_milestone_index(target_index.into());
-                Protocol::broadcast_heartbeat(
-                    *tangle().get_solid_milestone_index(),
-                    *tangle().get_snapshot_milestone_index(),
-                )
-                .await;
-            } else {
-                Protocol::trigger_transaction_solidification(target_hash, target_index).await
-=======
             match tangle().is_solid_transaction(&target_hash) {
                 true => {
                     // TODO set confirmation index + trigger ledger
@@ -119,7 +107,6 @@ impl MilestoneSolidifierWorker {
                     .await;
                 }
                 false => Protocol::trigger_transaction_solidification(target_hash, target_index).await,
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
             };
         };
     }

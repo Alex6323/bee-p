@@ -1,7 +1,7 @@
 use crate::milestone::MilestoneIndex as MsIndex;
 
-use bee_bundle::{Hash as THash, Transaction};
 use bee_tangle::{Tangle, TransactionRef};
+use bee_transaction::{BundledTransaction as Transaction, Hash as THash};
 
 use bitflags::bitflags;
 use dashmap::{DashMap, DashSet};

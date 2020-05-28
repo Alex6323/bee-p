@@ -131,14 +131,10 @@ where
         // TODO remove clone
         // TODO test invalid index
         // Safe to unwrap
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-        self.index = i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner().to_buf())
-            .map_err(MilestoneBuilderError::InvalidIndex)? as u32;
-=======
-        self.index = (i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner().clone())
-            .map_err(|e| MilestoneBuilderError::InvalidIndex(e))? as u32)
-            .into();
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
+        self.index = MilestoneIndex(
+            i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner().to_buf())
+                .map_err(MilestoneBuilderError::InvalidIndex)? as u32,
+        );
 
         self.validate_signatures()?;
 

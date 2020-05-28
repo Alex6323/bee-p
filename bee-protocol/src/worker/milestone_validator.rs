@@ -16,11 +16,7 @@ use crate::{
 
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{PublicKey, RecoverableSignature};
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-use bee_tangle::tangle;
 use bee_transaction::{Hash, TransactionVertex};
-=======
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
 
 use std::marker::PhantomData;
 
@@ -110,13 +106,8 @@ where
                                 // TODO check multiple triggers
                                 tangle().add_milestone(milestone.index.into(), milestone.hash);
                                 // TODO deref ? Why not .into() ?
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-                                if milestone.index > *tangle().get_last_milestone_index() {
-                                    info!("New milestone #{}.", milestone.index);
-=======
                                 if milestone.index > tangle().get_last_milestone_index() {
-                                    info!("[MilestoneValidatorWorker ] New milestone #{}.", *milestone.index);
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
+                                    info!("New milestone #{}.", *milestone.index);
                                     tangle().update_last_milestone_index(milestone.index.into());
                                 }
                                 // TODO only trigger if index == last solid index ?

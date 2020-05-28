@@ -130,24 +130,16 @@ impl TransactionWorker {
         }
 
         // store transaction
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-        match tangle().insert_transaction(transaction, hash).await {
-            Some(transaction) => {
-                Protocol::get().metrics.new_transactions_received_inc();
-                if !tangle().is_synced() && Protocol::get().requested.is_empty() {
-                    Protocol::trigger_milestone_solidification().await;
-=======
         let (transaction, is_new) = tangle().insert_transaction(transaction, hash, Flags::empty());
 
         if is_new {
-            if !tangle().is_synced() && Protocol::get().requested.len() == 0 {
+            if !tangle().is_synced() && Protocol::get().requested.is_empty() {
                 Protocol::trigger_milestone_solidification().await;
             }
 
             match Protocol::get().requested.remove(&hash) {
                 Some((hash, index)) => {
                     Protocol::trigger_transaction_solidification(hash, index).await;
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
                 }
                 None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
             };
@@ -180,37 +172,17 @@ impl TransactionWorker {
                             }
                             None => None,
                         }
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-                    };
-
-                    if let Some(tail) = tail {
-                        if let Err(e) = milestone_validator_worker_tx.send(tail).await {
-                            error!("Sending tail to milestone validation failed: {:?}.", e);
-                        }
-                    };
-                }
-            }
-            None => {
-                debug!("Transaction {} already present in the tangle.", &hash);
-=======
                     }
                 };
 
                 if let Some(tail) = tail {
                     if let Err(e) = milestone_validator_worker_tx.send(tail).await {
-                        error!(
-                            "[TransactionWorker ] Sending tail to milestone validation failed: {:?}.",
-                            e
-                        );
+                        error!("Sending tail to milestone validation failed: {:?}.", e);
                     }
                 };
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
             }
         } else {
-            debug!(
-                "[TransactionWorker ] Transaction {} already present in the tangle.",
-                &hash
-            );
+            debug!("Transaction {} already present in the tangle.", &hash);
         }
     }
 }

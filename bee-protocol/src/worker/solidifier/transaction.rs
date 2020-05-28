@@ -17,13 +17,8 @@ use crate::{
     protocol::Protocol,
 };
 
-<<<<<<< baed4d538fede531d25a17691d41af7c7e610d86
-use bee_tangle::tangle;
-use bee_transaction::Hash;
-=======
-use bee_bundle::Hash;
 use bee_tangle::traversal;
->>>>>>> Introduce generic Tangle, Flag API, and traversal module
+use bee_transaction::Hash;
 
 use std::collections::HashSet;
 
