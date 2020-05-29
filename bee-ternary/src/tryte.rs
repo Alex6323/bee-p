@@ -58,7 +58,7 @@ impl Tryte {
 
     pub fn from_trits(trits: [Btrit; 3]) -> Self {
         let mut buf = [0; 1];
-        unsafe { Trits::<T1B1>::from_raw_unchecked_mut(&mut buf).as_trytes()[0] }
+        unsafe { Trits::<T3B1>::from_raw_unchecked_mut(&mut buf, 3).as_trytes()[0] }
     }
 
     /// Interpret this tryte as a [`T3B1`] trit slice with exactly 3 elements.
