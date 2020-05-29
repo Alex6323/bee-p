@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{Error, Trits, T3B1};
+use crate::{Btrit, Error, Trits, T3B1};
 use std::{
     convert::TryFrom,
     fmt,
@@ -56,10 +56,17 @@ impl Tryte {
     /// The maximum value that this [`Tryte`] can hold
     pub const MAX_VALUE: Self = Tryte::M;
 
+    pub fn from_trits(trits: [Btrit; 3]) -> Self {
+        let mut buf = [0; 1];
+        unsafe { Trits::<T3B1>::from_raw_unchecked_mut(&mut buf, 3).as_trytes()[0] }
+    }
+
+    /// Interpret this tryte as a [`T3B1`] trit slice with exactly 3 elements.
     pub fn as_trits(&self) -> &Trits<T3B1> {
         unsafe { &*(T3B1::make(self as *const _ as *const _, 0, 3) as *const _) }
     }
 
+    /// Interpret this tryte as a mutable [`T3B1`] trit slice with exactly 3 elements.
     pub fn as_trits_mut(&mut self) -> &mut Trits<T3B1> {
         unsafe { &mut *(T3B1::make(self as *const _ as *const _, 0, 3) as *mut _) }
     }

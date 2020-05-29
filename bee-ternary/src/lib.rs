@@ -146,7 +146,10 @@ where
     /// it is suggested that only [`i8`] slices created from existing trit slices or trit buffers
     /// be used. Calling this function with an invalid [`i8`] slice is undefined behaviour.
     pub unsafe fn from_raw_unchecked(raw: &[i8], num_trits: usize) -> &Self {
-        debug_assert!(raw.iter().all(T::is_valid));
+        debug_assert!(
+            raw.iter().all(T::is_valid),
+            "Invalid i8 slice used to create trit slice"
+        );
         &*(T::from_raw_unchecked(raw, num_trits) as *const _ as *const _)
     }
 
@@ -167,7 +170,10 @@ where
     /// it is suggested that only [`i8`] slices created from existing trit slices or trit buffers
     /// be used. Calling this function with an invalid [`i8`] slice is undefined behaviour.
     pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8], num_trits: usize) -> &mut Self {
-        debug_assert!(raw.iter().all(T::is_valid));
+        debug_assert!(
+            raw.iter().all(T::is_valid),
+            "Invalid i8 slice used to create trit slice"
+        );
         &mut *(T::from_raw_unchecked_mut(raw, num_trits) as *mut _ as *mut _)
     }
 
@@ -250,7 +256,12 @@ where
     /// An index with a value less then the result of [`Trits::len`] must be used. Any other value
     /// is undefined behaviour.
     pub unsafe fn get_unchecked(&self, index: usize) -> T::Trit {
-        debug_assert!(index < self.len());
+        debug_assert!(
+            index < self.0.len(),
+            "Attempt to get trit at index {}, but length of slice is {}",
+            index,
+            self.len(),
+        );
         self.0.get_unchecked(index)
     }
 
@@ -267,7 +278,12 @@ where
     /// An index with a value less then the result of [`Trits::len`] must be used. Any other value
     /// is undefined behaviour.
     pub unsafe fn set_unchecked(&mut self, index: usize, trit: T::Trit) {
-        debug_assert!(index < self.len());
+        debug_assert!(
+            index < self.0.len(),
+            "Attempt to set trit at index {}, but length of slice is {}",
+            index,
+            self.len(),
+        );
         self.0.set_unchecked(index, trit);
     }
 
@@ -287,15 +303,13 @@ where
     /// This function will panic if the index is not less than the length of this slice.
     // TODO: Should we return `Option<()>` instead?
     pub fn set(&mut self, index: usize, trit: T::Trit) {
-        if index < self.0.len() {
-            unsafe { self.set_unchecked(index, trit) };
-        } else {
-            panic!(
-                "Attempt to set trit at index {}, but length of slice is {}",
-                index,
-                self.len()
-            );
-        }
+        assert!(
+            index < self.0.len(),
+            "Attempt to set trit at index {}, but length of slice is {}",
+            index,
+            self.len(),
+        );
+        unsafe { self.set_unchecked(index, trit) };
     }
 
     /// Returns an iterator over the trits in this slice.
@@ -313,7 +327,10 @@ where
     /// This function will panic if called with a range that contains indices outside this slice,
     /// or the start of the range is greater than its end.
     pub fn subslice(&self, range: Range<usize>) -> &Self {
-        assert!(range.end >= range.start && range.end <= self.len());
+        assert!(
+            range.end >= range.start && range.end <= self.len(),
+            "Sub-slice range must be within the bounds of the source trit slice",
+        );
         unsafe { &*(self.0.slice_unchecked(range) as *const _ as *const Self) }
     }
 
@@ -324,7 +341,10 @@ where
     /// This function will panic if called with a range that contains indices outside this slice,
     /// or the start of the range is greater than its end.
     pub fn subslice_mut(&mut self, range: Range<usize>) -> &mut Self {
-        assert!(range.end >= range.start && range.end <= self.len());
+        assert!(
+            range.end >= range.start && range.end <= self.len(),
+            "Sub-slice range must be within the bounds of the source trit slice",
+        );
         unsafe { &mut *(self.0.slice_unchecked_mut(range) as *mut _ as *mut Self) }
     }
 
@@ -335,7 +355,10 @@ where
     ///
     /// This function will panic if the length of the slices are different
     pub fn copy_from<U: RawEncoding<Trit = T::Trit> + ?Sized>(&mut self, trits: &Trits<U>) {
-        assert!(self.len() == trits.len());
+        assert!(
+            self.len() == trits.len(),
+            "Source trit slice must be the same length as target"
+        );
         for (i, trit) in trits.iter().enumerate() {
             unsafe {
                 self.set_unchecked(i, trit);
@@ -370,7 +393,7 @@ where
         &self,
         chunk_len: usize,
     ) -> impl DoubleEndedIterator<Item = &Self> + ExactSizeIterator<Item = &Self> + '_ {
-        assert!(chunk_len > 0);
+        assert!(chunk_len > 0, "Chunk length must be non-zero");
         (0..self.len())
             .step_by(chunk_len)
             .map(move |i| &self[i..(i + chunk_len).min(self.len())])
@@ -413,7 +436,7 @@ impl<T: Trit> Trits<T1B1<T>> {
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item = &mut Self> + '_ {
-        assert!(chunk_len > 0);
+        assert!(chunk_len > 0, "Chunk length must be non-zero");
         (0..self.len()).step_by(chunk_len).scan(self, move |this, _| {
             let idx = chunk_len.min(this.len());
             let (a, b) = Trits::split_at_mut(this, idx);
@@ -427,7 +450,10 @@ impl<T: Trit> Trits<T1B1<T>> {
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     fn split_at_mut<'a>(this: &mut &'a mut Self, idx: usize) -> (&'a mut Self, &'a mut Self) {
-        assert!(idx <= this.len());
+        assert!(
+            idx <= this.len(),
+            "Cannot split at an index outside the trit slice bounds"
+        );
         (
             unsafe { &mut *(this.0.slice_unchecked_mut(0..idx) as *mut _ as *mut Self) },
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
@@ -458,7 +484,7 @@ impl Trits<T3B1> {
     /// This function will panic if the length of the slice is not a multiple of `3`, or if the
     /// slice is not byte-aligned.
     pub fn as_trytes(&self) -> &[Tryte] {
-        assert!(self.len() % 3 == 0);
+        assert!(self.len() % 3 == 0, "Trit slice length must be a multiple of 3");
         unsafe { &*(self.as_i8_slice() as *const _ as *const _) }
     }
 
@@ -469,7 +495,7 @@ impl Trits<T3B1> {
     /// This function will panic if the length of the slice is not a multiple of `3`, or if the
     /// slice is not byte-aligned.
     pub fn as_trytes_mut(&mut self) -> &mut [Tryte] {
-        assert!(self.len() % 3 == 0);
+        assert!(self.len() % 3 == 0, "Trit slice length must be a multiple of 3");
         unsafe { &mut *(self.as_i8_slice_mut() as *mut _ as *mut _) }
     }
 }
