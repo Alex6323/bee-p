@@ -4,20 +4,20 @@ use bee_transaction::{BundledTransaction as Transaction, Hash as TransactionHash
 
 use async_std::sync::Arc;
 
-pub struct Vertex<Meta> {
+pub struct Vertex<T> {
     trunk: TransactionHash,
     branch: TransactionHash,
     transaction: TransactionRef,
-    meta: Meta,
+    metadata: T,
 }
 
-impl<Meta> Vertex<Meta> {
-    pub fn new(transaction: Transaction, meta: Meta) -> Self {
+impl<T> Vertex<T> {
+    pub fn new(transaction: Transaction, metadata: T) -> Self {
         Self {
             trunk: transaction.trunk().clone(),
             branch: transaction.branch().clone(),
             transaction: TransactionRef(Arc::new(transaction)),
-            meta,
+            metadata,
         }
     }
 
@@ -33,12 +33,12 @@ impl<Meta> Vertex<Meta> {
         &self.transaction
     }
 
-    pub fn get_meta(&self) -> &Meta {
-        &self.meta
+    pub fn get_metadata(&self) -> &T {
+        &self.metadata
     }
 
-    pub fn get_meta_mut(&mut self) -> &mut Meta {
-        &mut self.meta
+    pub fn get_metadata_mut(&mut self) -> &mut T {
+        &mut self.metadata
     }
 }
 
@@ -49,23 +49,24 @@ mod tests {
 
     #[test]
     fn create_new_vertex() {
-        let (hash, tx) = create_random_tx();
+        let (_, tx) = create_random_tx();
+        let metadata = 0b0000_0001u8;
 
-        let vtx = Vertex::new(tx.clone(), 0b0000_0001u8);
+        let vtx = Vertex::new(tx.clone(), metadata);
 
         assert_eq!(tx.trunk(), vtx.get_trunk());
         assert_eq!(tx.branch(), vtx.get_branch());
-        assert_eq!(&tx, vtx.get_transaction());
-        assert_eq!(meta, vtx.get_meta());
+        assert_eq!(tx, **vtx.get_transaction());
+        assert_eq!(metadata, *vtx.get_metadata());
     }
 
     #[test]
     fn update_vertex_meta() {
-        let (hash, tx) = create_random_tx();
+        let (_, tx) = create_random_tx();
 
-        let mut vtx = Vertex::new(tx.clone(), 0b0000_0001u8);
-        *vtx.get_meta_mut() = 0b1111_1110u8;
+        let mut vtx = Vertex::new(tx, 0b0000_0001u8);
+        *vtx.get_metadata_mut() = 0b1111_1110u8;
 
-        assert_eq!(0b1111_1110u8, vtx.get_meta());
+        assert_eq!(0b1111_1110u8, *vtx.get_metadata());
     }
 }

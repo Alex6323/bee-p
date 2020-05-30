@@ -10,8 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    milestone::{tangle::tangle, Milestone, MilestoneBuilder, MilestoneBuilderError},
+    milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
+    tangle::tangle,
 };
 
 use bee_crypto::{Kerl, Sponge};

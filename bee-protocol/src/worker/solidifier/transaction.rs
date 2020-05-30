@@ -9,13 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    milestone::{
-        tangle::{tangle, Flags},
-        MilestoneIndex,
-    },
-    protocol::Protocol,
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_tangle::traversal;
 use bee_transaction::Hash;
@@ -44,10 +38,10 @@ impl TransactionSolidifierWorker {
     async fn solidify(&self, hash: Hash, index: MilestoneIndex) -> bool {
         let mut missing_hashes = HashSet::new();
 
-        traversal::walk_approvees_dfs(
+        traversal::df_walk_approvees(
             &tangle().inner,
             hash,
-            |_, v| v.get_meta().contains(Flags::SOLID),
+            |_, v| v.get_metadata().is_solid(),
             |_, _| {},
             |h| {
                 missing_hashes.insert(*h);

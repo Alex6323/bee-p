@@ -9,10 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! `bee-tangle`
+//! A crate that provides access to the Tangle.
 
-//#![deny(missing_docs)]
-#![allow(dead_code, unused_imports, unused_variables)]
+#![warn(missing_docs)]
 
 pub use tangle::Tangle;
 pub mod traversal;
@@ -20,18 +19,11 @@ pub mod traversal;
 mod tangle;
 mod vertex;
 
-use async_std::{
-    sync::{channel, Arc, Barrier},
-    task::spawn,
-};
-
 use bee_transaction::BundledTransaction as Transaction;
 
-use std::{
-    ops::Deref,
-    ptr,
-    sync::atomic::{AtomicBool, AtomicPtr, Ordering},
-};
+use async_std::sync::Arc;
+
+use std::ops::Deref;
 
 #[derive(Clone)]
 pub struct TransactionRef(pub(crate) Arc<Transaction>);

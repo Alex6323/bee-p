@@ -20,6 +20,40 @@ bitflags! {
     }
 }
 
+impl Flags {
+    pub(crate) fn is_solid(&self) -> bool {
+        self.contains(Flags::SOLID)
+    }
+
+    pub(crate) fn set_solid(&mut self) {
+        self.insert(Flags::SOLID);
+    }
+
+    pub(crate) fn is_tail(&self) -> bool {
+        self.contains(Flags::TAIL)
+    }
+
+    pub(crate) fn set_tail(&mut self) {
+        self.insert(Flags::TAIL);
+    }
+
+    pub(crate) fn is_requested(&self) -> bool {
+        self.contains(Flags::REQUESTED)
+    }
+
+    pub(crate) fn set_requested(&mut self) {
+        self.insert(Flags::REQUESTED);
+    }
+
+    pub(crate) fn is_milestone(&self) -> bool {
+        self.contains(Flags::MILESTONE)
+    }
+
+    pub(crate) fn set_milestone(&mut self) {
+        self.insert(Flags::MILESTONE);
+    }
+}
+
 /// Milestone-based Tangle.
 pub struct MsTangle {
     pub(crate) inner: Tangle<Flags>,
@@ -63,7 +97,7 @@ impl MsTangle {
         self.milestones.insert(index, hash);
 
         self.inner.vertices.get_mut(&hash).map(|mut vtx| {
-            (*vtx.get_meta_mut()).insert(Flags::MILESTONE);
+            (*vtx.get_metadata_mut()).set_milestone();
         });
     }
 
@@ -138,7 +172,7 @@ impl MsTangle {
             self.inner
                 .vertices
                 .get(hash)
-                .map(|vtx| vtx.value().get_meta().contains(Flags::SOLID))
+                .map(|vtx| vtx.value().get_metadata().is_solid())
                 .unwrap_or(false)
         }
     }

@@ -9,10 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    milestone::{tangle::tangle, MilestoneIndex},
-    protocol::Protocol,
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -93,7 +90,7 @@ impl MilestoneSolidifierWorker {
     }
 
     async fn solidify_milestone(&self) {
-        let target_index = tangle().get_solid_milestone_index() + 1.into();
+        let target_index = tangle().get_solid_milestone_index() + MilestoneIndex(1);
 
         if let Some(target_hash) = tangle().get_milestone_hash(target_index.into()) {
             match tangle().is_solid_transaction(&target_hash) {

@@ -10,20 +10,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::MilestoneRequest,
-    milestone::{tangle::tangle, MilestoneIndex},
-    protocol::Protocol,
-    worker::SenderWorker,
+    message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
 };
 
 use bee_network::EndpointId;
-
-use std::cmp::Ordering;
 
 use futures::{channel::oneshot, future::FutureExt, select};
 use log::info;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
+
+use std::cmp::Ordering;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);

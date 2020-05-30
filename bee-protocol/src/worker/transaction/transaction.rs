@@ -11,8 +11,8 @@
 
 use crate::{
     message::{uncompress_transaction_bytes, TransactionBroadcast},
-    milestone::tangle::{tangle, Flags},
     protocol::Protocol,
+    tangle::{tangle, Flags},
     worker::transaction::TinyHashCache,
 };
 
@@ -133,6 +133,8 @@ impl TransactionWorker {
         let (transaction, is_new) = tangle().insert_transaction(transaction, hash, Flags::empty());
 
         if is_new {
+            Protocol::get().metrics.new_transactions_received_inc();
+
             if !tangle().is_synced() && Protocol::get().requested.is_empty() {
                 Protocol::trigger_milestone_solidification().await;
             }

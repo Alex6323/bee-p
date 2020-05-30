@@ -18,7 +18,7 @@ use bee_common::logger_init;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
-use bee_protocol::{tangle, Protocol};
+use bee_protocol::{tangle::tangle, Protocol};
 use bee_snapshot::LocalSnapshot;
 use bee_transaction::Hash;
 

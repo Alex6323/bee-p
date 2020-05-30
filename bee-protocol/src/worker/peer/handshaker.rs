@@ -14,9 +14,9 @@ use crate::{
     message::{
         messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
     },
-    milestone::tangle::tangle,
     peer::Peer,
     protocol::Protocol,
+    tangle::tangle,
     worker::PeerWorker,
 };
 

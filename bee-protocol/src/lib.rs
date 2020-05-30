@@ -11,6 +11,8 @@
 
 #![recursion_limit = "256"]
 
+pub mod tangle;
+
 mod config;
 mod message;
 mod milestone;
@@ -20,5 +22,5 @@ mod util;
 mod worker;
 
 pub use config::{ProtocolConfig, ProtocolConfigBuilder};
-pub use milestone::{tangle::tangle, Milestone, MilestoneIndex};
+pub use milestone::{Milestone, MilestoneIndex};
 pub use protocol::{Protocol, ProtocolMetrics};

@@ -11,7 +11,7 @@
 
 use crate::{
     message::{compress_transaction_bytes, TransactionBroadcast, TransactionRequest},
-    milestone::tangle::tangle,
+    tangle::tangle,
     worker::SenderWorker,
 };
 

@@ -11,7 +11,7 @@
 
 use crate::{
     config::ProtocolConfig,
-    milestone::{tangle, MilestoneIndex},
+    milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
     util::WaitPriorityQueue,
@@ -92,7 +92,7 @@ impl Protocol {
             return;
         }
 
-        tangle::init();
+        crate::tangle::init();
 
         let (transaction_worker_tx, transaction_worker_rx) = mpsc::channel(config.workers.transaction_worker_bound);
         let (transaction_worker_shutdown_tx, transaction_worker_shutdown_rx) = oneshot::channel();

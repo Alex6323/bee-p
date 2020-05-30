@@ -53,10 +53,10 @@ impl Message for Heartbeat {
         let mut message = Self::default();
 
         let (bytes, next) = bytes.split_at(SOLID_MILESTONE_INDEX_SIZE);
-        message.solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size")).into();
+        message.solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, _) = next.split_at(SNAPSHOT_MILESTONE_INDEX_SIZE);
-        message.snapshot_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size")).into();
+        message.snapshot_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         message
     }

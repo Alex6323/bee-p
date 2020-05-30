@@ -1,16 +1,15 @@
-use crate::{vertex::Vertex, TransactionRef};
+use crate::{vertex::Vertex, TransactionRef as TxRef};
 
-use bee_transaction::{BundledTransaction as Transaction, Hash as TransactionHash, TransactionVertex};
+use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVertex};
 
 use dashmap::{mapref::entry::Entry, DashMap};
 
-// TODO: Should we even add Key and Value type parameters?
-pub struct Tangle<Meta> {
-    pub vertices: DashMap<TransactionHash, Vertex<Meta>>,
-    pub approvers: DashMap<TransactionHash, Vec<TransactionHash>>,
+pub struct Tangle<T> {
+    pub vertices: DashMap<TxHash, Vertex<T>>,
+    pub approvers: DashMap<TxHash, Vec<TxHash>>,
 }
 
-impl<Meta> Default for Tangle<Meta> {
+impl<T> Default for Tangle<T> {
     fn default() -> Self {
         Self {
             vertices: DashMap::new(),
@@ -19,20 +18,15 @@ impl<Meta> Default for Tangle<Meta> {
     }
 }
 
-impl<Meta> Tangle<Meta> {
+impl<T> Tangle<T> {
+    /// Creates a new Tangle.
     pub fn new() -> Self {
-        Self {
-            vertices: DashMap::new(),
-            approvers: DashMap::new(),
-        }
+        Self::default()
     }
 
-    pub fn insert_transaction(
-        &self,
-        transaction: Transaction,
-        hash: TransactionHash,
-        meta: Meta,
-    ) -> (TransactionRef, bool) {
+    /// Inserts a transaction, and returns a thread-safe reference to it. If the transaction was new `true` is returned,
+    /// otherwise `false`.
+    pub fn insert_transaction(&self, transaction: Tx, hash: TxHash, metadata: T) -> (TxRef, bool) {
         self.add_approver(*transaction.trunk(), hash);
 
         if transaction.trunk() != transaction.branch() {
@@ -42,7 +36,7 @@ impl<Meta> Tangle<Meta> {
         match self.vertices.entry(hash) {
             Entry::Occupied(entry) => (entry.get().get_transaction().clone(), false),
             Entry::Vacant(entry) => {
-                let vtx = Vertex::new(transaction, meta);
+                let vtx = Vertex::new(transaction, metadata);
                 let tx_ref = vtx.get_transaction().clone();
                 entry.insert(vtx);
                 (tx_ref, true)
@@ -51,7 +45,7 @@ impl<Meta> Tangle<Meta> {
     }
 
     #[inline]
-    fn add_approver(&self, approvee: TransactionHash, approver: TransactionHash) {
+    fn add_approver(&self, approvee: TxHash, approver: TxHash) {
         match self.approvers.entry(approvee) {
             Entry::Occupied(mut entry) => {
                 let approvers = entry.get_mut();
@@ -63,14 +57,55 @@ impl<Meta> Tangle<Meta> {
         }
     }
 
-    pub fn get_transaction(&self, hash: &TransactionHash) -> Option<TransactionRef> {
+    pub fn get_transaction(&self, hash: &TxHash) -> Option<TxRef> {
         self.vertices.get(hash).map(|vtx| vtx.value().get_transaction().clone())
     }
 
-    pub fn update_meta(&self, hash: &TransactionHash, meta: Meta) {
+    /// Returns whether the transaction is stored in the Tangle.
+    pub fn contains_transaction(&self, hash: &TxHash) -> bool {
+        self.vertices.contains_key(hash)
+    }
+
+    pub fn update_metadata(&self, hash: &TxHash, metadata: T) {
         self.vertices.get_mut(hash).map(|mut vtx| {
             let vtx = vtx.value_mut();
-            *vtx.get_meta_mut() = meta;
+            *vtx.get_metadata_mut() = metadata;
         });
+    }
+
+    /// Returns the current size of the Tangle.
+    pub fn size(&self) -> usize {
+        self.vertices.len()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn num_approvers(&self, hash: &TxHash) -> usize {
+        self.approvers.get(hash).map_or(0, |r| r.value().len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use bee_test::transaction::create_random_tx;
+
+    #[test]
+    fn insert_and_contains() {
+        let tangle = Tangle::new();
+
+        let (hash, tx) = create_random_tx();
+
+        let (_, is_new) = tangle.insert_transaction(tx.clone(), hash.clone(), ());
+
+        assert!(is_new);
+        assert_eq!(1, tangle.size());
+        assert!(tangle.contains_transaction(&hash));
+
+        let (_, is_new) = tangle.insert_transaction(tx, hash, ());
+
+        assert!(!is_new);
+        assert_eq!(1, tangle.size());
+        assert!(tangle.contains_transaction(&hash));
     }
 }

@@ -10,22 +10,19 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::TransactionRequest,
-    milestone::{tangle::tangle, MilestoneIndex},
-    protocol::Protocol,
-    worker::SenderWorker,
+    message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
 };
 
 use bee_ternary::T5B1Buf;
 use bee_transaction::Hash;
-
-use std::cmp::Ordering;
 
 use bytemuck::cast_slice;
 use futures::{channel::oneshot, future::FutureExt, select};
 use log::info;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
+
+use std::cmp::Ordering;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
