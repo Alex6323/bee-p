@@ -1,21 +1,18 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundle::Bundle,
+    bundled::{Bundle, BundledTransaction, BundledTransactionField, BundledTransactions},
     constants::IOTA_SUPPLY,
-    transaction::{Transaction, TransactionField, Transactions},
+    TransactionVertex,
 };
 
 use bee_crypto::{Kerl, Sponge};
@@ -44,7 +41,7 @@ pub struct IncomingValidated;
 impl IncomingBundleBuilderStage for IncomingValidated {}
 
 pub struct StagedIncomingBundleBuilder<E, P, S> {
-    transactions: Transactions,
+    transactions: BundledTransactions,
     essence_sponge: PhantomData<E>,
     public_key: PhantomData<P>,
     stage: PhantomData<S>,
@@ -60,7 +57,7 @@ where
     // TODO TEST
     pub fn new() -> Self {
         Self {
-            transactions: Transactions::new(),
+            transactions: BundledTransactions::new(),
             essence_sponge: PhantomData,
             public_key: PhantomData,
             stage: PhantomData,
@@ -68,7 +65,7 @@ where
     }
 
     // TODO TEST
-    pub fn push(&mut self, transaction: Transaction) {
+    pub fn push(&mut self, transaction: BundledTransaction) {
         self.transactions.push(transaction);
     }
 
@@ -181,10 +178,11 @@ where
 mod tests {
 
     use super::*;
-    use crate::transaction::{Address, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionBuilder, Value};
 
-    fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
-        TransactionBuilder::new()
+    use crate::bundled::{Address, BundledTransactionBuilder, Hash, Index, Nonce, Payload, Tag, Timestamp, Value};
+
+    fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
+        BundledTransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
             .with_value(Value::from_inner_unchecked(0))

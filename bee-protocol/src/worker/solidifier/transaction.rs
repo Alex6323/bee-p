@@ -1,21 +1,18 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol};
 
-use bee_bundle::Hash;
 use bee_tangle::tangle;
+use bee_transaction::Hash;
 
 use std::collections::HashSet;
 
@@ -51,15 +48,14 @@ impl TransactionSolidifierWorker {
         );
 
         // TODO refactor with async closures when stabilized
-        match missing_hashes.is_empty() {
-            true => true,
-            false => {
-                for missing_hash in missing_hashes {
-                    Protocol::request_transaction(missing_hash, index).await;
-                }
-
-                false
+        if missing_hashes.is_empty() {
+            true
+        } else {
+            for missing_hash in missing_hashes {
+                Protocol::request_transaction(missing_hash, index).await;
             }
+
+            false
         }
     }
 
@@ -68,7 +64,7 @@ impl TransactionSolidifierWorker {
         receiver: mpsc::Receiver<TransactionSolidifierWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[TransactionSolidifierWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -86,7 +82,7 @@ impl TransactionSolidifierWorker {
             }
         }
 
-        info!("[TransactionSolidifierWorker ] Stopped.");
+        info!("Stopped.");
     }
 }
 

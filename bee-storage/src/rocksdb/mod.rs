@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 extern crate rocksdb;
 
@@ -22,10 +19,8 @@ use crate::storage::{
 };
 
 use bee_protocol::{Milestone, MilestoneIndex};
-
-use bee_bundle::{Hash, Transaction, TransactionField};
-
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
+use bee_transaction::{BundledTransaction as Transaction, BundledTransactionField, Hash, TransactionVertex};
 
 use std::{
     collections::{HashMap, HashSet},
@@ -56,9 +51,8 @@ struct Approvees<'a> {
 
 impl<'a> Approvees<'a> {
     fn into_trits_allocated(&self, buf: &mut TritBuf<T1B1Buf>) {
-        buf.copy_raw_bytes(self.trunk.as_trits(), 0, Hash::trit_len());
-
-        buf.copy_raw_bytes(self.branch.as_trits(), Hash::trit_len(), Hash::trit_len());
+        buf[..Hash::trit_len()].copy_from(self.trunk.as_trits());
+        buf[Hash::trit_len()..][..Hash::trit_len()].copy_from(self.branch.as_trits());
     }
 }
 
@@ -187,11 +181,12 @@ impl StorageBackend for RocksDbBackendStorage {
     }
 
     async fn establish_connection(&mut self, url: &str) -> Result<(), RocksDbBackendError> {
-        let _res = self.0.connection.establish_connection(url).await?;
+        self.0.connection.establish_connection(url).await?;
         Ok(())
     }
+
     async fn destroy_connection(&mut self) -> Result<(), RocksDbBackendError> {
-        let _res = self.0.connection.destroy_connection().await?;
+        self.0.connection.destroy_connection().await?;
         Ok(())
     }
 
@@ -202,19 +197,16 @@ impl StorageBackend for RocksDbBackendStorage {
 
         let transaction_cf_hash_to_trunk = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
 
-        for (key, value) in db
-            .iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start)
-            .unwrap()
-        {
+        for (key, value) in db.iterator_cf(&transaction_cf_hash_to_trunk, IteratorMode::Start) {
             let (trunk, branch) = decode_aprovees(value.as_ref());
             let approver = decode_hash(key.as_ref());
             hash_to_approvers
                 .entry(trunk)
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .insert(approver);
             hash_to_approvers
                 .entry(branch)
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .insert(approver);
         }
 
@@ -223,29 +215,29 @@ impl StorageBackend for RocksDbBackendStorage {
 
     fn map_missing_transaction_hashes_to_approvers(
         &self,
-        all_hashes: HashSet<bee_bundle::Hash>,
+        all_hashes: HashSet<Hash>,
     ) -> Result<MissingHashesToRCApprovers, RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
 
         let mut missing_to_approvers = HashMap::new();
         let transaction_cf_hash_to_aprovees = db.cf_handle(TRANSACTION_CF_HASH_TO_APROVEES).unwrap();
-        for (key, value) in db.iterator_cf(&transaction_cf_hash_to_aprovees, IteratorMode::Start)? {
+        for (key, value) in db.iterator_cf(&transaction_cf_hash_to_aprovees, IteratorMode::Start) {
             let (trunk, branch) = decode_aprovees(value.as_ref());
             let approver = decode_hash(key.as_ref());
 
             if !all_hashes.contains(&trunk) {
-                let optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(approver));
+                let optional_approver_rc = Some(Rc::<Hash>::new(approver));
                 missing_to_approvers
                     .entry(trunk)
-                    .or_insert(HashSet::new())
+                    .or_insert_with(HashSet::new)
                     .insert(optional_approver_rc.clone().unwrap());
             }
 
             if !all_hashes.contains(&branch) {
-                let optional_approver_rc = Some(Rc::<bee_bundle::Hash>::new(approver));
+                let optional_approver_rc = Some(Rc::<Hash>::new(approver));
                 missing_to_approvers
                     .entry(branch)
-                    .or_insert(HashSet::new())
+                    .or_insert_with(HashSet::new)
                     .insert(optional_approver_rc.clone().unwrap());
             }
         }
@@ -253,11 +245,7 @@ impl StorageBackend for RocksDbBackendStorage {
         Ok(missing_to_approvers)
     }
     // Implement all methods here
-    async fn insert_transaction(
-        &self,
-        tx_hash: bee_bundle::Hash,
-        tx: bee_bundle::Transaction,
-    ) -> Result<(), RocksDbBackendError> {
+    async fn insert_transaction(&self, tx_hash: Hash, tx: Transaction) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
 
         let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
@@ -294,10 +282,7 @@ impl StorageBackend for RocksDbBackendStorage {
         Ok(())
     }
 
-    async fn insert_transactions(
-        &self,
-        transactions: HashMap<bee_bundle::Hash, bee_bundle::Transaction>,
-    ) -> Result<(), Self::StorageError> {
+    async fn insert_transactions(&self, transactions: HashMap<Hash, Transaction>) -> Result<(), Self::StorageError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let mut batch = rocksdb::WriteBatch::default();
         let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
@@ -313,7 +298,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 &transaction_cf_hash_to_transaction,
                 cast_slice(hash_buf.as_i8_slice()),
                 cast_slice(tx_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
-            )?;
+            );
 
             let aprovees = Approvees {
                 trunk: tx.trunk(),
@@ -325,7 +310,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 &transaction_cf_hash_to_aprovees,
                 cast_slice(hash_buf.as_i8_slice()),
                 cast_slice(aprovees_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
-            )?;
+            );
         }
 
         let mut write_options = WriteOptions::default();
@@ -336,10 +321,7 @@ impl StorageBackend for RocksDbBackendStorage {
         Ok(())
     }
 
-    async fn find_transaction(
-        &self,
-        tx_hash: bee_bundle::Hash,
-    ) -> Result<bee_bundle::Transaction, RocksDbBackendError> {
+    async fn find_transaction(&self, tx_hash: Hash) -> Result<Transaction, RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
         let res = db.get_cf(
@@ -356,7 +338,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
     async fn update_transactions_set_solid(
         &self,
-        transaction_hashes: HashSet<bee_bundle::Hash>,
+        transaction_hashes: HashSet<Hash>,
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let mut batch = rocksdb::WriteBatch::default();
@@ -367,7 +349,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 &transaction_cf_hash_to_solid,
                 cast_slice(hash_buf.as_i8_slice()),
                 unsafe { mem::transmute::<bool, [u8; 1]>(true) },
-            )?;
+            );
         }
 
         let mut write_options = WriteOptions::default();
@@ -381,7 +363,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
     async fn update_transactions_set_snapshot_index(
         &self,
-        transaction_hashes: HashSet<bee_bundle::Hash>,
+        transaction_hashes: HashSet<Hash>,
         snapshot_index: MilestoneIndex,
     ) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
@@ -393,7 +375,7 @@ impl StorageBackend for RocksDbBackendStorage {
                 &transaction_cf_hash_to_snapshot_index,
                 cast_slice(hash_buf.as_i8_slice()),
                 snapshot_index.to_le_bytes(),
-            )?;
+            );
         }
 
         let mut write_options = WriteOptions::default();
@@ -454,17 +436,14 @@ impl StorageBackend for RocksDbBackendStorage {
         Ok(solid_states)
     }
 
-    async fn delete_transactions(
-        &self,
-        transaction_hashes: &HashSet<bee_bundle::Hash>,
-    ) -> Result<(), RocksDbBackendError> {
+    async fn delete_transactions(&self, transaction_hashes: &HashSet<Hash>) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let mut batch = rocksdb::WriteBatch::default();
         let transaction_cf_hash_to_transaction = db.cf_handle(TRANSACTION_CF_HASH_TO_TRANSACTION).unwrap();
 
         for hash in transaction_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
-            batch.delete_cf(&transaction_cf_hash_to_transaction, cast_slice(hash_buf.as_i8_slice()))?;
+            batch.delete_cf(&transaction_cf_hash_to_transaction, cast_slice(hash_buf.as_i8_slice()));
         }
 
         let mut write_options = WriteOptions::default();
@@ -496,7 +475,7 @@ impl StorageBackend for RocksDbBackendStorage {
         Ok(())
     }
 
-    async fn find_milestone(&self, milestone_hash: bee_bundle::Hash) -> Result<Milestone, RocksDbBackendError> {
+    async fn find_milestone(&self, milestone_hash: Hash) -> Result<Milestone, RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
         let milestone_cf_hash_to_index = db.cf_handle(MILESTONE_CF_HASH_TO_INDEX).unwrap();
         let res = db.get_cf(
@@ -513,7 +492,7 @@ impl StorageBackend for RocksDbBackendStorage {
         Ok(Milestone::new(milestone_hash, u32::from_le_bytes(index_buf)))
     }
 
-    async fn delete_milestones(&self, milestone_hashes: &HashSet<bee_bundle::Hash>) -> Result<(), RocksDbBackendError> {
+    async fn delete_milestones(&self, milestone_hashes: &HashSet<Hash>) -> Result<(), RocksDbBackendError> {
         let db = self.0.connection.db.as_ref().unwrap();
 
         let milestone_cf_hash_to_index = db.cf_handle(MILESTONE_CF_HASH_TO_INDEX).unwrap();
@@ -521,7 +500,7 @@ impl StorageBackend for RocksDbBackendStorage {
 
         for hash in milestone_hashes {
             let hash_buf = hash.to_inner().encode::<T5B1Buf>();
-            batch.delete_cf(&milestone_cf_hash_to_index, cast_slice(hash_buf.as_i8_slice()))?;
+            batch.delete_cf(&milestone_cf_hash_to_index, cast_slice(hash_buf.as_i8_slice()));
         }
 
         let mut write_options = WriteOptions::default();

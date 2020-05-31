@@ -1,26 +1,23 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
 };
 
-use bee_bundle::Hash;
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{PublicKey, RecoverableSignature};
 use bee_tangle::tangle;
+use bee_transaction::{Hash, TransactionVertex};
 
 use std::marker::PhantomData;
 
@@ -68,7 +65,7 @@ where
             .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
         if !transaction.is_tail() {
-            Err(MilestoneValidatorWorkerError::NotATail)?;
+            return Err(MilestoneValidatorWorkerError::NotATail);
         }
 
         builder.push((*transaction).clone());
@@ -85,7 +82,7 @@ where
         Ok(builder
             .depth(Protocol::get().config.coordinator.depth)
             .validate()
-            .map_err(|e| MilestoneValidatorWorkerError::InvalidMilestone(e))?
+            .map_err(MilestoneValidatorWorkerError::InvalidMilestone)?
             .build())
     }
 
@@ -95,7 +92,7 @@ where
         receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[MilestoneValidatorWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -111,7 +108,7 @@ where
                                 tangle().add_milestone(milestone.index.into(), milestone.hash);
                                 // TODO deref ? Why not .into() ?
                                 if milestone.index > *tangle().get_last_milestone_index() {
-                                    info!("[MilestoneValidatorWorker ] New milestone #{}.", milestone.index);
+                                    info!("New milestone #{}.", milestone.index);
                                     tangle().update_last_milestone_index(milestone.index.into());
                                 }
                                 // TODO only trigger if index == last solid index ?
@@ -121,7 +118,7 @@ where
                             Err(e) => {
                                 match e {
                                     MilestoneValidatorWorkerError::IncompleteBundle => {},
-                                    _ => debug!("[MilestoneValidatorWorker ] Invalid milestone bundle: {:?}.", e)
+                                    _ => debug!("Invalid milestone bundle: {:?}.", e)
                                 }
                             }
                         }
@@ -133,7 +130,7 @@ where
             }
         }
 
-        info!("[MilestoneValidatorWorker ] Stopped.");
+        info!("Stopped.");
     }
 }
 

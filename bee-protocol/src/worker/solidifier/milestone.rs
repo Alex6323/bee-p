@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::protocol::Protocol;
 
@@ -97,17 +94,16 @@ impl MilestoneSolidifierWorker {
         let target_index = *tangle().get_solid_milestone_index() + 1;
 
         if let Some(target_hash) = tangle().get_milestone_hash(target_index.into()) {
-            match tangle().is_solid_transaction(&target_hash) {
-                true => {
-                    // TODO set confirmation index + trigger ledger
-                    tangle().update_solid_milestone_index(target_index.into());
-                    Protocol::broadcast_heartbeat(
-                        *tangle().get_solid_milestone_index(),
-                        *tangle().get_snapshot_milestone_index(),
-                    )
-                    .await;
-                }
-                false => Protocol::trigger_transaction_solidification(target_hash, target_index).await,
+            if tangle().is_solid_transaction(&target_hash) {
+                // TODO set confirmation index + trigger ledger
+                tangle().update_solid_milestone_index(target_index.into());
+                Protocol::broadcast_heartbeat(
+                    *tangle().get_solid_milestone_index(),
+                    *tangle().get_snapshot_milestone_index(),
+                )
+                .await;
+            } else {
+                Protocol::trigger_transaction_solidification(target_hash, target_index).await
             };
         };
     }
@@ -117,7 +113,7 @@ impl MilestoneSolidifierWorker {
         receiver: mpsc::Receiver<MilestoneSolidifierWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[MilestoneSolidifierWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -141,7 +137,7 @@ impl MilestoneSolidifierWorker {
             }
         }
 
-        info!("[MilestoneSolidifierWorker ] Stopped.");
+        info!("Stopped.");
     }
 }
 

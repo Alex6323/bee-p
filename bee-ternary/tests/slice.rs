@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use std::convert::{TryFrom, TryInto};
 
@@ -108,7 +105,7 @@ fn set_generic<T: raw::RawEncodingBuf + Clone>() {
             }
 
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
 
@@ -148,7 +145,7 @@ fn set_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
             }
 
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
 
@@ -165,7 +162,7 @@ fn chunks_generic<T: raw::RawEncodingBuf + Clone>() {
         for (a, a_i8) in a.chunks(chunk_len).zip(a_i8.chunks(chunk_len)) {
             assert_eq!(a.len(), a_i8.len());
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }
@@ -180,7 +177,7 @@ fn chunks_generic_unbalanced<T: raw::RawEncodingBuf + Clone>() {
         for (a, a_i8) in a.chunks(chunk_len).zip(a_i8.chunks(chunk_len)) {
             assert_eq!(a.len(), a_i8.len());
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }
@@ -249,7 +246,7 @@ fn chunks_mut() {
         for (a, a_i8) in a.chunks_mut(chunk_len).zip(a_i8.chunks_mut(chunk_len)) {
             assert_eq!(a.len(), a_i8.len());
             assert!(a
-                .trits()
+                .iter()
                 .zip(a_i8.iter())
                 .all(|(a, b)| a == (*b).try_into().unwrap_or_else(|_| unreachable!())));
         }

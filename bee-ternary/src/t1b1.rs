@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{trit::ShiftTernary, Btrit, RawEncoding, RawEncodingBuf, Trit};
 use std::{convert::TryInto, hash, marker::PhantomData, ops::Range};
@@ -23,11 +20,11 @@ pub struct T1B1<T: Trit = Btrit> {
 
 impl<T: Trit> T1B1<T> {
     unsafe fn make(ptr: *const T, offset: usize, len: usize) -> *const Self {
-        std::mem::transmute((ptr.offset(offset as isize), len))
+        std::mem::transmute((ptr.add(offset), len))
     }
 
     unsafe fn ptr(&self, index: usize) -> *const T {
-        (self.inner.as_ptr() as *const T).offset(index as isize)
+        (self.inner.as_ptr() as *const T).add(index)
     }
 
     pub fn as_raw_slice(&self) -> &[T] {
@@ -89,12 +86,12 @@ where
     }
 
     unsafe fn from_raw_unchecked(b: &[i8], num_trits: usize) -> &Self {
-        debug_assert!(num_trits == b.len());
+        assert!(num_trits <= b.len());
         &*Self::make(b.as_ptr() as *const _, 0, num_trits)
     }
 
     unsafe fn from_raw_unchecked_mut(b: &mut [i8], num_trits: usize) -> &mut Self {
-        debug_assert!(num_trits == b.len());
+        assert!(num_trits <= b.len());
         &mut *(Self::make(b.as_ptr() as *const _, 0, num_trits) as *mut _)
     }
 }

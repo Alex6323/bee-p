@@ -1,20 +1,17 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
     message::{tlv_into_bytes, Heartbeat, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest},
-    peer::Peer,
+    peer::HandshakedPeer,
     protocol::Protocol,
 };
 
@@ -31,39 +28,16 @@ use futures::{
 };
 use log::warn;
 
-pub(crate) struct SenderContext {
-    pub(crate) milestone_request: (mpsc::Sender<MilestoneRequest>, oneshot::Sender<()>),
-    pub(crate) transaction_broadcast: (mpsc::Sender<TransactionBroadcast>, oneshot::Sender<()>),
-    pub(crate) transaction_request: (mpsc::Sender<TransactionRequest>, oneshot::Sender<()>),
-    pub(crate) heartbeat: (mpsc::Sender<Heartbeat>, oneshot::Sender<()>),
-}
-
-impl SenderContext {
-    pub(crate) fn new(
-        milestone_request: (mpsc::Sender<MilestoneRequest>, oneshot::Sender<()>),
-        transaction_broadcast: (mpsc::Sender<TransactionBroadcast>, oneshot::Sender<()>),
-        transaction_request: (mpsc::Sender<TransactionRequest>, oneshot::Sender<()>),
-        heartbeat: (mpsc::Sender<Heartbeat>, oneshot::Sender<()>),
-    ) -> Self {
-        Self {
-            milestone_request,
-            transaction_broadcast,
-            transaction_request,
-            heartbeat,
-        }
-    }
-}
-
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
-    peer: Arc<Peer>,
+    peer: Arc<HandshakedPeer>,
     _message_type: PhantomData<M>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
-            pub(crate) fn new(network: Network, peer: Arc<Peer>) -> Self {
+            pub(crate) fn new(network: Network, peer: Arc<HandshakedPeer>) -> Self {
                 Self {
                     network,
                     peer,
@@ -72,7 +46,7 @@ macro_rules! implement_sender_worker {
             }
 
             pub(crate) async fn send(epid: &EndpointId, message: $type) {
-                if let Some(context) = Protocol::get().contexts.get(&epid) {
+                if let Some(context) = Protocol::get().peer_manager.handshaked_peers.get(&epid) {
                     if let Err(e) = context
                         .$sender
                         .0
@@ -81,7 +55,8 @@ macro_rules! implement_sender_worker {
                         .send(message)
                         .await
                     {
-                        warn!("[SenderWorker ] Sending message failed: {:?}.", e);
+                        // TODO log actual message type ?
+                        warn!("Sending message to {} failed: {:?}.", epid, e);
                     }
                 };
             }
@@ -112,8 +87,9 @@ macro_rules! implement_sender_worker {
                                         Protocol::get().metrics.$incrementor();
                                     }
                                     Err(e) => {
+                                        // TODO log actual message type ?
                                         warn!(
-                                            "[SenderWorker({}) ] Sending message failed: {}.",
+                                            "Sending message to {} failed: {:?}.",
                                             self.peer.epid, e
                                         );
                                     }
@@ -134,3 +110,5 @@ implement_sender_worker!(MilestoneRequest, milestone_request, milestone_request_
 implement_sender_worker!(TransactionBroadcast, transaction_broadcast, transaction_broadcast_sent);
 implement_sender_worker!(TransactionRequest, transaction_request, transaction_request_sent);
 implement_sender_worker!(Heartbeat, heartbeat, heartbeat_sent);
+
+// TODO is this really necessary ?

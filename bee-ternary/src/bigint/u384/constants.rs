@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use lazy_static::lazy_static;
 use std::convert::TryFrom;
@@ -26,9 +23,9 @@ use crate::{
 use super::U384;
 
 lazy_static! {
-    pub static ref BE_U32_HALF_MAX: U384<BigEndian, U32Repr> = { (*LE_U32_HALF_MAX).into() };
+    pub static ref BE_U32_HALF_MAX: U384<BigEndian, U32Repr> = (*LE_U32_HALF_MAX).into();
     pub static ref BE_U32_HALF_MAX_T242: U384<BigEndian, U32Repr> =
-        { Into::<U384<BigEndian, U32Repr>>::into(*LE_U32_HALF_MAX_T242) };
+        Into::<U384<BigEndian, U32Repr>>::into(*LE_U32_HALF_MAX_T242);
     pub static ref LE_U32_HALF_MAX: U384<LittleEndian, U32Repr> = {
         let mut u384_max = U384::<LittleEndian, U32Repr>::max();
         u384_max.divide_by_two();

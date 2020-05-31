@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use std::{
     collections::{HashSet, VecDeque},
@@ -35,7 +32,7 @@ impl CustomHasher {
 impl Default for CustomHasher {
     fn default() -> Self {
         Self {
-            result: 17241709254077376921,
+            result: 17_241_709_254_077_376_921,
         }
     }
 }
@@ -70,7 +67,7 @@ impl TinyHashCache {
     pub fn insert(&mut self, bytes: &[u8]) -> bool {
         let hash = xx_hash(bytes);
 
-        if self.contains(&hash) {
+        if self.contains(hash) {
             return false;
         }
 
@@ -85,8 +82,8 @@ impl TinyHashCache {
         true
     }
 
-    fn contains(&self, hash: &u64) -> bool {
-        self.cache.contains(hash)
+    fn contains(&self, hash: u64) -> bool {
+        self.cache.contains(&hash)
     }
 
     fn len(&self) -> usize {
@@ -136,11 +133,10 @@ mod tests {
 
         let first_buf = &[1, 2, 3];
         let second_buf = &[3, 4, 5];
-        let second_buf_clone = second_buf.clone();
 
         assert_eq!(cache.insert(first_buf), true);
         assert_eq!(cache.insert(second_buf), true);
         assert_eq!(cache.len(), 1);
-        assert_eq!(cache.insert(&second_buf_clone), false);
+        assert_eq!(cache.insert(second_buf), false);
     }
 }

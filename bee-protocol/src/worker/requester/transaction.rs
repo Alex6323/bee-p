@@ -1,22 +1,19 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
 
-use bee_bundle::Hash;
 use bee_tangle::tangle;
 use bee_ternary::T5B1Buf;
+use bee_transaction::Hash;
 
 use std::cmp::Ordering;
 
@@ -54,18 +51,17 @@ impl TransactionRequesterWorker {
     }
 
     async fn process_request(&mut self, hash: Hash, index: MilestoneIndex) {
-        if Protocol::get().contexts.is_empty() {
+        if Protocol::get().peer_manager.handshaked_peers.is_empty() {
             return;
         }
 
         // TODO check that neighbor may have the tx (by the index)
         Protocol::get().requested.insert(hash, index);
 
-        match Protocol::get()
-            .contexts
-            .iter()
-            .nth(self.rng.gen_range(0, Protocol::get().contexts.len()))
-        {
+        match Protocol::get().peer_manager.handshaked_peers.iter().nth(
+            self.rng
+                .gen_range(0, Protocol::get().peer_manager.handshaked_peers.len()),
+        ) {
             Some(entry) => {
                 SenderWorker::<TransactionRequest>::send(
                     entry.key(),
@@ -73,12 +69,12 @@ impl TransactionRequesterWorker {
                 )
                 .await;
             }
-            None => return,
+            None => {}
         }
     }
 
     pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
-        info!("[TransactionRequesterWorker ] Running.");
+        info!("Running.");
 
         let mut shutdown_fused = shutdown.fuse();
 
@@ -98,6 +94,6 @@ impl TransactionRequesterWorker {
             }
         }
 
-        info!("[TransactionRequesterWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

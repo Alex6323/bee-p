@@ -1,21 +1,18 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 extern crate serde;
 
-use bee_bundle::{Address, Hash};
 use bee_protocol::{Milestone, MilestoneIndex};
+use bee_transaction::{Address, BundledTransaction as Transaction, Hash};
 
 use std::{
     collections::{HashMap, HashSet},
@@ -71,12 +68,9 @@ pub trait StorageBackend {
         all_hashes: HashSet<Hash>,
     ) -> Result<MissingHashesToRCApprovers, Self::StorageError>;
 
-    async fn insert_transaction(&self, tx_hash: Hash, tx: bee_bundle::Transaction) -> Result<(), Self::StorageError>;
-    async fn insert_transactions(
-        &self,
-        transactions: HashMap<Hash, bee_bundle::Transaction>,
-    ) -> Result<(), Self::StorageError>;
-    async fn find_transaction(&self, tx_hash: Hash) -> Result<bee_bundle::Transaction, Self::StorageError>;
+    async fn insert_transaction(&self, tx_hash: Hash, tx: Transaction) -> Result<(), Self::StorageError>;
+    async fn insert_transactions(&self, transactions: HashMap<Hash, Transaction>) -> Result<(), Self::StorageError>;
+    async fn find_transaction(&self, tx_hash: Hash) -> Result<Transaction, Self::StorageError>;
     async fn update_transactions_set_solid(&self, transaction_hashes: HashSet<Hash>) -> Result<(), Self::StorageError>;
     async fn update_transactions_set_snapshot_index(
         &self,

@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::address::{Address, Port};
 
@@ -52,7 +49,7 @@ impl NetworkConfigBuilder {
     }
 
     /// Builds the network config.
-    pub fn build(self) -> NetworkConfig {
+    pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
             binding_port: self.binding_port.unwrap_or(DEFAULT_BINDING_PORT),
             binding_addr: self.binding_addr.unwrap_or(DEFAULT_BINDING_ADDR),
@@ -69,11 +66,8 @@ pub struct NetworkConfig {
 
 impl NetworkConfig {
     /// Returns a builder for this config.
-    pub fn builder() -> NetworkConfigBuilder {
-        NetworkConfigBuilder {
-            binding_port: None,
-            binding_addr: None,
-        }
+    pub fn build() -> NetworkConfigBuilder {
+        NetworkConfigBuilder::new()
     }
 
     pub(crate) fn socket_addr(&self) -> Address {

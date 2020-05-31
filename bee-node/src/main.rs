@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 mod config;
 mod constants;
@@ -28,15 +25,15 @@ fn main() {
         Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
             Ok(config_builder) => config_builder,
             Err(e) => {
-                panic!("[Node ] Error parsing .toml config file.\n{:?}", e);
+                panic!("[Node ] Error parsing config file: {:?}", e);
             }
         },
         Err(e) => {
-            panic!("[Node ] Error reading .toml config file.\n{:?}", e);
+            panic!("[Node ] Error reading config file: {:?}", e);
         }
     };
 
-    let config = config_builder.build();
+    let config = config_builder.finish();
 
     let (network, shutdown, receiver) = bee_network::init(config.network);
 

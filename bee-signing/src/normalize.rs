@@ -1,18 +1,15 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, Trits, MAX_TRYTE_VALUE, MIN_TRYTE_VALUE, T3B1};
+use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, Trits, Tryte, T3B1};
 
 const SECURITY_LEVEL_MAX: usize = 3;
 const NORMALIZED_FRAGMENT_LENGTH: usize = 27;
@@ -33,7 +30,7 @@ pub fn normalize_hash(hash: &Trits) -> TritBuf {
         if sum > 0 {
             while sum > 0 {
                 for j in (i * NORMALIZED_FRAGMENT_LENGTH)..((i + 1) * NORMALIZED_FRAGMENT_LENGTH) {
-                    if (normalized_hash[j] as i8) > MIN_TRYTE_VALUE {
+                    if (normalized_hash[j] as i8) > Tryte::MIN_VALUE as i8 {
                         normalized_hash[j] -= 1;
                         break;
                     }
@@ -43,7 +40,7 @@ pub fn normalize_hash(hash: &Trits) -> TritBuf {
         } else {
             while sum < 0 {
                 for j in (i * NORMALIZED_FRAGMENT_LENGTH)..((i + 1) * NORMALIZED_FRAGMENT_LENGTH) {
-                    if (normalized_hash[j] as i8) < MAX_TRYTE_VALUE {
+                    if (normalized_hash[j] as i8) < Tryte::MAX_VALUE as i8 {
                         normalized_hash[j] += 1;
                         break;
                     }

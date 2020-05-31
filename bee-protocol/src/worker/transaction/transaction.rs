@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
     message::{uncompress_transaction_bytes, TransactionBroadcast},
@@ -18,11 +15,11 @@ use crate::{
     worker::transaction::TinyHashCache,
 };
 
-use bee_bundle::{Hash, Transaction, TransactionField};
 use bee_crypto::{CurlP81, Sponge};
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
+use bee_transaction::{BundledTransaction as Transaction, BundledTransactionField, Hash};
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -57,7 +54,7 @@ impl TransactionWorker {
         shutdown: oneshot::Receiver<()>,
         mut milestone_validator_worker_tx: mpsc::Sender<Hash>,
     ) {
-        info!("[TransactionWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -73,7 +70,7 @@ impl TransactionWorker {
             }
         }
 
-        info!("[TransactionWorker ] Stopped.");
+        info!("Stopped.");
     }
 
     async fn process_transaction_brodcast(
@@ -82,10 +79,10 @@ impl TransactionWorker {
         transaction_broadcast: TransactionBroadcast,
         milestone_validator_worker_tx: &mut mpsc::Sender<Hash>,
     ) {
-        debug!("[TransactionWorker ] Processing received data...");
+        debug!("Processing received data...");
 
         if !self.cache.insert(&transaction_broadcast.transaction) {
-            debug!("[TransactionWorker ] Data already received.");
+            debug!("Data already received.");
             return;
         }
 
@@ -108,7 +105,7 @@ impl TransactionWorker {
                     t5b1_trit_buf.encode::<T1B1Buf>()
                 }
                 Err(_) => {
-                    warn!("[TransactionWorker ] Can not decode T5B1 from received data.");
+                    warn!("Can not decode T5B1 from received data.");
                     return;
                 }
             }
@@ -118,10 +115,7 @@ impl TransactionWorker {
         let transaction = match Transaction::from_trits(&transaction_buf) {
             Ok(transaction) => transaction,
             Err(e) => {
-                warn!(
-                    "[TransactionWorker ] Can not build transaction from received data: {:?}",
-                    e
-                );
+                warn!("Can not build transaction from received data: {:?}", e);
                 return;
             }
         };
@@ -130,14 +124,15 @@ impl TransactionWorker {
         let hash = Hash::from_inner_unchecked(self.curl.digest(&transaction_buf).unwrap());
 
         if hash.weight() < Protocol::get().config.mwm {
-            debug!("[TransactionWorker ] Insufficient weight magnitude: {}.", hash.weight());
+            debug!("Insufficient weight magnitude: {}.", hash.weight());
             return;
         }
 
         // store transaction
         match tangle().insert_transaction(transaction, hash).await {
             Some(transaction) => {
-                if !tangle().is_synced() && Protocol::get().requested.len() == 0 {
+                Protocol::get().metrics.new_transactions_received_inc();
+                if !tangle().is_synced() && Protocol::get().requested.is_empty() {
                     Protocol::trigger_milestone_solidification().await;
                 }
                 match Protocol::get().requested.remove(&hash) {
@@ -171,19 +166,13 @@ impl TransactionWorker {
 
                     if let Some(tail) = tail {
                         if let Err(e) = milestone_validator_worker_tx.send(tail).await {
-                            error!(
-                                "[TransactionWorker ] Sending tail to milestone validation failed: {:?}.",
-                                e
-                            );
+                            error!("Sending tail to milestone validation failed: {:?}.", e);
                         }
                     };
                 }
             }
             None => {
-                debug!(
-                    "[TransactionWorker ] Transaction {} already present in the tangle.",
-                    &hash
-                );
+                debug!("Transaction {} already present in the tangle.", &hash);
             }
         }
     }
@@ -194,9 +183,11 @@ mod tests {
 
     use super::*;
 
-    use crate::ProtocolConfigBuilder;
+    use crate::ProtocolConfig;
+
+    use bee_network::{NetworkConfig, Url};
+
     use async_std::task::{block_on, spawn};
-    use bee_network::{NetworkConfigBuilder, Url};
     use futures::sink::SinkExt;
 
     #[test]
@@ -204,11 +195,11 @@ mod tests {
         bee_tangle::init();
 
         // build network
-        let network_config = NetworkConfigBuilder::default().build();
+        let network_config = NetworkConfig::build().finish();
         let (network, _shutdown, _receiver) = bee_network::init(network_config);
 
         // init protocol
-        let protocol_config = ProtocolConfigBuilder::default().build();
+        let protocol_config = ProtocolConfig::build().finish();
         block_on(Protocol::init(protocol_config, network));
 
         assert_eq!(tangle().size(), 0);
@@ -217,11 +208,12 @@ mod tests {
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::channel(1000);
 
-        let mut transaction_worker_sender_clone = transaction_worker_sender.clone();
+        let mut transaction_worker_sender_clone = transaction_worker_sender;
+
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
             let message = TransactionBroadcast::new(&tx);
-            let epid: EndpointId = block_on(Url::from_url_str("tcp://[::1]:16000")).unwrap().into();
+            let epid: EndpointId = Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();
             let event = TransactionWorkerEvent {
                 from: epid,
                 transaction_broadcast: message,

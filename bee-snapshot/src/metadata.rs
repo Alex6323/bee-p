@@ -1,19 +1,16 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
-use bee_bundle::{Hash, TransactionField};
 use bee_ternary::{T1B1Buf, TryteBuf};
+use bee_transaction::{BundledTransactionField, Hash};
 
 use std::{
     fs::File,
@@ -63,7 +60,7 @@ impl SnapshotMetadata {
                 let index = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<u32>()
-                        .map_err(|e| SnapshotMetadataError::InvalidIndex(e)),
+                        .map_err(SnapshotMetadataError::InvalidIndex),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -72,7 +69,7 @@ impl SnapshotMetadata {
                 let timestamp = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<u64>()
-                        .map_err(|e| SnapshotMetadataError::InvalidTimestamp(e)),
+                        .map_err(SnapshotMetadataError::InvalidTimestamp),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -81,7 +78,7 @@ impl SnapshotMetadata {
                 let solid_entry_points_num = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<usize>()
-                        .map_err(|e| SnapshotMetadataError::InvalidSolidEntryPointsNumber(e)),
+                        .map_err(SnapshotMetadataError::InvalidSolidEntryPointsNumber),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -90,7 +87,7 @@ impl SnapshotMetadata {
                 let seen_milestones_num = match reader.read_line(&mut line) {
                     Ok(_) => line[..line.len() - 1]
                         .parse::<usize>()
-                        .map_err(|e| SnapshotMetadataError::InvalidSeenMilestonesNumber(e)),
+                        .map_err(SnapshotMetadataError::InvalidSeenMilestonesNumber),
                     Err(e) => Err(SnapshotMetadataError::IOError(e)),
                 }?;
 
@@ -100,7 +97,7 @@ impl SnapshotMetadata {
                     line.clear();
                     let hash = match reader.read_line(&mut line) {
                         Ok(_) => {
-                            let tokens: Vec<&str> = line.split(";").collect();
+                            let tokens: Vec<&str> = line.split(';').collect();
                             // TODO check size of tokens
                             // TODO what to do with index ?
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {
@@ -120,7 +117,7 @@ impl SnapshotMetadata {
                     line.clear();
                     let hash = match reader.read_line(&mut line) {
                         Ok(_) => {
-                            let tokens: Vec<&str> = line.split(";").collect();
+                            let tokens: Vec<&str> = line.split(';').collect();
                             // TODO check size of tokens
                             // TODO what to do with index ?
                             match TryteBuf::try_from_str(&tokens[0][..tokens[0].len()]) {

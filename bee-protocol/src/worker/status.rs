@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::protocol::Protocol;
 
@@ -22,11 +19,15 @@ use async_std::{future::ready, prelude::*};
 use futures::channel::mpsc::Receiver;
 use log::info;
 
-pub(crate) struct StatusWorker {}
+pub(crate) struct StatusWorker {
+    interval_ms: u64,
+}
 
 impl StatusWorker {
-    pub(crate) fn new() -> Self {
-        Self {}
+    pub(crate) fn new(interval_s: u64) -> Self {
+        Self {
+            interval_ms: interval_s * 1000,
+        }
     }
 
     fn status(&self) {
@@ -49,15 +50,15 @@ impl StatusWorker {
 
         status = format!("{} Requested {}", status, Protocol::get().requested.len());
 
-        info!("[StatusWorker ] {}.", status);
+        info!("{}.", status);
     }
 
     pub(crate) async fn run(self, mut shutdown: Receiver<()>) {
-        info!("[StatusWorker ] Running.");
+        info!("Running.");
 
         loop {
             match ready(None)
-                .delay(Duration::from_millis(5000))
+                .delay(Duration::from_millis(self.interval_ms))
                 .race(shutdown.next())
                 .await
             {
@@ -68,6 +69,6 @@ impl StatusWorker {
             }
         }
 
-        info!("[StatusWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

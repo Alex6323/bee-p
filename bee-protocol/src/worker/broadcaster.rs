@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
     message::{tlv_into_bytes, TransactionBroadcast},
@@ -42,7 +39,7 @@ impl BroadcasterWorker {
     }
 
     async fn broadcast(&mut self, from: Option<EndpointId>, bytes: Vec<u8>) {
-        for entry in Protocol::get().contexts.iter() {
+        for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
             if match from {
                 Some(from) => from != *entry.key(),
                 None => true,
@@ -60,11 +57,7 @@ impl BroadcasterWorker {
                         // TODO metrics
                     }
                     Err(e) => {
-                        warn!(
-                            "[BroadcasterWorker ] Broadcasting transaction to {:?} failed: {:?}.",
-                            *entry.key(),
-                            e
-                        );
+                        warn!("Broadcasting transaction to {:?} failed: {:?}.", *entry.key(), e);
                     }
                 };
             }
@@ -76,7 +69,7 @@ impl BroadcasterWorker {
         receiver: mpsc::Receiver<BroadcasterWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[BroadcasterWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -94,6 +87,6 @@ impl BroadcasterWorker {
             }
         }
 
-        info!("[BroadcasterWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

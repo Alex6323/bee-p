@@ -1,7 +1,6 @@
 [workspace]
 members = [
 	"bee-api",
-	"bee-bundle",
 	"bee-common",
 	"bee-crypto",
 	"bee-ledger",
@@ -16,4 +15,5 @@ members = [
 	"bee-tangle",
 	"bee-ternary",
 	"bee-test",
+	"bee-transaction",
 ]

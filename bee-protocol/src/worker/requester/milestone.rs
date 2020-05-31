@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
 
@@ -52,7 +49,7 @@ impl MilestoneRequesterWorker {
     }
 
     async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
-        if Protocol::get().contexts.is_empty() {
+        if Protocol::get().peer_manager.handshaked_peers.is_empty() {
             return;
         }
 
@@ -60,11 +57,10 @@ impl MilestoneRequesterWorker {
         let epid = match epid {
             Some(epid) => epid,
             None => {
-                match Protocol::get()
-                    .contexts
-                    .iter()
-                    .nth(self.rng.gen_range(0, Protocol::get().contexts.len()))
-                {
+                match Protocol::get().peer_manager.handshaked_peers.iter().nth(
+                    self.rng
+                        .gen_range(0, Protocol::get().peer_manager.handshaked_peers.len()),
+                ) {
                     Some(entry) => *entry.key(),
                     None => return,
                 }
@@ -75,7 +71,7 @@ impl MilestoneRequesterWorker {
     }
 
     pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
-        info!("[MilestoneRequesterWorker ] Running.");
+        info!("Running.");
 
         let mut shutdown_fused = shutdown.fuse();
 
@@ -96,6 +92,6 @@ impl MilestoneRequesterWorker {
             }
         }
 
-        info!("[MilestoneRequesterWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

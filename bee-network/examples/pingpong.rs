@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 //! This example shows how to create and run 2 TCP nodes using `bee_network`, that will
 //! automatically add eachother as peers and exchange the messages 'ping' and 'pong'
@@ -27,8 +24,7 @@
 #![allow(dead_code, unused_imports)]
 
 use bee_network::{
-    Command::*, EndpointId as EpId, Event, EventSubscriber as Events, Network, NetworkConfig, NetworkConfigBuilder,
-    Origin, Shutdown, Url,
+    Command::*, EndpointId as EpId, Event, EventSubscriber as Events, Network, NetworkConfig, Origin, Shutdown, Url,
 };
 
 use common::*;
@@ -46,7 +42,7 @@ fn main() {
 
     logger::init(log::LevelFilter::Info);
 
-    let (network, shutdown, events) = bee_network::init(NetworkConfigBuilder::new().build());
+    let (network, shutdown, events) = bee_network::init(NetworkConfig::build().finish());
 
     let mut node = Node::builder()
         .with_network(network.clone())

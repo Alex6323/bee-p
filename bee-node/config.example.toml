@@ -1,15 +1,19 @@
 # Duplicate this file to config.toml to use it
 
-logLevel  = "info"
+[logger]
+color = true
+[[logger.outputs]]
+name  = "stdout"
+level = "info"
 
 [network]
 binding_addr  = "0.0.0.0"
-binding_port  = 1337
+binding_port  = 15600
 
 [peering]
 [peering.static]
 limit     = 5
-peers     = [ "tcp://[::1]:15600" ]
+peers     = [  ]
 
 [protocol]
 mwm = 14
@@ -19,7 +23,7 @@ public_key      = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRI
 security_level  = 2
 sponge_type     = "kerl"
 [protocol.workers]
+status_interval = 10
 
-[snapshot]
-meta_file_path  = "./data/mainnet.snapshot.meta"
-state_file_path = "./data/mainnet.snapshot.state"
+[snapshot.local]
+file_path = "./data/snapshot.bin"

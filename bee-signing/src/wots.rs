@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{IotaSeed, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature};
 
@@ -18,8 +15,6 @@ use bee_crypto::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
 use std::marker::PhantomData;
-
-// TODO constants
 
 #[derive(Clone, Copy)]
 pub enum WotsSecurityLevel {
@@ -34,38 +29,16 @@ impl Default for WotsSecurityLevel {
     }
 }
 
+#[derive(Debug)]
+pub enum WotsError {
+    MissingSecurityLevel,
+    FailedSpongeOperation,
+}
+
 #[derive(Default)]
 pub struct WotsPrivateKeyGeneratorBuilder<S> {
     security_level: Option<WotsSecurityLevel>,
     _sponge: PhantomData<S>,
-}
-
-#[derive(Default)]
-pub struct WotsPrivateKeyGenerator<S> {
-    security_level: WotsSecurityLevel,
-    _sponge: PhantomData<S>,
-}
-
-pub struct WotsPrivateKey<S> {
-    state: TritBuf,
-    _sponge: PhantomData<S>,
-}
-
-pub struct WotsPublicKey<S> {
-    state: TritBuf,
-    _sponge: PhantomData<S>,
-}
-
-pub struct WotsSignature<S> {
-    state: TritBuf,
-    _sponge: PhantomData<S>,
-}
-
-// TODO: documentation
-#[derive(Debug, PartialEq)]
-pub enum WotsError {
-    MissingSecurityLevel,
-    FailedSpongeOperation,
 }
 
 impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
@@ -80,6 +53,11 @@ impl<S: Sponge + Default> WotsPrivateKeyGeneratorBuilder<S> {
             _sponge: PhantomData,
         })
     }
+}
+
+pub struct WotsPrivateKeyGenerator<S> {
+    security_level: WotsSecurityLevel,
+    _sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
@@ -101,6 +79,11 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsPrivateKeyGenerator<S> {
             _sponge: PhantomData,
         })
     }
+}
+
+pub struct WotsPrivateKey<S> {
+    state: TritBuf,
+    _sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
@@ -164,6 +147,11 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     }
 }
 
+pub struct WotsPublicKey<S> {
+    state: TritBuf,
+    _sponge: PhantomData<S>,
+}
+
 impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     type Signature = WotsSignature<S>;
     type Error = WotsError;
@@ -187,6 +175,11 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     fn trits(&self) -> &Trits {
         &self.state
     }
+}
+
+pub struct WotsSignature<S> {
+    state: TritBuf,
+    _sponge: PhantomData<S>,
 }
 
 // TODO default impl ?
@@ -262,15 +255,16 @@ mod tests {
     const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
 
     #[test]
-    fn wots_generator_missing_security_level_test() {
+    fn wots_generator_missing_security_level() {
         match WotsPrivateKeyGeneratorBuilder::<Kerl>::default().build() {
             Ok(_) => unreachable!(),
-            Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
+            Err(WotsError::MissingSecurityLevel) => (),
+            Err(_) => unreachable!(),
         }
     }
 
     #[test]
-    fn wots_generator_valid_test() {
+    fn wots_generator_valid() {
         let security_levels = vec![
             WotsSecurityLevel::Low,
             WotsSecurityLevel::Medium,
@@ -287,7 +281,7 @@ mod tests {
         }
     }
 
-    fn wots_generic_complete_test<S: Sponge + Default>() {
+    fn wots_generic_complete<S: Sponge + Default>() {
         let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
         let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
         let seed = IotaSeed::<S>::from_buf(seed_trits).unwrap();
@@ -314,17 +308,17 @@ mod tests {
     }
 
     #[test]
-    fn wots_kerl_complete_test() {
-        wots_generic_complete_test::<Kerl>();
+    fn wots_kerl_complete() {
+        wots_generic_complete::<Kerl>();
     }
 
     #[test]
-    fn wots_curl27_complete_test() {
-        wots_generic_complete_test::<CurlP27>();
+    fn wots_curl27_complete() {
+        wots_generic_complete::<CurlP27>();
     }
 
     #[test]
-    fn wots_curl81_complete_test() {
-        wots_generic_complete_test::<CurlP81>();
+    fn wots_curl81_complete() {
+        wots_generic_complete::<CurlP81>();
     }
 }

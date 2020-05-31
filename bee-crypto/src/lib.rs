@@ -1,32 +1,14 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
-//! This is a prototype for [PR #21], the RFC introducing the `Kerl` and `CurlP` hash functions
-//! implemented in terms of a common `Sponge` trait.
-//!
-//! The main focus of this prototype are the [`Sponge`] trait, and the [`CurlP`], and [`Kerl`]
-//! types. These are cryptographic hash functions that are sponge constructions implemented in
-//! terms of the trait.
-//!
-//! [PR #21]: https://github.com/iotaledger/bee-rfcs/pull/21
-
-mod curlp;
-mod kerl;
 mod sponge;
-mod sponge_type;
 
-pub use curlp::{CurlP, CurlP27, CurlP81};
-pub use kerl::Kerl;
-pub use sponge::Sponge;
-pub use sponge_type::SpongeType;
+pub use sponge::{CurlP, CurlP27, CurlP81, Kerl, Sponge, SpongeType};

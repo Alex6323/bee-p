@@ -1,24 +1,20 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundle::Bundle,
-    constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
-    transaction::{
-        Address, Hash, Index, Payload, Tag, TransactionBuilder, TransactionBuilders, TransactionError,
-        TransactionField, Transactions,
+    bundled::{
+        Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
+        BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
     },
+    constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
 };
 
 use bee_crypto::{Kerl, Sponge};
@@ -36,7 +32,7 @@ pub enum OutgoingBundleBuilderError {
     UnsignedInput,
     InvalidValue(i64),
     MissingTransactionBuilderField(&'static str),
-    TransactionError(TransactionError),
+    TransactionError(BundledTransactionError),
     FailedSigningOperation,
 }
 
@@ -55,7 +51,7 @@ pub struct OutgoingAttached;
 impl OutgoingBundleBuilderStage for OutgoingAttached {}
 
 pub struct StagedOutgoingBundleBuilder<E, S> {
-    builders: TransactionBuilders,
+    builders: BundledTransactionBuilders,
     essence_sponge: PhantomData<E>,
     stage: PhantomData<S>,
 }
@@ -99,7 +95,7 @@ where
                 let mut is_m = true;
 
                 for trit in trits.iter() {
-                    if *trit != Btrit::PlusOne {
+                    if trit != Btrit::PlusOne {
                         is_m = false;
                         break;
                     }
@@ -152,14 +148,14 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
     // TODO TEST
     pub fn new() -> Self {
         Self {
-            builders: TransactionBuilders::default(),
+            builders: BundledTransactionBuilders::default(),
             essence_sponge: PhantomData,
             stage: PhantomData,
         }
     }
 
     // TODO TEST
-    pub fn push(&mut self, builder: TransactionBuilder) {
+    pub fn push(&mut self, builder: BundledTransactionBuilder) {
         self.builders.push(builder);
     }
 
@@ -345,7 +341,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
 impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
     // TODO TEST
     pub fn build(self) -> Result<Bundle, OutgoingBundleBuilderError> {
-        let mut transactions = Transactions::new();
+        let mut transactions = BundledTransactions::new();
 
         for transaction_builder in self.builders.0 {
             transactions.push(
@@ -363,12 +359,14 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
 mod tests {
 
     use super::*;
-    use crate::transaction::{Address, Nonce, Payload, Tag, Timestamp, Value};
+
+    use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
+
     use bee_signing::{PublicKey, RecoverableSignature, Seed, WotsSignature};
     use bee_ternary::{T1B1Buf, TritBuf};
 
-    fn default_transaction_builder(index: usize, last_index: usize) -> TransactionBuilder {
-        TransactionBuilder::new()
+    fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
+        BundledTransactionBuilder::new()
             .with_payload(Payload::zeros())
             .with_address(Address::zeros())
             .with_value(Value::from_inner_unchecked(0))
@@ -428,13 +426,14 @@ mod tests {
         let mut offset = 0;
         for i in 1..security + 1 {
             let input = bundle.0.get(i).unwrap();
-            signature.copy_raw_bytes(&input.payload.to_inner().to_owned(), offset, PAYLOAD_TRIT_LEN);
+            signature[offset..][..PAYLOAD_TRIT_LEN].copy_from(input.payload.to_inner());
+
             offset += PAYLOAD_TRIT_LEN;
         }
         let res = WotsSignature::<Kerl>::from_buf(signature)
             .recover_public_key(normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
-        assert_eq!(address.to_inner().as_slice(), res.trits());
+        assert_eq!(address.to_inner(), res.trits());
 
         Ok(())
     }
@@ -502,19 +501,19 @@ mod tests {
         let res_low = WotsSignature::<Kerl>::from_buf(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
             .recover_public_key(normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
-        assert_eq!(address_low.to_inner().as_slice(), res_low.trits());
+        assert_eq!(address_low.to_inner(), res_low.trits());
 
         let mut signature = TritBuf::<T1B1Buf>::zeros(PAYLOAD_TRIT_LEN * 2);
         let mut offset = 0;
         for i in 2..4 {
             let input = bundle.0.get(i).unwrap();
-            signature.copy_raw_bytes(&input.payload.to_inner().to_owned(), offset, PAYLOAD_TRIT_LEN);
+            signature[offset..][..PAYLOAD_TRIT_LEN].copy_from(input.payload.to_inner());
             offset += PAYLOAD_TRIT_LEN;
         }
         let res_medium = WotsSignature::<Kerl>::from_buf(signature)
             .recover_public_key(normalize_hash(bundle.0.get(2).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
-        assert_eq!(address_medium.to_inner().as_slice(), res_medium.trits());
+        assert_eq!(address_medium.to_inner(), res_medium.trits());
 
         Ok(())
     }

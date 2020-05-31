@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 //! Module that provides the [`Tangle`] struct.
 
@@ -19,7 +16,7 @@ use crate::{
     vertex::{TransactionRef, Vertex},
 };
 
-use bee_bundle::{Hash, Transaction};
+use bee_transaction::{BundledTransaction as Transaction, Hash, TransactionVertex};
 
 use std::{
     collections::HashSet,
@@ -30,9 +27,7 @@ use async_std::{
     sync::{Arc, Barrier},
     task::block_on,
 };
-
 use dashmap::{mapref::entry::Entry, DashMap, DashSet};
-
 use flume::Sender;
 
 /// A datastructure based on a directed acyclic graph (DAG).
@@ -414,11 +409,11 @@ mod tests {
     use super::*;
     use crate::*;
 
-    use bee_bundle::{TransactionField, Value};
     use bee_test::{
         field::rand_trits_field,
         transaction::{create_random_attached_tx, create_random_tx},
     };
+    use bee_transaction::{BundledTransactionField, Value};
 
     use async_std::{sync::channel, task::block_on};
     use serial_test::serial;
@@ -444,7 +439,7 @@ mod tests {
         init();
         let tangle = tangle();
 
-        tangle.update_snapshot_milestone_index(1368160.into());
+        tangle.update_snapshot_milestone_index(1_368_160.into());
 
         assert_eq!(1368160, *tangle.get_snapshot_milestone_index());
         drop();
@@ -456,9 +451,9 @@ mod tests {
         init();
         let tangle = tangle();
 
-        tangle.update_solid_milestone_index(1368167.into());
+        tangle.update_solid_milestone_index(1_368_167.into());
 
-        assert_eq!(1368167, *tangle.get_solid_milestone_index());
+        assert_eq!(1_368_167, *tangle.get_solid_milestone_index());
         drop();
     }
 
@@ -468,9 +463,9 @@ mod tests {
         init();
         let tangle = tangle();
 
-        tangle.update_last_milestone_index(1368168.into());
+        tangle.update_last_milestone_index(1_368_168.into());
 
-        assert_eq!(1368168, *tangle.get_last_milestone_index());
+        assert_eq!(1_368_168, *tangle.get_last_milestone_index());
         drop();
     }
 
@@ -571,9 +566,9 @@ mod tests {
 
         let (a_hash, a) = create_random_tx();
         let (b_hash, b) = create_random_tx();
-        let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone()); // branch, trunk
-        let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
-        let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
+        let (c_hash, c) = create_random_attached_tx(a_hash, b_hash); // branch, trunk
+        let (d_hash, d) = create_random_attached_tx(c_hash, a_hash);
+        let (e_hash, e) = create_random_attached_tx(c_hash, d_hash);
 
         block_on(async {
             tangle.insert_transaction(a.clone(), a_hash).await;
@@ -718,7 +713,6 @@ mod tests {
             v_hash,
             |hash, _transaction| {
                 hashes.push(*hash);
-                ()
             },
             |_| true,
             |_| (),

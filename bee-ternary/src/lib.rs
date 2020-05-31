@@ -1,28 +1,84 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
-use std::{convert::TryFrom, slice};
+//! A general-purpose ternary manipulation, translation and encoding crate.
+//!
+//! # Features
+//!
+//! - Creation of trit and tryte buffers with multiple encodings
+//! - Safe encoding API that allows the efficient manipulation and sharing of trit and tryte buffers and slices
+//! - Mutation of trit buffers and slices
+//! - Ternary BigInt implementation
+//! - Balanced and unbalanced ternary
+//! - `serde` support
+//!
+//! # Encodings
+//!
+//! This crate includes support for many different trit encodings. Encodings allow the trading off
+//! of different features against each other.
+//!
+//! [`T1B1`] is the canonical default encoding and represents every trit with a single byte of
+//! memory. It is the fastest encoding to manipulate since no bitwise operations are necessary to
+//! pack and unpack it from memory during manipulation. As a result of this, it also permits
+//! certain extra features like mutable chunking and accessing its contents through ordinary
+//! slices.
+//!
+//! [`T3B1`] is also commonly used. It provides good compression and has the advantage that it has
+//! an identical bit representation as a [`Tryte`] slice. For this reason, it is the only encoding
+//! that can be converted to a tryte slice with no overhead.
+//!
+//! [`T5B1`] is the most compressed encoding. It provides very high storage densities (almost
+//! optimal, in fact) and is the densest encoding supported by this crate.
+//!
+//! It is likely that one of the 3 encodings above will suit your requirements. In addition, this
+//! crate also supports [`T2B1`] and [`T4B1`] for completeness.
+//!
+//! # Byte Alignment
+//!
+//! This crate supports creating sub-slices of trit slices. To enable this, it stores extra
+//! metadata along with a trit slice in order to correct identify the index of a buffer it starts
+//! on. With compressed encodings, such as [`T3B1`], that starting index (and, indeed, the end
+//! index) may not fall exactly on a byte boundary.
+//!
+//! This crate makes a best attempt at avoiding the negative ramifications of this fact, but sadly
+//! some still leak through into the API. For example, some methods may panic if a slice does not
+//! have a byte-aligned starting index or otherwise does not fulfil certain invariants. However,
+//! all panicking behaviours are documented on each method such that you can easily avoid
+//! circumstances like this.
+//!
+//! When the documentation refers to 'byte alignment', it is referring specifically to whether the
+//! starting index is a multiple of the compression factor. For example a byte-aligned [`T3B1`]
+//! buffer will always start on an index of the *original* buffer that is a multiple of 3.
 
+use std::slice;
+
+/// Functionality pertaining to trit big integers.
 pub mod bigint;
+/// Utilities for converting to and from ternary and binary numerical representations.
 pub mod num_conversions;
+/// Types and traits that allow the implementation of new encoding formats.
 pub mod raw;
+/// The [`T1B1`] and [`T1B1Buf`] encodings.
 pub mod t1b1;
+/// The [`T2B1`] and [`T2B1Buf`] encodings.
 pub mod t2b1;
+/// The [`T3B1`] and [`T3B1Buf`] encodings.
 pub mod t3b1;
+/// The [`T4B1`] and [`T4B1Buf`] encodings.
 pub mod t4b1;
+/// The [`T5B1`] and [`T5B1Buf`] encodings.
 pub mod t5b1;
+/// Types and traits used to represent trits, both balanced and unbalanced.
 pub mod trit;
+/// Types and traits used to represent trytes and buffers of trytes.
 pub mod tryte;
 
 #[cfg(feature = "serde1")]
@@ -35,8 +91,7 @@ use std::{
     cmp::{self, Ordering},
     fmt, hash,
     iter::FromIterator,
-    ops::{Deref, DerefMut, Index, IndexMut, Range},
-    ptr,
+    ops::{Deref, DerefMut, Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive},
 };
 
 // Reexports
@@ -47,14 +102,20 @@ pub use crate::{
     t4b1::{T4B1Buf, T4B1},
     t5b1::{T5B1Buf, T5B1},
     trit::{Btrit, ShiftTernary, Trit, Utrit},
-    tryte::{Tryte, TryteBuf, MAX_TRYTE_VALUE, MIN_TRYTE_VALUE},
+    tryte::{Tryte, TryteBuf},
 };
 
+/// An error that may be produced as a result of fallible conversions.
 #[derive(Debug)]
 pub enum Error {
     InvalidRepr,
 }
 
+/// A type that represents a buffer of trits of unknown length.
+///
+/// This type is roughly analogous to `[T]` or [`str`]. It is an unsized type and hence is rarely
+/// used directly. Instead, it's more common to see it used from behind a reference (in a similar
+/// manner to `&[T]` and `&str`.
 #[derive(Hash)]
 #[repr(transparent)]
 pub struct Trits<T: RawEncoding + ?Sized = T1B1<Btrit>>(T);
@@ -63,20 +124,67 @@ impl<T> Trits<T>
 where
     T: RawEncoding + ?Sized,
 {
+    /// Create an empty trit slice.
     pub fn empty() -> &'static Self {
         unsafe { &*(T::empty() as *const _ as *const Self) }
     }
 
+    /// Interpret an (`std::i8`) slice as a trit slice with the given encoding without first
+    /// checking that the slice is valid in the given encoding. The `num_trits` parameter is used
+    /// to specify the exact length, in trits, that the slice should be taken to have. Providing a
+    /// slice that is not valid for this encoding is undefined behaviour.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if `num_trits` is more than can be represented with the slice in
+    /// the given encoding.
+    ///
+    /// # Safety
+    ///
+    /// This function must only be called with an [`i8`] slice that is valid for this trit encoding
+    /// given the specified `num_trits` length. Right now, this validity is not well-defined and so
+    /// it is suggested that only [`i8`] slices created from existing trit slices or trit buffers
+    /// be used. Calling this function with an invalid [`i8`] slice is undefined behaviour.
     pub unsafe fn from_raw_unchecked(raw: &[i8], num_trits: usize) -> &Self {
-        debug_assert!(raw.iter().all(T::is_valid));
+        debug_assert!(
+            raw.iter().all(T::is_valid),
+            "Invalid i8 slice used to create trit slice"
+        );
         &*(T::from_raw_unchecked(raw, num_trits) as *const _ as *const _)
     }
 
+    /// Interpret a mutable (`std::i8`) slice as a mutable trit slice with the given encoding
+    /// without first checking that the slice is valid in the given encoding. The `num_trits`
+    /// parameter is used to specify the exact length, in trits, that the slice should be taken to
+    /// have. Providing a slice that is not valid for this encoding is undefined behaviour.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if `num_trits` is more than can be represented with the slice in
+    /// the given encoding.
+    ///
+    /// # Safety
+    ///
+    /// This function must only be called with an [`i8`] slice that is valid for this trit encoding
+    /// given the specified `num_trits` length. Right now, this validity is not well-defined and so
+    /// it is suggested that only [`i8`] slices created from existing trit slices or trit buffers
+    /// be used. Calling this function with an invalid [`i8`] slice is undefined behaviour.
     pub unsafe fn from_raw_unchecked_mut(raw: &mut [i8], num_trits: usize) -> &mut Self {
-        debug_assert!(raw.iter().all(T::is_valid));
-        &mut *(T::from_raw_unchecked(raw, num_trits) as *const _ as *mut _)
+        debug_assert!(
+            raw.iter().all(T::is_valid),
+            "Invalid i8 slice used to create trit slice"
+        );
+        &mut *(T::from_raw_unchecked_mut(raw, num_trits) as *mut _ as *mut _)
     }
 
+    /// Interpret an (`std::i8`) slice as a trit slice with the given encoding, checking to ensure
+    /// that the slice is valid in the given encoding. The `num_trits` parameter is used to specify
+    /// the exact length, in trits, that the slice should be taken to have.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if `num_trits` is more than can be represented with the slice in
+    /// the given encoding.
     pub fn try_from_raw(raw: &[i8], num_trits: usize) -> Result<&Self, Error> {
         if raw.iter().all(T::is_valid) {
             Ok(unsafe { Self::from_raw_unchecked(raw, num_trits) })
@@ -85,6 +193,14 @@ where
         }
     }
 
+    /// Interpret a mutable (`std::i8`) slice as a mutable trit slice with the given encoding,
+    /// checking to ensure that the slice is valid in the given encoding. The `num_trits` parameter
+    /// is used to specify the exact length, in trits, that the slice should be taken to have.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if `num_trits` is more than can be represented with the slice in
+    /// the given encoding.
     pub fn try_from_raw_mut(raw: &mut [i8], num_trits: usize) -> Result<&mut Self, Error> {
         if raw.iter().all(T::is_valid) {
             Ok(unsafe { Self::from_raw_unchecked_mut(raw, num_trits) })
@@ -93,32 +209,85 @@ where
         }
     }
 
+    /// Returns `true` if the trit slice is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns the number of trits in this trit slice.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    /// Will panic if slice is not byte-aligned
+    /// Interpret this slice as an (`std::i8`) slice.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the slice is not byte-aligned
     // TODO: Evaluate whether this API makes sense to be `unsafe`
     pub fn as_i8_slice(&self) -> &[i8] {
         self.0.as_i8_slice()
     }
 
-    /// Will panic if slice is not byte-aligned
-    // TODO: Evaluate whether this API makes sense to be `unsafe`
+    /// Interpret this slice as a mutable (`std::i8`) slice.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the slice is not byte-aligned
+    ///
+    /// # Safety
+    ///
+    /// This function is marked `unsafe` because modification of the trit slice in a manner that is
+    /// not valid for this encoding is undefined behaviour.
     pub unsafe fn as_i8_slice_mut(&mut self) -> &mut [i8] {
         self.0.as_i8_slice_mut()
     }
 
+    /// Fetch the trit at the given index of this trit slice without first checking whether the
+    /// index is in bounds. Providing an index that is not less than the length of this slice is
+    /// undefined behaviour.
+    ///
+    /// This is perhaps the 'least bad' `unsafe` function in this crate: not because any form of
+    /// undefined behaviour is better or worse than another (after all, the point of undefined
+    /// behaviour is that it is undefined) but because it's the easiest to use correctly.
+    ///
+    /// # Safety
+    ///
+    /// An index with a value less then the result of [`Trits::len`] must be used. Any other value
+    /// is undefined behaviour.
     pub unsafe fn get_unchecked(&self, index: usize) -> T::Trit {
-        debug_assert!(index < self.len());
+        debug_assert!(
+            index < self.0.len(),
+            "Attempt to get trit at index {}, but length of slice is {}",
+            index,
+            self.len(),
+        );
         self.0.get_unchecked(index)
     }
 
+    /// Set the trit at the given index of this trit slice without first checking whether the
+    /// index is in bounds. Providing an index that is not less than the length of this slice is
+    /// undefined behaviour.
+    ///
+    /// This is perhaps the 'least bad' `unsafe` function in this crate: not because any form of
+    /// undefined behaviour is better or worse than another (after all, the point of undefined
+    /// behaviour is that it is undefined) but because it's the easiest to use correctly.
+    ///
+    /// # Safety
+    ///
+    /// An index with a value less then the result of [`Trits::len`] must be used. Any other value
+    /// is undefined behaviour.
     pub unsafe fn set_unchecked(&mut self, index: usize, trit: T::Trit) {
-        debug_assert!(index < self.len());
+        debug_assert!(
+            index < self.0.len(),
+            "Attempt to set trit at index {}, but length of slice is {}",
+            index,
+            self.len(),
+        );
         self.0.set_unchecked(index, trit);
     }
 
+    /// Fetch the trit at the given index of this trit slice, if the index is valid.
     pub fn get(&self, index: usize) -> Option<T::Trit> {
         if index < self.0.len() {
             unsafe { Some(self.get_unchecked(index)) }
@@ -127,87 +296,147 @@ where
         }
     }
 
+    /// Set the trit at the given index of this mutable trit slice, if the index is valid.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the index is not less than the length of this slice.
+    // TODO: Should we return `Option<()>` instead?
     pub fn set(&mut self, index: usize, trit: T::Trit) {
-        if index < self.0.len() {
-            unsafe { self.set_unchecked(index, trit) };
-        } else {
-            panic!(
-                "Attempt to set trit at index {}, but length of slice is {}",
-                index,
-                self.len()
-            );
-        }
+        assert!(
+            index < self.0.len(),
+            "Attempt to set trit at index {}, but length of slice is {}",
+            index,
+            self.len(),
+        );
+        unsafe { self.set_unchecked(index, trit) };
     }
 
-    pub fn trits(&self) -> impl DoubleEndedIterator<Item = T::Trit> + ExactSizeIterator<Item = T::Trit> + '_ {
+    /// Returns an iterator over the trits in this slice.
+    ///
+    /// Using this function is significantly faster than calling [`Trits::get`] in a loop and
+    /// should be used where possible.
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = T::Trit> + ExactSizeIterator<Item = T::Trit> + '_ {
         (0..self.0.len()).map(move |idx| unsafe { self.0.get_unchecked(idx) })
     }
 
-    pub fn slice(&self, range: Range<usize>) -> &Self {
-        assert!(range.end >= range.start && range.end <= self.len());
+    /// Returns a subslice of this slice with the given range of trits.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if called with a range that contains indices outside this slice,
+    /// or the start of the range is greater than its end.
+    pub fn subslice(&self, range: Range<usize>) -> &Self {
+        assert!(
+            range.end >= range.start && range.end <= self.len(),
+            "Sub-slice range must be within the bounds of the source trit slice",
+        );
         unsafe { &*(self.0.slice_unchecked(range) as *const _ as *const Self) }
     }
 
-    pub fn slice_mut(&mut self, range: Range<usize>) -> &mut Self {
-        assert!(range.end >= range.start && range.end <= self.len());
+    /// Returns a mutable subslice of this mutable slice with the given range of trits.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if called with a range that contains indices outside this slice,
+    /// or the start of the range is greater than its end.
+    pub fn subslice_mut(&mut self, range: Range<usize>) -> &mut Self {
+        assert!(
+            range.end >= range.start && range.end <= self.len(),
+            "Sub-slice range must be within the bounds of the source trit slice",
+        );
         unsafe { &mut *(self.0.slice_unchecked_mut(range) as *mut _ as *mut Self) }
     }
 
+    /// Copy the trits from a trit slice into this mutable trit slice (the encoding need not be
+    /// equivalent).
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the length of the slices are different
     pub fn copy_from<U: RawEncoding<Trit = T::Trit> + ?Sized>(&mut self, trits: &Trits<U>) {
-        assert!(self.len() == trits.len());
-        for (i, trit) in trits.trits().enumerate() {
+        assert!(
+            self.len() == trits.len(),
+            "Source trit slice must be the same length as target"
+        );
+        for (i, trit) in trits.iter().enumerate() {
             unsafe {
                 self.set_unchecked(i, trit);
             }
         }
     }
 
+    /// Fill this mutable trit slice with copied of the given trit.
     pub fn fill(&mut self, trit: T::Trit) {
         for i in 0..self.len() {
-            self.set(i, trit);
+            unsafe {
+                self.set_unchecked(i, trit);
+            }
         }
     }
 
-    pub fn to_buf<U>(&self) -> TritBuf<U>
-    where
-        U: RawEncodingBuf,
-        U::Slice: RawEncoding<Trit = T::Trit>,
-    {
-        self.trits().collect()
+    /// Copy the contents of this trit slice into a new [`TritBuf`] with the same encoding. This
+    /// function is analogous to `to_vec` method implemented on ordinary slices.
+    pub fn to_buf<U: RawEncodingBuf<Slice = T>>(&self) -> TritBuf<U> {
+        // TODO: A faster impl than this!
+        self.iter().collect()
     }
 
+    /// Return an iterator over distinct, non-overlapping subslices of this trit slice, each with
+    /// the given chunk length. If the length of the trit slice is not a multiple of the given
+    /// chunk length, the last slice provided by the iterator will be smaller to compensate.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the given chunk length is `0`.
     pub fn chunks(
         &self,
         chunk_len: usize,
     ) -> impl DoubleEndedIterator<Item = &Self> + ExactSizeIterator<Item = &Self> + '_ {
-        assert!(chunk_len > 0);
+        assert!(chunk_len > 0, "Chunk length must be non-zero");
         (0..self.len())
             .step_by(chunk_len)
-            .map(move |i| self.slice(i..(i + chunk_len).min(self.len())))
+            .map(move |i| &self[i..(i + chunk_len).min(self.len())])
     }
 
+    /// Encode the contents of this trit slice into a `TritBuf` with a different encoding.
     pub fn encode<U>(&self) -> TritBuf<U>
     where
         U: RawEncodingBuf,
         U::Slice: RawEncoding<Trit = T::Trit>,
     {
-        self.trits().collect()
+        self.iter().collect()
     }
 }
 
+/// These functions are only implemented for trit slices with the [`T1B1`] encoding because other
+/// encodings are compressed and do not support handing out references to their internal trits.
+/// [`T1B1`] is an exception because its trits are strictly byte-aligned.
+///
+/// This fact also implies that [`T1B1`] is the fastest encoding for general-purpose manipulation
+/// of trits.
 impl<T: Trit> Trits<T1B1<T>> {
+    /// View this trit slice as an ordinary slice of trits.
     pub fn as_raw_slice(&self) -> &[T] {
         self.0.as_raw_slice()
     }
 
+    /// View this mutable trit slice as an ordinary slice of mutable trits.
     pub fn as_raw_slice_mut(&mut self) -> &mut [T] {
         self.0.as_raw_slice_mut()
     }
 
+    /// Return an iterator over distinct, non-overlapping mutable subslices of this mutable trit
+    /// slice, each with the given chunk length. If the length of the trit slice is not a multiple
+    /// of the given chunk length, the last slice provided by the iterator will be smaller to compensate.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the given chunk length is `0`.
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     pub fn chunks_mut(&mut self, chunk_len: usize) -> impl Iterator<Item = &mut Self> + '_ {
-        assert!(chunk_len > 0);
+        assert!(chunk_len > 0, "Chunk length must be non-zero");
         (0..self.len()).step_by(chunk_len).scan(self, move |this, _| {
             let idx = chunk_len.min(this.len());
             let (a, b) = Trits::split_at_mut(this, idx);
@@ -216,50 +445,57 @@ impl<T: Trit> Trits<T1B1<T>> {
         })
     }
 
-    pub fn copy_raw_bytes(&mut self, trits: &Trits<T1B1>, offset: usize, count: usize) {
-        assert!(self.len() >= offset + count);
-        unsafe {
-            ptr::copy(
-                trits.as_i8_slice().as_ptr(),
-                self.as_i8_slice_mut().as_mut_ptr().offset(offset as isize),
-                count,
-            );
-        }
-    }
-
     // Helper
     // TODO: Make this public? Is it needed?
     // Q: Why isn't this method on Trits<T>?
     // A: Because overlapping slice lifetimes make this unsound on squashed encodings
     fn split_at_mut<'a>(this: &mut &'a mut Self, idx: usize) -> (&'a mut Self, &'a mut Self) {
-        assert!(idx <= this.len());
+        assert!(
+            idx <= this.len(),
+            "Cannot split at an index outside the trit slice bounds"
+        );
         (
             unsafe { &mut *(this.0.slice_unchecked_mut(0..idx) as *mut _ as *mut Self) },
             unsafe { &mut *(this.0.slice_unchecked_mut(idx..this.len()) as *mut _ as *mut Self) },
         )
     }
 
-    pub fn iter<'a>(&'a self) -> slice::Iter<'a, T> {
-        self.as_raw_slice().iter()
-    }
+    // pub fn iter<'a>(&'a self) -> slice::Iter<'a, T> {
+    //     self.as_raw_slice().iter()
+    // }
 
-    pub fn iter_mut<'a>(&'a mut self) -> slice::IterMut<'a, T> {
+    /// Returns a mutable iterator over the trits in this slice.
+    ///
+    /// Using this function is significantly faster than calling [`Trits::set`] in a loop and
+    /// should be used where possible.
+    pub fn iter_mut(&mut self) -> slice::IterMut<T> {
         self.as_raw_slice_mut().iter_mut()
     }
 }
 
+/// These functions are only implemented for trit slices with the [`T3B1`] encoding because only
+/// the [`T3B1`] encoding has a representation compatible with a slice of `Tryte`s. If you find
+/// yourself commonly needing to convert between trits and trytes, [`T3B1`] is the encoding to use.
 impl Trits<T3B1> {
-    /// Will panic if the trit slice is not a multiple of 3 in length, or if the trit slice is not
-    /// byte-aligned.
+    /// Interpret this trit slice as a [`Tryte`] slice.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the length of the slice is not a multiple of `3`, or if the
+    /// slice is not byte-aligned.
     pub fn as_trytes(&self) -> &[Tryte] {
-        assert!(self.len() % 3 == 0);
+        assert!(self.len() % 3 == 0, "Trit slice length must be a multiple of 3");
         unsafe { &*(self.as_i8_slice() as *const _ as *const _) }
     }
 
-    /// Will panic if the trit slice is not a multiple of 3 in length, or if the trit slice is not
-    /// byte-aligned.
+    /// Interpret this mutable trit slice as a mutable [`Tryte`] slice.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the length of the slice is not a multiple of `3`, or if the
+    /// slice is not byte-aligned.
     pub fn as_trytes_mut(&mut self) -> &mut [Tryte] {
-        assert!(self.len() % 3 == 0);
+        assert!(self.len() % 3 == 0, "Trit slice length must be a multiple of 3");
         unsafe { &mut *(self.as_i8_slice_mut() as *mut _ as *mut _) }
     }
 }
@@ -270,7 +506,7 @@ where
     U: RawEncoding<Trit = T::Trit> + ?Sized,
 {
     fn eq(&self, other: &Trits<U>) -> bool {
-        self.len() == other.len() && self.trits().zip(other.trits()).all(|(a, b)| a == b)
+        self.len() == other.len() && self.iter().zip(other.iter()).all(|(a, b)| a == b)
     }
 }
 
@@ -285,7 +521,7 @@ where
             return None;
         }
 
-        for (a, b) in self.trits().zip(other.trits()) {
+        for (a, b) in self.iter().zip(other.iter()) {
             match a.partial_cmp(&b) {
                 Some(Ordering::Equal) => continue,
                 other_order => return other_order,
@@ -299,7 +535,7 @@ where
 impl<'a, T: RawEncoding + ?Sized> fmt::Debug for &'a Trits<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Trits<{}> [", any::type_name::<T>())?;
-        for (i, trit) in self.trits().enumerate() {
+        for (i, trit) in self.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
@@ -309,17 +545,87 @@ impl<'a, T: RawEncoding + ?Sized> fmt::Debug for &'a Trits<T> {
     }
 }
 
+// x..y
+
 impl<T: RawEncoding + ?Sized> Index<Range<usize>> for Trits<T> {
     type Output = Self;
-
     fn index(&self, range: Range<usize>) -> &Self::Output {
-        self.slice(range)
+        self.subslice(range)
+    }
+}
+impl<T: RawEncoding + ?Sized> IndexMut<Range<usize>> for Trits<T> {
+    fn index_mut(&mut self, range: Range<usize>) -> &mut Self::Output {
+        self.subslice_mut(range)
     }
 }
 
-impl<T: RawEncoding + ?Sized> IndexMut<Range<usize>> for Trits<T> {
-    fn index_mut(&mut self, range: Range<usize>) -> &mut Self::Output {
-        self.slice_mut(range)
+// x..
+
+impl<T: RawEncoding + ?Sized> Index<RangeFrom<usize>> for Trits<T> {
+    type Output = Self;
+    fn index(&self, range: RangeFrom<usize>) -> &Self::Output {
+        self.subslice(range.start..self.len())
+    }
+}
+impl<T: RawEncoding + ?Sized> IndexMut<RangeFrom<usize>> for Trits<T> {
+    fn index_mut(&mut self, range: RangeFrom<usize>) -> &mut Self::Output {
+        self.subslice_mut(range.start..self.len())
+    }
+}
+
+// ..
+
+impl<T: RawEncoding + ?Sized> Index<RangeFull> for Trits<T> {
+    type Output = Self;
+    fn index(&self, _range: RangeFull) -> &Self::Output {
+        self
+    }
+}
+impl<T: RawEncoding + ?Sized> IndexMut<RangeFull> for Trits<T> {
+    fn index_mut(&mut self, _range: RangeFull) -> &mut Self::Output {
+        self
+    }
+}
+
+// x..=y
+
+impl<T: RawEncoding + ?Sized> Index<RangeInclusive<usize>> for Trits<T> {
+    type Output = Self;
+    fn index(&self, range: RangeInclusive<usize>) -> &Self::Output {
+        self.subslice(*range.start()..*range.end() + 1)
+    }
+}
+impl<T: RawEncoding + ?Sized> IndexMut<RangeInclusive<usize>> for Trits<T> {
+    fn index_mut(&mut self, range: RangeInclusive<usize>) -> &mut Self::Output {
+        self.subslice_mut(*range.start()..*range.end() + 1)
+    }
+}
+
+// ..y
+
+impl<T: RawEncoding + ?Sized> Index<RangeTo<usize>> for Trits<T> {
+    type Output = Self;
+    fn index(&self, range: RangeTo<usize>) -> &Self::Output {
+        self.subslice(0..range.end)
+    }
+}
+impl<T: RawEncoding + ?Sized> IndexMut<RangeTo<usize>> for Trits<T> {
+    fn index_mut(&mut self, range: RangeTo<usize>) -> &mut Self::Output {
+        self.subslice_mut(0..range.end)
+    }
+}
+
+// ..=y
+
+impl<T: RawEncoding + ?Sized> Index<RangeToInclusive<usize>> for Trits<T> {
+    type Output = Self;
+    fn index(&self, range: RangeToInclusive<usize>) -> &Self::Output {
+        self.subslice(0..range.end + 1)
+    }
+}
+impl<T: RawEncoding + ?Sized> IndexMut<RangeToInclusive<usize>> for Trits<T> {
+    fn index_mut(&mut self, range: RangeToInclusive<usize>) -> &mut Self::Output {
+        self.subslice_mut(0..range.end + 1)
     }
 }
 
@@ -331,21 +637,29 @@ impl<T: RawEncoding + ?Sized> ToOwned for Trits<T> {
     }
 }
 
+/// A buffer containing trits.
+///
+/// This type is roughly analogous to [`Vec`] or [`String`]. It supports pushing and popping trits
+/// and dereferences to [`Trits`]. It may be borrowed as a trit slice, either mutably or immutably.
 #[derive(Clone)]
 #[repr(transparent)]
 pub struct TritBuf<T: RawEncodingBuf = T1B1Buf<Btrit>>(T);
 
 impl<T: RawEncodingBuf> TritBuf<T> {
+    /// Create a new empty [`TritBuf`].
     pub fn new() -> Self {
-        Self(T::new())
+        Self::default()
     }
 
-    // TODO: Make public when original purged
+    /// Create a new empty [`TritBuf`], backed by the given capacity, `cap`. The resulting
+    /// [`TritBuf`] will contain at least enough space to contain `cap` trits without needing to
+    /// reallocate.
     fn with_capacity(_cap: usize) -> Self {
         // TODO: Allocate capacity
         Self::new()
     }
 
+    /// Create a new [`TritBuf`] of the given length, filled with copies of the provided trit.
     pub fn filled(len: usize, trit: <T::Slice as RawEncoding>::Trit) -> Self {
         let mut this = Self::with_capacity(len);
         for _ in 0..len {
@@ -354,38 +668,48 @@ impl<T: RawEncodingBuf> TritBuf<T> {
         this
     }
 
+    /// Create a new [`TritBuf`] of the given length, filled with zero trit.
     pub fn zeros(len: usize) -> Self {
         Self::filled(len, <T::Slice as RawEncoding>::Trit::zero())
     }
 
+    /// Create a new [`TritBuf`] containing the trits from the given slice of trits.
     pub fn from_trits(trits: &[<T::Slice as RawEncoding>::Trit]) -> Self {
         Self(T::from_trits(trits))
     }
 
-    // TODO: Is this a good API feature? No, it's not. Kill it with fire.
-    #[deprecated]
-    pub fn from_i8_unchecked(trits: &[i8]) -> Self {
-        trits
-            .iter()
-            .map(|t| <T::Slice as RawEncoding>::Trit::try_from(*t))
-            .collect::<Result<Self, _>>()
-            .unwrap_or_else(|_| panic!("Invalid i8 when converting to trit."))
-    }
-
+    /// Push a trit to the back of this [`TritBuf`].
     pub fn push(&mut self, trit: <T::Slice as RawEncoding>::Trit) {
         self.0.push(trit);
     }
 
+    /// Pop a trit from the back of this [`TritBuf`], returning it if successful.
     pub fn pop(&mut self) -> Option<<T::Slice as RawEncoding>::Trit> {
         self.0.pop()
     }
 
+    /// Extracts a trit slice containing the data within this buffer.
+    ///
+    /// Note that [`TritBuf`] dereferences to `Trits` anyway, so it's usually sufficient to take
+    /// a reference to [`TritBuf`] or to just call `&Trits` methods on it rather than explicitly
+    /// calling this method first.
     pub fn as_slice(&self) -> &Trits<T::Slice> {
         unsafe { &*(self.0.as_slice() as *const T::Slice as *const Trits<T::Slice>) }
     }
 
+    /// Extracts a mutable trit slice containing the data within this buffer.
+    ///
+    /// Note that [`TritBuf`] dereferences to `Trits` anyway, so it's usually sufficient to take
+    /// a reference to [`TritBuf`] or to just call `&mut Trits` methods on it rather
+    /// explicitly calling this method first.
     pub fn as_slice_mut(&mut self) -> &mut Trits<T::Slice> {
         unsafe { &mut *(self.0.as_slice_mut() as *mut T::Slice as *mut Trits<T::Slice>) }
+    }
+}
+
+impl<T: RawEncodingBuf> Default for TritBuf<T> {
+    fn default() -> Self {
+        Self(T::new())
     }
 }
 
@@ -394,6 +718,8 @@ where
     T: Trit,
     T::Target: Trit,
 {
+    /// Transform this [`TritBuf`] into a shifted representation. If the buffer contains
+    /// balanced trits ([`Btrit`]), the returned buffer will contain unbalanced trits ([`Utrit`]).
     pub fn into_shifted(self) -> TritBuf<T1B1Buf<<T as ShiftTernary>::Target>> {
         TritBuf(self.0.into_shifted())
     }
@@ -444,24 +770,10 @@ where
     }
 }
 
-impl<T: RawEncodingBuf> Index<Range<usize>> for TritBuf<T> {
-    type Output = Trits<T::Slice>;
-
-    fn index(&self, range: Range<usize>) -> &Self::Output {
-        self.slice(range)
-    }
-}
-
-impl<T: RawEncodingBuf> IndexMut<Range<usize>> for TritBuf<T> {
-    fn index_mut(&mut self, range: Range<usize>) -> &mut Self::Output {
-        self.slice_mut(range)
-    }
-}
-
 impl<T: RawEncodingBuf> fmt::Debug for TritBuf<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TritBuf<{}> [", any::type_name::<T>())?;
-        for (i, trit) in self.trits().enumerate() {
+        for (i, trit) in self.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }

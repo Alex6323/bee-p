@@ -10,24 +10,21 @@ license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "storage"]
 
 [dependencies]
-bee-bundle = { path = "../bee-bundle" }
 bee-protocol = { path = "../bee-protocol"}
 bee-ternary = { path = "../bee-ternary"}
-bee-test = { path = "../bee-test"}
+bee-transaction = { path = "../bee-transaction" }
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }
 async-trait = "0.1.22"
-serde = "1.0.104"
-
 bincode = "1.2.1"
-futures = "0.3.1"
+bytemuck = "1.2.0"
+futures = "0.3.5"
+itertools = "0.9.0"
 num_cpus = "1.12.0"
 rand = "0.7.3"
+rocksdb = { version = "0.14.0", default-features = false }
+serde = "1.0.104"
 sqlx = {version = "0.3.2", features = [ "postgres" ]}
-bytemuck = "1.2.0"
-rocksdb = "0.13.0"
-itertools = "0.9.0"
 
-[lib]
-name = "bee_storage"
-path = "src/lib.rs"
+[dev-dependencies]
+bee-test = { path = "../bee-test"}

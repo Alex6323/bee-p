@@ -1,21 +1,18 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::Seed;
 
 use bee_crypto::Sponge;
-use bee_ternary::{Btrit, Trit, TritBuf, Trits};
+use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
 use std::marker::PhantomData;
@@ -45,7 +42,14 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
         let seed: Vec<i8> = (0..243).map(|_| trits[rng.gen_range(0, trits.len())]).collect();
 
         Self {
-            seed: TritBuf::from_i8_unchecked(&seed),
+            // Hello, future programmer! If you get a type error here, you're probably trying to
+            // make this function generic over an encoding. Be aware that interpreting these raw i8
+            // bytes as trits is a bad idea for encodings other than `T1B1`. In fact, that's why
+            // I put this (currently unnecessary) type annotation here! To produce a warning that
+            // hopefully means you read this text! If you still want to make this generic, the best
+            // option is to just iterate through the `i8`s, convert them each to a trit, and then
+            // collect them into a `TritBuf`
+            seed: unsafe { Trits::<T1B1>::from_raw_unchecked(&seed, 243).to_buf() },
             _sponge: PhantomData,
         }
     }
@@ -114,7 +118,7 @@ mod tests {
     const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
 
     #[test]
-    fn iota_seed_new_test() {
+    fn iota_seed_new() {
         for _ in 0..10 {
             let iota_seed = IotaSeed::<CurlP27>::new();
             for byte in iota_seed.as_bytes() {
@@ -123,7 +127,7 @@ mod tests {
         }
     }
 
-    fn iota_seed_subseed_generic_test<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
+    fn iota_seed_subseed_generic<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
         let iota_seed_trits = TryteBuf::try_from_str(iota_seed_string)
             .unwrap()
             .as_trits()
@@ -142,8 +146,8 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_subseed_kerl_test() {
-        iota_seed_subseed_generic_test::<Kerl>(
+    fn iota_seed_subseed_kerl() {
+        iota_seed_subseed_generic::<Kerl>(
             IOTA_SEED,
             &[
                 "APSNZAPLANAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY",
@@ -161,8 +165,8 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_subseed_curl27_test() {
-        iota_seed_subseed_generic_test::<CurlP27>(
+    fn iota_seed_subseed_curl27() {
+        iota_seed_subseed_generic::<CurlP27>(
             IOTA_SEED,
             &[
                 "ITTFAEIWTRSFQGZGLGUMLUTHFXYSCLXTFYMGVTTDSNNWFUCKBRPSOBERNLXIYCNCEBKUV9QIXI9BDCKSM",
@@ -180,8 +184,8 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_subseed_curl81_test() {
-        iota_seed_subseed_generic_test::<CurlP81>(
+    fn iota_seed_subseed_curl81() {
+        iota_seed_subseed_generic::<CurlP81>(
             IOTA_SEED,
             &[
                 "PKKJZREHPYHNIBWAPYEXHXEAFZCI99UWZNKBOCCECFTDUXG9YGYDAGRLUBJVKMYNWPRCPYENACHOYSHJO",
@@ -199,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_from_bytes_invalid_length_test() {
+    fn iota_seed_from_bytes_invalid_length() {
         let buf = TritBuf::zeros(42);
 
         match IotaSeed::<CurlP27>::from_buf(buf) {
@@ -209,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    fn iota_seed_to_bytes_from_bytes_test() {
+    fn iota_seed_to_bytes_from_bytes() {
         for _ in 0..10 {
             let iota_seed_1 = IotaSeed::<CurlP27>::new();
             let iota_seed_2 = IotaSeed::<CurlP27>::from_buf(iota_seed_1.trits().to_buf()).unwrap();

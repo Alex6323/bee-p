@@ -1,26 +1,23 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
     message::{compress_transaction_bytes, MilestoneRequest, TransactionBroadcast},
     worker::SenderWorker,
 };
 
-use bee_bundle::Transaction;
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
+use bee_transaction::BundledTransaction as Transaction;
 
 use bytemuck::cast_slice;
 use futures::{
@@ -74,7 +71,7 @@ impl MilestoneResponderWorker {
         receiver: mpsc::Receiver<MilestoneResponderWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        info!("[MilestoneResponderWorker ] Running.");
+        info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
@@ -92,6 +89,6 @@ impl MilestoneResponderWorker {
             }
         }
 
-        info!("[MilestoneResponderWorker ] Stopped.");
+        info!("Stopped.");
     }
 }

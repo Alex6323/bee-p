@@ -1,16 +1,13 @@
 // Copyright 2020 IOTA Stiftung
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
     address::Address,
@@ -42,11 +39,11 @@ impl TcpWorker {
     }
 
     pub async fn run(mut self) -> Result<()> {
-        debug!("[TCP  ] Starting TCP worker...");
+        debug!("Starting TCP worker...");
 
         let listener = TcpListener::bind(*self.binding_addr).await?;
 
-        info!("[TCP  ] Accepting connections on {}.", listener.local_addr()?);
+        info!("Accepting connections on {}.", listener.local_addr()?);
 
         let mut incoming = listener.incoming().fuse();
         let shutdown = &mut self.shutdown;
@@ -61,8 +58,7 @@ impl TcpWorker {
                                 let conn = match TcpConnection::new(stream, Origin::Inbound) {
                                     Ok(conn) => conn,
                                     Err(e) => {
-                                        error!["TCP  ] Error creating TCP connection (Stream immediatedly aborted?)."];
-                                        error!["TCP  ] Error was: {:?}.", e];
+                                        error!["Creating TCP connection failed: {:?}.", e];
                                         continue;
                                     }
                                 };
@@ -74,13 +70,13 @@ impl TcpWorker {
 
                                 // Immediatedly drop stream, if it's associated IP address isn't whitelisted
                                 if !whitelist.contains_address(&conn.remote_addr.ip()) {
-                                    warn!("[TCP  ] Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
-                                    warn!("[TCP  ] Connection disallowed.");
+                                    warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
+                                    warn!("Connection disallowed.");
                                     continue;
                                 }
 
                                 info!(
-                                    "[TCP  ] Sucessfully established connection to {} ({}).",
+                                    "Sucessfully established connection to {} ({}).",
                                     conn.remote_addr,
                                     Origin::Inbound
                                 );
@@ -91,8 +87,7 @@ impl TcpWorker {
                                 }
                             }
                             Err(e) => {
-                                error!("[TCP  ] Accepting connection failed.");
-                                error!("[TCP  ] Error was: {:?}.", e.kind());
+                                error!("Accepting connection failed: {:?}.", e);
                             },
                         }
                     } else {
@@ -105,7 +100,7 @@ impl TcpWorker {
             }
         }
 
-        debug!("[TCP  ] Stopped TCP worker.");
+        debug!("Stopped TCP worker.");
         Ok(())
     }
 }
