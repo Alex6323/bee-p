@@ -112,7 +112,7 @@ impl Node {
     pub async fn init(&mut self) {
         logger_init(self.config.logger.clone()).unwrap();
 
-        info!("{} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
+        info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
         block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone()).run());
