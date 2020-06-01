@@ -38,6 +38,7 @@ const DEFAULT_MILESTONE_REQUESTER_WORKER_BOUND: usize = 1000;
 const DEFAULT_RECEIVER_WORKER_BOUND: usize = 1000;
 const DEFAULT_BROADCASTER_WORKER_BOUND: usize = 1000;
 const DEFAULT_STATUS_INTERVAL: u64 = 10;
+const DEFAULT_HANDSHAKE_WINDOW: u64 = 10;
 
 #[derive(Default, Deserialize)]
 struct ProtocolCoordinatorConfigBuilder {
@@ -65,6 +66,7 @@ struct ProtocolWorkersConfigBuilder {
     receiver_worker_bound: Option<usize>,
     broadcaster_worker_bound: Option<usize>,
     status_interval: Option<u64>,
+    handshake_window: Option<u64>,
 }
 
 #[derive(Default, Deserialize)]
@@ -206,6 +208,11 @@ impl ProtocolConfigBuilder {
         self
     }
 
+    pub fn handshake_window(mut self, handshake_window: u64) -> Self {
+        self.workers.handshake_window.replace(handshake_window);
+        self
+    }
+
     pub fn finish(self) -> ProtocolConfig {
         let coo_sponge_type = match self
             .coordinator
@@ -315,6 +322,7 @@ impl ProtocolConfigBuilder {
                     .unwrap_or(DEFAULT_BROADCASTER_WORKER_BOUND),
                 status_interval: self.workers.status_interval.unwrap_or(DEFAULT_STATUS_INTERVAL),
             },
+            handshake_window: self.workers.handshake_window.unwrap_or(DEFAULT_HANDSHAKE_WINDOW),
         }
     }
 }
@@ -354,6 +362,7 @@ pub struct ProtocolConfig {
     pub(crate) mwm: u8,
     pub(crate) coordinator: ProtocolCoordinatorConfig,
     pub(crate) workers: ProtocolWorkersConfig,
+    pub(crate) handshake_window: u64,
 }
 
 impl ProtocolConfig {
