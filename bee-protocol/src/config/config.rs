@@ -66,7 +66,6 @@ struct ProtocolWorkersConfigBuilder {
     receiver_worker_bound: Option<usize>,
     broadcaster_worker_bound: Option<usize>,
     status_interval: Option<u64>,
-    handshake_window: Option<u64>,
 }
 
 #[derive(Default, Deserialize)]
@@ -74,6 +73,7 @@ pub struct ProtocolConfigBuilder {
     mwm: Option<u8>,
     coordinator: ProtocolCoordinatorConfigBuilder,
     workers: ProtocolWorkersConfigBuilder,
+    handshake_window: Option<u64>,
 }
 
 impl ProtocolConfigBuilder {
@@ -209,7 +209,7 @@ impl ProtocolConfigBuilder {
     }
 
     pub fn handshake_window(mut self, handshake_window: u64) -> Self {
-        self.workers.handshake_window.replace(handshake_window);
+        self.handshake_window.replace(handshake_window);
         self
     }
 
@@ -322,7 +322,7 @@ impl ProtocolConfigBuilder {
                     .unwrap_or(DEFAULT_BROADCASTER_WORKER_BOUND),
                 status_interval: self.workers.status_interval.unwrap_or(DEFAULT_STATUS_INTERVAL),
             },
-            handshake_window: self.workers.handshake_window.unwrap_or(DEFAULT_HANDSHAKE_WINDOW),
+            handshake_window: self.handshake_window.unwrap_or(DEFAULT_HANDSHAKE_WINDOW),
         }
     }
 }
