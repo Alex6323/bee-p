@@ -250,6 +250,7 @@ impl ProtocolConfigBuilder {
         public_key_bytes.copy_from_slice(cast_slice(coo_public_key.to_inner().encode::<T5B1Buf>().as_i8_slice()));
 
         ProtocolConfig {
+            null_address: Address::zeros(),
             mwm: self.mwm.unwrap_or(DEFAULT_MWM),
             coordinator: ProtocolCoordinatorConfig {
                 depth: self.coordinator.depth.unwrap_or(DEFAULT_COO_DEPTH),
@@ -259,7 +260,6 @@ impl ProtocolConfigBuilder {
                 sponge_type: coo_sponge_type,
             },
             workers: ProtocolWorkersConfig {
-                null_address: Address::zeros(),
                 milestone_request_send_worker_bound: self
                     .workers
                     .milestone_request_send_worker_bound
@@ -338,7 +338,6 @@ pub struct ProtocolCoordinatorConfig {
 
 #[derive(Clone)]
 pub struct ProtocolWorkersConfig {
-    pub(crate) null_address: Address,
     pub(crate) milestone_request_send_worker_bound: usize,
     pub(crate) transaction_broadcast_send_worker_bound: usize,
     pub(crate) transaction_request_send_worker_bound: usize,
@@ -359,6 +358,7 @@ pub struct ProtocolWorkersConfig {
 
 #[derive(Clone)]
 pub struct ProtocolConfig {
+    pub(crate) null_address: Address,
     pub(crate) mwm: u8,
     pub(crate) coordinator: ProtocolCoordinatorConfig,
     pub(crate) workers: ProtocolWorkersConfig,

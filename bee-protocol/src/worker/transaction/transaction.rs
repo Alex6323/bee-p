@@ -122,7 +122,7 @@ impl TransactionWorker {
             };
 
             if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
-                || transaction.address().eq(&Protocol::get().config.workers.null_address)
+                || transaction.address().eq(&Protocol::get().config.null_address)
             {
                 let tail = {
                     if transaction.is_tail() {
