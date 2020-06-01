@@ -9,10 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+mod cli;
 mod config;
 mod constants;
 mod node;
 
+use cli::CliArgs;
 use config::{NodeConfigBuilder, CONFIG_PATH};
 use node::Node;
 
@@ -21,7 +23,7 @@ use async_std::task::block_on;
 use std::fs;
 
 fn main() {
-    let config_builder = match fs::read_to_string(CONFIG_PATH) {
+    let mut config_builder = match fs::read_to_string(CONFIG_PATH) {
         Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
             Ok(config_builder) => config_builder,
             Err(e) => {
@@ -32,6 +34,8 @@ fn main() {
             panic!("[Node ] Error reading config file: {:?}", e);
         }
     };
+
+    CliArgs::new().apply_to_config(&mut config_builder);
 
     let config = config_builder.finish();
 
