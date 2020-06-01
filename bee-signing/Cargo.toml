@@ -15,3 +15,4 @@ bee-ternary = { path = "../bee-ternary" }
 
 ed25519-dalek = "1.0.0-pre.3"
 rand = "0.7"
+rust-crypto = "0.2.36"

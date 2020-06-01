@@ -31,10 +31,10 @@ pub trait PrivateKeyGenerator {
     ///
     /// ```
     /// use bee_crypto::Kerl;
-    /// use bee_signing::{IotaSeed, PrivateKeyGenerator, Seed, WotsPrivateKeyGeneratorBuilder, WotsSecurityLevel};
+    /// use bee_signing::{TernarySeed, PrivateKeyGenerator, Seed, WotsSpongePrivateKeyGeneratorBuilder, WotsSecurityLevel};
     ///
-    /// let seed = IotaSeed::<Kerl>::new();
-    /// let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+    /// let seed = TernarySeed::<Kerl>::new();
+    /// let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
@@ -58,16 +58,16 @@ pub trait PrivateKey {
     /// ```
     /// # use bee_crypto::Kerl;
     /// # use bee_signing::{
-    ///     IotaSeed,
+    ///     TernarySeed,
     ///     PrivateKeyGenerator,
     ///     Seed,
-    ///     WotsPrivateKeyGeneratorBuilder,
+    ///     WotsSpongePrivateKeyGeneratorBuilder,
     ///     WotsSecurityLevel,
     /// };
     /// use bee_signing::PrivateKey;
     ///
-    /// # let seed = IotaSeed::<Kerl>::new();
-    /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+    /// # let seed = TernarySeed::<Kerl>::new();
+    /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
@@ -87,10 +87,10 @@ pub trait PrivateKey {
     /// ```
     /// # use bee_crypto::Kerl;
     /// # use bee_signing::{
-    ///     IotaSeed,
+    ///     TernarySeed,
     ///     PrivateKeyGenerator,
     ///     Seed,
-    ///     WotsPrivateKeyGeneratorBuilder,
+    ///     WotsSpongePrivateKeyGeneratorBuilder,
     ///     WotsSecurityLevel,
     /// };
     /// use bee_signing::PrivateKey;
@@ -99,8 +99,8 @@ pub trait PrivateKey {
     ///     TryteBuf,
     /// };
     ///
-    /// # let seed = IotaSeed::<Kerl>::new();
-    /// # let private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+    /// # let seed = TernarySeed::<Kerl>::new();
+    /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();

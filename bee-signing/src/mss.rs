@@ -334,7 +334,7 @@ mod tests {
 
     use crate::{
         seed::Seed,
-        wots::{WotsPrivateKeyGenerator, WotsPrivateKeyGeneratorBuilder, WotsPublicKey, WotsSecurityLevel},
+        wots::{WotsPublicKey, WotsSecurityLevel, WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder},
     };
 
     use bee_crypto::{CurlP27, CurlP81, Kerl};
@@ -342,11 +342,11 @@ mod tests {
 
     #[test]
     fn mss_generator_missing_depth() {
-        let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+        let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(WotsSecurityLevel::Low)
             .build()
             .unwrap();
-        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsSpongePrivateKeyGenerator<Kerl>>::default()
             .generator(wots_private_key_generator)
             .build()
         {
@@ -357,11 +357,11 @@ mod tests {
 
     #[test]
     fn mss_generator_invalid_depth() {
-        let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+        let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(WotsSecurityLevel::Low)
             .build()
             .unwrap();
-        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsSpongePrivateKeyGenerator<Kerl>>::default()
             .generator(wots_private_key_generator)
             .depth(21)
             .build()
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn mss_generator_missing_generator() {
-        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsPrivateKeyGenerator<Kerl>>::default()
+        match MssPrivateKeyGeneratorBuilder::<Kerl, WotsSpongePrivateKeyGenerator<Kerl>>::default()
             .depth(5)
             .build()
         {
@@ -493,11 +493,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<Kerl, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<Kerl, WotsSpongePrivateKeyGenerator<Kerl>>(wots_private_key_generator);
         }
     }
 
@@ -511,11 +511,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<CurlP27>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<CurlP27>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<Kerl, WotsPrivateKeyGenerator<CurlP27>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<Kerl, WotsSpongePrivateKeyGenerator<CurlP27>>(wots_private_key_generator);
         }
     }
 
@@ -529,11 +529,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<CurlP81>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<CurlP81>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<Kerl, WotsPrivateKeyGenerator<CurlP81>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<Kerl, WotsSpongePrivateKeyGenerator<CurlP81>>(wots_private_key_generator);
         }
     }
 
@@ -547,11 +547,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<CurlP27, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<CurlP27, WotsSpongePrivateKeyGenerator<Kerl>>(wots_private_key_generator);
         }
     }
 
@@ -565,11 +565,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<CurlP27>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<CurlP27>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<CurlP27, WotsPrivateKeyGenerator<CurlP27>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<CurlP27, WotsSpongePrivateKeyGenerator<CurlP27>>(wots_private_key_generator);
         }
     }
 
@@ -583,11 +583,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<CurlP81>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<CurlP81>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<CurlP27, WotsPrivateKeyGenerator<CurlP81>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<CurlP27, WotsSpongePrivateKeyGenerator<CurlP81>>(wots_private_key_generator);
         }
     }
 
@@ -601,11 +601,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<CurlP81, WotsPrivateKeyGenerator<Kerl>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<CurlP81, WotsSpongePrivateKeyGenerator<Kerl>>(wots_private_key_generator);
         }
     }
 
@@ -619,11 +619,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<CurlP27>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<CurlP27>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<CurlP81, WotsPrivateKeyGenerator<CurlP27>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<CurlP81, WotsSpongePrivateKeyGenerator<CurlP27>>(wots_private_key_generator);
         }
     }
 
@@ -637,11 +637,11 @@ mod tests {
         .to_vec()
         .into_iter()
         {
-            let wots_private_key_generator = WotsPrivateKeyGeneratorBuilder::<CurlP81>::default()
+            let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<CurlP81>::default()
                 .security_level(s)
                 .build()
                 .unwrap();
-            mss_wots_generic_roundtrip::<CurlP81, WotsPrivateKeyGenerator<CurlP81>>(wots_private_key_generator);
+            mss_wots_generic_roundtrip::<CurlP81, WotsSpongePrivateKeyGenerator<CurlP81>>(wots_private_key_generator);
         }
     }
 }
