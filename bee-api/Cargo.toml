@@ -11,8 +11,10 @@ keywords = ["iota", "tangle", "bee", "framework", "api"]
 
 [dependencies]
 bee-tangle = { path = "../bee-tangle" }
+bee-ternary = { path = "../bee-ternary" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = "1.5.0"
 async-trait = "0.1.24"
 jsonrpsee = "0.1.0"
+serde = { version = "1.0.104", features = ["derive" ] }
