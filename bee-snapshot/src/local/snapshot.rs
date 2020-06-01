@@ -16,8 +16,7 @@ use bee_transaction::{Address, BundledTransactionField, Hash};
 
 use std::collections::HashMap;
 
-use async_std::fs::File;
-use async_std::prelude::*;
+use async_std::{fs::File, prelude::*};
 use bytemuck::cast_slice;
 
 pub struct LocalSnapshot {
