@@ -11,7 +11,7 @@
 
 use crate::{
     config::NodeConfig,
-    constants::{BEE_GIT_COMMIT, BEE_NAME, BEE_VERSION},
+    constants::{BEE_GIT_COMMIT, BEE_VERSION},
 };
 
 use bee_common::logger_init;
