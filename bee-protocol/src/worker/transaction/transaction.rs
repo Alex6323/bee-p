@@ -203,11 +203,10 @@ mod tests {
             shutdown_sender.send(()).unwrap();
         });
 
-        block_on(TransactionWorker::new(10000).run(
-            transaction_worker_receiver,
-            shutdown_receiver,
-            milestone_validator_worker_sender,
-        ));
+        block_on(
+            TransactionWorker::new(milestone_validator_worker_sender, 10000)
+                .run(transaction_worker_receiver, shutdown_receiver),
+        );
 
         assert_eq!(tangle().size(), 1);
         assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
