@@ -84,7 +84,7 @@ impl TransactionWorker {
         }
 
         let transaction_bytes = uncompress_transaction_bytes(&transaction_broadcast.transaction);
-        let (transaction, hash) = match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), 6561) {
+        let (transaction, hash) = match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), 8019) {
             Ok(transaction_trits) => {
                 let transaction_buf = transaction_trits.to_buf::<T5B1Buf>().encode::<T1B1Buf>();
                 match Transaction::from_trits(&transaction_buf) {
