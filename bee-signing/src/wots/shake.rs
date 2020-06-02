@@ -20,7 +20,10 @@ use bee_ternary::{
     Btrit, TritBuf,
 };
 
-use crypto::digest::Digest;
+use sha3::{
+    digest::{ExtendableOutput, Input, XofReader},
+    Shake256,
+};
 
 use std::marker::PhantomData;
 
@@ -56,18 +59,16 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
 
     fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         let mut state = TritBuf::zeros(self.security_level as usize * 6561);
-
-        let mut shake = crypto::sha3::Sha3::shake_256();
+        let mut shake = Shake256::default();
         let mut ternary_buffer = T243::<Btrit>::default();
-        let mut binary_buffer = I384::<BigEndian, U8Repr>::default();
-
         ternary_buffer.inner_mut().copy_from(seed.trits());
-        binary_buffer = ternary_buffer.into_t242().into();
+        let mut binary_buffer: I384<BigEndian, U8Repr> = ternary_buffer.into_t242().into();
 
-        shake.input(binary_buffer.inner_ref());
+        shake.input(&binary_buffer.inner_ref()[..]);
+        let mut reader = shake.xof_result();
 
         for trit_chunk in state.chunks_mut(243) {
-            shake.result(&mut binary_buffer.inner_mut()[..]);
+            reader.read(&mut binary_buffer.inner_mut()[..]);
             let ternary_value = T242::from_i384_ignoring_mst(binary_buffer).into_t243();
 
             trit_chunk.copy_from(&ternary_value.inner_ref());
@@ -85,7 +86,7 @@ mod tests {
 
     use super::*;
 
-    use bee_crypto::{CurlP27, CurlP81, Kerl};
+    use bee_crypto::Kerl;
     use bee_ternary::{T1B1Buf, TryteBuf};
 
     const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
