@@ -1,7 +1,7 @@
 use crate::api::{ApiImpl, Api};
 
-use bee_ternary::{TryteBuf, T1B1Buf};
-use bee_transaction::{Hash, BundledTransactionField, Payload};
+use bee_ternary::{TryteBuf, T1B1Buf, TritBuf, Tryte};
+use bee_transaction::{Hash, BundledTransactionField, BundledTransaction};
 
 use jsonrpsee::common;
 use std::net::SocketAddr;
@@ -10,7 +10,9 @@ pub const RPC_SERVER_ADDRESS: &str = "127.0.0.1:8000";
 
 jsonrpsee::rpc_api! {
     RequestType {
-        fn transactions_by_hash(hashes: Vec<String>) -> Vec<Payload>; // change return value to Vec<Option<BundledTransaction>>
+        fn echo(msg: String) -> String; // e.g. curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "method": "echo", "params": {"msg": "Hello Bee"}, "id": 1}' 127.0.0.1:8000
+        fn transaction_by_hash(hash: String) -> String;
+        fn transactions_by_hash(hashes: Vec<String>) -> Vec<String>;
     }
 }
 
@@ -20,48 +22,54 @@ pub async fn run(listen_addr: SocketAddr) {
         .unwrap();
     let mut server = jsonrpsee::raw::RawServer::new(transport_server);
 
-    'outer: while let Ok(request) = RequestType::next_request(&mut server).await {
+    while let Ok(request) = RequestType::next_request(&mut server).await {
         match request {
-            RequestType::TransactionsByHash { respond, hashes } => {
 
-                // Deserialize hashes of request
-                let hashes = {
-                    let mut ret = Vec::new();
+            RequestType::Echo { respond, msg } => {
+                respond.ok(msg).await;
+            }
 
-                    for tryte_string in hashes {
-                        let hash_buf = TryteBuf::try_from_str(&tryte_string)
-                            .unwrap()
-                            .as_trits()
-                            .encode::<T1B1Buf>();
+            RequestType::TransactionByHash { respond, hash } => {
 
-                        let hash_result = Hash::try_from_inner(hash_buf);
+                // deserialize provided hash
+                let hash_result = Hash::try_from_inner(deserialize_tryte_str(&hash));
 
-                        match hash_result {
-                            Ok(hash) => ret.push(hash),
-                            Err(_) => {
-                                respond.err(common::Error::invalid_params("Invalid params provided!")).await;
-                                continue 'outer;
+                match hash_result {
+                    Ok(hash) => {
+                        match ApiImpl::transaction_by_hash(&hash) {
+                            Some(tx_ref) => {
+                                let mut trits = TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len());
+                                tx_ref.into_trits_allocated(&mut trits);
+                                let response = trits
+                                    .chunks(3)
+                                    .map(|trits| char::from(Tryte::from_trits([trits.get(0).unwrap(), trits.get(1).unwrap(), trits.get(2).unwrap()])))
+                                    .collect::<String>();
+                                respond.ok(response).await;
+                            }
+                            None => {
+                                let response = String::from("Transaction not found!");
+                                respond.ok(response).await;
                             }
                         }
                     }
-
-                    ret
-                };
-
-                let mut response = Vec::new();
-                for tx_ref in ApiImpl::transactions_by_hash(&hashes) {
-                    match tx_ref {
-                        Some(tx_ref) => {
-                            // Pushing only the transaction payload to the response
-                            response.push(tx_ref.payload().clone());
-                        }
-                        None => response.push(Payload::zeros())
+                    Err(_e) => {
+                        respond.err(common::Error::parse_error()).await;
                     }
                 }
 
-                respond.ok(response).await;
-
             }
+
+            RequestType::TransactionsByHash { respond, hashes } => {
+                respond.err(common::Error::method_not_found()).await;
+            }
+
         }
     }
+}
+
+fn deserialize_tryte_str(tryte_str: &str) -> TritBuf {
+    TryteBuf::try_from_str(tryte_str)
+        .unwrap()
+        .as_trits()
+        .encode::<T1B1Buf>()
 }
