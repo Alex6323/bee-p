@@ -20,7 +20,6 @@ use std::{cmp::PartialEq, fmt, hash};
 #[derive(Debug)]
 pub enum BundledTransactionFieldError {
     FieldWrongLength,
-    FieldDeserializationError,
 }
 
 pub trait BundledTransactionField: Sized + BundledTransactionFieldType {
@@ -73,7 +72,7 @@ impl NumTritsOfValue for usize {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Payload(pub(crate) TritBuf<T1B1Buf>);
 
 impl Payload {
@@ -86,7 +85,7 @@ impl Payload {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Address(pub(crate) TritBuf<T1B1Buf>);
 
 impl Address {
@@ -101,7 +100,7 @@ impl Address {
 
 impl Eq for Address {}
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Value(pub(crate) i64);
 
 impl Value {
@@ -110,7 +109,7 @@ impl Value {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Tag(pub(crate) TritBuf<T1B1Buf>);
 
 impl Tag {
@@ -123,7 +122,7 @@ impl Tag {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Timestamp(pub(crate) u64);
 
 impl Timestamp {
@@ -132,7 +131,7 @@ impl Timestamp {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Index(pub(crate) usize);
 
 impl Index {
@@ -237,7 +236,7 @@ impl BundledTransactionField for Hash {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Nonce(pub(crate) TritBuf<T1B1Buf>);
 
 impl Nonce {
