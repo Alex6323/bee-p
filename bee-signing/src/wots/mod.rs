@@ -9,5 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub(crate) const BEE_VERSION: &str = env!("CARGO_PKG_VERSION");
-pub(crate) const BEE_GIT_COMMIT: &str = env!("GIT_COMMIT");
+mod shake;
+mod sponge;
+mod wots;
+
+pub use shake::{WotsShakePrivateKeyGenerator, WotsShakePrivateKeyGeneratorBuilder};
+pub use sponge::{WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder};
+pub use wots::{WotsError, WotsPrivateKey, WotsPublicKey, WotsSecurityLevel, WotsSignature};

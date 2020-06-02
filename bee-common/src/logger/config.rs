@@ -70,6 +70,17 @@ impl LoggerConfigBuilder {
         self
     }
 
+    pub fn stdout_level(&mut self, level: String) {
+        if let Some(outputs) = self.outputs.as_deref_mut() {
+            if let Some(stdout) = outputs
+                .iter_mut()
+                .find(|output| "stdout" == output.name.as_ref().unwrap())
+            {
+                stdout.level.replace(level);
+            }
+        }
+    }
+
     pub fn finish(self) -> LoggerConfig {
         let mut outputs = Vec::new();
 

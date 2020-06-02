@@ -21,6 +21,7 @@ use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::{BundledTransaction as Transaction, BundledTransactionField, Hash};
 
+use bytemuck::cast_slice;
 use futures::{
     channel::{mpsc, oneshot},
     future::FutureExt,
@@ -28,7 +29,7 @@ use futures::{
     stream::StreamExt,
     SinkExt,
 };
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -36,13 +37,15 @@ pub(crate) struct TransactionWorkerEvent {
 }
 
 pub(crate) struct TransactionWorker {
+    milestone_validator_worker: mpsc::Sender<Hash>,
     cache: TinyHashCache,
     curl: CurlP81,
 }
 
 impl TransactionWorker {
-    pub(crate) fn new(cache_size: usize) -> Self {
+    pub(crate) fn new(milestone_validator_worker: mpsc::Sender<Hash>, cache_size: usize) -> Self {
         Self {
+            milestone_validator_worker,
             cache: TinyHashCache::new(cache_size),
             curl: CurlP81::new(),
         }
@@ -52,7 +55,6 @@ impl TransactionWorker {
         mut self,
         receiver: mpsc::Receiver<TransactionWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
-        mut milestone_validator_worker_tx: mpsc::Sender<Hash>,
     ) {
         info!("Running.");
 
@@ -63,7 +65,7 @@ impl TransactionWorker {
             select! {
                 event = receiver_fused.next() => {
                     if let Some(TransactionWorkerEvent{from, transaction_broadcast}) = event {
-                        self.process_transaction_brodcast(from, transaction_broadcast, &mut milestone_validator_worker_tx).await;
+                        self.process_transaction_brodcast(from, transaction_broadcast).await;
                     }
                 },
                 _ = shutdown_fused => break
@@ -73,106 +75,79 @@ impl TransactionWorker {
         info!("Stopped.");
     }
 
-    async fn process_transaction_brodcast(
-        &mut self,
-        from: EndpointId,
-        transaction_broadcast: TransactionBroadcast,
-        milestone_validator_worker_tx: &mut mpsc::Sender<Hash>,
-    ) {
-        debug!("Processing received data...");
+    async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_broadcast: TransactionBroadcast) {
+        debug!("Processing received transaction...");
 
         if !self.cache.insert(&transaction_broadcast.transaction) {
-            debug!("Data already received.");
+            debug!("Transaction already received.");
             return;
         }
 
-        // convert received transaction bytes into T1B1 buffer
-        let transaction_buf = {
-            let u8_t5b1_buf = uncompress_transaction_bytes(&transaction_broadcast.transaction);
-
-            // transform [u8] to &[i8]
-            let i8_t5b1_slice = unsafe { &*(&u8_t5b1_buf as *const [u8] as *const [i8]) };
-
-            // get T5B1 trits
-            let t5b1_trits_result = Trits::<T5B1>::try_from_raw(i8_t5b1_slice, i8_t5b1_slice.len() * 5 - 1);
-
-            match t5b1_trits_result {
-                Ok(t5b1_trits) => {
-                    // get T5B1 trit_buf
-                    let t5b1_trit_buf = t5b1_trits.to_buf::<T5B1Buf>();
-
-                    // get T1B1 trit_buf from TB51 trit_buf
-                    t5b1_trit_buf.encode::<T1B1Buf>()
-                }
-                Err(_) => {
-                    warn!("Can not decode T5B1 from received data.");
-                    return;
+        let transaction_bytes = uncompress_transaction_bytes(&transaction_broadcast.transaction);
+        let (transaction, hash) = match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), 8019) {
+            Ok(transaction_trits) => {
+                let transaction_buf = transaction_trits.to_buf::<T5B1Buf>().encode::<T1B1Buf>();
+                match Transaction::from_trits(&transaction_buf) {
+                    Ok(transaction) => (
+                        transaction,
+                        Hash::from_inner_unchecked(self.curl.digest(&transaction_buf).unwrap()),
+                    ),
+                    Err(e) => {
+                        debug!("Invalid transaction: {:?}.", e);
+                        return;
+                    }
                 }
             }
-        };
-
-        // build transaction
-        let transaction = match Transaction::from_trits(&transaction_buf) {
-            Ok(transaction) => transaction,
             Err(e) => {
-                warn!("Can not build transaction from received data: {:?}", e);
+                debug!("Invalid transaction: {:?}.", e);
                 return;
             }
         };
-
-        // calculate transaction hash
-        let hash = Hash::from_inner_unchecked(self.curl.digest(&transaction_buf).unwrap());
 
         if hash.weight() < Protocol::get().config.mwm {
             debug!("Insufficient weight magnitude: {}.", hash.weight());
             return;
         }
 
-        // store transaction
-        match tangle().insert_transaction(transaction, hash).await {
-            Some(transaction) => {
-                Protocol::get().metrics.new_transactions_received_inc();
-                if !tangle().is_synced() && Protocol::get().requested.is_empty() {
-                    Protocol::trigger_milestone_solidification().await;
+        if let Some(transaction) = tangle().insert_transaction(transaction, hash).await {
+            Protocol::get().metrics.new_transactions_received_inc();
+            if !tangle().is_synced() && Protocol::get().requested.is_empty() {
+                Protocol::trigger_milestone_solidification().await;
+            }
+            match Protocol::get().requested.remove(&hash) {
+                Some((hash, index)) => {
+                    Protocol::trigger_transaction_solidification(hash, index).await;
                 }
-                match Protocol::get().requested.remove(&hash) {
-                    Some((hash, index)) => {
-                        Protocol::trigger_transaction_solidification(hash, index).await;
+                None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
+            };
+
+            if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
+                || transaction.address().eq(&Protocol::get().config.null_address)
+            {
+                let tail = {
+                    if transaction.is_tail() {
+                        Some(hash)
+                    } else {
+                        let chain =
+                            tangle().trunk_walk_approvers(hash, |tx_ref| tx_ref.bundle() == transaction.bundle());
+                        match chain.last() {
+                            Some((tx_ref, hash)) => {
+                                if tx_ref.is_tail() {
+                                    Some(*hash)
+                                } else {
+                                    None
+                                }
+                            }
+                            None => None,
+                        }
                     }
-                    None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
                 };
 
-                if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
-                    || transaction.address().eq(&Protocol::get().config.workers.null_address)
-                {
-                    let tail = {
-                        if transaction.is_tail() {
-                            Some(hash)
-                        } else {
-                            let chain =
-                                tangle().trunk_walk_approvers(hash, |tx_ref| tx_ref.bundle() == transaction.bundle());
-                            match chain.last() {
-                                Some((tx_ref, hash)) => {
-                                    if tx_ref.is_tail() {
-                                        Some(*hash)
-                                    } else {
-                                        None
-                                    }
-                                }
-                                None => None,
-                            }
-                        }
-                    };
-
-                    if let Some(tail) = tail {
-                        if let Err(e) = milestone_validator_worker_tx.send(tail).await {
-                            error!("Sending tail to milestone validation failed: {:?}.", e);
-                        }
-                    };
-                }
-            }
-            None => {
-                debug!("Transaction {} already present in the tangle.", &hash);
+                if let Some(tail) = tail {
+                    if let Err(e) = self.milestone_validator_worker.send(tail).await {
+                        error!("Sending tail to milestone validation failed: {:?}.", e);
+                    }
+                };
             }
         }
     }
@@ -228,11 +203,10 @@ mod tests {
             shutdown_sender.send(()).unwrap();
         });
 
-        block_on(TransactionWorker::new(10000).run(
-            transaction_worker_receiver,
-            shutdown_receiver,
-            milestone_validator_worker_sender,
-        ));
+        block_on(
+            TransactionWorker::new(milestone_validator_worker_sender, 10000)
+                .run(transaction_worker_receiver, shutdown_receiver),
+        );
 
         assert_eq!(tangle().size(), 1);
         assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);

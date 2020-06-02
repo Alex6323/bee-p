@@ -1,4 +1,4 @@
-name: Test
+name: Build
 
 on:
   push:
@@ -9,27 +9,12 @@ on:
       - master
 
 jobs:
-  test:
+  build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        #os: [ubuntu-latest, windows-latest, macOS-latest]
         os: [ubuntu-latest]
         rust: [nightly, beta, stable]
-
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
     - uses: actions/checkout@master
@@ -58,8 +43,8 @@ jobs:
         path: target
         key: ${{ matrix.os }}-${{ matrix.rust }}-cargo-build-target-${{ hashFiles('**/Cargo.toml') }}
 
-    - name: Tests
+    - name: Build
       uses: actions-rs/cargo@v1
       with:
-        command: test
+        command: build
         args: --all --release

@@ -11,7 +11,7 @@
 
 use crate::{
     config::NodeConfig,
-    constants::{BEE_GIT_COMMIT, BEE_NAME, BEE_VERSION},
+    constants::{BEE_GIT_COMMIT, BEE_VERSION},
 };
 
 use bee_common::logger_init;
@@ -112,7 +112,7 @@ impl Node {
     pub async fn init(&mut self) {
         logger_init(self.config.logger.clone()).unwrap();
 
-        info!("{} v{}-{}.", BEE_NAME, BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
+        info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
         block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone()).run());
@@ -120,7 +120,7 @@ impl Node {
         bee_tangle::init();
 
         info!("Reading snapshot file...");
-        let snapshot_state = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()).await {
+        let snapshot_state = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
             Ok(local_snapshot) => {
                 info!(
                     "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and {} balances.",

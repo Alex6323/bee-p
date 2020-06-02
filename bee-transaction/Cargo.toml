@@ -13,5 +13,3 @@ keywords = ["iota", "tangle", "bee", "framework", "transaction"]
 bee-crypto = { path = "../bee-crypto" }
 bee-signing = { path = "../bee-signing" }
 bee-ternary = { path = "../bee-ternary", features = ["serde1"] }
-
-serde = { version = "1.0", features = ["derive"] }

@@ -171,11 +171,11 @@ impl Protocol {
         }
 
         spawn(
-            TransactionWorker::new(Protocol::get().config.workers.transaction_worker_cache).run(
-                transaction_worker_rx,
-                transaction_worker_shutdown_rx,
+            TransactionWorker::new(
                 Protocol::get().milestone_validator_worker.0.clone(),
-            ),
+                Protocol::get().config.workers.transaction_worker_cache,
+            )
+            .run(transaction_worker_rx, transaction_worker_shutdown_rx),
         );
         spawn(TransactionResponderWorker::new().run(
             transaction_responder_worker_rx,

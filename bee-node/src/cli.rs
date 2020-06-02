@@ -9,5 +9,26 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub(crate) const BEE_VERSION: &str = env!("CARGO_PKG_VERSION");
-pub(crate) const BEE_GIT_COMMIT: &str = env!("GIT_COMMIT");
+use crate::config::NodeConfigBuilder;
+
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+pub(crate) struct CliArgs {
+    #[structopt(
+        short = "l",
+        long = "log-level",
+        help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\""
+    )]
+    log_level: Option<String>,
+}
+
+impl CliArgs {
+    pub(crate) fn new() -> Self {
+        Self::from_args()
+    }
+
+    pub(crate) fn apply_to_config(self, config: &mut NodeConfigBuilder) {
+        self.log_level.map(|log_level| config.logger.stdout_level(log_level));
+    }
+}

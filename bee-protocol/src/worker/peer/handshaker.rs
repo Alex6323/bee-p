@@ -174,7 +174,7 @@ impl PeerHandshakerWorker {
             .expect("Clock may have gone backwards")
             .as_millis() as u64;
 
-        if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
+        if ((timestamp - handshake.timestamp) as i64).abs() as u64 > Protocol::get().config.handshake_window * 1000 {
             return Err(HandshakeError::InvalidTimestampDiff(
                 ((timestamp - handshake.timestamp) as i64).abs(),
             ));
