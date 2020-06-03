@@ -10,8 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundled::{Bundle, BundledTransaction, BundledTransactionField, BundledTransactions},
-    constants::IOTA_SUPPLY,
+    bundled::{constants::IOTA_SUPPLY, Bundle, BundledTransaction, BundledTransactionField, BundledTransactions},
     TransactionVertex,
 };
 

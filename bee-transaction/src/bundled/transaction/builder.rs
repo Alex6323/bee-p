@@ -9,12 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    bundled::{
-        Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Hash, Index, Nonce, Payload,
-        Tag, Timestamp, Value,
-    },
+use crate::bundled::{
     constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
+    Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Hash, Index, Nonce, Payload, Tag,
+    Timestamp, Value,
 };
 
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};
@@ -225,7 +223,7 @@ impl BundledTransactionBuilders {
 mod tests {
     use super::*;
 
-    use crate::constants::TRANSACTION_TRIT_LEN;
+    use crate::bundled::constants::TRANSACTION_TRIT_LEN;
 
     use bee_ternary::{Trits, T1B1};
 

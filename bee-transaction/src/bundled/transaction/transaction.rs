@@ -11,11 +11,12 @@
 
 use crate::{
     bundled::{
-        Address, BundledTransactionBuilder, BundledTransactionField, Hash, Index, Nonce, Payload, Tag, Timestamp, Value,
-    },
-    constants::{
-        Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
-        OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
+        constants::{
+            Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
+            OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
+        },
+        Address, BundledTransactionBuilder, BundledTransactionField, Hash, Index, Nonce, Payload, Tag, Timestamp,
+        Value,
     },
     TransactionVertex,
 };

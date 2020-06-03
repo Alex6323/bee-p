@@ -9,12 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    bundled::{
-        Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
-        BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
-    },
+use crate::bundled::{
     constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
+    Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
+    BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
 };
 
 use bee_crypto::{Kerl, Sponge};
