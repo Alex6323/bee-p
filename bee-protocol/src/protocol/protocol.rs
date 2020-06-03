@@ -37,10 +37,7 @@ use std::{
 
 use async_std::task::spawn;
 use dashmap::DashMap;
-use futures::{
-    channel::{mpsc, oneshot},
-    sink::SinkExt,
-};
+use futures::channel::{mpsc, oneshot};
 use log::warn;
 
 static mut PROTOCOL: *const Protocol = ptr::null();
@@ -79,8 +76,8 @@ pub struct Protocol {
         Mutex<Option<oneshot::Sender<()>>>,
     ),
     pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
-    pub(crate) status_worker: mpsc::Sender<()>,
-    pub(crate) tps_worker: mpsc::Sender<()>,
+    pub(crate) status_worker: Mutex<Option<oneshot::Sender<()>>>,
+    pub(crate) tps_worker: Mutex<Option<oneshot::Sender<()>>>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested: DashMap<Hash, MilestoneIndex>,
 }
@@ -122,9 +119,9 @@ impl Protocol {
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(config.workers.broadcaster_worker_bound);
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
 
-        let (status_worker_shutdown_tx, status_worker_shutdown_rx) = mpsc::channel(1);
+        let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();
 
-        let (tps_worker_shutdown_tx, tps_worker_shutdown_rx) = mpsc::channel(1);
+        let (tps_worker_shutdown_tx, tps_worker_shutdown_rx) = oneshot::channel();
 
         let protocol = Protocol {
             config,
@@ -160,8 +157,8 @@ impl Protocol {
                 Mutex::new(Some(milestone_solidifier_worker_shutdown_tx)),
             ),
             broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
-            status_worker: status_worker_shutdown_tx,
-            tps_worker: tps_worker_shutdown_tx,
+            status_worker: Mutex::new(Some(status_worker_shutdown_tx)),
+            tps_worker: Mutex::new(Some(tps_worker_shutdown_tx)),
             peer_manager: PeerManager::new(network.clone()),
             requested: Default::default(),
         };
@@ -279,11 +276,19 @@ impl Protocol {
                 }
             }
         }
-        if let Err(e) = Protocol::get().status_worker.clone().send(()).await {
-            warn!("Shutting down StatusWorker failed: {:?}.", e);
+        if let Ok(mut shutdown) = Protocol::get().status_worker.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("Shutting down StatusWorker failed: {:?}.", e);
+                }
+            }
         }
-        if let Err(e) = Protocol::get().tps_worker.clone().send(()).await {
-            warn!("Shutting down TpsWorker failed: {:?}.", e);
+        if let Ok(mut shutdown) = Protocol::get().tps_worker.lock() {
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("Shutting down TpsWorker failed: {:?}.", e);
+                }
+            }
         }
     }
 
