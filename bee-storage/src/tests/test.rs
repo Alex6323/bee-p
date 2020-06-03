@@ -9,6 +9,21 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::storage::StorageBackend;
+
+use std::marker::PhantomData;
+
+pub trait TestableStorage {
+    fn test_name() -> String;
+    fn setup();
+    fn teardown();
+    fn test_db_url() -> String;
+}
+
+pub struct StorageTestRunner<T: TestableStorage + StorageBackend> {
+    phantom: PhantomData<T>,
+}
+
 #[cfg(test)]
 pub mod tests {
     use crate::storage::{HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap, StorageBackend};
@@ -19,7 +34,6 @@ pub mod tests {
     use std::{
         collections::{HashMap, HashSet},
         io::{self, Write},
-        marker::PhantomData,
         panic,
         rc::Rc,
         time::Instant,
@@ -27,16 +41,7 @@ pub mod tests {
 
     use futures::{executor::block_on, future::join_all};
 
-    pub trait TestableStorage {
-        fn test_name() -> String;
-        fn setup();
-        fn teardown();
-        fn test_db_url() -> String;
-    }
-
-    pub struct StorageTestRunner<T: TestableStorage + StorageBackend> {
-        phantom: PhantomData<T>,
-    }
+    use super::{StorageTestRunner, TestableStorage};
 
     impl<T: TestableStorage + StorageBackend> StorageTestRunner<T> {
         fn test_insert_one_transaction() {

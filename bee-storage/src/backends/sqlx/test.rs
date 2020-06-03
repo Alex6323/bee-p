@@ -21,7 +21,7 @@ mod tests {
         process::Command,
     };
 
-    use crate::test::tests::{StorageTestRunner, TestableStorage};
+    use crate::tests::test::{StorageTestRunner, TestableStorage};
 
     impl TestableStorage for SqlxBackendStorage {
         fn test_name() -> String {
