@@ -14,7 +14,7 @@ mod tests {
     const BEE_TEST_DB_USER: &str = "test_db_user";
     const BEE_TEST_DB_NAME: &str = "test_db";
 
-    use crate::sqlx::SqlxBackendStorage;
+    use crate::backends::sqlx::SqlxBackendStorage;
 
     use std::{
         io::{self, Write},
@@ -29,8 +29,8 @@ mod tests {
         }
 
         fn setup() {
-            let output = Command::new("src/sqlx/schemes/postgres/setup.sh")
-                .arg("src/sqlx/schemes/postgres/schema.sql")
+            let output = Command::new("src/backends/sqlx/schemes/postgres/setup.sh")
+                .arg("src/backends/sqlx/schemes/postgres/schema.sql")
                 .arg(BEE_TEST_DB_USER)
                 .arg("dummy_password")
                 .arg(BEE_TEST_DB_NAME)
@@ -46,7 +46,7 @@ mod tests {
         }
 
         fn teardown() {
-            let output = Command::new("src/sqlx/schemes/postgres/teardown.sh")
+            let output = Command::new("src/backends/sqlx/schemes/postgres/teardown.sh")
                 .arg(BEE_TEST_DB_USER)
                 .arg(BEE_TEST_DB_NAME)
                 .output()

@@ -13,7 +13,7 @@
 mod tests {
     const BEE_TEST_DB_NAME: &str = "test_db";
 
-    use crate::rocksdb::RocksDbBackendStorage;
+    use crate::backends::rocksdb::RocksDbBackendStorage;
 
     use crate::test::tests::{StorageTestRunner, TestableStorage};
 

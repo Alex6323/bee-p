@@ -517,21 +517,22 @@ impl StorageBackend for RocksDbBackendStorage {
         state_delta: StateDeltaMap,
         index: MilestoneIndex,
     ) -> Result<(), RocksDbBackendError> {
-        let db = self.0.connection.db.as_ref().unwrap();
-        let milestone_cf_hash_to_delta = db.cf_handle(MILESTONE_CF_HASH_TO_DELTA).unwrap();
-        // TODO - handle error, assert the milestone exists?
-        let encoded: Vec<u8> = bincode::serialize(&state_delta).unwrap();
-
-        db.put_cf(&milestone_cf_hash_to_delta, index.to_le_bytes(), encoded)?;
+        // let db = self.0.connection.db.as_ref().unwrap();
+        // let milestone_cf_hash_to_delta = db.cf_handle(MILESTONE_CF_HASH_TO_DELTA).unwrap();
+        // // TODO - handle error, assert the milestone exists?
+        // let encoded: Vec<u8> = bincode::serialize(&state_delta).unwrap();
+        //
+        // db.put_cf(&milestone_cf_hash_to_delta, index.to_le_bytes(), encoded)?;
         Ok(())
     }
 
     async fn load_state_delta(&self, index: MilestoneIndex) -> Result<StateDeltaMap, RocksDbBackendError> {
-        let db = self.0.connection.db.as_ref().unwrap();
-        let milestone_cf_hash_to_delta = db.cf_handle(MILESTONE_CF_HASH_TO_DELTA).unwrap();
-
-        let res = db.get_cf(&milestone_cf_hash_to_delta, index.to_le_bytes())?;
-
-        Ok(bincode::deserialize(&res.unwrap()).unwrap())
+        // let db = self.0.connection.db.as_ref().unwrap();
+        // let milestone_cf_hash_to_delta = db.cf_handle(MILESTONE_CF_HASH_TO_DELTA).unwrap();
+        //
+        // let res = db.get_cf(&milestone_cf_hash_to_delta, index.to_le_bytes())?;
+        //
+        // Ok(bincode::deserialize(&res.unwrap()).unwrap())
+        Ok((Default::default()))
     }
 }
