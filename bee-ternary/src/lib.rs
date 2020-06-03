@@ -409,6 +409,21 @@ where
     }
 }
 
+impl<T> Trits<T>
+where
+    T: RawEncoding<Trit = Btrit> + ?Sized,
+{
+    /// Returns an iterator over the trytes represented within this slice.
+    ///
+    /// For encodings that are representation-compatible with trytes, such as [`T3B1`], use
+    /// [`Trits::as_trytes`] instead since it is faster and more capable.
+    pub fn iter_trytes(&self) -> impl DoubleEndedIterator<Item = Tryte> + ExactSizeIterator<Item = Tryte> + '_ {
+        assert!(self.len() % 3 == 0, "Trit slice length must be a multiple of 3");
+        self.chunks(3)
+            .map(|trits| Tryte::from_trits([trits.get(0).unwrap(), trits.get(1).unwrap(), trits.get(2).unwrap()]))
+    }
+}
+
 /// These functions are only implemented for trit slices with the [`T1B1`] encoding because other
 /// encodings are compressed and do not support handing out references to their internal trits.
 /// [`T1B1`] is an exception because its trits are strictly byte-aligned.
@@ -542,6 +557,15 @@ impl<'a, T: RawEncoding + ?Sized> fmt::Debug for &'a Trits<T> {
             write!(f, "{:?}", trit)?;
         }
         write!(f, "]")
+    }
+}
+
+// x
+
+impl<T: RawEncoding + ?Sized> Index<usize> for Trits<T> {
+    type Output = T::Trit;
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index).expect("Index out of range").as_arbitrary_ref()
     }
 }
 
@@ -792,5 +816,43 @@ impl<T: RawEncodingBuf> Borrow<Trits<T::Slice>> for TritBuf<T> {
 impl<T: RawEncodingBuf> BorrowMut<Trits<T::Slice>> for TritBuf<T> {
     fn borrow_mut(&mut self) -> &mut Trits<T::Slice> {
         self.as_slice_mut()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn conv() {
+        let trits = TritBuf::<T3B1Buf>::from_trits(&[
+            Btrit::PlusOne,
+            Btrit::Zero,
+            Btrit::NegOne,
+            Btrit::Zero,
+            Btrit::PlusOne,
+            Btrit::Zero,
+        ]);
+
+        let s0 = trits
+            .chunks(3)
+            .map(|trits| {
+                char::from(Tryte::from_trits([
+                    trits.get(0).unwrap(),
+                    trits.get(1).unwrap(),
+                    trits.get(2).unwrap(),
+                ]))
+            })
+            .collect::<String>();
+
+        assert_eq!(s0.as_str(), "SC");
+
+        let s1 = trits.as_trytes().iter().map(|t| char::from(*t)).collect::<String>();
+
+        assert_eq!(s1.as_str(), "SC");
+
+        let s2 = trits.iter_trytes().map(char::from).collect::<String>();
+
+        assert_eq!(s2.as_str(), "SC");
     }
 }

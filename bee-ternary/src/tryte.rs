@@ -57,8 +57,8 @@ impl Tryte {
     pub const MAX_VALUE: Self = Tryte::M;
 
     pub fn from_trits(trits: [Btrit; 3]) -> Self {
-        let mut buf = [0; 1];
-        unsafe { Trits::<T3B1>::from_raw_unchecked_mut(&mut buf, 3).as_trytes()[0] }
+        let x = i8::from(trits[0]) + i8::from(trits[1]) * 3 + i8::from(trits[2]) * 9;
+        Tryte::try_from(x).unwrap()
     }
 
     /// Interpret this tryte as a [`T3B1`] trit slice with exactly 3 elements.

@@ -59,6 +59,18 @@ impl Trit for Utrit {
     fn zero() -> Self {
         Self::Zero
     }
+
+    fn as_arbitrary_ref<'a>(&self) -> &'a Self {
+        static ZERO: Utrit = Utrit::Zero;
+        static ONE: Utrit = Utrit::One;
+        static TWO: Utrit = Utrit::Two;
+
+        match self {
+            Utrit::Zero => &ZERO,
+            Utrit::One => &ONE,
+            Utrit::Two => &TWO,
+        }
+    }
 }
 
 impl Utrit {
