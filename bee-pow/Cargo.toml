@@ -10,8 +10,6 @@ license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "pow"]
 
 [dependencies]
-bee-common = { path = "../bee-common" }
-
 crossbeam = "0.7.3"
 num_cpus = "1.11.1"
 serde = { version = "1.0.104", features = ["derive" ] }

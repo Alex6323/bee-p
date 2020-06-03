@@ -9,7 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::constants::*;
+pub const TRANSACTION_TRIT_LEN: usize = 8019;
+pub const HASH_TRIT_LEN: usize = 243;
+pub const NONCE_TRIT_LEN: usize = 81;
+
+pub const MAINNET_DIFFICULTY: usize = 14;
+pub const DEVNET_DIFFICULTY: usize = 9;
+pub const SPAMNET_DIFFICULTY: usize = 6;
 
 pub const NUM_FULL_CHUNKS_FOR_PRESTATE: usize = (TRANSACTION_TRIT_LEN - HASH_TRIT_LEN) / HASH_TRIT_LEN; // 32
 

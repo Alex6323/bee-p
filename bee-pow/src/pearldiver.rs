@@ -9,9 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::constants::{HASH_LEN, NUM_ROUNDS, STATE_LEN};
-
-use bee_common::constants::NONCE_TRIT_LEN as NONCE_LEN;
+use crate::constants::{HASH_LEN, NONCE_TRIT_LEN as NONCE_LEN, NUM_ROUNDS, STATE_LEN};
 
 use crate::{
     constants::*, cores::Cores, difficulty::Difficulty, input::InputTrits, nonce::NonceTrits,
