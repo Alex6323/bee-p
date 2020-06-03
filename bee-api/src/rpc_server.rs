@@ -3,6 +3,7 @@ use crate::api::{ApiImpl, Api};
 use bee_ternary::{TryteBuf, T1B1Buf, TritBuf, Tryte};
 use bee_transaction::{Hash, BundledTransactionField, BundledTransaction};
 
+use log::*;
 use jsonrpsee::common;
 use std::net::SocketAddr;
 
@@ -12,11 +13,13 @@ jsonrpsee::rpc_api! {
     RequestType {
         fn echo(msg: String) -> String; // e.g. curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "method": "echo", "params": {"msg": "Hello Bee"}, "id": 1}' 127.0.0.1:8000
         fn transaction_by_hash(hash: String) -> String;
-        fn transactions_by_hash(hashes: Vec<String>) -> Vec<String>;
     }
 }
 
 pub async fn run(listen_addr: SocketAddr) {
+
+    info!("Starting RPC server...");
+
     let transport_server = jsonrpsee::transport::http::HttpTransportServer::bind(&listen_addr)
         .await
         .unwrap();
@@ -57,10 +60,6 @@ pub async fn run(listen_addr: SocketAddr) {
                     }
                 }
 
-            }
-
-            RequestType::TransactionsByHash { respond, hashes } => {
-                respond.err(common::Error::method_not_found()).await;
             }
 
         }
