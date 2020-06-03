@@ -9,29 +9,30 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::{backends::rocksdb::RocksDbBackendStorage, tests::test::TestableStorage};
+
+const BEE_TEST_DB_NAME: &str = "test_db";
+
+impl TestableStorage for RocksDbBackendStorage {
+    fn test_name() -> String {
+        String::from("rocksdb")
+    }
+
+    fn setup() {}
+
+    fn teardown() {
+        rocksdb::DB::destroy(&rocksdb::Options::default(), Self::test_db_url()).unwrap();
+    }
+
+    fn test_db_url() -> String {
+        String::from(BEE_TEST_DB_NAME)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    const BEE_TEST_DB_NAME: &str = "test_db";
 
-    use crate::backends::rocksdb::RocksDbBackendStorage;
-
-    use crate::tests::test::{StorageTestRunner, TestableStorage};
-
-    impl TestableStorage for RocksDbBackendStorage {
-        fn test_name() -> String {
-            String::from("rocksdb")
-        }
-
-        fn setup() {}
-
-        fn teardown() {
-            rocksdb::DB::destroy(&rocksdb::Options::default(), Self::test_db_url()).unwrap();
-        }
-
-        fn test_db_url() -> String {
-            String::from(BEE_TEST_DB_NAME)
-        }
-    }
+    use crate::{backends::rocksdb::RocksDbBackendStorage, tests::test::StorageTestRunner};
 
     #[test]
     fn test_all() {
