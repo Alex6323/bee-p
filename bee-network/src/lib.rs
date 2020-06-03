@@ -88,5 +88,5 @@ pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
 
     whitelist::init();
 
-    (Network::new(command_sender), shutdown, events)
+    (Network::new(config, command_sender), shutdown, events)
 }
