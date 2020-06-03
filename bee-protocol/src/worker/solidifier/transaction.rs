@@ -41,10 +41,10 @@ impl TransactionSolidifierWorker {
         traversal::df_walk_approvees(
             &tangle().inner,
             hash,
-            |_, v| v.get_metadata().is_solid(),
+            |_, vtx| vtx.get_metadata().is_solid(),
             |_, _| {},
-            |h| {
-                missing_hashes.insert(*h);
+            |hash| {
+                missing_hashes.insert(*hash);
             },
         );
 
