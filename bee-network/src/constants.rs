@@ -9,9 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-/// NOTE: make sure this is always bigger in size than the biggest message sent between nodes.
+use std::net::{IpAddr, Ipv4Addr};
+
+pub(crate) const DEFAULT_BINDING_PORT: u16 = 15600;
+pub(crate) const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+pub(crate) const DEFAULT_RECONNECT_INTERVAL: u64 = 60;
+
 pub(crate) const MAX_BUFFER_SIZE: usize = 1654;
-
 pub(crate) const BYTES_CHANNEL_CAPACITY: usize = 10000;
-
-pub(crate) const CONNECT_INTERVAL: u64 = 5000;
