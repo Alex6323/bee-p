@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::commands::{Command, CommandSender};
+use crate::{
+    commands::{Command, CommandSender},
+    config::NetworkConfig,
+};
 
 use err_derive::Error;
 use futures::sink::SinkExt;
@@ -27,17 +30,26 @@ pub type NetworkResult = std::result::Result<(), NetworkError>;
 /// Note, that this type can be cloned to pass it to multiple threads.
 #[derive(Clone, Debug)]
 pub struct Network {
+    config: NetworkConfig,
     inner: CommandSender,
 }
 
 impl Network {
     /// Creates a new instance.
-    pub fn new(cmd_sender: CommandSender) -> Self {
-        Self { inner: cmd_sender }
+    pub fn new(config: NetworkConfig, cmd_sender: CommandSender) -> Self {
+        Self {
+            config,
+            inner: cmd_sender,
+        }
     }
 
     /// Sends a `Command` to the network layer.
     pub async fn send(&mut self, command: Command) -> NetworkResult {
         Ok(self.inner.send(command).await?)
+    }
+
+    /// Provides access to the network config.
+    pub fn config(&self) -> &NetworkConfig {
+        &self.config
     }
 }

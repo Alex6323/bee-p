@@ -14,7 +14,7 @@ use super::whitelist;
 use crate::{
     address::url::{Protocol, Url},
     commands::{Command, CommandReceiver as Commands, Responder},
-    constants::CONNECT_INTERVAL,
+    config::NetworkConfig,
     endpoint::{outbox::Outbox, store::Endpoints, Endpoint as Ep, EndpointId as EpId},
     errors::Result,
     events::{Event, EventPublisher as Notifier, EventPublisher as Publisher, EventSubscriber as Events},
@@ -38,6 +38,7 @@ pub struct EndpointWorker {
     shutdown: Shutdown,
     notifier: Notifier,
     publisher: Publisher,
+    reconnect_interval: u64,
 }
 
 impl EndpointWorker {
@@ -47,6 +48,7 @@ impl EndpointWorker {
         shutdown: Shutdown,
         notifier: Notifier,
         publisher: Publisher,
+        reconnect_interval: u64,
     ) -> Self {
         Self {
             commands,
@@ -54,6 +56,7 @@ impl EndpointWorker {
             shutdown,
             notifier,
             publisher,
+            reconnect_interval,
         }
     }
 
@@ -105,7 +108,7 @@ impl EndpointWorker {
                             }
                         },
                         Command::Connect { epid, responder } => {
-                            try_connect(epid, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
+                            try_connect(epid, self.reconnect_interval, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
                         },
                         Command::Disconnect { epid, responder } => {
                             let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
@@ -202,7 +205,7 @@ impl EndpointWorker {
 
                             // TODO: do not try to reconnect to duplicate endpoints
                             // NOTE: 'try_connect' will check if 'epid' is part of the contact list
-                            try_connect(epid, &mut contacts, &mut connected, None, &mut self.notifier).await?;
+                            try_connect(epid, self.reconnect_interval, &mut contacts, &mut connected, None, &mut self.notifier).await?;
                         }
                         Event::MessageSent { epid, num_bytes } => {
                             publisher.send(Event::MessageSent {
@@ -217,7 +220,7 @@ impl EndpointWorker {
                             }).await?
                         },
                         Event::TryConnect { epid, responder } => {
-                            try_connect(epid, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
+                            try_connect(epid, self.reconnect_interval, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
                         }
                         _ => (),
                     }
@@ -295,6 +298,7 @@ async fn rmv_endpoint(
 #[inline(always)]
 async fn try_connect(
     epid: EpId,
+    reconnect_interval: u64,
     contacts: &mut Endpoints,
     connected: &mut Endpoints,
     responder: Option<Responder<bool>>,
@@ -332,7 +336,7 @@ async fn try_connect(
                         // NOTE: It won't be raised, if the endpoint has been removed in the mean time.
                         spawn(raise_event_after_delay(
                             Event::TryConnect { epid, responder },
-                            CONNECT_INTERVAL,
+                            reconnect_interval,
                             notifier.clone(),
                         ));
                         Ok(false)

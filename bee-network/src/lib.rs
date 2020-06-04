@@ -73,6 +73,7 @@ pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
         epw_shutdown,
         internal_event_sender.clone(),
         event_sender,
+        config.reconnect_interval,
     );
 
     let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender, tcp_shutdown);
@@ -88,5 +89,5 @@ pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
 
     whitelist::init();
 
-    (Network::new(command_sender), shutdown, events)
+    (Network::new(config, command_sender), shutdown, events)
 }
