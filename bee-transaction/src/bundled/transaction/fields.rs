@@ -85,7 +85,7 @@ impl Payload {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct Address(pub(crate) TritBuf<T1B1Buf>);
 
 impl Address {
@@ -313,21 +313,8 @@ impl BundledTransactionFieldType for Timestamp {
     }
 }
 
-macro_rules! impl_hash_trait {
-    ( $($field_name:ident),+ $(,)?) => {
-        $(
-            impl hash::Hash for $field_name {
-                fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-                       self.0.hash(hasher)
-                }
-            }
-        )+
-    }
-}
-
 impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Tag, Nonce);
 impl_transaction_field!(Payload, Address, Tag, Nonce, Index, Value, Timestamp);
-impl_hash_trait!(Address);
 
 #[cfg(test)]
 mod tests {
