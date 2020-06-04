@@ -102,9 +102,8 @@ impl PeerHandshakerWorker {
             .network
             .send(SendMessage {
                 epid: self.peer.epid,
-                // TODO port
                 bytes: tlv_into_bytes(Handshake::new(
-                    1337,
+                    self.network.config().binding_port(),
                     &Protocol::get().config.coordinator.public_key_bytes,
                     Protocol::get().config.mwm,
                     &MESSAGES_VERSIONS,
