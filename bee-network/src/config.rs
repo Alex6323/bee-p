@@ -78,10 +78,26 @@ impl NetworkConfig {
         NetworkConfigBuilder::new()
     }
 
-    pub(crate) fn socket_addr(&self) -> Address {
+    /// Returns the listening address.
+    pub fn socket_addr(&self) -> Address {
         match self.binding_addr {
             IpAddr::V4(addr) => Address::from_v4_addr_and_port(addr, Port(self.binding_port)),
             IpAddr::V6(addr) => Address::from_v6_addr_and_port(addr, Port(self.binding_port)),
         }
+    }
+
+    /// Returns the port of the listening address.
+    pub fn binding_port(&self) -> u16 {
+        self.binding_port
+    }
+
+    /// Returns the listening IP address.
+    pub fn binding_addr(&self) -> IpAddr {
+        self.binding_addr
+    }
+
+    /// Returns the interval between reconnect attempts.
+    pub fn reconnect_interval(&self) -> u64 {
+        self.reconnect_interval
     }
 }
