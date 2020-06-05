@@ -50,19 +50,13 @@ impl Protocol {
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
-    pub(crate) async fn broadcast_transaction_message(
-        from: Option<EndpointId>,
-        transaction_broadcast: TransactionBroadcast,
-    ) {
+    pub(crate) async fn broadcast_transaction_message(source: Option<EndpointId>, transaction: TransactionBroadcast) {
         if let Err(e) = Protocol::get()
             .broadcaster_worker
             .0
             // TODO try to avoid
             .clone()
-            .send(BroadcasterWorkerEvent {
-                from,
-                transaction_broadcast,
-            })
+            .send(BroadcasterWorkerEvent { source, transaction })
             .await
         {
             warn!("Broadcasting transaction failed: {}.", e);
@@ -70,8 +64,8 @@ impl Protocol {
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
-    pub async fn broadcast_transaction(from: Option<EndpointId>, transaction: &[u8]) {
-        Protocol::broadcast_transaction_message(from, TransactionBroadcast::new(transaction)).await;
+    pub async fn broadcast_transaction(source: Option<EndpointId>, transaction: &[u8]) {
+        Protocol::broadcast_transaction_message(source, TransactionBroadcast::new(transaction)).await;
     }
 
     // TransactionRequest
