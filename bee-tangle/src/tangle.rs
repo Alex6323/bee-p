@@ -91,6 +91,11 @@ mod tests {
     use bee_test::transaction::create_random_tx;
 
     #[test]
+    fn new_tangle() {
+        let _: Tangle<u8> = Tangle::new();
+    }
+
+    #[test]
     fn insert_and_contains() {
         let tangle = Tangle::new();
 

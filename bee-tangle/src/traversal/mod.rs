@@ -15,6 +15,9 @@ use bee_transaction::Hash as TxHash;
 
 use std::collections::HashSet;
 
+// TODO: rename function name -> walk_past
+// TODO: rename Filter -> Match
+// TODO: rename Action -> Apply
 pub fn trunk_walk_approvees<'a, T, Filter, Action>(tangle: &'a Tangle<T>, start: TxHash, f: Filter, mut a: Action)
 where
     Filter: Fn(&Vertex<T>) -> bool,
@@ -37,38 +40,7 @@ where
     }
 }
 
-pub fn trunk_walk_approvers<'a, T, Filter, Action>(tangle: &'a Tangle<T>, start: TxHash, f: Filter, mut a: Action)
-where
-    Filter: Fn(&Vertex<T>) -> bool,
-    Action: FnMut(&TxHash, &Vertex<T>),
-{
-    let mut to_visit = vec![];
-
-    // NOTE: do we need to do this for `start`?
-    tangle.vertices.get(&start).map(|r| {
-        if f(r.value()) {
-            to_visit.push(start);
-            a(&start, r.value());
-        }
-    });
-
-    while let Some(hash) = to_visit.pop() {
-        if let Some(r) = tangle.approvers.get(&hash) {
-            for approver_hash in r.value() {
-                if let Some(s) = tangle.vertices.get(approver_hash) {
-                    if s.get_trunk() == &hash && f(s.value()) {
-                        to_visit.push(*approver_hash);
-                        a(approver_hash, s.value());
-                        // NOTE: For simplicity reasons we break here, and assume, that there can't be
-                        // a second approver that passes the filter
-                        break;
-                    }
-                }
-            }
-        }
-    }
-}
-
+// TODO: rename 'walk_approvees_depth_first'
 pub fn df_walk_approvees<'a, T, Follow, Hit, Miss>(
     tangle: &'a Tangle<T>,
     start: TxHash,
@@ -106,6 +78,40 @@ pub fn df_walk_approvees<'a, T, Follow, Hit, Miss>(
                 }
             }
             visited.insert(hash);
+        }
+    }
+}
+
+// TODO: rename Filter -> Continue
+// TODO: rename function name -> walk_approvers_trunk_breadth_first
+pub fn trunk_walk_approvers<'a, T, Filter, Action>(tangle: &'a Tangle<T>, start: TxHash, f: Filter, mut a: Action)
+where
+    Filter: Fn(&Vertex<T>) -> bool,
+    Action: FnMut(&TxHash, &Vertex<T>),
+{
+    let mut to_visit = vec![];
+
+    // NOTE: do we need to do this for `start`?
+    tangle.vertices.get(&start).map(|r| {
+        if f(r.value()) {
+            to_visit.push(start);
+            a(&start, r.value());
+        }
+    });
+
+    while let Some(hash) = to_visit.pop() {
+        if let Some(r) = tangle.approvers.get(&hash) {
+            for approver_hash in r.value() {
+                if let Some(s) = tangle.vertices.get(approver_hash) {
+                    if s.get_trunk() == &hash && f(s.value()) {
+                        to_visit.push(*approver_hash);
+                        a(approver_hash, s.value());
+                        // NOTE: For simplicity reasons we break here, and assume, that there can't be
+                        // a second approver that passes the filter
+                        break;
+                    }
+                }
+            }
         }
     }
 }
@@ -206,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn df_walk_approvees() {
+    fn test_df_walk_approvees() {
         let (tangle, Transactions { a, b, c, d, e, .. }, Hashes { e_hash, .. }) = create_test_tangle();
 
         let mut addresses = vec![];
