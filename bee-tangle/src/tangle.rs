@@ -26,7 +26,7 @@ impl<T> Tangle<T> {
 
     /// Inserts a transaction, and returns a thread-safe reference to it. If the transaction was new `true` is returned,
     /// otherwise `false`.
-    pub fn insert_transaction(&self, transaction: Tx, hash: TxHash, metadata: T) -> (TxRef, bool) {
+    pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: T) -> (TxRef, bool) {
         self.add_approver(*transaction.trunk(), hash);
 
         if transaction.trunk() != transaction.branch() {

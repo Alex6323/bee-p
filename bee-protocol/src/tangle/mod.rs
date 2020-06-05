@@ -76,20 +76,15 @@ impl MsTangle {
         }
     }
 
-    pub fn insert_transaction(
-        &'static self,
-        transaction: Transaction,
-        hash: THash,
-        flags: Flags,
-    ) -> (TransactionRef, bool) {
-        self.inner.insert_transaction(transaction, hash, flags)
+    pub fn insert(&'static self, transaction: Transaction, hash: THash, flags: Flags) -> (TransactionRef, bool) {
+        self.inner.insert(transaction, hash, flags)
     }
 
-    pub fn get_transaction(&'static self, hash: &THash) -> Option<TransactionRef> {
+    pub fn get(&'static self, hash: &THash) -> Option<TransactionRef> {
         self.inner.get_transaction(hash)
     }
 
-    pub fn contains_transaction(&'static self, hash: &THash) -> bool {
+    pub fn contains(&'static self, hash: &THash) -> bool {
         self.inner.vertices.contains_key(hash)
     }
 
@@ -108,7 +103,7 @@ impl MsTangle {
     pub fn get_milestone(&'static self, index: MsIndex) -> Option<TransactionRef> {
         match self.get_milestone_hash(index) {
             None => None,
-            Some(hash) => self.get_transaction(&hash),
+            Some(hash) => self.get(&hash),
         }
     }
 
