@@ -15,7 +15,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 pub struct ProtocolMetrics {
     invalid_transactions_received: AtomicU64,
     stale_transactions_received: AtomicU64,
-    random_transactions_received: AtomicU64,
     new_transactions_received: AtomicU64,
     known_transactions_received: AtomicU64,
 
@@ -53,14 +52,6 @@ impl ProtocolMetrics {
 
     pub fn stale_transactions_received_inc(&self) -> u64 {
         self.stale_transactions_received.fetch_add(1, Ordering::SeqCst)
-    }
-
-    pub fn random_transactions_received(&self) -> u64 {
-        self.random_transactions_received.load(Ordering::Relaxed)
-    }
-
-    pub fn random_transactions_received_inc(&self) -> u64 {
-        self.random_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn new_transactions_received(&self) -> u64 {
@@ -163,19 +154,16 @@ mod tests {
 
         assert_eq!(metrics.invalid_transactions_received(), 0);
         assert_eq!(metrics.stale_transactions_received(), 0);
-        assert_eq!(metrics.random_transactions_received(), 0);
         assert_eq!(metrics.new_transactions_received(), 0);
         assert_eq!(metrics.known_transactions_received(), 0);
 
         metrics.invalid_transactions_received_inc();
         metrics.stale_transactions_received_inc();
-        metrics.random_transactions_received_inc();
         metrics.new_transactions_received_inc();
         metrics.known_transactions_received_inc();
 
         assert_eq!(metrics.invalid_transactions_received(), 1);
         assert_eq!(metrics.stale_transactions_received(), 1);
-        assert_eq!(metrics.random_transactions_received(), 1);
         assert_eq!(metrics.new_transactions_received(), 1);
         assert_eq!(metrics.known_transactions_received(), 1);
     }
