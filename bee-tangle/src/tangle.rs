@@ -11,7 +11,7 @@ where
     // 'map_hash_vertex'
     pub vertices: DashMap<TxHash, Vertex<T>>,
     // TODO: rename this to 'map_parent_children'
-    pub approvers: DashMap<TxHash, Vec<TxHash>>,
+    pub children: DashMap<TxHash, Vec<TxHash>>,
     // TODO: add 'tips' DashSet for fast tip selection
 }
 
@@ -22,7 +22,7 @@ where
     fn default() -> Self {
         Self {
             vertices: DashMap::new(),
-            approvers: DashMap::new(),
+            children: DashMap::new(),
         }
     }
 }
@@ -57,10 +57,10 @@ where
 
     #[inline]
     fn add_approver(&self, approvee: TxHash, approver: TxHash) {
-        match self.approvers.entry(approvee) {
+        match self.children.entry(approvee) {
             Entry::Occupied(mut entry) => {
-                let approvers = entry.get_mut();
-                approvers.push(approver);
+                let children = entry.get_mut();
+                children.push(approver);
             }
             Entry::Vacant(entry) => {
                 entry.insert(vec![approver]);
@@ -97,8 +97,8 @@ where
     }
 
     #[cfg(test)]
-    pub(crate) fn num_approvers(&self, hash: &TxHash) -> usize {
-        self.approvers.get(hash).map_or(0, |r| r.value().len())
+    pub(crate) fn num_children(&self, hash: &TxHash) -> usize {
+        self.children.get(hash).map_or(0, |r| r.value().len())
     }
 }
 

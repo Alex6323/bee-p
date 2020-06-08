@@ -63,7 +63,7 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
             if matches(parent.value().get_data(), parent.value().get_metadata()) {
                 apply(parent_hash, parent.value().get_data(), parent.value().get_metadata());
 
-                if let Some(parent_children) = tangle.approvers.get(parent_hash) {
+                if let Some(parent_children) = tangle.children.get(parent_hash) {
                     for child_hash in parent_children.value() {
                         if let Some(child) = tangle.vertices.get(child_hash) {
                             if child.get_trunk() == parent_hash {
@@ -220,11 +220,11 @@ mod tests {
         tangle.insert(e.clone(), e_hash, ());
 
         assert_eq!(5, tangle.size());
-        assert_eq!(2, tangle.num_approvers(&a_hash));
-        assert_eq!(1, tangle.num_approvers(&b_hash));
-        assert_eq!(2, tangle.num_approvers(&c_hash));
-        assert_eq!(1, tangle.num_approvers(&d_hash));
-        assert_eq!(0, tangle.num_approvers(&e_hash));
+        assert_eq!(2, tangle.num_children(&a_hash));
+        assert_eq!(1, tangle.num_children(&b_hash));
+        assert_eq!(2, tangle.num_children(&c_hash));
+        assert_eq!(1, tangle.num_children(&d_hash));
+        assert_eq!(0, tangle.num_children(&e_hash));
 
         (
             tangle,
