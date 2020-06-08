@@ -42,7 +42,7 @@ impl ProtocolMetrics {
         self.invalid_transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn invalid_transactions_received_inc(&self) -> u64 {
+    pub(crate) fn invalid_transactions_received_inc(&self) -> u64 {
         self.invalid_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -50,7 +50,7 @@ impl ProtocolMetrics {
         self.stale_transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn stale_transactions_received_inc(&self) -> u64 {
+    pub(crate) fn stale_transactions_received_inc(&self) -> u64 {
         self.stale_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -58,7 +58,7 @@ impl ProtocolMetrics {
         self.new_transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn new_transactions_received_inc(&self) -> u64 {
+    pub(crate) fn new_transactions_received_inc(&self) -> u64 {
         self.new_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -66,7 +66,7 @@ impl ProtocolMetrics {
         self.known_transactions_received.load(Ordering::Relaxed)
     }
 
-    pub fn known_transactions_received_inc(&self) -> u64 {
+    pub(crate) fn known_transactions_received_inc(&self) -> u64 {
         self.known_transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -74,7 +74,7 @@ impl ProtocolMetrics {
         self.invalid_messages_received.load(Ordering::Relaxed)
     }
 
-    pub fn invalid_messages_received_inc(&self) -> u64 {
+    pub(crate) fn invalid_messages_received_inc(&self) -> u64 {
         self.invalid_messages_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -82,7 +82,7 @@ impl ProtocolMetrics {
         self.milestone_request_received.load(Ordering::Relaxed)
     }
 
-    pub fn milestone_request_received_inc(&self) -> u64 {
+    pub(crate) fn milestone_request_received_inc(&self) -> u64 {
         self.milestone_request_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -90,7 +90,7 @@ impl ProtocolMetrics {
         self.transaction_broadcast_received.load(Ordering::Relaxed)
     }
 
-    pub fn transaction_broadcast_received_inc(&self) -> u64 {
+    pub(crate) fn transaction_broadcast_received_inc(&self) -> u64 {
         self.transaction_broadcast_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -98,7 +98,7 @@ impl ProtocolMetrics {
         self.transaction_request_received.load(Ordering::Relaxed)
     }
 
-    pub fn transaction_request_received_inc(&self) -> u64 {
+    pub(crate) fn transaction_request_received_inc(&self) -> u64 {
         self.transaction_request_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -106,7 +106,7 @@ impl ProtocolMetrics {
         self.heartbeat_received.load(Ordering::Relaxed)
     }
 
-    pub fn heartbeat_received_inc(&self) -> u64 {
+    pub(crate) fn heartbeat_received_inc(&self) -> u64 {
         self.heartbeat_received.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -114,7 +114,7 @@ impl ProtocolMetrics {
         self.milestone_request_sent.load(Ordering::Relaxed)
     }
 
-    pub fn milestone_request_sent_inc(&self) -> u64 {
+    pub(crate) fn milestone_request_sent_inc(&self) -> u64 {
         self.milestone_request_sent.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -122,7 +122,7 @@ impl ProtocolMetrics {
         self.transaction_broadcast_sent.load(Ordering::Relaxed)
     }
 
-    pub fn transaction_broadcast_sent_inc(&self) -> u64 {
+    pub(crate) fn transaction_broadcast_sent_inc(&self) -> u64 {
         self.transaction_broadcast_sent.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -130,7 +130,7 @@ impl ProtocolMetrics {
         self.transaction_request_sent.load(Ordering::Relaxed)
     }
 
-    pub fn transaction_request_sent_inc(&self) -> u64 {
+    pub(crate) fn transaction_request_sent_inc(&self) -> u64 {
         self.transaction_request_sent.fetch_add(1, Ordering::SeqCst)
     }
 
@@ -138,7 +138,7 @@ impl ProtocolMetrics {
         self.heartbeat_sent.load(Ordering::Relaxed)
     }
 
-    pub fn heartbeat_sent_inc(&self) -> u64 {
+    pub(crate) fn heartbeat_sent_inc(&self) -> u64 {
         self.heartbeat_sent.fetch_add(1, Ordering::SeqCst)
     }
 }
@@ -149,7 +149,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn node_metrics_transactions_received_test() {
+    fn protocol_metrics_transactions_received_test() {
         let metrics = ProtocolMetrics::default();
 
         assert_eq!(metrics.invalid_transactions_received(), 0);
@@ -169,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn node_metrics_messages_received_test() {
+    fn protocol_metrics_messages_received_test() {
         let metrics = ProtocolMetrics::default();
 
         assert_eq!(metrics.invalid_messages_received(), 0);
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn node_metrics_messages_sent_test() {
+    fn protocol_metrics_messages_sent_test() {
         let metrics = ProtocolMetrics::default();
 
         assert_eq!(metrics.milestone_request_sent(), 0);

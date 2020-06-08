@@ -80,6 +80,7 @@ impl TransactionWorker {
 
         if !self.cache.insert(&transaction_broadcast.transaction) {
             debug!("Transaction already received.");
+            Protocol::get().metrics.known_transactions_received_inc();
             return;
         }
 
@@ -94,60 +95,68 @@ impl TransactionWorker {
                     ),
                     Err(e) => {
                         debug!("Invalid transaction: {:?}.", e);
+                        Protocol::get().metrics.invalid_transactions_received_inc();
                         return;
                     }
                 }
             }
             Err(e) => {
                 debug!("Invalid transaction: {:?}.", e);
+                Protocol::get().metrics.invalid_transactions_received_inc();
                 return;
             }
         };
 
         if hash.weight() < Protocol::get().config.mwm {
             debug!("Insufficient weight magnitude: {}.", hash.weight());
+            Protocol::get().metrics.invalid_transactions_received_inc();
             return;
         }
 
-        if let Some(transaction) = tangle().insert_transaction(transaction, hash).await {
-            Protocol::get().metrics.new_transactions_received_inc();
-            if !tangle().is_synced() && Protocol::get().requested.is_empty() {
-                Protocol::trigger_milestone_solidification().await;
-            }
-            match Protocol::get().requested.remove(&hash) {
-                Some((hash, index)) => {
-                    Protocol::trigger_transaction_solidification(hash, index).await;
+        match tangle().insert_transaction(transaction, hash).await {
+            Some(transaction) => {
+                Protocol::get().metrics.new_transactions_received_inc();
+                if !tangle().is_synced() && Protocol::get().requested.is_empty() {
+                    Protocol::trigger_milestone_solidification().await;
                 }
-                None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
-            };
+                match Protocol::get().requested.remove(&hash) {
+                    Some((hash, index)) => {
+                        Protocol::trigger_transaction_solidification(hash, index).await;
+                    }
+                    None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
+                };
 
-            if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
-                || transaction.address().eq(&Protocol::get().config.null_address)
-            {
-                let tail = {
-                    if transaction.is_tail() {
-                        Some(hash)
-                    } else {
-                        let chain =
-                            tangle().trunk_walk_approvers(hash, |tx_ref| tx_ref.bundle() == transaction.bundle());
-                        match chain.last() {
-                            Some((tx_ref, hash)) => {
-                                if tx_ref.is_tail() {
-                                    Some(*hash)
-                                } else {
-                                    None
+                if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
+                    || transaction.address().eq(&Protocol::get().config.null_address)
+                {
+                    let tail = {
+                        if transaction.is_tail() {
+                            Some(hash)
+                        } else {
+                            let chain =
+                                tangle().trunk_walk_approvers(hash, |tx_ref| tx_ref.bundle() == transaction.bundle());
+                            match chain.last() {
+                                Some((tx_ref, hash)) => {
+                                    if tx_ref.is_tail() {
+                                        Some(*hash)
+                                    } else {
+                                        None
+                                    }
                                 }
+                                None => None,
                             }
-                            None => None,
                         }
-                    }
-                };
+                    };
 
-                if let Some(tail) = tail {
-                    if let Err(e) = self.milestone_validator_worker.send(tail).await {
-                        error!("Sending tail to milestone validation failed: {:?}.", e);
-                    }
-                };
+                    if let Some(tail) = tail {
+                        if let Err(e) = self.milestone_validator_worker.send(tail).await {
+                            error!("Sending tail to milestone validation failed: {:?}.", e);
+                        }
+                    };
+                }
+            }
+            None => {
+                Protocol::get().metrics.known_transactions_received_inc();
             }
         }
     }
