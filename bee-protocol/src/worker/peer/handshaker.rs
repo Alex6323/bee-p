@@ -26,11 +26,6 @@ use bee_network::{
     Network, Origin, Port,
 };
 
-use std::{
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
-
 use async_std::{net::SocketAddr, task::spawn};
 use futures::{
     channel::{mpsc, oneshot},
@@ -39,6 +34,11 @@ use futures::{
     stream::StreamExt,
 };
 use log::{debug, error, info, warn};
+
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Debug)]
 pub(crate) enum HandshakeError {
@@ -102,9 +102,8 @@ impl PeerHandshakerWorker {
             .network
             .send(SendMessage {
                 epid: self.peer.epid,
-                // TODO port
                 bytes: tlv_into_bytes(Handshake::new(
-                    1337,
+                    self.network.config().binding_port(),
                     &Protocol::get().config.coordinator.public_key_bytes,
                     Protocol::get().config.mwm,
                     &MESSAGES_VERSIONS,
@@ -174,7 +173,7 @@ impl PeerHandshakerWorker {
             .expect("Clock may have gone backwards")
             .as_millis() as u64;
 
-        if ((timestamp - handshake.timestamp) as i64).abs() > 5000 {
+        if ((timestamp - handshake.timestamp) as i64).abs() as u64 > Protocol::get().config.handshake_window * 1000 {
             return Err(HandshakeError::InvalidTimestampDiff(
                 ((timestamp - handshake.timestamp) as i64).abs(),
             ));
@@ -232,7 +231,7 @@ impl PeerHandshakerWorker {
                     Ok(address) => {
                         info!("[{}] Handshake completed.", self.peer.address);
 
-                        Protocol::get().peer_manager.handshake(&self.peer.epid, address);
+                        Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
 
                         Protocol::send_heartbeat(
                             self.peer.epid,

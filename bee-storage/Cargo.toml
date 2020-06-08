@@ -15,7 +15,7 @@ bee-ternary = { path = "../bee-ternary"}
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }
-async-trait = "0.1.22"
+async-trait = "0.1.33"
 bincode = "1.2.1"
 bytemuck = "1.2.0"
 futures = "0.3.5"
@@ -23,7 +23,6 @@ itertools = "0.9.0"
 num_cpus = "1.12.0"
 rand = "0.7.3"
 rocksdb = { version = "0.14.0", default-features = false }
-serde = "1.0.104"
 sqlx = {version = "0.3.2", features = [ "postgres" ]}
 
 [dev-dependencies]

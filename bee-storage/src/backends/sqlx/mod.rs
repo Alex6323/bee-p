@@ -48,7 +48,7 @@ use async_trait::async_trait;
 use futures::executor::block_on;
 use sqlx::{postgres::PgQueryAs, PgPool, Row};
 
-use crate::sqlx::statements::*;
+use crate::backends::sqlx::statements::*;
 
 struct TransactionWrapper(Transaction);
 struct MilestoneWrapper(Milestone);
@@ -123,9 +123,10 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for MilestoneWrapper {
 
 impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for StateDeltaWrapper {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, SqlxError> {
-        let delta_vec = row.get::<Vec<u8>, _>(MILESTONE_COL_DELTA);
-        let delta: StateDeltaMap = bincode::deserialize(&delta_vec).unwrap();
-        Ok(Self(delta))
+        // let delta_vec = row.get::<Vec<u8>, _>(MILESTONE_COL_DELTA);
+        // let delta: StateDeltaMap = bincode::deserialize(&delta_vec).unwrap();
+        // Ok(Self(delta))
+        Ok(StateDeltaWrapper(Default::default()))
     }
 }
 
@@ -608,15 +609,15 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
         let mut conn_transaction = pool.begin().await?;
 
-        let encoded: Vec<u8> = bincode::serialize(&state_delta)?;
+        // let encoded: Vec<u8> = bincode::serialize(&state_delta)?;
 
-        sqlx::query(STORE_DELTA_STATEMENT)
-            .bind(encoded)
-            .bind(*index)
-            .execute(&mut conn_transaction)
-            .await?;
-
-        conn_transaction.commit().await?;
+        // sqlx::query(STORE_DELTA_STATEMENT)
+        //     .bind(encoded)
+        //     .bind(index as u32)
+        //     .execute(&mut conn_transaction)
+        //     .await?;
+        //
+        // conn_transaction.commit().await?;
 
         Ok(())
     }

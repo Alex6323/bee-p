@@ -25,8 +25,8 @@ use futures::{
 use log::{info, warn};
 
 pub(crate) struct BroadcasterWorkerEvent {
-    pub(crate) from: Option<EndpointId>,
-    pub(crate) transaction_broadcast: TransactionBroadcast,
+    pub(crate) source: Option<EndpointId>,
+    pub(crate) transaction: TransactionBroadcast,
 }
 
 pub(crate) struct BroadcasterWorker {
@@ -38,26 +38,29 @@ impl BroadcasterWorker {
         Self { network }
     }
 
-    async fn broadcast(&mut self, from: Option<EndpointId>, bytes: Vec<u8>) {
-        for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
-            if match from {
-                Some(from) => from != *entry.key(),
+    async fn broadcast(&mut self, source: Option<EndpointId>, transaction: TransactionBroadcast) {
+        let bytes = tlv_into_bytes(transaction);
+
+        for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
+            if match source {
+                Some(source) => source != *peer.key(),
                 None => true,
             } {
                 match self
                     .network
                     .send(SendMessage {
-                        epid: *entry.key(),
+                        epid: *peer.key(),
                         bytes: bytes.clone(),
                         responder: None,
                     })
                     .await
                 {
                     Ok(_) => {
-                        // TODO metrics
+                        (*peer.value()).metrics.transaction_broadcast_sent_inc();
+                        Protocol::get().metrics.transaction_broadcast_sent_inc();
                     }
                     Err(e) => {
-                        warn!("Broadcasting transaction to {:?} failed: {:?}.", *entry.key(), e);
+                        warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);
                     }
                 };
             }
@@ -77,8 +80,8 @@ impl BroadcasterWorker {
         loop {
             select! {
                 transaction = receiver_fused.next() => {
-                    if let Some(BroadcasterWorkerEvent{from, transaction_broadcast}) = transaction {
-                        self.broadcast(from, tlv_into_bytes(transaction_broadcast)).await;
+                    if let Some(BroadcasterWorkerEvent{source, transaction}) = transaction {
+                        self.broadcast(source, transaction).await;
                     }
                 },
                 _ = shutdown_fused => {

@@ -17,8 +17,6 @@ use bee_network::EndpointId;
 
 use futures::{channel::oneshot, future::FutureExt, select};
 use log::info;
-use rand::{Rng, SeedableRng};
-use rand_pcg::Pcg32;
 
 use std::cmp::Ordering;
 
@@ -39,14 +37,12 @@ impl Ord for MilestoneRequesterWorkerEntry {
 }
 
 pub(crate) struct MilestoneRequesterWorker {
-    rng: Pcg32,
+    counter: usize,
 }
 
 impl MilestoneRequesterWorker {
     pub(crate) fn new() -> Self {
-        Self {
-            rng: Pcg32::from_entropy(),
-        }
+        Self { counter: 0 }
     }
 
     async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
@@ -54,21 +50,27 @@ impl MilestoneRequesterWorker {
             return;
         }
 
-        // TODO check that it has the milestone
-        let epid = match epid {
-            Some(epid) => epid,
+        let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
+
+        match epid {
+            Some(epid) => {
+                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+            }
             None => {
-                match Protocol::get().peer_manager.handshaked_peers.iter().nth(
-                    self.rng
-                        .gen_range(0, Protocol::get().peer_manager.handshaked_peers.len()),
-                ) {
-                    Some(entry) => *entry.key(),
-                    None => return,
+                for _ in 0..guard.len() {
+                    let epid = &guard[self.counter % guard.len()];
+
+                    self.counter += 1;
+
+                    if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+                        if index > peer.snapshot_milestone_index() && index <= peer.solid_milestone_index() {
+                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+                            break;
+                        }
+                    }
                 }
             }
-        };
-
-        SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+        }
     }
 
     pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {

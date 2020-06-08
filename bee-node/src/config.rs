@@ -21,11 +21,11 @@ pub(crate) const CONFIG_PATH: &str = "./config.toml";
 
 #[derive(Default, Deserialize)]
 pub(crate) struct NodeConfigBuilder {
-    logger: LoggerConfigBuilder,
-    network: NetworkConfigBuilder,
-    peering: PeeringConfigBuilder,
-    protocol: ProtocolConfigBuilder,
-    snapshot: SnapshotConfigBuilder,
+    pub(crate) logger: LoggerConfigBuilder,
+    pub(crate) network: NetworkConfigBuilder,
+    pub(crate) peering: PeeringConfigBuilder,
+    pub(crate) protocol: ProtocolConfigBuilder,
+    pub(crate) snapshot: SnapshotConfigBuilder,
 }
 
 impl NodeConfigBuilder {

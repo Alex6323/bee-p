@@ -9,13 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod rocksdb;
-mod sqlx;
+mod backends;
+mod models;
 mod storage;
-mod test;
-
-pub use storage::{
-    AttachmentData, Connection, HashesToApprovers, MissingHashesToRCApprovers, StateDeltaMap, Storage, StorageBackend,
-};
-
-pub use crate::sqlx::{SqlxBackendConnection, SqlxBackendStorage};
+mod tests;

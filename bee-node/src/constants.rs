@@ -9,6 +9,5 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub(crate) const BEE_NAME: &str = "Bee";
-pub(crate) const BEE_VERSION: &str = "0.1.0";
-pub(crate) const BEE_GIT_COMMIT: &str = env!("BEE_GIT_COMMIT");
+pub(crate) const BEE_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const BEE_GIT_COMMIT: &str = env!("GIT_COMMIT");

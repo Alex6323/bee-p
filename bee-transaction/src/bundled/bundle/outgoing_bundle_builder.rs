@@ -9,18 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    bundled::{
-        Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
-        BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
-    },
+use crate::bundled::{
     constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
+    Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
+    BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
 };
 
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{
-    normalize_hash, IotaSeed, PrivateKey, PrivateKeyGenerator, Signature, WotsPrivateKeyGeneratorBuilder,
-    WotsSecurityLevel,
+    normalize_hash, PrivateKey, PrivateKeyGenerator, Signature, TernarySeed, WotsSecurityLevel,
+    WotsSpongePrivateKeyGeneratorBuilder,
 };
 use bee_ternary::Btrit;
 
@@ -257,7 +255,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     // We probably want to check it is the right input for the address.
     pub fn sign(
         mut self,
-        seed: &IotaSeed<Kerl>,
+        seed: &TernarySeed<Kerl>,
         inputs: &[(u64, Address, WotsSecurityLevel)],
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
         // Safe to unwrap because bundle is sealed
@@ -266,7 +264,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         let mut signature_fragments: Vec<Payload> = Vec::new();
 
         for (index, _, security) in inputs {
-            let key_generator = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            let key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(*security)
                 .build()
                 // Safe to unwrap because security level is provided
@@ -387,8 +385,8 @@ mod tests {
     fn bundle_builder_signature_check(security: WotsSecurityLevel) -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
-        let seed = IotaSeed::<Kerl>::new();
-        let privkey = WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+        let seed = TernarySeed::<Kerl>::new();
+        let privkey = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(security)
             .build()
             .unwrap()
@@ -441,9 +439,9 @@ mod tests {
     fn bundle_builder_different_security_check() -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
-        let seed = IotaSeed::<Kerl>::new();
+        let seed = TernarySeed::<Kerl>::new();
         let address_low = Address::from_inner_unchecked(
-            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(WotsSecurityLevel::Low)
                 .build()
                 .unwrap()
@@ -455,7 +453,7 @@ mod tests {
                 .to_owned(),
         );
         let address_medium = Address::from_inner_unchecked(
-            WotsPrivateKeyGeneratorBuilder::<Kerl>::default()
+            WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(WotsSecurityLevel::Medium)
                 .build()
                 .unwrap()

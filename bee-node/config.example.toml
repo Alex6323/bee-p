@@ -7,8 +7,9 @@ name  = "stdout"
 level = "info"
 
 [network]
-binding_addr  = "0.0.0.0"
-binding_port  = 15600
+binding_addr        = "0.0.0.0"
+binding_port        = 15600
+reconnect_interval  = 60
 
 [peering]
 [peering.static]

@@ -14,6 +14,6 @@ keywords = ["iota", "tangle", "bee", "framework", "peering"]
 bee-network = { path = "../bee-network" }
 
 async-std = "1.5.0"
-async-trait = "0.1.24"
+async-trait = "0.1.33"
 log = "0.4.8"
 serde = { version = "1.0.104", features = ["derive" ] }

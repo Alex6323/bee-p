@@ -16,15 +16,16 @@ use crate::{
     worker::{MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent},
 };
 
-use std::sync::Arc;
-
 use futures::{
     channel::{mpsc, oneshot},
     select,
     sink::SinkExt,
     stream::StreamExt,
 };
-use log::*;
+use futures_util::{future, stream};
+use log::{debug, error, info, warn};
+
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) enum PeerWorkerError {
@@ -60,8 +61,8 @@ impl PeerWorker {
 
     pub async fn run(
         mut self,
-        mut receiver_fused: futures_util::stream::Fuse<mpsc::Receiver<Vec<u8>>>,
-        mut shutdown_fused: futures_util::future::Fuse<oneshot::Receiver<()>>,
+        mut receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
+        mut shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
     ) {
         info!("[{}] Running.", self.peer.address);
 
@@ -69,8 +70,6 @@ impl PeerWorker {
             state: PeerReadState::Header,
             buffer: Vec::new(),
         };
-        // let mut receiver_fused = receiver.fuse();
-        // let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {
@@ -87,7 +86,7 @@ impl PeerWorker {
 
         info!("[{}] Stopped.", self.peer.address);
 
-        Protocol::get().peer_manager.remove(&self.peer.epid);
+        Protocol::get().peer_manager.remove(&self.peer.epid).await;
     }
 
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {

@@ -38,6 +38,7 @@ const DEFAULT_MILESTONE_REQUESTER_WORKER_BOUND: usize = 1000;
 const DEFAULT_RECEIVER_WORKER_BOUND: usize = 1000;
 const DEFAULT_BROADCASTER_WORKER_BOUND: usize = 1000;
 const DEFAULT_STATUS_INTERVAL: u64 = 10;
+const DEFAULT_HANDSHAKE_WINDOW: u64 = 10;
 
 #[derive(Default, Deserialize)]
 struct ProtocolCoordinatorConfigBuilder {
@@ -72,6 +73,7 @@ pub struct ProtocolConfigBuilder {
     mwm: Option<u8>,
     coordinator: ProtocolCoordinatorConfigBuilder,
     workers: ProtocolWorkersConfigBuilder,
+    handshake_window: Option<u64>,
 }
 
 impl ProtocolConfigBuilder {
@@ -206,6 +208,11 @@ impl ProtocolConfigBuilder {
         self
     }
 
+    pub fn handshake_window(mut self, handshake_window: u64) -> Self {
+        self.handshake_window.replace(handshake_window);
+        self
+    }
+
     pub fn finish(self) -> ProtocolConfig {
         let coo_sponge_type = match self
             .coordinator
@@ -243,6 +250,7 @@ impl ProtocolConfigBuilder {
         public_key_bytes.copy_from_slice(cast_slice(coo_public_key.to_inner().encode::<T5B1Buf>().as_i8_slice()));
 
         ProtocolConfig {
+            null_address: Address::zeros(),
             mwm: self.mwm.unwrap_or(DEFAULT_MWM),
             coordinator: ProtocolCoordinatorConfig {
                 depth: self.coordinator.depth.unwrap_or(DEFAULT_COO_DEPTH),
@@ -252,7 +260,6 @@ impl ProtocolConfigBuilder {
                 sponge_type: coo_sponge_type,
             },
             workers: ProtocolWorkersConfig {
-                null_address: Address::zeros(),
                 milestone_request_send_worker_bound: self
                     .workers
                     .milestone_request_send_worker_bound
@@ -315,6 +322,7 @@ impl ProtocolConfigBuilder {
                     .unwrap_or(DEFAULT_BROADCASTER_WORKER_BOUND),
                 status_interval: self.workers.status_interval.unwrap_or(DEFAULT_STATUS_INTERVAL),
             },
+            handshake_window: self.handshake_window.unwrap_or(DEFAULT_HANDSHAKE_WINDOW),
         }
     }
 }
@@ -330,7 +338,6 @@ pub struct ProtocolCoordinatorConfig {
 
 #[derive(Clone)]
 pub struct ProtocolWorkersConfig {
-    pub(crate) null_address: Address,
     pub(crate) milestone_request_send_worker_bound: usize,
     pub(crate) transaction_broadcast_send_worker_bound: usize,
     pub(crate) transaction_request_send_worker_bound: usize,
@@ -351,9 +358,11 @@ pub struct ProtocolWorkersConfig {
 
 #[derive(Clone)]
 pub struct ProtocolConfig {
+    pub(crate) null_address: Address,
     pub(crate) mwm: u8,
     pub(crate) coordinator: ProtocolCoordinatorConfig,
     pub(crate) workers: ProtocolWorkersConfig,
+    pub(crate) handshake_window: u64,
 }
 
 impl ProtocolConfig {

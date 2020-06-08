@@ -20,19 +20,19 @@ use std::marker::PhantomData;
 // TODO Put constants in a separate file
 
 // TODO: documentation
-pub struct IotaSeed<S> {
+pub struct TernarySeed<S> {
     seed: TritBuf,
     _sponge: PhantomData<S>,
 }
 
 // TODO: documentation
 #[derive(Debug, PartialEq)]
-pub enum IotaSeedError {
+pub enum TernarySeedError {
     InvalidLength(usize),
 }
 
-impl<S: Sponge + Default> Seed for IotaSeed<S> {
-    type Error = IotaSeedError;
+impl<S: Sponge + Default> Seed for TernarySeed<S> {
+    type Error = TernarySeedError;
     // TODO: documentation
     // TODO: is this random enough ?
     fn new() -> Self {
@@ -76,7 +76,7 @@ impl<S: Sponge + Default> Seed for IotaSeed<S> {
     }
 }
 
-impl<S: Sponge + Default> IotaSeed<S> {
+impl<S: Sponge + Default> TernarySeed<S> {
     // TODO: documentation
     pub fn subseed(&self, index: u64) -> Self {
         let mut sponge = S::default();
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn iota_seed_new() {
         for _ in 0..10 {
-            let iota_seed = IotaSeed::<CurlP27>::new();
+            let iota_seed = TernarySeed::<CurlP27>::new();
             for byte in iota_seed.as_bytes() {
                 assert!(*byte == -1 || *byte == 0 || *byte == 1);
             }
@@ -132,7 +132,7 @@ mod tests {
             .unwrap()
             .as_trits()
             .encode::<T1B1Buf>();
-        let iota_seed = IotaSeed::<S>::from_buf(iota_seed_trits).unwrap();
+        let iota_seed = TernarySeed::<S>::from_buf(iota_seed_trits).unwrap();
 
         for (i, iota_subseed_string) in iota_subseed_strings.iter().enumerate() {
             let iota_subseed = iota_seed.subseed(i as u64);
@@ -206,8 +206,8 @@ mod tests {
     fn iota_seed_from_bytes_invalid_length() {
         let buf = TritBuf::zeros(42);
 
-        match IotaSeed::<CurlP27>::from_buf(buf) {
-            Err(IotaSeedError::InvalidLength(len)) => assert_eq!(len, 42),
+        match TernarySeed::<CurlP27>::from_buf(buf) {
+            Err(TernarySeedError::InvalidLength(len)) => assert_eq!(len, 42),
             _ => unreachable!(),
         }
     }
@@ -215,8 +215,8 @@ mod tests {
     #[test]
     fn iota_seed_to_bytes_from_bytes() {
         for _ in 0..10 {
-            let iota_seed_1 = IotaSeed::<CurlP27>::new();
-            let iota_seed_2 = IotaSeed::<CurlP27>::from_buf(iota_seed_1.trits().to_buf()).unwrap();
+            let iota_seed_1 = TernarySeed::<CurlP27>::new();
+            let iota_seed_2 = TernarySeed::<CurlP27>::from_buf(iota_seed_1.trits().to_buf()).unwrap();
 
             assert_eq!(iota_seed_1.as_bytes(), iota_seed_2.as_bytes());
         }

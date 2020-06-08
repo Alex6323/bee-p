@@ -9,26 +9,22 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install -y clang lldb-6.0 lld-6.0 libc++-dev llvm binutils-dev libcurl4-openssl-dev libelf-dev libdw-dev binutils-dev libiberty-dev libusb-1.0-0-dev librocksdb-dev llvm-3.9-dev libclang-3.9-dev clang-3.9 g++ librocksdb-dev
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: nightly
           override: true
       - uses: actions-rs/cargo@v1
         with:
-          command: clean
-      - uses: actions-rs/cargo@v1
-        with:
           command: test
-          args: --release --all-features --no-fail-fast
+          args: --all-features --no-fail-fast
         env:
           CARGO_INCREMENTAL: "0"
-          #RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
           RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests"
-          RUSTDOCFLAGS: "-Cpanic=abort"
-      - uses: actions-rs/grcov@v0.1
+      - id: grcov
+        uses: actions-rs/grcov@v0.1
       - uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ steps.coverage.outputs.report }}
+          path-to-lcov: ${{ steps.grcov.outputs.report }}
