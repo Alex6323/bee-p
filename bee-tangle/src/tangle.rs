@@ -36,9 +36,7 @@ where
         Self::default()
     }
 
-    // TODO: maybe swap 'hash' and 'metadata'
-    /// Inserts a transaction, and returns a thread-safe reference to it. If the transaction was new `true` is returned,
-    /// otherwise `false`.
+    /// Inserts a transaction, and returns a thread-safe reference to it in case it didn't already exist.
     pub fn insert(&self, data: Tx, hash: TxHash, metadata: T) -> Option<TxRef> {
         self.add_approver(*data.trunk(), hash);
 
@@ -86,7 +84,7 @@ where
     }
 
     /// Updates the metadata of a particular vertex.
-    pub fn update(&self, hash: &TxHash, metadata: T) {
+    pub fn update_metadata(&self, hash: &TxHash, metadata: T) {
         self.vertices.get_mut(hash).map(|mut vtx| {
             let vtx = vtx.value_mut();
             *vtx.get_metadata_mut() = metadata;
@@ -121,16 +119,16 @@ mod tests {
 
         let (hash, tx) = create_random_tx();
 
-        let (_, is_new) = tangle.insert(tx.clone(), hash.clone(), ());
+        let insert1 = tangle.insert(tx.clone(), hash.clone(), ());
 
-        assert!(is_new);
+        assert!(insert1.is_some());
         assert_eq!(1, tangle.size());
         assert!(tangle.contains(&hash));
 
-        let (_, is_new) = tangle.insert_transaction(tx, hash, ());
+        let insert2 = tangle.insert(tx, hash, ());
 
-        assert!(!is_new);
+        assert!(insert2.is_none());
         assert_eq!(1, tangle.size());
-        assert!(tangle.contains_transaction(&hash));
+        assert!(tangle.contains(&hash));
     }
 }

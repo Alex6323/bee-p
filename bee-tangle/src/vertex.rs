@@ -59,7 +59,7 @@ mod tests {
 
         assert_eq!(tx.trunk(), vtx.get_trunk());
         assert_eq!(tx.branch(), vtx.get_branch());
-        assert_eq!(tx, **vtx.get_transaction());
+        assert_eq!(tx, **vtx.get_data());
         assert_eq!(metadata, *vtx.get_metadata());
     }
 

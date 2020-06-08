@@ -176,67 +176,6 @@ mod tests {
 
     use bee_test::transaction::{create_random_attached_tx, create_random_tx};
 
-    #[test]
-    fn walk_trunk_approvers() {
-        let (tangle, Transactions { a, d, e, .. }, Hashes { a_hash, .. }) = create_test_tangle();
-
-        let mut txs = vec![];
-
-        trunk_walk_approvers(
-            &tangle,
-            a_hash,
-            |_vtx| true,
-            |_hash, vtx| txs.push(vtx.get_transaction().clone()),
-        );
-
-        assert_eq!(3, txs.len());
-
-        assert_eq!(a.address(), txs[0].address());
-        assert_eq!(d.address(), txs[1].address());
-        assert_eq!(e.address(), txs[2].address());
-    }
-
-    #[test]
-    fn walk_trunk_approvees() {
-        let (tangle, Transactions { a, d, e, .. }, Hashes { e_hash, .. }) = create_test_tangle();
-
-        let mut txs = vec![];
-
-        trunk_walk_approvees(
-            &tangle,
-            e_hash,
-            |_vtx| true,
-            |_hash, vtx| txs.push(vtx.get_transaction().clone()),
-        );
-
-        assert_eq!(3, txs.len());
-
-        assert_eq!(e.address(), txs[0].address());
-        assert_eq!(d.address(), txs[1].address());
-        assert_eq!(a.address(), txs[2].address());
-    }
-
-    #[test]
-    fn test_df_walk_approvees() {
-        let (tangle, Transactions { a, b, c, d, e, .. }, Hashes { e_hash, .. }) = create_test_tangle();
-
-        let mut addresses = vec![];
-
-        df_walk_approvees(
-            &tangle,
-            e_hash,
-            |_hash, _vtx| true,
-            |_hash, vtx| addresses.push(vtx.get_transaction().address().clone()),
-            |_hash| (),
-        );
-
-        assert_eq!(*e.address(), addresses[0]);
-        assert_eq!(*d.address(), addresses[1]);
-        assert_eq!(*a.address(), addresses[2]);
-        assert_eq!(*c.address(), addresses[3]);
-        assert_eq!(*b.address(), addresses[4]);
-    }
-
     struct Transactions {
         pub a: Tx,
         pub b: Tx,
@@ -270,15 +209,15 @@ mod tests {
 
         let (a_hash, a) = create_random_tx();
         let (b_hash, b) = create_random_tx();
-        let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone()); // branch, trunk
-        let (d_hash, d) = create_random_attached_tx(c_hash.clone(), a_hash.clone());
-        let (e_hash, e) = create_random_attached_tx(c_hash.clone(), d_hash.clone());
+        let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone());
+        let (d_hash, d) = create_random_attached_tx(a_hash.clone(), c_hash.clone());
+        let (e_hash, e) = create_random_attached_tx(d_hash.clone(), c_hash.clone());
 
-        tangle.insert_transaction(a.clone(), a_hash, ());
-        tangle.insert_transaction(b.clone(), b_hash, ());
-        tangle.insert_transaction(c.clone(), c_hash, ());
-        tangle.insert_transaction(d.clone(), d_hash, ());
-        tangle.insert_transaction(e.clone(), e_hash, ());
+        tangle.insert(a.clone(), a_hash, ());
+        tangle.insert(b.clone(), b_hash, ());
+        tangle.insert(c.clone(), c_hash, ());
+        tangle.insert(d.clone(), d_hash, ());
+        tangle.insert(e.clone(), e_hash, ());
 
         assert_eq!(5, tangle.size());
         assert_eq!(2, tangle.num_approvers(&a_hash));
@@ -298,6 +237,84 @@ mod tests {
                 e_hash,
             },
         )
+    }
+
+    #[test]
+    fn visit_children_follow_trunk_in_simple_graph() {
+        // a   b
+        // |\ /
+        // | c
+        // |/|
+        // d |
+        //  \|
+        //   e
+
+        let (tangle, Transactions { b, c, d, e, .. }, Hashes { b_hash, .. }) = create_test_tangle();
+
+        let mut txs = vec![];
+
+        visit_children_follow_trunk(&tangle, b_hash, |_, _| true, |_, tx, _| txs.push(tx.clone()));
+
+        assert_eq!(4, txs.len());
+
+        assert_eq!(b.address(), txs[0].address());
+        assert_eq!(c.address(), txs[1].address());
+        assert_eq!(e.address(), txs[2].address());
+        assert_eq!(d.address(), txs[3].address());
+    }
+
+    #[test]
+    fn visit_parents_follow_trunk_in_simple_graph() {
+        // a   b
+        // |\ /
+        // | c
+        // |/|
+        // d |
+        //  \|
+        //   e
+
+        let (tangle, Transactions { e, b, c, .. }, Hashes { e_hash, .. }) = create_test_tangle();
+
+        let mut txs = vec![];
+
+        visit_parents_follow_trunk(&tangle, e_hash, |_, _| true, |_, tx, _| txs.push(tx.clone()));
+
+        assert_eq!(3, txs.len());
+
+        assert_eq!(e.address(), txs[0].address());
+        assert_eq!(c.address(), txs[1].address());
+        assert_eq!(b.address(), txs[2].address());
+    }
+
+    #[test]
+    fn visit_parents_depth_first_in_simple_graph() {
+        // a   b
+        // |\ /
+        // | c
+        // |/|
+        // d |
+        //  \|
+        //   e
+
+        let (tangle, Transactions { a, b, c, d, e, .. }, Hashes { e_hash, .. }) = create_test_tangle();
+
+        let mut addresses = vec![];
+
+        visit_parents_depth_first(
+            &tangle,
+            e_hash,
+            |_, _| true,
+            |_, data, _| addresses.push(data.address().clone()),
+            |_| (),
+        );
+
+        assert_eq!(5, addresses.len());
+
+        assert_eq!(*e.address(), addresses[0]);
+        assert_eq!(*d.address(), addresses[1]);
+        assert_eq!(*a.address(), addresses[2]);
+        assert_eq!(*c.address(), addresses[3]);
+        assert_eq!(*b.address(), addresses[4]);
     }
 
     // #[test]
