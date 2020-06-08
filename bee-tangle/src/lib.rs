@@ -14,6 +14,8 @@
 #![warn(missing_docs)]
 
 pub use tangle::Tangle;
+pub use vertex::Vertex;
+
 pub mod traversal;
 
 mod tangle;
@@ -25,6 +27,7 @@ use async_std::sync::Arc;
 
 use std::ops::Deref;
 
+// TODO: docs
 #[derive(Clone)]
 pub struct TransactionRef(pub(crate) Arc<Transaction>);
 

@@ -12,11 +12,12 @@
 use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
-    tangle::tangle,
+    tangle::{tangle, Flags},
 };
 
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{PublicKey, RecoverableSignature};
+use bee_tangle::Vertex;
 use bee_transaction::{Hash, TransactionVertex};
 
 use std::marker::PhantomData;
@@ -61,9 +62,10 @@ where
         // TODO also do an IncomingBundleBuilder check ?
         let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
         let mut transaction = tangle()
-            .get(&tail_hash)
+            .get_transaction(&tail_hash)
             .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
+        // TODO consider using the metadata instead as it might be more efficient
         if !transaction.is_tail() {
             return Err(MilestoneValidatorWorkerError::NotATail);
         }
@@ -73,7 +75,7 @@ where
         // TODO use walker
         for _ in 0..Protocol::get().config.coordinator.security_level {
             transaction = tangle()
-                .get(transaction.trunk())
+                .get_transaction((*transaction).trunk())
                 .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
             builder.push((*transaction).clone());

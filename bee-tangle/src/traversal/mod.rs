@@ -22,6 +22,7 @@ pub fn trunk_walk_approvees<'a, T, Filter, Action>(tangle: &'a Tangle<T>, start:
 where
     Filter: Fn(&Vertex<T>) -> bool,
     Action: FnMut(&TxHash, &Vertex<T>),
+    T: Clone + Copy,
 {
     let mut approvers = vec![start];
 
@@ -51,6 +52,7 @@ pub fn df_walk_approvees<'a, T, Follow, Hit, Miss>(
     Follow: Fn(&TxHash, &Vertex<T>) -> bool,
     Hit: FnMut(&TxHash, &Vertex<T>),
     Miss: FnMut(&TxHash),
+    T: Clone + Copy,
 {
     let mut to_visit = Vec::new();
     let mut visited = HashSet::new();
@@ -88,6 +90,7 @@ pub fn trunk_walk_approvers<'a, T, Filter, Action>(tangle: &'a Tangle<T>, start:
 where
     Filter: Fn(&Vertex<T>) -> bool,
     Action: FnMut(&TxHash, &Vertex<T>),
+    T: Clone + Copy,
 {
     let mut to_visit = vec![];
 
@@ -126,6 +129,7 @@ pub fn df_walk_approvers<'a, T, Filter, Hit, Miss>(
     Hit: FnMut(&TxHash, &Vertex<T>),
     Filter: Fn(&TxHash, &Vertex<T>) -> bool,
     Miss: FnMut(&TxHash),
+    T: Clone + Copy,
 {
     let mut to_visit = vec![start];
     let mut visited = HashSet::new();

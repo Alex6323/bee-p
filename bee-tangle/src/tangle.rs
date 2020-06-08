@@ -4,12 +4,21 @@ use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVerte
 
 use dashmap::{mapref::entry::Entry, DashMap};
 
-pub struct Tangle<T> {
+pub struct Tangle<T>
+where
+    T: Clone + Copy,
+{
+    // 'map_hash_vertex'
     pub vertices: DashMap<TxHash, Vertex<T>>,
+    // TODO: rename this to 'map_parent_children'
     pub approvers: DashMap<TxHash, Vec<TxHash>>,
+    // TODO: add 'tips' DashSet for fast tip selection
 }
 
-impl<T> Default for Tangle<T> {
+impl<T> Default for Tangle<T>
+where
+    T: Clone + Copy,
+{
     fn default() -> Self {
         Self {
             vertices: DashMap::new(),
@@ -18,28 +27,32 @@ impl<T> Default for Tangle<T> {
     }
 }
 
-impl<T> Tangle<T> {
+impl<T> Tangle<T>
+where
+    T: Clone + Copy,
+{
     /// Creates a new Tangle.
     pub fn new() -> Self {
         Self::default()
     }
 
+    // TODO: maybe swap 'hash' and 'metadata'
     /// Inserts a transaction, and returns a thread-safe reference to it. If the transaction was new `true` is returned,
     /// otherwise `false`.
-    pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: T) -> (TxRef, bool) {
-        self.add_approver(*transaction.trunk(), hash);
+    pub fn insert(&self, data: Tx, hash: TxHash, metadata: T) -> Option<TxRef> {
+        self.add_approver(*data.trunk(), hash);
 
-        if transaction.trunk() != transaction.branch() {
-            self.add_approver(*transaction.branch(), hash);
+        if data.trunk() != data.branch() {
+            self.add_approver(*data.branch(), hash);
         }
 
         match self.vertices.entry(hash) {
-            Entry::Occupied(entry) => (entry.get().get_transaction().clone(), false),
+            Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
-                let vtx = Vertex::new(transaction, metadata);
-                let tx_ref = vtx.get_transaction().clone();
+                let vtx = Vertex::new(data, metadata);
+                let txref = vtx.get_transaction().clone();
                 entry.insert(vtx);
-                (tx_ref, true)
+                Some(txref)
             }
         }
     }
@@ -57,16 +70,23 @@ impl<T> Tangle<T> {
         }
     }
 
-    pub fn get_transaction(&self, hash: &TxHash) -> Option<TxRef> {
+    // TODO: docs
+    // TODO: closure?
+    pub fn get_data(&self, hash: &TxHash) -> Option<TxRef> {
         self.vertices.get(hash).map(|vtx| vtx.value().get_transaction().clone())
     }
 
+    pub fn get_metadata(&self, hash: &TxHash) -> Option<T> {
+        self.vertices.get(hash).map(|vtx| *vtx.value().get_metadata())
+    }
+
     /// Returns whether the transaction is stored in the Tangle.
-    pub fn contains_transaction(&self, hash: &TxHash) -> bool {
+    pub fn contains(&self, hash: &TxHash) -> bool {
         self.vertices.contains_key(hash)
     }
 
-    pub fn update_metadata(&self, hash: &TxHash, metadata: T) {
+    /// Updates the metadata of a particular vertex.
+    pub fn update(&self, hash: &TxHash, metadata: T) {
         self.vertices.get_mut(hash).map(|mut vtx| {
             let vtx = vtx.value_mut();
             *vtx.get_metadata_mut() = metadata;
@@ -101,11 +121,11 @@ mod tests {
 
         let (hash, tx) = create_random_tx();
 
-        let (_, is_new) = tangle.insert_transaction(tx.clone(), hash.clone(), ());
+        let (_, is_new) = tangle.insert(tx.clone(), hash.clone(), ());
 
         assert!(is_new);
         assert_eq!(1, tangle.size());
-        assert!(tangle.contains_transaction(&hash));
+        assert!(tangle.contains(&hash));
 
         let (_, is_new) = tangle.insert_transaction(tx, hash, ());
 

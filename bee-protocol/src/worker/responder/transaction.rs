@@ -43,7 +43,7 @@ impl TransactionResponderWorker {
     async fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
         match Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
             Ok(hash) => {
-                match tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
+                match tangle().get_transaction(&Hash::from_inner_unchecked(hash.encode())) {
                     Some(transaction) => {
                         let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
                         transaction.into_trits_allocated(&mut trits);

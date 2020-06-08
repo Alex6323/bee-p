@@ -1,35 +1,38 @@
-use crate::TransactionRef;
+use crate::TransactionRef as TxRef;
 
-use bee_transaction::{BundledTransaction as Transaction, Hash as TransactionHash, TransactionVertex};
+use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVertex};
 
 use async_std::sync::Arc;
 
-pub struct Vertex<T> {
-    trunk: TransactionHash,
-    branch: TransactionHash,
-    transaction: TransactionRef,
+#[derive(Clone)]
+pub struct Vertex<T>
+where
+    T: Clone + Copy,
+{
+    transaction: TxRef,
     metadata: T,
 }
 
-impl<T> Vertex<T> {
-    pub fn new(transaction: Transaction, metadata: T) -> Self {
+impl<T> Vertex<T>
+where
+    T: Clone + Copy,
+{
+    pub fn new(transaction: Tx, metadata: T) -> Self {
         Self {
-            trunk: transaction.trunk().clone(),
-            branch: transaction.branch().clone(),
-            transaction: TransactionRef(Arc::new(transaction)),
+            transaction: TxRef(Arc::new(transaction)),
             metadata,
         }
     }
 
-    pub fn get_trunk(&self) -> &TransactionHash {
-        &self.trunk
+    pub fn get_trunk(&self) -> &TxHash {
+        self.transaction.trunk()
     }
 
-    pub fn get_branch(&self) -> &TransactionHash {
-        &self.branch
+    pub fn get_branch(&self) -> &TxHash {
+        self.transaction.branch()
     }
 
-    pub fn get_transaction(&self) -> &TransactionRef {
+    pub fn get_transaction(&self) -> &TxRef {
         &self.transaction
     }
 

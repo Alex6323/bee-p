@@ -130,9 +130,7 @@ impl TransactionWorker {
         }
 
         // store transaction
-        let (transaction, is_new) = tangle().insert(transaction, hash, Flags::empty());
-
-        if is_new {
+        if let Some(transaction) = tangle().insert(transaction, hash, Flags::empty()) {
             Protocol::get().metrics.new_transactions_received_inc();
 
             if !tangle().is_synced() && Protocol::get().requested.is_empty() {

@@ -1,7 +1,7 @@
 use crate::milestone::MilestoneIndex as MsIndex;
 
-use bee_tangle::{Tangle, TransactionRef};
-use bee_transaction::{BundledTransaction as Transaction, Hash as THash};
+use bee_tangle::{Tangle, TransactionRef as TxRef, Vertex};
+use bee_transaction::{BundledTransaction as Tx, Hash as TxHash};
 
 use bitflags::bitflags;
 use dashmap::{DashMap, DashSet};
@@ -57,8 +57,8 @@ impl Flags {
 /// Milestone-based Tangle.
 pub struct MsTangle {
     pub(crate) inner: Tangle<Flags>,
-    pub(crate) milestones: DashMap<MsIndex, THash>,
-    pub(crate) solid_entry_points: DashSet<THash>,
+    pub(crate) milestones: DashMap<MsIndex, TxHash>,
+    pub(crate) solid_entry_points: DashSet<TxHash>,
     solid_milestone_index: AtomicU32,
     last_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
@@ -76,19 +76,23 @@ impl MsTangle {
         }
     }
 
-    pub fn insert(&'static self, transaction: Transaction, hash: THash, flags: Flags) -> (TransactionRef, bool) {
+    pub fn insert(&'static self, transaction: Tx, hash: TxHash, flags: Flags) -> Option<TxRef> {
         self.inner.insert(transaction, hash, flags)
     }
 
-    pub fn get(&'static self, hash: &THash) -> Option<TransactionRef> {
-        self.inner.get_transaction(hash)
+    pub fn get_transaction(&'static self, hash: &TxHash) -> Option<TxRef> {
+        self.inner.get_data(hash)
     }
 
-    pub fn contains(&'static self, hash: &THash) -> bool {
+    pub fn get_flags(&'static self, hash: &TxHash) -> Option<Flags> {
+        self.inner.get_metadata(hash)
+    }
+
+    pub fn contains(&'static self, hash: &TxHash) -> bool {
         self.inner.vertices.contains_key(hash)
     }
 
-    pub fn add_milestone(&'static self, index: MsIndex, hash: THash) {
+    pub fn add_milestone(&'static self, index: MsIndex, hash: TxHash) {
         self.milestones.insert(index, hash);
 
         self.inner.vertices.get_mut(&hash).map(|mut vtx| {
@@ -100,14 +104,16 @@ impl MsTangle {
         self.milestones.remove(&index);
     }
 
-    pub fn get_milestone(&'static self, index: MsIndex) -> Option<TransactionRef> {
+    // TODO: use combinator instead of match
+    pub fn get_milestone(&'static self, index: MsIndex) -> Option<TxRef> {
         match self.get_milestone_hash(index) {
             None => None,
-            Some(hash) => self.get(&hash),
+            Some(ref hash) => self.get_transaction(hash),
         }
     }
 
-    pub fn get_milestone_hash(&'static self, index: MsIndex) -> Option<THash> {
+    // TODO: use combinator instead of match
+    pub fn get_milestone_hash(&'static self, index: MsIndex) -> Option<TxHash> {
         match self.milestones.get(&index) {
             None => None,
             Some(v) => Some(*v),
@@ -146,21 +152,21 @@ impl MsTangle {
         self.get_solid_milestone_index() == self.get_last_milestone_index()
     }
 
-    pub fn add_solid_entry_point(&'static self, hash: THash) {
+    pub fn add_solid_entry_point(&'static self, hash: TxHash) {
         self.solid_entry_points.insert(hash);
     }
 
     /// Removes `hash` from the set of solid entry points.
-    pub fn remove_solid_entry_point(&'static self, hash: &THash) {
+    pub fn remove_solid_entry_point(&'static self, hash: &TxHash) {
         self.solid_entry_points.remove(hash);
     }
 
     /// Returns whether the transaction associated `hash` is a solid entry point.
-    pub fn is_solid_entry_point(&'static self, hash: &THash) -> bool {
+    pub fn is_solid_entry_point(&'static self, hash: &TxHash) -> bool {
         self.solid_entry_points.contains(hash)
     }
 
-    pub fn is_solid_transaction(&'static self, hash: &THash) -> bool {
+    pub fn is_solid_transaction(&'static self, hash: &TxHash) -> bool {
         if self.is_solid_entry_point(hash) {
             true
         } else {
