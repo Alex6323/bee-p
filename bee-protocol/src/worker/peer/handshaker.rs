@@ -26,11 +26,6 @@ use bee_network::{
 };
 use bee_tangle::tangle;
 
-use std::{
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
-
 use async_std::{net::SocketAddr, task::spawn};
 use futures::{
     channel::{mpsc, oneshot},
@@ -39,6 +34,11 @@ use futures::{
     stream::StreamExt,
 };
 use log::{debug, error, info, warn};
+
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Debug)]
 pub(crate) enum HandshakeError {
