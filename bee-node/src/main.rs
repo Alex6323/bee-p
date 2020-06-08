@@ -39,10 +39,10 @@ fn main() {
 
     let config = config_builder.finish();
 
-    let (network, shutdown, receiver) = bee_network::init(config.network);
+    let (network, events, shutdown) = bee_network::init(config.network);
 
     // TODO: proper shutdown
-    let mut node = Node::new(config, network, shutdown, receiver);
+    let mut node = Node::new(config, network, events, shutdown);
 
     block_on(node.init());
     block_on(node.run());

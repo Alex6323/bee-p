@@ -37,19 +37,19 @@ use log::{debug, error, info, warn};
 pub struct Node {
     config: NodeConfig,
     network: Network,
-    shutdown: Shutdown,
     events: EventSubscriber,
+    shutdown: Shutdown,
     ledger: Option<(mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>)>,
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }
 
 impl Node {
-    pub(crate) fn new(config: NodeConfig, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
+    pub(crate) fn new(config: NodeConfig, network: Network, events: EventSubscriber, shutdown: Shutdown) -> Self {
         Self {
             config,
             network,
-            shutdown,
             events,
+            shutdown,
             ledger: None,
             peers: HashMap::new(),
         }
