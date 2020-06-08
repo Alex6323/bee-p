@@ -86,7 +86,7 @@ impl PeerWorker {
 
         info!("[{}] Stopped.", self.peer.address);
 
-        Protocol::get().peer_manager.remove(&self.peer.epid);
+        Protocol::get().peer_manager.remove(&self.peer.epid).await;
     }
 
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {

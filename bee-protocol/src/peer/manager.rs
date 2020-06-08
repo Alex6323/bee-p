@@ -22,7 +22,7 @@ use bee_network::{Address, EndpointId, Network};
 
 use std::sync::{Arc, Mutex};
 
-use async_std::task::spawn;
+use async_std::{sync::RwLock, task::spawn};
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
@@ -31,6 +31,7 @@ pub(crate) struct PeerManager {
     network: Network,
     pub(crate) peers: DashMap<EndpointId, Arc<Peer>>,
     pub(crate) handshaked_peers: DashMap<EndpointId, Arc<HandshakedPeer>>,
+    pub(crate) handshaked_peers_keys: RwLock<Vec<EndpointId>>,
 }
 
 impl PeerManager {
@@ -39,6 +40,7 @@ impl PeerManager {
             network,
             peers: Default::default(),
             handshaked_peers: Default::default(),
+            handshaked_peers_keys: Default::default(),
         }
     }
 
@@ -46,7 +48,7 @@ impl PeerManager {
         self.peers.insert(peer.epid, peer);
     }
 
-    pub(crate) fn handshake(&self, epid: &EndpointId, address: Address) {
+    pub(crate) async fn handshake(&self, epid: &EndpointId, address: Address) {
         if self.peers.remove(epid).is_some() {
             // TODO check if not already added
 
@@ -86,6 +88,7 @@ impl PeerManager {
             ));
 
             self.handshaked_peers.insert(*epid, peer.clone());
+            self.handshaked_peers_keys.write().await.push(*epid);
 
             spawn(
                 SenderWorker::<MilestoneRequest>::new(self.network.clone(), peer.clone())
@@ -103,9 +106,11 @@ impl PeerManager {
         }
     }
 
-    pub(crate) fn remove(&self, epid: &EndpointId) {
+    pub(crate) async fn remove(&self, epid: &EndpointId) {
         // TODO both ?
         self.peers.remove(epid);
+
+        self.handshaked_peers_keys.write().await.retain(|e| e != epid);
 
         if let Some((_, peer)) = self.handshaked_peers.remove(epid) {
             if let Ok(mut shutdown) = peer.milestone_request.1.lock() {

@@ -231,7 +231,7 @@ impl PeerHandshakerWorker {
                     Ok(address) => {
                         info!("[{}] Handshake completed.", self.peer.address);
 
-                        Protocol::get().peer_manager.handshake(&self.peer.epid, address);
+                        Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
 
                         Protocol::send_heartbeat(
                             self.peer.epid,
