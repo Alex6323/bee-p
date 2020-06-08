@@ -56,7 +56,7 @@ use async_std::task::spawn;
 use futures::channel::oneshot;
 
 /// Initializes the network layer.
-pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
+pub fn init(config: NetworkConfig) -> (Network, Events, Shutdown) {
     let (command_sender, commands) = commands::command_channel();
     let (event_sender, events) = events::event_channel();
     let (internal_event_sender, internal_events) = events::event_channel();
@@ -89,5 +89,5 @@ pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
 
     whitelist::init();
 
-    (Network::new(config, command_sender), shutdown, events)
+    (Network::new(config, command_sender), events, shutdown)
 }
