@@ -4,14 +4,13 @@ use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVerte
 
 use dashmap::{mapref::entry::Entry, DashMap};
 
+/// A datastructure to represent a special type of directed acyclic graph(DAG), the IOTA Tangle.
 pub struct Tangle<T>
 where
     T: Clone + Copy,
 {
-    // 'map_hash_vertex'
-    pub vertices: DashMap<TxHash, Vertex<T>>,
-    // TODO: rename this to 'map_parent_children'
-    pub children: DashMap<TxHash, Vec<TxHash>>,
+    pub(crate) vertices: DashMap<TxHash, Vertex<T>>,
+    pub(crate) children: DashMap<TxHash, Vec<TxHash>>,
     // TODO: add 'tips' DashSet for fast tip selection
 }
 
@@ -55,6 +54,7 @@ where
         }
     }
 
+    // TODO: rename add_child
     #[inline]
     fn add_approver(&self, approvee: TxHash, approver: TxHash) {
         match self.children.entry(approvee) {
@@ -68,12 +68,12 @@ where
         }
     }
 
-    // TODO: docs
-    // TODO: closure?
+    /// Get the data of a vertex associated with the given `hash`.
     pub fn get_data(&self, hash: &TxHash) -> Option<TxRef> {
         self.vertices.get(hash).map(|vtx| vtx.value().get_data().clone())
     }
 
+    /// Get the metadata of a vertex associated with the given `hash`.
     pub fn get_metadata(&self, hash: &TxHash) -> Option<T> {
         self.vertices.get(hash).map(|vtx| *vtx.value().get_metadata())
     }

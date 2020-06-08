@@ -26,7 +26,7 @@ use async_std::sync::Arc;
 
 use std::ops::Deref;
 
-// TODO: docs
+/// A thread-safe reference to a `bee_transaction:BundledTransaction`.
 #[derive(Clone)]
 pub struct TransactionRef(pub(crate) Arc<Transaction>);
 

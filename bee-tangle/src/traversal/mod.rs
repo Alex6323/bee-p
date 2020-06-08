@@ -9,14 +9,18 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+//! Collection of Tangle traversal functions.
+
 use crate::{tangle::Tangle, TransactionRef as TxRef};
 
 use bee_transaction::Hash as TxHash;
 
 use std::collections::HashSet;
 
-// TODO: docs
-// TODO: test
+/// A Tangle walker that - given a starting vertex - visits all of its ancestors that are connected through
+/// the *trunk* edge. The walk continues as long as the visited vertices match a certain condition. For each
+/// visited vertex a customized logic can be applied. Each traversed vertex provides read access to its
+/// associated data and metadata.
 pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
     initial: TxHash,
@@ -44,8 +48,10 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
     }
 }
 
-// TODO: docs
-// TODO: test
+/// A Tangle walker that - given a starting vertex - visits all of its children that are connected through
+/// the *trunk* edge. The walk continues as long as the visited vertices match a certain condition. For each
+/// visited vertex a customized logic can be applied. Each traversed vertex provides read access to its
+/// associated data and metadata.
 pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
     initial: TxHash,
@@ -77,8 +83,10 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
     }
 }
 
-// TODO: docs
-// TODO: test
+/// A Tangle walker that - given a starting vertex - visits all of its ancestors that are connected through
+/// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
+/// condition. For each visited vertex customized logic can be applied depending on the availability of the
+/// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     tangle: &'a Tangle<Metadata>,
     initial: TxHash,
