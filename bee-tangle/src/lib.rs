@@ -14,7 +14,6 @@
 #![warn(missing_docs)]
 
 pub use tangle::Tangle;
-pub use vertex::Vertex;
 
 pub mod traversal;
 

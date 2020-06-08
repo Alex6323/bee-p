@@ -12,12 +12,11 @@
 use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
-    tangle::{tangle, Flags},
+    tangle::tangle,
 };
 
 use bee_crypto::{Kerl, Sponge};
 use bee_signing::{PublicKey, RecoverableSignature};
-use bee_tangle::Vertex;
 use bee_transaction::{Hash, TransactionVertex};
 
 use std::marker::PhantomData;

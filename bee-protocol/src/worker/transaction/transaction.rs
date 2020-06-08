@@ -151,18 +151,18 @@ impl TransactionWorker {
                     if transaction.is_tail() {
                         Some(hash)
                     } else {
-                        let mut chain = vec![];
+                        let mut bundle = vec![];
 
-                        traversal::trunk_walk_approvers(
+                        traversal::visit_children_follow_trunk(
                             &tangle().inner,
                             hash,
-                            |v| v.get_transaction().bundle() == transaction.bundle(),
-                            |h, v| {
-                                chain.push((*h, v.get_transaction().clone()));
+                            |tx, _| tx.bundle() == transaction.bundle(),
+                            |tx_hash, tx, _| {
+                                bundle.push((*tx_hash, tx.clone()));
                             },
                         );
 
-                        match chain.last() {
+                        match bundle.last() {
                             Some((h, t)) => {
                                 if t.is_tail() {
                                     Some(*h)

@@ -1,6 +1,6 @@
 use crate::milestone::MilestoneIndex as MsIndex;
 
-use bee_tangle::{Tangle, TransactionRef as TxRef, Vertex};
+use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::{BundledTransaction as Tx, Hash as TxHash};
 
 use bitflags::bitflags;

@@ -9,74 +9,108 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{tangle::Tangle, vertex::Vertex};
+use crate::{tangle::Tangle, TransactionRef as TxRef};
 
 use bee_transaction::Hash as TxHash;
 
 use std::collections::HashSet;
 
-// TODO: rename function name -> walk_past
-// TODO: rename Filter -> Match
-// TODO: rename Action -> Apply
-pub fn trunk_walk_approvees<'a, T, Filter, Action>(tangle: &'a Tangle<T>, start: TxHash, f: Filter, mut a: Action)
-where
-    Filter: Fn(&Vertex<T>) -> bool,
-    Action: FnMut(&TxHash, &Vertex<T>),
-    T: Clone + Copy,
+// TODO: docs
+// TODO: test
+pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
+    tangle: &'a Tangle<Metadata>,
+    initial: TxHash,
+    matches: Match,
+    mut apply: Apply,
+) where
+    Metadata: Clone + Copy,
+    Match: Fn(&TxRef, &Metadata) -> bool,
+    Apply: FnMut(&TxHash, &TxRef, &Metadata),
 {
-    let mut approvers = vec![start];
+    // TODO: how much space is reasonable preallocate?
+    let mut parents = vec![initial];
 
-    // TODO: optimize
-    while let Some(approver_hash) = approvers.pop() {
-        if let Some(r) = tangle.vertices.get(&approver_hash) {
-            let vtx = r.value();
+    while let Some(ref hash) = parents.pop() {
+        if let Some(vtx) = tangle.vertices.get(&hash) {
+            let vtx = vtx.value();
 
-            if !f(vtx) {
+            if !matches(vtx.get_data(), vtx.get_metadata()) {
                 break;
             } else {
-                a(&approver_hash, vtx);
-                approvers.push(vtx.get_trunk().clone());
+                apply(&hash, vtx.get_data(), vtx.get_metadata());
+                parents.push(*vtx.get_trunk());
             }
         }
     }
 }
 
-// TODO: rename 'walk_approvees_depth_first'
-pub fn df_walk_approvees<'a, T, Follow, Hit, Miss>(
-    tangle: &'a Tangle<T>,
-    start: TxHash,
-    f: Follow,
-    mut h: Hit,
-    mut m: Miss,
+// TODO: docs
+// TODO: test
+pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
+    tangle: &'a Tangle<Metadata>,
+    initial: TxHash,
+    matches: Match,
+    mut apply: Apply,
 ) where
-    Follow: Fn(&TxHash, &Vertex<T>) -> bool,
-    Hit: FnMut(&TxHash, &Vertex<T>),
-    Miss: FnMut(&TxHash),
-    T: Clone + Copy,
+    Metadata: Clone + Copy,
+    Match: Fn(&TxRef, &Metadata) -> bool,
+    Apply: FnMut(&TxHash, &TxRef, &Metadata),
 {
-    let mut to_visit = Vec::new();
+    let mut children = vec![initial];
+
+    while let Some(ref parent_hash) = children.pop() {
+        if let Some(parent) = tangle.vertices.get(parent_hash) {
+            if matches(parent.value().get_data(), parent.value().get_metadata()) {
+                apply(parent_hash, parent.value().get_data(), parent.value().get_metadata());
+
+                if let Some(parent_children) = tangle.approvers.get(parent_hash) {
+                    for child_hash in parent_children.value() {
+                        if let Some(child) = tangle.vertices.get(child_hash) {
+                            if child.get_trunk() == parent_hash {
+                                children.push(*child_hash);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// TODO: docs
+// TODO: test
+pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
+    tangle: &'a Tangle<Metadata>,
+    initial: TxHash,
+    matches: Match,
+    mut apply: Apply,
+    mut else_apply: ElseApply,
+) where
+    Metadata: Clone + Copy,
+    Match: Fn(&TxRef, &Metadata) -> bool,
+    Apply: FnMut(&TxHash, &TxRef, &Metadata),
+    ElseApply: FnMut(&TxHash),
+{
+    let mut parents = Vec::new();
     let mut visited = HashSet::new();
 
-    to_visit.push(start);
+    parents.push(initial);
 
-    while let Some(hash) = to_visit.pop() {
+    while let Some(hash) = parents.pop() {
         if !visited.contains(&hash) {
             match tangle.vertices.get(&hash) {
                 Some(vtx) => {
                     let vtx = vtx.value();
 
-                    h(&hash, vtx);
+                    apply(&hash, vtx.get_data(), vtx.get_metadata());
 
-                    if f(&hash, vtx) {
-                        to_visit.push(*vtx.get_trunk());
-                        to_visit.push(*vtx.get_branch());
+                    if matches(vtx.get_data(), vtx.get_metadata()) {
+                        parents.push(*vtx.get_trunk());
+                        parents.push(*vtx.get_branch());
                     }
                 }
                 None => {
-                    // TODO: need to handle this in protocol
-                    // if !self.is_solid_entry_point(&hash) {
-                    m(&hash);
-                    //}
+                    else_apply(&hash);
                 }
             }
             visited.insert(hash);
@@ -84,86 +118,53 @@ pub fn df_walk_approvees<'a, T, Follow, Hit, Miss>(
     }
 }
 
-// TODO: rename Filter -> Continue
-// TODO: rename function name -> walk_approvers_trunk_breadth_first
-pub fn trunk_walk_approvers<'a, T, Filter, Action>(tangle: &'a Tangle<T>, start: TxHash, f: Filter, mut a: Action)
-where
-    Filter: Fn(&Vertex<T>) -> bool,
-    Action: FnMut(&TxHash, &Vertex<T>),
-    T: Clone + Copy,
-{
-    let mut to_visit = vec![];
+// // TODO: docs
+// // TODO: test
+// pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
+//     tangle: &'a Tangle<Metadata>,
+//     initial: TxHash,
+//     matches: Match,
+//     mut apply: Apply,
+//     mut else_apply: ElseApply,
+// ) where
+//     Metadata: Clone + Copy,
+//     Match: Fn(&TxRef, &Metadata) -> bool,
+//     Apply: FnMut(&TxHash, &TxRef, &Metadata),
+//     ElseApply: FnMut(&TxHash),
+// {
+//     let mut children = vec![initial];
+//     let mut visited = HashSet::new();
 
-    // NOTE: do we need to do this for `start`?
-    tangle.vertices.get(&start).map(|r| {
-        if f(r.value()) {
-            to_visit.push(start);
-            a(&start, r.value());
-        }
-    });
+//     while let Some(hash) = children.last() {
+//         match tangle.vertices.get(hash) {
+//             Some(r) => {
+//                 let vtx = r.value();
 
-    while let Some(hash) = to_visit.pop() {
-        if let Some(r) = tangle.approvers.get(&hash) {
-            for approver_hash in r.value() {
-                if let Some(s) = tangle.vertices.get(approver_hash) {
-                    if s.get_trunk() == &hash && f(s.value()) {
-                        to_visit.push(*approver_hash);
-                        a(approver_hash, s.value());
-                        // NOTE: For simplicity reasons we break here, and assume, that there can't be
-                        // a second approver that passes the filter
-                        break;
-                    }
-                }
-            }
-        }
-    }
-}
-
-pub fn df_walk_approvers<'a, T, Filter, Hit, Miss>(
-    tangle: &'a Tangle<T>,
-    start: TxHash,
-    f: Filter,
-    mut h: Hit,
-    mut m: Miss,
-) where
-    Hit: FnMut(&TxHash, &Vertex<T>),
-    Filter: Fn(&TxHash, &Vertex<T>) -> bool,
-    Miss: FnMut(&TxHash),
-    T: Clone + Copy,
-{
-    let mut to_visit = vec![start];
-    let mut visited = HashSet::new();
-
-    while let Some(hash) = to_visit.last() {
-        match tangle.vertices.get(hash) {
-            Some(r) => {
-                let vtx = r.value();
-
-                if visited.contains(vtx.get_trunk()) && visited.contains(vtx.get_branch()) {
-                    h(hash, &vtx);
-                    visited.insert(hash.clone());
-                    to_visit.pop();
-                } else if !visited.contains(vtx.get_trunk()) {
-                    if f(hash, &vtx) {
-                        to_visit.push(vtx.get_trunk().clone());
-                    }
-                } else if !visited.contains(vtx.get_branch()) {
-                    if f(hash, &vtx) {
-                        to_visit.push(vtx.get_branch().clone());
-                    }
-                }
-            }
-            None => {
-                // NOTE: this has to be dealt at the protocol level now ;)
-                // if !tangle.solid_entry_points.contains(hash) {
-                m(hash);
-                //}
-                visited.insert(hash.clone());
-                to_visit.pop();
-            }
-        }
-    }
-}
+//                 if visited.contains(vtx.get_trunk()) && visited.contains(vtx.get_branch()) {
+//                     apply(hash, vtx.get_data(), vtx.get_metadata());
+//                     visited.insert(hash.clone());
+//                     children.pop();
+//                 } else if !visited.contains(vtx.get_trunk()) {
+//                     if matches(vtx.get_data(), vtx.get_metadata()) {
+//                         children.push(*vtx.get_trunk());
+//                     }
+//                 } else if !visited.contains(vtx.get_branch()) {
+//                     if matches(vtx.get_data(), vtx.get_metadata()) {
+//                         children.push(*vtx.get_branch());
+//                     }
+//                 }
+//             }
+//             None => {
+//                 // NOTE: this has to be dealt at the protocol level now ;)
+//                 // if !tangle.solid_entry_points.contains(hash) {
+//                 else_apply(hash);
+//                 //}
+//                 visited.insert(hash.clone());
+//                 children.pop();
+//             }
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

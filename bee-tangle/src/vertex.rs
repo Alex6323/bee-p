@@ -32,7 +32,7 @@ where
         self.transaction.branch()
     }
 
-    pub fn get_transaction(&self) -> &TxRef {
+    pub fn get_data(&self) -> &TxRef {
         &self.transaction
     }
 

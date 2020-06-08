@@ -50,7 +50,7 @@ where
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
                 let vtx = Vertex::new(data, metadata);
-                let txref = vtx.get_transaction().clone();
+                let txref = vtx.get_data().clone();
                 entry.insert(vtx);
                 Some(txref)
             }
@@ -73,7 +73,7 @@ where
     // TODO: docs
     // TODO: closure?
     pub fn get_data(&self, hash: &TxHash) -> Option<TxRef> {
-        self.vertices.get(hash).map(|vtx| vtx.value().get_transaction().clone())
+        self.vertices.get(hash).map(|vtx| vtx.value().get_data().clone())
     }
 
     pub fn get_metadata(&self, hash: &TxHash) -> Option<T> {

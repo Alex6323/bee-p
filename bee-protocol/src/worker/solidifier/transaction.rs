@@ -38,13 +38,15 @@ impl TransactionSolidifierWorker {
     async fn solidify(&self, hash: Hash, index: MilestoneIndex) -> bool {
         let mut missing_hashes = HashSet::new();
 
-        traversal::df_walk_approvees(
+        traversal::visit_parents_depth_first(
             &tangle().inner,
             hash,
-            |_, vtx| vtx.get_metadata().is_solid(),
-            |_, _| {},
+            |_, metadata| metadata.is_solid(),
+            |_, _, _| {},
             |hash| {
-                missing_hashes.insert(*hash);
+                if !tangle().is_solid_entry_point(hash) {
+                    missing_hashes.insert(*hash);
+                }
             },
         );
 
