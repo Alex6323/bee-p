@@ -89,15 +89,18 @@ impl MsTangle {
     }
 
     pub fn contains(&'static self, hash: &TxHash) -> bool {
-        self.inner.vertices.contains_key(hash)
+        self.inner.contains(hash)
     }
 
     pub fn add_milestone(&'static self, index: MsIndex, hash: TxHash) {
+        // TODO: only insert if vacant
         self.milestones.insert(index, hash);
 
-        self.inner.vertices.get_mut(&hash).map(|mut vtx| {
-            (*vtx.get_metadata_mut()).set_milestone();
-        });
+        if let Some(mut metadata) = self.inner.get_metadata(&hash) {
+            metadata.set_milestone();
+
+            self.inner.update_metadata(&hash, metadata);
+        }
     }
 
     pub fn remove_milestone(&'static self, index: MsIndex) {
@@ -170,11 +173,7 @@ impl MsTangle {
         if self.is_solid_entry_point(hash) {
             true
         } else {
-            self.inner
-                .vertices
-                .get(hash)
-                .map(|vtx| vtx.value().get_metadata().is_solid())
-                .unwrap_or(false)
+            self.inner.get_metadata(hash).map(|m| m.is_solid()).unwrap_or(false)
         }
     }
 }
