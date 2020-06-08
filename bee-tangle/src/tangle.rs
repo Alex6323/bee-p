@@ -4,7 +4,7 @@ use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVerte
 
 use dashmap::{mapref::entry::Entry, DashMap};
 
-/// A datastructure to represent a special type of directed acyclic graph(DAG), the IOTA Tangle.
+/// A foundational, thread-safe graph datastructure to represent the IOTA Tangle.
 pub struct Tangle<T>
 where
     T: Clone + Copy,
@@ -37,10 +37,10 @@ where
 
     /// Inserts a transaction, and returns a thread-safe reference to it in case it didn't already exist.
     pub fn insert(&self, data: Tx, hash: TxHash, metadata: T) -> Option<TxRef> {
-        self.add_approver(*data.trunk(), hash);
+        self.add_child(*data.trunk(), hash);
 
         if data.trunk() != data.branch() {
-            self.add_approver(*data.branch(), hash);
+            self.add_child(*data.branch(), hash);
         }
 
         match self.vertices.entry(hash) {
@@ -54,16 +54,15 @@ where
         }
     }
 
-    // TODO: rename add_child
     #[inline]
-    fn add_approver(&self, approvee: TxHash, approver: TxHash) {
-        match self.children.entry(approvee) {
+    fn add_child(&self, parent: TxHash, child: TxHash) {
+        match self.children.entry(parent) {
             Entry::Occupied(mut entry) => {
                 let children = entry.get_mut();
-                children.push(approver);
+                children.push(child);
             }
             Entry::Vacant(entry) => {
-                entry.insert(vec![approver]);
+                entry.insert(vec![parent]);
             }
         }
     }
