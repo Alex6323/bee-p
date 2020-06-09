@@ -11,9 +11,9 @@
 
 use std::net::{IpAddr, Ipv4Addr};
 
+// TODO: use Port type instead of primitive
 pub(crate) const DEFAULT_BINDING_PORT: u16 = 15600;
 pub(crate) const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-pub(crate) const DEFAULT_RECONNECT_INTERVAL_MS: u64 = 60000;
 
 pub(crate) const MAX_BUFFER_SIZE: usize = 1654;
 pub(crate) const BYTES_CHANNEL_CAPACITY: usize = 10000;

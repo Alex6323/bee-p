@@ -22,7 +22,7 @@
 //! * very few dependencies
 //! * well documented
 
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![recursion_limit = "1024"]
 
 pub use address::{url::Url, Address, Port};
@@ -30,6 +30,7 @@ pub use commands::{response_channel, Command, Requester, Responder};
 pub use config::{NetworkConfig, NetworkConfigBuilder};
 pub use endpoint::{origin::Origin, Endpoint, EndpointId};
 pub use events::{Event, EventSubscriber};
+pub use timing::Seconds;
 
 pub use network::Network;
 pub use shutdown::Shutdown;
@@ -43,6 +44,7 @@ mod events;
 mod network;
 mod shutdown;
 mod tcp;
+mod timing;
 // mod udp;
 mod config;
 mod utils;
