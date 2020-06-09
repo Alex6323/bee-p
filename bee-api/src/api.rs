@@ -1,4 +1,7 @@
-use bee_tangle::{tangle, TransactionRef};
+use bee_tangle::{
+    tangle,
+    TransactionRef
+};
 use bee_transaction::Hash;
 
 pub trait Api {

@@ -10,4 +10,6 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod api;
-pub mod rpc_server;
+mod routes;
+pub mod server;
+

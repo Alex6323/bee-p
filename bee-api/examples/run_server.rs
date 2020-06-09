@@ -1,8 +1,9 @@
-use bee_api::rpc_server;
-use bee_api::rpc_server::RPC_SERVER_ADDRESS;
+use bee_api::server;
 
-fn main() {
+#[tokio::main]
+async fn main() {
+    bee_tangle::init();
 
-    async_std::task::block_on(rpc_server::run(RPC_SERVER_ADDRESS.parse().unwrap()));
-
+    server::run(server::SERVER_ADDRESS.parse().unwrap()).await;
 }
+
