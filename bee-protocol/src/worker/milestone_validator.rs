@@ -61,7 +61,7 @@ where
         // TODO also do an IncomingBundleBuilder check ?
         let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
         let mut transaction = tangle()
-            .get_transaction(&tail_hash)
+            .get(&tail_hash)
             .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
         // TODO consider using the metadata instead as it might be more efficient
@@ -74,7 +74,7 @@ where
         // TODO use walker
         for _ in 0..Protocol::get().config.coordinator.security_level {
             transaction = tangle()
-                .get_transaction((*transaction).trunk())
+                .get((*transaction).trunk())
                 .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
             builder.push((*transaction).clone());

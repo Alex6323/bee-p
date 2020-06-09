@@ -80,8 +80,8 @@ impl MsTangle {
         self.inner.insert(transaction, hash, flags)
     }
 
-    pub fn get_transaction(&'static self, hash: &TxHash) -> Option<TxRef> {
-        self.inner.get_data(hash)
+    pub fn get(&'static self, hash: &TxHash) -> Option<TxRef> {
+        self.inner.get(hash)
     }
 
     pub fn get_flags(&'static self, hash: &TxHash) -> Option<Flags> {
@@ -111,7 +111,7 @@ impl MsTangle {
     pub fn get_milestone(&'static self, index: MsIndex) -> Option<TxRef> {
         match self.get_milestone_hash(index) {
             None => None,
-            Some(ref hash) => self.get_transaction(hash),
+            Some(ref hash) => self.get(hash),
         }
     }
 

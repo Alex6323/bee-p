@@ -62,13 +62,14 @@ where
                 children.push(child);
             }
             Entry::Vacant(entry) => {
+                // TODO: find a good value for pre-allocation
                 entry.insert(vec![parent]);
             }
         }
     }
 
     /// Get the data of a vertex associated with the given `hash`.
-    pub fn get_data(&self, hash: &TxHash) -> Option<TxRef> {
+    pub fn get(&self, hash: &TxHash) -> Option<TxRef> {
         self.vertices.get(hash).map(|vtx| vtx.value().get_data().clone())
     }
 

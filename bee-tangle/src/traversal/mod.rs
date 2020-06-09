@@ -31,7 +31,7 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
     Match: Fn(&TxRef, &Metadata) -> bool,
     Apply: FnMut(&TxHash, &TxRef, &Metadata),
 {
-    // TODO: how much space is reasonable preallocate?
+    // TODO: how much space is reasonable to preallocate?
     let mut parents = vec![initial];
 
     while let Some(ref hash) = parents.pop() {
