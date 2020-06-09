@@ -10,10 +10,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod bundle;
+mod constants;
 mod transaction;
 
 pub use bundle::{
     Bundle, IncomingBundleBuilder, IncomingBundleBuilderError, OutgoingBundleBuilder, OutgoingBundleBuilderError,
+};
+pub use constants::{
+    ADDRESS_TRIT_LEN, HASH_TRIT_LEN, NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN, TRANSACTION_BYTE_LEN,
+    TRANSACTION_TRIT_LEN, TRANSACTION_TRYT_LEN,
 };
 pub use transaction::{
     Address, BundledTransaction, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,

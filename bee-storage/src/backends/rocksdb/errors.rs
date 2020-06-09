@@ -13,14 +13,14 @@ use std::{error::Error as StdError, fmt};
 
 #[derive(Debug, Clone)]
 pub enum RocksDbBackendError {
-    RocksDBError(String),
+    RocksDbError(String),
     TransactionDoesNotExist,
 }
 
 impl fmt::Display for RocksDbBackendError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            RocksDbBackendError::RocksDBError(ref reason) => write!(f, "RocksDB core error: {:?}", reason),
+            RocksDbBackendError::RocksDbError(ref reason) => write!(f, "RocksDB core error: {:?}", reason),
             RocksDbBackendError::TransactionDoesNotExist => write!(f, "Transaction does not exist"),
         }
     }
@@ -35,6 +35,6 @@ impl StdError for RocksDbBackendError {
 
 impl From<rocksdb::Error> for RocksDbBackendError {
     fn from(err: rocksdb::Error) -> Self {
-        RocksDbBackendError::RocksDBError(err.to_string())
+        RocksDbBackendError::RocksDbError(err.to_string())
     }
 }

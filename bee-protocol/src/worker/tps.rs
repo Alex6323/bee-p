@@ -14,7 +14,7 @@ use crate::protocol::Protocol;
 use std::time::Duration;
 
 use async_std::{future::ready, prelude::*};
-use futures::channel::mpsc::Receiver;
+use futures::channel::oneshot::Receiver;
 use log::info;
 
 pub(crate) struct TpsWorker {
@@ -53,15 +53,13 @@ impl TpsWorker {
         info!("Running.");
 
         loop {
-            match ready(None)
+            match ready(Ok(()))
                 .delay(Duration::from_millis(1000))
-                .race(shutdown.next())
+                .race(&mut shutdown)
                 .await
             {
-                Some(_) => {
-                    break;
-                }
-                None => self.tps(),
+                Ok(_) => self.tps(),
+                Err(_) => break,
             }
         }
 

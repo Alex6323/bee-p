@@ -9,20 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate serde;
-
 use bee_protocol::{Milestone, MilestoneIndex};
 use bee_transaction::{Address, BundledTransaction as Transaction, Hash};
+
+use async_trait::async_trait;
 
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     rc::Rc,
 };
-
-use serde::{Deserialize, Serialize};
-
-use async_trait::async_trait;
 
 // A transaction address. To be replaced later with whatever implementation is required.
 // type TxAddress = String;
@@ -33,7 +29,7 @@ pub type MissingHashesToRCApprovers = HashMap<Hash, HashSet<Rc<Hash>>>;
 // practically, a map for total balance change over an addresses will be collected
 // per milestone (snapshot_index), when we no longer have milestones, we will have to find
 // another way to decide on a check point where to store an address's delta if we want to snapshot
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Default, Debug)]
 pub struct StateDeltaMap {
     pub address_to_delta: HashMap<Address, i64>,
 }
@@ -88,9 +84,9 @@ pub trait StorageBackend {
         transaction_hashes: Vec<Hash>,
     ) -> Result<Vec<u32>, Self::StorageError>;
 
-    //**Operations over milestone's schema**//
-
     async fn delete_transactions(&self, transaction_hashes: &HashSet<Hash>) -> Result<(), Self::StorageError>;
+
+    //**Operations over milestone's schema**//
 
     async fn insert_milestone(&self, milestone: Milestone) -> Result<(), Self::StorageError>;
 

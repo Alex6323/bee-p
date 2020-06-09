@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::constants::{
+use crate::bundled::constants::{
     ADDRESS, ADDRESS_TRIT_LEN, HASH_TRIT_LEN, NONCE, NONCE_TRIT_LEN, PAYLOAD, PAYLOAD_TRIT_LEN, TAG, TAG_TRIT_LEN,
 };
 
@@ -85,7 +85,7 @@ impl Payload {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct Address(pub(crate) TritBuf<T1B1Buf>);
 
 impl Address {
@@ -313,21 +313,8 @@ impl BundledTransactionFieldType for Timestamp {
     }
 }
 
-macro_rules! impl_hash_trait {
-    ( $($field_name:ident),+ $(,)?) => {
-        $(
-            impl hash::Hash for $field_name {
-                fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-                       self.0.hash(hasher)
-                }
-            }
-        )+
-    }
-}
-
 impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Tag, Nonce);
 impl_transaction_field!(Payload, Address, Tag, Nonce, Index, Value, Timestamp);
-impl_hash_trait!(Address);
 
 #[cfg(test)]
 mod tests {

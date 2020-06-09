@@ -57,6 +57,18 @@ impl Trit for Btrit {
     fn zero() -> Self {
         Self::Zero
     }
+
+    fn as_arbitrary_ref<'a>(&self) -> &'a Self {
+        static NEG_ONE: Btrit = Btrit::NegOne;
+        static ZERO: Btrit = Btrit::Zero;
+        static PLUS_ONE: Btrit = Btrit::PlusOne;
+
+        match self {
+            Btrit::NegOne => &NEG_ONE,
+            Btrit::Zero => &ZERO,
+            Btrit::PlusOne => &PLUS_ONE,
+        }
+    }
 }
 
 impl TryFrom<i8> for Btrit {

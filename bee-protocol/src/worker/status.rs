@@ -16,7 +16,7 @@ use bee_tangle::tangle;
 use std::time::Duration;
 
 use async_std::{future::ready, prelude::*};
-use futures::channel::mpsc::Receiver;
+use futures::channel::oneshot::Receiver;
 use log::info;
 
 pub(crate) struct StatusWorker {
@@ -57,15 +57,13 @@ impl StatusWorker {
         info!("Running.");
 
         loop {
-            match ready(None)
+            match ready(Ok(()))
                 .delay(Duration::from_millis(self.interval_ms))
-                .race(shutdown.next())
+                .race(&mut shutdown)
                 .await
             {
-                Some(_) => {
-                    break;
-                }
-                None => self.status(),
+                Ok(_) => self.status(),
+                Err(_) => break,
             }
         }
 

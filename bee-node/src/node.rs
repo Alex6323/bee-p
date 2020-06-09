@@ -25,7 +25,7 @@ use bee_transaction::Hash;
 
 use std::collections::HashMap;
 
-use async_std::task::{block_on, spawn};
+use async_std::task::spawn;
 use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
@@ -37,19 +37,19 @@ use log::{debug, error, info, warn};
 pub struct Node {
     config: NodeConfig,
     network: Network,
-    shutdown: Shutdown,
     events: EventSubscriber,
+    shutdown: Shutdown,
     ledger: Option<(mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>)>,
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }
 
 impl Node {
-    pub(crate) fn new(config: NodeConfig, network: Network, shutdown: Shutdown, events: EventSubscriber) -> Self {
+    pub(crate) fn new(config: NodeConfig, network: Network, events: EventSubscriber, shutdown: Shutdown) -> Self {
         Self {
             config,
             network,
-            shutdown,
             events,
+            shutdown,
             ledger: None,
             peers: HashMap::new(),
         }
@@ -115,12 +115,14 @@ impl Node {
         info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
-        block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone()).run());
+        StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone())
+            .run()
+            .await;
 
         bee_tangle::init();
 
         info!("Reading snapshot file...");
-        let snapshot_state = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
+        let snapshot_state = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()).await {
             Ok(local_snapshot) => {
                 info!(
                     "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and {} balances.",

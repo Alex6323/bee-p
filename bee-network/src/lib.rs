@@ -56,7 +56,7 @@ use async_std::task::spawn;
 use futures::channel::oneshot;
 
 /// Initializes the network layer.
-pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
+pub fn init(config: NetworkConfig) -> (Network, Events, Shutdown) {
     let (command_sender, commands) = commands::command_channel();
     let (event_sender, events) = events::event_channel();
     let (internal_event_sender, internal_events) = events::event_channel();
@@ -73,6 +73,7 @@ pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
         epw_shutdown,
         internal_event_sender.clone(),
         event_sender,
+        config.reconnect_interval,
     );
 
     let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender, tcp_shutdown);
@@ -88,5 +89,5 @@ pub fn init(config: NetworkConfig) -> (Network, Shutdown, Events) {
 
     whitelist::init();
 
-    (Network::new(command_sender), shutdown, events)
+    (Network::new(config, command_sender), events, shutdown)
 }

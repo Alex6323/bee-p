@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::constants::TRANSACTION_BYTE_LEN;
+use bee_transaction::TRANSACTION_BYTE_LEN;
 
 const NON_PAYLOAD_SIZE: usize = 292;
 const MAX_PAYLOAD_SIZE: usize = 1312;

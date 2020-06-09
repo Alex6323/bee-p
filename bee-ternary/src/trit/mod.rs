@@ -22,6 +22,8 @@ pub trait Trit:
 {
     fn checked_increment(self) -> Option<Self>;
     fn zero() -> Self;
+
+    fn as_arbitrary_ref<'a>(&self) -> &'a Self;
 }
 
 pub trait ShiftTernary: Sized {
