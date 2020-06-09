@@ -104,7 +104,7 @@ impl MilestoneSolidifierWorker {
                 .await;
             } else {
                 Protocol::trigger_transaction_solidification(target_hash, target_index).await
-            };
+            }
         };
     }
 

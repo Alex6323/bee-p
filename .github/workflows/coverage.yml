@@ -12,11 +12,9 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: nightly
           override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clean
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -24,8 +22,9 @@ jobs:
         env:
           CARGO_INCREMENTAL: "0"
           RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests"
-      - uses: actions-rs/grcov@v0.1
+      - id: grcov
+        uses: actions-rs/grcov@v0.1
       - uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ steps.coverage.outputs.report }}
+          path-to-lcov: ${{ steps.grcov.outputs.report }}
