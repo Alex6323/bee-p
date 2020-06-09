@@ -12,7 +12,7 @@
 use crate::{
     message::{uncompress_transaction_bytes, TransactionBroadcast},
     protocol::Protocol,
-    tangle::{tangle, Flags},
+    tangle::{flags::Flags, tangle},
     worker::transaction::TinyHashCache,
 };
 

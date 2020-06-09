@@ -9,63 +9,20 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod propagator;
+pub(crate) mod flags;
+pub(crate) mod propagator;
 
-use crate::milestone::MilestoneIndex as MsIndex;
+use crate::{milestone::MilestoneIndex as MsIndex, tangle::flags::Flags};
 
 use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::{BundledTransaction as Tx, Hash as TxHash};
 
-use bitflags::bitflags;
 use dashmap::{DashMap, DashSet};
 
 use std::{
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
-
-bitflags! {
-    pub struct Flags: u8 {
-        const SOLID = 0b0000_0001;
-        const TAIL = 0b0000_0010;
-        const REQUESTED = 0b0000_0100;
-        const MILESTONE = 0b0000_1000;
-    }
-}
-
-impl Flags {
-    pub(crate) fn is_solid(&self) -> bool {
-        self.contains(Flags::SOLID)
-    }
-
-    pub(crate) fn set_solid(&mut self) {
-        self.insert(Flags::SOLID);
-    }
-
-    pub(crate) fn is_tail(&self) -> bool {
-        self.contains(Flags::TAIL)
-    }
-
-    pub(crate) fn set_tail(&mut self) {
-        self.insert(Flags::TAIL);
-    }
-
-    pub(crate) fn is_requested(&self) -> bool {
-        self.contains(Flags::REQUESTED)
-    }
-
-    pub(crate) fn set_requested(&mut self) {
-        self.insert(Flags::REQUESTED);
-    }
-
-    pub(crate) fn is_milestone(&self) -> bool {
-        self.contains(Flags::MILESTONE)
-    }
-
-    pub(crate) fn set_milestone(&mut self) {
-        self.insert(Flags::MILESTONE);
-    }
-}
 
 /// Milestone-based Tangle.
 pub struct MsTangle {
