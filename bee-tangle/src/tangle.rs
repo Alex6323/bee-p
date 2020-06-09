@@ -4,13 +4,15 @@ use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVerte
 
 use dashmap::{mapref::entry::Entry, DashMap};
 
+use std::collections::HashSet;
+
 /// A foundational, thread-safe graph datastructure to represent the IOTA Tangle.
 pub struct Tangle<T>
 where
     T: Clone + Copy,
 {
     pub(crate) vertices: DashMap<TxHash, Vertex<T>>,
-    pub(crate) children: DashMap<TxHash, Vec<TxHash>>,
+    pub(crate) children: DashMap<TxHash, HashSet<TxHash>>,
     // TODO: add 'tips' DashSet for fast tip selection
 }
 
@@ -36,17 +38,14 @@ where
     }
 
     /// Inserts a transaction, and returns a thread-safe reference to it in case it didn't already exist.
-    pub fn insert(&self, data: Tx, hash: TxHash, metadata: T) -> Option<TxRef> {
-        self.add_child(*data.trunk(), hash);
-
-        if data.trunk() != data.branch() {
-            self.add_child(*data.branch(), hash);
-        }
+    pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: T) -> Option<TxRef> {
+        self.add_child(*transaction.trunk(), hash);
+        self.add_child(*transaction.branch(), hash);
 
         match self.vertices.entry(hash) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
-                let vtx = Vertex::new(data, metadata);
+                let vtx = Vertex::new(transaction, metadata);
                 let txref = vtx.transaction().clone();
                 entry.insert(vtx);
                 Some(txref)
@@ -59,11 +58,13 @@ where
         match self.children.entry(parent) {
             Entry::Occupied(mut entry) => {
                 let children = entry.get_mut();
-                children.push(child);
+                children.insert(child);
             }
             Entry::Vacant(entry) => {
                 // TODO: find a good value for pre-allocation
-                entry.insert(vec![parent]);
+                let mut children = HashSet::new();
+                children.insert(parent);
+                entry.insert(children);
             }
         }
     }
