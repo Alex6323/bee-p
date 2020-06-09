@@ -29,7 +29,7 @@ impl Default for WotsSecurityLevel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum WotsError {
     MissingSecurityLevel,
     FailedSpongeOperation,

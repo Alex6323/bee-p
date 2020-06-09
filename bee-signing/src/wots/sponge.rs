@@ -79,8 +79,7 @@ mod tests {
     fn wots_generator_missing_security_level() {
         match WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default().build() {
             Ok(_) => unreachable!(),
-            Err(WotsError::MissingSecurityLevel) => (),
-            Err(_) => unreachable!(),
+            Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
         }
     }
 

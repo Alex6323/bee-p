@@ -366,8 +366,8 @@ mod tests {
             .depth(21)
             .build()
         {
-            Err(MssError::InvalidDepth(depth)) => assert_eq!(depth, 21),
-            _ => unreachable!(),
+            Ok(_) => unreachable!(),
+            Err(err) => assert_eq!(err, MssError::InvalidDepth(21)),
         }
     }
 
