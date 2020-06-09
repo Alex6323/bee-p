@@ -41,7 +41,7 @@ impl TransactionSolidifierWorker {
         traversal::visit_parents_depth_first(
             &tangle().inner,
             hash,
-            |_, metadata| metadata.is_solid(),
+            |_, metadata| !metadata.is_solid(),
             |_, _, _| {},
             |hash| {
                 if !tangle().is_solid_entry_point(hash) {
