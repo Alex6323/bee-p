@@ -2,7 +2,7 @@ use crate::{vertex::Vertex, TransactionRef as TxRef};
 
 use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVertex};
 
-use dashmap::{mapref::entry::Entry, DashMap};
+use dashmap::{mapref::entry::Entry, DashMap, DashSet};
 
 use std::collections::HashSet;
 
@@ -13,7 +13,7 @@ where
 {
     pub(crate) vertices: DashMap<TxHash, Vertex<T>>,
     pub(crate) children: DashMap<TxHash, HashSet<TxHash>>,
-    // TODO: add 'tips' DashSet for fast tip selection
+    pub(crate) tips: DashSet<TxHash>,
 }
 
 impl<T> Default for Tangle<T>
@@ -24,6 +24,7 @@ where
         Self {
             vertices: DashMap::new(),
             children: DashMap::new(),
+            tips: DashSet::new(),
         }
     }
 }
@@ -39,16 +40,27 @@ where
 
     /// Inserts a transaction, and returns a thread-safe reference to it in case it didn't already exist.
     pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: T) -> Option<TxRef> {
-        self.add_child(*transaction.trunk(), hash);
-        self.add_child(*transaction.branch(), hash);
-
         match self.vertices.entry(hash) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
+                self.add_child(*transaction.trunk(), hash);
+                self.add_child(*transaction.branch(), hash);
+
+                self.tips.remove(transaction.trunk());
+                self.tips.remove(transaction.branch());
+
+                let has_children = |hash| self.children.contains_key(hash);
+
+                if !has_children(&hash) {
+                    self.tips.insert(hash);
+                } else {
+                    self.tips.remove(&hash);
+                }
+
                 let vtx = Vertex::new(transaction, metadata);
-                let txref = vtx.transaction().clone();
+                let tx = vtx.transaction().clone();
                 entry.insert(vtx);
-                Some(txref)
+                Some(tx)
             }
         }
     }
@@ -97,6 +109,11 @@ where
         self.vertices.len()
     }
 
+    /// Returns the current number of tips.
+    pub fn num_tips(&self) -> usize {
+        self.tips.len()
+    }
+
     #[cfg(test)]
     pub(crate) fn num_children(&self, hash: &TxHash) -> usize {
         self.children.get(hash).map_or(0, |r| r.value().len())
@@ -106,7 +123,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use crate::helper::*;
     use bee_test::transaction::create_random_tx;
 
     #[test]
@@ -125,11 +142,20 @@ mod tests {
         assert!(insert1.is_some());
         assert_eq!(1, tangle.size());
         assert!(tangle.contains(&hash));
+        assert_eq!(1, tangle.num_tips());
 
         let insert2 = tangle.insert(tx, hash, ());
 
         assert!(insert2.is_none());
         assert_eq!(1, tangle.size());
         assert!(tangle.contains(&hash));
+        assert_eq!(1, tangle.num_tips());
+    }
+
+    #[test]
+    fn count_tips() {
+        let (tangle, _, _) = create_test_tangle();
+
+        assert_eq!(1, tangle.num_tips());
     }
 }
