@@ -59,7 +59,7 @@ impl NetworkConfigBuilder {
             binding_addr: self.binding_addr.unwrap_or(crate::constants::DEFAULT_BINDING_ADDR),
             reconnect_interval: self
                 .reconnect_interval
-                .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL),
+                .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL_MS),
         }
     }
 }
