@@ -5,7 +5,7 @@ use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVerte
 use async_std::sync::Arc;
 
 #[derive(Clone)]
-pub struct Vertex<T>
+pub(crate) struct Vertex<T>
 where
     T: Clone + Copy,
 {
@@ -24,23 +24,23 @@ where
         }
     }
 
-    pub fn get_trunk(&self) -> &TxHash {
+    pub fn trunk(&self) -> &TxHash {
         self.transaction.trunk()
     }
 
-    pub fn get_branch(&self) -> &TxHash {
+    pub fn branch(&self) -> &TxHash {
         self.transaction.branch()
     }
 
-    pub fn get_data(&self) -> &TxRef {
+    pub fn transaction(&self) -> &TxRef {
         &self.transaction
     }
 
-    pub fn get_metadata(&self) -> &T {
+    pub fn metadata(&self) -> &T {
         &self.metadata
     }
 
-    pub fn get_metadata_mut(&mut self) -> &mut T {
+    pub fn metadata_mut(&mut self) -> &mut T {
         &mut self.metadata
     }
 }
@@ -57,10 +57,10 @@ mod tests {
 
         let vtx = Vertex::new(tx.clone(), metadata);
 
-        assert_eq!(tx.trunk(), vtx.get_trunk());
-        assert_eq!(tx.branch(), vtx.get_branch());
-        assert_eq!(tx, **vtx.get_data());
-        assert_eq!(metadata, *vtx.get_metadata());
+        assert_eq!(tx.trunk(), vtx.trunk());
+        assert_eq!(tx.branch(), vtx.branch());
+        assert_eq!(tx, **vtx.transaction());
+        assert_eq!(metadata, *vtx.metadata());
     }
 
     #[test]
@@ -68,8 +68,8 @@ mod tests {
         let (_, tx) = create_random_tx();
 
         let mut vtx = Vertex::new(tx, 0b0000_0001u8);
-        *vtx.get_metadata_mut() = 0b1111_1110u8;
+        *vtx.metadata_mut() = 0b1111_1110u8;
 
-        assert_eq!(0b1111_1110u8, *vtx.get_metadata());
+        assert_eq!(0b1111_1110u8, *vtx.metadata());
     }
 }

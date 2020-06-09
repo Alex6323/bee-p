@@ -47,7 +47,7 @@ where
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
                 let vtx = Vertex::new(data, metadata);
-                let txref = vtx.get_data().clone();
+                let txref = vtx.transaction().clone();
                 entry.insert(vtx);
                 Some(txref)
             }
@@ -70,12 +70,12 @@ where
 
     /// Get the data of a vertex associated with the given `hash`.
     pub fn get(&self, hash: &TxHash) -> Option<TxRef> {
-        self.vertices.get(hash).map(|vtx| vtx.value().get_data().clone())
+        self.vertices.get(hash).map(|vtx| vtx.value().transaction().clone())
     }
 
     /// Get the metadata of a vertex associated with the given `hash`.
     pub fn get_metadata(&self, hash: &TxHash) -> Option<T> {
-        self.vertices.get(hash).map(|vtx| *vtx.value().get_metadata())
+        self.vertices.get(hash).map(|vtx| *vtx.value().metadata())
     }
 
     /// Returns whether the transaction is stored in the Tangle.
@@ -87,7 +87,7 @@ where
     pub fn update_metadata(&self, hash: &TxHash, metadata: T) {
         self.vertices.get_mut(hash).map(|mut vtx| {
             let vtx = vtx.value_mut();
-            *vtx.get_metadata_mut() = metadata;
+            *vtx.metadata_mut() = metadata;
         });
     }
 

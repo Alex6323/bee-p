@@ -38,11 +38,11 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
         if let Some(vtx) = tangle.vertices.get(&hash) {
             let vtx = vtx.value();
 
-            if !matches(vtx.get_data(), vtx.get_metadata()) {
+            if !matches(vtx.transaction(), vtx.metadata()) {
                 break;
             } else {
-                apply(&hash, vtx.get_data(), vtx.get_metadata());
-                parents.push(*vtx.get_trunk());
+                apply(&hash, vtx.transaction(), vtx.metadata());
+                parents.push(*vtx.trunk());
             }
         }
     }
@@ -66,13 +66,13 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
 
     while let Some(ref parent_hash) = children.pop() {
         if let Some(parent) = tangle.vertices.get(parent_hash) {
-            if matches(parent.value().get_data(), parent.value().get_metadata()) {
-                apply(parent_hash, parent.value().get_data(), parent.value().get_metadata());
+            if matches(parent.value().transaction(), parent.value().metadata()) {
+                apply(parent_hash, parent.value().transaction(), parent.value().metadata());
 
                 if let Some(parent_children) = tangle.children.get(parent_hash) {
                     for child_hash in parent_children.value() {
                         if let Some(child) = tangle.vertices.get(child_hash) {
-                            if child.get_trunk() == parent_hash {
+                            if child.trunk() == parent_hash {
                                 children.push(*child_hash);
                             }
                         }
@@ -110,11 +110,11 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
                 Some(vtx) => {
                     let vtx = vtx.value();
 
-                    apply(&hash, vtx.get_data(), vtx.get_metadata());
+                    apply(&hash, vtx.transaction(), vtx.metadata());
 
-                    if matches(vtx.get_data(), vtx.get_metadata()) {
-                        parents.push(*vtx.get_trunk());
-                        parents.push(*vtx.get_branch());
+                    if matches(vtx.transaction(), vtx.metadata()) {
+                        parents.push(*vtx.trunk());
+                        parents.push(*vtx.branch());
                     }
                 }
                 None => {
@@ -209,9 +209,6 @@ mod tests {
         // d |
         //  \|
         //   e
-        //
-        // Trunk path from 'e':
-        // e --(trunk)-> d --(trunk)-> a
 
         let tangle = Tangle::new();
 
