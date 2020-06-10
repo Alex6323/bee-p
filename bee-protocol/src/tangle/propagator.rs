@@ -11,9 +11,9 @@
 
 use crate::tangle;
 
-use bee_transaction::{Hash, TransactionVertex};
+use bee_transaction::Hash;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use async_std::{
     prelude::*,
@@ -37,27 +37,27 @@ impl SolidifierState {
     }
 
     fn propagate(&self, hash: Hash) {
-        // let mut stack = vec![hash];
-        // let mut already_solid = HashSet::new();
+        let mut stack = vec![hash];
+        let mut already_solid = HashSet::new();
 
-        // while let Some(hash) = stack.pop() {
-        //     if !already_solid.contains(&hash) {
-        //         if let Some(v) = tangle().vertices.get(&hash).map(|r| r.value().get_ref_to_inner()) {
-        //             if tangle().is_solid_transaction(v.trunk()) && tangle().is_solid_transaction(v.branch()) {
-        //                 // NOTE: unwrap should be safe since we just added it to the Tangle
-        //                 tangle().vertices.get_mut(&hash).unwrap().set_solid();
-        //                 already_solid.insert(hash);
+        while let Some(hash) = stack.pop() {
+            if !already_solid.contains(&hash) {
+                if let Some(v) = tangle().vertices.get(&hash).map(|r| r.value().get_ref_to_inner()) {
+                    if tangle().is_solid_transaction(v.trunk()) && tangle().is_solid_transaction(v.branch()) {
+                        // NOTE: unwrap should be safe since we just added it to the Tangle
+                        tangle().vertices.get_mut(&hash).unwrap().set_solid();
+                        already_solid.insert(hash);
 
-        //                 if let Some(approvers) = tangle().approvers.get(&hash) {
-        //                     let approvers = approvers.value();
-        //                     for approver in approvers {
-        //                         stack.push(*approver);
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+                        if let Some(approvers) = tangle().approvers.get(&hash) {
+                            let approvers = approvers.value();
+                            for approver in approvers {
+                                stack.push(*approver);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Attempt to perform solidification upon a vertex (and its approvers).

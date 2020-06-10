@@ -98,22 +98,31 @@ where
         self.vertices.get(hash).map(|vtx| vtx.value().transaction().clone())
     }
 
-    /// Get the metadata of a vertex associated with the given `hash`.
-    pub fn get_metadata(&self, hash: &TxHash) -> Option<T> {
-        self.vertices.get(hash).map(|vtx| *vtx.value().metadata())
-    }
-
     /// Returns whether the transaction is stored in the Tangle.
     pub fn contains(&self, hash: &TxHash) -> bool {
         self.vertices.contains_key(hash)
     }
 
+    /// Get the metadata of a vertex associated with the given `hash`.
+    pub fn get_metadata(&self, hash: &TxHash) -> Option<T> {
+        self.vertices.get(hash).map(|vtx| *vtx.value().metadata())
+    }
+
     /// Updates the metadata of a particular vertex.
-    pub fn update_metadata(&self, hash: &TxHash, metadata: T) {
+    pub fn set_metadata(&self, hash: &TxHash, metadata: T) {
         self.vertices.get_mut(hash).map(|mut vtx| {
-            let vtx = vtx.value_mut();
-            *vtx.metadata_mut() = metadata;
+            *vtx.value_mut().metadata_mut() = metadata;
         });
+    }
+
+    /// Updates the metadata of a vertex.
+    pub fn update_metadata<Update>(&self, hash: &TxHash, update: Update)
+    where
+        Update: Fn(&mut T),
+    {
+        self.vertices
+            .get_mut(hash)
+            .map(|mut vtx| update(vtx.value_mut().metadata_mut()));
     }
 
     /// Returns the current size of the Tangle.
@@ -121,12 +130,26 @@ where
         self.vertices.len()
     }
 
+    /// Returns the children of a vertex.
+    pub fn get_children(&self, hash: &TxHash) -> HashSet<TxHash> {
+        let num_children = self.num_children(hash);
+        let mut hashes = HashSet::with_capacity(num_children);
+
+        self.children.get(hash).map(|c| {
+            for child in c.value() {
+                hashes.insert(*child);
+            }
+        });
+
+        hashes
+    }
+
     /// Returns the current number of tips.
     pub fn num_tips(&self) -> usize {
         self.tips.len()
     }
 
-    #[cfg(test)]
+    /// Returns the number of children of a vertex.
     pub(crate) fn num_children(&self, hash: &TxHash) -> usize {
         self.children.get(hash).map_or(0, |r| r.value().len())
     }
@@ -142,7 +165,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::helper::*;
+    use crate::testhelpers::*;
     use bee_test::transaction::create_random_tx;
 
     #[test]

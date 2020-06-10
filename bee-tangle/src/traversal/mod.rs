@@ -126,8 +126,11 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     }
 }
 
-// TODO: docs
 // TODO: test
+/// A Tangle walker that - given a starting vertex - visits all of its decendents that are connected through
+/// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
+/// condition. For each visited vertex customized logic can be applied depending on the availability of the
+/// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     tangle: &'a Tangle<Metadata>,
     initial: TxHash,
@@ -177,7 +180,7 @@ pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::helper::*;
+    use crate::testhelpers::*;
 
     #[test]
     fn visit_children_follow_trunk_in_simple_graph() {

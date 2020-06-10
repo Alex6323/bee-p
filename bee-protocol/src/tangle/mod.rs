@@ -10,16 +10,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub(crate) mod flags;
-pub(crate) mod propagator;
+// TODO: reinstate the async worker
+// pub(crate) mod propagator;
 
 use crate::{milestone::MilestoneIndex as MsIndex, tangle::flags::Flags};
 
-use bee_tangle::{Tangle, TransactionRef as TxRef};
-use bee_transaction::{BundledTransaction as Tx, Hash as TxHash};
+use bee_tangle::{traversal, Tangle, TransactionRef as TxRef};
+use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVertex};
 
 use dashmap::{DashMap, DashSet};
 
 use std::{
+    collections::HashSet,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
@@ -47,7 +49,40 @@ impl MsTangle {
     }
 
     pub fn insert(&self, transaction: Tx, hash: TxHash, flags: Flags) -> Option<TxRef> {
-        self.inner.insert(transaction, hash, flags)
+        if let Some(tx) = self.inner.insert(transaction, hash, flags) {
+            self.propagate_solid_flag(hash);
+            return Some(tx);
+        }
+        None
+    }
+
+    // NOTE: not implemented as an async worker atm, but it makes things much easier
+    #[inline]
+    fn propagate_solid_flag(&self, initial: TxHash) {
+        let mut children = vec![initial];
+
+        while let Some(ref hash) = children.pop() {
+            let is_solid = |hash| {
+                self.inner
+                    .get_metadata(hash)
+                    .map(|flags| flags.is_solid())
+                    .unwrap_or(false)
+            };
+
+            if is_solid(hash) {
+                continue;
+            }
+
+            if let Some(tx) = self.inner.get(&hash) {
+                if is_solid(tx.trunk()) && is_solid(tx.branch()) {
+                    self.inner.update_metadata(&hash, |flags| flags.set_solid());
+
+                    for child in self.inner.get_children(&hash) {
+                        children.push(child);
+                    }
+                }
+            }
+        }
     }
 
     pub fn get(&self, hash: &TxHash) -> Option<TxRef> {
@@ -69,7 +104,7 @@ impl MsTangle {
         if let Some(mut metadata) = self.inner.get_metadata(&hash) {
             metadata.set_milestone();
 
-            self.inner.update_metadata(&hash, metadata);
+            self.inner.set_metadata(&hash, metadata);
         }
     }
 
