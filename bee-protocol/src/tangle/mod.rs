@@ -46,23 +46,23 @@ impl MsTangle {
         }
     }
 
-    pub fn insert(&'static self, transaction: Tx, hash: TxHash, flags: Flags) -> Option<TxRef> {
+    pub fn insert(&self, transaction: Tx, hash: TxHash, flags: Flags) -> Option<TxRef> {
         self.inner.insert(transaction, hash, flags)
     }
 
-    pub fn get(&'static self, hash: &TxHash) -> Option<TxRef> {
+    pub fn get(&self, hash: &TxHash) -> Option<TxRef> {
         self.inner.get(hash)
     }
 
-    pub fn get_flags(&'static self, hash: &TxHash) -> Option<Flags> {
+    pub fn get_flags(&self, hash: &TxHash) -> Option<Flags> {
         self.inner.get_metadata(hash)
     }
 
-    pub fn contains(&'static self, hash: &TxHash) -> bool {
+    pub fn contains(&self, hash: &TxHash) -> bool {
         self.inner.contains(hash)
     }
 
-    pub fn add_milestone(&'static self, index: MsIndex, hash: TxHash) {
+    pub fn add_milestone(&self, index: MsIndex, hash: TxHash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
 
@@ -73,12 +73,12 @@ impl MsTangle {
         }
     }
 
-    pub fn remove_milestone(&'static self, index: MsIndex) {
+    pub fn remove_milestone(&self, index: MsIndex) {
         self.milestones.remove(&index);
     }
 
     // TODO: use combinator instead of match
-    pub fn get_milestone(&'static self, index: MsIndex) -> Option<TxRef> {
+    pub fn get_milestone(&self, index: MsIndex) -> Option<TxRef> {
         match self.get_milestone_hash(index) {
             None => None,
             Some(ref hash) => self.get(hash),
@@ -86,60 +86,60 @@ impl MsTangle {
     }
 
     // TODO: use combinator instead of match
-    pub fn get_milestone_hash(&'static self, index: MsIndex) -> Option<TxHash> {
+    pub fn get_milestone_hash(&self, index: MsIndex) -> Option<TxHash> {
         match self.milestones.get(&index) {
             None => None,
             Some(v) => Some(*v),
         }
     }
 
-    pub fn contains_milestone(&'static self, index: MsIndex) -> bool {
+    pub fn contains_milestone(&self, index: MsIndex) -> bool {
         self.milestones.contains_key(&index)
     }
 
-    pub fn get_solid_milestone_index(&'static self) -> MsIndex {
+    pub fn get_solid_milestone_index(&self) -> MsIndex {
         self.solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn get_last_milestone_index(&'static self) -> MsIndex {
+    pub fn get_last_milestone_index(&self) -> MsIndex {
         self.last_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn get_snapshot_milestone_index(&'static self) -> MsIndex {
+    pub fn get_snapshot_milestone_index(&self) -> MsIndex {
         self.snapshot_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_solid_milestone_index(&'static self, new_index: MsIndex) {
+    pub fn update_solid_milestone_index(&self, new_index: MsIndex) {
         self.solid_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn update_last_milestone_index(&'static self, new_index: MsIndex) {
+    pub fn update_last_milestone_index(&self, new_index: MsIndex) {
         self.last_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn update_snapshot_milestone_index(&'static self, new_index: MsIndex) {
+    pub fn update_snapshot_milestone_index(&self, new_index: MsIndex) {
         self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn is_synced(&'static self) -> bool {
+    pub fn is_synced(&self) -> bool {
         self.get_solid_milestone_index() == self.get_last_milestone_index()
     }
 
-    pub fn add_solid_entry_point(&'static self, hash: TxHash) {
+    pub fn add_solid_entry_point(&self, hash: TxHash) {
         self.solid_entry_points.insert(hash);
     }
 
     /// Removes `hash` from the set of solid entry points.
-    pub fn remove_solid_entry_point(&'static self, hash: &TxHash) {
+    pub fn remove_solid_entry_point(&self, hash: &TxHash) {
         self.solid_entry_points.remove(hash);
     }
 
     /// Returns whether the transaction associated `hash` is a solid entry point.
-    pub fn is_solid_entry_point(&'static self, hash: &TxHash) -> bool {
+    pub fn is_solid_entry_point(&self, hash: &TxHash) -> bool {
         self.solid_entry_points.contains(hash)
     }
 
-    pub fn is_solid_transaction(&'static self, hash: &TxHash) -> bool {
+    pub fn is_solid_transaction(&self, hash: &TxHash) -> bool {
         if self.is_solid_entry_point(hash) {
             true
         } else {
@@ -165,6 +165,171 @@ pub fn tangle() -> &'static MsTangle {
         panic!("Tangle cannot be null");
     } else {
         unsafe { &*tangle }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tangle::Flags;
+
+    use bee_tangle::traversal;
+    use bee_test::{field::rand_trits_field, transaction::create_random_attached_tx};
+    use bee_transaction::Hash as TxHash;
+
+    #[test]
+    fn confirm_transaction() {
+        // Example from https://github.com/iotaledger/protocol-rfcs/blob/master/text/0005-white-flag/0005-white-flag.md
+
+        let mut tangle = MsTangle::new();
+
+        // Creates solid entry points
+        let sep1 = rand_trits_field::<TxHash>();
+        let sep2 = rand_trits_field::<TxHash>();
+        let sep3 = rand_trits_field::<TxHash>();
+        let sep4 = rand_trits_field::<TxHash>();
+        let sep5 = rand_trits_field::<TxHash>();
+        let sep6 = rand_trits_field::<TxHash>();
+
+        // Adds solid entry points
+        tangle.add_solid_entry_point(sep1);
+        tangle.add_solid_entry_point(sep2);
+        tangle.add_solid_entry_point(sep3);
+        tangle.add_solid_entry_point(sep4);
+        tangle.add_solid_entry_point(sep5);
+        tangle.add_solid_entry_point(sep6);
+
+        // Links transactions
+        let (a_hash, a) = create_random_attached_tx(sep1, sep2);
+        let (b_hash, b) = create_random_attached_tx(sep3, sep4);
+        let (c_hash, c) = create_random_attached_tx(sep5, sep6);
+        let (d_hash, d) = create_random_attached_tx(b_hash, a_hash);
+        let (e_hash, e) = create_random_attached_tx(b_hash, a_hash);
+        let (f_hash, f) = create_random_attached_tx(c_hash, b_hash);
+        let (g_hash, g) = create_random_attached_tx(e_hash, d_hash);
+        let (h_hash, h) = create_random_attached_tx(f_hash, e_hash);
+        let (i_hash, i) = create_random_attached_tx(c_hash, f_hash);
+        let (j_hash, j) = create_random_attached_tx(h_hash, g_hash);
+        let (k_hash, k) = create_random_attached_tx(i_hash, h_hash);
+        let (l_hash, l) = create_random_attached_tx(j_hash, g_hash);
+        let (m_hash, m) = create_random_attached_tx(h_hash, j_hash);
+        let (n_hash, n) = create_random_attached_tx(k_hash, h_hash);
+        let (o_hash, o) = create_random_attached_tx(i_hash, k_hash);
+        let (p_hash, p) = create_random_attached_tx(i_hash, k_hash);
+        let (q_hash, q) = create_random_attached_tx(m_hash, l_hash);
+        let (r_hash, r) = create_random_attached_tx(m_hash, l_hash);
+        let (s_hash, s) = create_random_attached_tx(o_hash, n_hash);
+        let (t_hash, t) = create_random_attached_tx(p_hash, o_hash);
+        let (u_hash, u) = create_random_attached_tx(r_hash, q_hash);
+        let (v_hash, v) = create_random_attached_tx(s_hash, r_hash);
+        let (w_hash, w) = create_random_attached_tx(t_hash, s_hash);
+        let (x_hash, x) = create_random_attached_tx(u_hash, q_hash);
+        let (y_hash, y) = create_random_attached_tx(v_hash, u_hash);
+        let (z_hash, z) = create_random_attached_tx(s_hash, v_hash);
+
+        // Confirms transactions
+        // TODO uncomment when confirmation index
+        // tangle.confirm_transaction(a_hash, 1);
+        // tangle.confirm_transaction(b_hash, 1);
+        // tangle.confirm_transaction(c_hash, 1);
+        // tangle.confirm_transaction(d_hash, 2);
+        // tangle.confirm_transaction(e_hash, 1);
+        // tangle.confirm_transaction(f_hash, 1);
+        // tangle.confirm_transaction(g_hash, 2);
+        // tangle.confirm_transaction(h_hash, 1);
+        // tangle.confirm_transaction(i_hash, 2);
+        // tangle.confirm_transaction(j_hash, 2);
+        // tangle.confirm_transaction(k_hash, 2);
+        // tangle.confirm_transaction(l_hash, 2);
+        // tangle.confirm_transaction(m_hash, 2);
+        // tangle.confirm_transaction(n_hash, 2);
+        // tangle.confirm_transaction(o_hash, 2);
+        // tangle.confirm_transaction(p_hash, 3);
+        // tangle.confirm_transaction(q_hash, 3);
+        // tangle.confirm_transaction(r_hash, 2);
+        // tangle.confirm_transaction(s_hash, 2);
+        // tangle.confirm_transaction(t_hash, 3);
+        // tangle.confirm_transaction(u_hash, 3);
+        // tangle.confirm_transaction(v_hash, 2);
+        // tangle.confirm_transaction(w_hash, 3);
+        // tangle.confirm_transaction(x_hash, 3);
+        // tangle.confirm_transaction(y_hash, 3);
+        // tangle.confirm_transaction(z_hash, 3);
+
+        // Constructs the graph
+        tangle.insert(a, a_hash, Flags::empty());
+        tangle.insert(b, b_hash, Flags::empty());
+        tangle.insert(c, c_hash, Flags::empty());
+        tangle.insert(d, d_hash, Flags::empty());
+        tangle.insert(e, e_hash, Flags::empty());
+        tangle.insert(f, f_hash, Flags::empty());
+        tangle.insert(g, g_hash, Flags::empty());
+        tangle.insert(h, h_hash, Flags::empty());
+        tangle.insert(i, i_hash, Flags::empty());
+        tangle.insert(j, j_hash, Flags::empty());
+        tangle.insert(k, k_hash, Flags::empty());
+        tangle.insert(l, l_hash, Flags::empty());
+        tangle.insert(m, m_hash, Flags::empty());
+        tangle.insert(n, n_hash, Flags::empty());
+        tangle.insert(o, o_hash, Flags::empty());
+        tangle.insert(p, p_hash, Flags::empty());
+        tangle.insert(q, q_hash, Flags::empty());
+        tangle.insert(r, r_hash, Flags::empty());
+        tangle.insert(s, s_hash, Flags::empty());
+        tangle.insert(t, t_hash, Flags::empty());
+        tangle.insert(u, u_hash, Flags::empty());
+        tangle.insert(v, v_hash, Flags::empty());
+        tangle.insert(w, w_hash, Flags::empty());
+        tangle.insert(x, x_hash, Flags::empty());
+        tangle.insert(y, y_hash, Flags::empty());
+        tangle.insert(z, z_hash, Flags::empty());
+
+        let mut hashes = Vec::new();
+
+        traversal::visit_children_depth_first(
+            &tangle.inner,
+            v_hash,
+            |_, _| true,
+            |hash, _tx, _metadata| hashes.push(*hash),
+            |_| (),
+        );
+
+        // TODO Remove when we have confirmation index
+        assert_eq!(hashes.len(), 18);
+
+        assert_eq!(hashes[0], a_hash);
+        assert_eq!(hashes[1], b_hash);
+        assert_eq!(hashes[2], d_hash);
+        assert_eq!(hashes[3], e_hash);
+        assert_eq!(hashes[4], g_hash);
+        assert_eq!(hashes[5], c_hash);
+        assert_eq!(hashes[6], f_hash);
+        assert_eq!(hashes[7], h_hash);
+        assert_eq!(hashes[8], j_hash);
+        assert_eq!(hashes[9], l_hash);
+        assert_eq!(hashes[10], m_hash);
+        assert_eq!(hashes[11], r_hash);
+        assert_eq!(hashes[12], i_hash);
+        assert_eq!(hashes[13], k_hash);
+        assert_eq!(hashes[14], n_hash);
+        assert_eq!(hashes[15], o_hash);
+        assert_eq!(hashes[16], s_hash);
+        assert_eq!(hashes[17], v_hash);
+
+        // TODO uncomment when we have confirmation index
+        // assert_eq!(hashes.len(), 12);
+        // assert_eq!(hashes[0], d_hash);
+        // assert_eq!(hashes[1], g_hash);
+        // assert_eq!(hashes[2], j_hash);
+        // assert_eq!(hashes[3], l_hash);
+        // assert_eq!(hashes[4], m_hash);
+        // assert_eq!(hashes[5], r_hash);
+        // assert_eq!(hashes[6], i_hash);
+        // assert_eq!(hashes[7], k_hash);
+        // assert_eq!(hashes[8], n_hash);
+        // assert_eq!(hashes[9], o_hash);
+        // assert_eq!(hashes[10], s_hash);
+        // assert_eq!(hashes[11], v_hash);
     }
 }
 
@@ -573,15 +738,6 @@ pub fn tangle() -> &'static MsTangle {
 //     use super::*;
 //     use crate::*;
 
-//     use bee_bundle::{TransactionField, Value};
-//     use bee_test::{
-//         field::rand_trits_field,
-//         transaction::{create_random_attached_tx, create_random_tx},
-//     };
-
-//     use async_std::{sync::channel, task::block_on};
-//     use serial_test::serial;
-
 //     #[test]
 //     #[serial]
 //     fn update_and_get_snapshot_milestone_index() {
@@ -617,168 +773,6 @@ pub fn tangle() -> &'static MsTangle {
 //         assert_eq!(1368168, *tangle.get_last_milestone_index());
 //         drop();
 //     }
-
-//     #[test]
-//     #[serial]
-//     fn walk_approvers_post_order_dfs() {
-//         // Example from https://github.com/iotaledger/protocol-rfcs/blob/master/text/0005-white-flag/0005-white-flag.md
-
-//         init();
-
-//         let tangle = tangle();
-
-//         // Creates solid entry points
-//         let sep1 = rand_trits_field::<Hash>();
-//         let sep2 = rand_trits_field::<Hash>();
-//         let sep3 = rand_trits_field::<Hash>();
-//         let sep4 = rand_trits_field::<Hash>();
-//         let sep5 = rand_trits_field::<Hash>();
-//         let sep6 = rand_trits_field::<Hash>();
-//         tangle.add_solid_entry_point(sep1);
-//         tangle.add_solid_entry_point(sep2);
-//         tangle.add_solid_entry_point(sep3);
-//         tangle.add_solid_entry_point(sep4);
-//         tangle.add_solid_entry_point(sep5);
-//         tangle.add_solid_entry_point(sep6);
-
-//         // Links transactions
-//         let (a_hash, a) = create_random_attached_tx(sep1, sep2);
-//         let (b_hash, b) = create_random_attached_tx(sep3, sep4);
-//         let (c_hash, c) = create_random_attached_tx(sep5, sep6);
-//         let (d_hash, d) = create_random_attached_tx(b_hash, a_hash);
-//         let (e_hash, e) = create_random_attached_tx(b_hash, a_hash);
-//         let (f_hash, f) = create_random_attached_tx(c_hash, b_hash);
-//         let (g_hash, g) = create_random_attached_tx(e_hash, d_hash);
-//         let (h_hash, h) = create_random_attached_tx(f_hash, e_hash);
-//         let (i_hash, i) = create_random_attached_tx(c_hash, f_hash);
-//         let (j_hash, j) = create_random_attached_tx(h_hash, g_hash);
-//         let (k_hash, k) = create_random_attached_tx(i_hash, h_hash);
-//         let (l_hash, l) = create_random_attached_tx(j_hash, g_hash);
-//         let (m_hash, m) = create_random_attached_tx(h_hash, j_hash);
-//         let (n_hash, n) = create_random_attached_tx(k_hash, h_hash);
-//         let (o_hash, o) = create_random_attached_tx(i_hash, k_hash);
-//         let (p_hash, p) = create_random_attached_tx(i_hash, k_hash);
-//         let (q_hash, q) = create_random_attached_tx(m_hash, l_hash);
-//         let (r_hash, r) = create_random_attached_tx(m_hash, l_hash);
-//         let (s_hash, s) = create_random_attached_tx(o_hash, n_hash);
-//         let (t_hash, t) = create_random_attached_tx(p_hash, o_hash);
-//         let (u_hash, u) = create_random_attached_tx(r_hash, q_hash);
-//         let (v_hash, v) = create_random_attached_tx(s_hash, r_hash);
-//         let (w_hash, w) = create_random_attached_tx(t_hash, s_hash);
-//         let (x_hash, x) = create_random_attached_tx(u_hash, q_hash);
-//         let (y_hash, y) = create_random_attached_tx(v_hash, u_hash);
-//         let (z_hash, z) = create_random_attached_tx(s_hash, v_hash);
-
-//         // Confirms transactions
-//         // TODO uncomment when confirmation index
-//         // tangle.confirm_transaction(a_hash, 1);
-//         // tangle.confirm_transaction(b_hash, 1);
-//         // tangle.confirm_transaction(c_hash, 1);
-//         // tangle.confirm_transaction(d_hash, 2);
-//         // tangle.confirm_transaction(e_hash, 1);
-//         // tangle.confirm_transaction(f_hash, 1);
-//         // tangle.confirm_transaction(g_hash, 2);
-//         // tangle.confirm_transaction(h_hash, 1);
-//         // tangle.confirm_transaction(i_hash, 2);
-//         // tangle.confirm_transaction(j_hash, 2);
-//         // tangle.confirm_transaction(k_hash, 2);
-//         // tangle.confirm_transaction(l_hash, 2);
-//         // tangle.confirm_transaction(m_hash, 2);
-//         // tangle.confirm_transaction(n_hash, 2);
-//         // tangle.confirm_transaction(o_hash, 2);
-//         // tangle.confirm_transaction(p_hash, 3);
-//         // tangle.confirm_transaction(q_hash, 3);
-//         // tangle.confirm_transaction(r_hash, 2);
-//         // tangle.confirm_transaction(s_hash, 2);
-//         // tangle.confirm_transaction(t_hash, 3);
-//         // tangle.confirm_transaction(u_hash, 3);
-//         // tangle.confirm_transaction(v_hash, 2);
-//         // tangle.confirm_transaction(w_hash, 3);
-//         // tangle.confirm_transaction(x_hash, 3);
-//         // tangle.confirm_transaction(y_hash, 3);
-//         // tangle.confirm_transaction(z_hash, 3);
-
-//         // Constructs the graph
-//         block_on(async {
-//             tangle.insert_transaction(a, a_hash).await;
-//             tangle.insert_transaction(b, b_hash).await;
-//             tangle.insert_transaction(c, c_hash).await;
-//             tangle.insert_transaction(d, d_hash).await;
-//             tangle.insert_transaction(e, e_hash).await;
-//             tangle.insert_transaction(f, f_hash).await;
-//             tangle.insert_transaction(g, g_hash).await;
-//             tangle.insert_transaction(h, h_hash).await;
-//             tangle.insert_transaction(i, i_hash).await;
-//             tangle.insert_transaction(j, j_hash).await;
-//             tangle.insert_transaction(k, k_hash).await;
-//             tangle.insert_transaction(l, l_hash).await;
-//             tangle.insert_transaction(m, m_hash).await;
-//             tangle.insert_transaction(n, n_hash).await;
-//             tangle.insert_transaction(o, o_hash).await;
-//             tangle.insert_transaction(p, p_hash).await;
-//             tangle.insert_transaction(q, q_hash).await;
-//             tangle.insert_transaction(r, r_hash).await;
-//             tangle.insert_transaction(s, s_hash).await;
-//             tangle.insert_transaction(t, t_hash).await;
-//             tangle.insert_transaction(u, u_hash).await;
-//             tangle.insert_transaction(v, v_hash).await;
-//             tangle.insert_transaction(w, w_hash).await;
-//             tangle.insert_transaction(x, x_hash).await;
-//             tangle.insert_transaction(y, y_hash).await;
-//             tangle.insert_transaction(z, z_hash).await;
-//         });
-
-//         let mut hashes = Vec::new();
-
-//         tangle.walk_approvers_post_order_dfs(
-//             v_hash,
-//             |hash, _transaction| {
-//                 hashes.push(*hash);
-//                 ()
-//             },
-//             |_| true,
-//             |_| (),
-//         );
-
-//         // TODO Remove when we have confirmation index
-//         assert_eq!(hashes.len(), 18);
-//         assert_eq!(hashes[0], a_hash);
-//         assert_eq!(hashes[1], b_hash);
-//         assert_eq!(hashes[2], d_hash);
-//         assert_eq!(hashes[3], e_hash);
-//         assert_eq!(hashes[4], g_hash);
-//         assert_eq!(hashes[5], c_hash);
-//         assert_eq!(hashes[6], f_hash);
-//         assert_eq!(hashes[7], h_hash);
-//         assert_eq!(hashes[8], j_hash);
-//         assert_eq!(hashes[9], l_hash);
-//         assert_eq!(hashes[10], m_hash);
-//         assert_eq!(hashes[11], r_hash);
-//         assert_eq!(hashes[12], i_hash);
-//         assert_eq!(hashes[13], k_hash);
-//         assert_eq!(hashes[14], n_hash);
-//         assert_eq!(hashes[15], o_hash);
-//         assert_eq!(hashes[16], s_hash);
-//         assert_eq!(hashes[17], v_hash);
-
-//         // TODO uncomment when we have confirmation index
-//         // assert_eq!(hashes.len(), 12);
-//         // assert_eq!(hashes[0], d_hash);
-//         // assert_eq!(hashes[1], g_hash);
-//         // assert_eq!(hashes[2], j_hash);
-//         // assert_eq!(hashes[3], l_hash);
-//         // assert_eq!(hashes[4], m_hash);
-//         // assert_eq!(hashes[5], r_hash);
-//         // assert_eq!(hashes[6], i_hash);
-//         // assert_eq!(hashes[7], k_hash);
-//         // assert_eq!(hashes[8], n_hash);
-//         // assert_eq!(hashes[9], o_hash);
-//         // assert_eq!(hashes[10], s_hash);
-//         // assert_eq!(hashes[11], v_hash);
-
-//         drop();
-//     }
-// }
 
 // ----
 

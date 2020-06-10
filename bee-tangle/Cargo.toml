@@ -20,7 +20,6 @@ bitflags = "1.2.1"
 bee-crypto = { path = "../bee-crypto" }
 bee-test = { path = "../bee-test" }
 
-serial_test = "0.4.0"
 criterion = "0.3.2"
 
 [[bench]]

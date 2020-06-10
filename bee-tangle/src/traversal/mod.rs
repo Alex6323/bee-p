@@ -126,53 +126,53 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     }
 }
 
-// // TODO: docs
-// // TODO: test
-// pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
-//     tangle: &'a Tangle<Metadata>,
-//     initial: TxHash,
-//     matches: Match,
-//     mut apply: Apply,
-//     mut else_apply: ElseApply,
-// ) where
-//     Metadata: Clone + Copy,
-//     Match: Fn(&TxRef, &Metadata) -> bool,
-//     Apply: FnMut(&TxHash, &TxRef, &Metadata),
-//     ElseApply: FnMut(&TxHash),
-// {
-//     let mut children = vec![initial];
-//     let mut visited = HashSet::new();
+// TODO: docs
+// TODO: test
+pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
+    tangle: &'a Tangle<Metadata>,
+    initial: TxHash,
+    matches: Match,
+    mut apply: Apply,
+    mut else_apply: ElseApply,
+) where
+    Metadata: Clone + Copy,
+    Match: Fn(&TxRef, &Metadata) -> bool,
+    Apply: FnMut(&TxHash, &TxRef, &Metadata),
+    ElseApply: FnMut(&TxHash),
+{
+    let mut children = vec![initial];
+    let mut visited = HashSet::new();
 
-//     while let Some(hash) = children.last() {
-//         match tangle.vertices.get(hash) {
-//             Some(r) => {
-//                 let vtx = r.value();
+    while let Some(hash) = children.last() {
+        match tangle.vertices.get(hash) {
+            Some(r) => {
+                let vtx = r.value();
 
-//                 if visited.contains(vtx.get_trunk()) && visited.contains(vtx.get_branch()) {
-//                     apply(hash, vtx.get_data(), vtx.get_metadata());
-//                     visited.insert(hash.clone());
-//                     children.pop();
-//                 } else if !visited.contains(vtx.get_trunk()) {
-//                     if matches(vtx.get_data(), vtx.get_metadata()) {
-//                         children.push(*vtx.get_trunk());
-//                     }
-//                 } else if !visited.contains(vtx.get_branch()) {
-//                     if matches(vtx.get_data(), vtx.get_metadata()) {
-//                         children.push(*vtx.get_branch());
-//                     }
-//                 }
-//             }
-//             None => {
-//                 // NOTE: this has to be dealt at the protocol level now ;)
-//                 // if !tangle.solid_entry_points.contains(hash) {
-//                 else_apply(hash);
-//                 //}
-//                 visited.insert(hash.clone());
-//                 children.pop();
-//             }
-//         }
-//     }
-// }
+                if visited.contains(vtx.trunk()) && visited.contains(vtx.branch()) {
+                    apply(hash, vtx.transaction(), vtx.metadata());
+                    visited.insert(hash.clone());
+                    children.pop();
+                } else if !visited.contains(vtx.trunk()) {
+                    if matches(vtx.transaction(), vtx.metadata()) {
+                        children.push(*vtx.trunk());
+                    }
+                } else if !visited.contains(vtx.branch()) {
+                    if matches(vtx.transaction(), vtx.metadata()) {
+                        children.push(*vtx.branch());
+                    }
+                }
+            }
+            None => {
+                // NOTE: this has to be dealt at the protocol level now ;)
+                // if !tangle.solid_entry_points.contains(hash) {
+                else_apply(hash);
+                //}
+                visited.insert(hash.clone());
+                children.pop();
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -256,165 +256,4 @@ mod tests {
         assert_eq!(*c.address(), addresses[3]);
         assert_eq!(*b.address(), addresses[4]);
     }
-
-    // #[test]
-    // #[serial]
-    // fn walk_approvers_post_order_dfs() {
-    // Example from https://github.com/iotaledger/protocol-rfcs/blob/master/text/0005-white-flag/0005-white-flag.md
-    //
-    // init();
-    //
-    // let tangle = tangle();
-    //
-    // Creates solid entry points
-    // let sep1 = rand_trits_field::<Hash>();
-    // let sep2 = rand_trits_field::<Hash>();
-    // let sep3 = rand_trits_field::<Hash>();
-    // let sep4 = rand_trits_field::<Hash>();
-    // let sep5 = rand_trits_field::<Hash>();
-    // let sep6 = rand_trits_field::<Hash>();
-    // tangle.add_solid_entry_point(sep1);
-    // tangle.add_solid_entry_point(sep2);
-    // tangle.add_solid_entry_point(sep3);
-    // tangle.add_solid_entry_point(sep4);
-    // tangle.add_solid_entry_point(sep5);
-    // tangle.add_solid_entry_point(sep6);
-    //
-    // Links transactions
-    // let (a_hash, a) = create_random_attached_tx(sep1, sep2);
-    // let (b_hash, b) = create_random_attached_tx(sep3, sep4);
-    // let (c_hash, c) = create_random_attached_tx(sep5, sep6);
-    // let (d_hash, d) = create_random_attached_tx(b_hash, a_hash);
-    // let (e_hash, e) = create_random_attached_tx(b_hash, a_hash);
-    // let (f_hash, f) = create_random_attached_tx(c_hash, b_hash);
-    // let (g_hash, g) = create_random_attached_tx(e_hash, d_hash);
-    // let (h_hash, h) = create_random_attached_tx(f_hash, e_hash);
-    // let (i_hash, i) = create_random_attached_tx(c_hash, f_hash);
-    // let (j_hash, j) = create_random_attached_tx(h_hash, g_hash);
-    // let (k_hash, k) = create_random_attached_tx(i_hash, h_hash);
-    // let (l_hash, l) = create_random_attached_tx(j_hash, g_hash);
-    // let (m_hash, m) = create_random_attached_tx(h_hash, j_hash);
-    // let (n_hash, n) = create_random_attached_tx(k_hash, h_hash);
-    // let (o_hash, o) = create_random_attached_tx(i_hash, k_hash);
-    // let (p_hash, p) = create_random_attached_tx(i_hash, k_hash);
-    // let (q_hash, q) = create_random_attached_tx(m_hash, l_hash);
-    // let (r_hash, r) = create_random_attached_tx(m_hash, l_hash);
-    // let (s_hash, s) = create_random_attached_tx(o_hash, n_hash);
-    // let (t_hash, t) = create_random_attached_tx(p_hash, o_hash);
-    // let (u_hash, u) = create_random_attached_tx(r_hash, q_hash);
-    // let (v_hash, v) = create_random_attached_tx(s_hash, r_hash);
-    // let (w_hash, w) = create_random_attached_tx(t_hash, s_hash);
-    // let (x_hash, x) = create_random_attached_tx(u_hash, q_hash);
-    // let (y_hash, y) = create_random_attached_tx(v_hash, u_hash);
-    // let (z_hash, z) = create_random_attached_tx(s_hash, v_hash);
-    //
-    // Confirms transactions
-    // TODO uncomment when confirmation index
-    // tangle.confirm_transaction(a_hash, 1);
-    // tangle.confirm_transaction(b_hash, 1);
-    // tangle.confirm_transaction(c_hash, 1);
-    // tangle.confirm_transaction(d_hash, 2);
-    // tangle.confirm_transaction(e_hash, 1);
-    // tangle.confirm_transaction(f_hash, 1);
-    // tangle.confirm_transaction(g_hash, 2);
-    // tangle.confirm_transaction(h_hash, 1);
-    // tangle.confirm_transaction(i_hash, 2);
-    // tangle.confirm_transaction(j_hash, 2);
-    // tangle.confirm_transaction(k_hash, 2);
-    // tangle.confirm_transaction(l_hash, 2);
-    // tangle.confirm_transaction(m_hash, 2);
-    // tangle.confirm_transaction(n_hash, 2);
-    // tangle.confirm_transaction(o_hash, 2);
-    // tangle.confirm_transaction(p_hash, 3);
-    // tangle.confirm_transaction(q_hash, 3);
-    // tangle.confirm_transaction(r_hash, 2);
-    // tangle.confirm_transaction(s_hash, 2);
-    // tangle.confirm_transaction(t_hash, 3);
-    // tangle.confirm_transaction(u_hash, 3);
-    // tangle.confirm_transaction(v_hash, 2);
-    // tangle.confirm_transaction(w_hash, 3);
-    // tangle.confirm_transaction(x_hash, 3);
-    // tangle.confirm_transaction(y_hash, 3);
-    // tangle.confirm_transaction(z_hash, 3);
-    //
-    // Constructs the graph
-    // block_on(async {
-    // tangle.insert_transaction(a, a_hash).await;
-    // tangle.insert_transaction(b, b_hash).await;
-    // tangle.insert_transaction(c, c_hash).await;
-    // tangle.insert_transaction(d, d_hash).await;
-    // tangle.insert_transaction(e, e_hash).await;
-    // tangle.insert_transaction(f, f_hash).await;
-    // tangle.insert_transaction(g, g_hash).await;
-    // tangle.insert_transaction(h, h_hash).await;
-    // tangle.insert_transaction(i, i_hash).await;
-    // tangle.insert_transaction(j, j_hash).await;
-    // tangle.insert_transaction(k, k_hash).await;
-    // tangle.insert_transaction(l, l_hash).await;
-    // tangle.insert_transaction(m, m_hash).await;
-    // tangle.insert_transaction(n, n_hash).await;
-    // tangle.insert_transaction(o, o_hash).await;
-    // tangle.insert_transaction(p, p_hash).await;
-    // tangle.insert_transaction(q, q_hash).await;
-    // tangle.insert_transaction(r, r_hash).await;
-    // tangle.insert_transaction(s, s_hash).await;
-    // tangle.insert_transaction(t, t_hash).await;
-    // tangle.insert_transaction(u, u_hash).await;
-    // tangle.insert_transaction(v, v_hash).await;
-    // tangle.insert_transaction(w, w_hash).await;
-    // tangle.insert_transaction(x, x_hash).await;
-    // tangle.insert_transaction(y, y_hash).await;
-    // tangle.insert_transaction(z, z_hash).await;
-    // });
-    //
-    // let mut hashes = Vec::new();
-    //
-    // tangle.walk_approvers_post_order_dfs(
-    // v_hash,
-    // |hash, _transaction| {
-    // hashes.push(*hash);
-    // ()
-    // },
-    // |_| true,
-    // |_| (),
-    // );
-    //
-    // TODO Remove when we have confirmation index
-    // assert_eq!(hashes.len(), 18);
-    // assert_eq!(hashes[0], a_hash);
-    // assert_eq!(hashes[1], b_hash);
-    // assert_eq!(hashes[2], d_hash);
-    // assert_eq!(hashes[3], e_hash);
-    // assert_eq!(hashes[4], g_hash);
-    // assert_eq!(hashes[5], c_hash);
-    // assert_eq!(hashes[6], f_hash);
-    // assert_eq!(hashes[7], h_hash);
-    // assert_eq!(hashes[8], j_hash);
-    // assert_eq!(hashes[9], l_hash);
-    // assert_eq!(hashes[10], m_hash);
-    // assert_eq!(hashes[11], r_hash);
-    // assert_eq!(hashes[12], i_hash);
-    // assert_eq!(hashes[13], k_hash);
-    // assert_eq!(hashes[14], n_hash);
-    // assert_eq!(hashes[15], o_hash);
-    // assert_eq!(hashes[16], s_hash);
-    // assert_eq!(hashes[17], v_hash);
-    //
-    // TODO uncomment when we have confirmation index
-    // assert_eq!(hashes.len(), 12);
-    // assert_eq!(hashes[0], d_hash);
-    // assert_eq!(hashes[1], g_hash);
-    // assert_eq!(hashes[2], j_hash);
-    // assert_eq!(hashes[3], l_hash);
-    // assert_eq!(hashes[4], m_hash);
-    // assert_eq!(hashes[5], r_hash);
-    // assert_eq!(hashes[6], i_hash);
-    // assert_eq!(hashes[7], k_hash);
-    // assert_eq!(hashes[8], n_hash);
-    // assert_eq!(hashes[9], o_hash);
-    // assert_eq!(hashes[10], s_hash);
-    // assert_eq!(hashes[11], v_hash);
-    //
-    // drop();
-    // }
 }

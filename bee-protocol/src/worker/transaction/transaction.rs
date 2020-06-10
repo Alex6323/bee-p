@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_tx_worker_with_compressed_buffer() {
-        bee_tangle::init();
+        crate::tangle::init();
 
         // build network
         let network_config = NetworkConfig::build().finish();
@@ -196,7 +196,7 @@ mod tests {
         let protocol_config = ProtocolConfig::build().finish();
         block_on(Protocol::init(protocol_config, network));
 
-        assert_eq!(tangle().size(), 0);
+        assert_eq!(tangle().inner.size(), 0);
 
         let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
@@ -227,7 +227,7 @@ mod tests {
                 .run(transaction_worker_receiver, shutdown_receiver),
         );
 
-        assert_eq!(tangle().size(), 1);
-        assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
+        assert_eq!(tangle().inner.size(), 1);
+        assert_eq!(tangle().contains(&Hash::zeros()), true);
     }
 }

@@ -25,6 +25,7 @@ where
     pub(crate) vertices: DashMap<TxHash, Vertex<T>>,
     pub(crate) children: DashMap<TxHash, HashSet<TxHash>>,
     pub(crate) tips: DashSet<TxHash>,
+    // TODO: PriorityQueue with customizable priority for implementing cache eviction strategy
 }
 
 impl<T> Default for Tangle<T>
@@ -128,6 +129,13 @@ where
     #[cfg(test)]
     pub(crate) fn num_children(&self, hash: &TxHash) -> usize {
         self.children.get(hash).map_or(0, |r| r.value().len())
+    }
+
+    #[cfg(test)]
+    pub fn clear(&mut self) {
+        self.vertices.clear();
+        self.children.clear();
+        self.tips.clear();
     }
 }
 

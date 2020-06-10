@@ -20,8 +20,9 @@ pub mod traversal;
 mod tangle;
 mod vertex;
 
+// TODO: Move into tangle.rs
 #[cfg(test)]
-mod helper;
+mod testhelpers;
 
 use bee_transaction::BundledTransaction as Transaction;
 
