@@ -13,6 +13,5 @@ keywords = ["iota", "tangle", "bee", "framework", "signing"]
 bee-crypto = { path = "../bee-crypto" }
 bee-ternary = { path = "../bee-ternary" }
 
-ed25519-dalek = "1.0.0-pre.3"
 rand = "0.7"
 sha3 = "0.8.2"
