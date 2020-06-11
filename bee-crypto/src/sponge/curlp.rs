@@ -46,11 +46,6 @@ impl CurlP {
         }
     }
 
-    /// Return the number of rounds used in this `CurlP` instacnce.
-    pub fn rounds(&self) -> usize {
-        self.rounds
-    }
-
     /// Transforms the internal state of the `CurlP` sponge after the input was copied
     /// into the internal state.
     ///
@@ -185,13 +180,6 @@ macro_rules! forward_sponge_impl {
     ($($t:ty),+) => {
 
     $(
-        impl $t {
-            /// Return the number of rounds used in this `CurlP` instacnce.
-            pub fn rounds(&self) -> usize {
-                self.0.rounds
-            }
-        }
-
         impl Sponge for $t {
             const IN_LEN: usize = 243;
             const OUT_LEN: usize = 243;
