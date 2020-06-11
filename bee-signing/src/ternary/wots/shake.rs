@@ -80,32 +80,3 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
         })
     }
 }
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    use bee_crypto::Kerl;
-    use bee_ternary::{T1B1Buf, TryteBuf};
-
-    const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
-    const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
-
-    #[test]
-    fn wots_shake() {
-        let seed_trits =
-            TryteBuf::try_from_str("CEFLDDLMF9TO9ZLLTYXIPVFIJKAOFRIQLGNYIDZCTDYSWMNXPYNGFAKHQDY9ABGGQZHEFTXKWKWZXEIUD")
-                .unwrap()
-                .as_trits()
-                .encode::<T1B1Buf>();
-        let seed = TernarySeed::<Kerl>::from_buf(seed_trits).unwrap();
-        let private_key_generator = WotsShakePrivateKeyGeneratorBuilder::<Kerl>::default()
-            .security_level(WotsSecurityLevel::Medium)
-            .build()
-            .unwrap();
-        let private_key = private_key_generator.generate(&seed, 0).unwrap();
-
-        println!("{:?}", private_key.state.as_i8_slice());
-    }
-}

@@ -14,7 +14,7 @@ mod ternary;
 pub use ternary::{
     normalize_hash, MssError, MssPrivateKey, MssPrivateKeyGenerator, MssPrivateKeyGeneratorBuilder, MssPublicKey,
     MssSignature, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature, TernarySeed,
-    WotsError, WotsPrivateKey, WotsPublicKey, WotsSecurityLevel, WotsShakePrivateKeyGenerator,
+    TernarySeedError, WotsError, WotsPrivateKey, WotsPublicKey, WotsSecurityLevel, WotsShakePrivateKeyGenerator,
     WotsShakePrivateKeyGeneratorBuilder, WotsSignature, WotsSpongePrivateKeyGenerator,
     WotsSpongePrivateKeyGeneratorBuilder,
 };
