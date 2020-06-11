@@ -332,7 +332,7 @@ mod tests {
 
     use super::*;
 
-    use crate::{
+    use crate::ternary::{
         seed::Seed,
         wots::{WotsPublicKey, WotsSecurityLevel, WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder},
     };
