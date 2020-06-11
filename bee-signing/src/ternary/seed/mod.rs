@@ -13,4 +13,4 @@ mod seed;
 mod ternary_seed;
 
 pub use seed::Seed;
-pub use ternary_seed::TernarySeed;
+pub use ternary_seed::{TernarySeed, TernarySeedError};

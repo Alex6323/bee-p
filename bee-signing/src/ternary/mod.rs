@@ -20,7 +20,7 @@ pub use mss::{
 };
 pub use normalize::normalize_hash;
 pub use scheme::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature};
-pub use seed::{Seed, TernarySeed};
+pub use seed::{Seed, TernarySeed, TernarySeedError};
 pub use wots::{
     WotsError, WotsPrivateKey, WotsPublicKey, WotsSecurityLevel, WotsShakePrivateKeyGenerator,
     WotsShakePrivateKeyGeneratorBuilder, WotsSignature, WotsSpongePrivateKeyGenerator,
