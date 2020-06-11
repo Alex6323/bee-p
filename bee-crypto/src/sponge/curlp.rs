@@ -25,9 +25,15 @@ const HALF_STATE_LEN: usize = STATE_LEN / 2;
 
 const TRUTH_TABLE: [i8; 11] = [1, 0, -1, 2, 1, -1, 0, 2, -1, 1, 0];
 
+#[derive(Copy, Clone)]
+pub enum CurlPRounds {
+    Rounds27 = 27,
+    Rounds81 = 81,
+}
+
 pub struct CurlP {
     /// The number of rounds of hashing to apply before a hash is squeezed.
-    rounds: usize,
+    rounds: CurlPRounds,
 
     /// The internal state.
     state: TritBuf,
@@ -38,7 +44,7 @@ pub struct CurlP {
 
 impl CurlP {
     /// Create a new `CurlP` sponge with `rounds` of iterations.
-    pub fn new(rounds: usize) -> Self {
+    pub fn new(rounds: CurlPRounds) -> Self {
         Self {
             rounds,
             state: TritBuf::zeros(STATE_LEN),
@@ -93,14 +99,14 @@ impl CurlP {
 
         let (lhs, rhs) = (&mut self.state, &mut self.work_state);
 
-        for _ in 0..self.rounds {
+        for _ in 0..self.rounds as usize {
             apply_substitution_box(&lhs, rhs);
             std::mem::swap(lhs, rhs);
         }
 
         // Swap the slices back if the number of rounds is even (otherwise `self.work_state`
         // contains the transformed state).
-        if self.rounds & 1 == 0 {
+        if self.rounds as usize & 1 == 0 {
             std::mem::swap(lhs, rhs);
         }
     }
@@ -151,7 +157,7 @@ pub struct CurlP27(CurlP);
 
 impl CurlP27 {
     pub fn new() -> Self {
-        Self(CurlP::new(27))
+        Self(CurlP::new(CurlPRounds::Rounds27))
     }
 }
 
@@ -166,7 +172,7 @@ pub struct CurlP81(CurlP);
 
 impl CurlP81 {
     pub fn new() -> Self {
-        Self(CurlP::new(81))
+        Self(CurlP::new(CurlPRounds::Rounds81))
     }
 }
 
