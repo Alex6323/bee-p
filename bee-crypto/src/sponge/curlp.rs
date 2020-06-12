@@ -9,10 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::convert::{Infallible, TryInto};
-
 use crate::Sponge;
+
 use bee_ternary::{Btrit, TritBuf, Trits};
+
+use std::convert::{Infallible, TryInto};
 
 /// The length of a hash as returned by the hash functions implemented in this RFC (in
 /// units of binary-coded, balanced trits).
