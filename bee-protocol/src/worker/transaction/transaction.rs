@@ -13,7 +13,7 @@ use crate::{
     message::{uncompress_transaction_bytes, TransactionBroadcast},
     protocol::Protocol,
     tangle::{flags::Flags, tangle},
-    worker::transaction::TinyHashCache,
+    worker::transaction::HashCache,
 };
 
 use bee_crypto::{CurlP81, Sponge};
@@ -39,7 +39,7 @@ pub(crate) struct TransactionWorkerEvent {
 
 pub(crate) struct TransactionWorker {
     milestone_validator_worker: mpsc::Sender<Hash>,
-    cache: TinyHashCache,
+    cache: HashCache,
     curl: CurlP81,
 }
 
@@ -47,7 +47,7 @@ impl TransactionWorker {
     pub(crate) fn new(milestone_validator_worker: mpsc::Sender<Hash>, cache_size: usize) -> Self {
         Self {
             milestone_validator_worker,
-            cache: TinyHashCache::new(cache_size),
+            cache: HashCache::new(cache_size),
             curl: CurlP81::new(),
         }
     }

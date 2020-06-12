@@ -9,8 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod tiny_hash_cache;
+mod hash_cache;
 mod transaction;
 
-pub(crate) use tiny_hash_cache::TinyHashCache;
+pub(crate) use hash_cache::HashCache;
 pub(crate) use transaction::{TransactionWorker, TransactionWorkerEvent};
