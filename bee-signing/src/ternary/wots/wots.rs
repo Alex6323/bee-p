@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{PrivateKey, PublicKey, RecoverableSignature, Signature};
+use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 
 use bee_crypto::Sponge;
 use bee_ternary::{TritBuf, Trits};

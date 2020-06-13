@@ -15,7 +15,7 @@ use crate::{
 };
 
 use bee_crypto::{Kerl, Sponge};
-use bee_signing::{PublicKey, RecoverableSignature};
+use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_tangle::tangle;
 use bee_transaction::{Hash, TransactionVertex};
 
