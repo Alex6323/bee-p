@@ -12,7 +12,7 @@
 use crate::milestone::{Milestone, MilestoneIndex};
 
 use bee_crypto::{Kerl, Sponge};
-use bee_signing::{
+use bee_signing::ternary::{
     normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,
 };
 use bee_ternary::{num_conversions::TritsI64ConversionError, TritBuf};

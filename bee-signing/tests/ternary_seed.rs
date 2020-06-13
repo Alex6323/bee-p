@@ -13,7 +13,7 @@
 mod tests {
 
     use bee_crypto::{CurlP27, CurlP81, Kerl, Sponge};
-    use bee_signing::{Seed, TernarySeed, TernarySeedError};
+    use bee_signing::ternary::{Seed, TernarySeed, TernarySeedError};
     use bee_ternary::{T1B1Buf, TritBuf, TryteBuf};
 
     const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
