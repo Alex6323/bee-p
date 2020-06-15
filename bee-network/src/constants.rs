@@ -9,10 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    time::Duration,
-};
+use std::net::{IpAddr, Ipv4Addr};
 
 pub(crate) const DEFAULT_BINDING_PORT: u16 = 15600;
 pub(crate) const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
