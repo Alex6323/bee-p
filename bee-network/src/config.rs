@@ -55,7 +55,7 @@ impl NetworkConfigBuilder {
     /// Builds the network config.
     pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
-            binding_port: self.binding_port.unwrap_or(crate::constants::DEFAULT_BINDING_PORT),
+            binding_port: Port(self.binding_port.unwrap_or(crate::constants::DEFAULT_BINDING_PORT)),
             binding_addr: self.binding_addr.unwrap_or(crate::constants::DEFAULT_BINDING_ADDR),
             reconnect_interval: Duration::from_secs(
                 self.reconnect_interval
@@ -68,8 +68,7 @@ impl NetworkConfigBuilder {
 /// Network configuration.
 #[derive(Clone, Copy, Debug)]
 pub struct NetworkConfig {
-    // TODO: use Port instead of u16
-    pub(crate) binding_port: u16,
+    pub(crate) binding_port: Port,
     pub(crate) binding_addr: IpAddr,
     pub(crate) reconnect_interval: Duration,
 }
@@ -83,13 +82,13 @@ impl NetworkConfig {
     /// Returns the listening address.
     pub fn socket_addr(&self) -> Address {
         match self.binding_addr {
-            IpAddr::V4(addr) => Address::from_v4_addr_and_port(addr, Port(self.binding_port)),
-            IpAddr::V6(addr) => Address::from_v6_addr_and_port(addr, Port(self.binding_port)),
+            IpAddr::V4(addr) => Address::from_v4_addr_and_port(addr, self.binding_port),
+            IpAddr::V6(addr) => Address::from_v6_addr_and_port(addr, self.binding_port),
         }
     }
 
     /// Returns the port of the listening address.
-    pub fn binding_port(&self) -> u16 {
+    pub fn binding_port(&self) -> Port {
         self.binding_port
     }
 

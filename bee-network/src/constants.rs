@@ -14,7 +14,6 @@ use std::{
     time::Duration,
 };
 
-// TODO: use Port type instead of primitive
 pub(crate) const DEFAULT_BINDING_PORT: u16 = 15600;
 pub(crate) const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
