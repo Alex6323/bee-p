@@ -13,7 +13,7 @@ use crate::address::{Address, Port};
 
 use serde::Deserialize;
 
-use std::net::IpAddr;
+use std::{net::IpAddr, time::Duration};
 
 /// Network configuration builder.
 #[derive(Default, Deserialize)]
@@ -55,11 +55,12 @@ impl NetworkConfigBuilder {
     /// Builds the network config.
     pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
-            binding_port: self.binding_port.unwrap_or(crate::constants::DEFAULT_BINDING_PORT),
+            binding_port: Port(self.binding_port.unwrap_or(crate::constants::DEFAULT_BINDING_PORT)),
             binding_addr: self.binding_addr.unwrap_or(crate::constants::DEFAULT_BINDING_ADDR),
-            reconnect_interval: self
-                .reconnect_interval
-                .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL),
+            reconnect_interval: Duration::from_secs(
+                self.reconnect_interval
+                    .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL),
+            ),
         }
     }
 }
@@ -67,9 +68,9 @@ impl NetworkConfigBuilder {
 /// Network configuration.
 #[derive(Clone, Copy, Debug)]
 pub struct NetworkConfig {
-    pub(crate) binding_port: u16,
+    pub(crate) binding_port: Port,
     pub(crate) binding_addr: IpAddr,
-    pub(crate) reconnect_interval: u64,
+    pub(crate) reconnect_interval: Duration,
 }
 
 impl NetworkConfig {
@@ -81,13 +82,13 @@ impl NetworkConfig {
     /// Returns the listening address.
     pub fn socket_addr(&self) -> Address {
         match self.binding_addr {
-            IpAddr::V4(addr) => Address::from_v4_addr_and_port(addr, Port(self.binding_port)),
-            IpAddr::V6(addr) => Address::from_v6_addr_and_port(addr, Port(self.binding_port)),
+            IpAddr::V4(addr) => Address::from_v4_addr_and_port(addr, self.binding_port),
+            IpAddr::V6(addr) => Address::from_v6_addr_and_port(addr, self.binding_port),
         }
     }
 
     /// Returns the port of the listening address.
-    pub fn binding_port(&self) -> u16 {
+    pub fn binding_port(&self) -> Port {
         self.binding_port
     }
 
@@ -97,7 +98,7 @@ impl NetworkConfig {
     }
 
     /// Returns the interval between reconnect attempts.
-    pub fn reconnect_interval(&self) -> u64 {
+    pub fn reconnect_interval(&self) -> Duration {
         self.reconnect_interval
     }
 }
