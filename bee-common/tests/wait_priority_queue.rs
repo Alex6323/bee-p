@@ -37,16 +37,16 @@ mod tests {
     fn min_heap() {
         let queue = WaitPriorityQueue::default();
 
-        queue.insert(TestMinHeapEntry(5, 'F'));
-        queue.insert(TestMinHeapEntry(1, 'B'));
-        queue.insert(TestMinHeapEntry(9, 'J'));
-        queue.insert(TestMinHeapEntry(0, 'A'));
-        queue.insert(TestMinHeapEntry(7, 'H'));
-        queue.insert(TestMinHeapEntry(6, 'G'));
-        queue.insert(TestMinHeapEntry(2, 'C'));
-        queue.insert(TestMinHeapEntry(3, 'D'));
-        queue.insert(TestMinHeapEntry(8, 'I'));
-        queue.insert(TestMinHeapEntry(4, 'E'));
+        queue.push(TestMinHeapEntry(5, 'F'));
+        queue.push(TestMinHeapEntry(1, 'B'));
+        queue.push(TestMinHeapEntry(9, 'J'));
+        queue.push(TestMinHeapEntry(0, 'A'));
+        queue.push(TestMinHeapEntry(7, 'H'));
+        queue.push(TestMinHeapEntry(6, 'G'));
+        queue.push(TestMinHeapEntry(2, 'C'));
+        queue.push(TestMinHeapEntry(3, 'D'));
+        queue.push(TestMinHeapEntry(8, 'I'));
+        queue.push(TestMinHeapEntry(4, 'E'));
 
         assert_eq!(block_on(queue.pop()), TestMinHeapEntry(0, 'A'));
         assert_eq!(block_on(queue.pop()), TestMinHeapEntry(1, 'B'));
