@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use async_std::{prelude::*, stream::FusedStream};
+use futures::future::FusedFuture;
 use std::{
     collections::{BinaryHeap, VecDeque},
     future::Future,
@@ -18,7 +20,6 @@ use std::{
 };
 
 pub(crate) struct WaitPriorityQueue<T: Ord + Eq> {
-    // TODO use an RWLock ?
     inner: Mutex<(BinaryHeap<T>, VecDeque<Waker>)>,
 }
 
@@ -49,6 +50,13 @@ impl<T: Ord + Eq> WaitPriorityQueue<T> {
     pub fn pop(&self) -> impl Future<Output = T> + '_ {
         WaitFut(self)
     }
+
+    pub fn pending(&self) -> impl Stream<Item = T> + FusedStream + Future<Output = T> + FusedFuture + '_ {
+        WaitPending {
+            exhausted: false,
+            queue: self,
+        }
+    }
 }
 
 pub(crate) struct WaitFut<'a, T: Ord + Eq>(&'a WaitPriorityQueue<T>);
@@ -68,3 +76,56 @@ impl<'a, T: Ord + Eq> Future for WaitFut<'a, T> {
         }
     }
 }
+
+pub(crate) struct WaitPending<'a, T: Ord + Eq> {
+    exhausted: bool,
+    queue: &'a WaitPriorityQueue<T>,
+}
+
+impl<'a, T: Ord + Eq> Future for WaitPending<'a, T> {
+    type Output = T;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        let mut inner = self.queue.inner.lock().unwrap();
+
+        if self.exhausted {
+            Poll::Pending
+        } else {
+            match inner.0.pop() {
+                Some(entry) => Poll::Ready(entry),
+                None => {
+                    self.exhausted = true;
+                    Poll::Pending
+                }
+            }
+        }
+    }
+}
+
+impl<'a, T: Ord + Eq> FusedFuture for WaitPending<'a, T> {
+    fn is_terminated(&self) -> bool {
+        self.exhausted
+    }
+}
+
+impl<'a, T: Ord + Eq> Stream for WaitPending<'a, T> {
+    type Item = T;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let mut inner = self.queue.inner.lock().unwrap();
+
+        if self.exhausted {
+            Poll::Ready(None)
+        } else {
+            match inner.0.pop() {
+                Some(entry) => Poll::Ready(Some(entry)),
+                None => {
+                    self.exhausted = true;
+                    Poll::Ready(None)
+                }
+            }
+        }
+    }
+}
+
+impl<'a, T: Ord + Eq> FusedStream for WaitPending<'a, T> {}

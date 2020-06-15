@@ -14,7 +14,7 @@ use crate::{message::MilestoneRequest, milestone::MilestoneIndex, protocol::Prot
 use bee_network::EndpointId;
 use bee_tangle::tangle;
 
-use futures::{channel::oneshot, future::FutureExt, select};
+use futures::{channel::oneshot, future::FutureExt, select, stream::StreamExt};
 use log::info;
 
 use std::cmp::Ordering;
@@ -79,13 +79,11 @@ impl MilestoneRequesterWorker {
 
         loop {
             select! {
-                // TODO impl fused stream
-                entry = Protocol::get().milestone_requester_worker.0.pop().fuse() => {
+                entry = Protocol::get().milestone_requester_worker.0.pending() => {
                     if let MilestoneRequesterWorkerEntry(index, epid) = entry {
                         if !tangle().contains_milestone(index.into()) {
                             self.process_request(index, epid).await;
                         }
-
                     }
                 },
                 _ = shutdown_fused => {

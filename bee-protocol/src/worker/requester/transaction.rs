@@ -16,7 +16,7 @@ use bee_ternary::T5B1Buf;
 use bee_transaction::Hash;
 
 use bytemuck::cast_slice;
-use futures::{channel::oneshot, future::FutureExt, select};
+use futures::{channel::oneshot, future::FutureExt, select, stream::StreamExt};
 use log::info;
 
 use std::cmp::Ordering;
@@ -80,8 +80,7 @@ impl TransactionRequesterWorker {
 
         loop {
             select! {
-                // TODO impl fused stream
-                entry = Protocol::get().transaction_requester_worker.0.pop().fuse() => {
+                entry = Protocol::get().transaction_requester_worker.0.pending() => {
                     if let TransactionRequesterWorkerEntry(hash, index) = entry {
                         if !tangle().is_solid_entry_point(&hash) && !tangle().contains_transaction(&hash) {
                             self.process_request(hash, index).await;
