@@ -87,7 +87,7 @@ where
             Entry::Vacant(entry) => {
                 // TODO: find a good value for pre-allocation
                 let mut children = HashSet::new();
-                children.insert(parent);
+                children.insert(child);
                 entry.insert(children);
             }
         }

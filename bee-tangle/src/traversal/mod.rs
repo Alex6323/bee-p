@@ -72,7 +72,7 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
                 if let Some(parent_children) = tangle.children.get(parent_hash) {
                     for child_hash in parent_children.value() {
                         if let Some(child) = tangle.vertices.get(child_hash) {
-                            if child.trunk() == parent_hash {
+                            if child.value().trunk() == parent_hash {
                                 children.push(*child_hash);
                             }
                         }
@@ -192,7 +192,7 @@ mod tests {
         //  \|
         //   e
 
-        let (tangle, Transactions { b, c, d, e, .. }, Hashes { b_hash, .. }) = create_test_tangle();
+        let (tangle, Transactions { b, c, d, e, .. }, Hashes { a_hash, b_hash, .. }) = create_test_tangle();
 
         let mut txs = vec![];
 
@@ -202,8 +202,8 @@ mod tests {
 
         assert_eq!(b.address(), txs[0].address());
         assert_eq!(c.address(), txs[1].address());
-        assert_eq!(e.address(), txs[2].address());
-        assert_eq!(d.address(), txs[3].address());
+        assert_eq!(d.address(), txs[2].address());
+        assert_eq!(e.address(), txs[3].address());
     }
 
     #[test]

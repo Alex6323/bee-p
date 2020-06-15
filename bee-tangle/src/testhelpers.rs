@@ -12,7 +12,7 @@
 use crate::tangle::Tangle;
 
 use bee_test::transaction::{create_random_attached_tx, create_random_tx};
-use bee_transaction::{BundledTransaction as Tx, Hash as TxHash};
+use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVertex};
 
 pub(crate) struct Transactions {
     pub a: Tx,
@@ -48,11 +48,25 @@ pub(crate) fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
     let (d_hash, d) = create_random_attached_tx(a_hash.clone(), c_hash.clone());
     let (e_hash, e) = create_random_attached_tx(d_hash.clone(), c_hash.clone());
 
+    assert_eq!(*c.trunk(), b_hash);
+    assert_eq!(*c.branch(), a_hash);
+    assert_eq!(*d.trunk(), c_hash);
+    assert_eq!(*d.branch(), a_hash);
+    assert_eq!(*e.trunk(), c_hash);
+    assert_eq!(*e.branch(), d_hash);
+
     tangle.insert(a.clone(), a_hash, ());
     tangle.insert(b.clone(), b_hash, ());
     tangle.insert(c.clone(), c_hash, ());
     tangle.insert(d.clone(), d_hash, ());
     tangle.insert(e.clone(), e_hash, ());
+
+    assert_eq!(*tangle.get(&c_hash).unwrap().trunk(), b_hash);
+    assert_eq!(*tangle.get(&c_hash).unwrap().branch(), a_hash);
+    assert_eq!(*tangle.get(&d_hash).unwrap().trunk(), c_hash);
+    assert_eq!(*tangle.get(&d_hash).unwrap().branch(), a_hash);
+    // assert_eq!(*e.trunk(), c_hash);
+    // assert_eq!(*e.branch(), d_hash);
 
     assert_eq!(5, tangle.size());
     assert_eq!(2, tangle.num_children(&a_hash));
