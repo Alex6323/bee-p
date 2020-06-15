@@ -22,16 +22,15 @@ use std::cmp::Ordering;
 #[derive(Eq, PartialEq)]
 pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
-// TODO check that this is the right order
 impl PartialOrd for MilestoneRequesterWorkerEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        other.0.partial_cmp(&self.0)
     }
 }
 
 impl Ord for MilestoneRequesterWorkerEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
+        other.0.cmp(&self.0)
     }
 }
 
