@@ -49,13 +49,13 @@ impl Hasher for CustomHasher {
     }
 }
 
-pub(crate) struct TinyHashCache {
+pub(crate) struct HashCache {
     max_capacity: usize,
     cache: HashSet<u64, BuildHasherDefault<CustomHasher>>,
     elem_order: VecDeque<u64>,
 }
 
-impl TinyHashCache {
+impl HashCache {
     pub fn new(max_capacity: usize) -> Self {
         Self {
             max_capacity,
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_cache_insert_same_elements() {
-        let mut cache = TinyHashCache::new(10);
+        let mut cache = HashCache::new(10);
 
         let first_buf = &[1, 2, 3];
         let second_buf = &[1, 2, 3];
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_cache_insert_different_elements() {
-        let mut cache = TinyHashCache::new(10);
+        let mut cache = HashCache::new(10);
 
         let first_buf = &[1, 2, 3];
         let second_buf = &[3, 4, 5];
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_cache_max_capacity() {
-        let mut cache = TinyHashCache::new(1);
+        let mut cache = HashCache::new(1);
 
         let first_buf = &[1, 2, 3];
         let second_buf = &[3, 4, 5];

@@ -13,7 +13,9 @@
 mod tests {
 
     use bee_crypto::Kerl;
-    use bee_signing::{PrivateKeyGenerator, Seed, TernarySeed, WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder};
+    use bee_signing::ternary::{
+        PrivateKeyGenerator, Seed, TernarySeed, WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder,
+    };
     use bee_ternary::{T1B1Buf, TryteBuf};
 
     #[test]

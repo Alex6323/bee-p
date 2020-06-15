@@ -15,7 +15,7 @@ use crate::{
 };
 
 use bee_crypto::{Kerl, Sponge};
-use bee_signing::{PublicKey, Signature, WotsPublicKey};
+use bee_signing::ternary::{PublicKey, Signature, WotsPublicKey};
 use bee_ternary::TritBuf;
 
 use std::marker::PhantomData;

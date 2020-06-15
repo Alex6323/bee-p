@@ -30,7 +30,6 @@ impl StaticPeerManager {
     }
 
     async fn add_endpoint(&mut self, url: &str) {
-        // TODO block ?
         match Url::from_url_str(url).await {
             Ok(url) => {
                 if let Err(e) = self.network.send(AddEndpoint { url, responder: None }).await {

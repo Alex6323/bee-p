@@ -20,6 +20,9 @@ use log::info;
 pub(crate) struct TpsWorker {
     incoming: u64,
     new: u64,
+    known: u64,
+    stale: u64,
+    invalid: u64,
     outgoing: u64,
 }
 
@@ -28,6 +31,9 @@ impl TpsWorker {
         Self {
             incoming: 0,
             new: 0,
+            known: 0,
+            stale: 0,
+            invalid: 0,
             outgoing: 0,
         }
     }
@@ -35,17 +41,26 @@ impl TpsWorker {
     fn tps(&mut self) {
         let incoming = Protocol::get().metrics.transaction_broadcast_received();
         let new = Protocol::get().metrics.new_transactions_received();
+        let known = Protocol::get().metrics.known_transactions_received();
+        let stale = Protocol::get().metrics.stale_transactions_received();
+        let invalid = Protocol::get().metrics.invalid_transactions_received();
         let outgoing = Protocol::get().metrics.transaction_broadcast_sent();
 
         info!(
-            "incoming {} new {} outgoing {}",
+            "incoming {} new {} known {} stale {} invalid {} outgoing {}",
             incoming - self.incoming,
             new - self.new,
+            known - self.known,
+            stale - self.stale,
+            invalid - self.invalid,
             outgoing - self.outgoing
         );
 
         self.incoming = incoming;
         self.new = new;
+        self.known = known;
+        self.stale = stale;
+        self.invalid = invalid;
         self.outgoing = outgoing;
     }
 
