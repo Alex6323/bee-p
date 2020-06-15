@@ -14,7 +14,6 @@ use super::whitelist;
 use crate::{
     address::url::{Protocol, Url},
     commands::{Command, CommandReceiver as Commands, Responder},
-    config::NetworkConfig,
     endpoint::{outbox::Outbox, store::Endpoints, Endpoint as Ep, EndpointId as EpId},
     errors::Result,
     events::{Event, EventPublisher as Notifier, EventPublisher as Publisher, EventSubscriber as Events},
@@ -38,7 +37,7 @@ pub struct EndpointWorker {
     shutdown: Shutdown,
     notifier: Notifier,
     publisher: Publisher,
-    reconnect_interval: u64,
+    reconnect_interval: Duration,
 }
 
 impl EndpointWorker {
@@ -48,7 +47,7 @@ impl EndpointWorker {
         shutdown: Shutdown,
         notifier: Notifier,
         publisher: Publisher,
-        reconnect_interval: u64,
+        reconnect_interval: Duration,
     ) -> Self {
         Self {
             commands,
@@ -298,7 +297,7 @@ async fn rmv_endpoint(
 #[inline(always)]
 async fn try_connect(
     epid: EpId,
-    reconnect_interval: u64,
+    reconnect_interval: Duration,
     contacts: &mut Endpoints,
     connected: &mut Endpoints,
     responder: Option<Responder<bool>>,
@@ -369,8 +368,8 @@ async fn try_connect(
 }
 
 #[inline(always)]
-async fn raise_event_after_delay(event: Event, delay: u64, mut notifier: Notifier) -> Result<()> {
-    task::sleep(Duration::from_millis(delay)).await;
+async fn raise_event_after_delay(event: Event, delay: Duration, mut notifier: Notifier) -> Result<()> {
+    task::sleep(delay).await;
 
     Ok(notifier.send(event).await?)
 }
