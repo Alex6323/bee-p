@@ -30,8 +30,8 @@ pub trait PrivateKeyGenerator {
     /// # Example
     ///
     /// ```
-    /// use bee_crypto::Kerl;
-    /// use bee_signing::{
+    /// use bee_crypto::ternary::Kerl;
+    /// use bee_signing::ternary::{
     ///     PrivateKeyGenerator, Seed, TernarySeed, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder,
     /// };
     ///
@@ -58,15 +58,15 @@ pub trait PrivateKey {
     /// # Example
     ///
     /// ```
-    /// # use bee_crypto::Kerl;
-    /// # use bee_signing::{
+    /// # use bee_crypto::ternary::Kerl;
+    /// # use bee_signing::ternary::{
     ///     TernarySeed,
     ///     PrivateKeyGenerator,
     ///     Seed,
     ///     WotsSpongePrivateKeyGeneratorBuilder,
     ///     WotsSecurityLevel,
     /// };
-    /// use bee_signing::PrivateKey;
+    /// use bee_signing::ternary::PrivateKey;
     ///
     /// # let seed = TernarySeed::<Kerl>::new();
     /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
@@ -87,15 +87,15 @@ pub trait PrivateKey {
     /// # Example
     ///
     /// ```
-    /// # use bee_crypto::Kerl;
-    /// # use bee_signing::{
+    /// # use bee_crypto::ternary::Kerl;
+    /// # use bee_signing::ternary::{
     ///     TernarySeed,
     ///     PrivateKeyGenerator,
     ///     Seed,
     ///     WotsSpongePrivateKeyGeneratorBuilder,
     ///     WotsSecurityLevel,
     /// };
-    /// use bee_signing::PrivateKey;
+    /// use bee_signing::ternary::PrivateKey;
     /// use bee_ternary::{
     ///     T1B1Buf,
     ///     TryteBuf,
