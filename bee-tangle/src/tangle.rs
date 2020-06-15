@@ -17,7 +17,7 @@ use crate::{
 };
 
 use bee_crypto::ternary::Hash;
-use bee_transaction::{BundledTransaction as Transaction, TransactionVertex};
+use bee_transaction::{TransactionVertex, bundled::{BundledTransaction as Transaction}};
 
 use std::{
     collections::HashSet,
@@ -414,7 +414,7 @@ mod tests {
         field::rand_trits_field,
         transaction::{create_random_attached_tx, create_random_tx},
     };
-    use bee_transaction::{BundledTransactionField, Value};
+    use bee_transaction::bundled::{BundledTransactionField, Value};
 
     use async_std::{sync::channel, task::block_on};
     use serial_test::serial;

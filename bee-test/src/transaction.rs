@@ -13,8 +13,11 @@ use crate::field::rand_trits_field;
 
 use bee_crypto::ternary::Hash;
 use bee_transaction::{
-    Address, BundledTransaction as Transaction, BundledTransactionBuilder as TransactionBuilder,
-    BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, TransactionVertex, Value,
+    bundled::{
+        Address, BundledTransaction as Transaction, BundledTransactionBuilder as TransactionBuilder,
+        BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, Value,
+    },
+    TransactionVertex,
 };
 
 pub fn clone_tx(tx: &Transaction) -> Transaction {

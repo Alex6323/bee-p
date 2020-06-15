@@ -12,7 +12,7 @@
 use crate::tangle::Tangle;
 
 use bee_crypto::ternary::Hash;
-use bee_transaction::BundledTransaction as Transaction;
+use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use std::ops::Deref;
 
