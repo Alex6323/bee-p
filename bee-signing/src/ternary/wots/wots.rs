@@ -11,7 +11,7 @@
 
 use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 
-use bee_crypto::Sponge;
+use bee_crypto::ternary::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
 use std::{

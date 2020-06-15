@@ -11,7 +11,7 @@
 
 #[cfg(test)]
 mod tests {
-    use bee_crypto::{CurlP27, Sponge};
+    use bee_crypto::ternary::{CurlP27, Sponge};
     use bee_ternary::{T1B1Buf, T3B1Buf, Trits, TryteBuf, T1B1};
 
     const INPUT_TRITS: &[i8] = &[

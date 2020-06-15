@@ -11,7 +11,7 @@
 
 use crate::ternary::{PrivateKeyGenerator, Seed, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
 
-use bee_crypto::Sponge;
+use bee_crypto::ternary::Sponge;
 use bee_ternary::{Btrit, TritBuf};
 use bee_ternary_ext::bigint::{
     common::{BigEndian, U8Repr},
