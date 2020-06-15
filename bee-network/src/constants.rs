@@ -21,4 +21,4 @@ pub(crate) const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0
 pub(crate) const MAX_BUFFER_SIZE: usize = 1654;
 pub(crate) const BYTES_CHANNEL_CAPACITY: usize = 10000;
 
-pub(crate) const DEFAULT_RECONNECT_INTERVAL: Duration = Duration::from_secs(60);
+pub(crate) const DEFAULT_RECONNECT_INTERVAL: u64 = 60;

@@ -20,7 +20,7 @@ use std::{net::IpAddr, time::Duration};
 pub struct NetworkConfigBuilder {
     binding_port: Option<u16>,
     binding_addr: Option<IpAddr>,
-    reconnect_interval: Option<Duration>,
+    reconnect_interval: Option<u64>,
 }
 
 impl NetworkConfigBuilder {
@@ -47,7 +47,7 @@ impl NetworkConfigBuilder {
     }
 
     /// Sets the interval (in seconds) reconnection attempts occur.
-    pub fn reconnect_interval(mut self, interval: Duration) -> Self {
+    pub fn reconnect_interval(mut self, interval: u64) -> Self {
         self.reconnect_interval.replace(interval);
         self
     }
@@ -57,9 +57,10 @@ impl NetworkConfigBuilder {
         NetworkConfig {
             binding_port: self.binding_port.unwrap_or(crate::constants::DEFAULT_BINDING_PORT),
             binding_addr: self.binding_addr.unwrap_or(crate::constants::DEFAULT_BINDING_ADDR),
-            reconnect_interval: self
-                .reconnect_interval
-                .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL),
+            reconnect_interval: Duration::from_secs(
+                self.reconnect_interval
+                    .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL),
+            ),
         }
     }
 }
