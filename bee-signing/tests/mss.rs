@@ -12,7 +12,7 @@
 #[cfg(test)]
 mod tests {
 
-    use bee_crypto::{CurlP27, CurlP81, Kerl, Sponge};
+    use bee_crypto::ternary::{CurlP27, CurlP81, Kerl, Sponge};
     use bee_signing::ternary::{
         MssError, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature, PrivateKey, PrivateKeyGenerator,
         PublicKey, RecoverableSignature, Seed, Signature, WotsPublicKey, WotsSecurityLevel,

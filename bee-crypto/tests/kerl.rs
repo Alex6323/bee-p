@@ -11,7 +11,7 @@
 
 #[cfg(test)]
 mod tests {
-    use bee_crypto::{Kerl, Sponge};
+    use bee_crypto::ternary::{Kerl, Sponge};
     use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, TryteBuf};
 
     macro_rules! test_kerl {

@@ -15,7 +15,7 @@ use crate::bundled::{
     BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
 };
 
-use bee_crypto::{Kerl, Sponge};
+use bee_crypto::ternary::{Kerl, Sponge};
 use bee_signing::ternary::{
     normalize_hash, PrivateKey, PrivateKeyGenerator, Signature, TernarySeed, WotsSecurityLevel,
     WotsSpongePrivateKeyGeneratorBuilder,

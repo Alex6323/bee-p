@@ -14,7 +14,7 @@ use crate::{
     TransactionVertex,
 };
 
-use bee_crypto::{Kerl, Sponge};
+use bee_crypto::ternary::{Kerl, Sponge};
 use bee_signing::ternary::{PublicKey, Signature, WotsPublicKey};
 use bee_ternary::TritBuf;
 

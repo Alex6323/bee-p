@@ -12,7 +12,7 @@
 #[cfg(test)]
 mod tests {
 
-    use bee_crypto::Kerl;
+    use bee_crypto::ternary::Kerl;
     use bee_signing::ternary::{
         PrivateKeyGenerator, Seed, TernarySeed, WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder,
     };

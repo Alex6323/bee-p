@@ -11,7 +11,7 @@
 
 use crate::milestone::{Milestone, MilestoneIndex};
 
-use bee_crypto::{Kerl, Sponge};
+use bee_crypto::ternary::{Kerl, Sponge};
 use bee_signing::ternary::{
     normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,
 };
@@ -168,7 +168,7 @@ mod tests {
 
     use super::*;
 
-    use bee_crypto::CurlP27;
+    use bee_crypto::ternary::CurlP27;
     use bee_ternary::{T1B1Buf, TryteBuf};
 
     fn generic_validate_milestone<S: Sponge + Default>(

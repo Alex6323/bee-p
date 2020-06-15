@@ -11,7 +11,7 @@
 
 use crate::ternary::{PrivateKeyGenerator, Seed, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
 
-use bee_crypto::Sponge;
+use bee_crypto::ternary::Sponge;
 use bee_ternary::TritBuf;
 
 use std::marker::PhantomData;

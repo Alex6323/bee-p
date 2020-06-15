@@ -11,7 +11,7 @@
 
 use crate::ternary::Seed;
 
-use bee_crypto::Sponge;
+use bee_crypto::ternary::Sponge;
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
