@@ -17,13 +17,13 @@ use std::{
     task::{Context, Poll, Waker},
 };
 
-pub(crate) struct WaitPriorityQueue<T: Ord + Eq> {
+pub struct WaitPriorityQueue<T: Ord + Eq> {
     // TODO use an RWLock ?
     inner: Mutex<(BinaryHeap<T>, VecDeque<Waker>)>,
 }
 
 impl<T: Ord + Eq> WaitPriorityQueue<T> {
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.inner.lock().unwrap().0.is_empty()
     }
 }
@@ -51,7 +51,7 @@ impl<T: Ord + Eq> WaitPriorityQueue<T> {
     }
 }
 
-pub(crate) struct WaitFut<'a, T: Ord + Eq>(&'a WaitPriorityQueue<T>);
+pub struct WaitFut<'a, T: Ord + Eq>(&'a WaitPriorityQueue<T>);
 
 impl<'a, T: Ord + Eq> Future for WaitFut<'a, T> {
     type Output = T;

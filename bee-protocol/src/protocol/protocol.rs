@@ -14,7 +14,6 @@ use crate::{
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
-    util::WaitPriorityQueue,
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
@@ -25,6 +24,7 @@ use crate::{
     },
 };
 
+use bee_common::WaitPriorityQueue;
 use bee_crypto::ternary::{CurlP27, CurlP81, Hash, Kerl, SpongeType};
 use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::ternary::WotsPublicKey;
