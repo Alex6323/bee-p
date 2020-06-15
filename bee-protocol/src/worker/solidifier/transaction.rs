@@ -11,8 +11,8 @@
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol};
 
+use bee_crypto::ternary::Hash;
 use bee_tangle::tangle;
-use bee_transaction::Hash;
 
 use std::collections::HashSet;
 

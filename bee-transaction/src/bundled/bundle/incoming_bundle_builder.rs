@@ -178,7 +178,9 @@ mod tests {
 
     use super::*;
 
-    use crate::bundled::{Address, BundledTransactionBuilder, Hash, Index, Nonce, Payload, Tag, Timestamp, Value};
+    use crate::bundled::{Address, BundledTransactionBuilder, Index, Nonce, Payload, Tag, Timestamp, Value};
+
+    use bee_crypto::ternary::Hash;
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
         BundledTransactionBuilder::new()

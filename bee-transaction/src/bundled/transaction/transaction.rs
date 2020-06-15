@@ -15,16 +15,14 @@ use crate::{
             Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
             OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
         },
-        Address, BundledTransactionBuilder, BundledTransactionField, Hash, Index, Nonce, Payload, Tag, Timestamp,
-        Value,
+        Address, BundledTransactionBuilder, BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, Value,
     },
     TransactionVertex,
 };
 
-use bee_ternary::{raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Trits, T1B1};
+use bee_crypto::ternary::Hash;
+use bee_ternary::{raw::RawEncoding, Btrit, T1B1Buf, Trits, T1B1};
 use bee_ternary_ext::num_conversions::{self, i64_to_tritbuf, tritbuf_try_to_i64};
-
-use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub enum BundledTransactionError {

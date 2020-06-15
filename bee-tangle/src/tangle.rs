@@ -16,7 +16,8 @@ use crate::{
     vertex::{TransactionRef, Vertex},
 };
 
-use bee_transaction::{BundledTransaction as Transaction, Hash, TransactionVertex};
+use bee_crypto::ternary::Hash;
+use bee_transaction::{BundledTransaction as Transaction, TransactionVertex};
 
 use std::{
     collections::HashSet,
