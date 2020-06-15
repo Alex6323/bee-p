@@ -11,9 +11,9 @@
 
 use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
 
+use bee_crypto::ternary::Hash;
 use bee_tangle::tangle;
 use bee_ternary::T5B1Buf;
-use bee_transaction::Hash;
 
 use bytemuck::cast_slice;
 use futures::{channel::oneshot, future::FutureExt, select};

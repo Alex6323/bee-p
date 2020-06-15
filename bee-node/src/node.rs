@@ -15,13 +15,13 @@ use crate::{
 };
 
 use bee_common::logger_init;
+use bee_crypto::ternary::Hash;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::Protocol;
 use bee_snapshot::LocalSnapshot;
 use bee_tangle::tangle;
-use bee_transaction::Hash;
 
 use std::collections::HashMap;
 

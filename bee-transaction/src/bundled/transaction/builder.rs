@@ -11,10 +11,11 @@
 
 use crate::bundled::{
     constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
-    Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Hash, Index, Nonce, Payload, Tag,
+    Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Index, Nonce, Payload, Tag,
     Timestamp, Value,
 };
 
+use bee_crypto::ternary::Hash;
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};
 
 #[derive(Default)]

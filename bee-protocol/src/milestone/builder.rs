@@ -11,13 +11,13 @@
 
 use crate::milestone::{Milestone, MilestoneIndex};
 
-use bee_crypto::ternary::{Kerl, Sponge};
+use bee_crypto::ternary::{Hash, Kerl, Sponge};
 use bee_signing::ternary::{
     normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,
 };
 use bee_ternary::{num_conversions::TritsI64ConversionError, TritBuf};
 use bee_transaction::{
-    BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Hash, Payload,
+    BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Payload,
     TransactionVertex,
 };
 

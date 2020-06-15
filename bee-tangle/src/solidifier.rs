@@ -11,7 +11,8 @@
 
 use crate::{tangle, Tangle};
 
-use bee_transaction::{Hash, TransactionVertex};
+use bee_crypto::ternary::Hash;
+use bee_transaction::TransactionVertex;
 
 use std::collections::{HashMap, HashSet};
 

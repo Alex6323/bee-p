@@ -19,8 +19,8 @@ use crate::{
     },
 };
 
+use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
-use bee_transaction::Hash;
 
 use futures::sink::SinkExt;
 use log::warn;

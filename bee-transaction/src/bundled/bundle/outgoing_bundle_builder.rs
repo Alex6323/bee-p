@@ -12,10 +12,10 @@
 use crate::bundled::{
     constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
     Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
-    BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
+    BundledTransactionField, BundledTransactions, Index, Payload, Tag,
 };
 
-use bee_crypto::ternary::{Kerl, Sponge};
+use bee_crypto::ternary::{Hash, Kerl, Sponge};
 use bee_signing::ternary::{
     normalize_hash, PrivateKey, PrivateKeyGenerator, Signature, TernarySeed, WotsSecurityLevel,
     WotsSpongePrivateKeyGeneratorBuilder,

@@ -14,10 +14,10 @@ use crate::{
     protocol::Protocol,
 };
 
-use bee_crypto::ternary::{Kerl, Sponge};
+use bee_crypto::ternary::{Hash, Kerl, Sponge};
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_tangle::tangle;
-use bee_transaction::{Hash, TransactionVertex};
+use bee_transaction::TransactionVertex;
 
 use std::marker::PhantomData;
 

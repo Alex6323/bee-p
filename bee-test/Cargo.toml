@@ -10,6 +10,7 @@ license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "test"]
 
 [dependencies]
+bee-crypto = { path = "../bee-crypto" }
 bee-protocol = { path = "../bee-protocol" }
 bee-ternary = { path = "../bee-ternary" }
 bee-transaction = { path = "../bee-transaction" }
