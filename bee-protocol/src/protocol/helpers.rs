@@ -32,7 +32,7 @@ impl Protocol {
         Protocol::get()
             .milestone_requester_worker
             .0
-            .insert(MilestoneRequesterWorkerEntry(index, to));
+            .push(MilestoneRequesterWorkerEntry(index, to));
     }
 
     pub fn request_last_milestone(to: Option<EndpointId>) {
@@ -74,7 +74,7 @@ impl Protocol {
         Protocol::get()
             .transaction_requester_worker
             .0
-            .insert(TransactionRequesterWorkerEntry(hash, index));
+            .push(TransactionRequesterWorkerEntry(hash, index));
     }
 
     pub fn transaction_requester_is_empty() -> bool {

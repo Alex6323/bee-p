@@ -37,7 +37,7 @@ impl<T: Ord + Eq> Default for WaitPriorityQueue<T> {
 }
 
 impl<T: Ord + Eq> WaitPriorityQueue<T> {
-    pub fn insert(&self, entry: T) {
+    pub fn push(&self, entry: T) {
         let mut inner = self.inner.lock().unwrap();
 
         inner.0.push(entry);
