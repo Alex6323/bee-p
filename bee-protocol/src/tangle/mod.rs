@@ -181,6 +181,10 @@ impl MsTangle {
             self.inner.get_metadata(hash).map(|m| m.is_solid()).unwrap_or(false)
         }
     }
+
+    pub fn inner(&self) -> &Tangle<Flags> {
+        &self.inner
+    }
 }
 
 static TANGLE: AtomicPtr<MsTangle> = AtomicPtr::new(ptr::null_mut());
