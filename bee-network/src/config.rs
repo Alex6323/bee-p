@@ -9,21 +9,18 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    address::{Address, Port},
-    timing::Seconds,
-};
+use crate::address::{Address, Port};
 
 use serde::Deserialize;
 
-use std::net::IpAddr;
+use std::{net::IpAddr, time::Duration};
 
 /// Network configuration builder.
 #[derive(Default, Deserialize)]
 pub struct NetworkConfigBuilder {
     binding_port: Option<u16>,
     binding_addr: Option<IpAddr>,
-    reconnect_interval: Option<Seconds>,
+    reconnect_interval: Option<Duration>,
 }
 
 impl NetworkConfigBuilder {
@@ -50,7 +47,7 @@ impl NetworkConfigBuilder {
     }
 
     /// Sets the interval (in seconds) reconnection attempts occur.
-    pub fn reconnect_interval(mut self, interval: Seconds) -> Self {
+    pub fn reconnect_interval(mut self, interval: Duration) -> Self {
         self.reconnect_interval.replace(interval);
         self
     }
@@ -62,7 +59,7 @@ impl NetworkConfigBuilder {
             binding_addr: self.binding_addr.unwrap_or(crate::constants::DEFAULT_BINDING_ADDR),
             reconnect_interval: self
                 .reconnect_interval
-                .unwrap_or(crate::timing::DEFAULT_RECONNECT_INTERVAL),
+                .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL),
         }
     }
 }
@@ -73,7 +70,7 @@ pub struct NetworkConfig {
     // TODO: use Port instead of u16
     pub(crate) binding_port: u16,
     pub(crate) binding_addr: IpAddr,
-    pub(crate) reconnect_interval: Seconds,
+    pub(crate) reconnect_interval: Duration,
 }
 
 impl NetworkConfig {
@@ -101,7 +98,7 @@ impl NetworkConfig {
     }
 
     /// Returns the interval between reconnect attempts.
-    pub fn reconnect_interval(&self) -> Seconds {
+    pub fn reconnect_interval(&self) -> Duration {
         self.reconnect_interval
     }
 }

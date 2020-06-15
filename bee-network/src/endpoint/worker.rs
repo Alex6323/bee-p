@@ -19,7 +19,6 @@ use crate::{
     events::{Event, EventPublisher as Notifier, EventPublisher as Publisher, EventSubscriber as Events},
     shutdown::ShutdownListener as Shutdown,
     tcp,
-    timing::Seconds,
     utils::time,
 };
 
@@ -38,7 +37,7 @@ pub struct EndpointWorker {
     shutdown: Shutdown,
     notifier: Notifier,
     publisher: Publisher,
-    reconnect_interval: Seconds,
+    reconnect_interval: Duration,
 }
 
 impl EndpointWorker {
@@ -48,7 +47,7 @@ impl EndpointWorker {
         shutdown: Shutdown,
         notifier: Notifier,
         publisher: Publisher,
-        reconnect_interval: Seconds,
+        reconnect_interval: Duration,
     ) -> Self {
         Self {
             commands,
@@ -298,7 +297,7 @@ async fn rmv_endpoint(
 #[inline(always)]
 async fn try_connect(
     epid: EpId,
-    reconnect_interval: Seconds,
+    reconnect_interval: Duration,
     contacts: &mut Endpoints,
     connected: &mut Endpoints,
     responder: Option<Responder<bool>>,
@@ -369,8 +368,8 @@ async fn try_connect(
 }
 
 #[inline(always)]
-async fn raise_event_after_delay(event: Event, delay: Seconds, mut notifier: Notifier) -> Result<()> {
-    task::sleep(Duration::from_secs(*delay)).await;
+async fn raise_event_after_delay(event: Event, delay: Duration, mut notifier: Notifier) -> Result<()> {
+    task::sleep(delay).await;
 
     Ok(notifier.send(event).await?)
 }

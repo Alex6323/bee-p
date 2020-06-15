@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::net::{IpAddr, Ipv4Addr};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    time::Duration,
+};
 
 // TODO: use Port type instead of primitive
 pub(crate) const DEFAULT_BINDING_PORT: u16 = 15600;
@@ -17,3 +20,5 @@ pub(crate) const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0
 
 pub(crate) const MAX_BUFFER_SIZE: usize = 1654;
 pub(crate) const BYTES_CHANNEL_CAPACITY: usize = 10000;
+
+pub(crate) const DEFAULT_RECONNECT_INTERVAL: Duration = Duration::from_secs(60);
