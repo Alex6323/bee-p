@@ -11,7 +11,7 @@
 
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
-use bee_transaction::BundledTransactionField;
+use bee_transaction::bundled::BundledTransactionField;
 
 use std::marker::PhantomData;
 

@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
-use bee_transaction::BundledTransactionField as TransactionField;
+use bee_transaction::bundled::BundledTransactionField as TransactionField;
 
 use rand::Rng;
 

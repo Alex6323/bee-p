@@ -17,7 +17,9 @@ use bee_signing::ternary::{
 };
 use bee_ternary::{num_conversions::TritsI64ConversionError, TritBuf};
 use bee_transaction::{
-    BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Payload,
+    bundled::{
+        BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Payload,
+    },
     TransactionVertex,
 };
 
