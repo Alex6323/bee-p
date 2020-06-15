@@ -24,16 +24,15 @@ use std::cmp::Ordering;
 #[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
 
-// TODO check that this is the right order
 impl PartialOrd for TransactionRequesterWorkerEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.1.partial_cmp(&other.1)
+        other.1.partial_cmp(&self.1)
     }
 }
 
 impl Ord for TransactionRequesterWorkerEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.1.cmp(&other.1)
+        other.1.cmp(&self.1)
     }
 }
 
