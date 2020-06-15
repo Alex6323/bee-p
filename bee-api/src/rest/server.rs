@@ -20,6 +20,19 @@ pub const SERVER_ADDRESS: &str = "127.0.0.1:3030";
 
 pub async fn run(addr: SocketAddr) {
 
+    let approvers_of_transaction = warp::post()
+        .and(warp::path("v1"))
+        .and(warp::path("transaction"))
+        .and(warp::path::end())
+        .and(json_body())
+        .and_then(routes::approvers_of_transaction);
+
+    let is_synced = warp::get()
+        .and(warp::path("v1"))
+        .and(warp::path("tangle"))
+        .and(warp::path::end())
+        .and_then(routes::is_synced);
+
     let tx_by_hash = warp::post()
         .and(warp::path("v1"))
         .and(warp::path("transaction"))
@@ -27,7 +40,7 @@ pub async fn run(addr: SocketAddr) {
         .and(json_body())
         .and_then(routes::transaction_by_hash);
 
-    let routes = tx_by_hash;
+    let routes = tx_by_hash.or(approvers_of_transaction).or(is_synced);
 
     warp::serve(routes)
         .run(addr)

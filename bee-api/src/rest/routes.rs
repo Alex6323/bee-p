@@ -18,6 +18,56 @@ use bee_transaction::BundledTransaction;
 use serde_json::Value;
 use std::collections::HashMap;
 
+pub async fn approvers_of_transaction(json: Value) -> Result<impl warp::Reply, warp::Rejection> {
+
+    match deserialize_hash_array(json["hashes"].as_array()) {
+
+        Ok(hashes) => {
+
+            let mut ret = HashMap::new();
+            for (hash, tx_refs) in ApiImpl::approvers_of_transaction(&hashes).iter() {
+
+                let hash_string = hash.as_trits().
+                    iter_trytes()
+                    .map(|trit| char::from(trit))
+                    .collect::<String>();
+
+                let mut approvers = Vec::new();
+                for tx_ref in tx_refs {
+
+                    let mut tx_buf = TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len());
+                    tx_ref.into_trits_allocated(&mut tx_buf);
+
+                    let tx_string = tx_buf
+                        .iter_trytes()
+                        .map(|trit| char::from(trit))
+                        .collect::<String>();
+
+                    approvers.push(tx_string);
+
+                }
+
+                ret.insert(hash_string, approvers);
+
+            }
+
+            Ok(warp::reply::json(&ret))
+
+        }
+
+        Err(x) => {
+            Ok(warp::reply::json(&x.msg ))
+        }
+
+    }
+
+}
+
+pub async fn is_synced() -> Result<impl warp::Reply, warp::Rejection> {
+    let ret = ApiImpl::is_synced();
+    Ok(warp::reply::json(&ret))
+}
+
 pub async fn transaction_by_hash(json: Value) -> Result<impl warp::Reply, warp::Rejection> {
 
     match deserialize_hash_array(json["hashes"].as_array()) {
