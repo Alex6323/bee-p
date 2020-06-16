@@ -22,7 +22,7 @@
 //! * very few dependencies
 //! * well documented
 
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![recursion_limit = "1024"]
 
 pub use address::{url::Url, Address, Port};
