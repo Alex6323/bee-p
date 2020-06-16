@@ -196,7 +196,7 @@ mod tests {
         let protocol_config = ProtocolConfig::build().finish();
         block_on(Protocol::init(protocol_config, network));
 
-        assert_eq!(tangle().inner.size(), 0);
+        assert_eq!(tangle().size(), 0);
 
         let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();

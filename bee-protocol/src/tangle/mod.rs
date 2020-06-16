@@ -169,11 +169,12 @@ impl MsTangle {
         self.solid_entry_points.remove(hash);
     }
 
-    /// Returns whether the transaction associated `hash` is a solid entry point.
+    /// Returns whether the transaction associated with `hash` is a solid entry point.
     pub fn is_solid_entry_point(&self, hash: &TxHash) -> bool {
         self.solid_entry_points.contains(hash)
     }
 
+    /// Returns whether the transaction associated with `hash` is deemed `solid`.
     pub fn is_solid_transaction(&self, hash: &TxHash) -> bool {
         if self.is_solid_entry_point(hash) {
             true
@@ -182,8 +183,14 @@ impl MsTangle {
         }
     }
 
+    /// Returns a reference to the inner (abstract) Tangle.
     pub fn inner(&self) -> &Tangle<Flags> {
         &self.inner
+    }
+
+    /// Returns the size of the current Tangle.
+    pub fn size(&self) -> usize {
+        self.inner.size()
     }
 }
 
