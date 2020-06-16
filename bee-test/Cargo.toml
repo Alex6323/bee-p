@@ -11,6 +11,7 @@ keywords = ["iota", "tangle", "bee", "framework", "test"]
 
 [dependencies]
 bee-protocol = { path = "../bee-protocol" }
+bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { path = "../bee-ternary" }
 bee-transaction = { path = "../bee-transaction" }
 

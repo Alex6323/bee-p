@@ -20,10 +20,6 @@ pub mod traversal;
 mod tangle;
 mod vertex;
 
-// TODO: Move into tangle.rs
-#[cfg(test)]
-mod testhelpers;
-
 use bee_transaction::BundledTransaction as Transaction;
 
 use async_std::sync::Arc;

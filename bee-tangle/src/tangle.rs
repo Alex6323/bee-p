@@ -150,7 +150,7 @@ where
     }
 
     /// Returns the number of children of a vertex.
-    pub(crate) fn num_children(&self, hash: &TxHash) -> usize {
+    pub fn num_children(&self, hash: &TxHash) -> usize {
         self.children.get(hash).map_or(0, |r| r.value().len())
     }
 
@@ -165,8 +165,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testhelpers::*;
-    use bee_test::transaction::create_random_tx;
+    use bee_test::{tangle::*, transaction::create_random_tx};
 
     #[test]
     fn new_tangle() {

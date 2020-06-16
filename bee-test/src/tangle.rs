@@ -9,12 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::tangle::Tangle;
+use crate::transaction::{create_random_attached_tx, create_random_tx};
 
-use bee_test::transaction::{create_random_attached_tx, create_random_tx};
+use bee_tangle::Tangle;
 use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVertex};
 
-pub(crate) struct Transactions {
+pub struct Transactions {
     pub a: Tx,
     pub b: Tx,
     pub c: Tx,
@@ -22,7 +22,7 @@ pub(crate) struct Transactions {
     pub e: Tx,
 }
 
-pub(crate) struct Hashes {
+pub struct Hashes {
     pub a_hash: TxHash,
     pub b_hash: TxHash,
     pub c_hash: TxHash,
@@ -31,7 +31,7 @@ pub(crate) struct Hashes {
 }
 
 #[allow(clippy::many_single_char_names)]
-pub(crate) fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
+pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
     // a   b
     // |\ /
     // | c
@@ -65,8 +65,10 @@ pub(crate) fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
     assert_eq!(*tangle.get(&c_hash).unwrap().branch(), a_hash);
     assert_eq!(*tangle.get(&d_hash).unwrap().trunk(), c_hash);
     assert_eq!(*tangle.get(&d_hash).unwrap().branch(), a_hash);
-    // assert_eq!(*e.trunk(), c_hash);
-    // assert_eq!(*e.branch(), d_hash);
+    assert_eq!(*tangle.get(&e_hash).unwrap().trunk(), c_hash);
+    assert_eq!(*tangle.get(&e_hash).unwrap().branch(), d_hash);
+
+    // TODO ensure children reference their parents correctly
 
     assert_eq!(5, tangle.size());
     assert_eq!(2, tangle.num_children(&a_hash));

@@ -227,7 +227,7 @@ mod tests {
     fn confirm_transaction() {
         // Example from https://github.com/iotaledger/protocol-rfcs/blob/master/text/0005-white-flag/0005-white-flag.md
 
-        let mut tangle = MsTangle::new();
+        let tangle = MsTangle::new();
 
         // Creates solid entry points
         let sep1 = rand_trits_field::<TxHash>();

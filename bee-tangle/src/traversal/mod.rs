@@ -180,7 +180,7 @@ pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testhelpers::*;
+    use bee_test::tangle::*;
 
     #[test]
     fn visit_children_follow_trunk_in_simple_graph() {
