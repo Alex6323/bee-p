@@ -16,7 +16,6 @@ use serde_json::Value;
 
 use std::convert::TryFrom;
 
-
 pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
     Ok(warp::reply::json(&Value::from(ServiceImpl::node_info())))
 }

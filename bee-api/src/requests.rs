@@ -9,10 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_ternary::{T1B1Buf, TryteBuf};
 use bee_transaction::{Hash, BundledTransactionField};
-use std::convert::TryFrom;
+
 use serde_json::Value as JsonValue;
-use bee_ternary::{TryteBuf, T1B1Buf};
+
+use std::convert::TryFrom;
 
 pub struct TransactionByHashRequest {
     pub hashes: Vec<Hash>
@@ -63,5 +65,4 @@ impl TryFrom<&JsonValue> for HashWrapper {
             None => Err("No string provided")
         }
     }
-
 }

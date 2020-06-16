@@ -32,7 +32,7 @@ impl Service for ServiceImpl {
     fn transaction_by_hash(req: TransactionByHashRequest) -> TransactionByHashResponse {
         let mut ret = HashMap::new();
         for hash in req.hashes {
-            ret.insert(hash.clone(), tangle().get_transaction(&hash));
+            ret.insert(hash, tangle().get_transaction(&hash));
         }
         TransactionByHashResponse { hashes: ret }
     }
