@@ -45,7 +45,7 @@ impl MilestoneRequesterWorker {
         loop {
             select! {
                 // TODO impl fused stream
-                entry = Protocol::get().milestone_requester_worker.0.pop().fuse() => {
+                entry = Protocol::get().milestone_requester_worker.0.pop() => {
                     if let MilestoneRequesterWorkerEntry(index) = entry {
                         if tangle().contains_milestone(&(index.into())) {
                             continue;
