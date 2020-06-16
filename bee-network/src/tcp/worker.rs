@@ -12,12 +12,12 @@
 use crate::{
     address::Address,
     endpoint::{origin::Origin, whitelist},
-    errors::Result,
     events::EventPublisher as Notifier,
-    shutdown::ShutdownListener as Shutdown,
 };
 
 use super::{connection::TcpConnection, spawn_connection_workers};
+
+use bee_common::shutdown::{Result, ShutdownListener as Shutdown};
 
 use async_std::net::TcpListener;
 use futures::{prelude::*, select};

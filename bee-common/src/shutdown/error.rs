@@ -9,7 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod logger;
-pub mod shutdown;
+use err_derive::Error;
 
-pub use logger::{logger_init, LoggerConfig, LoggerConfigBuilder};
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error(display = "Async IO error")]
+    AsyncIo(#[source] async_std::io::Error),
+
+    #[error(display = "Error sending message")]
+    SendingMessageFailed(#[source] futures::channel::mpsc::SendError),
+}
+
+pub type Result<T> = std::result::Result<T, Error>;

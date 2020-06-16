@@ -18,6 +18,8 @@ use cli::CliArgs;
 use config::{NodeConfigBuilder, CONFIG_PATH};
 use node::Node;
 
+use bee_common::shutdown::ShutdownHandler as Shutdown;
+
 use async_std::task::block_on;
 
 use std::fs;
@@ -39,7 +41,9 @@ fn main() {
 
     let config = config_builder.finish();
 
-    let (network, events, shutdown) = bee_network::init(config.network);
+    let mut shutdown = Shutdown::new();
+
+    let (network, events) = bee_network::init(config.network, &mut shutdown);
 
     // TODO: proper shutdown
     let mut node = Node::new(config, network, events, shutdown);

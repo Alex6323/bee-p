@@ -11,16 +11,16 @@
 
 use err_derive::Error;
 
-#[derive(Debug, Error)]
-pub enum ActorError {
-    #[error(display = "Async IO error")]
-    AsyncIo(#[source] async_std::io::Error),
+// #[derive(Debug, Error)]
+// pub enum ActorError {
+//     #[error(display = "Async IO error")]
+//     AsyncIo(#[source] async_std::io::Error),
 
-    #[error(display = "Error sending message")]
-    SendingMessageFailed(#[source] futures::channel::mpsc::SendError),
-}
+//     #[error(display = "Error sending message")]
+//     SendingMessageFailed(#[source] futures::channel::mpsc::SendError),
+// }
 
-pub type Result<T> = std::result::Result<T, ActorError>;
+// pub type Result<T> = std::result::Result<T, ActorError>;
 
 #[derive(Debug, Error)]
 pub enum ConnectionError {

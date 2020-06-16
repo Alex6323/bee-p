@@ -10,7 +10,10 @@ license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "common"]
 
 [dependencies]
+async-std = "1.5.0"
 chrono = "0.4.11"
+err-derive = "0.2.3"
 fern = { version = "0.6.0", features = ["colored"] }
+futures = "0.3.5"
 log = "0.4.8"
 serde = { version = "1.0.104", features = ["derive" ] }

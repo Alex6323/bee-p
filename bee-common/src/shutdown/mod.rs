@@ -9,40 +9,60 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{endpoint::whitelist, errors::Result};
+// TODO remove
+// use crate::{endpoint::whitelist, errors::Result};
+
+mod error;
 
 use async_std::task;
 use futures::channel::oneshot;
 
-pub(crate) type ShutdownNotifier = oneshot::Sender<()>;
-pub(crate) type ShutdownListener = oneshot::Receiver<()>;
-pub(crate) type WorkerTask = task::JoinHandle<Result<()>>;
+pub use error::{Error, Result};
 
-/// Handles the graceful shutdown of the network layer.
-pub struct Shutdown {
+pub type ShutdownNotifier = oneshot::Sender<()>;
+pub type ShutdownListener = oneshot::Receiver<()>;
+pub type TaskHandle = task::JoinHandle<Result<()>>;
+
+/// Handles the graceful shutdown of asynchronous tasks.
+pub struct ShutdownHandler {
     notifiers: Vec<ShutdownNotifier>,
-    tasks: Vec<WorkerTask>,
+    tasks: Vec<TaskHandle>,
+    actions: Vec<Box<dyn Fn()>>,
 }
 
-impl Shutdown {
-    pub(crate) fn new() -> Self {
+impl ShutdownHandler {
+    /// Creates a new instance.
+    pub fn new() -> Self {
         Self {
             notifiers: vec![],
             tasks: vec![],
+            actions: vec![],
         }
     }
 
-    pub(crate) fn add_notifier(&mut self, notifier: ShutdownNotifier) {
+    /// Adds a shutdown notifier.
+    pub fn add_notifier(&mut self, notifier: ShutdownNotifier) {
         self.notifiers.push(notifier);
     }
 
-    pub(crate) fn add_task(&mut self, task: WorkerTask) {
+    /// Adds an asynchronous task.
+    pub fn add_task(&mut self, task: TaskHandle) {
         self.tasks.push(task);
+    }
+
+    /// Adds an action that is applied during shutdown.
+    pub fn add_action(&mut self, action: Box<dyn Fn()>) {
+        self.actions.push(action);
     }
 
     /// Executes the shutdown.
     pub async fn execute(self) {
-        whitelist::drop();
+        for action in self.actions {
+            action();
+        }
+
+        // TODO remove
+        // whitelist::drop();
 
         let mut tasks = self.tasks;
 

@@ -14,14 +14,13 @@ use super::whitelist;
 use crate::{
     address::url::{Protocol, Url},
     commands::{Command, CommandReceiver as Commands, Responder},
-    config::NetworkConfig,
     endpoint::{outbox::Outbox, store::Endpoints, Endpoint as Ep, EndpointId as EpId},
-    errors::Result,
     events::{Event, EventPublisher as Notifier, EventPublisher as Publisher, EventSubscriber as Events},
-    shutdown::ShutdownListener as Shutdown,
     tcp,
     utils::time,
 };
+
+use bee_common::shutdown::{Result, ShutdownListener as Shutdown};
 
 use async_std::{
     prelude::*,

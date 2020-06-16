@@ -32,7 +32,6 @@ pub use endpoint::{origin::Origin, Endpoint, EndpointId};
 pub use events::{Event, EventSubscriber};
 
 pub use network::Network;
-pub use shutdown::Shutdown;
 
 mod address;
 mod commands;
@@ -41,7 +40,6 @@ mod endpoint;
 mod errors;
 mod events;
 mod network;
-mod shutdown;
 mod tcp;
 // mod udp;
 mod config;
@@ -52,16 +50,16 @@ use events::EventSubscriber as Events;
 use tcp::worker::TcpWorker;
 // use udp::worker::UdpWorker;
 
+use bee_common::shutdown::ShutdownHandler as Shutdown;
+
 use async_std::task::spawn;
 use futures::channel::oneshot;
 
 /// Initializes the network layer.
-pub fn init(config: NetworkConfig) -> (Network, Events, Shutdown) {
+pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
     let (command_sender, commands) = commands::command_channel();
     let (event_sender, events) = events::event_channel();
     let (internal_event_sender, internal_events) = events::event_channel();
-
-    let mut shutdown = Shutdown::new();
 
     let (epw_sd_sender, epw_shutdown) = oneshot::channel();
     let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
@@ -88,6 +86,7 @@ pub fn init(config: NetworkConfig) -> (Network, Events, Shutdown) {
     // shutdown.add_task(spawn(udp_worker.run()));
 
     whitelist::init();
+    shutdown.add_action(Box::new(|| whitelist::drop()));
 
-    (Network::new(config, command_sender), events, shutdown)
+    (Network::new(config, command_sender), events)
 }
