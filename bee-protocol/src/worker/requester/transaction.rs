@@ -79,7 +79,6 @@ impl TransactionRequesterWorker {
 
         loop {
             select! {
-                // TODO impl fused stream
                 entry = Protocol::get().transaction_requester_worker.0.pop() => {
                     if let TransactionRequesterWorkerEntry(hash, index) = entry {
                         if !tangle().is_solid_entry_point(&hash) && !tangle().contains_transaction(&hash) {

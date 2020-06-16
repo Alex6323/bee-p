@@ -9,23 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use futures::{
+    future::FusedFuture,
+    stream::{FusedStream, Stream},
+};
 use std::{
-    collections::{
-        BinaryHeap,
-        VecDeque,
-    },
+    collections::{BinaryHeap, VecDeque},
     future::Future,
     pin::Pin,
     sync::Mutex,
-    task::{
-        Context,
-        Poll,
-        Waker,
-    },
-};
-use futures::{
-    future::FusedFuture,
-    stream::{Stream, FusedStream},
+    task::{Context, Poll, Waker},
 };
 
 pub struct WaitPriorityQueue<T: Ord + Eq> {
@@ -47,22 +40,22 @@ impl<T: Ord + Eq> Default for WaitPriorityQueue<T> {
 }
 
 impl<T: Ord + Eq> WaitPriorityQueue<T> {
-    /// Insert an item into the queue. It will be removed in an order consistent with the ordering
+    /// Pushes an item into the queue. It will be removed in an order consistent with the ordering
     /// of itself relative to other items in the queue at the time of removal.
-    pub fn insert(&self, entry: T) {
+    pub fn push(&self, entry: T) {
         let mut inner = self.inner.lock().unwrap();
 
         inner.0.push(entry);
         inner.1.pop_front().map(Waker::wake);
     }
 
-    /// Attempt to remove the item with the highest priority from the queue, returning [`None`] if
+    /// Attempts to remove the item with the highest priority from the queue, returning [`None`] if
     /// there are no available items.
     pub async fn try_pop(&self) -> Option<T> {
         self.inner.lock().unwrap().0.pop()
     }
 
-    /// Remove the item with the highest priority from the queue, waiting on an item should there
+    /// Removes the item with the highest priority from the queue, waiting on an item should there
     /// not be one immediately available.
     pub fn pop(&self) -> impl Future<Output = T> + FusedFuture + '_ {
         WaitFut {
@@ -73,9 +66,7 @@ impl<T: Ord + Eq> WaitPriorityQueue<T> {
 
     /// Returns a stream of highest-priority items from this queue.
     pub fn incoming(&self) -> impl Stream<Item = T> + FusedStream + '_ {
-        WaitIncoming {
-            queue: self,
-        }
+        WaitIncoming { queue: self }
     }
 
     /// Returns an iterator of pending items from this queue (i.e: those that are immediately
@@ -101,7 +92,7 @@ impl<'a, T: Ord + Eq> Future for WaitFut<'a, T> {
             Some(entry) => {
                 self.terminated = true;
                 Poll::Ready(entry)
-            },
+            }
             None => {
                 inner.1.push_back(cx.waker().clone());
                 Poll::Pending
@@ -111,7 +102,9 @@ impl<'a, T: Ord + Eq> Future for WaitFut<'a, T> {
 }
 
 impl<'a, T: Ord + Eq> FusedFuture for WaitFut<'a, T> {
-    fn is_terminated(&self) -> bool { self.terminated }
+    fn is_terminated(&self) -> bool {
+        self.terminated
+    }
 }
 
 pub(crate) struct WaitIncoming<'a, T: Ord + Eq> {
@@ -129,11 +122,13 @@ impl<'a, T: Ord + Eq> Stream for WaitIncoming<'a, T> {
             None => {
                 inner.1.push_back(cx.waker().clone());
                 Poll::Pending
-            },
+            }
         }
     }
 }
 
 impl<'a, T: Ord + Eq> FusedStream for WaitIncoming<'a, T> {
-    fn is_terminated(&self) -> bool { false }
+    fn is_terminated(&self) -> bool {
+        false
+    }
 }
