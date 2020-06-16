@@ -126,7 +126,10 @@ impl<'a, T: Ord + Eq> Stream for WaitIncoming<'a, T> {
 
         match inner.0.pop() {
             Some(entry) => Poll::Ready(Some(entry)),
-            None => Poll::Ready(None),
+            None => {
+                inner.1.push_back(cx.waker().clone());
+                Poll::Pending
+            },
         }
     }
 }
