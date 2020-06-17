@@ -37,7 +37,7 @@ mod tests {
                     .security_level(security)
                     .build()
                     .unwrap();
-                let mut private_key = private_key_generator.generate(&seed, index).unwrap();
+                let mut private_key = private_key_generator.generate_from_seed(&seed, index).unwrap();
                 let public_key = private_key.generate_public_key().unwrap();
                 let signature = private_key.sign(message_trits.as_i8_slice()).unwrap();
                 let recovered_public_key = signature.recover_public_key(message_trits.as_i8_slice()).unwrap();

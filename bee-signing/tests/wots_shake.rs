@@ -30,6 +30,6 @@ mod tests {
             .security_level(WotsSecurityLevel::Medium)
             .build()
             .unwrap();
-        let private_key = private_key_generator.generate(&seed, 0).unwrap();
+        let private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
     }
 }

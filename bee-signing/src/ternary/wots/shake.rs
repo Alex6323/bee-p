@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::{PrivateKeyGenerator, Seed, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
+use crate::ternary::{PrivateKeyGenerator, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
 
 use bee_crypto::ternary::Sponge;
 use bee_ternary::{Btrit, TritBuf};
@@ -55,11 +55,11 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
     type PrivateKey = WotsPrivateKey<S>;
     type Error = WotsError;
 
-    fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
+    fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
         let mut state = TritBuf::zeros(self.security_level as usize * 6561);
         let mut shake = Shake256::default();
         let mut ternary_buffer = T243::<Btrit>::default();
-        ternary_buffer.inner_mut().copy_from(seed.trits());
+        ternary_buffer.inner_mut().copy_from(entropy);
         let mut binary_buffer: I384<BigEndian, U8Repr> = ternary_buffer.into_t242().into();
 
         shake.input(&binary_buffer.inner_ref()[..]);

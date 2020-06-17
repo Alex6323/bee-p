@@ -149,7 +149,7 @@ mod tests {
             .generator(generator)
             .build()
             .unwrap();
-        let mut mss_private_key = mss_private_key_generator.generate(&seed, 0).unwrap();
+        let mut mss_private_key = mss_private_key_generator.generate_from_seed(&seed, 0).unwrap();
         let mss_public_key = mss_private_key.generate_public_key().unwrap();
 
         for _ in 0..1 << (DEPTH - 1) {
