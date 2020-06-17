@@ -119,6 +119,13 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     }
 }
 
+// TODO has been put for testing, maybe we just need to impl Eq on WotsPrivateKey
+impl<S: Sponge + Default> WotsPrivateKey<S> {
+    pub fn trits(&self) -> &Trits {
+        &self.state
+    }
+}
+
 pub struct WotsPublicKey<S> {
     state: TritBuf,
     _sponge: PhantomData<S>,
