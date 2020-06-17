@@ -20,33 +20,31 @@ pub struct TransactionByHashRequest {
     pub hashes: Vec<Hash>
 }
 
-struct HashVecWrapper(pub Vec<Hash>);
-struct HashWrapper(pub Hash);
+struct DeserializedHashes(pub Vec<Hash>);
+struct DeserializedHash(pub Hash);
 
 impl TryFrom<&JsonValue> for TransactionByHashRequest {
     type Error = &'static str;
     fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
-        Ok( TransactionByHashRequest { hashes: HashVecWrapper::try_from(value)?.0 } )
-    }
-}
-
-impl TryFrom<&JsonValue> for HashVecWrapper {
-    type Error = &'static str;
-    fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
         match value["hashes"].as_array() {
-            Some(hashes) => {
-                let mut ret = Vec::new();
-                for hash in hashes {
-                    ret.push(HashWrapper::try_from(hash)?.0);
-                }
-                Ok(HashVecWrapper(ret))
-            }
+            Some(hashes) => Ok( TransactionByHashRequest { hashes: DeserializedHashes::try_from(hashes)?.0 } ),
             None => Err("No hash array provided")
         }
     }
 }
 
-impl TryFrom<&JsonValue> for HashWrapper {
+impl TryFrom<&Vec<JsonValue>> for DeserializedHashes {
+    type Error = &'static str;
+    fn try_from(value: &Vec<JsonValue>) -> Result<Self, Self::Error> {
+        let mut ret = Vec::new();
+        for hash in value {
+            ret.push(DeserializedHash::try_from(hash)?.0);
+        }
+        Ok(DeserializedHashes(ret))
+    }
+}
+
+impl TryFrom<&JsonValue> for DeserializedHash {
     type Error = &'static str;
     fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
         match value.as_str() {
@@ -55,7 +53,7 @@ impl TryFrom<&JsonValue> for HashWrapper {
                     Ok(buf) => {
                         let x = buf.as_trits().encode::<T1B1Buf>();
                         match Hash::try_from_inner(x) {
-                            Ok(hash) => Ok(HashWrapper(hash)),
+                            Ok(hash) => Ok(DeserializedHash(hash)),
                             Err(_err) => Err("String has invalid size")
                         }
                     }
