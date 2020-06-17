@@ -165,7 +165,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bee_test::{tangle::*, transaction::create_random_tx};
+    use bee_test::transaction::create_random_tx;
 
     #[test]
     fn new_tangle() {
@@ -190,13 +190,6 @@ mod tests {
         assert!(insert2.is_none());
         assert_eq!(1, tangle.size());
         assert!(tangle.contains(&hash));
-        assert_eq!(1, tangle.num_tips());
-    }
-
-    #[test]
-    fn count_tips() {
-        let (tangle, _, _) = create_test_tangle();
-
         assert_eq!(1, tangle.num_tips());
     }
 }

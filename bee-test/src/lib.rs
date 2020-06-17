@@ -14,5 +14,4 @@
 pub mod field;
 pub mod milestone;
 pub mod slices;
-pub mod tangle;
 pub mod transaction;
