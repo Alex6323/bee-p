@@ -15,9 +15,17 @@ use bee_crypto::ternary::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
 use std::{
+    convert::TryFrom,
     fmt::{self, Display, Formatter},
     marker::PhantomData,
 };
+
+#[derive(Debug, PartialEq)]
+pub enum WotsError {
+    InvalidSecurityLevel,
+    MissingSecurityLevel,
+    FailedSpongeOperation,
+}
 
 #[derive(Clone, Copy)]
 pub enum WotsSecurityLevel {
@@ -32,10 +40,17 @@ impl Default for WotsSecurityLevel {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum WotsError {
-    MissingSecurityLevel,
-    FailedSpongeOperation,
+impl TryFrom<u8> for WotsSecurityLevel {
+    type Error = WotsError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(WotsSecurityLevel::Low),
+            2 => Ok(WotsSecurityLevel::Medium),
+            3 => Ok(WotsSecurityLevel::High),
+            _ => Err(WotsError::InvalidSecurityLevel),
+        }
+    }
 }
 
 pub struct WotsPrivateKey<S> {
