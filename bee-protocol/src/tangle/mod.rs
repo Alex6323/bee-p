@@ -10,18 +10,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub(crate) mod flags;
+
 // TODO: reinstate the async worker
 // pub(crate) mod propagator;
 
 use crate::{milestone::MilestoneIndex as MsIndex, tangle::flags::Flags};
 
-use bee_tangle::{traversal, Tangle, TransactionRef as TxRef};
+use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVertex};
 
 use dashmap::{DashMap, DashSet};
 
 use std::{
-    collections::HashSet,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
@@ -30,6 +30,7 @@ use std::{
 pub struct MsTangle {
     pub(crate) inner: Tangle<Flags>,
     pub(crate) milestones: DashMap<MsIndex, TxHash>,
+    // TODO use DashMap<TxHash, MilestoneIndex> or DashSet<Sep>, whereby Sep { hash: TxHash, ms: MilestoneIndex }
     pub(crate) solid_entry_points: DashSet<TxHash>,
     solid_milestone_index: AtomicU32,
     last_milestone_index: AtomicU32,
