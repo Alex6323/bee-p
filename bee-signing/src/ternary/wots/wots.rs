@@ -14,7 +14,10 @@ use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 use bee_crypto::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
-use std::marker::PhantomData;
+use std::{
+    fmt::{self, Display, Formatter},
+    marker::PhantomData,
+};
 
 #[derive(Clone, Copy)]
 pub enum WotsSecurityLevel {
@@ -131,6 +134,12 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     }
 }
 
+impl<S: Sponge + Default> Display for WotsPublicKey<S> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", trits_to_string(self.trits()))
+    }
+}
+
 pub struct WotsSignature<S> {
     state: TritBuf,
     _sponge: PhantomData<S>,
@@ -195,4 +204,15 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
             _sponge: PhantomData,
         })
     }
+}
+
+impl<S: Sponge + Default> Display for WotsSignature<S> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", trits_to_string(self.trits()))
+    }
+}
+
+// TODO consider making this a ternary utility function
+fn trits_to_string(trits: &Trits) -> String {
+    trits.iter_trytes().map(|trit| char::from(trit)).collect::<String>()
 }
