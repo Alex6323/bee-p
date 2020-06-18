@@ -136,26 +136,26 @@ impl TransactionWorker {
                     if transaction.is_tail() {
                         Some(hash)
                     } else {
-                        let mut bundle = vec![];
+                        let mut last = None;
 
                         traversal::visit_children_follow_trunk(
                             &tangle().inner,
                             hash,
                             |tx, _| tx.bundle() == transaction.bundle(),
                             |tx_hash, tx, _| {
-                                bundle.push((*tx_hash, tx.clone()));
+                                // bundle.push((*tx_hash, tx.clone()));
+                                last.replace((*tx_hash, tx.clone()));
                             },
                         );
 
-                        match bundle.last() {
-                            Some((h, t)) => {
-                                if t.is_tail() {
-                                    Some(*h)
-                                } else {
-                                    None
-                                }
+                        if let Some((h, t)) = last {
+                            if t.is_tail() {
+                                Some(h)
+                            } else {
+                                None
                             }
-                            None => None,
+                        } else {
+                            None
                         }
                     }
                 };
@@ -227,7 +227,7 @@ mod tests {
                 .run(transaction_worker_receiver, shutdown_receiver),
         );
 
-        assert_eq!(tangle().inner.size(), 1);
+        assert_eq!(tangle().size(), 1);
         assert_eq!(tangle().contains(&Hash::zeros()), true);
     }
 }
