@@ -12,8 +12,6 @@
 use bee_common::logger_init;
 use bee_node::{read_config, BeeNode, CliArgs};
 
-use log::info;
-
 fn main() {
     match read_config() {
         Ok(mut config) => {
@@ -22,7 +20,6 @@ fn main() {
 
             logger_init(config.logger.clone()).unwrap();
 
-            // TODO proper shutdown
             match BeeNode::build(config).finish() {
                 Ok(mut bee) => {
                     bee.run_loop();

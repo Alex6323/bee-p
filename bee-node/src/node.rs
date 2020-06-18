@@ -26,8 +26,10 @@ use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
+    select,
     sink::SinkExt,
-    stream::StreamExt,
+    stream::{Fuse, StreamExt},
+    FutureExt,
 };
 use log::{debug, error, info, warn};
 
@@ -98,7 +100,7 @@ impl BeeNodeBuilder {
         Ok(BeeNode {
             config: self.config,
             network,
-            events,
+            events: events.fuse(),
             shutdown,
             ledger: (ledger_worker_tx, ledger_worker_shutdown_tx),
             peers: HashMap::new(),
@@ -111,7 +113,7 @@ pub struct BeeNode {
     config: NodeConfig,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
-    events: EventSubscriber,
+    events: Fuse<EventSubscriber>,
     shutdown: Shutdown,
     // TODO design proper type `Ledger`
     ledger: (mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>),
@@ -124,30 +126,44 @@ impl BeeNode {
     pub fn run_loop(&mut self) {
         info!("Running.");
 
-        block_on(async {
-            while let Some(event) = self.events.next().await {
-                debug!("Received event {}.", event);
+        let mut shutdown = shutdown_listener().fuse();
 
-                match event {
-                    Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
-                    Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
-                    Event::EndpointConnected {
-                        epid, origin, address, ..
-                    } => self.endpoint_connected_handler(epid, address, origin).await,
-                    Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
-                    Event::MessageReceived { epid, bytes, .. } => {
-                        self.endpoint_bytes_received_handler(epid, bytes).await
+        block_on(async {
+            loop {
+                select! {
+                    event = self.events.next() => {
+                        if let Some(event) = event {
+                            debug!("Received event {}.", event);
+
+                            match event {
+                                Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
+                                Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
+                                Event::EndpointConnected {
+                                    epid, origin, address, ..
+                                } => self.endpoint_connected_handler(epid, address, origin).await,
+                                Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
+                                Event::MessageReceived { epid, bytes, .. } => {
+                                    self.endpoint_bytes_received_handler(epid, bytes).await
+                                }
+                                _ => warn!("Unsupported event {}.", event),
+                            }
+                        }
+                    },
+                    shutdown = shutdown => {
+                        break;
                     }
-                    _ => warn!("Unsupported event {}.", event),
                 }
             }
-        })
+        });
     }
 
     /// Shuts down the node.
     pub fn shutdown(self) {
-        // TODO execute shutdown logic
-        info!("Good bye!");
+        info!("Bee is shutting down...");
+
+        block_on(self.shutdown.execute());
+
+        info!("Shutdown complete.");
     }
 
     /// Returns a builder to create a node.
@@ -189,4 +205,19 @@ impl BeeNode {
             }
         }
     }
+}
+
+// TODO return a Result
+fn shutdown_listener() -> oneshot::Receiver<()> {
+    let (sender, receiver) = oneshot::channel();
+
+    spawn(async move {
+        let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime.");
+
+        rt.block_on(tokio::signal::ctrl_c()).expect("Error blocking on CTRL-C.");
+
+        sender.send(()).expect("Error sending shutdown signal.");
+    });
+
+    receiver
 }

@@ -25,6 +25,7 @@ futures = "0.3.5"
 log = "0.4.8"
 serde = { version = "1.0.104", features = ["derive" ] }
 structopt = { version = "0.3.14", default-features = false }
+tokio = { version = "0.2.11", features = ["signal"] }
 toml = "0.5.6"
 
 [lib]
@@ -32,5 +33,5 @@ name = "bee_node"
 path = "src/lib.rs"
 
 [[bin]]
-name = "bee_node"
+name = "bee"
 path = "src/main.rs"
