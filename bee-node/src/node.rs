@@ -114,6 +114,8 @@ impl Node {
         info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
+        Protocol::init(self.config.protocol.clone(), self.network.clone()).await;
+
         StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone())
             .run()
             .await;
@@ -151,8 +153,6 @@ impl Node {
                 panic!("TODO");
             }
         };
-
-        Protocol::init(self.config.protocol.clone(), self.network.clone()).await;
 
         // TODO config
         let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
