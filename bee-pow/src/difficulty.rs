@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::constants::{DEVNET_DIFFICULTY, HASH_TRIT_LEN, MAINNET_DIFFICULTY, COMNET_DIFFICULTY};
+use crate::constants::{COMNET_DIFFICULTY, DEVNET_DIFFICULTY, HASH_TRIT_LEN, MAINNET_DIFFICULTY};
 
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +24,6 @@ impl Difficulty {
     pub fn comnet() -> Self {
         Self(COMNET_DIFFICULTY)
     }
-    
     pub fn devnet() -> Self {
         Self(DEVNET_DIFFICULTY)
     }
