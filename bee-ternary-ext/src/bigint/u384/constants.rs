@@ -12,13 +12,11 @@
 use lazy_static::lazy_static;
 use std::convert::TryFrom;
 
-use crate::{
-    bigint::{
-        common::{BigEndian, LittleEndian, U32Repr, U8Repr},
-        T242, T243,
-    },
-    Utrit,
+use crate::bigint::{
+    common::{BigEndian, LittleEndian, U32Repr, U8Repr},
+    T242, T243,
 };
+use bee_ternary::Utrit;
 
 use super::U384;
 

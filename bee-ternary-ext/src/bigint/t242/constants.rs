@@ -11,13 +11,11 @@
 
 use lazy_static::lazy_static;
 
-use crate::{
-    bigint::{
-        common::{LittleEndian, U32Repr},
-        T242, U384,
-    },
-    Btrit, Utrit,
+use crate::bigint::{
+    common::{LittleEndian, U32Repr},
+    T242, U384,
 };
+use bee_ternary::{Btrit, Utrit};
 
 lazy_static! {
     pub static ref BTRIT_ZERO: T242<Btrit> = T242::<Btrit>::zero();

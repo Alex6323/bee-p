@@ -9,12 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary::{
-    bigint::{
-        common::{BigEndian, U8Repr},
-        I384, T242, T243,
-    },
-    Trits, T1B1,
+use bee_ternary::{Trits, T1B1};
+use bee_ternary_ext::bigint::{
+    common::{BigEndian, U8Repr},
+    I384, T242, T243,
 };
 
 #[test]

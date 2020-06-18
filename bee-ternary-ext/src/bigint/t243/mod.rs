@@ -20,14 +20,11 @@
 
 use std::cmp::Ordering;
 
-use crate::{
-    bigint::{
-        common::{BigEndian, LittleEndian, U32Repr, U8Repr},
-        I384, T242, U384,
-    },
-    raw::RawEncoding,
-    Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Trits, Utrit,
+use crate::bigint::{
+    common::{BigEndian, LittleEndian, U32Repr, U8Repr},
+    I384, T242, U384,
 };
+use bee_ternary::{raw::RawEncoding, Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Trits, Utrit};
 
 mod constants;
 pub use constants::{
