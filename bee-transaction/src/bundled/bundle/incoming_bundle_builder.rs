@@ -130,6 +130,10 @@ where
                 ));
             }
 
+            if *transaction.value.to_inner() > IOTA_SUPPLY {
+                return Err(IncomingBundleBuilderError::InvalidValue(*transaction.value.to_inner()));
+            }
+
             sum += *transaction.value.to_inner();
             if sum.abs() > IOTA_SUPPLY {
                 return Err(IncomingBundleBuilderError::InvalidValue(sum));
