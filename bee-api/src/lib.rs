@@ -13,7 +13,5 @@ mod requests;
 mod responses;
 
 pub mod config;
-pub mod service;
 pub mod rest;
-
-
+pub mod service;

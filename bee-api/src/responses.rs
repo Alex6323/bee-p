@@ -15,36 +15,29 @@ use bee_transaction::{BundledTransaction, Hash};
 
 use serde_json::{Map, Value as JsonValue};
 
-use std::convert::From;
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::From};
 
 pub struct TransactionByHashResponse {
-    pub hashes: HashMap<Hash, Option<TransactionRef>>
+    pub hashes: HashMap<Hash, Option<TransactionRef>>,
 }
 
 impl From<TransactionByHashResponse> for JsonValue {
-
     fn from(res: TransactionByHashResponse) -> Self {
-
         let mut map = Map::new();
 
         for (hash, tx_ref) in res.hashes.iter() {
-
-            let hash_string = hash.as_trits().
-                iter_trytes()
+            let hash_string = hash
+                .as_trits()
+                .iter_trytes()
                 .map(|trit| char::from(trit))
                 .collect::<String>();
 
             match tx_ref {
                 Some(tx_ref) => {
-
                     let mut tx_buf = TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len());
                     tx_ref.into_trits_allocated(&mut tx_buf);
 
-                    let tx_string = tx_buf
-                        .iter_trytes()
-                        .map(|trit| char::from(trit))
-                        .collect::<String>();
+                    let tx_string = tx_buf.iter_trytes().map(|trit| char::from(trit)).collect::<String>();
 
                     map.insert(hash_string, JsonValue::String(tx_string));
                 }
@@ -52,25 +45,20 @@ impl From<TransactionByHashResponse> for JsonValue {
                     map.insert(hash_string, JsonValue::Null);
                 }
             }
-
         }
 
-       JsonValue::Object(map)
-
+        JsonValue::Object(map)
     }
-
 }
 
 pub struct NodeInfoResponse {
-    pub is_synced: bool
+    pub is_synced: bool,
 }
 
 impl From<NodeInfoResponse> for JsonValue {
-
     fn from(res: NodeInfoResponse) -> Self {
         let mut map = Map::new();
         map.insert(String::from("is_synced"), JsonValue::Bool(res.is_synced));
         JsonValue::Object(map)
     }
-
 }

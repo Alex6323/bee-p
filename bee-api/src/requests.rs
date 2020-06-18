@@ -10,14 +10,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::{T1B1Buf, TryteBuf};
-use bee_transaction::{Hash, BundledTransactionField};
+use bee_transaction::{BundledTransactionField, Hash};
 
 use serde_json::Value as JsonValue;
 
 use std::convert::TryFrom;
 
 pub struct TransactionByHashRequest {
-    pub hashes: Vec<Hash>
+    pub hashes: Vec<Hash>,
 }
 
 struct DeserializedHashes(pub Vec<Hash>);
@@ -27,8 +27,10 @@ impl TryFrom<&JsonValue> for TransactionByHashRequest {
     type Error = &'static str;
     fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
         match value["hashes"].as_array() {
-            Some(hashes) => Ok( TransactionByHashRequest { hashes: DeserializedHashes::try_from(hashes)?.0 } ),
-            None => Err("No hash array provided")
+            Some(hashes) => Ok(TransactionByHashRequest {
+                hashes: DeserializedHashes::try_from(hashes)?.0,
+            }),
+            None => Err("No hash array provided"),
         }
     }
 }
@@ -48,19 +50,17 @@ impl TryFrom<&JsonValue> for DeserializedHash {
     type Error = &'static str;
     fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
         match value.as_str() {
-            Some(tryte_str) => {
-                match TryteBuf::try_from_str(tryte_str) {
-                    Ok(buf) => {
-                        let x = buf.as_trits().encode::<T1B1Buf>();
-                        match Hash::try_from_inner(x) {
-                            Ok(hash) => Ok(DeserializedHash(hash)),
-                            Err(_err) => Err("String has invalid size")
-                        }
+            Some(tryte_str) => match TryteBuf::try_from_str(tryte_str) {
+                Ok(buf) => {
+                    let x = buf.as_trits().encode::<T1B1Buf>();
+                    match Hash::try_from_inner(x) {
+                        Ok(hash) => Ok(DeserializedHash(hash)),
+                        Err(_err) => Err("String has invalid size"),
                     }
-                    Err(_err) => Err("String contains invalid characters")
                 }
-            }
-            None => Err("No string provided")
+                Err(_err) => Err("String contains invalid characters"),
+            },
+            None => Err("No string provided"),
         }
     }
 }

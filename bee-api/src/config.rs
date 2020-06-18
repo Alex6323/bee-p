@@ -85,5 +85,4 @@ impl ApiConfig {
     pub fn rest_binding_addr(&self) -> IpAddr {
         self.rest_binding_addr
     }
-
 }

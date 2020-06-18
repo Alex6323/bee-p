@@ -17,7 +17,6 @@ use warp::{Filter, Rejection};
 use std::net::SocketAddr;
 
 pub async fn run(addr: SocketAddr) {
-
     let node_info = warp::get()
         .and(warp::path("v1"))
         .and(warp::path("node-info"))
@@ -33,10 +32,7 @@ pub async fn run(addr: SocketAddr) {
 
     let routes = tx_by_hash.or(node_info);
 
-    warp::serve(routes)
-        .run(addr)
-        .await;
-
+    warp::serve(routes).run(addr).await;
 }
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {

@@ -9,8 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::requests::TransactionByHashRequest;
-use crate::responses::{TransactionByHashResponse, NodeInfoResponse};
+use crate::{
+    requests::TransactionByHashRequest,
+    responses::{NodeInfoResponse, TransactionByHashResponse},
+};
 
 use bee_tangle::tangle;
 
@@ -24,9 +26,10 @@ pub trait Service {
 pub struct ServiceImpl;
 
 impl Service for ServiceImpl {
-
     fn node_info() -> NodeInfoResponse {
-        NodeInfoResponse { is_synced: tangle().is_synced() }
+        NodeInfoResponse {
+            is_synced: tangle().is_synced(),
+        }
     }
 
     fn transaction_by_hash(req: TransactionByHashRequest) -> TransactionByHashResponse {
@@ -36,5 +39,4 @@ impl Service for ServiceImpl {
         }
         TransactionByHashResponse { hashes: ret }
     }
-
 }
