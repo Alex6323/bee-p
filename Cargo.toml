@@ -13,7 +13,7 @@ members = [
 	"bee-snapshot",
 	# "bee-storage",
 	"bee-tangle",
-	"bee-ternary",
+	"bee-ternary-ext",
 	"bee-test",
 	"bee-transaction",
 ]

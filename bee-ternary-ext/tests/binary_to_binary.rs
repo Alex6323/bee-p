@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary::bigint::{
+use bee_ternary_ext::bigint::{
     common::{LittleEndian, U32Repr},
     I384, U384,
 };
