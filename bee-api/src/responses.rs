@@ -47,7 +47,7 @@ impl From<TransactionByHashResponse> for JsonValue {
             }
         }
 
-        json_response(data)
+        json_success(data)
 
     }
 }
@@ -60,12 +60,24 @@ impl From<NodeInfoResponse> for JsonValue {
     fn from(res: NodeInfoResponse) -> Self {
         let mut data = Map::new();
         data.insert(String::from("is_synced"), JsonValue::Bool(res.is_synced));
-        json_response(data)
+        json_success(data)
     }
 }
 
-fn json_response(data: Map<String, JsonValue>) -> JsonValue {
+fn json_success(data: Map<String, JsonValue>) -> JsonValue {
     let mut response = Map::new();
     response.insert(String::from("data"), JsonValue::Object(data));
     JsonValue::Object(response)
 }
+
+pub fn json_error(msg: &str) -> JsonValue {
+    let mut message = Map::new();
+    message.insert(String::from("message"), JsonValue::String(String::from(msg)));
+    let mut response = Map::new();
+    response.insert(String::from("error"), JsonValue::Object(message));
+    JsonValue::Object(response)
+}
+
+
+
+

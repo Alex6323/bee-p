@@ -11,6 +11,7 @@
 
 use crate::{
     requests::TransactionByHashRequest,
+    responses,
     service::{Service, ServiceImpl},
 };
 
@@ -25,6 +26,6 @@ pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
 pub async fn transaction_by_hash(json: Value) -> Result<impl warp::Reply, warp::Rejection> {
     match TransactionByHashRequest::try_from(&json) {
         Ok(req) => Ok(warp::reply::json(&Value::from(ServiceImpl::transaction_by_hash(req)))),
-        Err(msg) => Ok(warp::reply::json(&String::from(msg))),
+        Err(msg) => Ok(warp::reply::json(&responses::json_error(msg))),
     }
 }
