@@ -9,11 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_api::config::ApiConfigBuilder;
 use bee_api::rest;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     bee_tangle::init();
-    rest::server::run(rest::server::SERVER_ADDRESS.parse().unwrap()).await;
+
+    let socket_addr = ApiConfigBuilder::new().finish().rest_socket_addr();
+
+    let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime");
+    rt.block_on(rest::server::run(socket_addr));
+
 }
 

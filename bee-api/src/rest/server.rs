@@ -16,8 +16,6 @@ use warp::{Filter, Rejection};
 
 use std::net::SocketAddr;
 
-pub const SERVER_ADDRESS: &str = "127.0.0.1:3030";
-
 pub async fn run(addr: SocketAddr) {
 
     let node_info = warp::get()
