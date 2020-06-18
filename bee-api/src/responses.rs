@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_tangle::TransactionRef;
+use bee_tangle::{MilestoneIndex, TransactionRef};
 use bee_ternary::{T1B1Buf, TritBuf};
 use bee_transaction::{BundledTransaction, Hash};
 
@@ -48,18 +48,66 @@ impl From<TransactionByHashResponse> for JsonValue {
         }
 
         json_success(data)
-
     }
 }
 
 pub struct NodeInfoResponse {
     pub is_synced: bool,
+    pub last_milestone_index: MilestoneIndex,
+    pub last_milestone_hash: Option<Hash>,
+    pub last_solid_milestone_index: MilestoneIndex,
+    pub last_solid_milestone_hash: Option<Hash>,
 }
 
 impl From<NodeInfoResponse> for JsonValue {
     fn from(res: NodeInfoResponse) -> Self {
         let mut data = Map::new();
+
         data.insert(String::from("is_synced"), JsonValue::Bool(res.is_synced));
+
+        data.insert(
+            String::from("last_milestone_index"),
+            JsonValue::from(*res.last_milestone_index),
+        );
+
+        match res.last_milestone_hash {
+            Some(hash) => {
+                let hash_string = hash
+                    .as_trits()
+                    .iter_trytes()
+                    .map(|trit| char::from(trit))
+                    .collect::<String>();
+
+                data.insert(String::from("last_milestone_hash"), JsonValue::String(hash_string));
+            }
+            None => {
+                data.insert(String::from("last_milestone_hash"), JsonValue::Null);
+            }
+        }
+
+        data.insert(
+            String::from("last_solid_milestone_index"),
+            JsonValue::from(*res.last_solid_milestone_index),
+        );
+
+        match res.last_solid_milestone_hash {
+            Some(hash) => {
+                let hash_string = hash
+                    .as_trits()
+                    .iter_trytes()
+                    .map(|trit| char::from(trit))
+                    .collect::<String>();
+
+                data.insert(
+                    String::from("last_solid_milestone_hash"),
+                    JsonValue::String(hash_string),
+                );
+            }
+            None => {
+                data.insert(String::from("last_solid_milestone_hash"), JsonValue::Null);
+            }
+        }
+
         json_success(data)
     }
 }
@@ -77,7 +125,3 @@ pub fn json_error(msg: &str) -> JsonValue {
     response.insert(String::from("error"), JsonValue::Object(message));
     JsonValue::Object(response)
 }
-
-
-
-

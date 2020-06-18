@@ -29,6 +29,10 @@ impl Service for ServiceImpl {
     fn node_info() -> NodeInfoResponse {
         NodeInfoResponse {
             is_synced: tangle().is_synced(),
+            last_milestone_index: tangle().get_last_milestone_index(),
+            last_milestone_hash: tangle().get_milestone_hash(tangle().get_last_milestone_index()),
+            last_solid_milestone_index: tangle().get_solid_milestone_index(),
+            last_solid_milestone_hash: tangle().get_milestone_hash(tangle().get_solid_milestone_index()),
         }
     }
 
