@@ -21,23 +21,20 @@ use std::fs;
 
 const CONFIG_PATH: &str = "./config.toml";
 
-// TODO use result
-pub fn read_config() -> NodeConfigBuilder {
+// TODO use proper error
+/// Creates a Bee config builder from the local config file.
+pub fn read_config() -> Result<BeeNodeConfigBuilder, ()> {
     match fs::read_to_string(CONFIG_PATH) {
-        Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
-            Ok(config_builder) => config_builder,
-            Err(e) => {
-                panic!("[Node ] Error parsing config file: {:?}", e);
-            }
+        Ok(toml) => match toml::from_str::<BeeNodeConfigBuilder>(&toml) {
+            Ok(config_builder) => Ok(config_builder),
+            Err(_) => Err(()),
         },
-        Err(e) => {
-            panic!("[Node ] Error reading config file: {:?}", e);
-        }
+        Err(_) => Err(()),
     }
 }
 
 #[derive(Default, Deserialize)]
-pub struct NodeConfigBuilder {
+pub struct BeeNodeConfigBuilder {
     pub(crate) logger: LoggerConfigBuilder,
     pub(crate) network: NetworkConfigBuilder,
     pub(crate) peering: PeeringConfigBuilder,
@@ -45,7 +42,7 @@ pub struct NodeConfigBuilder {
     pub(crate) snapshot: SnapshotConfigBuilder,
 }
 
-impl NodeConfigBuilder {
+impl BeeNodeConfigBuilder {
     pub fn finish(self) -> NodeConfig {
         NodeConfig {
             logger: self.logger.finish(),
@@ -59,9 +56,9 @@ impl NodeConfigBuilder {
 
 #[derive(Clone)]
 pub struct NodeConfig {
-    pub(crate) logger: LoggerConfig,
-    pub(crate) network: NetworkConfig,
-    pub(crate) peering: PeeringConfig,
-    pub(crate) protocol: ProtocolConfig,
-    pub(crate) snapshot: SnapshotConfig,
+    pub logger: LoggerConfig,
+    pub network: NetworkConfig,
+    pub peering: PeeringConfig,
+    pub protocol: ProtocolConfig,
+    pub snapshot: SnapshotConfig,
 }

@@ -9,18 +9,34 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_node::{read_config, CliArgs, Node, NodeConfigBuilder};
+use bee_common::logger_init;
+use bee_node::{read_config, BeeNode, CliArgs};
+
+use log::info;
 
 fn main() {
-    let mut config_builder = read_config();
+    match read_config() {
+        Ok(mut config) => {
+            CliArgs::new().apply_to_config(&mut config);
+            let config = config.finish();
 
-    CliArgs::new().apply_to_config(&mut config_builder);
+            logger_init(config.logger.clone()).unwrap();
 
-    let config = config_builder.finish();
-
-    // TODO proper shutdown
-    let mut node = Node::build(config).finish();
-
-    node.run();
-    node.end();
+            // TODO proper shutdown
+            match BeeNode::build(config).finish() {
+                Ok(mut bee) => {
+                    bee.run_loop();
+                    bee.shutdown();
+                }
+                Err(_) => {
+                    // TODO use error
+                    eprintln!("Unable to create a Bee node. Program aborted.");
+                }
+            }
+        }
+        Err(_) => {
+            // TODO use error
+            eprintln!("Unable to read local config file. Program aborted.");
+        }
+    }
 }

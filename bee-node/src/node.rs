@@ -14,7 +14,6 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
 };
 
-use bee_common::logger_init;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
@@ -34,15 +33,14 @@ use log::{debug, error, info, warn};
 
 use std::collections::HashMap;
 
-pub struct NodeBuilder {
+pub struct BeeNodeBuilder {
     config: NodeConfig,
 }
 
-impl NodeBuilder {
+impl BeeNodeBuilder {
+    // TODO use proper error type
     /// Finishes the build process of a new node.
-    pub fn finish(self) -> Node {
-        logger_init(self.config.logger.clone()).unwrap();
-
+    pub fn finish(self) -> Result<BeeNode, ()> {
         info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
@@ -83,7 +81,7 @@ impl NodeBuilder {
                     self.config.snapshot.local().file_path(),
                     e
                 );
-                panic!("TODO");
+                return Err(());
             }
         };
 
@@ -97,19 +95,19 @@ impl NodeBuilder {
 
         info!("Initialized.");
 
-        Node {
+        Ok(BeeNode {
             config: self.config,
             network,
             events,
             shutdown,
             ledger: (ledger_worker_tx, ledger_worker_shutdown_tx),
             peers: HashMap::new(),
-        }
+        })
     }
 }
 
 /// The main node type.
-pub struct Node {
+pub struct BeeNode {
     config: NodeConfig,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
@@ -121,9 +119,9 @@ pub struct Node {
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }
 
-impl Node {
+impl BeeNode {
     /// Executes node event loop. This method is only executed after the shutdown signal has been received.
-    pub fn run(&mut self) {
+    pub fn run_loop(&mut self) {
         info!("Running.");
 
         block_on(async {
@@ -147,14 +145,14 @@ impl Node {
     }
 
     /// Shuts down the node.
-    pub fn end(self) {
-        // TODO execute shutdown log
+    pub fn shutdown(self) {
+        // TODO execute shutdown logic
         info!("Good bye!");
     }
 
     /// Returns a builder to create a node.
-    pub fn build(config: NodeConfig) -> NodeBuilder {
-        NodeBuilder { config }
+    pub fn build(config: NodeConfig) -> BeeNodeBuilder {
+        BeeNodeBuilder { config }
     }
 
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
