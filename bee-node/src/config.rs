@@ -17,10 +17,27 @@ use bee_snapshot::{SnapshotConfig, SnapshotConfigBuilder};
 
 use serde::Deserialize;
 
-pub(crate) const CONFIG_PATH: &str = "./config.toml";
+use std::fs;
+
+const CONFIG_PATH: &str = "./config.toml";
+
+// TODO use result
+pub fn read_config() -> NodeConfigBuilder {
+    match fs::read_to_string(CONFIG_PATH) {
+        Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
+            Ok(config_builder) => config_builder,
+            Err(e) => {
+                panic!("[Node ] Error parsing config file: {:?}", e);
+            }
+        },
+        Err(e) => {
+            panic!("[Node ] Error reading config file: {:?}", e);
+        }
+    }
+}
 
 #[derive(Default, Deserialize)]
-pub(crate) struct NodeConfigBuilder {
+pub struct NodeConfigBuilder {
     pub(crate) logger: LoggerConfigBuilder,
     pub(crate) network: NetworkConfigBuilder,
     pub(crate) peering: PeeringConfigBuilder,
@@ -29,7 +46,7 @@ pub(crate) struct NodeConfigBuilder {
 }
 
 impl NodeConfigBuilder {
-    pub(crate) fn finish(self) -> NodeConfig {
+    pub fn finish(self) -> NodeConfig {
         NodeConfig {
             logger: self.logger.finish(),
             network: self.network.finish(),
@@ -41,7 +58,7 @@ impl NodeConfigBuilder {
 }
 
 #[derive(Clone)]
-pub(crate) struct NodeConfig {
+pub struct NodeConfig {
     pub(crate) logger: LoggerConfig,
     pub(crate) network: NetworkConfig,
     pub(crate) peering: PeeringConfig,
