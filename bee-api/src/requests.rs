@@ -52,8 +52,7 @@ impl TryFrom<&JsonValue> for DeserializedHash {
         match value.as_str() {
             Some(tryte_str) => match TryteBuf::try_from_str(tryte_str) {
                 Ok(buf) => {
-                    let x = buf.as_trits().encode::<T1B1Buf>();
-                    match Hash::try_from_inner(x) {
+                    match Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>()) {
                         Ok(hash) => Ok(DeserializedHash(hash)),
                         Err(_err) => Err("String has invalid size"),
                     }
