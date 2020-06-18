@@ -11,12 +11,10 @@
 
 use std::convert::TryInto;
 
-use bee_ternary::{
-    bigint::{
-        common::{LittleEndian, U32Repr},
-        I384, T243, U384,
-    },
-    Btrit, Utrit,
+use bee_ternary::{Btrit, Utrit};
+use bee_ternary_ext::bigint::{
+    common::{LittleEndian, U32Repr},
+    I384, T243, U384,
 };
 
 // #[test]

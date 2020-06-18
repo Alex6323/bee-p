@@ -9,12 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary::{
-    bigint::{
-        common::{BigEndian, U8Repr},
-        I384, T243,
-    },
-    T1B1Buf, TritBuf, TryteBuf,
+use bee_ternary::{T1B1Buf, TritBuf, TryteBuf};
+use bee_ternary_ext::bigint::{
+    common::{BigEndian, U8Repr},
+    I384, T243,
 };
 use std::convert::TryFrom;
 

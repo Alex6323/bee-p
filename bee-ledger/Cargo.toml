@@ -10,7 +10,7 @@ license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "ledger"]
 
 [dependencies]
-bee-ternary = { path = "../bee-ternary" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 bee-transaction = { path = "../bee-transaction" }
 
 bytemuck = "1.2.0"

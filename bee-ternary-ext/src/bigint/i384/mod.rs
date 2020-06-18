@@ -9,6 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_ternary::Btrit;
 use byteorder::{self, ByteOrder};
 
 use std::{
@@ -18,17 +19,14 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::{
-    bigint::{
-        common::{
-            BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr, BINARY_LEN_IN_U32 as LEN_IN_U32,
-            BINARY_LEN_IN_U8 as LEN_IN_U8,
-        },
-        u384,
-        utils::OverflowingAddExt,
-        T242, T243, U384,
+use crate::bigint::{
+    common::{
+        BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr, BINARY_LEN_IN_U32 as LEN_IN_U32,
+        BINARY_LEN_IN_U8 as LEN_IN_U8,
     },
-    Btrit,
+    u384,
+    utils::OverflowingAddExt,
+    T242, T243, U384,
 };
 
 mod constants;
