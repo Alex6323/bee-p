@@ -15,7 +15,8 @@ use bee_crypto::{Kerl, Sponge};
 use bee_signing::ternary::{
     normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,
 };
-use bee_ternary::{num_conversions::TritsI64ConversionError, TritBuf};
+use bee_ternary::TritBuf;
+use bee_ternary_ext::num_conversions::{tritbuf_try_to_i64, TritsI64ConversionError};
 use bee_transaction::{
     BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Hash, Payload,
     TransactionVertex,
@@ -131,7 +132,7 @@ where
         // TODO remove clone
         // TODO test invalid index
         // Safe to unwrap
-        self.index = i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner().to_buf())
+        self.index = tritbuf_try_to_i64(self.transactions.get(0).unwrap().obsolete_tag().to_inner().to_buf())
             .map_err(MilestoneBuilderError::InvalidIndex)? as u32;
 
         self.validate_signatures()?;

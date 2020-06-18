@@ -16,6 +16,7 @@ use crate::bundled::{
 };
 
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};
+use bee_ternary_ext::num_conversions::i64_to_tritbuf;
 
 #[derive(Default)]
 pub struct BundledTransactionBuilder {
@@ -51,11 +52,11 @@ impl BundledTransactionBuilder {
                 + LAST_INDEX.trit_offset.length,
         );
         let address = self.address.as_ref().unwrap();
-        let value = TritBuf::from(*self.value.as_ref().unwrap().to_inner());
+        let value = i64_to_tritbuf(*self.value.as_ref().unwrap().to_inner());
         let obsolete_tag = self.obsolete_tag.as_ref().unwrap();
-        let timestamp = TritBuf::from(*self.timestamp.as_ref().unwrap().to_inner() as i64);
-        let index = TritBuf::from(*self.index.as_ref().unwrap().to_inner() as i64);
-        let last_index = TritBuf::from(*self.last_index.as_ref().unwrap().to_inner() as i64);
+        let timestamp = i64_to_tritbuf(*self.timestamp.as_ref().unwrap().to_inner() as i64);
+        let index = i64_to_tritbuf(*self.index.as_ref().unwrap().to_inner() as i64);
+        let last_index = i64_to_tritbuf(*self.last_index.as_ref().unwrap().to_inner() as i64);
 
         let mut start = 0;
         let mut end = ADDRESS.trit_offset.length;

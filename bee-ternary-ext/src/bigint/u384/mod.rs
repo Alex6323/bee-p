@@ -12,15 +12,13 @@
 use byteorder::{self, ByteOrder};
 use std::{cmp::Ordering, convert::TryFrom, fmt, marker::PhantomData};
 
-use crate::{
-    bigint::{
-        common::{BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr},
-        t243,
-        utils::{OverflowingAddExt, SplitInteger},
-        I384, T242, T243,
-    },
-    Utrit,
+use crate::bigint::{
+    common::{BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr},
+    t243,
+    utils::{OverflowingAddExt, SplitInteger},
+    I384, T242, T243,
 };
+use bee_ternary::Utrit;
 
 mod constants;
 

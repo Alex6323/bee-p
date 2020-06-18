@@ -12,12 +12,10 @@
 use crate::ternary::{PrivateKeyGenerator, Seed, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
 
 use bee_crypto::Sponge;
-use bee_ternary::{
-    bigint::{
-        common::{BigEndian, U8Repr},
-        I384, T242, T243,
-    },
-    Btrit, TritBuf,
+use bee_ternary::{Btrit, TritBuf};
+use bee_ternary_ext::bigint::{
+    common::{BigEndian, U8Repr},
+    I384, T242, T243,
 };
 
 use sha3::{
