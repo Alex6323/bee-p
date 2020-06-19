@@ -186,8 +186,6 @@ mod tests {
 
     #[test]
     fn test_tx_worker_with_compressed_buffer() {
-        crate::tangle::init();
-
         // build network
         let network_config = NetworkConfig::build().finish();
         let (network, _shutdown, _receiver) = bee_network::init(network_config);
