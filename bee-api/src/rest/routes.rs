@@ -9,14 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    requests::TransactionByHashRequest,
-    responses,
-    service::{Service, ServiceImpl},
-};
+use crate::service::{Service, ServiceImpl};
 
 use serde_json::Value;
 
+use crate::{format::utils, service::TransactionByHashParams};
 use std::convert::TryFrom;
 
 pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
@@ -24,8 +21,8 @@ pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
 }
 
 pub async fn transaction_by_hash(json: Value) -> Result<impl warp::Reply, warp::Rejection> {
-    match TransactionByHashRequest::try_from(&json) {
+    match TransactionByHashParams::try_from(&json) {
         Ok(req) => Ok(warp::reply::json(&Value::from(ServiceImpl::transaction_by_hash(req)))),
-        Err(msg) => Ok(warp::reply::json(&responses::json_error(msg))),
+        Err(msg) => Ok(warp::reply::json(&utils::json_error(msg))),
     }
 }

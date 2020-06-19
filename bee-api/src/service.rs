@@ -9,22 +9,33 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    requests::TransactionByHashRequest,
-    responses::{NodeInfoResponse, TransactionByHashResponse},
-};
-
-use bee_tangle::tangle;
+use bee_tangle::{tangle, MilestoneIndex, TransactionRef};
+use bee_transaction::Hash;
 
 use std::collections::HashMap;
 
 pub trait Service {
     fn node_info() -> NodeInfoResponse;
-    fn transaction_by_hash(req: TransactionByHashRequest) -> TransactionByHashResponse;
+    fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse;
+}
+
+pub struct NodeInfoResponse {
+    pub is_synced: bool,
+    pub last_milestone_index: MilestoneIndex,
+    pub last_milestone_hash: Option<Hash>,
+    pub last_solid_milestone_index: MilestoneIndex,
+    pub last_solid_milestone_hash: Option<Hash>,
+}
+
+pub struct TransactionByHashParams {
+    pub hashes: Vec<Hash>,
+}
+
+pub struct TransactionByHashResponse {
+    pub hashes: HashMap<Hash, Option<TransactionRef>>,
 }
 
 pub struct ServiceImpl;
-
 impl Service for ServiceImpl {
     fn node_info() -> NodeInfoResponse {
         NodeInfoResponse {
@@ -36,9 +47,9 @@ impl Service for ServiceImpl {
         }
     }
 
-    fn transaction_by_hash(req: TransactionByHashRequest) -> TransactionByHashResponse {
+    fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
         let mut ret = HashMap::new();
-        for hash in req.hashes {
+        for hash in params.hashes {
             ret.insert(hash, tangle().get_transaction(&hash));
         }
         TransactionByHashResponse { hashes: ret }
