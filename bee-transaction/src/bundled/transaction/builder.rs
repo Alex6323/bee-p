@@ -278,17 +278,19 @@ mod tests {
         let tx2 = BundledTransaction::from_trits(tx_trits).unwrap();
 
         assert_eq!(tx.payload, tx2.payload);
+        assert_eq!(tx.address, tx2.address);
+        assert_eq!(tx.value, tx2.value);
+        assert_eq!(tx.obsolete_tag, tx2.obsolete_tag);
+        assert_eq!(tx.timestamp, tx2.timestamp);
+        assert_eq!(tx.index, tx2.index);
+        assert_eq!(tx.last_index, tx2.last_index);
+        assert_eq!(tx.tag, tx2.tag);
+        assert_eq!(tx.attachment_ts, tx2.attachment_ts);
         assert_eq!(tx.bundle, tx2.bundle);
         assert_eq!(tx.trunk, tx2.trunk);
         assert_eq!(tx.branch, tx2.branch);
-        assert_eq!(tx.nonce, tx2.nonce);
-        assert_eq!(tx.tag, tx2.tag);
-        assert_eq!(tx.obsolete_tag, tx2.obsolete_tag);
-        assert_eq!(tx.value, tx2.value);
-        assert_eq!(tx.timestamp, tx2.timestamp);
-        assert_eq!(tx.attachment_ts, tx2.attachment_ts);
+        assert_eq!(tx.attachment_lbts, tx2.attachment_lbts);
         assert_eq!(tx.attachment_ubts, tx2.attachment_ubts);
-        assert_eq!(tx.index, tx2.index);
-        assert_eq!(tx.last_index, tx2.last_index);
+        assert_eq!(tx.nonce, tx2.nonce);
     }
 }
