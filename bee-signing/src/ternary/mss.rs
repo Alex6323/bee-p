@@ -16,7 +16,6 @@ use bee_ternary::{TritBuf, Trits};
 
 use std::marker::PhantomData;
 
-// TODO: documentation
 #[derive(Debug, PartialEq)]
 pub enum MssError {
     InvalidDepth(u8),

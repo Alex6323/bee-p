@@ -17,15 +17,11 @@ use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 use rand::Rng;
 use std::marker::PhantomData;
 
-// TODO Put constants in a separate file
-
-// TODO: documentation
 pub struct TernarySeed<S> {
     seed: TritBuf,
     _sponge: PhantomData<S>,
 }
 
-// TODO: documentation
 #[derive(Debug, PartialEq)]
 pub enum TernarySeedError {
     InvalidLength(usize),
@@ -33,7 +29,7 @@ pub enum TernarySeedError {
 
 impl<S: Sponge + Default> Seed for TernarySeed<S> {
     type Error = TernarySeedError;
-    // TODO: documentation
+
     // TODO: is this random enough ?
     fn new() -> Self {
         let mut rng = rand::thread_rng();
@@ -54,7 +50,6 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         }
     }
 
-    // TODO: documentation
     fn subseed(&self, index: u64) -> Self {
         let mut sponge = S::default();
         let mut subseed = self.seed.clone();
@@ -83,7 +78,6 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         }
     }
 
-    // TODO: documentation
     fn from_buf(buf: TritBuf) -> Result<Self, Self::Error> {
         if buf.len() != 243 {
             return Err(Self::Error::InvalidLength(buf.len()));
@@ -95,7 +89,6 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         })
     }
 
-    // TODO: documentation
     fn as_bytes(&self) -> &[i8] {
         self.seed.as_i8_slice()
     }
