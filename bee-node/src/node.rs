@@ -19,9 +19,8 @@ use bee_crypto::ternary::Hash;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
-use bee_protocol::Protocol;
+use bee_protocol::{tangle::tangle, Protocol};
 use bee_snapshot::LocalSnapshot;
-use bee_tangle::tangle;
 
 use std::collections::HashMap;
 
@@ -115,11 +114,11 @@ impl Node {
         info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
+        Protocol::init(self.config.protocol.clone(), self.network.clone()).await;
+
         StaticPeerManager::new(self.config.peering.r#static.clone(), self.network.clone())
             .run()
             .await;
-
-        bee_tangle::init();
 
         info!("Reading snapshot file...");
         let snapshot_state = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()).await {
@@ -154,8 +153,6 @@ impl Node {
                 panic!("TODO");
             }
         };
-
-        Protocol::init(self.config.protocol.clone(), self.network.clone()).await;
 
         // TODO config
         let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);

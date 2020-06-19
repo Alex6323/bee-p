@@ -9,22 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::ops::Deref;
+#[macro_use]
+extern crate criterion;
 
-/// A wrapper around a `u32` that represents a milestone index.
-#[derive(Debug, Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct MilestoneIndex(u32);
+use criterion::Criterion;
 
-impl Deref for MilestoneIndex {
-    type Target = u32;
+use bee_tangle::Tangle;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+fn bench_insert_transaction(c: &mut Criterion) {
+    todo!("insert a few thousand transactions as fast as possible")
 }
 
-impl From<u32> for MilestoneIndex {
-    fn from(v: u32) -> Self {
-        Self(v)
-    }
-}
+criterion_group!(benches, bench_insert_transaction);
+criterion_main!(benches);

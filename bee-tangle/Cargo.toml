@@ -17,10 +17,13 @@ bee-transaction = { path = "../bee-transaction" }
 async-std = { version = "1.5", features = ["unstable"] }
 dashmap = "3.10"
 bitflags = "1.2.1"
-flume = "0.7.1"
 
 [dev-dependencies]
 bee-crypto = { path = "../bee-crypto" }
 bee-test = { path = "../bee-test" }
 
-serial_test = "0.4.0"
+criterion = "0.3.2"
+
+[[bench]]
+name = "bench"
+harness = false

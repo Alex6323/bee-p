@@ -164,8 +164,10 @@ impl PeerWorker {
                 debug!("[{}] Reading Heartbeat...", self.peer.address);
                 match tlv_from_bytes::<Heartbeat>(&header, bytes) {
                     Ok(message) => {
-                        self.peer.set_solid_milestone_index(message.solid_milestone_index);
-                        self.peer.set_snapshot_milestone_index(message.snapshot_milestone_index);
+                        self.peer
+                            .set_solid_milestone_index(message.solid_milestone_index.into());
+                        self.peer
+                            .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
 
                         self.peer.metrics.heartbeat_received_inc();
                         Protocol::get().metrics.heartbeat_received_inc();
