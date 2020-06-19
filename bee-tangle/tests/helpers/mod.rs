@@ -9,9 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_crypto::ternary::Hash as TxHash;
 use bee_tangle::Tangle;
 use bee_test::transaction::{create_random_attached_tx, create_random_tx};
-use bee_transaction::{BundledTransaction as Tx, Hash as TxHash, TransactionVertex};
+use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
 
 pub struct Transactions {
     pub a: Tx,

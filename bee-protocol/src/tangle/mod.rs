@@ -223,7 +223,6 @@ mod tests {
 
     use bee_tangle::traversal;
     use bee_test::{field::rand_trits_field, transaction::create_random_attached_tx};
-    use bee_transaction::Hash as TxHash;
 
     #[test]
     fn confirm_transaction() {

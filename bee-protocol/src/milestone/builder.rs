@@ -24,7 +24,7 @@ use bee_transaction::{
     TransactionVertex,
 };
 
-use std::{convert::TryFrom, marker::PhantomData};
+use std::marker::PhantomData;
 
 #[derive(Debug)]
 pub enum MilestoneBuilderError {
