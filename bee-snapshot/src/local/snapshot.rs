@@ -189,7 +189,7 @@ impl LocalSnapshot {
             };
 
             if i % 10_000 == 0 && i != 0 {
-                info!("Read {} balances", i);
+                info!("Read {} balances.", i);
             }
 
             balances.insert(address, value);
