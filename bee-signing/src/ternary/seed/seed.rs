@@ -16,6 +16,8 @@ pub trait Seed {
 
     fn new() -> Self;
 
+    fn subseed(&self, index: u64) -> Self;
+
     fn from_buf(buf: TritBuf) -> Result<Self, Self::Error>
     where
         Self: Sized;

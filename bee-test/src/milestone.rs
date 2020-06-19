@@ -11,8 +11,8 @@
 
 use crate::field::rand_trits_field;
 
+use bee_crypto::ternary::Hash;
 use bee_protocol::{Milestone, MilestoneIndex};
-use bee_transaction::Hash;
 
 pub fn clone_ms(ms: &Milestone) -> Milestone {
     Milestone::new(*ms.hash(), ms.index())

@@ -14,13 +14,13 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
 };
 
+use bee_common::logger_init;
+use bee_crypto::ternary::Hash;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
 use bee_peering::{PeerManager, StaticPeerManager};
-use bee_protocol::Protocol;
+use bee_protocol::{tangle, Protocol};
 use bee_snapshot::LocalSnapshot;
-use bee_tangle::tangle;
-use bee_transaction::Hash;
 
 use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
@@ -48,9 +48,9 @@ impl BeeNodeBuilder {
 
         let (network, events, shutdown) = bee_network::init(self.config.network);
 
-        block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
+        tangle::init();
 
-        bee_tangle::init();
+        block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
 
         info!("Reading snapshot file...");
         let snapshot_state = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
@@ -64,12 +64,13 @@ impl BeeNodeBuilder {
                 local_snapshot.metadata().seen_milestones().len(),
                 local_snapshot.state().balances().len()
             );
-                tangle().update_solid_milestone_index(local_snapshot.metadata().index().into());
+                tangle::tangle().update_solid_milestone_index(local_snapshot.metadata().index().into());
                 // TODO get from database
-                tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
-                tangle().add_solid_entry_point(Hash::zeros());
+                tangle::tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
+                tangle::tangle().add_solid_entry_point(Hash::zeros());
+
                 for solid_entry_point in local_snapshot.metadata().solid_entry_points() {
-                    tangle().add_solid_entry_point(*solid_entry_point);
+                    tangle::tangle().add_solid_entry_point(*solid_entry_point);
                 }
                 for seen_milestone in local_snapshot.metadata().seen_milestones() {
                     // TODO request ?

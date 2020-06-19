@@ -12,14 +12,15 @@
 use crate::{
     message::{uncompress_transaction_bytes, TransactionBroadcast},
     protocol::Protocol,
+    tangle::{flags::Flags, tangle},
     worker::transaction::HashCache,
 };
 
-use bee_crypto::{CurlP81, Sponge};
+use bee_crypto::ternary::{CurlP81, Hash, Sponge};
 use bee_network::EndpointId;
-use bee_tangle::tangle;
+use bee_tangle::traversal;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
-use bee_transaction::{BundledTransaction as Transaction, BundledTransactionField, Hash};
+use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use bytemuck::cast_slice;
 use futures::{
@@ -113,51 +114,60 @@ impl TransactionWorker {
             return;
         }
 
-        match tangle().insert_transaction(transaction, hash).await {
-            Some(transaction) => {
-                Protocol::get().metrics.new_transactions_received_inc();
-                if !tangle().is_synced() && Protocol::get().requested.is_empty() {
-                    Protocol::trigger_milestone_solidification().await;
+        // store transaction
+        if let Some(transaction) = tangle().insert(transaction, hash, Flags::empty()) {
+            Protocol::get().metrics.new_transactions_received_inc();
+
+            if !tangle().is_synced() && Protocol::get().requested.is_empty() {
+                Protocol::trigger_milestone_solidification().await;
+            }
+
+            match Protocol::get().requested.remove(&hash) {
+                Some((hash, index)) => {
+                    Protocol::trigger_transaction_solidification(hash, index).await;
                 }
-                match Protocol::get().requested.remove(&hash) {
-                    Some((hash, index)) => {
-                        Protocol::trigger_transaction_solidification(hash, index).await;
+                None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
+            };
+
+            if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
+                || transaction.address().eq(&Protocol::get().config.null_address)
+            {
+                let tail = {
+                    if transaction.is_tail() {
+                        Some(hash)
+                    } else {
+                        let mut last = None;
+
+                        traversal::visit_children_follow_trunk(
+                            &tangle().inner,
+                            hash,
+                            |tx, _| tx.bundle() == transaction.bundle(),
+                            |tx_hash, tx, _| {
+                                // bundle.push((*tx_hash, tx.clone()));
+                                last.replace((*tx_hash, tx.clone()));
+                            },
+                        );
+
+                        if let Some((h, t)) = last {
+                            if t.is_tail() {
+                                Some(h)
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
                     }
-                    None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
                 };
 
-                if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
-                    || transaction.address().eq(&Protocol::get().config.null_address)
-                {
-                    let tail = {
-                        if transaction.is_tail() {
-                            Some(hash)
-                        } else {
-                            let chain =
-                                tangle().trunk_walk_approvers(hash, |tx_ref| tx_ref.bundle() == transaction.bundle());
-                            match chain.last() {
-                                Some((tx_ref, hash)) => {
-                                    if tx_ref.is_tail() {
-                                        Some(*hash)
-                                    } else {
-                                        None
-                                    }
-                                }
-                                None => None,
-                            }
-                        }
-                    };
-
-                    if let Some(tail) = tail {
-                        if let Err(e) = self.milestone_validator_worker.send(tail).await {
-                            error!("Sending tail to milestone validation failed: {:?}.", e);
-                        }
-                    };
-                }
+                if let Some(tail) = tail {
+                    if let Err(e) = self.milestone_validator_worker.send(tail).await {
+                        error!("Sending tail to milestone validation failed: {:?}.", e);
+                    }
+                };
             }
-            None => {
-                Protocol::get().metrics.known_transactions_received_inc();
-            }
+        } else {
+            Protocol::get().metrics.known_transactions_received_inc();
         }
     }
 }
@@ -176,8 +186,6 @@ mod tests {
 
     #[test]
     fn test_tx_worker_with_compressed_buffer() {
-        bee_tangle::init();
-
         // build network
         let network_config = NetworkConfig::build().finish();
         let (network, _shutdown, _receiver) = bee_network::init(network_config);
@@ -218,6 +226,6 @@ mod tests {
         );
 
         assert_eq!(tangle().size(), 1);
-        assert_eq!(tangle().contains_transaction(&Hash::zeros()), true);
+        assert_eq!(tangle().contains(&Hash::zeros()), true);
     }
 }

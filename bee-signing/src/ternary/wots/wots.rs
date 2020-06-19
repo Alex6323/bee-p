@@ -11,13 +11,21 @@
 
 use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 
-use bee_crypto::Sponge;
+use bee_crypto::ternary::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
 use std::{
+    convert::TryFrom,
     fmt::{self, Display, Formatter},
     marker::PhantomData,
 };
+
+#[derive(Debug, PartialEq)]
+pub enum WotsError {
+    InvalidSecurityLevel,
+    MissingSecurityLevel,
+    FailedSpongeOperation,
+}
 
 #[derive(Clone, Copy)]
 pub enum WotsSecurityLevel {
@@ -32,10 +40,17 @@ impl Default for WotsSecurityLevel {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum WotsError {
-    MissingSecurityLevel,
-    FailedSpongeOperation,
+impl TryFrom<u8> for WotsSecurityLevel {
+    type Error = WotsError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(WotsSecurityLevel::Low),
+            2 => Ok(WotsSecurityLevel::Medium),
+            3 => Ok(WotsSecurityLevel::High),
+            _ => Err(WotsError::InvalidSecurityLevel),
+        }
+    }
 }
 
 pub struct WotsPrivateKey<S> {
@@ -101,6 +116,13 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             state: signature,
             _sponge: PhantomData,
         })
+    }
+}
+
+// TODO has been put for testing, maybe we just need to impl Eq on WotsPrivateKey
+impl<S: Sponge + Default> WotsPrivateKey<S> {
+    pub fn trits(&self) -> &Trits {
+        &self.state
     }
 }
 

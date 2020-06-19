@@ -14,5 +14,5 @@ mod fields;
 mod transaction;
 
 pub use builder::{BundledTransactionBuilder, BundledTransactionBuilders};
-pub use fields::{Address, BundledTransactionField, Hash, Index, Nonce, Payload, Tag, Timestamp, Value};
+pub use fields::{Address, BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, Value};
 pub use transaction::{BundledTransaction, BundledTransactionError, BundledTransactions};

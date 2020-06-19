@@ -8,10 +8,12 @@ readme = "README.md"
 repository = "https://github.com/iotaledger/bee"
 license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "test"]
+homepage = "https://www.iota.org"
 
 [dependencies]
+bee-crypto = { path = "../bee-crypto" }
 bee-protocol = { path = "../bee-protocol" }
-bee-ternary = { path = "../bee-ternary" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = { version = "1.4.0", features = [ "attributes" ] }

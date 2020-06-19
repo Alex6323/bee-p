@@ -20,7 +20,7 @@ pub trait PrivateKeyGenerator {
     type PrivateKey: PrivateKey;
     type Error;
 
-    /// Deterministically generates and returns a private key
+    /// Deterministically generates and returns a private key from a seed
     ///
     /// # Arguments
     ///
@@ -30,8 +30,8 @@ pub trait PrivateKeyGenerator {
     /// # Example
     ///
     /// ```
-    /// use bee_crypto::Kerl;
-    /// use bee_signing::{
+    /// use bee_crypto::ternary::Kerl;
+    /// use bee_signing::ternary::{
     ///     PrivateKeyGenerator, Seed, TernarySeed, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder,
     /// };
     ///
@@ -40,9 +40,34 @@ pub trait PrivateKeyGenerator {
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
-    /// let private_key = private_key_generator.generate(&seed, 0);
+    /// let private_key = private_key_generator.generate_from_seed(&seed, 0);
     /// ```
-    fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error>;
+    fn generate_from_seed(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
+        self.generate_from_entropy(seed.subseed(index).trits())
+    }
+
+    /// Deterministically generates and returns a private key from entropy
+    ///
+    /// # Arguments
+    ///
+    /// * `entropy` Entropy to deterministically derive a private key from
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bee_crypto::ternary::Kerl;
+    /// use bee_signing::ternary::{
+    ///     PrivateKeyGenerator, Seed, TernarySeed, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder,
+    /// };
+    ///
+    /// let seed = TernarySeed::<Kerl>::new();
+    /// let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
+    ///     .security_level(WotsSecurityLevel::Medium)
+    ///     .build()
+    ///     .unwrap();
+    /// let private_key = private_key_generator.generate_from_entropy(seed.trits());
+    /// ```
+    fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error>;
 }
 
 // TODO: documentation
@@ -58,22 +83,22 @@ pub trait PrivateKey {
     /// # Example
     ///
     /// ```
-    /// # use bee_crypto::Kerl;
-    /// # use bee_signing::{
+    /// # use bee_crypto::ternary::Kerl;
+    /// # use bee_signing::ternary::{
     ///     TernarySeed,
     ///     PrivateKeyGenerator,
     ///     Seed,
     ///     WotsSpongePrivateKeyGeneratorBuilder,
     ///     WotsSecurityLevel,
     /// };
-    /// use bee_signing::PrivateKey;
+    /// use bee_signing::ternary::PrivateKey;
     ///
     /// # let seed = TernarySeed::<Kerl>::new();
     /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
-    /// # let private_key = private_key_generator.generate(&seed, 0).unwrap();
+    /// # let private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
     /// let public_key = private_key.generate_public_key();
     /// ```
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error>;
@@ -87,15 +112,15 @@ pub trait PrivateKey {
     /// # Example
     ///
     /// ```
-    /// # use bee_crypto::Kerl;
-    /// # use bee_signing::{
+    /// # use bee_crypto::ternary::Kerl;
+    /// # use bee_signing::ternary::{
     ///     TernarySeed,
     ///     PrivateKeyGenerator,
     ///     Seed,
     ///     WotsSpongePrivateKeyGeneratorBuilder,
     ///     WotsSecurityLevel,
     /// };
-    /// use bee_signing::PrivateKey;
+    /// use bee_signing::ternary::PrivateKey;
     /// use bee_ternary::{
     ///     T1B1Buf,
     ///     TryteBuf,
@@ -106,7 +131,7 @@ pub trait PrivateKey {
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
-    /// # let mut private_key = private_key_generator.generate(&seed, 0).unwrap();
+    /// # let mut private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
     /// let message = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
     /// let message_trits = TryteBuf::try_from_str(message).unwrap().as_trits().encode::<T1B1Buf>();
     /// let signature = private_key.sign(&message_trits.as_i8_slice());

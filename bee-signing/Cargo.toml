@@ -8,10 +8,12 @@ readme = "README.md"
 repository = "https://github.com/iotaledger/bee"
 license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "signing"]
+homepage = "https://www.iota.org"
 
 [dependencies]
 bee-crypto = { path = "../bee-crypto" }
-bee-ternary = { path = "../bee-ternary" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
+bee-ternary-ext = { path = "../bee-ternary-ext" }
 
 rand = "0.7"
 sha3 = "0.8.2"
