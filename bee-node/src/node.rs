@@ -43,6 +43,8 @@ impl BeeNodeBuilder {
     // TODO use proper error type
     /// Finishes the build process of a new node.
     pub fn finish(self) -> Result<BeeNode, ()> {
+        // TODO print welcome banner
+
         info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
