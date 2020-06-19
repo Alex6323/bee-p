@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::config::BeeNodeConfigBuilder;
+use crate::config::NodeConfigBuilder;
 
 use structopt::StructOpt;
 
@@ -28,7 +28,7 @@ impl CliArgs {
         Self::from_args()
     }
 
-    pub fn apply_to_config(self, config: &mut BeeNodeConfigBuilder) {
+    pub fn apply_to_config(self, config: &mut NodeConfigBuilder) {
         self.log_level.map(|log_level| config.logger.stdout_level(log_level));
     }
 }

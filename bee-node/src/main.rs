@@ -21,9 +21,9 @@ fn main() {
             logger_init(config.logger.clone()).unwrap();
 
             match BeeNode::build(config).finish() {
-                Ok(mut bee) => {
-                    bee.run_loop();
-                    bee.shutdown();
+                Ok(mut node) => {
+                    node.run_loop();
+                    node.shutdown();
                 }
                 Err(_) => {
                     // TODO use error

@@ -23,9 +23,9 @@ const CONFIG_PATH: &str = "./config.toml";
 
 // TODO use proper error
 /// Creates a Bee config builder from the local config file.
-pub fn read_config() -> Result<BeeNodeConfigBuilder, ()> {
+pub fn read_config() -> Result<NodeConfigBuilder, ()> {
     match fs::read_to_string(CONFIG_PATH) {
-        Ok(toml) => match toml::from_str::<BeeNodeConfigBuilder>(&toml) {
+        Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
             Ok(config_builder) => Ok(config_builder),
             Err(_) => Err(()),
         },
@@ -34,7 +34,7 @@ pub fn read_config() -> Result<BeeNodeConfigBuilder, ()> {
 }
 
 #[derive(Default, Deserialize)]
-pub struct BeeNodeConfigBuilder {
+pub struct NodeConfigBuilder {
     pub(crate) logger: LoggerConfigBuilder,
     pub(crate) network: NetworkConfigBuilder,
     pub(crate) peering: PeeringConfigBuilder,
@@ -42,7 +42,7 @@ pub struct BeeNodeConfigBuilder {
     pub(crate) snapshot: SnapshotConfigBuilder,
 }
 
-impl BeeNodeConfigBuilder {
+impl NodeConfigBuilder {
     pub fn finish(self) -> NodeConfig {
         NodeConfig {
             logger: self.logger.finish(),

@@ -18,5 +18,5 @@ mod node;
 
 // TODO: prefix with `crate`? (it's not necessary but helps with eye parsing IMO)
 pub use cli::CliArgs;
-pub use config::{read_config, BeeNodeConfigBuilder};
+pub use config::{read_config, NodeConfigBuilder};
 pub use node::BeeNode;
