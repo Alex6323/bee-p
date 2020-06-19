@@ -9,10 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
+use crate::{
+    message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
+};
 
 use bee_network::EndpointId;
-use bee_tangle::tangle;
 
 use futures::{channel::oneshot, future::FutureExt, select};
 use log::info;
@@ -53,7 +54,7 @@ impl MilestoneRequesterWorker {
 
         match epid {
             Some(epid) => {
-                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
             }
             None => {
                 for _ in 0..guard.len() {
@@ -63,7 +64,7 @@ impl MilestoneRequesterWorker {
 
                     if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                         if index > peer.snapshot_milestone_index() && index <= peer.solid_milestone_index() {
-                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(index)).await;
+                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                             break;
                         }
                     }

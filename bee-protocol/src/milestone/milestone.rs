@@ -11,7 +11,33 @@
 
 use bee_transaction::Hash;
 
-pub type MilestoneIndex = u32;
+use std::ops::{Add, Deref};
+
+/// A wrapper around a `u32` that represents a milestone index.
+#[derive(Debug, Clone, Copy, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct MilestoneIndex(pub u32);
+
+impl Deref for MilestoneIndex {
+    type Target = u32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<u32> for MilestoneIndex {
+    fn from(v: u32) -> Self {
+        Self(v)
+    }
+}
+
+impl Add for MilestoneIndex {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self(*self + *other)
+    }
+}
 
 pub struct Milestone {
     pub(crate) hash: Hash,

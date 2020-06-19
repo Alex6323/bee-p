@@ -9,9 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
+use crate::{
+    message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
+};
 
-use bee_tangle::tangle;
 use bee_ternary::T5B1Buf;
 use bee_transaction::Hash;
 
@@ -83,7 +84,7 @@ impl TransactionRequesterWorker {
                 // TODO impl fused stream
                 entry = Protocol::get().transaction_requester_worker.0.pop().fuse() => {
                     if let TransactionRequesterWorkerEntry(hash, index) = entry {
-                        if !tangle().is_solid_entry_point(&hash) && !tangle().contains_transaction(&hash) {
+                        if !tangle().is_solid_entry_point(&hash) && !tangle().contains(&hash) {
                             self.process_request(hash, index).await;
                         }
                     }

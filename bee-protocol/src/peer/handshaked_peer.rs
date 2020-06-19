@@ -59,18 +59,18 @@ impl HandshakedPeer {
     }
 
     pub(crate) fn set_solid_milestone_index(&self, index: MilestoneIndex) {
-        self.solid_milestone_index.store(index, Ordering::Relaxed);
+        self.solid_milestone_index.store(*index, Ordering::Relaxed);
     }
 
     pub(crate) fn solid_milestone_index(&self) -> MilestoneIndex {
-        self.solid_milestone_index.load(Ordering::Relaxed)
+        self.solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
     pub(crate) fn set_snapshot_milestone_index(&self, index: MilestoneIndex) {
-        self.snapshot_milestone_index.store(index, Ordering::Relaxed);
+        self.snapshot_milestone_index.store(*index, Ordering::Relaxed);
     }
 
     pub(crate) fn snapshot_milestone_index(&self) -> MilestoneIndex {
-        self.snapshot_milestone_index.load(Ordering::Relaxed)
+        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
     }
 }

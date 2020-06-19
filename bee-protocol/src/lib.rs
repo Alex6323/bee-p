@@ -11,6 +11,8 @@
 
 #![recursion_limit = "256"]
 
+pub mod tangle;
+
 mod config;
 mod message;
 mod milestone;

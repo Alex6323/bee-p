@@ -36,7 +36,7 @@ impl Protocol {
     }
 
     pub fn request_last_milestone(to: Option<EndpointId>) {
-        Protocol::request_milestone(0, to);
+        Protocol::request_milestone(MilestoneIndex(0), to);
     }
 
     pub fn milestone_requester_is_empty() -> bool {
@@ -88,7 +88,7 @@ impl Protocol {
         solid_milestone_index: MilestoneIndex,
         snapshot_milestone_index: MilestoneIndex,
     ) {
-        SenderWorker::<Heartbeat>::send(&to, Heartbeat::new(solid_milestone_index, snapshot_milestone_index)).await;
+        SenderWorker::<Heartbeat>::send(&to, Heartbeat::new(*solid_milestone_index, *snapshot_milestone_index)).await;
     }
 
     pub async fn broadcast_heartbeat(solid_milestone_index: MilestoneIndex, snapshot_milestone_index: MilestoneIndex) {

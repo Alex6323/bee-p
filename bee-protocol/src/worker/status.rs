@@ -9,9 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::protocol::Protocol;
-
-use bee_tangle::tangle;
+use crate::{protocol::Protocol, tangle::tangle};
 
 use std::time::Duration;
 
@@ -31,9 +29,9 @@ impl StatusWorker {
     }
 
     fn status(&self) {
-        let snapshot_milestone_index: u32 = *tangle().get_snapshot_milestone_index();
-        let solid_milestone_index: u32 = *tangle().get_solid_milestone_index();
-        let last_milestone_index: u32 = *tangle().get_last_milestone_index();
+        let snapshot_milestone_index = *tangle().get_snapshot_milestone_index();
+        let solid_milestone_index = *tangle().get_solid_milestone_index();
+        let last_milestone_index = *tangle().get_last_milestone_index();
 
         // TODO Threshold
         // TODO use tangle synced method

@@ -19,8 +19,10 @@ bee-ternary-ext = { path = "../bee-ternary-ext" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = "1.5.0"
+bitflags = "1.2.1"
 bytemuck = "1.2.0"
 dashmap = "3.11"
+flume = "0.7.1"
 futures = "0.3.5"
 futures-util = "0.3.5"
 log = "0.4.8"
@@ -31,3 +33,4 @@ twox-hash = "1.5.0"
 bee-test = { path = "../bee-test" }
 
 rand = "0.7.3"
+serial_test = "0.4.0"
