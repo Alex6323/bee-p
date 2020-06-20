@@ -43,9 +43,8 @@ impl BeeNodeBuilder {
     // TODO use proper error type
     /// Finishes the build process of a new node.
     pub fn finish(self) -> Result<BeeNode, ()> {
-        // TODO print welcome banner
+        print_banner_and_version();
 
-        info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
         let (network, events, shutdown) = bee_network::init(self.config.network);
@@ -223,4 +222,18 @@ fn shutdown_listener() -> oneshot::Receiver<()> {
     });
 
     receiver
+}
+
+fn print_banner_and_version() {
+    println!(
+        "\n{}\tv{}-{}\n{}\n",
+        " ██████╗░███████╗███████╗
+ ██╔══██╗██╔════╝██╔════╝
+ ██████╦╝█████╗░░█████╗░░",
+        BEE_VERSION,
+        &BEE_GIT_COMMIT[0..7],
+        " ██╔══██╗██╔══╝░░██╔══╝░░
+ ██████╦╝███████╗███████╗
+ ╚═════╝░╚══════╝╚══════╝",
+    );
 }
