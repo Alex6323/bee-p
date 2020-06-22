@@ -55,9 +55,6 @@ impl From<bee_ternary_ext::bigint::common::Error> for Error {
 }
 
 impl Sponge for Kerl {
-    const IN_LEN: usize = HASH_LEN;
-    const OUT_LEN: usize = HASH_LEN;
-
     type Error = Error;
 
     /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal state and transforming the
@@ -68,11 +65,11 @@ impl Sponge for Kerl {
     /// the result of the last transformation before the data was copied, and will be reused for the next
     /// transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-        if input.len() % Self::IN_LEN != 0 {
+        if input.len() % HASH_LEN != 0 {
             return Err(Error::NotMultipleOfHashLength);
         }
 
-        for trits_chunk in input.chunks(Self::IN_LEN) {
+        for trits_chunk in input.chunks(HASH_LEN) {
             self.ternary_buffer.inner_mut().copy_from(&trits_chunk);
             // Unwrapping is ok because this cannot fail.
             //
@@ -101,11 +98,11 @@ impl Sponge for Kerl {
     ///
     /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written into it.
     fn squeeze_into(&mut self, buf: &mut Trits<T1B1>) -> Result<(), Self::Error> {
-        if buf.len() % Self::OUT_LEN != 0 {
+        if buf.len() % HASH_LEN != 0 {
             return Err(Error::NotMultipleOfHashLength);
         }
 
-        for trit_chunk in buf.chunks_mut(Self::OUT_LEN) {
+        for trit_chunk in buf.chunks_mut(HASH_LEN) {
             // Create a new Keccak in lieu of resetting the internal one
             let mut keccak = Keccak::v384();
 

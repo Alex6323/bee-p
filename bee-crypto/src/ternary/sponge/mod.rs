@@ -13,6 +13,8 @@ mod curlp;
 mod kerl;
 mod r#type;
 
+use super::HASH_LEN;
+
 pub use curlp::{CurlP, CurlP27, CurlP81};
 pub use kerl::Kerl;
 pub use r#type::SpongeType;
@@ -24,12 +26,6 @@ use std::ops::DerefMut;
 /// The common interface of cryptographic hash functions that follow the sponge construction, and that absorb and return
 /// binary-coded, balanced ternary.
 pub trait Sponge {
-    /// The expected length of the input to the sponge.
-    const IN_LEN: usize;
-
-    /// The length of the hash squeezed from the sponge.
-    const OUT_LEN: usize;
-
     /// An error indicating a that a failure has occured during `absorb`.
     type Error;
 
@@ -44,7 +40,7 @@ pub trait Sponge {
 
     /// Convenience function using `Sponge::squeeze_into` to to return an owned version of the hash.
     fn squeeze(&mut self) -> Result<TritBuf, Self::Error> {
-        let mut output = TritBuf::zeros(Self::OUT_LEN);
+        let mut output = TritBuf::zeros(HASH_LEN);
         self.squeeze_into(&mut output)?;
         Ok(output)
     }
@@ -68,8 +64,6 @@ pub trait Sponge {
 }
 
 impl<T: Sponge, U: DerefMut<Target = T>> Sponge for U {
-    const IN_LEN: usize = T::IN_LEN;
-    const OUT_LEN: usize = T::OUT_LEN;
     type Error = T::Error;
 
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {

@@ -108,9 +108,6 @@ impl CurlP {
 }
 
 impl Sponge for CurlP {
-    const IN_LEN: usize = HASH_LEN;
-    const OUT_LEN: usize = HASH_LEN;
-
     type Error = Infallible;
 
     /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal state and transforming the
@@ -121,7 +118,7 @@ impl Sponge for CurlP {
     /// the result of the last transformation before the data was copied, and will be reused for the next
     /// transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-        for chunk in input.chunks(Self::IN_LEN) {
+        for chunk in input.chunks(HASH_LEN) {
             self.state[0..chunk.len()].copy_from(chunk);
             self.transform();
         }
@@ -138,7 +135,7 @@ impl Sponge for CurlP {
     ///
     /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written into it.
     fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
-        for chunk in buf.chunks_mut(Self::OUT_LEN) {
+        for chunk in buf.chunks_mut(HASH_LEN) {
             chunk.copy_from(&self.state[0..chunk.len()]);
             self.transform()
         }
