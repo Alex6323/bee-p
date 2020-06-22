@@ -13,12 +13,14 @@ use crate::ternary::{Sponge, HASH_LEN};
 
 use bee_ternary::{Btrit, TritBuf, Trits};
 
-use std::convert::{Infallible, TryInto};
+use std::{
+    convert::{Infallible, TryInto},
+    ops::{Deref, DerefMut},
+};
 
 /// The length internal state of the `CurlP` sponge construction (in units of binary-coded, balanced trits).
 const STATE_LEN: usize = HASH_LEN * 3;
 const HALF_STATE_LEN: usize = STATE_LEN / 2;
-
 const TRUTH_TABLE: [i8; 11] = [1, 0, -1, 2, 1, -1, 0, 2, -1, 1, 0];
 
 #[derive(Copy, Clone)]
@@ -30,10 +32,8 @@ pub enum CurlPRounds {
 pub struct CurlP {
     /// The number of rounds of hashing to apply before a hash is squeezed.
     rounds: CurlPRounds,
-
     /// The internal state.
     state: TritBuf,
-
     /// Workspace for performing transformations
     work_state: TritBuf,
 }
@@ -161,6 +161,20 @@ impl Default for CurlP27 {
     }
 }
 
+impl Deref for CurlP27 {
+    type Target = CurlP;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CurlP27 {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 /// `CurlP` with a fixed number of 81 rounds.
 pub struct CurlP81(CurlP);
 
@@ -176,31 +190,16 @@ impl Default for CurlP81 {
     }
 }
 
-macro_rules! forward_sponge_impl {
-    ($($t:ty),+) => {
+impl Deref for CurlP81 {
+    type Target = CurlP;
 
-    $(
-        impl Sponge for $t {
-            const IN_LEN: usize = 243;
-            const OUT_LEN: usize = 243;
-
-            type Error = Infallible;
-
-            fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-                self.0.absorb(input)
-            }
-
-            fn reset(&mut self) {
-                self.0.reset()
-            }
-
-            fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
-                self.0.squeeze_into(buf)?;
-                Ok(())
-            }
-        }
-    )+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-forward_sponge_impl!(CurlP27, CurlP81);
+impl DerefMut for CurlP81 {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}

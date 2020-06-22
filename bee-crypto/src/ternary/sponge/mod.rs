@@ -19,6 +19,8 @@ pub use r#type::SpongeType;
 
 use bee_ternary::{TritBuf, Trits};
 
+use std::ops::DerefMut;
+
 /// The common interface of cryptographic hash functions that follow the sponge construction, and that absorb and return
 /// binary-coded, balanced ternary.
 pub trait Sponge {
@@ -62,5 +64,23 @@ pub trait Sponge {
         let output = self.squeeze()?;
         self.reset();
         Ok(output)
+    }
+}
+
+impl<T: Sponge, U: DerefMut<Target = T>> Sponge for U {
+    const IN_LEN: usize = T::IN_LEN;
+    const OUT_LEN: usize = T::OUT_LEN;
+    type Error = T::Error;
+
+    fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
+        T::absorb(self, input)
+    }
+
+    fn reset(&mut self) {
+        T::reset(self)
+    }
+
+    fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
+        T::squeeze_into(self, buf)
     }
 }
