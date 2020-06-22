@@ -321,7 +321,7 @@ mod tests {
     }
 
     #[test]
-    fn kerl_negative_byte_input() {
+    fn kerl_input_negative_byte() {
         kerl_generic_digest(
             "DJ9WGAKRZOMH9KVRCHGCDCREXZVDKY9FXAXVSLELYADXHQCQQSMQYAEEBTEIWTQDUZIOFSFLBQQA9RUPX",
             "XRZCRWFXU9UYRKFQRKWROIRGEVGTUGUBKDYGPWDTUXXOFVXWRTQBRRGGUSIEMPAISTUEYEZJXXEPUTY9D",
