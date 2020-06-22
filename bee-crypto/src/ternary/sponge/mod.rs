@@ -15,7 +15,7 @@ mod r#type;
 
 use super::HASH_LEN;
 
-pub use curlp::{CurlP, CurlP27, CurlP81};
+pub use curlp::{CurlP, CurlP27, CurlP81, CurlPRounds};
 pub use kerl::Kerl;
 pub use r#type::SpongeType;
 
