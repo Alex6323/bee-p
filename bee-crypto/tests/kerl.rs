@@ -327,7 +327,4 @@ mod tests {
             "XRZCRWFXU9UYRKFQRKWROIRGEVGTUGUBKDYGPWDTUXXOFVXWRTQBRRGGUSIEMPAISTUEYEZJXXEPUTY9D",
         );
     }
-
-    // #[test]
-    // fn kerl_fuzz() {}
 }
