@@ -9,37 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+mod sponge;
+
 #[cfg(test)]
 mod tests {
-    use bee_crypto::ternary::{Kerl, Sponge};
-    use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, TryteBuf};
 
-    fn kerl_generic_digest(input: &str, output: &str) {
-        let mut kerl = Kerl::new();
+    use super::sponge::{sponge_generic_digest, sponge_generic_digest_into};
 
-        let input_trit_buf = TryteBuf::try_from_str(input).unwrap().as_trits().encode::<T1B1Buf>();
-        let expected_hash = TryteBuf::try_from_str(output).unwrap();
-        let calculated_hash = kerl.digest(input_trit_buf.as_slice()).unwrap().encode::<T3B1Buf>();
-
-        assert_eq!(calculated_hash.as_slice(), expected_hash.as_trits());
-    }
-
-    fn kerl_generic_digest_into(input: &str, output: &str) {
-        let mut kerl = Kerl::new();
-
-        let input_trit_buf = TryteBuf::try_from_str(input).unwrap().as_trits().encode::<T1B1Buf>();
-        let expected_hash = TryteBuf::try_from_str(output).unwrap();
-
-        let output_len = expected_hash.as_trits().len();
-        let mut calculated_hash = TritBuf::<T1B1Buf>::zeros(output_len);
-
-        kerl.digest_into(input_trit_buf.as_slice(), &mut calculated_hash.as_slice_mut())
-            .unwrap();
-
-        let calculated_hash = calculated_hash.encode::<T3B1Buf>();
-
-        assert_eq!(calculated_hash.as_slice(), expected_hash.as_trits());
-    }
+    use bee_crypto::ternary::{Kerl};
 
     #[test]
     fn kerl_input_243_output_243() {
@@ -126,7 +103,7 @@ mod tests {
             ),
         ];
         for test in tests.iter() {
-            kerl_generic_digest(test.0, test.1);
+            sponge_generic_digest::<Kerl>(test.0, test.1);
         }
     }
 
@@ -176,7 +153,7 @@ mod tests {
         ];
 
         for test in tests.iter() {
-            kerl_generic_digest_into(test.0, test.1);
+            sponge_generic_digest_into::<Kerl>(test.0, test.1);
         }
     }
 
@@ -206,7 +183,7 @@ mod tests {
         ];
 
         for test in tests.iter() {
-            kerl_generic_digest_into(test.0, test.1);
+            sponge_generic_digest_into::<Kerl>(test.0, test.1);
         }
     }
 
@@ -256,7 +233,7 @@ mod tests {
         ];
 
         for test in tests.iter() {
-            kerl_generic_digest_into(test.0, test.1);
+            sponge_generic_digest_into::<Kerl>(test.0, test.1);
         }
     }
 
@@ -286,7 +263,7 @@ mod tests {
         ];
 
         for test in tests.iter() {
-            kerl_generic_digest_into(test.0, test.1);
+            sponge_generic_digest_into::<Kerl>(test.0, test.1);
         }
     }
 
@@ -316,13 +293,13 @@ mod tests {
         ];
 
         for test in tests.iter() {
-            kerl_generic_digest_into(test.0, test.1);
+            sponge_generic_digest_into::<Kerl>(test.0, test.1);
         }
     }
 
     #[test]
     fn kerl_input_negative_byte() {
-        kerl_generic_digest(
+        sponge_generic_digest::<Kerl>(
             "DJ9WGAKRZOMH9KVRCHGCDCREXZVDKY9FXAXVSLELYADXHQCQQSMQYAEEBTEIWTQDUZIOFSFLBQQA9RUPX",
             "XRZCRWFXU9UYRKFQRKWROIRGEVGTUGUBKDYGPWDTUXXOFVXWRTQBRRGGUSIEMPAISTUEYEZJXXEPUTY9D",
         );
