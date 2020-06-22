@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::Sponge;
+use crate::ternary::{Sponge, HASH_LEN};
 
 use bee_ternary::{Btrit, Trits, T1B1};
 use bee_ternary_ext::bigint::{
@@ -18,8 +18,6 @@ use bee_ternary_ext::bigint::{
 };
 
 use tiny_keccak::{Hasher, Keccak};
-
-const HASH_LEN: usize = 243;
 
 #[derive(Clone)]
 pub struct Kerl {
