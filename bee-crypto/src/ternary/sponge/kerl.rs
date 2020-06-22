@@ -62,13 +62,13 @@ impl Sponge for Kerl {
 
     type Error = Error;
 
-    /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal
-    /// state and transforming the state before moving on to the next chunk.
+    /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal state and transforming the
+    /// state before moving on to the next chunk.
     ///
-    /// If `input` is not a multiple of `HASH_LEN` with the last chunk having `n < HASH_LEN` trits,
-    /// the last chunk will be copied to the first `n` slots of the internal state. The remaining
-    /// data in the internal state is then just the result of the last transformation before the
-    /// data was copied, and will be reused for the next transformation.
+    /// If `input` is not a multiple of `HASH_LEN` with the last chunk having `n < HASH_LEN` trits, the last chunk will
+    /// be copied to the first `n` slots of the internal state. The remaining data in the internal state is then just
+    /// the result of the last transformation before the data was copied, and will be reused for the next
+    /// transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
         if input.len() % Self::IN_LEN != 0 {
             return Err(Error::NotMultipleOfHashLength);
@@ -93,17 +93,15 @@ impl Sponge for Kerl {
 
     /// Reset the internal state by overwriting it with zeros.
     fn reset(&mut self) {
-        // TODO: Overwrite the internal buffer directly rather then setting it to a new Keccak
-        // object. This requires using `KeccakState::reset` via a new method `Keccak::method`
-        // calling its internal state.
+        // TODO: Overwrite the internal buffer directly rather then setting it to a new Keccak object. This requires
+        // using `KeccakState::reset` via a new method `Keccak::method` calling its internal state.
         self.keccak = Keccak::v384();
     }
 
-    /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill
-    /// the buffer in chunks of `HASH_LEN` at a time.
+    /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill the buffer in chunks
+    /// of `HASH_LEN` at a time.
     ///
-    /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written
-    /// into it.
+    /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written into it.
     fn squeeze_into(&mut self, buf: &mut Trits<T1B1>) -> Result<(), Self::Error> {
         if buf.len() % Self::OUT_LEN != 0 {
             return Err(Error::NotMultipleOfHashLength);
