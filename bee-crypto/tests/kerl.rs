@@ -16,7 +16,7 @@ mod tests {
 
     use super::sponge::{sponge_generic_digest, sponge_generic_digest_into};
 
-    use bee_crypto::ternary::{Kerl};
+    use bee_crypto::ternary::Kerl;
 
     #[test]
     fn kerl_input_243_output_243() {
