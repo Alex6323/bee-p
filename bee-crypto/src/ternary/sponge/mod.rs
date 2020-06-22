@@ -26,7 +26,7 @@ use std::ops::DerefMut;
 /// The common interface of cryptographic hash functions that follow the sponge construction, and that absorb and return
 /// binary-coded, balanced ternary.
 pub trait Sponge {
-    /// An error indicating a that a failure has occured during `absorb`.
+    /// An error indicating that a failure has occured during `absorb`.
     type Error;
 
     /// Absorb `input` into the sponge.
