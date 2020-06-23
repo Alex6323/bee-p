@@ -39,13 +39,13 @@ impl TransactionSolidifierWorker {
         let mut missing_hashes = HashSet::new();
 
         traversal::visit_parents_depth_first(
-            &tangle().inner,
+            tangle(),
             hash,
             |_, metadata| !metadata.is_solid(),
             |_, _, _| {},
-            |hash| {
-                if !tangle().is_solid_entry_point(hash) {
-                    missing_hashes.insert(*hash);
+            |missing_hash| {
+                if !tangle().is_solid_entry_point(missing_hash) {
+                    missing_hashes.insert(*missing_hash);
                 }
             },
         );

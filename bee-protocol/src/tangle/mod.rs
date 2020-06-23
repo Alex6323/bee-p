@@ -23,6 +23,7 @@ use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
 use dashmap::{DashMap, DashSet};
 
 use std::{
+    ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
@@ -36,6 +37,14 @@ pub struct MsTangle {
     solid_milestone_index: AtomicU32,
     last_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
+}
+
+impl Deref for MsTangle {
+    type Target = Tangle<Flags>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl MsTangle {
