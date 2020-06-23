@@ -23,6 +23,7 @@ use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
 use dashmap::{DashMap, DashSet};
 
 use std::{
+    ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
@@ -36,6 +37,14 @@ pub struct MsTangle {
     solid_milestone_index: AtomicU32,
     last_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
+}
+
+impl Deref for MsTangle {
+    type Target = Tangle<Flags>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl MsTangle {
@@ -60,23 +69,16 @@ impl MsTangle {
 
     // NOTE: not implemented as an async worker atm, but it makes things much easier
     #[inline]
-    fn propagate_solid_flag(&self, initial: TxHash) {
-        let mut children = vec![initial];
+    fn propagate_solid_flag(&self, root: TxHash) {
+        let mut children = vec![root];
 
         while let Some(ref hash) = children.pop() {
-            let is_solid = |hash| {
-                self.inner
-                    .get_metadata(hash)
-                    .map(|flags| flags.is_solid())
-                    .unwrap_or(false)
-            };
-
-            if is_solid(hash) {
+            if self.is_solid_transaction(hash) {
                 continue;
             }
 
             if let Some(tx) = self.inner.get(&hash) {
-                if is_solid(tx.trunk()) && is_solid(tx.branch()) {
+                if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
                     self.inner.update_metadata(&hash, |flags| flags.set_solid());
 
                     for child in self.inner.get_children(&hash) {

@@ -9,21 +9,18 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::Sponge;
+use crate::ternary::{Sponge, HASH_LEN};
 
 use bee_ternary::{Btrit, TritBuf, Trits};
 
-use std::convert::{Infallible, TryInto};
+use std::{
+    convert::{Infallible, TryInto},
+    ops::{Deref, DerefMut},
+};
 
-/// The length of a hash as returned by the hash functions implemented in this RFC (in
-/// units of binary-coded, balanced trits).
-const HASH_LEN: usize = 243;
-
-/// The length internal state of the `CurlP` sponge construction (in units of binary-coded,
-/// balanced trits).
+/// The length internal state of the `CurlP` sponge construction (in units of binary-coded, balanced trits).
 const STATE_LEN: usize = HASH_LEN * 3;
 const HALF_STATE_LEN: usize = STATE_LEN / 2;
-
 const TRUTH_TABLE: [i8; 11] = [1, 0, -1, 2, 1, -1, 0, 2, -1, 1, 0];
 
 #[derive(Copy, Clone)]
@@ -35,10 +32,8 @@ pub enum CurlPRounds {
 pub struct CurlP {
     /// The number of rounds of hashing to apply before a hash is squeezed.
     rounds: CurlPRounds,
-
     /// The internal state.
     state: TritBuf,
-
     /// Workspace for performing transformations
     work_state: TritBuf,
 }
@@ -53,11 +48,10 @@ impl CurlP {
         }
     }
 
-    /// Transforms the internal state of the `CurlP` sponge after the input was copied
-    /// into the internal state.
+    /// Transforms the internal state of the `CurlP` sponge after the input was copied into the internal state.
     ///
-    /// The essence of this transformation is the application of a so-called substitution box to
-    /// the internal state, which happens `round` number of times.
+    /// The essence of this transformation is the application of a so-called substitution box to the internal state,
+    /// which happens `round` number of times.
     fn transform(&mut self) {
         fn calculate_truth_table_index(xs: &Trits, p: usize, q: usize) -> usize {
             let idx = xs.get(p).unwrap() as i8 + ((xs.get(q).unwrap() as i8) << 2) + 5;
@@ -68,8 +62,8 @@ impl CurlP {
             assert!(input.len() <= STATE_LEN);
             assert!(output.len() <= STATE_LEN);
 
-            // Unwrapping here and below is acceptable because we have verified that
-            // `calculate_truth_table_index` and `TRUTH_TABLE` always yield a value in {-1, 0, 1}
+            // Unwrapping here and below is acceptable because we have verified that `calculate_truth_table_index` and
+            // `TRUTH_TABLE` always yield a value in {-1, 0, 1}
             output.set(
                 0,
                 TRUTH_TABLE[calculate_truth_table_index(input, 0, HALF_STATE_LEN)]
@@ -105,8 +99,8 @@ impl CurlP {
             std::mem::swap(lhs, rhs);
         }
 
-        // Swap the slices back if the number of rounds is even (otherwise `self.work_state`
-        // contains the transformed state).
+        // Swap the slices back if the number of rounds is even (otherwise `self.work_state` contains the transformed
+        // state).
         if self.rounds as usize & 1 == 0 {
             std::mem::swap(lhs, rhs);
         }
@@ -114,20 +108,17 @@ impl CurlP {
 }
 
 impl Sponge for CurlP {
-    const IN_LEN: usize = HASH_LEN;
-    const OUT_LEN: usize = HASH_LEN;
-
     type Error = Infallible;
 
-    /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal
-    /// state and transforming the state before moving on to the next chunk.
+    /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal state and transforming the
+    /// state before moving on to the next chunk.
     ///
-    /// If `input` is not a multiple of `HASH_LEN` with the last chunk having `n < HASH_LEN` trits,
-    /// the last chunk will be copied to the first `n` slots of the internal state. The remaining
-    /// data in the internal state is then just the result of the last transformation before the
-    /// data was copied, and will be reused for the next transformation.
+    /// If `input` is not a multiple of `HASH_LEN` with the last chunk having `n < HASH_LEN` trits, the last chunk will
+    /// be copied to the first `n` slots of the internal state. The remaining data in the internal state is then just
+    /// the result of the last transformation before the data was copied, and will be reused for the next
+    /// transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-        for chunk in input.chunks(Self::IN_LEN) {
+        for chunk in input.chunks(HASH_LEN) {
             self.state[0..chunk.len()].copy_from(chunk);
             self.transform();
         }
@@ -139,13 +130,12 @@ impl Sponge for CurlP {
         self.state.fill(Btrit::Zero);
     }
 
-    /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill
-    /// the buffer in chunks of `HASH_LEN` at a time.
+    /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill the buffer in chunks
+    /// of `HASH_LEN` at a time.
     ///
-    /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written
-    /// into it.
+    /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written into it.
     fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
-        for chunk in buf.chunks_mut(Self::OUT_LEN) {
+        for chunk in buf.chunks_mut(HASH_LEN) {
             chunk.copy_from(&self.state[0..chunk.len()]);
             self.transform()
         }
@@ -168,6 +158,20 @@ impl Default for CurlP27 {
     }
 }
 
+impl Deref for CurlP27 {
+    type Target = CurlP;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CurlP27 {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 /// `CurlP` with a fixed number of 81 rounds.
 pub struct CurlP81(CurlP);
 
@@ -183,31 +187,16 @@ impl Default for CurlP81 {
     }
 }
 
-macro_rules! forward_sponge_impl {
-    ($($t:ty),+) => {
+impl Deref for CurlP81 {
+    type Target = CurlP;
 
-    $(
-        impl Sponge for $t {
-            const IN_LEN: usize = 243;
-            const OUT_LEN: usize = 243;
-
-            type Error = Infallible;
-
-            fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-                self.0.absorb(input)
-            }
-
-            fn reset(&mut self) {
-                self.0.reset()
-            }
-
-            fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
-                self.0.squeeze_into(buf)?;
-                Ok(())
-            }
-        }
-    )+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-forward_sponge_impl!(CurlP27, CurlP81);
+impl DerefMut for CurlP81 {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}

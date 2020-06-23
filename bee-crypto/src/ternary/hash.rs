@@ -13,7 +13,9 @@ use bee_ternary::{Trits, T1B1};
 
 use std::{cmp::PartialEq, fmt, hash};
 
-pub const HASH_TRIT_LEN: usize = 243;
+/// The length of a hash as returned by the hash functions implemented in this RFC (in units of binary-coded, balanced
+/// trits).
+pub const HASH_LEN: usize = 243;
 
 #[derive(Copy, Clone)]
 // TODO pub ?
@@ -46,7 +48,7 @@ impl Hash {
     }
 
     pub fn trit_len() -> usize {
-        HASH_TRIT_LEN
+        HASH_LEN
     }
 }
 
