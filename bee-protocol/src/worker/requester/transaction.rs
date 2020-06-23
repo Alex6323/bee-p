@@ -47,6 +47,10 @@ impl TransactionRequesterWorker {
     }
 
     async fn process_request(&mut self, hash: Hash, index: MilestoneIndex) {
+        if Protocol::get().requested.contains_key(&hash) {
+            return;
+        }
+
         if Protocol::get().peer_manager.handshaked_peers.is_empty() {
             return;
         }
