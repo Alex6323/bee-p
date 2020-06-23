@@ -133,6 +133,7 @@ impl Node {
                 );
                 tangle().update_solid_milestone_index(local_snapshot.metadata().index().into());
                 // TODO get from database
+                tangle().update_last_milestone_index(local_snapshot.metadata().index().into());
                 tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
                 tangle().add_solid_entry_point(Hash::zeros());
                 for solid_entry_point in local_snapshot.metadata().solid_entry_points() {
