@@ -13,7 +13,10 @@ use crate::service::{Service, ServiceImpl};
 
 use serde_json::Value;
 
-use crate::{format::utils, service::TransactionByHashParams};
+use crate::{
+    format::json_utils::{json_error_obj, json_success_obj},
+    service::TransactionByHashParams,
+};
 use std::convert::TryFrom;
 
 pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
@@ -22,9 +25,9 @@ pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
 
 pub async fn transaction_by_hash(json: Value) -> Result<impl warp::Reply, warp::Rejection> {
     match TransactionByHashParams::try_from(&json) {
-        Ok(params) => Ok(warp::reply::json(&Value::from(ServiceImpl::transaction_by_hash(
-            params,
+        Ok(params) => Ok(warp::reply::json(&json_success_obj(Value::from(
+            ServiceImpl::transaction_by_hash(params),
         )))),
-        Err(msg) => Ok(warp::reply::json(&utils::json_error(msg))),
+        Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
     }
 }

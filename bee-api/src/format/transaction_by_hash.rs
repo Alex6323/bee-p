@@ -9,8 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::format::utils::json_success;
-
 use serde_json::{Map, Value as JsonValue};
 
 use crate::{
@@ -38,13 +36,13 @@ impl TryFrom<&JsonValue> for TransactionByHashParams {
 
 impl From<TransactionByHashResponse> for JsonValue {
     fn from(res: TransactionByHashResponse) -> Self {
-        let mut data = Map::new();
+        let mut json_obj = Map::new();
         for (hash, tx_ref) in res.hashes.iter() {
             match tx_ref {
-                Some(tx_ref) => data.insert(String::from(hash), JsonValue::from(tx_ref)),
-                None => data.insert(String::from(hash), JsonValue::Null),
+                Some(tx_ref) => json_obj.insert(String::from(hash), JsonValue::from(tx_ref)),
+                None => json_obj.insert(String::from(hash), JsonValue::Null),
             };
         }
-        json_success(data)
+        JsonValue::Object(json_obj)
     }
 }

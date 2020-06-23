@@ -13,7 +13,7 @@ use bee_tangle::tangle;
 
 use crate::format::items::{
     bool_item::BoolItem, hash_item::HashItem, milestone_index_item::MilestoneIndexItem,
-    transaction_item::TransactionRefItem,
+    transaction_ref_item::TransactionRefItem,
 };
 use std::collections::HashMap;
 

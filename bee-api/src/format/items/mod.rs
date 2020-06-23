@@ -12,4 +12,4 @@
 pub mod bool_item;
 pub mod hash_item;
 pub mod milestone_index_item;
-pub mod transaction_item;
+pub mod transaction_ref_item;
