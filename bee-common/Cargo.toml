@@ -8,6 +8,7 @@ readme = "README.md"
 repository = "https://github.com/iotaledger/bee"
 license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "common"]
+homepage = "https://www.iota.org"
 
 [dependencies]
 async-std = "1.5.0"
@@ -17,3 +18,6 @@ fern = { version = "0.6.0", features = ["colored"] }
 futures = "0.3.5"
 log = "0.4.8"
 serde = { version = "1.0.104", features = ["derive" ] }
+
+[dev-dependencies]
+async-std = "1.5.0"

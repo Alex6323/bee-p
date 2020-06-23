@@ -9,12 +9,4 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod ternary;
-
-pub use ternary::{
-    normalize_hash, MssError, MssPrivateKey, MssPrivateKeyGenerator, MssPrivateKeyGeneratorBuilder, MssPublicKey,
-    MssSignature, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature, TernarySeed,
-    TernarySeedError, WotsError, WotsPrivateKey, WotsPublicKey, WotsSecurityLevel, WotsShakePrivateKeyGenerator,
-    WotsShakePrivateKeyGeneratorBuilder, WotsSignature, WotsSpongePrivateKeyGenerator,
-    WotsSpongePrivateKeyGeneratorBuilder,
-};
+pub mod ternary;

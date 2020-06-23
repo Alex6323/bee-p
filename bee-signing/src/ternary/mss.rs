@@ -9,14 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature};
+use crate::ternary::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature};
 
-use bee_crypto::Sponge;
+use bee_crypto::ternary::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
 use std::marker::PhantomData;
 
-// TODO: documentation
 #[derive(Debug, PartialEq)]
 pub enum MssError {
     InvalidDepth(u8),
@@ -27,6 +26,7 @@ pub enum MssError {
     FailedUnderlyingSignatureGeneration,
     FailedUnderlyingPublicKeyRecovery,
     FailedSpongeOperation,
+    FailedSeed,
 }
 
 pub struct MssPrivateKeyGeneratorBuilder<S, G> {
@@ -98,18 +98,18 @@ where
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
     type Error = MssError;
 
-    fn generate(&self, seed: &Self::Seed, _: u64) -> Result<Self::PrivateKey, Self::Error> {
+    fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
+        let seed = Self::Seed::from_buf(entropy.to_buf()).map_err(|_| MssError::FailedSeed)?;
         let mut sponge = S::default();
         let mut keys = Vec::new();
         let mut tree = TritBuf::zeros(((1 << self.depth) - 1) * 243);
 
-        // TODO: subseed collision ?
         // TODO: reserve ?
 
         for key_index in 0..(1 << (self.depth - 1)) {
             let ots_private_key = self
                 .generator
-                .generate(seed, key_index)
+                .generate_from_entropy(seed.subseed(key_index).trits())
                 .map_err(|_| Self::Error::FailedUnderlyingPrivateKeyGeneration)?;
             let ots_public_key = ots_private_key
                 .generate_public_key()

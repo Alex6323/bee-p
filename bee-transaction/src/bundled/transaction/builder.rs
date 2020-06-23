@@ -11,11 +11,13 @@
 
 use crate::bundled::{
     constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
-    Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Hash, Index, Nonce, Payload, Tag,
+    Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Index, Nonce, Payload, Tag,
     Timestamp, Value,
 };
 
+use bee_crypto::ternary::Hash;
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};
+use bee_ternary_ext::num_conversions::i64_to_tritbuf;
 
 #[derive(Default)]
 pub struct BundledTransactionBuilder {
@@ -51,11 +53,11 @@ impl BundledTransactionBuilder {
                 + LAST_INDEX.trit_offset.length,
         );
         let address = self.address.as_ref().unwrap();
-        let value = TritBuf::from(*self.value.as_ref().unwrap().to_inner());
+        let value = i64_to_tritbuf(*self.value.as_ref().unwrap().to_inner());
         let obsolete_tag = self.obsolete_tag.as_ref().unwrap();
-        let timestamp = TritBuf::from(*self.timestamp.as_ref().unwrap().to_inner() as i64);
-        let index = TritBuf::from(*self.index.as_ref().unwrap().to_inner() as i64);
-        let last_index = TritBuf::from(*self.last_index.as_ref().unwrap().to_inner() as i64);
+        let timestamp = i64_to_tritbuf(*self.timestamp.as_ref().unwrap().to_inner() as i64);
+        let index = i64_to_tritbuf(*self.index.as_ref().unwrap().to_inner() as i64);
+        let last_index = i64_to_tritbuf(*self.last_index.as_ref().unwrap().to_inner() as i64);
 
         let mut start = 0;
         let mut end = ADDRESS.trit_offset.length;
@@ -277,17 +279,19 @@ mod tests {
         let tx2 = BundledTransaction::from_trits(tx_trits).unwrap();
 
         assert_eq!(tx.payload, tx2.payload);
+        assert_eq!(tx.address, tx2.address);
+        assert_eq!(tx.value, tx2.value);
+        assert_eq!(tx.obsolete_tag, tx2.obsolete_tag);
+        assert_eq!(tx.timestamp, tx2.timestamp);
+        assert_eq!(tx.index, tx2.index);
+        assert_eq!(tx.last_index, tx2.last_index);
+        assert_eq!(tx.tag, tx2.tag);
+        assert_eq!(tx.attachment_ts, tx2.attachment_ts);
         assert_eq!(tx.bundle, tx2.bundle);
         assert_eq!(tx.trunk, tx2.trunk);
         assert_eq!(tx.branch, tx2.branch);
-        assert_eq!(tx.nonce, tx2.nonce);
-        assert_eq!(tx.tag, tx2.tag);
-        assert_eq!(tx.obsolete_tag, tx2.obsolete_tag);
-        assert_eq!(tx.value, tx2.value);
-        assert_eq!(tx.timestamp, tx2.timestamp);
-        assert_eq!(tx.attachment_ts, tx2.attachment_ts);
+        assert_eq!(tx.attachment_lbts, tx2.attachment_lbts);
         assert_eq!(tx.attachment_ubts, tx2.attachment_ubts);
-        assert_eq!(tx.index, tx2.index);
-        assert_eq!(tx.last_index, tx2.last_index);
+        assert_eq!(tx.nonce, tx2.nonce);
     }
 }

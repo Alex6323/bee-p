@@ -11,8 +11,9 @@
 
 use crate::{LocalSnapshotMetadata, SnapshotState};
 
+use bee_crypto::ternary::Hash;
 use bee_ternary::{T1B1Buf, Trits, T5B1};
-use bee_transaction::{Address, BundledTransactionField, Hash};
+use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use std::collections::HashMap;
 

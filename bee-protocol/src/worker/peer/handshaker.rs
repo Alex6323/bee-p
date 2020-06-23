@@ -16,6 +16,7 @@ use crate::{
     },
     peer::Peer,
     protocol::Protocol,
+    tangle::tangle,
     worker::PeerWorker,
 };
 
@@ -24,7 +25,6 @@ use bee_network::{
     Command::{Disconnect, SendMessage},
     Network, Origin, Port,
 };
-use bee_tangle::tangle;
 
 use async_std::{net::SocketAddr, task::spawn};
 use futures::{
@@ -103,7 +103,7 @@ impl PeerHandshakerWorker {
             .send(SendMessage {
                 epid: self.peer.epid,
                 bytes: tlv_into_bytes(Handshake::new(
-                    self.network.config().binding_port(),
+                    *self.network.config().binding_port(),
                     &Protocol::get().config.coordinator.public_key_bytes,
                     Protocol::get().config.mwm,
                     &MESSAGES_VERSIONS,
@@ -235,8 +235,8 @@ impl PeerHandshakerWorker {
 
                         Protocol::send_heartbeat(
                             self.peer.epid,
-                            *tangle().get_solid_milestone_index(),
-                            *tangle().get_snapshot_milestone_index(),
+                            tangle().get_solid_milestone_index(),
+                            tangle().get_snapshot_milestone_index(),
                         )
                         .await;
 

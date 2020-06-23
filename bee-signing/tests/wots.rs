@@ -12,8 +12,8 @@
 #[cfg(test)]
 mod tests {
 
-    use bee_crypto::Kerl;
-    use bee_signing::{WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder};
+    use bee_crypto::ternary::Kerl;
+    use bee_signing::ternary::{WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder};
 
     #[test]
     fn wots_generator_missing_security_level() {

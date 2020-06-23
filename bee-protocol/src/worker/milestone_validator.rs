@@ -12,12 +12,12 @@
 use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
+    tangle::tangle,
 };
 
-use bee_crypto::{Kerl, Sponge};
-use bee_signing::{PublicKey, RecoverableSignature};
-use bee_tangle::tangle;
-use bee_transaction::{Hash, TransactionVertex};
+use bee_crypto::ternary::{Hash, Kerl, Sponge};
+use bee_signing::ternary::{PublicKey, RecoverableSignature};
+use bee_transaction::TransactionVertex;
 
 use std::marker::PhantomData;
 
@@ -61,9 +61,10 @@ where
         // TODO also do an IncomingBundleBuilder check ?
         let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
         let mut transaction = tangle()
-            .get_transaction(&tail_hash)
+            .get(&tail_hash)
             .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
+        // TODO consider using the metadata instead as it might be more efficient
         if !transaction.is_tail() {
             return Err(MilestoneValidatorWorkerError::NotATail);
         }
@@ -73,7 +74,7 @@ where
         // TODO use walker
         for _ in 0..Protocol::get().config.coordinator.security_level {
             transaction = tangle()
-                .get_transaction(transaction.trunk())
+                .get((*transaction).trunk())
                 .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
             builder.push((*transaction).clone());
@@ -107,8 +108,8 @@ where
                                 // TODO check multiple triggers
                                 tangle().add_milestone(milestone.index.into(), milestone.hash);
                                 // TODO deref ? Why not .into() ?
-                                if milestone.index > *tangle().get_last_milestone_index() {
-                                    info!("New milestone #{}.", milestone.index);
+                                if milestone.index > tangle().get_last_milestone_index() {
+                                    info!("New milestone #{}.", *milestone.index);
                                     tangle().update_last_milestone_index(milestone.index.into());
                                 }
                                 // TODO only trigger if index == last solid index ?
