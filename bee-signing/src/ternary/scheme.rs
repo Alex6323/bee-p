@@ -13,7 +13,6 @@ use crate::ternary::Seed;
 
 use bee_ternary::{TritBuf, Trits};
 
-// TODO: documentation
 pub trait PrivateKeyGenerator {
     type Seed: Seed;
     /// The type of the generated private keys
@@ -70,7 +69,6 @@ pub trait PrivateKeyGenerator {
     fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error>;
 }
 
-// TODO: documentation
 pub trait PrivateKey {
     /// The type of the matching public key
     type PublicKey: PublicKey;
@@ -139,46 +137,32 @@ pub trait PrivateKey {
     fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error>;
 }
 
-// TODO: documentation
 pub trait PublicKey {
-    // TODO: documentation
     type Signature: Signature;
     type Error;
 
-    // TODO: documentation
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error>;
 
-    // TODO: documentation
     fn from_buf(buf: TritBuf) -> Self;
 
-    // TODO: documentation
-    // TODO: Rename to as_i8_slice?
     fn as_bytes(&self) -> &[i8];
 
     fn trits(&self) -> &Trits;
 }
 
-// TODO: documentation
 pub trait Signature {
-    // TODO: documentation
     fn size(&self) -> usize;
 
-    // TODO: documentation
     fn from_buf(buf: TritBuf) -> Self;
 
-    // TODO: documentation
-    // TODO: Rename to as_i8_slice?
     fn as_bytes(&self) -> &[i8];
 
     fn trits(&self) -> &Trits;
 }
 
-// TODO: documentation
 pub trait RecoverableSignature: Signature {
-    // TODO: documentation
     type PublicKey: PublicKey;
     type Error;
 
-    // TODO: documentation
     fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error>;
 }

@@ -139,7 +139,7 @@ impl TransactionWorker {
                         let mut last = None;
 
                         traversal::visit_children_follow_trunk(
-                            &tangle().inner,
+                            tangle(),
                             hash,
                             |tx, _| tx.bundle() == transaction.bundle(),
                             |tx_hash, tx, _| {

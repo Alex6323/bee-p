@@ -119,7 +119,6 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     }
 }
 
-// TODO has been put for testing, maybe we just need to impl Eq on WotsPrivateKey
 impl<S: Sponge + Default> WotsPrivateKey<S> {
     pub fn trits(&self) -> &Trits {
         &self.state
@@ -167,7 +166,6 @@ pub struct WotsSignature<S> {
     _sponge: PhantomData<S>,
 }
 
-// TODO default impl ?
 impl<S: Sponge + Default> Signature for WotsSignature<S> {
     fn size(&self) -> usize {
         self.state.len()

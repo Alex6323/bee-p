@@ -36,7 +36,7 @@ impl StatusWorker {
         // TODO Threshold
         // TODO use tangle synced method
         let mut status = if solid_milestone_index == last_milestone_index {
-            String::from("Synchronized")
+            format!("Synchronized at {} -", last_milestone_index)
         } else {
             let progress = ((solid_milestone_index - snapshot_milestone_index) as f32 * 100.0
                 / (last_milestone_index - snapshot_milestone_index) as f32) as u8;
