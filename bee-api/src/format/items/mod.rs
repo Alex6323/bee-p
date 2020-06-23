@@ -9,8 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod node_info;
-pub mod transaction_by_hash;
-pub mod utils;
-
-pub mod items;
+pub mod bool_item;
+pub mod hash_item;
+pub mod milestone_index_item;
+pub mod transaction_item;

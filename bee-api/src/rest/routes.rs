@@ -22,7 +22,9 @@ pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
 
 pub async fn transaction_by_hash(json: Value) -> Result<impl warp::Reply, warp::Rejection> {
     match TransactionByHashParams::try_from(&json) {
-        Ok(req) => Ok(warp::reply::json(&Value::from(ServiceImpl::transaction_by_hash(req)))),
+        Ok(params) => Ok(warp::reply::json(&Value::from(ServiceImpl::transaction_by_hash(
+            params,
+        )))),
         Err(msg) => Ok(warp::reply::json(&utils::json_error(msg))),
     }
 }

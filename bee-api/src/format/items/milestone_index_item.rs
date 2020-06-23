@@ -9,8 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod node_info;
-pub mod transaction_by_hash;
-pub mod utils;
+use serde_json::Value as JsonValue;
 
-pub mod items;
+use std::convert::From;
+
+use bee_tangle::MilestoneIndex;
+
+pub struct MilestoneIndexItem(pub MilestoneIndex);
+
+impl From<&MilestoneIndexItem> for JsonValue {
+    fn from(value: &MilestoneIndexItem) -> Self {
+        JsonValue::from(*value.0)
+    }
+}

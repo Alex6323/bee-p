@@ -20,50 +20,27 @@ impl From<NodeInfoResponse> for JsonValue {
     fn from(res: NodeInfoResponse) -> Self {
         let mut data = Map::new();
 
-        data.insert(String::from("is_synced"), JsonValue::Bool(res.is_synced));
+        data.insert(String::from("is_synced"), JsonValue::from(&res.is_synced));
 
         data.insert(
             String::from("last_milestone_index"),
-            JsonValue::from(*res.last_milestone_index),
+            JsonValue::from(&res.last_milestone_index),
         );
 
         match res.last_milestone_hash {
-            Some(hash) => {
-                let hash_string = hash
-                    .as_trits()
-                    .iter_trytes()
-                    .map(|trit| char::from(trit))
-                    .collect::<String>();
-
-                data.insert(String::from("last_milestone_hash"), JsonValue::String(hash_string));
-            }
-            None => {
-                data.insert(String::from("last_milestone_hash"), JsonValue::Null);
-            }
-        }
+            Some(hash) => data.insert(String::from("last_milestone_hash"), JsonValue::from(&hash)),
+            None => data.insert(String::from("last_milestone_hash"), JsonValue::Null),
+        };
 
         data.insert(
             String::from("last_solid_milestone_index"),
-            JsonValue::from(*res.last_solid_milestone_index),
+            JsonValue::from(&res.last_solid_milestone_index),
         );
 
         match res.last_solid_milestone_hash {
-            Some(hash) => {
-                let hash_string = hash
-                    .as_trits()
-                    .iter_trytes()
-                    .map(|trit| char::from(trit))
-                    .collect::<String>();
-
-                data.insert(
-                    String::from("last_solid_milestone_hash"),
-                    JsonValue::String(hash_string),
-                );
-            }
-            None => {
-                data.insert(String::from("last_solid_milestone_hash"), JsonValue::Null);
-            }
-        }
+            Some(hash) => data.insert(String::from("last_solid_milestone_hash"), JsonValue::from(&hash)),
+            None => data.insert(String::from("last_solid_milestone_hash"), JsonValue::Null),
+        };
 
         json_success(data)
     }

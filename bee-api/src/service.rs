@@ -9,9 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_tangle::{tangle, MilestoneIndex, TransactionRef};
-use bee_transaction::Hash;
+use bee_tangle::tangle;
 
+use crate::format::items::{
+    bool_item::BoolItem, hash_item::HashItem, milestone_index_item::MilestoneIndexItem,
+    transaction_item::TransactionRefItem,
+};
 use std::collections::HashMap;
 
 pub trait Service {
@@ -20,37 +23,51 @@ pub trait Service {
 }
 
 pub struct NodeInfoResponse {
-    pub is_synced: bool,
-    pub last_milestone_index: MilestoneIndex,
-    pub last_milestone_hash: Option<Hash>,
-    pub last_solid_milestone_index: MilestoneIndex,
-    pub last_solid_milestone_hash: Option<Hash>,
+    pub is_synced: BoolItem,
+    pub last_milestone_index: MilestoneIndexItem,
+    pub last_milestone_hash: Option<HashItem>,
+    pub last_solid_milestone_index: MilestoneIndexItem,
+    pub last_solid_milestone_hash: Option<HashItem>,
 }
 
 pub struct TransactionByHashParams {
-    pub hashes: Vec<Hash>,
+    pub hashes: Vec<HashItem>,
 }
 
 pub struct TransactionByHashResponse {
-    pub hashes: HashMap<Hash, Option<TransactionRef>>,
+    pub hashes: HashMap<HashItem, Option<TransactionRefItem>>,
 }
 
 pub struct ServiceImpl;
 impl Service for ServiceImpl {
     fn node_info() -> NodeInfoResponse {
+        let is_synced = BoolItem(tangle().is_synced());
+        let last_milestone_index = MilestoneIndexItem(tangle().get_last_milestone_index());
+        let last_milestone_hash = match tangle().get_milestone_hash(tangle().get_last_milestone_index()) {
+            Some(hash) => Some(HashItem(hash)),
+            None => None,
+        };
+        let last_solid_milestone_index = MilestoneIndexItem(tangle().get_solid_milestone_index());
+        let last_solid_milestone_hash = match tangle().get_milestone_hash(tangle().get_solid_milestone_index()) {
+            Some(hash) => Some(HashItem(hash)),
+            None => None,
+        };
         NodeInfoResponse {
-            is_synced: tangle().is_synced(),
-            last_milestone_index: tangle().get_last_milestone_index(),
-            last_milestone_hash: tangle().get_milestone_hash(tangle().get_last_milestone_index()),
-            last_solid_milestone_index: tangle().get_solid_milestone_index(),
-            last_solid_milestone_hash: tangle().get_milestone_hash(tangle().get_solid_milestone_index()),
+            is_synced,
+            last_milestone_index,
+            last_milestone_hash,
+            last_solid_milestone_index,
+            last_solid_milestone_hash,
         }
     }
 
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
         let mut ret = HashMap::new();
         for hash in params.hashes {
-            ret.insert(hash, tangle().get_transaction(&hash));
+            match tangle().get_transaction(&hash.0) {
+                Some(tx_ref) => ret.insert(HashItem(hash.0), Some(TransactionRefItem(tx_ref))),
+                None => ret.insert(HashItem(hash.0), None),
+            };
         }
         TransactionByHashResponse { hashes: ret }
     }

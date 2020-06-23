@@ -9,23 +9,28 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary::{T1B1Buf, TritBuf};
-use bee_transaction::BundledTransaction;
-
-use crate::format::utils::{json_success, DeserializedHashes};
+use crate::format::utils::json_success;
 
 use serde_json::{Map, Value as JsonValue};
 
-use crate::service::{TransactionByHashParams, TransactionByHashResponse};
+use crate::{
+    format::items::hash_item::HashItem,
+    service::{TransactionByHashParams, TransactionByHashResponse},
+};
 use std::convert::{From, TryFrom};
 
 impl TryFrom<&JsonValue> for TransactionByHashParams {
     type Error = &'static str;
     fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
         match value["hashes"].as_array() {
-            Some(hashes) => Ok(TransactionByHashParams {
-                hashes: DeserializedHashes::try_from(hashes)?.0,
-            }),
+            Some(hashes) => {
+                let mut ret = Vec::new();
+                for value in hashes {
+                    let hash_item = HashItem::try_from(value)?;
+                    ret.push(hash_item);
+                }
+                Ok(TransactionByHashParams { hashes: ret })
+            }
             None => Err("No hash array provided"),
         }
     }
@@ -34,29 +39,12 @@ impl TryFrom<&JsonValue> for TransactionByHashParams {
 impl From<TransactionByHashResponse> for JsonValue {
     fn from(res: TransactionByHashResponse) -> Self {
         let mut data = Map::new();
-
         for (hash, tx_ref) in res.hashes.iter() {
-            let hash_string = hash
-                .as_trits()
-                .iter_trytes()
-                .map(|trit| char::from(trit))
-                .collect::<String>();
-
             match tx_ref {
-                Some(tx_ref) => {
-                    let mut tx_buf = TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len());
-                    tx_ref.into_trits_allocated(&mut tx_buf);
-
-                    let tx_string = tx_buf.iter_trytes().map(|trit| char::from(trit)).collect::<String>();
-
-                    data.insert(hash_string, JsonValue::String(tx_string));
-                }
-                None => {
-                    data.insert(hash_string, JsonValue::Null);
-                }
-            }
+                Some(tx_ref) => data.insert(String::from(hash), JsonValue::from(tx_ref)),
+                None => data.insert(String::from(hash), JsonValue::Null),
+            };
         }
-
         json_success(data)
     }
 }

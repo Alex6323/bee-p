@@ -26,6 +26,7 @@ pub async fn run(addr: SocketAddr) {
     let tx_by_hash = warp::post()
         .and(warp::path("v1"))
         .and(warp::path("transaction"))
+        .and(warp::path("by-hash"))
         .and(warp::path::end())
         .and(json_body())
         .and_then(routes::transaction_by_hash);
