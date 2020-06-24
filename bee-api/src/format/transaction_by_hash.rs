@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use serde_json::{Map, Value as JsonValue};
+use serde_json::Value as JsonValue;
 
 use crate::{
     format::items::hash_item::HashItem,
@@ -28,11 +28,9 @@ impl TryFrom<&str> for TransactionByHashParams {
 
 impl From<TransactionByHashResponse> for JsonValue {
     fn from(res: TransactionByHashResponse) -> Self {
-        let mut json_obj = Map::new();
         match res.tx {
-            Some(tx_ref) => json_obj.insert(String::from("tx"), JsonValue::from(&tx_ref)),
-            None => json_obj.insert(String::from("tx"), JsonValue::Null),
-        };
-        JsonValue::Object(json_obj)
+            Some(tx_ref) => JsonValue::from(&tx_ref),
+            None => JsonValue::Null,
+        }
     }
 }
