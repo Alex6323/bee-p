@@ -81,9 +81,9 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     shutdown.add_notifier(tcp_sd_sender);
     // shutdown.add_notifier(udp_sd_sender);
 
-    shutdown.add_task(spawn(ep_worker.run()));
-    shutdown.add_task(spawn(tcp_worker.run()));
-    // shutdown.add_task(spawn(udp_worker.run()));
+    shutdown.add_worker(spawn(ep_worker.run()));
+    shutdown.add_worker(spawn(tcp_worker.run()));
+    // shutdown.add_worker(spawn(udp_worker.run()));
 
     whitelist::init();
     shutdown.add_action(Box::new(|| whitelist::drop()));

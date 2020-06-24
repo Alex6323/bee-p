@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub mod shutdown;
+pub mod worker;
 
 mod logger;
 mod wait_priority_queue;

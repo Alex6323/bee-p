@@ -9,24 +9,31 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// TODO remove
-// use crate::{endpoint::whitelist, errors::Result};
-
-mod error;
+use crate::worker::Error as WorkerError;
 
 use async_std::task;
 use futures::channel::oneshot;
+use thiserror::Error;
 
-pub use error::{Error, Result};
+use std::result::Result;
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Sending the shutdown signal to a task failed.")]
+    SendingShutdownSignalFailed,
+
+    #[error("Waiting for task to end failed.")]
+    WaitingforWorkerShutdownFailed(#[from] WorkerError),
+}
 
 pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
-pub type TaskHandle = task::JoinHandle<Result<()>>;
+pub type WorkerHandle = task::JoinHandle<Result<(), WorkerError>>;
 
 /// Handles the graceful shutdown of asynchronous tasks.
 pub struct ShutdownHandler {
     notifiers: Vec<ShutdownNotifier>,
-    tasks: Vec<TaskHandle>,
+    workers: Vec<WorkerHandle>,
     actions: Vec<Box<dyn Fn()>>,
 }
 
@@ -35,7 +42,7 @@ impl ShutdownHandler {
     pub fn new() -> Self {
         Self {
             notifiers: vec![],
-            tasks: vec![],
+            workers: vec![],
             actions: vec![],
         }
     }
@@ -45,9 +52,9 @@ impl ShutdownHandler {
         self.notifiers.push(notifier);
     }
 
-    /// Adds an asynchronous task.
-    pub fn add_task(&mut self, task: TaskHandle) {
-        self.tasks.push(task);
+    /// Adds an asynchronous worker.
+    pub fn add_worker(&mut self, worker: WorkerHandle) {
+        self.workers.push(worker);
     }
 
     /// Adds an action that is applied during shutdown.
@@ -56,22 +63,21 @@ impl ShutdownHandler {
     }
 
     /// Executes the shutdown.
-    pub async fn execute(self) {
+    pub async fn execute(self) -> Result<(), Error> {
+        for notifier in self.notifiers {
+            // NOTE: in case of an error the `Err` variant simply contains our shutdown signal `()` that we tried to
+            // send.
+            notifier.send(()).map_err(|_| Error::SendingShutdownSignalFailed)?
+        }
+
+        for worker in self.workers {
+            worker.await?;
+        }
+
         for action in self.actions {
             action();
         }
 
-        // TODO remove
-        // whitelist::drop();
-
-        let mut tasks = self.tasks;
-
-        for notifier in self.notifiers {
-            notifier.send(()).expect("error sending shutdown signal to task");
-        }
-
-        for task in &mut tasks {
-            task.await.expect("error waiting for task to finish");
-        }
+        Ok(())
     }
 }
