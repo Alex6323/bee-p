@@ -20,6 +20,7 @@ use std::collections::HashMap;
 pub trait Service {
     fn node_info() -> NodeInfoResponse;
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse;
+    fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse;
 }
 
 pub struct NodeInfoResponse {
@@ -31,11 +32,19 @@ pub struct NodeInfoResponse {
 }
 
 pub struct TransactionByHashParams {
-    pub hashes: Vec<HashItem>,
+    pub hash: HashItem,
 }
 
 pub struct TransactionByHashResponse {
-    pub hashes: HashMap<HashItem, Option<TransactionRefItem>>,
+    pub tx: Option<TransactionRefItem>,
+}
+
+pub struct TransactionsByHashesParams {
+    pub hashes: Vec<HashItem>,
+}
+
+pub struct TransactionsByHashesResponse {
+    pub txs: HashMap<HashItem, Option<TransactionRefItem>>,
 }
 
 pub struct ServiceImpl;
@@ -62,13 +71,21 @@ impl Service for ServiceImpl {
     }
 
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
+        let ret = match tangle().get_transaction(&params.hash.0) {
+            Some(tx_ref) => Some(TransactionRefItem(tx_ref)),
+            None => None,
+        };
+        TransactionByHashResponse { tx: ret }
+    }
+
+    fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse {
         let mut ret = HashMap::new();
         for hash in params.hashes {
-            match tangle().get_transaction(&hash.0) {
-                Some(tx_ref) => ret.insert(HashItem(hash.0), Some(TransactionRefItem(tx_ref))),
-                None => ret.insert(HashItem(hash.0), None),
-            };
+            ret.insert(
+                HashItem(hash.0),
+                ServiceImpl::transaction_by_hash(TransactionByHashParams { hash }).tx,
+            );
         }
-        TransactionByHashResponse { hashes: ret }
+        TransactionsByHashesResponse { txs: ret }
     }
 }

@@ -11,23 +11,32 @@
 
 use crate::service::{Service, ServiceImpl};
 
-use serde_json::Value;
+use serde_json::Value as JsonValue;
 
 use crate::{
     format::json_utils::{json_error_obj, json_success_obj},
-    service::TransactionByHashParams,
+    service::{TransactionByHashParams, TransactionsByHashesParams},
 };
 use std::convert::TryFrom;
 
 pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
-    Ok(warp::reply::json(&Value::from(ServiceImpl::node_info())))
+    Ok(warp::reply::json(&JsonValue::from(ServiceImpl::node_info())))
 }
 
-pub async fn transaction_by_hash(json: Value) -> Result<impl warp::Reply, warp::Rejection> {
-    match TransactionByHashParams::try_from(&json) {
-        Ok(params) => Ok(warp::reply::json(&json_success_obj(Value::from(
-            ServiceImpl::transaction_by_hash(params),
-        )))),
+pub async fn transactions_by_hashes(json: JsonValue) -> Result<impl warp::Reply, warp::Rejection> {
+    match TransactionsByHashesParams::try_from(&json) {
+        Ok(params) => Ok(warp::reply::json(&json_success_obj(
+            ServiceImpl::transactions_by_hashes(params).into(),
+        ))),
+        Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
+    }
+}
+
+pub async fn transaction_by_hash(value: String) -> Result<impl warp::Reply, warp::Rejection> {
+    match TransactionByHashParams::try_from(value.as_str()) {
+        Ok(params) => Ok(warp::reply::json(&json_success_obj(
+            ServiceImpl::transaction_by_hash(params).into(),
+        ))),
         Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
     }
 }

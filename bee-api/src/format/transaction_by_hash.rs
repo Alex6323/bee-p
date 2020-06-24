@@ -17,32 +17,22 @@ use crate::{
 };
 use std::convert::{From, TryFrom};
 
-impl TryFrom<&JsonValue> for TransactionByHashParams {
+impl TryFrom<&str> for TransactionByHashParams {
     type Error = &'static str;
-    fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
-        match value["hashes"].as_array() {
-            Some(hashes) => {
-                let mut ret = Vec::new();
-                for value in hashes {
-                    let hash_item = HashItem::try_from(value)?;
-                    ret.push(hash_item);
-                }
-                Ok(TransactionByHashParams { hashes: ret })
-            }
-            None => Err("No hash array provided"),
-        }
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(TransactionByHashParams {
+            hash: HashItem::try_from(value)?,
+        })
     }
 }
 
 impl From<TransactionByHashResponse> for JsonValue {
     fn from(res: TransactionByHashResponse) -> Self {
         let mut json_obj = Map::new();
-        for (hash, tx_ref) in res.hashes.iter() {
-            match tx_ref {
-                Some(tx_ref) => json_obj.insert(String::from(hash), JsonValue::from(tx_ref)),
-                None => json_obj.insert(String::from(hash), JsonValue::Null),
-            };
-        }
+        match res.tx {
+            Some(tx_ref) => json_obj.insert(String::from("tx"), JsonValue::from(&tx_ref)),
+            None => json_obj.insert(String::from("tx"), JsonValue::Null),
+        };
         JsonValue::Object(json_obj)
     }
 }

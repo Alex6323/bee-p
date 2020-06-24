@@ -19,17 +19,24 @@ use std::convert::TryFrom;
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct HashItem(pub Hash);
 
+impl TryFrom<&str> for HashItem {
+    type Error = &'static str;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match TryteBuf::try_from_str(value) {
+            Ok(buf) => match Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>()) {
+                Ok(hash) => Ok(HashItem(hash)),
+                Err(_err) => Err("String has invalid size"),
+            },
+            Err(_err) => Err("String contains invalid characters"),
+        }
+    }
+}
+
 impl TryFrom<&JsonValue> for HashItem {
     type Error = &'static str;
     fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
         match value.as_str() {
-            Some(tryte_str) => match TryteBuf::try_from_str(tryte_str) {
-                Ok(buf) => match Hash::try_from_inner(buf.as_trits().encode::<T1B1Buf>()) {
-                    Ok(hash) => Ok(HashItem(hash)),
-                    Err(_err) => Err("String has invalid size"),
-                },
-                Err(_err) => Err("String contains invalid characters"),
-            },
+            Some(tryte_str) => HashItem::try_from(tryte_str),
             None => Err("No string provided"),
         }
     }

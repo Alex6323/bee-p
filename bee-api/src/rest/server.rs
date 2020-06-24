@@ -23,15 +23,23 @@ pub async fn run(addr: SocketAddr) {
         .and(warp::path::end())
         .and_then(routes::node_info);
 
-    let tx_by_hash = warp::post()
+    let tx_by_hash_post = warp::post()
         .and(warp::path("v1"))
         .and(warp::path("transaction"))
         .and(warp::path("by-hash"))
         .and(warp::path::end())
         .and(json_body())
+        .and_then(routes::transactions_by_hashes);
+
+    let tx_by_hash_get = warp::get()
+        .and(warp::path("v1"))
+        .and(warp::path("transaction"))
+        .and(warp::path("by-hash"))
+        .and(warp::path::param())
+        .and(warp::path::end())
         .and_then(routes::transaction_by_hash);
 
-    let routes = tx_by_hash.or(node_info);
+    let routes = tx_by_hash_get.or(tx_by_hash_post.or(node_info));
 
     warp::serve(routes).run(addr).await;
 }
