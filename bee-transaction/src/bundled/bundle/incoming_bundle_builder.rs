@@ -84,8 +84,8 @@ where
     }
 
     fn validate_signatures(&self) -> Result<(), IncomingBundleBuilderError> {
-        // TODO no bundle should be considered valid if it contains more than MaxSecLevel transactions belonging to the input address with a value != 0 (actually < 0)
-        // TODO get real values
+        // TODO no bundle should be considered valid if it contains more than MaxSecLevel transactions belonging to the
+        // input address with a value != 0 (actually < 0) TODO get real values
         let public_key = P::from_buf(TritBuf::new());
         let signature = P::Signature::from_buf(TritBuf::new());
 
