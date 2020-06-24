@@ -19,10 +19,10 @@ use std::result::Result;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Sending the shutdown signal to a task failed.")]
+    #[error("Sending the shutdown signal to a worker failed.")]
     SendingShutdownSignalFailed,
 
-    #[error("Waiting for task to end failed.")]
+    #[error("Waiting for worker to shut down failed.")]
     WaitingforWorkerShutdownFailed(#[from] WorkerError),
 }
 
@@ -30,14 +30,14 @@ pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
 pub type WorkerHandle = task::JoinHandle<Result<(), WorkerError>>;
 
-/// Handles the graceful shutdown of asynchronous tasks.
-pub struct ShutdownHandler {
+/// Handles the graceful shutdown of asynchronous workers.
+pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
     workers: Vec<WorkerHandle>,
     actions: Vec<Box<dyn Fn()>>,
 }
 
-impl ShutdownHandler {
+impl Shutdown {
     /// Creates a new instance.
     pub fn new() -> Self {
         Self {
@@ -57,7 +57,7 @@ impl ShutdownHandler {
         self.workers.push(worker);
     }
 
-    /// Adds an action that is applied during shutdown.
+    /// Adds teardown logic that is executed during shutdown.
     pub fn add_action(&mut self, action: Box<dyn Fn()>) {
         self.actions.push(action);
     }

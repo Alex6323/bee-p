@@ -50,7 +50,7 @@ use events::EventSubscriber as Events;
 use tcp::worker::TcpWorker;
 // use udp::worker::UdpWorker;
 
-use bee_common::shutdown::ShutdownHandler as Shutdown;
+use bee_common::shutdown::Shutdown;
 
 use async_std::task::spawn;
 use futures::channel::oneshot;
