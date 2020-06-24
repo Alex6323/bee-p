@@ -11,9 +11,7 @@
 
 use std::convert::TryFrom;
 
-use bee_ternary::{Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Utrit, T1B1};
-
-use std::convert::From;
+use bee_ternary::{Btrit, T1B1Buf, TritBuf};
 
 const RADIX: u8 = 3;
 const MAX_TRITS_IN_I64: usize = (0.63 * 64_f32) as usize + 1; // (log2/log3)*64

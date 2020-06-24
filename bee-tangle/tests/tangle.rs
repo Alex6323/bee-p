@@ -9,22 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::ops::Deref;
+mod helpers;
 
-/// A wrapper around a `u32` that represents a milestone index.
-#[derive(Debug, Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct MilestoneIndex(u32);
+use self::helpers::*;
 
-impl Deref for MilestoneIndex {
-    type Target = u32;
+#[test]
+fn count_tips() {
+    let (tangle, _, _) = create_test_tangle();
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl From<u32> for MilestoneIndex {
-    fn from(v: u32) -> Self {
-        Self(v)
-    }
+    assert_eq!(1, tangle.num_tips());
 }

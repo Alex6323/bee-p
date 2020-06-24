@@ -10,5 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod logger;
+mod wait_priority_queue;
 
 pub use logger::{logger_init, LoggerConfig, LoggerConfigBuilder};
+pub use wait_priority_queue::WaitPriorityQueue;

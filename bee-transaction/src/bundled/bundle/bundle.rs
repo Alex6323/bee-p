@@ -10,9 +10,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    bundled::{Address, BundledTransaction, BundledTransactionField, BundledTransactions, Hash},
+    bundled::{Address, BundledTransaction, BundledTransactionField, BundledTransactions},
     TransactionVertex,
 };
+
+use bee_crypto::ternary::Hash;
 
 use std::collections::HashMap;
 

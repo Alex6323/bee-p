@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::Sponge;
+use crate::ternary::{Sponge, HASH_LEN};
 
 use bee_ternary::{Btrit, Trits, T1B1};
 use bee_ternary_ext::bigint::{
@@ -18,8 +18,6 @@ use bee_ternary_ext::bigint::{
 };
 
 use tiny_keccak::{Hasher, Keccak};
-
-const HASH_LEN: usize = 243;
 
 #[derive(Clone)]
 pub struct Kerl {
@@ -57,24 +55,21 @@ impl From<bee_ternary_ext::bigint::common::Error> for Error {
 }
 
 impl Sponge for Kerl {
-    const IN_LEN: usize = HASH_LEN;
-    const OUT_LEN: usize = HASH_LEN;
-
     type Error = Error;
 
-    /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal
-    /// state and transforming the state before moving on to the next chunk.
+    /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal state and transforming the
+    /// state before moving on to the next chunk.
     ///
-    /// If `input` is not a multiple of `HASH_LEN` with the last chunk having `n < HASH_LEN` trits,
-    /// the last chunk will be copied to the first `n` slots of the internal state. The remaining
-    /// data in the internal state is then just the result of the last transformation before the
-    /// data was copied, and will be reused for the next transformation.
+    /// If `input` is not a multiple of `HASH_LEN` with the last chunk having `n < HASH_LEN` trits, the last chunk will
+    /// be copied to the first `n` slots of the internal state. The remaining data in the internal state is then just
+    /// the result of the last transformation before the data was copied, and will be reused for the next
+    /// transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-        if input.len() % Self::IN_LEN != 0 {
+        if input.len() % HASH_LEN != 0 {
             return Err(Error::NotMultipleOfHashLength);
         }
 
-        for trits_chunk in input.chunks(Self::IN_LEN) {
+        for trits_chunk in input.chunks(HASH_LEN) {
             self.ternary_buffer.inner_mut().copy_from(&trits_chunk);
             // Unwrapping is ok because this cannot fail.
             //
@@ -93,23 +88,21 @@ impl Sponge for Kerl {
 
     /// Reset the internal state by overwriting it with zeros.
     fn reset(&mut self) {
-        // TODO: Overwrite the internal buffer directly rather then setting it to a new Keccak
-        // object. This requires using `KeccakState::reset` via a new method `Keccak::method`
-        // calling its internal state.
+        // TODO: Overwrite the internal buffer directly rather then setting it to a new Keccak object. This requires
+        // using `KeccakState::reset` via a new method `Keccak::method` calling its internal state.
         self.keccak = Keccak::v384();
     }
 
-    /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill
-    /// the buffer in chunks of `HASH_LEN` at a time.
+    /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill the buffer in chunks
+    /// of `HASH_LEN` at a time.
     ///
-    /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written
-    /// into it.
+    /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written into it.
     fn squeeze_into(&mut self, buf: &mut Trits<T1B1>) -> Result<(), Self::Error> {
-        if buf.len() % Self::OUT_LEN != 0 {
+        if buf.len() % HASH_LEN != 0 {
             return Err(Error::NotMultipleOfHashLength);
         }
 
-        for trit_chunk in buf.chunks_mut(Self::OUT_LEN) {
+        for trit_chunk in buf.chunks_mut(HASH_LEN) {
             // Create a new Keccak in lieu of resetting the internal one
             let mut keccak = Keccak::v384();
 

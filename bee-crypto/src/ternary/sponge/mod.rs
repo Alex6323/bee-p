@@ -9,18 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+mod curlp;
+mod kerl;
+mod r#type;
+
+use super::HASH_LEN;
+
+pub use curlp::{CurlP, CurlP27, CurlP81, CurlPRounds};
+pub use kerl::Kerl;
+pub use r#type::SpongeType;
+
 use bee_ternary::{TritBuf, Trits};
 
-/// The common interface of cryptographic hash functions that follow the sponge construction,
-/// and that absorb and return binary-coded, balanced ternary.
+use std::ops::DerefMut;
+
+/// The common interface of cryptographic hash functions that follow the sponge construction, and that absorb and return
+/// binary-coded, balanced ternary.
 pub trait Sponge {
-    /// The expected length of the input to the sponge.
-    const IN_LEN: usize;
-
-    /// The length of the hash squeezed from the sponge.
-    const OUT_LEN: usize;
-
-    /// An error indicating a that a failure has occured during `absorb`.
+    /// An error indicating that a failure has occured during `absorb`.
     type Error;
 
     /// Absorb `input` into the sponge.
@@ -32,16 +38,14 @@ pub trait Sponge {
     /// Squeeze the sponge into a buffer
     fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error>;
 
-    /// Convenience function using `Sponge::squeeze_into` to to return an owned
-    /// version of the hash.
+    /// Convenience function using `Sponge::squeeze_into` to to return an owned version of the hash.
     fn squeeze(&mut self) -> Result<TritBuf, Self::Error> {
-        let mut output = TritBuf::zeros(Self::OUT_LEN);
+        let mut output = TritBuf::zeros(HASH_LEN);
         self.squeeze_into(&mut output)?;
         Ok(output)
     }
 
-    /// Convenience function to absorb `input`, squeeze the sponge into a
-    /// buffer, and reset the sponge in one go.
+    /// Convenience function to absorb `input`, squeeze the sponge into a buffer, and reset the sponge in one go.
     fn digest_into(&mut self, input: &Trits, buf: &mut Trits) -> Result<(), Self::Error> {
         self.absorb(input)?;
         self.squeeze_into(buf)?;
@@ -49,12 +53,28 @@ pub trait Sponge {
         Ok(())
     }
 
-    /// Convenience function to absorb `input`, squeeze the sponge, and reset the sponge in one go.
-    /// Returns an owned versin of the hash.
+    /// Convenience function to absorb `input`, squeeze the sponge, and reset the sponge in one go. Returns an owned
+    /// version of the hash.
     fn digest(&mut self, input: &Trits) -> Result<TritBuf, Self::Error> {
         self.absorb(input)?;
         let output = self.squeeze()?;
         self.reset();
         Ok(output)
+    }
+}
+
+impl<T: Sponge, U: DerefMut<Target = T>> Sponge for U {
+    type Error = T::Error;
+
+    fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
+        T::absorb(self, input)
+    }
+
+    fn reset(&mut self) {
+        T::reset(self)
+    }
+
+    fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
+        T::squeeze_into(self, buf)
     }
 }

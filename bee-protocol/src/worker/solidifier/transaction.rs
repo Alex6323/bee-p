@@ -9,10 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
-use bee_tangle::tangle;
-use bee_transaction::Hash;
+use bee_crypto::ternary::Hash;
+use bee_tangle::traversal;
 
 use std::collections::HashSet;
 
@@ -35,15 +35,18 @@ impl TransactionSolidifierWorker {
 
     // TODO is the index even needed ? We request one milestone at a time ? No PriorityQueue ?
 
-    async fn solidify(&self, hash: Hash, index: u32) -> bool {
+    async fn solidify(&self, hash: Hash, index: MilestoneIndex) -> bool {
         let mut missing_hashes = HashSet::new();
 
-        tangle().walk_approvees_depth_first(
+        traversal::visit_parents_depth_first(
+            tangle(),
             hash,
-            |_| {},
-            |vertex| !vertex.is_solid(),
+            |_, metadata| !metadata.is_solid() && !Protocol::get().requested.contains_key(&hash),
+            |_, _, _| {},
             |missing_hash| {
-                missing_hashes.insert(*missing_hash);
+                if !tangle().is_solid_entry_point(missing_hash) && !Protocol::get().requested.contains_key(&hash) {
+                    missing_hashes.insert(*missing_hash);
+                }
             },
         );
 

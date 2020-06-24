@@ -12,10 +12,10 @@
 use crate::bundled::{
     constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
     Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
-    BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
+    BundledTransactionField, BundledTransactions, Index, Payload, Tag,
 };
 
-use bee_crypto::{Kerl, Sponge};
+use bee_crypto::ternary::{Hash, Kerl, Sponge};
 use bee_signing::ternary::{
     normalize_hash, PrivateKey, PrivateKeyGenerator, Signature, TernarySeed, WotsSecurityLevel,
     WotsSpongePrivateKeyGeneratorBuilder,
@@ -271,7 +271,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
                 .unwrap();
             // Create subseed and then sign the message
             let signature = key_generator
-                .generate(seed, *index)
+                .generate_from_seed(seed, *index)
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?
                 .sign(message.as_i8_slice())
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
@@ -390,7 +390,7 @@ mod tests {
             .security_level(security)
             .build()
             .unwrap()
-            .generate(&seed, 0)
+            .generate_from_seed(&seed, 0)
             .unwrap();
         let address = Address::from_inner_unchecked(privkey.generate_public_key().unwrap().trits().to_owned());
 
@@ -445,7 +445,7 @@ mod tests {
                 .security_level(WotsSecurityLevel::Low)
                 .build()
                 .unwrap()
-                .generate(&seed, 0)
+                .generate_from_seed(&seed, 0)
                 .unwrap()
                 .generate_public_key()
                 .unwrap()
@@ -457,7 +457,7 @@ mod tests {
                 .security_level(WotsSecurityLevel::Medium)
                 .build()
                 .unwrap()
-                .generate(&seed, 1)
+                .generate_from_seed(&seed, 1)
                 .unwrap()
                 .generate_public_key()
                 .unwrap()

@@ -9,12 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod curlp;
-mod kerl;
+mod hash;
 mod sponge;
-mod r#type;
 
-pub use curlp::{CurlP, CurlP27, CurlP81};
-pub use kerl::Kerl;
-pub use r#type::SpongeType;
-pub use sponge::Sponge;
+pub use hash::{Hash, HASH_LEN};
+pub use sponge::{CurlP, CurlP27, CurlP81, CurlPRounds, Kerl, Sponge, SpongeType};

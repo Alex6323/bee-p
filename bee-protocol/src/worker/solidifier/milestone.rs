@@ -9,9 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::protocol::Protocol;
-
-use bee_tangle::tangle;
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -84,28 +82,29 @@ impl MilestoneSolidifierWorker {
 
         // TODO this may request unpublished milestones
         for index in solid_milestone_index..solid_milestone_index + MILESTONE_REQUEST_RANGE as u32 {
-            if !tangle().contains_milestone(index.into()) {
+            let index = index.into();
+            if !tangle().contains_milestone(index) {
                 Protocol::request_milestone(index, None);
             }
         }
     }
 
     async fn solidify_milestone(&self) {
-        let target_index = *tangle().get_solid_milestone_index() + 1;
+        let target_index = tangle().get_solid_milestone_index() + MilestoneIndex(1);
 
         if let Some(target_hash) = tangle().get_milestone_hash(target_index.into()) {
             if tangle().is_solid_transaction(&target_hash) {
                 // TODO set confirmation index + trigger ledger
                 tangle().update_solid_milestone_index(target_index.into());
                 Protocol::broadcast_heartbeat(
-                    *tangle().get_solid_milestone_index(),
-                    *tangle().get_snapshot_milestone_index(),
+                    tangle().get_solid_milestone_index(),
+                    tangle().get_snapshot_milestone_index(),
                 )
                 .await;
             } else {
-                Protocol::trigger_transaction_solidification(target_hash, target_index).await
+                Protocol::trigger_transaction_solidification(target_hash, target_index).await;
             }
-        };
+        }
     }
 
     pub(crate) async fn run(

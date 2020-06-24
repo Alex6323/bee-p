@@ -9,11 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
+use crate::{
+    message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
+};
 
-use bee_tangle::tangle;
+use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
-use bee_transaction::Hash;
 
 use bytemuck::cast_slice;
 use futures::{channel::oneshot, future::FutureExt, select};
@@ -24,16 +25,15 @@ use std::cmp::Ordering;
 #[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
 
-// TODO check that this is the right order
 impl PartialOrd for TransactionRequesterWorkerEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.1.partial_cmp(&other.1)
+        other.1.partial_cmp(&self.1)
     }
 }
 
 impl Ord for TransactionRequesterWorkerEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.1.cmp(&other.1)
+        other.1.cmp(&self.1)
     }
 }
 
@@ -47,6 +47,10 @@ impl TransactionRequesterWorker {
     }
 
     async fn process_request(&mut self, hash: Hash, index: MilestoneIndex) {
+        if Protocol::get().requested.contains_key(&hash) {
+            return;
+        }
+
         if Protocol::get().peer_manager.handshaked_peers.is_empty() {
             return;
         }
@@ -80,10 +84,9 @@ impl TransactionRequesterWorker {
 
         loop {
             select! {
-                // TODO impl fused stream
-                entry = Protocol::get().transaction_requester_worker.0.pop().fuse() => {
+                entry = Protocol::get().transaction_requester_worker.0.pop() => {
                     if let TransactionRequesterWorkerEntry(hash, index) = entry {
-                        if !tangle().is_solid_entry_point(&hash) && !tangle().contains_transaction(&hash) {
+                        if !tangle().is_solid_entry_point(&hash) && !tangle().contains(&hash) {
                             self.process_request(hash, index).await;
                         }
                     }

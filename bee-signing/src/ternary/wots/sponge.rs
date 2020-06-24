@@ -9,10 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::{PrivateKeyGenerator, Seed, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
+use crate::ternary::{PrivateKeyGenerator, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
 
-use bee_crypto::Sponge;
-use bee_ternary::TritBuf;
+use bee_crypto::ternary::Sponge;
+use bee_ternary::{TritBuf, Trits};
 
 use std::marker::PhantomData;
 
@@ -46,13 +46,12 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsSpongePrivateKeyGenerator<
     type PrivateKey = WotsPrivateKey<S>;
     type Error = WotsError;
 
-    fn generate(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
-        let subseed = seed.subseed(index);
+    fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
         let mut sponge = S::default();
         let mut state = TritBuf::zeros(self.security_level as usize * 6561);
 
         sponge
-            .digest_into(subseed.trits(), &mut state)
+            .digest_into(entropy, &mut state)
             .map_err(|_| Self::Error::FailedSpongeOperation)?;
 
         Ok(Self::PrivateKey {

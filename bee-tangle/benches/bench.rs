@@ -9,6 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod wait_priority_queue;
+#[macro_use]
+extern crate criterion;
 
-pub(crate) use wait_priority_queue::WaitPriorityQueue;
+use criterion::Criterion;
+
+use bee_tangle::Tangle;
+
+fn bench_insert_transaction(c: &mut Criterion) {
+    todo!("insert a few thousand transactions as fast as possible")
+}
+
+criterion_group!(benches, bench_insert_transaction);
+criterion_main!(benches);
