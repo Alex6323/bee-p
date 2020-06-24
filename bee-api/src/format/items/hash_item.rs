@@ -10,10 +10,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::{T1B1Buf, TryteBuf};
-use bee_transaction::{BundledTransactionField, Hash};
 
 use serde_json::Value as JsonValue;
 
+use bee_crypto::ternary::Hash;
+use bee_transaction::bundled::BundledTransactionField;
 use std::convert::TryFrom;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]

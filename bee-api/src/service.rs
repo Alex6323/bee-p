@@ -9,12 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_tangle::tangle;
-
 use crate::format::items::{
     bool_item::BoolItem, hash_item::HashItem, milestone_index_item::MilestoneIndexItem,
     transaction_ref_item::TransactionRefItem,
 };
+use bee_protocol::tangle::tangle;
 use std::collections::HashMap;
 
 pub trait Service {
@@ -71,7 +70,7 @@ impl Service for ServiceImpl {
     }
 
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
-        let ret = match tangle().get_transaction(&params.hash.0) {
+        let ret = match tangle().get(&params.hash.0) {
             Some(tx_ref) => Some(TransactionRefItem(tx_ref)),
             None => None,
         };

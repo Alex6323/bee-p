@@ -10,11 +10,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::{T1B1Buf, TritBuf};
-use bee_transaction::{BundledTransaction, BundledTransactionField, TransactionVertex};
-
-use serde_json::{Map, Value as JsonValue};
 
 use bee_tangle::TransactionRef;
+use serde_json::{Map, Value as JsonValue};
+
+use bee_transaction::{
+    bundled::{BundledTransaction, BundledTransactionField},
+    TransactionVertex,
+};
 
 pub struct TransactionRefItem(pub TransactionRef);
 
@@ -60,7 +63,7 @@ impl From<&TransactionRefItem> for JsonValue {
         );
         json_obj.insert(String::from("value"), JsonValue::from(value.to_inner().clone()));
         json_obj.insert(
-            String::from("obolete_tag"),
+            String::from("obsolete_tag"),
             JsonValue::String(
                 obolete_tag
                     .to_inner()

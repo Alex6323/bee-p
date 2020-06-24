@@ -13,7 +13,7 @@ use serde_json::Value as JsonValue;
 
 use std::convert::From;
 
-use bee_tangle::MilestoneIndex;
+use bee_protocol::MilestoneIndex;
 
 pub struct MilestoneIndexItem(pub MilestoneIndex);
 

@@ -11,17 +11,19 @@
 
 use bee_api::{config::ApiConfigBuilder, rest};
 use bee_ternary::{T1B1Buf, TritBuf};
-use bee_transaction::{BundledTransaction, Hash};
+
+use bee_crypto::ternary::Hash;
+use bee_protocol::tangle::{flags::Flags, tangle};
+use bee_transaction::bundled::BundledTransaction;
 
 fn main() {
-    bee_tangle::init();
+    bee_protocol::tangle::init();
 
     let test_tx = BundledTransaction::from_trits(&TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len())).unwrap();
 
-    let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime");
-    rt.block_on(bee_tangle::tangle().insert_transaction(test_tx, Hash::zeros()));
+    tangle().insert(test_tx, Hash::zeros(), Flags::empty());
 
-    assert_eq!(bee_tangle::tangle().contains_transaction(&Hash::zeros()), true);
+    assert_eq!(tangle().contains(&Hash::zeros()), true);
 
     let socket_addr = ApiConfigBuilder::new().finish().rest_socket_addr();
 
