@@ -9,11 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod shutdown;
-pub mod worker;
+use thiserror::Error;
 
-mod logger;
-mod wait_priority_queue;
+#[derive(Error, Debug)]
+pub enum Error {
+    /// A wrapper for an async task error.
+    #[error("An asynchronous operation failed.")]
+    AsynchronousOperationFailed(#[from] async_std::io::Error),
 
-pub use logger::{logger_init, LoggerConfig, LoggerConfigBuilder};
-pub use wait_priority_queue::WaitPriorityQueue;
+    /// An error that occurs, when sending a message over an `mpsc` channel failed.
+    #[error("Sending a message to a task failed.")]
+    SendingMessageFailed(#[from] futures::channel::mpsc::SendError),
+}

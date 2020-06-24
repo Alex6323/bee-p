@@ -14,10 +14,10 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
 };
 
-use bee_common::logger_init;
+use bee_common::{logger_init, shutdown::Shutdown};
 use bee_crypto::ternary::Hash;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
-use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
+use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle::tangle, Protocol};
 use bee_snapshot::LocalSnapshot;

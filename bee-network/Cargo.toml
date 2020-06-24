@@ -11,6 +11,8 @@ keywords = ["iota", "tangle", "bee", "framework", "network"]
 homepage = "https://www.iota.org"
 
 [dependencies]
+bee-common = { path = "../bee-common" }
+
 async-std = "1.5.0"
 dashmap = "3.10.0"
 err-derive = "0.2.3"
