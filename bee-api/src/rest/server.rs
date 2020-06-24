@@ -39,7 +39,9 @@ pub async fn run(addr: SocketAddr) {
         .and(warp::path::end())
         .and_then(routes::transaction_by_hash);
 
-    let routes = tx_by_hash_get.or(tx_by_hash_post.or(node_info));
+    let routes = tx_by_hash_get
+        .or(tx_by_hash_post.or(node_info))
+        .with(warp::cors().allow_any_origin());
 
     warp::serve(routes).run(addr).await;
 }

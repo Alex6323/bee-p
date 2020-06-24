@@ -28,7 +28,10 @@ pub async fn transactions_by_hashes(json: JsonValue) -> Result<impl warp::Reply,
         Ok(params) => Ok(warp::reply::json(&json_success_obj(
             ServiceImpl::transactions_by_hashes(params).into(),
         ))),
-        Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
+        Err(msg) => Ok(warp::reply::json(&json_error_obj(
+            msg,
+            warp::http::StatusCode::BAD_REQUEST.as_u16(),
+        ))),
     }
 }
 
@@ -37,6 +40,9 @@ pub async fn transaction_by_hash(value: String) -> Result<impl warp::Reply, warp
         Ok(params) => Ok(warp::reply::json(&json_success_obj(
             ServiceImpl::transaction_by_hash(params).into(),
         ))),
-        Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
+        Err(msg) => Ok(warp::reply::json(&json_error_obj(
+            msg,
+            warp::http::StatusCode::BAD_REQUEST.as_u16(),
+        ))),
     }
 }
