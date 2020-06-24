@@ -16,10 +16,7 @@ use bee_common::worker::Error as WorkerError;
 use async_std::sync::Arc;
 use futures::{channel::mpsc, sink::SinkExt};
 
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    result::Result,
-};
+use std::collections::{hash_map::Entry, HashMap};
 
 // TODO: rename to `MessageSender`, `MessageReceiver`.
 pub type BytesSender = mpsc::Sender<Arc<Vec<u8>>>;

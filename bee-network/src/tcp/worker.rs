@@ -23,8 +23,6 @@ use async_std::net::TcpListener;
 use futures::{prelude::*, select};
 use log::*;
 
-use std::result::Result;
-
 pub(crate) struct TcpWorker {
     binding_addr: Address,
     notifier: Notifier,

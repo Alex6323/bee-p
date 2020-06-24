@@ -15,8 +15,6 @@ use async_std::task;
 use futures::channel::oneshot;
 use thiserror::Error;
 
-use std::result::Result;
-
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Sending the shutdown signal to a worker failed.")]
@@ -41,9 +39,9 @@ impl Shutdown {
     /// Creates a new instance.
     pub fn new() -> Self {
         Self {
-            notifiers: vec![],
-            workers: vec![],
-            actions: vec![],
+            notifiers: Vec::new(),
+            workers: Vec::new(),
+            actions: Vec::new(),
         }
     }
 

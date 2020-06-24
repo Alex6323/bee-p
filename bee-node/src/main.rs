@@ -18,7 +18,7 @@ use cli::CliArgs;
 use config::{NodeConfigBuilder, CONFIG_PATH};
 use node::Node;
 
-use bee_common::shutdown::ShutdownHandler as Shutdown;
+use bee_common::shutdown::Shutdown;
 
 use async_std::task::block_on;
 

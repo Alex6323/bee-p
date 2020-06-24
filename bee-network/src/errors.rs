@@ -9,18 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+// TODO: Try to get rid of `XXXError` pattern; use `xxx::Error` instead
+// TODO: Use thiserror crate instead because it's a bit less verbose
 use err_derive::Error;
-
-// #[derive(Debug, Error)]
-// pub enum ActorError {
-//     #[error(display = "Async IO error")]
-//     AsyncIo(#[source] async_std::io::Error),
-
-//     #[error(display = "Error sending message")]
-//     SendingMessageFailed(#[source] futures::channel::mpsc::SendError),
-// }
-
-// pub type Result<T> = std::result::Result<T, ActorError>;
 
 #[derive(Debug, Error)]
 pub enum ConnectionError {
@@ -40,20 +31,18 @@ pub enum ConnectionError {
     SendingEventFailed(#[source] futures::channel::mpsc::SendError),
 }
 
+// TODO: remove alias bc it's considered a nono as of now
 pub type ConnectionResult<T> = std::result::Result<T, ConnectionError>;
 
+// TODO: fix this
 #[derive(Debug, Error)]
 pub enum SendError {
     //#[error(display = "Sending Error")]
 // Io(#[source] async_std::io::Error),
 }
 
-// pub type SendResult<T> = std::result::Result<T, SendError>;
-
 #[derive(Debug, Error)]
 pub enum RecvError {
     #[error(display = "Receiving Error")]
     Io(#[source] async_std::io::Error),
 }
-
-// pub type RecvResult<T> = std::result::Result<T, RecvError>;

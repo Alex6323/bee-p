@@ -29,7 +29,7 @@ use async_std::{
 use futures::{select, sink::SinkExt, FutureExt};
 use log::*;
 
-use std::{result::Result, time::Duration};
+use std::time::Duration;
 
 pub struct EndpointWorker {
     commands: Commands,
