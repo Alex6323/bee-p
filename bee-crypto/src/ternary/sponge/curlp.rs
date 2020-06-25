@@ -98,12 +98,6 @@ impl CurlP {
             apply_substitution_box(&lhs, rhs);
             std::mem::swap(lhs, rhs);
         }
-
-        // Swap the slices back if the number of rounds is even (otherwise `self.work_state` contains the transformed
-        // state).
-        if self.rounds as usize & 1 == 0 {
-            std::mem::swap(lhs, rhs);
-        }
     }
 }
 

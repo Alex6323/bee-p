@@ -12,11 +12,11 @@
 #[cfg(test)]
 mod tests {
 
-    use bee_common::WaitPriorityQueue;
-
-    use std::cmp::Ordering;
+    use bee_common::wait_priority_queue::WaitPriorityQueue;
 
     use async_std::task::block_on;
+
+    use std::cmp::Ordering;
 
     #[derive(Eq, PartialEq, Debug)]
     pub(crate) struct TestMinHeapEntry(u64, char);
