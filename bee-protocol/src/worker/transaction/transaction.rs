@@ -179,7 +179,7 @@ mod tests {
 
     use crate::ProtocolConfig;
 
-    use bee_common::shutdown::ShutdownHandler;
+    use bee_common::shutdown::Shutdown;
     use bee_network::{NetworkConfig, Url};
 
     use async_std::task::{block_on, spawn};
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_tx_worker_with_compressed_buffer() {
-        let mut shutdown = ShutdownHandler::new();
+        let mut shutdown = Shutdown::new();
 
         // build network
         let network_config = NetworkConfig::build().finish();
