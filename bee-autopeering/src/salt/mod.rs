@@ -76,10 +76,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn create_new_salt() {
-        let salt = Salt::new(Duration::from_secs(60)).unwrap();
+    fn new_salt() {
+        match Salt::new(Duration::from_secs(10)) {
+            Ok(salt) => {
+                assert_eq!(SALT_BY_SIZE, salt.size());
+                assert!(!salt.expired());
+            }
+            Err(_) => assert!(false),
+        }
+    }
 
-        assert_eq!(SALT_BY_SIZE, salt.size());
-        assert!(!salt.expired());
+    #[test]
+    fn new_salt_with_zero_lifetime() {
+        match Salt::new(Duration::from_secs(0)) {
+            Ok(salt) => {
+                assert!(salt.expired());
+            }
+            Err(_) => assert!(false),
+        }
     }
 }
