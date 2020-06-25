@@ -1,7 +1,12 @@
 //! Autopeering crate
 
+use bee_common::shutdown::Shutdown;
+
+pub mod config;
 pub mod salt;
 
-pub fn init() {
-    // TODO
+use config::AutopeeringConfig;
+
+pub fn init(config: AutopeeringConfig, shutdown: &mut Shutdown) {
+    todo!()
 }

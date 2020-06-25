@@ -19,4 +19,5 @@ log = "0.4.8"
 prost = "0.6.1"
 prost-types = "0.6.1"
 ring = "0.16.15"
+serde = { version = "1.0.104", features = ["derive" ] }
 thiserror = "1.0.20"
