@@ -17,12 +17,12 @@ use fern::colors::{Color, ColoredLevelConfig};
 
 #[derive(Debug)]
 #[non_exhaustive]
-pub enum LoggerError {
+pub enum Error {
     File,
     Apply,
 }
 
-pub fn logger_init(config: LoggerConfig) -> Result<(), LoggerError> {
+pub fn logger_init(config: LoggerConfig) -> Result<(), Error> {
     let timestamp_format = "[%Y-%m-%d][%H:%M:%S]";
 
     let mut logger = if config.color {
@@ -60,13 +60,13 @@ pub fn logger_init(config: LoggerConfig) -> Result<(), LoggerError> {
         dispatcher = if output.name == "stdout" {
             dispatcher.chain(std::io::stdout())
         } else {
-            dispatcher.chain(fern::log_file(output.name).map_err(|_| LoggerError::File)?)
+            dispatcher.chain(fern::log_file(output.name).map_err(|_| Error::File)?)
         };
 
         logger = logger.chain(dispatcher);
     }
 
-    logger.apply().map_err(|_| LoggerError::Apply)?;
+    logger.apply().map_err(|_| Error::Apply)?;
 
     Ok(())
 }
