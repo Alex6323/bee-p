@@ -1,7 +1,3 @@
-mod proto;
-
-use proto::ProtoSalt;
-
 use ring::rand::{SecureRandom, SystemRandom};
 use thiserror::Error;
 
@@ -52,14 +48,26 @@ impl Salt {
     }
 }
 
-impl From<ProtoSalt> for Salt {
-    fn from(salt: ProtoSalt) -> Self {
-        todo!()
+pub(crate) struct ProtoSalt {
+    bytes: [u8; SALT_BY_SIZE],
+    expiration_time: u64,
+}
+
+impl From<Salt> for ProtoSalt {
+    fn from(salt: Salt) -> Self {
+        todo!("Impl From<Salt>")
     }
 }
+
+impl From<ProtoSalt> for Salt {
+    fn from(salt: ProtoSalt) -> Self {
+        todo!("Impl From<ProtoSalt>")
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("An error occurred while filling the salt with random bytes")]
+    #[error("An error occurred while filling the salt with random bytes.")]
     FillingWithRandomBytesFailure,
 }
 
