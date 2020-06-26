@@ -14,9 +14,9 @@ use crate::rest::routes;
 use serde::de::DeserializeOwned;
 use warp::{Filter, Rejection};
 
-use std::net::SocketAddr;
+use crate::config::ApiConfig;
 
-pub async fn run(addr: SocketAddr) {
+pub async fn run(config: ApiConfig) {
     let node_info = warp::get()
         .and(warp::path("v1"))
         .and(warp::path("node-info"))
@@ -39,11 +39,19 @@ pub async fn run(addr: SocketAddr) {
         .and(warp::path::end())
         .and_then(routes::transaction_by_hash);
 
+    let txs_by_bundle = warp::get()
+        .and(warp::path("v1"))
+        .and(warp::path("transaction"))
+        .and(warp::path("by-bundle"))
+        .and(warp::path::param())
+        .and(warp::path::end())
+        .and_then(routes::transactions_by_bundle);
+
     let routes = tx_by_hash_get
-        .or(tx_by_hash_post.or(node_info))
+        .or(tx_by_hash_post.or(node_info).or(txs_by_bundle))
         .with(warp::cors().allow_any_origin());
 
-    warp::serve(routes).run(addr).await;
+    warp::serve(routes).run(config.rest_socket_addr()).await;
 }
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {

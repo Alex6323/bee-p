@@ -11,6 +11,7 @@
 
 pub mod json_utils;
 pub mod node_info;
+pub mod transactions_by_bundle;
 pub mod transaction_by_hash;
 pub mod transactions_by_hashes;
 

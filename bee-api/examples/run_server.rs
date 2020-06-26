@@ -22,11 +22,8 @@ fn main() {
     let test_tx = BundledTransaction::from_trits(&TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len())).unwrap();
 
     tangle().insert(test_tx, Hash::zeros(), Flags::empty());
-
     assert_eq!(tangle().contains(&Hash::zeros()), true);
 
-    let socket_addr = ApiConfigBuilder::new().finish().rest_socket_addr();
-
     let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime");
-    rt.block_on(rest::server::run(socket_addr));
+    rt.block_on(rest::server::run(ApiConfigBuilder::new().finish()));
 }

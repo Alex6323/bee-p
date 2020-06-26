@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::service::{Service, ServiceImpl};
+use crate::service::{Service, ServiceImpl, TransactionsByBundleParams};
 
 use serde_json::Value as JsonValue;
 
@@ -39,6 +39,18 @@ pub async fn transaction_by_hash(value: String) -> Result<impl warp::Reply, warp
     match TransactionByHashParams::try_from(value.as_str()) {
         Ok(params) => Ok(warp::reply::json(&json_success_obj(
             ServiceImpl::transaction_by_hash(params).into(),
+        ))),
+        Err(msg) => Ok(warp::reply::json(&json_error_obj(
+            msg,
+            warp::http::StatusCode::BAD_REQUEST.as_u16(),
+        ))),
+    }
+}
+
+pub async fn transactions_by_bundle(value: String) -> Result<impl warp::Reply, warp::Rejection> {
+    match TransactionsByBundleParams::try_from(value.as_str()) {
+        Ok(params) => Ok(warp::reply::json(&json_success_obj(
+            ServiceImpl::transactions_by_bundle(params).into(),
         ))),
         Err(msg) => Ok(warp::reply::json(&json_error_obj(
             msg,
