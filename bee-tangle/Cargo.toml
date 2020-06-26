@@ -16,7 +16,6 @@ bee-transaction = { path = "../bee-transaction" }
 
 async-std = { version = "1.5", features = ["unstable"] }
 dashmap = "3.10"
-bitflags = "1.2.1"
 
 [dev-dependencies]
 bee-crypto = { path = "../bee-crypto" }
