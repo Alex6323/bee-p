@@ -15,12 +15,12 @@ use crate::{
     address::url::{Protocol, Url},
     commands::{Command, CommandReceiver as Commands, Responder},
     endpoint::{outbox::Outbox, store::Endpoints, Endpoint as Ep, EndpointId as EpId},
-    errors::Result,
     events::{Event, EventPublisher as Notifier, EventPublisher as Publisher, EventSubscriber as Events},
-    shutdown::ShutdownListener as Shutdown,
     tcp,
     utils::time,
 };
+
+use bee_common::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
 
 use async_std::{
     prelude::*,
@@ -59,7 +59,7 @@ impl EndpointWorker {
         }
     }
 
-    pub async fn run(mut self) -> Result<()> {
+    pub async fn run(mut self) -> Result<(), WorkerError> {
         debug!("Starting endpoint worker...");
 
         let mut contacts = Endpoints::new();
@@ -237,7 +237,7 @@ impl EndpointWorker {
 }
 
 #[inline(always)]
-async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> Result<bool> {
+async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> Result<bool, WorkerError> {
     let ep = Ep::from_url(url);
     let epid = ep.id;
 
@@ -266,7 +266,7 @@ async fn rmv_endpoint(
     connected: &mut Endpoints,
     outbox: &mut Outbox,
     notifier: &mut Notifier,
-) -> Result<bool> {
+) -> Result<bool, WorkerError> {
     // NOTE: current default behavior is to drop connections once the contact is removed
     let removed_recipient = outbox.remove(&epid);
     let removed_contact = contacts.remove(&epid);
@@ -302,7 +302,7 @@ async fn try_connect(
     connected: &mut Endpoints,
     responder: Option<Responder<bool>>,
     notifier: &mut Notifier,
-) -> Result<bool> {
+) -> Result<bool, WorkerError> {
     // Try to find the endpoint in our servers list.
     if let Some(ep) = contacts.get_mut(&epid) {
         // if ep.is_connected() {
@@ -368,7 +368,7 @@ async fn try_connect(
 }
 
 #[inline(always)]
-async fn raise_event_after_delay(event: Event, delay: Duration, mut notifier: Notifier) -> Result<()> {
+async fn raise_event_after_delay(event: Event, delay: Duration, mut notifier: Notifier) -> Result<(), WorkerError> {
     task::sleep(delay).await;
 
     Ok(notifier.send(event).await?)
@@ -387,16 +387,16 @@ async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox) 
 }
 
 #[inline(always)]
-async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
+async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool, WorkerError> {
     Ok(outbox.send(bytes, recipient).await?)
 }
 
 #[inline(always)]
-async fn multicast_bytes(recipients: &[EpId], bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
+async fn multicast_bytes(recipients: &[EpId], bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool, WorkerError> {
     Ok(outbox.multicast(bytes, recipients).await?)
 }
 
 #[inline(always)]
-async fn broadcast_bytes(bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool> {
+async fn broadcast_bytes(bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool, WorkerError> {
     Ok(outbox.broadcast(bytes).await?)
 }

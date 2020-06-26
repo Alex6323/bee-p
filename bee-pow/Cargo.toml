@@ -13,4 +13,4 @@ homepage = "https://www.iota.org"
 [dependencies]
 crossbeam = "0.7.3"
 num_cpus = "1.11.1"
-serde = { version = "1.0.104", features = ["derive" ] }
+serde = { version = "1.0.114", features = ["derive" ] }

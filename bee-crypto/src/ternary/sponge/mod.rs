@@ -13,7 +13,7 @@ mod curlp;
 mod kerl;
 mod r#type;
 
-use super::HASH_LEN;
+use super::HASH_LENGTH;
 
 pub use curlp::{CurlP, CurlP27, CurlP81, CurlPRounds};
 pub use kerl::Kerl;
@@ -40,7 +40,7 @@ pub trait Sponge {
 
     /// Convenience function using `Sponge::squeeze_into` to to return an owned version of the hash.
     fn squeeze(&mut self) -> Result<TritBuf, Self::Error> {
-        let mut output = TritBuf::zeros(HASH_LEN);
+        let mut output = TritBuf::zeros(HASH_LENGTH);
         self.squeeze_into(&mut output)?;
         Ok(output)
     }
