@@ -19,7 +19,7 @@ use bee_ternary_ext::bigint::{
 };
 
 use sha3::{
-    digest::{ExtendableOutput, Input, XofReader},
+    digest::{ExtendableOutput, Update, XofReader},
     Shake256,
 };
 
@@ -62,8 +62,8 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
         ternary_buffer.inner_mut().copy_from(entropy);
         let mut binary_buffer: I384<BigEndian, U8Repr> = ternary_buffer.into_t242().into();
 
-        shake.input(&binary_buffer.inner_ref()[..]);
-        let mut reader = shake.xof_result();
+        shake.update(&binary_buffer.inner_ref()[..]);
+        let mut reader = shake.finalize_xof();
 
         for trit_chunk in state.chunks_mut(243) {
             reader.read(&mut binary_buffer.inner_mut()[..]);
