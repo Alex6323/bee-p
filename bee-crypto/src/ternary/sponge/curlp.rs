@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::{Sponge, HASH_LEN};
+use crate::ternary::{Sponge, HASH_LENGTH};
 
 use bee_ternary::{Btrit, TritBuf, Trits};
 
@@ -19,7 +19,7 @@ use std::{
 };
 
 /// The length internal state of the `CurlP` sponge construction (in units of binary-coded, balanced trits).
-const STATE_LEN: usize = HASH_LEN * 3;
+const STATE_LEN: usize = HASH_LENGTH * 3;
 const HALF_STATE_LEN: usize = STATE_LEN / 2;
 const TRUTH_TABLE: [i8; 11] = [1, 0, -1, 2, 1, -1, 0, 2, -1, 1, 0];
 
@@ -34,7 +34,7 @@ pub struct CurlP {
     rounds: CurlPRounds,
     /// The internal state.
     state: TritBuf,
-    /// Workspace for performing transformations
+    /// Workspace for performing transformations.
     work_state: TritBuf,
 }
 
@@ -104,15 +104,15 @@ impl CurlP {
 impl Sponge for CurlP {
     type Error = Infallible;
 
-    /// Absorb `input` into the sponge by copying `HASH_LEN` chunks of it into its internal state and transforming the
-    /// state before moving on to the next chunk.
+    /// Absorb `input` into the sponge by copying `HASH_LENGTH` chunks of it into its internal state and transforming
+    /// the state before moving on to the next chunk.
     ///
-    /// If `input` is not a multiple of `HASH_LEN` with the last chunk having `n < HASH_LEN` trits, the last chunk will
-    /// be copied to the first `n` slots of the internal state. The remaining data in the internal state is then just
-    /// the result of the last transformation before the data was copied, and will be reused for the next
+    /// If `input` is not a multiple of `HASH_LENGTH` with the last chunk having `n < HASH_LENGTH` trits, the last chunk
+    /// will be copied to the first `n` slots of the internal state. The remaining data in the internal state is then
+    /// just the result of the last transformation before the data was copied, and will be reused for the next
     /// transformation.
     fn absorb(&mut self, input: &Trits) -> Result<(), Self::Error> {
-        for chunk in input.chunks(HASH_LEN) {
+        for chunk in input.chunks(HASH_LENGTH) {
             self.state[0..chunk.len()].copy_from(chunk);
             self.transform();
         }
@@ -125,11 +125,11 @@ impl Sponge for CurlP {
     }
 
     /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill the buffer in chunks
-    /// of `HASH_LEN` at a time.
+    /// of `HASH_LENGTH` at a time.
     ///
-    /// If the last chunk is smaller than `HASH_LEN`, then only the fraction that fits is written into it.
+    /// If the last chunk is smaller than `HASH_LENGTH`, then only the fraction that fits is written into it.
     fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
-        for chunk in buf.chunks_mut(HASH_LEN) {
+        for chunk in buf.chunks_mut(HASH_LENGTH) {
             chunk.copy_from(&self.state[0..chunk.len()]);
             self.transform()
         }
