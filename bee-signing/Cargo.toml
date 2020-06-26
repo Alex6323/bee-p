@@ -16,4 +16,4 @@ bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 bee-ternary-ext = { path = "../bee-ternary-ext" }
 
 rand = "0.7"
-sha3 = "0.8.2"
+sha3 = "0.9.0"

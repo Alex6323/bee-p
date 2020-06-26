@@ -16,14 +16,14 @@ bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 bee-transaction = { path = "../bee-transaction" }
 
 bytemuck = "1.2.0"
-digest = "0.8.1"
+digest = "0.9.0"
 futures = "0.3.5"
 log = "0.4.8"
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }
 
-async-std = "1.4.0"
-blake2 = "0.8.1"
+async-std = "1.6.2"
+blake2 = "0.9.0"
 hex = "0.4.2"
 rand = "0.7.3"

@@ -14,10 +14,10 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
 };
 
-use bee_common::logger_init;
+use bee_common::shutdown::Shutdown;
 use bee_crypto::ternary::Hash;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
-use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin, Shutdown};
+use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, Protocol};
 use bee_snapshot::LocalSnapshot;
@@ -47,7 +47,8 @@ impl BeeNodeBuilder {
 
         info!("Initializing...");
 
-        let (network, events, shutdown) = bee_network::init(self.config.network);
+        let mut shutdown = Shutdown::new();
+        let (network, events) = bee_network::init(self.config.network, &mut shutdown);
 
         tangle::init();
 
