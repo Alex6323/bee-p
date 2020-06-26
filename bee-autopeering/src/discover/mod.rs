@@ -1,1 +1,1 @@
-mod worker;
+pub(crate) mod worker;
