@@ -4,7 +4,7 @@ use bee_common::{shutdown::Shutdown, worker::Error as WorkerError};
 
 pub mod config;
 pub mod events;
-pub mod peers;
+pub mod peer;
 pub mod salt;
 
 mod discover;

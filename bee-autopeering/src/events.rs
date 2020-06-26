@@ -1,4 +1,4 @@
-use crate::peers::{Peer, PeerId};
+use crate::peer::{Peer, PeerId};
 
 use futures::{channel::mpsc, stream::StreamExt};
 

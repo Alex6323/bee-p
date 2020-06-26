@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package proto;
+
+message ServiceMap {
+    map<string, NetworkAddress> map = 1;
+}
+
+message NetworkAddress {
+    string network = 1;
+    uint32 port = 2;
+}
