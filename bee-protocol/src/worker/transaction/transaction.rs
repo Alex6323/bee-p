@@ -12,7 +12,7 @@
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    tangle::{flags::Flags, tangle},
+    tangle::{tangle, TransactionMetadata},
     worker::transaction::HashCache,
 };
 
@@ -115,7 +115,7 @@ impl TransactionWorker {
         }
 
         // store transaction
-        if let Some(transaction) = tangle().insert(transaction, hash, Flags::empty()) {
+        if let Some(transaction) = tangle().insert(transaction, hash, TransactionMetadata::new()) {
             Protocol::get().metrics.new_transactions_received_inc();
 
             if !tangle().is_synced() && Protocol::get().requested.is_empty() {

@@ -10,6 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub mod flags;
+mod metadata;
+
+pub use metadata::TransactionMetadata;
 
 // TODO: reinstate the async worker
 // pub(crate) mod propagator;
@@ -30,7 +33,7 @@ use std::{
 
 /// Milestone-based Tangle.
 pub struct MsTangle {
-    pub(crate) inner: Tangle<Flags>,
+    pub(crate) inner: Tangle<TransactionMetadata>,
     pub(crate) milestones: DashMap<MilestoneIndex, TxHash>,
     pub(crate) solid_entry_points: DashMap<TxHash, MilestoneIndex>,
     solid_milestone_index: AtomicU32,
@@ -39,7 +42,7 @@ pub struct MsTangle {
 }
 
 impl Deref for MsTangle {
-    type Target = Tangle<Flags>;
+    type Target = Tangle<TransactionMetadata>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -58,8 +61,8 @@ impl MsTangle {
         }
     }
 
-    pub fn insert(&self, transaction: Tx, hash: TxHash, flags: Flags) -> Option<TxRef> {
-        if let Some(tx) = self.inner.insert(transaction, hash, flags) {
+    pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: TransactionMetadata) -> Option<TxRef> {
+        if let Some(tx) = self.inner.insert(transaction, hash, metadata) {
             self.propagate_solid_flag(hash);
             return Some(tx);
         }
@@ -78,7 +81,7 @@ impl MsTangle {
 
             if let Some(tx) = self.inner.get(&hash) {
                 if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
-                    self.inner.update_metadata(&hash, |flags| flags.set_solid());
+                    self.inner.update_metadata(&hash, |metadata| metadata.flags.set_solid());
 
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
@@ -88,7 +91,7 @@ impl MsTangle {
         }
     }
 
-    pub fn get_flags(&self, hash: &TxHash) -> Option<Flags> {
+    pub fn get_flags(&self, hash: &TxHash) -> Option<TransactionMetadata> {
         self.inner.get_metadata(hash)
     }
 
@@ -97,7 +100,7 @@ impl MsTangle {
         self.milestones.insert(index, hash);
 
         if let Some(mut metadata) = self.inner.get_metadata(&hash) {
-            metadata.set_milestone();
+            metadata.flags.set_milestone();
 
             self.inner.set_metadata(&hash, metadata);
         }
@@ -174,7 +177,10 @@ impl MsTangle {
         if self.is_solid_entry_point(hash) {
             true
         } else {
-            self.inner.get_metadata(hash).map(|m| m.is_solid()).unwrap_or(false)
+            self.inner
+                .get_metadata(hash)
+                .map(|metadata| metadata.flags.is_solid())
+                .unwrap_or(false)
         }
     }
 }
