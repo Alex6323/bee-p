@@ -19,7 +19,7 @@ use bee_crypto::ternary::Hash;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
-use bee_protocol::{tangle::tangle, Protocol};
+use bee_protocol::{tangle::tangle, MilestoneIndex, Protocol};
 use bee_snapshot::LocalSnapshot;
 
 use std::collections::HashMap;
@@ -135,9 +135,10 @@ impl Node {
                 // TODO get from database
                 tangle().update_last_milestone_index(local_snapshot.metadata().index().into());
                 tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
-                tangle().add_solid_entry_point(Hash::zeros());
-                for solid_entry_point in local_snapshot.metadata().solid_entry_points() {
-                    tangle().add_solid_entry_point(*solid_entry_point);
+                // TODO index 0 ?
+                tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
+                for (hash, index) in local_snapshot.metadata().solid_entry_points() {
+                    tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
                 }
                 for seen_milestone in local_snapshot.metadata().seen_milestones() {
                     // TODO request ?
