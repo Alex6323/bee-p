@@ -35,7 +35,7 @@ pub trait Sponge {
     /// Reset the inner state of the sponge.
     fn reset(&mut self);
 
-    /// Squeeze the sponge into a buffer
+    /// Squeeze the sponge into a buffer.
     fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error>;
 
     /// Convenience function using `Sponge::squeeze_into` to return an owned version of the hash.
