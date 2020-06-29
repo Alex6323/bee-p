@@ -21,7 +21,7 @@ use std::{
 /// The length internal state of the `CurlP` sponge construction (in units of binary-coded, balanced trits).
 const STATE_LEN: usize = HASH_LENGTH * 3;
 const HALF_STATE_LEN: usize = STATE_LEN / 2;
-const TRUTH_TABLE: [i8; 11] = [1, 0, -1, 2, 1, -1, 0, 2, -1, 1, 0];
+const TRUTH_TABLE: [[i8; 3]; 3] = [[1, 0, -1], [1, -1, 0], [-1, 1, 0]];
 
 #[derive(Copy, Clone)]
 pub enum CurlPRounds {
@@ -53,42 +53,27 @@ impl CurlP {
     /// The essence of this transformation is the application of a so-called substitution box to the internal state,
     /// which happens `round` number of times.
     fn transform(&mut self) {
-        fn calculate_truth_table_index(xs: &Trits, p: usize, q: usize) -> usize {
-            let idx = xs.get(p).unwrap() as i8 + ((xs.get(q).unwrap() as i8) << 2) + 5;
-            idx as usize
+        // TODO inline ?
+        fn truth_table_get(xs: &Trits, p: usize, q: usize) -> Btrit {
+            // Unwrapping here is acceptable because `TRUTH_TABLE` always yield a value in {-1, 0, 1}.
+            TRUTH_TABLE[xs.get(q).unwrap() as usize + 1][xs.get(p).unwrap() as usize + 1]
+                .try_into()
+                .unwrap()
         }
 
         fn apply_substitution_box(input: &Trits, output: &mut Trits) {
             assert!(input.len() <= STATE_LEN);
             assert!(output.len() <= STATE_LEN);
 
-            // Unwrapping here and below is acceptable because we have verified that `calculate_truth_table_index` and
-            // `TRUTH_TABLE` always yield a value in {-1, 0, 1}
-            output.set(
-                0,
-                TRUTH_TABLE[calculate_truth_table_index(input, 0, HALF_STATE_LEN)]
-                    .try_into()
-                    .unwrap(),
-            );
+            output.set(0, truth_table_get(input, 0, HALF_STATE_LEN));
 
             for state_index in 0..HALF_STATE_LEN {
                 let left_idx = HALF_STATE_LEN - state_index;
                 let right_idx = STATE_LEN - state_index - 1;
+                let state_index_2 = 2 * state_index;
 
-                output.set(
-                    2 * state_index + 1,
-                    TRUTH_TABLE[calculate_truth_table_index(input, left_idx, right_idx)]
-                        .try_into()
-                        .unwrap(),
-                );
-
-                let left_idx = left_idx - 1;
-                output.set(
-                    2 * state_index + 2,
-                    TRUTH_TABLE[calculate_truth_table_index(input, right_idx, left_idx)]
-                        .try_into()
-                        .unwrap(),
-                );
+                output.set(state_index_2 + 1, truth_table_get(input, left_idx, right_idx));
+                output.set(state_index_2 + 2, truth_table_get(input, right_idx, left_idx - 1));
             }
         }
 
