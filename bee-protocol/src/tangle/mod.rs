@@ -89,16 +89,8 @@ impl MsTangle {
         }
     }
 
-    pub fn get(&self, hash: &TxHash) -> Option<TxRef> {
-        self.inner.get(hash)
-    }
-
     pub fn get_flags(&self, hash: &TxHash) -> Option<Flags> {
         self.inner.get_metadata(hash)
-    }
-
-    pub fn contains(&self, hash: &TxHash) -> bool {
-        self.inner.contains(hash)
     }
 
     pub fn add_milestone(&self, index: MsIndex, hash: TxHash) {
@@ -185,16 +177,6 @@ impl MsTangle {
         } else {
             self.inner.get_metadata(hash).map(|m| m.is_solid()).unwrap_or(false)
         }
-    }
-
-    /// Returns a reference to the inner (abstract) Tangle.
-    pub fn inner(&self) -> &Tangle<Flags> {
-        &self.inner
-    }
-
-    /// Returns the size of the current Tangle.
-    pub fn size(&self) -> usize {
-        self.inner.size()
     }
 }
 
