@@ -20,9 +20,9 @@ const CONSTANT_SIZE: usize = HASH_SIZE;
 const VARIABLE_MIN_SIZE: usize = 292;
 const VARIABLE_MAX_SIZE: usize = 1604;
 
-/// A legacy message to broadcast a transaction and request another one at the same time.
+/// A legacy message to send a transaction and request another one at the same time.
 pub(crate) struct LegacyGossip {
-    /// Transaction to broadcast. Can be compressed.
+    /// Transaction to send. Can be compressed.
     pub(crate) transaction: Vec<u8>,
     /// Hash of the requested transaction.
     pub(crate) hash: [u8; HASH_SIZE],

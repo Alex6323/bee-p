@@ -10,7 +10,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{tlv_from_bytes, Header, Heartbeat, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest},
+    message::{
+        tlv_from_bytes, Header, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage,
+        TransactionRequest,
+    },
     peer::HandshakedPeer,
     protocol::Protocol,
     worker::{MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent},
@@ -114,23 +117,23 @@ impl PeerWorker {
                     }
                 }
             }
-            TransactionBroadcast::ID => {
-                debug!("[{}] Reading TransactionBroadcast...", self.peer.address);
-                match tlv_from_bytes::<TransactionBroadcast>(&header, bytes) {
+            TransactionMessage::ID => {
+                debug!("[{}] Reading TransactionMessage...", self.peer.address);
+                match tlv_from_bytes::<TransactionMessage>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_worker
                             .send(TransactionWorkerEvent {
                                 from: self.peer.epid,
-                                transaction_broadcast: message,
+                                transaction: message,
                             })
                             .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.transaction_broadcast_received_inc();
-                        Protocol::get().metrics.transaction_broadcast_received_inc();
+                        self.peer.metrics.transaction_received_inc();
+                        Protocol::get().metrics.transaction_received_inc();
                     }
                     Err(e) => {
-                        warn!("[{}] Reading TransactionBroadcast failed: {:?}.", self.peer.address, e);
+                        warn!("[{}] Reading TransactionMessage failed: {:?}.", self.peer.address, e);
 
                         self.peer.metrics.invalid_messages_received_inc();
                         Protocol::get().metrics.invalid_messages_received_inc();

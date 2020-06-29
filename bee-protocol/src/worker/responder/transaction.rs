@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{compress_transaction_bytes, TransactionBroadcast, TransactionRequest},
+    message::{compress_transaction_bytes, Transaction as TransactionMessage, TransactionRequest},
     tangle::tangle,
     worker::SenderWorker,
 };
@@ -49,10 +49,10 @@ impl TransactionResponderWorker {
                         let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
                         transaction.into_trits_allocated(&mut trits);
                         // TODO dedicated channel ? Priority Queue ?
-                        SenderWorker::<TransactionBroadcast>::send(
+                        SenderWorker::<TransactionMessage>::send(
                             &epid,
                             // TODO try to compress lower in the pipeline ?
-                            TransactionBroadcast::new(&compress_transaction_bytes(cast_slice(
+                            TransactionMessage::new(&compress_transaction_bytes(cast_slice(
                                 trits.encode::<T5B1Buf>().as_i8_slice(),
                             ))),
                         )

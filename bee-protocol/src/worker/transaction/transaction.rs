@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{uncompress_transaction_bytes, TransactionBroadcast},
+    message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{flags::Flags, tangle},
     worker::transaction::HashCache,
@@ -34,7 +34,7 @@ use log::{debug, error, info};
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
-    pub(crate) transaction_broadcast: TransactionBroadcast,
+    pub(crate) transaction: TransactionMessage,
 }
 
 pub(crate) struct TransactionWorker {
@@ -65,8 +65,8 @@ impl TransactionWorker {
         loop {
             select! {
                 event = receiver_fused.next() => {
-                    if let Some(TransactionWorkerEvent{from, transaction_broadcast}) = event {
-                        self.process_transaction_brodcast(from, transaction_broadcast).await;
+                    if let Some(TransactionWorkerEvent{from, transaction}) = event {
+                        self.process_transaction_brodcast(from, transaction).await;
                     }
                 },
                 _ = shutdown_fused => break
@@ -76,16 +76,16 @@ impl TransactionWorker {
         info!("Stopped.");
     }
 
-    async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_broadcast: TransactionBroadcast) {
+    async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_message: TransactionMessage) {
         debug!("Processing received transaction...");
 
-        if !self.cache.insert(&transaction_broadcast.transaction) {
+        if !self.cache.insert(&transaction_message.bytes) {
             debug!("Transaction already received.");
             Protocol::get().metrics.known_transactions_received_inc();
             return;
         }
 
-        let transaction_bytes = uncompress_transaction_bytes(&transaction_broadcast.transaction);
+        let transaction_bytes = uncompress_transaction_bytes(&transaction_message.bytes);
         let (transaction, hash) = match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), 8019) {
             Ok(transaction_trits) => {
                 let transaction_buf = transaction_trits.to_buf::<T5B1Buf>().encode::<T1B1Buf>();
@@ -126,7 +126,7 @@ impl TransactionWorker {
                 Some((hash, index)) => {
                     Protocol::trigger_transaction_solidification(hash, index).await;
                 }
-                None => Protocol::broadcast_transaction_message(Some(from), transaction_broadcast).await,
+                None => Protocol::broadcast_transaction_message(Some(from), transaction_message).await,
             };
 
             if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
@@ -191,7 +191,7 @@ mod tests {
 
         // build network
         let network_config = NetworkConfig::build().finish();
-        let (network, receiver) = bee_network::init(network_config, &mut shutdown);
+        let (network, _) = bee_network::init(network_config, &mut shutdown);
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
@@ -207,11 +207,11 @@ mod tests {
 
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
-            let message = TransactionBroadcast::new(&tx);
+            let message = TransactionMessage::new(&tx);
             let epid: EndpointId = Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();
             let event = TransactionWorkerEvent {
                 from: epid,
-                transaction_broadcast: message,
+                transaction: message,
             };
             transaction_worker_sender_clone.send(event).await.unwrap();
         });
