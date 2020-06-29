@@ -21,18 +21,6 @@ use std::fs;
 
 const CONFIG_PATH: &str = "./config.toml";
 
-// TODO use proper error
-/// Creates a Bee config builder from the local config file.
-pub fn read_config() -> Result<NodeConfigBuilder, ()> {
-    match fs::read_to_string(CONFIG_PATH) {
-        Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
-            Ok(config_builder) => Ok(config_builder),
-            Err(_) => Err(()),
-        },
-        Err(_) => Err(()),
-    }
-}
-
 #[derive(Default, Deserialize)]
 pub struct NodeConfigBuilder {
     pub(crate) logger: LoggerConfigBuilder,
@@ -43,6 +31,18 @@ pub struct NodeConfigBuilder {
 }
 
 impl NodeConfigBuilder {
+    // TODO use proper error
+    /// Creates a node config builder from the local config file.
+    pub fn from_config() -> Result<Self, ()> {
+        match fs::read_to_string(CONFIG_PATH) {
+            Ok(toml) => match toml::from_str::<Self>(&toml) {
+                Ok(config_builder) => Ok(config_builder),
+                Err(_) => Err(()),
+            },
+            Err(_) => Err(()),
+        }
+    }
+
     pub fn finish(self) -> NodeConfig {
         NodeConfig {
             logger: self.logger.finish(),

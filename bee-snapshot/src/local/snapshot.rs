@@ -189,7 +189,12 @@ impl LocalSnapshot {
             };
 
             if i % 10_000 == 0 && i != 0 {
-                info!("Read {} balances.", i);
+                info!(
+                    "Read {}/{} ({:.0}%) balances.",
+                    i,
+                    balances_num,
+                    ((i * 100) as f64) / (balances_num as f64)
+                );
             }
 
             balances.insert(address, value);

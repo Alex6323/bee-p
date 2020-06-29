@@ -10,13 +10,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::logger::logger_init;
-use bee_node::{read_config, BeeNode, CliArgs};
+use bee_node::{BeeNode, CliArgs, NodeConfigBuilder};
 
 fn main() {
-    match read_config() {
-        Ok(mut config) => {
-            CliArgs::new().apply_to_config(&mut config);
-            let config = config.finish();
+    match NodeConfigBuilder::from_config() {
+        Ok(mut config_builder) => {
+            CliArgs::new().apply_to_config(&mut config_builder);
+            let config = config_builder.finish();
 
             logger_init(config.logger.clone()).unwrap();
 
