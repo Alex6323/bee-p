@@ -14,14 +14,18 @@ use crate::ternary::{Sponge, HASH_LENGTH};
 use bee_ternary::{Btrit, TritBuf, Trits};
 
 use std::{
-    convert::{Infallible, TryInto},
+    convert::Infallible,
     ops::{Deref, DerefMut},
 };
 
 /// The length internal state of the `CurlP` sponge construction (in units of binary-coded, balanced trits).
 const STATE_LEN: usize = HASH_LENGTH * 3;
 const HALF_STATE_LEN: usize = STATE_LEN / 2;
-const TRUTH_TABLE: [[i8; 3]; 3] = [[1, 0, -1], [1, -1, 0], [-1, 1, 0]];
+const TRUTH_TABLE: [[Btrit; 3]; 3] = [
+    [Btrit::PlusOne, Btrit::Zero, Btrit::NegOne],
+    [Btrit::PlusOne, Btrit::NegOne, Btrit::Zero],
+    [Btrit::NegOne, Btrit::PlusOne, Btrit::Zero],
+];
 
 #[derive(Copy, Clone)]
 pub enum CurlPRounds {
@@ -55,10 +59,7 @@ impl CurlP {
     fn transform(&mut self) {
         // TODO inline ?
         fn truth_table_get(xs: &Trits, p: usize, q: usize) -> Btrit {
-            // Unwrapping here is acceptable because `TRUTH_TABLE` always yield a value in {-1, 0, 1}.
             TRUTH_TABLE[xs.get(q).unwrap() as usize + 1][xs.get(p).unwrap() as usize + 1]
-                .try_into()
-                .unwrap()
         }
 
         fn apply_substitution_box(input: &Trits, output: &mut Trits) {
