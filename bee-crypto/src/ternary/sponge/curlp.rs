@@ -63,9 +63,6 @@ impl CurlP {
         }
 
         fn apply_substitution_box(input: &Trits, output: &mut Trits) {
-            assert!(input.len() <= STATE_LEN);
-            assert!(output.len() <= STATE_LEN);
-
             output.set(0, truth_table_get(input, 0, HALF_STATE_LEN));
 
             for state_index in 0..HALF_STATE_LEN {
