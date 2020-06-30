@@ -11,6 +11,8 @@
 
 use crate::config::NodeConfigBuilder;
 
+use bee_common::logger::LOGGER_STDOUT_NAME;
+
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -29,6 +31,7 @@ impl CliArgs {
     }
 
     pub fn apply_to_config(self, config: &mut NodeConfigBuilder) {
-        self.log_level.map(|log_level| config.logger.stdout_level(log_level));
+        self.log_level
+            .map(|log_level| config.logger.level(LOGGER_STDOUT_NAME, log_level));
     }
 }

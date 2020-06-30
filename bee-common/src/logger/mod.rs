@@ -13,15 +13,27 @@ mod config;
 
 pub use config::{LoggerConfig, LoggerConfigBuilder, LoggerOutputConfig, LoggerOutputConfigBuilder};
 
-use fern::colors::{Color, ColoredLevelConfig};
+use fern::{
+    colors::{Color, ColoredLevelConfig},
+    Dispatch,
+};
 
+/// Name of the standard output.
+pub const LOGGER_STDOUT_NAME: &str = "stdout";
+
+/// Error occuring when initializing a logger backend.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {
-    File,
-    Apply,
+    CreatingFileFailed,
+    InitializationFailed,
 }
 
+/// Initializes a `fern` logger backend for the `log` crate.
+///
+/// # Arguments
+///
+/// * `config`  -   Logger configuration
 pub fn logger_init(config: LoggerConfig) -> Result<(), Error> {
     let timestamp_format = "[%Y-%m-%d][%H:%M:%S]";
 
@@ -33,7 +45,8 @@ pub fn logger_init(config: LoggerConfig) -> Result<(), Error> {
             .warn(Color::BrightYellow)
             .error(Color::BrightRed);
 
-        fern::Dispatch::new().format(move |out, message, record| {
+        // Creates a logger dispatch with color support.
+        Dispatch::new().format(move |out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",
                 chrono::Local::now().format(timestamp_format),
@@ -43,7 +56,8 @@ pub fn logger_init(config: LoggerConfig) -> Result<(), Error> {
             ))
         })
     } else {
-        fern::Dispatch::new().format(move |out, message, record| {
+        // Creates a logger dispatch without color support.
+        Dispatch::new().format(move |out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",
                 chrono::Local::now().format(timestamp_format),
@@ -55,18 +69,20 @@ pub fn logger_init(config: LoggerConfig) -> Result<(), Error> {
     };
 
     for output in config.outputs {
-        let mut dispatcher = fern::Dispatch::new().level(output.level);
+        // Creates a logger dispatch for each output of the configuration.
+        let mut dispatch = Dispatch::new().level(output.level);
 
-        dispatcher = if output.name == "stdout" {
-            dispatcher.chain(std::io::stdout())
+        // Special case for the standard output.
+        dispatch = if output.name == LOGGER_STDOUT_NAME {
+            dispatch.chain(std::io::stdout())
         } else {
-            dispatcher.chain(fern::log_file(output.name).map_err(|_| Error::File)?)
+            dispatch.chain(fern::log_file(output.name).map_err(|_| Error::CreatingFileFailed)?)
         };
 
-        logger = logger.chain(dispatcher);
+        logger = logger.chain(dispatch);
     }
 
-    logger.apply().map_err(|_| Error::Apply)?;
+    logger.apply().map_err(|_| Error::InitializationFailed)?;
 
     Ok(())
 }
