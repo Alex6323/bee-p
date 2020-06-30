@@ -19,6 +19,7 @@ use std::collections::HashMap;
 
 use async_std::{fs::File, prelude::*};
 use bytemuck::cast_slice;
+use log::info;
 
 pub struct LocalSnapshot {
     metadata: LocalSnapshotMetadata,
@@ -172,7 +173,7 @@ impl LocalSnapshot {
         let mut buf_value = [0u8; std::mem::size_of::<u64>()];
         let mut balances = HashMap::with_capacity(balances_num as usize);
         let mut supply: u64 = 0;
-        for _ in 0..balances_num {
+        for i in 0..balances_num {
             let address = match file.read_exact(&mut buf_address).await {
                 Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_address), 243) {
                     Ok(trits) => Address::try_from_inner(trits.encode::<T1B1Buf>())
@@ -185,6 +186,16 @@ impl LocalSnapshot {
                 Ok(_) => u64::from_le_bytes(buf_value),
                 Err(e) => return Err(SnapshotReadError::IOError(e)),
             };
+
+            if i % 10_000 == 0 && i != 0 {
+                info!(
+                    "Read {}/{} ({:.0}%) balances.",
+                    i,
+                    balances_num,
+                    ((i * 100) as f64) / (balances_num as f64)
+                );
+            }
+
             balances.insert(address, value);
             supply += value;
         }

@@ -17,4 +17,5 @@ bee-transaction = { path = "../bee-transaction" }
 
 async-std = "1.6.2"
 bytemuck = "1.2.0"
+log = "0.4.8"
 serde = { version = "1.0.114", features = ["derive" ] }
