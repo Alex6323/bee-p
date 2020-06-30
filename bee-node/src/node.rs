@@ -128,7 +128,7 @@ impl NodeBuilder {
         Ok(Node {
             config: self.config,
             network,
-            events,
+            events: events.fuse(),
             shutdown,
             ledger: (ledger_worker_tx, ledger_worker_shutdown_tx),
             peers: HashMap::new(),
@@ -141,7 +141,7 @@ pub struct Node {
     config: NodeConfig,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
-    events: EventSubscriber,
+    events: Fuse<EventSubscriber>,
     shutdown: Shutdown,
     // TODO design proper type `Ledger`
     ledger: (mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>),
