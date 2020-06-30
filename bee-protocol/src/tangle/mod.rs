@@ -208,7 +208,7 @@ pub fn tangle() -> &'static MsTangle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tangle::Flags;
+    use crate::{tangle::TransactionMetadata, MilestoneIndex};
 
     use bee_tangle::traversal;
     use bee_test::{field::rand_trits_field, transaction::create_random_attached_tx};
@@ -228,12 +228,12 @@ mod tests {
         let sep6 = rand_trits_field::<TxHash>();
 
         // Adds solid entry points
-        tangle.add_solid_entry_point(sep1);
-        tangle.add_solid_entry_point(sep2);
-        tangle.add_solid_entry_point(sep3);
-        tangle.add_solid_entry_point(sep4);
-        tangle.add_solid_entry_point(sep5);
-        tangle.add_solid_entry_point(sep6);
+        tangle.add_solid_entry_point(sep1, MilestoneIndex(0));
+        tangle.add_solid_entry_point(sep2, MilestoneIndex(1));
+        tangle.add_solid_entry_point(sep3, MilestoneIndex(2));
+        tangle.add_solid_entry_point(sep4, MilestoneIndex(3));
+        tangle.add_solid_entry_point(sep5, MilestoneIndex(4));
+        tangle.add_solid_entry_point(sep6, MilestoneIndex(5));
 
         // Links transactions
         let (a_hash, a) = create_random_attached_tx(sep1, sep2);
@@ -293,32 +293,32 @@ mod tests {
         // tangle.confirm_transaction(z_hash, 3);
 
         // Constructs the graph
-        tangle.insert(a, a_hash, Flags::empty());
-        tangle.insert(b, b_hash, Flags::empty());
-        tangle.insert(c, c_hash, Flags::empty());
-        tangle.insert(d, d_hash, Flags::empty());
-        tangle.insert(e, e_hash, Flags::empty());
-        tangle.insert(f, f_hash, Flags::empty());
-        tangle.insert(g, g_hash, Flags::empty());
-        tangle.insert(h, h_hash, Flags::empty());
-        tangle.insert(i, i_hash, Flags::empty());
-        tangle.insert(j, j_hash, Flags::empty());
-        tangle.insert(k, k_hash, Flags::empty());
-        tangle.insert(l, l_hash, Flags::empty());
-        tangle.insert(m, m_hash, Flags::empty());
-        tangle.insert(n, n_hash, Flags::empty());
-        tangle.insert(o, o_hash, Flags::empty());
-        tangle.insert(p, p_hash, Flags::empty());
-        tangle.insert(q, q_hash, Flags::empty());
-        tangle.insert(r, r_hash, Flags::empty());
-        tangle.insert(s, s_hash, Flags::empty());
-        tangle.insert(t, t_hash, Flags::empty());
-        tangle.insert(u, u_hash, Flags::empty());
-        tangle.insert(v, v_hash, Flags::empty());
-        tangle.insert(w, w_hash, Flags::empty());
-        tangle.insert(x, x_hash, Flags::empty());
-        tangle.insert(y, y_hash, Flags::empty());
-        tangle.insert(z, z_hash, Flags::empty());
+        tangle.insert(a, a_hash, TransactionMetadata::new());
+        tangle.insert(b, b_hash, TransactionMetadata::new());
+        tangle.insert(c, c_hash, TransactionMetadata::new());
+        tangle.insert(d, d_hash, TransactionMetadata::new());
+        tangle.insert(e, e_hash, TransactionMetadata::new());
+        tangle.insert(f, f_hash, TransactionMetadata::new());
+        tangle.insert(g, g_hash, TransactionMetadata::new());
+        tangle.insert(h, h_hash, TransactionMetadata::new());
+        tangle.insert(i, i_hash, TransactionMetadata::new());
+        tangle.insert(j, j_hash, TransactionMetadata::new());
+        tangle.insert(k, k_hash, TransactionMetadata::new());
+        tangle.insert(l, l_hash, TransactionMetadata::new());
+        tangle.insert(m, m_hash, TransactionMetadata::new());
+        tangle.insert(n, n_hash, TransactionMetadata::new());
+        tangle.insert(o, o_hash, TransactionMetadata::new());
+        tangle.insert(p, p_hash, TransactionMetadata::new());
+        tangle.insert(q, q_hash, TransactionMetadata::new());
+        tangle.insert(r, r_hash, TransactionMetadata::new());
+        tangle.insert(s, s_hash, TransactionMetadata::new());
+        tangle.insert(t, t_hash, TransactionMetadata::new());
+        tangle.insert(u, u_hash, TransactionMetadata::new());
+        tangle.insert(v, v_hash, TransactionMetadata::new());
+        tangle.insert(w, w_hash, TransactionMetadata::new());
+        tangle.insert(x, x_hash, TransactionMetadata::new());
+        tangle.insert(y, y_hash, TransactionMetadata::new());
+        tangle.insert(z, z_hash, TransactionMetadata::new());
 
         let mut hashes = Vec::new();
 

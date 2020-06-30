@@ -176,6 +176,7 @@ impl TransactionWorker {
 mod tests {
 
     use super::*;
+    use crate::tangle;
 
     use crate::ProtocolConfig;
 
@@ -192,6 +193,9 @@ mod tests {
         // build network
         let network_config = NetworkConfig::build().finish();
         let (network, _) = bee_network::init(network_config, &mut shutdown);
+
+        // init tangle
+        tangle::init();
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
