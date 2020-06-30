@@ -38,10 +38,16 @@ use thiserror::Error;
 
 use std::collections::HashMap;
 
+/// All possible node errors.
 #[derive(Error, Debug)]
 pub enum Error {
+    /// Occurs, when there is an error while reading the snapshot file.
     #[error("Reading the snapshot file failed.")]
     SnapshotReadError(SnapshotReadError),
+
+    /// Occurs, when there is an error while shutting down the node.
+    #[error("Shutting down failed.")]
+    ShutdownError(#[from] bee_common::shutdown::Error),
 }
 
 pub struct NodeBuilder {
@@ -53,20 +59,24 @@ impl NodeBuilder {
     /// Finishes the build process of a new node.
     pub fn finish(self) -> Result<Node, Error> {
         info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
-        info!("Initializing...");
 
         let mut shutdown = Shutdown::new();
+
+        info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown);
 
+        info!("Initializing tangle...");
         tangle::init();
 
-        block_on(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
+        info!("Starting static peer manager...");
+        spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
 
         info!("Reading snapshot file...");
         let snapshot_state = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
             Ok(local_snapshot) => {
                 info!(
-                    "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and {} balances.",
+                    "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and
+        {} balances.",
                     Utc.timestamp(local_snapshot.metadata().timestamp() as i64, 0)
                         .to_rfc2822(),
                     local_snapshot.metadata().index(),
@@ -104,20 +114,21 @@ impl NodeBuilder {
             }
         };
 
-        block_on(Protocol::init(self.config.protocol.clone(), network.clone()));
-
         // TODO config
         let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
         let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
 
+        info!("Starting ledger...");
         spawn(LedgerWorker::new(snapshot_state.into_balances()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
+
+        block_on(Protocol::init(self.config.protocol.clone(), network.clone()));
 
         info!("Initialized.");
 
         Ok(Node {
             config: self.config,
             network,
-            events: events.fuse(),
+            events,
             shutdown,
             ledger: (ledger_worker_tx, ledger_worker_shutdown_tx),
             peers: HashMap::new(),
@@ -130,7 +141,7 @@ pub struct Node {
     config: NodeConfig,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
-    events: Fuse<EventSubscriber>,
+    events: EventSubscriber,
     shutdown: Shutdown,
     // TODO design proper type `Ledger`
     ledger: (mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>),
@@ -152,18 +163,7 @@ impl Node {
                         if let Some(event) = event {
                             debug!("Received event {}.", event);
 
-                            match event {
-                                Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
-                                Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
-                                Event::EndpointConnected {
-                                    epid, origin, address, ..
-                                } => self.endpoint_connected_handler(epid, address, origin).await,
-                                Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
-                                Event::MessageReceived { epid, bytes, .. } => {
-                                    self.endpoint_bytes_received_handler(epid, bytes).await
-                                }
-                                _ => warn!("Unsupported event {}.", event),
-                            }
+                            self.handle_event(event).await;
                         }
                     },
                     shutdown = shutdown => {
@@ -174,13 +174,29 @@ impl Node {
         });
     }
 
+    #[inline]
+    async fn handle_event(&mut self, event: Event) {
+        match event {
+            Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
+            Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
+            Event::EndpointConnected {
+                epid, origin, address, ..
+            } => self.endpoint_connected_handler(epid, address, origin).await,
+            Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
+            Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
+            _ => warn!("Unsupported event {}.", event),
+        }
+    }
+
     /// Shuts down the node.
-    pub fn shutdown(self) {
+    pub fn shutdown(self) -> Result<(), Error> {
         info!("Bee is shutting down...");
 
-        block_on(self.shutdown.execute());
+        block_on(self.shutdown.execute())?;
 
         info!("Shutdown complete.");
+
+        Ok(())
     }
 
     /// Returns a builder to create a node.

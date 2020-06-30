@@ -12,8 +12,10 @@
 use bee_common::logger::logger_init;
 use bee_node::{CliArgs, Node, NodeConfigBuilder};
 
+const CONFIG_PATH: &str = "./config.toml";
+
 fn main() {
-    match NodeConfigBuilder::from_config() {
+    match NodeConfigBuilder::from_file(CONFIG_PATH) {
         Ok(mut config_builder) => {
             CliArgs::new().apply_to_config(&mut config_builder);
             let config = config_builder.finish();
