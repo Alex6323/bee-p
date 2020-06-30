@@ -114,8 +114,17 @@ impl TransactionWorker {
             return;
         }
 
+        let mut metadata = TransactionMetadata::new();
+
+        if transaction.is_tail() {
+            metadata.flags.set_tail();
+        }
+        if Protocol::get().requested.contains_key(&hash) {
+            metadata.flags.set_requested();
+        }
+
         // store transaction
-        if let Some(transaction) = tangle().insert(transaction, hash, TransactionMetadata::new()) {
+        if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
             Protocol::get().metrics.new_transactions_received_inc();
 
             if !tangle().is_synced() && Protocol::get().requested.is_empty() {
@@ -143,7 +152,6 @@ impl TransactionWorker {
                             hash,
                             |tx, _| tx.bundle() == transaction.bundle(),
                             |tx_hash, tx, _| {
-                                // bundle.push((*tx_hash, tx.clone()));
                                 last.replace((*tx_hash, tx.clone()));
                             },
                         );

@@ -91,7 +91,7 @@ impl MsTangle {
         }
     }
 
-    pub fn get_flags(&self, hash: &TxHash) -> Option<TransactionMetadata> {
+    pub fn get_metadata(&self, hash: &TxHash) -> Option<TransactionMetadata> {
         self.inner.get_metadata(hash)
     }
 
