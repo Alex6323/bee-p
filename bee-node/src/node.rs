@@ -58,7 +58,7 @@ impl NodeBuilder {
     // TODO use proper error type
     /// Finishes the build process of a new node.
     pub fn finish(self) -> Result<Node, Error> {
-        info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
+        print_banner_and_version();
 
         let mut shutdown = Shutdown::new();
 
@@ -253,4 +253,18 @@ fn shutdown_listener() -> oneshot::Receiver<()> {
     });
 
     receiver
+}
+
+fn print_banner_and_version() {
+    println!(
+        "\n{}\tv{}-{}\n{}\n",
+        " ██████╗░███████╗███████╗
+ ██╔══██╗██╔════╝██╔════╝
+ ██████╦╝█████╗░░█████╗░░",
+        BEE_VERSION,
+        &BEE_GIT_COMMIT[0..7],
+        " ██╔══██╗██╔══╝░░██╔══╝░░
+ ██████╦╝███████╗███████╗
+ ╚═════╝░╚══════╝╚══════╝",
+    );
 }
