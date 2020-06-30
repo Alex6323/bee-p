@@ -16,10 +16,20 @@ use bee_protocol::{ProtocolConfig, ProtocolConfigBuilder};
 use bee_snapshot::{SnapshotConfig, SnapshotConfigBuilder};
 
 use serde::Deserialize;
+use thiserror::Error;
 
 use std::fs;
 
 const CONFIG_PATH: &str = "./config.toml";
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Reading the config file failed.")]
+    ConfigFileReadFailure(#[from] std::io::Error),
+
+    #[error("Deserializing the node config builder failed.")]
+    NodeConfigBuilderCreationFailure(#[from] toml::de::Error),
+}
 
 #[derive(Default, Deserialize)]
 pub struct NodeConfigBuilder {
@@ -31,15 +41,14 @@ pub struct NodeConfigBuilder {
 }
 
 impl NodeConfigBuilder {
-    // TODO use proper error
     /// Creates a node config builder from the local config file.
-    pub fn from_config() -> Result<Self, ()> {
+    pub fn from_config() -> Result<Self, Error> {
         match fs::read_to_string(CONFIG_PATH) {
             Ok(toml) => match toml::from_str::<Self>(&toml) {
                 Ok(config_builder) => Ok(config_builder),
-                Err(_) => Err(()),
+                Err(e) => Err(Error::NodeConfigBuilderCreationFailure(e)),
             },
-            Err(_) => Err(()),
+            Err(e) => Err(Error::ConfigFileReadFailure(e)),
         }
     }
 

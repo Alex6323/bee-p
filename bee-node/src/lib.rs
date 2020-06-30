@@ -18,4 +18,4 @@ mod node;
 
 pub use cli::CliArgs;
 pub use config::NodeConfigBuilder;
-pub use node::BeeNode;
+pub use node::{Error, Node};

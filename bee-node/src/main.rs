@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::logger::logger_init;
-use bee_node::{BeeNode, CliArgs, NodeConfigBuilder};
+use bee_node::{CliArgs, Node, NodeConfigBuilder};
 
 fn main() {
     match NodeConfigBuilder::from_config() {
@@ -20,20 +20,18 @@ fn main() {
 
             logger_init(config.logger.clone()).unwrap();
 
-            match BeeNode::build(config).finish() {
+            match Node::build(config).finish() {
                 Ok(mut node) => {
                     node.run_loop();
                     node.shutdown();
                 }
-                Err(_) => {
-                    // TODO use error
-                    eprintln!("Unable to create a Bee node. Program aborted.");
+                Err(e) => {
+                    eprintln!("Program aborted. Error was: {}", e);
                 }
             }
         }
-        Err(_) => {
-            // TODO use error
-            eprintln!("Unable to read local config file. Program aborted.");
+        Err(e) => {
+            eprintln!("Program aborted. Error was: {}", e);
         }
     }
 }

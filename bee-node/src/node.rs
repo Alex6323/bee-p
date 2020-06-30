@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+#![warn(missing_docs)]
+
 use crate::{
     config::NodeConfig,
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
@@ -20,7 +22,7 @@ use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::LocalSnapshot;
+use bee_snapshot::{LocalSnapshot, SnapshotReadError};
 
 use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
@@ -32,17 +34,24 @@ use futures::{
     FutureExt,
 };
 use log::{debug, error, info, warn};
+use thiserror::Error;
 
 use std::collections::HashMap;
 
-pub struct BeeNodeBuilder {
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Reading the snapshot file failed.")]
+    SnapshotReadError(SnapshotReadError),
+}
+
+pub struct NodeBuilder {
     config: NodeConfig,
 }
 
-impl BeeNodeBuilder {
+impl NodeBuilder {
     // TODO use proper error type
     /// Finishes the build process of a new node.
-    pub fn finish(self) -> Result<BeeNode, ()> {
+    pub fn finish(self) -> Result<Node, Error> {
         info!("Running v{}-{}.", BEE_VERSION, &BEE_GIT_COMMIT[0..7]);
         info!("Initializing...");
 
@@ -79,7 +88,7 @@ impl BeeNodeBuilder {
                     tangle::tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
                 }
 
-                for seen_milestone in local_snapshot.metadata().seen_milestones() {
+                for _seen_milestone in local_snapshot.metadata().seen_milestones() {
                     // TODO request ?
                 }
 
@@ -91,7 +100,7 @@ impl BeeNodeBuilder {
                     self.config.snapshot.local().file_path(),
                     e
                 );
-                return Err(());
+                return Err(Error::SnapshotReadError(e));
             }
         };
 
@@ -105,7 +114,7 @@ impl BeeNodeBuilder {
 
         info!("Initialized.");
 
-        Ok(BeeNode {
+        Ok(Node {
             config: self.config,
             network,
             events: events.fuse(),
@@ -117,7 +126,7 @@ impl BeeNodeBuilder {
 }
 
 /// The main node type.
-pub struct BeeNode {
+pub struct Node {
     config: NodeConfig,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
@@ -129,7 +138,7 @@ pub struct BeeNode {
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }
 
-impl BeeNode {
+impl Node {
     /// Executes node event loop. This method is only executed after the shutdown signal has been received.
     pub fn run_loop(&mut self) {
         info!("Running.");
@@ -175,8 +184,8 @@ impl BeeNode {
     }
 
     /// Returns a builder to create a node.
-    pub fn build(config: NodeConfig) -> BeeNodeBuilder {
-        BeeNodeBuilder { config }
+    pub fn build(config: NodeConfig) -> NodeBuilder {
+        NodeBuilder { config }
     }
 
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
