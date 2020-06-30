@@ -19,7 +19,7 @@ use bee_crypto::ternary::Hash;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
-use bee_protocol::{tangle, Protocol};
+use bee_protocol::{tangle, MilestoneIndex, Protocol};
 use bee_snapshot::LocalSnapshot;
 
 use async_std::task::{block_on, spawn};
@@ -57,29 +57,35 @@ impl BeeNodeBuilder {
         let snapshot_state = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
             Ok(local_snapshot) => {
                 info!(
-                "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and {} balances.",
-                Utc.timestamp(local_snapshot.metadata().timestamp() as i64, 0)
-                    .to_rfc2822(),
-                local_snapshot.metadata().index(),
-                local_snapshot.metadata().solid_entry_points().len(),
-                local_snapshot.metadata().seen_milestones().len(),
-                local_snapshot.state().balances().len()
-            );
-                tangle::tangle().update_solid_milestone_index(local_snapshot.metadata().index().into());
-                // TODO get from database
-                tangle::tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
-                tangle::tangle().add_solid_entry_point(Hash::zeros());
+                    "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and {} balances.",
+                    Utc.timestamp(local_snapshot.metadata().timestamp() as i64, 0)
+                        .to_rfc2822(),
+                    local_snapshot.metadata().index(),
+                    local_snapshot.metadata().solid_entry_points().len(),
+                    local_snapshot.metadata().seen_milestones().len(),
+                    local_snapshot.state().balances().len()
+                );
 
-                for solid_entry_point in local_snapshot.metadata().solid_entry_points() {
-                    tangle::tangle().add_solid_entry_point(*solid_entry_point);
+                tangle::tangle().update_solid_milestone_index(local_snapshot.metadata().index().into());
+
+                // TODO get from database
+                tangle::tangle().update_last_milestone_index(local_snapshot.metadata().index().into());
+
+                tangle::tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
+
+                // TODO index 0 ?
+                tangle::tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
+                for (hash, index) in local_snapshot.metadata().solid_entry_points() {
+                    tangle::tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
                 }
+
                 for seen_milestone in local_snapshot.metadata().seen_milestones() {
                     // TODO request ?
                 }
+
                 local_snapshot.into_state()
             }
             Err(e) => {
-                // TODO exit ?
                 error!(
                     "Failed to read snapshot file \"{}\": {:?}.",
                     self.config.snapshot.local().file_path(),

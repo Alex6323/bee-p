@@ -126,8 +126,8 @@ where
             .map(|mut vtx| update(vtx.value_mut().metadata_mut()));
     }
 
-    /// Returns the current size of the Tangle.
-    pub fn size(&self) -> usize {
+    /// Returns the number of transactions in the Tangle.
+    pub fn len(&self) -> usize {
         self.vertices.len()
     }
 
@@ -182,14 +182,14 @@ mod tests {
         let insert1 = tangle.insert(tx.clone(), hash.clone(), ());
 
         assert!(insert1.is_some());
-        assert_eq!(1, tangle.size());
+        assert_eq!(1, tangle.len());
         assert!(tangle.contains(&hash));
         assert_eq!(1, tangle.num_tips());
 
         let insert2 = tangle.insert(tx, hash, ());
 
         assert!(insert2.is_none());
-        assert_eq!(1, tangle.size());
+        assert_eq!(1, tangle.len());
         assert!(tangle.contains(&hash));
         assert_eq!(1, tangle.num_tips());
     }

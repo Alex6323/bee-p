@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{compress_transaction_bytes, MilestoneRequest, TransactionBroadcast},
+    message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
     tangle::tangle,
     worker::SenderWorker,
 };
@@ -53,10 +53,10 @@ impl MilestoneResponderWorker {
                 transaction.into_trits_allocated(&mut trits);
                 // TODO dedicated channel ? Priority Queue ?
                 // TODO compress bytes
-                SenderWorker::<TransactionBroadcast>::send(
+                SenderWorker::<TransactionMessage>::send(
                     &epid,
                     // TODO try to compress lower in the pipeline ?
-                    TransactionBroadcast::new(&compress_transaction_bytes(cast_slice(
+                    TransactionMessage::new(&compress_transaction_bytes(cast_slice(
                         trits.encode::<T5B1Buf>().as_i8_slice(),
                     ))),
                 )

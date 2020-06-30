@@ -10,7 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{tlv_into_bytes, Heartbeat, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest},
+    message::{
+        tlv_into_bytes, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest,
+    },
     peer::HandshakedPeer,
     protocol::Protocol,
 };
@@ -107,11 +109,7 @@ macro_rules! implement_sender_worker {
 }
 
 implement_sender_worker!(MilestoneRequest, milestone_request, milestone_request_sent_inc);
-implement_sender_worker!(
-    TransactionBroadcast,
-    transaction_broadcast,
-    transaction_broadcast_sent_inc
-);
+implement_sender_worker!(TransactionMessage, transaction, transaction_sent_inc);
 implement_sender_worker!(TransactionRequest, transaction_request, transaction_request_sent_inc);
 implement_sender_worker!(Heartbeat, heartbeat, heartbeat_sent_inc);
 

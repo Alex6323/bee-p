@@ -9,7 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+/// A logger backend for the `log` crate.
 pub mod logger;
+/// A graceful shutdown mechanism for asynchronous workers.
 pub mod shutdown;
+/// An asynchronous waiting priority queue.
 pub mod wait_priority_queue;
+/// Utilities for asynchronous workers.
 pub mod worker;
