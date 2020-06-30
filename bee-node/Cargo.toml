@@ -26,6 +26,7 @@ futures = "0.3.5"
 log = "0.4.8"
 serde = { version = "1.0.114", features = ["derive" ] }
 structopt = { version = "0.3.14", default-features = false }
+thiserror = "1.0.20"
 tokio = { version = "0.2.11", features = ["signal"] }
 toml = "0.5.6"
 

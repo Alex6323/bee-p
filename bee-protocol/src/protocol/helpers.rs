@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{Heartbeat, TransactionBroadcast},
+    message::{Heartbeat, Transaction as TransactionMessage},
     milestone::MilestoneIndex,
     protocol::Protocol,
     worker::{
@@ -43,14 +43,14 @@ impl Protocol {
         Protocol::get().milestone_requester_worker.0.is_empty()
     }
 
-    // TransactionBroadcast
+    // TransactionMessage
 
     pub async fn send_transaction(to: EndpointId, transaction: &[u8]) {
-        SenderWorker::<TransactionBroadcast>::send(&to, TransactionBroadcast::new(transaction)).await;
+        SenderWorker::<TransactionMessage>::send(&to, TransactionMessage::new(transaction)).await;
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
-    pub(crate) async fn broadcast_transaction_message(source: Option<EndpointId>, transaction: TransactionBroadcast) {
+    pub(crate) async fn broadcast_transaction_message(source: Option<EndpointId>, transaction: TransactionMessage) {
         if let Err(e) = Protocol::get()
             .broadcaster_worker
             .0
@@ -65,7 +65,7 @@ impl Protocol {
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
     pub async fn broadcast_transaction(source: Option<EndpointId>, transaction: &[u8]) {
-        Protocol::broadcast_transaction_message(source, TransactionBroadcast::new(transaction)).await;
+        Protocol::broadcast_transaction_message(source, TransactionMessage::new(transaction)).await;
     }
 
     // TransactionRequest

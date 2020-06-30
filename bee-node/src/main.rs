@@ -10,30 +10,30 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::logger::logger_init;
-use bee_node::{read_config, BeeNode, CliArgs};
+use bee_node::{CliArgs, Node, NodeConfigBuilder};
+
+const CONFIG_PATH: &str = "./config.toml";
 
 fn main() {
-    match read_config() {
-        Ok(mut config) => {
-            CliArgs::new().apply_to_config(&mut config);
-            let config = config.finish();
+    match NodeConfigBuilder::from_file(CONFIG_PATH) {
+        Ok(mut config_builder) => {
+            CliArgs::new().apply_to_config(&mut config_builder);
+            let config = config_builder.finish();
 
             logger_init(config.logger.clone()).unwrap();
 
-            match BeeNode::build(config).finish() {
+            match Node::build(config).finish() {
                 Ok(mut node) => {
                     node.run_loop();
                     node.shutdown();
                 }
-                Err(_) => {
-                    // TODO use error
-                    eprintln!("Unable to create a Bee node. Program aborted.");
+                Err(e) => {
+                    eprintln!("Program aborted. Error was: {}", e);
                 }
             }
         }
-        Err(_) => {
-            // TODO use error
-            eprintln!("Unable to read local config file. Program aborted.");
+        Err(e) => {
+            eprintln!("Program aborted. Error was: {}", e);
         }
     }
 }

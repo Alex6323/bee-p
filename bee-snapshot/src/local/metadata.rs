@@ -11,11 +11,13 @@
 
 use bee_crypto::ternary::Hash;
 
+use std::collections::HashMap;
+
 pub struct LocalSnapshotMetadata {
     pub(crate) hash: Hash,
     pub(crate) index: u32,
     pub(crate) timestamp: u64,
-    pub(crate) solid_entry_points: Vec<Hash>,
+    pub(crate) solid_entry_points: HashMap<Hash, u32>,
     pub(crate) seen_milestones: Vec<Hash>,
 }
 
@@ -32,7 +34,7 @@ impl LocalSnapshotMetadata {
         self.timestamp
     }
 
-    pub fn solid_entry_points(&self) -> &Vec<Hash> {
+    pub fn solid_entry_points(&self) -> &HashMap<Hash, u32> {
         &self.solid_entry_points
     }
 

@@ -10,17 +10,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub mod flags;
+mod metadata;
+
+pub use metadata::TransactionMetadata;
 
 // TODO: reinstate the async worker
 // pub(crate) mod propagator;
 
-use crate::{milestone::MilestoneIndex as MsIndex, tangle::flags::Flags};
+use crate::{milestone::MilestoneIndex, tangle::flags::Flags};
 
 use bee_crypto::ternary::Hash as TxHash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
 
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 
 use std::{
     ops::Deref,
@@ -30,17 +33,16 @@ use std::{
 
 /// Milestone-based Tangle.
 pub struct MsTangle {
-    pub(crate) inner: Tangle<Flags>,
-    pub(crate) milestones: DashMap<MsIndex, TxHash>,
-    // TODO use DashMap<TxHash, MilestoneIndex> or DashSet<Sep>, whereby Sep { hash: TxHash, ms: MilestoneIndex }
-    pub(crate) solid_entry_points: DashSet<TxHash>,
+    pub(crate) inner: Tangle<TransactionMetadata>,
+    pub(crate) milestones: DashMap<MilestoneIndex, TxHash>,
+    pub(crate) solid_entry_points: DashMap<TxHash, MilestoneIndex>,
     solid_milestone_index: AtomicU32,
     last_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
 }
 
 impl Deref for MsTangle {
-    type Target = Tangle<Flags>;
+    type Target = Tangle<TransactionMetadata>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -52,15 +54,15 @@ impl MsTangle {
         Self {
             inner: Tangle::new(),
             milestones: DashMap::new(),
-            solid_entry_points: DashSet::new(),
+            solid_entry_points: DashMap::new(),
             solid_milestone_index: AtomicU32::new(0),
             last_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
         }
     }
 
-    pub fn insert(&self, transaction: Tx, hash: TxHash, flags: Flags) -> Option<TxRef> {
-        if let Some(tx) = self.inner.insert(transaction, hash, flags) {
+    pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: TransactionMetadata) -> Option<TxRef> {
+        if let Some(tx) = self.inner.insert(transaction, hash, metadata) {
             self.propagate_solid_flag(hash);
             return Some(tx);
         }
@@ -79,7 +81,7 @@ impl MsTangle {
 
             if let Some(tx) = self.inner.get(&hash) {
                 if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
-                    self.inner.update_metadata(&hash, |flags| flags.set_solid());
+                    self.inner.update_metadata(&hash, |metadata| metadata.flags.set_solid());
 
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
@@ -89,35 +91,27 @@ impl MsTangle {
         }
     }
 
-    pub fn get(&self, hash: &TxHash) -> Option<TxRef> {
-        self.inner.get(hash)
-    }
-
-    pub fn get_flags(&self, hash: &TxHash) -> Option<Flags> {
+    pub fn get_flags(&self, hash: &TxHash) -> Option<TransactionMetadata> {
         self.inner.get_metadata(hash)
     }
 
-    pub fn contains(&self, hash: &TxHash) -> bool {
-        self.inner.contains(hash)
-    }
-
-    pub fn add_milestone(&self, index: MsIndex, hash: TxHash) {
+    pub fn add_milestone(&self, index: MilestoneIndex, hash: TxHash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
 
         if let Some(mut metadata) = self.inner.get_metadata(&hash) {
-            metadata.set_milestone();
+            metadata.flags.set_milestone();
 
             self.inner.set_metadata(&hash, metadata);
         }
     }
 
-    pub fn remove_milestone(&self, index: MsIndex) {
+    pub fn remove_milestone(&self, index: MilestoneIndex) {
         self.milestones.remove(&index);
     }
 
     // TODO: use combinator instead of match
-    pub fn get_milestone(&self, index: MsIndex) -> Option<TxRef> {
+    pub fn get_milestone(&self, index: MilestoneIndex) -> Option<TxRef> {
         match self.get_milestone_hash(index) {
             None => None,
             Some(ref hash) => self.get(hash),
@@ -125,38 +119,38 @@ impl MsTangle {
     }
 
     // TODO: use combinator instead of match
-    pub fn get_milestone_hash(&self, index: MsIndex) -> Option<TxHash> {
+    pub fn get_milestone_hash(&self, index: MilestoneIndex) -> Option<TxHash> {
         match self.milestones.get(&index) {
             None => None,
             Some(v) => Some(*v),
         }
     }
 
-    pub fn contains_milestone(&self, index: MsIndex) -> bool {
+    pub fn contains_milestone(&self, index: MilestoneIndex) -> bool {
         self.milestones.contains_key(&index)
     }
 
-    pub fn get_solid_milestone_index(&self) -> MsIndex {
+    pub fn get_solid_milestone_index(&self) -> MilestoneIndex {
         self.solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn get_last_milestone_index(&self) -> MsIndex {
+    pub fn get_last_milestone_index(&self) -> MilestoneIndex {
         self.last_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn get_snapshot_milestone_index(&self) -> MsIndex {
+    pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
         self.snapshot_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_solid_milestone_index(&self, new_index: MsIndex) {
+    pub fn update_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.solid_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn update_last_milestone_index(&self, new_index: MsIndex) {
+    pub fn update_last_milestone_index(&self, new_index: MilestoneIndex) {
         self.last_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn update_snapshot_milestone_index(&self, new_index: MsIndex) {
+    pub fn update_snapshot_milestone_index(&self, new_index: MilestoneIndex) {
         self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
@@ -164,8 +158,8 @@ impl MsTangle {
         self.get_solid_milestone_index() == self.get_last_milestone_index()
     }
 
-    pub fn add_solid_entry_point(&self, hash: TxHash) {
-        self.solid_entry_points.insert(hash);
+    pub fn add_solid_entry_point(&self, hash: TxHash, index: MilestoneIndex) {
+        self.solid_entry_points.insert(hash, index);
     }
 
     /// Removes `hash` from the set of solid entry points.
@@ -175,7 +169,7 @@ impl MsTangle {
 
     /// Returns whether the transaction associated with `hash` is a solid entry point.
     pub fn is_solid_entry_point(&self, hash: &TxHash) -> bool {
-        self.solid_entry_points.contains(hash)
+        self.solid_entry_points.contains_key(hash)
     }
 
     /// Returns whether the transaction associated with `hash` is deemed `solid`.
@@ -183,18 +177,11 @@ impl MsTangle {
         if self.is_solid_entry_point(hash) {
             true
         } else {
-            self.inner.get_metadata(hash).map(|m| m.is_solid()).unwrap_or(false)
+            self.inner
+                .get_metadata(hash)
+                .map(|metadata| metadata.flags.is_solid())
+                .unwrap_or(false)
         }
-    }
-
-    /// Returns a reference to the inner (abstract) Tangle.
-    pub fn inner(&self) -> &Tangle<Flags> {
-        &self.inner
-    }
-
-    /// Returns the size of the current Tangle.
-    pub fn size(&self) -> usize {
-        self.inner.size()
     }
 }
 

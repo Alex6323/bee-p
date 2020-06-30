@@ -14,5 +14,5 @@ mod local;
 mod state;
 
 pub use config::{SnapshotConfig, SnapshotConfigBuilder};
-pub use local::{LocalSnapshot, LocalSnapshotMetadata};
+pub use local::{LocalSnapshot, LocalSnapshotMetadata, SnapshotReadError};
 pub use state::SnapshotState;

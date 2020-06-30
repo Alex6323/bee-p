@@ -9,14 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-#![recursion_limit = "256"]
-
 mod cli;
 mod config;
 mod constants;
 mod node;
 
-// TODO: prefix with `crate`? (it's not necessary but helps with eye parsing IMO)
 pub use cli::CliArgs;
-pub use config::{read_config, NodeConfigBuilder};
-pub use node::BeeNode;
+pub use config::NodeConfigBuilder;
+pub use node::{Error, Node};

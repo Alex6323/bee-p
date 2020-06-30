@@ -70,7 +70,7 @@ pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
 
     // TODO ensure children reference their parents correctly
 
-    assert_eq!(5, tangle.size());
+    assert_eq!(5, tangle.len());
     assert_eq!(2, tangle.num_children(&a_hash));
     assert_eq!(1, tangle.num_children(&b_hash));
     assert_eq!(2, tangle.num_children(&c_hash));

@@ -16,21 +16,17 @@ use bee_protocol::{ProtocolConfig, ProtocolConfigBuilder};
 use bee_snapshot::{SnapshotConfig, SnapshotConfigBuilder};
 
 use serde::Deserialize;
+use thiserror::Error;
 
-use std::fs;
+use std::{fs, path::Path};
 
-const CONFIG_PATH: &str = "./config.toml";
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Reading the specified config file failed.")]
+    ConfigFileReadFailure(#[from] std::io::Error),
 
-// TODO use proper error
-/// Creates a Bee config builder from the local config file.
-pub fn read_config() -> Result<NodeConfigBuilder, ()> {
-    match fs::read_to_string(CONFIG_PATH) {
-        Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
-            Ok(config_builder) => Ok(config_builder),
-            Err(_) => Err(()),
-        },
-        Err(_) => Err(()),
-    }
+    #[error("Deserializing the node config builder failed.")]
+    NodeConfigBuilderCreationFailure(#[from] toml::de::Error),
 }
 
 #[derive(Default, Deserialize)]
@@ -43,6 +39,14 @@ pub struct NodeConfigBuilder {
 }
 
 impl NodeConfigBuilder {
+    /// Creates a node config builder from a local config file.
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        match fs::read_to_string(path) {
+            Ok(toml) => toml::from_str::<Self>(&toml).map_err(|e| Error::NodeConfigBuilderCreationFailure(e)),
+            Err(e) => Err(Error::ConfigFileReadFailure(e)),
+        }
+    }
+
     pub fn finish(self) -> NodeConfig {
         NodeConfig {
             logger: self.logger.finish(),

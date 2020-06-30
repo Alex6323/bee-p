@@ -128,9 +128,9 @@ impl LocalSnapshot {
 
         let mut buf_hash = [0u8; 49];
         let mut buf_index = [0u8; std::mem::size_of::<u32>()];
-        let mut solid_entry_points = Vec::with_capacity(solid_entry_points_num as usize);
+        let mut solid_entry_points = HashMap::with_capacity(solid_entry_points_num as usize);
         for _ in 0..solid_entry_points_num {
-            let solid_entry_point = match file.read_exact(&mut buf_hash).await {
+            let hash = match file.read_exact(&mut buf_hash).await {
                 Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), 243) {
                     Ok(trits) => Hash::try_from_inner(trits.encode::<T1B1Buf>())
                         .map_err(|_| SnapshotReadError::InvalidSolidEntryPointHash),
@@ -138,12 +138,11 @@ impl LocalSnapshot {
                 },
                 Err(e) => Err(SnapshotReadError::IOError(e)),
             }?;
-            solid_entry_points.push(solid_entry_point);
-            // TODO should we use that ?
-            match file.read_exact(&mut buf_index).await {
+            let index = match file.read_exact(&mut buf_index).await {
                 Ok(_) => u32::from_le_bytes(buf_index),
                 Err(e) => return Err(SnapshotReadError::IOError(e)),
             };
+            solid_entry_points.insert(hash, index);
         }
 
         // Seen milestones
@@ -189,7 +188,12 @@ impl LocalSnapshot {
             };
 
             if i % 10_000 == 0 && i != 0 {
-                info!("Read {} balances.", i);
+                info!(
+                    "Read {}/{} ({:.0}%) balances.",
+                    i,
+                    balances_num,
+                    ((i * 100) as f64) / (balances_num as f64)
+                );
             }
 
             balances.insert(address, value);

@@ -9,19 +9,25 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// TODO document
+use super::Flags;
 
-mod compression;
-mod message;
-mod tlv;
-mod v0;
-mod v1;
-mod v2;
-mod version;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-pub(crate) use compression::{compress_transaction_bytes, uncompress_transaction_bytes};
-pub(crate) use message::Message;
-pub(crate) use tlv::{tlv_from_bytes, tlv_into_bytes, Header, HEADER_SIZE};
-pub(crate) use v0::Handshake;
-pub(crate) use v2::{Heartbeat, MilestoneRequest, Transaction, TransactionRequest};
-pub(crate) use version::{messages_supported_version, MESSAGES_VERSIONS};
+// TODO Should it really be copy ?
+#[derive(Copy, Clone, Default)]
+pub struct TransactionMetadata {
+    pub(crate) flags: Flags,
+    pub(crate) arrival_timestamp: u64,
+}
+
+impl TransactionMetadata {
+    pub fn new() -> Self {
+        Self {
+            arrival_timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Clock may have gone backwards")
+                .as_millis() as u64,
+            ..Self::default()
+        }
+    }
+}
