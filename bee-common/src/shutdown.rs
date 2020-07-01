@@ -11,9 +11,11 @@
 
 use crate::worker::Error as WorkerError;
 
-use async_std::task;
-use futures::channel::oneshot;
+use futures::{channel::oneshot, future::FutureExt};
+use log::error;
 use thiserror::Error;
+
+use std::future::Future;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -26,12 +28,12 @@ pub enum Error {
 
 pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
-pub type WorkerHandle = task::JoinHandle<Result<(), WorkerError>>;
+pub type WorkerHandle = dyn Future<Output = Result<(), WorkerError>> + Unpin;
 
 /// Handles the graceful shutdown of asynchronous workers.
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
-    workers: Vec<WorkerHandle>,
+    workers: Vec<Box<WorkerHandle>>,
     actions: Vec<Box<dyn Fn()>>,
 }
 
@@ -51,13 +53,13 @@ impl Shutdown {
     }
 
     /// Adds an asynchronous worker.
-    pub fn add_worker(&mut self, worker: WorkerHandle) {
-        self.workers.push(worker);
+    pub fn add_worker<T>(&mut self, worker: impl Future<Output = Result<T, WorkerError>> + Unpin + 'static) {
+        self.workers.push(Box::new(worker.map(|x| x.map(|_| ()))));
     }
 
     /// Adds teardown logic that is executed during shutdown.
-    pub fn add_action(&mut self, action: Box<dyn Fn()>) {
-        self.actions.push(action);
+    pub fn add_action(&mut self, action: impl Fn() + 'static) {
+        self.actions.push(Box::new(action));
     }
 
     /// Executes the shutdown.
@@ -69,7 +71,9 @@ impl Shutdown {
         }
 
         for worker in self.workers {
-            worker.await?;
+            if let Err(e) = worker.await {
+                error!("Awaiting worker failed: {:?}.", e);
+            }
         }
 
         for action in self.actions {

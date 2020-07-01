@@ -86,7 +86,7 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     // shutdown.add_worker(spawn(udp_worker.run()));
 
     whitelist::init();
-    shutdown.add_action(Box::new(|| whitelist::drop()));
+    shutdown.add_action(|| whitelist::drop());
 
     (Network::new(config, command_sender), events)
 }
