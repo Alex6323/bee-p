@@ -32,6 +32,7 @@ pub type Worker = Box<dyn Future<Output = Result<(), WorkerError>> + Unpin>;
 pub type Action = Box<dyn Fn()>;
 
 /// Handles the graceful shutdown of asynchronous workers.
+#[derive(Default)]
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
     workers: Vec<Worker>,
@@ -41,11 +42,7 @@ pub struct Shutdown {
 impl Shutdown {
     /// Creates a new instance.
     pub fn new() -> Self {
-        Self {
-            notifiers: Vec::new(),
-            workers: Vec::new(),
-            actions: Vec::new(),
-        }
+        Self::default()
     }
 
     /// Adds a shutdown notifier.
