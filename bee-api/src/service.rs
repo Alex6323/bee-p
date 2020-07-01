@@ -9,21 +9,17 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::format::items::{
-    bool_item::BoolItem, hash_item::HashItem, milestone_index_item::MilestoneIndexItem,
-    transaction_ref_item::TransactionRefItem,
+use crate::{
+    format::items::{
+        bool_item::BoolItem, hash_item::HashItem, milestone_index_item::MilestoneIndexItem,
+        transaction_ref_item::TransactionRefItem,
+    },
+    service,
 };
+use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
 use bee_tangle::traversal;
 use std::collections::HashMap;
-use bee_crypto::ternary::Hash;
-
-pub trait Service {
-    fn node_info() -> NodeInfoResponse;
-    fn transactions_by_bundle(params: TransactionsByBundleParams) -> TransactionsByBundleResponse;
-    fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse;
-    fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse;
-}
 
 pub struct NodeInfoResponse {
     pub is_synced: BoolItem,
@@ -57,62 +53,56 @@ pub struct TransactionsByBundleResponse {
     pub txs: HashMap<HashItem, TransactionRefItem>,
 }
 
-pub struct ServiceImpl;
-impl Service for ServiceImpl {
-    fn node_info() -> NodeInfoResponse {
-        let is_synced = BoolItem(tangle().is_synced());
-        let last_milestone_index = MilestoneIndexItem(tangle().get_last_milestone_index());
-        let last_milestone_hash = match tangle().get_milestone_hash(tangle().get_last_milestone_index()) {
-            Some(hash) => Some(HashItem(hash)),
-            None => None,
-        };
-        let last_solid_milestone_index = MilestoneIndexItem(tangle().get_solid_milestone_index());
-        let last_solid_milestone_hash = match tangle().get_milestone_hash(tangle().get_solid_milestone_index()) {
-            Some(hash) => Some(HashItem(hash)),
-            None => None,
-        };
-        NodeInfoResponse {
-            is_synced,
-            last_milestone_index,
-            last_milestone_hash,
-            last_solid_milestone_index,
-            last_solid_milestone_hash,
-        }
+pub fn node_info() -> NodeInfoResponse {
+    let is_synced = BoolItem(tangle().is_synced());
+    let last_milestone_index = MilestoneIndexItem(tangle().get_last_milestone_index());
+    let last_milestone_hash = match tangle().get_milestone_hash(tangle().get_last_milestone_index()) {
+        Some(hash) => Some(HashItem(hash)),
+        None => None,
+    };
+    let last_solid_milestone_index = MilestoneIndexItem(tangle().get_solid_milestone_index());
+    let last_solid_milestone_hash = match tangle().get_milestone_hash(tangle().get_solid_milestone_index()) {
+        Some(hash) => Some(HashItem(hash)),
+        None => None,
+    };
+    NodeInfoResponse {
+        is_synced,
+        last_milestone_index,
+        last_milestone_hash,
+        last_solid_milestone_index,
+        last_solid_milestone_hash,
     }
+}
 
-    fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
-        let ret = match tangle().get(&params.hash.0) {
-            Some(tx_ref) => Some(TransactionRefItem(tx_ref)),
-            None => None,
-        };
-        TransactionByHashResponse { tx: ret }
-    }
+pub fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
+    let ret = match tangle().get(&params.hash.0) {
+        Some(tx_ref) => Some(TransactionRefItem(tx_ref)),
+        None => None,
+    };
+    TransactionByHashResponse { tx: ret }
+}
 
-    fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse {
-        let mut ret = HashMap::new();
-        for hash in params.hashes {
-            ret.insert(
-                HashItem(hash.0),
-                ServiceImpl::transaction_by_hash(TransactionByHashParams { hash }).tx,
-            );
-        }
-        TransactionsByHashesResponse { txs: ret }
+pub fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse {
+    let mut ret = HashMap::new();
+    for hash in params.hashes {
+        ret.insert(
+            HashItem(hash.0),
+            service::transaction_by_hash(TransactionByHashParams { hash }).tx,
+        );
     }
+    TransactionsByHashesResponse { txs: ret }
+}
 
-    fn transactions_by_bundle(params: TransactionsByBundleParams) -> TransactionsByBundleResponse {
-        let mut ret = HashMap::new();
-            traversal::visit_children_depth_first(
-                tangle(),
-                Hash::zeros(),
-                |tx, _| tx.bundle() == &params.hash.0,
-                |tx_hash, tx, _| {
-                    ret.insert(
-                        HashItem(tx_hash.clone()),
-                        TransactionRefItem(tx.clone())
-                    );
-                },
-                |_| ()
-            );
-        TransactionsByBundleResponse { txs: ret }
-    }
+pub fn transactions_by_bundle(params: TransactionsByBundleParams) -> TransactionsByBundleResponse {
+    let mut ret = HashMap::new();
+    traversal::visit_children_depth_first(
+        tangle(),
+        Hash::zeros(),
+        |tx, _| tx.bundle() == &params.bundle.0,
+        |tx_hash, tx, _| {
+            ret.insert(HashItem(tx_hash.clone()), TransactionRefItem(tx.clone()));
+        },
+        |_| (),
+    );
+    TransactionsByBundleResponse { txs: ret }
 }
