@@ -11,9 +11,11 @@
 
 use crate::worker::Error as WorkerError;
 
-use async_std::task;
 use futures::channel::oneshot;
+use log::error;
 use thiserror::Error;
+
+use std::future::Future;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -26,23 +28,21 @@ pub enum Error {
 
 pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
-pub type WorkerHandle = task::JoinHandle<Result<(), WorkerError>>;
+pub type WorkerShutdown = Box<dyn Future<Output = Result<(), WorkerError>> + Unpin>;
+pub type Action = Box<dyn Fn()>;
 
 /// Handles the graceful shutdown of asynchronous workers.
+#[derive(Default)]
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
-    workers: Vec<WorkerHandle>,
-    actions: Vec<Box<dyn Fn()>>,
+    worker_shutdowns: Vec<WorkerShutdown>,
+    actions: Vec<Action>,
 }
 
 impl Shutdown {
     /// Creates a new instance.
     pub fn new() -> Self {
-        Self {
-            notifiers: Vec::new(),
-            workers: Vec::new(),
-            actions: Vec::new(),
-        }
+        Self::default()
     }
 
     /// Adds a shutdown notifier.
@@ -51,13 +51,13 @@ impl Shutdown {
     }
 
     /// Adds an asynchronous worker.
-    pub fn add_worker(&mut self, worker: WorkerHandle) {
-        self.workers.push(worker);
+    pub fn add_worker_shutdown(&mut self, worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static) {
+        self.worker_shutdowns.push(Box::new(worker));
     }
 
     /// Adds teardown logic that is executed during shutdown.
-    pub fn add_action(&mut self, action: Box<dyn Fn()>) {
-        self.actions.push(action);
+    pub fn add_action(&mut self, action: impl Fn() + 'static) {
+        self.actions.push(Box::new(action));
     }
 
     /// Executes the shutdown.
@@ -68,8 +68,10 @@ impl Shutdown {
             notifier.send(()).map_err(|_| Error::SendingShutdownSignalFailed)?
         }
 
-        for worker in self.workers {
-            worker.await?;
+        for worker in self.worker_shutdowns {
+            if let Err(e) = worker.await {
+                error!("Awaiting worker failed: {:?}.", e);
+            }
         }
 
         for action in self.actions {
