@@ -13,6 +13,7 @@ use crate::config::NodeConfigBuilder;
 
 use bee_common::logger::LOGGER_STDOUT_NAME;
 
+use log::LevelFilter;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -22,7 +23,7 @@ pub struct CliArgs {
         long = "log-level",
         help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\""
     )]
-    log_level: Option<String>,
+    log_level: Option<LevelFilter>,
 }
 
 impl CliArgs {
