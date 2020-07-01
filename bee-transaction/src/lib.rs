@@ -12,4 +12,7 @@
 pub mod bundled;
 mod vertex;
 
+#[cfg(feature = "serde1")]
+mod serde;
+
 pub use vertex::TransactionVertex;
