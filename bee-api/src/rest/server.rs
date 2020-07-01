@@ -48,7 +48,7 @@ pub async fn run(config: ApiConfig) {
         .and_then(routes::transactions_by_bundle);
 
     let routes = tx_by_hash_get
-        .or(tx_by_hash_post.or(node_info).or(txs_by_bundle))
+        .or(tx_by_hash_post.or(node_info))
         .with(warp::cors().allow_any_origin());
 
     warp::serve(routes).run(config.rest_socket_addr()).await;
