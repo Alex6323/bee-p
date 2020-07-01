@@ -9,53 +9,68 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::service::TransactionsByBundleParams;
+use crate::service::{Service, ServiceImpl, TransactionsByBundleParams};
 
 use serde_json::Value as JsonValue;
 
+use async_trait::async_trait;
+
 use crate::{
+    api::Api,
     format::json_utils::{json_error_obj, json_success_obj},
-    service,
     service::{TransactionByHashParams, TransactionsByHashesParams},
 };
 use std::convert::TryFrom;
 
-pub async fn node_info() -> Result<impl warp::Reply, warp::Rejection> {
-    Ok(warp::reply::json(&JsonValue::from(service::node_info())))
-}
+type WarpJsonReply = Result<warp::reply::Json, warp::Rejection>;
+pub struct RestApi;
+#[async_trait]
+impl Api for RestApi {
+    type NodeInfoResponse = WarpJsonReply;
+    type TransactionsByBundleParams = String;
+    type TransactionsByBundleResponse = WarpJsonReply;
+    type TransactionByHashParams = String;
+    type TransactionByHashResponse = WarpJsonReply;
+    type TransactionsByHashesParams = JsonValue;
+    type TransactionsByHashesResponse = WarpJsonReply;
 
-pub async fn transactions_by_hashes(json: JsonValue) -> Result<impl warp::Reply, warp::Rejection> {
-    match TransactionsByHashesParams::try_from(&json) {
-        Ok(params) => Ok(warp::reply::json(&json_success_obj(
-            service::transactions_by_hashes(params).into(),
-        ))),
-        Err(msg) => Ok(warp::reply::json(&json_error_obj(
-            msg,
-            warp::http::StatusCode::BAD_REQUEST.as_u16(),
-        ))),
+    async fn node_info() -> Self::NodeInfoResponse {
+        Ok(warp::reply::json(&JsonValue::from(ServiceImpl::node_info())))
     }
-}
 
-pub async fn transaction_by_hash(value: String) -> Result<impl warp::Reply, warp::Rejection> {
-    match TransactionByHashParams::try_from(value.as_str()) {
-        Ok(params) => Ok(warp::reply::json(&json_success_obj(
-            service::transaction_by_hash(params).into(),
-        ))),
-        Err(msg) => Ok(warp::reply::json(&json_error_obj(
-            msg,
-            warp::http::StatusCode::BAD_REQUEST.as_u16(),
-        ))),
+    async fn transactions_by_bundle(params: Self::TransactionsByBundleParams) -> Self::TransactionsByBundleResponse {
+        match TransactionsByBundleParams::try_from(params.as_str()) {
+            Ok(params) => Ok(warp::reply::json(&json_success_obj(
+                ServiceImpl::transactions_by_bundle(params).into(),
+            ))),
+            Err(msg) => Ok(warp::reply::json(&json_error_obj(
+                msg,
+                warp::http::StatusCode::BAD_REQUEST.as_u16(),
+            ))),
+        }
     }
-}
 
-pub async fn transactions_by_bundle(value: String) -> Result<impl warp::Reply, warp::Rejection> {
-    match TransactionsByBundleParams::try_from(value.as_str()) {
-        Ok(params) => Ok(warp::reply::json(&json_success_obj(
-            service::transactions_by_bundle(params).into(),
-        ))),
-        Err(msg) => Ok(warp::reply::json(&json_error_obj(
-            msg,
-            warp::http::StatusCode::BAD_REQUEST.as_u16(),
-        ))),
+    async fn transaction_by_hash(params: Self::TransactionByHashParams) -> Self::TransactionByHashResponse {
+        match TransactionByHashParams::try_from(params.as_str()) {
+            Ok(params) => Ok(warp::reply::json(&json_success_obj(
+                ServiceImpl::transaction_by_hash(params).into(),
+            ))),
+            Err(msg) => Ok(warp::reply::json(&json_error_obj(
+                msg,
+                warp::http::StatusCode::BAD_REQUEST.as_u16(),
+            ))),
+        }
+    }
+
+    async fn transactions_by_hashes(params: Self::TransactionsByHashesParams) -> Self::TransactionsByHashesResponse {
+        match TransactionsByHashesParams::try_from(&params) {
+            Ok(params) => Ok(warp::reply::json(&json_success_obj(
+                ServiceImpl::transactions_by_hashes(params).into(),
+            ))),
+            Err(msg) => Ok(warp::reply::json(&json_error_obj(
+                msg,
+                warp::http::StatusCode::BAD_REQUEST.as_u16(),
+            ))),
+        }
     }
 }

@@ -24,13 +24,16 @@ fn main() {
     tangle().insert(test_tx, Hash::zeros(), Flags::empty());
     assert_eq!(tangle().contains(&Hash::zeros()), true);
 
+    let entry = Hash::zeros();
     traversal::visit_children_depth_first(
         tangle(),
-        Hash::zeros(),
-        |tx, _| tx.bundle() == &Hash::zeros(),
+        entry,
+        |tx, _| false,
         |tx_hash, _tx, _| {
             println!("Found tx hash: {}", tx_hash);
         },
-        |_| (),
+        |_| {
+            println!("Nopt tx hash");
+        },
     );
 }

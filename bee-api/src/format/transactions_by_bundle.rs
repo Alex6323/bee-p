@@ -9,18 +9,20 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use serde_json::{Value as JsonValue, Map};
+use serde_json::{Map, Value as JsonValue};
 
 use crate::{
     format::items::hash_item::HashItem,
+    service::{TransactionsByBundleParams, TransactionsByBundleResponse},
 };
 use std::convert::{From, TryFrom};
-use crate::service::{TransactionsByBundleResponse, TransactionsByBundleParams};
 
 impl TryFrom<&str> for TransactionsByBundleParams {
     type Error = &'static str;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(TransactionsByBundleParams { bundle: HashItem::try_from(value)? })
+        Ok(TransactionsByBundleParams {
+            bundle: HashItem::try_from(value)?,
+        })
     }
 }
 
