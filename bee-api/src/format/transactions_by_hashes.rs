@@ -12,7 +12,7 @@
 use serde_json::{Map, Value as JsonValue};
 
 use crate::{
-    format::items::hash_item::HashItem,
+    format::items::hash::HashItem,
     service::{TransactionsByHashesParams, TransactionsByHashesResponse},
 };
 use std::convert::{From, TryFrom};
@@ -24,8 +24,7 @@ impl TryFrom<&JsonValue> for TransactionsByHashesParams {
             Some(hashes) => {
                 let mut ret = Vec::new();
                 for value in hashes {
-                    let hash_item = HashItem::try_from(value)?;
-                    ret.push(hash_item);
+                    ret.push(HashItem::try_from(value)?);
                 }
                 Ok(TransactionsByHashesParams { hashes: ret })
             }

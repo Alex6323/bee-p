@@ -10,8 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::format::items::{
-    bool_item::BoolItem, hash_item::HashItem, milestone_index_item::MilestoneIndexItem,
-    transaction_ref_item::TransactionRefItem,
+    bool::BoolItem, hash::HashItem, milestone_index::MilestoneIndexItem,
+    transaction_ref::TransactionRefItem,
 };
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;

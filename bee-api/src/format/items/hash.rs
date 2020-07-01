@@ -33,16 +33,6 @@ impl TryFrom<&str> for HashItem {
     }
 }
 
-impl TryFrom<&JsonValue> for HashItem {
-    type Error = &'static str;
-    fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
-        match value.as_str() {
-            Some(tryte_str) => HashItem::try_from(tryte_str),
-            None => Err("No string provided"),
-        }
-    }
-}
-
 impl From<&HashItem> for String {
     fn from(value: &HashItem) -> Self {
         value
@@ -51,6 +41,16 @@ impl From<&HashItem> for String {
             .iter_trytes()
             .map(|trit| char::from(trit))
             .collect::<String>()
+    }
+}
+
+impl TryFrom<&JsonValue> for HashItem {
+    type Error = &'static str;
+    fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            Some(str) => HashItem::try_from(str),
+            None => Err("No string provided"),
+        }
     }
 }
 

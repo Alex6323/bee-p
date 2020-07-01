@@ -12,7 +12,7 @@
 use serde_json::{Map, Value as JsonValue};
 
 use crate::{
-    format::items::hash_item::HashItem,
+    format::items::hash::HashItem,
     service::{TransactionsByBundleParams, TransactionsByBundleResponse},
 };
 use std::convert::{From, TryFrom};
