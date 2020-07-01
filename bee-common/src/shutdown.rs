@@ -28,14 +28,14 @@ pub enum Error {
 
 pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
-pub type Worker = Box<dyn Future<Output = Result<(), WorkerError>> + Unpin>;
+pub type WorkerShutdown = Box<dyn Future<Output = Result<(), WorkerError>> + Unpin>;
 pub type Action = Box<dyn Fn()>;
 
 /// Handles the graceful shutdown of asynchronous workers.
 #[derive(Default)]
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
-    workers: Vec<Worker>,
+    worker_shutdowns: Vec<WorkerShutdown>,
     actions: Vec<Action>,
 }
 
@@ -51,8 +51,8 @@ impl Shutdown {
     }
 
     /// Adds an asynchronous worker.
-    pub fn add_worker(&mut self, worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static) {
-        self.workers.push(Box::new(worker));
+    pub fn add_worker_shutdown(&mut self, worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static) {
+        self.worker_shutdowns.push(Box::new(worker));
     }
 
     /// Adds teardown logic that is executed during shutdown.
@@ -68,7 +68,7 @@ impl Shutdown {
             notifier.send(()).map_err(|_| Error::SendingShutdownSignalFailed)?
         }
 
-        for worker in self.workers {
+        for worker in self.worker_shutdowns {
             if let Err(e) = worker.await {
                 error!("Awaiting worker failed: {:?}.", e);
             }
