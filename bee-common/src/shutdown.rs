@@ -11,7 +11,7 @@
 
 use crate::worker::Error as WorkerError;
 
-use futures::{channel::oneshot, future::FutureExt};
+use futures::channel::oneshot;
 use log::error;
 use thiserror::Error;
 
@@ -28,13 +28,14 @@ pub enum Error {
 
 pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
-pub type WorkerHandle = dyn Future<Output = Result<(), WorkerError>> + Unpin;
+pub type Worker = Box<dyn Future<Output = Result<(), WorkerError>> + Unpin>;
+pub type Action = Box<dyn Fn()>;
 
 /// Handles the graceful shutdown of asynchronous workers.
 pub struct Shutdown {
     notifiers: Vec<ShutdownNotifier>,
-    workers: Vec<Box<WorkerHandle>>,
-    actions: Vec<Box<dyn Fn()>>,
+    workers: Vec<Worker>,
+    actions: Vec<Action>,
 }
 
 impl Shutdown {
@@ -53,8 +54,8 @@ impl Shutdown {
     }
 
     /// Adds an asynchronous worker.
-    pub fn add_worker<T>(&mut self, worker: impl Future<Output = Result<T, WorkerError>> + Unpin + 'static) {
-        self.workers.push(Box::new(worker.map(|x| x.map(|_| ()))));
+    pub fn add_worker(&mut self, worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static) {
+        self.workers.push(Box::new(worker));
     }
 
     /// Adds teardown logic that is executed during shutdown.
