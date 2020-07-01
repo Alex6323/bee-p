@@ -75,8 +75,8 @@ impl NodeBuilder {
         let snapshot_state = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
             Ok(local_snapshot) => {
                 info!(
-                    "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and
-        {} balances.",
+                    "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
+                    {} balances.",
                     Utc.timestamp(local_snapshot.metadata().timestamp() as i64, 0)
                         .to_rfc2822(),
                     local_snapshot.metadata().index(),
