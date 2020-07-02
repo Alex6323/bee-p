@@ -62,7 +62,7 @@ impl MsTangle {
     }
 
     pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: TransactionMetadata) -> Option<TxRef> {
-        if let Some(tx) = self.inner.insert(transaction, hash, metadata) {
+        if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
             self.propagate_solid_flag(hash);
             return Some(tx);
         }
