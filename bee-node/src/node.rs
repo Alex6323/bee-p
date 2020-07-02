@@ -22,7 +22,7 @@ use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::{LocalSnapshot, SnapshotReadError};
+use bee_snapshot::local::{Error as SnapshotReadError, LocalSnapshot};
 
 use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
