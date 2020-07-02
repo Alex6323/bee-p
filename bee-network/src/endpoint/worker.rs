@@ -20,7 +20,7 @@ use crate::{
     utils::time,
 };
 
-use bee_common::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
+use bee_common_ext::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
 
 use async_std::{
     prelude::*,

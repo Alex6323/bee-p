@@ -17,7 +17,7 @@ use crate::{
 
 use super::{connection::TcpConnection, spawn_connection_workers};
 
-use bee_common::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
+use bee_common_ext::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
 
 use async_std::net::TcpListener;
 use futures::{prelude::*, select};
