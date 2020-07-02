@@ -55,11 +55,11 @@ pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
     assert_eq!(*e.trunk(), c_hash);
     assert_eq!(*e.branch(), d_hash);
 
-    tangle.insert(a.clone(), a_hash, ());
-    tangle.insert(b.clone(), b_hash, ());
-    tangle.insert(c.clone(), c_hash, ());
-    tangle.insert(d.clone(), d_hash, ());
-    tangle.insert(e.clone(), e_hash, ());
+    tangle.insert(a_hash, a.clone(), ());
+    tangle.insert(b_hash, b.clone(), ());
+    tangle.insert(c_hash, c.clone(), ());
+    tangle.insert(d_hash, d.clone(), ());
+    tangle.insert(e_hash, e.clone(), ());
 
     assert_eq!(*tangle.get(&c_hash).unwrap().trunk(), b_hash);
     assert_eq!(*tangle.get(&c_hash).unwrap().branch(), a_hash);
