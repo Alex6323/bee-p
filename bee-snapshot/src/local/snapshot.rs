@@ -171,7 +171,7 @@ impl LocalSnapshot {
 
         let mut buf_address = [0u8; 49];
         let mut buf_value = [0u8; std::mem::size_of::<u64>()];
-        let mut balances = HashMap::with_capacity(balances_num as usize);
+        let mut state = SnapshotState::with_capacity(balances_num as usize);
         let mut supply: u64 = 0;
         for i in 0..balances_num {
             let address = match file.read_exact(&mut buf_address).await {
@@ -195,7 +195,7 @@ impl LocalSnapshot {
                 );
             }
 
-            balances.insert(address, value);
+            state.insert(address, value);
             supply += value;
         }
 
@@ -214,7 +214,7 @@ impl LocalSnapshot {
                 solid_entry_points,
                 seen_milestones,
             },
-            state: SnapshotState { balances },
+            state,
         })
     }
 

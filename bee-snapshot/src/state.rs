@@ -15,11 +15,38 @@ use std::collections::HashMap;
 
 // TODO Abstract balances
 
+#[derive(Default)]
 pub struct SnapshotState {
     pub(crate) balances: HashMap<Address, u64>,
 }
 
 impl SnapshotState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            balances: HashMap::with_capacity(capacity),
+        }
+    }
+
+    pub fn insert(&mut self, address: Address, balance: u64) -> Option<u64> {
+        self.balances.insert(address, balance)
+    }
+
+    pub fn remove(&mut self, address: &Address) -> Option<u64> {
+        self.balances.remove(address)
+    }
+
+    pub fn get(&self, address: &Address) -> Option<&u64> {
+        self.balances.get(address)
+    }
+
+    pub fn len(&self) -> usize {
+        self.balances.len()
+    }
+
     pub fn balances(&self) -> &HashMap<Address, u64> {
         &self.balances
     }
