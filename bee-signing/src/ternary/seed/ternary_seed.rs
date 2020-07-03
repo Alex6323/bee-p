@@ -15,16 +15,30 @@ use bee_crypto::ternary::Sponge;
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
+use zeroize::Zeroize;
+
 use std::marker::PhantomData;
+
+#[derive(Debug, PartialEq)]
+pub enum TernarySeedError {
+    InvalidLength(usize),
+}
 
 pub struct TernarySeed<S> {
     seed: TritBuf,
     _sponge: PhantomData<S>,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum TernarySeedError {
-    InvalidLength(usize),
+impl<S> Zeroize for TernarySeed<S> {
+    fn zeroize(&mut self) {
+        unsafe { self.seed.as_i8_slice_mut().zeroize() }
+    }
+}
+
+impl<S> Drop for TernarySeed<S> {
+    fn drop(&mut self) {
+        self.zeroize()
+    }
 }
 
 impl<S: Sponge + Default> Seed for TernarySeed<S> {
