@@ -17,10 +17,9 @@ pub fn json_success_obj(data: JsonValue) -> JsonValue {
     JsonValue::Object(response)
 }
 
-pub fn json_error_obj(msg: &str, err_code: u16) -> JsonValue {
+pub fn json_error_obj(msg: &str) -> JsonValue {
     let mut error = Map::new();
     error.insert(String::from("message"), JsonValue::String(String::from(msg)));
-    error.insert(String::from("code"), JsonValue::from(err_code));
     let mut response = Map::new();
     response.insert(String::from("error"), JsonValue::Object(error));
     JsonValue::Object(response)

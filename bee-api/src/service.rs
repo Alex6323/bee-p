@@ -13,14 +13,14 @@ use crate::format::items::{
     bool::BoolItem, hash::HashItem, milestone_index::MilestoneIndexItem,
     transaction_ref::TransactionRefItem,
 };
-use bee_crypto::ternary::Hash;
+
 use bee_protocol::tangle::tangle;
 use bee_tangle::traversal;
 use std::collections::HashMap;
 
 pub trait Service {
     fn node_info() -> NodeInfoResponse;
-    fn transactions_by_bundle(params: TransactionsByBundleParams) -> TransactionsByBundleResponse;
+    fn transactions_by_bundle(params: TransactionsByBundleParams) -> Result<TransactionsByBundleResponse, String>;
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse;
     fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse;
 }
@@ -50,6 +50,7 @@ pub struct TransactionsByHashesResponse {
 }
 
 pub struct TransactionsByBundleParams {
+    pub entry: HashItem,
     pub bundle: HashItem,
 }
 
@@ -99,17 +100,20 @@ impl Service for ServiceImpl {
         TransactionsByHashesResponse { txs: ret }
     }
 
-    fn transactions_by_bundle(params: TransactionsByBundleParams) -> TransactionsByBundleResponse {
+    fn transactions_by_bundle(params: TransactionsByBundleParams) -> Result<TransactionsByBundleResponse, String> {
         let mut ret = HashMap::new();
+        if params.entry == params.bundle {
+            return Err(String::from("Entry hash is equal to bundle hash"));
+        }
         traversal::visit_children_depth_first(
             tangle(),
-            Hash::zeros(),
+            params.entry.0,
             |tx, _| tx.bundle() == &params.bundle.0,
             |tx_hash, tx, _| {
                 ret.insert(HashItem(tx_hash.clone()), TransactionRefItem(tx.clone()));
             },
             |_| (),
         );
-        TransactionsByBundleResponse { txs: ret }
+        Ok(TransactionsByBundleResponse { txs: ret })
     }
 }

@@ -23,15 +23,7 @@ pub async fn run(config: ApiConfig) {
         .and(warp::path::end())
         .and_then(routes::RestApi::node_info);
 
-    let tx_by_hash_post = warp::post()
-        .and(warp::path("v1"))
-        .and(warp::path("transaction"))
-        .and(warp::path("by-hash"))
-        .and(warp::path::end())
-        .and(json_body())
-        .and_then(routes::RestApi::transactions_by_hashes);
-
-    let tx_by_hash_get = warp::get()
+    let tx_by_hash = warp::get()
         .and(warp::path("v1"))
         .and(warp::path("transaction"))
         .and(warp::path("by-hash"))
@@ -39,16 +31,24 @@ pub async fn run(config: ApiConfig) {
         .and(warp::path::end())
         .and_then(routes::RestApi::transaction_by_hash);
 
-    let _txs_by_bundle = warp::get()
+    let txs_by_hashes = warp::post()
+        .and(warp::path("v1"))
+        .and(warp::path("transaction"))
+        .and(warp::path("by-hash"))
+        .and(warp::path::end())
+        .and(json_body())
+        .and_then(routes::RestApi::transactions_by_hashes);
+
+    let txs_by_bundle = warp::post()
         .and(warp::path("v1"))
         .and(warp::path("transaction"))
         .and(warp::path("by-bundle"))
-        .and(warp::path::param())
         .and(warp::path::end())
+        .and(json_body())
         .and_then(routes::RestApi::transactions_by_bundle);
 
-    let routes = tx_by_hash_get
-        .or(tx_by_hash_post.or(node_info))
+    let routes = tx_by_hash
+        .or(txs_by_hashes.or(node_info).or(txs_by_bundle))
         .with(warp::cors().allow_any_origin());
 
     warp::serve(routes).run(config.rest_socket_addr()).await;

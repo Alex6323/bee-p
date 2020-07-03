@@ -17,11 +17,20 @@ use crate::{
 };
 use std::convert::{From, TryFrom};
 
-impl TryFrom<&str> for TransactionsByBundleParams {
+impl TryFrom<&JsonValue> for TransactionsByBundleParams {
     type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
+        let entry = match value["entry"].as_str() {
+            Some(str) => HashItem::try_from(str)?,
+            None => return Err("Can not find entry hash")
+        };
+        let bundle = match value["bundle"].as_str() {
+            Some(str) => HashItem::try_from(str)?,
+            None => return Err("Can not find bundle hash")
+        };
         Ok(TransactionsByBundleParams {
-            bundle: HashItem::try_from(value)?,
+            entry,
+            bundle,
         })
     }
 }

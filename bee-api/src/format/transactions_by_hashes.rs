@@ -24,7 +24,10 @@ impl TryFrom<&JsonValue> for TransactionsByHashesParams {
             Some(hashes) => {
                 let mut ret = Vec::new();
                 for value in hashes {
-                    ret.push(HashItem::try_from(value)?);
+                    match value.as_str() {
+                        Some(str) => ret.push(HashItem::try_from(str)?),
+                        None => return Err("No string provided"),
+                    }
                 }
                 Ok(TransactionsByHashesParams { hashes: ret })
             }

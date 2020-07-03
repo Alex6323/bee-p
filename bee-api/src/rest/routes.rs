@@ -27,7 +27,7 @@ pub struct RestApi;
 #[async_trait]
 impl Api for RestApi {
     type NodeInfoResponse = WarpJsonReply;
-    type TransactionsByBundleParams = String;
+    type TransactionsByBundleParams = JsonValue;
     type TransactionsByBundleResponse = WarpJsonReply;
     type TransactionByHashParams = String;
     type TransactionByHashResponse = WarpJsonReply;
@@ -39,13 +39,22 @@ impl Api for RestApi {
     }
 
     async fn transactions_by_bundle(params: Self::TransactionsByBundleParams) -> Self::TransactionsByBundleResponse {
-        match TransactionsByBundleParams::try_from(params.as_str()) {
-            Ok(params) => Ok(warp::reply::json(&json_success_obj(
-                ServiceImpl::transactions_by_bundle(params).into(),
-            ))),
+        match TransactionsByBundleParams::try_from(&params) {
+            Ok(params) =>
+
+                match ServiceImpl::transactions_by_bundle(params) {
+                    Ok(res) => {
+                        Ok(warp::reply::json(&json_success_obj(
+                                             res.into()
+                        )))
+                    }
+                    Err(msg) => Ok(warp::reply::json(&json_error_obj(
+                        &msg,
+                    )))
+                }
+                ,
             Err(msg) => Ok(warp::reply::json(&json_error_obj(
                 msg,
-                warp::http::StatusCode::BAD_REQUEST.as_u16(),
             ))),
         }
     }
@@ -57,7 +66,6 @@ impl Api for RestApi {
             ))),
             Err(msg) => Ok(warp::reply::json(&json_error_obj(
                 msg,
-                warp::http::StatusCode::BAD_REQUEST.as_u16(),
             ))),
         }
     }
@@ -69,7 +77,6 @@ impl Api for RestApi {
             ))),
             Err(msg) => Ok(warp::reply::json(&json_error_obj(
                 msg,
-                warp::http::StatusCode::BAD_REQUEST.as_u16(),
             ))),
         }
     }
