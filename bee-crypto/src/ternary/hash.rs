@@ -13,17 +13,16 @@ use bee_ternary::{Trits, T1B1};
 
 use std::{cmp::PartialEq, fmt, hash};
 
-/// The length of a hash as returned by the hash functions implemented in this RFC (in units of binary-coded, balanced
-/// trits).
-pub const HASH_LEN: usize = 243;
+/// The length of a hash in units of binary-coded balanced trits.
+pub const HASH_LENGTH: usize = 243;
 
 #[derive(Copy, Clone)]
 // TODO pub ?
-pub struct Hash(pub [i8; 243]);
+pub struct Hash(pub [i8; HASH_LENGTH]);
 
 impl Hash {
     pub fn zeros() -> Self {
-        Self([0; 243])
+        Self([0; HASH_LENGTH])
     }
 
     pub fn as_bytes(&self) -> &[i8] {
@@ -31,7 +30,7 @@ impl Hash {
     }
 
     pub fn as_trits(&self) -> &Trits<T1B1> {
-        unsafe { Trits::from_raw_unchecked(self.as_bytes(), 243) }
+        unsafe { Trits::from_raw_unchecked(self.as_bytes(), HASH_LENGTH) }
     }
 
     pub fn weight(&self) -> u8 {
@@ -48,7 +47,7 @@ impl Hash {
     }
 
     pub fn trit_len() -> usize {
-        HASH_LEN
+        HASH_LENGTH
     }
 }
 
@@ -84,8 +83,8 @@ mod tests {
     #[test]
     fn hash_weigth() {
         for i in 0..20 {
-            let mut trits = [0i8; 243];
-            trits[243 - i - 1] = 1;
+            let mut trits = [0i8; HASH_LENGTH];
+            trits[HASH_LENGTH - i - 1] = 1;
             let hash = Hash(trits);
             assert_eq!(hash.weight(), i as u8);
         }

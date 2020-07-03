@@ -12,5 +12,5 @@
 mod hash;
 mod sponge;
 
-pub use hash::{Hash, HASH_LEN};
+pub use hash::{Hash, HASH_LENGTH};
 pub use sponge::{CurlP, CurlP27, CurlP81, CurlPRounds, Kerl, Sponge, SpongeType};

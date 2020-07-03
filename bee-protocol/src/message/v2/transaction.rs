@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! TransactionBroadcast message of the protocol version 2
+//! Transaction message of the protocol version 2
 
 use crate::message::Message;
 
@@ -18,22 +18,22 @@ use std::ops::Range;
 const VARIABLE_MIN_SIZE: usize = 292;
 const VARIABLE_MAX_SIZE: usize = 1604;
 
-/// A message to broadcast a transaction.
+/// A message to send a transaction.
 #[derive(Default)]
-pub(crate) struct TransactionBroadcast {
-    /// Transaction to broadcast. Can be compressed.
-    pub(crate) transaction: Vec<u8>,
+pub(crate) struct Transaction {
+    /// Transaction to send. Can be compressed.
+    pub(crate) bytes: Vec<u8>,
 }
 
-impl TransactionBroadcast {
+impl Transaction {
     pub(crate) fn new(transaction: &[u8]) -> Self {
         Self {
-            transaction: transaction.to_vec(),
+            bytes: transaction.to_vec(),
         }
     }
 }
 
-impl Message for TransactionBroadcast {
+impl Message for Transaction {
     const ID: u8 = 0x04;
 
     fn size_range() -> Range<usize> {
@@ -43,17 +43,17 @@ impl Message for TransactionBroadcast {
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
 
-        message.transaction = bytes.to_vec();
+        message.bytes = bytes.to_vec();
 
         message
     }
 
     fn size(&self) -> usize {
-        self.transaction.len()
+        self.bytes.len()
     }
 
     fn into_bytes(self, bytes: &mut [u8]) {
-        bytes.copy_from_slice(&self.transaction)
+        bytes.copy_from_slice(&self.bytes)
     }
 }
 
@@ -90,34 +90,34 @@ mod tests {
 
     #[test]
     fn id() {
-        assert_eq!(TransactionBroadcast::ID, 4);
+        assert_eq!(Transaction::ID, 4);
     }
 
     #[test]
     fn size_range() {
-        assert_eq!(TransactionBroadcast::size_range().contains(&291), false);
-        assert_eq!(TransactionBroadcast::size_range().contains(&292), true);
-        assert_eq!(TransactionBroadcast::size_range().contains(&293), true);
+        assert_eq!(Transaction::size_range().contains(&291), false);
+        assert_eq!(Transaction::size_range().contains(&292), true);
+        assert_eq!(Transaction::size_range().contains(&293), true);
 
-        assert_eq!(TransactionBroadcast::size_range().contains(&1603), true);
-        assert_eq!(TransactionBroadcast::size_range().contains(&1604), true);
-        assert_eq!(TransactionBroadcast::size_range().contains(&1605), false);
+        assert_eq!(Transaction::size_range().contains(&1603), true);
+        assert_eq!(Transaction::size_range().contains(&1604), true);
+        assert_eq!(Transaction::size_range().contains(&1605), false);
     }
 
     #[test]
     fn size() {
-        let message = TransactionBroadcast::new(&TRANSACTION);
+        let message = Transaction::new(&TRANSACTION);
 
         assert_eq!(message.size(), 500);
     }
 
     #[test]
     fn into_from() {
-        let message_from = TransactionBroadcast::new(&TRANSACTION);
+        let message_from = Transaction::new(&TRANSACTION);
         let mut bytes = vec![0u8; message_from.size()];
         message_from.into_bytes(&mut bytes);
-        let message_to = TransactionBroadcast::from_bytes(&bytes);
+        let message_to = Transaction::from_bytes(&bytes);
 
-        assert!(slice_eq(&message_to.transaction, &TRANSACTION));
+        assert!(slice_eq(&message_to.bytes, &TRANSACTION));
     }
 }

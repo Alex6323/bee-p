@@ -12,6 +12,7 @@
 use bitflags::bitflags;
 
 bitflags! {
+    #[derive(Default)]
     pub struct Flags: u8 {
         const SOLID = 0b0000_0001;
         const TAIL = 0b0000_0010;

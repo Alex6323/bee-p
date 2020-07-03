@@ -52,7 +52,7 @@ where
     }
 
     /// Inserts a transaction, and returns a thread-safe reference to it in case it didn't already exist.
-    pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: T) -> Option<TxRef> {
+    pub fn insert(&self, hash: TxHash, transaction: Tx, metadata: T) -> Option<TxRef> {
         match self.vertices.entry(hash) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
@@ -126,8 +126,8 @@ where
             .map(|mut vtx| update(vtx.value_mut().metadata_mut()));
     }
 
-    /// Returns the current size of the Tangle.
-    pub fn size(&self) -> usize {
+    /// Returns the number of transactions in the Tangle.
+    pub fn len(&self) -> usize {
         self.vertices.len()
     }
 
@@ -179,17 +179,17 @@ mod tests {
 
         let (hash, tx) = create_random_tx();
 
-        let insert1 = tangle.insert(tx.clone(), hash.clone(), ());
+        let insert1 = tangle.insert(hash.clone(), tx.clone(), ());
 
         assert!(insert1.is_some());
-        assert_eq!(1, tangle.size());
+        assert_eq!(1, tangle.len());
         assert!(tangle.contains(&hash));
         assert_eq!(1, tangle.num_tips());
 
-        let insert2 = tangle.insert(tx, hash, ());
+        let insert2 = tangle.insert(hash, tx, ());
 
         assert!(insert2.is_none());
-        assert_eq!(1, tangle.size());
+        assert_eq!(1, tangle.len());
         assert!(tangle.contains(&hash));
         assert_eq!(1, tangle.num_tips());
     }

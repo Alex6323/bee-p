@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{tlv_into_bytes, TransactionBroadcast},
+    message::{tlv_into_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
 };
 
@@ -26,7 +26,7 @@ use log::{info, warn};
 
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
-    pub(crate) transaction: TransactionBroadcast,
+    pub(crate) transaction: TransactionMessage,
 }
 
 pub(crate) struct BroadcasterWorker {
@@ -38,7 +38,7 @@ impl BroadcasterWorker {
         Self { network }
     }
 
-    async fn broadcast(&mut self, source: Option<EndpointId>, transaction: TransactionBroadcast) {
+    async fn broadcast(&mut self, source: Option<EndpointId>, transaction: TransactionMessage) {
         let bytes = tlv_into_bytes(transaction);
 
         for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
@@ -56,8 +56,8 @@ impl BroadcasterWorker {
                     .await
                 {
                     Ok(_) => {
-                        (*peer.value()).metrics.transaction_broadcast_sent_inc();
-                        Protocol::get().metrics.transaction_broadcast_sent_inc();
+                        (*peer.value()).metrics.transaction_sent_inc();
+                        Protocol::get().metrics.transaction_sent_inc();
                     }
                     Err(e) => {
                         warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);

@@ -21,12 +21,12 @@ pub struct ProtocolMetrics {
     invalid_messages_received: AtomicU64,
 
     milestone_request_received: AtomicU64,
-    transaction_broadcast_received: AtomicU64,
+    transaction_received: AtomicU64,
     transaction_request_received: AtomicU64,
     heartbeat_received: AtomicU64,
 
     milestone_request_sent: AtomicU64,
-    transaction_broadcast_sent: AtomicU64,
+    transaction_sent: AtomicU64,
     transaction_request_sent: AtomicU64,
     heartbeat_sent: AtomicU64,
 }
@@ -86,12 +86,12 @@ impl ProtocolMetrics {
         self.milestone_request_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_broadcast_received(&self) -> u64 {
-        self.transaction_broadcast_received.load(Ordering::Relaxed)
+    pub fn transaction_received(&self) -> u64 {
+        self.transaction_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_broadcast_received_inc(&self) -> u64 {
-        self.transaction_broadcast_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transaction_received_inc(&self) -> u64 {
+        self.transaction_received.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn transaction_request_received(&self) -> u64 {
@@ -118,12 +118,12 @@ impl ProtocolMetrics {
         self.milestone_request_sent.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_broadcast_sent(&self) -> u64 {
-        self.transaction_broadcast_sent.load(Ordering::Relaxed)
+    pub fn transaction_sent(&self) -> u64 {
+        self.transaction_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_broadcast_sent_inc(&self) -> u64 {
-        self.transaction_broadcast_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transaction_sent_inc(&self) -> u64 {
+        self.transaction_sent.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn transaction_request_sent(&self) -> u64 {
@@ -174,19 +174,19 @@ mod tests {
 
         assert_eq!(metrics.invalid_messages_received(), 0);
         assert_eq!(metrics.milestone_request_received(), 0);
-        assert_eq!(metrics.transaction_broadcast_received(), 0);
+        assert_eq!(metrics.transaction_received(), 0);
         assert_eq!(metrics.transaction_request_received(), 0);
         assert_eq!(metrics.heartbeat_received(), 0);
 
         metrics.invalid_messages_received_inc();
         metrics.milestone_request_received_inc();
-        metrics.transaction_broadcast_received_inc();
+        metrics.transaction_received_inc();
         metrics.transaction_request_received_inc();
         metrics.heartbeat_received_inc();
 
         assert_eq!(metrics.invalid_messages_received(), 1);
         assert_eq!(metrics.milestone_request_received(), 1);
-        assert_eq!(metrics.transaction_broadcast_received(), 1);
+        assert_eq!(metrics.transaction_received(), 1);
         assert_eq!(metrics.transaction_request_received(), 1);
         assert_eq!(metrics.heartbeat_received(), 1);
     }
@@ -196,17 +196,17 @@ mod tests {
         let metrics = ProtocolMetrics::default();
 
         assert_eq!(metrics.milestone_request_sent(), 0);
-        assert_eq!(metrics.transaction_broadcast_sent(), 0);
+        assert_eq!(metrics.transaction_sent(), 0);
         assert_eq!(metrics.transaction_request_sent(), 0);
         assert_eq!(metrics.heartbeat_sent(), 0);
 
         metrics.milestone_request_sent_inc();
-        metrics.transaction_broadcast_sent_inc();
+        metrics.transaction_sent_inc();
         metrics.transaction_request_sent_inc();
         metrics.heartbeat_sent_inc();
 
         assert_eq!(metrics.milestone_request_sent(), 1);
-        assert_eq!(metrics.transaction_broadcast_sent(), 1);
+        assert_eq!(metrics.transaction_sent(), 1);
         assert_eq!(metrics.transaction_request_sent(), 1);
         assert_eq!(metrics.heartbeat_sent(), 1);
     }

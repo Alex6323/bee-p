@@ -1,7 +1,7 @@
 [workspace]
 members = [
 	"bee-api",
-	"bee-common",
+	"bee-common-ext",
 	"bee-crypto",
 	"bee-ledger",
 	"bee-network",
@@ -9,7 +9,8 @@ members = [
 	"bee-peering",
 	"bee-pow",
 	"bee-protocol",
-	"bee-signing",
+	"bee-signing/bee-signing",
+	"bee-signing/bee-signing-derive",
 	"bee-snapshot",
 	# "bee-storage",
 	"bee-tangle",

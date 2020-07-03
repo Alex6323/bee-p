@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{LocalSnapshotMetadata, SnapshotState};
+use crate::{local::LocalSnapshotMetadata, state::SnapshotState};
 
 use bee_crypto::ternary::Hash;
 use bee_ternary::{T1B1Buf, Trits, T5B1};
@@ -19,6 +19,7 @@ use std::collections::HashMap;
 
 use async_std::{fs::File, prelude::*};
 use bytemuck::cast_slice;
+use log::info;
 
 pub struct LocalSnapshot {
     metadata: LocalSnapshotMetadata,
@@ -31,7 +32,7 @@ pub const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 // TODO detail errors
 #[derive(Debug)]
-pub enum SnapshotReadError {
+pub enum Error {
     IOError(async_std::io::Error),
     InvalidVersion,
     InvalidMilestoneHash,
@@ -43,8 +44,8 @@ pub enum SnapshotReadError {
     InvalidSupply,
 }
 impl LocalSnapshot {
-    pub async fn from_file(path: &str) -> Result<LocalSnapshot, SnapshotReadError> {
-        let mut file = File::open(path).await.map_err(|e| SnapshotReadError::IOError(e))?;
+    pub async fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
+        let mut file = File::open(path).await.map_err(|e| Error::IOError(e))?;
 
         // Version byte
 
@@ -52,10 +53,10 @@ impl LocalSnapshot {
         match file.read_exact(&mut buf).await {
             Ok(_) => {
                 if buf[0] != VERSION {
-                    return Err(SnapshotReadError::InvalidVersion);
+                    return Err(Error::InvalidVersion);
                 }
             }
-            Err(e) => return Err(SnapshotReadError::IOError(e)),
+            Err(e) => return Err(Error::IOError(e)),
         };
 
         // Milestone hash
@@ -63,12 +64,10 @@ impl LocalSnapshot {
         let mut buf = [0u8; 49];
         let hash = match file.read_exact(&mut buf).await {
             Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf), 243) {
-                Ok(trits) => {
-                    Hash::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| SnapshotReadError::InvalidMilestoneHash)
-                }
-                Err(_) => Err(SnapshotReadError::InvalidMilestoneHash),
+                Ok(trits) => Hash::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidMilestoneHash),
+                Err(_) => Err(Error::InvalidMilestoneHash),
             },
-            Err(e) => Err(SnapshotReadError::IOError(e)),
+            Err(e) => Err(Error::IOError(e)),
         }?;
 
         // Milestone index
@@ -76,7 +75,7 @@ impl LocalSnapshot {
         let mut buf = [0u8; std::mem::size_of::<u32>()];
         let index = match file.read_exact(&mut buf).await {
             Ok(_) => u32::from_le_bytes(buf),
-            Err(e) => return Err(SnapshotReadError::IOError(e)),
+            Err(e) => return Err(Error::IOError(e)),
         };
 
         // Timestamp
@@ -84,7 +83,7 @@ impl LocalSnapshot {
         let mut buf = [0u8; std::mem::size_of::<u64>()];
         let timestamp = match file.read_exact(&mut buf).await {
             Ok(_) => u64::from_le_bytes(buf),
-            Err(e) => return Err(SnapshotReadError::IOError(e)),
+            Err(e) => return Err(Error::IOError(e)),
         };
 
         // Number of solid entry points
@@ -92,7 +91,7 @@ impl LocalSnapshot {
         let mut buf = [0u8; std::mem::size_of::<u32>()];
         let solid_entry_points_num = match file.read_exact(&mut buf).await {
             Ok(_) => u32::from_le_bytes(buf),
-            Err(e) => return Err(SnapshotReadError::IOError(e)),
+            Err(e) => return Err(Error::IOError(e)),
         };
 
         // Number of seen milestones
@@ -100,7 +99,7 @@ impl LocalSnapshot {
         let mut buf = [0u8; std::mem::size_of::<u32>()];
         let seen_milestones_num = match file.read_exact(&mut buf).await {
             Ok(_) => u32::from_le_bytes(buf),
-            Err(e) => return Err(SnapshotReadError::IOError(e)),
+            Err(e) => return Err(Error::IOError(e)),
         };
 
         // Number of balances
@@ -108,7 +107,7 @@ impl LocalSnapshot {
         let mut buf = [0u8; std::mem::size_of::<u32>()];
         let balances_num = match file.read_exact(&mut buf).await {
             Ok(_) => u32::from_le_bytes(buf),
-            Err(e) => return Err(SnapshotReadError::IOError(e)),
+            Err(e) => return Err(Error::IOError(e)),
         };
 
         // Number of spent addresses
@@ -117,32 +116,32 @@ impl LocalSnapshot {
         match file.read_exact(&mut buf).await {
             Ok(_) => {
                 if u32::from_le_bytes(buf) != 0 {
-                    return Err(SnapshotReadError::NonZeroSpentAddressesNumber);
+                    return Err(Error::NonZeroSpentAddressesNumber);
                 }
             }
-            Err(e) => return Err(SnapshotReadError::IOError(e)),
+            Err(e) => return Err(Error::IOError(e)),
         };
 
         // Solid entry points
 
         let mut buf_hash = [0u8; 49];
         let mut buf_index = [0u8; std::mem::size_of::<u32>()];
-        let mut solid_entry_points = Vec::with_capacity(solid_entry_points_num as usize);
+        let mut solid_entry_points = HashMap::with_capacity(solid_entry_points_num as usize);
         for _ in 0..solid_entry_points_num {
-            let solid_entry_point = match file.read_exact(&mut buf_hash).await {
+            let hash = match file.read_exact(&mut buf_hash).await {
                 Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), 243) {
-                    Ok(trits) => Hash::try_from_inner(trits.encode::<T1B1Buf>())
-                        .map_err(|_| SnapshotReadError::InvalidSolidEntryPointHash),
-                    Err(_) => Err(SnapshotReadError::InvalidSolidEntryPointHash),
+                    Ok(trits) => {
+                        Hash::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidSolidEntryPointHash)
+                    }
+                    Err(_) => Err(Error::InvalidSolidEntryPointHash),
                 },
-                Err(e) => Err(SnapshotReadError::IOError(e)),
+                Err(e) => Err(Error::IOError(e)),
             }?;
-            solid_entry_points.push(solid_entry_point);
-            // TODO should we use that ?
-            match file.read_exact(&mut buf_index).await {
+            let index = match file.read_exact(&mut buf_index).await {
                 Ok(_) => u32::from_le_bytes(buf_index),
-                Err(e) => return Err(SnapshotReadError::IOError(e)),
+                Err(e) => return Err(Error::IOError(e)),
             };
+            solid_entry_points.insert(hash, index);
         }
 
         // Seen milestones
@@ -153,17 +152,18 @@ impl LocalSnapshot {
         for _ in 0..seen_milestones_num {
             let seen_milestone = match file.read_exact(&mut buf_hash).await {
                 Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), 243) {
-                    Ok(trits) => Hash::try_from_inner(trits.encode::<T1B1Buf>())
-                        .map_err(|_| SnapshotReadError::InvalidSeenMilestoneHash),
-                    Err(_) => Err(SnapshotReadError::InvalidSeenMilestoneHash),
+                    Ok(trits) => {
+                        Hash::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidSeenMilestoneHash)
+                    }
+                    Err(_) => Err(Error::InvalidSeenMilestoneHash),
                 },
-                Err(e) => Err(SnapshotReadError::IOError(e)),
+                Err(e) => Err(Error::IOError(e)),
             }?;
             seen_milestones.push(seen_milestone);
             // TODO should we use that ?
             match file.read_exact(&mut buf_index).await {
                 Ok(_) => u32::from_le_bytes(buf_index),
-                Err(e) => return Err(SnapshotReadError::IOError(e)),
+                Err(e) => return Err(Error::IOError(e)),
             };
         }
 
@@ -171,27 +171,36 @@ impl LocalSnapshot {
 
         let mut buf_address = [0u8; 49];
         let mut buf_value = [0u8; std::mem::size_of::<u64>()];
-        let mut balances = HashMap::with_capacity(balances_num as usize);
+        let mut state = SnapshotState::with_capacity(balances_num as usize);
         let mut supply: u64 = 0;
-        for _ in 0..balances_num {
+        for i in 0..balances_num {
             let address = match file.read_exact(&mut buf_address).await {
                 Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_address), 243) {
-                    Ok(trits) => Address::try_from_inner(trits.encode::<T1B1Buf>())
-                        .map_err(|_| SnapshotReadError::InvalidAddress),
-                    Err(_) => Err(SnapshotReadError::InvalidAddress),
+                    Ok(trits) => Address::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidAddress),
+                    Err(_) => Err(Error::InvalidAddress),
                 },
-                Err(e) => Err(SnapshotReadError::IOError(e)),
+                Err(e) => Err(Error::IOError(e)),
             }?;
             let value = match file.read_exact(&mut buf_value).await {
                 Ok(_) => u64::from_le_bytes(buf_value),
-                Err(e) => return Err(SnapshotReadError::IOError(e)),
+                Err(e) => return Err(Error::IOError(e)),
             };
-            balances.insert(address, value);
+
+            if i % 10_000 == 0 && i != 0 {
+                info!(
+                    "Read {}/{} ({:.0}%) balances.",
+                    i,
+                    balances_num,
+                    ((i * 100) as f64) / (balances_num as f64)
+                );
+            }
+
+            state.insert(address, value);
             supply += value;
         }
 
         if supply != IOTA_SUPPLY {
-            return Err(SnapshotReadError::InvalidSupply);
+            return Err(Error::InvalidSupply);
         }
 
         // TODO spend addresses ?
@@ -205,7 +214,7 @@ impl LocalSnapshot {
                 solid_entry_points,
                 seen_milestones,
             },
-            state: SnapshotState { balances },
+            state,
         })
     }
 

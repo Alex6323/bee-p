@@ -11,7 +11,9 @@
 
 use bee_ternary::{TritBuf, Trits};
 
-pub trait Seed {
+use zeroize::Zeroize;
+
+pub trait Seed: Zeroize + Drop {
     type Error;
 
     fn new() -> Self;

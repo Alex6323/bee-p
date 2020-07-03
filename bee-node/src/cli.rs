@@ -11,24 +11,28 @@
 
 use crate::config::NodeConfigBuilder;
 
+use bee_common::logger::LOGGER_STDOUT_NAME;
+
+use log::LevelFilter;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-pub(crate) struct CliArgs {
+pub struct CliArgs {
     #[structopt(
         short = "l",
         long = "log-level",
         help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\""
     )]
-    log_level: Option<String>,
+    log_level: Option<LevelFilter>,
 }
 
 impl CliArgs {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self::from_args()
     }
 
-    pub(crate) fn apply_to_config(self, config: &mut NodeConfigBuilder) {
-        self.log_level.map(|log_level| config.logger.stdout_level(log_level));
+    pub fn apply_to_config(self, config: &mut NodeConfigBuilder) {
+        self.log_level
+            .map(|log_level| config.logger.level(LOGGER_STDOUT_NAME, log_level));
     }
 }

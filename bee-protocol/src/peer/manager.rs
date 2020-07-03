@@ -12,7 +12,7 @@
 // TODO get peer info
 
 use crate::{
-    message::{Heartbeat, MilestoneRequest, TransactionBroadcast, TransactionRequest},
+    message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     peer::{HandshakedPeer, Peer},
     protocol::Protocol,
     worker::SenderWorker,
@@ -57,10 +57,10 @@ impl PeerManager {
                 mpsc::channel(Protocol::get().config.workers.milestone_request_send_worker_bound);
             let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
 
-            // SenderWorker TransactionBroadcast
-            let (transaction_broadcast_tx, transaction_broadcast_rx) =
-                mpsc::channel(Protocol::get().config.workers.transaction_broadcast_send_worker_bound);
-            let (transaction_broadcast_shutdown_tx, transaction_broadcast_shutdown_rx) = oneshot::channel();
+            // SenderWorker TransactionMessage
+            let (transaction_tx, transaction_rx) =
+                mpsc::channel(Protocol::get().config.workers.transaction_send_worker_bound);
+            let (transaction_shutdown_tx, transaction_shutdown_rx) = oneshot::channel();
 
             // SenderWorker TransactionRequest
             let (transaction_request_tx, transaction_request_rx) =
@@ -76,10 +76,7 @@ impl PeerManager {
                 *epid,
                 address,
                 (milestone_request_tx, Mutex::new(Some(milestone_request_shutdown_tx))),
-                (
-                    transaction_broadcast_tx,
-                    Mutex::new(Some(transaction_broadcast_shutdown_tx)),
-                ),
+                (transaction_tx, Mutex::new(Some(transaction_shutdown_tx))),
                 (
                     transaction_request_tx,
                     Mutex::new(Some(transaction_request_shutdown_tx)),
@@ -95,8 +92,8 @@ impl PeerManager {
                     .run(milestone_request_rx, milestone_request_shutdown_rx),
             );
             spawn(
-                SenderWorker::<TransactionBroadcast>::new(self.network.clone(), peer.clone())
-                    .run(transaction_broadcast_rx, transaction_broadcast_shutdown_rx),
+                SenderWorker::<TransactionMessage>::new(self.network.clone(), peer.clone())
+                    .run(transaction_rx, transaction_shutdown_rx),
             );
             spawn(
                 SenderWorker::<TransactionRequest>::new(self.network.clone(), peer.clone())
@@ -127,8 +124,8 @@ impl PeerManager {
         // if let Err(_) = peer.milestone_request.1.send(()) {
         //     warn!("Shutting down MilestoneRequest SenderWorker failed.");
         // }
-        // if let Err(_) = peer.transaction_broadcast.1.send(()) {
-        //     warn!("Shutting down TransactionBroadcast SenderWorker failed.");
+        // if let Err(_) = peer.transaction.1.send(()) {
+        //     warn!("Shutting down TransactionMessage SenderWorker failed.");
         // }
         // if let Err(_) = peer.transaction_request.1.send(()) {
         //     warn!("Shutting down TransactionRequest SenderWorker failed.");

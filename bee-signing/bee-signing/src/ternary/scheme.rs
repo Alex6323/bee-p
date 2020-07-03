@@ -13,6 +13,8 @@ use crate::ternary::Seed;
 
 use bee_ternary::{TritBuf, Trits};
 
+use zeroize::Zeroize;
+
 pub trait PrivateKeyGenerator {
     type Seed: Seed;
     /// The type of the generated private keys
@@ -69,7 +71,7 @@ pub trait PrivateKeyGenerator {
     fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error>;
 }
 
-pub trait PrivateKey {
+pub trait PrivateKey: Zeroize + Drop {
     /// The type of the matching public key
     type PublicKey: PublicKey;
     /// The type of the generated signatures
