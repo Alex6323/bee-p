@@ -29,7 +29,7 @@ pub enum Error {
 pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
 pub type WorkerShutdown = Box<dyn Future<Output = Result<(), WorkerError>> + Unpin>;
-pub type Action = Box<dyn Fn()>;
+pub type Action = Box<dyn FnOnce()>;
 
 /// Handles the graceful shutdown of asynchronous workers.
 #[derive(Default)]
@@ -56,7 +56,7 @@ impl Shutdown {
     }
 
     /// Adds teardown logic that is executed during shutdown.
-    pub fn add_action(&mut self, action: impl Fn() + 'static) {
+    pub fn add_action(&mut self, action: impl FnOnce() + 'static) {
         self.actions.push(Box::new(action));
     }
 
