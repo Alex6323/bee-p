@@ -12,6 +12,7 @@
 use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 
 use bee_crypto::ternary::Sponge;
+use bee_signing_derive::{SecretDebug, SecretDisplay};
 use bee_ternary::{TritBuf, Trits};
 
 use zeroize::Zeroize;
@@ -55,6 +56,7 @@ impl TryFrom<u8> for WotsSecurityLevel {
     }
 }
 
+#[derive(SecretDebug, SecretDisplay)]
 pub struct WotsPrivateKey<S> {
     pub(crate) state: TritBuf,
     pub(crate) _sponge: PhantomData<S>,

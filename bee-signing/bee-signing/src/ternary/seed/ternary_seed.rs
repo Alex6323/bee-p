@@ -12,6 +12,7 @@
 use crate::ternary::Seed;
 
 use bee_crypto::ternary::Sponge;
+use bee_signing_derive::{SecretDebug, SecretDisplay};
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
@@ -24,6 +25,7 @@ pub enum TernarySeedError {
     InvalidLength(usize),
 }
 
+#[derive(SecretDebug, SecretDisplay)]
 pub struct TernarySeed<S> {
     seed: TritBuf,
     _sponge: PhantomData<S>,

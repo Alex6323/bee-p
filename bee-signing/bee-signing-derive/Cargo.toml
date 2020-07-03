@@ -10,4 +10,10 @@ license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "signing"]
 homepage = "https://www.iota.org"
 
+[lib]
+proc-macro = true
+
 [dependencies]
+proc-macro2 = "1.0.18"
+quote = "1.0.7"
+syn = "1.0.33"
