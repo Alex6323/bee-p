@@ -9,7 +9,7 @@ members = [
 	"bee-peering",
 	"bee-pow",
 	"bee-protocol",
-	"bee-signing",
+	"bee-signing/bee-signing",
 	"bee-snapshot",
 	# "bee-storage",
 	"bee-tangle",
