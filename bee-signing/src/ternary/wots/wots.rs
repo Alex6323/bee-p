@@ -14,6 +14,8 @@ use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 use bee_crypto::ternary::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
+use zeroize::Zeroize;
+
 use std::{
     convert::TryFrom,
     fmt::{self, Display, Formatter},
@@ -56,6 +58,18 @@ impl TryFrom<u8> for WotsSecurityLevel {
 pub struct WotsPrivateKey<S> {
     pub(crate) state: TritBuf,
     pub(crate) _sponge: PhantomData<S>,
+}
+
+impl<S> Zeroize for WotsPrivateKey<S> {
+    fn zeroize(&mut self) {
+        unsafe { self.state.as_i8_slice_mut().zeroize() }
+    }
+}
+
+impl<S> Drop for WotsPrivateKey<S> {
+    fn drop(&mut self) {
+        self.zeroize()
+    }
 }
 
 impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {

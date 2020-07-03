@@ -17,3 +17,4 @@ bee-ternary-ext = { path = "../bee-ternary-ext" }
 
 rand = "0.7"
 sha3 = "0.9.0"
+zeroize = "1.1.0"

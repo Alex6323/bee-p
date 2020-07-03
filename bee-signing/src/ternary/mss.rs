@@ -14,6 +14,8 @@ use crate::ternary::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSign
 use bee_crypto::ternary::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
+use zeroize::Zeroize;
+
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq)]
@@ -149,12 +151,27 @@ where
     }
 }
 
-pub struct MssPrivateKey<S, K> {
+pub struct MssPrivateKey<S, K: Zeroize> {
     depth: u8,
     index: u64,
     keys: Vec<K>,
     tree: TritBuf,
     _sponge: PhantomData<S>,
+}
+
+impl<S, K: Zeroize> Zeroize for MssPrivateKey<S, K> {
+    fn zeroize(&mut self) {
+        for key in self.keys.iter_mut() {
+            key.zeroize();
+        }
+        unsafe { self.tree.as_i8_slice_mut().zeroize() }
+    }
+}
+
+impl<S, K: Zeroize> Drop for MssPrivateKey<S, K> {
+    fn drop(&mut self) {
+        self.zeroize()
+    }
 }
 
 impl<S, K> PrivateKey for MssPrivateKey<S, K>
