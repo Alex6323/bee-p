@@ -45,13 +45,13 @@ impl Shutdown {
         Self::default()
     }
 
-    /// Adds a shutdown notifier.
-    pub fn add_notifier(&mut self, notifier: ShutdownNotifier) {
+    /// Adds an asynchronous worker, and a corresponding shutdown notifier.
+    pub fn add_worker_shutdown(
+        &mut self,
+        worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static,
+        notifier: ShutdownNotifier,
+    ) {
         self.notifiers.push(notifier);
-    }
-
-    /// Adds an asynchronous worker.
-    pub fn add_worker_shutdown(&mut self, worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static) {
         self.worker_shutdowns.push(Box::new(worker));
     }
 
@@ -61,20 +61,20 @@ impl Shutdown {
     }
 
     /// Executes the shutdown.
-    pub async fn execute(self) -> Result<(), Error> {
-        for notifier in self.notifiers {
+    pub async fn execute(mut self) -> Result<(), Error> {
+        while let Some(notifier) = self.notifiers.pop() {
             // NOTE: in case of an error the `Err` variant simply contains our shutdown signal `()` that we tried to
             // send.
             notifier.send(()).map_err(|_| Error::SendingShutdownSignalFailed)?
         }
 
-        for worker in self.worker_shutdowns {
-            if let Err(e) = worker.await {
+        while let Some(worker_shutdown) = self.worker_shutdowns.pop() {
+            if let Err(e) = worker_shutdown.await {
                 error!("Awaiting worker failed: {:?}.", e);
             }
         }
 
-        for action in self.actions {
+        while let Some(action) = self.actions.pop() {
             action();
         }
 
