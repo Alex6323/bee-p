@@ -27,6 +27,7 @@ pub enum Error {
     ExtraneousSemicolon,
     InvalidAddressTryte,
     InvalidAddressLength,
+    DuplicateAddress,
     InvalidBalance,
     NullBalance,
     InvalidSupply,
@@ -68,7 +69,10 @@ impl GlobalSnapshot {
                 return Err(Error::NullBalance);
             }
 
-            state.insert(address, balance);
+            if state.insert(address, balance).is_some() {
+                return Err(Error::DuplicateAddress);
+            }
+
             supply += balance;
         }
 

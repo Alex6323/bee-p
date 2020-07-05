@@ -66,6 +66,14 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_address() {
+        assert_eq!(
+            GlobalSnapshot::from_file("tests/files/global_snapshot_duplicate_address.txt").err(),
+            Some(Error::DuplicateAddress)
+        );
+    }
+
+    #[test]
     fn invalid_balance() {
         assert_eq!(
             GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_balance.txt").err(),
