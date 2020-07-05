@@ -28,6 +28,7 @@ pub enum Error {
     InvalidAddressTryte,
     InvalidAddressLength,
     InvalidBalance,
+    NullBalance,
     InvalidSupply,
     DifferentNewline,
 }
@@ -62,6 +63,10 @@ impl GlobalSnapshot {
             };
 
             let balance = tokens[1].parse::<u64>().map_err(|_| Error::InvalidBalance)?;
+
+            if balance == 0 {
+                return Err(Error::NullBalance);
+            }
 
             state.insert(address, balance);
             supply += balance;

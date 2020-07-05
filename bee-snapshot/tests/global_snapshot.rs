@@ -90,6 +90,14 @@ mod tests {
     }
 
     #[test]
+    fn null_balance() {
+        assert_eq!(
+            GlobalSnapshot::from_file("tests/files/global_snapshot_null_balance.txt").err(),
+            Some(Error::NullBalance)
+        );
+    }
+
+    #[test]
     fn invalid_supply_more() {
         assert_eq!(
             GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_supply_more.txt").err(),
