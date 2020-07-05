@@ -34,6 +34,14 @@ mod tests {
     }
 
     #[test]
+    fn empty() {
+        assert_eq!(
+            GlobalSnapshot::from_file("tests/files/global_snapshot_empty.txt").err(),
+            Some(Error::InvalidSupply)
+        );
+    }
+
+    #[test]
     fn missing_semicolon() {
         assert_eq!(
             GlobalSnapshot::from_file("tests/files/global_snapshot_missing_semicolon.txt").err(),
