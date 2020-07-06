@@ -93,9 +93,6 @@ where
             Ok(milestone) => {
                 // TODO check multiple triggers
                 tangle().add_milestone(milestone.index.into(), milestone.hash);
-                let mut metadata = tangle().get_metadata(&milestone.hash).unwrap();
-                metadata.flags.set_milestone();
-                tangle().set_metadata(&milestone.hash, metadata);
 
                 // TODO deref ? Why not .into() ?
                 if milestone.index > tangle().get_last_milestone_index() {

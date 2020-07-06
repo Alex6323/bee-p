@@ -105,12 +105,8 @@ impl MsTangle {
     pub fn add_milestone(&self, index: MilestoneIndex, hash: TxHash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
-
-        if let Some(mut metadata) = self.inner.get_metadata(&hash) {
-            metadata.flags.set_milestone();
-
-            self.inner.set_metadata(&hash, metadata);
-        }
+        self.inner
+            .update_metadata(&hash, |metadata| metadata.flags.set_milestone());
     }
 
     pub fn remove_milestone(&self, index: MilestoneIndex) {
