@@ -15,11 +15,9 @@ use serde_json::{Map, Value as JsonValue};
 use bee_transaction::{bundled::BundledTransactionField, TransactionVertex};
 
 pub struct TransactionRefItem(pub TransactionRef);
-
 impl From<&TransactionRefItem> for JsonValue {
     fn from(tx_ref: &TransactionRefItem) -> Self {
         let mut json_obj = Map::new();
-
         json_obj.insert(
             String::from("payload"),
             JsonValue::String(
@@ -144,7 +142,6 @@ impl From<&TransactionRefItem> for JsonValue {
                     .collect::<String>(),
             ),
         );
-
         JsonValue::Object(json_obj)
     }
 }
