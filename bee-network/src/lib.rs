@@ -77,13 +77,9 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender, tcp_shutdown);
     // let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
 
-    shutdown.add_notifier(epw_sd_sender);
-    shutdown.add_notifier(tcp_sd_sender);
-    // shutdown.add_notifier(udp_sd_sender);
-
-    shutdown.add_worker_shutdown(spawn(ep_worker.run()));
-    shutdown.add_worker_shutdown(spawn(tcp_worker.run()));
-    // shutdown.add_worker(spawn(udp_worker.run()));
+    shutdown.add_worker_shutdown(epw_sd_sender, spawn(ep_worker.run()));
+    shutdown.add_worker_shutdown(tcp_sd_sender, spawn(tcp_worker.run()));
+    // shutdown.add_worker_shutdown(udp_sd_sender, spawn(udp_worker.run()));
 
     whitelist::init();
     shutdown.add_action(|| whitelist::drop());
