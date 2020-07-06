@@ -10,19 +10,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_api::{config::ApiConfigBuilder, rest};
-use bee_ternary::{T1B1Buf, TritBuf};
+use bee_ternary::{T1B1Buf, TritBuf, TryteBuf};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::{tangle, TransactionMetadata};
-use bee_transaction::bundled::BundledTransaction;
+use bee_transaction::bundled::{BundledTransaction, BundledTransactionField};
 
 fn main() {
     bee_protocol::tangle::init();
 
-    let test_tx = BundledTransaction::from_trits(&TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len())).unwrap();
+    let tx = BundledTransaction::from_trits(&TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len())).unwrap();
+    let tx_hash= Hash::try_from_inner(TryteBuf::try_from_str("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap().as_trits().encode::<T1B1Buf>()).unwrap();
 
-    tangle().insert(test_tx, Hash::zeros(), TransactionMetadata::new());
-    assert_eq!(tangle().contains(&Hash::zeros()), true);
+    tangle().insert(tx, tx_hash, TransactionMetadata::new());
+    assert_eq!(tangle().contains(&tx_hash), true);
 
     let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime");
     rt.block_on(rest::server::run(ApiConfigBuilder::new().finish()));
