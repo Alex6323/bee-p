@@ -1,5 +1,5 @@
 [package]
-name = "bee-common"
+name = "bee-common-ext"
 version = "0.1.0-alpha"
 authors = ["IOTA Stiftung"]
 edition = "2018"

@@ -13,7 +13,7 @@ use bee_common::logger::{LoggerConfig, LoggerConfigBuilder};
 use bee_network::{NetworkConfig, NetworkConfigBuilder};
 use bee_peering::{PeeringConfig, PeeringConfigBuilder};
 use bee_protocol::{ProtocolConfig, ProtocolConfigBuilder};
-use bee_snapshot::{SnapshotConfig, SnapshotConfigBuilder};
+use bee_snapshot::config::{SnapshotConfig, SnapshotConfigBuilder};
 
 use serde::Deserialize;
 use thiserror::Error;

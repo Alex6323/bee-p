@@ -16,13 +16,13 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
 };
 
-use bee_common::shutdown::Shutdown;
+use bee_common_ext::shutdown::Shutdown;
 use bee_crypto::ternary::Hash;
 use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::{LocalSnapshot, SnapshotReadError};
+use bee_snapshot::local::{Error as SnapshotReadError, LocalSnapshot};
 
 use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
@@ -47,7 +47,7 @@ pub enum Error {
 
     /// Occurs, when there is an error while shutting down the node.
     #[error("Shutting down failed.")]
-    ShutdownError(#[from] bee_common::shutdown::Error),
+    ShutdownError(#[from] bee_common_ext::shutdown::Error),
 }
 
 pub struct NodeBuilder {
