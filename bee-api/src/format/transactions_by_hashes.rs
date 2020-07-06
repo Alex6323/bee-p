@@ -16,6 +16,7 @@ use crate::{
     service::{TransactionsByHashesParams, TransactionsByHashesResponse},
 };
 use std::convert::{From, TryFrom};
+use crate::format::items::transaction_ref::TransactionRefItem;
 
 impl TryFrom<&JsonValue> for TransactionsByHashesParams {
     type Error = &'static str;
@@ -25,7 +26,7 @@ impl TryFrom<&JsonValue> for TransactionsByHashesParams {
                 let mut ret = Vec::new();
                 for value in hashes {
                     match value.as_str() {
-                        Some(str) => ret.push(HashItem::try_from(str)?),
+                        Some(str) => ret.push(HashItem::try_from(str)?.0),
                         None => return Err("No string provided"),
                     }
                 }
@@ -41,8 +42,8 @@ impl From<TransactionsByHashesResponse> for JsonValue {
         let mut json_obj = Map::new();
         for (hash, tx_ref) in res.tx_refs.iter() {
             match tx_ref {
-                Some(tx_ref) => json_obj.insert(String::from(hash), JsonValue::from(tx_ref)),
-                None => json_obj.insert(String::from(hash), JsonValue::Null),
+                Some(tx_ref) => json_obj.insert(String::from(&HashItem(hash.clone())), JsonValue::from(&TransactionRefItem(tx_ref.clone()))),
+                None => json_obj.insert(String::from(&HashItem(hash.clone())), JsonValue::Null),
             };
         }
         JsonValue::Object(json_obj)

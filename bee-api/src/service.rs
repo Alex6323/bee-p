@@ -9,15 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::format::items::{
-    bool::BoolItem, hash::HashItem, milestone_index::MilestoneIndexItem,
-    transaction_ref::TransactionRefItem,
-};
-
 use bee_protocol::tangle::tangle;
-use bee_tangle::traversal;
+use bee_tangle::{traversal, TransactionRef};
 use std::collections::HashMap;
 use std::fmt;
+use bee_crypto::ternary::Hash;
+use bee_protocol::MilestoneIndex;
 
 pub trait Service {
     fn node_info() -> NodeInfoResponse;
@@ -43,58 +40,47 @@ impl fmt::Display for ServiceError {
 }
 
 pub struct NodeInfoResponse {
-    pub is_synced: BoolItem,
-    pub last_milestone_index: MilestoneIndexItem,
-    pub last_milestone_hash: Option<HashItem>,
-    pub last_solid_milestone_index: MilestoneIndexItem,
-    pub last_solid_milestone_hash: Option<HashItem>,
+    pub is_synced: bool,
+    pub last_milestone_index: MilestoneIndex,
+    pub last_milestone_hash: Option<Hash>,
+    pub last_solid_milestone_index: MilestoneIndex,
+    pub last_solid_milestone_hash: Option<Hash>,
 }
 
 pub struct TransactionByHashParams {
-    pub hash: HashItem,
+    pub hash: Hash,
 }
 
 pub struct TransactionByHashResponse {
-    pub tx_ref: Option<TransactionRefItem>,
+    pub tx_ref: Option<TransactionRef>,
 }
 
 pub struct TransactionsByHashesParams {
-    pub hashes: Vec<HashItem>,
+    pub hashes: Vec<Hash>,
 }
 
 pub struct TransactionsByHashesResponse {
-    pub tx_refs: HashMap<HashItem, Option<TransactionRefItem>>,
+    pub tx_refs: HashMap<Hash, Option<TransactionRef>>,
 }
 
 pub struct TransactionsByBundleParams {
-    pub entry: HashItem,
-    pub bundle: HashItem,
+    pub entry: Hash,
+    pub bundle: Hash,
 }
 
 pub struct TransactionsByBundleResponse {
-    pub tx_refs: HashMap<HashItem, TransactionRefItem>,
+    pub tx_refs: HashMap<Hash, TransactionRef>,
 }
 
 pub struct ServiceImpl;
 impl Service for ServiceImpl {
     fn node_info() -> NodeInfoResponse {
-        let is_synced = BoolItem(tangle().is_synced());
-        let last_milestone_index = MilestoneIndexItem(tangle().get_last_milestone_index());
-        let last_milestone_hash = match tangle().get_milestone_hash(tangle().get_last_milestone_index()) {
-            Some(hash) => Some(HashItem(hash)),
-            None => None,
-        };
-        let last_solid_milestone_index = MilestoneIndexItem(tangle().get_solid_milestone_index());
-        let last_solid_milestone_hash = match tangle().get_milestone_hash(tangle().get_solid_milestone_index()) {
-            Some(hash) => Some(HashItem(hash)),
-            None => None,
-        };
         NodeInfoResponse {
-            is_synced,
-            last_milestone_index,
-            last_milestone_hash,
-            last_solid_milestone_index,
-            last_solid_milestone_hash,
+            is_synced: tangle().is_synced(),
+            last_milestone_index: tangle().get_last_milestone_index(),
+            last_milestone_hash: tangle().get_milestone_hash(tangle().get_last_milestone_index()),
+            last_solid_milestone_index: tangle().get_solid_milestone_index(),
+            last_solid_milestone_hash: tangle().get_milestone_hash(tangle().get_solid_milestone_index()),
         }
     }
 
@@ -105,10 +91,10 @@ impl Service for ServiceImpl {
         }
         traversal::visit_children_depth_first(
             tangle(),
-            params.entry.0,
-            |tx, _| tx.bundle() == &params.bundle.0,
-            |tx_hash, tx, _| {
-                ret.insert(HashItem(tx_hash.clone()), TransactionRefItem(tx.clone()));
+            params.entry,
+            |tx, _| tx.bundle() == &params.bundle,
+            |tx_hash, tx_ref, _| {
+                ret.insert(tx_hash.clone(), tx_ref.clone());
             },
             |_| (),
         );
@@ -116,18 +102,14 @@ impl Service for ServiceImpl {
     }
 
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
-        let ret = match tangle().get(&params.hash.0) {
-            Some(tx_ref) => Some(TransactionRefItem(tx_ref)),
-            None => None,
-        };
-        TransactionByHashResponse { tx_ref: ret }
+        TransactionByHashResponse { tx_ref: tangle().get(&params.hash) }
     }
 
     fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse {
         let mut ret = HashMap::new();
         for hash in params.hashes {
             ret.insert(
-                HashItem(hash.0),
+                hash,
                 ServiceImpl::transaction_by_hash(TransactionByHashParams { hash }).tx_ref,
             );
         }

@@ -16,12 +16,13 @@ use crate::{
     service::{TransactionByHashParams, TransactionByHashResponse},
 };
 use std::convert::{From, TryFrom};
+use crate::format::items::transaction_ref::TransactionRefItem;
 
 impl TryFrom<&str> for TransactionByHashParams {
     type Error = &'static str;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Ok(TransactionByHashParams {
-            hash: HashItem::try_from(value)?,
+            hash: HashItem::try_from(value)?.0,
         })
     }
 }
@@ -29,7 +30,7 @@ impl TryFrom<&str> for TransactionByHashParams {
 impl From<TransactionByHashResponse> for JsonValue {
     fn from(res: TransactionByHashResponse) -> Self {
         match res.tx_ref {
-            Some(tx_ref) => JsonValue::from(&tx_ref),
+            Some(tx_ref) => JsonValue::from(&TransactionRefItem(tx_ref)),
             None => JsonValue::Null,
         }
     }

@@ -13,30 +13,33 @@ use serde_json::{Map, Value as JsonValue};
 
 use crate::service::NodeInfoResponse;
 use std::convert::From;
+use crate::format::items::bool::BoolItem;
+use crate::format::items::milestone_index::MilestoneIndexItem;
+use crate::format::items::hash::HashItem;
 
 impl From<NodeInfoResponse> for JsonValue {
     fn from(res: NodeInfoResponse) -> Self {
         let mut json_obj = Map::new();
 
-        json_obj.insert(String::from("is_synced"), JsonValue::from(&res.is_synced));
+        json_obj.insert(String::from("is_synced"), JsonValue::from(&BoolItem(res.is_synced)));
 
         json_obj.insert(
             String::from("last_milestone_index"),
-            JsonValue::from(&res.last_milestone_index),
+            JsonValue::from(&MilestoneIndexItem(res.last_milestone_index)),
         );
 
         match res.last_milestone_hash {
-            Some(hash) => json_obj.insert(String::from("last_milestone_hash"), JsonValue::from(&hash)),
+            Some(hash) => json_obj.insert(String::from("last_milestone_hash"), JsonValue::from(&HashItem(hash))),
             None => json_obj.insert(String::from("last_milestone_hash"), JsonValue::Null),
         };
 
         json_obj.insert(
             String::from("last_solid_milestone_index"),
-            JsonValue::from(&res.last_solid_milestone_index),
+            JsonValue::from(&MilestoneIndexItem(res.last_solid_milestone_index)),
         );
 
         match res.last_solid_milestone_hash {
-            Some(hash) => json_obj.insert(String::from("last_solid_milestone_hash"), JsonValue::from(&hash)),
+            Some(hash) => json_obj.insert(String::from("last_solid_milestone_hash"), JsonValue::from(&HashItem(hash))),
             None => json_obj.insert(String::from("last_solid_milestone_hash"), JsonValue::Null),
         };
 
