@@ -18,12 +18,17 @@ use crate::{
 use std::convert::{From, TryFrom};
 use crate::format::items::transaction_ref::TransactionRefItem;
 
-impl TryFrom<&str> for TransactionByHashParams {
+impl TryFrom<&JsonValue> for TransactionByHashParams {
     type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(TransactionByHashParams {
-            hash: HashItem::try_from(value)?.0,
-        })
+    fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            Some(str) => {
+                Ok(TransactionByHashParams {
+                    hash: HashItem::try_from(str)?.0,
+                })
+            }
+            None => Err("not a string provided")
+        }
     }
 }
 

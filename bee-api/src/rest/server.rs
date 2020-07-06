@@ -27,8 +27,9 @@ pub async fn run(config: ApiConfig) {
         .and(warp::path("v1"))
         .and(warp::path("transaction"))
         .and(warp::path("by-hash"))
-        .and(warp::path::param())
+        .and(warp::path::param::<String>())
         .and(warp::path::end())
+        .map(| param | serde_json::Value::String(param))
         .and_then(routes::RestApi::transaction_by_hash);
 
     let txs_by_hashes = warp::post()

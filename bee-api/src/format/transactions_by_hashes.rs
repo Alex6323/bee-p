@@ -27,12 +27,12 @@ impl TryFrom<&JsonValue> for TransactionsByHashesParams {
                 for value in hashes {
                     match value.as_str() {
                         Some(str) => ret.push(HashItem::try_from(str)?.0),
-                        None => return Err("No string provided"),
+                        None => return Err("no string provided"),
                     }
                 }
                 Ok(TransactionsByHashesParams { hashes: ret })
             }
-            None => Err("No hash array provided"),
+            None => Err("no hash array provided"),
         }
     }
 }
