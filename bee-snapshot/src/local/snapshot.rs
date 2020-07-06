@@ -43,6 +43,7 @@ pub enum Error {
 }
 impl LocalSnapshot {
     pub async fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
+        // TODO BufReader ?
         let mut file = File::open(path).await.map_err(|e| Error::IOError(e))?;
 
         // Version byte
