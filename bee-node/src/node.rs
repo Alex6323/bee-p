@@ -121,7 +121,11 @@ impl NodeBuilder {
         info!("Starting ledger...");
         spawn(LedgerWorker::new(snapshot_state.into_balances()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
 
-        block_on(Protocol::init(self.config.protocol.clone(), network.clone()));
+        block_on(Protocol::init(
+            self.config.protocol.clone(),
+            network.clone(),
+            &mut shutdown,
+        ));
 
         info!("Initialized.");
 
@@ -190,7 +194,7 @@ impl Node {
 
     /// Shuts down the node.
     pub fn shutdown(self) -> Result<(), Error> {
-        info!("Bee is shutting down...");
+        info!("Stopping...");
 
         block_on(self.shutdown.execute())?;
 

@@ -31,7 +31,6 @@ impl Protocol {
     pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
         Protocol::get()
             .milestone_requester_worker
-            .0
             .push(MilestoneRequesterWorkerEntry(index, to));
     }
 
@@ -40,7 +39,7 @@ impl Protocol {
     }
 
     pub fn milestone_requester_is_empty() -> bool {
-        Protocol::get().milestone_requester_worker.0.is_empty()
+        Protocol::get().milestone_requester_worker.is_empty()
     }
 
     // TransactionMessage
@@ -53,7 +52,6 @@ impl Protocol {
     pub(crate) async fn broadcast_transaction_message(source: Option<EndpointId>, transaction: TransactionMessage) {
         if let Err(e) = Protocol::get()
             .broadcaster_worker
-            .0
             // TODO try to avoid
             .clone()
             .send(BroadcasterWorkerEvent { source, transaction })
@@ -73,12 +71,11 @@ impl Protocol {
     pub async fn request_transaction(hash: Hash, index: MilestoneIndex) {
         Protocol::get()
             .transaction_requester_worker
-            .0
             .push(TransactionRequesterWorkerEntry(hash, index));
     }
 
     pub fn transaction_requester_is_empty() -> bool {
-        Protocol::get().transaction_requester_worker.0.is_empty()
+        Protocol::get().transaction_requester_worker.is_empty()
     }
 
     // Heartbeat
@@ -103,7 +100,6 @@ impl Protocol {
         if let Err(e) = Protocol::get()
             .transaction_solidifier_worker
             // TODO try to avoid clone
-            .0
             .clone()
             .send(TransactionSolidifierWorkerEvent(hash, index))
             .await
@@ -116,7 +112,6 @@ impl Protocol {
         if let Err(e) = Protocol::get()
             .milestone_solidifier_worker
             // TODO try to avoid clone
-            .0
             .clone()
             .send(MilestoneSolidifierWorkerEvent())
             .await

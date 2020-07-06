@@ -15,6 +15,7 @@ use crate::{
     worker::SenderWorker,
 };
 
+use bee_common_ext::worker::Error as WorkerError;
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
@@ -69,7 +70,7 @@ impl TransactionResponderWorker {
         self,
         receiver: mpsc::Receiver<TransactionResponderWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
@@ -89,5 +90,7 @@ impl TransactionResponderWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }

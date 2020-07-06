@@ -13,6 +13,7 @@ use crate::{
     message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
 };
 
+use bee_common_ext::worker::Error as WorkerError;
 use bee_network::EndpointId;
 
 use futures::{channel::oneshot, future::FutureExt, select};
@@ -72,14 +73,14 @@ impl MilestoneRequesterWorker {
         }
     }
 
-    pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
+    pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {
-                entry = Protocol::get().milestone_requester_worker.0.pop() => {
+                entry = Protocol::get().milestone_requester_worker.pop() => {
                     if let MilestoneRequesterWorkerEntry(index, epid) = entry {
                         if !tangle().contains_milestone(index.into()) {
                             self.process_request(index, epid).await;
@@ -94,5 +95,7 @@ impl MilestoneRequesterWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }

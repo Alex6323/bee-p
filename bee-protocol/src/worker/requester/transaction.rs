@@ -13,6 +13,7 @@ use crate::{
     message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
 };
 
+use bee_common_ext::worker::Error as WorkerError;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
@@ -77,14 +78,14 @@ impl TransactionRequesterWorker {
         }
     }
 
-    pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
+    pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut shutdown_fused = shutdown.fuse();
 
         loop {
             select! {
-                entry = Protocol::get().transaction_requester_worker.0.pop() => {
+                entry = Protocol::get().transaction_requester_worker.pop() => {
                     if let TransactionRequesterWorkerEntry(hash, index) = entry {
                         if !tangle().is_solid_entry_point(&hash) && !tangle().contains(&hash) {
                             self.process_request(hash, index).await;
@@ -98,5 +99,7 @@ impl TransactionRequesterWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }

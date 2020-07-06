@@ -11,6 +11,7 @@
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
+use bee_common_ext::worker::Error as WorkerError;
 use bee_crypto::ternary::Hash;
 use bee_tangle::traversal;
 
@@ -66,7 +67,7 @@ impl TransactionSolidifierWorker {
         self,
         receiver: mpsc::Receiver<TransactionSolidifierWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
@@ -86,6 +87,8 @@ impl TransactionSolidifierWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }
 
