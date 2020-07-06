@@ -39,7 +39,7 @@ impl TryFrom<&JsonValue> for TransactionsByHashesParams {
 impl From<TransactionsByHashesResponse> for JsonValue {
     fn from(res: TransactionsByHashesResponse) -> Self {
         let mut json_obj = Map::new();
-        for (hash, tx_ref) in res.txs.iter() {
+        for (hash, tx_ref) in res.tx_refs.iter() {
             match tx_ref {
                 Some(tx_ref) => json_obj.insert(String::from(hash), JsonValue::from(tx_ref)),
                 None => json_obj.insert(String::from(hash), JsonValue::Null),

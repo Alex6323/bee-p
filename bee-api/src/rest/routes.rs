@@ -26,19 +26,19 @@ type WarpJsonReply = Result<warp::reply::Json, warp::Rejection>;
 pub struct RestApi;
 #[async_trait]
 impl Api for RestApi {
-    type NodeInfoResponse = WarpJsonReply;
-    type TransactionsByBundleParams = JsonValue;
-    type TransactionsByBundleResponse = WarpJsonReply;
-    type TransactionByHashParams = String;
-    type TransactionByHashResponse = WarpJsonReply;
-    type TransactionsByHashesParams = JsonValue;
-    type TransactionsByHashesResponse = WarpJsonReply;
+    type NodeInfoApiResponse = WarpJsonReply;
+    type TransactionsByBundleApiParams = JsonValue;
+    type TransactionsByBundleApiResponse = WarpJsonReply;
+    type TransactionByHashApiParams = String;
+    type TransactionByHashApiResponse = WarpJsonReply;
+    type TransactionsByHashesApiParams = JsonValue;
+    type TransactionsByHashesApiResponse = WarpJsonReply;
 
-    async fn node_info() -> Self::NodeInfoResponse {
+    async fn node_info() -> Self::NodeInfoApiResponse {
         Ok(warp::reply::json(&JsonValue::from(ServiceImpl::node_info())))
     }
 
-    async fn transactions_by_bundle(params: Self::TransactionsByBundleParams) -> Self::TransactionsByBundleResponse {
+    async fn transactions_by_bundle(params: Self::TransactionsByBundleApiParams) -> Self::TransactionsByBundleApiResponse {
         match TransactionsByBundleParams::try_from(&params) {
             Ok(params) =>
 
@@ -48,8 +48,8 @@ impl Api for RestApi {
                                              res.into()
                         )))
                     }
-                    Err(msg) => Ok(warp::reply::json(&json_error_obj(
-                        &msg,
+                    Err(e) => Ok(warp::reply::json(&json_error_obj(
+                        &e.msg,
                     )))
                 }
                 ,
@@ -59,7 +59,7 @@ impl Api for RestApi {
         }
     }
 
-    async fn transaction_by_hash(params: Self::TransactionByHashParams) -> Self::TransactionByHashResponse {
+    async fn transaction_by_hash(params: Self::TransactionByHashApiParams) -> Self::TransactionByHashApiResponse {
         match TransactionByHashParams::try_from(params.as_str()) {
             Ok(params) => Ok(warp::reply::json(&json_success_obj(
                 ServiceImpl::transaction_by_hash(params).into(),
@@ -70,7 +70,7 @@ impl Api for RestApi {
         }
     }
 
-    async fn transactions_by_hashes(params: Self::TransactionsByHashesParams) -> Self::TransactionsByHashesResponse {
+    async fn transactions_by_hashes(params: Self::TransactionsByHashesApiParams) -> Self::TransactionsByHashesApiResponse {
         match TransactionsByHashesParams::try_from(&params) {
             Ok(params) => Ok(warp::reply::json(&json_success_obj(
                 ServiceImpl::transactions_by_hashes(params).into(),

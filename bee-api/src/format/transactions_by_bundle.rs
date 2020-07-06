@@ -38,7 +38,7 @@ impl TryFrom<&JsonValue> for TransactionsByBundleParams {
 impl From<TransactionsByBundleResponse> for JsonValue {
     fn from(res: TransactionsByBundleResponse) -> Self {
         let mut json_obj = Map::new();
-        for (hash, tx_ref) in res.txs.iter() {
+        for (hash, tx_ref) in res.tx_refs.iter() {
             json_obj.insert(String::from(hash), JsonValue::from(tx_ref));
         }
         JsonValue::Object(json_obj)

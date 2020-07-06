@@ -28,7 +28,7 @@ impl TryFrom<&str> for TransactionByHashParams {
 
 impl From<TransactionByHashResponse> for JsonValue {
     fn from(res: TransactionByHashResponse) -> Self {
-        match res.tx {
+        match res.tx_ref {
             Some(tx_ref) => JsonValue::from(&tx_ref),
             None => JsonValue::Null,
         }

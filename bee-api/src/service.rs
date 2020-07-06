@@ -17,12 +17,29 @@ use crate::format::items::{
 use bee_protocol::tangle::tangle;
 use bee_tangle::traversal;
 use std::collections::HashMap;
+use std::fmt;
 
 pub trait Service {
     fn node_info() -> NodeInfoResponse;
-    fn transactions_by_bundle(params: TransactionsByBundleParams) -> Result<TransactionsByBundleResponse, String>;
+    fn transactions_by_bundle(params: TransactionsByBundleParams) -> Result<TransactionsByBundleResponse, ServiceError>;
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse;
     fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse;
+}
+
+pub struct ServiceError {
+    pub msg: String,
+}
+
+impl ServiceError {
+    fn new(msg: String) -> Self {
+        Self { msg }
+    }
+}
+
+impl fmt::Display for ServiceError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.msg)
+    }
 }
 
 pub struct NodeInfoResponse {
@@ -38,7 +55,7 @@ pub struct TransactionByHashParams {
 }
 
 pub struct TransactionByHashResponse {
-    pub tx: Option<TransactionRefItem>,
+    pub tx_ref: Option<TransactionRefItem>,
 }
 
 pub struct TransactionsByHashesParams {
@@ -46,7 +63,7 @@ pub struct TransactionsByHashesParams {
 }
 
 pub struct TransactionsByHashesResponse {
-    pub txs: HashMap<HashItem, Option<TransactionRefItem>>,
+    pub tx_refs: HashMap<HashItem, Option<TransactionRefItem>>,
 }
 
 pub struct TransactionsByBundleParams {
@@ -55,7 +72,7 @@ pub struct TransactionsByBundleParams {
 }
 
 pub struct TransactionsByBundleResponse {
-    pub txs: HashMap<HashItem, TransactionRefItem>,
+    pub tx_refs: HashMap<HashItem, TransactionRefItem>,
 }
 
 pub struct ServiceImpl;
@@ -81,29 +98,10 @@ impl Service for ServiceImpl {
         }
     }
 
-    fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
-        let ret = match tangle().get(&params.hash.0) {
-            Some(tx_ref) => Some(TransactionRefItem(tx_ref)),
-            None => None,
-        };
-        TransactionByHashResponse { tx: ret }
-    }
-
-    fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse {
-        let mut ret = HashMap::new();
-        for hash in params.hashes {
-            ret.insert(
-                HashItem(hash.0),
-                ServiceImpl::transaction_by_hash(TransactionByHashParams { hash }).tx,
-            );
-        }
-        TransactionsByHashesResponse { txs: ret }
-    }
-
-    fn transactions_by_bundle(params: TransactionsByBundleParams) -> Result<TransactionsByBundleResponse, String> {
+    fn transactions_by_bundle(params: TransactionsByBundleParams) -> Result<TransactionsByBundleResponse, ServiceError> {
         let mut ret = HashMap::new();
         if params.entry == params.bundle {
-            return Err(String::from("Entry hash is equal to bundle hash"));
+            return Err(ServiceError::new(String::from("entry hash is equal to bundle hash")))
         }
         traversal::visit_children_depth_first(
             tangle(),
@@ -114,6 +112,26 @@ impl Service for ServiceImpl {
             },
             |_| (),
         );
-        Ok(TransactionsByBundleResponse { txs: ret })
+        Ok(TransactionsByBundleResponse { tx_refs: ret })
     }
+
+    fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
+        let ret = match tangle().get(&params.hash.0) {
+            Some(tx_ref) => Some(TransactionRefItem(tx_ref)),
+            None => None,
+        };
+        TransactionByHashResponse { tx_ref: ret }
+    }
+
+    fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse {
+        let mut ret = HashMap::new();
+        for hash in params.hashes {
+            ret.insert(
+                HashItem(hash.0),
+                ServiceImpl::transaction_by_hash(TransactionByHashParams { hash }).tx_ref,
+            );
+        }
+        TransactionsByHashesResponse { tx_refs: ret }
+    }
+
 }
