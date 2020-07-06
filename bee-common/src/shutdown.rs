@@ -48,8 +48,8 @@ impl Shutdown {
     /// Adds an asynchronous worker, and a corresponding shutdown notifier.
     pub fn add_worker_shutdown(
         &mut self,
-        worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static,
         notifier: ShutdownNotifier,
+        worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static,
     ) {
         self.notifiers.push(notifier);
         self.worker_shutdowns.push(Box::new(worker));
