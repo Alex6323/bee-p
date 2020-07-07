@@ -11,13 +11,14 @@
 
 use thiserror::Error;
 
+/// Errors, that might occur during the lifetime of asynchronous workers.
 #[derive(Error, Debug)]
 pub enum Error {
-    /// A wrapper for an async task error.
+    /// Occurs, when there is some asynchronous I/O error.
     #[error("An asynchronous operation failed.")]
     AsynchronousOperationFailed(#[from] async_std::io::Error),
 
-    /// An error that occurs, when sending a message over an `mpsc` channel failed.
+    /// Occurs, when a message couldn't be sent over an `futures::channel::mpsc` channel.
     #[error("Sending a message to a task failed.")]
     SendingMessageFailed(#[from] futures::channel::mpsc::SendError),
 }

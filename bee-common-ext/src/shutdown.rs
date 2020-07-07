@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+//! A module that contains functionalities for a graceful shutdown of asynchronous workers.
+
 use crate::worker::Error as WorkerError;
 
 use futures::channel::oneshot;
@@ -17,18 +19,28 @@ use thiserror::Error;
 
 use std::future::Future;
 
+/// Errors, that might occur during shutdown.
 #[derive(Error, Debug)]
 pub enum Error {
+    /// Occurs, when the shutdown signal couldn't be sent to a worker.
     #[error("Sending the shutdown signal to a worker failed.")]
     SendingShutdownSignalFailed,
 
+    /// Occurs, when a worker failed to shut down properly.
     #[error("Waiting for worker to shut down failed.")]
     WaitingforWorkerShutdownFailed(#[from] WorkerError),
 }
 
+/// A type alias for the sending side of the shutdown signal.
 pub type ShutdownNotifier = oneshot::Sender<()>;
+
+/// A type alias for the receiving side of the shutdown signal.
 pub type ShutdownListener = oneshot::Receiver<()>;
+
+/// A type alias for the termination `Future` of an asynchronous worker.
 pub type WorkerShutdown = Box<dyn Future<Output = Result<(), WorkerError>> + Unpin>;
+
+/// A type alias for a closure, that is executed during the final step of the shutdown procedure.
 pub type Action = Box<dyn FnOnce()>;
 
 /// Handles the graceful shutdown of asynchronous workers.
