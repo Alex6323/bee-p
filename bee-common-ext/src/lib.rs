@@ -12,8 +12,6 @@
 //! A crate that provides common functionalities shared across multiple crates within the Bee framework, and for
 //! applications built on-top.
 
-#![warn(missing_docs)]
-
 pub mod shutdown;
 pub mod wait_priority_queue;
 pub mod worker;
