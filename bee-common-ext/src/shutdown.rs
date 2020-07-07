@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A module that contains functionalities for a graceful shutdown of asynchronous workers.
+//! A module that deals with the graceful shutdown of asynchronous workers.
 
 use crate::worker::Error as WorkerError;
 

@@ -210,7 +210,7 @@ mod tests {
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        block_on(Protocol::init(protocol_config, network));
+        block_on(Protocol::init(protocol_config, network, &mut shutdown));
 
         assert_eq!(tangle().len(), 0);
 

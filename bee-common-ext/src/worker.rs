@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+//! A module that deals with asynchronous workers in general.
+
 use thiserror::Error;
 
 /// Errors, that might occur during the lifetime of asynchronous workers.
@@ -16,7 +18,7 @@ use thiserror::Error;
 pub enum Error {
     /// Occurs, when there is some asynchronous I/O error.
     #[error("An asynchronous operation failed.")]
-    AsynchronousOperationFailed(#[from] async_std::io::Error),
+    AsynchronousOperationFailed(#[from] std::io::Error),
 
     /// Occurs, when a message couldn't be sent over an `futures::channel::mpsc` channel.
     #[error("Sending a message to a task failed.")]
