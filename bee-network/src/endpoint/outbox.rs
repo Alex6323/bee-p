@@ -11,7 +11,7 @@
 
 use crate::{constants::BYTES_CHANNEL_CAPACITY, endpoint::EndpointId as EpId};
 
-use bee_common_ext::worker::Error as WorkerError;
+use bee_common::worker::Error as WorkerError;
 
 use async_std::sync::Arc;
 use futures::{channel::mpsc, sink::SinkExt};

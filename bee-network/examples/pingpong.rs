@@ -23,7 +23,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use bee_common_ext::shutdown::Shutdown;
+use bee_common::shutdown::Shutdown;
 use bee_network::{
     Command::*, EndpointId as EpId, Event, EventSubscriber as Events, Network, NetworkConfig, Origin, Url,
 };

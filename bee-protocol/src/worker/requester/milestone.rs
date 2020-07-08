@@ -13,7 +13,7 @@ use crate::{
     message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
 };
 
-use bee_common_ext::worker::Error as WorkerError;
+use bee_common::worker::Error as WorkerError;
 use bee_network::EndpointId;
 
 use futures::{channel::oneshot, future::FutureExt, select};

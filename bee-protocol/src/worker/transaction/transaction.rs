@@ -16,7 +16,7 @@ use crate::{
     worker::transaction::HashCache,
 };
 
-use bee_common_ext::worker::Error as WorkerError;
+use bee_common::worker::Error as WorkerError;
 use bee_crypto::ternary::{CurlP81, Hash, Sponge};
 use bee_network::EndpointId;
 use bee_tangle::traversal;
@@ -191,7 +191,7 @@ mod tests {
 
     use crate::ProtocolConfig;
 
-    use bee_common_ext::shutdown::Shutdown;
+    use bee_common::shutdown::Shutdown;
     use bee_network::{NetworkConfig, Url};
 
     use async_std::task::{block_on, spawn};
