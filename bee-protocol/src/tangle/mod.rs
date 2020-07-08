@@ -29,6 +29,7 @@ use std::{
     ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 /// Milestone-based Tangle.
@@ -81,7 +82,13 @@ impl MsTangle {
 
             if let Some(tx) = self.inner.get(&hash) {
                 if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
-                    self.inner.update_metadata(&hash, |metadata| metadata.flags.set_solid());
+                    self.inner.update_metadata(&hash, |metadata| {
+                        metadata.flags.set_solid();
+                        metadata.solidification_timestamp = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .expect("Clock may have gone backwards")
+                            .as_millis() as u64;
+                    });
 
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
@@ -98,12 +105,8 @@ impl MsTangle {
     pub fn add_milestone(&self, index: MilestoneIndex, hash: TxHash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
-
-        if let Some(mut metadata) = self.inner.get_metadata(&hash) {
-            metadata.flags.set_milestone();
-
-            self.inner.set_metadata(&hash, metadata);
-        }
+        self.inner
+            .update_metadata(&hash, |metadata| metadata.flags.set_milestone());
     }
 
     pub fn remove_milestone(&self, index: MilestoneIndex) {

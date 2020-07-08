@@ -22,7 +22,7 @@ pub fn derive_secret_debug(input: proc_macro::TokenStream) -> proc_macro::TokenS
     let name = input.ident;
     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
     let expanded = quote! {
-        impl #impl_generics std::fmt::Display for #name #ty_generics {
+        impl #impl_generics std::fmt::Debug for #name #ty_generics {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "<Omitted secret>")
             }
@@ -38,7 +38,7 @@ pub fn derive_secret_display(input: proc_macro::TokenStream) -> proc_macro::Toke
     let name = input.ident;
     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
     let expanded = quote! {
-        impl #impl_generics std::fmt::Debug for #name #ty_generics {
+        impl #impl_generics std::fmt::Display for #name #ty_generics {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "<Omitted secret>")
             }

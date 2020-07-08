@@ -14,6 +14,7 @@ use crate::{
     protocol::Protocol,
 };
 
+use bee_common_ext::worker::Error as WorkerError;
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use futures::{
@@ -71,7 +72,7 @@ impl BroadcasterWorker {
         mut self,
         receiver: mpsc::Receiver<BroadcasterWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
@@ -91,5 +92,7 @@ impl BroadcasterWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }

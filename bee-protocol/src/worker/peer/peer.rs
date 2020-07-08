@@ -56,9 +56,9 @@ impl PeerWorker {
     pub fn new(peer: Arc<HandshakedPeer>) -> Self {
         Self {
             peer,
-            transaction_worker: Protocol::get().transaction_worker.0.clone(),
-            transaction_responder_worker: Protocol::get().transaction_responder_worker.0.clone(),
-            milestone_responder_worker: Protocol::get().milestone_responder_worker.0.clone(),
+            transaction_worker: Protocol::get().transaction_worker.clone(),
+            transaction_responder_worker: Protocol::get().transaction_responder_worker.clone(),
+            milestone_responder_worker: Protocol::get().milestone_responder_worker.clone(),
         }
     }
 

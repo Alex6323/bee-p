@@ -15,11 +15,10 @@ use crate::{
     tangle::tangle,
 };
 
+use bee_common_ext::worker::Error as WorkerError;
 use bee_crypto::ternary::{Hash, Kerl, Sponge};
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_transaction::TransactionVertex;
-
-use std::marker::PhantomData;
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -28,6 +27,8 @@ use futures::{
     stream::StreamExt,
 };
 use log::{debug, info};
+
+use std::marker::PhantomData;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -93,9 +94,6 @@ where
             Ok(milestone) => {
                 // TODO check multiple triggers
                 tangle().add_milestone(milestone.index.into(), milestone.hash);
-                let mut metadata = tangle().get_metadata(&milestone.hash).unwrap();
-                metadata.flags.set_milestone();
-                tangle().set_metadata(&milestone.hash, metadata);
 
                 // TODO deref ? Why not .into() ?
                 if milestone.index > tangle().get_last_milestone_index() {
@@ -118,7 +116,7 @@ where
         self,
         receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
@@ -138,6 +136,8 @@ where
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }
 

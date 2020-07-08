@@ -29,7 +29,7 @@ pub enum Error {
 pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
 pub type WorkerShutdown = Box<dyn Future<Output = Result<(), WorkerError>> + Unpin>;
-pub type Action = Box<dyn Fn()>;
+pub type Action = Box<dyn FnOnce()>;
 
 /// Handles the graceful shutdown of asynchronous workers.
 #[derive(Default)]
@@ -45,36 +45,36 @@ impl Shutdown {
         Self::default()
     }
 
-    /// Adds a shutdown notifier.
-    pub fn add_notifier(&mut self, notifier: ShutdownNotifier) {
+    /// Adds an asynchronous worker, and a corresponding shutdown notifier.
+    pub fn add_worker_shutdown(
+        &mut self,
+        notifier: ShutdownNotifier,
+        worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static,
+    ) {
         self.notifiers.push(notifier);
-    }
-
-    /// Adds an asynchronous worker.
-    pub fn add_worker_shutdown(&mut self, worker: impl Future<Output = Result<(), WorkerError>> + Unpin + 'static) {
         self.worker_shutdowns.push(Box::new(worker));
     }
 
     /// Adds teardown logic that is executed during shutdown.
-    pub fn add_action(&mut self, action: impl Fn() + 'static) {
+    pub fn add_action(&mut self, action: impl FnOnce() + 'static) {
         self.actions.push(Box::new(action));
     }
 
     /// Executes the shutdown.
-    pub async fn execute(self) -> Result<(), Error> {
-        for notifier in self.notifiers {
+    pub async fn execute(mut self) -> Result<(), Error> {
+        while let Some(notifier) = self.notifiers.pop() {
             // NOTE: in case of an error the `Err` variant simply contains our shutdown signal `()` that we tried to
             // send.
             notifier.send(()).map_err(|_| Error::SendingShutdownSignalFailed)?
         }
 
-        for worker in self.worker_shutdowns {
-            if let Err(e) = worker.await {
+        while let Some(worker_shutdown) = self.worker_shutdowns.pop() {
+            if let Err(e) = worker_shutdown.await {
                 error!("Awaiting worker failed: {:?}.", e);
             }
         }
 
-        for action in self.actions {
+        while let Some(action) = self.actions.pop() {
             action();
         }
 

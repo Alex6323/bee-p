@@ -11,6 +11,8 @@
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
+use bee_common_ext::worker::Error as WorkerError;
+
 use futures::{
     channel::{mpsc, oneshot},
     future::FutureExt,
@@ -111,7 +113,7 @@ impl MilestoneSolidifierWorker {
         self,
         receiver: mpsc::Receiver<MilestoneSolidifierWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
@@ -137,6 +139,8 @@ impl MilestoneSolidifierWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }
 

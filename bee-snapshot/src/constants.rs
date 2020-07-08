@@ -9,26 +9,4 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::Flags;
-
-use std::time::{SystemTime, UNIX_EPOCH};
-
-// TODO Should it really be copy ?
-#[derive(Copy, Clone, Default)]
-pub struct TransactionMetadata {
-    pub(crate) flags: Flags,
-    pub(crate) arrival_timestamp: u64,
-    pub(crate) solidification_timestamp: u64,
-}
-
-impl TransactionMetadata {
-    pub fn new() -> Self {
-        Self {
-            arrival_timestamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .expect("Clock may have gone backwards")
-                .as_millis() as u64,
-            ..Self::default()
-        }
-    }
-}
+pub const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;

@@ -11,11 +11,13 @@
 
 use crate::protocol::Protocol;
 
-use std::time::Duration;
+use bee_common_ext::worker::Error as WorkerError;
 
 use async_std::{future::ready, prelude::*};
 use futures::channel::oneshot::Receiver;
 use log::info;
+
+use std::time::Duration;
 
 pub(crate) struct TpsWorker {
     incoming: u64,
@@ -64,7 +66,7 @@ impl TpsWorker {
         self.outgoing = outgoing;
     }
 
-    pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) {
+    pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
         loop {
@@ -79,5 +81,7 @@ impl TpsWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }

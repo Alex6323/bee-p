@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{local::LocalSnapshotMetadata, state::SnapshotState};
+use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata, state::SnapshotState};
 
 use bee_crypto::ternary::Hash;
 use bee_ternary::{T1B1Buf, Trits, T5B1};
@@ -27,8 +27,6 @@ pub struct LocalSnapshot {
 }
 
 const VERSION: u8 = 4;
-// TODO export ?
-pub const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 // TODO detail errors
 #[derive(Debug)]
@@ -45,6 +43,7 @@ pub enum Error {
 }
 impl LocalSnapshot {
     pub async fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
+        // TODO BufReader ?
         let mut file = File::open(path).await.map_err(|e| Error::IOError(e))?;
 
         // Version byte
