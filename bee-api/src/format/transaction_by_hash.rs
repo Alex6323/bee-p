@@ -12,22 +12,19 @@
 use serde_json::Value as JsonValue;
 
 use crate::{
-    format::items::hash::HashItem,
+    format::items::{hash::HashItem, transaction_ref::TransactionRefItem},
     service::{TransactionByHashParams, TransactionByHashResponse},
 };
 use std::convert::{From, TryFrom};
-use crate::format::items::transaction_ref::TransactionRefItem;
 
 impl TryFrom<&JsonValue> for TransactionByHashParams {
     type Error = &'static str;
     fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
         match value.as_str() {
-            Some(str) => {
-                Ok(TransactionByHashParams {
-                    hash: HashItem::try_from(str)?.0,
-                })
-            }
-            None => Err("not a string provided")
+            Some(str) => Ok(TransactionByHashParams {
+                hash: HashItem::try_from(str)?.0,
+            }),
+            None => Err("not a string provided"),
         }
     }
 }

@@ -20,7 +20,13 @@ fn main() {
     bee_protocol::tangle::init();
 
     let tx = BundledTransaction::from_trits(&TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len())).unwrap();
-    let tx_hash= Hash::try_from_inner(TryteBuf::try_from_str("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap().as_trits().encode::<T1B1Buf>()).unwrap();
+    let tx_hash = Hash::try_from_inner(
+        TryteBuf::try_from_str("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            .unwrap()
+            .as_trits()
+            .encode::<T1B1Buf>(),
+    )
+    .unwrap();
 
     tangle().insert(tx, tx_hash, TransactionMetadata::new());
     assert_eq!(tangle().contains(&tx_hash), true);

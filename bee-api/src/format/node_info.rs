@@ -11,11 +11,11 @@
 
 use serde_json::{Map, Value as JsonValue};
 
-use crate::service::NodeInfoResponse;
+use crate::{
+    format::items::{bool::BoolItem, hash::HashItem, milestone_index::MilestoneIndexItem},
+    service::NodeInfoResponse,
+};
 use std::convert::From;
-use crate::format::items::bool::BoolItem;
-use crate::format::items::milestone_index::MilestoneIndexItem;
-use crate::format::items::hash::HashItem;
 
 impl From<NodeInfoResponse> for JsonValue {
     fn from(res: NodeInfoResponse) -> Self {
@@ -39,7 +39,10 @@ impl From<NodeInfoResponse> for JsonValue {
         );
 
         match res.last_solid_milestone_hash {
-            Some(hash) => json_obj.insert(String::from("last_solid_milestone_hash"), JsonValue::from(&HashItem(hash))),
+            Some(hash) => json_obj.insert(
+                String::from("last_solid_milestone_hash"),
+                JsonValue::from(&HashItem(hash)),
+            ),
             None => json_obj.insert(String::from("last_solid_milestone_hash"), JsonValue::Null),
         };
 

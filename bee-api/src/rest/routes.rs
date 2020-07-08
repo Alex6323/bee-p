@@ -25,54 +25,38 @@ use std::convert::TryFrom;
 pub struct RestApi;
 #[async_trait]
 impl Api for RestApi {
+    type Input = JsonValue;
+    type Output = Result<warp::reply::Json, warp::Rejection>;
 
-    type Params = JsonValue;
-    type Response = Result<warp::reply::Json, warp::Rejection>;
-
-    async fn node_info() -> Self::Response {
+    async fn node_info() -> Self::Output {
         Ok(warp::reply::json(&JsonValue::from(ServiceImpl::node_info())))
     }
 
-    async fn transactions_by_bundle(params: Self::Params) -> Self::Response {
-        match TransactionsByBundleParams::try_from(&params) {
-            Ok(params) =>
-
-                match ServiceImpl::transactions_by_bundle(params) {
-                    Ok(res) => {
-                        Ok(warp::reply::json(&json_success_obj(
-                                             res.into()
-                        )))
-                    }
-                    Err(e) => Ok(warp::reply::json(&json_error_obj(
-                        &e.msg,
-                    )))
-                }
-                ,
-            Err(msg) => Ok(warp::reply::json(&json_error_obj(
-                msg,
-            ))),
+    async fn transactions_by_bundle(input: Self::Input) -> Self::Output {
+        match TransactionsByBundleParams::try_from(&input) {
+            Ok(params) => match ServiceImpl::transactions_by_bundle(params) {
+                Ok(res) => Ok(warp::reply::json(&json_success_obj(res.into()))),
+                Err(e) => Ok(warp::reply::json(&json_error_obj(&e.msg))),
+            },
+            Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
         }
     }
 
-    async fn transaction_by_hash(params: Self::Params) -> Self::Response {
-        match TransactionByHashParams::try_from(&params) {
+    async fn transaction_by_hash(input: Self::Input) -> Self::Output {
+        match TransactionByHashParams::try_from(&input) {
             Ok(params) => Ok(warp::reply::json(&json_success_obj(
                 ServiceImpl::transaction_by_hash(params).into(),
             ))),
-            Err(msg) => Ok(warp::reply::json(&json_error_obj(
-                msg,
-            ))),
+            Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
         }
     }
 
-    async fn transactions_by_hashes(params: Self::Params) -> Self::Response {
-        match TransactionsByHashesParams::try_from(&params) {
+    async fn transactions_by_hashes(input: Self::Input) -> Self::Output {
+        match TransactionsByHashesParams::try_from(&input) {
             Ok(params) => Ok(warp::reply::json(&json_success_obj(
                 ServiceImpl::transactions_by_hashes(params).into(),
             ))),
-            Err(msg) => Ok(warp::reply::json(&json_error_obj(
-                msg,
-            ))),
+            Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
         }
     }
 }

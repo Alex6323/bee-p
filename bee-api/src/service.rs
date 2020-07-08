@@ -9,16 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_protocol::tangle::tangle;
-use bee_tangle::{traversal, TransactionRef};
-use std::collections::HashMap;
-use std::fmt;
 use bee_crypto::ternary::Hash;
-use bee_protocol::MilestoneIndex;
+use bee_protocol::{tangle::tangle, MilestoneIndex};
+use bee_tangle::{traversal, TransactionRef};
+use std::{collections::HashMap, fmt};
 
 pub trait Service {
     fn node_info() -> NodeInfoResponse;
-    fn transactions_by_bundle(params: TransactionsByBundleParams) -> Result<TransactionsByBundleResponse, ServiceError>;
+    fn transactions_by_bundle(params: TransactionsByBundleParams)
+        -> Result<TransactionsByBundleResponse, ServiceError>;
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse;
     fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse;
 }
@@ -84,10 +83,12 @@ impl Service for ServiceImpl {
         }
     }
 
-    fn transactions_by_bundle(params: TransactionsByBundleParams) -> Result<TransactionsByBundleResponse, ServiceError> {
+    fn transactions_by_bundle(
+        params: TransactionsByBundleParams,
+    ) -> Result<TransactionsByBundleResponse, ServiceError> {
         let mut ret = HashMap::new();
         if params.entry == params.bundle {
-            return Err(ServiceError::new(String::from("entry hash is equal to bundle hash")))
+            return Err(ServiceError::new(String::from("entry hash is equal to bundle hash")));
         }
         traversal::visit_children_depth_first(
             tangle(),
@@ -102,7 +103,9 @@ impl Service for ServiceImpl {
     }
 
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse {
-        TransactionByHashResponse { tx_ref: tangle().get(&params.hash) }
+        TransactionByHashResponse {
+            tx_ref: tangle().get(&params.hash),
+        }
     }
 
     fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse {
@@ -115,5 +118,4 @@ impl Service for ServiceImpl {
         }
         TransactionsByHashesResponse { tx_refs: ret }
     }
-
 }

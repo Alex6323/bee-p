@@ -12,11 +12,10 @@
 use serde_json::{Map, Value as JsonValue};
 
 use crate::{
-    format::items::hash::HashItem,
+    format::items::{hash::HashItem, transaction_ref::TransactionRefItem},
     service::{TransactionsByHashesParams, TransactionsByHashesResponse},
 };
 use std::convert::{From, TryFrom};
-use crate::format::items::transaction_ref::TransactionRefItem;
 
 impl TryFrom<&JsonValue> for TransactionsByHashesParams {
     type Error = &'static str;
@@ -42,7 +41,10 @@ impl From<TransactionsByHashesResponse> for JsonValue {
         let mut json_obj = Map::new();
         for (hash, tx_ref) in res.tx_refs.iter() {
             match tx_ref {
-                Some(tx_ref) => json_obj.insert(String::from(&HashItem(hash.clone())), JsonValue::from(&TransactionRefItem(tx_ref.clone()))),
+                Some(tx_ref) => json_obj.insert(
+                    String::from(&HashItem(hash.clone())),
+                    JsonValue::from(&TransactionRefItem(tx_ref.clone())),
+                ),
                 None => json_obj.insert(String::from(&HashItem(hash.clone())), JsonValue::Null),
             };
         }

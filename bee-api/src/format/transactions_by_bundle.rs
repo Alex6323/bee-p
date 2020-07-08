@@ -12,27 +12,23 @@
 use serde_json::{Map, Value as JsonValue};
 
 use crate::{
-    format::items::hash::HashItem,
+    format::items::{hash::HashItem, transaction_ref::TransactionRefItem},
     service::{TransactionsByBundleParams, TransactionsByBundleResponse},
 };
 use std::convert::{From, TryFrom};
-use crate::format::items::transaction_ref::TransactionRefItem;
 
 impl TryFrom<&JsonValue> for TransactionsByBundleParams {
     type Error = &'static str;
     fn try_from(value: &JsonValue) -> Result<Self, Self::Error> {
         let entry = match value["entry"].as_str() {
             Some(str) => HashItem::try_from(str)?.0,
-            None => return Err("can not find entry hash")
+            None => return Err("can not find entry hash"),
         };
         let bundle = match value["bundle"].as_str() {
             Some(str) => HashItem::try_from(str)?.0,
-            None => return Err("can not find bundle hash")
+            None => return Err("can not find bundle hash"),
         };
-        Ok(TransactionsByBundleParams {
-            entry,
-            bundle,
-        })
+        Ok(TransactionsByBundleParams { entry, bundle })
     }
 }
 
@@ -40,7 +36,10 @@ impl From<TransactionsByBundleResponse> for JsonValue {
     fn from(res: TransactionsByBundleResponse) -> Self {
         let mut json_obj = Map::new();
         for (hash, tx_ref) in res.tx_refs.iter() {
-            json_obj.insert(String::from(&HashItem(hash.clone())), JsonValue::from(&TransactionRefItem(tx_ref.clone())));
+            json_obj.insert(
+                String::from(&HashItem(hash.clone())),
+                JsonValue::from(&TransactionRefItem(tx_ref.clone())),
+            );
         }
         JsonValue::Object(json_obj)
     }
