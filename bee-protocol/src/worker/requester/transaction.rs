@@ -13,7 +13,7 @@ use crate::{
     message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
 };
 
-use bee_common_ext::worker::Error as WorkerError;
+use bee_common::worker::Error as WorkerError;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 

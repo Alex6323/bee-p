@@ -15,7 +15,7 @@ use crate::{
     worker::SenderWorker,
 };
 
-use bee_common_ext::worker::Error as WorkerError;
+use bee_common::worker::Error as WorkerError;
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::bundled::BundledTransaction as Transaction;
