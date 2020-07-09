@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::worker::Error as WorkerError;
+use bee_crypto::ternary::Hash;
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -19,7 +20,7 @@ use futures::{
 };
 use log::info;
 
-pub enum LedgerConfirmationWorkerEvent {}
+pub struct LedgerConfirmationWorkerEvent(Hash);
 
 pub struct LedgerConfirmationWorker {}
 
@@ -28,8 +29,10 @@ impl LedgerConfirmationWorker {
         Self {}
     }
 
+    fn confirm(&self, hash: Hash) {}
+
     pub async fn run(
-        mut self,
+        self,
         receiver: mpsc::Receiver<LedgerConfirmationWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) -> Result<(), WorkerError> {
@@ -41,9 +44,8 @@ impl LedgerConfirmationWorker {
         loop {
             select! {
                 event = receiver_fused.next() => {
-                    if let Some(event) = event {
-                        match event {
-                        }
+                    if let Some(LedgerConfirmationWorkerEvent(hash)) = event {
+                        self.confirm(hash)
                     }
                 },
                 _ = shutdown_fused => {
