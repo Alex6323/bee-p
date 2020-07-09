@@ -14,3 +14,25 @@ mod workers;
 
 pub(crate) use merkle::Merkle;
 pub use workers::{LedgerStateWorker, LedgerStateWorkerEvent};
+
+use bee_common::shutdown::Shutdown;
+use bee_transaction::bundled::Address;
+
+use async_std::task::spawn;
+use futures::channel::{mpsc, oneshot};
+
+use std::collections::HashMap;
+
+// TODO get concrete type
+pub fn init(state: HashMap<Address, u64>, shutdown: &mut Shutdown) -> mpsc::Sender<LedgerStateWorkerEvent> {
+    // TODO config
+    let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
+    let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
+
+    shutdown.add_worker_shutdown(
+        ledger_worker_shutdown_tx,
+        spawn(LedgerStateWorker::new(state).run(ledger_worker_rx, ledger_worker_shutdown_rx)),
+    );
+
+    ledger_worker_tx
+}

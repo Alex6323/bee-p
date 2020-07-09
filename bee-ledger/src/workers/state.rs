@@ -9,9 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_common::worker::Error as WorkerError;
 use bee_transaction::bundled::Address;
-
-use std::collections::HashMap;
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -20,6 +19,8 @@ use futures::{
     stream::StreamExt,
 };
 use log::{info, warn};
+
+use std::collections::HashMap;
 
 pub enum LedgerStateWorkerEvent {
     ApplyDiff(HashMap<Address, i64>),
@@ -56,7 +57,11 @@ impl LedgerStateWorker {
         }
     }
 
-    pub async fn run(mut self, receiver: mpsc::Receiver<LedgerStateWorkerEvent>, shutdown: oneshot::Receiver<()>) {
+    pub async fn run(
+        mut self,
+        receiver: mpsc::Receiver<LedgerStateWorkerEvent>,
+        shutdown: oneshot::Receiver<()>,
+    ) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
@@ -79,6 +84,8 @@ impl LedgerStateWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }
 
