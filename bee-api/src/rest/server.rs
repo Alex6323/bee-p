@@ -11,12 +11,17 @@
 
 use crate::rest::routes;
 
+use futures::channel::oneshot;
+use futures_util::FutureExt;
 use serde::de::DeserializeOwned;
+
 use warp::{Filter, Rejection};
 
 use crate::{api::Api, config::ApiConfig};
+use bee_common_ext::{shutdown::Shutdown, worker::Error as WorkerError};
+use std::io::{Error, ErrorKind};
 
-pub async fn run(config: ApiConfig) {
+pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
     let node_info = warp::get()
         .and(warp::path("v1"))
         .and(warp::path("node-info"))
@@ -52,7 +57,21 @@ pub async fn run(config: ApiConfig) {
         .or(txs_by_hashes.or(node_info).or(txs_by_bundle))
         .with(warp::cors().allow_any_origin());
 
-    warp::serve(routes).run(config.rest_socket_addr()).await;
+    let (server_sd_sender, server_sd_receiver) = oneshot::channel::<()>();
+
+    let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.rest_socket_addr(), async {
+        server_sd_receiver.await.ok();
+    });
+
+    let handle = tokio::spawn(server).map(|result| match result {
+        Ok(_) => Ok(()),
+        Err(_) => Err(WorkerError::AsynchronousOperationFailed(Error::new(
+            ErrorKind::Other,
+            "asynchronous operation failed",
+        ))),
+    });
+
+    shutdown.add_worker_shutdown(server_sd_sender, handle)
 }
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
