@@ -18,7 +18,7 @@ use crate::{
 
 use bee_common::shutdown::Shutdown;
 use bee_crypto::ternary::Hash;
-use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
+use bee_ledger::{LedgerStateWorker, LedgerStateWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
@@ -119,7 +119,7 @@ impl NodeBuilder {
         let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
 
         info!("Starting ledger...");
-        spawn(LedgerWorker::new(snapshot_state.into_balances()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
+        spawn(LedgerStateWorker::new(snapshot_state.into_balances()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
 
         block_on(Protocol::init(
             self.config.protocol.clone(),
@@ -148,7 +148,7 @@ pub struct Node {
     events: Fuse<EventSubscriber>,
     shutdown: Shutdown,
     // TODO design proper type `Ledger`
-    ledger: (mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>),
+    ledger: (mpsc::Sender<LedgerStateWorkerEvent>, oneshot::Sender<()>),
     // TODO design proper type `PeerList`
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }
