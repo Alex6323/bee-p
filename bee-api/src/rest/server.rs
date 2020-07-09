@@ -20,8 +20,9 @@ use warp::{Filter, Rejection};
 use crate::{api::Api, config::ApiConfig};
 use bee_common_ext::{shutdown::Shutdown, worker::Error as WorkerError};
 use std::io::{Error, ErrorKind};
+use tokio::runtime::Runtime;
 
-pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
+pub fn run(config: ApiConfig, shutdown: &mut Shutdown, runtime: &Runtime) {
     let node_info = warp::get()
         .and(warp::path("v1"))
         .and(warp::path("node-info"))
@@ -58,12 +59,11 @@ pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
         .with(warp::cors().allow_any_origin());
 
     let (server_sd_sender, server_sd_receiver) = oneshot::channel::<()>();
-
     let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.rest_socket_addr(), async {
         server_sd_receiver.await.ok();
     });
 
-    let handle = tokio::spawn(server).map(|result| match result {
+    let handle = runtime.spawn(server).map(|result| match result {
         Ok(_) => Ok(()),
         Err(_) => Err(WorkerError::AsynchronousOperationFailed(Error::new(
             ErrorKind::Other,

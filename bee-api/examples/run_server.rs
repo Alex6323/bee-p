@@ -18,9 +18,9 @@ use bee_protocol::tangle::{tangle, TransactionMetadata};
 use bee_transaction::bundled::{BundledTransaction, BundledTransactionField};
 
 use std::time::Duration;
+use std::thread;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     bee_protocol::tangle::init();
 
     let tx = BundledTransaction::from_trits(&TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len())).unwrap();
@@ -36,14 +36,16 @@ async fn main() {
     assert_eq!(tangle().contains(&tx_hash), true);
 
     let mut shutdown = Shutdown::new();
-    rest::server::run(ApiConfigBuilder::new().finish(), &mut shutdown);
+    let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime");
+    rest::server::run(ApiConfigBuilder::new().finish(), &mut shutdown, &rt);
 
-    let seconds = 10;
+    let seconds = 60;
     println!("Shutdown API in {} seconds...", seconds);
-    tokio::time::delay_for(Duration::from_secs(seconds)).await;
+    thread::sleep(Duration::from_secs(seconds));
 
-    match shutdown.execute().await {
+    match rt.block_on(shutdown.execute()) {
         Ok(_) => println!("Shutdown was successful!"),
         Err(_err) => println!("Shutdown was not successful!"),
     }
+
 }
