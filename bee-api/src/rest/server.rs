@@ -11,14 +11,13 @@
 
 use crate::rest::routes;
 
+use async_std::task::spawn;
+use bee_common::shutdown::Shutdown;
 use futures::channel::oneshot;
-use futures_util::FutureExt;
 use serde::de::DeserializeOwned;
-
 use warp::{Filter, Rejection};
 
 use crate::{api::Api, config::ApiConfig};
-use bee_common::{shutdown::Shutdown};
 
 pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
     let node_info = warp::get()
@@ -61,8 +60,7 @@ pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
         server_sd_receiver.await.ok();
     });
 
-    let task= smol::Task::spawn(server).map(|_| Ok(()));
-    shutdown.add_worker_shutdown(server_sd_sender, task)
+    shutdown.add_worker_shutdown(server_sd_sender, spawn(async { Ok(server.await) }));
 }
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {

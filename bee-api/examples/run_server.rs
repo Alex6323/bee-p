@@ -17,10 +17,10 @@ use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::{tangle, TransactionMetadata};
 use bee_transaction::bundled::{BundledTransaction, BundledTransactionField};
 
-use std::time::Duration;
-use std::thread;
+use std::{thread, time::Duration};
 
-fn main() {
+#[async_std::main]
+async fn main() {
     bee_protocol::tangle::init();
 
     let tx = BundledTransaction::from_trits(&TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len())).unwrap();
@@ -42,9 +42,8 @@ fn main() {
     println!("Shutdown API in {} seconds...", seconds);
     thread::sleep(Duration::from_secs(seconds));
 
-    match smol::block_on(shutdown.execute()) {
+    match async_std::task::block_on(shutdown.execute()) {
         Ok(_) => println!("Shutdown was successful!"),
         Err(_err) => println!("Shutdown was not successful!"),
     }
-
 }
