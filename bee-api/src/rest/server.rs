@@ -18,7 +18,7 @@ use serde::de::DeserializeOwned;
 use warp::{Filter, Rejection};
 
 use crate::{api::Api, config::ApiConfig};
-use bee_common_ext::{shutdown::Shutdown, worker::Error as WorkerError};
+use bee_common::{shutdown::Shutdown, worker::Error as WorkerError};
 use std::io::{Error, ErrorKind};
 
 pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
