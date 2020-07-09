@@ -12,7 +12,7 @@
 use bee_api::{config::ApiConfigBuilder, rest};
 use bee_ternary::{T1B1Buf, TritBuf, TryteBuf};
 
-use bee_common_ext::shutdown::Shutdown;
+use bee_common::shutdown::Shutdown;
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::{tangle, TransactionMetadata};
 use bee_transaction::bundled::{BundledTransaction, BundledTransactionField};

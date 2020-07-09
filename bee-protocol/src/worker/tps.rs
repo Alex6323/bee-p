@@ -11,7 +11,7 @@
 
 use crate::protocol::Protocol;
 
-use bee_common_ext::worker::Error as WorkerError;
+use bee_common::worker::Error as WorkerError;
 
 use async_std::{future::ready, prelude::*};
 use futures::channel::oneshot::Receiver;
