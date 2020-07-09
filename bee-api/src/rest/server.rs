@@ -18,11 +18,9 @@ use serde::de::DeserializeOwned;
 use warp::{Filter, Rejection};
 
 use crate::{api::Api, config::ApiConfig};
-use bee_common::{shutdown::Shutdown, worker::Error as WorkerError};
-use std::io::{Error, ErrorKind};
-use tokio::runtime::Runtime;
+use bee_common::{shutdown::Shutdown};
 
-pub fn run(config: ApiConfig, shutdown: &mut Shutdown, runtime: &Runtime) {
+pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
     let node_info = warp::get()
         .and(warp::path("v1"))
         .and(warp::path("node-info"))
@@ -63,15 +61,8 @@ pub fn run(config: ApiConfig, shutdown: &mut Shutdown, runtime: &Runtime) {
         server_sd_receiver.await.ok();
     });
 
-    let handle = runtime.spawn(server).map(|result| match result {
-        Ok(_) => Ok(()),
-        Err(_) => Err(WorkerError::AsynchronousOperationFailed(Error::new(
-            ErrorKind::Other,
-            "asynchronous operation failed",
-        ))),
-    });
-
-    shutdown.add_worker_shutdown(server_sd_sender, handle)
+    let task= smol::Task::spawn(server).map(|_| Ok(()));
+    shutdown.add_worker_shutdown(server_sd_sender, task)
 }
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {

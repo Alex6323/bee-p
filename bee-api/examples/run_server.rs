@@ -36,14 +36,13 @@ fn main() {
     assert_eq!(tangle().contains(&tx_hash), true);
 
     let mut shutdown = Shutdown::new();
-    let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime");
-    rest::server::run(ApiConfigBuilder::new().finish(), &mut shutdown, &rt);
+    rest::server::run(ApiConfigBuilder::new().finish(), &mut shutdown);
 
     let seconds = 60;
     println!("Shutdown API in {} seconds...", seconds);
     thread::sleep(Duration::from_secs(seconds));
 
-    match rt.block_on(shutdown.execute()) {
+    match smol::block_on(shutdown.execute()) {
         Ok(_) => println!("Shutdown was successful!"),
         Err(_err) => println!("Shutdown was not successful!"),
     }
