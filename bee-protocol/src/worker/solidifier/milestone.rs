@@ -94,10 +94,10 @@ impl MilestoneSolidifierWorker {
     async fn solidify_milestone(&self) {
         let target_index = tangle().get_solid_milestone_index() + MilestoneIndex(1);
 
-        if let Some(target_hash) = tangle().get_milestone_hash(target_index.into()) {
+        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
             if tangle().is_solid_transaction(&target_hash) {
                 // TODO set confirmation index + trigger ledger
-                tangle().update_solid_milestone_index(target_index.into());
+                tangle().update_solid_milestone_index(target_index);
                 Protocol::broadcast_heartbeat(
                     tangle().get_solid_milestone_index(),
                     tangle().get_snapshot_milestone_index(),
