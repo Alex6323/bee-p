@@ -24,7 +24,8 @@ use crate::{
     },
 };
 
-use bee_common_ext::{shutdown::Shutdown, wait_priority_queue::WaitPriorityQueue};
+use bee_common::shutdown::Shutdown;
+use bee_common_ext::wait_priority_queue::WaitPriorityQueue;
 use bee_crypto::ternary::{CurlP27, CurlP81, Hash, Kerl, SpongeType};
 use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::ternary::WotsPublicKey;

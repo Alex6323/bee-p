@@ -16,9 +16,8 @@ use crate::{
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
 };
 
-use bee_common_ext::shutdown::Shutdown;
+use bee_common::shutdown::Shutdown;
 use bee_crypto::ternary::Hash;
-use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
@@ -47,7 +46,7 @@ pub enum Error {
 
     /// Occurs, when there is an error while shutting down the node.
     #[error("Shutting down failed.")]
-    ShutdownError(#[from] bee_common_ext::shutdown::Error),
+    ShutdownError(#[from] bee_common::shutdown::Error),
 }
 
 pub struct NodeBuilder {
@@ -114,12 +113,8 @@ impl NodeBuilder {
             }
         };
 
-        // TODO config
-        let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
-        let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
-
-        info!("Starting ledger...");
-        spawn(LedgerWorker::new(snapshot_state.into_balances()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
+        info!("Initializing ledger...");
+        bee_ledger::init(snapshot_state.into_balances(), &mut shutdown);
 
         block_on(Protocol::init(
             self.config.protocol.clone(),
@@ -134,7 +129,6 @@ impl NodeBuilder {
             network,
             events: events.fuse(),
             shutdown,
-            ledger: (ledger_worker_tx, ledger_worker_shutdown_tx),
             peers: HashMap::new(),
         })
     }
@@ -147,8 +141,6 @@ pub struct Node {
     network: Network,
     events: Fuse<EventSubscriber>,
     shutdown: Shutdown,
-    // TODO design proper type `Ledger`
-    ledger: (mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>),
     // TODO design proper type `PeerList`
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }

@@ -14,7 +14,7 @@ use crate::{
     protocol::Protocol,
 };
 
-use bee_common_ext::worker::Error as WorkerError;
+use bee_common::worker::Error as WorkerError;
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use futures::{
