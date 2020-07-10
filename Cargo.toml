@@ -3,6 +3,7 @@ members = [
 	"bee-api",
 	"bee-common-ext",
 	"bee-crypto",
+	"bee-event",
 	"bee-ledger",
 	"bee-network",
 	"bee-node",
