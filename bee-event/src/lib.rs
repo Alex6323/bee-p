@@ -1,5 +1,5 @@
-#![feature(test)]
-extern crate test;
+// #![feature(test)]
+// extern crate test;
 
 use internment::Intern;
 use dashmap::DashMap;
@@ -60,7 +60,7 @@ impl<'a> Bus<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::{Bencher, black_box};
+    // use test::{Bencher, black_box};
 
     struct Foo;
     impl Event for Foo { fn name() -> &'static str { "foo" } }
@@ -77,14 +77,14 @@ mod tests {
         bus.dispatch(Foo);
     }
 
-    #[bench]
-    fn bench_add_two(b: &mut Bencher) {
-        let bus = Bus::default();
+    // #[bench]
+    // fn bench_add_two(b: &mut Bencher) {
+    //     let bus = Bus::default();
 
-        bus.add_listener(|e: &Foo| { black_box(e); });
+    //     bus.add_listener(|e: &Foo| { black_box(e); });
 
-        b.iter(|| {
-            bus.dispatch(Foo);
-        });
-    }
+    //     b.iter(|| {
+    //         bus.dispatch(Foo);
+    //     });
+    // }
 }
