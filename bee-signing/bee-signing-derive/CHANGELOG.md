@@ -19,18 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security -->
 
-## Unreleased - YYYY-MM-DD
+## 0.1.0-alpha - 2020-07-10
 
 ### Added
 
-- `SecretDebug` and `SecretDisplay`;
-
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
+- `SecretDebug` and `SecretDisplay` derive macros;
