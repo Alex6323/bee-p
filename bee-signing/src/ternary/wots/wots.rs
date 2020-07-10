@@ -11,8 +11,8 @@
 
 use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 
+use bee_common_derive::{SecretDebug, SecretDisplay};
 use bee_crypto::ternary::Sponge;
-use bee_signing_derive::{SecretDebug, SecretDisplay};
 use bee_ternary::{TritBuf, Trits};
 
 use zeroize::Zeroize;
