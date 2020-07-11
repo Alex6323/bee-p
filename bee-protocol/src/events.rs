@@ -9,16 +9,22 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod events;
-pub mod tangle;
+use crate::milestone::Milestone;
 
-mod config;
-mod message;
-mod milestone;
-mod peer;
-mod protocol;
-mod worker;
+use std::any::Any;
 
-pub use config::{ProtocolConfig, ProtocolConfigBuilder};
-pub use milestone::{Milestone, MilestoneIndex};
-pub use protocol::{Protocol, ProtocolMetrics};
+pub trait Event: Any + Clone {
+    const NAME: &'static str;
+}
+
+#[derive(Clone)]
+pub struct NewMilestone(Milestone);
+impl Event for NewMilestone {
+    const NAME: &'static str = "new_milestone";
+}
+
+#[derive(Clone)]
+pub struct SolidMilestone(Milestone);
+impl Event for SolidMilestone {
+    const NAME: &'static str = "solid_milestone";
+}

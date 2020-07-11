@@ -84,6 +84,12 @@ impl MsTangle {
                 if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
                     self.inner.update_metadata(&hash, |metadata| {
                         metadata.flags.set_solid();
+                        // This is possibly not sufficient as there is no guarantee a milestone has been validated
+                        // before being solidified, we then also need to check when a milestone gets validated if it's
+                        // already solid.
+                        if metadata.flags.is_milestone() {
+                            // TODO trigger new solid MS event
+                        }
                         metadata.solidification_timestamp = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
                             .expect("Clock may have gone backwards")

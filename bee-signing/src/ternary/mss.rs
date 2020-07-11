@@ -12,7 +12,7 @@
 use crate::ternary::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature};
 
 use bee_crypto::ternary::Sponge;
-use bee_signing_derive::{SecretDebug, SecretDisplay};
+use bee_common_derive::{SecretDebug, SecretDisplay};
 use bee_ternary::{TritBuf, Trits};
 
 use zeroize::Zeroize;

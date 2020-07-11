@@ -95,6 +95,15 @@ where
                 // TODO check multiple triggers
                 tangle().add_milestone(milestone.index.into(), milestone.hash);
 
+                // This is possibly not sufficient as there is no guarantee a milestone has been solidified
+                // before being validated, we then also need to check when a milestone gets solidified if it's
+                // already vadidated.
+                if let Some(meta) = tangle().get_metadata(&milestone.hash) {
+                    if meta.flags.is_solid() {
+                        // TODO trigger new solid MS event
+                    }
+                }
+
                 // TODO deref ? Why not .into() ?
                 if milestone.index > tangle().get_last_milestone_index() {
                     info!("New milestone #{}.", *milestone.index);

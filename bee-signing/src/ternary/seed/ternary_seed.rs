@@ -11,8 +11,8 @@
 
 use crate::ternary::Seed;
 
+use bee_common_derive::{SecretDebug, SecretDisplay};
 use bee_crypto::ternary::Sponge;
-use bee_signing_derive::{SecretDebug, SecretDisplay};
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
