@@ -57,6 +57,7 @@ impl OverflowingAddExt for u32 {
         (sum, first_overflow | second_overflow)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::SplitInteger;

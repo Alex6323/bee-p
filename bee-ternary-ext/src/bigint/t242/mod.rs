@@ -18,21 +18,23 @@
 //! Analogous to fanning out a `u64` into 64 individual bits, `t243` is fanned out into
 //! 243 trits, each (rather inefficiently) represented by one `u8`.
 
-use crate::bigint::{
-    common::{BigEndian, Error, LittleEndian, U32Repr, U8Repr},
-    u384, I384, T243, U384,
-};
-use bee_ternary::{raw::RawEncoding, Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Trits, Utrit};
-use std::{
-    cmp::Ordering,
-    convert::{TryFrom, TryInto},
-};
-
 mod constants;
 
 pub use constants::{
     BTRIT_MAX, BTRIT_MIN, BTRIT_NEG_ONE, BTRIT_ONE, BTRIT_ZERO, UTRIT_ONE, UTRIT_TWO, UTRIT_U384_MAX,
     UTRIT_U384_MAX_HALF, UTRIT_ZERO,
+};
+
+use crate::bigint::{
+    common::{BigEndian, Error, LittleEndian, U32Repr, U8Repr},
+    u384, I384, T243, U384,
+};
+
+use bee_ternary::{raw::RawEncoding, Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Trits, Utrit};
+
+use std::{
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
 };
 
 def_and_impl_ternary!(T242, 242);

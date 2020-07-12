@@ -9,13 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use lazy_static::lazy_static;
-
 use crate::bigint::{
     common::{LittleEndian, U32Repr},
     T242, U384,
 };
+
 use bee_ternary::{Btrit, Utrit};
+
+use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref BTRIT_ZERO: T242<Btrit> = T242::<Btrit>::zero();

@@ -9,14 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary::Btrit;
-use byteorder::{self, ByteOrder};
+mod constants;
 
-use std::{
-    cmp::Ordering,
-    convert::{TryFrom, TryInto},
-    fmt,
-    marker::PhantomData,
+pub use constants::{
+    BE_U32_0, BE_U32_1, BE_U32_2, BE_U32_MAX, BE_U32_MIN, BE_U32_NEG_1, BE_U32_NEG_2, BE_U8_0, BE_U8_1, BE_U8_2,
+    BE_U8_MAX, BE_U8_MIN, BE_U8_NEG_1, BE_U8_NEG_2, LE_U32_0, LE_U32_1, LE_U32_2, LE_U32_MAX, LE_U32_MIN, LE_U32_NEG_1,
+    LE_U32_NEG_2, LE_U8_0, LE_U8_1, LE_U8_2, LE_U8_MAX, LE_U8_MIN, LE_U8_NEG_1, LE_U8_NEG_2,
 };
 
 use crate::bigint::{
@@ -29,11 +27,15 @@ use crate::bigint::{
     T242, T243, U384,
 };
 
-mod constants;
-pub use constants::{
-    BE_U32_0, BE_U32_1, BE_U32_2, BE_U32_MAX, BE_U32_MIN, BE_U32_NEG_1, BE_U32_NEG_2, BE_U8_0, BE_U8_1, BE_U8_2,
-    BE_U8_MAX, BE_U8_MIN, BE_U8_NEG_1, BE_U8_NEG_2, LE_U32_0, LE_U32_1, LE_U32_2, LE_U32_MAX, LE_U32_MIN, LE_U32_NEG_1,
-    LE_U32_NEG_2, LE_U8_0, LE_U8_1, LE_U8_2, LE_U8_MAX, LE_U8_MIN, LE_U8_NEG_1, LE_U8_NEG_2,
+use bee_ternary::Btrit;
+
+use byteorder::{self, ByteOrder};
+
+use std::{
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
+    fmt,
+    marker::PhantomData,
 };
 
 /// A biginteger encoding a signed integer with 384 bits.

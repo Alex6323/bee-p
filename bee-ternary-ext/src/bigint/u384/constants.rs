@@ -9,16 +9,18 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use lazy_static::lazy_static;
-use std::convert::TryFrom;
-
 use crate::bigint::{
     common::{BigEndian, LittleEndian, U32Repr, U8Repr},
     T242, T243,
 };
-use bee_ternary::Utrit;
 
 use super::U384;
+
+use bee_ternary::Utrit;
+
+use lazy_static::lazy_static;
+
+use std::convert::TryFrom;
 
 lazy_static! {
     pub static ref BE_U32_HALF_MAX: U384<BigEndian, U32Repr> = (*LE_U32_HALF_MAX).into();
