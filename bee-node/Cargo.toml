@@ -15,7 +15,7 @@ bee-broker = { path = "../bee-broker" }
 bee-common = { git = "https://github.com/iotaledger/bee.git" }
 bee-common-ext = { path = "../bee-common-ext" }
 bee-crypto = { path = "../bee-crypto" }
-bee-event = { path = "../bee-event" }
+bee-event = { path = "../bee-event/bee-event" }
 bee-ledger = { path = "../bee-ledger" }
 bee-network = { path = "../bee-network" }
 bee-peering = { path = "../bee-peering" }

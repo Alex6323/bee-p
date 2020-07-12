@@ -11,7 +11,7 @@ keywords = ["iota", "tangle", "bee", "framework", "broker"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-event = { path = "../bee-event" }
+bee-event = { path = "../bee-event/bee-event" }
 bee-protocol = { path = "../bee-protocol" }
 
 zmq = "0.9.2"
