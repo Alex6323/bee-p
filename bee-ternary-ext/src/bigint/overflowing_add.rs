@@ -9,24 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-#[cfg(test)]
-#[macro_use]
-mod test_macros;
+pub(crate) trait OverflowingAdd<Rhs = Self> {
+    type Output;
 
-#[macro_use]
-mod macros;
+    fn overflowing_add_with_carry(self, other: Rhs, carry: Rhs) -> (Self::Output, bool);
+}
 
-mod private;
+impl OverflowingAdd for u32 {
+    type Output = Self;
 
-pub mod common;
-pub mod i384;
-pub mod overflowing_add;
-pub mod split_integer;
-pub mod t242;
-pub mod t243;
-pub mod u384;
+    fn overflowing_add_with_carry(self, other: u32, carry: u32) -> (Self::Output, bool) {
+        let (sum, first_overflow) = self.overflowing_add(other);
+        let (sum, second_overflow) = sum.overflowing_add(carry);
 
-pub use i384::I384;
-pub use t242::T242;
-pub use t243::T243;
-pub use u384::U384;
+        (sum, first_overflow | second_overflow)
+    }
+}

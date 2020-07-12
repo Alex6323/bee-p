@@ -19,9 +19,9 @@ pub use constants::{
 
 use crate::bigint::{
     common::{BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr},
-    t243,
-    utils::{OverflowingAddExt, SplitInteger},
-    I384, T242, T243,
+    overflowing_add::OverflowingAdd,
+    split_integer::SplitInteger,
+    t243, I384, T242, T243,
 };
 
 use bee_ternary::Utrit;

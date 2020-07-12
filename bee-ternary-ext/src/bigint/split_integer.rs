@@ -12,6 +12,7 @@
 pub(crate) trait SplitInteger: Copy {
     type High;
     type Low;
+
     fn hi(self) -> Self::High;
     fn lo(self) -> Self::Low;
 }
@@ -39,22 +40,6 @@ impl SplitInteger for u64 {
 
     fn lo(self) -> Self::Low {
         self as u32
-    }
-}
-
-pub(crate) trait OverflowingAddExt<Rhs = Self> {
-    type Output;
-    fn overflowing_add_with_carry(self, other: Rhs, carry: Rhs) -> (Self::Output, bool);
-}
-
-impl OverflowingAddExt for u32 {
-    type Output = Self;
-
-    fn overflowing_add_with_carry(self, other: u32, carry: u32) -> (Self::Output, bool) {
-        let (sum, first_overflow) = self.overflowing_add(other);
-        let (sum, second_overflow) = sum.overflowing_add(carry);
-
-        (sum, first_overflow | second_overflow)
     }
 }
 

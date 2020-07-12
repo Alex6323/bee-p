@@ -22,9 +22,8 @@ use crate::bigint::{
         BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr, BINARY_LEN_IN_U32 as LEN_IN_U32,
         BINARY_LEN_IN_U8 as LEN_IN_U8,
     },
-    u384,
-    utils::OverflowingAddExt,
-    T242, T243, U384,
+    overflowing_add::OverflowingAdd,
+    u384, T242, T243, U384,
 };
 
 use bee_ternary::Btrit;
