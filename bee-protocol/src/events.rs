@@ -9,22 +9,32 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::milestone::Milestone;
+use crate::Milestone;
 
-use std::any::Any;
+use bee_event::Event;
 
-pub trait Event: Any + Clone {
-    const NAME: &'static str;
+pub struct LatestMilestone {
+    previous: Milestone,
+    current: Milestone,
+}
+impl Event for LatestMilestone {
+    fn name() -> &'static str
+    where
+        Self: Sized,
+    {
+        "latest_milestone"
+    }
 }
 
-#[derive(Clone)]
-pub struct NewMilestone(Milestone);
-impl Event for NewMilestone {
-    const NAME: &'static str = "new_milestone";
+pub struct LatestSolidMilestone {
+    previous: Milestone,
+    current: Milestone,
 }
-
-#[derive(Clone)]
-pub struct SolidMilestone(Milestone);
-impl Event for SolidMilestone {
-    const NAME: &'static str = "solid_milestone";
+impl Event for LatestSolidMilestone {
+    fn name() -> &'static str
+    where
+        Self: Sized,
+    {
+        "latest_solid_milestone"
+    }
 }

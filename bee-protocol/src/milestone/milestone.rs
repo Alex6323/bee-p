@@ -39,7 +39,6 @@ impl Add for MilestoneIndex {
     }
 }
 
-#[derive(Copy, Clone)]
 pub struct Milestone {
     pub(crate) hash: Hash,
     pub(crate) index: MilestoneIndex,

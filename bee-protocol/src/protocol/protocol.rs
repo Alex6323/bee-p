@@ -27,6 +27,7 @@ use crate::{
 use bee_common::shutdown::Shutdown;
 use bee_common_ext::wait_priority_queue::WaitPriorityQueue;
 use bee_crypto::ternary::{CurlP27, CurlP81, Hash, Kerl, SpongeType};
+use bee_event::Bus;
 use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::ternary::WotsPublicKey;
 
@@ -57,7 +58,7 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub async fn init(config: ProtocolConfig, network: Network, shutdown: &mut Shutdown) {
+    pub async fn init(config: ProtocolConfig, network: Network, bus: Arc<Bus<'_>>, shutdown: &mut Shutdown) {
         if unsafe { !PROTOCOL.is_null() } {
             warn!("Already initialized.");
             return;
