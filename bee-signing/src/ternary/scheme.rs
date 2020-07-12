@@ -145,21 +145,19 @@ pub trait PublicKey {
 
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error>;
 
-    fn from_buf(buf: TritBuf) -> Self;
+    fn size(&self) -> usize;
 
-    fn as_bytes(&self) -> &[i8];
+    fn from_trits(buf: TritBuf) -> Self;
 
-    fn trits(&self) -> &Trits;
+    fn to_trits(&self) -> &Trits;
 }
 
 pub trait Signature {
     fn size(&self) -> usize;
 
-    fn from_buf(buf: TritBuf) -> Self;
+    fn from_trits(buf: TritBuf) -> Self;
 
-    fn as_bytes(&self) -> &[i8];
-
-    fn trits(&self) -> &Trits;
+    fn to_trits(&self) -> &Trits;
 }
 
 pub trait RecoverableSignature: Signature {

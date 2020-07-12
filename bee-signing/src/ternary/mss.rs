@@ -11,8 +11,8 @@
 
 use crate::ternary::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature};
 
-use bee_crypto::ternary::Sponge;
 use bee_common_derive::{SecretDebug, SecretDisplay};
+use bee_crypto::ternary::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
 use zeroize::Zeroize;
@@ -120,7 +120,7 @@ where
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
             keys.push(ots_private_key);
-            tree[tree_index * 243..(tree_index + 1) * 243].copy_from(ots_public_key.trits());
+            tree[tree_index * 243..(tree_index + 1) * 243].copy_from(ots_public_key.to_trits());
         }
 
         for depth in (0..self.depth - 1).rev() {
@@ -188,7 +188,7 @@ where
 
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         // TODO return or generate ?
-        Ok(Self::PublicKey::from_buf(self.tree[0..243].to_buf()).depth(self.depth))
+        Ok(Self::PublicKey::from_trits(self.tree[0..243].to_buf()).depth(self.depth))
     }
 
     fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
@@ -203,7 +203,7 @@ where
         let mut i = 0;
 
         // TODO PAD TO 6561
-        state[0..ots_signature.size()].copy_from(ots_signature.trits());
+        state[0..ots_signature.size()].copy_from(ots_signature.to_trits());
 
         while tree_index != 0 {
             if tree_index % 2 != 0 {
@@ -221,7 +221,7 @@ where
 
         self.index += 1;
 
-        Ok(Self::Signature::from_buf(state).index(self.index - 1))
+        Ok(Self::Signature::from_trits(state).index(self.index - 1))
     }
 }
 
@@ -255,14 +255,14 @@ where
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
         let mut sponge = S::default();
         let ots_signature =
-            K::Signature::from_buf(signature.state[0..((signature.state.len() / 6561) - 1) * 6561].to_buf());
+            K::Signature::from_trits(signature.state[0..((signature.state.len() / 6561) - 1) * 6561].to_buf());
         let siblings: TritBuf = signature.state.chunks(6561).last().unwrap().to_buf();
         let ots_public_key = ots_signature
             .recover_public_key(message)
             .map_err(|_| Self::Error::FailedUnderlyingPublicKeyRecovery)?;
         let mut hash: TritBuf = TritBuf::zeros(243);
 
-        hash.copy_from(ots_public_key.trits());
+        hash.copy_from(ots_public_key.to_trits());
 
         let mut j = 1;
         for (i, sibling) in siblings.chunks(243).enumerate() {
@@ -290,7 +290,11 @@ where
         Ok(hash == self.state)
     }
 
-    fn from_buf(state: TritBuf) -> Self {
+    fn size(&self) -> usize {
+        self.state.len()
+    }
+
+    fn from_trits(state: TritBuf) -> Self {
         Self {
             state,
             // TODO OPTION
@@ -300,11 +304,7 @@ where
         }
     }
 
-    fn as_bytes(&self) -> &[i8] {
-        &self.state.as_i8_slice()
-    }
-
-    fn trits(&self) -> &Trits {
+    fn to_trits(&self) -> &Trits {
         &self.state
     }
 }
@@ -328,7 +328,7 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
         self.state.len()
     }
 
-    fn from_buf(state: TritBuf) -> Self {
+    fn from_trits(state: TritBuf) -> Self {
         Self {
             state,
             // TODO OPTION
@@ -337,11 +337,7 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
         }
     }
 
-    fn as_bytes(&self) -> &[i8] {
-        self.state.as_i8_slice()
-    }
-
-    fn trits(&self) -> &Trits {
+    fn to_trits(&self) -> &Trits {
         &self.state
     }
 }

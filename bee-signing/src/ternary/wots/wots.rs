@@ -155,25 +155,25 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
         Ok(signature.recover_public_key(message)?.state == self.state)
     }
 
-    fn from_buf(state: TritBuf) -> Self {
+    fn size(&self) -> usize {
+        self.state.len()
+    }
+
+    fn from_trits(state: TritBuf) -> Self {
         Self {
             state,
             _sponge: PhantomData,
         }
     }
 
-    fn as_bytes(&self) -> &[i8] {
-        self.state.as_i8_slice()
-    }
-
-    fn trits(&self) -> &Trits {
+    fn to_trits(&self) -> &Trits {
         &self.state
     }
 }
 
 impl<S: Sponge + Default> Display for WotsPublicKey<S> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", trits_to_string(self.trits()))
+        write!(f, "{}", trits_to_string(self.to_trits()))
     }
 }
 
@@ -187,18 +187,14 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
         self.state.len()
     }
 
-    fn from_buf(state: TritBuf) -> Self {
+    fn from_trits(state: TritBuf) -> Self {
         Self {
             state,
             _sponge: PhantomData,
         }
     }
 
-    fn as_bytes(&self) -> &[i8] {
-        self.state.as_i8_slice()
-    }
-
-    fn trits(&self) -> &Trits {
+    fn to_trits(&self) -> &Trits {
         &self.state
     }
 }
@@ -244,7 +240,7 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
 impl<S: Sponge + Default> Display for WotsSignature<S> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", trits_to_string(self.trits()))
+        write!(f, "{}", trits_to_string(self.to_trits()))
     }
 }
 

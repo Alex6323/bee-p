@@ -99,9 +99,9 @@ where
         // Safe to unwrap `transactions.get(0)` since we're sure it's not empty
         // Safe to unwrap `self.depth` since we're sure it's not None
         let public_key: MssPublicKey<M, P> =
-            MssPublicKey::<M, P>::from_buf(self.transactions.get(0).unwrap().address().to_inner().to_buf())
+            MssPublicKey::<M, P>::from_trits(self.transactions.get(0).unwrap().address().to_inner().to_buf())
                 .depth(self.depth.unwrap());
-        let signature: MssSignature<M> = MssSignature::<M>::from_buf(signature_buf).index(*self.index as u64);
+        let signature: MssSignature<M> = MssSignature::<M>::from_trits(signature_buf).index(*self.index as u64);
         let hash = self
             .transactions
             .get(self.transactions.len() - 2)
