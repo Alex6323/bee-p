@@ -5,6 +5,7 @@ members = [
 	"bee-common-ext",
 	"bee-crypto",
 	"bee-event/bee-event",
+	"bee-event/bee-event-derive",
 	"bee-ledger",
 	"bee-network",
 	"bee-node",

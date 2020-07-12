@@ -11,30 +11,18 @@
 
 use crate::Milestone;
 
-use bee_event::Event;
+use bee_event_derive::Event;
 
+#[derive(Event)]
+#[name = "latest_milestone"]
 pub struct LatestMilestone {
     previous: Milestone,
     current: Milestone,
 }
-impl Event for LatestMilestone {
-    fn name() -> &'static str
-    where
-        Self: Sized,
-    {
-        "latest_milestone"
-    }
-}
 
+#[derive(Event)]
+#[name = "latest_solid_milestone"]
 pub struct LatestSolidMilestone {
     previous: Milestone,
     current: Milestone,
-}
-impl Event for LatestSolidMilestone {
-    fn name() -> &'static str
-    where
-        Self: Sized,
-    {
-        "latest_solid_milestone"
-    }
 }

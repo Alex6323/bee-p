@@ -14,5 +14,7 @@ homepage = "https://www.iota.org"
 proc-macro = true
 
 [dependencies]
+bee-event = { path = "../bee-event" }
+
 quote = "1.0.7"
 syn = "1.0.33"
