@@ -76,8 +76,8 @@ mod tests {
             .as_trits()
             .encode::<T1B1Buf>();
 
-        let public_key = MssPublicKey::<S, WotsPublicKey<S>>::from_buf(public_key_trits).depth(depth);
-        let signature = MssSignature::<S>::from_buf(signature_trits).index(index);
+        let public_key = MssPublicKey::<S, WotsPublicKey<S>>::from_trits(public_key_trits).depth(depth);
+        let signature = MssSignature::<S>::from_trits(signature_trits).index(index);
         let valid = public_key.verify(message_trits.as_i8_slice(), &signature).unwrap();
 
         assert!(valid);
