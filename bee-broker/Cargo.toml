@@ -11,3 +11,4 @@ keywords = ["iota", "tangle", "bee", "framework", "broker"]
 homepage = "https://www.iota.org"
 
 [dependencies]
+zmq = "0.9.2"
