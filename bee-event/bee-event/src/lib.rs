@@ -1,14 +1,30 @@
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
+
 // #![feature(test)]
 // extern crate test;
 
-use internment::Intern;
 use dashmap::DashMap;
-use std::{cell::Cell, any::Any, sync::Arc};
+use internment::Intern;
+use std::{any::Any, cell::Cell, sync::Arc};
 
 pub trait Event: Any {
-    fn name() -> &'static str where Self: Sized;
+    fn name() -> &'static str
+    where
+        Self: Sized;
 
-    fn get_interned() -> Intern<String> where Self: Sized {
+    fn get_interned() -> Intern<String>
+    where
+        Self: Sized,
+    {
         thread_local! {
             pub static INTERNED_NAME: Cell<Option<Intern<String>>> = Cell::new(None);
         }
@@ -19,7 +35,7 @@ pub trait Event: Any {
                 let intern = Intern::new(Self::name().to_string());
                 name.set(Some(intern));
                 intern
-            },
+            }
         })
     }
 }
@@ -37,22 +53,15 @@ impl<'a> Bus<'a> {
         let inner_event = InnerEvent(Arc::new(event));
         self.listeners
             .get_mut(&E::get_interned())
-            .map(|mut ls| ls
-                .iter_mut()
-                .for_each(|l| l(inner_event.clone())));
+            .map(|mut ls| ls.iter_mut().for_each(|l| l(inner_event.clone())));
     }
 
-    pub fn add_listener<E: Event>(
-        &self,
-        mut handler: impl FnMut(&E) + Send + Sync + 'a,
-    ) {
+    pub fn add_listener<E: Event>(&self, mut handler: impl FnMut(&E) + Send + Sync + 'a) {
         self.listeners
             .entry(E::get_interned())
             .or_default()
             .push(Box::new(move |inner_event| {
-                handler(&inner_event.0
-                    .downcast_ref()
-                    .expect("Invalid event"))
+                handler(&inner_event.0.downcast_ref().expect("Invalid event"))
             }));
     }
 }
@@ -63,10 +72,18 @@ mod tests {
     // use test::{Bencher, black_box};
 
     struct Foo;
-    impl Event for Foo { fn name() -> &'static str { "foo" } }
+    impl Event for Foo {
+        fn name() -> &'static str {
+            "foo"
+        }
+    }
 
     struct Bar;
-    impl Event for Bar { fn name() -> &'static str { "bar" } }
+    impl Event for Bar {
+        fn name() -> &'static str {
+            "bar"
+        }
+    }
 
     #[test]
     fn basic() {
