@@ -26,7 +26,8 @@ pub use constants::{
 };
 
 use crate::bigint::{
-    common::{BigEndian, Error, LittleEndian, U32Repr, U8Repr},
+    common::{BigEndian, LittleEndian, U32Repr, U8Repr},
+    error::Error,
     u384, I384, T243, U384,
 };
 

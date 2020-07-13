@@ -11,11 +11,11 @@
 
 use crate::bigint::private;
 
-/// The number of bits in an I384
+/// The number of bits in an I384.
 pub const BINARY_LEN: usize = 384;
-
-/// The number of bytes in an I384
+/// The number of u8s in an I384.
 pub const BINARY_LEN_IN_U8: usize = BINARY_LEN / 8;
+/// The number of u32s in an I384.
 pub const BINARY_LEN_IN_U32: usize = BINARY_LEN / 32;
 
 /// The inner representation of a I384 using 48 u8s.
@@ -57,10 +57,4 @@ impl BinaryRepresentation for U32Repr {
     fn iter(&self) -> std::slice::Iter<'_, Self::T> {
         (self as &[u32]).iter()
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum Error {
-    BinaryExceedsTernaryRange,
-    TernaryExceedsBinaryRange,
 }

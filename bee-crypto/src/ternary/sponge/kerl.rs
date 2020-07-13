@@ -48,11 +48,11 @@ impl Default for Kerl {
 #[derive(Debug)]
 pub enum Error {
     NotMultipleOfHashLength,
-    TernaryBinaryConversion(bee_ternary_ext::bigint::common::Error),
+    TernaryBinaryConversion(bee_ternary_ext::bigint::error::Error),
 }
 
-impl From<bee_ternary_ext::bigint::common::Error> for Error {
-    fn from(error: bee_ternary_ext::bigint::common::Error) -> Self {
+impl From<bee_ternary_ext::bigint::error::Error> for Error {
+    fn from(error: bee_ternary_ext::bigint::error::Error) -> Self {
         Error::TernaryBinaryConversion(error)
     }
 }
