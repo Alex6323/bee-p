@@ -9,15 +9,22 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::bigint::private::Sealed;
+//! Endianness markers for big integers.
 
-#[derive(Clone, Copy, Debug)]
-pub struct BigEndian {}
-
-#[derive(Clone, Copy, Debug)]
-pub struct LittleEndian {}
+use crate::bigint::sealed::Sealed;
 
 trait Endianness: Sealed {}
 
+/// Big endian marker.
+#[derive(Clone, Copy, Debug)]
+pub struct BigEndian {}
+
+impl Sealed for BigEndian {}
 impl Endianness for BigEndian {}
+
+/// Little endian marker.
+#[derive(Clone, Copy, Debug)]
+pub struct LittleEndian {}
+
+impl Sealed for LittleEndian {}
 impl Endianness for LittleEndian {}

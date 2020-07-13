@@ -16,7 +16,7 @@ mod test_macros;
 #[macro_use]
 mod macros;
 
-mod private;
+mod sealed;
 
 pub mod binary_representation;
 pub mod endianness;

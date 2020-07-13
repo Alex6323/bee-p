@@ -106,8 +106,6 @@ ternary_roundtrip!(
     [zero_is_zero, zero],
     [one_is_one, one],
     [neg_one_is_neg_one, neg_one],
-    [two_is_two, two],
-    [neg_two_is_neg_two, neg_two],
     [max_is_max, max],
 );
 
