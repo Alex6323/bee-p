@@ -17,8 +17,9 @@ use crate::bundled::{
 
 use bee_crypto::ternary::{Hash, Kerl, Sponge};
 use bee_signing::ternary::{
-    normalize_hash, PrivateKey, PrivateKeyGenerator, Signature, TernarySeed, WotsSecurityLevel,
-    WotsSpongePrivateKeyGeneratorBuilder,
+    normalize_hash,
+    wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    PrivateKey, PrivateKeyGenerator, Signature, TernarySeed,
 };
 use bee_ternary::Btrit;
 
@@ -360,7 +361,7 @@ mod tests {
 
     use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_signing::ternary::{PublicKey, RecoverableSignature, Seed, WotsSignature};
+    use bee_signing::ternary::{wots::WotsSignature, PublicKey, RecoverableSignature, Seed};
     use bee_ternary::{T1B1Buf, TritBuf};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {

@@ -13,7 +13,10 @@ use crate::milestone::{Milestone, MilestoneIndex};
 
 use bee_crypto::ternary::{Hash, Kerl, Sponge};
 use bee_signing::ternary::{
-    normalize_hash, MssError, MssPublicKey, MssSignature, PublicKey, RecoverableSignature, Signature, WotsPublicKey,
+    mss::{MssError, MssPublicKey, MssSignature},
+    normalize_hash,
+    wots::WotsPublicKey,
+    PublicKey, RecoverableSignature, Signature,
 };
 use bee_ternary::TritBuf;
 use bee_ternary_ext::num_conversions::{tritbuf_try_to_i64, TritsI64ConversionError};

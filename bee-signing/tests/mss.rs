@@ -14,9 +14,9 @@ mod tests {
 
     use bee_crypto::ternary::{CurlP27, CurlP81, Kerl, Sponge};
     use bee_signing::ternary::{
-        MssError, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature, PrivateKey, PrivateKeyGenerator,
-        PublicKey, RecoverableSignature, Seed, Signature, WotsPublicKey, WotsSecurityLevel,
-        WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder,
+        mss::{MssError, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature},
+        wots::{WotsPublicKey, WotsSecurityLevel, WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder},
+        PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
     };
     use bee_ternary::{T1B1Buf, TryteBuf};
 

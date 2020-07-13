@@ -14,8 +14,8 @@ mod tests {
 
     use bee_crypto::ternary::{CurlP27, CurlP81, Kerl, Sponge};
     use bee_signing::ternary::{
-        PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, TernarySeed, WotsSecurityLevel,
-        WotsSpongePrivateKeyGeneratorBuilder,
+        wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+        PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, TernarySeed,
     };
     use bee_ternary::{T1B1Buf, TryteBuf};
 

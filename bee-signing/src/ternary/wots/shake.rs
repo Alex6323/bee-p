@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::{PrivateKeyGenerator, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
+use crate::ternary::{
+    wots::{WotsError, WotsPrivateKey, WotsSecurityLevel},
+    PrivateKeyGenerator, TernarySeed,
+};
 
 use bee_crypto::ternary::Sponge;
 use bee_ternary::{Btrit, TritBuf, Trits};
