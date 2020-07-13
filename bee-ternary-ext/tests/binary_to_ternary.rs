@@ -10,10 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::{Trits, T1B1};
-use bee_ternary_ext::bigint::{
-    common::{BigEndian, U8Repr},
-    I384, T242, T243,
-};
+use bee_ternary_ext::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243};
 
 #[test]
 fn custom_binary_to_ternary() {

@@ -18,7 +18,8 @@ mod macros;
 
 mod private;
 
-pub mod common;
+pub mod binary_representation;
+pub mod endianness;
 pub mod error;
 pub mod i384;
 pub mod overflowing_add;

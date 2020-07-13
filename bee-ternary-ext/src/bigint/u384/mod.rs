@@ -18,7 +18,8 @@ pub use constants::{
 };
 
 use crate::bigint::{
-    common::{BigEndian, BinaryRepresentation, LittleEndian, U32Repr, U8Repr},
+    binary_representation::{BinaryRepresentation, U32Repr, U8Repr},
+    endianness::{BigEndian, LittleEndian},
     error::Error,
     overflowing_add::OverflowingAdd,
     split_integer::SplitInteger,

@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::bigint::private;
+use crate::bigint::private::Sealed;
 
 /// The number of bits in an I384.
 pub const BINARY_LEN: usize = 384;
@@ -20,28 +20,17 @@ pub const BINARY_LEN_IN_U32: usize = BINARY_LEN / 32;
 
 /// The inner representation of a I384 using 48 u8s.
 pub type U8Repr = [u8; BINARY_LEN_IN_U8];
-
 /// The inner representation of a I384 using 12 u32s.
 pub type U32Repr = [u32; BINARY_LEN_IN_U32];
 
-#[derive(Clone, Copy, Debug)]
-pub struct BigEndian {}
-
-#[derive(Clone, Copy, Debug)]
-pub struct LittleEndian {}
-
-trait EndianType: private::Sealed {}
-
-impl EndianType for BigEndian {}
-impl EndianType for LittleEndian {}
-
-pub trait BinaryRepresentation: private::Sealed + Clone {
+pub trait BinaryRepresentation: Sealed + Clone {
     type T;
+
     fn iter(&self) -> std::slice::Iter<'_, Self::T>;
 }
 
-impl private::Sealed for U8Repr {}
-impl private::Sealed for U32Repr {}
+impl Sealed for U8Repr {}
+impl Sealed for U32Repr {}
 
 impl BinaryRepresentation for U8Repr {
     type T = u8;

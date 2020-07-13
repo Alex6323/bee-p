@@ -12,10 +12,7 @@
 use crate::ternary::{Sponge, HASH_LENGTH};
 
 use bee_ternary::{Btrit, Trits, T1B1};
-use bee_ternary_ext::bigint::{
-    common::{BigEndian, U8Repr},
-    I384, T242, T243,
-};
+use bee_ternary_ext::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243};
 
 use tiny_keccak::{Hasher, Keccak};
 

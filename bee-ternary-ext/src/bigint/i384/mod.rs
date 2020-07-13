@@ -18,10 +18,10 @@ pub use constants::{
 };
 
 use crate::bigint::{
-    common::{
-        BigEndian, BinaryRepresentation, LittleEndian, U32Repr, U8Repr, BINARY_LEN_IN_U32 as LEN_IN_U32,
-        BINARY_LEN_IN_U8 as LEN_IN_U8,
+    binary_representation::{
+        BinaryRepresentation, U32Repr, U8Repr, BINARY_LEN_IN_U32 as LEN_IN_U32, BINARY_LEN_IN_U8 as LEN_IN_U8,
     },
+    endianness::{BigEndian, LittleEndian},
     error::Error,
     overflowing_add::OverflowingAdd,
     u384, T242, T243, U384,

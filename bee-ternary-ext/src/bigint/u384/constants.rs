@@ -10,7 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::bigint::{
-    common::{BigEndian, LittleEndian, U32Repr, U8Repr},
+    binary_representation::{U32Repr, U8Repr},
+    endianness::{BigEndian, LittleEndian},
     T242, T243,
 };
 

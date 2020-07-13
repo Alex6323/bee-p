@@ -12,10 +12,7 @@
 use std::convert::TryInto;
 
 use bee_ternary::{Btrit, Utrit};
-use bee_ternary_ext::bigint::{
-    common::{LittleEndian, U32Repr},
-    I384, T242, T243, U384,
-};
+use bee_ternary_ext::bigint::{binary_representation::U32Repr, endianness::LittleEndian, I384, T242, T243, U384};
 
 #[test]
 fn t243_max_exceeds_u384_range() {

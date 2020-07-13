@@ -9,9 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::bigint::endianness::{BigEndian, LittleEndian};
+use crate::bigint::private::Sealed;
 
-pub trait Sealed {}
+#[derive(Clone, Copy, Debug)]
+pub struct BigEndian {}
 
-impl Sealed for BigEndian {}
-impl Sealed for LittleEndian {}
+#[derive(Clone, Copy, Debug)]
+pub struct LittleEndian {}
+
+trait Endianness: Sealed {}
+
+impl Endianness for BigEndian {}
+impl Endianness for LittleEndian {}
