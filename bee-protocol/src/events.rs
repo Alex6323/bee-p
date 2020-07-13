@@ -9,9 +9,22 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::bigint::common::{BigEndian, LittleEndian};
+use crate::milestone::Milestone;
 
-pub trait Sealed {}
+use std::any::Any;
 
-impl Sealed for BigEndian {}
-impl Sealed for LittleEndian {}
+pub trait Event: Any + Clone {
+    const NAME: &'static str;
+}
+
+#[derive(Clone)]
+pub struct NewMilestone(Milestone);
+impl Event for NewMilestone {
+    const NAME: &'static str = "new_milestone";
+}
+
+#[derive(Clone)]
+pub struct SolidMilestone(Milestone);
+impl Event for SolidMilestone {
+    const NAME: &'static str = "solid_milestone";
+}

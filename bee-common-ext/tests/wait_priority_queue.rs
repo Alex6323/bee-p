@@ -12,7 +12,7 @@
 #[cfg(test)]
 mod tests {
 
-    use bee_common::wait_priority_queue::WaitPriorityQueue;
+    use bee_common_ext::wait_priority_queue::WaitPriorityQueue;
 
     use async_std::task::block_on;
 

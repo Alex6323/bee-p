@@ -9,10 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary_ext::bigint::{
-    common::{LittleEndian, U32Repr},
-    I384, U384,
-};
+use bee_ternary_ext::bigint::{binary_representation::U32Repr, endianness::LittleEndian, I384, U384};
 
 #[test]
 fn shift_i384_min_is_u384_zero() {

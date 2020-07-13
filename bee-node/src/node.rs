@@ -18,11 +18,10 @@ use crate::{
 
 use bee_common::shutdown::Shutdown;
 use bee_crypto::ternary::Hash;
-use bee_ledger::{LedgerWorker, LedgerWorkerEvent};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::{LocalSnapshot, SnapshotReadError};
+use bee_snapshot::local::{Error as SnapshotReadError, LocalSnapshot};
 
 use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
@@ -114,14 +113,14 @@ impl NodeBuilder {
             }
         };
 
-        // TODO config
-        let (ledger_worker_tx, ledger_worker_rx) = mpsc::channel(1000);
-        let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
+        info!("Initializing ledger...");
+        bee_ledger::init(snapshot_state.into_balances(), &mut shutdown);
 
-        info!("Starting ledger...");
-        spawn(LedgerWorker::new(snapshot_state.into_balances()).run(ledger_worker_rx, ledger_worker_shutdown_rx));
-
-        block_on(Protocol::init(self.config.protocol.clone(), network.clone()));
+        block_on(Protocol::init(
+            self.config.protocol.clone(),
+            network.clone(),
+            &mut shutdown,
+        ));
 
         info!("Initialized.");
 
@@ -130,7 +129,6 @@ impl NodeBuilder {
             network,
             events: events.fuse(),
             shutdown,
-            ledger: (ledger_worker_tx, ledger_worker_shutdown_tx),
             peers: HashMap::new(),
         })
     }
@@ -143,8 +141,6 @@ pub struct Node {
     network: Network,
     events: Fuse<EventSubscriber>,
     shutdown: Shutdown,
-    // TODO design proper type `Ledger`
-    ledger: (mpsc::Sender<LedgerWorkerEvent>, oneshot::Sender<()>),
     // TODO design proper type `PeerList`
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
 }
@@ -190,7 +186,7 @@ impl Node {
 
     /// Shuts down the node.
     pub fn shutdown(self) -> Result<(), Error> {
-        info!("Bee is shutting down...");
+        info!("Stopping...");
 
         block_on(self.shutdown.execute())?;
 

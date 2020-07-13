@@ -29,6 +29,7 @@ use std::{
     ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 /// Milestone-based Tangle.
@@ -62,7 +63,7 @@ impl MsTangle {
     }
 
     pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: TransactionMetadata) -> Option<TxRef> {
-        if let Some(tx) = self.inner.insert(transaction, hash, metadata) {
+        if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
             self.propagate_solid_flag(hash);
             return Some(tx);
         }
@@ -81,7 +82,19 @@ impl MsTangle {
 
             if let Some(tx) = self.inner.get(&hash) {
                 if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
-                    self.inner.update_metadata(&hash, |metadata| metadata.flags.set_solid());
+                    self.inner.update_metadata(&hash, |metadata| {
+                        metadata.flags.set_solid();
+                        // This is possibly not sufficient as there is no guarantee a milestone has been validated
+                        // before being solidified, we then also need to check when a milestone gets validated if it's
+                        // already solid.
+                        if metadata.flags.is_milestone() {
+                            // TODO trigger new solid MS event
+                        }
+                        metadata.solidification_timestamp = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .expect("Clock may have gone backwards")
+                            .as_millis() as u64;
+                    });
 
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
@@ -98,12 +111,8 @@ impl MsTangle {
     pub fn add_milestone(&self, index: MilestoneIndex, hash: TxHash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
-
-        if let Some(mut metadata) = self.inner.get_metadata(&hash) {
-            metadata.flags.set_milestone();
-
-            self.inner.set_metadata(&hash, metadata);
-        }
+        self.inner
+            .update_metadata(&hash, |metadata| metadata.flags.set_milestone());
     }
 
     pub fn remove_milestone(&self, index: MilestoneIndex) {

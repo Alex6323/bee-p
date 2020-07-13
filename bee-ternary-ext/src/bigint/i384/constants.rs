@@ -9,7 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::{BigEndian, LittleEndian, U32Repr, U8Repr, I384};
+use crate::bigint::{
+    binary_representation::{U32Repr, U8Repr},
+    endianness::{BigEndian, LittleEndian},
+    I384,
+};
 
 pub const BE_U8_0: I384<BigEndian, U8Repr> = I384::<BigEndian, U8Repr>::from_array([
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

@@ -9,17 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use byteorder::{self, ByteOrder};
-use std::{cmp::Ordering, convert::TryFrom, fmt, marker::PhantomData};
-
-use crate::bigint::{
-    common::{BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr},
-    t243,
-    utils::{OverflowingAddExt, SplitInteger},
-    I384, T242, T243,
-};
-use bee_ternary::Utrit;
-
 mod constants;
 
 pub use constants::{
@@ -27,6 +16,21 @@ pub use constants::{
     BE_U8_MAX, LE_U32_0, LE_U32_1, LE_U32_2, LE_U32_HALF_MAX, LE_U32_HALF_MAX_T242, LE_U32_MAX, LE_U32_MAX_T242,
     LE_U32_NEG_HALF_MAX_T242, LE_U32_ONLY_T243_OCCUPIED, LE_U8_0, LE_U8_1, LE_U8_2, LE_U8_MAX,
 };
+
+use crate::bigint::{
+    binary_representation::{BinaryRepresentation, U32Repr, U8Repr},
+    endianness::{BigEndian, LittleEndian},
+    error::Error,
+    overflowing_add::OverflowingAdd,
+    split_integer::SplitInteger,
+    t243, I384, T242, T243,
+};
+
+use bee_ternary::Utrit;
+
+use byteorder::{self, ByteOrder};
+
+use std::{cmp::Ordering, convert::TryFrom, fmt, marker::PhantomData};
 
 #[derive(Clone, Copy)]
 pub struct U384<E, T> {

@@ -16,11 +16,14 @@ mod test_macros;
 #[macro_use]
 mod macros;
 
-pub mod common;
-mod private;
-pub mod utils;
+mod sealed;
 
+pub mod binary_representation;
+pub mod endianness;
+pub mod error;
 pub mod i384;
+pub mod overflowing_add;
+pub mod split_integer;
 pub mod t242;
 pub mod t243;
 pub mod u384;

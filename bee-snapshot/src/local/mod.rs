@@ -15,4 +15,4 @@ mod snapshot;
 
 pub use config::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
 pub use metadata::LocalSnapshotMetadata;
-pub use snapshot::{LocalSnapshot, SnapshotReadError};
+pub use snapshot::{Error, LocalSnapshot};

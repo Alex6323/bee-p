@@ -41,6 +41,7 @@ macro_rules! def_and_impl_ternary {
             pub fn zero() -> Self {
                 Self(TritBuf::zeros(LEN))
             }
+
             pub fn inner_ref(&self) -> &TritBuf<T1B1Buf<T>> {
                 &self.0
             }
@@ -80,29 +81,15 @@ macro_rules! def_and_impl_ternary {
             }
 
             pub fn one() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Btrit::PlusOne);
-                t243
+                let mut trits = Self::zero();
+                trits.0.set(0, Btrit::PlusOne);
+                trits
             }
 
             pub fn neg_one() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Btrit::NegOne);
-                t243
-            }
-
-            pub fn two() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Btrit::NegOne);
-                t243.0.set(1, Btrit::PlusOne);
-                t243
-            }
-
-            pub fn neg_two() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Btrit::PlusOne);
-                t243.0.set(1, Btrit::NegOne);
-                t243
+                let mut trits = Self::zero();
+                trits.0.set(0, Btrit::NegOne);
+                trits
             }
 
             pub fn max() -> Self {
@@ -130,15 +117,15 @@ macro_rules! def_and_impl_ternary {
             }
 
             pub fn one() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Utrit::One);
-                t243
+                let mut trits = Self::zero();
+                trits.0.set(0, Utrit::One);
+                trits
             }
 
             pub fn two() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Utrit::Two);
-                t243
+                let mut trits = Self::zero();
+                trits.0.set(0, Utrit::Two);
+                trits
             }
 
             pub fn half_max() -> Self {
@@ -166,7 +153,6 @@ macro_rules! def_and_impl_ternary {
             fn cmp(&self, other: &Self) -> Ordering {
                 match self.partial_cmp(other) {
                     Some(ordering) => ordering,
-
                     // Cannot be reached because the order is total.
                     None => unreachable!(),
                 }

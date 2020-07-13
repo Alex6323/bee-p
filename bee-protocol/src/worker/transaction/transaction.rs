@@ -16,6 +16,7 @@ use crate::{
     worker::transaction::HashCache,
 };
 
+use bee_common::worker::Error as WorkerError;
 use bee_crypto::ternary::{CurlP81, Hash, Sponge};
 use bee_network::EndpointId;
 use bee_tangle::traversal;
@@ -56,7 +57,7 @@ impl TransactionWorker {
         mut self,
         receiver: mpsc::Receiver<TransactionWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
@@ -74,6 +75,8 @@ impl TransactionWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 
     async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_message: TransactionMessage) {
@@ -207,7 +210,7 @@ mod tests {
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        block_on(Protocol::init(protocol_config, network));
+        block_on(Protocol::init(protocol_config, network, &mut shutdown));
 
         assert_eq!(tangle().len(), 0);
 

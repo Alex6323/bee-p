@@ -11,11 +11,13 @@
 
 use crate::{protocol::Protocol, tangle::tangle};
 
-use std::time::Duration;
+use bee_common::worker::Error as WorkerError;
 
 use async_std::{future::ready, prelude::*};
 use futures::channel::oneshot::Receiver;
 use log::info;
+
+use std::time::Duration;
 
 pub(crate) struct StatusWorker {
     interval_ms: u64,
@@ -51,7 +53,7 @@ impl StatusWorker {
         info!("{}.", status);
     }
 
-    pub(crate) async fn run(self, mut shutdown: Receiver<()>) {
+    pub(crate) async fn run(self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
         loop {
@@ -66,5 +68,7 @@ impl StatusWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }
