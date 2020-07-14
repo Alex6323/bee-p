@@ -70,7 +70,7 @@ impl Sponge for Kerl {
         }
 
         for trits_chunk in input.chunks(HASH_LENGTH) {
-            self.ternary_state.inner_mut().copy_from(&trits_chunk);
+            self.ternary_state.copy_from(&trits_chunk);
             // Unwrapping is ok because this cannot fail.
             //
             // TODO: Replace with a dedicated `TryFrom` implementation with `Error = !`.
@@ -112,7 +112,7 @@ impl Sponge for Kerl {
             keccak.finalize(&mut self.binary_state.inner_mut()[..]);
             let ternary_value = T242::from_i384_ignoring_mst(self.binary_state).into_t243();
 
-            trit_chunk.copy_from(&ternary_value.inner_ref());
+            trit_chunk.copy_from(&ternary_value);
             self.binary_state.not_inplace();
             self.keccak.update(self.binary_state.inner_ref());
         }

@@ -32,7 +32,7 @@ use crate::bigint::{
     u384, I384, T243, U384,
 };
 
-use bee_ternary::{raw::RawEncoding, Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Trits, Utrit};
+use bee_ternary::{Btrit, ShiftTernary, T1B1Buf, Trit, TritBuf, Utrit};
 
 use std::{
     cmp::Ordering,

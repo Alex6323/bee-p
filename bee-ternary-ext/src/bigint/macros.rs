@@ -11,47 +11,37 @@
 
 macro_rules! def_and_impl_ternary {
     ($ident:ident, $len:expr) => {
-        pub const LEN: usize = $len;
+        pub const LENGTH: usize = $len;
 
         #[derive(Clone, Debug)]
         pub struct $ident<T: Trit>(TritBuf<T1B1Buf<T>>);
 
-        impl<T> $ident<T>
-        where
-            T: Trit,
-        {
+        impl<T: Trit> $ident<T> {
             pub fn from_trit_buf(trits_buf: TritBuf<T1B1Buf<T>>) -> Self {
-                assert_eq!(trits_buf.len(), LEN);
+                assert_eq!(trits_buf.len(), LENGTH);
                 $ident(trits_buf)
             }
 
-            /// Copies all elements from `Trits` into the inner `TritsBuf`.
-            ///
-            /// Panics if `Trits` does not have the same length as the inner buffer (243 elements).
-            pub fn copy_from_trits<R>(&mut self, trits: &Trits<R>)
-            where
-                R: RawEncoding<Trit = T>,
-            {
-                assert_eq!(trits.len(), LEN);
-                for (x, y) in self.0.iter_mut().zip(trits.iter()) {
-                    *x = y;
-                }
-            }
-
             pub fn zero() -> Self {
-                Self(TritBuf::zeros(LEN))
-            }
-
-            pub fn inner_ref(&self) -> &TritBuf<T1B1Buf<T>> {
-                &self.0
-            }
-
-            pub fn inner_mut(&mut self) -> &mut TritBuf<T1B1Buf<T>> {
-                &mut self.0
+                Self(TritBuf::zeros(LENGTH))
             }
 
             pub fn into_inner(self) -> TritBuf<T1B1Buf<T>> {
                 self.0
+            }
+        }
+
+        impl<T: Trit> std::ops::Deref for $ident<T> {
+            type Target = TritBuf<T1B1Buf<T>>;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl<T: Trit> std::ops::DerefMut for $ident<T> {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
             }
         }
 
@@ -67,7 +57,7 @@ macro_rules! def_and_impl_ternary {
 
         impl $ident<Btrit> {
             pub fn increment_inplace(&mut self) -> bool {
-                for trit in self.inner_mut().iter_mut() {
+                for trit in self.iter_mut() {
                     match trit.checked_increment() {
                         Some(increment) => {
                             *trit = increment;
@@ -93,17 +83,17 @@ macro_rules! def_and_impl_ternary {
             }
 
             pub fn max() -> Self {
-                Self(TritBuf::filled(LEN, Btrit::PlusOne))
+                Self(TritBuf::filled(LENGTH, Btrit::PlusOne))
             }
 
             pub fn min() -> Self {
-                Self(TritBuf::filled(LEN, Btrit::NegOne))
+                Self(TritBuf::filled(LENGTH, Btrit::NegOne))
             }
         }
 
         impl $ident<Utrit> {
             pub fn increment_inplace(&mut self) -> bool {
-                for trit in self.inner_mut().iter_mut() {
+                for trit in self.iter_mut() {
                     match trit.checked_increment() {
                         Some(increment) => {
                             *trit = increment;
@@ -129,11 +119,11 @@ macro_rules! def_and_impl_ternary {
             }
 
             pub fn half_max() -> Self {
-                Self(TritBuf::filled(LEN, Utrit::One))
+                Self(TritBuf::filled(LENGTH, Utrit::One))
             }
 
             pub fn max() -> Self {
-                Self(TritBuf::filled(LEN, Utrit::Two))
+                Self(TritBuf::filled(LENGTH, Utrit::Two))
             }
 
             pub fn min() -> Self {

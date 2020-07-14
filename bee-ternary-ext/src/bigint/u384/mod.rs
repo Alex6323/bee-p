@@ -320,7 +320,7 @@ impl U384<LittleEndian, U32Repr> {
         // most significant one.
 
         // Optimization: advance the iterator until the first non-zero trit is found.
-        let mut binary_trits_iterator = trits.inner_ref().as_i8_slice().iter().rev().peekable();
+        let mut binary_trits_iterator = trits.as_i8_slice().iter().rev().peekable();
         while let Some(0) = binary_trits_iterator.peek() {
             binary_trits_iterator.next();
         }

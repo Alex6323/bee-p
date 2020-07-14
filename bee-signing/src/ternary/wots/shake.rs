@@ -59,7 +59,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
         let mut state = TritBuf::zeros(self.security_level as usize * 6561);
         let mut shake = Shake256::default();
         let mut ternary_buffer = T243::<Btrit>::default();
-        ternary_buffer.inner_mut().copy_from(entropy);
+        ternary_buffer.copy_from(entropy);
         let mut binary_buffer: I384<BigEndian, U8Repr> = ternary_buffer.into_t242().into();
 
         shake.update(&binary_buffer.inner_ref()[..]);
@@ -69,7 +69,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
             reader.read(&mut binary_buffer.inner_mut()[..]);
             let ternary_value = T242::from_i384_ignoring_mst(binary_buffer).into_t243();
 
-            trit_chunk.copy_from(&ternary_value.inner_ref());
+            trit_chunk.copy_from(&ternary_value);
         }
 
         Ok(Self::PrivateKey {

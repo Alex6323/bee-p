@@ -43,7 +43,7 @@ lazy_static! {
     };
     pub static ref LE_U32_ONLY_T243_OCCUPIED: U384<LittleEndian, U32Repr> = {
         let mut t243 = T243::<Utrit>::zero();
-        t243.inner_mut().set(242, Utrit::One);
+        t243.set(242, Utrit::One);
         U384::<LittleEndian, U32Repr>::try_from(t243).unwrap()
     };
     pub static ref LE_U32_MAX_T242: U384<LittleEndian, U32Repr> = {
