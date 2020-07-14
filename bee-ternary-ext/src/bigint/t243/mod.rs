@@ -20,9 +20,7 @@
 
 mod constants;
 
-pub use constants::{
-    BTRIT_NEG_ONE, BTRIT_ONE, BTRIT_ZERO, UTRIT_ONE, UTRIT_TWO, UTRIT_U384_MAX, UTRIT_U384_MAX_HALF, UTRIT_ZERO,
-};
+pub use constants::{BTRIT_0, BTRIT_1, BTRIT_NEG_1, UTRIT_0, UTRIT_1, UTRIT_2, UTRIT_U384_MAX, UTRIT_U384_MAX_HALF};
 
 use crate::bigint::{
     binary_representation::{U32Repr, U8Repr},

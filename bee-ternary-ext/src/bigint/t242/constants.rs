@@ -16,14 +16,14 @@ use bee_ternary::{Btrit, Utrit};
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref BTRIT_ZERO: T242<Btrit> = T242::<Btrit>::zero();
-    pub static ref BTRIT_ONE: T242<Btrit> = T242::<Btrit>::one();
-    pub static ref BTRIT_NEG_ONE: T242<Btrit> = T242::<Btrit>::neg_one();
+    pub static ref BTRIT_0: T242<Btrit> = T242::<Btrit>::zero();
+    pub static ref BTRIT_1: T242<Btrit> = T242::<Btrit>::one();
+    pub static ref BTRIT_NEG_1: T242<Btrit> = T242::<Btrit>::neg_one();
     pub static ref BTRIT_MAX: T242<Btrit> = T242::<Btrit>::max();
     pub static ref BTRIT_MIN: T242<Btrit> = T242::<Btrit>::min();
-    pub static ref UTRIT_ZERO: T242<Utrit> = T242::<Utrit>::zero();
-    pub static ref UTRIT_ONE: T242<Utrit> = T242::<Utrit>::one();
-    pub static ref UTRIT_TWO: T242<Utrit> = T242::<Utrit>::two();
+    pub static ref UTRIT_0: T242<Utrit> = T242::<Utrit>::zero();
+    pub static ref UTRIT_1: T242<Utrit> = T242::<Utrit>::one();
+    pub static ref UTRIT_2: T242<Utrit> = T242::<Utrit>::two();
     pub static ref UTRIT_U384_MAX: T242<Utrit> = {
         let u384_max = U384::<LittleEndian, U32Repr>::max();
         From::from(u384_max)
