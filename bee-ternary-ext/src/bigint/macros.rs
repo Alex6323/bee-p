@@ -56,20 +56,6 @@ macro_rules! def_and_impl_ternary {
         }
 
         impl $ident<Btrit> {
-            pub fn increment_inplace(&mut self) -> bool {
-                for trit in self.iter_mut() {
-                    match trit.checked_increment() {
-                        Some(increment) => {
-                            *trit = increment;
-                            return false;
-                        }
-
-                        None => *trit = Btrit::NegOne,
-                    }
-                }
-                true
-            }
-
             pub fn one() -> Self {
                 let mut trits = Self::zero();
                 trits.0.set(0, Btrit::PlusOne);
@@ -92,20 +78,6 @@ macro_rules! def_and_impl_ternary {
         }
 
         impl $ident<Utrit> {
-            pub fn increment_inplace(&mut self) -> bool {
-                for trit in self.iter_mut() {
-                    match trit.checked_increment() {
-                        Some(increment) => {
-                            *trit = increment;
-                            return false;
-                        }
-
-                        None => *trit = Utrit::Zero,
-                    }
-                }
-                true
-            }
-
             pub fn one() -> Self {
                 let mut trits = Self::zero();
                 trits.0.set(0, Utrit::One);
@@ -139,6 +111,12 @@ macro_rules! def_and_impl_ternary {
 
         impl<T: Trit> Eq for $ident<T> {}
 
+        impl<T: Trit> PartialEq for $ident<T> {
+            fn eq(&self, other: &Self) -> bool {
+                self.0.eq(&other.0)
+            }
+        }
+
         impl<T: Trit> Ord for $ident<T> {
             fn cmp(&self, other: &Self) -> Ordering {
                 match self.partial_cmp(other) {
@@ -146,12 +124,6 @@ macro_rules! def_and_impl_ternary {
                     // Cannot be reached because the order is total.
                     None => unreachable!(),
                 }
-            }
-        }
-
-        impl<T: Trit> PartialEq for $ident<T> {
-            fn eq(&self, other: &Self) -> bool {
-                self.0.eq(&other.0)
             }
         }
 
