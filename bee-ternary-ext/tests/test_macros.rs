@@ -84,8 +84,8 @@ macro_rules! test_endianness_roundtrip {
     ) => {
 
         mod endianness_roundtrip {
-            use crate::bigint::$($root)* as Root;
-            use crate::bigint::{
+            use bee_ternary_ext::bigint::$($root)* as Root;
+            use bee_ternary_ext::bigint::{
                 binary_representation::{
                     U8Repr,
                     U32Repr,
@@ -152,8 +152,8 @@ macro_rules! test_endianness_toggle {
     ) => {
 
         mod toggle_endianness {
-            use crate::bigint::$($root)* as Root;
-            use crate::bigint::{
+            use bee_ternary_ext::bigint::$($root)* as Root;
+            use bee_ternary_ext::bigint::{
                 binary_representation::{
                     U8Repr,
                     U32Repr,
@@ -206,8 +206,8 @@ macro_rules! test_repr_roundtrip {
         $(,)?
     ) => {
         mod test_repr_roundtrip {
-            use crate::bigint::$($root)* as Root;
-            use crate::bigint::{
+            use bee_ternary_ext::bigint::$($root)* as Root;
+            use bee_ternary_ext::bigint::{
                 binary_representation::{
                     U8Repr,
                     U32Repr,
