@@ -46,7 +46,7 @@ impl Hash {
         weight
     }
 
-    pub fn trit_len() -> usize {
+    pub const fn len() -> usize {
         HASH_LENGTH
     }
 }
@@ -73,20 +73,5 @@ impl fmt::Debug for Hash {
 impl hash::Hash for Hash {
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         self.0.hash(hasher)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hash_weigth() {
-        for i in 0..20 {
-            let mut trits = [0i8; HASH_LENGTH];
-            trits[HASH_LENGTH - i - 1] = 1;
-            let hash = Hash(trits);
-            assert_eq!(hash.weight(), i as u8);
-        }
     }
 }
