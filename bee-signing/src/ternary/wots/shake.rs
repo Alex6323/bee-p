@@ -62,11 +62,11 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
         ternary_buffer.copy_from(entropy);
         let mut binary_buffer: I384<BigEndian, U8Repr> = ternary_buffer.into_t242().into();
 
-        shake.update(&binary_buffer.inner_ref()[..]);
+        shake.update(&binary_buffer[..]);
         let mut reader = shake.finalize_xof();
 
         for trit_chunk in state.chunks_mut(243) {
-            reader.read(&mut binary_buffer.inner_mut()[..]);
+            reader.read(&mut binary_buffer[..]);
             let ternary_value = T242::from_i384_ignoring_mst(binary_buffer).into_t243();
 
             trit_chunk.copy_from(&ternary_value);

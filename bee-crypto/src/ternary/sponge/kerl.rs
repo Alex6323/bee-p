@@ -80,7 +80,7 @@ impl Sponge for Kerl {
             // TODO: Convert to binary without cloning.
             self.binary_state = self.ternary_state.clone().into_t242().into();
 
-            self.keccak.update(self.binary_state.inner_ref());
+            self.keccak.update(&self.binary_state[..]);
         }
 
         Ok(())
@@ -109,12 +109,12 @@ impl Sponge for Kerl {
             // Swap out the internal one and the new one
             std::mem::swap(&mut self.keccak, &mut keccak);
 
-            keccak.finalize(&mut self.binary_state.inner_mut()[..]);
+            keccak.finalize(&mut self.binary_state[..]);
             let ternary_value = T242::from_i384_ignoring_mst(self.binary_state).into_t243();
 
             trit_chunk.copy_from(&ternary_value);
             self.binary_state.not_inplace();
-            self.keccak.update(self.binary_state.inner_ref());
+            self.keccak.update(&self.binary_state[..]);
         }
         Ok(())
     }

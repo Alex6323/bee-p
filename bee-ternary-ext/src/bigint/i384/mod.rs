@@ -36,6 +36,7 @@ use std::{
     convert::{TryFrom, TryInto},
     fmt,
     marker::PhantomData,
+    ops::{Deref, DerefMut},
 };
 
 /// A biginteger encoding a signed integer with 384 bits.
@@ -55,12 +56,16 @@ pub struct I384<E, T> {
     _phantom: PhantomData<E>,
 }
 
-impl<E, T> I384<E, T> {
-    pub fn inner_ref(&self) -> &T {
+impl<E, T> Deref for I384<E, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
         &self.inner
     }
+}
 
-    pub fn inner_mut(&mut self) -> &mut T {
+impl<E, T> DerefMut for I384<E, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
