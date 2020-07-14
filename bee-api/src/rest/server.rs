@@ -17,14 +17,14 @@ use futures::channel::oneshot;
 use serde::de::DeserializeOwned;
 use warp::{Filter, Rejection};
 
-use crate::{api::Api, config::ApiConfig};
+use crate::{web_service::WebService, config::ApiConfig};
 
 pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
     let node_info = warp::get()
         .and(warp::path("v1"))
         .and(warp::path("node-info"))
         .and(warp::path::end())
-        .and_then(routes::RestApi::node_info);
+        .and_then(routes::Rest::node_info);
 
     let tx_by_hash = warp::get()
         .and(warp::path("v1"))
@@ -33,7 +33,7 @@ pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
         .and(warp::path::param())
         .and(warp::path::end())
         .map(|param| serde_json::Value::String(param))
-        .and_then(routes::RestApi::transaction_by_hash);
+        .and_then(routes::Rest::transaction_by_hash);
 
     let txs_by_hashes = warp::post()
         .and(warp::path("v1"))
@@ -41,7 +41,7 @@ pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
         .and(warp::path("by-hash"))
         .and(warp::path::end())
         .and(json_body())
-        .and_then(routes::RestApi::transactions_by_hashes);
+        .and_then(routes::Rest::transactions_by_hashes);
 
     let txs_by_bundle = warp::post()
         .and(warp::path("v1"))
@@ -49,7 +49,7 @@ pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
         .and(warp::path("by-bundle"))
         .and(warp::path::end())
         .and(json_body())
-        .and_then(routes::RestApi::transactions_by_bundle);
+        .and_then(routes::Rest::transactions_by_bundle);
 
     let routes = tx_by_hash
         .or(txs_by_hashes.or(node_info).or(txs_by_bundle))

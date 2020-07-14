@@ -16,15 +16,15 @@ use serde_json::Value as JsonValue;
 use async_trait::async_trait;
 
 use crate::{
-    api::Api,
+    web_service::WebService,
     format::json_utils::{json_error_obj, json_success_obj},
     service::{TransactionByHashParams, TransactionsByHashesParams},
 };
 use std::convert::TryFrom;
 
-pub struct RestApi;
+pub struct Rest;
 #[async_trait]
-impl Api for RestApi {
+impl WebService for Rest {
     type Input = JsonValue;
     type Output = Result<warp::reply::Json, warp::Rejection>;
 

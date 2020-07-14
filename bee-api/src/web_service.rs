@@ -12,7 +12,7 @@
 use async_trait::async_trait;
 
 #[async_trait]
-pub trait Api {
+pub trait WebService {
     type Input;
     type Output;
 
