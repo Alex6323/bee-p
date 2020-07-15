@@ -91,7 +91,7 @@ impl T242<Utrit> {
         let mut unsigned_binary = value.as_u384();
         unsigned_binary.add_inplace(*u384::LE_U32_HALF_MAX_T242);
         if unsigned_binary > *u384::LE_U32_MAX_T242 {
-            Err(Error::BinaryExceedsTernaryRange)?
+            return Err(Error::BinaryExceedsTernaryRange);
         }
         let unsigned_ternary: T243<Utrit> = unsigned_binary.into();
         Ok(unsigned_ternary.into_t242())
