@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+//! This module contains unsigned integers encoded by 384 bits.
+
 mod constants;
 
 pub use constants::{
@@ -30,17 +32,41 @@ use bee_ternary::Utrit;
 
 use byteorder::{self, ByteOrder};
 
-use std::{cmp::Ordering, convert::TryFrom, fmt, marker::PhantomData};
+use std::{
+    cmp::Ordering,
+    convert::TryFrom,
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
+/// A big integer encoding an unsigned integer with 384 bits.
+///
+/// `T` is usually taken as a `[u32; 12]` or `[u8; 48]`.
+///
+/// `E` refers to the endianness of the digits in `T`. This means that in the case of `[u32; 12]`, if `E == BigEndian`,
+/// that the u32 at position i=0 is considered the most significant digit. The endianness `E` here makes no statement
+/// about the endianness of each single digit within itself (this then is dependent on the endianness of the platform
+/// this code is run on).
+///
+/// For `E == LittleEndian` the digit at the last position is considered to be the most significant.
 #[derive(Clone, Copy)]
 pub struct U384<E, T> {
     pub(crate) inner: T,
     _phantom: PhantomData<E>,
 }
 
-impl<E, T> U384<E, T> {
-    pub fn inner_ref(&self) -> &T {
+impl<E, T> Deref for U384<E, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+impl<E, T> DerefMut for U384<E, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }
 
@@ -59,10 +85,12 @@ where
 }
 
 impl U384<BigEndian, U32Repr> {
+    /// Reinterprets the U384 as an I384.
     pub fn as_i384(self) -> I384<BigEndian, U32Repr> {
         I384::<BigEndian, U32Repr>::from_array(self.inner)
     }
 
+    /// Shifts the U384 in signed space.
     pub fn shift_into_i384(mut self) -> I384<BigEndian, U32Repr> {
         self.sub_inplace(*BE_U32_HALF_MAX);
         self.sub_inplace(Self::one());
@@ -118,6 +146,7 @@ impl U384<BigEndian, U32Repr> {
         self.inner[0] >>= 1;
     }
 
+    /// Creates an U384 from an unbalanced T242.
     pub fn from_t242(trits: T242<Utrit>) -> Self {
         let u384_le = U384::<LittleEndian, U32Repr>::from_t242(trits);
         u384_le.into()
@@ -185,6 +214,7 @@ impl U384<BigEndian, U32Repr> {
 }
 
 impl U384<LittleEndian, U32Repr> {
+    /// Reinterprets the U384 as an I384.
     pub fn as_i384(self) -> I384<LittleEndian, U32Repr> {
         I384::<LittleEndian, U32Repr>::from_array(self.inner)
     }
@@ -236,6 +266,7 @@ impl U384<LittleEndian, U32Repr> {
         self.inner[self.inner.len() - 1] >>= 1;
     }
 
+    /// Creates an U384 from an unbalanced T242.
     pub fn from_t242(trits: T242<Utrit>) -> Self {
         let t243 = trits.into_t243();
 
@@ -243,6 +274,7 @@ impl U384<LittleEndian, U32Repr> {
         Self::try_from_t243(t243).unwrap()
     }
 
+    /// Shifts the U384 in signed space.
     pub fn shift_into_i384(mut self) -> I384<LittleEndian, U32Repr> {
         self.sub_inplace(*LE_U32_HALF_MAX);
         self.sub_inplace(Self::one());

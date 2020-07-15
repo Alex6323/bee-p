@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+//! This module contains signed integers encoded by 384 bits.
+
 mod constants;
 
 pub use constants::{
@@ -39,17 +41,16 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// A biginteger encoding a signed integer with 384 bits.
+/// A big integer encoding a signed integer with 384 bits.
 ///
 /// `T` is usually taken as a `[u32; 12]` or `[u8; 48]`.
 ///
-/// `E` refers to the endianness of the digits in `T`. This means that in the case of `[u32; 12]`,
-/// if `E == BigEndian`, that the u32 at position i=0 is considered the most significant digit. The
-/// endianness `E` here makes no statement about the endianness of each single digit within itself
-/// (this then is dependent on the endianness of the platform this code is run on).
+/// `E` refers to the endianness of the digits in `T`. This means that in the case of `[u32; 12]`, if `E == BigEndian`,
+/// that the u32 at position i=0 is considered the most significant digit. The endianness `E` here makes no statement
+/// about the endianness of each single digit within itself (this then is dependent on the endianness of the platform
+/// this code is run on).
 ///
-/// For `E == LittleEndian` the digit at the last position is considered to be the most
-/// significant.
+/// For `E == LittleEndian` the digit at the last position is considered to be the most significant.
 #[derive(Clone, Copy)]
 pub struct I384<E, T> {
     pub(crate) inner: T,
@@ -143,6 +144,7 @@ macro_rules! impl_default {
 }
 
 impl I384<BigEndian, U8Repr> {
+    /// Applies not on all bytes of the I384.
     pub fn not_inplace(&mut self) {
         for digit in &mut self.inner[..] {
             *digit = !*digit;
@@ -309,27 +311,30 @@ impl I384<BigEndian, U32Repr> {
         i
     }
 
+    /// Reinterprets the I384 as an U384.
     pub fn as_u384(self) -> U384<BigEndian, U32Repr> {
         U384::<BigEndian, U32Repr>::from_array(self.inner)
     }
 
-    pub fn from_t242(value: T242<Btrit>) -> Self {
-        // First make it unbalanced.
-        let t242_unbalanced = value.into_shifted();
+    // pub fn from_t242(value: T242<Btrit>) -> Self {
+    //     // First make it unbalanced.
+    //     let t242_unbalanced = value.into_shifted();
+    //
+    //     // Then expand the size.
+    //     let t243_unbalanced = t242_unbalanced.into_t243();
+    //
+    //     // Unwrapping here is ok because a ut242 always fits into a u384
+    //     let mut u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(t243_unbalanced).unwrap();
+    //     u384_integer.sub_inplace(*u384::BE_U32_HALF_MAX_T242);
+    //     u384_integer.as_i384()
+    // }
 
-        // Then expand the size.
-        let t243_unbalanced = t242_unbalanced.into_t243();
-
-        // Unwrapping here is ok because a ut242 always fits into a u384
-        let mut u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(t243_unbalanced).unwrap();
-        u384_integer.sub_inplace(*u384::BE_U32_HALF_MAX_T242);
-        u384_integer.as_i384()
-    }
-
+    /// Checks if the I384 is positive.
     pub fn is_positive(&self) -> bool {
         (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x0000_0000
     }
 
+    /// Checks if the I384 is negative.
     pub fn is_negative(&self) -> bool {
         (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x8000_0000
     }
@@ -350,6 +355,7 @@ impl I384<BigEndian, U32Repr> {
         }
     }
 
+    /// Shifts the I384 in unsigned space.
     pub fn shift_into_u384(self) -> U384<BigEndian, U32Repr> {
         let mut u384_value = self.as_u384();
         u384_value.sub_inplace(*u384::BE_U32_HALF_MAX);
@@ -400,6 +406,7 @@ impl I384<BigEndian, U32Repr> {
         i
     }
 
+    /// Creates an I384 from a balanced T243.
     pub fn try_from_t243(balanced_trits: T243<Btrit>) -> Result<Self, Error> {
         let unbalanced_trits = balanced_trits.into_shifted();
         let u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(unbalanced_trits)?;
@@ -663,10 +670,12 @@ impl I384<LittleEndian, U32Repr> {
         i
     }
 
+    /// Reinterprets the I384 as an U384.
     pub fn as_u384(self) -> U384<LittleEndian, U32Repr> {
         U384::<LittleEndian, U32Repr>::from_array(self.inner)
     }
 
+    /// Creates an I384 from a balanced T242.
     pub fn from_t242(value: T242<Btrit>) -> Self {
         // First make it unbalanced.
         let t242_unbalanced = value.into_shifted();
@@ -680,10 +689,12 @@ impl I384<LittleEndian, U32Repr> {
         u384_integer.as_i384()
     }
 
+    /// Checks if the I384 is positive.
     pub fn is_positive(&self) -> bool {
         (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x0000_0000
     }
 
+    /// Checks if the I384 is negative.
     pub fn is_negative(&self) -> bool {
         (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x8000_0000
     }
@@ -704,6 +715,7 @@ impl I384<LittleEndian, U32Repr> {
         }
     }
 
+    /// Shifts the I384 in unsigned space.
     pub fn shift_into_u384(self) -> U384<LittleEndian, U32Repr> {
         let mut u384_value = self.as_u384();
         u384_value.sub_inplace(*u384::LE_U32_HALF_MAX);
@@ -754,12 +766,14 @@ impl I384<LittleEndian, U32Repr> {
         i
     }
 
+    /// Tries to create an I384 from a balanced T243.
     pub fn try_from_t243(balanced_trits: T243<Btrit>) -> Result<Self, Error> {
         let unbalanced_trits = balanced_trits.into_shifted();
         let u384_integer = U384::<LittleEndian, U32Repr>::try_from_t243(unbalanced_trits)?;
         Ok(u384_integer.shift_into_i384())
     }
 
+    /// Zeroes the most significant trit of the I384.
     pub fn zero_most_significant_trit(&mut self) {
         if *self > u384::LE_U32_HALF_MAX_T242.as_i384() {
             self.sub_inplace(u384::LE_U32_ONLY_T243_OCCUPIED.as_i384());
