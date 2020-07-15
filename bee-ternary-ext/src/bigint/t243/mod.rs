@@ -9,14 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! This module contains logic to convert an integer encoded by 243 trits to the same
-//! integer encoded by 384 bits (or 48 signed bytes, `i8`).
+//! This module contains logic to convert an integer encoded by 243 trits to the same integer encoded by 384 bits (or 48
+//! signed bytes, `i8`).
 //!
-//! At the core of this a slice of binary-coded, balanced trits is interpreted
-//! fanned-out `t243`, where `t243` is used analogous to `i64` or `u64`. If the latter
-//! are 64-bit signed/unsigned integer types, then `t243` is a 243-trit integer type.
-//! Analogous to fanning out a `u64` into 64 individual bits, `t243` is fanned out into
-//! 243 trits, each (rather inefficiently) represented by one `u8`.
+//! At the core of this a slice of binary-coded, balanced trits is interpreted fanned out `t243`, where `t243` is used
+//! analogous to `i64` or `u64`. If the latter are 64-bit signed/unsigned integer types, then `t243` is a 243-trit
+//! integer type. Analogous to fanning out a `u64` into 64 individual bits, `t243` is fanned out into 243 trits, each
+//! (rather inefficiently) represented by one `u8`.
 
 mod constants;
 
@@ -35,6 +34,7 @@ use std::cmp::Ordering;
 def_and_impl_ternary!(T243, 243);
 
 impl<T: Trit> T243<T> {
+    /// Converts the T243 to a T242.
     pub fn into_t242(self) -> T242<T> {
         let mut trit_buf = self.into_inner();
         trit_buf.pop();
@@ -43,6 +43,7 @@ impl<T: Trit> T243<T> {
 }
 
 impl T243<Utrit> {
+    /// Converts a big-endian `u32` represented U384 to an unbalanced T243.
     pub fn from_u384(value: U384<BigEndian, U32Repr>) -> Self {
         let mut u384_value = value;
         let mut u384_inner_slice = &mut u384_value.inner[..];
