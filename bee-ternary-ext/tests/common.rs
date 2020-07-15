@@ -11,6 +11,7 @@
 
 use bee_ternary::*;
 use rand::prelude::*;
+
 use std::{convert::TryFrom, ops::Range};
 
 pub fn gen_trit() -> i8 {

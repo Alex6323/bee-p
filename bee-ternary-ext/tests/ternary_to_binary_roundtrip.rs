@@ -9,10 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::convert::TryInto;
-
 use bee_ternary::{Btrit, Utrit};
 use bee_ternary_ext::bigint::{binary_representation::U32Repr, endianness::LittleEndian, I384, T242, T243, U384};
+
+use std::convert::TryInto;
 
 #[test]
 fn t243_max_exceeds_u384_range() {
