@@ -11,21 +11,26 @@
 
 macro_rules! def_and_impl_ternary {
     ($ident:ident, $len:expr) => {
+        /// Length of the trit buffer.
         pub const LENGTH: usize = $len;
 
+        /// Fixed size trit buffer.
         #[derive(Clone, Debug)]
         pub struct $ident<T: Trit>(TritBuf<T1B1Buf<T>>);
 
         impl<T: Trit> $ident<T> {
-            pub fn from_trit_buf(trits_buf: TritBuf<T1B1Buf<T>>) -> Self {
+            /// Creates a new fixed size trit buffer from input.
+            pub fn new(trits_buf: TritBuf<T1B1Buf<T>>) -> Self {
                 assert_eq!(trits_buf.len(), LENGTH);
                 $ident(trits_buf)
             }
 
+            /// Creates a new trit buffer that represents the value 0.
             pub fn zero() -> Self {
                 Self(TritBuf::zeros(LENGTH))
             }
 
+            /// Transforms into its inner trit buffer.
             pub fn into_inner(self) -> TritBuf<T1B1Buf<T>> {
                 self.0
             }
@@ -50,54 +55,64 @@ macro_rules! def_and_impl_ternary {
             T: Trit,
             <T as ShiftTernary>::Target: Trit,
         {
+            /// Transforms into a shifted representation of the trit buffer.
             pub fn into_shifted(self) -> $ident<<T as ShiftTernary>::Target> {
                 $ident(self.0.into_shifted())
             }
         }
 
         impl $ident<Btrit> {
+            /// Creates a new balanced trit buffer that represents the value 1.
             pub fn one() -> Self {
                 let mut trits = Self::zero();
                 trits.0.set(0, Btrit::PlusOne);
                 trits
             }
 
+            /// Creates a new balanced trit buffer that represents the value -1.
             pub fn neg_one() -> Self {
                 let mut trits = Self::zero();
                 trits.0.set(0, Btrit::NegOne);
                 trits
             }
 
+            /// Creates a new balanced trit buffer that represents the maximum value.
             pub fn max() -> Self {
                 Self(TritBuf::filled(LENGTH, Btrit::PlusOne))
             }
 
+            /// Creates a new balanced trit buffer that represents the minimum value.
             pub fn min() -> Self {
                 Self(TritBuf::filled(LENGTH, Btrit::NegOne))
             }
         }
 
         impl $ident<Utrit> {
+            /// Creates a new unbalanced trit buffer that represents the value 1.
             pub fn one() -> Self {
                 let mut trits = Self::zero();
                 trits.0.set(0, Utrit::One);
                 trits
             }
 
+            /// Creates a new unbalanced trit buffer that represents the value 2.
             pub fn two() -> Self {
                 let mut trits = Self::zero();
                 trits.0.set(0, Utrit::Two);
                 trits
             }
 
+            /// Creates a new unbalanced trit buffer that represents the half of the maximum value.
             pub fn half_max() -> Self {
                 Self(TritBuf::filled(LENGTH, Utrit::One))
             }
 
+            /// Creates a new unbalanced trit buffer that represents the maximum value.
             pub fn max() -> Self {
                 Self(TritBuf::filled(LENGTH, Utrit::Two))
             }
 
+            /// Creates a new unbalanced trit buffer that represents the minimum value.
             pub fn min() -> Self {
                 Self::zero()
             }
@@ -145,6 +160,7 @@ macro_rules! def_and_impl_ternary {
 macro_rules! impl_const_functions {
     ( ( $($root:tt)* ), { $endianness:ty $(,)? }, { $repr:ty $(,)? } ) => {
         impl $($root)* < $endianness, $repr > {
+            /// Creates an instance from an array of inner representation.
             pub const fn from_array(inner: $repr) -> Self {
                 Self {
                     inner,
@@ -173,6 +189,7 @@ macro_rules! impl_constants {
         $(
             impl $t {
                 $(
+                    /// Returns the appropriate constant value.
                     pub const fn $fn() -> Self {
                         $val
                     }

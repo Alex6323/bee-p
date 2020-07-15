@@ -44,7 +44,7 @@ impl<T: Trit> T242<T> {
     pub fn into_t243(self) -> T243<T> {
         let mut trit_buf = self.into_inner();
         trit_buf.push(T::zero());
-        T243::from_trit_buf(trit_buf)
+        T243::new(trit_buf)
     }
 }
 
