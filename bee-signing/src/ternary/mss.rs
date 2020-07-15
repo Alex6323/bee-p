@@ -102,7 +102,7 @@ where
     type Error = MssError;
 
     fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
-        let seed = Self::Seed::from_buf(entropy.to_buf()).map_err(|_| MssError::FailedSeed)?;
+        let seed = Self::Seed::from_trits(entropy.to_buf()).map_err(|_| MssError::FailedSeed)?;
         let mut sponge = S::default();
         let mut keys = Vec::new();
         let mut tree = TritBuf::zeros(((1 << self.depth) - 1) * 243);
@@ -112,7 +112,7 @@ where
         for key_index in 0..(1 << (self.depth - 1)) {
             let ots_private_key = self
                 .generator
-                .generate_from_entropy(seed.subseed(key_index).trits())
+                .generate_from_entropy(seed.subseed(key_index).to_trits())
                 .map_err(|_| Self::Error::FailedUnderlyingPrivateKeyGeneration)?;
             let ots_public_key = ots_private_key
                 .generate_public_key()

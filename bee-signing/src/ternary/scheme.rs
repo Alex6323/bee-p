@@ -44,7 +44,7 @@ pub trait PrivateKeyGenerator {
     /// let private_key = private_key_generator.generate_from_seed(&seed, 0);
     /// ```
     fn generate_from_seed(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
-        self.generate_from_entropy(seed.subseed(index).trits())
+        self.generate_from_entropy(seed.subseed(index).to_trits())
     }
 
     /// Deterministically generates and returns a private key from entropy
@@ -66,7 +66,7 @@ pub trait PrivateKeyGenerator {
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
-    /// let private_key = private_key_generator.generate_from_entropy(seed.trits());
+    /// let private_key = private_key_generator.generate_from_entropy(seed.to_trits());
     /// ```
     fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error>;
 }

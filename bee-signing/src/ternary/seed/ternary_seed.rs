@@ -94,7 +94,7 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         }
     }
 
-    fn from_buf(buf: TritBuf) -> Result<Self, Self::Error> {
+    fn from_trits(buf: TritBuf) -> Result<Self, Self::Error> {
         if buf.len() != 243 {
             return Err(Self::Error::InvalidLength(buf.len()));
         }
@@ -105,11 +105,7 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         })
     }
 
-    fn as_bytes(&self) -> &[i8] {
-        self.seed.as_i8_slice()
-    }
-
-    fn trits(&self) -> &Trits {
+    fn to_trits(&self) -> &Trits {
         &self.seed
     }
 }

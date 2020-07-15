@@ -25,7 +25,7 @@ mod tests {
     fn wots_sponge<S: Sponge + Default>() {
         let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
         let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
-        let seed = TernarySeed::<S>::from_buf(seed_trits).unwrap();
+        let seed = TernarySeed::<S>::from_trits(seed_trits).unwrap();
         let security_levels = vec![
             WotsSecurityLevel::Low,
             WotsSecurityLevel::Medium,

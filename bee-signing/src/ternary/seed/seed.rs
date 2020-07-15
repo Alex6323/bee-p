@@ -20,11 +20,9 @@ pub trait Seed: Zeroize + Drop {
 
     fn subseed(&self, index: u64) -> Self;
 
-    fn from_buf(buf: TritBuf) -> Result<Self, Self::Error>
+    fn from_trits(buf: TritBuf) -> Result<Self, Self::Error>
     where
         Self: Sized;
 
-    fn as_bytes(&self) -> &[i8];
-
-    fn trits(&self) -> &Trits;
+    fn to_trits(&self) -> &Trits;
 }
