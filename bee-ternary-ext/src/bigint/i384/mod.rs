@@ -825,8 +825,7 @@ impl PartialOrd for I384<LittleEndian, U32Repr> {
         const NEGBIT: u32 = 0x8000_0000;
         const UMAX: u32 = std::u32::MAX;
 
-        // twos_complement is `true` if both bigints are negative.
-        let twos_complement = match zipped_iter.next() {
+        let numbers_negative = match zipped_iter.next() {
             // Case 1: both numbers are negative, s is less.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
@@ -856,7 +855,7 @@ impl PartialOrd for I384<LittleEndian, U32Repr> {
         };
 
         // Create two separate loops as to avoid repeatedly checking `numbers_negative`.
-        if twos_complement {
+        if numbers_negative {
             for (s, o) in zipped_iter {
                 if s > o {
                     return Some(Less);
