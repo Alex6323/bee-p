@@ -9,7 +9,28 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+//! This module contains signed integers encoded by 384 bits.
+
+mod constants;
+
+pub use constants::{
+    BE_U32_0, BE_U32_1, BE_U32_2, BE_U32_MAX, BE_U32_MIN, BE_U32_NEG_1, BE_U32_NEG_2, BE_U8_0, BE_U8_1, BE_U8_2,
+    BE_U8_MAX, BE_U8_MIN, BE_U8_NEG_1, BE_U8_NEG_2, LE_U32_0, LE_U32_1, LE_U32_2, LE_U32_MAX, LE_U32_MIN, LE_U32_NEG_1,
+    LE_U32_NEG_2, LE_U8_0, LE_U8_1, LE_U8_2, LE_U8_MAX, LE_U8_MIN, LE_U8_NEG_1, LE_U8_NEG_2,
+};
+
+use crate::bigint::{
+    binary_representation::{
+        BinaryRepresentation, U32Repr, U8Repr, BINARY_LEN_IN_U32 as LEN_IN_U32, BINARY_LEN_IN_U8 as LEN_IN_U8,
+    },
+    endianness::{BigEndian, LittleEndian},
+    error::Error,
+    overflowing_add::OverflowingAdd,
+    u384, T242, T243, U384,
+};
+
 use bee_ternary::Btrit;
+
 use byteorder::{self, ByteOrder};
 
 use std::{
@@ -17,48 +38,35 @@ use std::{
     convert::{TryFrom, TryInto},
     fmt,
     marker::PhantomData,
+    ops::{Deref, DerefMut},
 };
 
-use crate::bigint::{
-    common::{
-        BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr, BINARY_LEN_IN_U32 as LEN_IN_U32,
-        BINARY_LEN_IN_U8 as LEN_IN_U8,
-    },
-    u384,
-    utils::OverflowingAddExt,
-    T242, T243, U384,
-};
-
-mod constants;
-pub use constants::{
-    BE_U32_0, BE_U32_1, BE_U32_2, BE_U32_MAX, BE_U32_MIN, BE_U32_NEG_1, BE_U32_NEG_2, BE_U8_0, BE_U8_1, BE_U8_2,
-    BE_U8_MAX, BE_U8_MIN, BE_U8_NEG_1, BE_U8_NEG_2, LE_U32_0, LE_U32_1, LE_U32_2, LE_U32_MAX, LE_U32_MIN, LE_U32_NEG_1,
-    LE_U32_NEG_2, LE_U8_0, LE_U8_1, LE_U8_2, LE_U8_MAX, LE_U8_MIN, LE_U8_NEG_1, LE_U8_NEG_2,
-};
-
-/// A biginteger encoding a signed integer with 384 bits.
+/// A big integer encoding a signed integer with 384 bits.
 ///
 /// `T` is usually taken as a `[u32; 12]` or `[u8; 48]`.
 ///
-/// `E` refers to the endianness of the digits in `T`. This means that in the case of `[u32; 12]`,
-/// if `E == BigEndian`, that the u32 at position i=0 is considered the most significant digit. The
-/// endianness `E` here makes no statement about the endianness of each single digit within itself
-/// (this then is dependent on the endianness of the platform this code is run on).
+/// `E` refers to the endianness of the digits in `T`. This means that in the case of `[u32; 12]`, if `E == BigEndian`,
+/// that the u32 at position i=0 is considered the most significant digit. The endianness `E` here makes no statement
+/// about the endianness of each single digit within itself (this then is dependent on the endianness of the platform
+/// this code is run on).
 ///
-/// For `E == LittleEndian` the digit at the last position is considered to be the most
-/// significant.
+/// For `E == LittleEndian` the digit at the last position is considered to be the most significant.
 #[derive(Clone, Copy)]
 pub struct I384<E, T> {
     pub(crate) inner: T,
     _phantom: PhantomData<E>,
 }
 
-impl<E, T> I384<E, T> {
-    pub fn inner_ref(&self) -> &T {
+impl<E, T> Deref for I384<E, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
         &self.inner
     }
+}
 
-    pub fn inner_mut(&mut self) -> &mut T {
+impl<E, T> DerefMut for I384<E, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
@@ -136,6 +144,7 @@ macro_rules! impl_default {
 }
 
 impl I384<BigEndian, U8Repr> {
+    /// Applies not on all bytes of the I384.
     pub fn not_inplace(&mut self) {
         for digit in &mut self.inner[..] {
             *digit = !*digit;
@@ -302,10 +311,12 @@ impl I384<BigEndian, U32Repr> {
         i
     }
 
+    /// Reinterprets the I384 as an U384.
     pub fn as_u384(self) -> U384<BigEndian, U32Repr> {
         U384::<BigEndian, U32Repr>::from_array(self.inner)
     }
 
+    /// Creates an I384 from a balanced T242.
     pub fn from_t242(value: T242<Btrit>) -> Self {
         // First make it unbalanced.
         let t242_unbalanced = value.into_shifted();
@@ -319,10 +330,12 @@ impl I384<BigEndian, U32Repr> {
         u384_integer.as_i384()
     }
 
+    /// Checks if the I384 is positive.
     pub fn is_positive(&self) -> bool {
         (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x0000_0000
     }
 
+    /// Checks if the I384 is negative.
     pub fn is_negative(&self) -> bool {
         (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x8000_0000
     }
@@ -343,6 +356,7 @@ impl I384<BigEndian, U32Repr> {
         }
     }
 
+    /// Shifts the I384 in unsigned space.
     pub fn shift_into_u384(self) -> U384<BigEndian, U32Repr> {
         let mut u384_value = self.as_u384();
         u384_value.sub_inplace(*u384::BE_U32_HALF_MAX);
@@ -393,6 +407,7 @@ impl I384<BigEndian, U32Repr> {
         i
     }
 
+    /// Creates an I384 from a balanced T243.
     pub fn try_from_t243(balanced_trits: T243<Btrit>) -> Result<Self, Error> {
         let unbalanced_trits = balanced_trits.into_shifted();
         let u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(unbalanced_trits)?;
@@ -656,10 +671,12 @@ impl I384<LittleEndian, U32Repr> {
         i
     }
 
+    /// Reinterprets the I384 as an U384.
     pub fn as_u384(self) -> U384<LittleEndian, U32Repr> {
         U384::<LittleEndian, U32Repr>::from_array(self.inner)
     }
 
+    /// Creates an I384 from a balanced T242.
     pub fn from_t242(value: T242<Btrit>) -> Self {
         // First make it unbalanced.
         let t242_unbalanced = value.into_shifted();
@@ -673,10 +690,12 @@ impl I384<LittleEndian, U32Repr> {
         u384_integer.as_i384()
     }
 
+    /// Checks if the I384 is positive.
     pub fn is_positive(&self) -> bool {
         (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x0000_0000
     }
 
+    /// Checks if the I384 is negative.
     pub fn is_negative(&self) -> bool {
         (self.inner[LEN_IN_U32 - 1] & 0x8000_0000) == 0x8000_0000
     }
@@ -697,6 +716,7 @@ impl I384<LittleEndian, U32Repr> {
         }
     }
 
+    /// Shifts the I384 in unsigned space.
     pub fn shift_into_u384(self) -> U384<LittleEndian, U32Repr> {
         let mut u384_value = self.as_u384();
         u384_value.sub_inplace(*u384::LE_U32_HALF_MAX);
@@ -747,12 +767,14 @@ impl I384<LittleEndian, U32Repr> {
         i
     }
 
+    /// Tries to create an I384 from a balanced T243.
     pub fn try_from_t243(balanced_trits: T243<Btrit>) -> Result<Self, Error> {
         let unbalanced_trits = balanced_trits.into_shifted();
         let u384_integer = U384::<LittleEndian, U32Repr>::try_from_t243(unbalanced_trits)?;
         Ok(u384_integer.shift_into_i384())
     }
 
+    /// Zeroes the most significant trit of the I384.
     pub fn zero_most_significant_trit(&mut self) {
         if *self > u384::LE_U32_HALF_MAX_T242.as_i384() {
             self.sub_inplace(u384::LE_U32_ONLY_T243_OCCUPIED.as_i384());
@@ -880,92 +902,3 @@ impl TryFrom<T243<Btrit>> for I384<LittleEndian, U32Repr> {
 }
 
 impl_toggle_endianness!((I384), U8Repr, U32Repr);
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    test_binary_op!(
-        [min_minus_one_is_max, sub_inplace, LE_U32_MIN, LE_U32_1, LE_U32_MAX],
-        [
-            min_plus_neg_one_is_max,
-            add_inplace,
-            LE_U32_MIN,
-            LE_U32_NEG_1,
-            LE_U32_MAX
-        ],
-        [min_minus_zero_is_min, sub_inplace, LE_U32_MIN, LE_U32_0, LE_U32_MIN],
-        [min_plus_zero_is_min, add_inplace, LE_U32_MIN, LE_U32_0, LE_U32_MIN],
-        [
-            neg_one_minus_one_is_neg_two,
-            sub_inplace,
-            LE_U32_NEG_1,
-            LE_U32_1,
-            LE_U32_NEG_2
-        ],
-        [
-            neg_one_minus_neg_one_is_zero,
-            sub_inplace,
-            LE_U32_NEG_1,
-            LE_U32_NEG_1,
-            LE_U32_0
-        ],
-        [neg_one_plus_one_is_zero, add_inplace, LE_U32_NEG_1, LE_U32_1, LE_U32_0],
-        [
-            neg_one_plus_neg_one_is_neg_two,
-            add_inplace,
-            LE_U32_NEG_1,
-            LE_U32_NEG_1,
-            LE_U32_NEG_2
-        ],
-        [zero_minus_one_is_neg_one, sub_inplace, LE_U32_0, LE_U32_1, LE_U32_NEG_1],
-        [zero_minus_neg_one_is_one, sub_inplace, LE_U32_0, LE_U32_NEG_1, LE_U32_1],
-        [zero_plus_one_is_one, add_inplace, LE_U32_0, LE_U32_1, LE_U32_1],
-        [
-            zero_plus_neg_one_is_neg_one,
-            add_inplace,
-            LE_U32_0,
-            LE_U32_NEG_1,
-            LE_U32_NEG_1
-        ],
-        [one_minus_neg_one_is_two, sub_inplace, LE_U32_1, LE_U32_NEG_1, LE_U32_2],
-        [one_minus_one_is_zero, sub_inplace, LE_U32_1, LE_U32_1, LE_U32_0],
-        [one_plus_one_is_two, add_inplace, LE_U32_1, LE_U32_1, LE_U32_2],
-        [one_plus_neg_one_is_zero, add_inplace, LE_U32_1, LE_U32_NEG_1, LE_U32_0],
-        [max_plus_one_is_min, add_inplace, LE_U32_MAX, LE_U32_1, LE_U32_MIN],
-        [
-            max_minus_neg_one_is_min,
-            sub_inplace,
-            LE_U32_MAX,
-            LE_U32_NEG_1,
-            LE_U32_MIN
-        ],
-    );
-
-    test_binary_op_calc_result!(
-        [
-            min_minus_two_is_max_minus_one,
-            sub_inplace,
-            LE_U32_MIN,
-            LE_U32_2,
-            sub_inplace,
-            LE_U32_MAX,
-            LE_U32_1
-        ],
-        [
-            min_plus_one_is_max_plus_two,
-            add_inplace,
-            LE_U32_MIN,
-            LE_U32_1,
-            add_inplace,
-            LE_U32_MAX,
-            LE_U32_2
-        ],
-    );
-
-    test_endianness_toggle!((I384), [u8_repr, U8Repr], [u32_repr, U32Repr],);
-
-    test_endianness_roundtrip!((I384), [u8_repr, U8Repr], [u32_repr, U32Repr],);
-
-    test_repr_roundtrip!((I384), [big_endian, BigEndian], [little_endian, LittleEndian],);
-}

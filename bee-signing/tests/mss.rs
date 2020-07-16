@@ -14,9 +14,9 @@ mod tests {
 
     use bee_crypto::ternary::{CurlP27, CurlP81, Kerl, Sponge};
     use bee_signing::ternary::{
-        MssError, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature, PrivateKey, PrivateKeyGenerator,
-        PublicKey, RecoverableSignature, Seed, Signature, WotsPublicKey, WotsSecurityLevel,
-        WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder,
+        mss::{MssError, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature},
+        wots::{WotsPublicKey, WotsSecurityLevel, WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder},
+        PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
     };
     use bee_ternary::{T1B1Buf, TryteBuf};
 
@@ -76,8 +76,8 @@ mod tests {
             .as_trits()
             .encode::<T1B1Buf>();
 
-        let public_key = MssPublicKey::<S, WotsPublicKey<S>>::from_buf(public_key_trits).depth(depth);
-        let signature = MssSignature::<S>::from_buf(signature_trits).index(index);
+        let public_key = MssPublicKey::<S, WotsPublicKey<S>>::from_trits(public_key_trits).depth(depth);
+        let signature = MssSignature::<S>::from_trits(signature_trits).index(index);
         let valid = public_key.verify(message_trits.as_i8_slice(), &signature).unwrap();
 
         assert!(valid);
@@ -140,7 +140,7 @@ mod tests {
         const DEPTH: u8 = 4;
 
         let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
-        let seed = G::Seed::from_buf(seed_trits).unwrap();
+        let seed = G::Seed::from_trits(seed_trits).unwrap();
         let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
 
         // todo try with not recover

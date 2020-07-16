@@ -9,25 +9,31 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use lazy_static::lazy_static;
+use crate::bigint::{binary_representation::U32Repr, endianness::LittleEndian, T243, U384};
 
-use crate::bigint::{
-    common::{LittleEndian, U32Repr},
-    T243, U384,
-};
 use bee_ternary::{Btrit, Utrit};
 
+use lazy_static::lazy_static;
+
 lazy_static! {
-    pub static ref BTRIT_ZERO: T243<Btrit> = T243::<Btrit>::zero();
-    pub static ref BTRIT_ONE: T243<Btrit> = T243::<Btrit>::one();
-    pub static ref BTRIT_NEG_ONE: T243<Btrit> = T243::<Btrit>::neg_one();
-    pub static ref UTRIT_ZERO: T243<Utrit> = T243::<Utrit>::zero();
-    pub static ref UTRIT_ONE: T243<Utrit> = T243::<Utrit>::one();
-    pub static ref UTRIT_TWO: T243<Utrit> = T243::<Utrit>::two();
+    /// T243 balanced trits represented 0.
+    pub static ref BTRIT_0: T243<Btrit> = T243::<Btrit>::zero();
+    /// T243 balanced trits represented 1.
+    pub static ref BTRIT_1: T243<Btrit> = T243::<Btrit>::one();
+    /// T243 balanced trits represented -1.
+    pub static ref BTRIT_NEG_1: T243<Btrit> = T243::<Btrit>::neg_one();
+    /// T243 unbalanced trits represented 0.
+    pub static ref UTRIT_0: T243<Utrit> = T243::<Utrit>::zero();
+    /// T243 unbalanced trits represented 1.
+    pub static ref UTRIT_1: T243<Utrit> = T243::<Utrit>::one();
+    /// T243 unbalanced trits represented 2.
+    pub static ref UTRIT_2: T243<Utrit> = T243::<Utrit>::two();
+    /// T243 unbalanced trits represented U384::max.
     pub static ref UTRIT_U384_MAX: T243<Utrit> = From::from(U384::<LittleEndian, U32Repr>::max());
+    /// T243 unbalanced trits represented half of U384::max.
     pub static ref UTRIT_U384_MAX_HALF: T243<Utrit> = {
         let mut u384_max = U384::<LittleEndian, U32Repr>::max();
         u384_max.divide_by_two();
-        From::from(u384_max)
+        u384_max.into()
     };
 }

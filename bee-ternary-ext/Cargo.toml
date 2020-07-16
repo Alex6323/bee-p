@@ -11,9 +11,11 @@ keywords = ["iota", "tangle", "bee", "framework", "ternary"]
 homepage = "https://www.iota.org"
 
 [dependencies]
+bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
+
 byteorder = "1.3.4"
 lazy_static = "1.4.0"
-bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
+thiserror = "1.0.20"
 
 [dev-dependencies]
 rand = "0.7.3"

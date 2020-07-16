@@ -14,8 +14,8 @@ mod tests {
 
     use bee_crypto::ternary::{CurlP27, CurlP81, Kerl, Sponge};
     use bee_signing::ternary::{
-        PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, TernarySeed, WotsSecurityLevel,
-        WotsSpongePrivateKeyGeneratorBuilder,
+        wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+        PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, TernarySeed,
     };
     use bee_ternary::{T1B1Buf, TryteBuf};
 
@@ -25,7 +25,7 @@ mod tests {
     fn wots_sponge<S: Sponge + Default>() {
         let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
         let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
-        let seed = TernarySeed::<S>::from_buf(seed_trits).unwrap();
+        let seed = TernarySeed::<S>::from_trits(seed_trits).unwrap();
         let security_levels = vec![
             WotsSecurityLevel::Low,
             WotsSecurityLevel::Medium,
@@ -41,7 +41,7 @@ mod tests {
                 let public_key = private_key.generate_public_key().unwrap();
                 let signature = private_key.sign(message_trits.as_i8_slice()).unwrap();
                 let recovered_public_key = signature.recover_public_key(message_trits.as_i8_slice()).unwrap();
-                assert_eq!(public_key.as_bytes(), recovered_public_key.as_bytes());
+                assert_eq!(public_key.to_trits(), recovered_public_key.to_trits());
                 let valid = public_key.verify(message_trits.as_i8_slice(), &signature).unwrap();
                 assert!(valid);
             }

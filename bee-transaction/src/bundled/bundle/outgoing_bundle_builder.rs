@@ -17,8 +17,9 @@ use crate::bundled::{
 
 use bee_crypto::ternary::{Hash, Kerl, Sponge};
 use bee_signing::ternary::{
-    normalize_hash, PrivateKey, PrivateKeyGenerator, Signature, TernarySeed, WotsSecurityLevel,
-    WotsSpongePrivateKeyGeneratorBuilder,
+    normalize_hash,
+    wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    PrivateKey, PrivateKeyGenerator, Signature, TernarySeed,
 };
 use bee_ternary::Btrit;
 
@@ -277,7 +278,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
 
             // Split signature into fragments
-            for fragment in signature.trits().chunks(PAYLOAD_TRIT_LEN) {
+            for fragment in signature.to_trits().chunks(PAYLOAD_TRIT_LEN) {
                 signature_fragments.push(Payload::from_inner_unchecked(fragment.to_owned()));
             }
         }
@@ -360,7 +361,7 @@ mod tests {
 
     use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_signing::ternary::{PublicKey, RecoverableSignature, Seed, WotsSignature};
+    use bee_signing::ternary::{wots::WotsSignature, PublicKey, RecoverableSignature, Seed};
     use bee_ternary::{T1B1Buf, TritBuf};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
@@ -392,7 +393,7 @@ mod tests {
             .unwrap()
             .generate_from_seed(&seed, 0)
             .unwrap();
-        let address = Address::from_inner_unchecked(privkey.generate_public_key().unwrap().trits().to_owned());
+        let address = Address::from_inner_unchecked(privkey.generate_public_key().unwrap().to_trits().to_owned());
 
         // Transfer
         bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(1)));
@@ -428,10 +429,10 @@ mod tests {
 
             offset += PAYLOAD_TRIT_LEN;
         }
-        let res = WotsSignature::<Kerl>::from_buf(signature)
+        let res = WotsSignature::<Kerl>::from_trits(signature)
             .recover_public_key(normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
-        assert_eq!(address.to_inner(), res.trits());
+        assert_eq!(address.to_inner(), res.to_trits());
 
         Ok(())
     }
@@ -449,7 +450,7 @@ mod tests {
                 .unwrap()
                 .generate_public_key()
                 .unwrap()
-                .trits()
+                .to_trits()
                 .to_owned(),
         );
         let address_medium = Address::from_inner_unchecked(
@@ -461,7 +462,7 @@ mod tests {
                 .unwrap()
                 .generate_public_key()
                 .unwrap()
-                .trits()
+                .to_trits()
                 .to_owned(),
         );
 
@@ -496,10 +497,10 @@ mod tests {
         assert_eq!(bundle.len(), bundle_size);
 
         // Validate signature
-        let res_low = WotsSignature::<Kerl>::from_buf(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
+        let res_low = WotsSignature::<Kerl>::from_trits(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
             .recover_public_key(normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
-        assert_eq!(address_low.to_inner(), res_low.trits());
+        assert_eq!(address_low.to_inner(), res_low.to_trits());
 
         let mut signature = TritBuf::<T1B1Buf>::zeros(PAYLOAD_TRIT_LEN * 2);
         let mut offset = 0;
@@ -508,10 +509,10 @@ mod tests {
             signature[offset..][..PAYLOAD_TRIT_LEN].copy_from(input.payload.to_inner());
             offset += PAYLOAD_TRIT_LEN;
         }
-        let res_medium = WotsSignature::<Kerl>::from_buf(signature)
+        let res_medium = WotsSignature::<Kerl>::from_trits(signature)
             .recover_public_key(normalize_hash(bundle.0.get(2).unwrap().bundle.to_inner()).as_i8_slice())
             .unwrap();
-        assert_eq!(address_medium.to_inner(), res_medium.trits());
+        assert_eq!(address_medium.to_inner(), res_medium.to_trits());
 
         Ok(())
     }

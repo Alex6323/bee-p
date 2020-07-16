@@ -10,10 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::{Trits, T1B1};
-use bee_ternary_ext::bigint::{
-    common::{BigEndian, U8Repr},
-    I384, T242, T243,
-};
+use bee_ternary_ext::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243};
 
 #[test]
 fn custom_binary_to_ternary() {
@@ -37,7 +34,7 @@ fn custom_binary_to_ternary() {
     let trit_buf = unsafe { Trits::<T1B1>::from_raw_unchecked(&EXPECTED_TERNARY, EXPECTED_TERNARY.len()).to_buf() };
 
     let calculated_ternary = T242::from_i384_ignoring_mst(i384_be_u8).into_t243();
-    let expected_ternary = T243::from_trit_buf(trit_buf);
+    let expected_ternary = T243::new(trit_buf);
 
     assert_eq!(calculated_ternary, expected_ternary);
 }

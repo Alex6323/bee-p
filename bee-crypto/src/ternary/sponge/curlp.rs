@@ -18,7 +18,6 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// The length internal state of the `CurlP` sponge construction (in units of binary-coded, balanced trits).
 const STATE_LEN: usize = HASH_LENGTH * 3;
 const HALF_STATE_LEN: usize = STATE_LEN / 2;
 const TRUTH_TABLE: [[Btrit; 3]; 3] = [
@@ -27,12 +26,16 @@ const TRUTH_TABLE: [[Btrit; 3]; 3] = [
     [Btrit::NegOne, Btrit::PlusOne, Btrit::Zero],
 ];
 
+/// Available round numbers for CurlP.
 #[derive(Copy, Clone)]
 pub enum CurlPRounds {
+    /// 27 rounds.
     Rounds27 = 27,
+    /// 81 rounds.
     Rounds81 = 81,
 }
 
+/// State of the ternary cryptographic function `CurlP`.
 pub struct CurlP {
     /// The number of rounds of hashing to apply before a hash is squeezed.
     rounds: CurlPRounds,
@@ -124,6 +127,7 @@ impl Sponge for CurlP {
 pub struct CurlP27(CurlP);
 
 impl CurlP27 {
+    /// Creates a new `CurlP27`.
     pub fn new() -> Self {
         Self(CurlP::new(CurlPRounds::Rounds27))
     }
@@ -153,6 +157,7 @@ impl DerefMut for CurlP27 {
 pub struct CurlP81(CurlP);
 
 impl CurlP81 {
+    /// Creates a new `CurlP81`.
     pub fn new() -> Self {
         Self(CurlP::new(CurlPRounds::Rounds81))
     }

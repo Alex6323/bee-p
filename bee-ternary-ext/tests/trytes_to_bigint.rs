@@ -10,10 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_ternary::{T1B1Buf, TritBuf, TryteBuf};
-use bee_ternary_ext::bigint::{
-    common::{BigEndian, U8Repr},
-    I384, T243,
-};
+use bee_ternary_ext::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T243};
+
 use std::convert::TryFrom;
 
 #[test]
@@ -29,7 +27,7 @@ fn trytes_to_i384_be_u8_1() {
     assert!(trytes.is_ok());
     let trytes = trytes.unwrap();
     let trit_buf: TritBuf<T1B1Buf> = trytes.as_trits().encode();
-    let t243 = T243::from_trit_buf(trit_buf);
+    let t243 = T243::new(trit_buf);
     let t242 = t243.into_t242();
 
     let converted_i384 = I384::<BigEndian, U8Repr>::try_from(t242);
@@ -53,7 +51,7 @@ fn trytes_to_i384_be_u8_2() {
     assert!(trytes.is_ok());
     let trytes = trytes.unwrap();
     let trit_buf: TritBuf<T1B1Buf> = trytes.as_trits().encode();
-    let t243 = T243::from_trit_buf(trit_buf);
+    let t243 = T243::new(trit_buf);
     let t242 = t243.into_t242();
 
     let converted_i384 = I384::<BigEndian, U8Repr>::try_from(t242);

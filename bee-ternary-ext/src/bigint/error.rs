@@ -9,13 +9,17 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-/// Different types of Sponges.
-#[derive(Copy, Clone)]
-pub enum SpongeType {
-    /// Kerl.
-    Kerl,
-    /// CurlP with 27 rounds.
-    CurlP27,
-    /// CurlP with 81 rounds.
-    CurlP81,
+//! Big integers errors.
+
+use thiserror::Error;
+
+/// Errors related to big integers.
+#[derive(Clone, Debug, Error)]
+pub enum Error {
+    /// Error when converting and binary representation exceeds ternary range.
+    #[error("Binary representation exceeds ternary range.")]
+    BinaryExceedsTernaryRange,
+    /// Error when converting and ternary representation exceeds binary range.
+    #[error("Ternary representation exceeds binary range.")]
+    TernaryExceedsBinaryRange,
 }

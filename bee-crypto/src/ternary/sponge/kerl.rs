@@ -12,13 +12,11 @@
 use crate::ternary::{Sponge, HASH_LENGTH};
 
 use bee_ternary::{Btrit, Trits, T1B1};
-use bee_ternary_ext::bigint::{
-    common::{BigEndian, U8Repr},
-    I384, T242, T243,
-};
+use bee_ternary_ext::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243};
 
 use tiny_keccak::{Hasher, Keccak};
 
+/// State of the ternary cryptographic function `Kerl`.
 #[derive(Clone)]
 pub struct Kerl {
     /// Actual keccak hash function.
@@ -30,6 +28,7 @@ pub struct Kerl {
 }
 
 impl Kerl {
+    /// Creates a new `Kerl`.
     pub fn new() -> Self {
         Self {
             keccak: Keccak::v384(),
@@ -48,11 +47,11 @@ impl Default for Kerl {
 #[derive(Debug)]
 pub enum Error {
     NotMultipleOfHashLength,
-    TernaryBinaryConversion(bee_ternary_ext::bigint::common::Error),
+    TernaryBinaryConversion(bee_ternary_ext::bigint::error::Error),
 }
 
-impl From<bee_ternary_ext::bigint::common::Error> for Error {
-    fn from(error: bee_ternary_ext::bigint::common::Error) -> Self {
+impl From<bee_ternary_ext::bigint::error::Error> for Error {
+    fn from(error: bee_ternary_ext::bigint::error::Error) -> Self {
         Error::TernaryBinaryConversion(error)
     }
 }
@@ -73,7 +72,7 @@ impl Sponge for Kerl {
         }
 
         for trits_chunk in input.chunks(HASH_LENGTH) {
-            self.ternary_state.inner_mut().copy_from(&trits_chunk);
+            self.ternary_state.copy_from(&trits_chunk);
             // Unwrapping is ok because this cannot fail.
             //
             // TODO: Replace with a dedicated `TryFrom` implementation with `Error = !`.
@@ -83,7 +82,7 @@ impl Sponge for Kerl {
             // TODO: Convert to binary without cloning.
             self.binary_state = self.ternary_state.clone().into_t242().into();
 
-            self.keccak.update(self.binary_state.inner_ref());
+            self.keccak.update(&self.binary_state[..]);
         }
 
         Ok(())
@@ -112,12 +111,12 @@ impl Sponge for Kerl {
             // Swap out the internal one and the new one
             std::mem::swap(&mut self.keccak, &mut keccak);
 
-            keccak.finalize(&mut self.binary_state.inner_mut()[..]);
+            keccak.finalize(&mut self.binary_state[..]);
             let ternary_value = T242::from_i384_ignoring_mst(self.binary_state).into_t243();
 
-            trit_chunk.copy_from(&ternary_value.inner_ref());
+            trit_chunk.copy_from(&ternary_value);
             self.binary_state.not_inplace();
-            self.keccak.update(self.binary_state.inner_ref());
+            self.keccak.update(&self.binary_state[..]);
         }
         Ok(())
     }
