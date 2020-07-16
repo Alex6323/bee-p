@@ -16,8 +16,14 @@ use dashmap::DashMap;
 use internment::Intern;
 use std::{any::Any, cell::Cell};
 
+pub type EventNameCache = Cell<Option<Intern<String>>>;
+
 pub trait Event: Any {
     fn name() -> &'static str
+    where
+        Self: Sized;
+
+    fn interned_static() -> &'static std::thread::LocalKey<EventNameCache>
     where
         Self: Sized;
 
@@ -25,11 +31,7 @@ pub trait Event: Any {
     where
         Self: Sized,
     {
-        thread_local! {
-            pub static INTERNED_NAME: Cell<Option<Intern<String>>> = Cell::new(None);
-        }
-
-        INTERNED_NAME.with(|name| match name.get() {
+        Self::interned_static().with(|name| match name.get() {
             Some(intern) => intern,
             None => {
                 let intern = Intern::new(Self::name().to_string());

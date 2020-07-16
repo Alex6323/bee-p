@@ -43,6 +43,13 @@ pub fn derive_event(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             fn name() -> &'static str {
                 #event_name
             }
+
+            fn interned_static() -> &'static std::thread::LocalKey<bee_event::EventNameCache> {
+                thread_local! {
+                    pub static INTERNED_NAME: bee_event::EventNameCache = Default::default();
+                }
+                &INTERNED_NAME
+            }
         }
     };
 
