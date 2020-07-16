@@ -16,6 +16,7 @@ use bee_ternary_ext::bigint::{binary_representation::U8Repr, endianness::BigEndi
 
 use tiny_keccak::{Hasher, Keccak};
 
+/// State of the ternary cryptographic function `Kerl`.
 #[derive(Clone)]
 pub struct Kerl {
     /// Actual keccak hash function.
@@ -27,6 +28,7 @@ pub struct Kerl {
 }
 
 impl Kerl {
+    /// Creates a new `Kerl`.
     pub fn new() -> Self {
         Self {
             keccak: Keccak::v384(),

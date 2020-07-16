@@ -16,11 +16,13 @@ use std::{cmp::PartialEq, fmt, hash};
 /// The length of a hash in units of binary-coded balanced trits.
 pub const HASH_LENGTH: usize = 243;
 
+/// Ternary cryptographic hash.
 #[derive(Copy, Clone)]
 // TODO pub ?
 pub struct Hash(pub [i8; HASH_LENGTH]);
 
 impl Hash {
+    /// Creates a hash filled with zeros.
     pub fn zeros() -> Self {
         Self([0; HASH_LENGTH])
     }
