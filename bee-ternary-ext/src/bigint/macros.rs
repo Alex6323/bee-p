@@ -11,46 +11,42 @@
 
 macro_rules! def_and_impl_ternary {
     ($ident:ident, $len:expr) => {
-        pub const LEN: usize = $len;
+        /// Length of the trit buffer.
+        pub const LENGTH: usize = $len;
 
+        /// Fixed size trit buffer.
         #[derive(Clone, Debug)]
         pub struct $ident<T: Trit>(TritBuf<T1B1Buf<T>>);
 
-        impl<T> $ident<T>
-        where
-            T: Trit,
-        {
-            pub fn from_trit_buf(trits_buf: TritBuf<T1B1Buf<T>>) -> Self {
-                assert_eq!(trits_buf.len(), LEN);
+        impl<T: Trit> $ident<T> {
+            /// Creates a new fixed size trit buffer from input.
+            pub fn new(trits_buf: TritBuf<T1B1Buf<T>>) -> Self {
+                assert_eq!(trits_buf.len(), LENGTH);
                 $ident(trits_buf)
             }
 
-            /// Copies all elements from `Trits` into the inner `TritsBuf`.
-            ///
-            /// Panics if `Trits` does not have the same length as the inner buffer (243 elements).
-            pub fn copy_from_trits<R>(&mut self, trits: &Trits<R>)
-            where
-                R: RawEncoding<Trit = T>,
-            {
-                assert_eq!(trits.len(), LEN);
-                for (x, y) in self.0.iter_mut().zip(trits.iter()) {
-                    *x = y;
-                }
-            }
-
+            /// Creates a new trit buffer that represents the value 0.
             pub fn zero() -> Self {
-                Self(TritBuf::zeros(LEN))
-            }
-            pub fn inner_ref(&self) -> &TritBuf<T1B1Buf<T>> {
-                &self.0
+                Self(TritBuf::zeros(LENGTH))
             }
 
-            pub fn inner_mut(&mut self) -> &mut TritBuf<T1B1Buf<T>> {
-                &mut self.0
-            }
-
+            /// Transforms into its inner trit buffer.
             pub fn into_inner(self) -> TritBuf<T1B1Buf<T>> {
                 self.0
+            }
+        }
+
+        impl<T: Trit> std::ops::Deref for $ident<T> {
+            type Target = TritBuf<T1B1Buf<T>>;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl<T: Trit> std::ops::DerefMut for $ident<T> {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
             }
         }
 
@@ -59,96 +55,64 @@ macro_rules! def_and_impl_ternary {
             T: Trit,
             <T as ShiftTernary>::Target: Trit,
         {
+            /// Transforms into a shifted representation of the trit buffer.
             pub fn into_shifted(self) -> $ident<<T as ShiftTernary>::Target> {
                 $ident(self.0.into_shifted())
             }
         }
 
         impl $ident<Btrit> {
-            pub fn increment_inplace(&mut self) -> bool {
-                for trit in self.inner_mut().iter_mut() {
-                    match trit.checked_increment() {
-                        Some(increment) => {
-                            *trit = increment;
-                            return false;
-                        }
-
-                        None => *trit = Btrit::NegOne,
-                    }
-                }
-                true
-            }
-
+            /// Creates a new balanced trit buffer that represents the value 1.
             pub fn one() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Btrit::PlusOne);
-                t243
+                let mut trits = Self::zero();
+                trits.0.set(0, Btrit::PlusOne);
+                trits
             }
 
+            /// Creates a new balanced trit buffer that represents the value -1.
             pub fn neg_one() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Btrit::NegOne);
-                t243
+                let mut trits = Self::zero();
+                trits.0.set(0, Btrit::NegOne);
+                trits
             }
 
-            pub fn two() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Btrit::NegOne);
-                t243.0.set(1, Btrit::PlusOne);
-                t243
-            }
-
-            pub fn neg_two() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Btrit::PlusOne);
-                t243.0.set(1, Btrit::NegOne);
-                t243
-            }
-
+            /// Creates a new balanced trit buffer that represents the maximum value.
             pub fn max() -> Self {
-                Self(TritBuf::filled(LEN, Btrit::PlusOne))
+                Self(TritBuf::filled(LENGTH, Btrit::PlusOne))
             }
 
+            /// Creates a new balanced trit buffer that represents the minimum value.
             pub fn min() -> Self {
-                Self(TritBuf::filled(LEN, Btrit::NegOne))
+                Self(TritBuf::filled(LENGTH, Btrit::NegOne))
             }
         }
 
         impl $ident<Utrit> {
-            pub fn increment_inplace(&mut self) -> bool {
-                for trit in self.inner_mut().iter_mut() {
-                    match trit.checked_increment() {
-                        Some(increment) => {
-                            *trit = increment;
-                            return false;
-                        }
-
-                        None => *trit = Utrit::Zero,
-                    }
-                }
-                true
-            }
-
+            /// Creates a new unbalanced trit buffer that represents the value 1.
             pub fn one() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Utrit::One);
-                t243
+                let mut trits = Self::zero();
+                trits.0.set(0, Utrit::One);
+                trits
             }
 
+            /// Creates a new unbalanced trit buffer that represents the value 2.
             pub fn two() -> Self {
-                let mut t243 = Self::zero();
-                t243.0.set(0, Utrit::Two);
-                t243
+                let mut trits = Self::zero();
+                trits.0.set(0, Utrit::Two);
+                trits
             }
 
+            /// Creates a new unbalanced trit buffer that represents the half of the maximum value.
             pub fn half_max() -> Self {
-                Self(TritBuf::filled(LEN, Utrit::One))
+                Self(TritBuf::filled(LENGTH, Utrit::One))
             }
 
+            /// Creates a new unbalanced trit buffer that represents the maximum value.
             pub fn max() -> Self {
-                Self(TritBuf::filled(LEN, Utrit::Two))
+                Self(TritBuf::filled(LENGTH, Utrit::Two))
             }
 
+            /// Creates a new unbalanced trit buffer that represents the minimum value.
             pub fn min() -> Self {
                 Self::zero()
             }
@@ -162,20 +126,19 @@ macro_rules! def_and_impl_ternary {
 
         impl<T: Trit> Eq for $ident<T> {}
 
+        impl<T: Trit> PartialEq for $ident<T> {
+            fn eq(&self, other: &Self) -> bool {
+                self.0.eq(&other.0)
+            }
+        }
+
         impl<T: Trit> Ord for $ident<T> {
             fn cmp(&self, other: &Self) -> Ordering {
                 match self.partial_cmp(other) {
                     Some(ordering) => ordering,
-
                     // Cannot be reached because the order is total.
                     None => unreachable!(),
                 }
-            }
-        }
-
-        impl<T: Trit> PartialEq for $ident<T> {
-            fn eq(&self, other: &Self) -> bool {
-                self.0.eq(&other.0)
             }
         }
 
@@ -197,6 +160,7 @@ macro_rules! def_and_impl_ternary {
 macro_rules! impl_const_functions {
     ( ( $($root:tt)* ), { $endianness:ty $(,)? }, { $repr:ty $(,)? } ) => {
         impl $($root)* < $endianness, $repr > {
+            /// Creates an instance from an array of inner representation.
             pub const fn from_array(inner: $repr) -> Self {
                 Self {
                     inner,
@@ -225,6 +189,7 @@ macro_rules! impl_constants {
         $(
             impl $t {
                 $(
+                    /// Returns the appropriate constant value.
                     pub const fn $fn() -> Self {
                         $val
                     }

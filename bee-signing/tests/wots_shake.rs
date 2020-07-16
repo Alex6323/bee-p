@@ -13,7 +13,10 @@
 mod tests {
 
     use bee_crypto::ternary::Kerl;
-    use bee_signing::ternary::{PrivateKeyGenerator, WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder};
+    use bee_signing::ternary::{
+        wots::{WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder},
+        PrivateKeyGenerator,
+    };
     use bee_ternary::{T1B1Buf, TryteBuf};
 
     use std::convert::TryInto;

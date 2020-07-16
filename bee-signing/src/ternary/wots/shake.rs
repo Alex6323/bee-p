@@ -9,14 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::{PrivateKeyGenerator, TernarySeed, WotsError, WotsPrivateKey, WotsSecurityLevel};
+use crate::ternary::{
+    wots::{WotsError, WotsPrivateKey, WotsSecurityLevel},
+    PrivateKeyGenerator, TernarySeed,
+};
 
 use bee_crypto::ternary::Sponge;
 use bee_ternary::{Btrit, TritBuf, Trits};
-use bee_ternary_ext::bigint::{
-    common::{BigEndian, U8Repr},
-    I384, T242, T243,
-};
+use bee_ternary_ext::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243};
 
 use sha3::{
     digest::{ExtendableOutput, Update, XofReader},
@@ -59,17 +59,17 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
         let mut state = TritBuf::zeros(self.security_level as usize * 6561);
         let mut shake = Shake256::default();
         let mut ternary_buffer = T243::<Btrit>::default();
-        ternary_buffer.inner_mut().copy_from(entropy);
+        ternary_buffer.copy_from(entropy);
         let mut binary_buffer: I384<BigEndian, U8Repr> = ternary_buffer.into_t242().into();
 
-        shake.update(&binary_buffer.inner_ref()[..]);
+        shake.update(&binary_buffer[..]);
         let mut reader = shake.finalize_xof();
 
         for trit_chunk in state.chunks_mut(243) {
-            reader.read(&mut binary_buffer.inner_mut()[..]);
+            reader.read(&mut binary_buffer[..]);
             let ternary_value = T242::from_i384_ignoring_mst(binary_buffer).into_t243();
 
-            trit_chunk.copy_from(&ternary_value.inner_ref());
+            trit_chunk.copy_from(&ternary_value);
         }
 
         Ok(Self::PrivateKey {

@@ -84,12 +84,16 @@ macro_rules! test_endianness_roundtrip {
     ) => {
 
         mod endianness_roundtrip {
-            use crate::bigint::$($root)* as Root;
-            use crate::bigint::common::{
-                BigEndian,
-                LittleEndian,
-                U8Repr,
-                U32Repr,
+            use bee_ternary_ext::bigint::$($root)* as Root;
+            use bee_ternary_ext::bigint::{
+                binary_representation::{
+                    U8Repr,
+                    U32Repr,
+                },
+                endianness::{
+                    BigEndian,
+                    LittleEndian,
+                }
             };
             $(
                 mod $modname {
@@ -148,12 +152,16 @@ macro_rules! test_endianness_toggle {
     ) => {
 
         mod toggle_endianness {
-            use crate::bigint::$($root)* as Root;
-            use crate::bigint::common::{
-                BigEndian,
-                LittleEndian,
-                U8Repr,
-                U32Repr,
+            use bee_ternary_ext::bigint::$($root)* as Root;
+            use bee_ternary_ext::bigint::{
+                binary_representation::{
+                    U8Repr,
+                    U32Repr,
+                },
+                endianness::{
+                    BigEndian,
+                    LittleEndian,
+                }
             };
             $(
                 mod $modname {
@@ -198,12 +206,16 @@ macro_rules! test_repr_roundtrip {
         $(,)?
     ) => {
         mod test_repr_roundtrip {
-            use crate::bigint::$($root)* as Root;
-            use crate::bigint::common::{
-                BigEndian,
-                LittleEndian,
-                U8Repr,
-                U32Repr,
+            use bee_ternary_ext::bigint::$($root)* as Root;
+            use bee_ternary_ext::bigint::{
+                binary_representation::{
+                    U8Repr,
+                    U32Repr,
+                },
+                endianness::{
+                    BigEndian,
+                    LittleEndian,
+                }
             };
 
             $(

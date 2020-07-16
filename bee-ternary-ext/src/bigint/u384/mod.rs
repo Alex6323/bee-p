@@ -9,16 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use byteorder::{self, ByteOrder};
-use std::{cmp::Ordering, convert::TryFrom, fmt, marker::PhantomData};
-
-use crate::bigint::{
-    common::{BigEndian, BinaryRepresentation, Error, LittleEndian, U32Repr, U8Repr},
-    t243,
-    utils::{OverflowingAddExt, SplitInteger},
-    I384, T242, T243,
-};
-use bee_ternary::Utrit;
+//! This module contains unsigned integers encoded by 384 bits.
 
 mod constants;
 
@@ -28,15 +19,54 @@ pub use constants::{
     LE_U32_NEG_HALF_MAX_T242, LE_U32_ONLY_T243_OCCUPIED, LE_U8_0, LE_U8_1, LE_U8_2, LE_U8_MAX,
 };
 
+use crate::bigint::{
+    binary_representation::{BinaryRepresentation, U32Repr, U8Repr},
+    endianness::{BigEndian, LittleEndian},
+    error::Error,
+    overflowing_add::OverflowingAdd,
+    split_integer::SplitInteger,
+    t243, I384, T242, T243,
+};
+
+use bee_ternary::Utrit;
+
+use byteorder::{self, ByteOrder};
+
+use std::{
+    cmp::Ordering,
+    convert::TryFrom,
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
+
+/// A big integer encoding an unsigned integer with 384 bits.
+///
+/// `T` is usually taken as a `[u32; 12]` or `[u8; 48]`.
+///
+/// `E` refers to the endianness of the digits in `T`. This means that in the case of `[u32; 12]`, if `E == BigEndian`,
+/// that the u32 at position i=0 is considered the most significant digit. The endianness `E` here makes no statement
+/// about the endianness of each single digit within itself (this then is dependent on the endianness of the platform
+/// this code is run on).
+///
+/// For `E == LittleEndian` the digit at the last position is considered to be the most significant.
 #[derive(Clone, Copy)]
 pub struct U384<E, T> {
     pub(crate) inner: T,
     _phantom: PhantomData<E>,
 }
 
-impl<E, T> U384<E, T> {
-    pub fn inner_ref(&self) -> &T {
+impl<E, T> Deref for U384<E, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+impl<E, T> DerefMut for U384<E, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }
 
@@ -55,10 +85,12 @@ where
 }
 
 impl U384<BigEndian, U32Repr> {
+    /// Reinterprets the U384 as an I384.
     pub fn as_i384(self) -> I384<BigEndian, U32Repr> {
         I384::<BigEndian, U32Repr>::from_array(self.inner)
     }
 
+    /// Shifts the U384 in signed space.
     pub fn shift_into_i384(mut self) -> I384<BigEndian, U32Repr> {
         self.sub_inplace(*BE_U32_HALF_MAX);
         self.sub_inplace(Self::one());
@@ -78,8 +110,8 @@ impl U384<BigEndian, U32Repr> {
         }
     }
 
-    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
-    /// from the least significant one).
+    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting from the least
+    /// significant one).
     pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
@@ -114,6 +146,7 @@ impl U384<BigEndian, U32Repr> {
         self.inner[0] >>= 1;
     }
 
+    /// Creates an U384 from an unbalanced T242.
     pub fn from_t242(trits: T242<Utrit>) -> Self {
         let u384_le = U384::<LittleEndian, U32Repr>::from_t242(trits);
         u384_le.into()
@@ -121,16 +154,15 @@ impl U384<BigEndian, U32Repr> {
 
     /// Subtract `other` from `self` inplace.
     ///
-    /// This function is defined in terms of `overflowing_add` by making use of the following identity
-    /// (in terms of Two's complement, and where `!` is logical bitwise negation):
+    /// This function is defined in terms of `overflowing_add` by making use of the following identity (in terms of
+    /// Two's complement, and where `!` is logical bitwise negation):
     ///
     /// !x = -x - 1 => -x = !x + 1
     pub fn sub_inplace(&mut self, other: Self) {
         let self_iter = self.inner.iter_mut().rev();
         let other_iter = other.inner.iter().rev();
 
-        // The first `borrow` is always true because the addition operation needs to account for the
-        // above).
+        // The first `borrow` is always true because the addition operation needs to account for the above).
         let mut borrow = true;
 
         for (s, o) in self_iter.zip(other_iter) {
@@ -140,10 +172,9 @@ impl U384<BigEndian, U32Repr> {
         }
     }
 
-    /// Converts a signed integer represented by the balanced trits in `t243` to the unsigned
-    /// binary integer `u384`. It does this by shifting the `t243` into signed range (by adding 1
-    /// to all its trits).  `t243` is assumed to be in little endian representation, with the most
-    /// significant trit being at the largest index in the array.
+    /// Converts a signed integer represented by the balanced trits in `t243` to the unsigned binary integer `u384`.
+    /// It does this by shifting the `t243` into signed range (by adding 1 to all its trits).  `t243` is assumed to be
+    /// in little endian representation, with the most significant trit being at the largest index in the array.
     ///
     /// This is done in the following steps:
     ///
@@ -156,9 +187,8 @@ impl U384<BigEndian, U32Repr> {
     ///   + t_1 * 3 + t_0
     /// ```
     ///
-    /// To perform this sum efficiently, its accumulation is staggered, so that each multiplication
-    /// by 3 is done in each iteration of accumulating loop. This can be understood by factoring
-    /// the powers of 3 from the previous sum:
+    /// To perform this sum efficiently, its accumulation is staggered, so that each multiplication by 3 is done in each
+    /// iteration of accumulating loop. This can be understood by factoring the powers of 3 from the previous sum:
     ///
     /// ```ignore
     /// s = (...((t_242 * 3 + t_241) * 3 + t_240) * 3 + ...
@@ -166,8 +196,7 @@ impl U384<BigEndian, U32Repr> {
     ///   +  ...t_1) * 3 + t_0
     /// ```
     ///
-    /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i`
-    /// running from `[242..0`]:
+    /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i` running from `[242..0`]:
     ///
     /// ```ignore
     /// acc = 0
@@ -181,6 +210,7 @@ impl U384<BigEndian, U32Repr> {
 }
 
 impl U384<LittleEndian, U32Repr> {
+    /// Reinterprets the U384 as an I384.
     pub fn as_i384(self) -> I384<LittleEndian, U32Repr> {
         I384::<LittleEndian, U32Repr>::from_array(self.inner)
     }
@@ -198,8 +228,8 @@ impl U384<LittleEndian, U32Repr> {
         }
     }
 
-    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
-    /// from the least significant one).
+    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting from the least
+    /// significant one).
     pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
@@ -232,6 +262,7 @@ impl U384<LittleEndian, U32Repr> {
         self.inner[self.inner.len() - 1] >>= 1;
     }
 
+    /// Creates an U384 from an unbalanced T242.
     pub fn from_t242(trits: T242<Utrit>) -> Self {
         let t243 = trits.into_t243();
 
@@ -239,6 +270,7 @@ impl U384<LittleEndian, U32Repr> {
         Self::try_from_t243(t243).unwrap()
     }
 
+    /// Shifts the U384 in signed space.
     pub fn shift_into_i384(mut self) -> I384<LittleEndian, U32Repr> {
         self.sub_inplace(*LE_U32_HALF_MAX);
         self.sub_inplace(Self::one());
@@ -247,16 +279,15 @@ impl U384<LittleEndian, U32Repr> {
 
     /// Subtract `other` from `self` inplace.
     ///
-    /// This function is defined in terms of `overflowing_add` by making use of the following identity
-    /// (in terms of Two's complement, and where `!` is logical bitwise negation):
+    /// This function is defined in terms of `overflowing_add` by making use of the following identity (in terms of
+    /// Two's complement, and where `!` is logical bitwise negation):
     ///
     /// !x = -x -1 => -x = !x + 1
     pub fn sub_inplace(&mut self, other: Self) {
         let self_iter = self.inner.iter_mut();
         let other_iter = other.inner.iter();
 
-        // The first `borrow` is always true because the addition operation needs to account for the
-        // above).
+        // The first `borrow` is always true because the addition operation needs to account for the above).
         let mut borrow = true;
 
         for (s, o) in self_iter.zip(other_iter) {
@@ -266,10 +297,9 @@ impl U384<LittleEndian, U32Repr> {
         }
     }
 
-    /// Converts a signed integer represented by the balanced trits in `t243` to the unsigned
-    /// binary integer `u384`. It does this by shifting the `t243` into signed range (by adding 1
-    /// to all its trits).  `t243` is assumed to be in little endian representation, with the most
-    /// significant trit being at the largest index in the array.
+    /// Converts a signed integer represented by the balanced trits in `t243` to the unsigned binary integer `u384`.
+    /// It does this by shifting the `t243` into signed range (by adding 1 to all its trits).  `t243` is assumed to be
+    /// in little endian representation, with the most significant trit being at the largest index in the array.
     ///
     /// This is done in the following steps:
     ///
@@ -282,9 +312,8 @@ impl U384<LittleEndian, U32Repr> {
     ///   + t_1 * 3 + t_0
     /// ```
     ///
-    /// To perform this sum efficiently, its accumulation is staggered, so that each multiplication
-    /// by 3 is done in each iteration of accumulating loop. This can be understood by factoring
-    /// the powers of 3 from the previous sum:
+    /// To perform this sum efficiently, its accumulation is staggered, so that each multiplication by 3 is done in each
+    /// iteration of accumulating loop. This can be understood by factoring the powers of 3 from the previous sum:
     ///
     /// ```ignore
     /// s = (...((t_242 * 3 + t_241) * 3 + t_240) * 3 + ...
@@ -292,8 +321,7 @@ impl U384<LittleEndian, U32Repr> {
     ///   +  ...t_1) * 3 + t_0
     /// ```
     ///
-    /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i`
-    /// running from `[242..0`]:
+    /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i` running from `[242..0`]:
     ///
     /// ```ignore
     /// acc = 0
@@ -305,26 +333,24 @@ impl U384<LittleEndian, U32Repr> {
             return Err(Error::TernaryExceedsBinaryRange);
         }
 
-        // The accumulator is a little endian bigint using `u32` as an internal representation
+        // The accumulator is a little endian bigint using `u32` as an internal representation.
         let mut accumulator = Self::zero();
         let mut accumulator_extent = 1;
 
         // Iterate over all trits starting from the most significant one.
         //
         // Note that the most significant trit is that at position i=241, not i=242.
-        // 384 bits cannot represent 243 trits and this we choose to ignore the technically
-        // most significant one.
+        // 384 bits cannot represent 243 trits and this we choose to ignore the technically most significant one.
 
         // Optimization: advance the iterator until the first non-zero trit is found.
-        let mut binary_trits_iterator = trits.inner_ref().as_i8_slice().iter().rev().peekable();
+        let mut binary_trits_iterator = trits.as_i8_slice().iter().rev().peekable();
         while let Some(0) = binary_trits_iterator.peek() {
             binary_trits_iterator.next();
         }
 
         for binary_trit in binary_trits_iterator {
             // Iterate over all digits in the bigint accumulator, multiplying by 3 into a `u64`.
-            // Overflow is handled by taking the lower `u32` as the new digit, and the higher `u32`
-            // as the carry.
+            // Overflow is handled by taking the lower `u32` as the new digit, and the higher `u32` as the carry.
             let mut carry: u32 = 0;
             for digit in accumulator.inner[0..accumulator_extent].iter_mut() {
                 let new_digit = *digit as u64 * 3u64 + carry as u64;
@@ -454,60 +480,3 @@ impl TryFrom<T243<Utrit>> for U384<LittleEndian, U32Repr> {
 }
 
 impl_toggle_endianness!((U384), U8Repr, U32Repr);
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn half_max_plus_half_max_is_max_minus_1() {
-        let mut left = *LE_U32_HALF_MAX;
-        left.add_inplace(*LE_U32_HALF_MAX);
-        let mut right = LE_U32_MAX;
-        right.sub_inplace(LE_U32_1);
-        assert_eq!(left, right);
-    }
-
-    test_binary_op!(
-        [zero_plus_one_is_one, add_inplace, LE_U32_0, LE_U32_1, LE_U32_1],
-        [zero_plus_two_is_two, add_inplace, LE_U32_0, LE_U32_2, LE_U32_2],
-        [zero_minus_one_is_max, sub_inplace, LE_U32_0, LE_U32_1, LE_U32_MAX],
-        [zero_plus_max_is_max, add_inplace, LE_U32_0, LE_U32_MAX, LE_U32_MAX],
-        [one_minus_one_is_zero, sub_inplace, LE_U32_1, LE_U32_1, LE_U32_0],
-        [one_minus_two_is_max, sub_inplace, LE_U32_1, LE_U32_2, LE_U32_MAX],
-        [one_plus_one_is_two, add_inplace, LE_U32_1, LE_U32_1, LE_U32_2],
-        [max_minus_max_is_zero, sub_inplace, LE_U32_MAX, LE_U32_MAX, LE_U32_0],
-        [max_minus_zero_is_max, sub_inplace, LE_U32_MAX, LE_U32_0, LE_U32_MAX],
-        [max_plus_zero_is_max, add_inplace, LE_U32_MAX, LE_U32_0, LE_U32_MAX],
-        [max_plus_one_is_zero, add_inplace, LE_U32_MAX, LE_U32_1, LE_U32_0],
-        [max_plus_two_is_one, add_inplace, LE_U32_MAX, LE_U32_2, LE_U32_1],
-    );
-
-    test_binary_op_calc_result!([
-        max_plus_max_is_max_minus_one,
-        add_inplace,
-        LE_U32_MAX,
-        LE_U32_MAX,
-        sub_inplace,
-        LE_U32_MAX,
-        LE_U32_1
-    ],);
-
-    // test_endianness_toggle!(
-    //     ( U384 ),
-    //     [u8_repr, U8Repr],
-    //     [u32_repr, U32Repr],
-    // );
-
-    // test_endianness_roundtrip!(
-    //     ( U384 ),
-    //     [u8_repr, U8Repr],
-    //     [u32_repr, U32Repr],
-    // );
-
-    // test_repr_roundtrip!(
-    //     ( U384 ),
-    //     [big_endian, BigEndian],
-    //     [little_endian, LittleEndian],
-    // );
-}

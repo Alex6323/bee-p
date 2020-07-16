@@ -33,7 +33,7 @@ pub trait PrivateKeyGenerator {
     /// ```
     /// use bee_crypto::ternary::Kerl;
     /// use bee_signing::ternary::{
-    ///     PrivateKeyGenerator, Seed, TernarySeed, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder,
+    ///     PrivateKeyGenerator, Seed, TernarySeed, wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
     /// };
     ///
     /// let seed = TernarySeed::<Kerl>::new();
@@ -44,7 +44,7 @@ pub trait PrivateKeyGenerator {
     /// let private_key = private_key_generator.generate_from_seed(&seed, 0);
     /// ```
     fn generate_from_seed(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
-        self.generate_from_entropy(seed.subseed(index).trits())
+        self.generate_from_entropy(seed.subseed(index).to_trits())
     }
 
     /// Deterministically generates and returns a private key from entropy
@@ -58,7 +58,7 @@ pub trait PrivateKeyGenerator {
     /// ```
     /// use bee_crypto::ternary::Kerl;
     /// use bee_signing::ternary::{
-    ///     PrivateKeyGenerator, Seed, TernarySeed, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder,
+    ///     PrivateKeyGenerator, Seed, TernarySeed, wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
     /// };
     ///
     /// let seed = TernarySeed::<Kerl>::new();
@@ -66,7 +66,7 @@ pub trait PrivateKeyGenerator {
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
-    /// let private_key = private_key_generator.generate_from_entropy(seed.trits());
+    /// let private_key = private_key_generator.generate_from_entropy(seed.to_trits());
     /// ```
     fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error>;
 }
@@ -85,11 +85,8 @@ pub trait PrivateKey: Zeroize + Drop {
     /// ```
     /// # use bee_crypto::ternary::Kerl;
     /// # use bee_signing::ternary::{
-    ///     TernarySeed,
-    ///     PrivateKeyGenerator,
-    ///     Seed,
-    ///     WotsSpongePrivateKeyGeneratorBuilder,
-    ///     WotsSecurityLevel,
+    ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    ///     PrivateKeyGenerator, Seed, TernarySeed,
     /// };
     /// use bee_signing::ternary::PrivateKey;
     ///
@@ -114,11 +111,8 @@ pub trait PrivateKey: Zeroize + Drop {
     /// ```
     /// # use bee_crypto::ternary::Kerl;
     /// # use bee_signing::ternary::{
-    ///     TernarySeed,
-    ///     PrivateKeyGenerator,
-    ///     Seed,
-    ///     WotsSpongePrivateKeyGeneratorBuilder,
-    ///     WotsSecurityLevel,
+    ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    ///     PrivateKeyGenerator, Seed, TernarySeed,
     /// };
     /// use bee_signing::ternary::PrivateKey;
     /// use bee_ternary::{
@@ -145,21 +139,19 @@ pub trait PublicKey {
 
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error>;
 
-    fn from_buf(buf: TritBuf) -> Self;
+    fn size(&self) -> usize;
 
-    fn as_bytes(&self) -> &[i8];
+    fn from_trits(buf: TritBuf) -> Self;
 
-    fn trits(&self) -> &Trits;
+    fn to_trits(&self) -> &Trits;
 }
 
 pub trait Signature {
     fn size(&self) -> usize;
 
-    fn from_buf(buf: TritBuf) -> Self;
+    fn from_trits(buf: TritBuf) -> Self;
 
-    fn as_bytes(&self) -> &[i8];
-
-    fn trits(&self) -> &Trits;
+    fn to_trits(&self) -> &Trits;
 }
 
 pub trait RecoverableSignature: Signature {
