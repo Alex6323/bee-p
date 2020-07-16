@@ -66,9 +66,6 @@ impl NodeBuilder {
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown);
 
-        info!("Initializing zmq broker...");
-        bee_broker::zmq::init(bus.clone());
-
         info!("Initializing tangle...");
         tangle::init();
 

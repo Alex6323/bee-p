@@ -1,7 +1,6 @@
 [workspace]
 members = [
 	"bee-api",
-	"bee-broker",
 	"bee-common-ext",
 	"bee-crypto",
 	"bee-event/bee-event",
