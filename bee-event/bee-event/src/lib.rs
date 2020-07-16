@@ -14,7 +14,7 @@
 
 use dashmap::DashMap;
 use internment::Intern;
-use std::{any::Any, cell::Cell, sync::Arc};
+use std::{any::Any, cell::Cell};
 
 pub trait Event: Any {
     fn name() -> &'static str
@@ -40,28 +40,24 @@ pub trait Event: Any {
     }
 }
 
-#[derive(Clone)]
-struct InnerEvent(Arc<dyn Any>);
-
 #[derive(Default)]
 pub struct Bus<'a> {
-    listeners: DashMap<Intern<String>, Vec<Box<dyn FnMut(InnerEvent) + 'a>>>,
+    listeners: DashMap<Intern<String>, Vec<Box<dyn Fn(&dyn Any) + Send + Sync + 'a>>>,
 }
 
 impl<'a> Bus<'a> {
     pub fn dispatch<E: Event>(&self, event: E) {
-        let inner_event = InnerEvent(Arc::new(event));
         self.listeners
             .get_mut(&E::get_interned())
-            .map(|mut ls| ls.iter_mut().for_each(|l| l(inner_event.clone())));
+            .map(|mut ls| ls.iter_mut().for_each(|l| l(&event)));
     }
 
-    pub fn add_listener<E: Event>(&self, mut handler: impl FnMut(&E) + Send + Sync + 'a) {
+    pub fn add_listener<E: Event>(&self, handler: impl Fn(&E) + Send + Sync + 'a) {
         self.listeners
             .entry(E::get_interned())
             .or_default()
-            .push(Box::new(move |inner_event| {
-                handler(&inner_event.0.downcast_ref().expect("Invalid event"))
+            .push(Box::new(move |event| {
+                handler(&event.downcast_ref().expect("Invalid event"))
             }));
     }
 }
@@ -92,6 +88,12 @@ mod tests {
         bus.add_listener(|_: &Foo| println!("Received a foo!"));
 
         bus.dispatch(Foo);
+    }
+
+    #[test]
+    fn send_sync() {
+        fn helper<T: Send + Sync>() {}
+        helper::<Bus<'static>>();
     }
 
     // #[bench]
