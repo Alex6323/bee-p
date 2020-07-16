@@ -110,8 +110,8 @@ impl U384<BigEndian, U32Repr> {
         }
     }
 
-    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
-    /// from the least significant one).
+    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting from the least
+    /// significant one).
     pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
@@ -154,16 +154,15 @@ impl U384<BigEndian, U32Repr> {
 
     /// Subtract `other` from `self` inplace.
     ///
-    /// This function is defined in terms of `overflowing_add` by making use of the following identity
-    /// (in terms of Two's complement, and where `!` is logical bitwise negation):
+    /// This function is defined in terms of `overflowing_add` by making use of the following identity (in terms of
+    /// Two's complement, and where `!` is logical bitwise negation):
     ///
     /// !x = -x - 1 => -x = !x + 1
     pub fn sub_inplace(&mut self, other: Self) {
         let self_iter = self.inner.iter_mut().rev();
         let other_iter = other.inner.iter().rev();
 
-        // The first `borrow` is always true because the addition operation needs to account for the
-        // above).
+        // The first `borrow` is always true because the addition operation needs to account for the above).
         let mut borrow = true;
 
         for (s, o) in self_iter.zip(other_iter) {
@@ -173,10 +172,9 @@ impl U384<BigEndian, U32Repr> {
         }
     }
 
-    /// Converts a signed integer represented by the balanced trits in `t243` to the unsigned
-    /// binary integer `u384`. It does this by shifting the `t243` into signed range (by adding 1
-    /// to all its trits).  `t243` is assumed to be in little endian representation, with the most
-    /// significant trit being at the largest index in the array.
+    /// Converts a signed integer represented by the balanced trits in `t243` to the unsigned binary integer `u384`.
+    /// It does this by shifting the `t243` into signed range (by adding 1 to all its trits).  `t243` is assumed to be
+    /// in little endian representation, with the most significant trit being at the largest index in the array.
     ///
     /// This is done in the following steps:
     ///
@@ -189,9 +187,8 @@ impl U384<BigEndian, U32Repr> {
     ///   + t_1 * 3 + t_0
     /// ```
     ///
-    /// To perform this sum efficiently, its accumulation is staggered, so that each multiplication
-    /// by 3 is done in each iteration of accumulating loop. This can be understood by factoring
-    /// the powers of 3 from the previous sum:
+    /// To perform this sum efficiently, its accumulation is staggered, so that each multiplication by 3 is done in each
+    /// iteration of accumulating loop. This can be understood by factoring the powers of 3 from the previous sum:
     ///
     /// ```ignore
     /// s = (...((t_242 * 3 + t_241) * 3 + t_240) * 3 + ...
@@ -199,8 +196,7 @@ impl U384<BigEndian, U32Repr> {
     ///   +  ...t_1) * 3 + t_0
     /// ```
     ///
-    /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i`
-    /// running from `[242..0`]:
+    /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i` running from `[242..0`]:
     ///
     /// ```ignore
     /// acc = 0
@@ -232,8 +228,8 @@ impl U384<LittleEndian, U32Repr> {
         }
     }
 
-    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
-    /// from the least significant one).
+    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting from the least
+    /// significant one).
     pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
@@ -283,16 +279,15 @@ impl U384<LittleEndian, U32Repr> {
 
     /// Subtract `other` from `self` inplace.
     ///
-    /// This function is defined in terms of `overflowing_add` by making use of the following identity
-    /// (in terms of Two's complement, and where `!` is logical bitwise negation):
+    /// This function is defined in terms of `overflowing_add` by making use of the following identity (in terms of
+    /// Two's complement, and where `!` is logical bitwise negation):
     ///
     /// !x = -x -1 => -x = !x + 1
     pub fn sub_inplace(&mut self, other: Self) {
         let self_iter = self.inner.iter_mut();
         let other_iter = other.inner.iter();
 
-        // The first `borrow` is always true because the addition operation needs to account for the
-        // above).
+        // The first `borrow` is always true because the addition operation needs to account for the above).
         let mut borrow = true;
 
         for (s, o) in self_iter.zip(other_iter) {
@@ -302,10 +297,9 @@ impl U384<LittleEndian, U32Repr> {
         }
     }
 
-    /// Converts a signed integer represented by the balanced trits in `t243` to the unsigned
-    /// binary integer `u384`. It does this by shifting the `t243` into signed range (by adding 1
-    /// to all its trits).  `t243` is assumed to be in little endian representation, with the most
-    /// significant trit being at the largest index in the array.
+    /// Converts a signed integer represented by the balanced trits in `t243` to the unsigned binary integer `u384`.
+    /// It does this by shifting the `t243` into signed range (by adding 1 to all its trits).  `t243` is assumed to be
+    /// in little endian representation, with the most significant trit being at the largest index in the array.
     ///
     /// This is done in the following steps:
     ///
@@ -318,9 +312,8 @@ impl U384<LittleEndian, U32Repr> {
     ///   + t_1 * 3 + t_0
     /// ```
     ///
-    /// To perform this sum efficiently, its accumulation is staggered, so that each multiplication
-    /// by 3 is done in each iteration of accumulating loop. This can be understood by factoring
-    /// the powers of 3 from the previous sum:
+    /// To perform this sum efficiently, its accumulation is staggered, so that each multiplication by 3 is done in each
+    /// iteration of accumulating loop. This can be understood by factoring the powers of 3 from the previous sum:
     ///
     /// ```ignore
     /// s = (...((t_242 * 3 + t_241) * 3 + t_240) * 3 + ...
@@ -328,8 +321,7 @@ impl U384<LittleEndian, U32Repr> {
     ///   +  ...t_1) * 3 + t_0
     /// ```
     ///
-    /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i`
-    /// running from `[242..0`]:
+    /// Expressed in procedural form, this is the sum accumulated in `acc` with the index `i` running from `[242..0`]:
     ///
     /// ```ignore
     /// acc = 0
@@ -341,15 +333,14 @@ impl U384<LittleEndian, U32Repr> {
             return Err(Error::TernaryExceedsBinaryRange);
         }
 
-        // The accumulator is a little endian bigint using `u32` as an internal representation
+        // The accumulator is a little endian bigint using `u32` as an internal representation.
         let mut accumulator = Self::zero();
         let mut accumulator_extent = 1;
 
         // Iterate over all trits starting from the most significant one.
         //
         // Note that the most significant trit is that at position i=241, not i=242.
-        // 384 bits cannot represent 243 trits and this we choose to ignore the technically
-        // most significant one.
+        // 384 bits cannot represent 243 trits and this we choose to ignore the technically most significant one.
 
         // Optimization: advance the iterator until the first non-zero trit is found.
         let mut binary_trits_iterator = trits.as_i8_slice().iter().rev().peekable();
@@ -359,8 +350,7 @@ impl U384<LittleEndian, U32Repr> {
 
         for binary_trit in binary_trits_iterator {
             // Iterate over all digits in the bigint accumulator, multiplying by 3 into a `u64`.
-            // Overflow is handled by taking the lower `u32` as the new digit, and the higher `u32`
-            // as the carry.
+            // Overflow is handled by taking the lower `u32` as the new digit, and the higher `u32` as the carry.
             let mut carry: u32 = 0;
             for digit in accumulator.inner[0..accumulator_extent].iter_mut() {
                 let new_digit = *digit as u64 * 3u64 + carry as u64;

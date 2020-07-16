@@ -185,41 +185,39 @@ impl PartialOrd for I384<BigEndian, U8Repr> {
 
         // The most significant u8 (MSU8) has to be handled separately.
         //
-        // If the most significant bit of both numbers is set, then the comparison operators
-        // have to be reversed.
+        // If the most significant bit of both numbers is set, then the comparison operators have to be reversed.
         //
-        // Note that this is only relevant to the comparison operators between the less significant
-        // u8 if the two MSU8s are equal. If they are not equal, then an early return will be
-        // triggered.
+        // Note that this is only relevant to the comparison operators between the less significant u8 if the two MSU8s
+        // are equal. If they are not equal, then an early return will be triggered.
 
         const NEGBIT: u8 = 0x80;
         const UMAX: u8 = std::u8::MAX;
         let numbers_negative = match zipped_iter.next() {
-            // Case 1: both numbers are negative, s is less
+            // Case 1: both numbers are negative, s is less.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
-            // Case 2: both numbers are negative, s is greater
+            // Case 2: both numbers are negative, s is greater.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
-            // Case 3: both numbers are negative, but equal
+            // Case 3: both numbers are negative, but equal.
             Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true,
 
-            // Case 4: only s is negative
+            // Case 4: only s is negative.
             Some((NEGBIT..=UMAX, _)) => return Some(Less),
 
-            // Case 5: only o is negative
+            // Case 5: only o is negative.
             Some((_, NEGBIT..=UMAX)) => return Some(Greater),
 
-            // Case 6: both are positive
+            // Case 6: both are positive, s is greater.
             Some((s, o)) if s > o => return Some(Greater),
 
+            // Case 7: both are positive, s is less.
             Some((s, o)) if s < o => return Some(Less),
 
-            // Fallthrough case; only happens if s == o
+            // Fallthrough case; only happens if s == o.
             Some(_) => false,
 
-            // The array inside `I384` always has a length larger zero, so the first element is
-            // guaranteed to exist.
+            // The array inside `I384` always has a length larger zero, so the first element is guaranteed to exist.
             None => unreachable!(),
         };
 
@@ -289,8 +287,8 @@ impl I384<BigEndian, U32Repr> {
         }
     }
 
-    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
-    /// from the least significant one).
+    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting from the least
+    /// significant one).
     pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
@@ -324,7 +322,7 @@ impl I384<BigEndian, U32Repr> {
         // Then expand the size.
         let t243_unbalanced = t242_unbalanced.into_t243();
 
-        // Unwrapping here is ok because a ut242 always fits into a u384
+        // Unwrapping here is ok because a ut242 always fits into a u384.
         let mut u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(t243_unbalanced).unwrap();
         u384_integer.sub_inplace(*u384::BE_U32_HALF_MAX_T242);
         u384_integer.as_i384()
@@ -366,13 +364,13 @@ impl I384<BigEndian, U32Repr> {
 
     /// Subtract `other` from `self` inplace.
     ///
-    /// This function is defined in terms of `overflowing_add` by making use of the following identity
-    /// (in terms of Two's complement, and where `!` is logical bitwise negation):
+    /// This function is defined in terms of `overflowing_add` by making use of the following identity (in terms of
+    /// Two's complement, and where `!` is logical bitwise negation):
     ///
     /// !x = -x -1 => -x = !x + 1
     ///
-    /// TODO: Verifiy that the final assert is indeed not necessary. Preliminary testing shows that
-    /// results are as expected.
+    /// TODO: Verifiy that the final assert is indeed not necessary. Preliminary testing shows that results are as
+    /// expected.
     pub fn sub_inplace(&mut self, other: Self) {
         let self_iter = self.inner.iter_mut().rev();
         let other_iter = other.inner.iter().rev();
@@ -388,8 +386,8 @@ impl I384<BigEndian, U32Repr> {
         }
     }
 
-    /// Subtracts `other` in place, returning the number of digits required accomodate `other`
-    /// (starting from the least significant one).
+    /// Subtracts `other` in place, returning the number of digits required accomodate `other` (starting from the least
+    /// significant one).
     pub fn sub_integer_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
@@ -455,41 +453,39 @@ impl PartialOrd for I384<BigEndian, U32Repr> {
 
         // The most significant u32 (MSU32) has to be handled separately.
         //
-        // If the most significant bit of both numbers is set, then the comparison operators
-        // have to be reversed.
+        // If the most significant bit of both numbers is set, then the comparison operators have to be reversed.
         //
-        // Note that this is only relevant to the comparison operators between the less significant
-        // u32 if the two MSU32s are equal. If they are not equal, then an early return will be
-        // triggered.
+        // Note that this is only relevant to the comparison operators between the less significant u32 if the two
+        // MSU32s are equal. If they are not equal, then an early return will be triggered.
 
         const NEGBIT: u32 = 0x8000_0000;
         const UMAX: u32 = std::u32::MAX;
         let numbers_negative = match zipped_iter.next() {
-            // Case 1: both numbers are negative, s is less
+            // Case 1: both numbers are negative, s is less.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
-            // Case 2: both numbers are negative, s is greater
+            // Case 2: both numbers are negative, s is greater.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
-            // Case 3: both numbers are negative, but equal
+            // Case 3: both numbers are negative, but equal.
             Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true,
 
-            // Case 4: only s is negative
+            // Case 4: only s is negative.
             Some((NEGBIT..=UMAX, _)) => return Some(Less),
 
-            // Case 5: only o is negative
+            // Case 5: only o is negative.
             Some((_, NEGBIT..=UMAX)) => return Some(Greater),
 
-            // Case 6: both are positive
+            // Case 6: both are positive, s is greater.
             Some((s, o)) if s > o => return Some(Greater),
 
+            // Case 7: both are positive, s is less.
             Some((s, o)) if s < o => return Some(Less),
 
-            // Fallthrough case; only happens if s == o
+            // Fallthrough case; only happens if s == o.
             Some(_) => false,
 
-            // The array inside `I384` always has a length larger zero, so the first element is
-            // guaranteed to exist.
+            // The array inside `I384` always has a length larger zero, so the first element is guaranteed to exist.
             None => unreachable!(),
         };
 
@@ -576,41 +572,39 @@ impl PartialOrd for I384<LittleEndian, U8Repr> {
 
         // The most significant u8 (MSU8) has to be handled separately.
         //
-        // If the most significant bit of both numbers is set, then the comparison operators
-        // have to be reversed.
+        // If the most significant bit of both numbers is set, then the comparison operators have to be reversed.
         //
-        // Note that this is only relevant to the comparison operators between the less significant
-        // u8 if the two MSU8s are equal. If they are not equal, then an early return will be
-        // triggered.
+        // Note that this is only relevant to the comparison operators between the less significant u8 if the two MSU8s
+        // are equal. If they are not equal, then an early return will be triggered.
 
         const NEGBIT: u8 = 0x80;
         const UMAX: u8 = std::u8::MAX;
         let numbers_negative = match zipped_iter.next() {
-            // Case 1: both numbers are negative, s is less
+            // Case 1: both numbers are negative, s is less.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
-            // Case 2: both numbers are negative, s is greater
+            // Case 2: both numbers are negative, s is greater.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
-            // Case 3: both numbers are negative, but equal
+            // Case 3: both numbers are negative, but equal.
             Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true,
 
-            // Case 4: only s is negative
+            // Case 4: only s is negative.
             Some((NEGBIT..=UMAX, _)) => return Some(Less),
 
-            // Case 5: only o is negative
+            // Case 5: only o is negative.
             Some((_, NEGBIT..=UMAX)) => return Some(Greater),
 
-            // Case 6: both are positive
+            // Case 6: both are positive, s is greater.
             Some((s, o)) if s > o => return Some(Greater),
 
+            // Case 7: both are positive, s is less.
             Some((s, o)) if s < o => return Some(Less),
 
-            // Fallthrough case; only happens if s == o
+            // Fallthrough case; only happens if s == o.
             Some(_) => false,
 
-            // The array inside `I384` always has a length larger zero, so the first element is
-            // guaranteed to exist.
+            // The array inside `I384` always has a length larger zero, so the first element is guaranteed to exist.
             None => unreachable!(),
         };
 
@@ -651,8 +645,8 @@ impl I384<LittleEndian, U32Repr> {
         }
     }
 
-    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting
-    /// from the least significant one).
+    /// Adds `other` in place, returning the number of digits required accomodate `other` (starting from the least
+    /// significant one).
     pub fn add_digit_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
@@ -684,7 +678,7 @@ impl I384<LittleEndian, U32Repr> {
         // Then expand the size.
         let t243_unbalanced = t242_unbalanced.into_t243();
 
-        // Unwrapping here is okay, because a ut242 always fits into a u384
+        // Unwrapping here is okay, because a ut242 always fits into a u384.
         let mut u384_integer = U384::<LittleEndian, U32Repr>::try_from_t243(t243_unbalanced).unwrap();
         u384_integer.sub_inplace(*u384::LE_U32_HALF_MAX_T242);
         u384_integer.as_i384()
@@ -726,19 +720,18 @@ impl I384<LittleEndian, U32Repr> {
 
     /// Subtract `other` from `self` inplace.
     ///
-    /// This function is defined in terms of `overflowing_add` by making use of the following identity
-    /// (in terms of Two's complement, and where `!` is logical bitwise negation):
+    /// This function is defined in terms of `overflowing_add` by making use of the following identity (in terms of
+    /// Two's complement, and where `!` is logical bitwise negation):
     ///
     /// !x = -x -1 => -x = !x + 1
     ///
-    /// TODO: Verifiy that the final assert is indeed not necessary. Preliminary testing shows that
-    /// results are as expected.
+    /// TODO: Verifiy that the final assert is indeed not necessary. Preliminary testing shows that results are as
+    /// expected.
     pub fn sub_inplace(&mut self, other: Self) {
         let self_iter = self.inner.iter_mut();
         let other_iter = other.inner.iter();
 
-        // The first `borrow` is always true because the addition operation needs to account for the
-        // above).
+        // The first `borrow` is always true because the addition operation needs to account for the above).
         let mut borrow = true;
 
         for (s, o) in self_iter.zip(other_iter) {
@@ -748,8 +741,8 @@ impl I384<LittleEndian, U32Repr> {
         }
     }
 
-    /// Subtracts `other` in place, returning the number of digits required accomodate `other`
-    /// (starting from the least significant one).
+    /// Subtracts `other` in place, returning the number of digits required accomodate `other` (starting from the least
+    /// significant one).
     pub fn sub_integer_inplace<T: Into<u32>>(&mut self, other: T) -> usize {
         let other = other.into();
 
@@ -824,44 +817,41 @@ impl PartialOrd for I384<LittleEndian, U32Repr> {
 
         // The most significant u32 (MSU32) has to be handled separately.
         //
-        // If the most significant bit of both numbers is set, then the comparison operators
-        // have to be reversed.
+        // If the most significant bit of both numbers is set, then the comparison operators have to be reversed.
         //
-        // Note that this is only relevant to the comparison operators between the less significant
-        // u32 if the two MSU32s are equal. If they are not equal, then an early return will be
-        // triggered.
+        // Note that this is only relevant to the comparison operators between the less significant u32 if the two
+        // MSU32s are equal. If they are not equal, then an early return will be triggered.
 
         const NEGBIT: u32 = 0x8000_0000;
         const UMAX: u32 = std::u32::MAX;
 
-        // twos_complement is `true` if both bigints are negative
+        // twos_complement is `true` if both bigints are negative.
         let twos_complement = match zipped_iter.next() {
-            // Case 1: both numbers are negative, s is less
+            // Case 1: both numbers are negative, s is less.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s > o => return Some(Greater),
 
-            // Case 2: both numbers are negative, s is greater
+            // Case 2: both numbers are negative, s is greater.
             Some((s @ NEGBIT..=UMAX, o @ NEGBIT..=UMAX)) if s < o => return Some(Less),
 
-            // Case 3: both numbers are negative, but equal
+            // Case 3: both numbers are negative, but equal.
             Some((NEGBIT..=UMAX, NEGBIT..=UMAX)) => true,
 
-            // Case 4: only s is negative
+            // Case 4: only s is negative.
             Some((NEGBIT..=UMAX, _)) => return Some(Less),
 
-            // Case 5: only o is negative
+            // Case 5: only o is negative.
             Some((_, NEGBIT..=UMAX)) => return Some(Greater),
 
-            // Case 6: both are positive, s is greater
+            // Case 6: both are positive, s is greater.
             Some((s, o)) if s > o => return Some(Greater),
 
-            // Case 7: both are positive, o is greater
+            // Case 7: both are positive, s is less.
             Some((s, o)) if s < o => return Some(Less),
 
-            // Fallthrough case; only happens if s == o and positive
+            // Fallthrough case; only happens if s == o and positive.
             Some(_) => false,
 
-            // The array inside `I384` always has a length larger zero, so the first element is
-            // guaranteed to exist.
+            // The array inside `I384` always has a length larger zero, so the first element is guaranteed to exist.
             None => unreachable!(),
         };
 
