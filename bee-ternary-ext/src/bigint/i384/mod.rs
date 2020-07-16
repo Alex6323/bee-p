@@ -316,18 +316,19 @@ impl I384<BigEndian, U32Repr> {
         U384::<BigEndian, U32Repr>::from_array(self.inner)
     }
 
-    // pub fn from_t242(value: T242<Btrit>) -> Self {
-    //     // First make it unbalanced.
-    //     let t242_unbalanced = value.into_shifted();
-    //
-    //     // Then expand the size.
-    //     let t243_unbalanced = t242_unbalanced.into_t243();
-    //
-    //     // Unwrapping here is ok because a ut242 always fits into a u384
-    //     let mut u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(t243_unbalanced).unwrap();
-    //     u384_integer.sub_inplace(*u384::BE_U32_HALF_MAX_T242);
-    //     u384_integer.as_i384()
-    // }
+    /// Creates an I384 from a balanced T242.
+    pub fn from_t242(value: T242<Btrit>) -> Self {
+        // First make it unbalanced.
+        let t242_unbalanced = value.into_shifted();
+
+        // Then expand the size.
+        let t243_unbalanced = t242_unbalanced.into_t243();
+
+        // Unwrapping here is ok because a ut242 always fits into a u384
+        let mut u384_integer = U384::<BigEndian, U32Repr>::try_from_t243(t243_unbalanced).unwrap();
+        u384_integer.sub_inplace(*u384::BE_U32_HALF_MAX_T242);
+        u384_integer.as_i384()
+    }
 
     /// Checks if the I384 is positive.
     pub fn is_positive(&self) -> bool {
