@@ -17,7 +17,12 @@ pub use metadata::TransactionMetadata;
 // TODO: reinstate the async worker
 // pub(crate) mod propagator;
 
-use crate::{milestone::MilestoneIndex, tangle::flags::Flags};
+use crate::{
+    events::LastSolidMilestone,
+    milestone::{Milestone, MilestoneIndex},
+    protocol::Protocol,
+    tangle::flags::Flags,
+};
 
 use bee_crypto::ternary::Hash as TxHash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
@@ -37,8 +42,8 @@ pub struct MsTangle {
     pub(crate) inner: Tangle<TransactionMetadata>,
     pub(crate) milestones: DashMap<MilestoneIndex, TxHash>,
     pub(crate) solid_entry_points: DashMap<TxHash, MilestoneIndex>,
-    solid_milestone_index: AtomicU32,
     last_milestone_index: AtomicU32,
+    last_solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
 }
 
@@ -56,8 +61,8 @@ impl MsTangle {
             inner: Tangle::new(),
             milestones: DashMap::new(),
             solid_entry_points: DashMap::new(),
-            solid_milestone_index: AtomicU32::new(0),
             last_milestone_index: AtomicU32::new(0),
+            last_solid_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
         }
     }
@@ -88,7 +93,10 @@ impl MsTangle {
                         // before being solidified, we then also need to check when a milestone gets validated if it's
                         // already solid.
                         if metadata.flags.is_milestone() {
-                            // TODO trigger new solid MS event
+                            Protocol::get().bus.dispatch(LastSolidMilestone(Milestone {
+                                hash: *hash,
+                                index: metadata.milestone_index,
+                            }));
                         }
                         metadata.solidification_timestamp = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
@@ -111,8 +119,10 @@ impl MsTangle {
     pub fn add_milestone(&self, index: MilestoneIndex, hash: TxHash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
-        self.inner
-            .update_metadata(&hash, |metadata| metadata.flags.set_milestone());
+        self.inner.update_metadata(&hash, |metadata| {
+            metadata.flags.set_milestone();
+            metadata.milestone_index = index
+        });
     }
 
     pub fn remove_milestone(&self, index: MilestoneIndex) {
@@ -139,24 +149,24 @@ impl MsTangle {
         self.milestones.contains_key(&index)
     }
 
-    pub fn get_solid_milestone_index(&self) -> MilestoneIndex {
-        self.solid_milestone_index.load(Ordering::Relaxed).into()
-    }
-
     pub fn get_last_milestone_index(&self) -> MilestoneIndex {
         self.last_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
-        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
-    }
-
-    pub fn update_solid_milestone_index(&self, new_index: MilestoneIndex) {
-        self.solid_milestone_index.store(*new_index, Ordering::Relaxed);
-    }
-
     pub fn update_last_milestone_index(&self, new_index: MilestoneIndex) {
         self.last_milestone_index.store(*new_index, Ordering::Relaxed);
+    }
+
+    pub fn get_last_solid_milestone_index(&self) -> MilestoneIndex {
+        self.last_solid_milestone_index.load(Ordering::Relaxed).into()
+    }
+
+    pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
+        self.last_solid_milestone_index.store(*new_index, Ordering::Relaxed);
+    }
+
+    pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
+        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
     }
 
     pub fn update_snapshot_milestone_index(&self, new_index: MilestoneIndex) {
@@ -164,7 +174,7 @@ impl MsTangle {
     }
 
     pub fn is_synced(&self) -> bool {
-        self.get_solid_milestone_index() == self.get_last_milestone_index()
+        self.get_last_solid_milestone_index() == self.get_last_milestone_index()
     }
 
     pub fn add_solid_entry_point(&self, hash: TxHash, index: MilestoneIndex) {

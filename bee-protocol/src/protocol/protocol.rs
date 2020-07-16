@@ -11,9 +11,11 @@
 
 use crate::{
     config::ProtocolConfig,
+    events::{LastMilestone, LastSolidMilestone},
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
+    tangle::tangle,
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
@@ -33,16 +35,17 @@ use bee_signing::ternary::WotsPublicKey;
 
 use std::{ptr, sync::Arc};
 
-use async_std::task::spawn;
+use async_std::task::{block_on, spawn};
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
-use log::warn;
+use log::{info, warn};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
 pub struct Protocol {
     pub(crate) config: ProtocolConfig,
     pub(crate) network: Network,
+    pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
     pub(crate) transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
@@ -58,7 +61,7 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub async fn init(config: ProtocolConfig, network: Network, bus: Arc<Bus<'_>>, shutdown: &mut Shutdown) {
+    pub async fn init(config: ProtocolConfig, network: Network, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) {
         if unsafe { !PROTOCOL.is_null() } {
             warn!("Already initialized.");
             return;
@@ -101,6 +104,7 @@ impl Protocol {
         let protocol = Protocol {
             config,
             network: network.clone(),
+            bus,
             metrics: ProtocolMetrics::new(),
             transaction_worker: transaction_worker_tx,
             transaction_responder_worker: transaction_responder_worker_tx,
@@ -118,6 +122,9 @@ impl Protocol {
         unsafe {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
+
+        Protocol::get().bus.add_listener(handle_last_milestone);
+        Protocol::get().bus.add_listener(handle_last_solid_milestone);
 
         shutdown.add_worker_shutdown(
             transaction_worker_shutdown_tx,
@@ -238,4 +245,18 @@ impl Protocol {
 
         (receiver_tx, receiver_shutdown_tx)
     }
+}
+
+fn handle_last_milestone(last_milestone: &LastMilestone) {
+    info!("New milestone #{}.", *last_milestone.0.index);
+    tangle().update_last_milestone_index(last_milestone.0.index);
+}
+
+fn handle_last_solid_milestone(last_solid_milestone: &LastSolidMilestone) {
+    tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
+    // TODO block_on ?
+    block_on(Protocol::broadcast_heartbeat(
+        last_solid_milestone.0.index,
+        tangle().get_snapshot_milestone_index(),
+    ));
 }

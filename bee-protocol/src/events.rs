@@ -14,15 +14,9 @@ use crate::Milestone;
 use bee_event_derive::Event;
 
 #[derive(Event)]
-#[name = "latest_milestone"]
-pub struct LatestMilestone {
-    previous: Milestone,
-    current: Milestone,
-}
+#[name = "last_milestone"]
+pub struct LastMilestone(pub Milestone);
 
 #[derive(Event)]
-#[name = "latest_solid_milestone"]
-pub struct LatestSolidMilestone {
-    previous: Milestone,
-    current: Milestone,
-}
+#[name = "last_solid_milestone"]
+pub struct LastSolidMilestone(pub Milestone);

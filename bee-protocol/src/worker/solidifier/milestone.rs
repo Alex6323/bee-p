@@ -63,7 +63,7 @@ impl MilestoneSolidifierWorker {
     //             true => {
     //                 tangle().update_solid_milestone_index(target_index.into());
     //                 Protocol::broadcast_heartbeat(
-    //                     *tangle().get_solid_milestone_index(),
+    //                     *tangle().get_last_solid_milestone_index(),
     //                     *tangle().get_snapshot_milestone_index(),
     //                 )
     //                 .await;
@@ -80,7 +80,7 @@ impl MilestoneSolidifierWorker {
     // }
 
     fn request_milestones(&self) {
-        let solid_milestone_index = *tangle().get_solid_milestone_index();
+        let solid_milestone_index = *tangle().get_last_solid_milestone_index();
 
         // TODO this may request unpublished milestones
         for index in solid_milestone_index..solid_milestone_index + MILESTONE_REQUEST_RANGE as u32 {
@@ -92,18 +92,23 @@ impl MilestoneSolidifierWorker {
     }
 
     async fn solidify_milestone(&self) {
-        let target_index = tangle().get_solid_milestone_index() + MilestoneIndex(1);
+        let target_index = tangle().get_last_solid_milestone_index() + MilestoneIndex(1);
 
+        // if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
+        //     if tangle().is_solid_transaction(&target_hash) {
+        //         // TODO set confirmation index + trigger ledger
+        //         tangle().update_last_solid_milestone_index(target_index);
+        //         Protocol::broadcast_heartbeat(
+        //             tangle().get_last_solid_milestone_index(),
+        //             tangle().get_snapshot_milestone_index(),
+        //         )
+        //         .await;
+        //     } else {
+        //         Protocol::trigger_transaction_solidification(target_hash, target_index).await;
+        //     }
+        // }
         if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-            if tangle().is_solid_transaction(&target_hash) {
-                // TODO set confirmation index + trigger ledger
-                tangle().update_solid_milestone_index(target_index);
-                Protocol::broadcast_heartbeat(
-                    tangle().get_solid_milestone_index(),
-                    tangle().get_snapshot_milestone_index(),
-                )
-                .await;
-            } else {
+            if !tangle().is_solid_transaction(&target_hash) {
                 Protocol::trigger_transaction_solidification(target_hash, target_index).await;
             }
         }
@@ -125,8 +130,8 @@ impl MilestoneSolidifierWorker {
                     if let Some(MilestoneSolidifierWorkerEvent()) = event {
                         self.request_milestones();
                         self.solidify_milestone().await;
-                        // while tangle().get_solid_milestone_index() < tangle().get_last_milestone_index() {
-                        //     if !self.process_target(*tangle().get_solid_milestone_index() + 1).await {
+                        // while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
+                        //     if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
                         //         break;
                         //     }
                         // }

@@ -86,7 +86,7 @@ impl NodeBuilder {
                     local_snapshot.state().balances().len()
                 );
 
-                tangle::tangle().update_solid_milestone_index(local_snapshot.metadata().index().into());
+                tangle::tangle().update_last_solid_milestone_index(local_snapshot.metadata().index().into());
 
                 // TODO get from database
                 tangle::tangle().update_last_milestone_index(local_snapshot.metadata().index().into());

@@ -235,7 +235,7 @@ impl PeerHandshakerWorker {
 
                         Protocol::send_heartbeat(
                             self.peer.epid,
-                            tangle().get_solid_milestone_index(),
+                            tangle().get_last_solid_milestone_index(),
                             tangle().get_snapshot_milestone_index(),
                         )
                         .await;
