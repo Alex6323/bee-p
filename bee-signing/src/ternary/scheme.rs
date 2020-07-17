@@ -33,7 +33,8 @@ pub trait PrivateKeyGenerator {
     /// ```
     /// use bee_crypto::ternary::Kerl;
     /// use bee_signing::ternary::{
-    ///     PrivateKeyGenerator, Seed, TernarySeed, wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    ///     PrivateKeyGenerator, Seed, TernarySeed,
     /// };
     ///
     /// let seed = TernarySeed::<Kerl>::new();
@@ -58,7 +59,8 @@ pub trait PrivateKeyGenerator {
     /// ```
     /// use bee_crypto::ternary::Kerl;
     /// use bee_signing::ternary::{
-    ///     PrivateKeyGenerator, Seed, TernarySeed, wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    ///     PrivateKeyGenerator, Seed, TernarySeed,
     /// };
     ///
     /// let seed = TernarySeed::<Kerl>::new();
