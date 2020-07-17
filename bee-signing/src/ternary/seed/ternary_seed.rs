@@ -11,7 +11,7 @@
 
 use crate::ternary::Seed;
 
-use bee_common_derive::{SecretDebug, SecretDisplay};
+use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto::ternary::Sponge;
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
@@ -25,7 +25,7 @@ pub enum TernarySeedError {
     InvalidLength(usize),
 }
 
-#[derive(SecretDebug, SecretDisplay)]
+#[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct TernarySeed<S> {
     seed: TritBuf,
     _sponge: PhantomData<S>,
@@ -34,12 +34,6 @@ pub struct TernarySeed<S> {
 impl<S> Zeroize for TernarySeed<S> {
     fn zeroize(&mut self) {
         unsafe { self.seed.as_i8_slice_mut().zeroize() }
-    }
-}
-
-impl<S> Drop for TernarySeed<S> {
-    fn drop(&mut self) {
-        self.zeroize()
     }
 }
 
