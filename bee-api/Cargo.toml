@@ -14,12 +14,12 @@ homepage = "https://www.iota.org"
 bee-common = { git = "https://github.com/iotaledger/bee.git" }
 bee-crypto = { path = "../bee-crypto" }
 bee-protocol = { path = "../bee-protocol" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 bee-transaction = { path = "../bee-transaction" }
 bee-tangle = { path = "../bee-tangle" }
 
 async-std = { version = "1.6.2", features = ["attributes", "tokio02"] }
 async-trait = "0.1.36"
-bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 futures = "0.3.5"
 log = "0.4.8"
 serde = { version = "1.0.114", features = ["derive"] }
