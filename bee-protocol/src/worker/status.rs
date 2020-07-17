@@ -32,7 +32,7 @@ impl StatusWorker {
 
     fn status(&self) {
         let snapshot_milestone_index = *tangle().get_snapshot_milestone_index();
-        let solid_milestone_index = *tangle().get_solid_milestone_index();
+        let solid_milestone_index = *tangle().get_last_solid_milestone_index();
         let last_milestone_index = *tangle().get_last_milestone_index();
 
         // TODO Threshold

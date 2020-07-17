@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
+    events::{LastMilestone, LastSolidMilestone},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::tangle,
@@ -93,22 +94,21 @@ where
         match self.validate_milestone(tail_hash).await {
             Ok(milestone) => {
                 // TODO check multiple triggers
-                tangle().add_milestone(milestone.index.into(), milestone.hash);
+                tangle().add_milestone(milestone.index, milestone.hash);
 
                 // This is possibly not sufficient as there is no guarantee a milestone has been solidified
                 // before being validated, we then also need to check when a milestone gets solidified if it's
                 // already vadidated.
                 if let Some(meta) = tangle().get_metadata(&milestone.hash) {
                     if meta.flags.is_solid() {
-                        // TODO trigger new solid MS event
+                        Protocol::get().bus.dispatch(LastSolidMilestone(milestone.clone()));
                     }
                 }
 
-                // TODO deref ? Why not .into() ?
                 if milestone.index > tangle().get_last_milestone_index() {
-                    info!("New milestone #{}.", *milestone.index);
-                    tangle().update_last_milestone_index(milestone.index.into());
+                    Protocol::get().bus.dispatch(LastMilestone(milestone));
                 }
+
                 // TODO only trigger if index == last solid index ?
                 // TODO trigger only if requester is empty ? And unsynced ?
                 // Protocol::trigger_transaction_solidification(milestone.hash).await;

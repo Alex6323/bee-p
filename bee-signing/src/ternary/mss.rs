@@ -11,7 +11,7 @@
 
 use crate::ternary::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature};
 
-use bee_common_derive::{SecretDebug, SecretDisplay};
+use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto::ternary::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
@@ -152,7 +152,7 @@ where
     }
 }
 
-#[derive(SecretDebug, SecretDisplay)]
+#[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct MssPrivateKey<S, K: Zeroize> {
     depth: u8,
     index: u64,
@@ -167,12 +167,6 @@ impl<S, K: Zeroize> Zeroize for MssPrivateKey<S, K> {
             key.zeroize();
         }
         unsafe { self.tree.as_i8_slice_mut().zeroize() }
-    }
-}
-
-impl<S, K: Zeroize> Drop for MssPrivateKey<S, K> {
-    fn drop(&mut self) {
-        self.zeroize()
     }
 }
 

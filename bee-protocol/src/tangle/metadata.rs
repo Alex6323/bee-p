@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::Flags;
+use crate::{milestone::MilestoneIndex, tangle::Flags};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -19,6 +19,7 @@ pub struct TransactionMetadata {
     pub(crate) flags: Flags,
     pub(crate) arrival_timestamp: u64,
     pub(crate) solidification_timestamp: u64,
+    pub(crate) milestone_index: MilestoneIndex,
 }
 
 impl TransactionMetadata {

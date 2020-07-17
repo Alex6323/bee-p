@@ -18,6 +18,7 @@ use crate::{
 
 use bee_common::shutdown::Shutdown;
 use bee_crypto::ternary::Hash;
+use bee_event::Bus;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
@@ -35,7 +36,7 @@ use futures::{
 use log::{debug, error, info, warn};
 use thiserror::Error;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 /// All possible node errors.
 #[derive(Error, Debug)]
@@ -60,6 +61,7 @@ impl NodeBuilder {
         print_banner_and_version();
 
         let mut shutdown = Shutdown::new();
+        let bus = Arc::new(Bus::default());
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown);
@@ -84,7 +86,7 @@ impl NodeBuilder {
                     local_snapshot.state().balances().len()
                 );
 
-                tangle::tangle().update_solid_milestone_index(local_snapshot.metadata().index().into());
+                tangle::tangle().update_last_solid_milestone_index(local_snapshot.metadata().index().into());
 
                 // TODO get from database
                 tangle::tangle().update_last_milestone_index(local_snapshot.metadata().index().into());
@@ -119,6 +121,7 @@ impl NodeBuilder {
         block_on(Protocol::init(
             self.config.protocol.clone(),
             network.clone(),
+            bus.clone(),
             &mut shutdown,
         ));
 
