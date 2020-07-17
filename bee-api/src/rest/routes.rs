@@ -16,9 +16,9 @@ use serde_json::Value as JsonValue;
 use async_trait::async_trait;
 
 use crate::{
-    web_service::WebService,
     format::json_utils::{json_error_obj, json_success_obj},
     service::{TransactionByHashParams, TransactionsByHashesParams},
+    web_service::WebService,
 };
 use std::convert::TryFrom;
 

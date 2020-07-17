@@ -17,7 +17,7 @@ use futures::channel::oneshot;
 use serde::de::DeserializeOwned;
 use warp::{Filter, Rejection};
 
-use crate::{web_service::WebService, config::ApiConfig};
+use crate::{config::ApiConfig, web_service::WebService};
 
 pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
     let node_info = warp::get()
