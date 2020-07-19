@@ -51,8 +51,16 @@ pub fn run(config: ApiConfig, shutdown: &mut Shutdown) {
         .and(json_body())
         .and_then(routes::Rest::transactions_by_bundle);
 
+    let traverse_tangle = warp::post()
+        .and(warp::path("v1"))
+        .and(warp::path("tangle"))
+        .and(warp::path("visit-children-follow-trunk"))
+        .and(warp::path::end())
+        .and(json_body())
+        .and_then(routes::Rest::visit_children_follow_trunk);
+
     let routes = tx_by_hash
-        .or(txs_by_hashes.or(node_info).or(txs_by_bundle))
+        .or(txs_by_hashes.or(node_info).or(txs_by_bundle).or(traverse_tangle))
         .with(warp::cors().allow_any_origin());
 
     let (server_sd_sender, server_sd_receiver) = oneshot::channel::<()>();

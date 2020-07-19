@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::service::{Service, ServiceImpl, TransactionsByBundleParams};
+use crate::service::{Service, ServiceImpl, TransactionsByBundleParams, VisitChildrenFollowTrunkParams};
 
 use serde_json::Value as JsonValue;
 
@@ -56,6 +56,16 @@ impl WebService for Rest {
             Ok(params) => Ok(warp::reply::json(&json_success_obj(
                 ServiceImpl::transactions_by_hashes(params).into(),
             ))),
+            Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
+        }
+    }
+
+    async fn visit_children_follow_trunk(input: Self::Input) -> Self::Output {
+        match VisitChildrenFollowTrunkParams::try_from(&input) {
+            Ok(params) => match ServiceImpl::visit_children_follow_trunk(params) {
+                Ok(res) => Ok(warp::reply::json(&json_success_obj(res.into()))),
+                Err(e) => Ok(warp::reply::json(&json_error_obj(&e.msg))),
+            },
             Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
         }
     }

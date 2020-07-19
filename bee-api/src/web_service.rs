@@ -20,4 +20,5 @@ pub trait WebService {
     async fn transactions_by_bundle(input: Self::Input) -> Self::Output;
     async fn transaction_by_hash(input: Self::Input) -> Self::Output;
     async fn transactions_by_hashes(input: Self::Input) -> Self::Output;
+    async fn visit_children_follow_trunk(input: Self::Input) -> Self::Output;
 }

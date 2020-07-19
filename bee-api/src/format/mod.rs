@@ -14,5 +14,6 @@ pub mod node_info;
 pub mod transaction_by_hash;
 pub mod transactions_by_bundle;
 pub mod transactions_by_hashes;
+pub mod visit_children_follow_trunk;
 
 pub mod items;

@@ -12,11 +12,10 @@
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::{tangle, TransactionMetadata};
 use bee_tangle::traversal;
-use bee_transaction::bundled::{BundledTransaction, BundledTransactionField};
 use bee_ternary::{T1B1Buf, TritBuf, TryteBuf};
+use bee_transaction::bundled::{BundledTransaction, BundledTransactionField};
 
 fn main() {
-
     bee_protocol::tangle::init();
 
     // Build a transaction consisting of only zeros and put it into the tangle with some random hash
@@ -26,17 +25,11 @@ fn main() {
             .unwrap()
             .as_trits()
             .encode::<T1B1Buf>(),
-    ).unwrap();
+    )
+    .unwrap();
     tangle().insert(tx, tx_hash, TransactionMetadata::new());
     assert_eq!(tangle().contains(&tx_hash), true);
 
     // use tx_hash as entry hash
-    traversal::visit_children_depth_first(
-        tangle(),
-        tx_hash,
-        |_, _| false,
-        |_, _, _| (),
-        |_| (),
-    );
-
+    traversal::visit_children_follow_trunk(tangle(), tx_hash, |_, _| false, |_, _, _| ());
 }

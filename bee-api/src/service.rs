@@ -9,9 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::format::items::transaction_ref::TransactionRefItem;
 use bee_crypto::ternary::Hash;
 use bee_protocol::{tangle::tangle, MilestoneIndex};
 use bee_tangle::{traversal, TransactionRef};
+use serde_json::Value as JsonValue;
 use std::{collections::HashMap, fmt};
 
 pub trait Service {
@@ -20,6 +22,9 @@ pub trait Service {
         -> Result<TransactionsByBundleResponse, ServiceError>;
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse;
     fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse;
+    fn visit_children_follow_trunk(
+        params: VisitChildrenFollowTrunkParams,
+    ) -> Result<VisitChildrenFollowTrunkResponse, ServiceError>;
 }
 
 pub struct ServiceError {
@@ -71,6 +76,16 @@ pub struct TransactionsByBundleResponse {
     pub tx_refs: HashMap<Hash, TransactionRef>,
 }
 
+pub struct VisitChildrenFollowTrunkParams {
+    pub entry: Hash,
+    pub traverse_cond: JsonValue,
+    pub catch_cond: JsonValue,
+}
+
+pub struct VisitChildrenFollowTrunkResponse {
+    pub tx_refs: HashMap<Hash, TransactionRef>,
+}
+
 pub struct ServiceImpl;
 impl Service for ServiceImpl {
     fn node_info() -> NodeInfoResponse {
@@ -93,7 +108,7 @@ impl Service for ServiceImpl {
         traversal::visit_children_depth_first(
             tangle(),
             params.entry,
-            |tx, _| tx.bundle() == &params.bundle,
+            |tx_ref, _| tx_ref.bundle() == &params.bundle,
             |tx_hash, tx_ref, _| {
                 ret.insert(tx_hash.clone(), tx_ref.clone());
             },
@@ -117,5 +132,32 @@ impl Service for ServiceImpl {
             );
         }
         TransactionsByHashesResponse { tx_refs: ret }
+    }
+
+    fn visit_children_follow_trunk(
+        params: VisitChildrenFollowTrunkParams,
+    ) -> Result<VisitChildrenFollowTrunkResponse, ServiceError> {
+        let mut ret = HashMap::new();
+        traversal::visit_children_follow_trunk(
+            tangle(),
+            params.entry,
+            |tx_ref, _| match_cond(&params.traverse_cond, tx_ref),
+            |tx_hash, tx_ref, _| {
+                if match_cond(&params.catch_cond, tx_ref) {
+                    ret.insert(tx_hash.clone(), tx_ref.clone());
+                }
+            },
+        );
+        Ok(VisitChildrenFollowTrunkResponse { tx_refs: ret })
+    }
+}
+
+pub fn match_cond(cond: &JsonValue, tx_ref: &TransactionRef) -> bool {
+    match jsonlogic_rs::apply(cond, &JsonValue::from(&TransactionRefItem(tx_ref.clone()))) {
+        Ok(value) => match value.as_bool() {
+            Some(bool) => bool,
+            None => false,
+        },
+        Err(_) => false,
     }
 }

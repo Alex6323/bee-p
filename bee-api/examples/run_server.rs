@@ -38,7 +38,7 @@ async fn main() {
     let mut shutdown = Shutdown::new();
     rest::server::run(ApiConfigBuilder::new().finish(), &mut shutdown);
 
-    let seconds = 60;
+    let seconds = 60 * 60;
     println!("Shutdown API in {} seconds...", seconds);
     thread::sleep(Duration::from_secs(seconds));
 
