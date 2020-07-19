@@ -62,10 +62,9 @@ impl WebService for Rest {
 
     async fn visit_children_follow_trunk(input: Self::Input) -> Self::Output {
         match VisitChildrenFollowTrunkParams::try_from(&input) {
-            Ok(params) => match ServiceImpl::visit_children_follow_trunk(params) {
-                Ok(res) => Ok(warp::reply::json(&json_success_obj(res.into()))),
-                Err(e) => Ok(warp::reply::json(&json_error_obj(&e.msg))),
-            },
+            Ok(params) => Ok(warp::reply::json(&json_success_obj(
+                ServiceImpl::visit_children_follow_trunk(params).into(),
+            ))),
             Err(msg) => Ok(warp::reply::json(&json_error_obj(msg))),
         }
     }

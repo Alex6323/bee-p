@@ -22,9 +22,7 @@ pub trait Service {
         -> Result<TransactionsByBundleResponse, ServiceError>;
     fn transaction_by_hash(params: TransactionByHashParams) -> TransactionByHashResponse;
     fn transactions_by_hashes(params: TransactionsByHashesParams) -> TransactionsByHashesResponse;
-    fn visit_children_follow_trunk(
-        params: VisitChildrenFollowTrunkParams,
-    ) -> Result<VisitChildrenFollowTrunkResponse, ServiceError>;
+    fn visit_children_follow_trunk(params: VisitChildrenFollowTrunkParams) -> VisitChildrenFollowTrunkResponse;
 }
 
 pub struct ServiceError {
@@ -134,9 +132,7 @@ impl Service for ServiceImpl {
         TransactionsByHashesResponse { tx_refs: ret }
     }
 
-    fn visit_children_follow_trunk(
-        params: VisitChildrenFollowTrunkParams,
-    ) -> Result<VisitChildrenFollowTrunkResponse, ServiceError> {
+    fn visit_children_follow_trunk(params: VisitChildrenFollowTrunkParams) -> VisitChildrenFollowTrunkResponse {
         let mut ret = HashMap::new();
         traversal::visit_children_follow_trunk(
             tangle(),
@@ -148,7 +144,7 @@ impl Service for ServiceImpl {
                 }
             },
         );
-        Ok(VisitChildrenFollowTrunkResponse { tx_refs: ret })
+        VisitChildrenFollowTrunkResponse { tx_refs: ret }
     }
 }
 
