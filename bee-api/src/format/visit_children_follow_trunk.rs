@@ -25,12 +25,12 @@ impl TryFrom<&JsonValue> for VisitChildrenFollowTrunkParams {
             None => return Err("can not find initial hash"),
         };
         let traverse_cond = value["traverse_cond"].to_owned();
-        let collect_cond = value["collect_cond"].to_owned();
+        let catch_cond = value["catch_cond"].to_owned();
 
         Ok(VisitChildrenFollowTrunkParams {
             entry,
             traverse_cond,
-            collect_cond,
+            catch_cond,
         })
     }
 }
