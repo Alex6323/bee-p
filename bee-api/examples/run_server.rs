@@ -25,7 +25,7 @@ async fn main() {
 
     let tx = BundledTransaction::from_trits(&TritBuf::<T1B1Buf>::zeros(BundledTransaction::trit_len())).unwrap();
     let tx_hash = Hash::try_from_inner(
-        TryteBuf::try_from_str("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        TryteBuf::try_from_str("ENTRY9HASH99999999999999999999999999999999999999999999999999999999999999999999999")
             .unwrap()
             .as_trits()
             .encode::<T1B1Buf>(),

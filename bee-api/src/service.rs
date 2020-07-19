@@ -77,7 +77,7 @@ pub struct TransactionsByBundleResponse {
 pub struct VisitChildrenFollowTrunkParams {
     pub entry: Hash,
     pub traverse_cond: JsonValue,
-    pub catch_cond: JsonValue,
+    pub collect_cond: JsonValue,
 }
 
 pub struct VisitChildrenFollowTrunkResponse {
@@ -139,7 +139,7 @@ impl Service for ServiceImpl {
             params.entry,
             |tx_ref, _| match_cond(&params.traverse_cond, tx_ref),
             |tx_hash, tx_ref, _| {
-                if match_cond(&params.catch_cond, tx_ref) {
+                if match_cond(&params.collect_cond, tx_ref) {
                     ret.insert(tx_hash.clone(), tx_ref.clone());
                 }
             },
