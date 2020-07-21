@@ -17,7 +17,10 @@ use crate::{
 };
 
 use bee_common::worker::Error as WorkerError;
-use bee_crypto_ext::ternary::{Hash, Kerl, Sponge};
+use bee_crypto_ext::ternary::{
+    sponge::{Kerl, Sponge},
+    Hash,
+};
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_transaction::TransactionVertex;
 

@@ -28,7 +28,10 @@ use crate::{
 
 use bee_common::shutdown::Shutdown;
 use bee_common_ext::wait_priority_queue::WaitPriorityQueue;
-use bee_crypto_ext::ternary::{CurlP27, CurlP81, Hash, Kerl, SpongeType};
+use bee_crypto_ext::ternary::{
+    sponge::{CurlP27, CurlP81, Kerl, SpongeType},
+    Hash,
+};
 use bee_event::Bus;
 use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::ternary::wots::WotsPublicKey;

@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto_ext::ternary::SpongeType;
+use bee_crypto_ext::ternary::sponge::SpongeType;
 use bee_ternary::{T1B1Buf, T5B1Buf, TryteBuf};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 

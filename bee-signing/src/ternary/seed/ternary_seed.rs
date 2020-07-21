@@ -12,7 +12,7 @@
 use crate::ternary::Seed;
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
-use bee_crypto_ext::ternary::Sponge;
+use bee_crypto_ext::ternary::sponge::Sponge;
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;

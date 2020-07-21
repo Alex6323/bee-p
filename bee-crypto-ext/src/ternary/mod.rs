@@ -12,7 +12,7 @@
 //! Ternary cryptographic primitives for the IOTA protocol.
 
 mod hash;
-mod sponge;
+
+pub mod sponge;
 
 pub use hash::{Hash, HASH_LENGTH};
-pub use sponge::{CurlP, CurlP27, CurlP81, CurlPRounds, Kerl, Sponge, SpongeType};
