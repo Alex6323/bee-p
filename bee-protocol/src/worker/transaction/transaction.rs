@@ -192,14 +192,18 @@ mod tests {
     use crate::ProtocolConfig;
 
     use bee_common::shutdown::Shutdown;
+    use bee_event::Bus;
     use bee_network::{NetworkConfig, Url};
 
     use async_std::task::{block_on, spawn};
     use futures::sink::SinkExt;
 
+    use std::sync::Arc;
+
     #[test]
     fn test_tx_worker_with_compressed_buffer() {
         let mut shutdown = Shutdown::new();
+        let bus = Arc::new(Bus::default());
 
         // build network
         let network_config = NetworkConfig::build().finish();
@@ -210,7 +214,7 @@ mod tests {
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        block_on(Protocol::init(protocol_config, network, &mut shutdown));
+        block_on(Protocol::init(protocol_config, network, bus, &mut shutdown));
 
         assert_eq!(tangle().len(), 0);
 
@@ -241,7 +245,8 @@ mod tests {
         block_on(
             TransactionWorker::new(milestone_validator_worker_sender, 10000)
                 .run(transaction_worker_receiver, shutdown_receiver),
-        );
+        )
+        .unwrap();
 
         assert_eq!(tangle().len(), 1);
         assert_eq!(tangle().contains(&Hash::zeros()), true);
