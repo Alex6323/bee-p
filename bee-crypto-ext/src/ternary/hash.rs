@@ -27,12 +27,8 @@ impl Hash {
         Self([0; HASH_LENGTH])
     }
 
-    pub fn as_bytes(&self) -> &[i8] {
-        &self.0
-    }
-
     pub fn as_trits(&self) -> &Trits<T1B1> {
-        unsafe { Trits::from_raw_unchecked(self.as_bytes(), HASH_LENGTH) }
+        unsafe { Trits::from_raw_unchecked(&self.0, HASH_LENGTH) }
     }
 
     pub fn weight(&self) -> u8 {
@@ -58,6 +54,7 @@ impl PartialEq for Hash {
         self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b)
     }
 }
+
 impl Eq for Hash {}
 
 impl fmt::Display for Hash {
