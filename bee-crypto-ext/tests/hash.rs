@@ -9,13 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto_ext::ternary::Hash;
+use bee_crypto_ext::ternary::{Hash, HASH_LENGTH};
 
 #[test]
 fn hash_weigth() {
     for i in 0..20 {
-        let mut trits = [0i8; Hash::len()];
-        trits[Hash::len() - i - 1] = 1;
+        let mut trits = [0i8; HASH_LENGTH];
+        trits[HASH_LENGTH - i - 1] = 1;
         let hash = Hash::new(trits);
         assert_eq!(hash.weight(), i as u8);
     }

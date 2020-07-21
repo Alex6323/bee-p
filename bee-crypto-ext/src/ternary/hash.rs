@@ -13,15 +13,15 @@ use bee_ternary::{Trits, T1B1};
 
 use std::{cmp::PartialEq, fmt, hash};
 
-/// The length of a hash in units of binary-coded balanced trits.
+/// The length of a hash in units of balanced trits.
 pub const HASH_LENGTH: usize = 243;
 
 /// Ternary cryptographic hash.
 #[derive(Copy, Clone)]
-// TODO pub ?
 pub struct Hash([i8; HASH_LENGTH]);
 
 impl Hash {
+    /// Creates a new `Hash` from trits.
     pub fn new(trits: [i8; HASH_LENGTH]) -> Self {
         Self(trits)
     }
@@ -31,10 +31,12 @@ impl Hash {
         Self([0; HASH_LENGTH])
     }
 
+    /// Reinterprets the `Hash` as `Trits`.
     pub fn as_trits(&self) -> &Trits<T1B1> {
         unsafe { Trits::from_raw_unchecked(&self.0, HASH_LENGTH) }
     }
 
+    /// Returns the weight - number of ending 0s - of the `Hash`.
     pub fn weight(&self) -> u8 {
         let mut weight = 0u8;
 
@@ -46,10 +48,6 @@ impl Hash {
         }
 
         weight
-    }
-
-    pub const fn len() -> usize {
-        HASH_LENGTH
     }
 }
 
