@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto_ext::ternary::sponge::SpongeType;
+use bee_crypto_ext::ternary::sponge::SpongeKind;
 use bee_ternary::{T1B1Buf, T5B1Buf, TryteBuf};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
@@ -220,10 +220,10 @@ impl ProtocolConfigBuilder {
             .unwrap_or_else(|| DEFAULT_COO_SPONGE_TYPE.to_owned())
             .as_str()
         {
-            "kerl" => SpongeType::Kerl,
-            "curl27" => SpongeType::CurlP27,
-            "curl81" => SpongeType::CurlP81,
-            _ => SpongeType::Kerl,
+            "kerl" => SpongeKind::Kerl,
+            "curl27" => SpongeKind::CurlP27,
+            "curl81" => SpongeKind::CurlP81,
+            _ => SpongeKind::Kerl,
         };
 
         let coo_public_key_default = Address::from_inner_unchecked(
@@ -333,7 +333,7 @@ pub struct ProtocolCoordinatorConfig {
     pub(crate) public_key: Address,
     pub(crate) public_key_bytes: [u8; 49],
     pub(crate) security_level: u8,
-    pub(crate) sponge_type: SpongeType,
+    pub(crate) sponge_type: SpongeKind,
 }
 
 #[derive(Clone)]

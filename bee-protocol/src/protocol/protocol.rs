@@ -29,7 +29,7 @@ use crate::{
 use bee_common::shutdown::Shutdown;
 use bee_common_ext::wait_priority_queue::WaitPriorityQueue;
 use bee_crypto_ext::ternary::{
-    sponge::{CurlP27, CurlP81, Kerl, SpongeType},
+    sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
     Hash,
 };
 use bee_event::Bus;
@@ -167,21 +167,21 @@ impl Protocol {
         );
 
         match Protocol::get().config.coordinator.sponge_type {
-            SpongeType::Kerl => shutdown.add_worker_shutdown(
+            SpongeKind::Kerl => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
                     MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new()
                         .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
                 ),
             ),
-            SpongeType::CurlP27 => shutdown.add_worker_shutdown(
+            SpongeKind::CurlP27 => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
                     MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new()
                         .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
                 ),
             ),
-            SpongeType::CurlP81 => shutdown.add_worker_shutdown(
+            SpongeKind::CurlP81 => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
                     MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new()

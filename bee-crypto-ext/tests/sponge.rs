@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto_ext::ternary::sponge::{CurlP27, CurlP81, Kerl, Sponge, SpongeType};
+use bee_crypto_ext::ternary::sponge::{CurlP27, CurlP81, Kerl, Sponge, SpongeKind};
 use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, TryteBuf};
 
 pub fn sponge_generic_digest<S: Sponge + Default>(input: &str, output: &str) {
@@ -49,7 +49,7 @@ pub fn sponge_generic_digest_into<S: Sponge + Default>(input: &str, output: &str
 // * CurlP27 output
 // * CurlP81 output
 
-fn sponge_input_243_output_243(sponge_type: SpongeType) {
+fn sponge_input_243_output_243(sponge_type: SpongeKind) {
     let tests = [
         (
             "HHPELNTNJIOKLYDUW9NDULWPHCWFRPTDIUWLYUHQWWJVPAKKGKOAZFJPQJBLNDPALCVXGJLRBFSHATF9C",
@@ -175,29 +175,29 @@ fn sponge_input_243_output_243(sponge_type: SpongeType) {
 
     for test in tests.iter() {
         match sponge_type {
-            SpongeType::Kerl => sponge_generic_digest::<Kerl>(test.0, test.1),
-            SpongeType::CurlP27 => sponge_generic_digest::<CurlP27>(test.0, test.2),
-            SpongeType::CurlP81 => sponge_generic_digest::<CurlP81>(test.0, test.3),
+            SpongeKind::Kerl => sponge_generic_digest::<Kerl>(test.0, test.1),
+            SpongeKind::CurlP27 => sponge_generic_digest::<CurlP27>(test.0, test.2),
+            SpongeKind::CurlP81 => sponge_generic_digest::<CurlP81>(test.0, test.3),
         }
     }
 }
 
 #[test]
 fn kerl_input_243_output_243() {
-    sponge_input_243_output_243(SpongeType::Kerl);
+    sponge_input_243_output_243(SpongeKind::Kerl);
 }
 
 #[test]
 fn curlp27_input_243_output_243() {
-    sponge_input_243_output_243(SpongeType::CurlP27);
+    sponge_input_243_output_243(SpongeKind::CurlP27);
 }
 
 #[test]
 fn curlp81_input_243_output_243() {
-    sponge_input_243_output_243(SpongeType::CurlP81);
+    sponge_input_243_output_243(SpongeKind::CurlP81);
 }
 
-fn sponge_input_243_output_486(sponge_type: SpongeType) {
+fn sponge_input_243_output_486(sponge_type: SpongeKind) {
     let tests = [
         (
             "9MIDYNHBWMBCXVDEFOFWINXTERALUKYYPPHKP9JJFGJEIUY9MUDVNFZHMMWZUYUSWAIOWEVTHNWMHANBH",
@@ -263,29 +263,29 @@ fn sponge_input_243_output_486(sponge_type: SpongeType) {
 
     for test in tests.iter() {
         match sponge_type {
-            SpongeType::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
-            SpongeType::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
-            SpongeType::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
+            SpongeKind::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
+            SpongeKind::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
+            SpongeKind::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
         }
     }
 }
 
 #[test]
 fn kerl_input_243_output_486() {
-    sponge_input_243_output_486(SpongeType::Kerl);
+    sponge_input_243_output_486(SpongeKind::Kerl);
 }
 
 #[test]
 fn curlp27_input_243_output_486() {
-    sponge_input_243_output_486(SpongeType::CurlP27);
+    sponge_input_243_output_486(SpongeKind::CurlP27);
 }
 
 #[test]
 fn curlp81_input_243_output_486() {
-    sponge_input_243_output_486(SpongeType::CurlP81);
+    sponge_input_243_output_486(SpongeKind::CurlP81);
 }
 
-fn sponge_input_243_output_6561(sponge_type: SpongeType) {
+fn sponge_input_243_output_6561(sponge_type: SpongeKind) {
     let tests = [
         (
             "PQ9YDLLUQYNUKPCPGHYHQKJNBOOOSEXXGFWTEQQTV9MLPMPGRDIKYWWEQZPICNPCZIIINTULV9UXXYUFT",
@@ -321,29 +321,29 @@ fn sponge_input_243_output_6561(sponge_type: SpongeType) {
 
     for test in tests.iter() {
         match sponge_type {
-            SpongeType::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
-            SpongeType::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
-            SpongeType::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
+            SpongeKind::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
+            SpongeKind::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
+            SpongeKind::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
         }
     }
 }
 
 #[test]
 fn kerl_input_243_output_6561() {
-    sponge_input_243_output_6561(SpongeType::Kerl);
+    sponge_input_243_output_6561(SpongeKind::Kerl);
 }
 
 #[test]
 fn curlp27_input_243_output_6561() {
-    sponge_input_243_output_6561(SpongeType::CurlP27);
+    sponge_input_243_output_6561(SpongeKind::CurlP27);
 }
 
 #[test]
 fn curlp81_input_243_output_6561() {
-    sponge_input_243_output_6561(SpongeType::CurlP81);
+    sponge_input_243_output_6561(SpongeKind::CurlP81);
 }
 
-fn sponge_input_486_output_486(sponge_type: SpongeType) {
+fn sponge_input_486_output_486(sponge_type: SpongeKind) {
     let tests = [
         (
             "G9JYBOMPUXHYHKSNRNMMSSZCSHOFYOYNZRSZMAAYWDYEIMVVOGKPJBVBM9TDPULSFUNMTVXRKFIDOHUXXVYDLFSZYZTWQYTE9SPYYWYTXJYQ9IFGYOLZXWZBKWZN9QOOTBQMWMUBLEWUEEASRHRTNIQWJQNDWRYLCA",
@@ -409,29 +409,29 @@ fn sponge_input_486_output_486(sponge_type: SpongeType) {
 
     for test in tests.iter() {
         match sponge_type {
-            SpongeType::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
-            SpongeType::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
-            SpongeType::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
+            SpongeKind::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
+            SpongeKind::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
+            SpongeKind::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
         }
     }
 }
 
 #[test]
 fn kerl_input_486_output_486() {
-    sponge_input_486_output_486(SpongeType::Kerl);
+    sponge_input_486_output_486(SpongeKind::Kerl);
 }
 
 #[test]
 fn curlp27_input_486_output_486() {
-    sponge_input_486_output_486(SpongeType::CurlP27);
+    sponge_input_486_output_486(SpongeKind::CurlP27);
 }
 
 #[test]
 fn curlp81_input_486_output_486() {
-    sponge_input_486_output_486(SpongeType::CurlP81);
+    sponge_input_486_output_486(SpongeKind::CurlP81);
 }
 
-fn sponge_input_6561_output_6561(sponge_type: SpongeType) {
+fn sponge_input_6561_output_6561(sponge_type: SpongeKind) {
     let tests = [
         (
             "ZDVXRHZRIPSGGHWELMZ9LAWABXPSBK9ERUANCKBPIKXNBMJUXTFNF9VHHXECYZTUKSQTPNFCTXZAGNTRCMLGFKEDAAVQMBUREFLNPJVQFDINCDRBL9TGKQGLBSBEVZUZDDCZDRVSDBOBVLSZHGZMDCQPEZBFLKWUXYFGQMSMCSHYKDBINWXXKFLYWAWCNPCYB9CBZOIRCNMFUMKXNPWRDPWHNGLHJALXUQNMRTFNVDRDEVHJHDQSIPHGFAVLQAIUUDXJREZLJKBYMCXPWIDOIMNKZICFTCQWRHKAZMZBNTRIXNFYZGELISFA9UVSAQHVJABZNSPMPZGSLNFMDORGPKTYMLWFMJQXVKUHDGPINFFBTEUTXAHDBMK9FVS9GBWXIOZBMBTZMDDFCVUYMIWXXFZZAXINQIPFIYMDGUURJJOCWRXMCULCKB9ZSZLLGXVMQMNZQFMSHCK9TRWIIPIOHRRQGHYZJVETBGEOAGZOGKTEJGYAYBHVQ9VFBNEKXLSJKXAAFHDQDEJCZEAHZPJXCYBQNZJOTOZ9AUTJVPGQABNMTZWCZSULVMFSXDKKUZ9JAXRMZRCFETMGBLBLJJMZAVSAZAVWTUETEYOMVDF9GXEMYKXWMEJBERDTMAIGDLRHAZJUUCQNATVZIRVOGXAZBECUPYBNUDFUM9SLRIBQNPVKXGMXZFZ9FGFVNNGCCOABCYWNMNNSIOPFHQVRXXWIFJKODOGOPURT9HFQUKAQB9DOGYIEVQTESPSVNKWKLGTMXTDPKTPDJGOKQIZVOHBA9UHOKXXZJZLCPLZTMWSHRIQHZRXXUOZSDGBAPOLNNXMXJXZGQZYXAQEGMKUICIQTL9DOXAELENQLTBAXQVEYQBFVRSVQMAMIELIUALNUUDAZKZTPYHUMPXBGZSAZPZRZFYUISCBRLMJQLYUVVPLDFMHIL9DEEIQSZWOUOQSXTREGSWZKPQBVXMBOANYWQGVHDXZO9LQGYOEXMCGFJKZQKYQYMRMGHTCPCOUYCEYHDCWSCHAYVDEOW9GKTBYRQGSSJATRVZM9FPT9FQTFBGNJQMQNQIMFDSHELQFKAVQXQBEHHKCNDNANYMWZDNFKU9ERPRVLDLTFTMGSSPWAGYPJNFKFUMM9Z9YHSSDJLDGNAAWDZIDTAHD9VQDJVPSQKMUFJAICMPAFDZHZDANRAXRESAUXTWEFGWWZRHVYQOGHLNMXZI9KZ9LJIXXBGOXIDJUBEZYBOYAOCP9RLHEAXQQBUUSMNJWNJIWVKCZLVDYTFANUGUNMZFFTLRUCMTCZUPMLVODPYYNVLJOSRNQVMORMMJYO9ZDXYFFOMMSZONYKENHMYLZPLLIFXKRND9CU9XIDMZFKOFLASVVBCVOXKZDOOVDUSDKVLSBKXREQDVKXJCIXCHWPXF9P9ROPDSPBSOYLPEQAGDYNLMBUOBIJQGUE9NWFWHZW9VJNGVAIDPR99KZXWSDETGXLOPJUZVB9VFLDJEPOMYJFAGXPSMDSXBPESBXDLPLNAGSPRKJYVEKHUUXGRLUWLJWBGCQHVFFTTXPWVEAZXW9EXDREDNHOULFTACX9QBZEUPORZPBTDGZWEKQUQTTAXFLDLUULWRBBEKVDPISONVYIXCSVEWPFGRXJJQBOYEXBVUWXKFSVHCNZXVLSFMJHYTDYGZUCNKORCAVZYGYGLAGTHGRUCZMHKFNIKLMY9JBRDAEKOJRBBWHQBUGCFIXBNNVCKKZDXLIHBJYXMLYKBLTYHQLCFBCXQARHCQXGIJS9LYSGNPWBZE9DWNJ9O9WJPYZEYKTDBJDHJZONCWVAMPMKVDEOPMHTYOXRKHE9CTXOBAGVFJSWFBVORGPXTBEYMMMUUALDST9OQHG9NGUICAFFRSEXHNQCZQCCUBXMWHCPZVSLKTNOHRLLZXOIRQIQCJIUQNDXVGPEISBIAXZNDVOMCDLTGJEBMHNYVNQMLZYNEQWRBNGFQOFDRCIXILN9QVKWJGVXXIFPVAPFELFSR9ZNNJGIUCUJWVIETMVMMTPHEKRZHJGSG9S9PCNYLANUFAIQTEFQSYJGBDEUJMAAPWQYBHZLSYSNQHWANATOESRFRIFJPDNRVWKDQVFLKFUXFCY9SBEOWTXPQGNUQJWLCRVFSNQPLGSQMPWOWJJASPAYPHQRLIGBGOMIZ9AIBHMFZJPJSNP",
@@ -467,29 +467,29 @@ fn sponge_input_6561_output_6561(sponge_type: SpongeType) {
 
     for test in tests.iter() {
         match sponge_type {
-            SpongeType::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
-            SpongeType::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
-            SpongeType::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
+            SpongeKind::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
+            SpongeKind::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
+            SpongeKind::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
         }
     }
 }
 
 #[test]
 fn kerl_input_6561_output_6561() {
-    sponge_input_6561_output_6561(SpongeType::Kerl);
+    sponge_input_6561_output_6561(SpongeKind::Kerl);
 }
 
 #[test]
 fn curlp27_input_6561_output_6561() {
-    sponge_input_6561_output_6561(SpongeType::CurlP27);
+    sponge_input_6561_output_6561(SpongeKind::CurlP27);
 }
 
 #[test]
 fn curlp81_input_6561_output_6561() {
-    sponge_input_6561_output_6561(SpongeType::CurlP81);
+    sponge_input_6561_output_6561(SpongeKind::CurlP81);
 }
 
-fn sponge_input_6561_output_243(sponge_type: SpongeType) {
+fn sponge_input_6561_output_243(sponge_type: SpongeKind) {
     let tests = [
         (
             "CIVIZMYHVFYZCXTXLDTPY9DMZKEEFMEABECNS9RHMIKQMHMUXSAQXLGLSYTRQCZWTQOGIQFFDWVBOCXXTVMRRCWQRVMCTBEIINDFFLXRIBJMBRQUCBAMDIDCAL9ICXFKOIBGJWKENILISRCZZU9WWPBTPQXOGYOFLWYISNYVHCOQQSKXBOOXESJQLZOHZAFRXOCGQRL9HUZFXYGUVRALGELOTEWNGYEZWCZRRITFYHDLWEZXPJOM9HSHMEUXJ9UCKDRYBZUIRWOSCNXAMGUTFUUPLTEYURVFROXZGGA9EFWROQMH9SZSXGNCIPXUDCCXS9UARJFJYDEEKNFSATRVNELTFXVX9UENWHXBQOMIBV9MUI99B9C9SSOFJYGBZCAHKHC9VIQRD9OHBQ9AEI9HRGQM9DDCJSPRQBBZRLGXJSKARRJTZWTHUVEUVPFVMUIAMDBRLOTKLMXSCPKQIULZ9TVKPRHXPFVAFQTDMOCHJ9DOFIYDWMKQXKLIZVXRRRSCGGJKOXOJH9RWYCLGLQR99STVPNGFOVZCJAJRNUCSWLZLXOEFHNDPHIMWXNENZZGYFFAQSXQPSZLBRSZR9OHIKBLMHQTOCLCQRQYEYGQEORKEXQN9LGZ9Q9QAEQOFTWADRSLZTOWK9SSDXOUJTIHYTHNYWRRJIHKPRLEK9FOSCMVVBAPBWDMBWIE9UAIJYDFPZEHSDIHOWTZGAHPLHULBFYJSACTIWJQUHTFESUFURCRLUURILTCOJ9JQVKTDA9RPMFVQH9HTIDGZPSRWTPUOQZUKQ9FVDFSCTQEEKTGGDXQUDVXKCJBMUCD9JTCYNNYTXDZYZEHQM9FYVGCCTJUARNKJUBL9EPLGRKYGBIDGVHUDGMDMHAAGNXQCXCRGTKL9NVNADJXIINSZVZNJVUOGISRECSUDFMNWBERUOSVSSZOLFYGOQTRMVJYQ9FDNOGSWSWYZHMRRGCVDKSLYSMKPLNLLVBQVPIVWVUQKSP9BCNVWJVSDUOBCSGPNRDQJTXPOVQSCFIKENKSG9AVFYFURXSZGYQZXPO9LMFDS9JQQUKUYXOANJAXJZWUUUSSWVZ9KJDZFXOSITHTQJYVRQXOCLLLSCUWN9DNFDGJ9ITECMYUJJPNK9IRBLRBDTSC9CVGFSKJPERC9BKRBLQLBXDEUNGCWBYYDYRWYR9TRCIQMOGNQGKWSZSCICTDUJHYOEYV9TNHLZWMDABDZCYHVMPLBAZXVFW9UKMFPHZ9ORQEFRFXXGOPTJBXEAFTBVRGATWOEZJRUWETAKLYOUHWZMTN9ABLMRLXHBSCVEWABNCYMOMMVDA9E9BWSNTVLZNJHPHC9JTJMQXZIQQLMBPPXTUXMYEVYLYERVWGQXSOO9LD9BRBDHQ9GMEKIIGCMSVXZFAHBZIM9ROGJGE9YTGSUGSIUYDNABCVZUHBJSKC9GW9SXK9CTKPKH9DFQJKMXWFKWD9IVNOONUEYPJTBNFEZPADBEIOLWZLSMXNEZSNFHEOXYJDMPQ9IKTEKCFSGVQDJYLRXHYMWFOWTB9EWDXKPGEMZWFLIDLZTAHIZ9IFHACVBXCXDZDJXLKYSDU9BMOST9HERRLKRV9UCKXFPSZSEBIZNYIDMQDFUSNTXNUJASXEXRHQMHOUWD9OACKQLSHVUMKCFMGDDUJIMCLDRWJCLX9WOGHXFXDMWUFPIXYWZIGZCXX9ZQ9XVTDWI9FRRKUGRUTSVVMGVPLAFOXGOGSMSNRURINKPTKYNNLHHYCWANODIPVCPMVYVLWFTOOVQECXNYYDVFZOMGAOQ9AARCXXIEELVCAQIMWLZNKAWH9AQMLCHGSKSRTTVGLK9MKFEMBNMHHDHCXWMJGEBKMIPRWYFMNJFBPGOKLSIFSTOCHX9ZKOMLXJBHZYRKLYWI9AQNCZGHCPOHJCNUETDXVELQQAGAEXPRQTJKZUARPKYFDUOZPPLAU9ZPJQMZOJYONLOPBFAKADDXBJTCGNMEYZMRINLBXHAK9PRWV9KPUVCMVUFLVOVTSQBYZ9LIJYQUFYJP9SZ9XMMTPH99CQMKTSSWOFJPDBRYMRZCOUHVXX9VJWLGUYXWUAFHBJZJHJWBDMRZYADWNVYJKQ9GOOMLRICCWXZJNDRSETOZWODRMKDYVXHNTTJBDQQSCGCQS9YLPRRWKSXYYORCOBCYUOTDMN",
@@ -525,26 +525,26 @@ fn sponge_input_6561_output_243(sponge_type: SpongeType) {
 
     for test in tests.iter() {
         match sponge_type {
-            SpongeType::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
-            SpongeType::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
-            SpongeType::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
+            SpongeKind::Kerl => sponge_generic_digest_into::<Kerl>(test.0, test.1),
+            SpongeKind::CurlP27 => sponge_generic_digest_into::<CurlP27>(test.0, test.2),
+            SpongeKind::CurlP81 => sponge_generic_digest_into::<CurlP81>(test.0, test.3),
         }
     }
 }
 
 #[test]
 fn kerl_input_6561_output_243() {
-    sponge_input_6561_output_243(SpongeType::Kerl);
+    sponge_input_6561_output_243(SpongeKind::Kerl);
 }
 
 #[test]
 fn curlp27_input_6561_output_243() {
-    sponge_input_6561_output_243(SpongeType::CurlP27);
+    sponge_input_6561_output_243(SpongeKind::CurlP27);
 }
 
 #[test]
 fn curlp81_input_6561_output_243() {
-    sponge_input_6561_output_243(SpongeType::CurlP81);
+    sponge_input_6561_output_243(SpongeKind::CurlP81);
 }
 
 #[test]
