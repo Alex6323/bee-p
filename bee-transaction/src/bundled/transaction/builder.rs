@@ -15,7 +15,7 @@ use crate::bundled::{
     Timestamp, Value,
 };
 
-use bee_crypto::ternary::Hash;
+use bee_crypto_ext::ternary::Hash;
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};
 
 #[derive(Default)]

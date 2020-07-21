@@ -14,7 +14,7 @@ use crate::{
     TransactionVertex,
 };
 
-use bee_crypto::ternary::{Kerl, Sponge};
+use bee_crypto_ext::ternary::{Kerl, Sponge};
 use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, Signature};
 use bee_ternary::TritBuf;
 
@@ -181,7 +181,7 @@ mod tests {
 
     use crate::bundled::{Address, BundledTransactionBuilder, Index, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_crypto::ternary::Hash;
+    use bee_crypto_ext::ternary::Hash;
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
         BundledTransactionBuilder::new()

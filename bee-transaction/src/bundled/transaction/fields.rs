@@ -13,7 +13,7 @@ use crate::bundled::constants::{
     ADDRESS, ADDRESS_TRIT_LEN, NONCE, NONCE_TRIT_LEN, PAYLOAD, PAYLOAD_TRIT_LEN, TAG, TAG_TRIT_LEN,
 };
 
-use bee_crypto::ternary::Hash;
+use bee_crypto_ext::ternary::Hash;
 use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
 use std::cmp::PartialEq;

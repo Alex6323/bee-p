@@ -11,14 +11,15 @@ keywords = ["iota", "tangle", "bee", "framework"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-crypto = { path = "../bee-crypto" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
+bee-crypto-ext = { path = "../bee-crypto-ext" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = { version = "1.6.2", features = ["unstable"] }
 dashmap = "3.10"
 
 [dev-dependencies]
-bee-crypto = { path = "../bee-crypto" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
 bee-test = { path = "../bee-test" }
 
 criterion = "0.3.2"

@@ -2,7 +2,7 @@
 members = [
 	"bee-api",
 	"bee-common-ext",
-	"bee-crypto",
+	"bee-crypto-ext",
 	"bee-event/bee-event",
 	"bee-event/bee-event-derive",
 	"bee-ledger",
@@ -15,7 +15,6 @@ members = [
 	"bee-snapshot",
 	# "bee-storage",
 	"bee-tangle",
-	"bee-ternary-ext",
 	"bee-test",
 	"bee-transaction",
 ]

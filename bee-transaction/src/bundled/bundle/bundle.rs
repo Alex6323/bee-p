@@ -14,7 +14,7 @@ use crate::{
     TransactionVertex,
 };
 
-use bee_crypto::ternary::Hash;
+use bee_crypto_ext::ternary::Hash;
 
 use std::collections::HashMap;
 

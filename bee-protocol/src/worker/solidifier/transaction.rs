@@ -12,7 +12,7 @@
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::worker::Error as WorkerError;
-use bee_crypto::ternary::Hash;
+use bee_crypto_ext::ternary::Hash;
 use bee_tangle::traversal;
 
 use std::collections::HashSet;

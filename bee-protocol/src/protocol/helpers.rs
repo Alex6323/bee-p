@@ -19,7 +19,7 @@ use crate::{
     },
 };
 
-use bee_crypto::ternary::Hash;
+use bee_crypto_ext::ternary::Hash;
 use bee_network::EndpointId;
 
 use futures::sink::SinkExt;

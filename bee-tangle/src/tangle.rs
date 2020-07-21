@@ -11,7 +11,7 @@
 
 use crate::{vertex::Vertex, TransactionRef as TxRef};
 
-use bee_crypto::ternary::Hash as TxHash;
+use bee_crypto_ext::ternary::Hash;
 use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
 
 use dashmap::{mapref::entry::Entry, DashMap, DashSet};
@@ -23,9 +23,9 @@ pub struct Tangle<T>
 where
     T: Clone + Copy,
 {
-    pub(crate) vertices: DashMap<TxHash, Vertex<T>>,
-    pub(crate) children: DashMap<TxHash, HashSet<TxHash>>,
-    pub(crate) tips: DashSet<TxHash>,
+    pub(crate) vertices: DashMap<Hash, Vertex<T>>,
+    pub(crate) children: DashMap<Hash, HashSet<Hash>>,
+    pub(crate) tips: DashSet<Hash>,
     // TODO: PriorityQueue with customizable priority for implementing cache eviction strategy
 }
 
@@ -52,7 +52,7 @@ where
     }
 
     /// Inserts a transaction, and returns a thread-safe reference to it in case it didn't already exist.
-    pub fn insert(&self, hash: TxHash, transaction: Tx, metadata: T) -> Option<TxRef> {
+    pub fn insert(&self, hash: Hash, transaction: Tx, metadata: T) -> Option<TxRef> {
         match self.vertices.entry(hash) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
@@ -79,7 +79,7 @@ where
     }
 
     #[inline]
-    fn add_child(&self, parent: TxHash, child: TxHash) {
+    fn add_child(&self, parent: Hash, child: Hash) {
         match self.children.entry(parent) {
             Entry::Occupied(mut entry) => {
                 let children = entry.get_mut();
@@ -95,29 +95,29 @@ where
     }
 
     /// Get the data of a vertex associated with the given `hash`.
-    pub fn get(&self, hash: &TxHash) -> Option<TxRef> {
+    pub fn get(&self, hash: &Hash) -> Option<TxRef> {
         self.vertices.get(hash).map(|vtx| vtx.value().transaction().clone())
     }
 
     /// Returns whether the transaction is stored in the Tangle.
-    pub fn contains(&self, hash: &TxHash) -> bool {
+    pub fn contains(&self, hash: &Hash) -> bool {
         self.vertices.contains_key(hash)
     }
 
     /// Get the metadata of a vertex associated with the given `hash`.
-    pub fn get_metadata(&self, hash: &TxHash) -> Option<T> {
+    pub fn get_metadata(&self, hash: &Hash) -> Option<T> {
         self.vertices.get(hash).map(|vtx| *vtx.value().metadata())
     }
 
     /// Updates the metadata of a particular vertex.
-    pub fn set_metadata(&self, hash: &TxHash, metadata: T) {
+    pub fn set_metadata(&self, hash: &Hash, metadata: T) {
         self.vertices.get_mut(hash).map(|mut vtx| {
             *vtx.value_mut().metadata_mut() = metadata;
         });
     }
 
     /// Updates the metadata of a vertex.
-    pub fn update_metadata<Update>(&self, hash: &TxHash, update: Update)
+    pub fn update_metadata<Update>(&self, hash: &Hash, update: Update)
     where
         Update: Fn(&mut T),
     {
@@ -132,7 +132,7 @@ where
     }
 
     /// Returns the children of a vertex.
-    pub fn get_children(&self, hash: &TxHash) -> HashSet<TxHash> {
+    pub fn get_children(&self, hash: &Hash) -> HashSet<Hash> {
         let num_children = self.num_children(hash);
         let mut hashes = HashSet::with_capacity(num_children);
 
@@ -151,7 +151,7 @@ where
     }
 
     /// Returns the number of children of a vertex.
-    pub fn num_children(&self, hash: &TxHash) -> usize {
+    pub fn num_children(&self, hash: &Hash) -> usize {
         self.children.get(hash).map_or(0, |r| r.value().len())
     }
 

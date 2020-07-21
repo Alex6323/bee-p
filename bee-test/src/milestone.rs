@@ -11,7 +11,7 @@
 
 use crate::field::rand_trits_field;
 
-use bee_crypto::ternary::Hash;
+use bee_crypto_ext::ternary::Hash;
 use bee_protocol::{Milestone, MilestoneIndex};
 
 pub fn clone_ms(ms: &Milestone) -> Milestone {

@@ -11,8 +11,10 @@
 
 use crate::ternary::{Sponge, HASH_LENGTH};
 
+use bee_crypto::ternary::bigint::{
+    binary_representation::U8Repr, endianness::BigEndian, error::Error as ConversioError, I384, T242, T243,
+};
 use bee_ternary::{Btrit, Trits, T1B1};
-use bee_ternary_ext::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243};
 
 use tiny_keccak::{Hasher, Keccak};
 
@@ -47,11 +49,11 @@ impl Default for Kerl {
 #[derive(Debug)]
 pub enum Error {
     NotMultipleOfHashLength,
-    TernaryBinaryConversion(bee_ternary_ext::bigint::error::Error),
+    TernaryBinaryConversion(ConversioError),
 }
 
-impl From<bee_ternary_ext::bigint::error::Error> for Error {
-    fn from(error: bee_ternary_ext::bigint::error::Error) -> Self {
+impl From<ConversioError> for Error {
+    fn from(error: ConversioError) -> Self {
         Error::TernaryBinaryConversion(error)
     }
 }

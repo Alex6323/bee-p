@@ -11,7 +11,7 @@
 
 use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata, state::SnapshotState};
 
-use bee_crypto::ternary::Hash;
+use bee_crypto_ext::ternary::Hash;
 use bee_ternary::{T1B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 

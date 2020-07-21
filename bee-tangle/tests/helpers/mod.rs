@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::Hash as TxHash;
+use bee_crypto_ext::ternary::Hash;
 use bee_tangle::Tangle;
 use bee_test::transaction::{create_random_attached_tx, create_random_tx};
 use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
@@ -23,11 +23,11 @@ pub struct Transactions {
 }
 
 pub struct Hashes {
-    pub a_hash: TxHash,
-    pub b_hash: TxHash,
-    pub c_hash: TxHash,
-    pub d_hash: TxHash,
-    pub e_hash: TxHash,
+    pub a_hash: Hash,
+    pub b_hash: Hash,
+    pub c_hash: Hash,
+    pub d_hash: Hash,
+    pub e_hash: Hash,
 }
 
 #[allow(clippy::many_single_char_names)]

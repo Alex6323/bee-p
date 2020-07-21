@@ -13,14 +13,14 @@ homepage = "https://www.iota.org"
 [dependencies]
 bee-common = { git = "https://github.com/iotaledger/bee.git" }
 bee-common-ext = { path = "../bee-common-ext" }
-bee-crypto = { path = "../bee-crypto" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
+bee-crypto-ext = { path = "../bee-crypto-ext" }
 bee-event = { path = "../bee-event/bee-event" }
 bee-event-derive = { path = "../bee-event/bee-event-derive" }
 bee-network = { path = "../bee-network" }
 bee-signing = { path = "../bee-signing" }
 bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
-bee-ternary-ext = { path = "../bee-ternary-ext" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = "1.6.2"

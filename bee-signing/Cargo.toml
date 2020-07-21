@@ -12,9 +12,9 @@ homepage = "https://www.iota.org"
 
 [dependencies]
 bee-common-derive = { git = "https://github.com/iotaledger/bee.git" }
-bee-crypto = { path = "../bee-crypto" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
+bee-crypto-ext = { path = "../bee-crypto-ext" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
-bee-ternary-ext = { path = "../bee-ternary-ext" }
 
 rand = "0.7"
 sha3 = "0.9.0"

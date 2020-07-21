@@ -17,7 +17,7 @@ use crate::{
 };
 
 use bee_common::worker::Error as WorkerError;
-use bee_crypto::ternary::{CurlP81, Hash, Sponge};
+use bee_crypto_ext::ternary::{CurlP81, Hash, Sponge};
 use bee_network::EndpointId;
 use bee_tangle::traversal;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
