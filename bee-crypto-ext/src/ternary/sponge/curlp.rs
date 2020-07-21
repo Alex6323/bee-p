@@ -18,8 +18,9 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-const STATE_LEN: usize = HASH_LENGTH * 3;
-const HALF_STATE_LEN: usize = STATE_LEN / 2;
+const STATE_LENGTH: usize = HASH_LENGTH * 3;
+const HALF_STATE_LENGTH: usize = STATE_LENGTH / 2;
+
 const TRUTH_TABLE: [[Btrit; 3]; 3] = [
     [Btrit::PlusOne, Btrit::Zero, Btrit::NegOne],
     [Btrit::PlusOne, Btrit::NegOne, Btrit::Zero],
@@ -37,7 +38,7 @@ pub enum CurlPRounds {
 
 /// State of the ternary cryptographic function `CurlP`.
 pub struct CurlP {
-    /// The number of rounds of hashing to apply before a hash is squeezed.
+    /// The number of rounds of hashing to apply to the state.
     rounds: CurlPRounds,
     /// The internal state.
     state: TritBuf,
@@ -50,27 +51,28 @@ impl CurlP {
     pub fn new(rounds: CurlPRounds) -> Self {
         Self {
             rounds,
-            state: TritBuf::zeros(STATE_LEN),
-            work_state: TritBuf::zeros(STATE_LEN),
+            state: TritBuf::zeros(STATE_LENGTH),
+            work_state: TritBuf::zeros(STATE_LENGTH),
         }
     }
 
     /// Transforms the internal state of the `CurlP` sponge after the input was copied into the internal state.
     ///
-    /// The essence of this transformation is the application of a so-called substitution box to the internal state,
-    /// which happens `round` number of times.
+    /// The essence of this transformation is the application of a substitution box to the internal state, which happens
+    /// `rounds` number of times.
     fn transform(&mut self) {
-        // TODO inline ?
-        fn truth_table_get(xs: &Trits, p: usize, q: usize) -> Btrit {
-            TRUTH_TABLE[xs.get(q).unwrap() as usize + 1][xs.get(p).unwrap() as usize + 1]
+        #[inline]
+        fn truth_table_get(state: &Trits, p: usize, q: usize) -> Btrit {
+            // Safe to unwrap since indexes come from iteration on the state.
+            TRUTH_TABLE[state.get(q).unwrap() as usize + 1][state.get(p).unwrap() as usize + 1]
         }
 
-        fn apply_substitution_box(input: &Trits, output: &mut Trits) {
-            output.set(0, truth_table_get(input, 0, HALF_STATE_LEN));
+        fn substitution_box(input: &Trits, output: &mut Trits) {
+            output.set(0, truth_table_get(input, 0, HALF_STATE_LENGTH));
 
-            for state_index in 0..HALF_STATE_LEN {
-                let left_idx = HALF_STATE_LEN - state_index;
-                let right_idx = STATE_LEN - state_index - 1;
+            for state_index in 0..HALF_STATE_LENGTH {
+                let left_idx = HALF_STATE_LENGTH - state_index;
+                let right_idx = STATE_LENGTH - state_index - 1;
                 let state_index_2 = 2 * state_index;
 
                 output.set(state_index_2 + 1, truth_table_get(input, left_idx, right_idx));
@@ -81,7 +83,7 @@ impl CurlP {
         let (lhs, rhs) = (&mut self.state, &mut self.work_state);
 
         for _ in 0..self.rounds as usize {
-            apply_substitution_box(&lhs, rhs);
+            substitution_box(lhs, rhs);
             std::mem::swap(lhs, rhs);
         }
     }
@@ -110,8 +112,8 @@ impl Sponge for CurlP {
         Ok(())
     }
 
-    /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill the buffer in chunks
-    /// of `HASH_LENGTH` at a time.
+    /// Squeeze the sponge by copying the state into the provided `buf`. This will fill the buffer in chunks of
+    /// `HASH_LENGTH` at a time.
     ///
     /// If the last chunk is smaller than `HASH_LENGTH`, then only the fraction that fits is written into it.
     fn squeeze_into(&mut self, buf: &mut Trits) -> Result<(), Self::Error> {
