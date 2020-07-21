@@ -61,6 +61,13 @@ impl From<ConversioError> for Error {
 impl Sponge for Kerl {
     type Error = Error;
 
+    /// Reset the internal state by overwriting it with zeros.
+    fn reset(&mut self) {
+        // TODO: Overwrite the internal buffer directly rather then setting it to a new Keccak object. This requires
+        // using `KeccakState::reset` via a new method `Keccak::method` calling its internal state.
+        self.keccak = Keccak::v384();
+    }
+
     /// Absorb `input` into the sponge by copying `HASH_LENGTH` chunks of it into its internal state and transforming
     /// the state before moving on to the next chunk.
     ///
@@ -86,13 +93,6 @@ impl Sponge for Kerl {
         }
 
         Ok(())
-    }
-
-    /// Reset the internal state by overwriting it with zeros.
-    fn reset(&mut self) {
-        // TODO: Overwrite the internal buffer directly rather then setting it to a new Keccak object. This requires
-        // using `KeccakState::reset` via a new method `Keccak::method` calling its internal state.
-        self.keccak = Keccak::v384();
     }
 
     /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill the buffer in chunks

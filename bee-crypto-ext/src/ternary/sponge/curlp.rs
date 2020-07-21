@@ -90,6 +90,11 @@ impl CurlP {
 impl Sponge for CurlP {
     type Error = Infallible;
 
+    /// Reset the internal state by overwriting it with zeros.
+    fn reset(&mut self) {
+        self.state.fill(Btrit::Zero);
+    }
+
     /// Absorb `input` into the sponge by copying `HASH_LENGTH` chunks of it into its internal state and transforming
     /// the state before moving on to the next chunk.
     ///
@@ -103,11 +108,6 @@ impl Sponge for CurlP {
             self.transform();
         }
         Ok(())
-    }
-
-    /// Reset the internal state by overwriting it with zeros.
-    fn reset(&mut self) {
-        self.state.fill(Btrit::Zero);
     }
 
     /// Squeeze the sponge by copying the calculated hash into the provided `buf`. This will fill the buffer in chunks
