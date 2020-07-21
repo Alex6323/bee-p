@@ -19,7 +19,7 @@ const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9A
 fn iota_seed_new() {
     for _ in 0..10 {
         let iota_seed = TernarySeed::<CurlP27>::new();
-        for byte in iota_seed.to_trits().iter() {
+        for byte in iota_seed.as_trits().iter() {
             assert!(byte == Btrit::NegOne || byte == Btrit::Zero || byte == Btrit::PlusOne);
         }
     }
@@ -39,7 +39,7 @@ fn iota_seed_subseed_generic<S: Sponge + Default>(iota_seed_string: &str, iota_s
             .as_trits()
             .encode::<T1B1Buf>();
 
-        assert_eq!(iota_subseed.to_trits(), iota_subseed_trits.as_slice());
+        assert_eq!(iota_subseed.as_trits(), iota_subseed_trits.as_slice());
     }
 }
 
@@ -114,8 +114,8 @@ fn iota_seed_from_bytes_invalid_length() {
 fn iota_seed_to_bytes_from_bytes() {
     for _ in 0..10 {
         let iota_seed_1 = TernarySeed::<CurlP27>::new();
-        let iota_seed_2 = TernarySeed::<CurlP27>::from_trits(iota_seed_1.to_trits().to_buf()).unwrap();
+        let iota_seed_2 = TernarySeed::<CurlP27>::from_trits(iota_seed_1.as_trits().to_buf()).unwrap();
 
-        assert_eq!(iota_seed_1.to_trits(), iota_seed_2.to_trits());
+        assert_eq!(iota_seed_1.as_trits(), iota_seed_2.as_trits());
     }
 }

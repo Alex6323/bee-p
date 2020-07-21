@@ -9,8 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::Seed;
-
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto_ext::ternary::sponge::Sponge;
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
@@ -19,6 +17,24 @@ use rand::Rng;
 use zeroize::Zeroize;
 
 use std::marker::PhantomData;
+
+pub trait Seed: Zeroize + Drop {
+    type Error;
+
+    /// Creates a new `Seed`.
+    fn new() -> Self;
+
+    /// Creates a new `Seed` from the current `Seed` and an index.
+    fn subseed(&self, index: u64) -> Self;
+
+    /// Creates a `Seed` from trits.
+    fn from_trits(buf: TritBuf) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
+
+    /// Returns the inner trits.
+    fn as_trits(&self) -> &Trits;
+}
 
 #[derive(Debug, PartialEq)]
 pub enum TernarySeedError {
@@ -99,7 +115,7 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         })
     }
 
-    fn to_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits {
         &self.seed
     }
 }

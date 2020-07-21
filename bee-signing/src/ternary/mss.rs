@@ -112,7 +112,7 @@ where
         for key_index in 0..(1 << (self.depth - 1)) {
             let ots_private_key = self
                 .generator
-                .generate_from_entropy(seed.subseed(key_index).to_trits())
+                .generate_from_entropy(seed.subseed(key_index).as_trits())
                 .map_err(|_| Self::Error::FailedUnderlyingPrivateKeyGeneration)?;
             let ots_public_key = ots_private_key
                 .generate_public_key()
