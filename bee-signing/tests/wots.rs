@@ -9,35 +9,31 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-#[cfg(test)]
-mod tests {
+use bee_crypto::ternary::Kerl;
+use bee_signing::ternary::wots::{WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder};
 
-    use bee_crypto::ternary::Kerl;
-    use bee_signing::ternary::wots::{WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder};
-
-    #[test]
-    fn wots_generator_missing_security_level() {
-        match WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default().build() {
-            Ok(_) => unreachable!(),
-            Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
-        }
+#[test]
+fn wots_generator_missing_security_level() {
+    match WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default().build() {
+        Ok(_) => unreachable!(),
+        Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
     }
+}
 
-    #[test]
-    fn wots_generator_valid() {
-        let security_levels = vec![
-            WotsSecurityLevel::Low,
-            WotsSecurityLevel::Medium,
-            WotsSecurityLevel::High,
-        ];
-        for security in security_levels {
-            assert_eq!(
-                WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
-                    .security_level(security)
-                    .build()
-                    .is_ok(),
-                true
-            );
-        }
+#[test]
+fn wots_generator_valid() {
+    let security_levels = vec![
+        WotsSecurityLevel::Low,
+        WotsSecurityLevel::Medium,
+        WotsSecurityLevel::High,
+    ];
+    for security in security_levels {
+        assert_eq!(
+            WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
+                .security_level(security)
+                .build()
+                .is_ok(),
+            true
+        );
     }
 }

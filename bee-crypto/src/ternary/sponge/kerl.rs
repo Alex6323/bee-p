@@ -73,8 +73,6 @@ impl Sponge for Kerl {
 
         for trits_chunk in input.chunks(HASH_LENGTH) {
             self.ternary_state.copy_from(&trits_chunk);
-            // Unwrapping is ok because this cannot fail.
-            //
             // TODO: Replace with a dedicated `TryFrom` implementation with `Error = !`.
             //
             // TODO: Convert to `t242` without cloning.
