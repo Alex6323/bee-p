@@ -18,8 +18,7 @@ use bee_signing::ternary::{
     wots::WotsPublicKey,
     PublicKey, RecoverableSignature, Signature,
 };
-use bee_ternary::TritBuf;
-use bee_ternary_ext::num_conversions::{tritbuf_try_to_i64, TritsI64ConversionError};
+use bee_ternary::{convert::Error as ConvertError, TritBuf};
 use bee_transaction::{
     bundled::{
         BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Payload,
@@ -27,14 +26,14 @@ use bee_transaction::{
     TransactionVertex,
 };
 
-use std::marker::PhantomData;
+use std::{convert::TryFrom, marker::PhantomData};
 
 #[derive(Debug)]
 pub enum MilestoneBuilderError {
     Empty,
     InvalidSignature,
     SignatureError(MssError),
-    InvalidIndex(TritsI64ConversionError),
+    InvalidIndex(ConvertError),
 }
 
 // TODO are stages really needed since it's internal ?
@@ -138,7 +137,7 @@ where
         // TODO test invalid index
         // Safe to unwrap
         self.index = MilestoneIndex(
-            tritbuf_try_to_i64(self.transactions.get(0).unwrap().obsolete_tag().to_inner().to_buf())
+            i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner())
                 .map_err(MilestoneBuilderError::InvalidIndex)? as u32,
         );
 

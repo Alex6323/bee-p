@@ -13,5 +13,3 @@
 
 /// Functionality pertaining to trit big integers.
 pub mod bigint;
-/// Utilities for converting to and from ternary and binary numerical representations.
-pub mod num_conversions;
