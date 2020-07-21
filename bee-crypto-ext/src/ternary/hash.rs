@@ -19,9 +19,13 @@ pub const HASH_LENGTH: usize = 243;
 /// Ternary cryptographic hash.
 #[derive(Copy, Clone)]
 // TODO pub ?
-pub struct Hash(pub [i8; HASH_LENGTH]);
+pub struct Hash([i8; HASH_LENGTH]);
 
 impl Hash {
+    pub fn new(trits: [i8; HASH_LENGTH]) -> Self {
+        Self(trits)
+    }
+
     /// Creates a hash filled with zeros.
     pub fn zeros() -> Self {
         Self([0; HASH_LENGTH])

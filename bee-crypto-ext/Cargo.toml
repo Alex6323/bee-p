@@ -14,4 +14,4 @@ homepage = "https://www.iota.org"
 bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 
-tiny-keccak = { version = "2.0.1", features = ["keccak"] }
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }

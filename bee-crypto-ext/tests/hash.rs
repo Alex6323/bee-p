@@ -16,7 +16,7 @@ fn hash_weigth() {
     for i in 0..20 {
         let mut trits = [0i8; Hash::len()];
         trits[Hash::len() - i - 1] = 1;
-        let hash = Hash(trits);
+        let hash = Hash::new(trits);
         assert_eq!(hash.weight(), i as u8);
     }
 }

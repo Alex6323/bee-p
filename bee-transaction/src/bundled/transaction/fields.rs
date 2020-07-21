@@ -167,7 +167,7 @@ impl BundledTransactionField for Hash {
         let mut trits = [0; 243];
         trits.copy_from_slice(buf.as_i8_slice());
 
-        Self(trits)
+        Self::new(trits)
     }
 }
 
