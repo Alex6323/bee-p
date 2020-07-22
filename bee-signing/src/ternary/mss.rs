@@ -15,20 +15,30 @@ use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto_ext::ternary::sponge::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
+use thiserror::Error;
 use zeroize::Zeroize;
 
 use std::marker::PhantomData;
 
-#[derive(Debug, PartialEq)]
-pub enum MssError {
+#[derive(Debug, Error, PartialEq)]
+pub enum Error {
+    #[error("Invalid MSS depth provided.")]
     InvalidDepth(u8),
+    #[error("Missing MSS depth.")]
     MissingDepth,
+    #[error("Missing underlying private key generator.")]
     MissingGenerator,
+    #[error("Underlying private key generation failed.")]
     FailedUnderlyingPrivateKeyGeneration,
+    #[error("Underlying ppublic key generation failed.")]
     FailedUnderlyingPublicKeyGeneration,
+    #[error("Underlying signature generation failed.")]
     FailedUnderlyingSignatureGeneration,
+    #[error("Underlying public key recovery failed.")]
     FailedUnderlyingPublicKeyRecovery,
+    #[error("Failed sponge operation.")]
     FailedSpongeOperation,
+    #[error("Seed generation failed.")]
     FailedSeed,
 }
 
@@ -67,15 +77,15 @@ where
         self
     }
 
-    pub fn build(self) -> Result<MssPrivateKeyGenerator<S, G>, MssError> {
+    pub fn build(self) -> Result<MssPrivateKeyGenerator<S, G>, Error> {
         let depth = match self.depth {
             Some(depth) => match depth {
                 0..=20 => depth,
-                _ => return Err(MssError::InvalidDepth(depth)),
+                _ => return Err(Error::InvalidDepth(depth)),
             },
-            None => return Err(MssError::MissingDepth),
+            None => return Err(Error::MissingDepth),
         };
-        let generator = self.generator.ok_or(MssError::MissingGenerator)?;
+        let generator = self.generator.ok_or(Error::MissingGenerator)?;
 
         Ok(MssPrivateKeyGenerator {
             depth,
@@ -99,10 +109,10 @@ where
 {
     type Seed = G::Seed;
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
-    type Error = MssError;
+    type Error = Error;
 
     fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
-        let seed = Self::Seed::from_trits(entropy.to_buf()).map_err(|_| MssError::FailedSeed)?;
+        let seed = Self::Seed::from_trits(entropy.to_buf()).map_err(|_| Error::FailedSeed)?;
         let mut sponge = S::default();
         let mut keys = Vec::new();
         let mut tree = TritBuf::zeros(((1 << self.depth) - 1) * 243);
@@ -178,7 +188,7 @@ where
 {
     type PublicKey = MssPublicKey<S, K::PublicKey>;
     type Signature = MssSignature<S>;
-    type Error = MssError;
+    type Error = Error;
 
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         // TODO return or generate ?
@@ -244,7 +254,7 @@ where
     <K as PublicKey>::Signature: RecoverableSignature,
 {
     type Signature = MssSignature<S>;
-    type Error = MssError;
+    type Error = Error;
 
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
         let mut sponge = S::default();

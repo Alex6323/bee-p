@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::ternary::{
-    wots::{WotsError, WotsPrivateKey, WotsSecurityLevel},
+    wots::{Error as WotsError, WotsPrivateKey, WotsSecurityLevel},
     PrivateKeyGenerator, TernarySeed,
 };
 

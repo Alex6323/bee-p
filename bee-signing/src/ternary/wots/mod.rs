@@ -21,6 +21,7 @@ use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto_ext::ternary::sponge::Sponge;
 use bee_ternary::{TritBuf, Trits};
 
+use thiserror::Error;
 use zeroize::Zeroize;
 
 use std::{
@@ -29,10 +30,13 @@ use std::{
     marker::PhantomData,
 };
 
-#[derive(Debug, PartialEq)]
-pub enum WotsError {
+#[derive(Debug, Error, PartialEq)]
+pub enum Error {
+    #[error("Invalid security level provided.")]
     InvalidSecurityLevel,
+    #[error("Missing security level.")]
     MissingSecurityLevel,
+    #[error("Failed sponge operation.")]
     FailedSpongeOperation,
 }
 
@@ -50,14 +54,14 @@ impl Default for WotsSecurityLevel {
 }
 
 impl TryFrom<u8> for WotsSecurityLevel {
-    type Error = WotsError;
+    type Error = Error;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             1 => Ok(WotsSecurityLevel::Low),
             2 => Ok(WotsSecurityLevel::Medium),
             3 => Ok(WotsSecurityLevel::High),
-            _ => Err(WotsError::InvalidSecurityLevel),
+            _ => Err(Error::InvalidSecurityLevel),
         }
     }
 }
@@ -77,7 +81,7 @@ impl<S> Zeroize for WotsPrivateKey<S> {
 impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     type PublicKey = WotsPublicKey<S>;
     type Signature = WotsSignature<S>;
-    type Error = WotsError;
+    type Error = Error;
 
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
@@ -148,7 +152,7 @@ pub struct WotsPublicKey<S> {
 
 impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     type Signature = WotsSignature<S>;
-    type Error = WotsError;
+    type Error = Error;
 
     // TODO: enforce hash size ?
     fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
@@ -201,7 +205,7 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
 
 impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
     type PublicKey = WotsPublicKey<S>;
-    type Error = WotsError;
+    type Error = Error;
 
     fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();

@@ -14,6 +14,7 @@ use bee_crypto_ext::ternary::sponge::Sponge;
 use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
+use thiserror::Error;
 use zeroize::Zeroize;
 
 use std::marker::PhantomData;
@@ -36,8 +37,9 @@ pub trait Seed: Zeroize + Drop {
     fn as_trits(&self) -> &Trits;
 }
 
-#[derive(Debug, PartialEq)]
-pub enum TernarySeedError {
+#[derive(Debug, Error, PartialEq)]
+pub enum Error {
+    #[error("Invalid seed length.")]
     InvalidLength(usize),
 }
 
@@ -54,7 +56,7 @@ impl<S> Zeroize for TernarySeed<S> {
 }
 
 impl<S: Sponge + Default> Seed for TernarySeed<S> {
-    type Error = TernarySeedError;
+    type Error = Error;
 
     // TODO: is this random enough ?
     fn new() -> Self {

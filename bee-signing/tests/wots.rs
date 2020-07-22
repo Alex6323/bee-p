@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_crypto_ext::ternary::sponge::Kerl;
-use bee_signing::ternary::wots::{WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder};
+use bee_signing::ternary::wots::{Error as WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder};
 
 #[test]
 fn wots_generator_missing_security_level() {

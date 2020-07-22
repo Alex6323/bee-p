@@ -18,4 +18,5 @@ bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 
 rand = "0.7"
 sha3 = "0.9.0"
+thiserror = "1.0.20"
 zeroize = "1.1.0"

@@ -20,4 +20,4 @@ pub mod wots;
 
 pub use normalize::normalize_hash;
 pub use scheme::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature};
-pub use seed::{Seed, TernarySeed, TernarySeedError};
+pub use seed::{Error as TernarySeedError, Seed, TernarySeed};

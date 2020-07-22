@@ -16,7 +16,7 @@ use bee_crypto_ext::ternary::{
     Hash,
 };
 use bee_signing::ternary::{
-    mss::{MssError, MssPublicKey, MssSignature},
+    mss::{Error as MssError, MssPublicKey, MssSignature},
     normalize_hash,
     wots::WotsPublicKey,
     PublicKey, RecoverableSignature, Signature,

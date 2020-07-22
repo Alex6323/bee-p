@@ -11,7 +11,7 @@
 
 use bee_crypto_ext::ternary::sponge::{CurlP27, CurlP81, Kerl, Sponge};
 use bee_signing::ternary::{
-    mss::{MssError, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature},
+    mss::{Error as MssError, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature},
     wots::{WotsPublicKey, WotsSecurityLevel, WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder},
     PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
 };
