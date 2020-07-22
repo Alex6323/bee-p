@@ -15,7 +15,7 @@ use crate::ternary::{
 };
 
 use bee_crypto_ext::ternary::sponge::Sponge;
-use bee_ternary::{TritBuf, Trits};
+use bee_ternary::{T1B1Buf, TritBuf, Trits};
 
 use std::marker::PhantomData;
 
@@ -51,7 +51,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsSpongePrivateKeyGenerator<
 
     fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
         let mut sponge = S::default();
-        let mut state = TritBuf::zeros(self.security_level as usize * 6561);
+        let mut state = TritBuf::<T1B1Buf>::zeros(self.security_level as usize * 6561);
 
         sponge
             .digest_into(entropy, &mut state)

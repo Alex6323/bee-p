@@ -16,7 +16,7 @@ use crate::ternary::{
 
 use bee_crypto::ternary::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243};
 use bee_crypto_ext::ternary::sponge::Sponge;
-use bee_ternary::{Btrit, TritBuf, Trits};
+use bee_ternary::{Btrit, T1B1Buf, TritBuf, Trits};
 
 use sha3::{
     digest::{ExtendableOutput, Update, XofReader},
@@ -56,7 +56,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
     type Error = WotsError;
 
     fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
-        let mut state = TritBuf::zeros(self.security_level as usize * 6561);
+        let mut state = TritBuf::<T1B1Buf>::zeros(self.security_level as usize * 6561);
         let mut shake = Shake256::default();
         let mut ternary_buffer = T243::<Btrit>::default();
         ternary_buffer.copy_from(entropy);

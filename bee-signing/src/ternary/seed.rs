@@ -11,7 +11,7 @@
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto_ext::ternary::sponge::Sponge;
-use bee_ternary::{Btrit, Trit, TritBuf, Trits, T1B1};
+use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
 use thiserror::Error;
@@ -29,7 +29,7 @@ pub trait Seed: Zeroize + Drop {
     fn subseed(&self, index: u64) -> Self;
 
     /// Creates a `Seed` from trits.
-    fn from_trits(buf: TritBuf) -> Result<Self, Self::Error>
+    fn from_trits(buf: TritBuf<T1B1Buf>) -> Result<Self, Self::Error>
     where
         Self: Sized;
 
@@ -45,7 +45,7 @@ pub enum Error {
 
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct TernarySeed<S> {
-    seed: TritBuf,
+    seed: TritBuf<T1B1Buf>,
     _sponge: PhantomData<S>,
 }
 
@@ -106,7 +106,7 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         }
     }
 
-    fn from_trits(buf: TritBuf) -> Result<Self, Self::Error> {
+    fn from_trits(buf: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
         if buf.len() != 243 {
             return Err(Self::Error::InvalidLength(buf.len()));
         }

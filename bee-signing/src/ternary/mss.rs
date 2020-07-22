@@ -13,7 +13,7 @@ use crate::ternary::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSign
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto_ext::ternary::sponge::Sponge;
-use bee_ternary::{TritBuf, Trits};
+use bee_ternary::{T1B1Buf, TritBuf, Trits};
 
 use thiserror::Error;
 use zeroize::Zeroize;
@@ -130,7 +130,7 @@ where
         let seed = Self::Seed::from_trits(entropy.to_buf()).map_err(|_| Error::FailedSeed)?;
         let mut sponge = S::default();
         let mut keys = Vec::new();
-        let mut tree = TritBuf::zeros(((1 << self.depth) - 1) * 243);
+        let mut tree = TritBuf::<T1B1Buf>::zeros(((1 << self.depth) - 1) * 243);
 
         // TODO: reserve ?
 
@@ -183,7 +183,7 @@ pub struct MssPrivateKey<S, K: Zeroize> {
     depth: u8,
     index: u64,
     keys: Vec<K>,
-    tree: TritBuf,
+    tree: TritBuf<T1B1Buf>,
     _sponge: PhantomData<S>,
 }
 
@@ -217,7 +217,7 @@ where
             .sign(message)
             .map_err(|_| Self::Error::FailedUnderlyingSignatureGeneration)?;
         // let mut state = vec![0; ots_signature.size() + 6561];
-        let mut state: TritBuf = TritBuf::zeros(ots_signature.size() + 6561);
+        let mut state = TritBuf::<T1B1Buf>::zeros(ots_signature.size() + 6561);
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
         let mut sibling_index;
         let mut i = 0;
@@ -247,7 +247,7 @@ where
 
 /// Merkle Signature Scheme public key.
 pub struct MssPublicKey<S, K> {
-    state: TritBuf,
+    state: TritBuf<T1B1Buf>,
     depth: u8,
     _sponge: PhantomData<S>,
     _key: PhantomData<K>,
@@ -278,11 +278,11 @@ where
         let mut sponge = S::default();
         let ots_signature =
             K::Signature::from_trits(signature.state[0..((signature.state.len() / 6561) - 1) * 6561].to_buf());
-        let siblings: TritBuf = signature.state.chunks(6561).last().unwrap().to_buf();
+        let siblings: TritBuf<T1B1Buf> = signature.state.chunks(6561).last().unwrap().to_buf();
         let ots_public_key = ots_signature
             .recover_public_key(message)
             .map_err(|_| Self::Error::FailedUnderlyingPublicKeyRecovery)?;
-        let mut hash: TritBuf = TritBuf::zeros(243);
+        let mut hash = TritBuf::<T1B1Buf>::zeros(243);
 
         hash.copy_from(ots_public_key.to_trits());
 
@@ -316,7 +316,7 @@ where
         self.state.len()
     }
 
-    fn from_trits(state: TritBuf) -> Self {
+    fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
         Self {
             state,
             // TODO OPTION
@@ -333,7 +333,7 @@ where
 
 /// Merkle Signature Scheme signature.
 pub struct MssSignature<S> {
-    state: TritBuf,
+    state: TritBuf<T1B1Buf>,
     index: u64,
     _sponge: PhantomData<S>,
 }
@@ -352,7 +352,7 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
         self.state.len()
     }
 
-    fn from_trits(state: TritBuf) -> Self {
+    fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
         Self {
             state,
             // TODO OPTION

@@ -15,7 +15,7 @@ const SECURITY_LEVEL_MAX: usize = 3;
 const NORMALIZED_FRAGMENT_LENGTH: usize = 27;
 
 // TODO Trits or TritBuf ?
-pub fn normalize_hash(hash: &Trits) -> TritBuf {
+pub fn normalize_hash(hash: &Trits) -> TritBuf<T1B1Buf> {
     let hash_trits = hash.as_i8_slice();
     let mut normalized_hash = [0i8; SECURITY_LEVEL_MAX * NORMALIZED_FRAGMENT_LENGTH];
 

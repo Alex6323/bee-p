@@ -19,7 +19,7 @@ use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto_ext::ternary::sponge::Sponge;
-use bee_ternary::{TritBuf, Trits};
+use bee_ternary::{T1B1Buf, TritBuf, Trits};
 
 use thiserror::Error;
 use zeroize::Zeroize;
@@ -77,7 +77,7 @@ impl TryFrom<u8> for WotsSecurityLevel {
 /// A Winternitz One Time Signature private key.
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct WotsPrivateKey<S> {
-    pub(crate) state: TritBuf,
+    pub(crate) state: TritBuf<T1B1Buf>,
     pub(crate) _sponge: PhantomData<S>,
 }
 
@@ -96,8 +96,8 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
         let mut hashed_private_key = self.state.clone();
-        let mut digests: TritBuf = TritBuf::zeros((self.state.len() / 6561) * 243);
-        let mut hash = TritBuf::zeros(243);
+        let mut digests = TritBuf::<T1B1Buf>::zeros((self.state.len() / 6561) * 243);
+        let mut hash = TritBuf::<T1B1Buf>::zeros(243);
 
         for chunk in hashed_private_key.chunks_mut(243) {
             for _ in 0..26 {
@@ -158,7 +158,7 @@ impl<S: Sponge + Default> WotsPrivateKey<S> {
 
 /// A Winternitz One Time Signature public key.
 pub struct WotsPublicKey<S> {
-    state: TritBuf,
+    state: TritBuf<T1B1Buf>,
     _sponge: PhantomData<S>,
 }
 
@@ -175,7 +175,7 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
         self.state.len()
     }
 
-    fn from_trits(state: TritBuf) -> Self {
+    fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
         Self {
             state,
             _sponge: PhantomData,
@@ -195,7 +195,7 @@ impl<S: Sponge + Default> Display for WotsPublicKey<S> {
 
 /// A Winternitz One Time Signature signature.
 pub struct WotsSignature<S> {
-    state: TritBuf,
+    state: TritBuf<T1B1Buf>,
     _sponge: PhantomData<S>,
 }
 
@@ -204,7 +204,7 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
         self.state.len()
     }
 
-    fn from_trits(state: TritBuf) -> Self {
+    fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
         Self {
             state,
             _sponge: PhantomData,
@@ -222,8 +222,8 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
     fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
-        let mut hash = TritBuf::zeros(243);
-        let mut digests: TritBuf = TritBuf::zeros((self.state.len() / 6561) * 243);
+        let mut hash = TritBuf::<T1B1Buf>::zeros(243);
+        let mut digests = TritBuf::<T1B1Buf>::zeros((self.state.len() / 6561) * 243);
         let mut state = self.state.clone();
 
         for (i, chunk) in state.chunks_mut(243).enumerate() {

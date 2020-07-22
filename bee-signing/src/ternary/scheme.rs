@@ -11,7 +11,7 @@
 
 use crate::ternary::Seed;
 
-use bee_ternary::{TritBuf, Trits};
+use bee_ternary::{T1B1Buf, TritBuf, Trits};
 
 use zeroize::Zeroize;
 
@@ -143,7 +143,7 @@ pub trait PublicKey {
 
     fn size(&self) -> usize;
 
-    fn from_trits(buf: TritBuf) -> Self;
+    fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
     fn to_trits(&self) -> &Trits;
 }
@@ -151,7 +151,7 @@ pub trait PublicKey {
 pub trait Signature {
     fn size(&self) -> usize;
 
-    fn from_trits(buf: TritBuf) -> Self;
+    fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
     fn to_trits(&self) -> &Trits;
 }
