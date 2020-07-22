@@ -246,5 +246,5 @@ impl<S: Sponge + Default> Display for WotsSignature<S> {
 
 // TODO consider making this a ternary utility function
 fn trits_to_string(trits: &Trits) -> String {
-    trits.iter_trytes().map(|trit| char::from(trit)).collect::<String>()
+    trits.iter_trytes().map(char::from).collect::<String>()
 }
