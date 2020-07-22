@@ -20,28 +20,39 @@ use zeroize::Zeroize;
 
 use std::marker::PhantomData;
 
+/// Errors occuring during MSS operations.
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
+    /// Invalid MSS depth provided.
     #[error("Invalid MSS depth provided.")]
     InvalidDepth(u8),
+    /// Missing MSS depth.
     #[error("Missing MSS depth.")]
     MissingDepth,
+    /// Missing underlying private key generator.
     #[error("Missing underlying private key generator.")]
     MissingGenerator,
+    /// Underlying private key generation failed.
     #[error("Underlying private key generation failed.")]
     FailedUnderlyingPrivateKeyGeneration,
+    /// Underlying ppublic key generation failed.
     #[error("Underlying ppublic key generation failed.")]
     FailedUnderlyingPublicKeyGeneration,
+    /// Underlying signature generation failed.
     #[error("Underlying signature generation failed.")]
     FailedUnderlyingSignatureGeneration,
+    /// Underlying public key recovery failed.
     #[error("Underlying public key recovery failed.")]
     FailedUnderlyingPublicKeyRecovery,
+    /// Failed sponge operation.
     #[error("Failed sponge operation.")]
     FailedSpongeOperation,
+    /// Seed generation failed.
     #[error("Seed generation failed.")]
     FailedSeed,
 }
 
+/// Merkle Signature Scheme private key generator builder.
 pub struct MssPrivateKeyGeneratorBuilder<S, G> {
     depth: Option<u8>,
     generator: Option<G>,
@@ -67,16 +78,19 @@ where
     S: Sponge + Default,
     G: PrivateKeyGenerator,
 {
+    /// Sets the depth of the MSS.
     pub fn depth(mut self, depth: u8) -> Self {
         self.depth = Some(depth);
         self
     }
 
+    /// Sets the underlying private key generator.
     pub fn generator(mut self, generator: G) -> Self {
         self.generator = Some(generator);
         self
     }
 
+    /// Builds the private key generator.
     pub fn build(self) -> Result<MssPrivateKeyGenerator<S, G>, Error> {
         let depth = match self.depth {
             Some(depth) => match depth {
@@ -95,6 +109,7 @@ where
     }
 }
 
+/// Merkle Signature Scheme private key generator.
 pub struct MssPrivateKeyGenerator<S, G> {
     depth: u8,
     generator: G,
@@ -162,6 +177,7 @@ where
     }
 }
 
+/// Merkle Signature Scheme private key.
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct MssPrivateKey<S, K: Zeroize> {
     depth: u8,
@@ -229,6 +245,7 @@ where
     }
 }
 
+/// Merkle Signature Scheme public key.
 pub struct MssPublicKey<S, K> {
     state: TritBuf,
     depth: u8,
@@ -241,6 +258,7 @@ where
     S: Sponge + Default,
     K: PublicKey,
 {
+    /// Sets the depth of the public key.
     pub fn depth(mut self, depth: u8) -> Self {
         self.depth = depth;
         self
@@ -313,6 +331,7 @@ where
     }
 }
 
+/// Merkle Signature Scheme signature.
 pub struct MssSignature<S> {
     state: TritBuf,
     index: u64,
@@ -320,6 +339,7 @@ pub struct MssSignature<S> {
 }
 
 impl<S: Sponge + Default> MssSignature<S> {
+    /// Set the index of the signature.
     pub fn index(mut self, index: u64) -> Self {
         self.index = index;
         self

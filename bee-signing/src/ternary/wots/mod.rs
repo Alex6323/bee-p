@@ -30,20 +30,28 @@ use std::{
     marker::PhantomData,
 };
 
+/// Errors occuring during WOTS operations.
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
+    /// Invalid security level provided.
     #[error("Invalid security level provided.")]
     InvalidSecurityLevel,
+    /// Missing security level.
     #[error("Missing security level.")]
     MissingSecurityLevel,
+    /// Failed sponge operation.
     #[error("Failed sponge operation.")]
     FailedSpongeOperation,
 }
 
+/// Available WOTS security levels.
 #[derive(Clone, Copy)]
 pub enum WotsSecurityLevel {
+    /// Low security.
     Low = 1,
+    /// Medium security.
     Medium = 2,
+    /// High security.
     High = 3,
 }
 
@@ -66,6 +74,7 @@ impl TryFrom<u8> for WotsSecurityLevel {
     }
 }
 
+/// A Winternitz One Time Signature private key.
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct WotsPrivateKey<S> {
     pub(crate) state: TritBuf,
@@ -74,6 +83,7 @@ pub struct WotsPrivateKey<S> {
 
 impl<S> Zeroize for WotsPrivateKey<S> {
     fn zeroize(&mut self) {
+        // This unsafe is fine since we only reset the whole buffer with zeros, there is no alignement issues.
         unsafe { self.state.as_i8_slice_mut().zeroize() }
     }
 }
@@ -140,11 +150,13 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 }
 
 impl<S: Sponge + Default> WotsPrivateKey<S> {
-    pub fn trits(&self) -> &Trits {
+    /// Returns the inner trits.
+    pub fn as_trits(&self) -> &Trits {
         &self.state
     }
 }
 
+/// A Winternitz One Time Signature public key.
 pub struct WotsPublicKey<S> {
     state: TritBuf,
     _sponge: PhantomData<S>,
@@ -181,6 +193,7 @@ impl<S: Sponge + Default> Display for WotsPublicKey<S> {
     }
 }
 
+/// A Winternitz One Time Signature signature.
 pub struct WotsSignature<S> {
     state: TritBuf,
     _sponge: PhantomData<S>,

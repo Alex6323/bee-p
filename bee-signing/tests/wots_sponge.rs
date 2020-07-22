@@ -77,5 +77,5 @@ fn wots_example() {
         .build()
         .unwrap();
     let generated_key = private_key_generator.generate_from_entropy(&entropy).unwrap();
-    assert_eq!(&key.as_slice(), &generated_key.trits());
+    assert_eq!(&key.as_slice(), &generated_key.as_trits());
 }
