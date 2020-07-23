@@ -29,9 +29,9 @@ pub fn normalize_hash(hash: &Trits<T1B1>) -> TritBuf<T1B1Buf> {
 
         if sum > 0 {
             while sum > 0 {
-                for j in (i * NORMALIZED_FRAGMENT_LENGTH)..((i + 1) * NORMALIZED_FRAGMENT_LENGTH) {
-                    if (normalized_hash[j] as i8) > Tryte::MIN_VALUE as i8 {
-                        normalized_hash[j] -= 1;
+                for t in &mut normalized_hash[i * NORMALIZED_FRAGMENT_LENGTH..(i + 1) * NORMALIZED_FRAGMENT_LENGTH] {
+                    if (*t as i8) > Tryte::MIN_VALUE as i8 {
+                        *t -= 1;
                         break;
                     }
                 }
@@ -39,9 +39,9 @@ pub fn normalize_hash(hash: &Trits<T1B1>) -> TritBuf<T1B1Buf> {
             }
         } else {
             while sum < 0 {
-                for j in (i * NORMALIZED_FRAGMENT_LENGTH)..((i + 1) * NORMALIZED_FRAGMENT_LENGTH) {
-                    if (normalized_hash[j] as i8) < Tryte::MAX_VALUE as i8 {
-                        normalized_hash[j] += 1;
+                for t in &mut normalized_hash[i * NORMALIZED_FRAGMENT_LENGTH..(i + 1) * NORMALIZED_FRAGMENT_LENGTH] {
+                    if (*t as i8) < Tryte::MAX_VALUE as i8 {
+                        *t += 1;
                         break;
                     }
                 }
