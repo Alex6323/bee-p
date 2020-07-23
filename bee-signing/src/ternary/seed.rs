@@ -19,7 +19,9 @@ use zeroize::Zeroize;
 
 use std::marker::PhantomData;
 
+/// Ternary `Seed` to derive private keys, public keys and signatures from.
 pub trait Seed: Zeroize + Drop {
+    /// Associated error type.
     type Error;
 
     /// Creates a new `Seed`.
@@ -37,12 +39,18 @@ pub trait Seed: Zeroize + Drop {
     fn as_trits(&self) -> &Trits;
 }
 
+/// Errors occuring when handling a `Seed`.
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
+    /// Invalid seed length.
     #[error("Invalid seed length.")]
     InvalidLength(usize),
+    /// Failed sponge operation.
+    #[error("Failed sponge operation.")]
+    FailedSpongeOperation,
 }
 
+/// Ternary `Sponge`-based `Seed` to derive private keys, public keys and signatures from.
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct TernarySeed<S> {
     seed: TritBuf<T1B1Buf>,
