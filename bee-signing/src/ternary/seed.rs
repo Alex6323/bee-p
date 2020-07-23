@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
-use bee_crypto::ternary::sponge::Sponge;
+use bee_crypto::ternary::{sponge::Sponge, HASH_LENGTH};
 use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
@@ -59,6 +59,7 @@ pub struct TernarySeed<S> {
 
 impl<S> Zeroize for TernarySeed<S> {
     fn zeroize(&mut self) {
+        // This unsafe is fine since we only reset the whole buffer with zeros, there is no alignement issues.
         unsafe { self.seed.as_i8_slice_mut().zeroize() }
     }
 }
@@ -72,10 +73,10 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         let mut rng = rand::thread_rng();
         // TODO out of here ?
         let trits = [-1, 0, 1];
-        let seed: Vec<i8> = (0..243).map(|_| trits[rng.gen_range(0, trits.len())]).collect();
+        let seed: Vec<i8> = (0..HASH_LENGTH).map(|_| trits[rng.gen_range(0, trits.len())]).collect();
 
         Self {
-            seed: unsafe { Trits::<T1B1>::from_raw_unchecked(&seed, 243).to_buf() },
+            seed: unsafe { Trits::<T1B1>::from_raw_unchecked(&seed, HASH_LENGTH).to_buf() },
             _sponge: PhantomData,
         }
     }
@@ -108,7 +109,7 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
     }
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
-        if buf.len() != 243 {
+        if buf.len() != HASH_LENGTH {
             return Err(Self::Error::InvalidLength(buf.len()));
         }
 

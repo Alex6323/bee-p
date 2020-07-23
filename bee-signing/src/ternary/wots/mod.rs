@@ -19,11 +19,11 @@ pub use normalize::normalize_hash;
 pub use shake::{WotsShakePrivateKeyGenerator, WotsShakePrivateKeyGeneratorBuilder};
 pub use sponge::{WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder};
 
-use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
+use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature, SIGNATURE_FRAGMENT_LENGTH};
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
-use bee_crypto::ternary::sponge::Sponge;
-use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
+use bee_crypto::ternary::{sponge::Sponge, HASH_LENGTH};
+use bee_ternary::{T1B1Buf, TritBuf, Trits, Tryte, T1B1};
 
 use thiserror::Error;
 use zeroize::Zeroize;
@@ -103,11 +103,11 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
         let mut hashed_private_key = self.state.clone();
-        let mut digests = TritBuf::<T1B1Buf>::zeros((self.state.len() / 6561) * 243);
-        let mut hash = TritBuf::<T1B1Buf>::zeros(243);
+        let mut digests = TritBuf::<T1B1Buf>::zeros((self.state.len() / SIGNATURE_FRAGMENT_LENGTH) * HASH_LENGTH);
+        let mut hash = TritBuf::<T1B1Buf>::zeros(HASH_LENGTH);
 
-        for chunk in hashed_private_key.chunks_mut(243) {
-            for _ in 0..26 {
+        for chunk in hashed_private_key.chunks_mut(HASH_LENGTH) {
+            for _ in 0..Tryte::MAX_VALUE as i8 - Tryte::MIN_VALUE as i8 {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge
                     .squeeze_into(chunk)
@@ -116,9 +116,9 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             }
         }
 
-        for (i, chunk) in hashed_private_key.chunks(6561).enumerate() {
+        for (i, chunk) in hashed_private_key.chunks(SIGNATURE_FRAGMENT_LENGTH).enumerate() {
             sponge
-                .digest_into(chunk, &mut digests[i * 243..(i + 1) * 243])
+                .digest_into(chunk, &mut digests[i * HASH_LENGTH..(i + 1) * HASH_LENGTH])
                 .map_err(|_| Self::Error::FailedSpongeOperation)?;
         }
 
@@ -137,10 +137,10 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
         let mut sponge = S::default();
         let mut signature = self.state.clone();
 
-        for (i, chunk) in signature.chunks_mut(243).enumerate() {
+        for (i, chunk) in signature.chunks_mut(HASH_LENGTH).enumerate() {
             let val = i8::from(message[i * 3]) + i8::from(message[i * 3 + 1]) * 3 + i8::from(message[i * 3 + 2]) * 9;
 
-            for _ in 0..(13 - val) {
+            for _ in 0..(Tryte::MAX_VALUE as i8 - val) {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge
                     .squeeze_into(chunk)
@@ -229,15 +229,15 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
     fn recover_public_key(&self, message: &Trits<T1B1>) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
-        let mut hash = TritBuf::<T1B1Buf>::zeros(243);
-        let mut digests = TritBuf::<T1B1Buf>::zeros((self.state.len() / 6561) * 243);
+        let mut hash = TritBuf::<T1B1Buf>::zeros(HASH_LENGTH);
+        let mut digests = TritBuf::<T1B1Buf>::zeros((self.state.len() / SIGNATURE_FRAGMENT_LENGTH) * HASH_LENGTH);
         let mut state = self.state.clone();
 
-        for (i, chunk) in state.chunks_mut(243).enumerate() {
+        for (i, chunk) in state.chunks_mut(HASH_LENGTH).enumerate() {
             // TODO DRY
             let val = i8::from(message[i * 3]) + i8::from(message[i * 3 + 1]) * 3 + i8::from(message[i * 3 + 2]) * 9;
 
-            for _ in 0..(val - -13) {
+            for _ in 0..(val - Tryte::MIN_VALUE as i8) {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge
                     .squeeze_into(chunk)
@@ -246,9 +246,9 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
             }
         }
 
-        for (i, chunk) in state.chunks(6561).enumerate() {
+        for (i, chunk) in state.chunks(SIGNATURE_FRAGMENT_LENGTH).enumerate() {
             sponge
-                .digest_into(chunk, &mut digests[i * 243..(i + 1) * 243])
+                .digest_into(chunk, &mut digests[i * HASH_LENGTH..(i + 1) * HASH_LENGTH])
                 .map_err(|_| Self::Error::FailedSpongeOperation)?;
         }
 
