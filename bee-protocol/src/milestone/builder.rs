@@ -114,7 +114,7 @@ where
             .trunk()
             .to_inner();
 
-        match public_key.verify(normalize_hash(hash).as_i8_slice(), &signature) {
+        match public_key.verify(&normalize_hash(hash), &signature) {
             Ok(valid) => {
                 if valid {
                     Ok(())

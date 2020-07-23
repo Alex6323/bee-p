@@ -16,7 +16,7 @@ use crate::{
 
 use bee_crypto_ext::ternary::sponge::{Kerl, Sponge};
 use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, Signature};
-use bee_ternary::TritBuf;
+use bee_ternary::{T1B1Buf, TritBuf};
 
 use std::marker::PhantomData;
 
@@ -89,7 +89,8 @@ where
         let public_key = P::from_trits(TritBuf::new());
         let signature = P::Signature::from_trits(TritBuf::new());
 
-        match public_key.verify(&[], &signature) {
+        // TODO Temporary buffer
+        match public_key.verify(&TritBuf::<T1B1Buf>::zeros(1), &signature) {
             Ok(valid) => {
                 if valid {
                     Ok(())
