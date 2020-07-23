@@ -56,6 +56,9 @@ impl MessageHandler {
     }
 
     fn append_bytes(&mut self, mut bytes: Vec<u8>) {
+        self.offset = 0;
+        self.remaining = true;
+
         if self.context.buffer.is_empty() {
             self.context.buffer = bytes;
         } else {
@@ -65,8 +68,6 @@ impl MessageHandler {
 
     fn clean_buffer(&mut self) {
         self.context.buffer = self.context.buffer.split_off(self.offset);
-        self.offset = 0;
-        self.remaining = true;
     }
 }
 
