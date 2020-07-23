@@ -14,7 +14,7 @@ use crate::ternary::{
     PrivateKeyGenerator, TernarySeed,
 };
 
-use bee_crypto_ext::ternary::sponge::Sponge;
+use bee_crypto::ternary::sponge::Sponge;
 use bee_ternary::{T1B1Buf, TritBuf, Trits};
 
 use std::marker::PhantomData;

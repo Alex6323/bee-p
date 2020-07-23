@@ -11,7 +11,7 @@
 
 use crate::field::rand_trits_field;
 
-use bee_crypto_ext::ternary::Hash;
+use bee_crypto::ternary::Hash;
 use bee_transaction::{
     bundled::{
         Address, BundledTransaction as Transaction, BundledTransactionBuilder as TransactionBuilder,

@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::worker::Error as WorkerError;
-use bee_crypto_ext::ternary::Hash;
+use bee_crypto::ternary::Hash;
 
 use futures::{
     channel::{mpsc, oneshot},

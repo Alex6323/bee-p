@@ -13,7 +13,7 @@
 
 use crate::{tangle::Tangle, TransactionRef as TxRef};
 
-use bee_crypto_ext::ternary::Hash;
+use bee_crypto::ternary::Hash;
 
 use std::collections::HashSet;
 

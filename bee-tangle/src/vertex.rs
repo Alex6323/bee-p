@@ -11,7 +11,7 @@
 
 use crate::TransactionRef as TxRef;
 
-use bee_crypto_ext::ternary::Hash;
+use bee_crypto::ternary::Hash;
 use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
 
 use async_std::sync::Arc;

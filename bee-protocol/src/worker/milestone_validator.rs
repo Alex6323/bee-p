@@ -17,7 +17,7 @@ use crate::{
 };
 
 use bee_common::worker::Error as WorkerError;
-use bee_crypto_ext::ternary::{
+use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
     Hash,
 };

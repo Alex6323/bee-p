@@ -28,7 +28,7 @@ use crate::{
 
 use bee_common::shutdown::Shutdown;
 use bee_common_ext::wait_priority_queue::WaitPriorityQueue;
-use bee_crypto_ext::ternary::{
+use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
     Hash,
 };

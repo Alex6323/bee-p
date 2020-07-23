@@ -20,7 +20,7 @@ use crate::{
     TransactionVertex,
 };
 
-use bee_crypto_ext::ternary::Hash;
+use bee_crypto::ternary::Hash;
 use bee_ternary::{convert::Error as ConvertError, raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Trits, T1B1};
 
 use std::convert::TryFrom;

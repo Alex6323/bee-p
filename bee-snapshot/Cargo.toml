@@ -12,7 +12,6 @@ homepage = "https://www.iota.org"
 
 [dependencies]
 bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
-bee-crypto-ext = { path = "../bee-crypto-ext" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 bee-transaction = { path = "../bee-transaction" }
 

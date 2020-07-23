@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
-use bee_crypto_ext::ternary::sponge::Sponge;
+use bee_crypto::ternary::sponge::Sponge;
 use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;

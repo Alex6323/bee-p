@@ -14,7 +14,7 @@
 use crate::ternary::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature};
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
-use bee_crypto_ext::ternary::sponge::Sponge;
+use bee_crypto::ternary::sponge::Sponge;
 use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
 use thiserror::Error;

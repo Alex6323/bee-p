@@ -15,7 +15,7 @@ use crate::bundled::{
     BundledTransactionField, BundledTransactions, Index, Payload, Tag,
 };
 
-use bee_crypto_ext::ternary::{
+use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
     Hash,
 };

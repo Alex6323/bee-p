@@ -14,8 +14,10 @@ use crate::ternary::{
     PrivateKeyGenerator, TernarySeed,
 };
 
-use bee_crypto::ternary::bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243};
-use bee_crypto_ext::ternary::sponge::Sponge;
+use bee_crypto::ternary::{
+    bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243},
+    sponge::Sponge,
+};
 use bee_ternary::{Btrit, T1B1Buf, TritBuf, Trits};
 
 use sha3::{

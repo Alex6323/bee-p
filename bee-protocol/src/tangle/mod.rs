@@ -24,7 +24,7 @@ use crate::{
     tangle::flags::Flags,
 };
 
-use bee_crypto_ext::ternary::Hash;
+use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
 
