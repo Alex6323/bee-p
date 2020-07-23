@@ -75,7 +75,7 @@ where
 
     let public_key = MssPublicKey::<S, WotsPublicKey<S>>::from_trits(public_key_trits).depth(depth);
     let signature = MssSignature::<S>::from_trits(signature_trits).index(index);
-    let valid = public_key.verify(message_trits.as_i8_slice(), &signature).unwrap();
+    let valid = public_key.verify(&message_trits, &signature).unwrap();
 
     assert!(valid);
 }
@@ -149,10 +149,8 @@ where
     let mss_public_key = mss_private_key.generate_public_key().unwrap();
 
     for _ in 0..1 << (DEPTH - 1) {
-        let mss_signature = mss_private_key.sign(message_trits.as_i8_slice()).unwrap();
-        let valid = mss_public_key
-            .verify(message_trits.as_i8_slice(), &mss_signature)
-            .unwrap();
+        let mss_signature = mss_private_key.sign(&message_trits).unwrap();
+        let valid = mss_public_key.verify(&message_trits, &mss_signature).unwrap();
 
         assert!(valid);
         //  TODO invalid test

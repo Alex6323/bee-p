@@ -15,7 +15,7 @@ use crate::ternary::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSign
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto_ext::ternary::sponge::Sponge;
-use bee_ternary::{T1B1Buf, TritBuf, Trits};
+use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
 use thiserror::Error;
 use zeroize::Zeroize;
@@ -213,7 +213,7 @@ where
         Ok(Self::PublicKey::from_trits(self.tree[0..243].to_buf()).depth(self.depth))
     }
 
-    fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
+    fn sign(&mut self, message: &Trits<T1B1>) -> Result<Self::Signature, Self::Error> {
         let ots_private_key = &mut self.keys[self.index as usize];
         let ots_signature = ots_private_key
             .sign(message)
@@ -276,7 +276,7 @@ where
     type Signature = MssSignature<S>;
     type Error = Error;
 
-    fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
+    fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error> {
         let mut sponge = S::default();
         let ots_signature =
             K::Signature::from_trits(signature.state[0..((signature.state.len() / 6561) - 1) * 6561].to_buf());

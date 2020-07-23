@@ -11,7 +11,7 @@
 
 use crate::ternary::Seed;
 
-use bee_ternary::{T1B1Buf, TritBuf, Trits};
+use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
 use zeroize::Zeroize;
 
@@ -130,16 +130,16 @@ pub trait PrivateKey: Zeroize + Drop {
     /// # let mut private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
     /// let message = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
     /// let message_trits = TryteBuf::try_from_str(message).unwrap().as_trits().encode::<T1B1Buf>();
-    /// let signature = private_key.sign(&message_trits.as_i8_slice());
+    /// let signature = private_key.sign(&message_trits);
     /// ```
-    fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error>;
+    fn sign(&mut self, message: &Trits<T1B1>) -> Result<Self::Signature, Self::Error>;
 }
 
 pub trait PublicKey {
     type Signature: Signature;
     type Error;
 
-    fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error>;
+    fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error>;
 
     fn size(&self) -> usize;
 
@@ -160,5 +160,5 @@ pub trait RecoverableSignature: Signature {
     type PublicKey: PublicKey;
     type Error;
 
-    fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error>;
+    fn recover_public_key(&self, message: &Trits<T1B1>) -> Result<Self::PublicKey, Self::Error>;
 }

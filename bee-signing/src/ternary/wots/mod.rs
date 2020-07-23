@@ -21,7 +21,7 @@ use crate::ternary::{PrivateKey, PublicKey, RecoverableSignature, Signature};
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto_ext::ternary::sponge::Sponge;
-use bee_ternary::{T1B1Buf, TritBuf, Trits};
+use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
 use thiserror::Error;
 use zeroize::Zeroize;
@@ -128,12 +128,12 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
     }
 
     // TODO: enforce hash size ?
-    fn sign(&mut self, message: &[i8]) -> Result<Self::Signature, Self::Error> {
+    fn sign(&mut self, message: &Trits<T1B1>) -> Result<Self::Signature, Self::Error> {
         let mut sponge = S::default();
         let mut signature = self.state.clone();
 
         for (i, chunk) in signature.chunks_mut(243).enumerate() {
-            let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
+            let val = i8::from(message[i * 3]) + i8::from(message[i * 3 + 1]) * 3 + i8::from(message[i * 3 + 2]) * 9;
 
             for _ in 0..(13 - val) {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
@@ -169,7 +169,7 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
     type Error = Error;
 
     // TODO: enforce hash size ?
-    fn verify(&self, message: &[i8], signature: &Self::Signature) -> Result<bool, Self::Error> {
+    fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error> {
         Ok(signature.recover_public_key(message)?.state == self.state)
     }
 
@@ -222,14 +222,15 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
     type PublicKey = WotsPublicKey<S>;
     type Error = Error;
 
-    fn recover_public_key(&self, message: &[i8]) -> Result<Self::PublicKey, Self::Error> {
+    fn recover_public_key(&self, message: &Trits<T1B1>) -> Result<Self::PublicKey, Self::Error> {
         let mut sponge = S::default();
         let mut hash = TritBuf::<T1B1Buf>::zeros(243);
         let mut digests = TritBuf::<T1B1Buf>::zeros((self.state.len() / 6561) * 243);
         let mut state = self.state.clone();
 
         for (i, chunk) in state.chunks_mut(243).enumerate() {
-            let val = message[i * 3] + message[i * 3 + 1] * 3 + message[i * 3 + 2] * 9;
+            // TODO DRY
+            let val = i8::from(message[i * 3]) + i8::from(message[i * 3 + 1]) * 3 + i8::from(message[i * 3 + 2]) * 9;
 
             for _ in 0..(val - -13) {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;

@@ -36,10 +36,10 @@ fn wots_sponge<S: Sponge + Default>() {
                 .unwrap();
             let mut private_key = private_key_generator.generate_from_seed(&seed, index).unwrap();
             let public_key = private_key.generate_public_key().unwrap();
-            let signature = private_key.sign(message_trits.as_i8_slice()).unwrap();
-            let recovered_public_key = signature.recover_public_key(message_trits.as_i8_slice()).unwrap();
+            let signature = private_key.sign(&message_trits).unwrap();
+            let recovered_public_key = signature.recover_public_key(&message_trits).unwrap();
             assert_eq!(public_key.to_trits(), recovered_public_key.to_trits());
-            let valid = public_key.verify(message_trits.as_i8_slice(), &signature).unwrap();
+            let valid = public_key.verify(&message_trits, &signature).unwrap();
             assert!(valid);
         }
     }
