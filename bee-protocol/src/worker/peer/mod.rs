@@ -65,6 +65,8 @@ impl MessageHandler {
 
     fn clean_buffer(&mut self) {
         self.context.buffer = self.context.buffer.split_off(self.offset);
+        self.offset = 0;
+        self.remaining = true;
     }
 }
 
