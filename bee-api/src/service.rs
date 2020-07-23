@@ -14,7 +14,10 @@ use bee_crypto::ternary::Hash;
 use bee_protocol::{tangle::tangle, MilestoneIndex};
 use bee_tangle::{traversal, TransactionRef};
 use serde_json::Value as JsonValue;
-use std::{collections::HashMap, fmt};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 
 pub trait Service {
     fn node_info() -> NodeInfoResponse;
@@ -81,7 +84,7 @@ pub struct VisitChildrenFollowTrunkParams {
 }
 
 pub struct VisitChildrenFollowTrunkResponse {
-    pub tx_refs: HashMap<Hash, TransactionRef>,
+    pub tx_refs: HashSet<Hash>,
 }
 
 pub struct ServiceImpl;
@@ -133,14 +136,14 @@ impl Service for ServiceImpl {
     }
 
     fn visit_children_follow_trunk(params: VisitChildrenFollowTrunkParams) -> VisitChildrenFollowTrunkResponse {
-        let mut ret = HashMap::new();
+        let mut ret = HashSet::new();
         traversal::visit_children_follow_trunk(
             tangle(),
             params.entry,
             |tx_ref, _| match_cond(&params.traverse_cond, tx_ref),
             |tx_hash, tx_ref, _| {
                 if match_cond(&params.catch_cond, tx_ref) {
-                    ret.insert(tx_hash.clone(), tx_ref.clone());
+                    ret.insert(tx_hash.clone());
                 }
             },
         );

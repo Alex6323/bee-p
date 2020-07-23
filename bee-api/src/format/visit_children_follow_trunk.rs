@@ -9,10 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use serde_json::{Map, Value as JsonValue};
+use serde_json::Value as JsonValue;
 
 use crate::{
-    format::items::{hash::HashItem, transaction_ref::TransactionRefItem},
+    format::items::hash::HashItem,
     service::{VisitChildrenFollowTrunkParams, VisitChildrenFollowTrunkResponse},
 };
 use std::convert::{From, TryFrom};
@@ -37,13 +37,10 @@ impl TryFrom<&JsonValue> for VisitChildrenFollowTrunkParams {
 
 impl From<VisitChildrenFollowTrunkResponse> for JsonValue {
     fn from(res: VisitChildrenFollowTrunkResponse) -> Self {
-        let mut json_obj = Map::new();
-        for (hash, tx_ref) in res.tx_refs.iter() {
-            json_obj.insert(
-                String::from(&HashItem(hash.clone())),
-                JsonValue::from(&TransactionRefItem(tx_ref.clone())),
-            );
+        let mut hashes = Vec::new();
+        for hash in res.tx_refs.iter() {
+            hashes.push(JsonValue::from(&HashItem(hash.clone())));
         }
-        JsonValue::Object(json_obj)
+        JsonValue::Array(hashes)
     }
 }
