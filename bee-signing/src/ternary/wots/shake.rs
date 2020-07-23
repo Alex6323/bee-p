@@ -11,14 +11,15 @@
 
 use crate::ternary::{
     wots::{Error as WotsError, WotsPrivateKey, WotsSecurityLevel},
-    PrivateKeyGenerator, TernarySeed,
+    PrivateKeyGenerator, TernarySeed, SIGNATURE_FRAGMENT_LENGTH,
 };
 
 use bee_crypto::ternary::{
     bigint::{binary_representation::U8Repr, endianness::BigEndian, I384, T242, T243},
     sponge::Sponge,
+    HASH_LENGTH,
 };
-use bee_ternary::{Btrit, T1B1Buf, TritBuf, Trits};
+use bee_ternary::{Btrit, T1B1Buf, TritBuf, Trits, T1B1};
 
 use sha3::{
     digest::{ExtendableOutput, Update, XofReader},
@@ -61,8 +62,8 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
     type PrivateKey = WotsPrivateKey<S>;
     type Error = WotsError;
 
-    fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
-        let mut state = TritBuf::<T1B1Buf>::zeros(self.security_level as usize * 6561);
+    fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error> {
+        let mut state = TritBuf::<T1B1Buf>::zeros(self.security_level as usize * SIGNATURE_FRAGMENT_LENGTH);
         let mut shake = Shake256::default();
         let mut ternary_buffer = T243::<Btrit>::default();
         ternary_buffer.copy_from(entropy);
@@ -71,7 +72,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
         shake.update(&binary_buffer[..]);
         let mut reader = shake.finalize_xof();
 
-        for trit_chunk in state.chunks_mut(243) {
+        for trit_chunk in state.chunks_mut(HASH_LENGTH) {
             reader.read(&mut binary_buffer[..]);
             let ternary_value = T242::from_i384_ignoring_mst(binary_buffer).into_t243();
 

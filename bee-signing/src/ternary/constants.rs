@@ -9,17 +9,5 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! Ternary signing scheme.
-
-mod constants;
-mod normalize;
-mod scheme;
-mod seed;
-
-pub mod mss;
-pub mod wots;
-
-pub use constants::SIGNATURE_FRAGMENT_LENGTH;
-pub use normalize::normalize_hash;
-pub use scheme::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature};
-pub use seed::{Error as TernarySeedError, Seed, TernarySeed};
+/// Length of a signature fragment.
+pub const SIGNATURE_FRAGMENT_LENGTH: usize = 6561;

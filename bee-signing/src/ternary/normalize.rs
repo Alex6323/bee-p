@@ -9,13 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, Trits, Tryte, T3B1};
+use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, Trits, Tryte, T1B1, T3B1};
 
 const SECURITY_LEVEL_MAX: usize = 3;
 const NORMALIZED_FRAGMENT_LENGTH: usize = 27;
 
 // TODO Trits or TritBuf ?
-pub fn normalize_hash(hash: &Trits) -> TritBuf<T1B1Buf> {
+pub fn normalize_hash(hash: &Trits<T1B1>) -> TritBuf<T1B1Buf> {
     let hash_trits = hash.as_i8_slice();
     let mut normalized_hash = [0i8; SECURITY_LEVEL_MAX * NORMALIZED_FRAGMENT_LENGTH];
 

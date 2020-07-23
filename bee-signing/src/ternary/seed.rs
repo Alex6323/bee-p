@@ -36,7 +36,7 @@ pub trait Seed: Zeroize + Drop {
         Self: Sized;
 
     /// Returns the inner trits.
-    fn as_trits(&self) -> &Trits;
+    fn as_trits(&self) -> &Trits<T1B1>;
 }
 
 /// Errors occuring when handling a `Seed`.
@@ -118,7 +118,7 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         })
     }
 
-    fn as_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits<T1B1> {
         &self.seed
     }
 }

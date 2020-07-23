@@ -70,7 +70,7 @@ pub trait PrivateKeyGenerator {
     ///     .unwrap();
     /// let private_key = private_key_generator.generate_from_entropy(seed.as_trits());
     /// ```
-    fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error>;
+    fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error>;
 }
 
 pub trait PrivateKey: Zeroize + Drop {
@@ -145,7 +145,7 @@ pub trait PublicKey {
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
-    fn as_trits(&self) -> &Trits;
+    fn as_trits(&self) -> &Trits<T1B1>;
 }
 
 pub trait Signature {
@@ -153,7 +153,7 @@ pub trait Signature {
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
-    fn as_trits(&self) -> &Trits;
+    fn as_trits(&self) -> &Trits<T1B1>;
 }
 
 pub trait RecoverableSignature: Signature {

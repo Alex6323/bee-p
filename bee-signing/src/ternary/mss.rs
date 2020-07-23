@@ -128,7 +128,7 @@ where
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
     type Error = Error;
 
-    fn generate_from_entropy(&self, entropy: &Trits) -> Result<Self::PrivateKey, Self::Error> {
+    fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error> {
         let seed = Self::Seed::from_trits(entropy.to_buf()).map_err(|_| Error::FailedSeed)?;
         let mut sponge = S::default();
         let mut keys = Vec::new();
@@ -328,7 +328,7 @@ where
         }
     }
 
-    fn as_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits<T1B1> {
         &self.state
     }
 }
@@ -363,7 +363,7 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
         }
     }
 
-    fn as_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits<T1B1> {
         &self.state
     }
 }

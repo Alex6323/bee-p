@@ -153,7 +153,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
 impl<S: Sponge + Default> WotsPrivateKey<S> {
     /// Returns the inner trits.
-    pub fn as_trits(&self) -> &Trits {
+    pub fn as_trits(&self) -> &Trits<T1B1> {
         &self.state
     }
 }
@@ -184,7 +184,7 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
         }
     }
 
-    fn as_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits<T1B1> {
         &self.state
     }
 }
@@ -213,7 +213,7 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
         }
     }
 
-    fn as_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits<T1B1> {
         &self.state
     }
 }
@@ -265,6 +265,6 @@ impl<S: Sponge + Default> Display for WotsSignature<S> {
 }
 
 // TODO consider making this a ternary utility function
-fn trits_to_string(trits: &Trits) -> String {
+fn trits_to_string(trits: &Trits<T1B1>) -> String {
     trits.iter_trytes().map(char::from).collect::<String>()
 }
