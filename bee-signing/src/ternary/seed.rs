@@ -77,13 +77,12 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         let mut subseed = self.seed.clone();
 
         for _ in 0..index {
-            // TODO Put in trit utilities file
-            for i in 0..subseed.len() {
-                if let Some(ntrit) = subseed.get(i).unwrap().checked_increment() {
-                    subseed.set(i, ntrit);
+            for t in subseed.iter_mut() {
+                if let Some(ntrit) = t.checked_increment() {
+                    *t = ntrit;
                     break;
                 } else {
-                    subseed.set(i, Btrit::NegOne);
+                    *t = Btrit::NegOne;
                 }
             }
         }
