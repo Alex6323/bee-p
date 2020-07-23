@@ -39,17 +39,14 @@ struct MessageHandler {
 }
 
 impl MessageHandler {
-    fn new(mut context: PeerReadContext, mut bytes: Vec<u8>, address: Address) -> Self {
-        if context.buffer.is_empty() {
-            context.buffer = bytes;
-        } else {
-            context.buffer.append(&mut bytes);
-        }
-
+    fn new(address: Address) -> Self {
         Self {
             offset: 0,
             remaining: true,
-            context,
+            context: PeerReadContext {
+                state: PeerReadState::Header,
+                buffer: vec![],
+            },
             address,
         }
     }
@@ -58,11 +55,16 @@ impl MessageHandler {
         &self.context.buffer[begin..end]
     }
 
-    fn consume(self) -> PeerReadContext {
-        PeerReadContext {
-            state: self.context.state,
-            buffer: self.context.buffer[self.offset..].to_vec(),
+    fn append_bytes(&mut self, mut bytes: Vec<u8>) {
+        if self.context.buffer.is_empty() {
+            self.context.buffer = bytes;
+        } else {
+            self.context.buffer.append(&mut bytes);
         }
+    }
+
+    fn clean_buffer(&mut self) {
+        self.context.buffer = self.context.buffer.split_off(self.offset);
     }
 }
 

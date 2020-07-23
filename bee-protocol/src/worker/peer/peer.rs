@@ -17,7 +17,7 @@ use crate::{
     peer::HandshakedPeer,
     protocol::Protocol,
     worker::{
-        peer::{PeerReadContext, PeerReadState},
+        peer::{PeerReadContext, PeerReadState, MessageHandler},
         MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
     },
 };
@@ -62,16 +62,13 @@ impl PeerWorker {
     ) {
         info!("[{}] Running.", self.peer.address);
 
-        let mut context = PeerReadContext {
-            state: PeerReadState::Header,
-            buffer: Vec::new(),
-        };
+        let mut message_handler = MessageHandler::new(self.peer.address);
 
         loop {
             select! {
                 event = receiver_fused.next() => {
                     if let Some(event) = event {
-                        context = self.message_handler(context, event).await;
+                        self.process_event(&mut message_handler, event).await;
                     }
                 },
                 _ = shutdown_fused => {
@@ -190,8 +187,8 @@ impl PeerWorker {
         Ok(())
     }
 
-    async fn message_handler(&mut self, context: PeerReadContext, bytes: Vec<u8>) -> PeerReadContext {
-        let mut message_handler = super::MessageHandler::new(context, bytes, self.peer.address);
+    async fn process_event(&mut self, message_handler: &mut MessageHandler, event: Vec<u8>) {
+        message_handler.append_bytes(event);
 
         while let Some((header, offset)) = message_handler.next() {
             let bytes = message_handler.get_bytes(offset, offset + header.message_length as usize);
@@ -200,7 +197,7 @@ impl PeerWorker {
             }
         }
 
-        message_handler.consume()
+        message_handler.clean_buffer();
     }
 }
 

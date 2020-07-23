@@ -18,7 +18,7 @@ use crate::{
     protocol::Protocol,
     tangle::tangle,
     worker::{
-        peer::{PeerReadContext, PeerReadState},
+        peer::{PeerReadContext, PeerReadState, MessageHandler},
         PeerWorker,
     },
 };
@@ -83,10 +83,6 @@ impl PeerHandshakerWorker {
 
         // TODO should we have a first check if already connected ?
 
-        let mut context = PeerReadContext {
-            state: PeerReadState::Header,
-            buffer: Vec::new(),
-        };
         let mut receiver_fused = receiver.fuse();
         let mut shutdown_fused = shutdown.fuse();
 
@@ -109,11 +105,13 @@ impl PeerHandshakerWorker {
             warn!("[{}] Failed to send handshake: {:?}.", self.peer.address, e);
         }
 
+        let mut message_handler = MessageHandler::new(self.peer.address);
+
         loop {
             select! {
                 event = receiver_fused.next() => {
                     if let Some(event) = event {
-                        context = self.message_handler(context, event).await;
+                        self.process_event(&mut message_handler, event).await;
                         match self.status {
                             HandshakeStatus::Done | HandshakeStatus::Duplicate => break,
                             _ => continue
@@ -257,8 +255,8 @@ impl PeerHandshakerWorker {
         Ok(())
     }
 
-    async fn message_handler(&mut self, context: PeerReadContext, bytes: Vec<u8>) -> PeerReadContext {
-        let mut message_handler = super::MessageHandler::new(context, bytes, self.peer.address);
+    async fn process_event(&mut self, message_handler: &mut MessageHandler, event: Vec<u8>) {
+        message_handler.append_bytes(event);
 
         while let Some((header, offset)) = message_handler.next() {
             let bytes = message_handler.get_bytes(offset, offset + header.message_length as usize);
@@ -267,7 +265,7 @@ impl PeerHandshakerWorker {
             }
         }
 
-        message_handler.consume()
+        message_handler.clean_buffer();
     }
 }
 
