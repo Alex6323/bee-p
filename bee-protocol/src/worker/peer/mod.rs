@@ -14,3 +14,88 @@ mod peer;
 
 pub(crate) use handshaker::PeerHandshakerWorker;
 pub(crate) use peer::PeerWorker;
+
+use crate::message::Header;
+
+use bee_network::Address;
+
+use log::debug;
+
+enum PeerReadState {
+    Header,
+    Payload(Header),
+}
+
+struct PeerReadContext {
+    state: PeerReadState,
+    buffer: Vec<u8>,
+}
+
+struct MessageHandler {
+    offset: usize,
+    remaining: bool,
+    context: PeerReadContext,
+    address: Address,
+}
+
+impl MessageHandler {
+    fn new(mut context: PeerReadContext, mut bytes: Vec<u8>, address: Address) -> Self {
+        if context.buffer.is_empty() {
+            context.buffer = bytes;
+        } else {
+            context.buffer.append(&mut bytes);
+        }
+
+        Self {
+            offset: 0,
+            remaining: true,
+            context,
+            address,
+        }
+    }
+
+    fn get_bytes(&self, begin: usize, end: usize) -> &[u8] {
+        &self.context.buffer[begin..end]
+    }
+
+    fn consume(self) -> PeerReadContext {
+        PeerReadContext {
+            state: self.context.state,
+            buffer: self.context.buffer[self.offset..].to_vec(),
+        }
+    }
+}
+
+impl Iterator for MessageHandler {
+    type Item = (Header, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut item = None;
+
+        if self.remaining {
+            if self.offset + 3 <= self.context.buffer.len() {
+                debug!("[{}] Reading Header...", self.address);
+                let header = Header::from_bytes(&self.context.buffer[self.offset..self.offset + 3]);
+                self.offset += 3;
+                if (self.offset + header.message_length as usize) <= self.context.buffer.len() {
+                    item = Some((header.clone(), self.offset));
+                    self.offset += header.message_length as usize;
+
+                    self.context.state = PeerReadState::Header;
+                } else {
+                    self.remaining = false;
+
+                    self.context.state = PeerReadState::Payload(header);
+                }
+            } else {
+                self.remaining = false;
+
+                self.context.state = PeerReadState::Header;
+            }
+        }
+
+        item
+    }
+
+
+}

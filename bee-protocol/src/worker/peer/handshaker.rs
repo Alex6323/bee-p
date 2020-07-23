@@ -17,7 +17,10 @@ use crate::{
     peer::Peer,
     protocol::Protocol,
     tangle::tangle,
-    worker::PeerWorker,
+    worker::{
+        peer::{PeerReadContext, PeerReadState},
+        PeerWorker,
+    },
 };
 
 use bee_network::{
@@ -53,16 +56,6 @@ pub(crate) enum HandshakeError {
 
 #[derive(Debug)]
 pub(crate) enum PeerHandshakerWorkerError {}
-
-enum PeerReadState {
-    Header,
-    Payload(Header),
-}
-
-struct PeerReadContext {
-    state: PeerReadState,
-    buffer: Vec<u8>,
-}
 
 enum HandshakeStatus {
     Awaiting,
@@ -264,59 +257,17 @@ impl PeerHandshakerWorker {
         Ok(())
     }
 
-    async fn message_handler(&mut self, mut context: PeerReadContext, mut bytes: Vec<u8>) -> PeerReadContext {
-        let mut offset = 0;
-        let mut remaining = true;
+    async fn message_handler(&mut self, context: PeerReadContext, bytes: Vec<u8>) -> PeerReadContext {
+        let mut message_handler = super::MessageHandler::new(context, bytes, self.peer.address);
 
-        if context.buffer.is_empty() {
-            context.buffer = bytes;
-        } else {
-            context.buffer.append(&mut bytes);
+        while let Some((header, offset)) = message_handler.next() {
+            let bytes = message_handler.get_bytes(offset, offset + header.message_length as usize);
+            if let Err(e) = self.process_message(&header, bytes).await {
+                error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
+            }
         }
 
-        while remaining {
-            context.state = match context.state {
-                PeerReadState::Header => {
-                    if offset + 3 <= context.buffer.len() {
-                        debug!("[{}] Reading Header...", self.peer.address);
-                        let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
-                        offset += 3;
-
-                        PeerReadState::Payload(header)
-                    } else {
-                        remaining = false;
-
-                        PeerReadState::Header
-                    }
-                }
-                PeerReadState::Payload(header) => {
-                    if (offset + header.message_length as usize) <= context.buffer.len() {
-                        if let Err(e) = self
-                            .process_message(
-                                &header,
-                                &context.buffer[offset..offset + header.message_length as usize],
-                            )
-                            .await
-                        {
-                            error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
-                        }
-
-                        offset += header.message_length as usize;
-
-                        PeerReadState::Header
-                    } else {
-                        remaining = false;
-
-                        PeerReadState::Payload(header)
-                    }
-                }
-            };
-        }
-
-        PeerReadContext {
-            state: context.state,
-            buffer: context.buffer[offset..].to_vec(),
-        }
+        message_handler.consume()
     }
 }
 

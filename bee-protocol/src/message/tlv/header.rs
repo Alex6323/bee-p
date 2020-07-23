@@ -18,6 +18,7 @@ const HEADER_LENGTH_SIZE: usize = 2;
 pub(crate) const HEADER_SIZE: usize = HEADER_TYPE_SIZE + HEADER_LENGTH_SIZE;
 
 /// A header for the type-length-value encoding.
+#[derive(Clone)]
 pub(crate) struct Header {
     /// Type of the message.
     pub(crate) message_type: u8,
