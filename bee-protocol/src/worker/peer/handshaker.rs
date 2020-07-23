@@ -264,8 +264,6 @@ impl PeerHandshakerWorker {
                 error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
         }
-
-        message_handler.clean_buffer();
     }
 }
 

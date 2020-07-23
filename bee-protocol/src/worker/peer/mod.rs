@@ -82,6 +82,7 @@ impl Iterator for MessageHandler {
                         self.context.state = PeerReadState::Payload(header);
                     } else {
                         self.remaining = false;
+                        self.clean_buffer();
                     }
                 }
                 PeerReadState::Payload(ref header) => {
@@ -92,6 +93,7 @@ impl Iterator for MessageHandler {
                         return item;
                     } else {
                         self.remaining = false;
+                        self.clean_buffer();
                     }
                 }
             };
