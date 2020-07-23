@@ -184,14 +184,14 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
         }
     }
 
-    fn to_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits {
         &self.state
     }
 }
 
 impl<S: Sponge + Default> Display for WotsPublicKey<S> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", trits_to_string(self.to_trits()))
+        write!(f, "{}", trits_to_string(self.as_trits()))
     }
 }
 
@@ -213,7 +213,7 @@ impl<S: Sponge + Default> Signature for WotsSignature<S> {
         }
     }
 
-    fn to_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits {
         &self.state
     }
 }
@@ -260,7 +260,7 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
 impl<S: Sponge + Default> Display for WotsSignature<S> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", trits_to_string(self.to_trits()))
+        write!(f, "{}", trits_to_string(self.as_trits()))
     }
 }
 

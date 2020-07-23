@@ -145,7 +145,7 @@ pub trait PublicKey {
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
-    fn to_trits(&self) -> &Trits;
+    fn as_trits(&self) -> &Trits;
 }
 
 pub trait Signature {
@@ -153,7 +153,7 @@ pub trait Signature {
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
-    fn to_trits(&self) -> &Trits;
+    fn as_trits(&self) -> &Trits;
 }
 
 pub trait RecoverableSignature: Signature {

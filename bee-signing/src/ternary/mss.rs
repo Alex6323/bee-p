@@ -147,7 +147,7 @@ where
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
             keys.push(ots_private_key);
-            tree[tree_index * 243..(tree_index + 1) * 243].copy_from(ots_public_key.to_trits());
+            tree[tree_index * 243..(tree_index + 1) * 243].copy_from(ots_public_key.as_trits());
         }
 
         for depth in (0..self.depth - 1).rev() {
@@ -225,7 +225,7 @@ where
         let mut i = 0;
 
         // TODO PAD TO 6561
-        state[0..ots_signature.size()].copy_from(ots_signature.to_trits());
+        state[0..ots_signature.size()].copy_from(ots_signature.as_trits());
 
         while tree_index != 0 {
             if tree_index % 2 != 0 {
@@ -286,7 +286,7 @@ where
             .map_err(|_| Self::Error::FailedUnderlyingPublicKeyRecovery)?;
         let mut hash = TritBuf::<T1B1Buf>::zeros(243);
 
-        hash.copy_from(ots_public_key.to_trits());
+        hash.copy_from(ots_public_key.as_trits());
 
         let mut j = 1;
         for (i, sibling) in siblings.chunks(243).enumerate() {
@@ -328,7 +328,7 @@ where
         }
     }
 
-    fn to_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits {
         &self.state
     }
 }
@@ -363,7 +363,7 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
         }
     }
 
-    fn to_trits(&self) -> &Trits {
+    fn as_trits(&self) -> &Trits {
         &self.state
     }
 }
