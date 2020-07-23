@@ -58,21 +58,15 @@ impl<S> Zeroize for TernarySeed<S> {
 impl<S: Sponge + Default> Seed for TernarySeed<S> {
     type Error = Error;
 
-    // TODO: is this random enough ?
     fn new() -> Self {
+        // `ThreadRng` implements `CryptoRng` so it is safe to use in cryptographic contexts.
+        // https://rust-random.github.io/rand/rand/trait.CryptoRng.html
         let mut rng = rand::thread_rng();
         // TODO out of here ?
         let trits = [-1, 0, 1];
         let seed: Vec<i8> = (0..243).map(|_| trits[rng.gen_range(0, trits.len())]).collect();
 
         Self {
-            // Hello, future programmer! If you get a type error here, you're probably trying to
-            // make this function generic over an encoding. Be aware that interpreting these raw i8
-            // bytes as trits is a bad idea for encodings other than `T1B1`. In fact, that's why
-            // I put this (currently unnecessary) type annotation here! To produce a warning that
-            // hopefully means you read this text! If you still want to make this generic, the best
-            // option is to just iterate through the `i8`s, convert them each to a trit, and then
-            // collect them into a `TritBuf`
             seed: unsafe { Trits::<T1B1>::from_raw_unchecked(&seed, 243).to_buf() },
             _sponge: PhantomData,
         }
