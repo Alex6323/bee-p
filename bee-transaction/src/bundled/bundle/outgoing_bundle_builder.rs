@@ -20,8 +20,7 @@ use bee_crypto::ternary::{
     Hash,
 };
 use bee_signing::ternary::{
-    normalize_hash,
-    wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    wots::{normalize_hash, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
     PrivateKey, PrivateKeyGenerator, Signature, TernarySeed,
 };
 use bee_ternary::Btrit;

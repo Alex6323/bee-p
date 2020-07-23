@@ -11,9 +11,11 @@
 
 //! Winternitz One Time Signature scheme.
 
+mod normalize;
 mod shake;
 mod sponge;
 
+pub use normalize::normalize_hash;
 pub use shake::{WotsShakePrivateKeyGenerator, WotsShakePrivateKeyGeneratorBuilder};
 pub use sponge::{WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder};
 

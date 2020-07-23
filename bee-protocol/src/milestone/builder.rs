@@ -17,8 +17,7 @@ use bee_crypto::ternary::{
 };
 use bee_signing::ternary::{
     mss::{Error as MssError, MssPublicKey, MssSignature},
-    normalize_hash,
-    wots::WotsPublicKey,
+    wots::{WotsPublicKey,normalize_hash},
     PublicKey, RecoverableSignature, Signature,
 };
 use bee_ternary::{convert::Error as ConvertError, TritBuf};

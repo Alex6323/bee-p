@@ -12,7 +12,6 @@
 //! Ternary signing scheme.
 
 mod constants;
-mod normalize;
 mod scheme;
 mod seed;
 
@@ -20,6 +19,5 @@ pub mod mss;
 pub mod wots;
 
 pub use constants::SIGNATURE_FRAGMENT_LENGTH;
-pub use normalize::normalize_hash;
 pub use scheme::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature};
 pub use seed::{Error as TernarySeedError, Seed, TernarySeed};
