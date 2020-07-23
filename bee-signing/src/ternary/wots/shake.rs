@@ -25,6 +25,7 @@ use sha3::{
 
 use std::marker::PhantomData;
 
+/// Shake-based Winternitz One Time Signature private key generator builder.
 #[derive(Default)]
 pub struct WotsShakePrivateKeyGeneratorBuilder<S> {
     security_level: Option<WotsSecurityLevel>,
@@ -32,11 +33,13 @@ pub struct WotsShakePrivateKeyGeneratorBuilder<S> {
 }
 
 impl<S: Sponge + Default> WotsShakePrivateKeyGeneratorBuilder<S> {
+    /// Sets the security level of the private key.
     pub fn security_level(mut self, security_level: WotsSecurityLevel) -> Self {
         self.security_level.replace(security_level);
         self
     }
 
+    /// Builds the private key generator.
     pub fn build(self) -> Result<WotsShakePrivateKeyGenerator<S>, WotsError> {
         Ok(WotsShakePrivateKeyGenerator {
             security_level: self.security_level.ok_or(WotsError::MissingSecurityLevel)?,
@@ -45,6 +48,7 @@ impl<S: Sponge + Default> WotsShakePrivateKeyGeneratorBuilder<S> {
     }
 }
 
+/// Shake-based Winternitz One Time Signature private key generator.
 pub struct WotsShakePrivateKeyGenerator<S> {
     security_level: WotsSecurityLevel,
     _sponge: PhantomData<S>,

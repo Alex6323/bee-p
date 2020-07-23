@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+//! Winternitz One Time Signature scheme.
+
 mod shake;
 mod sponge;
 
@@ -74,7 +76,7 @@ impl TryFrom<u8> for WotsSecurityLevel {
     }
 }
 
-/// A Winternitz One Time Signature private key.
+/// Winternitz One Time Signature private key.
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct WotsPrivateKey<S> {
     pub(crate) state: TritBuf<T1B1Buf>,
@@ -156,7 +158,7 @@ impl<S: Sponge + Default> WotsPrivateKey<S> {
     }
 }
 
-/// A Winternitz One Time Signature public key.
+/// Winternitz One Time Signature public key.
 pub struct WotsPublicKey<S> {
     state: TritBuf<T1B1Buf>,
     _sponge: PhantomData<S>,
@@ -193,7 +195,7 @@ impl<S: Sponge + Default> Display for WotsPublicKey<S> {
     }
 }
 
-/// A Winternitz One Time Signature signature.
+/// Winternitz One Time Signature signature.
 pub struct WotsSignature<S> {
     state: TritBuf<T1B1Buf>,
     _sponge: PhantomData<S>,
