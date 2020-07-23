@@ -44,6 +44,9 @@ pub enum Error {
     /// Failed sponge operation.
     #[error("Failed sponge operation.")]
     FailedSpongeOperation,
+    /// Invalid entropy length.
+    #[error("Invalid entropy length.")]
+    InvalidEntropyLength,
 }
 
 /// Available WOTS security levels.

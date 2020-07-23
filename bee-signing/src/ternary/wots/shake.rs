@@ -63,6 +63,10 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
     type Error = WotsError;
 
     fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error> {
+        if entropy.len() != HASH_LENGTH {
+            return Err(WotsError::InvalidEntropyLength);
+        }
+
         let mut state = TritBuf::<T1B1Buf>::zeros(self.security_level as usize * SIGNATURE_FRAGMENT_LENGTH);
         let mut shake = Shake256::default();
         let mut ternary_buffer = T243::<Btrit>::default();
@@ -72,11 +76,11 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
         shake.update(&binary_buffer[..]);
         let mut reader = shake.finalize_xof();
 
-        for trit_chunk in state.chunks_mut(HASH_LENGTH) {
+        for chunk in state.chunks_mut(HASH_LENGTH) {
             reader.read(&mut binary_buffer[..]);
-            let ternary_value = T242::from_i384_ignoring_mst(binary_buffer).into_t243();
+            ternary_buffer = T242::from_i384_ignoring_mst(binary_buffer).into_t243();
 
-            trit_chunk.copy_from(&ternary_value);
+            chunk.copy_from(&ternary_buffer);
         }
 
         Ok(Self::PrivateKey {

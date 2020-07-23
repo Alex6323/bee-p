@@ -11,7 +11,7 @@
 
 use bee_crypto::ternary::sponge::Kerl;
 use bee_signing::ternary::{
-    wots::{WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder},
+    wots::{Error as WotsError, WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder},
     PrivateKeyGenerator,
 };
 use bee_ternary::{T1B1Buf, TryteBuf};
@@ -548,4 +548,21 @@ fn wots_shake_example() {
     let generated_key = private_key_generator.generate_from_entropy(&entropy).unwrap();
 
     assert_eq!(&key.as_slice(), &generated_key.as_trits());
+}
+
+#[test]
+fn wots_shake_invalid_entropy_length() {
+    let entropy = TryteBuf::try_from_str("CEFLDDLMF9TO9ZLLTYXINXPYNGFAKHQDY9ABGGQZHEFTXKWKWZXEIUD")
+        .unwrap()
+        .as_trits()
+        .encode::<T1B1Buf>();
+    let private_key_generator = WotsShakePrivateKeyGeneratorBuilder::<Kerl>::default()
+        .security_level(WotsSecurityLevel::Medium)
+        .build()
+        .unwrap();
+
+    assert_eq!(
+        private_key_generator.generate_from_entropy(&entropy).err(),
+        Some(WotsError::InvalidEntropyLength)
+    );
 }
