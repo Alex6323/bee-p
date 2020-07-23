@@ -70,32 +70,31 @@ impl Iterator for MessageHandler {
     type Item = (Header, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut item = None;
-
-        if self.remaining {
-            if self.offset + 3 <= self.context.buffer.len() {
-                debug!("[{}] Reading Header...", self.address);
-                let header = Header::from_bytes(&self.context.buffer[self.offset..self.offset + 3]);
-                self.offset += 3;
-                if (self.offset + header.message_length as usize) <= self.context.buffer.len() {
-                    item = Some((header.clone(), self.offset));
-                    self.offset += header.message_length as usize;
-
-                    self.context.state = PeerReadState::Header;
-                } else {
-                    self.remaining = false;
-
-                    self.context.state = PeerReadState::Payload(header);
+        while self.remaining {
+            match self.context.state {
+                PeerReadState::Header => {
+                    if self.offset + 3 <= self.context.buffer.len() {
+                        debug!("[{}] Reading Header...", self.address);
+                        let header = Header::from_bytes(&self.context.buffer[self.offset..self.offset + 3]);
+                        self.offset += 3;
+                        self.context.state = PeerReadState::Payload(header);
+                    } else {
+                        self.remaining = false;
+                    }
                 }
-            } else {
-                self.remaining = false;
-
-                self.context.state = PeerReadState::Header;
-            }
+                PeerReadState::Payload(ref header) => {
+                    if (self.offset + header.message_length as usize) <= self.context.buffer.len() {
+                        let item = Some((header.clone(), self.offset));
+                        self.offset += header.message_length as usize;
+                        self.context.state = PeerReadState::Header;
+                        return item;
+                    } else {
+                        self.remaining = false;
+                    }
+                }
+            };
         }
 
-        item
+        None
     }
-
-
 }
