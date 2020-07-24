@@ -2,33 +2,33 @@ use crate::message::Header;
 
 use bee_network::Address;
 
-use futures::stream::StreamExt;
 use futures::{
     channel::{mpsc, oneshot},
-    future, select, stream,
+    future, select,
+    stream::{self, StreamExt},
 };
+
 use log::debug;
 
-enum PeerReadState {
+enum ReadState {
     Header,
     Payload(Header),
 }
 
+type EventRecv = stream::Fuse<mpsc::Receiver<Vec<u8>>>;
+type ShutdownRecv = future::Fuse<oneshot::Receiver<()>>;
+
 pub(super) struct MessageHandler {
     events: EventHandler,
-    state: PeerReadState,
+    state: ReadState,
     address: Address,
 }
 
 impl MessageHandler {
-    pub(super) fn new(
-        receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
-        shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
-        address: Address,
-    ) -> Self {
+    pub(super) fn new(receiver: EventRecv, shutdown: ShutdownRecv, address: Address) -> Self {
         Self {
-            events: EventHandler::new(receiver_fused, shutdown_fused),
-            state: PeerReadState::Header,
+            events: EventHandler::new(receiver, shutdown),
+            state: ReadState::Header,
             address,
         }
     }
@@ -36,47 +36,39 @@ impl MessageHandler {
     pub(super) async fn fetch_message<'a>(&'a mut self) -> Option<(Header, &'a [u8])> {
         loop {
             match &self.state {
-                PeerReadState::Header => {
+                ReadState::Header => {
                     let bytes = self.events.fetch_bytes(3).await?;
                     debug!("[{}] Reading Header...", self.address);
                     let header = Header::from_bytes(bytes);
-                    self.state = PeerReadState::Payload(header);
+                    self.state = ReadState::Payload(header);
                 }
-                PeerReadState::Payload(header) => {
+                ReadState::Payload(header) => {
                     let header = header.clone();
                     let bytes = self.events.fetch_bytes(header.message_length as usize).await?;
-                    self.state = PeerReadState::Header;
+                    self.state = ReadState::Header;
                     return Some((header, bytes));
                 }
             }
         }
     }
 
-    pub(super) fn consume(
-        self,
-    ) -> (
-        stream::Fuse<mpsc::Receiver<Vec<u8>>>,
-        future::Fuse<oneshot::Receiver<()>>,
-    ) {
-        (self.events.receiver_fused, self.events.shutdown_fused)
+    pub(super) fn consume(self) -> (EventRecv, ShutdownRecv) {
+        (self.events.receiver, self.events.shutdown)
     }
 }
 
 struct EventHandler {
-    receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
-    shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
+    receiver: EventRecv,
+    shutdown: ShutdownRecv,
     buffer: Vec<u8>,
     offset: usize,
 }
 
 impl EventHandler {
-    fn new(
-        receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
-        shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
-    ) -> Self {
+    fn new(receiver: EventRecv, shutdown: ShutdownRecv) -> Self {
         Self {
-            receiver_fused,
-            shutdown_fused,
+            receiver,
+            shutdown,
             buffer: vec![],
             offset: 0,
         }
@@ -96,12 +88,12 @@ impl EventHandler {
     async fn fetch_bytes<'a>(&'a mut self, len: usize) -> Option<&'a [u8]> {
         while self.offset + len > self.buffer.len() {
             select! {
-                event = self.receiver_fused.next() => {
+                event = self.receiver.next() => {
                     if let Some(event) = event {
                         self.push_event(event);
                     }
                 },
-                _ = &mut self.shutdown_fused => {
+                _ = &mut self.shutdown => {
                     return None;
                 }
             }

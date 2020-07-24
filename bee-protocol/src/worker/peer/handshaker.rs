@@ -17,7 +17,7 @@ use crate::{
     peer::Peer,
     protocol::Protocol,
     tangle::tangle,
-    worker::{peer::MessageHandler, PeerWorker},
+    worker::{peer::{MessageHandler}, PeerWorker},
 };
 
 use bee_network::{
