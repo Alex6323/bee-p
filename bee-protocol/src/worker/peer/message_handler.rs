@@ -67,7 +67,6 @@ struct EventHandler {
     shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
     buffer: Vec<u8>,
     offset: usize,
-    closed: bool,
 }
 
 impl EventHandler {
@@ -80,7 +79,6 @@ impl EventHandler {
             shutdown_fused,
             buffer: vec![],
             offset: 0,
-            closed: false,
         }
     }
 
@@ -96,10 +94,6 @@ impl EventHandler {
     }
 
     async fn fetch_bytes<'a>(&'a mut self, len: usize) -> Option<&'a [u8]> {
-        if self.closed {
-            return None;
-        }
-
         while self.offset + len > self.buffer.len() {
             select! {
                 event = self.receiver_fused.next() => {
@@ -108,7 +102,6 @@ impl EventHandler {
                     }
                 },
                 _ = &mut self.shutdown_fused => {
-                    self.closed = true;
                     return None;
                 }
             }
