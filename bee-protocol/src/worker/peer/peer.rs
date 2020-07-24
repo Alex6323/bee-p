@@ -17,8 +17,7 @@ use crate::{
     peer::HandshakedPeer,
     protocol::Protocol,
     worker::{
-        peer::{MessageHandler},
-        MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
+        peer::MessageHandler, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
     },
 };
 
