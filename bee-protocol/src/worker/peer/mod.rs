@@ -78,14 +78,12 @@ impl Iterator for MessageHandler {
         while self.remaining {
             match self.context.state {
                 PeerReadState::Header => {
-                    if self.offset + 3 <= self.context.buffer.len() {
+                    if let Some(bytes) = self.context.buffer.get(self.offset..self.offset + 3) {
                         debug!("[{}] Reading Header...", self.address);
-                        let header = Header::from_bytes(&self.context.buffer[self.offset..self.offset + 3]);
+                        let header = Header::from_bytes(bytes);
                         self.offset += 3;
                         self.context.state = PeerReadState::Payload(header);
-                    } else {
-                        self.remaining = false;
-                        self.clean_buffer();
+                        continue;
                     }
                 }
                 PeerReadState::Payload(ref header) => {
@@ -94,12 +92,12 @@ impl Iterator for MessageHandler {
                         self.offset += header.message_length as usize;
                         self.context.state = PeerReadState::Header;
                         return item;
-                    } else {
-                        self.remaining = false;
-                        self.clean_buffer();
                     }
                 }
             };
+
+            self.remaining = false;
+            self.clean_buffer();
         }
 
         None
