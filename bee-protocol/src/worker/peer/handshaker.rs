@@ -114,6 +114,7 @@ impl PeerHandshakerWorker {
 
         match self.status {
             HandshakeStatus::Done => {
+                let (receiver, shutdown) = message_handler.consume();
                 spawn(
                     PeerWorker::new(
                         Protocol::get()
@@ -124,7 +125,7 @@ impl PeerHandshakerWorker {
                             .value()
                             .clone(),
                     )
-                    .run(message_handler.events.receiver_fused, message_handler.events.shutdown_fused),
+                    .run(receiver, shutdown),
                 );
             }
             HandshakeStatus::Duplicate => {
