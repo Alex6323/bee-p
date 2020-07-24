@@ -19,6 +19,11 @@ use crate::message::Header;
 
 use bee_network::Address;
 
+use futures::stream::StreamExt;
+use futures::{
+    channel::{mpsc, oneshot},
+    future, select, stream,
+};
 use log::debug;
 
 enum PeerReadState {
@@ -26,80 +31,99 @@ enum PeerReadState {
     Payload(Header),
 }
 
-struct PeerReadContext {
-    state: PeerReadState,
-    buffer: Vec<u8>,
-}
-
 struct MessageHandler {
-    offset: usize,
-    remaining: bool,
-    context: PeerReadContext,
+    events: EventHandler,
+    state: PeerReadState,
     address: Address,
 }
 
 impl MessageHandler {
-    fn new(address: Address) -> Self {
+    fn new(
+        receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
+        shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
+        address: Address,
+    ) -> Self {
         Self {
-            offset: 0,
-            remaining: true,
-            context: PeerReadContext {
-                state: PeerReadState::Header,
-                buffer: vec![],
-            },
+            events: EventHandler::new(receiver_fused, shutdown_fused),
+            state: PeerReadState::Header,
             address,
         }
     }
 
-    fn get_bytes(&self, begin: usize, end: usize) -> &[u8] {
-        &self.context.buffer[begin..end]
-    }
-
-    fn append_bytes(&mut self, mut bytes: Vec<u8>) {
-        self.offset = 0;
-        self.remaining = true;
-
-        if self.context.buffer.is_empty() {
-            self.context.buffer = bytes;
-        } else {
-            self.context.buffer.append(&mut bytes);
+    async fn fetch_message<'a>(&'a mut self) -> Option<(Header, &'a [u8])> {
+        loop {
+            match &self.state {
+                PeerReadState::Header => {
+                    let bytes = self.events.fetch_bytes(3).await?;
+                    debug!("[{}] Reading Header...", self.address);
+                    let header = Header::from_bytes(bytes);
+                    self.state = PeerReadState::Payload(header);
+                }
+                PeerReadState::Payload(header) => {
+                    let header = header.clone();
+                    let bytes = self.events.fetch_bytes(header.message_length as usize).await?;
+                    self.state = PeerReadState::Header;
+                    return Some((header, bytes));
+                }
+            }
         }
-    }
-
-    fn clean_buffer(&mut self) {
-        self.context.buffer = self.context.buffer.split_off(self.offset);
     }
 }
 
-impl Iterator for MessageHandler {
-    type Item = (Header, usize);
+struct EventHandler {
+    receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
+    shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
+    buffer: Vec<u8>,
+    offset: usize,
+    closed: bool,
+}
 
-    fn next(&mut self) -> Option<Self::Item> {
-        while self.remaining {
-            match self.context.state {
-                PeerReadState::Header => {
-                    if let Some(bytes) = self.context.buffer.get(self.offset..self.offset + 3) {
-                        debug!("[{}] Reading Header...", self.address);
-                        let header = Header::from_bytes(bytes);
-                        self.offset += 3;
-                        self.context.state = PeerReadState::Payload(header);
-                        continue;
-                    }
-                }
-                PeerReadState::Payload(ref header) => {
-                    if (self.offset + header.message_length as usize) <= self.context.buffer.len() {
-                        let item = Some((header.clone(), self.offset));
-                        self.offset += header.message_length as usize;
-                        self.context.state = PeerReadState::Header;
-                        return item;
-                    }
-                }
-            };
+impl EventHandler {
+    fn new(
+        receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
+        shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
+    ) -> Self {
+        Self {
+            receiver_fused,
+            shutdown_fused,
+            buffer: vec![],
+            offset: 0,
+            closed: false,
+        }
+    }
 
-            self.remaining = false;
-            self.clean_buffer();
+    fn push_event(&mut self, mut bytes: Vec<u8>) {
+        self.buffer = self.buffer.split_off(self.offset);
+        self.offset = 0;
+
+        if self.buffer.is_empty() {
+            self.buffer = bytes;
+        } else {
+            self.buffer.append(&mut bytes);
+        }
+    }
+
+    async fn fetch_bytes<'a>(&'a mut self, len: usize) -> Option<&'a [u8]> {
+        if self.closed {
+            return None;
         }
 
-        None
+        while self.offset + len > self.buffer.len() {
+            select! {
+                event = self.receiver_fused.next() => {
+                    if let Some(event) = event {
+                        self.push_event(event);
+                    }
+                },
+                _ = &mut self.shutdown_fused => {
+                    self.closed = true;
+                    return None;
+                }
+            }
+        }
+
+        let item = &self.buffer[self.offset..(self.offset + len)];
+        self.offset += len;
+        Some(item)
     }
 }

@@ -17,10 +17,7 @@ use crate::{
     peer::Peer,
     protocol::Protocol,
     tangle::tangle,
-    worker::{
-        peer::{PeerReadContext, PeerReadState, MessageHandler},
-        PeerWorker,
-    },
+    worker::{peer::MessageHandler, PeerWorker},
 };
 
 use bee_network::{
@@ -33,7 +30,6 @@ use async_std::{net::SocketAddr, task::spawn};
 use futures::{
     channel::{mpsc, oneshot},
     future::FutureExt,
-    select,
     stream::StreamExt,
 };
 use log::{debug, error, info, warn};
@@ -83,8 +79,8 @@ impl PeerHandshakerWorker {
 
         // TODO should we have a first check if already connected ?
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
+        let receiver_fused = receiver.fuse();
+        let shutdown_fused = shutdown.fuse();
 
         // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
         if let Err(e) = self
@@ -105,22 +101,14 @@ impl PeerHandshakerWorker {
             warn!("[{}] Failed to send handshake: {:?}.", self.peer.address, e);
         }
 
-        let mut message_handler = MessageHandler::new(self.peer.address);
+        let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address);
 
-        loop {
-            select! {
-                event = receiver_fused.next() => {
-                    if let Some(event) = event {
-                        self.process_event(&mut message_handler, event).await;
-                        match self.status {
-                            HandshakeStatus::Done | HandshakeStatus::Duplicate => break,
-                            _ => continue
-                        }
-                    }
-                },
-                _ = shutdown_fused => {
-                    break;
-                }
+        while let Some((header, bytes)) = message_handler.fetch_message().await {
+            if let Err(e) = self.process_message(&header, bytes).await {
+                error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
+            }
+            if let HandshakeStatus::Done | HandshakeStatus::Duplicate = self.status {
+                break;
             }
         }
 
@@ -136,7 +124,7 @@ impl PeerHandshakerWorker {
                             .value()
                             .clone(),
                     )
-                    .run(receiver_fused, shutdown_fused),
+                    .run(message_handler.events.receiver_fused, message_handler.events.shutdown_fused),
                 );
             }
             HandshakeStatus::Duplicate => {
@@ -253,17 +241,6 @@ impl PeerHandshakerWorker {
         }
 
         Ok(())
-    }
-
-    async fn process_event(&mut self, message_handler: &mut MessageHandler, event: Vec<u8>) {
-        message_handler.append_bytes(event);
-
-        while let Some((header, offset)) = message_handler.next() {
-            let bytes = message_handler.get_bytes(offset, offset + header.message_length as usize);
-            if let Err(e) = self.process_message(&header, bytes).await {
-                error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
-            }
-        }
     }
 }
 

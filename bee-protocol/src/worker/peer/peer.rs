@@ -17,16 +17,14 @@ use crate::{
     peer::HandshakedPeer,
     protocol::Protocol,
     worker::{
-        peer::{PeerReadContext, PeerReadState, MessageHandler},
+        peer::{MessageHandler},
         MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
     },
 };
 
 use futures::{
     channel::{mpsc, oneshot},
-    select,
     sink::SinkExt,
-    stream::StreamExt,
 };
 use futures_util::{future, stream};
 use log::{debug, error, info, warn};
@@ -57,23 +55,16 @@ impl PeerWorker {
 
     pub async fn run(
         mut self,
-        mut receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
-        mut shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
+        receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
+        shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
     ) {
         info!("[{}] Running.", self.peer.address);
 
-        let mut message_handler = MessageHandler::new(self.peer.address);
+        let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address);
 
-        loop {
-            select! {
-                event = receiver_fused.next() => {
-                    if let Some(event) = event {
-                        self.process_event(&mut message_handler, event).await;
-                    }
-                },
-                _ = shutdown_fused => {
-                    break;
-                }
+        while let Some((header, bytes)) = message_handler.fetch_message().await {
+            if let Err(e) = self.process_message(&header, bytes).await {
+                error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
         }
 
@@ -185,17 +176,6 @@ impl PeerWorker {
         };
 
         Ok(())
-    }
-
-    async fn process_event(&mut self, message_handler: &mut MessageHandler, event: Vec<u8>) {
-        message_handler.append_bytes(event);
-
-        while let Some((header, offset)) = message_handler.next() {
-            let bytes = message_handler.get_bytes(offset, offset + header.message_length as usize);
-            if let Err(e) = self.process_message(&header, bytes).await {
-                error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
-            }
-        }
     }
 }
 
