@@ -10,7 +10,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_crypto::ternary::sponge::Kerl;
-use bee_signing::ternary::wots::{Error as WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder};
+use bee_signing::ternary::{
+    wots::{Error as WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature,
+};
+use bee_ternary::{T1B1Buf, TryteBuf};
 
 #[test]
 fn wots_generator_missing_security_level() {
@@ -35,5 +39,42 @@ fn wots_generator_valid() {
                 .is_ok(),
             true
         );
+    }
+}
+
+#[test]
+fn wots_invalid_message_length() {
+    let message = TryteBuf::try_from_str("CEFLDDLMF9TO9ZNYIDZCTHQDY9ABGGQZHEFTXKWKWZ")
+        .unwrap()
+        .as_trits()
+        .encode::<T1B1Buf>();
+    let entropy =
+        TryteBuf::try_from_str("CEFLDDLMF9TO9ZLLTYXIPVFIJKAOFRIQLGNYIDZCTDYSWMNXPYNGFAKHQDY9ABGGQZHEFTXKWKWZXEIUD")
+            .unwrap()
+            .as_trits()
+            .encode::<T1B1Buf>();
+    let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
+        .security_level(WotsSecurityLevel::Medium)
+        .build()
+        .unwrap();
+    let mut private_key = private_key_generator.generate_from_entropy(&entropy).unwrap();
+
+    match private_key.sign(&message) {
+        Err(WotsError::InvalidMessageLength(len)) => assert_eq!(len, message.len()),
+        _ => unreachable!(),
+    }
+
+    let signature = private_key.sign(&entropy).unwrap();
+
+    match signature.recover_public_key(&message) {
+        Err(WotsError::InvalidMessageLength(len)) => assert_eq!(len, message.len()),
+        _ => unreachable!(),
+    }
+
+    let public_key = private_key.generate_public_key().unwrap();
+
+    match public_key.verify(&message, &signature) {
+        Err(WotsError::InvalidMessageLength(len)) => assert_eq!(len, message.len()),
+        _ => unreachable!(),
     }
 }
