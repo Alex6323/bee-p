@@ -16,7 +16,7 @@ mod normalize;
 mod shake;
 mod sponge;
 
-pub use normalize::normalize;
+pub use normalize::{normalize, Error as NormalizeError};
 pub use shake::{WotsShakePrivateKeyGenerator, WotsShakePrivateKeyGeneratorBuilder};
 pub use sponge::{WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder};
 

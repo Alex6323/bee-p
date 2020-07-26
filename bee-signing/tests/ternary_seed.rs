@@ -16,7 +16,7 @@ use bee_ternary::{Btrit, T1B1Buf, TritBuf, TryteBuf};
 const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
 
 #[test]
-fn iota_seed_new() {
+fn new() {
     for _ in 0..10 {
         let iota_seed = TernarySeed::<CurlP27>::new();
         for byte in iota_seed.as_trits().iter() {
@@ -25,7 +25,7 @@ fn iota_seed_new() {
     }
 }
 
-fn iota_seed_subseed_generic<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
+fn subseed_generic<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
     let iota_seed_trits = TryteBuf::try_from_str(iota_seed_string)
         .unwrap()
         .as_trits()
@@ -44,8 +44,8 @@ fn iota_seed_subseed_generic<S: Sponge + Default>(iota_seed_string: &str, iota_s
 }
 
 #[test]
-fn iota_seed_subseed_kerl() {
-    iota_seed_subseed_generic::<Kerl>(
+fn subseed_kerl() {
+    subseed_generic::<Kerl>(
         IOTA_SEED,
         &[
             "APSNZAPLANAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY",
@@ -63,8 +63,8 @@ fn iota_seed_subseed_kerl() {
 }
 
 #[test]
-fn iota_seed_subseed_curl27() {
-    iota_seed_subseed_generic::<CurlP27>(
+fn subseed_curl27() {
+    subseed_generic::<CurlP27>(
         IOTA_SEED,
         &[
             "ITTFAEIWTRSFQGZGLGUMLUTHFXYSCLXTFYMGVTTDSNNWFUCKBRPSOBERNLXIYCNCEBKUV9QIXI9BDCKSM",
@@ -82,8 +82,8 @@ fn iota_seed_subseed_curl27() {
 }
 
 #[test]
-fn iota_seed_subseed_curl81() {
-    iota_seed_subseed_generic::<CurlP81>(
+fn subseed_curl81() {
+    subseed_generic::<CurlP81>(
         IOTA_SEED,
         &[
             "PKKJZREHPYHNIBWAPYEXHXEAFZCI99UWZNKBOCCECFTDUXG9YGYDAGRLUBJVKMYNWPRCPYENACHOYSHJO",

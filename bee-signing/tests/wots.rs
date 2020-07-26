@@ -17,7 +17,7 @@ use bee_signing::ternary::{
 use bee_ternary::{T1B1Buf, TryteBuf};
 
 #[test]
-fn wots_generator_missing_security_level() {
+fn generator_missing_security_level() {
     match WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default().build() {
         Ok(_) => unreachable!(),
         Err(err) => assert_eq!(err, WotsError::MissingSecurityLevel),
@@ -25,7 +25,7 @@ fn wots_generator_missing_security_level() {
 }
 
 #[test]
-fn wots_generator_valid() {
+fn generator_valid() {
     let security_levels = vec![
         WotsSecurityLevel::Low,
         WotsSecurityLevel::Medium,
@@ -43,7 +43,7 @@ fn wots_generator_valid() {
 }
 
 #[test]
-fn wots_invalid_message_length() {
+fn invalid_message_length() {
     let message = TryteBuf::try_from_str("CEFLDDLMF9TO9ZNYIDZCTHQDY9ABGGQZHEFTXKWKWZ")
         .unwrap()
         .as_trits()
