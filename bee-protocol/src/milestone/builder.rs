@@ -17,7 +17,7 @@ use bee_crypto::ternary::{
 };
 use bee_signing::ternary::{
     mss::{Error as MssError, MssPublicKey, MssSignature},
-    wots::{WotsPublicKey,normalize_hash},
+    wots::{normalize, WotsPublicKey},
     PublicKey, RecoverableSignature, Signature,
 };
 use bee_ternary::{convert::Error as ConvertError, TritBuf};
@@ -113,7 +113,8 @@ where
             .trunk()
             .to_inner();
 
-        match public_key.verify(&normalize_hash(hash), &signature) {
+        // Safe to unwrap because we know `hash` has a valid size since it comes from `trunk`.
+        match public_key.verify(&normalize(hash).unwrap(), &signature) {
             Ok(valid) => {
                 if valid {
                     Ok(())

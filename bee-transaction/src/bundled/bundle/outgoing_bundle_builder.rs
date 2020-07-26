@@ -20,7 +20,7 @@ use bee_crypto::ternary::{
     Hash,
 };
 use bee_signing::ternary::{
-    wots::{normalize_hash, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    wots::{normalize, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
     PrivateKey, PrivateKeyGenerator, Signature, TernarySeed,
 };
 use bee_ternary::Btrit;
@@ -87,12 +87,14 @@ where
                 let _ = sponge.absorb(&builder.essence());
             }
 
+            // TODO squeeze into
             let hash = sponge
                 .squeeze()
                 .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."));
 
             let mut has_m_bug = false;
-            for trits in normalize_hash(&hash).chunks(3) {
+            // Safe to unwrap because we know `hash` has a valid size since it's squeezed from the sponge.
+            for trits in normalize(&hash).unwrap().chunks(3) {
                 let mut is_m = true;
 
                 for trit in trits.iter() {
@@ -261,8 +263,9 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
         seed: &TernarySeed<Kerl>,
         inputs: &[(u64, Address, WotsSecurityLevel)],
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
-        // Safe to unwrap because bundle is sealed
-        let message = normalize_hash(self.builders.0.get(0).unwrap().bundle.as_ref().unwrap().to_inner());
+        // Safe to unwrap `get` because bundle is sealed.
+        // Safe to unwrap `normalize` because we know the bundle hash has a valid size.
+        let message = normalize(self.builders.0.get(0).unwrap().bundle.as_ref().unwrap().to_inner()).unwrap();
 
         let mut signature_fragments: Vec<Payload> = Vec::new();
 
@@ -432,7 +435,7 @@ mod tests {
             offset += PAYLOAD_TRIT_LEN;
         }
         let res = WotsSignature::<Kerl>::from_trits(signature)
-            .recover_public_key(&normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()))
+            .recover_public_key(&normalize(bundle.0.get(1).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
         assert_eq!(address.to_inner(), res.as_trits());
 
@@ -500,7 +503,7 @@ mod tests {
 
         // Validate signature
         let res_low = WotsSignature::<Kerl>::from_trits(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
-            .recover_public_key(&normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()))
+            .recover_public_key(&normalize(bundle.0.get(1).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
         assert_eq!(address_low.to_inner(), res_low.as_trits());
 
@@ -512,7 +515,7 @@ mod tests {
             offset += PAYLOAD_TRIT_LEN;
         }
         let res_medium = WotsSignature::<Kerl>::from_trits(signature)
-            .recover_public_key(&normalize_hash(bundle.0.get(2).unwrap().bundle.to_inner()))
+            .recover_public_key(&normalize(bundle.0.get(2).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
         assert_eq!(address_medium.to_inner(), res_medium.as_trits());
 

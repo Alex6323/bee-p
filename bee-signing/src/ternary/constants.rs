@@ -9,5 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_crypto::ternary::HASH_LENGTH;
+
+/// Length of a message fragment.
+pub const MESSAGE_FRAGMENT_LENGTH: usize = 27;
+
 /// Length of a signature fragment.
-pub const SIGNATURE_FRAGMENT_LENGTH: usize = 6561;
+pub const SIGNATURE_FRAGMENT_LENGTH: usize = MESSAGE_FRAGMENT_LENGTH * HASH_LENGTH;

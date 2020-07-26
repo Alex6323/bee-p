@@ -16,7 +16,7 @@ mod normalize;
 mod shake;
 mod sponge;
 
-pub use normalize::normalize_hash;
+pub use normalize::normalize;
 pub use shake::{WotsShakePrivateKeyGenerator, WotsShakePrivateKeyGeneratorBuilder};
 pub use sponge::{WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder};
 

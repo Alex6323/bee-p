@@ -9,27 +9,42 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::ternary::{constants::MESSAGE_FRAGMENT_LENGTH, wots::WotsSecurityLevel};
+
+use bee_crypto::ternary::HASH_LENGTH;
 use bee_ternary::{T1B1Buf, T3B1Buf, TritBuf, Trits, Tryte, T1B1, T3B1};
 
-const SECURITY_LEVEL_MAX: usize = 3;
-const NORMALIZED_FRAGMENT_LENGTH: usize = 27;
+use thiserror::Error;
 
-// TODO Trits or TritBuf ?
-pub fn normalize_hash(hash: &Trits<T1B1>) -> TritBuf<T1B1Buf> {
-    let hash_trits = hash.as_i8_slice();
-    let mut normalized_hash = [0i8; SECURITY_LEVEL_MAX * NORMALIZED_FRAGMENT_LENGTH];
+use std::convert::TryFrom;
 
-    for i in 0..SECURITY_LEVEL_MAX {
+/// Errors occuring during normalization.
+#[derive(Debug, Error, PartialEq)]
+pub enum Error {
+    /// Invalid hash length.
+    #[error("Invalid hash length.")]
+    InvalidHashLength,
+}
+
+pub fn normalize(hash: &Trits<T1B1>) -> Result<TritBuf<T1B1Buf>, Error> {
+    if hash.len() != HASH_LENGTH {
+        return Err(Error::InvalidHashLength);
+    }
+
+    let mut normalized_hash = [0i8; WotsSecurityLevel::High as usize * MESSAGE_FRAGMENT_LENGTH];
+
+    for i in 0..WotsSecurityLevel::High as usize {
         let mut sum: i16 = 0;
 
-        for j in (i * NORMALIZED_FRAGMENT_LENGTH)..((i + 1) * NORMALIZED_FRAGMENT_LENGTH) {
-            normalized_hash[j] = hash_trits[j * 3] + hash_trits[j * 3 + 1] * 3 + hash_trits[j * 3 + 2] * 9;
+        for j in (i * MESSAGE_FRAGMENT_LENGTH)..((i + 1) * MESSAGE_FRAGMENT_LENGTH) {
+            // Safe to unwrap because 3 trits can't underflow/overflow an i8.
+            normalized_hash[j] = i8::try_from(&hash[j * 3..j * 3 + 3]).unwrap();
             sum += normalized_hash[j] as i16;
         }
 
         if sum > 0 {
             while sum > 0 {
-                for t in &mut normalized_hash[i * NORMALIZED_FRAGMENT_LENGTH..(i + 1) * NORMALIZED_FRAGMENT_LENGTH] {
+                for t in &mut normalized_hash[i * MESSAGE_FRAGMENT_LENGTH..(i + 1) * MESSAGE_FRAGMENT_LENGTH] {
                     if (*t as i8) > Tryte::MIN_VALUE as i8 {
                         *t -= 1;
                         break;
@@ -39,7 +54,7 @@ pub fn normalize_hash(hash: &Trits<T1B1>) -> TritBuf<T1B1Buf> {
             }
         } else {
             while sum < 0 {
-                for t in &mut normalized_hash[i * NORMALIZED_FRAGMENT_LENGTH..(i + 1) * NORMALIZED_FRAGMENT_LENGTH] {
+                for t in &mut normalized_hash[i * MESSAGE_FRAGMENT_LENGTH..(i + 1) * MESSAGE_FRAGMENT_LENGTH] {
                     if (*t as i8) < Tryte::MAX_VALUE as i8 {
                         *t += 1;
                         break;
@@ -50,9 +65,10 @@ pub fn normalize_hash(hash: &Trits<T1B1>) -> TritBuf<T1B1Buf> {
         }
     }
 
-    unsafe {
+    // TODO unsafe
+    Ok(unsafe {
         Trits::<T3B1>::from_raw_unchecked(&normalized_hash, normalized_hash.len() * 3)
             .to_buf::<T3B1Buf>()
             .encode::<T1B1Buf>()
-    }
+    })
 }
