@@ -141,7 +141,7 @@ pub trait PublicKey {
 
     fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error>;
 
-    fn size(&self) -> usize;
+    fn len(&self) -> usize;
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
@@ -149,7 +149,7 @@ pub trait PublicKey {
 }
 
 pub trait Signature {
-    fn size(&self) -> usize;
+    fn len(&self) -> usize;
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 

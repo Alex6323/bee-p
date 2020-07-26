@@ -222,13 +222,13 @@ where
             .sign(message)
             .map_err(|_| Self::Error::FailedUnderlyingSignatureGeneration)?;
         // let mut state = vec![0; ots_signature.size() + SIGNATURE_FRAGMENT_LENGTH];
-        let mut state = TritBuf::<T1B1Buf>::zeros(ots_signature.size() + SIGNATURE_FRAGMENT_LENGTH);
+        let mut state = TritBuf::<T1B1Buf>::zeros(ots_signature.len() + SIGNATURE_FRAGMENT_LENGTH);
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
         let mut sibling_index;
         let mut i = 0;
 
         // TODO PAD TO SIGNATURE_FRAGMENT_LENGTH
-        state[0..ots_signature.size()].copy_from(ots_signature.as_trits());
+        state[0..ots_signature.len()].copy_from(ots_signature.as_trits());
 
         while tree_index != 0 {
             if tree_index % 2 != 0 {
@@ -239,7 +239,7 @@ where
                 tree_index = (tree_index - 1) / 2;
             }
 
-            state[ots_signature.size() + i * HASH_LENGTH..ots_signature.size() + (i + 1) * HASH_LENGTH]
+            state[ots_signature.len() + i * HASH_LENGTH..ots_signature.len() + (i + 1) * HASH_LENGTH]
                 .copy_from(&self.tree[sibling_index * HASH_LENGTH..(sibling_index + 1) * HASH_LENGTH]);
             i += 1;
         }
@@ -324,7 +324,7 @@ where
         Ok(hash == self.state)
     }
 
-    fn size(&self) -> usize {
+    fn len(&self) -> usize {
         self.state.len()
     }
 
@@ -360,7 +360,7 @@ impl<S: Sponge + Default> MssSignature<S> {
 
 // TODO default impl ?
 impl<S: Sponge + Default> Signature for MssSignature<S> {
-    fn size(&self) -> usize {
+    fn len(&self) -> usize {
         self.state.len()
     }
 

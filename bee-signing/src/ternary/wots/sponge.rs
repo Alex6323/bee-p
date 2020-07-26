@@ -55,7 +55,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsSpongePrivateKeyGenerator<
 
     fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error> {
         if entropy.len() != HASH_LENGTH {
-            return Err(WotsError::InvalidEntropyLength);
+            return Err(WotsError::InvalidEntropyLength(entropy.len()));
         }
 
         let mut sponge = S::default();

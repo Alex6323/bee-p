@@ -95,8 +95,8 @@ fn sponge_invalid_entropy_length() {
         .build()
         .unwrap();
 
-    assert_eq!(
-        private_key_generator.generate_from_entropy(&entropy).err(),
-        Some(WotsError::InvalidEntropyLength)
-    );
+    match private_key_generator.generate_from_entropy(&entropy) {
+        Err(WotsError::InvalidEntropyLength(len)) => assert_eq!(len, entropy.len()),
+        _ => unreachable!(),
+    };
 }

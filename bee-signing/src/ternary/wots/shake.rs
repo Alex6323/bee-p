@@ -64,7 +64,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
 
     fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error> {
         if entropy.len() != HASH_LENGTH {
-            return Err(WotsError::InvalidEntropyLength);
+            return Err(WotsError::InvalidEntropyLength(entropy.len()));
         }
 
         let mut state = TritBuf::<T1B1Buf>::zeros(self.security_level as usize * SIGNATURE_FRAGMENT_LENGTH);

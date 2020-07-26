@@ -38,18 +38,15 @@ use std::{
 /// Errors occuring during WOTS operations.
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
-    /// Invalid security level provided.
-    #[error("Invalid security level provided.")]
-    InvalidSecurityLevel,
-    /// Missing security level.
-    #[error("Missing security level.")]
+    /// Missing security level in generator.
+    #[error("Missing security level in generator.")]
     MissingSecurityLevel,
     /// Failed sponge operation.
     #[error("Failed sponge operation.")]
     FailedSpongeOperation,
     /// Invalid entropy length.
     #[error("Invalid entropy length, should be 243 trits.")]
-    InvalidEntropyLength,
+    InvalidEntropyLength(usize),
     /// Invalid message length.
     #[error("Invalid message length, should be 243 trits.")]
     InvalidMessageLength(usize),
@@ -140,6 +137,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
             // Safe to unwrap because 3 trits can't underflow/overflow an i8.
             let val = i8::try_from(&message[i * 3..i * 3 + 3]).unwrap();
 
+            // Hash each chunk of the private key an amount of times given by the corresponding byte of the message.
             for _ in 0..(Tryte::MAX_VALUE as i8 - val) {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge
@@ -177,7 +175,7 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
         Ok(signature.recover_public_key(message)?.state == self.state)
     }
 
-    fn size(&self) -> usize {
+    fn len(&self) -> usize {
         self.state.len()
     }
 
@@ -206,7 +204,7 @@ pub struct WotsSignature<S> {
 }
 
 impl<S: Sponge + Default> Signature for WotsSignature<S> {
-    fn size(&self) -> usize {
+    fn len(&self) -> usize {
         self.state.len()
     }
 
@@ -232,14 +230,16 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
         }
 
         let mut sponge = S::default();
-        let mut hash = TritBuf::<T1B1Buf>::zeros(HASH_LENGTH);
-        let mut digests = TritBuf::<T1B1Buf>::zeros((self.state.len() / SIGNATURE_FRAGMENT_LENGTH) * HASH_LENGTH);
-        let mut state = self.state.clone();
+        let mut public_key_state = TritBuf::<T1B1Buf>::zeros(HASH_LENGTH);
+        let security = self.state.len() / SIGNATURE_FRAGMENT_LENGTH;
+        let mut digests = TritBuf::<T1B1Buf>::zeros(security * HASH_LENGTH);
+        let mut hashed_signature = self.state.clone();
 
-        for (i, chunk) in state.chunks_mut(HASH_LENGTH).enumerate() {
+        for (i, chunk) in hashed_signature.chunks_mut(HASH_LENGTH).enumerate() {
             // Safe to unwrap because 3 trits can't underflow/overflow an i8.
             let val = i8::try_from(&message[i * 3..i * 3 + 3]).unwrap();
 
+            // Hash each chunk of the signature an amount of times given by the corresponding byte of the message.
             for _ in 0..(val - Tryte::MIN_VALUE as i8) {
                 sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge
@@ -249,18 +249,20 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
             }
         }
 
-        for (i, chunk) in state.chunks(SIGNATURE_FRAGMENT_LENGTH).enumerate() {
+        // Create one digest per fragment of the signature.
+        for (i, chunk) in hashed_signature.chunks(SIGNATURE_FRAGMENT_LENGTH).enumerate() {
             sponge
                 .digest_into(chunk, &mut digests[i * HASH_LENGTH..(i + 1) * HASH_LENGTH])
                 .map_err(|_| Self::Error::FailedSpongeOperation)?;
         }
 
+        // Hash the digests together to recover the public key.
         sponge
-            .digest_into(&digests, &mut hash)
+            .digest_into(&digests, &mut public_key_state)
             .map_err(|_| Self::Error::FailedSpongeOperation)?;
 
         Ok(Self::PublicKey {
-            state: hash,
+            state: public_key_state,
             _sponge: PhantomData,
         })
     }
