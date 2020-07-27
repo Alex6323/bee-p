@@ -566,3 +566,21 @@ fn shake_invalid_entropy_length() {
         _ => unreachable!(),
     };
 }
+
+#[test]
+fn shake_non_null_last_entropy_trit() {
+    let entropy =
+        TryteBuf::try_from_str("CEFLDDLMF9TO9ZLLTYXIPVFIJKAOFRIQLGNYIDZCTDYSWMNXPYNGFAKHQDY9ABGGQZHEFTXKWKWZXEIUS")
+            .unwrap()
+            .as_trits()
+            .encode::<T1B1Buf>();
+    let private_key_generator = WotsShakePrivateKeyGeneratorBuilder::<Kerl>::default()
+        .security_level(WotsSecurityLevel::Medium)
+        .build()
+        .unwrap();
+
+    assert_eq!(
+        private_key_generator.generate_from_entropy(&entropy).err(),
+        Some(WotsError::NonNullEntropyLastTrit)
+    );
+}

@@ -61,9 +61,16 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
     type PrivateKey = WotsPrivateKey<S>;
     type Error = WotsError;
 
+    /// Derives a private key from entropy using the SHAKE256 extendable-output function.
+    /// The entropy must be a slice of exactly 243 trits where the last trit is zero.
+    /// Derives its security assumptions from the properties of the underlying SHAKE function.
     fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error> {
         if entropy.len() != HASH_LENGTH {
             return Err(WotsError::InvalidEntropyLength(entropy.len()));
+        }
+
+        if entropy[HASH_LENGTH - 1] != Btrit::Zero {
+            return Err(WotsError::NonNullEntropyLastTrit);
         }
 
         let mut state = TritBuf::<T1B1Buf>::zeros(self.security_level as usize * SIGNATURE_FRAGMENT_LENGTH);

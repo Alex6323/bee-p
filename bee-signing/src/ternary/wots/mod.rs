@@ -56,6 +56,9 @@ pub enum Error {
     /// Invalid signature length.
     #[error("Invalid signature length, should be 243 trits.")]
     InvalidSignatureLength(usize),
+    /// Last trit of the entropy is not null.
+    #[error("Last trit of the entropy is not null.")]
+    NonNullEntropyLastTrit,
 }
 
 /// Available WOTS security levels.
@@ -203,7 +206,11 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
 
 impl<S: Sponge + Default> Display for WotsPublicKey<S> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", trits_to_string(self.as_trits()))
+        write!(
+            f,
+            "{}",
+            self.as_trits().iter_trytes().map(char::from).collect::<String>()
+        )
     }
 }
 
@@ -291,11 +298,10 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
 impl<S: Sponge + Default> Display for WotsSignature<S> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", trits_to_string(self.as_trits()))
+        write!(
+            f,
+            "{}",
+            self.as_trits().iter_trytes().map(char::from).collect::<String>()
+        )
     }
-}
-
-// TODO consider making this a ternary utility function
-fn trits_to_string(trits: &Trits<T1B1>) -> String {
-    trits.iter_trytes().map(char::from).collect::<String>()
 }
