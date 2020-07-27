@@ -15,18 +15,21 @@ use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
 use zeroize::Zeroize;
 
+/// Generates a ternary private key.
 pub trait PrivateKeyGenerator {
+    /// Required input seed type.
     type Seed: Seed;
-    /// The type of the generated private keys
+    /// Generated private keys type.
     type PrivateKey: PrivateKey;
+    /// Errors occuring while generating private keys.
     type Error;
 
-    /// Deterministically generates and returns a private key from a seed
+    /// Deterministically generates and returns a private key from a seed and an index.
     ///
     /// # Arguments
     ///
-    /// * `seed`    A seed to deterministically derive a private key from
-    /// * `index`   An index to deterministically derive a private key from
+    /// * `seed`    A seed to deterministically derive a private key from.
+    /// * `index`   An index to deterministically derive a private key from.
     ///
     /// # Example
     ///
@@ -48,11 +51,11 @@ pub trait PrivateKeyGenerator {
         self.generate_from_entropy(seed.subseed(index).as_trits())
     }
 
-    /// Deterministically generates and returns a private key from entropy
+    /// Deterministically generates and returns a private key from ternary entropy.
     ///
     /// # Arguments
     ///
-    /// * `entropy` Entropy to deterministically derive a private key from
+    /// * `entropy` Entropy to deterministically derive a private key from.
     ///
     /// # Example
     ///
@@ -73,14 +76,16 @@ pub trait PrivateKeyGenerator {
     fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error>;
 }
 
+/// A ternary private key.
 pub trait PrivateKey: Zeroize + Drop {
-    /// The type of the matching public key
+    /// Matching public key type.
     type PublicKey: PublicKey;
-    /// The type of the generated signatures
+    /// Generated signatures type.
     type Signature: Signature;
+    /// Errors occuring while handling private keys.
     type Error;
 
-    /// Returns the public counterpart of a private key
+    /// Returns the public counterpart of a private key.
     ///
     /// # Example
     ///
@@ -102,11 +107,11 @@ pub trait PrivateKey: Zeroize + Drop {
     /// ```
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error>;
 
-    /// Generates and returns a signature for a given message
+    /// Generates and returns a signature for a given message.
     ///
     /// # Arguments
     ///
-    /// * `message` A slice that holds a message to be signed
+    /// * `message` A slice that holds a message to be signed.
     ///
     /// # Example
     ///
@@ -135,8 +140,11 @@ pub trait PrivateKey: Zeroize + Drop {
     fn sign(&mut self, message: &Trits<T1B1>) -> Result<Self::Signature, Self::Error>;
 }
 
+/// A ternary public key.
 pub trait PublicKey {
+    /// Matching signature type.
     type Signature: Signature;
+    /// Errors occuring while handling public keys.
     type Error;
 
     fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error>;
@@ -148,6 +156,7 @@ pub trait PublicKey {
     fn as_trits(&self) -> &Trits<T1B1>;
 }
 
+/// A ternary signature.
 pub trait Signature {
     fn len(&self) -> usize;
 
@@ -156,8 +165,11 @@ pub trait Signature {
     fn as_trits(&self) -> &Trits<T1B1>;
 }
 
+/// A ternary signature from which a public key can be recovered.
 pub trait RecoverableSignature: Signature {
+    /// Matching public key type.
     type PublicKey: PublicKey;
+    /// Errors occuring while handling recoverable signatures.
     type Error;
 
     fn recover_public_key(&self, message: &Trits<T1B1>) -> Result<Self::PublicKey, Self::Error>;
