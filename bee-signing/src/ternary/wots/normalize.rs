@@ -26,6 +26,10 @@ pub enum Error {
     InvalidMessageLength,
 }
 
+/// When applying WOTS on a non-normalized message, the amount of private key data leaked is not uniform and some
+/// messages could result in most of (or all of) the key being leaked. As a consequence, even after one signature there
+/// is a varying chance that brute forcing another message becomes feasible. By normalizing the message, such "extreme"
+/// cases get alleviated, so that every signature exactly leaks half of the private key.
 pub fn normalize(message: &Trits<T1B1>) -> Result<TritBuf<T1B1Buf>, Error> {
     if message.len() != HASH_LENGTH {
         return Err(Error::InvalidMessageLength);
@@ -65,7 +69,8 @@ pub fn normalize(message: &Trits<T1B1>) -> Result<TritBuf<T1B1Buf>, Error> {
         }
     }
 
-    // TODO unsafe
+    // This usage of unsafe is fine since we are creating the normalized trits inside this function and we know that the
+    // content can't go wrong.
     Ok(unsafe {
         Trits::<T3B1>::from_raw_unchecked(&normalized, normalized.len() * 3)
             .to_buf::<T3B1Buf>()
