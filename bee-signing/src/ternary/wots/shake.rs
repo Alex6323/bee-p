@@ -84,7 +84,7 @@ impl<S: Sponge + Default> PrivateKeyGenerator for WotsShakePrivateKeyGenerator<S
 
         Ok(Self::PrivateKey {
             state,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         })
     }
 }

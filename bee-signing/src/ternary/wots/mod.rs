@@ -74,7 +74,7 @@ impl Default for WotsSecurityLevel {
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]
 pub struct WotsPrivateKey<S> {
     pub(crate) state: TritBuf<T1B1Buf>,
-    pub(crate) _sponge: PhantomData<S>,
+    pub(crate) sponge: PhantomData<S>,
 }
 
 impl<S> Zeroize for WotsPrivateKey<S> {
@@ -121,7 +121,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
         Ok(Self::PublicKey {
             state: public_key_state,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         })
     }
 
@@ -149,7 +149,7 @@ impl<S: Sponge + Default> PrivateKey for WotsPrivateKey<S> {
 
         Ok(Self::Signature {
             state: signature,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         })
     }
 }
@@ -164,7 +164,7 @@ impl<S: Sponge + Default> WotsPrivateKey<S> {
 /// Winternitz One Time Signature public key.
 pub struct WotsPublicKey<S> {
     state: TritBuf<T1B1Buf>,
-    _sponge: PhantomData<S>,
+    sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
@@ -175,14 +175,14 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
         Ok(signature.recover_public_key(message)?.state == self.state)
     }
 
-    fn len(&self) -> usize {
+    fn size(&self) -> usize {
         self.state.len()
     }
 
     fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
         Self {
             state,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         }
     }
 
@@ -200,18 +200,18 @@ impl<S: Sponge + Default> Display for WotsPublicKey<S> {
 /// Winternitz One Time Signature signature.
 pub struct WotsSignature<S> {
     state: TritBuf<T1B1Buf>,
-    _sponge: PhantomData<S>,
+    sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> Signature for WotsSignature<S> {
-    fn len(&self) -> usize {
+    fn size(&self) -> usize {
         self.state.len()
     }
 
     fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
         Self {
             state,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         }
     }
 
@@ -263,7 +263,7 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
         Ok(Self::PublicKey {
             state: public_key_state,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         })
     }
 }

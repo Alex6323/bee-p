@@ -18,7 +18,7 @@ const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9A
 #[test]
 fn new() {
     for _ in 0..10 {
-        let iota_seed = Seed::new();
+        let iota_seed = Seed::rand();
         for byte in iota_seed.as_trits().iter() {
             assert!(byte == Btrit::NegOne || byte == Btrit::Zero || byte == Btrit::PlusOne);
         }
@@ -75,7 +75,7 @@ fn iota_seed_from_bytes_invalid_length() {
 #[test]
 fn iota_seed_to_bytes_from_bytes() {
     for _ in 0..10 {
-        let iota_seed_1 = Seed::new();
+        let iota_seed_1 = Seed::rand();
         let iota_seed_2 = Seed::from_trits(iota_seed_1.as_trits().to_buf()).unwrap();
 
         assert_eq!(iota_seed_1.as_trits(), iota_seed_2.as_trits());

@@ -60,7 +60,7 @@ pub enum Error {
 pub struct MssPrivateKeyGeneratorBuilder<S, G> {
     depth: Option<u8>,
     generator: Option<G>,
-    _sponge: PhantomData<S>,
+    sponge: PhantomData<S>,
 }
 
 impl<S, G> Default for MssPrivateKeyGeneratorBuilder<S, G>
@@ -72,7 +72,7 @@ where
         Self {
             depth: None,
             generator: None,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         }
     }
 }
@@ -108,7 +108,7 @@ where
         Ok(MssPrivateKeyGenerator {
             depth,
             generator,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         })
     }
 }
@@ -117,7 +117,7 @@ where
 pub struct MssPrivateKeyGenerator<S, G> {
     depth: u8,
     generator: G,
-    _sponge: PhantomData<S>,
+    sponge: PhantomData<S>,
 }
 
 impl<S, G> PrivateKeyGenerator for MssPrivateKeyGenerator<S, G>
@@ -175,7 +175,7 @@ where
             index: 0,
             keys,
             tree,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         })
     }
 }
@@ -187,7 +187,7 @@ pub struct MssPrivateKey<S, K: Zeroize> {
     index: u64,
     keys: Vec<K>,
     tree: TritBuf<T1B1Buf>,
-    _sponge: PhantomData<S>,
+    sponge: PhantomData<S>,
 }
 
 impl<S, K: Zeroize> Zeroize for MssPrivateKey<S, K> {
@@ -221,13 +221,13 @@ where
             .sign(message)
             .map_err(|_| Self::Error::FailedUnderlyingSignatureGeneration)?;
         // let mut state = vec![0; ots_signature.size() + SIGNATURE_FRAGMENT_LENGTH];
-        let mut state = TritBuf::<T1B1Buf>::zeros(ots_signature.len() + SIGNATURE_FRAGMENT_LENGTH);
+        let mut state = TritBuf::<T1B1Buf>::zeros(ots_signature.size() + SIGNATURE_FRAGMENT_LENGTH);
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
         let mut sibling_index;
         let mut i = 0;
 
         // TODO PAD TO SIGNATURE_FRAGMENT_LENGTH
-        state[0..ots_signature.len()].copy_from(ots_signature.as_trits());
+        state[0..ots_signature.size()].copy_from(ots_signature.as_trits());
 
         while tree_index != 0 {
             if tree_index % 2 != 0 {
@@ -238,7 +238,7 @@ where
                 tree_index = (tree_index - 1) / 2;
             }
 
-            state[ots_signature.len() + i * HASH_LENGTH..ots_signature.len() + (i + 1) * HASH_LENGTH]
+            state[ots_signature.size() + i * HASH_LENGTH..ots_signature.size() + (i + 1) * HASH_LENGTH]
                 .copy_from(&self.tree[sibling_index * HASH_LENGTH..(sibling_index + 1) * HASH_LENGTH]);
             i += 1;
         }
@@ -253,8 +253,8 @@ where
 pub struct MssPublicKey<S, K> {
     state: TritBuf<T1B1Buf>,
     depth: u8,
-    _sponge: PhantomData<S>,
-    _key: PhantomData<K>,
+    sponge: PhantomData<S>,
+    key: PhantomData<K>,
 }
 
 impl<S, K> MssPublicKey<S, K>
@@ -323,7 +323,7 @@ where
         Ok(hash == self.state)
     }
 
-    fn len(&self) -> usize {
+    fn size(&self) -> usize {
         self.state.len()
     }
 
@@ -332,8 +332,8 @@ where
             state,
             // TODO OPTION
             depth: 0,
-            _sponge: PhantomData,
-            _key: PhantomData,
+            sponge: PhantomData,
+            key: PhantomData,
         }
     }
 
@@ -346,7 +346,7 @@ where
 pub struct MssSignature<S> {
     state: TritBuf<T1B1Buf>,
     index: u64,
-    _sponge: PhantomData<S>,
+    sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> MssSignature<S> {
@@ -357,9 +357,8 @@ impl<S: Sponge + Default> MssSignature<S> {
     }
 }
 
-// TODO default impl ?
 impl<S: Sponge + Default> Signature for MssSignature<S> {
-    fn len(&self) -> usize {
+    fn size(&self) -> usize {
         self.state.len()
     }
 
@@ -368,7 +367,7 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
             state,
             // TODO OPTION
             index: 0,
-            _sponge: PhantomData,
+            sponge: PhantomData,
         }
     }
 

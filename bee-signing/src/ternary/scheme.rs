@@ -36,7 +36,7 @@ pub trait PrivateKeyGenerator {
     /// use bee_signing::ternary::{
     ///     seed::Seed,
     ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    ///     PrivateKeyGenerator
+    ///     PrivateKeyGenerator,
     /// };
     ///
     /// let seed = Seed::new();
@@ -63,7 +63,7 @@ pub trait PrivateKeyGenerator {
     /// use bee_signing::ternary::{
     ///     seed::Seed,
     ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    ///     PrivateKeyGenerator
+    ///     PrivateKeyGenerator,
     /// };
     ///
     /// let seed = Seed::new();
@@ -151,7 +151,7 @@ pub trait PublicKey {
 
     fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error>;
 
-    fn len(&self) -> usize;
+    fn size(&self) -> usize;
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
@@ -160,7 +160,7 @@ pub trait PublicKey {
 
 /// A ternary signature.
 pub trait Signature {
-    fn len(&self) -> usize;
+    fn size(&self) -> usize;
 
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 

@@ -392,7 +392,7 @@ mod tests {
     fn bundle_builder_signature_check(security: WotsSecurityLevel) -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
-        let seed = Seed::new();
+        let seed = Seed::rand();
         let privkey = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(security)
             .build()
@@ -446,7 +446,7 @@ mod tests {
     fn bundle_builder_different_security_check() -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
-        let seed = Seed::new();
+        let seed = Seed::rand();
         let address_low = Address::from_inner_unchecked(
             WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(WotsSecurityLevel::Low)

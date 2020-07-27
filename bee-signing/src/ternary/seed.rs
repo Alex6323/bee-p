@@ -44,7 +44,7 @@ impl Zeroize for Seed {
 
 impl Seed {
     /// Creates a new `Seed`.
-    pub fn new() -> Self {
+    pub fn rand() -> Self {
         // `ThreadRng` implements `CryptoRng` so it is safe to use in cryptographic contexts.
         // https://rust-random.github.io/rand/rand/trait.CryptoRng.html
         let mut rng = rand::thread_rng();
