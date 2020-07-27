@@ -39,12 +39,12 @@ pub trait PrivateKeyGenerator {
     ///     PrivateKeyGenerator,
     /// };
     ///
-    /// let seed = Seed::new();
+    /// let seed = Seed::rand();
     /// let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
-    /// let private_key = private_key_generator.generate_from_seed(&seed, 0);
+    /// let private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
     /// ```
     fn generate_from_seed(&self, seed: &Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         self.generate_from_entropy(seed.subseed(index).as_trits())
@@ -66,12 +66,12 @@ pub trait PrivateKeyGenerator {
     ///     PrivateKeyGenerator,
     /// };
     ///
-    /// let seed = Seed::new();
+    /// let seed = Seed::rand();
     /// let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
-    /// let private_key = private_key_generator.generate_from_entropy(seed.as_trits());
+    /// let private_key = private_key_generator.generate_from_entropy(seed.as_trits()).unwrap();
     /// ```
     fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error>;
 }
@@ -98,13 +98,13 @@ pub trait PrivateKey: Zeroize + Drop {
     /// };
     /// use bee_signing::ternary::PrivateKey;
     ///
-    /// # let seed = Seed::new();
+    /// # let seed = Seed::rand();
     /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
     /// # let private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
-    /// let public_key = private_key.generate_public_key();
+    /// let public_key = private_key.generate_public_key().unwrap();
     /// ```
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error>;
 
@@ -129,7 +129,7 @@ pub trait PrivateKey: Zeroize + Drop {
     ///     TryteBuf,
     /// };
     ///
-    /// # let seed = Seed::new();
+    /// # let seed = Seed::rand();
     /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
@@ -137,7 +137,7 @@ pub trait PrivateKey: Zeroize + Drop {
     /// # let mut private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
     /// let message = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
     /// let message_trits = TryteBuf::try_from_str(message).unwrap().as_trits().encode::<T1B1Buf>();
-    /// let signature = private_key.sign(&message_trits);
+    /// let signature = private_key.sign(&message_trits).unwrap();
     /// ```
     fn sign(&mut self, message: &Trits<T1B1>) -> Result<Self::Signature, Self::Error>;
 }
@@ -149,21 +149,62 @@ pub trait PublicKey {
     /// Errors occuring while handling public keys.
     type Error;
 
+    /// Verifies a signature for a given message.
+    ///
+    /// # Arguments
+    ///
+    /// * `message`     A slice that holds a message to verify a signature for.
+    /// * `signature`   The signature to verify.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use bee_crypto::ternary::sponge::Kerl;
+    /// # use bee_signing::ternary::{
+    ///     seed::Seed,
+    ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    ///     PrivateKeyGenerator
+    /// };
+    /// # use bee_signing::ternary::PrivateKey;
+    /// use bee_signing::ternary::PublicKey;
+    /// # use bee_ternary::{
+    ///     T1B1Buf,
+    ///     TryteBuf,
+    /// };
+    ///
+    /// # let seed = Seed::rand();
+    /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
+    ///     .security_level(WotsSecurityLevel::Medium)
+    ///     .build()
+    ///     .unwrap();
+    /// # let mut private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
+    /// # let message = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
+    /// # let message_trits = TryteBuf::try_from_str(message).unwrap().as_trits().encode::<T1B1Buf>();
+    /// # let public_key = private_key.generate_public_key().unwrap();
+    /// # let signature = private_key.sign(&message_trits).unwrap();
+    /// let valid = public_key.verify(&message_trits, &signature).unwrap();
+    /// ```
     fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error>;
 
+    /// Returns the size of the public key.
     fn size(&self) -> usize;
 
+    /// Creates a public key from trits.
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
+    /// Interprets the public key as trits.
     fn as_trits(&self) -> &Trits<T1B1>;
 }
 
 /// A ternary signature.
 pub trait Signature {
+    /// Returns the size of the signature.
     fn size(&self) -> usize;
 
+    /// Creates a signature from trits.
     fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
 
+    /// Interprets the signature as trits.
     fn as_trits(&self) -> &Trits<T1B1>;
 }
 
@@ -174,5 +215,38 @@ pub trait RecoverableSignature: Signature {
     /// Errors occuring while handling recoverable signatures.
     type Error;
 
+    /// Recovers a public key from a signature.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` A slice that holds a message to recover the public key from.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use bee_crypto::ternary::sponge::Kerl;
+    /// # use bee_signing::ternary::{
+    ///     seed::Seed,
+    ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    ///     PrivateKeyGenerator
+    /// };
+    /// # use bee_signing::ternary::PrivateKey;
+    /// use bee_signing::ternary::RecoverableSignature;
+    /// # use bee_ternary::{
+    ///     T1B1Buf,
+    ///     TryteBuf,
+    /// };
+    ///
+    /// # let seed = Seed::rand();
+    /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
+    ///     .security_level(WotsSecurityLevel::Medium)
+    ///     .build()
+    ///     .unwrap();
+    /// # let mut private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
+    /// # let message = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
+    /// # let message_trits = TryteBuf::try_from_str(message).unwrap().as_trits().encode::<T1B1Buf>();
+    /// # let signature = private_key.sign(&message_trits).unwrap();
+    /// let public_key = signature.recover_public_key(&message_trits).unwrap();
+    /// ```
     fn recover_public_key(&self, message: &Trits<T1B1>) -> Result<Self::PublicKey, Self::Error>;
 }

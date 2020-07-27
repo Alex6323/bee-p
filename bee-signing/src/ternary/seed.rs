@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+//! Ternary seed to derive private keys, public keys and signatures from.
+
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
