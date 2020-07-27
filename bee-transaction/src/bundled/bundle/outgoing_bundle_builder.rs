@@ -367,7 +367,7 @@ mod tests {
 
     use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_signing::ternary::{seed::Seed, wots::WotsSignature, PublicKey};
+    use bee_signing::ternary::{seed::Seed, wots::WotsSignature, PublicKey, RecoverableSignature};
     use bee_ternary::{T1B1Buf, TritBuf};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
@@ -436,6 +436,7 @@ mod tests {
             offset += PAYLOAD_TRIT_LEN;
         }
         let res = WotsSignature::<Kerl>::from_trits(signature)
+            .unwrap()
             .recover_public_key(&normalize(bundle.0.get(1).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
         assert_eq!(address.to_inner(), res.as_trits());
@@ -504,6 +505,7 @@ mod tests {
 
         // Validate signature
         let res_low = WotsSignature::<Kerl>::from_trits(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
+            .unwrap()
             .recover_public_key(&normalize(bundle.0.get(1).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
         assert_eq!(address_low.to_inner(), res_low.as_trits());
@@ -516,6 +518,7 @@ mod tests {
             offset += PAYLOAD_TRIT_LEN;
         }
         let res_medium = WotsSignature::<Kerl>::from_trits(signature)
+            .unwrap()
             .recover_public_key(&normalize(bundle.0.get(2).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
         assert_eq!(address_medium.to_inner(), res_medium.as_trits());
