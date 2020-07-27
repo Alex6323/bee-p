@@ -18,7 +18,7 @@ use crate::{
 
 use bee_common::shutdown::Shutdown;
 use bee_crypto::ternary::Hash;
-use bee_event::Bus;
+use bee_common_ext::event::Bus;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};

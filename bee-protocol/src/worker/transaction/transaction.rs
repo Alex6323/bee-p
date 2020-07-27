@@ -195,7 +195,7 @@ mod tests {
     use crate::ProtocolConfig;
 
     use bee_common::shutdown::Shutdown;
-    use bee_event::Bus;
+    use bee_common_ext::event::Bus;
     use bee_network::{NetworkConfig, Url};
 
     use async_std::task::{block_on, spawn};

@@ -11,12 +11,6 @@
 
 use crate::Milestone;
 
-use bee_event_derive::Event;
-
-#[derive(Event)]
-#[name = "last_milestone"]
 pub struct LastMilestone(pub Milestone);
 
-#[derive(Event)]
-#[name = "last_solid_milestone"]
 pub struct LastSolidMilestone(pub Milestone);
