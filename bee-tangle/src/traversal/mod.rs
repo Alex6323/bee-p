@@ -11,7 +11,11 @@
 
 //! Collection of Tangle traversal functions.
 
-use crate::{tangle::Tangle, TransactionRef as TxRef};
+use crate::{
+    tangle::Tangle,
+    TransactionRef as TxRef,
+    interner::InternKey,
+};
 
 use bee_crypto::ternary::Hash;
 
@@ -23,13 +27,13 @@ use std::collections::HashSet;
 /// associated data and metadata.
 pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
-    initial: Hash,
+    initial: InternKey<Hash>,
     matches: Match,
     mut apply: Apply,
 ) where
     Metadata: Clone + Copy,
     Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&Hash, &TxRef, &Metadata),
+    Apply: FnMut(InternKey<Hash>, &TxRef, &Metadata),
 {
     // TODO: how much space is reasonable to preallocate?
     let mut parents = vec![initial];
@@ -41,7 +45,7 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
             if !matches(vtx.transaction(), vtx.metadata()) {
                 break;
             } else {
-                apply(&hash, vtx.transaction(), vtx.metadata());
+                apply(*hash, vtx.transaction(), vtx.metadata());
                 parents.push(*vtx.trunk());
             }
         }
@@ -54,13 +58,13 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
 /// associated data and metadata.
 pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
-    initial: Hash,
+    initial: InternKey<Hash>,
     matches: Match,
     mut apply: Apply,
 ) where
     Metadata: Clone + Copy,
     Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&Hash, &TxRef, &Metadata),
+    Apply: FnMut(InternKey<Hash>, &TxRef, &Metadata),
 {
     let mut children = vec![initial];
 
@@ -89,14 +93,14 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     tangle: &'a Tangle<Metadata>,
-    initial: Hash,
+    initial: InternKey<Hash>,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
 ) where
     Metadata: Clone + Copy,
     Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&Hash, &TxRef, &Metadata),
+    Apply: FnMut(InternKey<Hash>, &TxRef, &Metadata),
     ElseApply: FnMut(&Hash),
 {
     let mut parents = Vec::new();
@@ -133,14 +137,14 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     tangle: &'a Tangle<Metadata>,
-    initial: Hash,
+    initial: InternKey<Hash>,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
 ) where
     Metadata: Clone + Copy,
     Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&Hash, &TxRef, &Metadata),
+    Apply: FnMut(InternKey<Hash>, &TxRef, &Metadata),
     ElseApply: FnMut(&Hash),
 {
     let mut children = vec![initial];

@@ -9,7 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{vertex::Vertex, TransactionRef as TxRef};
+use crate::{
+    vertex::Vertex,
+    interner::{InternKey, Interner},
+    TransactionRef as TxRef,
+};
 
 use bee_crypto::ternary::Hash;
 use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
@@ -23,9 +27,11 @@ pub struct Tangle<T>
 where
     T: Clone + Copy,
 {
-    pub(crate) vertices: DashMap<Hash, Vertex<T>>,
-    pub(crate) children: DashMap<Hash, HashSet<Hash>>,
-    pub(crate) tips: DashSet<Hash>,
+    pub(crate) vertices: DashMap<InternKey<Hash>, Vertex<T>>,
+    pub(crate) children: DashMap<InternKey<Hash>, HashSet<InternKey<Hash>>>,
+    pub(crate) tips: DashSet<InternKey<Hash>>,
+
+    pub(crate) hash_interner: Interner<Hash>,
     // TODO: PriorityQueue with customizable priority for implementing cache eviction strategy
 }
 
@@ -38,6 +44,8 @@ where
             vertices: DashMap::new(),
             children: DashMap::new(),
             tips: DashSet::new(),
+
+            hash_interner: Interner::default(),
         }
     }
 }
@@ -56,8 +64,12 @@ where
         match self.vertices.entry(hash) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
-                self.add_child(*transaction.trunk(), hash);
-                self.add_child(*transaction.branch(), hash);
+
+                // Intern hash, fetch a key that uniquely corresponds to this hash
+                let key = self.interner.intern(hash);
+
+                self.add_child(*transaction.trunk(), key);
+                self.add_child(*transaction.branch(), key);
 
                 self.tips.remove(transaction.trunk());
                 self.tips.remove(transaction.branch());
@@ -79,7 +91,7 @@ where
     }
 
     #[inline]
-    fn add_child(&self, parent: Hash, child: Hash) {
+    fn add_child(&self, parent: InternKey<Hash>, child: InternKey<Hash>) {
         match self.children.entry(parent) {
             Entry::Occupied(mut entry) => {
                 let children = entry.get_mut();
@@ -95,34 +107,34 @@ where
     }
 
     /// Get the data of a vertex associated with the given `hash`.
-    pub fn get(&self, hash: &Hash) -> Option<TxRef> {
-        self.vertices.get(hash).map(|vtx| vtx.value().transaction().clone())
+    pub fn get(&self, hash: InternKey<Hash>) -> Option<TxRef> {
+        self.vertices.get(&hash).map(|vtx| vtx.value().transaction().clone())
     }
 
     /// Returns whether the transaction is stored in the Tangle.
-    pub fn contains(&self, hash: &Hash) -> bool {
-        self.vertices.contains_key(hash)
+    pub fn contains(&self, hash: InternKey<Hash>) -> bool {
+        self.vertices.contains_key(&hash)
     }
 
     /// Get the metadata of a vertex associated with the given `hash`.
-    pub fn get_metadata(&self, hash: &Hash) -> Option<T> {
-        self.vertices.get(hash).map(|vtx| *vtx.value().metadata())
+    pub fn get_metadata(&self, hash: InternKey<Hash>) -> Option<T> {
+        self.vertices.get(&hash).map(|vtx| *vtx.value().metadata())
     }
 
     /// Updates the metadata of a particular vertex.
-    pub fn set_metadata(&self, hash: &Hash, metadata: T) {
-        self.vertices.get_mut(hash).map(|mut vtx| {
+    pub fn set_metadata(&self, hash: InternKey<Hash>, metadata: T) {
+        self.vertices.get_mut(&hash).map(|mut vtx| {
             *vtx.value_mut().metadata_mut() = metadata;
         });
     }
 
     /// Updates the metadata of a vertex.
-    pub fn update_metadata<Update>(&self, hash: &Hash, update: Update)
+    pub fn update_metadata<Update>(&self, hash: InternKey<Hash>, update: Update)
     where
         Update: Fn(&mut T),
     {
         self.vertices
-            .get_mut(hash)
+            .get_mut(&hash)
             .map(|mut vtx| update(vtx.value_mut().metadata_mut()));
     }
 
@@ -132,11 +144,11 @@ where
     }
 
     /// Returns the children of a vertex.
-    pub fn get_children(&self, hash: &Hash) -> HashSet<Hash> {
-        let num_children = self.num_children(hash);
+    pub fn get_children(&self, hash: InternKey<Hash>) -> HashSet<Hash> {
+        let num_children = self.num_children(&hash);
         let mut hashes = HashSet::with_capacity(num_children);
 
-        self.children.get(hash).map(|c| {
+        self.children.get(&hash).map(|c| {
             for child in c.value() {
                 hashes.insert(*child);
             }
@@ -151,8 +163,8 @@ where
     }
 
     /// Returns the number of children of a vertex.
-    pub fn num_children(&self, hash: &Hash) -> usize {
-        self.children.get(hash).map_or(0, |r| r.value().len())
+    pub fn num_children(&self, hash: InternKey<Hash>) -> usize {
+        self.children.get(&hash).map_or(0, |r| r.value().len())
     }
 
     #[cfg(test)]

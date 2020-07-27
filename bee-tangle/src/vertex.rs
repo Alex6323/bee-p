@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::TransactionRef as TxRef;
+use crate::{
+    interner::InternKey,
+    TransactionRef as TxRef,
+};
 
 use bee_crypto::ternary::Hash;
 use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
@@ -23,6 +26,9 @@ where
 {
     transaction: TxRef,
     metadata: T,
+
+    interned_trunk: Option<InternKey<Hash>>,
+    interned_branch: Option<InternKey<Hash>>,
 }
 
 impl<T> Vertex<T>
@@ -33,10 +39,13 @@ where
         Self {
             transaction: TxRef(Arc::new(transaction)),
             metadata,
+
+            interned_trunk: None,
+            interned_branch: None,
         }
     }
 
-    pub fn trunk(&self) -> &Hash {
+    pub fn trunk(&self) -> HashKey<'a> {
         self.transaction.trunk()
     }
 

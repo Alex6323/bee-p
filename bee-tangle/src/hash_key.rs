@@ -9,33 +9,22 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A crate that contains foundational building blocks for the IOTA Tangle.
+use crate::interner::InternKey;
 
-#![warn(missing_docs)]
+#[derive(Copy, Clone, Debug)]
+pub enum HashKey<'a> {
+    Interned(InternKey<Hash>),
+    Hash(&'a Hash),
+}
 
-pub use tangle::Tangle;
+impl<'a> From<InternKey<Hash>> for HashKey<'a> {
+    fn from(key: InternKey<Hash>) -> HashKey<'a> {
+        HashKey::Interned(key)
+    }
+}
 
-pub mod traversal;
-
-mod tangle;
-mod vertex;
-mod interner;
-mod hash_key;
-
-use bee_transaction::bundled::BundledTransaction as Transaction;
-
-use async_std::sync::Arc;
-
-use std::ops::Deref;
-
-/// A thread-safe reference to a `bee_transaction:BundledTransaction`.
-#[derive(Clone)]
-pub struct TransactionRef(pub(crate) Arc<Transaction>);
-
-impl Deref for TransactionRef {
-    type Target = Transaction;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.0
+impl<'a> From<&'a Hash> for HashKey<'a> {
+    fn from(hash: &'a Hash) -> HashKey<'a> {
+        HashKey::Hash(hash)
     }
 }
