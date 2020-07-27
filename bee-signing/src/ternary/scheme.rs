@@ -190,7 +190,9 @@ pub trait PublicKey {
     fn size(&self) -> usize;
 
     /// Creates a public key from trits.
-    fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
+    fn from_trits(buf: TritBuf<T1B1Buf>) -> Result<Self, Self::Error>
+    where
+        Self: std::marker::Sized;
 
     /// Interprets the public key as trits.
     fn as_trits(&self) -> &Trits<T1B1>;
@@ -198,11 +200,16 @@ pub trait PublicKey {
 
 /// A ternary signature.
 pub trait Signature {
+    /// Errors occuring while handling public keys.
+    type Error;
+
     /// Returns the size of the signature.
     fn size(&self) -> usize;
 
     /// Creates a signature from trits.
-    fn from_trits(buf: TritBuf<T1B1Buf>) -> Self;
+    fn from_trits(buf: TritBuf<T1B1Buf>) -> Result<Self, Self::Error>
+    where
+        Self: std::marker::Sized;
 
     /// Interprets the signature as trits.
     fn as_trits(&self) -> &Trits<T1B1>;
@@ -248,5 +255,8 @@ pub trait RecoverableSignature: Signature {
     /// # let signature = private_key.sign(&message_trits).unwrap();
     /// let public_key = signature.recover_public_key(&message_trits).unwrap();
     /// ```
-    fn recover_public_key(&self, message: &Trits<T1B1>) -> Result<Self::PublicKey, Self::Error>;
+    fn recover_public_key(
+        &self,
+        message: &Trits<T1B1>,
+    ) -> Result<Self::PublicKey, <Self as RecoverableSignature>::Error>;
 }

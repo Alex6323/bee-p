@@ -74,8 +74,10 @@ where
         .as_trits()
         .encode::<T1B1Buf>();
 
-    let public_key = MssPublicKey::<S, WotsPublicKey<S>>::from_trits(public_key_trits).depth(depth);
-    let signature = MssSignature::<S>::from_trits(signature_trits).index(index);
+    let public_key = MssPublicKey::<S, WotsPublicKey<S>>::from_trits(public_key_trits)
+        .unwrap()
+        .depth(depth);
+    let signature = MssSignature::<S>::from_trits(signature_trits).unwrap().index(index);
     let valid = public_key.verify(&message_trits, &signature).unwrap();
 
     assert!(valid);

@@ -11,8 +11,8 @@
 
 use bee_crypto::ternary::sponge::Kerl;
 use bee_signing::ternary::{
-    wots::{Error as WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature,
+    wots::{Error as WotsError, WotsPublicKey, WotsSecurityLevel, WotsSignature, WotsSpongePrivateKeyGeneratorBuilder},
+    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature,
 };
 use bee_ternary::{T1B1Buf, TryteBuf};
 
@@ -75,6 +75,32 @@ fn invalid_message_length() {
 
     match public_key.verify(&message, &signature) {
         Err(WotsError::InvalidMessageLength(len)) => assert_eq!(len, message.len()),
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn invalid_public_key_length() {
+    let entropy = TryteBuf::try_from_str("YSWMNXPYNGFAKHQDY9ABGGQZHEFTXKWKWZXEIUD")
+        .unwrap()
+        .as_trits()
+        .encode::<T1B1Buf>();
+
+    match WotsPublicKey::<Kerl>::from_trits(entropy.clone()) {
+        Err(WotsError::InvalidPublicKeyLength(len)) => assert_eq!(len, entropy.len()),
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn invalid_signature_length() {
+    let entropy = TryteBuf::try_from_str("YSWMNXPYNGFAKHQDY9ABGGQZHEFTXKWKWZXEIUD")
+        .unwrap()
+        .as_trits()
+        .encode::<T1B1Buf>();
+
+    match WotsSignature::<Kerl>::from_trits(entropy.clone()) {
+        Err(WotsError::InvalidSignatureLength(len)) => assert_eq!(len, entropy.len()),
         _ => unreachable!(),
     }
 }

@@ -50,6 +50,12 @@ pub enum Error {
     /// Invalid message length.
     #[error("Invalid message length, should be 243 trits.")]
     InvalidMessageLength(usize),
+    /// Invalid public key length.
+    #[error("Invalid public key length, should be 243 trits.")]
+    InvalidPublicKeyLength(usize),
+    /// Invalid signature length.
+    #[error("Invalid signature length, should be 243 trits.")]
+    InvalidSignatureLength(usize),
 }
 
 /// Available WOTS security levels.
@@ -179,11 +185,15 @@ impl<S: Sponge + Default> PublicKey for WotsPublicKey<S> {
         self.state.len()
     }
 
-    fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
-        Self {
+    fn from_trits(state: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
+        if state.len() != HASH_LENGTH {
+            return Err(Error::InvalidPublicKeyLength(state.len()));
+        }
+
+        Ok(Self {
             state,
             sponge: PhantomData,
-        }
+        })
     }
 
     fn as_trits(&self) -> &Trits<T1B1> {
@@ -204,15 +214,21 @@ pub struct WotsSignature<S> {
 }
 
 impl<S: Sponge + Default> Signature for WotsSignature<S> {
+    type Error = Error;
+
     fn size(&self) -> usize {
         self.state.len()
     }
 
-    fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
-        Self {
+    fn from_trits(state: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
+        if state.len() % SIGNATURE_FRAGMENT_LENGTH != 0 {
+            return Err(Error::InvalidSignatureLength(state.len()));
+        }
+
+        Ok(Self {
             state,
             sponge: PhantomData,
-        }
+        })
     }
 
     fn as_trits(&self) -> &Trits<T1B1> {
@@ -224,7 +240,10 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
     type PublicKey = WotsPublicKey<S>;
     type Error = Error;
 
-    fn recover_public_key(&self, message: &Trits<T1B1>) -> Result<Self::PublicKey, Self::Error> {
+    fn recover_public_key(
+        &self,
+        message: &Trits<T1B1>,
+    ) -> Result<Self::PublicKey, <Self as RecoverableSignature>::Error> {
         if message.len() != HASH_LENGTH {
             return Err(Error::InvalidMessageLength(message.len()));
         }
@@ -241,10 +260,12 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
 
             // Hash each chunk of the signature an amount of times given by the corresponding byte of the message.
             for _ in 0..(val - Tryte::MIN_VALUE as i8) {
-                sponge.absorb(chunk).map_err(|_| Self::Error::FailedSpongeOperation)?;
+                sponge
+                    .absorb(chunk)
+                    .map_err(|_| <Self as RecoverableSignature>::Error::FailedSpongeOperation)?;
                 sponge
                     .squeeze_into(chunk)
-                    .map_err(|_| Self::Error::FailedSpongeOperation)?;
+                    .map_err(|_| <Self as RecoverableSignature>::Error::FailedSpongeOperation)?;
                 sponge.reset();
             }
         }
@@ -253,13 +274,13 @@ impl<S: Sponge + Default> RecoverableSignature for WotsSignature<S> {
         for (i, chunk) in hashed_signature.chunks(SIGNATURE_FRAGMENT_LENGTH).enumerate() {
             sponge
                 .digest_into(chunk, &mut digests[i * HASH_LENGTH..(i + 1) * HASH_LENGTH])
-                .map_err(|_| Self::Error::FailedSpongeOperation)?;
+                .map_err(|_| <Self as RecoverableSignature>::Error::FailedSpongeOperation)?;
         }
 
         // Hash the digests together to recover the public key.
         sponge
             .digest_into(&digests, &mut public_key_state)
-            .map_err(|_| Self::Error::FailedSpongeOperation)?;
+            .map_err(|_| <Self as RecoverableSignature>::Error::FailedSpongeOperation)?;
 
         Ok(Self::PublicKey {
             state: public_key_state,

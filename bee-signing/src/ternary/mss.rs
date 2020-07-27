@@ -212,7 +212,9 @@ where
 
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
         // TODO return or generate ?
-        Ok(Self::PublicKey::from_trits(self.tree[0..HASH_LENGTH].to_buf()).depth(self.depth))
+        Ok(Self::PublicKey::from_trits(self.tree[0..HASH_LENGTH].to_buf())
+            .unwrap()
+            .depth(self.depth))
     }
 
     fn sign(&mut self, message: &Trits<T1B1>) -> Result<Self::Signature, Self::Error> {
@@ -245,7 +247,7 @@ where
 
         self.index += 1;
 
-        Ok(Self::Signature::from_trits(state).index(self.index - 1))
+        Ok(Self::Signature::from_trits(state).unwrap().index(self.index - 1))
     }
 }
 
@@ -280,10 +282,13 @@ where
 
     fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error> {
         let mut sponge = S::default();
-        let ots_signature = K::Signature::from_trits(
+        let ots_signature = match K::Signature::from_trits(
             signature.state[0..((signature.state.len() / SIGNATURE_FRAGMENT_LENGTH) - 1) * SIGNATURE_FRAGMENT_LENGTH]
                 .to_buf(),
-        );
+        ) {
+            Ok(sig) => sig,
+            Err(_) => unreachable!(),
+        };
         let siblings: TritBuf<T1B1Buf> = signature
             .state
             .chunks(SIGNATURE_FRAGMENT_LENGTH)
@@ -327,14 +332,14 @@ where
         self.state.len()
     }
 
-    fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
-        Self {
+    fn from_trits(state: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
+        Ok(Self {
             state,
             // TODO OPTION
             depth: 0,
             sponge: PhantomData,
             key: PhantomData,
-        }
+        })
     }
 
     fn as_trits(&self) -> &Trits<T1B1> {
@@ -358,17 +363,19 @@ impl<S: Sponge + Default> MssSignature<S> {
 }
 
 impl<S: Sponge + Default> Signature for MssSignature<S> {
+    type Error = Error;
+
     fn size(&self) -> usize {
         self.state.len()
     }
 
-    fn from_trits(state: TritBuf<T1B1Buf>) -> Self {
-        Self {
+    fn from_trits(state: TritBuf<T1B1Buf>) -> Result<Self, Error> {
+        Ok(Self {
             state,
             // TODO OPTION
             index: 0,
             sponge: PhantomData,
-        }
+        })
     }
 
     fn as_trits(&self) -> &Trits<T1B1> {
