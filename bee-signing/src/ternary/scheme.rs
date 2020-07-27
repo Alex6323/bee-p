@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::ternary::Seed;
+use crate::ternary::seed::Seed;
 
 use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
@@ -17,8 +17,6 @@ use zeroize::Zeroize;
 
 /// Generates a ternary private key.
 pub trait PrivateKeyGenerator {
-    /// Required input seed type.
-    type Seed: Seed;
     /// Generated private keys type.
     type PrivateKey: PrivateKey;
     /// Errors occuring while generating private keys.
@@ -36,18 +34,19 @@ pub trait PrivateKeyGenerator {
     /// ```
     /// use bee_crypto::ternary::sponge::Kerl;
     /// use bee_signing::ternary::{
+    ///     seed::Seed,
     ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    ///     PrivateKeyGenerator, Seed, TernarySeed,
+    ///     PrivateKeyGenerator
     /// };
     ///
-    /// let seed = TernarySeed::<Kerl>::new();
+    /// let seed = Seed::new();
     /// let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
     ///     .unwrap();
     /// let private_key = private_key_generator.generate_from_seed(&seed, 0);
     /// ```
-    fn generate_from_seed(&self, seed: &Self::Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
+    fn generate_from_seed(&self, seed: &Seed, index: u64) -> Result<Self::PrivateKey, Self::Error> {
         self.generate_from_entropy(seed.subseed(index).as_trits())
     }
 
@@ -62,11 +61,12 @@ pub trait PrivateKeyGenerator {
     /// ```
     /// use bee_crypto::ternary::sponge::Kerl;
     /// use bee_signing::ternary::{
+    ///     seed::Seed,
     ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    ///     PrivateKeyGenerator, Seed, TernarySeed,
+    ///     PrivateKeyGenerator
     /// };
     ///
-    /// let seed = TernarySeed::<Kerl>::new();
+    /// let seed = Seed::new();
     /// let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
@@ -92,12 +92,13 @@ pub trait PrivateKey: Zeroize + Drop {
     /// ```
     /// # use bee_crypto::ternary::sponge::Kerl;
     /// # use bee_signing::ternary::{
+    ///     seed::Seed,
     ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    ///     PrivateKeyGenerator, Seed, TernarySeed,
+    ///     PrivateKeyGenerator
     /// };
     /// use bee_signing::ternary::PrivateKey;
     ///
-    /// # let seed = TernarySeed::<Kerl>::new();
+    /// # let seed = Seed::new();
     /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()
@@ -118,8 +119,9 @@ pub trait PrivateKey: Zeroize + Drop {
     /// ```
     /// # use bee_crypto::ternary::sponge::Kerl;
     /// # use bee_signing::ternary::{
+    ///     seed::Seed,
     ///     wots::{WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    ///     PrivateKeyGenerator, Seed, TernarySeed,
+    ///     PrivateKeyGenerator
     /// };
     /// use bee_signing::ternary::PrivateKey;
     /// use bee_ternary::{
@@ -127,7 +129,7 @@ pub trait PrivateKey: Zeroize + Drop {
     ///     TryteBuf,
     /// };
     ///
-    /// # let seed = TernarySeed::<Kerl>::new();
+    /// # let seed = Seed::new();
     /// # let private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
     ///     .security_level(WotsSecurityLevel::Medium)
     ///     .build()

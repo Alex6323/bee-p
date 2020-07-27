@@ -12,8 +12,9 @@
 use bee_crypto::ternary::sponge::{CurlP27, CurlP81, Kerl, Sponge};
 use bee_signing::ternary::{
     mss::{Error as MssError, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature},
+    seed::Seed,
     wots::{WotsPublicKey, WotsSecurityLevel, WotsSpongePrivateKeyGenerator, WotsSpongePrivateKeyGeneratorBuilder},
-    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature,
+    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature,
 };
 use bee_ternary::{T1B1Buf, TryteBuf};
 
@@ -129,14 +130,13 @@ where
     S: Sponge + Default,
     G: PrivateKeyGenerator,
     <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature: RecoverableSignature,
-    <<G as PrivateKeyGenerator>::Seed as Seed>::Error: std::fmt::Debug,
 {
     const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
     const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
     const DEPTH: u8 = 4;
 
     let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
-    let seed = G::Seed::from_trits(seed_trits).unwrap();
+    let seed = Seed::from_trits(seed_trits).unwrap();
     let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
 
     // todo try with not recover

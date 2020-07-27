@@ -12,7 +12,7 @@
 //! Merkle Signature Scheme.
 
 use crate::ternary::{
-    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, Signature, SIGNATURE_FRAGMENT_LENGTH,
+    seed::Seed, PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature, SIGNATURE_FRAGMENT_LENGTH,
 };
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
@@ -126,12 +126,11 @@ where
     G: PrivateKeyGenerator,
     <<<G as PrivateKeyGenerator>::PrivateKey as PrivateKey>::PublicKey as PublicKey>::Signature: RecoverableSignature,
 {
-    type Seed = G::Seed;
     type PrivateKey = MssPrivateKey<S, G::PrivateKey>;
     type Error = Error;
 
     fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error> {
-        let seed = Self::Seed::from_trits(entropy.to_buf()).map_err(|_| Error::FailedSeed)?;
+        let seed = Seed::from_trits(entropy.to_buf()).map_err(|_| Error::FailedSeed)?;
         let mut sponge = S::default();
         let mut keys = Vec::new();
         let mut tree = TritBuf::<T1B1Buf>::zeros(((1 << self.depth) - 1) * HASH_LENGTH);

@@ -20,8 +20,9 @@ use bee_crypto::ternary::{
     Hash,
 };
 use bee_signing::ternary::{
+    seed::Seed,
     wots::{normalize, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    PrivateKey, PrivateKeyGenerator, Signature, TernarySeed,
+    PrivateKey, PrivateKeyGenerator, Signature,
 };
 use bee_ternary::Btrit;
 
@@ -260,7 +261,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     // We probably want to check it is the right input for the address.
     pub fn sign(
         mut self,
-        seed: &TernarySeed<Kerl>,
+        seed: &Seed,
         inputs: &[(u64, Address, WotsSecurityLevel)],
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
         // Safe to unwrap `get` because bundle is sealed.
@@ -366,7 +367,7 @@ mod tests {
 
     use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_signing::ternary::{wots::WotsSignature, PublicKey, RecoverableSignature, Seed};
+    use bee_signing::ternary::{seed::Seed, wots::WotsSignature, PublicKey, RecoverableSignature};
     use bee_ternary::{T1B1Buf, TritBuf};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
@@ -391,7 +392,7 @@ mod tests {
     fn bundle_builder_signature_check(security: WotsSecurityLevel) -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
-        let seed = TernarySeed::<Kerl>::new();
+        let seed = Seed::new();
         let privkey = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(security)
             .build()
@@ -445,7 +446,7 @@ mod tests {
     fn bundle_builder_different_security_check() -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
-        let seed = TernarySeed::<Kerl>::new();
+        let seed = Seed::new();
         let address_low = Address::from_inner_unchecked(
             WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(WotsSecurityLevel::Low)

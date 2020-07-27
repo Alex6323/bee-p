@@ -13,11 +13,10 @@
 
 mod constants;
 mod scheme;
-mod seed;
 
 pub mod mss;
+pub mod seed;
 pub mod wots;
 
 pub use constants::SIGNATURE_FRAGMENT_LENGTH;
 pub use scheme::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature};
-pub use seed::{Error as TernarySeedError, Seed, TernarySeed};

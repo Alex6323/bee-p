@@ -10,34 +10,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
-use bee_crypto::ternary::{sponge::Sponge, HASH_LENGTH};
+use bee_crypto::ternary::{
+    sponge::{Kerl, Sponge},
+    HASH_LENGTH,
+};
 use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, T1B1};
 
 use rand::Rng;
 use thiserror::Error;
 use zeroize::Zeroize;
-
-use std::marker::PhantomData;
-
-/// Ternary `Seed` to derive private keys, public keys and signatures from.
-pub trait Seed: Zeroize + Drop {
-    /// Associated error type.
-    type Error;
-
-    /// Creates a new `Seed`.
-    fn new() -> Self;
-
-    /// Creates a new `Seed` from the current `Seed` and an index.
-    fn subseed(&self, index: u64) -> Self;
-
-    /// Creates a `Seed` from trits.
-    fn from_trits(buf: TritBuf<T1B1Buf>) -> Result<Self, Self::Error>
-    where
-        Self: Sized;
-
-    /// Returns the inner trits.
-    fn as_trits(&self) -> &Trits<T1B1>;
-}
 
 /// Errors occuring when handling a `Seed`.
 #[derive(Debug, Error, PartialEq)]
@@ -50,24 +31,20 @@ pub enum Error {
     FailedSpongeOperation,
 }
 
-/// Ternary `Sponge`-based `Seed` to derive private keys, public keys and signatures from.
+/// Ternary `Kerl`-based `Seed` to derive private keys, public keys and signatures from.
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]
-pub struct TernarySeed<S> {
-    seed: TritBuf<T1B1Buf>,
-    _sponge: PhantomData<S>,
-}
+pub struct Seed(TritBuf<T1B1Buf>);
 
-impl<S> Zeroize for TernarySeed<S> {
+impl Zeroize for Seed {
     fn zeroize(&mut self) {
         // This unsafe is fine since we only reset the whole buffer with zeros, there is no alignement issues.
-        unsafe { self.seed.as_i8_slice_mut().zeroize() }
+        unsafe { self.0.as_i8_slice_mut().zeroize() }
     }
 }
 
-impl<S: Sponge + Default> Seed for TernarySeed<S> {
-    type Error = Error;
-
-    fn new() -> Self {
+impl Seed {
+    /// Creates a new `Seed`.
+    pub fn new() -> Self {
         // `ThreadRng` implements `CryptoRng` so it is safe to use in cryptographic contexts.
         // https://rust-random.github.io/rand/rand/trait.CryptoRng.html
         let mut rng = rand::thread_rng();
@@ -75,15 +52,13 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
         let trits = [-1, 0, 1];
         let seed: Vec<i8> = (0..HASH_LENGTH).map(|_| trits[rng.gen_range(0, trits.len())]).collect();
 
-        Self {
-            seed: unsafe { Trits::<T1B1>::from_raw_unchecked(&seed, HASH_LENGTH).to_buf() },
-            _sponge: PhantomData,
-        }
+        Self(unsafe { Trits::<T1B1>::from_raw_unchecked(&seed, HASH_LENGTH).to_buf() })
     }
 
-    fn subseed(&self, index: u64) -> Self {
-        let mut sponge = S::default();
-        let mut subseed = self.seed.clone();
+    /// Creates a new `Seed` from the current `Seed` and an index.
+    pub fn subseed(&self, index: u64) -> Self {
+        let mut sponge = Kerl::default();
+        let mut subseed = self.0.clone();
 
         for _ in 0..index {
             for t in subseed.iter_mut() {
@@ -102,24 +77,20 @@ impl<S: Sponge + Default> Seed for TernarySeed<S> {
             Err(_) => unreachable!(),
         };
 
-        Self {
-            seed: tmp,
-            _sponge: PhantomData,
-        }
+        Self(tmp)
     }
 
-    fn from_trits(buf: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
+    /// Creates a `Seed` from trits.
+    pub fn from_trits(buf: TritBuf<T1B1Buf>) -> Result<Self, Error> {
         if buf.len() != HASH_LENGTH {
-            return Err(Self::Error::InvalidLength(buf.len()));
+            return Err(Error::InvalidLength(buf.len()));
         }
 
-        Ok(Self {
-            seed: buf,
-            _sponge: PhantomData,
-        })
+        Ok(Self(buf))
     }
 
-    fn as_trits(&self) -> &Trits<T1B1> {
-        &self.seed
+    /// Returns the inner trits.
+    pub fn as_trits(&self) -> &Trits<T1B1> {
+        &self.0
     }
 }

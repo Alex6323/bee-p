@@ -9,8 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::sponge::{CurlP27, CurlP81, Kerl, Sponge};
-use bee_signing::ternary::{Seed, TernarySeed, TernarySeedError};
+use bee_crypto::ternary::sponge::{Kerl, Sponge};
+use bee_signing::ternary::seed::{Error, Seed};
 use bee_ternary::{Btrit, T1B1Buf, TritBuf, TryteBuf};
 
 const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
@@ -18,7 +18,7 @@ const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9A
 #[test]
 fn new() {
     for _ in 0..10 {
-        let iota_seed = TernarySeed::<CurlP27>::new();
+        let iota_seed = Seed::new();
         for byte in iota_seed.as_trits().iter() {
             assert!(byte == Btrit::NegOne || byte == Btrit::Zero || byte == Btrit::PlusOne);
         }
@@ -30,7 +30,7 @@ fn subseed_generic<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_str
         .unwrap()
         .as_trits()
         .encode::<T1B1Buf>();
-    let iota_seed = TernarySeed::<S>::from_trits(iota_seed_trits).unwrap();
+    let iota_seed = Seed::from_trits(iota_seed_trits).unwrap();
 
     for (i, iota_subseed_string) in iota_subseed_strings.iter().enumerate() {
         let iota_subseed = iota_seed.subseed(i as u64);
@@ -63,49 +63,11 @@ fn subseed_kerl() {
 }
 
 #[test]
-fn subseed_curl27() {
-    subseed_generic::<CurlP27>(
-        IOTA_SEED,
-        &[
-            "ITTFAEIWTRSFQGZGLGUMLUTHFXYSCLXTFYMGVTTDSNNWFUCKBRPSOBERNLXIYCNCEBKUV9QIXI9BDCKSM",
-            "W9YWLOQQJMENWCDBLBKYBNJJDGFKFBGYEBSIBPKUAGNIV9TJWRRAQPAEKBLIYVLGHPIIDYQYP9QNSPFTY",
-            "X9WMLHFSJYEWNLVSGTVGWMAPNUSFMXQPTMCPUML9RCMAJQVUYMTJJHKT9HO9NSNGAEMKGDBHE9KZNMBPZ",
-            "YNTUYQNJWJPK99YE9NOMGNKF9YRBJX9EH9UZWLMISXQRQLLZRKHFOPTW9PIERIPXK9ZDUPLSLZOEFUWXF",
-            "URBRFVWBAGHM9WTWSZZLRBMNGMNNRJRBGBLDEBBSZTGMWELW9JHXFSFNLRKPI9MLYELEZEDYIPKGE9CRO",
-            "XMGTGBZBINHC9ZPKRBHZFLUP9CEWULNCMVUAVVUXRDHU9OILDOORKPLRIWZQDNRFGSWMJAVYZWGDXMZNW",
-            "KFEGWPGWLAHWQXGCHKHDDVAZEISLYMGQLRRZBCJWXWKK9JIJKHXRDV9NMYIFTAGKXU9GLACAQUCXBLMH9",
-            "BMUAOOZBHPUOVHRWPX9KWUCZSXWXWPMKOMGNAZOXLDMAHBBVMDLXQ9IVPOPIOFPWHZSMRKBOBLCUEVUXX",
-            "GLVXLLOFYERJWBECYRXVPCFXK9GUDCHBEZYMTPMUDOYEQCIAPCAACKSOL9ADEGSTBQRIBJIWTCJYVUIRW",
-            "FOPHLVKCYHZLLCCOUWBPMQQAWHVRBGJBKQGPQXOTOEWTOCVZQCJXDCBLG9SEZBUVYPIIRTTP9CJPXWKKW",
-        ],
-    );
-}
-
-#[test]
-fn subseed_curl81() {
-    subseed_generic::<CurlP81>(
-        IOTA_SEED,
-        &[
-            "PKKJZREHPYHNIBWAPYEXHXEAFZCI99UWZNKBOCCECFTDUXG9YGYDAGRLUBJVKMYNWPRCPYENACHOYSHJO",
-            "EM9CGOOPJNDODXNHATOQTKLPV9SCMMDHMZIBQUZJCUBCPVAGP9AIEAKYAXOYTEUXRKZACVXRHGWNW9TNC",
-            "RRJNNVVOJEGYSXWUDUBVZSYSSWXLIAYUPIEAFSWUDDDEFCTRBBTMODUSXASEONBJOAREKLARUOUDHWKZF",
-            "XNW9XBGHM9ZVPSV9BXMFRB9MKODAXKEPPSTGX9PFEDNTVZPJUQGGQ9JCOZRMABQQNQBAURFKVJUZTYUQV",
-            "MMJRVEANOJUYWEGF9NNJUJVVZTGXKRWGXGVXRNRNDHPNMWVDGRHRH9FGODYVYWSVABUYZEVCJXUZZLYQB",
-            "PCOAKZFKIWGDTTQSBWZABUCIIEFADQQFHCJYTOFVEURSEQZHQCORMMBDKVRGNATYINDDWMGZBUGKLUZOR",
-            "CMDZYS9GCHCFFOHPMIPDKRASMFSUXJPDWUWYNMHLHBXUPUPPLEKCSBWSKUG9TKTCRXHJHIA9BVWKAGEHG",
-            "TAIMONWQMIXTMCGYMBGIDOZF9FOUPBIEIYYPQZYNMORHGNNLAPWCSMAKVLREZLGDS9XGTXNYYYQYUWRPM",
-            "VTKERDSFSJGLZF9UJHXJKFXIXFYSPNVSBHBMAZXXCJCBJHLDEEDMNPBRFJ9PCLNNSZYFLMRJQAYRMHVWL",
-            "YVGEVYOLICOIDRYBHP99JQZZJKVYZDPHFCQKJAN9BCEZCMWIEUJIRZWNAZNUMNDMT9JUCDGBSGXDUYQJC",
-        ],
-    );
-}
-
-#[test]
 fn iota_seed_from_bytes_invalid_length() {
     let buf = TritBuf::zeros(42);
 
-    match TernarySeed::<CurlP27>::from_trits(buf) {
-        Err(TernarySeedError::InvalidLength(len)) => assert_eq!(len, 42),
+    match Seed::from_trits(buf) {
+        Err(Error::InvalidLength(len)) => assert_eq!(len, 42),
         _ => unreachable!(),
     }
 }
@@ -113,8 +75,8 @@ fn iota_seed_from_bytes_invalid_length() {
 #[test]
 fn iota_seed_to_bytes_from_bytes() {
     for _ in 0..10 {
-        let iota_seed_1 = TernarySeed::<CurlP27>::new();
-        let iota_seed_2 = TernarySeed::<CurlP27>::from_trits(iota_seed_1.as_trits().to_buf()).unwrap();
+        let iota_seed_1 = Seed::new();
+        let iota_seed_2 = Seed::from_trits(iota_seed_1.as_trits().to_buf()).unwrap();
 
         assert_eq!(iota_seed_1.as_trits(), iota_seed_2.as_trits());
     }

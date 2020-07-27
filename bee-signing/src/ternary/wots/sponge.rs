@@ -11,7 +11,7 @@
 
 use crate::ternary::{
     wots::{Error as WotsError, WotsPrivateKey, WotsSecurityLevel},
-    PrivateKeyGenerator, TernarySeed, SIGNATURE_FRAGMENT_LENGTH,
+    PrivateKeyGenerator, SIGNATURE_FRAGMENT_LENGTH,
 };
 
 use bee_crypto::ternary::{sponge::Sponge, HASH_LENGTH};
@@ -49,7 +49,6 @@ pub struct WotsSpongePrivateKeyGenerator<S> {
 }
 
 impl<S: Sponge + Default> PrivateKeyGenerator for WotsSpongePrivateKeyGenerator<S> {
-    type Seed = TernarySeed<S>;
     type PrivateKey = WotsPrivateKey<S>;
     type Error = WotsError;
 

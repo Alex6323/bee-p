@@ -11,8 +11,9 @@
 
 use bee_crypto::ternary::sponge::{CurlP27, CurlP81, Kerl, Sponge};
 use bee_signing::ternary::{
+    seed::Seed,
     wots::{Error as WotsError, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Seed, TernarySeed,
+    PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature,
 };
 use bee_ternary::{T1B1Buf, TryteBuf};
 
@@ -22,7 +23,7 @@ const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYI
 fn sponge_roundtrip<S: Sponge + Default>() {
     let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
     let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
-    let seed = TernarySeed::<S>::from_trits(seed_trits).unwrap();
+    let seed = Seed::from_trits(seed_trits).unwrap();
     let security_levels = vec![
         WotsSecurityLevel::Low,
         WotsSecurityLevel::Medium,
