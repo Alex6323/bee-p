@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::message::Header;
+use crate::message::{HEADER_SIZE, Header};
 
 use bee_network::Address;
 
@@ -63,8 +63,8 @@ impl MessageHandler {
             match &self.state {
                 // Read a header.
                 ReadState::Header => {
-                    // We need 3 bytes to read a header.
-                    let bytes = self.events.fetch_bytes(3).await?;
+                    // We need `HEADER_SIZE` bytes to read a header.
+                    let bytes = self.events.fetch_bytes(HEADER_SIZE).await?;
                     debug!("[{}] Reading Header...", self.address);
                     let header = Header::from_bytes(bytes);
                     // Now we are ready to read a payload.
