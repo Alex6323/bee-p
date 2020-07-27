@@ -35,7 +35,7 @@ enum ReadState {
     Payload(Header),
 }
 
-/// A message handler
+/// A message handler.
 ///
 /// It takes care of processing events into messages that can be processed by the workers.
 pub(super) struct MessageHandler {
@@ -82,10 +82,6 @@ impl MessageHandler {
                 }
             }
         }
-    }
-    // Helper method to recover the event and shutdown receivers.
-    pub(super) fn consume(self) -> (EventRecv, ShutdownRecv) {
-        (self.events.receiver, self.events.shutdown)
     }
 }
 

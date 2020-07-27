@@ -21,11 +21,7 @@ use crate::{
     },
 };
 
-use futures::{
-    channel::{mpsc, oneshot},
-    sink::SinkExt,
-};
-use futures_util::{future, stream};
+use futures::{channel::mpsc, sink::SinkExt};
 use log::{debug, error, info, warn};
 
 use std::sync::Arc;
@@ -52,14 +48,8 @@ impl PeerWorker {
         }
     }
 
-    pub async fn run(
-        mut self,
-        receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
-        shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
-    ) {
+    pub(super) async fn run(mut self, mut message_handler: MessageHandler) {
         info!("[{}] Running.", self.peer.address);
-
-        let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address);
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
             if let Err(e) = self.process_message(&header, bytes).await {
