@@ -86,8 +86,14 @@ where
     fn validate_signatures(&self) -> Result<(), IncomingBundleBuilderError> {
         // TODO no bundle should be considered valid if it contains more than MaxSecLevel transactions belonging to the
         // input address with a value != 0 (actually < 0) TODO get real values
-        let public_key = P::from_trits(TritBuf::new());
-        let signature = P::Signature::from_trits(TritBuf::new());
+        let public_key = match P::from_trits(TritBuf::new()) {
+            Ok(pk) => pk,
+            Err(_) => unreachable!(),
+        };
+        let signature = match P::Signature::from_trits(TritBuf::new()) {
+            Ok(sig) => sig,
+            Err(_) => unreachable!(),
+        };
 
         // TODO Temporary buffer
         match public_key.verify(&TritBuf::<T1B1Buf>::zeros(1), &signature) {

@@ -103,9 +103,16 @@ where
         // Safe to unwrap `transactions.get(0)` since we're sure it's not empty
         // Safe to unwrap `self.depth` since we're sure it's not None
         let public_key: MssPublicKey<M, P> =
-            MssPublicKey::<M, P>::from_trits(self.transactions.get(0).unwrap().address().to_inner().to_buf())
-                .depth(self.depth.unwrap());
-        let signature: MssSignature<M> = MssSignature::<M>::from_trits(signature_buf).index(*self.index as u64);
+            match MssPublicKey::<M, P>::from_trits(self.transactions.get(0).unwrap().address().to_inner().to_buf()) {
+                Ok(pk) => pk,
+                Err(_) => unreachable!(),
+            }
+            .depth(self.depth.unwrap());
+        let signature: MssSignature<M> = match MssSignature::<M>::from_trits(signature_buf) {
+            Ok(sig) => sig,
+            Err(_) => unreachable!(),
+        }
+        .index(*self.index as u64);
         let hash = self
             .transactions
             .get(self.transactions.len() - 2)

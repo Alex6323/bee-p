@@ -48,21 +48,23 @@ impl Zeroize for Seed {
 }
 
 impl Seed {
-    /// Creates a new `Seed`.
+    /// Creates a new random `Seed`.
     pub fn rand() -> Self {
         // `ThreadRng` implements `CryptoRng` so it is safe to use in cryptographic contexts.
         // https://rust-random.github.io/rand/rand/trait.CryptoRng.html
         let mut rng = rand::thread_rng();
-        // TODO out of here ?
-        let trits = [-1, 0, 1];
-        let seed: Vec<i8> = (0..HASH_LENGTH).map(|_| trits[rng.gen_range(0, trits.len())]).collect();
+        let trits = [Btrit::NegOne, Btrit::Zero, Btrit::PlusOne];
+        let mut seed = [Btrit::Zero; HASH_LENGTH];
 
-        Self(unsafe { Trits::<T1B1>::from_raw_unchecked(&seed, HASH_LENGTH).to_buf() })
+        for trit in seed.iter_mut() {
+            *trit = trits[rng.gen_range(0, trits.len())];
+        }
+
+        Self(<&Trits>::from(&seed as &[_]).to_buf())
     }
 
     /// Creates a new `Seed` from the current `Seed` and an index.
     pub fn subseed(&self, index: u64) -> Self {
-        let mut sponge = Kerl::default();
         let mut subseed = self.0.clone();
 
         for _ in 0..index {
@@ -77,12 +79,12 @@ impl Seed {
         }
 
         // TODO return error
-        let tmp = match sponge.digest(&subseed) {
-            Ok(buf) => buf,
+        let subseed = match Kerl::default().digest(&subseed) {
+            Ok(subseed) => subseed,
             Err(_) => unreachable!(),
         };
 
-        Self(tmp)
+        Self(subseed)
     }
 
     /// Creates a `Seed` from &str.
