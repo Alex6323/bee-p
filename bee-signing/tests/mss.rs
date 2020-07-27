@@ -137,8 +137,7 @@ where
     const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
     const DEPTH: u8 = 4;
 
-    let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
-    let seed = Seed::from_trits(seed_trits).unwrap();
+    let seed = Seed::from_str(SEED).unwrap();
     let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
 
     // todo try with not recover

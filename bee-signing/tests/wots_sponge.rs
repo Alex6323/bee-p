@@ -21,9 +21,8 @@ const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
 const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
 
 fn sponge_roundtrip<S: Sponge + Default>() {
-    let seed_trits = TryteBuf::try_from_str(SEED).unwrap().as_trits().encode::<T1B1Buf>();
     let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
-    let seed = Seed::from_trits(seed_trits).unwrap();
+    let seed = Seed::from_str(SEED).unwrap();
     let security_levels = vec![
         WotsSecurityLevel::Low,
         WotsSecurityLevel::Medium,

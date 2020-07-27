@@ -367,7 +367,7 @@ mod tests {
 
     use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_signing::ternary::{seed::Seed, wots::WotsSignature, PublicKey, RecoverableSignature};
+    use bee_signing::ternary::{seed::Seed, wots::WotsSignature, PublicKey};
     use bee_ternary::{T1B1Buf, TritBuf};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {

@@ -16,7 +16,7 @@ use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
     HASH_LENGTH,
 };
-use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, T1B1};
+use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, TryteBuf, T1B1};
 
 use rand::Rng;
 use thiserror::Error;
@@ -28,6 +28,9 @@ pub enum Error {
     /// Invalid seed length.
     #[error("Invalid seed length.")]
     InvalidLength(usize),
+    /// Invalid seed trytes.
+    #[error("Invalid seed trytes.")]
+    InvalidTrytes,
     /// Failed sponge operation.
     #[error("Failed sponge operation.")]
     FailedSpongeOperation,
@@ -80,6 +83,20 @@ impl Seed {
         };
 
         Self(tmp)
+    }
+
+    /// Creates a `Seed` from &str.
+    pub fn from_str(str: &str) -> Result<Self, Error> {
+        if str.len() != HASH_LENGTH / 3 {
+            return Err(Error::InvalidLength(str.len() * 3));
+        }
+
+        Ok(Self(
+            TryteBuf::try_from_str(str)
+                .map_err(|_| Error::InvalidTrytes)?
+                .as_trits()
+                .encode::<T1B1Buf>(),
+        ))
     }
 
     /// Creates a `Seed` from trits.

@@ -13,7 +13,7 @@ use bee_crypto::ternary::sponge::{Kerl, Sponge};
 use bee_signing::ternary::seed::{Error, Seed};
 use bee_ternary::{Btrit, T1B1Buf, TritBuf, TryteBuf};
 
-const IOTA_SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
+const SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
 
 #[test]
 fn new() {
@@ -25,28 +25,24 @@ fn new() {
     }
 }
 
-fn subseed_generic<S: Sponge + Default>(iota_seed_string: &str, iota_subseed_strings: &[&str]) {
-    let iota_seed_trits = TryteBuf::try_from_str(iota_seed_string)
-        .unwrap()
-        .as_trits()
-        .encode::<T1B1Buf>();
-    let iota_seed = Seed::from_trits(iota_seed_trits).unwrap();
+fn subseed_generic<S: Sponge + Default>(seed_string: &str, subseed_strings: &[&str]) {
+    let seed = Seed::from_str(seed_string).unwrap();
 
-    for (i, iota_subseed_string) in iota_subseed_strings.iter().enumerate() {
-        let iota_subseed = iota_seed.subseed(i as u64);
-        let iota_subseed_trits = TryteBuf::try_from_str(iota_subseed_string)
+    for (i, subseed_string) in subseed_strings.iter().enumerate() {
+        let subseed = seed.subseed(i as u64);
+        let subseed_trits = TryteBuf::try_from_str(subseed_string)
             .unwrap()
             .as_trits()
             .encode::<T1B1Buf>();
 
-        assert_eq!(iota_subseed.as_trits(), iota_subseed_trits.as_slice());
+        assert_eq!(subseed.as_trits(), subseed_trits.as_slice());
     }
 }
 
 #[test]
 fn subseed_kerl() {
     subseed_generic::<Kerl>(
-        IOTA_SEED,
+        SEED,
         &[
             "APSNZAPLANAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY",
             "PXQMW9VMXGYTEPYPIASGPQ9CAQUQWNSUIIVHFIEAB9C9DHNNCWSNJKSBEAKYIBCYOZDDTQANEKPGJPVIY",
@@ -63,17 +59,34 @@ fn subseed_kerl() {
 }
 
 #[test]
-fn iota_seed_from_bytes_invalid_length() {
-    let buf = TritBuf::zeros(42);
+fn from_trits_invalid_length() {
+    let trits = TritBuf::zeros(42);
 
-    match Seed::from_trits(buf) {
-        Err(Error::InvalidLength(len)) => assert_eq!(len, 42),
+    match Seed::from_trits(trits.clone()) {
+        Err(Error::InvalidLength(len)) => assert_eq!(len, trits.len()),
         _ => unreachable!(),
     }
 }
 
 #[test]
-fn iota_seed_to_bytes_from_bytes() {
+fn from_str_invalid_length() {
+    let trytes = "VBAZOIZIWGBRAXMFDUBLP";
+
+    match Seed::from_str(&trytes) {
+        Err(Error::InvalidLength(len)) => assert_eq!(len, trytes.len() * 3),
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn from_str_invalid_trytes() {
+    let trytes = "APSNZAPL@NAGSXGZMZYCSXROJ9KUX9HVOPODQHMWNJOCGBKRIOOQKYGPFAIQBYNIODMIWMFKJGKRWFFPY";
+
+    assert_eq!(Seed::from_str(&trytes).err(), Some(Error::InvalidTrytes));
+}
+
+#[test]
+fn to_bytes_from_bytes() {
     for _ in 0..10 {
         let iota_seed_1 = Seed::rand();
         let iota_seed_2 = Seed::from_trits(iota_seed_1.as_trits().to_buf()).unwrap();
