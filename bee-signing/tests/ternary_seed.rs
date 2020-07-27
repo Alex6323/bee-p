@@ -11,19 +11,9 @@
 
 use bee_crypto::ternary::sponge::{Kerl, Sponge};
 use bee_signing::ternary::seed::{Error, Seed};
-use bee_ternary::{Btrit, T1B1Buf, TritBuf, TryteBuf};
+use bee_ternary::{T1B1Buf, TritBuf, TryteBuf};
 
 const SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
-
-#[test]
-fn new() {
-    for _ in 0..10 {
-        let iota_seed = Seed::rand();
-        for byte in iota_seed.as_trits().iter() {
-            assert!(byte == Btrit::NegOne || byte == Btrit::Zero || byte == Btrit::PlusOne);
-        }
-    }
-}
 
 fn subseed_generic<S: Sponge + Default>(seed_string: &str, subseed_strings: &[&str]) {
     let seed = Seed::from_str(seed_string).unwrap();
@@ -59,16 +49,6 @@ fn subseed_kerl() {
 }
 
 #[test]
-fn from_trits_invalid_length() {
-    let trits = TritBuf::zeros(42);
-
-    match Seed::from_trits(trits.clone()) {
-        Err(Error::InvalidLength(len)) => assert_eq!(len, trits.len()),
-        _ => unreachable!(),
-    }
-}
-
-#[test]
 fn from_str_invalid_length() {
     let trytes = "VBAZOIZIWGBRAXMFDUBLP";
 
@@ -86,11 +66,21 @@ fn from_str_invalid_trytes() {
 }
 
 #[test]
-fn to_bytes_from_bytes() {
-    for _ in 0..10 {
-        let iota_seed_1 = Seed::rand();
-        let iota_seed_2 = Seed::from_trits(iota_seed_1.as_trits().to_buf()).unwrap();
+fn from_trits_invalid_length() {
+    let trits = TritBuf::zeros(42);
 
-        assert_eq!(iota_seed_1.as_trits(), iota_seed_2.as_trits());
+    match Seed::from_trits(trits.clone()) {
+        Err(Error::InvalidLength(len)) => assert_eq!(len, trits.len()),
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn to_trits_from_trits() {
+    for _ in 0..10 {
+        let seed_1 = Seed::rand();
+        let seed_2 = Seed::from_trits(seed_1.as_trits().to_buf()).unwrap();
+
+        assert_eq!(seed_1.as_trits(), seed_2.as_trits());
     }
 }
