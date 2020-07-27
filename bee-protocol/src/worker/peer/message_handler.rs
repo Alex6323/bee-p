@@ -8,14 +8,14 @@
 // Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
-
-use crate::message::{HEADER_SIZE, Header};
+use crate::message::{Header, HEADER_SIZE};
 
 use bee_network::Address;
 
 use futures::{
     channel::{mpsc, oneshot},
-    future, select,
+    future::{self, FutureExt},
+    select,
     stream::{self, StreamExt},
 };
 
@@ -40,6 +40,7 @@ enum ReadState {
 /// It takes care of processing events into messages that can be processed by the workers.
 pub(super) struct MessageHandler {
     events: EventHandler,
+    shutdown: ShutdownRecv,
     state: ReadState,
     /// The address of the peer. This field is only here for logging purposes.
     address: Address,
@@ -50,13 +51,16 @@ impl MessageHandler {
     /// address.
     pub(super) fn new(receiver: EventRecv, shutdown: ShutdownRecv, address: Address) -> Self {
         Self {
-            events: EventHandler::new(receiver, shutdown),
+            events: EventHandler::new(receiver),
+            shutdown,
             // The handler should read a header first.
             state: ReadState::Header,
             address,
         }
     }
     /// Fetch the header and payload of a message.
+    ///
+    /// This method only returns `None` if a shutdown signal is received.
     pub(super) async fn fetch_message<'a>(&'a mut self) -> Option<(Header, &'a [u8])> {
         // loop until we can return the header and payload
         loop {
@@ -64,7 +68,7 @@ impl MessageHandler {
                 // Read a header.
                 ReadState::Header => {
                     // We need `HEADER_SIZE` bytes to read a header.
-                    let bytes = self.events.fetch_bytes(HEADER_SIZE).await?;
+                    let bytes = Self::fetch_bytes(&mut self.events, &mut self.shutdown, HEADER_SIZE).await?;
                     debug!("[{}] Reading Header...", self.address);
                     let header = Header::from_bytes(bytes);
                     // Now we are ready to read a payload.
@@ -72,15 +76,31 @@ impl MessageHandler {
                 }
                 // Read a payload.
                 ReadState::Payload(header) => {
+                    // FIXME: Avoid this clone
                     let header = header.clone();
                     // We read the quantity of bytes stated by the header.
-                    let bytes = self.events.fetch_bytes(header.message_length as usize).await?;
+                    let bytes =
+                        Self::fetch_bytes(&mut self.events, &mut self.shutdown, header.message_length.into()).await?;
                     // Now we are ready to read the next message's header.
                     self.state = ReadState::Header;
                     // We return the current message's header and payload.
                     return Some((header, bytes));
                 }
             }
+        }
+    }
+
+    /// Helper method to be able to shutdown when fetching bytes for a message.
+    ///
+    /// This does not use `&mut self` to avoid lifetime issues inside `fetch_message`.
+    async fn fetch_bytes<'a>(
+        events: &'a mut EventHandler,
+        mut shutdown: &'a mut ShutdownRecv,
+        len: usize,
+    ) -> Option<&'a [u8]> {
+        select! {
+            bytes = events.fetch_bytes(len).fuse() => Some(bytes),
+            _ = shutdown => None,
         }
     }
 }
@@ -91,17 +111,15 @@ impl MessageHandler {
 // they can be used seamlessly by the `MessageHandler`.
 struct EventHandler {
     receiver: EventRecv,
-    shutdown: ShutdownRecv,
     buffer: Vec<u8>,
     offset: usize,
 }
 
 impl EventHandler {
-    /// Create a new event handler from an event and a shutdown receivers.
-    fn new(receiver: EventRecv, shutdown: ShutdownRecv) -> Self {
+    /// Create a new event handler from an event receiver.
+    fn new(receiver: EventRecv) -> Self {
         Self {
             receiver,
-            shutdown,
             buffer: vec![],
             offset: 0,
         }
@@ -126,23 +144,15 @@ impl EventHandler {
     }
     /// Fetch a slice of bytes of a determined length.
     ///
-    /// This method returns `None` if a shutdown signal was received.
-    async fn fetch_bytes<'a>(&'a mut self, len: usize) -> Option<&'a [u8]> {
+    /// The future returned by this method will be ready until there are enough bytes to fullfill
+    /// the request.
+    async fn fetch_bytes<'a>(&'a mut self, len: usize) -> &'a [u8] {
         // We need to be sure that we have enough bytes in the buffer.
         while self.offset + len > self.buffer.len() {
-            // If there are not enough bytes in the buffer, we must either receive new events until
-            // we have enough bytes, or receive a shutdown signal.
-            select! {
-                event = self.receiver.next() => {
-                    // If we received an event, we push it to the buffer.
-                    if let Some(event) = event {
-                        self.push_event(event);
-                    }
-                },
-                _ = &mut self.shutdown => {
-                    // If we received a shutdown signal, we return `None`.
-                    return None;
-                }
+            // If there are not enough bytes in the buffer, we must receive new events
+            if let Some(event) = self.receiver.next().await {
+                // If we received an event, we push it to the buffer.
+                self.push_event(event);
             }
         }
         // Get the requested bytes. This will not panic because the loop above only exists if we
@@ -150,7 +160,7 @@ impl EventHandler {
         let bytes = &self.buffer[self.offset..(self.offset + len)];
         // Increase the offset by the length of the byte slice.
         self.offset += len;
-        Some(bytes)
+        bytes
     }
 }
 
