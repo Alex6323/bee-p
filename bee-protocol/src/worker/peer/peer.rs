@@ -16,16 +16,12 @@ use crate::{
     },
     peer::HandshakedPeer,
     protocol::Protocol,
-    worker::{MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent},
+    worker::{
+        peer::MessageHandler, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
+    },
 };
 
-use futures::{
-    channel::{mpsc, oneshot},
-    select,
-    sink::SinkExt,
-    stream::StreamExt,
-};
-use futures_util::{future, stream};
+use futures::{channel::mpsc, sink::SinkExt};
 use log::{debug, error, info, warn};
 
 use std::sync::Arc;
@@ -33,16 +29,6 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub(crate) enum PeerWorkerError {
     FailedSend,
-}
-
-enum PeerReadState {
-    Header,
-    Payload(Header),
-}
-
-struct PeerReadContext {
-    state: PeerReadState,
-    buffer: Vec<u8>,
 }
 
 pub struct PeerWorker {
@@ -62,28 +48,12 @@ impl PeerWorker {
         }
     }
 
-    pub async fn run(
-        mut self,
-        mut receiver_fused: stream::Fuse<mpsc::Receiver<Vec<u8>>>,
-        mut shutdown_fused: future::Fuse<oneshot::Receiver<()>>,
-    ) {
+    pub(super) async fn run(mut self, mut message_handler: MessageHandler) {
         info!("[{}] Running.", self.peer.address);
 
-        let mut context = PeerReadContext {
-            state: PeerReadState::Header,
-            buffer: Vec::new(),
-        };
-
-        loop {
-            select! {
-                event = receiver_fused.next() => {
-                    if let Some(event) = event {
-                        context = self.message_handler(context, event).await;
-                    }
-                },
-                _ = shutdown_fused => {
-                    break;
-                }
+        while let Some((header, bytes)) = message_handler.fetch_message().await {
+            if let Err(e) = self.process_message(&header, bytes).await {
+                error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
         }
 
@@ -195,61 +165,6 @@ impl PeerWorker {
         };
 
         Ok(())
-    }
-
-    async fn message_handler(&mut self, mut context: PeerReadContext, mut bytes: Vec<u8>) -> PeerReadContext {
-        let mut offset = 0;
-        let mut remaining = true;
-
-        if context.buffer.is_empty() {
-            context.buffer = bytes;
-        } else {
-            context.buffer.append(&mut bytes);
-        }
-
-        while remaining {
-            context.state = match context.state {
-                PeerReadState::Header => {
-                    if offset + 3 <= context.buffer.len() {
-                        debug!("[{}] Reading Header...", self.peer.address);
-                        let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
-                        offset += 3;
-
-                        PeerReadState::Payload(header)
-                    } else {
-                        remaining = false;
-
-                        PeerReadState::Header
-                    }
-                }
-                PeerReadState::Payload(header) => {
-                    if (offset + header.message_length as usize) <= context.buffer.len() {
-                        if let Err(e) = self
-                            .process_message(
-                                &header,
-                                &context.buffer[offset..offset + header.message_length as usize],
-                            )
-                            .await
-                        {
-                            error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
-                        }
-
-                        offset += header.message_length as usize;
-
-                        PeerReadState::Header
-                    } else {
-                        remaining = false;
-
-                        PeerReadState::Payload(header)
-                    }
-                }
-            };
-        }
-
-        PeerReadContext {
-            state: context.state,
-            buffer: context.buffer[offset..].to_vec(),
-        }
     }
 }
 
