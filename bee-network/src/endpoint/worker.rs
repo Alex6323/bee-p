@@ -20,13 +20,13 @@ use crate::{
     utils::time,
 };
 
-use bee_common::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
+use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
 use async_std::{
     prelude::*,
     task::{self, spawn},
 };
-use futures::{select, sink::SinkExt, FutureExt};
+use futures::{future::Fuse, select, sink::SinkExt, FutureExt};
 use log::*;
 
 use std::time::Duration;
@@ -34,28 +34,28 @@ use std::time::Duration;
 pub struct EndpointWorker {
     commands: Commands,
     events: Events,
-    shutdown: Shutdown,
     notifier: Notifier,
     publisher: Publisher,
     reconnect_interval: Duration,
+    shutdown_listener: Fuse<ShutdownListener>,
 }
 
 impl EndpointWorker {
     pub fn new(
         commands: Commands,
         events: Events,
-        shutdown: Shutdown,
         notifier: Notifier,
         publisher: Publisher,
         reconnect_interval: Duration,
+        shutdown_listener: ShutdownListener,
     ) -> Self {
         Self {
             commands,
             events,
-            shutdown,
             notifier,
             publisher,
             reconnect_interval,
+            shutdown_listener: shutdown_listener.fuse(),
         }
     }
 
@@ -70,7 +70,7 @@ impl EndpointWorker {
 
         let commands = &mut self.commands;
         let events = &mut self.events;
-        let shutdown = &mut self.shutdown;
+        let mut shutdown_listener = &mut self.shutdown_listener;
         let publisher = &mut self.publisher;
 
         loop {
@@ -225,7 +225,7 @@ impl EndpointWorker {
                     }
                 },
 
-                shutdown = shutdown.fuse() => {
+                _ = shutdown_listener => {
                     break;
                 }
             }

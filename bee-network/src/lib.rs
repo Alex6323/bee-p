@@ -68,10 +68,10 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     let ep_worker = EpWorker::new(
         commands,
         internal_events,
-        epw_shutdown,
         internal_event_sender.clone(),
         event_sender,
         config.reconnect_interval,
+        epw_shutdown,
     );
 
     let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender, tcp_shutdown);
