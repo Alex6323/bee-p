@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{Heartbeat, MilestoneRequest, TransactionBroadcast, TransactionRequest},
+    message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     milestone::MilestoneIndex,
     protocol::ProtocolMetrics,
 };
@@ -31,7 +31,7 @@ pub struct HandshakedPeer {
     pub(crate) solid_milestone_index: AtomicU32,
     pub(crate) snapshot_milestone_index: AtomicU32,
     pub(crate) milestone_request: (mpsc::Sender<MilestoneRequest>, Mutex<Option<oneshot::Sender<()>>>),
-    pub(crate) transaction_broadcast: (mpsc::Sender<TransactionBroadcast>, Mutex<Option<oneshot::Sender<()>>>),
+    pub(crate) transaction: (mpsc::Sender<TransactionMessage>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) transaction_request: (mpsc::Sender<TransactionRequest>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) heartbeat: (mpsc::Sender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
 }
@@ -41,7 +41,7 @@ impl HandshakedPeer {
         epid: EndpointId,
         address: Address,
         milestone_request: (mpsc::Sender<MilestoneRequest>, Mutex<Option<oneshot::Sender<()>>>),
-        transaction_broadcast: (mpsc::Sender<TransactionBroadcast>, Mutex<Option<oneshot::Sender<()>>>),
+        transaction: (mpsc::Sender<TransactionMessage>, Mutex<Option<oneshot::Sender<()>>>),
         transaction_request: (mpsc::Sender<TransactionRequest>, Mutex<Option<oneshot::Sender<()>>>),
         heartbeat: (mpsc::Sender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
     ) -> Self {
@@ -52,25 +52,25 @@ impl HandshakedPeer {
             solid_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
             milestone_request,
-            transaction_broadcast,
+            transaction,
             transaction_request,
             heartbeat,
         }
     }
 
     pub(crate) fn set_solid_milestone_index(&self, index: MilestoneIndex) {
-        self.solid_milestone_index.store(index, Ordering::Relaxed);
+        self.solid_milestone_index.store(*index, Ordering::Relaxed);
     }
 
     pub(crate) fn solid_milestone_index(&self) -> MilestoneIndex {
-        self.solid_milestone_index.load(Ordering::Relaxed)
+        self.solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
     pub(crate) fn set_snapshot_milestone_index(&self, index: MilestoneIndex) {
-        self.snapshot_milestone_index.store(index, Ordering::Relaxed);
+        self.snapshot_milestone_index.store(*index, Ordering::Relaxed);
     }
 
     pub(crate) fn snapshot_milestone_index(&self) -> MilestoneIndex {
-        self.snapshot_milestone_index.load(Ordering::Relaxed)
+        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
     }
 }

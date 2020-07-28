@@ -9,15 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::protocol::Protocol;
+use crate::{protocol::Protocol, tangle::tangle};
 
-use bee_tangle::tangle;
-
-use std::time::Duration;
+use bee_common::worker::Error as WorkerError;
 
 use async_std::{future::ready, prelude::*};
 use futures::channel::oneshot::Receiver;
 use log::info;
+
+use std::time::Duration;
 
 pub(crate) struct StatusWorker {
     interval_ms: u64,
@@ -31,14 +31,14 @@ impl StatusWorker {
     }
 
     fn status(&self) {
-        let snapshot_milestone_index: u32 = *tangle().get_snapshot_milestone_index();
-        let solid_milestone_index: u32 = *tangle().get_solid_milestone_index();
-        let last_milestone_index: u32 = *tangle().get_last_milestone_index();
+        let snapshot_milestone_index = *tangle().get_snapshot_milestone_index();
+        let solid_milestone_index = *tangle().get_last_solid_milestone_index();
+        let last_milestone_index = *tangle().get_last_milestone_index();
 
         // TODO Threshold
         // TODO use tangle synced method
         let mut status = if solid_milestone_index == last_milestone_index {
-            String::from("Synchronized")
+            format!("Synchronized at {} -", last_milestone_index)
         } else {
             let progress = ((solid_milestone_index - snapshot_milestone_index) as f32 * 100.0
                 / (last_milestone_index - snapshot_milestone_index) as f32) as u8;
@@ -53,7 +53,7 @@ impl StatusWorker {
         info!("{}.", status);
     }
 
-    pub(crate) async fn run(self, mut shutdown: Receiver<()>) {
+    pub(crate) async fn run(self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
         loop {
@@ -68,5 +68,7 @@ impl StatusWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }

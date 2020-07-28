@@ -9,21 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// mod ed25519;
-mod mss;
-mod normalize;
-mod scheme;
-mod seed;
-mod wots;
+//! Signing scheme primitives.
 
-pub use mss::{
-    MssError, MssPrivateKey, MssPrivateKeyGenerator, MssPrivateKeyGeneratorBuilder, MssPublicKey, MssSignature,
-};
-pub use normalize::normalize_hash;
-pub use scheme::{PrivateKey, PrivateKeyGenerator, PublicKey, RecoverableSignature, Signature};
-pub use seed::{Seed, TernarySeed};
-pub use wots::{
-    WotsError, WotsPrivateKey, WotsPublicKey, WotsSecurityLevel, WotsShakePrivateKeyGenerator,
-    WotsShakePrivateKeyGeneratorBuilder, WotsSignature, WotsSpongePrivateKeyGenerator,
-    WotsSpongePrivateKeyGeneratorBuilder,
-};
+#![warn(missing_docs)]
+
+pub mod ternary;

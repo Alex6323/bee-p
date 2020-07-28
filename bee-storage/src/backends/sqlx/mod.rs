@@ -116,7 +116,7 @@ impl<'a> sqlx::FromRow<'a, sqlx::postgres::PgRow<'a>> for MilestoneWrapper {
 
         Ok(Self(Milestone::new(
             Hash::from_inner_unchecked(hash_tritbuf),
-            row.get::<i32, _>(MILESTONE_COL_ID) as u32,
+            MilestoneIndex(row.get::<i32, _>(MILESTONE_COL_ID) as u32),
         )))
     }
 }
@@ -471,7 +471,7 @@ impl StorageBackend for SqlxBackendStorage {
 
         for hash in transaction_hashes.iter() {
             let _ = sqlx::query(UPDATE_SNAPSHOT_INDEX_STATEMENT)
-                .bind(snapshot_index as i32)
+                .bind(*snapshot_index)
                 .bind(encode_buffer(hash.to_inner().encode::<T5B1Buf>()))
                 .execute(&mut conn_transaction)
                 .await?;
@@ -548,7 +548,7 @@ impl StorageBackend for SqlxBackendStorage {
         let mut conn_transaction = pool.begin().await?;
 
         sqlx::query(INSERT_MILESTONE_STATEMENT)
-            .bind(milestone.index() as i32)
+            .bind(*milestone.index() as i32)
             .bind(encode_buffer(milestone.hash().to_inner().encode::<T5B1Buf>()))
             .execute(&mut conn_transaction)
             .await?;
@@ -631,7 +631,7 @@ impl StorageBackend for SqlxBackendStorage {
             .expect(CONNECTION_NOT_INITIALIZED);
 
         let state_delta_wrapper: StateDeltaWrapper = sqlx::query_as(LOAD_DELTA_STATEMENT_BY_INDEX)
-            .bind(index as u32)
+            .bind(*index)
             .fetch_one(&mut pool)
             .await?;
 

@@ -9,18 +9,28 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::{LoggerConfig, LoggerConfigBuilder};
+use bee_common::logger::{LoggerConfig, LoggerConfigBuilder};
 use bee_network::{NetworkConfig, NetworkConfigBuilder};
 use bee_peering::{PeeringConfig, PeeringConfigBuilder};
 use bee_protocol::{ProtocolConfig, ProtocolConfigBuilder};
-use bee_snapshot::{SnapshotConfig, SnapshotConfigBuilder};
+use bee_snapshot::config::{SnapshotConfig, SnapshotConfigBuilder};
 
 use serde::Deserialize;
+use thiserror::Error;
 
-pub(crate) const CONFIG_PATH: &str = "./config.toml";
+use std::{fs, path::Path};
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Reading the specified config file failed.")]
+    ConfigFileReadFailure(#[from] std::io::Error),
+
+    #[error("Deserializing the node config builder failed.")]
+    NodeConfigBuilderCreationFailure(#[from] toml::de::Error),
+}
 
 #[derive(Default, Deserialize)]
-pub(crate) struct NodeConfigBuilder {
+pub struct NodeConfigBuilder {
     pub(crate) logger: LoggerConfigBuilder,
     pub(crate) network: NetworkConfigBuilder,
     pub(crate) peering: PeeringConfigBuilder,
@@ -29,7 +39,15 @@ pub(crate) struct NodeConfigBuilder {
 }
 
 impl NodeConfigBuilder {
-    pub(crate) fn finish(self) -> NodeConfig {
+    /// Creates a node config builder from a local config file.
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        match fs::read_to_string(path) {
+            Ok(toml) => toml::from_str::<Self>(&toml).map_err(|e| Error::NodeConfigBuilderCreationFailure(e)),
+            Err(e) => Err(Error::ConfigFileReadFailure(e)),
+        }
+    }
+
+    pub fn finish(self) -> NodeConfig {
         NodeConfig {
             logger: self.logger.finish(),
             network: self.network.finish(),
@@ -41,10 +59,10 @@ impl NodeConfigBuilder {
 }
 
 #[derive(Clone)]
-pub(crate) struct NodeConfig {
-    pub(crate) logger: LoggerConfig,
-    pub(crate) network: NetworkConfig,
-    pub(crate) peering: PeeringConfig,
-    pub(crate) protocol: ProtocolConfig,
-    pub(crate) snapshot: SnapshotConfig,
+pub struct NodeConfig {
+    pub logger: LoggerConfig,
+    pub network: NetworkConfig,
+    pub peering: PeeringConfig,
+    pub protocol: ProtocolConfig,
+    pub snapshot: SnapshotConfig,
 }

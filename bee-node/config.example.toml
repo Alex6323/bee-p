@@ -1,7 +1,7 @@
 # Duplicate this file to config.toml to use it
 
 [logger]
-color = true
+color_enabled = true
 [[logger.outputs]]
 name  = "stdout"
 level = "info"
@@ -27,4 +27,4 @@ sponge_type     = "kerl"
 status_interval = 10
 
 [snapshot.local]
-file_path = "./data/snapshot.bin"
+file_path = "./data/local_snapshot.bin"

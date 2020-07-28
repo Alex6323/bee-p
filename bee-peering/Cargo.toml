@@ -1,6 +1,6 @@
 [package]
 name = "bee-peering"
-version = "0.1.0"
+version = "0.1.0-alpha"
 authors = ["IOTA Stiftung"]
 edition = "2018"
 description = ""
@@ -8,12 +8,12 @@ readme = "README.md"
 repository = "https://github.com/iotaledger/bee"
 license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "peering"]
+homepage = "https://www.iota.org"
 
 [dependencies]
-
 bee-network = { path = "../bee-network" }
 
-async-std = "1.5.0"
-async-trait = "0.1.33"
+async-std = "1.6.2"
+async-trait = "0.1.36"
 log = "0.4.8"
-serde = { version = "1.0.104", features = ["derive" ] }
+serde = { version = "1.0.114", features = ["derive" ] }

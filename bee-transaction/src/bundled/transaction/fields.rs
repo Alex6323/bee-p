@@ -10,12 +10,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::bundled::constants::{
-    ADDRESS, ADDRESS_TRIT_LEN, HASH_TRIT_LEN, NONCE, NONCE_TRIT_LEN, PAYLOAD, PAYLOAD_TRIT_LEN, TAG, TAG_TRIT_LEN,
+    ADDRESS, ADDRESS_TRIT_LEN, NONCE, NONCE_TRIT_LEN, PAYLOAD, PAYLOAD_TRIT_LEN, TAG, TAG_TRIT_LEN,
 };
 
+use bee_crypto::ternary::Hash;
 use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
-use std::{cmp::PartialEq, fmt, hash};
+use std::cmp::PartialEq;
 
 #[derive(Debug)]
 pub enum BundledTransactionFieldError {
@@ -47,12 +48,6 @@ impl NumTritsOfValue for Trits {
         self.len()
     }
 }
-
-// impl NumTritsOfValue for TritBuf<T1B1Buf> {
-//     fn num_trits(&self) -> usize {
-//         self.len()
-//     }
-// }
 
 impl NumTritsOfValue for i64 {
     fn num_trits(&self) -> usize {
@@ -140,66 +135,6 @@ impl Index {
     }
 }
 
-#[derive(Copy, Clone)]
-// TODO pub ?
-pub struct Hash(pub [i8; 243]);
-
-impl Hash {
-    pub fn zeros() -> Self {
-        Self([0; 243])
-    }
-
-    pub fn as_bytes(&self) -> &[i8] {
-        &self.0
-    }
-
-    pub fn as_trits(&self) -> &Trits<T1B1> {
-        unsafe { Trits::from_raw_unchecked(self.as_bytes(), 243) }
-    }
-
-    pub fn weight(&self) -> u8 {
-        let mut weight = 0u8;
-
-        for i in (0..self.0.len()).rev() {
-            if self.0[i] != 0 {
-                break;
-            }
-            weight += 1;
-        }
-
-        weight
-    }
-
-    pub fn trit_len() -> usize {
-        HASH_TRIT_LEN
-    }
-}
-
-impl PartialEq for Hash {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b)
-    }
-}
-impl Eq for Hash {}
-
-impl fmt::Display for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.as_trits())
-    }
-}
-
-impl fmt::Debug for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self.as_trits())
-    }
-}
-
-impl hash::Hash for Hash {
-    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        self.0.hash(hasher)
-    }
-}
-
 impl BundledTransactionFieldType for Hash {
     type InnerType = Trits<T1B1>; // TritBuf<T1B1Buf>;
 
@@ -229,10 +164,10 @@ impl BundledTransactionField for Hash {
     }
 
     fn from_inner_unchecked(buf: <Self::Inner as ToOwned>::Owned) -> Self {
-        let mut trits = [0; 243];
-        trits.copy_from_slice(buf.as_i8_slice());
+        let mut hash = Hash::zeros();
+        (*hash).copy_from(&buf);
 
-        Self(trits)
+        hash
     }
 }
 
@@ -315,20 +250,3 @@ impl BundledTransactionFieldType for Timestamp {
 
 impl_transaction_field_type_for_tritbuf_fields!(Payload, Address, Tag, Nonce);
 impl_transaction_field!(Payload, Address, Tag, Nonce, Index, Value, Timestamp);
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hash_weigth() {
-        for i in 0..20 {
-            let mut trits = [0i8; 243];
-            trits[243 - i - 1] = 1;
-            unsafe {
-                let hash = Hash::try_from_inner(Trits::<T1B1>::from_raw_unchecked(&trits, 243).to_buf()).unwrap();
-                assert_eq!(hash.weight(), i as u8);
-            }
-        }
-    }
-}

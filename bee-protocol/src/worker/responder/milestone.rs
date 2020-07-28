@@ -10,14 +10,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{compress_transaction_bytes, MilestoneRequest, TransactionBroadcast},
+    message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
+    tangle::tangle,
     worker::SenderWorker,
 };
 
+use bee_common::worker::Error as WorkerError;
 use bee_network::EndpointId;
-use bee_tangle::tangle;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
-use bee_transaction::BundledTransaction as Transaction;
+use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use bytemuck::cast_slice;
 use futures::{
@@ -53,10 +54,10 @@ impl MilestoneResponderWorker {
                 transaction.into_trits_allocated(&mut trits);
                 // TODO dedicated channel ? Priority Queue ?
                 // TODO compress bytes
-                SenderWorker::<TransactionBroadcast>::send(
+                SenderWorker::<TransactionMessage>::send(
                     &epid,
                     // TODO try to compress lower in the pipeline ?
-                    TransactionBroadcast::new(&compress_transaction_bytes(cast_slice(
+                    TransactionMessage::new(&compress_transaction_bytes(cast_slice(
                         trits.encode::<T5B1Buf>().as_i8_slice(),
                     ))),
                 )
@@ -70,7 +71,7 @@ impl MilestoneResponderWorker {
         self,
         receiver: mpsc::Receiver<MilestoneResponderWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), WorkerError> {
         info!("Running.");
 
         let mut receiver_fused = receiver.fuse();
@@ -90,5 +91,7 @@ impl MilestoneResponderWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }

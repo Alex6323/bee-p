@@ -9,7 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{constants::BYTES_CHANNEL_CAPACITY, endpoint::EndpointId as EpId, errors::Result};
+use crate::{constants::BYTES_CHANNEL_CAPACITY, endpoint::EndpointId as EpId};
+
+use bee_common::worker::Error as WorkerError;
 
 use async_std::sync::Arc;
 use futures::{channel::mpsc, sink::SinkExt};
@@ -59,7 +61,7 @@ impl Outbox {
     /// Sends `bytes` to `receiver`.
     ///
     /// Returns `true` if the send was successful.
-    pub async fn send(&mut self, bytes: Vec<u8>, recipient: &EpId) -> Result<bool> {
+    pub async fn send(&mut self, bytes: Vec<u8>, recipient: &EpId) -> Result<bool, WorkerError> {
         let bytes = Arc::new(bytes);
         if let Some(sender) = self.inner.get_mut(recipient) {
             sender.send(bytes).await?;
@@ -73,7 +75,7 @@ impl Outbox {
     ///
     /// NOTE: The multicast is considered to be successful, if at least
     /// one send is successful.
-    pub async fn multicast(&mut self, bytes: Vec<u8>, recipients: &[EpId]) -> Result<bool> {
+    pub async fn multicast(&mut self, bytes: Vec<u8>, recipients: &[EpId]) -> Result<bool, WorkerError> {
         let bytes = Arc::new(bytes);
         let mut num_sends = 0;
 
@@ -92,7 +94,7 @@ impl Outbox {
     ///
     /// NOTE: The broadcast is considered to be successful, if at least
     /// one send is successful.
-    pub async fn broadcast(&mut self, bytes: Vec<u8>) -> Result<bool> {
+    pub async fn broadcast(&mut self, bytes: Vec<u8>) -> Result<bool, WorkerError> {
         let bytes = Arc::new(bytes);
         let mut num_sends = 0;
 

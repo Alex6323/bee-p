@@ -22,5 +22,5 @@ pub use constants::{
 };
 pub use transaction::{
     Address, BundledTransaction, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
-    BundledTransactionField, BundledTransactions, Hash, Index, Nonce, Payload, Tag, Timestamp, Value,
+    BundledTransactionField, BundledTransactions, Index, Nonce, Payload, Tag, Timestamp, Value,
 };

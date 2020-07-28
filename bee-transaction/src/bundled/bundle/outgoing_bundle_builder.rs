@@ -12,13 +12,17 @@
 use crate::bundled::{
     constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
     Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
-    BundledTransactionField, BundledTransactions, Hash, Index, Payload, Tag,
+    BundledTransactionField, BundledTransactions, Index, Payload, Tag,
 };
 
-use bee_crypto::{Kerl, Sponge};
-use bee_signing::{
-    normalize_hash, PrivateKey, PrivateKeyGenerator, Signature, TernarySeed, WotsSecurityLevel,
-    WotsSpongePrivateKeyGeneratorBuilder,
+use bee_crypto::ternary::{
+    sponge::{Kerl, Sponge},
+    Hash,
+};
+use bee_signing::ternary::{
+    seed::Seed,
+    wots::{normalize, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
+    PrivateKey, PrivateKeyGenerator, Signature,
 };
 use bee_ternary::Btrit;
 
@@ -84,12 +88,14 @@ where
                 let _ = sponge.absorb(&builder.essence());
             }
 
+            // TODO squeeze into
             let hash = sponge
                 .squeeze()
                 .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."));
 
             let mut has_m_bug = false;
-            for trits in normalize_hash(&hash).chunks(3) {
+            // Safe to unwrap because we know `hash` has a valid size since it's squeezed from the sponge.
+            for trits in normalize(&hash).unwrap().chunks(3) {
                 let mut is_m = true;
 
                 for trit in trits.iter() {
@@ -255,11 +261,12 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     // We probably want to check it is the right input for the address.
     pub fn sign(
         mut self,
-        seed: &TernarySeed<Kerl>,
+        seed: &Seed,
         inputs: &[(u64, Address, WotsSecurityLevel)],
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
-        // Safe to unwrap because bundle is sealed
-        let message = normalize_hash(self.builders.0.get(0).unwrap().bundle.as_ref().unwrap().to_inner());
+        // Safe to unwrap `get` because bundle is sealed.
+        // Safe to unwrap `normalize` because we know the bundle hash has a valid size.
+        let message = normalize(self.builders.0.get(0).unwrap().bundle.as_ref().unwrap().to_inner()).unwrap();
 
         let mut signature_fragments: Vec<Payload> = Vec::new();
 
@@ -271,13 +278,13 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
                 .unwrap();
             // Create subseed and then sign the message
             let signature = key_generator
-                .generate(seed, *index)
+                .generate_from_seed(seed, *index)
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?
-                .sign(message.as_i8_slice())
+                .sign(&message)
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
 
             // Split signature into fragments
-            for fragment in signature.trits().chunks(PAYLOAD_TRIT_LEN) {
+            for fragment in signature.as_trits().chunks(PAYLOAD_TRIT_LEN) {
                 signature_fragments.push(Payload::from_inner_unchecked(fragment.to_owned()));
             }
         }
@@ -360,7 +367,7 @@ mod tests {
 
     use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_signing::{PublicKey, RecoverableSignature, Seed, WotsSignature};
+    use bee_signing::ternary::{seed::Seed, wots::WotsSignature, PublicKey, RecoverableSignature};
     use bee_ternary::{T1B1Buf, TritBuf};
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
@@ -385,14 +392,14 @@ mod tests {
     fn bundle_builder_signature_check(security: WotsSecurityLevel) -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
-        let seed = TernarySeed::<Kerl>::new();
+        let seed = Seed::rand();
         let privkey = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
             .security_level(security)
             .build()
             .unwrap()
-            .generate(&seed, 0)
+            .generate_from_seed(&seed, 0)
             .unwrap();
-        let address = Address::from_inner_unchecked(privkey.generate_public_key().unwrap().trits().to_owned());
+        let address = Address::from_inner_unchecked(privkey.generate_public_key().unwrap().as_trits().to_owned());
 
         // Transfer
         bundle_builder.push(default_transaction_builder(0, bundle_size - 1).with_value(Value::from_inner_unchecked(1)));
@@ -428,10 +435,11 @@ mod tests {
 
             offset += PAYLOAD_TRIT_LEN;
         }
-        let res = WotsSignature::<Kerl>::from_buf(signature)
-            .recover_public_key(normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()).as_i8_slice())
+        let res = WotsSignature::<Kerl>::from_trits(signature)
+            .unwrap()
+            .recover_public_key(&normalize(bundle.0.get(1).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
-        assert_eq!(address.to_inner(), res.trits());
+        assert_eq!(address.to_inner(), res.as_trits());
 
         Ok(())
     }
@@ -439,17 +447,17 @@ mod tests {
     fn bundle_builder_different_security_check() -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::new();
-        let seed = TernarySeed::<Kerl>::new();
+        let seed = Seed::rand();
         let address_low = Address::from_inner_unchecked(
             WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .security_level(WotsSecurityLevel::Low)
                 .build()
                 .unwrap()
-                .generate(&seed, 0)
+                .generate_from_seed(&seed, 0)
                 .unwrap()
                 .generate_public_key()
                 .unwrap()
-                .trits()
+                .as_trits()
                 .to_owned(),
         );
         let address_medium = Address::from_inner_unchecked(
@@ -457,11 +465,11 @@ mod tests {
                 .security_level(WotsSecurityLevel::Medium)
                 .build()
                 .unwrap()
-                .generate(&seed, 1)
+                .generate_from_seed(&seed, 1)
                 .unwrap()
                 .generate_public_key()
                 .unwrap()
-                .trits()
+                .as_trits()
                 .to_owned(),
         );
 
@@ -496,10 +504,11 @@ mod tests {
         assert_eq!(bundle.len(), bundle_size);
 
         // Validate signature
-        let res_low = WotsSignature::<Kerl>::from_buf(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
-            .recover_public_key(normalize_hash(bundle.0.get(1).unwrap().bundle.to_inner()).as_i8_slice())
+        let res_low = WotsSignature::<Kerl>::from_trits(bundle.0.get(1).unwrap().payload.to_inner().to_owned())
+            .unwrap()
+            .recover_public_key(&normalize(bundle.0.get(1).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
-        assert_eq!(address_low.to_inner(), res_low.trits());
+        assert_eq!(address_low.to_inner(), res_low.as_trits());
 
         let mut signature = TritBuf::<T1B1Buf>::zeros(PAYLOAD_TRIT_LEN * 2);
         let mut offset = 0;
@@ -508,10 +517,11 @@ mod tests {
             signature[offset..][..PAYLOAD_TRIT_LEN].copy_from(input.payload.to_inner());
             offset += PAYLOAD_TRIT_LEN;
         }
-        let res_medium = WotsSignature::<Kerl>::from_buf(signature)
-            .recover_public_key(normalize_hash(bundle.0.get(2).unwrap().bundle.to_inner()).as_i8_slice())
+        let res_medium = WotsSignature::<Kerl>::from_trits(signature)
+            .unwrap()
+            .recover_public_key(&normalize(bundle.0.get(2).unwrap().bundle.to_inner()).unwrap())
             .unwrap();
-        assert_eq!(address_medium.to_inner(), res_medium.trits());
+        assert_eq!(address_medium.to_inner(), res_medium.as_trits());
 
         Ok(())
     }

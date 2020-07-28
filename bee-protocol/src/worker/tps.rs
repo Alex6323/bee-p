@@ -11,15 +11,20 @@
 
 use crate::protocol::Protocol;
 
-use std::time::Duration;
+use bee_common::worker::Error as WorkerError;
 
 use async_std::{future::ready, prelude::*};
 use futures::channel::oneshot::Receiver;
 use log::info;
 
+use std::time::Duration;
+
 pub(crate) struct TpsWorker {
     incoming: u64,
     new: u64,
+    known: u64,
+    stale: u64,
+    invalid: u64,
     outgoing: u64,
 }
 
@@ -28,28 +33,40 @@ impl TpsWorker {
         Self {
             incoming: 0,
             new: 0,
+            known: 0,
+            stale: 0,
+            invalid: 0,
             outgoing: 0,
         }
     }
 
     fn tps(&mut self) {
-        let incoming = Protocol::get().metrics.transaction_broadcast_received();
+        let incoming = Protocol::get().metrics.transaction_received();
         let new = Protocol::get().metrics.new_transactions_received();
-        let outgoing = Protocol::get().metrics.transaction_broadcast_sent();
+        let known = Protocol::get().metrics.known_transactions_received();
+        let stale = Protocol::get().metrics.stale_transactions_received();
+        let invalid = Protocol::get().metrics.invalid_transactions_received();
+        let outgoing = Protocol::get().metrics.transaction_sent();
 
         info!(
-            "incoming {} new {} outgoing {}",
+            "incoming {} new {} known {} stale {} invalid {} outgoing {}",
             incoming - self.incoming,
             new - self.new,
+            known - self.known,
+            stale - self.stale,
+            invalid - self.invalid,
             outgoing - self.outgoing
         );
 
         self.incoming = incoming;
         self.new = new;
+        self.known = known;
+        self.stale = stale;
+        self.invalid = invalid;
         self.outgoing = outgoing;
     }
 
-    pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) {
+    pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
         loop {
@@ -64,5 +81,7 @@ impl TpsWorker {
         }
 
         info!("Stopped.");
+
+        Ok(())
     }
 }

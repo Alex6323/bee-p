@@ -77,7 +77,8 @@ mod tests {
     use super::*;
 
     use crate::message::{
-        v1::LegacyGossip, Handshake, Heartbeat, Message, MilestoneRequest, TransactionBroadcast, TransactionRequest,
+        v1::LegacyGossip, Handshake, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage,
+        TransactionRequest,
     };
 
     use bee_test::slices::slice_eq;
@@ -213,11 +214,11 @@ mod tests {
     );
 
     implement_tlv_tests!(
-        TransactionBroadcast,
-        invalid_advertised_type_transaction_broadcast,
-        invalid_advertised_length_transaction_broadcast,
-        length_out_of_range_transaction_broadcast,
-        fuzz_transaction_broadcast
+        TransactionMessage,
+        invalid_advertised_type_transaction,
+        invalid_advertised_length_transaction,
+        length_out_of_range_transaction,
+        fuzz_transaction
     );
 
     implement_tlv_tests!(

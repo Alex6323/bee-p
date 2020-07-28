@@ -1,6 +1,6 @@
 [package]
 name = "bee-snapshot"
-version = "0.1.0"
+version = "0.1.0-alpha"
 authors = ["IOTA Stiftung"]
 edition = "2018"
 description = ""
@@ -8,11 +8,14 @@ readme = "README.md"
 repository = "https://github.com/iotaledger/bee"
 license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "snapshot"]
+homepage = "https://www.iota.org"
 
 [dependencies]
-bee-ternary = { path = "../bee-ternary" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 bee-transaction = { path = "../bee-transaction" }
 
-async-std = "1.4.0"
+async-std = "1.6.2"
 bytemuck = "1.2.0"
-serde = { version = "1.0.104", features = ["derive" ] }
+log = "0.4.8"
+serde = { version = "1.0.114", features = ["derive" ] }

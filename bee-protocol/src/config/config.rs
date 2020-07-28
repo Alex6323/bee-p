@@ -9,9 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::SpongeType;
+use bee_crypto::ternary::sponge::SpongeKind;
 use bee_ternary::{T1B1Buf, T5B1Buf, TryteBuf};
-use bee_transaction::{Address, BundledTransactionField};
+use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use bytemuck::cast_slice;
 use serde::Deserialize;
@@ -23,7 +23,7 @@ const DEFAULT_COO_PUBLIC_KEY: &str =
 const DEFAULT_COO_SECURITY: u8 = 2;
 const DEFAULT_COO_SPONGE_TYPE: &str = "kerl";
 const DEFAULT_MILESTONE_REQUEST_SEND_WORKER_BOUND: usize = 1000;
-const DEFAULT_TRANSACTION_BROADCAST_SEND_WORKER_BOUND: usize = 1000;
+const DEFAULT_TRANSACTION_SEND_WORKER_BOUND: usize = 1000;
 const DEFAULT_TRANSACTION_REQUEST_SEND_WORKER_BOUND: usize = 1000;
 const DEFAULT_HEARTBEAT_SEND_WORKER_BOUND: usize = 1000;
 const DEFAULT_MILESTONE_VALIDATOR_WORKER_BOUND: usize = 1000;
@@ -51,7 +51,7 @@ struct ProtocolCoordinatorConfigBuilder {
 #[derive(Default, Deserialize)]
 struct ProtocolWorkersConfigBuilder {
     milestone_request_send_worker_bound: Option<usize>,
-    transaction_broadcast_send_worker_bound: Option<usize>,
+    transaction_send_worker_bound: Option<usize>,
     transaction_request_send_worker_bound: Option<usize>,
     heartbeat_send_worker_bound: Option<usize>,
     milestone_validator_worker_bound: Option<usize>,
@@ -108,15 +108,15 @@ impl ProtocolConfigBuilder {
 
     pub fn milestone_request_send_worker_bound(mut self, milestone_request_send_worker_bound: usize) -> Self {
         self.workers
-            .transaction_broadcast_send_worker_bound
+            .transaction_send_worker_bound
             .replace(milestone_request_send_worker_bound);
         self
     }
 
-    pub fn transaction_broadcast_send_worker_bound(mut self, transaction_broadcast_send_worker_bound: usize) -> Self {
+    pub fn transaction_send_worker_bound(mut self, transaction_send_worker_bound: usize) -> Self {
         self.workers
-            .transaction_broadcast_send_worker_bound
-            .replace(transaction_broadcast_send_worker_bound);
+            .transaction_send_worker_bound
+            .replace(transaction_send_worker_bound);
         self
     }
 
@@ -220,10 +220,10 @@ impl ProtocolConfigBuilder {
             .unwrap_or_else(|| DEFAULT_COO_SPONGE_TYPE.to_owned())
             .as_str()
         {
-            "kerl" => SpongeType::Kerl,
-            "curl27" => SpongeType::CurlP27,
-            "curl81" => SpongeType::CurlP81,
-            _ => SpongeType::Kerl,
+            "kerl" => SpongeKind::Kerl,
+            "curl27" => SpongeKind::CurlP27,
+            "curl81" => SpongeKind::CurlP81,
+            _ => SpongeKind::Kerl,
         };
 
         let coo_public_key_default = Address::from_inner_unchecked(
@@ -264,10 +264,10 @@ impl ProtocolConfigBuilder {
                     .workers
                     .milestone_request_send_worker_bound
                     .unwrap_or(DEFAULT_MILESTONE_REQUEST_SEND_WORKER_BOUND),
-                transaction_broadcast_send_worker_bound: self
+                transaction_send_worker_bound: self
                     .workers
-                    .transaction_broadcast_send_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_BROADCAST_SEND_WORKER_BOUND),
+                    .transaction_send_worker_bound
+                    .unwrap_or(DEFAULT_TRANSACTION_SEND_WORKER_BOUND),
                 transaction_request_send_worker_bound: self
                     .workers
                     .transaction_request_send_worker_bound
@@ -333,13 +333,13 @@ pub struct ProtocolCoordinatorConfig {
     pub(crate) public_key: Address,
     pub(crate) public_key_bytes: [u8; 49],
     pub(crate) security_level: u8,
-    pub(crate) sponge_type: SpongeType,
+    pub(crate) sponge_type: SpongeKind,
 }
 
 #[derive(Clone)]
 pub struct ProtocolWorkersConfig {
     pub(crate) milestone_request_send_worker_bound: usize,
-    pub(crate) transaction_broadcast_send_worker_bound: usize,
+    pub(crate) transaction_send_worker_bound: usize,
     pub(crate) transaction_request_send_worker_bound: usize,
     pub(crate) heartbeat_send_worker_bound: usize,
     pub(crate) milestone_validator_worker_bound: usize,

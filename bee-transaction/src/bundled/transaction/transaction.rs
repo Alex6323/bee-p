@@ -15,19 +15,19 @@ use crate::{
             Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
             OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
         },
-        Address, BundledTransactionBuilder, BundledTransactionField, Hash, Index, Nonce, Payload, Tag, Timestamp,
-        Value,
+        Address, BundledTransactionBuilder, BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, Value,
     },
     TransactionVertex,
 };
 
-use bee_ternary::{num_conversions, raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Trits, T1B1};
+use bee_crypto::ternary::Hash;
+use bee_ternary::{convert::Error as ConvertError, raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Trits, T1B1};
 
 use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub enum BundledTransactionError {
-    InvalidNumericField(&'static str, num_conversions::TritsI64ConversionError),
+    InvalidNumericField(&'static str, ConvertError),
     MissingField(&'static str),
     InvalidValue(i64),
     InvalidAddress,
@@ -68,31 +68,25 @@ impl BundledTransaction {
                 trits[ADDRESS.trit_offset.start..ADDRESS.trit_offset.start + ADDRESS.trit_offset.length].to_buf(),
             ))
             .with_value(Value::from_inner_unchecked(
-                i64::try_from(
-                    trits[VALUE.trit_offset.start..VALUE.trit_offset.start + VALUE.trit_offset.length].to_buf(),
-                )
-                .map_err(|e| BundledTransactionError::InvalidNumericField("value", e))?,
+                i64::try_from(&trits[VALUE.trit_offset.start..VALUE.trit_offset.start + VALUE.trit_offset.length])
+                    .map_err(|e| BundledTransactionError::InvalidNumericField("value", e))?,
             ))
             .with_obsolete_tag(Tag(trits[OBSOLETE_TAG.trit_offset.start
                 ..OBSOLETE_TAG.trit_offset.start + OBSOLETE_TAG.trit_offset.length]
                 .to_buf()))
             .with_timestamp(Timestamp::from_inner_unchecked(
-                i64::try_from(
-                    trits[TIMESTAMP.trit_offset.start..TIMESTAMP.trit_offset.start + TIMESTAMP.trit_offset.length]
-                        .to_buf(),
+                i128::try_from(
+                    &trits[TIMESTAMP.trit_offset.start..TIMESTAMP.trit_offset.start + TIMESTAMP.trit_offset.length],
                 )
                 .map_err(|e| BundledTransactionError::InvalidNumericField("timestamp", e))? as u64,
             ))
             .with_index(Index::from_inner_unchecked(
-                i64::try_from(
-                    trits[INDEX.trit_offset.start..INDEX.trit_offset.start + INDEX.trit_offset.length].to_buf(),
-                )
-                .map_err(|e| BundledTransactionError::InvalidNumericField("index", e))? as usize,
+                i128::try_from(&trits[INDEX.trit_offset.start..INDEX.trit_offset.start + INDEX.trit_offset.length])
+                    .map_err(|e| BundledTransactionError::InvalidNumericField("index", e))? as usize,
             ))
             .with_last_index(Index::from_inner_unchecked(
-                i64::try_from(
-                    trits[LAST_INDEX.trit_offset.start..LAST_INDEX.trit_offset.start + LAST_INDEX.trit_offset.length]
-                        .to_buf(),
+                i128::try_from(
+                    &trits[LAST_INDEX.trit_offset.start..LAST_INDEX.trit_offset.start + LAST_INDEX.trit_offset.length],
                 )
                 .map_err(|e| BundledTransactionError::InvalidNumericField("last_index", e))? as usize,
             ))
@@ -100,10 +94,9 @@ impl BundledTransaction {
                 [TAG.trit_offset.start..TAG.trit_offset.start + TAG.trit_offset.length]
                 .to_buf()))
             .with_attachment_ts(Timestamp::from_inner_unchecked(
-                i64::try_from(
-                    trits[ATTACHMENT_TS.trit_offset.start
-                        ..ATTACHMENT_TS.trit_offset.start + ATTACHMENT_TS.trit_offset.length]
-                        .to_buf(),
+                i128::try_from(
+                    &trits[ATTACHMENT_TS.trit_offset.start
+                        ..ATTACHMENT_TS.trit_offset.start + ATTACHMENT_TS.trit_offset.length],
                 )
                 .map_err(|e| BundledTransactionError::InvalidNumericField("attachment_ts", e))? as u64,
             ))
@@ -117,19 +110,17 @@ impl BundledTransaction {
                 trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
             ))
             .with_attachment_lbts(Timestamp::from_inner_unchecked(
-                i64::try_from(
-                    trits[ATTACHMENT_LBTS.trit_offset.start
-                        ..ATTACHMENT_LBTS.trit_offset.start + ATTACHMENT_LBTS.trit_offset.length]
-                        .to_buf(),
+                i128::try_from(
+                    &trits[ATTACHMENT_LBTS.trit_offset.start
+                        ..ATTACHMENT_LBTS.trit_offset.start + ATTACHMENT_LBTS.trit_offset.length],
                 )
                 .map_err(|e| BundledTransactionError::InvalidNumericField("attachment_lbts", e))?
                     as u64,
             ))
             .with_attachment_ubts(Timestamp::from_inner_unchecked(
-                i64::try_from(
-                    trits[ATTACHMENT_UBTS.trit_offset.start
-                        ..ATTACHMENT_UBTS.trit_offset.start + ATTACHMENT_UBTS.trit_offset.length]
-                        .to_buf(),
+                i128::try_from(
+                    &trits[ATTACHMENT_UBTS.trit_offset.start
+                        ..ATTACHMENT_UBTS.trit_offset.start + ATTACHMENT_UBTS.trit_offset.length],
                 )
                 .map_err(|e| BundledTransactionError::InvalidNumericField("attachment_ubts", e))?
                     as u64,
@@ -159,25 +150,25 @@ impl BundledTransaction {
         let mut copy_slice =
             |layout: Field, slice: &Trits<T1B1>| buf[layout.trit_offset.start..][..slice.len()].copy_from(slice);
 
-        let value_buf = TritBuf::<T1B1Buf>::try_from(*self.value().to_inner()).unwrap();
+        let value_buf = TritBuf::<T1B1Buf<_>>::from(*self.value().to_inner());
         copy_slice(VALUE, &value_buf);
 
-        let index_buf = TritBuf::<T1B1Buf>::try_from(*self.index().to_inner() as i64).unwrap();
+        let index_buf = TritBuf::<T1B1Buf<_>>::from(*self.index().to_inner() as i128);
         copy_slice(INDEX, &index_buf);
 
-        let last_index_buf = TritBuf::<T1B1Buf>::try_from(*self.last_index().to_inner() as i64).unwrap();
+        let last_index_buf = TritBuf::<T1B1Buf<_>>::from(*self.last_index().to_inner() as i128);
         copy_slice(LAST_INDEX, &last_index_buf);
 
-        let timestamp_buf = TritBuf::<T1B1Buf>::try_from(*self.timestamp().to_inner() as i64).unwrap();
+        let timestamp_buf = TritBuf::<T1B1Buf<_>>::from(*self.timestamp().to_inner() as i128);
         copy_slice(TIMESTAMP, &timestamp_buf);
 
-        let attachment_ts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_ts().to_inner() as i64).unwrap();
+        let attachment_ts_buf = TritBuf::<T1B1Buf<_>>::from(*self.attachment_ts().to_inner() as i128);
         copy_slice(ATTACHMENT_TS, &attachment_ts_buf);
 
-        let attachment_lbts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_lbts().to_inner() as i64).unwrap();
+        let attachment_lbts_buf = TritBuf::<T1B1Buf<_>>::from(*self.attachment_lbts().to_inner() as i128);
         copy_slice(ATTACHMENT_LBTS, &attachment_lbts_buf);
 
-        let attachment_ubts_buf = TritBuf::<T1B1Buf>::try_from(*self.attachment_ubts().to_inner() as i64).unwrap();
+        let attachment_ubts_buf = TritBuf::<T1B1Buf<_>>::from(*self.attachment_ubts().to_inner() as i128);
         copy_slice(ATTACHMENT_UBTS, &attachment_ubts_buf);
     }
 

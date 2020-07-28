@@ -12,12 +12,12 @@
 use crate::{
     address::Address,
     endpoint::{origin::Origin, whitelist},
-    errors::Result,
     events::EventPublisher as Notifier,
-    shutdown::ShutdownListener as Shutdown,
 };
 
 use super::{connection::TcpConnection, spawn_connection_workers};
+
+use bee_common::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
 
 use async_std::net::TcpListener;
 use futures::{prelude::*, select};
@@ -38,7 +38,7 @@ impl TcpWorker {
         }
     }
 
-    pub async fn run(mut self) -> Result<()> {
+    pub async fn run(mut self) -> Result<(), WorkerError> {
         debug!("Starting TCP worker...");
 
         let listener = TcpListener::bind(*self.binding_addr).await?;

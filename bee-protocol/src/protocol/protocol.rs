@@ -11,10 +11,11 @@
 
 use crate::{
     config::ProtocolConfig,
+    events::{LastMilestone, LastSolidMilestone},
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
-    util::WaitPriorityQueue,
+    tangle::tangle,
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
@@ -25,65 +26,44 @@ use crate::{
     },
 };
 
-use bee_crypto::{CurlP27, CurlP81, Kerl, SpongeType};
-use bee_network::{Address, EndpointId, Network, Origin};
-use bee_signing::WotsPublicKey;
-use bee_transaction::Hash;
-
-use std::{
-    ptr,
-    sync::{Arc, Mutex},
+use bee_common::shutdown::Shutdown;
+use bee_common_ext::{wait_priority_queue::WaitPriorityQueue, event::Bus};
+use bee_crypto::ternary::{
+    sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
+    Hash,
 };
+use bee_network::{Address, EndpointId, Network, Origin};
+use bee_signing::ternary::wots::WotsPublicKey;
 
-use async_std::task::spawn;
+use std::{ptr, sync::Arc};
+
+use async_std::task::{block_on, spawn};
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
-use log::warn;
+use log::{info, warn};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
 pub struct Protocol {
     pub(crate) config: ProtocolConfig,
     pub(crate) network: Network,
+    pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
-    pub(crate) transaction_worker: (mpsc::Sender<TransactionWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
-    pub(crate) transaction_responder_worker: (
-        mpsc::Sender<TransactionResponderWorkerEvent>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) milestone_responder_worker: (
-        mpsc::Sender<MilestoneResponderWorkerEvent>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) transaction_requester_worker: (
-        WaitPriorityQueue<TransactionRequesterWorkerEntry>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) milestone_requester_worker: (
-        WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) milestone_validator_worker: (
-        mpsc::Sender<MilestoneValidatorWorkerEvent>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) transaction_solidifier_worker: (
-        mpsc::Sender<TransactionSolidifierWorkerEvent>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) milestone_solidifier_worker: (
-        mpsc::Sender<MilestoneSolidifierWorkerEvent>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) broadcaster_worker: (mpsc::Sender<BroadcasterWorkerEvent>, Mutex<Option<oneshot::Sender<()>>>),
-    pub(crate) status_worker: Mutex<Option<oneshot::Sender<()>>>,
-    pub(crate) tps_worker: Mutex<Option<oneshot::Sender<()>>>,
+    pub(crate) transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
+    pub(crate) transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
+    pub(crate) milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
+    pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
+    pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
+    pub(crate) milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
+    pub(crate) transaction_solidifier_worker: mpsc::Sender<TransactionSolidifierWorkerEvent>,
+    pub(crate) milestone_solidifier_worker: mpsc::Sender<MilestoneSolidifierWorkerEvent>,
+    pub(crate) broadcaster_worker: mpsc::Sender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested: DashMap<Hash, MilestoneIndex>,
 }
 
 impl Protocol {
-    pub async fn init(config: ProtocolConfig, network: Network) {
+    pub async fn init(config: ProtocolConfig, network: Network, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) {
         if unsafe { !PROTOCOL.is_null() } {
             warn!("Already initialized.");
             return;
@@ -126,39 +106,17 @@ impl Protocol {
         let protocol = Protocol {
             config,
             network: network.clone(),
+            bus,
             metrics: ProtocolMetrics::new(),
-            transaction_worker: (transaction_worker_tx, Mutex::new(Some(transaction_worker_shutdown_tx))),
-            transaction_responder_worker: (
-                transaction_responder_worker_tx,
-                Mutex::new(Some(transaction_responder_worker_shutdown_tx)),
-            ),
-            milestone_responder_worker: (
-                milestone_responder_worker_tx,
-                Mutex::new(Some(milestone_responder_worker_shutdown_tx)),
-            ),
-            transaction_requester_worker: (
-                Default::default(),
-                Mutex::new(Some(transaction_requester_worker_shutdown_tx)),
-            ),
-            milestone_requester_worker: (
-                Default::default(),
-                Mutex::new(Some(milestone_requester_worker_shutdown_tx)),
-            ),
-            milestone_validator_worker: (
-                milestone_validator_worker_tx,
-                Mutex::new(Some(milestone_validator_worker_shutdown_tx)),
-            ),
-            transaction_solidifier_worker: (
-                transaction_solidifier_worker_tx,
-                Mutex::new(Some(transaction_solidifier_worker_shutdown_tx)),
-            ),
-            milestone_solidifier_worker: (
-                milestone_solidifier_worker_tx,
-                Mutex::new(Some(milestone_solidifier_worker_shutdown_tx)),
-            ),
-            broadcaster_worker: (broadcaster_worker_tx, Mutex::new(Some(broadcaster_worker_shutdown_tx))),
-            status_worker: Mutex::new(Some(status_worker_shutdown_tx)),
-            tps_worker: Mutex::new(Some(tps_worker_shutdown_tx)),
+            transaction_worker: transaction_worker_tx,
+            transaction_responder_worker: transaction_responder_worker_tx,
+            milestone_responder_worker: milestone_responder_worker_tx,
+            transaction_requester_worker: Default::default(),
+            milestone_requester_worker: Default::default(),
+            milestone_validator_worker: milestone_validator_worker_tx,
+            transaction_solidifier_worker: transaction_solidifier_worker_tx,
+            milestone_solidifier_worker: milestone_solidifier_worker_tx,
+            broadcaster_worker: broadcaster_worker_tx,
             peer_manager: PeerManager::new(network.clone()),
             requested: Default::default(),
         };
@@ -167,129 +125,100 @@ impl Protocol {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
-        spawn(
-            TransactionWorker::new(
-                Protocol::get().milestone_validator_worker.0.clone(),
-                Protocol::get().config.workers.transaction_worker_cache,
-            )
-            .run(transaction_worker_rx, transaction_worker_shutdown_rx),
+        Protocol::get().bus.add_listener(handle_last_milestone);
+        Protocol::get().bus.add_listener(handle_last_solid_milestone);
+
+        shutdown.add_worker_shutdown(
+            transaction_worker_shutdown_tx,
+            spawn(
+                TransactionWorker::new(
+                    Protocol::get().milestone_validator_worker.clone(),
+                    Protocol::get().config.workers.transaction_worker_cache,
+                )
+                .run(transaction_worker_rx, transaction_worker_shutdown_rx),
+            ),
         );
-        spawn(TransactionResponderWorker::new().run(
-            transaction_responder_worker_rx,
-            transaction_responder_worker_shutdown_rx,
-        ));
-        spawn(
-            MilestoneResponderWorker::new().run(milestone_responder_worker_rx, milestone_responder_worker_shutdown_rx),
+
+        shutdown.add_worker_shutdown(
+            transaction_responder_worker_shutdown_tx,
+            spawn(TransactionResponderWorker::new().run(
+                transaction_responder_worker_rx,
+                transaction_responder_worker_shutdown_rx,
+            )),
         );
-        spawn(TransactionRequesterWorker::new().run(transaction_requester_worker_shutdown_rx));
-        spawn(MilestoneRequesterWorker::new().run(milestone_requester_worker_shutdown_rx));
+
+        shutdown.add_worker_shutdown(
+            milestone_responder_worker_shutdown_tx,
+            spawn(
+                MilestoneResponderWorker::new()
+                    .run(milestone_responder_worker_rx, milestone_responder_worker_shutdown_rx),
+            ),
+        );
+
+        shutdown.add_worker_shutdown(
+            transaction_requester_worker_shutdown_tx,
+            spawn(TransactionRequesterWorker::new().run(transaction_requester_worker_shutdown_rx)),
+        );
+
+        shutdown.add_worker_shutdown(
+            milestone_requester_worker_shutdown_tx,
+            spawn(MilestoneRequesterWorker::new().run(milestone_requester_worker_shutdown_rx)),
+        );
 
         match Protocol::get().config.coordinator.sponge_type {
-            SpongeType::Kerl => spawn(
-                MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new()
-                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            SpongeKind::Kerl => shutdown.add_worker_shutdown(
+                milestone_validator_worker_shutdown_tx,
+                spawn(
+                    MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new()
+                        .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+                ),
             ),
-            SpongeType::CurlP27 => spawn(
-                MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new()
-                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            SpongeKind::CurlP27 => shutdown.add_worker_shutdown(
+                milestone_validator_worker_shutdown_tx,
+                spawn(
+                    MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new()
+                        .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+                ),
             ),
-            SpongeType::CurlP81 => spawn(
-                MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new()
-                    .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+            SpongeKind::CurlP81 => shutdown.add_worker_shutdown(
+                milestone_validator_worker_shutdown_tx,
+                spawn(
+                    MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new()
+                        .run(milestone_validator_worker_rx, milestone_validator_worker_shutdown_rx),
+                ),
             ),
         };
 
-        spawn(TransactionSolidifierWorker::new().run(
-            transaction_solidifier_worker_rx,
-            transaction_solidifier_worker_shutdown_rx,
-        ));
-        spawn(
-            MilestoneSolidifierWorker::new()
-                .run(milestone_solidifier_worker_rx, milestone_solidifier_worker_shutdown_rx),
+        shutdown.add_worker_shutdown(
+            transaction_solidifier_worker_shutdown_tx,
+            spawn(TransactionSolidifierWorker::new().run(
+                transaction_solidifier_worker_rx,
+                transaction_solidifier_worker_shutdown_rx,
+            )),
         );
-        spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx));
-        spawn(StatusWorker::new(Protocol::get().config.workers.status_interval).run(status_worker_shutdown_rx));
-        spawn(TpsWorker::new().run(tps_worker_shutdown_rx));
-    }
 
-    pub async fn shutdown() {
-        if let Ok(mut shutdown) = Protocol::get().transaction_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down TransactionWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().transaction_responder_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down TransactionResponderWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().milestone_responder_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down MilestoneResponderWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().transaction_requester_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down TransactionRequesterWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().milestone_requester_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down MilestoneRequesterWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().milestone_validator_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down MilestoneValidatorWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().transaction_solidifier_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down TransactionSolidifierWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().milestone_solidifier_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down MilestoneSolidifierWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().broadcaster_worker.1.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down BroadcasterWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().status_worker.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down StatusWorker failed: {:?}.", e);
-                }
-            }
-        }
-        if let Ok(mut shutdown) = Protocol::get().tps_worker.lock() {
-            if let Some(shutdown) = shutdown.take() {
-                if let Err(e) = shutdown.send(()) {
-                    warn!("Shutting down TpsWorker failed: {:?}.", e);
-                }
-            }
-        }
+        shutdown.add_worker_shutdown(
+            milestone_solidifier_worker_shutdown_tx,
+            spawn(
+                MilestoneSolidifierWorker::new()
+                    .run(milestone_solidifier_worker_rx, milestone_solidifier_worker_shutdown_rx),
+            ),
+        );
+
+        shutdown.add_worker_shutdown(
+            broadcaster_worker_shutdown_tx,
+            spawn(BroadcasterWorker::new(network).run(broadcaster_worker_rx, broadcaster_worker_shutdown_rx)),
+        );
+
+        shutdown.add_worker_shutdown(
+            status_worker_shutdown_tx,
+            spawn(StatusWorker::new(Protocol::get().config.workers.status_interval).run(status_worker_shutdown_rx)),
+        );
+
+        shutdown.add_worker_shutdown(
+            tps_worker_shutdown_tx,
+            spawn(TpsWorker::new().run(tps_worker_shutdown_rx)),
+        );
     }
 
     pub(crate) fn get() -> &'static Protocol {
@@ -318,4 +247,18 @@ impl Protocol {
 
         (receiver_tx, receiver_shutdown_tx)
     }
+}
+
+fn handle_last_milestone(last_milestone: &LastMilestone) {
+    info!("New milestone #{}.", *last_milestone.0.index);
+    tangle().update_last_milestone_index(last_milestone.0.index);
+}
+
+fn handle_last_solid_milestone(last_solid_milestone: &LastSolidMilestone) {
+    tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
+    // TODO block_on ?
+    block_on(Protocol::broadcast_heartbeat(
+        last_solid_milestone.0.index,
+        tangle().get_snapshot_milestone_index(),
+    ));
 }

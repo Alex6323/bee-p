@@ -14,8 +14,8 @@ pub const HASH_TRIT_LEN: usize = 243;
 pub const NONCE_TRIT_LEN: usize = 81;
 
 pub const MAINNET_DIFFICULTY: usize = 14;
+pub const COMNET_DIFFICULTY: usize = 10;
 pub const DEVNET_DIFFICULTY: usize = 9;
-pub const SPAMNET_DIFFICULTY: usize = 6;
 
 pub const NUM_FULL_CHUNKS_FOR_PRESTATE: usize = (TRANSACTION_TRIT_LEN - HASH_TRIT_LEN) / HASH_TRIT_LEN; // 32
 

@@ -9,8 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
-use bee_transaction::{BundledTransactionField, Hash};
+use bee_transaction::bundled::BundledTransactionField;
 
 use std::marker::PhantomData;
 
@@ -37,9 +38,9 @@ impl<H: Default + Digest> Merkle<H> {
     fn leaf(&mut self, hash: Hash) -> Vec<u8> {
         let mut hasher = H::default();
 
-        hasher.input([LEAF_PREFIX]);
-        hasher.input(cast_slice(hash.to_inner().encode::<T5B1Buf>().as_i8_slice()));
-        (&hasher.result_reset()).to_vec()
+        hasher.update([LEAF_PREFIX]);
+        hasher.update(cast_slice(hash.to_inner().encode::<T5B1Buf>().as_i8_slice()));
+        (&hasher.finalize_reset()).to_vec()
     }
 
     fn node(&mut self, hashes: &[Hash]) -> Vec<u8> {
@@ -47,10 +48,10 @@ impl<H: Default + Digest> Merkle<H> {
         let n = hashes.len() as u32 - 1;
         let k = 1 << (32 - n.leading_zeros() - 1);
 
-        hasher.input([NODE_PREFIX]);
-        hasher.input(self.hash(&hashes[0..k]));
-        hasher.input(self.hash(&hashes[k..]));
-        (&hasher.result_reset()).to_vec()
+        hasher.update([NODE_PREFIX]);
+        hasher.update(self.hash(&hashes[0..k]));
+        hasher.update(self.hash(&hashes[k..]));
+        (&hasher.finalize_reset()).to_vec()
     }
 
     pub(crate) fn hash(&mut self, hashes: &[Hash]) -> Vec<u8> {

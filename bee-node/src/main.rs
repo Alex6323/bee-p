@@ -9,41 +9,31 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod cli;
-mod config;
-mod constants;
-mod node;
+use bee_common::logger::logger_init;
+use bee_node::{CliArgs, Node, NodeConfigBuilder};
 
-use cli::CliArgs;
-use config::{NodeConfigBuilder, CONFIG_PATH};
-use node::Node;
-
-use async_std::task::block_on;
-
-use std::fs;
+const CONFIG_PATH: &str = "./config.toml";
 
 fn main() {
-    let mut config_builder = match fs::read_to_string(CONFIG_PATH) {
-        Ok(toml) => match toml::from_str::<NodeConfigBuilder>(&toml) {
-            Ok(config_builder) => config_builder,
-            Err(e) => {
-                panic!("[Node ] Error parsing config file: {:?}", e);
+    match NodeConfigBuilder::from_file(CONFIG_PATH) {
+        Ok(mut config_builder) => {
+            CliArgs::new().apply_to_config(&mut config_builder);
+            let config = config_builder.finish();
+
+            logger_init(config.logger.clone()).unwrap();
+
+            match Node::build(config).finish() {
+                Ok(mut node) => {
+                    node.run_loop();
+                    node.shutdown();
+                }
+                Err(e) => {
+                    eprintln!("Program aborted. Error was: {}", e);
+                }
             }
-        },
-        Err(e) => {
-            panic!("[Node ] Error reading config file: {:?}", e);
         }
-    };
-
-    CliArgs::new().apply_to_config(&mut config_builder);
-
-    let config = config_builder.finish();
-
-    let (network, events, shutdown) = bee_network::init(config.network);
-
-    // TODO: proper shutdown
-    let mut node = Node::new(config, network, events, shutdown);
-
-    block_on(node.init());
-    block_on(node.run());
+        Err(e) => {
+            eprintln!("Program aborted. Error was: {}", e);
+        }
+    }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "bee-protocol"
-version = "0.1.0"
+version = "0.1.0-alpha"
 authors = ["IOTA Stiftung"]
 edition = "2018"
 description = ""
@@ -8,25 +8,30 @@ readme = "README.md"
 repository = "https://github.com/iotaledger/bee"
 license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "protocol"]
+homepage = "https://www.iota.org"
 
 [dependencies]
-bee-crypto = { path = "../bee-crypto" }
+bee-common = { git = "https://github.com/iotaledger/bee.git" }
+bee-common-ext = { path = "../bee-common-ext" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
 bee-network = { path = "../bee-network" }
 bee-signing = { path = "../bee-signing" }
 bee-tangle = { path = "../bee-tangle" }
-bee-ternary = { path = "../bee-ternary" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
 bee-transaction = { path = "../bee-transaction" }
 
-async-std = "1.5.0"
+async-std = "1.6.2"
+bitflags = "1.2.1"
 bytemuck = "1.2.0"
 dashmap = "3.11"
 futures = "0.3.5"
 futures-util = "0.3.5"
 log = "0.4.8"
-serde = { version = "1.0.104", features = ["derive" ] }
+serde = { version = "1.0.114", features = ["derive" ] }
 twox-hash = "1.5.0"
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }
 
 rand = "0.7.3"
+serial_test = "0.4.0"

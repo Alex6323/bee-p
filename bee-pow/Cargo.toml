@@ -1,6 +1,6 @@
 [package]
 name = "bee-pow"
-version = "0.1.0"
+version = "0.1.0-alpha"
 authors = ["IOTA Stiftung"]
 edition = "2018"
 description = ""
@@ -8,8 +8,9 @@ readme = "README.md"
 repository = "https://github.com/iotaledger/bee"
 license = "Apache-2.0"
 keywords = ["iota", "tangle", "bee", "framework", "pow"]
+homepage = "https://www.iota.org"
 
 [dependencies]
 crossbeam = "0.7.3"
 num_cpus = "1.11.1"
-serde = { version = "1.0.104", features = ["derive" ] }
+serde = { version = "1.0.114", features = ["derive" ] }

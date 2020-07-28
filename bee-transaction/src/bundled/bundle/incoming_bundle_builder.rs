@@ -14,9 +14,9 @@ use crate::{
     TransactionVertex,
 };
 
-use bee_crypto::{Kerl, Sponge};
-use bee_signing::{PublicKey, Signature, WotsPublicKey};
-use bee_ternary::TritBuf;
+use bee_crypto::ternary::sponge::{Kerl, Sponge};
+use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, Signature};
+use bee_ternary::{T1B1Buf, TritBuf};
 
 use std::marker::PhantomData;
 
@@ -84,11 +84,19 @@ where
     }
 
     fn validate_signatures(&self) -> Result<(), IncomingBundleBuilderError> {
-        // TODO get real values
-        let public_key = P::from_buf(TritBuf::new());
-        let signature = P::Signature::from_buf(TritBuf::new());
+        // TODO no bundle should be considered valid if it contains more than MaxSecLevel transactions belonging to the
+        // input address with a value != 0 (actually < 0) TODO get real values
+        let public_key = match P::from_trits(TritBuf::new()) {
+            Ok(pk) => pk,
+            Err(_) => unreachable!(),
+        };
+        let signature = match P::Signature::from_trits(TritBuf::new()) {
+            Ok(sig) => sig,
+            Err(_) => unreachable!(),
+        };
 
-        match public_key.verify(&[], &signature) {
+        // TODO Temporary buffer
+        match public_key.verify(&TritBuf::<T1B1Buf>::zeros(1), &signature) {
             Ok(valid) => {
                 if valid {
                     Ok(())
@@ -178,7 +186,9 @@ mod tests {
 
     use super::*;
 
-    use crate::bundled::{Address, BundledTransactionBuilder, Hash, Index, Nonce, Payload, Tag, Timestamp, Value};
+    use crate::bundled::{Address, BundledTransactionBuilder, Index, Nonce, Payload, Tag, Timestamp, Value};
+
+    use bee_crypto::ternary::Hash;
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
         BundledTransactionBuilder::new()

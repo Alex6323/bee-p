@@ -9,91 +9,51 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::tangle::Tangle;
+use crate::TransactionRef as TxRef;
 
-use bee_transaction::{BundledTransaction as Transaction, Hash};
-
-use std::ops::Deref;
+use bee_crypto::ternary::Hash;
+use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
 
 use async_std::sync::Arc;
-use bitflags::bitflags;
 
-/// A wrapper around `bee_transaction::Transaction` that allows sharing it safely across threads.
 #[derive(Clone)]
-pub struct TransactionRef(Arc<Transaction>);
-
-impl Deref for TransactionRef {
-    type Target = Transaction;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.0
-    }
+pub(crate) struct Vertex<T>
+where
+    T: Clone + Copy,
+{
+    transaction: TxRef,
+    metadata: T,
 }
 
-bitflags! {
-    pub(crate) struct Flags: u8 {
-        const SOLID = 0b0000_0001;
-        const TAIL = 0b0000_0010;
-        const REQUESTED = 0b0000_0100;
-        const MILESTONE = 0b0000_1000;
-    }
-}
-
-pub struct Vertex {
-    id: Hash,
-    inner: TransactionRef,
-    flags: Flags,
-}
-
-impl Vertex {
-    pub fn from(transaction: Transaction, hash: Hash) -> Self {
-        let flags = if transaction.is_tail() {
-            Flags::TAIL
-        } else {
-            Flags::empty()
-        };
-
+impl<T> Vertex<T>
+where
+    T: Clone + Copy,
+{
+    pub fn new(transaction: Tx, metadata: T) -> Self {
         Self {
-            id: hash,
-            inner: TransactionRef(Arc::new(transaction)),
-            flags,
+            transaction: TxRef(Arc::new(transaction)),
+            metadata,
         }
     }
 
-    pub fn get_id(&self) -> Hash {
-        self.id
+    pub fn trunk(&self) -> &Hash {
+        self.transaction.trunk()
     }
 
-    pub fn get_ref_to_inner(&self) -> TransactionRef {
-        self.inner.clone()
+    pub fn branch(&self) -> &Hash {
+        self.transaction.branch()
     }
 
-    pub fn is_solid(&self) -> bool {
-        self.flags.contains(Flags::SOLID)
+    pub fn transaction(&self) -> &TxRef {
+        &self.transaction
     }
 
-    pub fn set_solid(&mut self) {
-        self.flags.insert(Flags::SOLID);
+    pub fn metadata(&self) -> &T {
+        &self.metadata
     }
 
-    pub fn is_tail(&self) -> bool {
-        self.flags.contains(Flags::TAIL)
-    }
-
-    pub fn is_requested(&self) -> bool {
-        self.flags.contains(Flags::REQUESTED)
-    }
-
-    pub fn set_requested(&mut self) {
-        self.flags.insert(Flags::REQUESTED);
-    }
-
-    pub fn is_milestone(&self) -> bool {
-        self.flags.contains(Flags::MILESTONE)
-    }
-
-    pub fn set_milestone(&mut self) {
-        self.flags.insert(Flags::MILESTONE);
+    pub fn metadata_mut(&mut self) -> &mut T {
+        &mut self.metadata
     }
 }
 
@@ -103,13 +63,25 @@ mod tests {
     use bee_test::transaction::create_random_tx;
 
     #[test]
-    fn set_and_is_solid() {
-        let (hash, tx) = create_random_tx();
+    fn create_new_vertex() {
+        let (_, tx) = create_random_tx();
+        let metadata = 0b0000_0001u8;
 
-        let mut vtx = Vertex::from(tx, hash);
-        assert!(!vtx.is_solid());
+        let vtx = Vertex::new(tx.clone(), metadata);
 
-        vtx.set_solid();
-        assert!(vtx.is_solid())
+        assert_eq!(tx.trunk(), vtx.trunk());
+        assert_eq!(tx.branch(), vtx.branch());
+        assert_eq!(tx, **vtx.transaction());
+        assert_eq!(metadata, *vtx.metadata());
+    }
+
+    #[test]
+    fn update_vertex_meta() {
+        let (_, tx) = create_random_tx();
+
+        let mut vtx = Vertex::new(tx, 0b0000_0001u8);
+        *vtx.metadata_mut() = 0b1111_1110u8;
+
+        assert_eq!(0b1111_1110u8, *vtx.metadata());
     }
 }
