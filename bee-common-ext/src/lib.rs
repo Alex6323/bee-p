@@ -13,3 +13,4 @@
 //! applications built on-top.
 
 pub mod wait_priority_queue;
+pub mod event;
