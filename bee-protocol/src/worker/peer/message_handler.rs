@@ -68,7 +68,7 @@ impl MessageHandler {
                 // Read a header.
                 ReadState::Header => {
                     // We need `HEADER_SIZE` bytes to read a header.
-                    let bytes = Self::fetch_bytes(&mut self.events, &mut self.shutdown, HEADER_SIZE).await?;
+                    let bytes = self.events.fetch_bytes_or_shutdown(&mut self.shutdown, HEADER_SIZE).await?;
                     debug!("[{}] Reading Header...", self.address);
                     let header = Header::from_bytes(bytes);
                     // Now we are ready to read a payload.
@@ -80,27 +80,13 @@ impl MessageHandler {
                     let header = header.clone();
                     // We read the quantity of bytes stated by the header.
                     let bytes =
-                        Self::fetch_bytes(&mut self.events, &mut self.shutdown, header.message_length.into()).await?;
+                        self.events.fetch_bytes_or_shutdown(&mut self.shutdown, header.message_length.into()).await?;
                     // Now we are ready to read the next message's header.
                     self.state = ReadState::Header;
                     // We return the current message's header and payload.
                     return Some((header, bytes));
                 }
             }
-        }
-    }
-
-    /// Helper method to be able to shutdown when fetching bytes for a message.
-    ///
-    /// This does not use `&mut self` to avoid lifetime issues inside `fetch_message`.
-    async fn fetch_bytes<'a>(
-        events: &'a mut EventHandler,
-        mut shutdown: &'a mut ShutdownRecv,
-        len: usize,
-    ) -> Option<&'a [u8]> {
-        select! {
-            bytes = events.fetch_bytes(len).fuse() => Some(bytes),
-            _ = shutdown => None,
         }
     }
 }
@@ -161,6 +147,21 @@ impl EventHandler {
         // Increase the offset by the length of the byte slice.
         self.offset += len;
         bytes
+    }
+
+    /// Helper method to be able to shutdown when fetching bytes for a message.
+    ///
+    /// This method returns `None` if a shutdown signal is received, otherwise it returns the
+    /// requested bytes.
+    async fn fetch_bytes_or_shutdown<'a>(
+        &'a mut self,
+        mut shutdown: &'a mut ShutdownRecv,
+        len: usize,
+    ) -> Option<&'a [u8]> {
+        select! {
+            _ = shutdown => None,
+            bytes = self.fetch_bytes(len).fuse() => Some(bytes),
+        }
     }
 }
 
