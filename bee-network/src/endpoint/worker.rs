@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::whitelist;
+use super::allowlist;
 
 use crate::{
     address::url::{Protocol, Url},
@@ -242,10 +242,10 @@ async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifie
     let epid = ep.id;
 
     if contacts.insert(ep) {
-        // add its ip to the whitelist, so that we can make sure that we accept only connections
+        // add its ip to the allowlist, so that we can make sure that we accept only connections
         // from known peers
-        let whitelist = whitelist::get();
-        whitelist.insert(epid, url.address().ip());
+        let allowlist = allowlist::get();
+        allowlist.insert(epid, url.address().ip());
 
         notifier
             .send(Event::EndpointAdded {
@@ -277,10 +277,10 @@ async fn rmv_endpoint(
     }
 
     if removed_contact || removed_connected {
-        // Remove its IP also from the whitelist, so we won't accept connections from it
+        // Remove its IP also from the allowlist, so we won't accept connections from it
         // anymore
-        let whitelist = whitelist::get();
-        whitelist.remove(&epid);
+        let allowlist = allowlist::get();
+        allowlist.remove(&epid);
 
         notifier
             .send(Event::EndpointRemoved {

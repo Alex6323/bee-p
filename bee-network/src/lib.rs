@@ -45,7 +45,7 @@ mod tcp;
 mod config;
 mod utils;
 
-use endpoint::{whitelist, worker::EndpointWorker as EpWorker};
+use endpoint::{allowlist, worker::EndpointWorker as EpWorker};
 use events::EventSubscriber as Events;
 use tcp::worker::TcpWorker;
 // use udp::worker::UdpWorker;
@@ -81,8 +81,8 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     shutdown.add_worker_shutdown(tcp_sd_sender, spawn(tcp_worker.run()));
     // shutdown.add_worker_shutdown(udp_sd_sender, spawn(udp_worker.run()));
 
-    whitelist::init();
-    shutdown.add_action(|| whitelist::drop());
+    allowlist::init();
+    shutdown.add_action(|| allowlist::drop());
 
     (Network::new(config, command_sender), events)
 }

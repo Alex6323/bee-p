@@ -11,7 +11,7 @@
 
 use crate::{
     address::Address,
-    endpoint::{origin::Origin, whitelist},
+    endpoint::{allowlist, origin::Origin},
     events::EventPublisher as Notifier,
 };
 
@@ -63,13 +63,13 @@ impl TcpWorker {
                                     }
                                 };
 
-                                let whitelist = whitelist::get();
+                                let allowlist = allowlist::get();
 
                                 // Update IP addresses if necessary
-                                // whitelist.refresh().await;
+                                // allowlist.refresh().await;
 
-                                // Immediatedly drop stream, if it's associated IP address isn't whitelisted
-                                if !whitelist.contains_address(&conn.remote_addr.ip()) {
+                                // Immediatedly drop stream, if it's associated IP address isn't on the allowlist
+                                if !allowlist.contains_address(&conn.remote_addr.ip()) {
                                     warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
                                     warn!("Connection disallowed.");
                                     continue;

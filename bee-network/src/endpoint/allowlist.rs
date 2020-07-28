@@ -19,24 +19,24 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr, Ordering},
 };
 
-static WHITELIST: AtomicPtr<WhiteList> = AtomicPtr::new(ptr::null_mut());
+static ALLOWLIST: AtomicPtr<Allowlist> = AtomicPtr::new(ptr::null_mut());
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-const INITIAL_WHITELIST_CAPACITY: usize = 10;
+const INITIAL_ALLOWLIST_CAPACITY: usize = 10;
 
 pub fn init() {
     if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
-        WHITELIST.store(Box::into_raw(WhiteList::new().into()), Ordering::Relaxed);
+        ALLOWLIST.store(Box::into_raw(Allowlist::new().into()), Ordering::Relaxed);
     } else {
         drop();
-        panic!("Whitelist already initialized!");
+        panic!("Allowlist already initialized!");
     }
 }
 
-pub fn get() -> &'static WhiteList {
-    let wl = WHITELIST.load(Ordering::Relaxed);
+pub fn get() -> &'static Allowlist {
+    let wl = ALLOWLIST.load(Ordering::Relaxed);
     if wl.is_null() {
-        panic!("Whitelist cannot be null!");
+        panic!("Allowlist cannot be null!");
     } else {
         unsafe { &*wl }
     }
@@ -44,23 +44,23 @@ pub fn get() -> &'static WhiteList {
 
 pub fn drop() {
     if INITIALIZED.compare_and_swap(true, false, Ordering::Relaxed) {
-        let wl = WHITELIST.swap(ptr::null_mut(), Ordering::Relaxed);
+        let wl = ALLOWLIST.swap(ptr::null_mut(), Ordering::Relaxed);
         if !wl.is_null() {
             unsafe { Box::from_raw(wl) };
         }
     } else {
-        panic!("Whitelist already dropped!");
+        panic!("Allowlist already dropped!");
     }
 }
 
-pub struct WhiteList {
+pub struct Allowlist {
     inner: DashMap<EpId, IpAddr>,
 }
 
-impl WhiteList {
+impl Allowlist {
     pub fn new() -> Self {
         Self {
-            inner: DashMap::with_capacity(INITIAL_WHITELIST_CAPACITY),
+            inner: DashMap::with_capacity(INITIAL_ALLOWLIST_CAPACITY),
         }
     }
 
