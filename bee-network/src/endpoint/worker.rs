@@ -13,53 +13,47 @@ use super::allowlist;
 
 use crate::{
     address::url::{Protocol, Url},
-    commands::{Command, CommandReceiver as Commands, Responder},
+    commands::{Command, CommandReceiver, Responder},
     endpoint::{outbox::Outbox, store::Endpoints, Endpoint as Ep, EndpointId as EpId},
-    events::{Event, EventPublisher as Notifier, EventPublisher as Publisher, EventSubscriber as Events},
+    events::{Event, EventPublisher, EventSubscriber},
     tcp,
     utils::time,
 };
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
-use async_std::{
-    prelude::*,
-    task::{self, spawn},
-};
-use futures::{future::Fuse, select, sink::SinkExt, FutureExt};
+use async_std::task::{self, spawn};
+use futures::{future, select, sink::SinkExt, stream, FutureExt, StreamExt};
 use log::*;
 
 use std::time::Duration;
 
 pub struct EndpointWorker {
-    commands: Commands,
-    events: Events,
-    notifier: Notifier,
-    publisher: Publisher,
+    fused_command_rx: stream::Fuse<CommandReceiver>,
+    fused_event_sub: stream::Fuse<EventSubscriber>,
+    event_pub_intern: EventPublisher,
+    event_pub: EventPublisher,
     reconnect_interval: Duration,
-    shutdown_listener: Fuse<ShutdownListener>,
 }
 
 impl EndpointWorker {
     pub fn new(
-        commands: Commands,
-        events: Events,
-        notifier: Notifier,
-        publisher: Publisher,
+        command_rx: CommandReceiver,
+        event_sub: EventSubscriber,
+        event_pub_intern: EventPublisher,
+        event_pub: EventPublisher,
         reconnect_interval: Duration,
-        shutdown_listener: ShutdownListener,
     ) -> Self {
         Self {
-            commands,
-            events,
-            notifier,
-            publisher,
+            fused_command_rx: command_rx.fuse(),
+            fused_event_sub: event_sub.fuse(),
+            event_pub_intern,
+            event_pub,
             reconnect_interval,
-            shutdown_listener: shutdown_listener.fuse(),
         }
     }
 
-    pub async fn run(mut self) -> Result<(), WorkerError> {
+    pub async fn run(mut self, shutdown_listener: ShutdownListener) -> Result<(), WorkerError> {
         debug!("Starting endpoint worker...");
 
         let mut contacts = Endpoints::new();
@@ -68,164 +62,21 @@ impl EndpointWorker {
         let mut connected = Endpoints::new();
         let mut outbox = Outbox::new();
 
-        let commands = &mut self.commands;
-        let events = &mut self.events;
-        let mut shutdown_listener = &mut self.shutdown_listener;
-        let publisher = &mut self.publisher;
+        let mut fused_shutdown_listener = shutdown_listener.fuse();
 
         loop {
             select! {
-                command = commands.next().fuse() => {
-
-                    let command = if let Some(command) = command {
-                        command
-                    } else {
-                        error!("Command channel unexpectedly closed.");
+                command = self.fused_command_rx.next() => {
+                    if !self.handle_command(command, &mut contacts, &mut connected, &mut outbox).await? {
                         break;
-                    };
-
-                    debug!("Received {}.", command);
-
-                    match command {
-                        Command::AddEndpoint { url, responder } => {
-                            let res = add_endpoint(&mut contacts, url, &mut self.notifier).await?;
-
-                            if let Some(responder) = responder {
-                                if responder.send(res).is_err() {
-                                    warn!("Error sending command response.");
-                                };
-                            }
-                        },
-                        Command::RemoveEndpoint { epid, responder } => {
-                            let res = rmv_endpoint(epid, &mut contacts, &mut connected, &mut outbox,
-                                &mut self.notifier).await?;
-
-                            if let Some(responder) = responder {
-                                if responder.send(res).is_err() {
-                                    warn!("Error sending command response.");
-                                };
-                            }
-                        },
-                        Command::Connect { epid, responder } => {
-                            try_connect(epid, self.reconnect_interval, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
-                        },
-                        Command::Disconnect { epid, responder } => {
-                            let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
-
-                            if let Some(responder) = responder {
-                                if responder.send(is_disconnected).is_err() {
-                                    warn!("Error sending command response.");
-                                };
-                            }
-
-                            if is_disconnected {
-                                publisher
-                                    .send(Event::EndpointDisconnected {
-                                        epid,
-                                        total: connected.num(),
-                                    })
-                                    .await?;
-                            }
-
-                        },
-                        Command::SendMessage { epid, bytes, responder } => {
-                            let res = send_bytes(&epid, bytes, &mut outbox).await?;
-
-                            if let Some(responder) = responder {
-                                if responder.send(res).is_err() {
-                                    warn!("Error sending command response.");
-                                };
-                            }
-                        },
-                        Command::MulticastMessage { epids, bytes, responder } => {
-                            let res = multicast_bytes(&epids, bytes, &mut outbox).await?;
-
-                            if let Some(responder) = responder {
-                                if responder.send(res).is_err() {
-                                    warn!("Error sending command response.");
-                                };
-                            }
-                        },
-                        Command::BroadcastMessage { bytes, responder } => {
-                            let res = broadcast_bytes(bytes, &mut outbox).await?;
-
-                            if let Some(responder) = responder {
-                                if responder.send(res).is_err() {
-                                    warn!("Error sending command response.");
-                                };
-                            }
-                        },
-                    }
-
-                },
-                event = events.next().fuse() => {
-                    let event = if let Some(event) = event {
-                        event
-                    } else {
-                        error!("Event channel unexpectedly closed.");
-                        break;
-                    };
-
-                    debug!("Received {}.", event);
-
-                    match event {
-                        Event::EndpointAdded { epid, total } => {
-                            publisher.send(Event::EndpointAdded { epid, total }).await?;
-                        },
-                        Event::EndpointRemoved { epid, total } => {
-                            publisher.send(Event::EndpointRemoved { epid, total }).await?;
-                        },
-                        Event::NewConnection { ep, origin, sender } => {
-                            let epid = ep.id;
-                            let addr = ep.address;
-
-                            outbox.insert(epid, sender);
-                            connected.insert(ep);
-
-                            publisher.send(Event::EndpointConnected {
-                                epid,
-                                address: addr,
-                                origin,
-                                timestamp: time::timestamp_millis(),
-                                total: connected.num(),
-                            }).await?
-                        },
-                        Event::LostConnection { epid } => {
-                            let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
-
-                            if is_disconnected {
-                                publisher
-                                    .send(Event::EndpointDisconnected {
-                                        epid,
-                                        total: connected.num(),
-                                    })
-                                    .await?;
-                            }
-
-                            // TODO: do not try to reconnect to duplicate endpoints
-                            // NOTE: 'try_connect' will check if 'epid' is part of the contact list
-                            try_connect(epid, self.reconnect_interval, &mut contacts, &mut connected, None, &mut self.notifier).await?;
-                        }
-                        Event::MessageSent { epid, num_bytes } => {
-                            publisher.send(Event::MessageSent {
-                                epid,
-                                num_bytes,
-                            }).await?
-                        },
-                        Event::MessageReceived { epid, bytes } => {
-                            publisher.send(Event::MessageReceived {
-                                epid,
-                                bytes,
-                            }).await?
-                        },
-                        Event::TryConnect { epid, responder } => {
-                            try_connect(epid, self.reconnect_interval, &mut contacts, &mut connected, responder, &mut self.notifier).await?;
-                        }
-                        _ => (),
                     }
                 },
-
-                _ = shutdown_listener => {
+                event = self.fused_event_sub.next() => {
+                    if !self.handle_event(event, &mut contacts, &mut connected, &mut outbox).await? {
+                        break;
+                    }
+                },
+                _ = fused_shutdown_listener => {
                     break;
                 }
             }
@@ -234,10 +85,206 @@ impl EndpointWorker {
         debug!("Stopped endpoint worker.");
         Ok(())
     }
+
+    #[inline]
+    async fn handle_command(
+        &mut self,
+        command: Option<Command>,
+        mut contacts: &mut Endpoints,
+        mut connected: &mut Endpoints,
+        mut outbox: &mut Outbox,
+    ) -> Result<bool, WorkerError> {
+        let command = if let Some(command) = command {
+            command
+        } else {
+            error!("Command channel unexpectedly closed.");
+            return Ok(false);
+        };
+
+        debug!("Received {}.", command);
+
+        match command {
+            Command::AddEndpoint { url, responder } => {
+                let res = add_endpoint(&mut contacts, url, &mut self.event_pub_intern).await?;
+
+                if let Some(responder) = responder {
+                    if responder.send(res).is_err() {
+                        warn!("Error sending command response.");
+                    };
+                }
+            }
+            Command::RemoveEndpoint { epid, responder } => {
+                let res = remove_endpoint(
+                    epid,
+                    &mut contacts,
+                    &mut connected,
+                    &mut outbox,
+                    &mut self.event_pub_intern,
+                )
+                .await?;
+
+                if let Some(responder) = responder {
+                    if responder.send(res).is_err() {
+                        warn!("Error sending command response.");
+                    };
+                }
+            }
+            Command::Connect { epid, responder } => {
+                try_connect(
+                    epid,
+                    self.reconnect_interval,
+                    &mut contacts,
+                    &mut connected,
+                    responder,
+                    &mut self.event_pub_intern,
+                )
+                .await?;
+            }
+            Command::Disconnect { epid, responder } => {
+                let is_disconnected = disconnect(epid, &mut connected, &mut outbox).await;
+
+                if let Some(responder) = responder {
+                    if responder.send(is_disconnected).is_err() {
+                        warn!("Error sending command response.");
+                    };
+                }
+
+                if is_disconnected {
+                    self.event_pub
+                        .send(Event::EndpointDisconnected {
+                            epid,
+                            total: connected.num(),
+                        })
+                        .await?;
+                }
+            }
+            Command::SendMessage { epid, bytes, responder } => {
+                let res = send_bytes(&epid, bytes, &mut outbox).await?;
+
+                if let Some(responder) = responder {
+                    if responder.send(res).is_err() {
+                        warn!("Error sending command response.");
+                    };
+                }
+            }
+            Command::MulticastMessage {
+                epids,
+                bytes,
+                responder,
+            } => {
+                let res = multicast_bytes(&epids, bytes, &mut outbox).await?;
+
+                if let Some(responder) = responder {
+                    if responder.send(res).is_err() {
+                        warn!("Error sending command response.");
+                    };
+                }
+            }
+            Command::BroadcastMessage { bytes, responder } => {
+                let res = broadcast_bytes(bytes, &mut outbox).await?;
+
+                if let Some(responder) = responder {
+                    if responder.send(res).is_err() {
+                        warn!("Error sending command response.");
+                    };
+                }
+            }
+        }
+
+        Ok(true)
+    }
+
+    #[inline]
+    async fn handle_event(
+        &mut self,
+        event: Option<Event>,
+        contacts: &mut Endpoints,
+        connected: &mut Endpoints,
+        outbox: &mut Outbox,
+    ) -> Result<bool, WorkerError> {
+        let event = if let Some(event) = event {
+            event
+        } else {
+            error!("Event channel unexpectedly closed.");
+            return Ok(false);
+        };
+
+        debug!("Received {}.", event);
+
+        match event {
+            Event::EndpointAdded { epid, total } => {
+                self.event_pub.send(Event::EndpointAdded { epid, total }).await?;
+            }
+            Event::EndpointRemoved { epid, total } => {
+                self.event_pub.send(Event::EndpointRemoved { epid, total }).await?;
+            }
+            Event::NewConnection { ep, origin, sender } => {
+                let epid = ep.id;
+                let addr = ep.address;
+
+                outbox.insert(epid, sender);
+                connected.insert(ep);
+
+                self.event_pub
+                    .send(Event::EndpointConnected {
+                        epid,
+                        address: addr,
+                        origin,
+                        timestamp: time::timestamp_millis(),
+                        total: connected.num(),
+                    })
+                    .await?
+            }
+            Event::LostConnection { epid } => {
+                let is_disconnected = disconnect(epid, connected, outbox).await;
+
+                if is_disconnected {
+                    self.event_pub
+                        .send(Event::EndpointDisconnected {
+                            epid,
+                            total: connected.num(),
+                        })
+                        .await?;
+                }
+
+                // TODO: do not try to reconnect to duplicate endpoints
+                // NOTE: 'try_connect' will check if 'epid' is part of the contact list
+                try_connect(
+                    epid,
+                    self.reconnect_interval,
+                    contacts,
+                    connected,
+                    None,
+                    &mut self.event_pub_intern,
+                )
+                .await?;
+            }
+            Event::MessageSent { epid, num_bytes } => {
+                self.event_pub.send(Event::MessageSent { epid, num_bytes }).await?
+            }
+            Event::MessageReceived { epid, bytes } => {
+                self.event_pub.send(Event::MessageReceived { epid, bytes }).await?
+            }
+            Event::TryConnect { epid, responder } => {
+                try_connect(
+                    epid,
+                    self.reconnect_interval,
+                    contacts,
+                    connected,
+                    responder,
+                    &mut self.event_pub_intern,
+                )
+                .await?;
+            }
+            _ => (),
+        }
+
+        Ok(true)
+    }
 }
 
 #[inline(always)]
-async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifier) -> Result<bool, WorkerError> {
+async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut EventPublisher) -> Result<bool, WorkerError> {
     let ep = Ep::from_url(url);
     let epid = ep.id;
 
@@ -260,12 +307,12 @@ async fn add_endpoint(contacts: &mut Endpoints, url: Url, notifier: &mut Notifie
 }
 
 #[inline(always)]
-async fn rmv_endpoint(
+async fn remove_endpoint(
     epid: EpId,
     contacts: &mut Endpoints,
     connected: &mut Endpoints,
     outbox: &mut Outbox,
-    notifier: &mut Notifier,
+    notifier: &mut EventPublisher,
 ) -> Result<bool, WorkerError> {
     // NOTE: current default behavior is to drop connections once the contact is removed
     let removed_recipient = outbox.remove(&epid);
@@ -301,7 +348,7 @@ async fn try_connect(
     contacts: &mut Endpoints,
     connected: &mut Endpoints,
     responder: Option<Responder<bool>>,
-    notifier: &mut Notifier,
+    notifier: &mut EventPublisher,
 ) -> Result<bool, WorkerError> {
     // Try to find the endpoint in our servers list.
     if let Some(ep) = contacts.get_mut(&epid) {
@@ -368,7 +415,11 @@ async fn try_connect(
 }
 
 #[inline(always)]
-async fn raise_event_after_delay(event: Event, delay: Duration, mut notifier: Notifier) -> Result<(), WorkerError> {
+async fn raise_event_after_delay(
+    event: Event,
+    delay: Duration,
+    mut notifier: EventPublisher,
+) -> Result<(), WorkerError> {
     task::sleep(delay).await;
 
     Ok(notifier.send(event).await?)
