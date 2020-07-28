@@ -76,11 +76,11 @@ impl MessageHandler {
                 }
                 // Read a payload.
                 ReadState::Payload(header) => {
-                    // FIXME: Avoid this clone
-                    let header = header.clone();
                     // We read the quantity of bytes stated by the header.
                     let bytes =
                         self.events.fetch_bytes_or_shutdown(&mut self.shutdown, header.message_length.into()).await?;
+                    // FIXME: Avoid this clone
+                    let header = header.clone();
                     // Now we are ready to read the next message's header.
                     self.state = ReadState::Header;
                     // We return the current message's header and payload.
