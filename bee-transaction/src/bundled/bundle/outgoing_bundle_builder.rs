@@ -272,7 +272,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
 
         for (index, _, security) in inputs {
             let key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
-                .security_level(*security)
+                .with_security_level(*security)
                 .build()
                 // Safe to unwrap because security level is provided
                 .unwrap();
@@ -394,7 +394,7 @@ mod tests {
         let mut bundle_builder = OutgoingBundleBuilder::new();
         let seed = Seed::rand();
         let privkey = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
-            .security_level(security)
+            .with_security_level(security)
             .build()
             .unwrap()
             .generate_from_seed(&seed, 0)
@@ -450,7 +450,7 @@ mod tests {
         let seed = Seed::rand();
         let address_low = Address::from_inner_unchecked(
             WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
-                .security_level(WotsSecurityLevel::Low)
+                .with_security_level(WotsSecurityLevel::Low)
                 .build()
                 .unwrap()
                 .generate_from_seed(&seed, 0)
@@ -462,7 +462,7 @@ mod tests {
         );
         let address_medium = Address::from_inner_unchecked(
             WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
-                .security_level(WotsSecurityLevel::Medium)
+                .with_security_level(WotsSecurityLevel::Medium)
                 .build()
                 .unwrap()
                 .generate_from_seed(&seed, 1)

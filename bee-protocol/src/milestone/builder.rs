@@ -107,12 +107,12 @@ where
                 Ok(pk) => pk,
                 Err(_) => unreachable!(),
             }
-            .depth(self.depth.unwrap());
+            .with_depth(self.depth.unwrap());
         let signature: MssSignature<M> = match MssSignature::<M>::from_trits(signature_buf) {
             Ok(sig) => sig,
             Err(_) => unreachable!(),
         }
-        .index(*self.index as u64);
+        .with_index(*self.index as u64);
         let hash = self
             .transactions
             .get(self.transactions.len() - 2)
