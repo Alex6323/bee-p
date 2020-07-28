@@ -159,6 +159,7 @@ impl EventHandler {
         len: usize,
     ) -> Option<&'a [u8]> {
         select! {
+            // Always select `shutdown` first, otherwise you can end with an infinite loop.
             _ = shutdown => None,
             bytes = self.fetch_bytes(len).fuse() => Some(bytes),
         }
