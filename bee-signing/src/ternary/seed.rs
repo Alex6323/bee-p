@@ -78,13 +78,8 @@ impl Seed {
             }
         }
 
-        // TODO return error
-        let subseed = match Kerl::default().digest(&subseed) {
-            Ok(subseed) => subseed,
-            Err(_) => unreachable!(),
-        };
-
-        Self(subseed)
+        // Safe to unwrap since the size is known to be valid.
+        Self(Kerl::default().digest(&subseed).unwrap())
     }
 
     /// Creates a `Seed` from &str.
