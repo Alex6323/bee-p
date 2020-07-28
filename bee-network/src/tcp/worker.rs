@@ -12,89 +12,54 @@
 use crate::{
     address::Address,
     endpoint::{allowlist, origin::Origin},
-    events::EventPublisher as Notifier,
+    events::EventPublisher,
 };
 
 use super::{connection::TcpConnection, spawn_connection_workers};
 
-use bee_common::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
+use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
-use async_std::net::TcpListener;
+use async_std::net::{TcpListener, TcpStream};
 use futures::{prelude::*, select};
 use log::*;
 
+use std::io::Error;
+
 pub(crate) struct TcpWorker {
     binding_addr: Address,
-    notifier: Notifier,
-    shutdown: Shutdown,
+    event_pub_intern: EventPublisher,
 }
 
 impl TcpWorker {
-    pub fn new(binding_addr: Address, notifier: Notifier, shutdown: Shutdown) -> Self {
+    pub fn new(binding_addr: Address, event_pub_intern: EventPublisher) -> Self {
         Self {
             binding_addr,
-            notifier,
-            shutdown,
+            event_pub_intern,
         }
     }
 
-    pub async fn run(mut self) -> Result<(), WorkerError> {
+    pub async fn run(mut self, shutdown_listener: ShutdownListener) -> Result<(), WorkerError> {
         debug!("Starting TCP worker...");
 
         let listener = TcpListener::bind(*self.binding_addr).await?;
 
-        info!("Accepting connections on {}.", listener.local_addr()?);
+        debug!("Accepting connections on {}.", listener.local_addr()?);
 
-        let mut incoming = listener.incoming().fuse();
-        let shutdown = &mut self.shutdown;
+        let mut fused_incoming_streams = listener.incoming().fuse();
+        let mut fused_shutdown_listener = shutdown_listener.fuse();
 
         loop {
             select! {
-                stream = incoming.next() => {
+                stream = fused_incoming_streams.next() => {
                     if let Some(stream) = stream {
-                        match stream {
-                            Ok(stream) => {
-
-                                let conn = match TcpConnection::new(stream, Origin::Inbound) {
-                                    Ok(conn) => conn,
-                                    Err(e) => {
-                                        error!["Creating TCP connection failed: {:?}.", e];
-                                        continue;
-                                    }
-                                };
-
-                                let allowlist = allowlist::get();
-
-                                // Update IP addresses if necessary
-                                // allowlist.refresh().await;
-
-                                // Immediatedly drop stream, if it's associated IP address isn't on the allowlist
-                                if !allowlist.contains_address(&conn.remote_addr.ip()) {
-                                    warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
-                                    warn!("Connection disallowed.");
-                                    continue;
-                                }
-
-                                info!(
-                                    "Sucessfully established connection to {} ({}).",
-                                    conn.remote_addr,
-                                    Origin::Inbound
-                                );
-
-                                match spawn_connection_workers(conn, self.notifier.clone()).await {
-                                    Ok(_) => (),
-                                    Err(_) => (),
-                                }
-                            }
-                            Err(e) => {
-                                error!("Accepting connection failed: {:?}.", e);
-                            },
+                        if !self.handle_stream(stream).await? {
+                            continue;
                         }
                     } else {
                         break;
                     }
                 },
-                shutdown = shutdown.fuse() => {
+                _ = fused_shutdown_listener => {
                     break;
                 }
             }
@@ -102,5 +67,50 @@ impl TcpWorker {
 
         debug!("Stopped TCP worker.");
         Ok(())
+    }
+
+    #[inline]
+    async fn handle_stream(&mut self, stream: Result<TcpStream, Error>) -> Result<bool, WorkerError> {
+        match stream {
+            Ok(stream) => {
+                let conn = match TcpConnection::new(stream, Origin::Inbound) {
+                    Ok(conn) => conn,
+                    Err(e) => {
+                        warn!("Creating TCP connection failed: {:?}.", e);
+
+                        return Ok(false);
+                    }
+                };
+
+                let allowlist = allowlist::get();
+
+                // TODO: Update IP addresses if necessary
+                // allowlist.refresh().await;
+
+                // Immediatedly drop stream, if it's associated IP address isn't on the allowlist
+                if !allowlist.contains_address(&conn.remote_addr.ip()) {
+                    warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
+                    warn!("Connection disallowed.");
+
+                    return Ok(false);
+                }
+
+                debug!(
+                    "Sucessfully established connection to {} ({}).",
+                    conn.remote_addr,
+                    Origin::Inbound
+                );
+
+                match spawn_connection_workers(conn, self.event_pub_intern.clone()).await {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
+            }
+            Err(e) => {
+                warn!("Accepting connection failed: {:?}.", e);
+            }
+        }
+
+        Ok(true)
     }
 }

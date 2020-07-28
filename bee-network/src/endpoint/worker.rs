@@ -39,14 +39,14 @@ pub struct EndpointWorker {
 impl EndpointWorker {
     pub fn new(
         command_rx: CommandReceiver,
-        event_sub: EventSubscriber,
+        event_sub_intern: EventSubscriber,
         event_pub_intern: EventPublisher,
         event_pub: EventPublisher,
         reconnect_interval: Duration,
     ) -> Self {
         Self {
             fused_command_rx: command_rx.fuse(),
-            fused_event_sub: event_sub.fuse(),
+            fused_event_sub: event_sub_intern.fuse(),
             event_pub_intern,
             event_pub,
             reconnect_interval,
