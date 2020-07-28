@@ -140,7 +140,6 @@ where
     let seed = Seed::from_str(SEED).unwrap();
     let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
 
-    // todo try with not recover
     let private_key_generator = MssPrivateKeyGeneratorBuilder::<S, G>::default()
         .depth(DEPTH)
         .generator(generator)
@@ -154,7 +153,6 @@ where
         let valid = public_key.verify(&message_trits, &signature).unwrap();
 
         assert!(valid);
-        //  TODO invalid test
     }
 }
 
@@ -237,4 +235,34 @@ fn curl81_wots_curl81_roundtrip() {
         .build()
         .unwrap();
     wots_generic_roundtrip::<CurlP81, WotsSpongePrivateKeyGenerator<CurlP81>>(wots_private_key_generator);
+}
+
+#[test]
+fn signatures_exhausted() {
+    let wots_private_key_generator = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
+        .security_level(WotsSecurityLevel::Low)
+        .build()
+        .unwrap();
+    const SEED: &str = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
+    const MESSAGE: &str = "CHXHLHQLOPYP9NSUXTMWWABIBSBLUFXFRNWOZXJPVJPBCIDI99YBSCFYILCHPXHTSEYSYWIGQFERCRVDD";
+    const DEPTH: u8 = 3;
+
+    let seed = Seed::from_str(SEED).unwrap();
+    let message_trits = TryteBuf::try_from_str(MESSAGE).unwrap().as_trits().encode::<T1B1Buf>();
+
+    let private_key_generator = MssPrivateKeyGeneratorBuilder::<Kerl, WotsSpongePrivateKeyGenerator<Kerl>>::default()
+        .depth(DEPTH)
+        .generator(wots_private_key_generator)
+        .build()
+        .unwrap();
+    let mut private_key = private_key_generator.generate_from_seed(&seed, 0).unwrap();
+
+    assert!(private_key.sign(&message_trits).is_ok());
+    assert!(private_key.sign(&message_trits).is_ok());
+    assert!(private_key.sign(&message_trits).is_ok());
+    assert!(private_key.sign(&message_trits).is_ok());
+    assert_eq!(
+        private_key.sign(&message_trits).err(),
+        Some(MssError::SignaturesExhausted)
+    );
 }

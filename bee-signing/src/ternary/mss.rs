@@ -24,6 +24,8 @@ use zeroize::Zeroize;
 
 use std::marker::PhantomData;
 
+const MAX_MSS_DEPTH: u8 = 20;
+
 /// Errors occuring during MSS operations.
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
@@ -33,14 +35,17 @@ pub enum Error {
     /// Missing MSS depth.
     #[error("Missing MSS depth.")]
     MissingDepth,
+    /// Missing signature index.
+    #[error("Missing signature index.")]
+    MissingSignatureIndex,
     /// Missing underlying private key generator.
     #[error("Missing underlying private key generator.")]
     MissingGenerator,
     /// Underlying private key generation failed.
     #[error("Underlying private key generation failed.")]
     FailedUnderlyingPrivateKeyGeneration,
-    /// Underlying ppublic key generation failed.
-    #[error("Underlying ppublic key generation failed.")]
+    /// Underlying public key generation failed.
+    #[error("Underlying public key generation failed.")]
     FailedUnderlyingPublicKeyGeneration,
     /// Underlying signature generation failed.
     #[error("Underlying signature generation failed.")]
@@ -48,12 +53,24 @@ pub enum Error {
     /// Underlying public key recovery failed.
     #[error("Underlying public key recovery failed.")]
     FailedUnderlyingPublicKeyRecovery,
+    /// Public key generation failed.
+    #[error("Public key generation failed..")]
+    PublicKeyGenerationFailed,
+    /// Signature generation failed.
+    #[error("Signature generation failed..")]
+    SignatureGenerationFailed,
     /// Failed sponge operation.
     #[error("Failed sponge operation.")]
     FailedSpongeOperation,
     /// Seed generation failed.
     #[error("Seed generation failed.")]
-    FailedSeed,
+    FailedSeedGeneration,
+    /// Signatures exhausted.
+    #[error("Signatures exhausted.")]
+    SignaturesExhausted,
+    /// Invalid signature size.
+    #[error("Invalid signature size.")]
+    InvalidSignatureSize,
 }
 
 /// Merkle Signature Scheme private key generator builder.
@@ -84,13 +101,13 @@ where
 {
     /// Sets the depth of the MSS.
     pub fn depth(mut self, depth: u8) -> Self {
-        self.depth = Some(depth);
+        self.depth.replace(depth);
         self
     }
 
     /// Sets the underlying private key generator.
     pub fn generator(mut self, generator: G) -> Self {
-        self.generator = Some(generator);
+        self.generator.replace(generator);
         self
     }
 
@@ -98,16 +115,15 @@ where
     pub fn build(self) -> Result<MssPrivateKeyGenerator<S, G>, Error> {
         let depth = match self.depth {
             Some(depth) => match depth {
-                0..=20 => depth,
+                0..=MAX_MSS_DEPTH => depth,
                 _ => return Err(Error::InvalidDepth(depth)),
             },
             None => return Err(Error::MissingDepth),
         };
-        let generator = self.generator.ok_or(Error::MissingGenerator)?;
 
         Ok(MssPrivateKeyGenerator {
             depth,
-            generator,
+            generator: self.generator.ok_or(Error::MissingGenerator)?,
             sponge: PhantomData,
         })
     }
@@ -130,27 +146,27 @@ where
     type Error = Error;
 
     fn generate_from_entropy(&self, entropy: &Trits<T1B1>) -> Result<Self::PrivateKey, Self::Error> {
-        let seed = Seed::from_trits(entropy.to_buf()).map_err(|_| Error::FailedSeed)?;
+        let seed = Seed::from_trits(entropy.to_buf()).map_err(|_| Error::FailedSeedGeneration)?;
         let mut sponge = S::default();
-        let mut keys = Vec::new();
+        let mut keys = Vec::with_capacity(1 << (self.depth - 1));
         let mut tree = TritBuf::<T1B1Buf>::zeros(((1 << self.depth) - 1) * HASH_LENGTH);
 
-        // TODO: reserve ?
-
+        // Generate all the underlying private keys and public keys.
         for key_index in 0..(1 << (self.depth - 1)) {
-            let ots_private_key = self
+            let underlying_private_key = self
                 .generator
                 .generate_from_entropy(seed.subseed(key_index).as_trits())
                 .map_err(|_| Self::Error::FailedUnderlyingPrivateKeyGeneration)?;
-            let ots_public_key = ots_private_key
+            let underlying_public_key = underlying_private_key
                 .generate_public_key()
                 .map_err(|_| Self::Error::FailedUnderlyingPublicKeyGeneration)?;
             let tree_index = ((1 << (self.depth - 1)) + key_index - 1) as usize;
 
-            keys.push(ots_private_key);
-            tree[tree_index * HASH_LENGTH..(tree_index + 1) * HASH_LENGTH].copy_from(ots_public_key.as_trits());
+            keys.push(underlying_private_key);
+            tree[tree_index * HASH_LENGTH..(tree_index + 1) * HASH_LENGTH].copy_from(underlying_public_key.as_trits());
         }
 
+        // Create the merkle tree by hashing from botton to top.
         for depth in (0..self.depth - 1).rev() {
             for i in 0..(1 << depth) {
                 let index = (1 << depth) + i - 1;
@@ -211,26 +227,29 @@ where
     type Error = Error;
 
     fn generate_public_key(&self) -> Result<Self::PublicKey, Self::Error> {
-        // TODO return or generate ?
         Ok(Self::PublicKey::from_trits(self.tree[0..HASH_LENGTH].to_buf())
-            .unwrap()
+            .map_err(|_| Error::PublicKeyGenerationFailed)?
             .depth(self.depth))
     }
 
     fn sign(&mut self, message: &Trits<T1B1>) -> Result<Self::Signature, Self::Error> {
-        let ots_private_key = &mut self.keys[self.index as usize];
-        let ots_signature = ots_private_key
+        if self.index as usize >= self.keys.len() {
+            return Err(Error::SignaturesExhausted);
+        }
+
+        let underlying_private_key = &mut self.keys[self.index as usize];
+        let underlying_signature = underlying_private_key
             .sign(message)
             .map_err(|_| Self::Error::FailedUnderlyingSignatureGeneration)?;
-        // let mut state = vec![0; ots_signature.size() + SIGNATURE_FRAGMENT_LENGTH];
-        let mut state = TritBuf::<T1B1Buf>::zeros(ots_signature.size() + SIGNATURE_FRAGMENT_LENGTH);
+        let mut state = TritBuf::<T1B1Buf>::zeros(underlying_signature.size() + SIGNATURE_FRAGMENT_LENGTH);
         let mut tree_index = ((1 << (self.depth - 1)) + self.index - 1) as usize;
         let mut sibling_index;
         let mut i = 0;
 
-        // TODO PAD TO SIGNATURE_FRAGMENT_LENGTH
-        state[0..ots_signature.size()].copy_from(ots_signature.as_trits());
+        // Copy the underlying signature.
+        state[0..underlying_signature.size()].copy_from(underlying_signature.as_trits());
 
+        // Append the merkle branch to the signature.
         while tree_index != 0 {
             if tree_index % 2 != 0 {
                 sibling_index = tree_index + 1;
@@ -240,21 +259,23 @@ where
                 tree_index = (tree_index - 1) / 2;
             }
 
-            state[ots_signature.size() + i * HASH_LENGTH..ots_signature.size() + (i + 1) * HASH_LENGTH]
+            state[underlying_signature.size() + i * HASH_LENGTH..underlying_signature.size() + (i + 1) * HASH_LENGTH]
                 .copy_from(&self.tree[sibling_index * HASH_LENGTH..(sibling_index + 1) * HASH_LENGTH]);
             i += 1;
         }
 
         self.index += 1;
 
-        Ok(Self::Signature::from_trits(state).unwrap().index(self.index - 1))
+        Ok(Self::Signature::from_trits(state)
+            .map_err(|_| Error::SignatureGenerationFailed)?
+            .index(self.index - 1))
     }
 }
 
 /// Merkle Signature Scheme public key.
 pub struct MssPublicKey<S, K> {
     state: TritBuf<T1B1Buf>,
-    depth: u8,
+    depth: Option<u8>,
     sponge: PhantomData<S>,
     key: PhantomData<K>,
 }
@@ -266,7 +287,7 @@ where
 {
     /// Sets the depth of the public key.
     pub fn depth(mut self, depth: u8) -> Self {
-        self.depth = depth;
+        self.depth.replace(depth);
         self
     }
 }
@@ -281,34 +302,38 @@ where
     type Error = Error;
 
     fn verify(&self, message: &Trits<T1B1>, signature: &Self::Signature) -> Result<bool, Self::Error> {
+        if signature.size() % SIGNATURE_FRAGMENT_LENGTH != 0 || signature.size() < 2 * SIGNATURE_FRAGMENT_LENGTH {
+            return Err(Error::InvalidSignatureSize);
+        }
+
+        let depth = self.depth.ok_or(Error::MissingDepth)?;
+        let signature_index = signature.index.ok_or(Error::MissingSignatureIndex)?;
+
         let mut sponge = S::default();
-        let ots_signature = match K::Signature::from_trits(
+        let underlying_signature = K::Signature::from_trits(
             signature.state[0..((signature.state.len() / SIGNATURE_FRAGMENT_LENGTH) - 1) * SIGNATURE_FRAGMENT_LENGTH]
                 .to_buf(),
-        ) {
-            Ok(sig) => sig,
-            Err(_) => unreachable!(),
-        };
-        let siblings: TritBuf<T1B1Buf> = signature
-            .state
-            .chunks(SIGNATURE_FRAGMENT_LENGTH)
-            .last()
-            .unwrap()
-            .to_buf();
-        let ots_public_key = ots_signature
+        )
+        .map_err(|_| Error::FailedUnderlyingSignatureGeneration)?;
+
+        // Safe to unwrap since we already validated the signature size.
+        let siblings: &Trits<T1B1> = signature.state.chunks(SIGNATURE_FRAGMENT_LENGTH).last().unwrap();
+        // Recovers underlying public key from underlying signature.
+        let underlying_public_key = underlying_signature
             .recover_public_key(message)
             .map_err(|_| Self::Error::FailedUnderlyingPublicKeyRecovery)?;
         let mut hash = TritBuf::<T1B1Buf>::zeros(HASH_LENGTH);
 
-        hash.copy_from(ots_public_key.as_trits());
+        hash.copy_from(underlying_public_key.as_trits());
 
+        // Hash the underlying public key with the merkle branch to recover the merkle root.
         let mut j = 1;
         for (i, sibling) in siblings.chunks(HASH_LENGTH).enumerate() {
-            if self.depth - 1 == i as u8 {
+            if depth - 1 == i as u8 {
                 break;
             }
 
-            if signature.index & j != 0 {
+            if signature_index & j != 0 {
                 sponge.absorb(sibling).map_err(|_| Self::Error::FailedSpongeOperation)?;
                 sponge.absorb(&hash).map_err(|_| Self::Error::FailedSpongeOperation)?;
             } else {
@@ -335,8 +360,7 @@ where
     fn from_trits(state: TritBuf<T1B1Buf>) -> Result<Self, Self::Error> {
         Ok(Self {
             state,
-            // TODO OPTION
-            depth: 0,
+            depth: None,
             sponge: PhantomData,
             key: PhantomData,
         })
@@ -350,14 +374,14 @@ where
 /// Merkle Signature Scheme signature.
 pub struct MssSignature<S> {
     state: TritBuf<T1B1Buf>,
-    index: u64,
+    index: Option<u64>,
     sponge: PhantomData<S>,
 }
 
 impl<S: Sponge + Default> MssSignature<S> {
     /// Set the index of the signature.
     pub fn index(mut self, index: u64) -> Self {
-        self.index = index;
+        self.index.replace(index);
         self
     }
 }
@@ -372,8 +396,7 @@ impl<S: Sponge + Default> Signature for MssSignature<S> {
     fn from_trits(state: TritBuf<T1B1Buf>) -> Result<Self, Error> {
         Ok(Self {
             state,
-            // TODO OPTION
-            index: 0,
+            index: None,
             sponge: PhantomData,
         })
     }
