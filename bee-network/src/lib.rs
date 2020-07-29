@@ -23,7 +23,6 @@
 //! * well documented
 
 #![warn(missing_docs)]
-#![recursion_limit = "1024"]
 
 pub use address::{url::Url, Address, Port};
 pub use commands::{response_channel, Command, Requester, Responder};
