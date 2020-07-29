@@ -23,7 +23,7 @@ use crate::{
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
 use async_std::task::{self, spawn};
-use futures::{future, select, sink::SinkExt, stream, FutureExt, StreamExt};
+use futures::{select, sink::SinkExt, stream, FutureExt, StreamExt};
 use log::*;
 
 use std::time::Duration;

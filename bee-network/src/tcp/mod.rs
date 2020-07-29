@@ -18,7 +18,6 @@ use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
 
 use crate::{
     address::{url::Protocol, Address},
-    constants::MAX_BUFFER_SIZE,
     endpoint::{
         origin::Origin,
         outbox::{bytes_channel, BytesReceiver},
@@ -32,16 +31,12 @@ use futures::{channel::oneshot, prelude::*, select, StreamExt};
 use log::*;
 use thiserror::Error;
 
+const MAX_BUFFER_SIZE: usize = 1654;
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Async IO error")]
     AsyncIo(#[from] std::io::Error),
-
-    #[error("Error sending bytes")]
-    SendingBytesFailed,
-
-    #[error("Error receiving bytes")]
-    ReceivingBytesFailed,
 
     #[error("Connection attempt failed")]
     ConnectionAttemptFailed,

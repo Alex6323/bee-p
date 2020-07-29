@@ -34,7 +34,6 @@ pub use network::Network;
 
 mod address;
 mod commands;
-mod constants;
 mod endpoint;
 mod events;
 mod network;

@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{constants::BYTES_CHANNEL_CAPACITY, endpoint::EndpointId as EpId};
+use crate::endpoint::EndpointId as EpId;
 
 use bee_common::worker::Error as WorkerError;
 
@@ -17,6 +17,8 @@ use async_std::sync::Arc;
 use futures::{channel::mpsc, sink::SinkExt};
 
 use std::collections::{hash_map::Entry, HashMap};
+
+const BYTES_CHANNEL_CAPACITY: usize = 10000;
 
 // TODO: rename to `MessageSender`, `MessageReceiver`.
 pub type BytesSender = mpsc::Sender<Arc<Vec<u8>>>;

@@ -13,7 +13,14 @@ use crate::address::{Address, Port};
 
 use serde::Deserialize;
 
-use std::{net::IpAddr, time::Duration};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    time::Duration,
+};
+
+const DEFAULT_BINDING_PORT: u16 = 15600;
+const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+const DEFAULT_RECONNECT_INTERVAL: u64 = 60;
 
 /// Network configuration builder.
 #[derive(Default, Deserialize)]
@@ -55,12 +62,9 @@ impl NetworkConfigBuilder {
     /// Builds the network config.
     pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
-            binding_port: Port(self.binding_port.unwrap_or(crate::constants::DEFAULT_BINDING_PORT)),
-            binding_addr: self.binding_addr.unwrap_or(crate::constants::DEFAULT_BINDING_ADDR),
-            reconnect_interval: Duration::from_secs(
-                self.reconnect_interval
-                    .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL),
-            ),
+            binding_port: Port(self.binding_port.unwrap_or(DEFAULT_BINDING_PORT)),
+            binding_addr: self.binding_addr.unwrap_or(DEFAULT_BINDING_ADDR),
+            reconnect_interval: Duration::from_secs(self.reconnect_interval.unwrap_or(DEFAULT_RECONNECT_INTERVAL)),
         }
     }
 }
