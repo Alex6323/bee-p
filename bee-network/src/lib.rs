@@ -34,18 +34,16 @@ pub use network::Network;
 
 mod address;
 mod commands;
+mod config;
 mod endpoint;
 mod events;
 mod network;
 mod tcp;
-// mod udp;
-mod config;
 mod utils;
 
 use endpoint::{allowlist, worker::EndpointWorker as EpWorker};
 use events::EventSubscriber as Events;
 use tcp::worker::TcpWorker;
-// use udp::worker::UdpWorker;
 
 use bee_common::shutdown::Shutdown;
 
@@ -63,7 +61,6 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     let (epw_sd_sender, epw_shutdown) = oneshot::channel();
 
     let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
-    // let (udp_sd_sender, udp_shutdown) = oneshot::channel();
 
     let ep_worker = EpWorker::new(
         commands,
@@ -74,13 +71,12 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     );
 
     let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender);
-    // let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
 
     shutdown.add_worker_shutdown(epw_sd_sender, spawn(ep_worker.run(epw_shutdown)));
     shutdown.add_worker_shutdown(tcp_sd_sender, spawn(tcp_worker.run(tcp_shutdown)));
-    // shutdown.add_worker_shutdown(udp_sd_sender, spawn(udp_worker.run()));
 
     allowlist::init();
+
     shutdown.add_action(|| allowlist::drop());
 
     (Network::new(config, command_sender), events)
