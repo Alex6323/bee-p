@@ -14,9 +14,9 @@ homepage = "https://www.iota.org"
 bee-common = { git = "https://github.com/iotaledger/bee.git" }
 
 async-std = "1.6.2"
-dashmap = "3.10.0"
+dashmap = "3.11.7"
 futures = "0.3.5"
-log = "0.4.8"
+log = "0.4.11"
 serde = { version = "1.0.114", features = ["derive" ] }
 thiserror = "1.0.20"
 url = "2.1.1"
@@ -25,5 +25,5 @@ url = "2.1.1"
 env_logger = "0.7.1"
 pretty_env_logger = "0.4.0"
 serial_test = "0.4.0"
-structopt = "0.3.12"
-tokio = { version = "0.2.11", features = ["signal"] }
+structopt = "0.3.15"
+tokio = { version = "0.2.22", features = ["signal"] }
