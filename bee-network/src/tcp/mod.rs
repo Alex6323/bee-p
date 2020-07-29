@@ -24,17 +24,33 @@ use crate::{
         outbox::{bytes_channel, BytesReceiver},
         Endpoint, EndpointId as EpId,
     },
-    errors::{ConnectionError, ConnectionResult},
     events::{Event, EventPublisher},
 };
 
 use async_std::{net::TcpStream, sync::Arc, task::spawn};
 use futures::{channel::oneshot, prelude::*, select, StreamExt};
 use log::*;
+use thiserror::Error;
 
-// TODO: get rid of `ConnectionResult`
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Async IO error")]
+    AsyncIo(#[from] std::io::Error),
 
-pub(crate) async fn try_connect(epid: &EpId, addr: &Address, event_pub_intern: EventPublisher) -> ConnectionResult<()> {
+    #[error("Error sending bytes")]
+    SendingBytesFailed,
+
+    #[error("Error receiving bytes")]
+    ReceivingBytesFailed,
+
+    #[error("Connection attempt failed")]
+    ConnectionAttemptFailed,
+
+    #[error("Sending event failed")]
+    SendingEventFailed(#[from] futures::channel::mpsc::SendError),
+}
+
+pub(crate) async fn try_connect(epid: &EpId, addr: &Address, event_pub_intern: EventPublisher) -> Result<(), Error> {
     debug!("Trying to connect to {}...", epid);
 
     match TcpStream::connect(**addr).await {
@@ -44,7 +60,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, event_pub_intern: E
                 Err(e) => {
                     warn!["Error creating TCP connection: {:?}.", e];
 
-                    return Err(ConnectionError::ConnectionAttemptFailed);
+                    return Err(Error::ConnectionAttemptFailed);
                 }
             };
 
@@ -59,7 +75,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, event_pub_intern: E
         Err(e) => {
             warn!("Connecting to {} failed: {:?}.", epid, e);
 
-            Err(ConnectionError::ConnectionAttemptFailed)
+            Err(Error::ConnectionAttemptFailed)
         }
     }
 }
@@ -67,7 +83,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, event_pub_intern: E
 pub(crate) async fn spawn_connection_workers(
     conn: TcpConnection,
     mut event_pub_intern: EventPublisher,
-) -> ConnectionResult<()> {
+) -> Result<(), Error> {
     debug!("Spawning TCP connection workers...");
 
     let addr: Address = conn.remote_addr.into();

@@ -9,14 +9,32 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod errors;
 pub mod url;
-
-use errors::*;
 
 use async_std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 
 use std::{fmt, ops};
+
+use thiserror::Error;
+
+/// Errors that can happen when dealing with `Address`es.
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Error resolving domain name to address.")]
+    Io(#[from] std::io::Error),
+
+    #[error("Error parsing url.")]
+    UrlParseFailure,
+
+    #[error("Error destructing url.")]
+    UrlDestructFailure,
+
+    #[error("Unsupported protocol.")]
+    UnsupportedProtocol,
+
+    #[error("Error resolving domain name to address.")]
+    ResolveFailure,
+}
 
 /// A wrapper around a `u16` describing a network port number to increase type safety.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -54,12 +72,12 @@ impl Address {
     /// Creates an `Address` from a host address string (e.g. "example.com:15600").
     ///
     /// NOTE: This operation is async, and can fail if the host name can't be resolved.
-    pub async fn from_addr_str(address: &str) -> AddressResult<Self> {
+    pub async fn from_addr_str(address: &str) -> Result<Self, Error> {
         let address = address.to_socket_addrs().await?.next();
 
         match address {
             Some(address) => Ok(address.into()),
-            None => Err(AddressError::ResolveFailure),
+            None => Err(Error::ResolveFailure),
         }
     }
 

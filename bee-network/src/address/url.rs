@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::{errors::*, Address};
+use super::{Address, Error};
 
 use url::Url as ExternUrl;
 
@@ -58,10 +58,10 @@ impl Url {
     /// Creates a `Url` from a string slice.
     ///
     /// NOTE: This function expects an input of the format: tcp://example.com:15600.
-    pub async fn from_url_str(url: &str) -> AddressResult<Self> {
+    pub async fn from_url_str(url: &str) -> Result<Self, Error> {
         if let Ok(url) = ExternUrl::parse(url) {
-            let host = url.host_str().ok_or(AddressError::UrlDestructFailure)?;
-            let port = url.port().ok_or(AddressError::UrlDestructFailure)?;
+            let host = url.host_str().ok_or(Error::UrlDestructFailure)?;
+            let port = url.port().ok_or(Error::UrlDestructFailure)?;
 
             let host_port = &format!("{}:{}", host, port)[..];
             let addr = Address::from_addr_str(host_port).await?;
@@ -69,10 +69,10 @@ impl Url {
             match url.scheme() {
                 TCP => Ok(Url::new(addr, Protocol::Tcp)),
                 UDP => Ok(Url::new(addr, Protocol::Udp)),
-                _ => Err(AddressError::UnsupportedProtocol),
+                _ => Err(Error::UnsupportedProtocol),
             }
         } else {
-            Err(AddressError::UrlParseFailure)
+            Err(Error::UrlParseFailure)
         }
     }
 

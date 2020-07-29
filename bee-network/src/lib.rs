@@ -36,7 +36,6 @@ mod address;
 mod commands;
 mod constants;
 mod endpoint;
-mod errors;
 mod events;
 mod network;
 mod tcp;
@@ -57,10 +56,13 @@ use futures::channel::oneshot;
 /// Initializes the network layer.
 pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
     let (command_sender, commands) = commands::command_channel();
+
     let (event_sender, events) = events::event_channel();
+
     let (internal_event_sender, internal_events) = events::event_channel();
 
     let (epw_sd_sender, epw_shutdown) = oneshot::channel();
+
     let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
     // let (udp_sd_sender, udp_shutdown) = oneshot::channel();
 

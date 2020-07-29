@@ -9,7 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{endpoint::origin::Origin, errors::ConnectionResult};
+use super::Error;
+
+use crate::endpoint::origin::Origin;
 
 use async_std::{
     net::{SocketAddr, TcpStream},
@@ -27,7 +29,7 @@ pub struct TcpConnection {
 }
 
 impl TcpConnection {
-    pub fn new(stream: TcpStream, origin: Origin) -> ConnectionResult<Self> {
+    pub fn new(stream: TcpStream, origin: Origin) -> Result<Self, Error> {
         let local_addr = stream.local_addr()?;
         let remote_addr = stream.peer_addr()?;
         let stream = Arc::new(stream);

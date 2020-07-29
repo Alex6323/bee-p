@@ -15,10 +15,10 @@ bee-common = { git = "https://github.com/iotaledger/bee.git" }
 
 async-std = "1.6.2"
 dashmap = "3.10.0"
-err-derive = "0.2.3"
 futures = "0.3.5"
 log = "0.4.8"
 serde = { version = "1.0.114", features = ["derive" ] }
+thiserror = "1.0.20"
 url = "2.1.1"
 
 [dev-dependencies]
