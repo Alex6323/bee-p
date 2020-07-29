@@ -66,6 +66,9 @@ impl EndpointWorker {
 
         loop {
             select! {
+                _ = fused_shutdown_listener => {
+                    break;
+                },
                 command = self.fused_command_rx.next() => {
                     if !self.handle_command(command, &mut contacts, &mut connected, &mut outbox).await? {
                         break;
@@ -75,9 +78,6 @@ impl EndpointWorker {
                     if !self.handle_event(event, &mut contacts, &mut connected, &mut outbox).await? {
                         break;
                     }
-                },
-                _ = fused_shutdown_listener => {
-                    break;
                 }
             }
         }

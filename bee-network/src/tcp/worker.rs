@@ -50,6 +50,9 @@ impl TcpWorker {
 
         loop {
             select! {
+                _ = fused_shutdown_listener => {
+                    break;
+                },
                 stream = fused_incoming_streams.next() => {
                     if let Some(stream) = stream {
                         if !self.handle_stream(stream).await? {
@@ -58,9 +61,6 @@ impl TcpWorker {
                     } else {
                         break;
                     }
-                },
-                _ = fused_shutdown_listener => {
-                    break;
                 }
             }
         }

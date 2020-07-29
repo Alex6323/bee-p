@@ -153,8 +153,11 @@ async fn reader(
 
     loop {
         select! {
+            _ = fused_shutdown => {
+                // local writer shut down first (we disconnected)
+                break;
+            }
             num_read = stream.read(&mut buffer).fuse() => {
-            //num_read = fused_stream_read => {
                 match num_read {
                     Ok(num_read) => {
                         if !handle_read(epid, num_read, &mut event_pub_intern, &buffer).await {
@@ -166,10 +169,6 @@ async fn reader(
                     }
                 }
             },
-            _ = fused_shutdown => {
-                // NOTE: local writer shut down first (we disconnected)
-                break;
-            }
         }
     }
 
@@ -185,8 +184,7 @@ async fn handle_read(epid: EpId, num_read: usize, event_pub_intern: &mut EventPu
             warn!("Failed to inform about lost connection.");
         }
 
-        // NOTE: local reader shut down first (we were disconnected)
-        // break;
+        // local reader shut down first (we were disconnected)
         false
     } else {
         let mut bytes = vec![0u8; num_read];
