@@ -136,13 +136,11 @@ where
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 tail_hash = receiver_fused.next() => {
                     if let Some(tail_hash) = tail_hash {
                         self.process(tail_hash).await;
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }

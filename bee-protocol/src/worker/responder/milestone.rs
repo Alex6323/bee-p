@@ -79,13 +79,11 @@ impl MilestoneResponderWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
                     if let Some(MilestoneResponderWorkerEvent { epid, request }) = event {
                         self.process_request(epid, request).await;
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }

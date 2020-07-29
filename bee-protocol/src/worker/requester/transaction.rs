@@ -85,15 +85,13 @@ impl TransactionRequesterWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 entry = Protocol::get().transaction_requester_worker.pop() => {
                     if let TransactionRequesterWorkerEntry(hash, index) = entry {
                         if !tangle().is_solid_entry_point(&hash) && !tangle().contains(&hash) {
                             self.process_request(hash, index).await;
                         }
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }

@@ -43,13 +43,11 @@ impl LedgerConfirmationWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
                     if let Some(LedgerConfirmationWorkerEvent(hash)) = event {
                         self.confirm(hash)
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }

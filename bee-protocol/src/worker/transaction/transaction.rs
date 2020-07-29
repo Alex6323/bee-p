@@ -68,12 +68,12 @@ impl TransactionWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
                     if let Some(TransactionWorkerEvent{from, transaction}) = event {
                         self.process_transaction_brodcast(from, transaction).await;
                     }
-                },
-                _ = shutdown_fused => break
+                }
             }
         }
 

@@ -126,6 +126,7 @@ impl MilestoneSolidifierWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
                     if let Some(MilestoneSolidifierWorkerEvent()) = event {
                         self.request_milestones();
@@ -136,9 +137,6 @@ impl MilestoneSolidifierWorker {
                         //     }
                         // }
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }

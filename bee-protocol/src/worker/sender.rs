@@ -73,6 +73,7 @@ macro_rules! implement_sender_worker {
 
                 loop {
                     select! {
+                        _ = shutdown_fused => break,
                         message = events_fused.next() => {
                             if let Some(message) = message {
                                 match self
@@ -97,9 +98,6 @@ macro_rules! implement_sender_worker {
                                     }
                                 }
                             }
-                        }
-                        _ = shutdown_fused => {
-                            break;
                         }
                     }
                 }

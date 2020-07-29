@@ -75,13 +75,11 @@ impl TransactionSolidifierWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
                     if let Some(TransactionSolidifierWorkerEvent(hash, index)) = event {
                         self.solidify(hash, index).await;
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }

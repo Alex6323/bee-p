@@ -80,13 +80,11 @@ impl BroadcasterWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 transaction = receiver_fused.next() => {
                     if let Some(BroadcasterWorkerEvent{source, transaction}) = transaction {
                         self.broadcast(source, transaction).await;
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }

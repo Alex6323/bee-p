@@ -80,6 +80,7 @@ impl MilestoneRequesterWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 entry = Protocol::get().milestone_requester_worker.pop() => {
                     if let MilestoneRequesterWorkerEntry(index, epid) = entry {
                         if !tangle().contains_milestone(index.into()) {
@@ -87,9 +88,6 @@ impl MilestoneRequesterWorker {
                         }
 
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }

@@ -69,6 +69,7 @@ impl LedgerStateWorker {
 
         loop {
             select! {
+                _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
                     if let Some(event) = event {
                         match event {
@@ -76,9 +77,6 @@ impl LedgerStateWorker {
                             LedgerStateWorkerEvent::GetBalance(address, sender) => self.get_balance(address, sender)
                         }
                     }
-                },
-                _ = shutdown_fused => {
-                    break;
                 }
             }
         }
