@@ -11,25 +11,19 @@
 
 use std::fmt;
 
-/// The connection relationship with an endpoint.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
 pub enum Origin {
-    /// Incoming connection attempt that got accepted.
     Inbound,
-
-    /// Outgoing connection attempt that got accepted.
     Outbound,
-
-    /// Participating endpoints are not bound to eachother.
-    Unbound,
 }
 
 impl fmt::Display for Origin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Origin::Outbound => write!(f, "outbound"),
-            Origin::Inbound => write!(f, "inbound"),
-            Origin::Unbound => write!(f, "unbound"),
-        }
+        let s = match *self {
+            Origin::Outbound => "outbound",
+            Origin::Inbound => "inbound",
+        };
+        write!(f, "{}", s)
     }
 }

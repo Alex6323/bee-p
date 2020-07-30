@@ -23,11 +23,16 @@ use crate::{
         outbox::{bytes_channel, BytesReceiver},
         Endpoint, EndpointId as EpId,
     },
-    events::{Event, EventPublisher},
+    events::{Event, EventSender},
 };
 
-use async_std::{net::TcpStream, sync::Arc, task::spawn};
-use futures::{channel::oneshot, prelude::*, select, StreamExt};
+use async_std::{
+    io::prelude::{ReadExt, WriteExt},
+    net::TcpStream,
+    sync::Arc,
+    task::spawn,
+};
+use futures::{channel::oneshot, future::FutureExt, select, sink::SinkExt, StreamExt};
 use log::*;
 use thiserror::Error;
 
@@ -35,17 +40,17 @@ const MAX_BUFFER_SIZE: usize = 1654;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Async IO error")]
-    AsyncIo(#[from] std::io::Error),
+    #[error("An async I/O error occured.")]
+    AsyncIoErrorOccurred(#[from] std::io::Error),
 
-    #[error("Connection attempt failed")]
+    #[error("Connection attempt failed.")]
     ConnectionAttemptFailed,
 
-    #[error("Sending event failed")]
+    #[error("Sending an event failed.")]
     SendingEventFailed(#[from] futures::channel::mpsc::SendError),
 }
 
-pub(crate) async fn try_connect(epid: &EpId, addr: &Address, event_pub_intern: EventPublisher) -> Result<(), Error> {
+pub(crate) async fn try_connect(epid: &EpId, addr: &Address, internal_event_sender: EventSender) -> Result<(), Error> {
     debug!("Trying to connect to {}...", epid);
 
     match TcpStream::connect(**addr).await {
@@ -65,7 +70,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, event_pub_intern: E
                 Origin::Outbound
             );
 
-            Ok(spawn_connection_workers(conn, event_pub_intern).await?)
+            Ok(spawn_connection_workers(conn, internal_event_sender).await?)
         }
         Err(e) => {
             warn!("Connecting to {} failed: {:?}.", epid, e);
@@ -77,7 +82,7 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, event_pub_intern: E
 
 pub(crate) async fn spawn_connection_workers(
     conn: TcpConnection,
-    mut event_pub_intern: EventPublisher,
+    mut internal_event_sender: EventSender,
 ) -> Result<(), Error> {
     debug!("Spawning TCP connection workers...");
 
@@ -85,21 +90,31 @@ pub(crate) async fn spawn_connection_workers(
     let proto = Protocol::Tcp;
     let origin = conn.origin;
 
-    let ep = Endpoint::new(addr, proto);
+    let endpoint = Endpoint::new(addr, proto);
 
-    let (sender, receiver) = bytes_channel();
+    let (bytes_sender, bytes_receiver) = bytes_channel();
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
 
-    spawn(writer(ep.id, conn.stream.clone(), receiver, shutdown_sender));
-    spawn(reader(
-        ep.id,
+    spawn(writer(
+        endpoint.id,
         conn.stream.clone(),
-        event_pub_intern.clone(),
+        bytes_receiver,
+        shutdown_sender,
+    ));
+
+    spawn(reader(
+        endpoint.id,
+        conn.stream.clone(),
+        internal_event_sender.clone(),
         shutdown_receiver,
     ));
 
-    Ok(event_pub_intern
-        .send(Event::NewConnection { ep, origin, sender })
+    Ok(internal_event_sender
+        .send(Event::NewConnection {
+            endpoint,
+            origin,
+            sender: bytes_sender,
+        })
         .await?)
 }
 
@@ -124,15 +139,13 @@ async fn writer(
                 .await
                 .unwrap_or_else(|e| error!("Sending bytes failed: {:?}", e));
         } else {
-            // NOTE: If the bytes sender gets dropped (which happens when the connection pool
-            // is dropped, we break out of the loop)
             break;
         }
     }
 
     // Try to send the shutdown signal, but don't care about whether it succeeds, since if it fails,  the receiver was
     // shut down first.
-    shutdown_notifier.send(()).map_err(|_| ()).unwrap();
+    shutdown_notifier.send(()).unwrap_or_else(|_| ());
 
     debug!("Connection writer event loop for {} stopped.", epid);
 }
@@ -140,7 +153,7 @@ async fn writer(
 async fn reader(
     epid: EpId,
     stream: Arc<TcpStream>,
-    mut event_pub_intern: EventPublisher,
+    mut internal_event_sender: EventSender,
     shutdown_listener: ShutdownListener,
 ) {
     debug!("Starting connection reader event loop for {}...", epid);
@@ -154,13 +167,12 @@ async fn reader(
     loop {
         select! {
             _ = fused_shutdown => {
-                // local writer shut down first (we disconnected)
                 break;
             }
             num_read = stream.read(&mut buffer).fuse() => {
                 match num_read {
                     Ok(num_read) => {
-                        if !handle_read(epid, num_read, &mut event_pub_intern, &buffer).await {
+                        if !handle_read(epid, num_read, &mut internal_event_sender, &buffer).await {
                             break;
                         }
                     },
@@ -176,11 +188,15 @@ async fn reader(
 }
 
 #[inline]
-async fn handle_read(epid: EpId, num_read: usize, event_pub_intern: &mut EventPublisher, buffer: &Vec<u8>) -> bool {
+async fn handle_read(epid: EpId, num_read: usize, internal_event_sender: &mut EventSender, buffer: &Vec<u8>) -> bool {
     if num_read == 0 {
         debug!("Received EOF (0 byte message).");
 
-        if event_pub_intern.send(Event::LostConnection { epid }).await.is_err() {
+        if internal_event_sender
+            .send(Event::LostConnection { epid })
+            .await
+            .is_err()
+        {
             warn!("Failed to inform about lost connection.");
         }
 
@@ -190,7 +206,7 @@ async fn handle_read(epid: EpId, num_read: usize, event_pub_intern: &mut EventPu
         let mut bytes = vec![0u8; num_read];
         bytes.copy_from_slice(&buffer[0..num_read]);
 
-        if event_pub_intern
+        if internal_event_sender
             .send(Event::MessageReceived { epid, bytes })
             .await
             .is_err()

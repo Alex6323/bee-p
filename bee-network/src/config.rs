@@ -69,8 +69,7 @@ impl NetworkConfigBuilder {
     }
 }
 
-/// Network configuration.
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct NetworkConfig {
     pub(crate) binding_port: Port,
     pub(crate) binding_addr: IpAddr,

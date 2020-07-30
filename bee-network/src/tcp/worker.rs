@@ -12,7 +12,7 @@
 use crate::{
     address::Address,
     endpoint::{allowlist, origin::Origin},
-    events::EventPublisher,
+    events::EventSender,
 };
 
 use super::{connection::TcpConnection, spawn_connection_workers};
@@ -27,14 +27,14 @@ use std::io::Error;
 
 pub(crate) struct TcpWorker {
     binding_addr: Address,
-    event_pub_intern: EventPublisher,
+    internal_event_sender: EventSender,
 }
 
 impl TcpWorker {
-    pub fn new(binding_addr: Address, event_pub_intern: EventPublisher) -> Self {
+    pub fn new(binding_addr: Address, internal_event_sender: EventSender) -> Self {
         Self {
             binding_addr,
-            event_pub_intern,
+            internal_event_sender,
         }
     }
 
@@ -101,10 +101,9 @@ impl TcpWorker {
                     Origin::Inbound
                 );
 
-                match spawn_connection_workers(conn, self.event_pub_intern.clone()).await {
-                    Ok(_) => (),
-                    Err(_) => (),
-                }
+                spawn_connection_workers(conn, self.internal_event_sender.clone())
+                    .await
+                    .unwrap_or_else(|_| ());
             }
             Err(e) => {
                 warn!("Accepting connection failed: {:?}.", e);

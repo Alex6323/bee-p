@@ -22,7 +22,6 @@ use crate::address::{
 
 use std::fmt;
 
-/// The id of an `Endpoint`.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct EndpointId {
     inner: Address,

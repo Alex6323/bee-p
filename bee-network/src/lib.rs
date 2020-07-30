@@ -9,26 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! # bee-network
-//!
-//! Network layer for Bee.
-//!
-//! The main properties of its architecure are:
-//! * async (depends on async_std),
-//! * message passing in favor of shared state (mpsc, oneshot channels),
-//! * event-driven (situations are modeled as events),
-//! * command pattern
-//! * no unsafe code
-//! * very few dependencies
-//! * well documented
-
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 
 pub use address::{url::Url, Address, Port};
-pub use commands::{response_channel, Command, Requester, Responder};
+pub use commands::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
 pub use endpoint::{origin::Origin, Endpoint, EndpointId};
-pub use events::{Event, EventSubscriber};
+pub use events::Event;
 
 pub use network::Network;
 
@@ -41,43 +28,61 @@ mod network;
 mod tcp;
 mod utils;
 
-use endpoint::{allowlist, worker::EndpointWorker as EpWorker};
-use events::EventSubscriber as Events;
+use endpoint::{allowlist, worker::EndpointWorker};
 use tcp::worker::TcpWorker;
 
 use bee_common::shutdown::Shutdown;
 
 use async_std::task::spawn;
-use futures::channel::oneshot;
+use futures::{
+    channel::{mpsc, oneshot},
+    stream::StreamExt,
+};
 
-/// Initializes the network layer.
+// NOTE: we make this an opaque type because it is exposed.
+pub struct Events(mpsc::Receiver<Event>);
+
+impl Events {
+    pub async fn recv(&mut self) -> Option<Event> {
+        self.0.next().await
+    }
+}
+
 pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
-    let (command_sender, commands) = commands::command_channel();
+    // Create communication channels.
+    let (command_sender, command_receiver) = commands::channel();
+    let (event_sender, event_receiver) = events::channel();
+    let (internal_event_sender, internal_event_receiver) = events::channel();
 
-    let (event_sender, events) = events::event_channel();
+    // Create channels to signal shutdown to the workers.
+    let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
+    let (tcp_worker_shutdown_sender, tcp_worker_shutdown_receiver) = oneshot::channel();
 
-    let (internal_event_sender, internal_events) = events::event_channel();
-
-    let (epw_sd_sender, epw_shutdown) = oneshot::channel();
-
-    let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
-
-    let ep_worker = EpWorker::new(
-        commands,
-        internal_events,
-        internal_event_sender.clone(),
+    // Create the worker that manages the endpoints to connect to.
+    let endpoint_worker = EndpointWorker::new(
+        command_receiver,
         event_sender,
+        internal_event_receiver,
+        internal_event_sender.clone(),
         config.reconnect_interval,
     );
 
+    // Create the worker that manages the TCP connections established with the endpoints.
     let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender);
 
-    shutdown.add_worker_shutdown(epw_sd_sender, spawn(ep_worker.run(epw_shutdown)));
-    shutdown.add_worker_shutdown(tcp_sd_sender, spawn(tcp_worker.run(tcp_shutdown)));
+    // Spawn workers, and connect them to the shutdown mechanism.
+    shutdown.add_worker_shutdown(
+        endpoint_worker_shutdown_sender,
+        spawn(endpoint_worker.run(endpoint_worker_shutdown_receiver)),
+    );
+    shutdown.add_worker_shutdown(
+        tcp_worker_shutdown_sender,
+        spawn(tcp_worker.run(tcp_worker_shutdown_receiver)),
+    );
 
+    // Initialize Allowlist and make sure it gets dropped when the shutdown occurs.
     allowlist::init();
-
     shutdown.add_action(|| allowlist::drop());
 
-    (Network::new(config, command_sender), events)
+    (Network::new(config, command_sender), Events(event_receiver))
 }
