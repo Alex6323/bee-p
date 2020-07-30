@@ -9,8 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod bundled;
-pub mod atomic;
-mod vertex;
-
-pub use vertex::Vertex;
+pub struct SignedData {
+    data: Vec<u8>,
+    public_key: [u8; 32],
+    signature: [u8; 64],
+}
