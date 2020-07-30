@@ -9,8 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod bundled;
-pub mod atomic;
-mod vertex;
+pub struct WotsAddress([u8; 49]);
 
-pub use vertex::Vertex;
+pub struct Ed25519Address([u8; 32]);
+
+pub enum Address {
+    Wots(WotsAddress),
+    Ed25519(Ed25519Address)
+}
+
+pub struct SigLockedSingleDeposit {
+    address: Address,
+    amount: u64
+}

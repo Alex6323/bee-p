@@ -9,8 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod bundled;
-pub mod atomic;
-mod vertex;
+mod input;
+mod output;
+mod unsigned_transaction;
+mod unlock;
 
-pub use vertex::Vertex;
+pub use unsigned_transaction::UnsignedTransaction;
+pub use unlock::UnlockBlock;
+
+pub struct SignedTransaction {
+    unsigned_transaction: UnsignedTransaction,
+    unlock_block_count: u16,
+    unlock_blocks: Vec<UnlockBlock>
+}

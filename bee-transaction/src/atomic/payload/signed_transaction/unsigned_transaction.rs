@@ -9,8 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod bundled;
-pub mod atomic;
-mod vertex;
+pub use crate::atomic::payload::signed_transaction::input::Input;
+pub use crate::atomic::payload::signed_transaction::output::Output;
+use crate::atomic::payload::Payload;
 
-pub use vertex::Vertex;
+pub struct UnsignedTransaction {
+    input_count: u16,
+    inputs: Vec<Input>,
+    output_count: u16,
+    outputs: Vec<Output>,
+    payload: Option<Payload>
+}

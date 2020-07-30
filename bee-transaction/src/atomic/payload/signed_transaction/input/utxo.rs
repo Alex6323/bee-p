@@ -9,8 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod bundled;
-pub mod atomic;
-mod vertex;
+use crate::atomic::Hash;
 
-pub use vertex::Vertex;
+pub struct UTXOInput {
+    transaction_id: Hash,
+    output_index: u16
+}

@@ -9,8 +9,22 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod bundled;
-pub mod atomic;
-mod vertex;
+mod indexation;
+mod milestone;
+mod signed_data;
+mod signed_transaction;
+mod unsigned_data;
 
-pub use vertex::Vertex;
+pub use indexation::Indexation;
+pub use milestone::Milestone;
+pub use signed_data::SignedData;
+pub use signed_transaction::SignedTransaction;
+pub use unsigned_data::UnsignedData;
+
+pub enum Payload {
+    Indexation(Box<Indexation>),
+    Milestone(Box<Milestone>),
+    SignedData(Box<SignedData>),
+    SignedTransaction(Box<SignedTransaction>),
+    UnsignedData(Box<UnsignedData>),
+}
