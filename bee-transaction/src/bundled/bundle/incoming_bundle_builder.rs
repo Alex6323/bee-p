@@ -11,7 +11,7 @@
 
 use crate::{
     bundled::{constants::IOTA_SUPPLY, Bundle, BundledTransaction, BundledTransactionField, BundledTransactions},
-    TransactionVertex,
+    Vertex,
 };
 
 use bee_crypto::ternary::sponge::{Kerl, Sponge};

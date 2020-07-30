@@ -17,7 +17,7 @@ use crate::{
         },
         Address, BundledTransactionBuilder, BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, Value,
     },
-    TransactionVertex,
+    Vertex,
 };
 
 use bee_crypto::ternary::Hash;
@@ -246,12 +246,14 @@ impl BundledTransaction {
     }
 }
 
-impl TransactionVertex for BundledTransaction {
-    fn trunk(&self) -> &Hash {
+impl Vertex for BundledTransaction {
+    type Hash = Hash;
+
+    fn trunk(&self) -> &Self::Hash {
         &self.trunk
     }
 
-    fn branch(&self) -> &Hash {
+    fn branch(&self) -> &Self::Hash {
         &self.branch
     }
 }

@@ -25,7 +25,7 @@ use bee_transaction::{
     bundled::{
         BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Payload,
     },
-    TransactionVertex,
+    Vertex,
 };
 
 use std::{convert::TryFrom, marker::PhantomData};

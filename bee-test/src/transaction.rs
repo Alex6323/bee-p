@@ -17,7 +17,7 @@ use bee_transaction::{
         Address, BundledTransaction as Transaction, BundledTransactionBuilder as TransactionBuilder,
         BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, Value,
     },
-    TransactionVertex,
+    Vertex,
 };
 
 pub fn clone_tx(tx: &Transaction) -> Transaction {

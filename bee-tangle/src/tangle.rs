@@ -12,7 +12,7 @@
 use crate::{vertex::Vertex, TransactionRef as TxRef};
 
 use bee_crypto::ternary::Hash;
-use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
+use bee_transaction::{bundled::BundledTransaction as Tx, Vertex as MessageVertex};
 
 use dashmap::{mapref::entry::Entry, DashMap, DashSet};
 

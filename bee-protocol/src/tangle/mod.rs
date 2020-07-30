@@ -26,7 +26,7 @@ use crate::{
 
 use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
-use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
+use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
 
 use dashmap::DashMap;
 

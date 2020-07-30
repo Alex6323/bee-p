@@ -12,7 +12,7 @@
 use bee_crypto::ternary::Hash;
 use bee_tangle::Tangle;
 use bee_test::transaction::{create_random_attached_tx, create_random_tx};
-use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
+use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
 
 pub struct Transactions {
     pub a: Tx,

@@ -11,7 +11,7 @@
 
 use crate::{
     bundled::{Address, BundledTransaction, BundledTransactionField, BundledTransactions},
-    TransactionVertex,
+    Vertex,
 };
 
 use bee_crypto::ternary::Hash;

@@ -22,7 +22,7 @@ use bee_crypto::ternary::{
     Hash,
 };
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
-use bee_transaction::TransactionVertex;
+use bee_transaction::Vertex;
 
 use futures::{
     channel::{mpsc, oneshot},

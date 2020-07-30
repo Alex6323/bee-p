@@ -12,7 +12,7 @@
 use crate::tangle;
 
 use bee_crypto::ternary::Hash;
-use bee_transaction::TransactionVertex;
+use bee_transaction::Vertex;
 
 use std::collections::HashSet;
 
