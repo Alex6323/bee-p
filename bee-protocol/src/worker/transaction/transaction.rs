@@ -13,7 +13,7 @@ use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::transaction::HashCache,
+    worker::{milestone_validator::MilestoneValidatorWorkerEvent, transaction::HashCache},
 };
 
 use bee_common::worker::Error as WorkerError;
@@ -42,13 +42,16 @@ pub(crate) struct TransactionWorkerEvent {
 }
 
 pub(crate) struct TransactionWorker {
-    milestone_validator_worker: mpsc::Sender<Hash>,
+    milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
     cache: HashCache,
     curl: CurlP81,
 }
 
 impl TransactionWorker {
-    pub(crate) fn new(milestone_validator_worker: mpsc::Sender<Hash>, cache_size: usize) -> Self {
+    pub(crate) fn new(
+        milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
+        cache_size: usize,
+    ) -> Self {
         Self {
             milestone_validator_worker,
             cache: HashCache::new(cache_size),
@@ -175,7 +178,11 @@ impl TransactionWorker {
                 };
 
                 if let Some(tail) = tail {
-                    if let Err(e) = self.milestone_validator_worker.send(tail).await {
+                    if let Err(e) = self
+                        .milestone_validator_worker
+                        .send(MilestoneValidatorWorkerEvent(tail))
+                        .await
+                    {
                         error!("Sending tail to milestone validation failed: {:?}.", e);
                     }
                 };

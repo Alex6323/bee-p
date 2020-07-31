@@ -42,7 +42,7 @@ pub(crate) enum MilestoneValidatorWorkerError {
     InvalidMilestone(MilestoneBuilderError),
 }
 
-pub(crate) type MilestoneValidatorWorkerEvent = Hash;
+pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct MilestoneValidatorWorker<M, P> {
     mss_sponge: PhantomData<M>,
@@ -138,7 +138,7 @@ where
             select! {
                 _ = shutdown_fused => break,
                 tail_hash = receiver_fused.next() => {
-                    if let Some(tail_hash) = tail_hash {
+                    if let Some(MilestoneValidatorWorkerEvent(tail_hash)) = tail_hash {
                         self.process(tail_hash).await;
                     }
                 }
