@@ -15,7 +15,7 @@ use crate::{
     message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     peer::{HandshakedPeer, Peer},
     protocol::Protocol,
-    worker::SenderWorker,
+    worker::{Receiver, SenderWorker},
 };
 
 use bee_network::{Address, EndpointId, Network};
@@ -88,18 +88,37 @@ impl PeerManager {
             self.handshaked_peers_keys.write().await.push(*epid);
 
             spawn(
-                SenderWorker::<MilestoneRequest>::new(self.network.clone(), peer.clone())
-                    .run(milestone_request_rx, milestone_request_shutdown_rx),
+                SenderWorker::<MilestoneRequest>::new(
+                    self.network.clone(),
+                    peer.clone(),
+                    Receiver::new(milestone_request_rx, milestone_request_shutdown_rx),
+                )
+                .run(),
             );
             spawn(
-                SenderWorker::<TransactionMessage>::new(self.network.clone(), peer.clone())
-                    .run(transaction_rx, transaction_shutdown_rx),
+                SenderWorker::<TransactionMessage>::new(
+                    self.network.clone(),
+                    peer.clone(),
+                    Receiver::new(transaction_rx, transaction_shutdown_rx),
+                )
+                .run(),
             );
             spawn(
-                SenderWorker::<TransactionRequest>::new(self.network.clone(), peer.clone())
-                    .run(transaction_request_rx, transaction_request_shutdown_rx),
+                SenderWorker::<TransactionRequest>::new(
+                    self.network.clone(),
+                    peer.clone(),
+                    Receiver::new(transaction_request_rx, transaction_request_shutdown_rx),
+                )
+                .run(),
             );
-            spawn(SenderWorker::<Heartbeat>::new(self.network.clone(), peer).run(heartbeat_rx, heartbeat_shutdown_rx));
+            spawn(
+                SenderWorker::<Heartbeat>::new(
+                    self.network.clone(),
+                    peer,
+                    Receiver::new(heartbeat_rx, heartbeat_shutdown_rx),
+                )
+                .run(),
+            );
         }
     }
 

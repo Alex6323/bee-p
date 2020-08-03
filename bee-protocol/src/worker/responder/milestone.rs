@@ -21,24 +21,24 @@ use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use bytemuck::cast_slice;
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-};
+use futures::channel::mpsc;
+
 use log::info;
+
+type Receiver = crate::worker::Receiver<mpsc::Receiver<MilestoneResponderWorkerEvent>>;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: MilestoneRequest,
 }
 
-pub(crate) struct MilestoneResponderWorker {}
+pub(crate) struct MilestoneResponderWorker {
+    receiver: Receiver,
+}
 
 impl MilestoneResponderWorker {
-    pub(crate) fn new() -> Self {
-        Self {}
+    pub(crate) fn new(receiver: Receiver) -> Self {
+        Self { receiver }
     }
 
     async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
@@ -67,25 +67,11 @@ impl MilestoneResponderWorker {
         }
     }
 
-    pub(crate) async fn run(
-        self,
-        receiver: mpsc::Receiver<MilestoneResponderWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(MilestoneResponderWorkerEvent { epid, request }) = event {
-                        self.process_request(epid, request).await;
-                    }
-                }
-            }
+        while let Some(MilestoneResponderWorkerEvent { epid, request }) = self.receiver.receive_event().await {
+            self.process_request(epid, request).await;
         }
 
         info!("Stopped.");

@@ -27,14 +27,10 @@ use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use bytemuck::cast_slice;
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-    SinkExt,
-};
+use futures::{channel::mpsc, SinkExt};
 use log::{debug, error, info};
+
+type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionWorkerEvent>>;
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -45,39 +41,28 @@ pub(crate) struct TransactionWorker {
     milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
     cache: HashCache,
     curl: CurlP81,
+    receiver: Receiver,
 }
 
 impl TransactionWorker {
     pub(crate) fn new(
         milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
         cache_size: usize,
+        receiver: Receiver,
     ) -> Self {
         Self {
             milestone_validator_worker,
             cache: HashCache::new(cache_size),
             curl: CurlP81::new(),
+            receiver,
         }
     }
 
-    pub(crate) async fn run(
-        mut self,
-        receiver: mpsc::Receiver<TransactionWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(TransactionWorkerEvent{from, transaction}) = event {
-                        self.process_transaction_brodcast(from, transaction).await;
-                    }
-                }
-            }
+        while let Some(TransactionWorkerEvent { from, transaction }) = self.receiver.receive_event().await {
+            self.process_transaction_brodcast(from, transaction).await;
         }
 
         info!("Stopped.");

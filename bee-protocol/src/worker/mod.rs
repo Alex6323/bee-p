@@ -39,3 +39,37 @@ pub(crate) use solidifier::{
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{TransactionWorker, TransactionWorkerEvent};
+
+use futures::{
+    channel::oneshot,
+    future::{self, FutureExt},
+    stream::{self, Stream, StreamExt},
+};
+
+pub(crate) struct Receiver<R> {
+    receiver: stream::Fuse<R>,
+    shutdown: future::Fuse<oneshot::Receiver<()>>,
+}
+
+impl<R, E> Receiver<R>
+where
+    R: Stream<Item = E> + std::marker::Unpin,
+{
+    pub(crate) fn new(receiver: R, shutdown: oneshot::Receiver<()>) -> Self {
+        Self {
+            receiver: receiver.fuse(),
+            shutdown: shutdown.fuse(),
+        }
+    }
+
+    async fn receive_event(&mut self) -> Option<E> {
+        loop {
+            futures::select! {
+                _ = &mut self.shutdown => return None,
+                event = self.receiver.next() => if let Some(_) = event {
+                    return event;
+                }
+            }
+        }
+    }
+}
