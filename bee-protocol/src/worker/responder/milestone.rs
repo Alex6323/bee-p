@@ -21,7 +21,7 @@ use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use bytemuck::cast_slice;
-use futures::channel::mpsc;
+use futures::{channel::mpsc, stream::StreamExt};
 
 use log::info;
 
@@ -70,7 +70,7 @@ impl MilestoneResponderWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(MilestoneResponderWorkerEvent { epid, request }) = self.receiver.receive_event().await {
+        while let Some(MilestoneResponderWorkerEvent { epid, request }) = self.receiver.next().await {
             self.process_request(epid, request).await;
         }
 

@@ -17,7 +17,7 @@ use crate::{
 use bee_common::worker::Error as WorkerError;
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
-use futures::channel::mpsc;
+use futures::{channel::mpsc, stream::StreamExt};
 
 use log::{info, warn};
 
@@ -70,7 +70,7 @@ impl BroadcasterWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(BroadcasterWorkerEvent { source, transaction }) = self.receiver.receive_event().await {
+        while let Some(BroadcasterWorkerEvent { source, transaction }) = self.receiver.next().await {
             self.broadcast(source, transaction).await;
         }
 

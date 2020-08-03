@@ -44,32 +44,33 @@ use futures::{
     channel::oneshot,
     future::{self, FutureExt},
     stream::{self, Stream, StreamExt},
+    task::{Context, Poll},
 };
+
+use std::pin::Pin;
 
 pub(crate) struct Receiver<R> {
     receiver: stream::Fuse<R>,
     shutdown: future::Fuse<oneshot::Receiver<()>>,
 }
 
-impl<R, E> Receiver<R>
-where
-    R: Stream<Item = E> + std::marker::Unpin,
-{
+impl<R: Stream> Receiver<R> {
     pub(crate) fn new(receiver: R, shutdown: oneshot::Receiver<()>) -> Self {
         Self {
             receiver: receiver.fuse(),
             shutdown: shutdown.fuse(),
         }
     }
+}
 
-    async fn receive_event(&mut self) -> Option<E> {
-        loop {
-            futures::select! {
-                _ = &mut self.shutdown => return None,
-                event = self.receiver.next() => if let Some(_) = event {
-                    return event;
-                }
-            }
+impl<R: Stream<Item = E> + std::marker::Unpin, E> Stream for Receiver<R> {
+    type Item = E;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        if let Poll::Ready(_) = self.shutdown.poll_unpin(cx) {
+            Poll::Ready(None)
+        } else {
+            self.receiver.poll_next_unpin(cx)
         }
     }
 }

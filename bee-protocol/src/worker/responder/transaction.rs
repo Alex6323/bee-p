@@ -22,7 +22,7 @@ use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use bytemuck::cast_slice;
-use futures::channel::mpsc;
+use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
 type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionResponderWorkerEvent>>;
@@ -68,7 +68,7 @@ impl TransactionResponderWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(TransactionResponderWorkerEvent { epid, request }) = self.receiver.receive_event().await {
+        while let Some(TransactionResponderWorkerEvent { epid, request }) = self.receiver.next().await {
             self.process_request(epid, request).await;
         }
 

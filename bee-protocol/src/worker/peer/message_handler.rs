@@ -68,7 +68,10 @@ impl MessageHandler {
                 // Read a header.
                 ReadState::Header => {
                     // We need `HEADER_SIZE` bytes to read a header.
-                    let bytes = self.events.fetch_bytes_or_shutdown(&mut self.shutdown, HEADER_SIZE).await?;
+                    let bytes = self
+                        .events
+                        .fetch_bytes_or_shutdown(&mut self.shutdown, HEADER_SIZE)
+                        .await?;
                     debug!("[{}] Reading Header...", self.address);
                     let header = Header::from_bytes(bytes);
                     // Now we are ready to read a payload.
@@ -77,8 +80,10 @@ impl MessageHandler {
                 // Read a payload.
                 ReadState::Payload(header) => {
                     // We read the quantity of bytes stated by the header.
-                    let bytes =
-                        self.events.fetch_bytes_or_shutdown(&mut self.shutdown, header.message_length.into()).await?;
+                    let bytes = self
+                        .events
+                        .fetch_bytes_or_shutdown(&mut self.shutdown, header.message_length.into())
+                        .await?;
                     // FIXME: Avoid this clone
                     let header = header.clone();
                     // Now we are ready to read the next message's header.
@@ -172,7 +177,8 @@ mod tests {
 
     use futures::{
         channel::{mpsc, oneshot},
-        {future::FutureExt, stream::StreamExt},
+        future::FutureExt,
+        stream::StreamExt,
     };
 
     use async_std::task;

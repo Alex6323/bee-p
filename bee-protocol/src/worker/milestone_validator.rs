@@ -26,7 +26,7 @@ use bee_transaction::TransactionVertex;
 
 use log::{debug, info};
 
-use futures::channel::mpsc;
+use futures::{channel::mpsc, stream::StreamExt};
 use std::marker::PhantomData;
 
 type Receiver = crate::worker::Receiver<mpsc::Receiver<MilestoneValidatorWorkerEvent>>;
@@ -126,7 +126,7 @@ where
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(MilestoneValidatorWorkerEvent(tail_hash)) = self.receiver.receive_event().await {
+        while let Some(MilestoneValidatorWorkerEvent(tail_hash)) = self.receiver.next().await {
             self.process(tail_hash).await;
         }
 

@@ -13,7 +13,7 @@ use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::worker::Error as WorkerError;
 
-use futures::channel::mpsc;
+use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
 const MILESTONE_REQUEST_RANGE: u8 = 50;
@@ -116,7 +116,7 @@ impl MilestoneSolidifierWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(MilestoneSolidifierWorkerEvent) = self.receiver.receive_event().await {
+        while let Some(MilestoneSolidifierWorkerEvent) = self.receiver.next().await {
             self.request_milestones();
             self.solidify_milestone().await;
             // while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {

@@ -27,7 +27,11 @@ use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, SinkExt};
+use futures::{
+    channel::{mpsc, oneshot},
+    stream::StreamExt,
+    SinkExt,
+};
 use log::{debug, error, info};
 
 type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionWorkerEvent>>;
@@ -61,7 +65,7 @@ impl TransactionWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(TransactionWorkerEvent { from, transaction }) = self.receiver.receive_event().await {
+        while let Some(TransactionWorkerEvent { from, transaction }) = self.receiver.next().await {
             self.process_transaction_brodcast(from, transaction).await;
         }
 
@@ -238,8 +242,12 @@ mod tests {
         });
 
         block_on(
-            TransactionWorker::new(milestone_validator_worker_sender, 10000)
-                .run(transaction_worker_receiver, shutdown_receiver),
+            TransactionWorker::new(
+                milestone_validator_worker_sender,
+                10000,
+                Receiver::new(transaction_worker_receiver, shutdown_receiver),
+            )
+            .run(),
         )
         .unwrap();
 

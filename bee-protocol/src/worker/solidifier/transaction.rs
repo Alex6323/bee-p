@@ -17,21 +17,20 @@ use bee_tangle::traversal;
 
 use std::collections::HashSet;
 
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
+
+type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionSolidifierWorkerEvent>>;
 
 pub(crate) struct TransactionSolidifierWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 
-pub(crate) struct TransactionSolidifierWorker {}
+pub(crate) struct TransactionSolidifierWorker {
+    receiver: Receiver,
+}
 
 impl TransactionSolidifierWorker {
-    pub(crate) fn new() -> Self {
-        Self {}
+    pub(crate) fn new(receiver: Receiver) -> Self {
+        Self { receiver }
     }
 
     // TODO is the index even needed ? We request one milestone at a time ? No PriorityQueue ?
@@ -63,25 +62,11 @@ impl TransactionSolidifierWorker {
         }
     }
 
-    pub(crate) async fn run(
-        self,
-        receiver: mpsc::Receiver<TransactionSolidifierWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(TransactionSolidifierWorkerEvent(hash, index)) = event {
-                        self.solidify(hash, index).await;
-                    }
-                }
-            }
+        while let Some(TransactionSolidifierWorkerEvent(hash, index)) = self.receiver.next().await {
+            self.solidify(hash, index).await;
         }
 
         info!("Stopped.");

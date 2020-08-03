@@ -21,7 +21,7 @@ use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use std::sync::Arc;
 
-use futures::{sink::SinkExt, channel::mpsc};
+use futures::{channel::mpsc, sink::SinkExt, stream::StreamExt};
 
 use log::warn;
 
@@ -61,7 +61,7 @@ macro_rules! implement_sender_worker {
             }
 
             pub(crate) async fn run(mut self) {
-                while let Some(message) = self.receiver.receive_event().await {
+                while let Some(message) = self.receiver.next().await {
                     match self
                         .network
                         .send(SendMessage {

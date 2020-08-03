@@ -207,10 +207,13 @@ impl Protocol {
 
         shutdown.add_worker_shutdown(
             transaction_solidifier_worker_shutdown_tx,
-            spawn(TransactionSolidifierWorker::new().run(
-                transaction_solidifier_worker_rx,
-                transaction_solidifier_worker_shutdown_rx,
-            )),
+            spawn(
+                TransactionSolidifierWorker::new(Receiver::new(
+                    transaction_solidifier_worker_rx,
+                    transaction_solidifier_worker_shutdown_rx,
+                ))
+                .run(),
+            ),
         );
 
         shutdown.add_worker_shutdown(
