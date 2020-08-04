@@ -20,6 +20,8 @@ pub use unlock::UnlockBlock;
 pub use unsigned_transaction::UnsignedTransaction;
 
 use std::collections::HashSet;
+use std::slice::Iter;
+use std::cmp::Ordering;
 
 pub struct SignedTransaction {
     pub unsigned_transaction: UnsignedTransaction,
@@ -63,7 +65,10 @@ impl SignedTransaction {
             }
         }
 
-        // TODO Inputs must be in lexicographical order of their serialized form.
+        // Inputs must be in lexicographical order of their serialized form.
+        if is_sorted(transaction.inputs.iter()) == false {
+            return Err(Error::OrderError);
+        }
 
         // Output validation
         // Outputs Count must be 0 < x < 127
@@ -78,14 +83,21 @@ impl SignedTransaction {
         }
 
         let mut total = 0;
+        let mut combination = HashSet::new();
         for i in transaction.outputs.iter() {
             // Output Type must be 0, denoting a SigLockedSingleDeposit.
             match i {
                 output::Output::SigLockedSingleDeposit(u) => {
                     // Address Type must either be 0 or 1, denoting a WOTS- or Ed25519 address.
-                    // TODO If Address is of type WOTS address, its bytes must be valid T5B1 bytes
+                    
+                    if let output::Address::Wots(_a) = &u.address {
+                        // TODO If Address is of type WOTS address, its bytes must be valid T5B1 bytes
+                    }
 
-                    // TODO The Address must be unique in the set of SigLockedSingleDeposits
+                    // The Address must be unique in the set of SigLockedSingleDeposits
+                    if combination.insert(&u.address) == false {
+                        return Err(Error::DuplicateError);
+                    }
 
                     // Amount must be > 0
                     if u.amount == 0 {
@@ -97,7 +109,10 @@ impl SignedTransaction {
             }
         }
 
-        // TODO Outputs must be in lexicographical order by their serialized form
+        // Outputs must be in lexicographical order by their serialized form
+        if is_sorted(transaction.outputs.iter()) == false {
+            return Err(Error::OrderError);
+        }
 
         // Accumulated output balance must not exceed the total supply of tokens 2'779'530'283'277'761
         if total > 2779530283277761 {
@@ -167,4 +182,21 @@ impl SignedTransaction {
 
         Ok(())
     }
+}
+
+fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
+    let mut iterator = iterator;
+    let mut last = match iterator.next() {
+        Some(e) => e,
+        None => return true,
+    };
+
+    while let Some(curr) = iterator.next() {
+        if let Ordering::Greater = &last.cmp(&curr) {
+            return false;
+        }
+        last = curr;
+    }
+
+    true
 }
