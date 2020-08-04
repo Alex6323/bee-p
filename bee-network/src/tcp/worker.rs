@@ -9,13 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    address::Address,
-    endpoint::{allowlist, origin::Origin},
-    events::EventSender,
-};
+use crate::{address::Address, endpoint::allowlist, events::EventSender, tcp::Origin};
 
-use super::{connection::TcpConnection, spawn_connection_workers};
+use super::{connection::Connection, spawn_connection_workers};
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
@@ -41,6 +37,7 @@ impl TcpWorker {
     pub async fn run(mut self, shutdown_listener: ShutdownListener) -> Result<(), WorkerError> {
         debug!("Starting TCP worker...");
 
+        // FIXME: If another application already occupies the binding address, this line just blocks.
         let listener = TcpListener::bind(*self.binding_addr).await?;
 
         debug!("Accepting connections on {}.", listener.local_addr()?);
@@ -61,7 +58,7 @@ impl TcpWorker {
                     } else {
                         break;
                     }
-                }
+                },
             }
         }
 
@@ -73,7 +70,7 @@ impl TcpWorker {
     async fn handle_stream(&mut self, stream: Result<TcpStream, Error>) -> Result<bool, WorkerError> {
         match stream {
             Ok(stream) => {
-                let conn = match TcpConnection::new(stream, Origin::Inbound) {
+                let conn = match Connection::new(stream, Origin::Inbound) {
                     Ok(conn) => conn,
                     Err(e) => {
                         warn!("Creating TCP connection failed: {:?}.", e);
@@ -84,11 +81,8 @@ impl TcpWorker {
 
                 let allowlist = allowlist::get();
 
-                // TODO: Update IP addresses if necessary
-                // allowlist.refresh().await;
-
-                // Immediatedly drop stream, if it's associated IP address isn't on the allowlist
-                if !allowlist.contains_address(&conn.remote_addr.ip()) {
+                // Immediatedly drop stream, if it's associated IP address isn't part of the allowlist
+                if !allowlist.contains(&conn.remote_addr.ip()) {
                     warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
                     warn!("Connection disallowed.");
 

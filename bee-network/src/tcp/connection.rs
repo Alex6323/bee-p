@@ -10,8 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use super::Error;
-
-use crate::endpoint::origin::Origin;
+use crate::utils::time;
 
 use async_std::{
     net::{SocketAddr, TcpStream},
@@ -20,15 +19,32 @@ use async_std::{
 
 use std::fmt;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Origin {
+    Inbound,
+    Outbound,
+}
+
+impl fmt::Display for Origin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match *self {
+            Origin::Outbound => "outbound",
+            Origin::Inbound => "inbound",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 #[derive(Clone)]
-pub struct TcpConnection {
+pub struct Connection {
     pub origin: Origin,
     pub local_addr: SocketAddr,
     pub remote_addr: SocketAddr,
     pub stream: Arc<TcpStream>,
+    pub timestamp: u64,
 }
 
-impl TcpConnection {
+impl Connection {
     pub fn new(stream: TcpStream, origin: Origin) -> Result<Self, Error> {
         let local_addr = stream.local_addr()?;
         let remote_addr = stream.peer_addr()?;
@@ -39,20 +55,20 @@ impl TcpConnection {
             local_addr,
             remote_addr,
             stream,
+            timestamp: time::timestamp_millis(),
         })
     }
 }
 
-impl fmt::Display for TcpConnection {
+impl fmt::Display for Connection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} <-> {}", self.local_addr, self.remote_addr)
     }
 }
 
-impl Eq for TcpConnection {}
-impl PartialEq for TcpConnection {
+impl Eq for Connection {}
+impl PartialEq for Connection {
     fn eq(&self, other: &Self) -> bool {
-        // TODO: use socket address instead of IP
-        self.remote_addr.ip() == other.remote_addr.ip()
+        self.remote_addr == other.remote_addr
     }
 }

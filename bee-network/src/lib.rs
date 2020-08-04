@@ -14,8 +14,9 @@
 pub use address::{url::Url, Address, Port};
 pub use commands::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
-pub use endpoint::{origin::Origin, Endpoint, EndpointId};
+pub use endpoint::{Endpoint, EndpointId};
 pub use events::Event;
+pub use tcp::connection::Origin;
 
 pub use network::Network;
 
@@ -28,6 +29,7 @@ mod network;
 mod tcp;
 mod utils;
 
+use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use endpoint::{allowlist, worker::EndpointWorker};
 use tcp::worker::TcpWorker;
 
@@ -36,15 +38,31 @@ use bee_common::shutdown::Shutdown;
 use async_std::task::spawn;
 use futures::{
     channel::{mpsc, oneshot},
+    stream,
     stream::StreamExt,
 };
 
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+
+pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
+pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
+
 // NOTE: we make this an opaque type because it is exposed.
+// pub struct Events(stream::Fuse<mpsc::Receiver<Event>>);
 pub struct Events(mpsc::Receiver<Event>);
 
-impl Events {
-    pub async fn recv(&mut self) -> Option<Event> {
-        self.0.next().await
+impl std::ops::Deref for Events {
+    // type Target = stream::Fuse<mpsc::Receiver<Event>>;
+    type Target = mpsc::Receiver<Event>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Events {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -64,7 +82,6 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
         event_sender,
         internal_event_receiver,
         internal_event_sender.clone(),
-        config.reconnect_interval,
     );
 
     // Create the worker that manages the TCP connections established with the endpoints.
@@ -73,10 +90,12 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     // Spawn workers, and connect them to the shutdown mechanism.
     shutdown.add_worker_shutdown(
         endpoint_worker_shutdown_sender,
+        // endpoint,
         spawn(endpoint_worker.run(endpoint_worker_shutdown_receiver)),
     );
     shutdown.add_worker_shutdown(
         tcp_worker_shutdown_sender,
+        // tcp,
         spawn(tcp_worker.run(tcp_worker_shutdown_receiver)),
     );
 
@@ -84,5 +103,9 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     allowlist::init();
     shutdown.add_action(|| allowlist::drop());
 
+    MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
+    RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
+
+    // (Network::new(config, command_sender), Events(event_receiver.fuse()))
     (Network::new(config, command_sender), Events(event_receiver))
 }

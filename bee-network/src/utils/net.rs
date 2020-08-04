@@ -9,21 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::fmt;
+use async_std::{
+    net::{SocketAddr, ToSocketAddrs},
+    task::block_on,
+};
+use thiserror::Error;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(u8)]
-pub enum Origin {
-    Inbound,
-    Outbound,
+#[derive(Debug, Error)]
+pub(crate) enum Error {
+    #[error("Address could not be parsed.")]
+    AddressParseError(#[from] std::io::Error),
+
+    #[error("Address could not be resolved.")]
+    AddressResolveError,
 }
 
-impl fmt::Display for Origin {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match *self {
-            Origin::Outbound => "outbound",
-            Origin::Inbound => "inbound",
-        };
-        write!(f, "{}", s)
-    }
+pub(crate) fn resolve_address(address: &str) -> Result<SocketAddr, Error> {
+    block_on(address.to_socket_addrs())?
+        .next()
+        .map(|a| a.into())
+        .ok_or(Error::AddressResolveError)
 }

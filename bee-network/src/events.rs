@@ -11,7 +11,8 @@
 
 use crate::{
     address::Address,
-    endpoint::{origin::Origin, outbox::BytesSender, Endpoint, EndpointId},
+    endpoint::{connected::DataSender, Endpoint, EndpointId},
+    tcp::connection::Origin,
 };
 
 use futures::channel::mpsc;
@@ -39,13 +40,14 @@ pub enum Event {
         total: usize,
     },
 
-    NewConnection {
+    ConnectionCreated {
         endpoint: Endpoint,
         origin: Origin,
-        sender: BytesSender,
+        data_sender: DataSender,
+        timestamp: u64,
     },
 
-    LostConnection {
+    ConnectionDropped {
         epid: EndpointId,
     },
 
@@ -53,7 +55,6 @@ pub enum Event {
         epid: EndpointId,
         address: Address,
         origin: Origin,
-        timestamp: u64,
         total: usize,
     },
 
@@ -62,17 +63,12 @@ pub enum Event {
         total: usize,
     },
 
-    MessageSent {
-        epid: EndpointId,
-        num_bytes: usize,
-    },
-
     MessageReceived {
         epid: EndpointId,
-        bytes: Vec<u8>,
+        message: Vec<u8>,
     },
 
-    TryConnect {
+    TryConnectTo {
         epid: EndpointId,
     },
 }
@@ -88,20 +84,19 @@ impl fmt::Display for Event {
                 write!(f, "Event::EndpointRemoved {{ {}, num_endpoints: {} }}", epid, total)
             }
 
-            Event::NewConnection { endpoint, .. } => write!(f, "Event::NewConnection {{ {} }}", endpoint.id),
+            Event::ConnectionCreated { endpoint, .. } => write!(f, "Event::ConnectionCreated {{ {} }}", endpoint.epid),
 
-            Event::LostConnection { epid, .. } => write!(f, "Event::LostConnection {{ {} }}", epid),
+            Event::ConnectionDropped { epid, .. } => write!(f, "Event::ConnectionDroopped {{ {} }}", epid),
 
             Event::EndpointConnected {
                 epid,
                 address,
                 origin,
-                timestamp,
                 total,
             } => write!(
                 f,
-                "Event::EndpointConnected {{ {}, address: {}, origin: {}, ts: {}, num_connected: {} }}",
-                epid, address, origin, timestamp, total
+                "Event::EndpointConnected {{ {}, address: {}, origin: {}, num_connected: {} }}",
+                epid, address, origin, total
             ),
 
             Event::EndpointDisconnected { epid, total } => write!(
@@ -110,15 +105,11 @@ impl fmt::Display for Event {
                 epid, total
             ),
 
-            Event::MessageSent { epid, num_bytes } => {
-                write!(f, "Event::MessageSent {{ {}, num_bytes: {} }}", epid, num_bytes)
+            Event::MessageReceived { epid, message } => {
+                write!(f, "Event::MessageReceived {{ {}, num_bytes: {} }}", epid, message.len())
             }
 
-            Event::MessageReceived { epid, bytes } => {
-                write!(f, "Event::MessageReceived {{ {}, num_bytes: {} }}", epid, bytes.len())
-            }
-
-            Event::TryConnect { epid, .. } => write!(f, "Event::TryConnect {{ {} }}", epid),
+            Event::TryConnectTo { epid, .. } => write!(f, "Event::TryConnectTo {{ {} }}", epid),
         }
     }
 }

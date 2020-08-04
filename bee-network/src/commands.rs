@@ -24,14 +24,11 @@ pub(crate) fn channel() -> (mpsc::Sender<Command>, mpsc::Receiver<Command>) {
 #[derive(Debug)]
 pub enum Command {
     AddEndpoint { url: Url },
-
     RemoveEndpoint { epid: EndpointId },
-
     Connect { epid: EndpointId },
-
     Disconnect { epid: EndpointId },
-
-    SendMessage { epid: EndpointId, bytes: Vec<u8> },
+    SendMessage { epid: EndpointId, message: Vec<u8> },
+    SetDuplicate { epid: EndpointId, other: EndpointId },
 }
 
 impl fmt::Display for Command {
@@ -42,6 +39,7 @@ impl fmt::Display for Command {
             Command::Connect { epid, .. } => write!(f, "Command::Connect {{ {} }}", epid),
             Command::Disconnect { epid, .. } => write!(f, "Command::Disconnect {{ {} }}", epid),
             Command::SendMessage { epid, .. } => write!(f, "Command::SendMessage {{ {} }}", epid),
+            Command::SetDuplicate { epid, other } => write!(f, "Command::SetDuplicate {{ {} == {} }}", epid, other),
         }
     }
 }

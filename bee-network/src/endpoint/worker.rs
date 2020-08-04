@@ -14,10 +14,9 @@ use super::allowlist;
 use crate::{
     address::url::{Protocol, Url},
     commands::Command,
-    endpoint::{outbox::Outbox, store::Endpoints, Endpoint as Ep, EndpointId as EpId},
+    endpoint::{connected::ConnectedEndpointList, Endpoint, EndpointId, EndpointList},
     events::Event,
-    tcp,
-    utils::time,
+    tcp, RECONNECT_INTERVAL,
 };
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
@@ -26,7 +25,7 @@ use async_std::task::{self, spawn};
 use futures::{channel::mpsc, select, sink::SinkExt, stream, FutureExt, StreamExt};
 use log::*;
 
-use std::time::Duration;
+use std::{sync::atomic::Ordering, time::Duration};
 
 type CommandReceiver = mpsc::Receiver<Command>;
 type EventReceiver = mpsc::Receiver<Event>;
@@ -37,7 +36,6 @@ pub struct EndpointWorker {
     event_sender: EventSender,
     internal_event_receiver: stream::Fuse<EventReceiver>,
     internal_event_sender: EventSender,
-    reconnect_interval: Duration,
 }
 
 impl EndpointWorker {
@@ -46,25 +44,20 @@ impl EndpointWorker {
         event_sender: EventSender,
         internal_event_receiver: EventReceiver,
         internal_event_sender: EventSender,
-        reconnect_interval: Duration,
     ) -> Self {
         Self {
             command_receiver: command_receiver.fuse(),
             event_sender,
             internal_event_receiver: internal_event_receiver.fuse(),
             internal_event_sender,
-            reconnect_interval,
         }
     }
 
     pub async fn run(mut self, shutdown_listener: ShutdownListener) -> Result<(), WorkerError> {
         debug!("Starting endpoint worker...");
 
-        let mut contacts = Endpoints::new();
-
-        // TODO: those two probably need to be merged as each connected endpoint is also part of the outbox
-        let mut connected = Endpoints::new();
-        let mut outbox = Outbox::new();
+        let mut endpoints = EndpointList::new();
+        let mut connected_endpoints = ConnectedEndpointList::new();
 
         let mut fused_shutdown_listener = shutdown_listener.fuse();
 
@@ -74,15 +67,15 @@ impl EndpointWorker {
                     break;
                 },
                 command = self.command_receiver.next() => {
-                    if !self.handle_command(command, &mut contacts, &mut connected, &mut outbox).await? {
+                    if !self.handle_command(command, &mut endpoints, &mut connected_endpoints).await? {
                         break;
                     }
                 },
                 event = self.internal_event_receiver.next() => {
-                    if !self.handle_event(event, &mut contacts, &mut connected, &mut outbox).await? {
+                    if !self.handle_event(event, &mut endpoints, &mut connected_endpoints).await? {
                         break;
                     }
-                }
+                },
             }
         }
 
@@ -94,9 +87,8 @@ impl EndpointWorker {
     async fn handle_command(
         &mut self,
         command: Option<Command>,
-        mut contacts: &mut Endpoints,
-        mut connected: &mut Endpoints,
-        mut outbox: &mut Outbox,
+        mut endpoints: &mut EndpointList,
+        mut connected_endpoints: &mut ConnectedEndpointList,
     ) -> Result<bool, WorkerError> {
         let command = if let Some(command) = command {
             command
@@ -109,40 +101,46 @@ impl EndpointWorker {
 
         match command {
             Command::AddEndpoint { url } => {
-                add_endpoint(&mut contacts, url, &mut self.internal_event_sender).await?;
+                add_endpoint(&mut endpoints, url, &mut self.internal_event_sender).await?;
             }
+
             Command::RemoveEndpoint { epid } => {
                 remove_endpoint(
                     epid,
-                    &mut contacts,
-                    &mut connected,
-                    &mut outbox,
+                    &mut endpoints,
+                    &mut connected_endpoints,
                     &mut self.internal_event_sender,
                 )
                 .await?;
             }
+
             Command::Connect { epid } => {
-                try_connect(
+                try_connect_to(
                     epid,
-                    self.reconnect_interval,
-                    &mut contacts,
-                    &mut connected,
+                    &mut endpoints,
+                    &mut connected_endpoints,
                     &mut self.internal_event_sender,
                 )
                 .await?;
             }
+
             Command::Disconnect { epid } => {
-                if disconnect(epid, &mut connected, &mut outbox).await {
+                if disconnect(epid, &mut connected_endpoints) {
                     self.event_sender
                         .send(Event::EndpointDisconnected {
                             epid,
-                            total: connected.num(),
+                            total: connected_endpoints.len(),
                         })
                         .await?;
                 }
             }
-            Command::SendMessage { epid, bytes } => {
-                send_bytes(&epid, bytes, &mut outbox).await?;
+
+            Command::SendMessage { epid, message } => {
+                send_message(&epid, message, &mut connected_endpoints).await?;
+            }
+
+            Command::SetDuplicate { epid, other } => {
+                remove_duplicate(epid, other, &mut connected_endpoints, &mut self.internal_event_sender).await?;
             }
         }
 
@@ -153,9 +151,8 @@ impl EndpointWorker {
     async fn handle_event(
         &mut self,
         event: Option<Event>,
-        contacts: &mut Endpoints,
-        connected: &mut Endpoints,
-        outbox: &mut Outbox,
+        endpoints: &mut EndpointList,
+        connected_endpoints: &mut ConnectedEndpointList,
     ) -> Result<bool, WorkerError> {
         let event = if let Some(event) = event {
             event
@@ -170,68 +167,55 @@ impl EndpointWorker {
             Event::EndpointAdded { epid, total } => {
                 self.event_sender.send(Event::EndpointAdded { epid, total }).await?;
             }
+
             Event::EndpointRemoved { epid, total } => {
                 self.event_sender.send(Event::EndpointRemoved { epid, total }).await?;
             }
-            Event::NewConnection {
+
+            Event::ConnectionCreated {
                 endpoint,
                 origin,
-                sender,
+                timestamp,
+                data_sender,
             } => {
-                let epid = endpoint.id;
-                let addr = endpoint.address;
+                let epid = endpoint.epid;
+                let address = endpoint.address;
 
-                outbox.insert(epid, sender);
-                connected.insert(endpoint);
+                connected_endpoints.insert(epid, address, timestamp, data_sender);
 
                 self.event_sender
                     .send(Event::EndpointConnected {
                         epid,
-                        address: addr,
+                        address,
                         origin,
-                        timestamp: time::timestamp_millis(),
-                        total: connected.num(),
+                        total: connected_endpoints.len(),
                     })
                     .await?
             }
-            Event::LostConnection { epid } => {
-                let is_disconnected = disconnect(epid, connected, outbox).await;
+
+            Event::ConnectionDropped { epid } => {
+                let is_disconnected = disconnect(epid, connected_endpoints);
 
                 if is_disconnected {
                     self.event_sender
                         .send(Event::EndpointDisconnected {
                             epid,
-                            total: connected.num(),
+                            total: connected_endpoints.len(),
                         })
                         .await?;
                 }
 
-                // TODO: do not try to reconnect to duplicate endpoints
-                // NOTE: 'try_connect' will check if 'epid' is part of the contact list
-                try_connect(
-                    epid,
-                    self.reconnect_interval,
-                    contacts,
-                    connected,
-                    &mut self.internal_event_sender,
-                )
-                .await?;
+                if !connected_endpoints.is_duplicate(&epid) && !connected_endpoints.has_duplicate(&epid) {
+                    try_connect_to(epid, endpoints, connected_endpoints, &mut self.internal_event_sender).await?;
+                }
             }
-            Event::MessageSent { epid, num_bytes } => {
-                self.event_sender.send(Event::MessageSent { epid, num_bytes }).await?
+
+            Event::MessageReceived { epid, message } => {
+                self.event_sender.send(Event::MessageReceived { epid, message }).await?
             }
-            Event::MessageReceived { epid, bytes } => {
-                self.event_sender.send(Event::MessageReceived { epid, bytes }).await?
-            }
-            Event::TryConnect { epid } => {
-                try_connect(
-                    epid,
-                    self.reconnect_interval,
-                    contacts,
-                    connected,
-                    &mut self.internal_event_sender,
-                )
-                .await?;
+
+            Event::TryConnectTo { epid } => {
+                try_connect_to(epid, endpoints, connected_endpoints, &mut self.internal_event_sender).await?;
             }
             _ => (),
         }
@@ -242,25 +226,25 @@ impl EndpointWorker {
 
 #[inline]
 async fn add_endpoint(
-    contacts: &mut Endpoints,
+    endpoints: &mut EndpointList,
     url: Url,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    let ep = Ep::from_url(url);
-    let epid = ep.id;
+    let endpoint = Endpoint::from_url(url.clone());
+    let epid = endpoint.epid;
 
-    if contacts.insert(ep) {
-        // add its ip to the allowlist, so that we can make sure that we accept only connections
-        // from known peers
+    if endpoints.insert(endpoint) {
+        // Add to allowlist
         let allowlist = allowlist::get();
-        allowlist.insert(epid, url.address().ip());
+        allowlist.insert(epid, url);
 
         internal_event_sender
             .send(Event::EndpointAdded {
                 epid,
-                total: contacts.num(),
+                total: endpoints.len(),
             })
             .await?;
+
         Ok(true)
     } else {
         Ok(false)
@@ -269,31 +253,26 @@ async fn add_endpoint(
 
 #[inline]
 async fn remove_endpoint(
-    epid: EpId,
-    contacts: &mut Endpoints,
-    connected: &mut Endpoints,
-    outbox: &mut Outbox,
+    epid: EndpointId,
+    endpoints: &mut EndpointList,
+    connected_endpoints: &mut ConnectedEndpointList,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    // NOTE: current default behavior is to drop connections once the contact is removed
-    let removed_recipient = outbox.remove(&epid);
-    let removed_contact = contacts.remove(&epid);
-    let removed_connected = connected.remove(&epid);
+    if endpoints.remove(&epid) {
+        if connected_endpoints.remove(&epid) {
+            debug!("Removed connected endpoint {}.", epid);
+        } else {
+            debug!("Removed unconnected endpoint {}.", epid);
+        }
 
-    if removed_connected && !removed_recipient {
-        warn!("Removed an endpoint that was connected, but couldn't be sent to.");
-    }
-
-    if removed_contact || removed_connected {
-        // Remove its IP also from the allowlist, so we won't accept connections from it
-        // anymore
+        // Remove from allowlist
         let allowlist = allowlist::get();
         allowlist.remove(&epid);
 
         internal_event_sender
             .send(Event::EndpointRemoved {
                 epid,
-                total: contacts.num(),
+                total: endpoints.len(),
             })
             .await?;
         Ok(true)
@@ -303,37 +282,36 @@ async fn remove_endpoint(
 }
 
 #[inline]
-async fn try_connect(
-    epid: EpId,
-    reconnect_interval: Duration,
-    contacts: &mut Endpoints,
-    connected: &mut Endpoints,
+async fn try_connect_to(
+    epid: EndpointId,
+    endpoints: &mut EndpointList,
+    connected_endpoints: &mut ConnectedEndpointList,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    if let Some(ep) = contacts.get_mut(&epid) {
-        if connected.contains(&ep.id) {
+    if let Some(endpoint) = endpoints.get_mut(&epid) {
+        if connected_endpoints.contains(&endpoint.epid) {
             Ok(false)
         } else {
-            match ep.protocol {
+            match endpoint.protocol {
                 Protocol::Tcp => {
-                    if tcp::try_connect(&ep.id, &ep.address, internal_event_sender.clone())
+                    let epid = &endpoint.epid;
+                    let address = &endpoint.address;
+
+                    if tcp::try_connect_to(epid, address, internal_event_sender.clone())
                         .await
                         .is_ok()
                     {
-                        connected.insert(ep.clone());
+                        // connected_endpoints.insert(*epid, *address, timestamp, bytes_sender);
                         Ok(true)
                     } else {
-                        // If connection attempt fails, issue a `TryConnect` event after a certain delay.
-                        // NOTE: It won't be raised, if the endpoint has been removed in the mean time.
-                        spawn(raise_event_after_delay(
-                            Event::TryConnect { epid },
-                            reconnect_interval,
+                        spawn(send_event_after_delay(
+                            Event::TryConnectTo { epid: *epid },
                             internal_event_sender.clone(),
                         ));
                         Ok(false)
                     }
                 }
-                Protocol::Udp => Ok(true),
+                Protocol::Udp => unimplemented!("Support for UDP endpoints is not yet implemented"),
             }
         }
     } else {
@@ -342,29 +320,35 @@ async fn try_connect(
 }
 
 #[inline]
-async fn raise_event_after_delay(
-    event: Event,
-    delay: Duration,
-    mut internal_event_sender: EventSender,
-) -> Result<(), WorkerError> {
-    task::sleep(delay).await;
+async fn send_event_after_delay(event: Event, mut internal_event_sender: EventSender) -> Result<(), WorkerError> {
+    task::sleep(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
 
     Ok(internal_event_sender.send(event).await?)
 }
 
 #[inline]
-async fn disconnect(epid: EpId, connected: &mut Endpoints, outbox: &mut Outbox) -> bool {
-    let removed_recipient = outbox.remove(&epid);
-    let removed_connected = connected.remove(&epid);
-
-    if removed_connected && !removed_recipient {
-        warn!("Removed an endpoint that was connected, but couldn't be sent to.");
-    }
-
-    removed_connected
+fn disconnect(epid: EndpointId, connected: &mut ConnectedEndpointList) -> bool {
+    connected.remove(&epid)
 }
 
 #[inline]
-async fn send_bytes(recipient: &EpId, bytes: Vec<u8>, outbox: &mut Outbox) -> Result<bool, WorkerError> {
-    Ok(outbox.send(bytes, recipient).await?)
+async fn send_message(
+    epid: &EndpointId,
+    message: Vec<u8>,
+    connected: &mut ConnectedEndpointList,
+) -> Result<bool, WorkerError> {
+    Ok(connected.send(message, epid).await?)
+}
+
+#[inline]
+async fn remove_duplicate(
+    epid: EndpointId,
+    other: EndpointId,
+    connected_endpoints: &mut ConnectedEndpointList,
+    internal_event_sender: &mut EventSender,
+) -> Result<(), WorkerError> {
+    if connected_endpoints.set_duplicate(epid, other) && connected_endpoints.remove_duplicate(&epid, &other) {
+        internal_event_sender.send(Event::ConnectionDropped { epid }).await?;
+    }
+    Ok(())
 }
