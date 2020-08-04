@@ -12,7 +12,7 @@
 mod indexation;
 mod milestone;
 mod signed_data;
-mod signed_transaction;
+pub mod signed_transaction;
 mod unsigned_data;
 
 pub use indexation::Indexation;
@@ -22,9 +22,9 @@ pub use signed_transaction::SignedTransaction;
 pub use unsigned_data::UnsignedData;
 
 pub enum Payload {
-    Indexation(Box<Indexation>),
-    Milestone(Box<Milestone>),
-    SignedData(Box<SignedData>),
-    SignedTransaction(Box<SignedTransaction>),
-    UnsignedData(Box<UnsignedData>),
+    Indexation(Indexation),
+    Milestone(Milestone),
+    SignedData(SignedData),
+    SignedTransaction(SignedTransaction),
+    UnsignedData(UnsignedData),
 }

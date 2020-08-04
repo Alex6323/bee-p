@@ -9,14 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub use crate::atomic::payload::signed_transaction::input::Input;
-pub use crate::atomic::payload::signed_transaction::output::Output;
+pub use crate::atomic::payload::signed_transaction::{input::Input, output::Output};
 use crate::atomic::payload::Payload;
 
 pub struct UnsignedTransaction {
-    input_count: u16,
-    inputs: Vec<Input>,
-    output_count: u16,
-    outputs: Vec<Output>,
-    payload: Option<Payload>
+    pub input_count: u8,
+    pub inputs: Vec<Input>,
+    pub output_count: u16,
+    pub outputs: Vec<Output>,
+    pub payload: Option<Vec<Payload>>,
 }
