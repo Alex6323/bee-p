@@ -17,7 +17,8 @@ use crate::{
     peer::HandshakedPeer,
     protocol::Protocol,
     worker::{
-        peer::MessageHandler, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
+        peer::MessageHandler, MilestoneResponderWorkerEvent, MilestoneSolidifierWorkerEvent,
+        TransactionResponderWorkerEvent, TransactionWorkerEvent,
     },
 };
 
@@ -144,6 +145,11 @@ impl PeerWorker {
 
                         self.peer.metrics.heartbeat_received_inc();
                         Protocol::get().metrics.heartbeat_received_inc();
+                        Protocol::get()
+                            .milestone_solidifier_worker
+                            .clone()
+                            .send(MilestoneSolidifierWorkerEvent::NewIndex(message.solid_milestone_index))
+                            .await;
                     }
                     Err(e) => {
                         warn!("[{}] Reading Heartbeat failed: {:?}.", self.peer.address, e);

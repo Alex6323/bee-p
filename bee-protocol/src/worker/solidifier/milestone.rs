@@ -21,15 +21,23 @@ use futures::{
 };
 use log::info;
 
-const MILESTONE_REQUEST_RANGE: u8 = 50;
+const MILESTONE_REQUEST_RANGE: u32 = 50;
 
-pub(crate) struct MilestoneSolidifierWorkerEvent();
+pub(crate) enum MilestoneSolidifierWorkerEvent {
+    Solidify,
+    NewIndex(u32),
+}
 
-pub(crate) struct MilestoneSolidifierWorker {}
+pub(crate) struct MilestoneSolidifierWorker {
+    /// The largest `MilestoneIndex` that the node has seen.
+    max_index: u32,
+}
 
 impl MilestoneSolidifierWorker {
     pub(crate) fn new() -> Self {
-        Self {}
+        Self {
+            max_index: *tangle().get_last_milestone_index(),
+        }
     }
 
     // async fn solidify(&self, hash: Hash, target_index: u32) -> bool {
@@ -82,8 +90,7 @@ impl MilestoneSolidifierWorker {
     fn request_milestones(&self) {
         let solid_milestone_index = *tangle().get_last_solid_milestone_index();
 
-        // TODO this may request unpublished milestones
-        for index in solid_milestone_index..solid_milestone_index + MILESTONE_REQUEST_RANGE as u32 {
+        for index in solid_milestone_index..self.max_index.min(solid_milestone_index + MILESTONE_REQUEST_RANGE) {
             let index = index.into();
             if !tangle().contains_milestone(index) {
                 Protocol::request_milestone(index, None);
@@ -115,7 +122,7 @@ impl MilestoneSolidifierWorker {
     }
 
     pub(crate) async fn run(
-        self,
+        mut self,
         receiver: mpsc::Receiver<MilestoneSolidifierWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) -> Result<(), WorkerError> {
@@ -128,14 +135,21 @@ impl MilestoneSolidifierWorker {
             select! {
                 _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
-                    if let Some(MilestoneSolidifierWorkerEvent()) = event {
-                        self.request_milestones();
-                        self.solidify_milestone().await;
-                        // while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
-                        //     if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
-                        //         break;
-                        //     }
-                        // }
+                    if let Some(event) = event {
+                        match event {
+                            MilestoneSolidifierWorkerEvent::Solidify => {
+                                self.request_milestones();
+                                self.solidify_milestone().await;
+                                // while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
+                                //     if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
+                                //         break;
+                                //     }
+                                // }
+                            }
+                            MilestoneSolidifierWorkerEvent::NewIndex(index) => {
+                                self.max_index = self.max_index.max(index);;
+                            }
+                        }
                     }
                 }
             }

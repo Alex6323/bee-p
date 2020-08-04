@@ -113,7 +113,7 @@ impl Protocol {
             .milestone_solidifier_worker
             // TODO try to avoid clone
             .clone()
-            .send(MilestoneSolidifierWorkerEvent())
+            .send(MilestoneSolidifierWorkerEvent::Solidify)
             .await
         {
             warn!("Triggering milestone solidification failed: {}.", e);
