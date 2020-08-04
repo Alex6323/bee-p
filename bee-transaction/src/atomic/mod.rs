@@ -23,6 +23,7 @@ pub enum Error {
     EmptyError,
     DuplicateError,
     IndexError,
+    OrderError,
 }
 
 impl std::fmt::Display for Error {
@@ -33,6 +34,7 @@ impl std::fmt::Display for Error {
             Error::DuplicateError => "The object in the set must be unique".fmt(f),
             Error::EmptyError => "The length of the object is empty".fmt(f),
             Error::IndexError => "The position of index is not correct.".fmt(f),
+            Error::OrderError => "The vector is not sorted by lexicographical order.".fmt(f),
         }
     }
 }

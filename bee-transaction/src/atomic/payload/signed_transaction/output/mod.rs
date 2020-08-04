@@ -13,6 +13,7 @@ mod sig_locked_single_deposit;
 
 pub use sig_locked_single_deposit::{Address, SigLockedSingleDeposit};
 
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Output {
     SigLockedSingleDeposit(SigLockedSingleDeposit),
 }
