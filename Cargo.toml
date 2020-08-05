@@ -8,6 +8,7 @@ members = [
 	"bee-peering",
 	"bee-pow",
 	"bee-protocol",
+	"bee-signing-ext",
 	"bee-snapshot",
 	"bee-storage/bee-storage",
 	"bee-storage/bee-storage-rocksdb",
