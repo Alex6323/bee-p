@@ -14,24 +14,24 @@ mod output;
 mod unlock;
 mod unsigned_transaction;
 
-use crate::atomic::Error;
-use input::Input;
+use crate::atomic::payload::Payload;
+pub use crate::atomic::Error;
+pub use input::Input;
+pub use output::Output;
 pub use unlock::UnlockBlock;
 pub use unsigned_transaction::UnsignedTransaction;
 
-use std::collections::HashSet;
-use std::slice::Iter;
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashSet, slice::Iter};
 
 pub struct SignedTransaction {
     pub unsigned_transaction: UnsignedTransaction,
-    pub unlock_block_count: u16,
+    pub unlock_block_count: u8,
     pub unlock_blocks: Vec<UnlockBlock>,
 }
 
 impl SignedTransaction {
     pub fn validate(&self) -> Result<(), Error> {
-        // Should we add this fiedl? -> Transaction Type value must be 0, denoting an Unsigned Transaction
+        // Should we add this field? -> Transaction Type value must be 0, denoting an Unsigned Transaction
 
         // Inputs validation
         let transaction = &self.unsigned_transaction;
@@ -89,7 +89,7 @@ impl SignedTransaction {
             match i {
                 output::Output::SigLockedSingleDeposit(u) => {
                     // Address Type must either be 0 or 1, denoting a WOTS- or Ed25519 address.
-                    
+
                     if let output::Address::Wots(_a) = &u.address {
                         // TODO If Address is of type WOTS address, its bytes must be valid T5B1 bytes
                     }
@@ -146,12 +146,12 @@ impl SignedTransaction {
                                         return Err(Error::IndexError);
                                     }
                                 }
-                            }
+                            },
                         }
                     }
 
                     // The reference index must therefore be < the index of the Reference Unlock Block
-                    if r.index >= i as u16 {
+                    if r.index >= i as u8 {
                         return Err(Error::IndexError);
                     }
                 }
@@ -171,7 +171,7 @@ impl SignedTransaction {
                                         return Err(Error::IndexError);
                                     }
                                 }
-                            }
+                            },
                         }
                     }
                 }
@@ -199,4 +199,61 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
     }
 
     true
+}
+
+pub struct SignedTransactionBuilder {
+    // TODO Seed to sign
+    inputs: Vec<(Input, u8)>,
+    outputs: Vec<Output>,
+    payload: Option<Vec<Payload>>,
+}
+
+impl SignedTransactionBuilder {
+    pub fn new() -> Self {
+        Self {
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            payload: None,
+        }
+    }
+
+    pub fn set_inputs(mut self, inputs: Vec<(Input, u8)>) -> Self {
+        let mut inputs = inputs;
+        self.inputs.append(&mut inputs);
+
+        self
+    }
+
+    pub fn set_outputs(mut self, outputs: Vec<Output>) -> Self {
+        let mut outputs = outputs;
+        self.outputs.append(&mut outputs);
+
+        self
+    }
+
+    pub fn set_payload(mut self, payload: Vec<Payload>) -> Self {
+        self.payload = Some(payload);
+
+        self
+    }
+
+    pub fn build(self) -> SignedTransaction {
+        let mut inputs: Vec<Input> = self.inputs.into_iter().map(|(i, _)| i).collect();
+        let mut outputs: Vec<Output> = self.outputs;
+        inputs.sort();
+        outputs.sort();
+
+        SignedTransaction {
+            unsigned_transaction: UnsignedTransaction {
+                input_count: inputs.len() as u8,
+                inputs,
+                output_count: outputs.len() as u8,
+                outputs,
+                payload: self.payload,
+            },
+            // TODO signed the transaction
+            unlock_block_count: 0,
+            unlock_blocks: Vec::new(),
+        }
+    }
 }
