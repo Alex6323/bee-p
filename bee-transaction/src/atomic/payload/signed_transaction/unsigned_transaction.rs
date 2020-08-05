@@ -15,7 +15,7 @@ use crate::atomic::payload::Payload;
 pub struct UnsignedTransaction {
     pub input_count: u8,
     pub inputs: Vec<Input>,
-    pub output_count: u16,
+    pub output_count: u8,
     pub outputs: Vec<Output>,
     pub payload: Option<Vec<Payload>>,
 }
