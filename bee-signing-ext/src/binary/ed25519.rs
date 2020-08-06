@@ -15,7 +15,7 @@ use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 
 use blake2::VarBlake2b;
 use digest::{VariableOutput, Update};
-use ed25519_dalek::{ExpandedSecretKey, Verifier};
+use ed25519_dalek::{ExpandedSecretKey, Verifier, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use zeroize::Zeroize;
@@ -23,6 +23,9 @@ use zeroize::Zeroize;
 /// Errors occuring during Ed25519 operations.
 #[derive(Debug, Error)]
 pub enum Error {
+    /// Convertion Error
+    #[error("Failed to convert bytes to target primitives.")]
+    ConvertError,
     /// Private Key Error
     #[error("Failed to generate private key.")]
     PrivateKeyError,
@@ -48,6 +51,21 @@ impl Seed {
         // https://rust-random.github.io/rand/rand/trait.CryptoRng.html
         let mut rng = rand::thread_rng();
         Self(ed25519_dalek::SecretKey::generate(&mut rng))
+    }
+
+    /// View this seed as a byte array.
+    pub fn as_bytes(&self) -> &[u8; SECRET_KEY_LENGTH] {
+        self.0.as_bytes()
+    }
+
+    /// Convert this seed to a byte array.
+    pub fn to_bytes(&self) -> [u8; SECRET_KEY_LENGTH] {
+        self.0.to_bytes()
+    }
+
+    /// Convert this seed to a byte array.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Ok(Self(ed25519_dalek::SecretKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?))
     }
 }
 
@@ -93,6 +111,21 @@ impl PrivateKey {
         let key: ExpandedSecretKey = (&self.0).into();
         Ok(Signature(key.sign(message, &(&self.0).into())))
     }
+
+    /// View this private key as a byte array.
+    pub fn as_bytes(&self) -> &[u8; SECRET_KEY_LENGTH] {
+        self.0.as_bytes()
+    }
+
+    /// Convert this private key to a byte array.
+    pub fn to_bytes(&self) -> [u8; SECRET_KEY_LENGTH] {
+        self.0.to_bytes()
+    }
+
+    /// Convert this private key to a byte array.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Ok(Self(ed25519_dalek::SecretKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?))
+    }
 }
 
 /// Ed25519 public key.
@@ -110,8 +143,43 @@ impl PublicKey {
         self.0.verify(message, &signature.0).map_err(|_| Error::VerifyError)?;
         Ok(true)
     }
+
+    /// View this public key as a byte array.
+    pub fn as_bytes(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
+        self.0.as_bytes()
+    }
+
+    /// Convert this public key to a byte array.
+    pub fn to_bytes(&self) -> [u8; PUBLIC_KEY_LENGTH] {
+        self.0.to_bytes()
+    }
+
+    /// Convert this public key to a byte array.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Ok(Self(ed25519_dalek::PublicKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?))
+    }
 }
 
 /// Ed25519 signature
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Signature(ed25519_dalek::Signature);
+
+impl Signature {
+    /// Convert this public key to a byte array.
+    pub fn to_bytes(&self) -> [u8; SIGNATURE_LENGTH] {
+        self.0.to_bytes()
+    }
+
+    /// Convert this public key to a byte array.
+    pub fn from_bytes(bytes: [u8; SIGNATURE_LENGTH]) -> Result<Self, Error> {
+        Ok(Self(ed25519_dalek::Signature::new(bytes)))
+    }
+}
+
+#[test]
+fn test_new_seed() {
+    let seed = Seed::rand();
+
+    // check if Seed generates different seeds in consequent calls.
+    //assert_ne!(seed.0, Seed::rand().0);
+}
