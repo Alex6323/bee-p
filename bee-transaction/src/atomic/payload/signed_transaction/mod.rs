@@ -201,6 +201,7 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
     true
 }
 
+#[derive(Default)]
 pub struct SignedTransactionBuilder {
     // TODO Seed to sign
     inputs: Vec<(Input, u8)>,
@@ -209,14 +210,6 @@ pub struct SignedTransactionBuilder {
 }
 
 impl SignedTransactionBuilder {
-    pub fn new() -> Self {
-        Self {
-            inputs: Vec::new(),
-            outputs: Vec::new(),
-            payload: None,
-        }
-    }
-
     pub fn set_inputs(mut self, inputs: Vec<(Input, u8)>) -> Self {
         let mut inputs = inputs;
         self.inputs.append(&mut inputs);
