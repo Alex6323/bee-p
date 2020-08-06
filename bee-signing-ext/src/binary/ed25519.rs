@@ -13,8 +13,7 @@
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 
-use blake2::VarBlake2b;
-use digest::{VariableOutput, Update};
+use blake2::{VarBlake2b, digest::{VariableOutput, Update}};
 use ed25519_dalek::{ExpandedSecretKey, Verifier, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -87,7 +86,7 @@ impl PrivateKey {
     /// * `seed`    A seed to deterministically derive a private key from.
     pub fn generate_from_seed(seed: &Seed, index: u64) -> Result<Self, Error> {
         let mut subseed = seed.0.to_bytes();
-        let mut hash = VarBlake2b::new(256).map_err(|_| Error::PrivateKeyError)?;
+        let mut hash = VarBlake2b::new(32).map_err(|_| Error::PrivateKeyError)?;
         hash.update(index.to_le_bytes());
         hash.finalize_variable(|ha| {
             subseed.iter_mut().zip(ha.iter()).for_each(|(i, h)| *i = *i ^ *h);
@@ -107,7 +106,7 @@ impl PrivateKey {
     /// # Arguments
     ///
     /// * `message` A slice that holds a message to be signed.
-    pub fn sign(&mut self, message: &[u8]) -> Result<Signature, Error> {
+    pub fn sign(&self, message: &[u8]) -> Result<Signature, Error> {
         let key: ExpandedSecretKey = (&self.0).into();
         Ok(Signature(key.sign(message, &(&self.0).into())))
     }
@@ -181,5 +180,15 @@ fn test_new_seed() {
     let seed = Seed::rand();
 
     // check if Seed generates different seeds in consequent calls.
-    //assert_ne!(seed.0, Seed::rand().0);
+    assert_ne!(seed.as_bytes(), Seed::rand().as_bytes());
+
+    // check if private key derivation logic is deterministic
+    assert_eq!(PrivateKey::generate_from_seed(&seed, 0).unwrap().as_bytes(), PrivateKey::generate_from_seed(&seed, 0).unwrap().as_bytes());
+    assert_eq!(PrivateKey::generate_from_seed(&seed, 1337).unwrap().as_bytes(), PrivateKey::generate_from_seed(&seed, 1337).unwrap().as_bytes());
+
+    // check if the generated keypair can sign and verify
+    let private_key = PrivateKey::generate_from_seed(&seed, 7).unwrap();
+    let public_key = private_key.generate_public_key();
+    let signature = private_key.sign(&[1,3,3,8]).unwrap();
+    public_key.verify(&[1,3,3,8], &signature).unwrap();
 }
