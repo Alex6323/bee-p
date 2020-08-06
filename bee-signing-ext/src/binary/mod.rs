@@ -12,3 +12,5 @@
 //! Binary signing scheme primitives.
 
 pub mod ed25519;
+
+pub use ed25519::{PrivateKey, PublicKey, Seed, Signature};

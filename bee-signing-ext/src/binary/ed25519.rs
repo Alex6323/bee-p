@@ -13,7 +13,10 @@
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 
-use blake2::{VarBlake2b, digest::{VariableOutput, Update}};
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use ed25519_dalek::{ExpandedSecretKey, Verifier, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -64,7 +67,9 @@ impl Seed {
 
     /// Convert this seed to a byte array.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Ok(Self(ed25519_dalek::SecretKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?))
+        Ok(Self(
+            ed25519_dalek::SecretKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?,
+        ))
     }
 }
 
@@ -123,7 +128,9 @@ impl PrivateKey {
 
     /// Convert this private key to a byte array.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Ok(Self(ed25519_dalek::SecretKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?))
+        Ok(Self(
+            ed25519_dalek::SecretKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?,
+        ))
     }
 }
 
@@ -155,7 +162,9 @@ impl PublicKey {
 
     /// Convert this public key to a byte array.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Ok(Self(ed25519_dalek::PublicKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?))
+        Ok(Self(
+            ed25519_dalek::PublicKey::from_bytes(bytes).map_err(|_| Error::ConvertError)?,
+        ))
     }
 }
 
@@ -173,22 +182,4 @@ impl Signature {
     pub fn from_bytes(bytes: [u8; SIGNATURE_LENGTH]) -> Result<Self, Error> {
         Ok(Self(ed25519_dalek::Signature::new(bytes)))
     }
-}
-
-#[test]
-fn test_new_seed() {
-    let seed = Seed::rand();
-
-    // check if Seed generates different seeds in consequent calls.
-    assert_ne!(seed.as_bytes(), Seed::rand().as_bytes());
-
-    // check if private key derivation logic is deterministic
-    assert_eq!(PrivateKey::generate_from_seed(&seed, 0).unwrap().as_bytes(), PrivateKey::generate_from_seed(&seed, 0).unwrap().as_bytes());
-    assert_eq!(PrivateKey::generate_from_seed(&seed, 1337).unwrap().as_bytes(), PrivateKey::generate_from_seed(&seed, 1337).unwrap().as_bytes());
-
-    // check if the generated keypair can sign and verify
-    let private_key = PrivateKey::generate_from_seed(&seed, 7).unwrap();
-    let public_key = private_key.generate_public_key();
-    let signature = private_key.sign(&[1,3,3,8]).unwrap();
-    public_key.verify(&[1,3,3,8], &signature).unwrap();
 }
