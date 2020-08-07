@@ -24,6 +24,7 @@ pub enum Error {
     DuplicateError,
     IndexError,
     OrderError,
+    HashError,
 }
 
 impl std::fmt::Display for Error {
@@ -35,6 +36,7 @@ impl std::fmt::Display for Error {
             Error::EmptyError => "The length of the object is empty".fmt(f),
             Error::IndexError => "The position of index is not correct.".fmt(f),
             Error::OrderError => "The vector is not sorted by lexicographical order.".fmt(f),
+            Error::HashError => "The format of provided hash is not correct.".fmt(f),
         }
     }
 }

@@ -90,9 +90,7 @@ impl SignedTransaction {
                 output::Output::SigLockedSingleDeposit(u) => {
                     // Address Type must either be 0 or 1, denoting a WOTS- or Ed25519 address.
 
-                    if let output::Address::Wots(_a) = &u.address {
-                        // TODO If Address is of type WOTS address, its bytes must be valid T5B1 bytes
-                    }
+                    // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
 
                     // The Address must be unique in the set of SigLockedSingleDeposits
                     if combination.insert(&u.address) == false {
