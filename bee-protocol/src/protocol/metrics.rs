@@ -20,15 +20,15 @@ pub struct ProtocolMetrics {
 
     invalid_messages_received: AtomicU64,
 
-    milestone_request_received: AtomicU64,
-    transaction_received: AtomicU64,
-    transaction_request_received: AtomicU64,
-    heartbeat_received: AtomicU64,
+    milestone_requests_received: AtomicU64,
+    transactions_received: AtomicU64,
+    transaction_requests_received: AtomicU64,
+    heartbeats_received: AtomicU64,
 
-    milestone_request_sent: AtomicU64,
-    transaction_sent: AtomicU64,
-    transaction_request_sent: AtomicU64,
-    heartbeat_sent: AtomicU64,
+    milestone_requests_sent: AtomicU64,
+    transactions_sent: AtomicU64,
+    transaction_requests_sent: AtomicU64,
+    heartbeats_sent: AtomicU64,
 }
 
 impl ProtocolMetrics {
@@ -78,68 +78,68 @@ impl ProtocolMetrics {
         self.invalid_messages_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn milestone_request_received(&self) -> u64 {
-        self.milestone_request_received.load(Ordering::Relaxed)
+    pub fn milestone_requests_received(&self) -> u64 {
+        self.milestone_requests_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn milestone_request_received_inc(&self) -> u64 {
-        self.milestone_request_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn milestone_requests_received_inc(&self) -> u64 {
+        self.milestone_requests_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_received(&self) -> u64 {
-        self.transaction_received.load(Ordering::Relaxed)
+    pub fn transactions_received(&self) -> u64 {
+        self.transactions_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_received_inc(&self) -> u64 {
-        self.transaction_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transactions_received_inc(&self) -> u64 {
+        self.transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_request_received(&self) -> u64 {
-        self.transaction_request_received.load(Ordering::Relaxed)
+    pub fn transaction_requests_received(&self) -> u64 {
+        self.transaction_requests_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_request_received_inc(&self) -> u64 {
-        self.transaction_request_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transaction_requests_received_inc(&self) -> u64 {
+        self.transaction_requests_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn heartbeat_received(&self) -> u64 {
-        self.heartbeat_received.load(Ordering::Relaxed)
+    pub fn heartbeats_received(&self) -> u64 {
+        self.heartbeats_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn heartbeat_received_inc(&self) -> u64 {
-        self.heartbeat_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn heartbeats_received_inc(&self) -> u64 {
+        self.heartbeats_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn milestone_request_sent(&self) -> u64 {
-        self.milestone_request_sent.load(Ordering::Relaxed)
+    pub fn milestone_requests_sent(&self) -> u64 {
+        self.milestone_requests_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn milestone_request_sent_inc(&self) -> u64 {
-        self.milestone_request_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn milestone_requests_sent_inc(&self) -> u64 {
+        self.milestone_requests_sent.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_sent(&self) -> u64 {
-        self.transaction_sent.load(Ordering::Relaxed)
+    pub fn transactions_sent(&self) -> u64 {
+        self.transactions_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_sent_inc(&self) -> u64 {
-        self.transaction_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transactions_sent_inc(&self) -> u64 {
+        self.transactions_sent.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_request_sent(&self) -> u64 {
-        self.transaction_request_sent.load(Ordering::Relaxed)
+    pub fn transaction_requests_sent(&self) -> u64 {
+        self.transaction_requests_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_request_sent_inc(&self) -> u64 {
-        self.transaction_request_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transaction_requests_sent_inc(&self) -> u64 {
+        self.transaction_requests_sent.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn heartbeat_sent(&self) -> u64 {
-        self.heartbeat_sent.load(Ordering::Relaxed)
+    pub fn heartbeats_sent(&self) -> u64 {
+        self.heartbeats_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn heartbeat_sent_inc(&self) -> u64 {
-        self.heartbeat_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn heartbeats_sent_inc(&self) -> u64 {
+        self.heartbeats_sent.fetch_add(1, Ordering::SeqCst)
     }
 }
 
@@ -173,41 +173,41 @@ mod tests {
         let metrics = ProtocolMetrics::default();
 
         assert_eq!(metrics.invalid_messages_received(), 0);
-        assert_eq!(metrics.milestone_request_received(), 0);
-        assert_eq!(metrics.transaction_received(), 0);
-        assert_eq!(metrics.transaction_request_received(), 0);
-        assert_eq!(metrics.heartbeat_received(), 0);
+        assert_eq!(metrics.milestone_requests_received(), 0);
+        assert_eq!(metrics.transactions_received(), 0);
+        assert_eq!(metrics.transaction_requests_received(), 0);
+        assert_eq!(metrics.heartbeats_received(), 0);
 
         metrics.invalid_messages_received_inc();
-        metrics.milestone_request_received_inc();
-        metrics.transaction_received_inc();
-        metrics.transaction_request_received_inc();
-        metrics.heartbeat_received_inc();
+        metrics.milestone_requests_received_inc();
+        metrics.transactions_received_inc();
+        metrics.transaction_requests_received_inc();
+        metrics.heartbeats_received_inc();
 
         assert_eq!(metrics.invalid_messages_received(), 1);
-        assert_eq!(metrics.milestone_request_received(), 1);
-        assert_eq!(metrics.transaction_received(), 1);
-        assert_eq!(metrics.transaction_request_received(), 1);
-        assert_eq!(metrics.heartbeat_received(), 1);
+        assert_eq!(metrics.milestone_requests_received(), 1);
+        assert_eq!(metrics.transactions_received(), 1);
+        assert_eq!(metrics.transaction_requests_received(), 1);
+        assert_eq!(metrics.heartbeats_received(), 1);
     }
 
     #[test]
     fn protocol_metrics_messages_sent_test() {
         let metrics = ProtocolMetrics::default();
 
-        assert_eq!(metrics.milestone_request_sent(), 0);
-        assert_eq!(metrics.transaction_sent(), 0);
-        assert_eq!(metrics.transaction_request_sent(), 0);
-        assert_eq!(metrics.heartbeat_sent(), 0);
+        assert_eq!(metrics.milestone_requests_sent(), 0);
+        assert_eq!(metrics.transactions_sent(), 0);
+        assert_eq!(metrics.transaction_requests_sent(), 0);
+        assert_eq!(metrics.heartbeats_sent(), 0);
 
-        metrics.milestone_request_sent_inc();
-        metrics.transaction_sent_inc();
-        metrics.transaction_request_sent_inc();
-        metrics.heartbeat_sent_inc();
+        metrics.milestone_requests_sent_inc();
+        metrics.transactions_sent_inc();
+        metrics.transaction_requests_sent_inc();
+        metrics.heartbeats_sent_inc();
 
-        assert_eq!(metrics.milestone_request_sent(), 1);
-        assert_eq!(metrics.transaction_sent(), 1);
-        assert_eq!(metrics.transaction_request_sent(), 1);
-        assert_eq!(metrics.heartbeat_sent(), 1);
+        assert_eq!(metrics.milestone_requests_sent(), 1);
+        assert_eq!(metrics.transactions_sent(), 1);
+        assert_eq!(metrics.transaction_requests_sent(), 1);
+        assert_eq!(metrics.heartbeats_sent(), 1);
     }
 }

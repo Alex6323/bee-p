@@ -86,9 +86,9 @@ macro_rules! implement_sender_worker {
     };
 }
 
-implement_sender_worker!(MilestoneRequest, milestone_request, milestone_request_sent_inc);
-implement_sender_worker!(TransactionMessage, transaction, transaction_sent_inc);
-implement_sender_worker!(TransactionRequest, transaction_request, transaction_request_sent_inc);
-implement_sender_worker!(Heartbeat, heartbeat, heartbeat_sent_inc);
+implement_sender_worker!(MilestoneRequest, milestone_request, milestone_requests_sent_inc);
+implement_sender_worker!(TransactionMessage, transaction, transactions_sent_inc);
+implement_sender_worker!(TransactionRequest, transaction_request, transaction_requests_sent_inc);
+implement_sender_worker!(Heartbeat, heartbeat, heartbeats_sent_inc);
 
 // TODO is this really necessary ?

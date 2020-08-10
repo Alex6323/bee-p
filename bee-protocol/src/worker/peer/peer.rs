@@ -76,8 +76,8 @@ impl PeerWorker {
                             .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.milestone_request_received_inc();
-                        Protocol::get().metrics.milestone_request_received_inc();
+                        self.peer.metrics.milestone_requests_received_inc();
+                        Protocol::get().metrics.milestone_requests_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading MilestoneRequest failed: {:?}.", self.peer.address, e);
@@ -99,8 +99,8 @@ impl PeerWorker {
                             .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.transaction_received_inc();
-                        Protocol::get().metrics.transaction_received_inc();
+                        self.peer.metrics.transactions_received_inc();
+                        Protocol::get().metrics.transactions_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading TransactionMessage failed: {:?}.", self.peer.address, e);
@@ -122,8 +122,8 @@ impl PeerWorker {
                             .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.transaction_request_received_inc();
-                        Protocol::get().metrics.transaction_request_received_inc();
+                        self.peer.metrics.transaction_requests_received_inc();
+                        Protocol::get().metrics.transaction_requests_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading TransactionRequest failed: {:?}.", self.peer.address, e);
@@ -142,8 +142,8 @@ impl PeerWorker {
                         self.peer
                             .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
 
-                        self.peer.metrics.heartbeat_received_inc();
-                        Protocol::get().metrics.heartbeat_received_inc();
+                        self.peer.metrics.heartbeats_received_inc();
+                        Protocol::get().metrics.heartbeats_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading Heartbeat failed: {:?}.", self.peer.address, e);

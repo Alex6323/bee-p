@@ -13,6 +13,7 @@ mod cli;
 mod config;
 mod constants;
 mod node;
+mod plugin;
 
 pub use cli::CliArgs;
 pub use config::NodeConfigBuilder;

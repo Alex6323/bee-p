@@ -14,6 +14,7 @@
 use crate::{
     config::NodeConfig,
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
+    plugin,
 };
 
 use bee_common::shutdown::Shutdown;
@@ -124,6 +125,10 @@ impl NodeBuilder {
             bus.clone(),
             &mut shutdown,
         ));
+
+        info!("Initializing plugins...");
+
+        plugin::init(bus);
 
         info!("Initialized.");
 

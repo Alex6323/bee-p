@@ -9,17 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::Milestone;
+use bee_common_ext::event::Bus;
 
-pub struct LastMilestone(pub Milestone);
+use std::sync::Arc;
 
-pub struct LastSolidMilestone(pub Milestone);
+mod tps;
 
-pub struct TpsMetrics {
-    pub incoming: u64,
-    pub new: u64,
-    pub known: u64,
-    pub stale: u64,
-    pub invalid: u64,
-    pub outgoing: u64,
+pub(crate) fn init(bus: Arc<Bus>) {
+    tps::TpsPlugin::new().init(bus);
 }

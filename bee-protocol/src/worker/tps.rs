@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::protocol::Protocol;
+use crate::{event::TpsMetrics, protocol::Protocol};
 
 use bee_common::worker::Error as WorkerError;
 
@@ -19,6 +19,7 @@ use log::info;
 
 use std::time::Duration;
 
+#[derive(Default)]
 pub(crate) struct TpsWorker {
     incoming: u64,
     new: u64,
@@ -30,33 +31,25 @@ pub(crate) struct TpsWorker {
 
 impl TpsWorker {
     pub(crate) fn new() -> Self {
-        Self {
-            incoming: 0,
-            new: 0,
-            known: 0,
-            stale: 0,
-            invalid: 0,
-            outgoing: 0,
-        }
+        Self::default()
     }
 
     fn tps(&mut self) {
-        let incoming = Protocol::get().metrics.transaction_received();
+        let incoming = Protocol::get().metrics.transactions_received();
         let new = Protocol::get().metrics.new_transactions_received();
         let known = Protocol::get().metrics.known_transactions_received();
         let stale = Protocol::get().metrics.stale_transactions_received();
         let invalid = Protocol::get().metrics.invalid_transactions_received();
-        let outgoing = Protocol::get().metrics.transaction_sent();
+        let outgoing = Protocol::get().metrics.transactions_sent();
 
-        info!(
-            "incoming {} new {} known {} stale {} invalid {} outgoing {}",
-            incoming - self.incoming,
-            new - self.new,
-            known - self.known,
-            stale - self.stale,
-            invalid - self.invalid,
-            outgoing - self.outgoing
-        );
+        Protocol::get().bus.dispatch(TpsMetrics {
+            incoming: incoming - self.incoming,
+            new: new - self.new,
+            known: known - self.known,
+            stale: stale - self.stale,
+            invalid: invalid - self.invalid,
+            outgoing: outgoing - self.outgoing,
+        });
 
         self.incoming = incoming;
         self.new = new;

@@ -56,8 +56,8 @@ impl BroadcasterWorker {
                     .await
                 {
                     Ok(_) => {
-                        (*peer.value()).metrics.transaction_sent_inc();
-                        Protocol::get().metrics.transaction_sent_inc();
+                        (*peer.value()).metrics.transactions_sent_inc();
+                        Protocol::get().metrics.transactions_sent_inc();
                     }
                     Err(e) => {
                         warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);
