@@ -13,7 +13,29 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
+use serde::{Serialize, Serializer, ser::SerializeStruct};
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Input {
     UTXO(UTXOInput),
+}
+
+impl Serialize for Input {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Input::UTXO(UTXOInput{
+                ref transaction_id,
+                ref output_index,
+            }) => {
+                let mut serializer = serializer.serialize_struct("UTXO", 3)?;
+                serializer.serialize_field("Input Type", &0u8)?;
+                serializer.serialize_field("Transaction ID", transaction_id)?;
+                serializer.serialize_field("Transaction Output Index", output_index)?;
+                serializer.end()
+            }
+        }
+    }
 }
