@@ -30,7 +30,7 @@ impl Serialize for Input {
                 ref transaction_id,
                 ref output_index,
             }) => {
-                let mut serializer = serializer.serialize_struct("UTXO", 3)?;
+                let mut serializer = serializer.serialize_struct("Input", 3)?;
                 serializer.serialize_field("Input Type", &0u8)?;
                 serializer.serialize_field("Transaction ID", transaction_id)?;
                 serializer.serialize_field("Transaction Output Index", output_index)?;
