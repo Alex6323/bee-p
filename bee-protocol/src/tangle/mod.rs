@@ -18,7 +18,7 @@ pub use metadata::TransactionMetadata;
 // pub(crate) mod propagator;
 
 use crate::{
-    events::LastSolidMilestone,
+    event::LastSolidMilestone,
     milestone::{Milestone, MilestoneIndex},
     protocol::Protocol,
     tangle::flags::Flags,

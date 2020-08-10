@@ -11,7 +11,7 @@
 
 use crate::{
     config::ProtocolConfig,
-    events::{LastMilestone, LastSolidMilestone},
+    event::{LastMilestone, LastSolidMilestone},
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,

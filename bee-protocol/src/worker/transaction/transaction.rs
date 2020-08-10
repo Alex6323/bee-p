@@ -188,7 +188,7 @@ mod tests {
     use super::*;
     use crate::tangle;
 
-    use crate::ProtocolConfig;
+    use crate::config::ProtocolConfig;
 
     use bee_common::shutdown::Shutdown;
     use bee_common_ext::event::Bus;

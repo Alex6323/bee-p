@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    events::{LastMilestone, LastSolidMilestone},
+    event::{LastMilestone, LastSolidMilestone},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::tangle,
