@@ -9,15 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod input;
+mod input;
 mod output;
 mod unlock;
 mod unsigned_transaction;
 
 use crate::atomic::payload::Payload;
 pub use crate::atomic::Error;
-pub use input::Input;
-pub use output::Output;
+pub use input::{Input, UTXOInput};
+pub use output::{Output, Address, SigLockedSingleDeposit};
 pub use unlock::UnlockBlock;
 pub use unsigned_transaction::UnsignedTransaction;
 
