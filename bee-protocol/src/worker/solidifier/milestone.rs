@@ -13,23 +13,22 @@ use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::worker::Error as WorkerError;
 
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
 const MILESTONE_REQUEST_RANGE: u8 = 50;
 
-pub(crate) struct MilestoneSolidifierWorkerEvent();
+type Receiver = crate::worker::Receiver<mpsc::Receiver<MilestoneSolidifierWorkerEvent>>;
 
-pub(crate) struct MilestoneSolidifierWorker {}
+pub(crate) struct MilestoneSolidifierWorkerEvent;
+
+pub(crate) struct MilestoneSolidifierWorker {
+    receiver: Receiver,
+}
 
 impl MilestoneSolidifierWorker {
-    pub(crate) fn new() -> Self {
-        Self {}
+    pub(crate) fn new(receiver: Receiver) -> Self {
+        Self { receiver }
     }
 
     // async fn solidify(&self, hash: Hash, target_index: u32) -> bool {
@@ -114,31 +113,17 @@ impl MilestoneSolidifierWorker {
         }
     }
 
-    pub(crate) async fn run(
-        self,
-        receiver: mpsc::Receiver<MilestoneSolidifierWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(MilestoneSolidifierWorkerEvent()) = event {
-                        self.request_milestones();
-                        self.solidify_milestone().await;
-                        // while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
-                        //     if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
-                        //         break;
-                        //     }
-                        // }
-                    }
-                }
-            }
+        while let Some(MilestoneSolidifierWorkerEvent) = self.receiver.next().await {
+            self.request_milestones();
+            self.solidify_milestone().await;
+            // while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
+            //     if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
+            //         break;
+            //     }
+            // }
         }
 
         info!("Stopped.");

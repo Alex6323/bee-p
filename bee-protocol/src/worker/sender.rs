@@ -19,31 +19,28 @@ use crate::{
 
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
-use std::{marker::PhantomData, sync::Arc};
+use std::sync::Arc;
 
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    sink::SinkExt,
-    stream::StreamExt,
-};
+use futures::{channel::mpsc, sink::SinkExt, stream::StreamExt};
+
 use log::warn;
+
+type Receiver<M> = crate::worker::Receiver<mpsc::Receiver<M>>;
 
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
     peer: Arc<HandshakedPeer>,
-    _message_type: PhantomData<M>,
+    receiver: Receiver<M>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
-            pub(crate) fn new(network: Network, peer: Arc<HandshakedPeer>) -> Self {
+            pub(crate) fn new(network: Network, peer: Arc<HandshakedPeer>, receiver: Receiver<$type>) -> Self {
                 Self {
                     network,
                     peer,
-                    _message_type: PhantomData,
+                    receiver,
                 }
             }
 
@@ -63,41 +60,24 @@ macro_rules! implement_sender_worker {
                 };
             }
 
-            pub(crate) async fn run(
-                mut self,
-                events_receiver: mpsc::Receiver<$type>,
-                shutdown_receiver: oneshot::Receiver<()>,
-            ) {
-                let mut events_fused = events_receiver.fuse();
-                let mut shutdown_fused = shutdown_receiver.fuse();
-
-                loop {
-                    select! {
-                        _ = shutdown_fused => break,
-                        message = events_fused.next() => {
-                            if let Some(message) = message {
-                                match self
-                                    .network
-                                    .send(SendMessage {
-                                        epid: self.peer.epid,
-                                        bytes: tlv_into_bytes(message),
-                                        responder: None,
-                                    })
-                                    .await
-                                {
-                                    Ok(_) => {
-                                        self.peer.metrics.$incrementor();
-                                        Protocol::get().metrics.$incrementor();
-                                    }
-                                    Err(e) => {
-                                        // TODO log actual message type ?
-                                        warn!(
-                                            "Sending message to {} failed: {:?}.",
-                                            self.peer.epid, e
-                                        );
-                                    }
-                                }
-                            }
+            pub(crate) async fn run(mut self) {
+                while let Some(message) = self.receiver.next().await {
+                    match self
+                        .network
+                        .send(SendMessage {
+                            epid: self.peer.epid,
+                            bytes: tlv_into_bytes(message),
+                            responder: None,
+                        })
+                        .await
+                    {
+                        Ok(_) => {
+                            self.peer.metrics.$incrementor();
+                            Protocol::get().metrics.$incrementor();
+                        }
+                        Err(e) => {
+                            // TODO log actual message type ?
+                            warn!("Sending message to {} failed: {:?}.", self.peer.epid, e);
                         }
                     }
                 }

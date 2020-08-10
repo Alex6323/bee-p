@@ -39,3 +39,38 @@ pub(crate) use solidifier::{
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{TransactionWorker, TransactionWorkerEvent};
+
+use futures::{
+    channel::oneshot,
+    future::{self, FutureExt},
+    stream::{self, Stream, StreamExt},
+    task::{Context, Poll},
+};
+
+use std::pin::Pin;
+
+pub(crate) struct Receiver<R> {
+    receiver: stream::Fuse<R>,
+    shutdown: future::Fuse<oneshot::Receiver<()>>,
+}
+
+impl<R: Stream> Receiver<R> {
+    pub(crate) fn new(receiver: R, shutdown: oneshot::Receiver<()>) -> Self {
+        Self {
+            receiver: receiver.fuse(),
+            shutdown: shutdown.fuse(),
+        }
+    }
+}
+
+impl<R: Stream<Item = E> + std::marker::Unpin, E> Stream for Receiver<R> {
+    type Item = E;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        if let Poll::Ready(_) = self.shutdown.poll_unpin(cx) {
+            Poll::Ready(None)
+        } else {
+            self.receiver.poll_next_unpin(cx)
+        }
+    }
+}

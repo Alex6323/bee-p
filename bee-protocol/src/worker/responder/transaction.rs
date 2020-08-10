@@ -22,24 +22,23 @@ use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use bytemuck::cast_slice;
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
+
+type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionResponderWorkerEvent>>;
 
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: TransactionRequest,
 }
 
-pub(crate) struct TransactionResponderWorker {}
+pub(crate) struct TransactionResponderWorker {
+    receiver: Receiver,
+}
 
 impl TransactionResponderWorker {
-    pub(crate) fn new() -> Self {
-        Self {}
+    pub(crate) fn new(receiver: Receiver) -> Self {
+        Self { receiver }
     }
 
     async fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
@@ -66,25 +65,11 @@ impl TransactionResponderWorker {
         }
     }
 
-    pub(crate) async fn run(
-        self,
-        receiver: mpsc::Receiver<TransactionResponderWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(TransactionResponderWorkerEvent { epid, request }) = event {
-                        self.process_request(epid, request).await;
-                    }
-                }
-            }
+        while let Some(TransactionResponderWorkerEvent { epid, request }) = self.receiver.next().await {
+            self.process_request(epid, request).await;
         }
 
         info!("Stopped.");

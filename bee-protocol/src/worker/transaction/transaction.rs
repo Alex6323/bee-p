@@ -13,7 +13,7 @@ use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::transaction::HashCache,
+    worker::{milestone_validator::MilestoneValidatorWorkerEvent, transaction::HashCache},
 };
 
 use bee_common::worker::Error as WorkerError;
@@ -29,12 +29,12 @@ use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransac
 use bytemuck::cast_slice;
 use futures::{
     channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
     stream::StreamExt,
     SinkExt,
 };
 use log::{debug, error, info};
+
+type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionWorkerEvent>>;
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -42,39 +42,31 @@ pub(crate) struct TransactionWorkerEvent {
 }
 
 pub(crate) struct TransactionWorker {
-    milestone_validator_worker: mpsc::Sender<Hash>,
+    milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
     cache: HashCache,
     curl: CurlP81,
+    receiver: Receiver,
 }
 
 impl TransactionWorker {
-    pub(crate) fn new(milestone_validator_worker: mpsc::Sender<Hash>, cache_size: usize) -> Self {
+    pub(crate) fn new(
+        milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
+        cache_size: usize,
+        receiver: Receiver,
+    ) -> Self {
         Self {
             milestone_validator_worker,
             cache: HashCache::new(cache_size),
             curl: CurlP81::new(),
+            receiver,
         }
     }
 
-    pub(crate) async fn run(
-        mut self,
-        receiver: mpsc::Receiver<TransactionWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(TransactionWorkerEvent{from, transaction}) = event {
-                        self.process_transaction_brodcast(from, transaction).await;
-                    }
-                }
-            }
+        while let Some(TransactionWorkerEvent { from, transaction }) = self.receiver.next().await {
+            self.process_transaction_brodcast(from, transaction).await;
         }
 
         info!("Stopped.");
@@ -175,7 +167,11 @@ impl TransactionWorker {
                 };
 
                 if let Some(tail) = tail {
-                    if let Err(e) = self.milestone_validator_worker.send(tail).await {
+                    if let Err(e) = self
+                        .milestone_validator_worker
+                        .send(MilestoneValidatorWorkerEvent(tail))
+                        .await
+                    {
                         error!("Sending tail to milestone validation failed: {:?}.", e);
                     }
                 };
@@ -246,8 +242,12 @@ mod tests {
         });
 
         block_on(
-            TransactionWorker::new(milestone_validator_worker_sender, 10000)
-                .run(transaction_worker_receiver, shutdown_receiver),
+            TransactionWorker::new(
+                milestone_validator_worker_sender,
+                10000,
+                Receiver::new(transaction_worker_receiver, shutdown_receiver),
+            )
+            .run(),
         )
         .unwrap();
 

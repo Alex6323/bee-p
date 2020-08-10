@@ -24,15 +24,12 @@ use bee_crypto::ternary::{
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-};
 use log::{debug, info};
 
+use futures::{channel::mpsc, stream::StreamExt};
 use std::marker::PhantomData;
+
+type Receiver = crate::worker::Receiver<mpsc::Receiver<MilestoneValidatorWorkerEvent>>;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -42,9 +39,10 @@ pub(crate) enum MilestoneValidatorWorkerError {
     InvalidMilestone(MilestoneBuilderError),
 }
 
-pub(crate) type MilestoneValidatorWorkerEvent = Hash;
+pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct MilestoneValidatorWorker<M, P> {
+    receiver: Receiver,
     mss_sponge: PhantomData<M>,
     public_key: PhantomData<P>,
 }
@@ -55,8 +53,9 @@ where
     P: PublicKey,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(receiver: Receiver) -> Self {
         Self {
+            receiver,
             mss_sponge: PhantomData,
             public_key: PhantomData,
         }
@@ -124,25 +123,11 @@ where
     }
 
     // TODO PriorityQueue ?
-    pub(crate) async fn run(
-        self,
-        receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                tail_hash = receiver_fused.next() => {
-                    if let Some(tail_hash) = tail_hash {
-                        self.process(tail_hash).await;
-                    }
-                }
-            }
+        while let Some(MilestoneValidatorWorkerEvent(tail_hash)) = self.receiver.next().await {
+            self.process(tail_hash).await;
         }
 
         info!("Stopped.");
