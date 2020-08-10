@@ -17,7 +17,15 @@ use std::{convert::TryInto, ops::Range};
 
 const SOLID_MILESTONE_INDEX_SIZE: usize = 4;
 const SNAPSHOT_MILESTONE_INDEX_SIZE: usize = 4;
+// const LAST_MILESTONE_INDEX_SIZE: usize = 4;
+// const CONNECTED_PEERS_SIZE: usize = 1;
+// const SYNCED_PEERS_SIZE: usize = 1;
 const CONSTANT_SIZE: usize = SOLID_MILESTONE_INDEX_SIZE + SNAPSHOT_MILESTONE_INDEX_SIZE;
+// const CONSTANT_SIZE: usize = SOLID_MILESTONE_INDEX_SIZE
+//     + SNAPSHOT_MILESTONE_INDEX_SIZE
+//     + LAST_MILESTONE_INDEX_SIZE
+//     + CONNECTED_PEERS_SIZE
+//     + SYNCED_PEERS_SIZE;
 
 /// A message that informs about the part of the tangle currently being fully stored by a node.
 /// This message is sent when a node:
@@ -33,6 +41,20 @@ pub(crate) struct Heartbeat {
     pub(crate) snapshot_milestone_index: u32,
 }
 
+// #[derive(Default)]
+// pub(crate) struct Heartbeat {
+//     /// Index of the last solid milestone.
+//     pub(crate) solid_milestone_index: u32,
+//     /// Index of the snapshotted milestone.
+//     pub(crate) snapshot_milestone_index: u32,
+//     /// Index of the last milestone.
+//     pub(crate) last_milestone_index: u32,
+//     /// Number of connected peers.
+//     pub(crate) connected_peers: u8,
+//     /// Number of synced peers.
+//     pub(crate) synced_peers: u8,
+// }
+
 impl Heartbeat {
     pub(crate) fn new(solid_milestone_index: u32, snapshot_milestone_index: u32) -> Self {
         Self {
@@ -41,6 +63,24 @@ impl Heartbeat {
         }
     }
 }
+
+// impl Heartbeat {
+//     pub(crate) fn new(
+//         solid_milestone_index: u32,
+//         snapshot_milestone_index: u32,
+//         last_milestone_index: u32,
+//         connected_peers: u8,
+//         synced_peers: u8,
+//     ) -> Self {
+//         Self {
+//             solid_milestone_index,
+//             snapshot_milestone_index,
+//             last_milestone_index,
+//             connected_peers,
+//             synced_peers,
+//         }
+//     }
+// }
 
 impl Message for Heartbeat {
     const ID: u8 = 0x06;
@@ -61,6 +101,27 @@ impl Message for Heartbeat {
         message
     }
 
+    // fn from_bytes(bytes: &[u8]) -> Self {
+    //     let mut message = Self::default();
+    //
+    //     let (bytes, next) = bytes.split_at(SOLID_MILESTONE_INDEX_SIZE);
+    //     message.solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+    //
+    //     let (bytes, next) = next.split_at(SNAPSHOT_MILESTONE_INDEX_SIZE);
+    //     message.snapshot_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+    //
+    //     let (bytes, next) = next.split_at(LAST_MILESTONE_INDEX_SIZE);
+    //     message.last_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+    //
+    //     let (bytes, next) = next.split_at(CONNECTED_PEERS_SIZE);
+    //     message.connected_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+    //
+    //     let (bytes, _) = next.split_at(SYNCED_PEERS_SIZE);
+    //     message.synced_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+    //
+    //     message
+    // }
+
     fn size(&self) -> usize {
         CONSTANT_SIZE
     }
@@ -69,6 +130,19 @@ impl Message for Heartbeat {
         bytes[0..SOLID_MILESTONE_INDEX_SIZE].copy_from_slice(&self.solid_milestone_index.to_be_bytes());
         bytes[SOLID_MILESTONE_INDEX_SIZE..].copy_from_slice(&self.snapshot_milestone_index.to_be_bytes());
     }
+
+    // fn into_bytes(self, bytes: &mut [u8]) {
+    //     let (bytes, next) = bytes.split_at_mut(SOLID_MILESTONE_INDEX_SIZE);
+    //     bytes.copy_from_slice(&self.solid_milestone_index.to_be_bytes());
+    //     let (bytes, next) = next.split_at_mut(SNAPSHOT_MILESTONE_INDEX_SIZE);
+    //     bytes.copy_from_slice(&self.snapshot_milestone_index.to_be_bytes());
+    //     let (bytes, next) = next.split_at_mut(LAST_MILESTONE_INDEX_SIZE);
+    //     bytes.copy_from_slice(&self.last_milestone_index.to_be_bytes());
+    //     let (bytes, next) = next.split_at_mut(CONNECTED_PEERS_SIZE);
+    //     bytes.copy_from_slice(&self.connected_peers.to_be_bytes());
+    //     let (bytes, _) = next.split_at_mut(SYNCED_PEERS_SIZE);
+    //     bytes.copy_from_slice(&self.synced_peers.to_be_bytes());
+    // }
 }
 
 #[cfg(test)]
@@ -76,8 +150,11 @@ mod tests {
 
     use super::*;
 
-    const FIRST_SOLID_MILESTONE_INDEX: u32 = 0x3dc2_97b4;
-    const LAST_SOLID_MILESTONE_INDEX: u32 = 0x0118_1f9b;
+    const SOLID_MILESTONE_INDEX: u32 = 0x0118_1f9b;
+    const SNAPSHOT_MILESTONE_INDEX: u32 = 0x3dc2_97b4;
+    // const LAST_MILESTONE_INDEX: u32 = 0x60be_20c2;
+    // const CONNECTED_PEERS: u8 = 12;
+    // const SYNCED_PEERS: u8 = 5;
 
     #[test]
     fn id() {
@@ -91,21 +168,61 @@ mod tests {
         assert_eq!(Heartbeat::size_range().contains(&9), false);
     }
 
+    // #[test]
+    // fn size_range() {
+    //     assert_eq!(Heartbeat::size_range().contains(&13), false);
+    //     assert_eq!(Heartbeat::size_range().contains(&14), true);
+    //     assert_eq!(Heartbeat::size_range().contains(&15), false);
+    // }
+
+    // #[test]
+    // fn size() {
+    //     let message = Heartbeat::new(
+    //         SNAPSHOT_MILESTONE_INDEX,
+    //         SOLID_MILESTONE_INDEX,
+    //         LAST_MILESTONE_INDEX,
+    //         CONNECTED_PEERS,
+    //         SYNCED_PEERS,
+    //     );
+    //
+    //     assert_eq!(message.size(), CONSTANT_SIZE);
+    // }
+
     #[test]
     fn size() {
-        let message = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
+        let message = Heartbeat::new(SNAPSHOT_MILESTONE_INDEX, SOLID_MILESTONE_INDEX);
 
         assert_eq!(message.size(), CONSTANT_SIZE);
     }
 
+    // #[test]
+    // fn into_from() {
+    //     let message_from = Heartbeat::new(
+    //         SNAPSHOT_MILESTONE_INDEX,
+    //         SOLID_MILESTONE_INDEX,
+    //         LAST_MILESTONE_INDEX,
+    //         CONNECTED_PEERS,
+    //         SYNCED_PEERS,
+    //     );
+    //     let mut bytes = vec![0u8; message_from.size()];
+    //     message_from.into_bytes(&mut bytes);
+    //     let message_to = Heartbeat::from_bytes(&bytes);
+    //
+    //     assert_eq!(message_to.solid_milestone_index, SNAPSHOT_MILESTONE_INDEX);
+    //     assert_eq!(message_to.snapshot_milestone_index, SOLID_MILESTONE_INDEX);
+    //     assert_eq!(message_to.last_milestone_index, LAST_MILESTONE_INDEX);
+    //     assert_eq!(message_to.connected_peers, CONNECTED_PEERS);
+    //     assert_eq!(message_to.synced_peers, SYNCED_PEERS);
+    // }
+
     #[test]
     fn into_from() {
-        let message_from = Heartbeat::new(FIRST_SOLID_MILESTONE_INDEX, LAST_SOLID_MILESTONE_INDEX);
+        let message_from = Heartbeat::new(SNAPSHOT_MILESTONE_INDEX, SOLID_MILESTONE_INDEX);
         let mut bytes = vec![0u8; message_from.size()];
         message_from.into_bytes(&mut bytes);
         let message_to = Heartbeat::from_bytes(&bytes);
 
-        assert_eq!(message_to.solid_milestone_index, FIRST_SOLID_MILESTONE_INDEX);
-        assert_eq!(message_to.snapshot_milestone_index, LAST_SOLID_MILESTONE_INDEX);
+        assert_eq!(message_to.solid_milestone_index, SNAPSHOT_MILESTONE_INDEX);
+        assert_eq!(message_to.snapshot_milestone_index, SOLID_MILESTONE_INDEX);
     }
 }
