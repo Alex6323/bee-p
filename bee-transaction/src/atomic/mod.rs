@@ -25,6 +25,8 @@ pub enum Error {
     IndexError,
     OrderError,
     HashError,
+    BincodeError(bincode::Error),
+    SigningError(bee_signing_ext::binary::ed25519::Error),
 }
 
 impl std::fmt::Display for Error {
@@ -37,6 +39,20 @@ impl std::fmt::Display for Error {
             Error::IndexError => "The position of index is not correct.".fmt(f),
             Error::OrderError => "The vector is not sorted by lexicographical order.".fmt(f),
             Error::HashError => "The format of provided hash is not correct.".fmt(f),
+            Error::BincodeError(e) => e.fmt(f),
+            Error::SigningError(e) => e.fmt(f),
         }
+    }
+}
+
+impl From<bincode::Error> for Error {
+    fn from(error: bincode::Error) -> Self {
+        Error::BincodeError(error)
+    }
+}
+
+impl From<bee_signing_ext::binary::ed25519::Error> for Error {
+    fn from(error: bee_signing_ext::binary::ed25519::Error) -> Self {
+        Error::SigningError(error)
     }
 }

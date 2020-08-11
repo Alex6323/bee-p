@@ -13,7 +13,7 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
-use serde::{Serialize, Serializer, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Input {
@@ -26,7 +26,7 @@ impl Serialize for Input {
         S: Serializer,
     {
         match self {
-            Input::UTXO(UTXOInput{
+            Input::UTXO(UTXOInput {
                 ref transaction_id,
                 ref output_index,
             }) => {

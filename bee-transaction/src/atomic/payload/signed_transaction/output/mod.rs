@@ -13,7 +13,7 @@ mod sig_locked_single_deposit;
 
 pub use sig_locked_single_deposit::{Address, SigLockedSingleDeposit};
 
-use serde::{Serialize, Serializer, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Output {
@@ -26,7 +26,7 @@ impl Serialize for Output {
         S: Serializer,
     {
         match self {
-            Output::SigLockedSingleDeposit(SigLockedSingleDeposit{
+            Output::SigLockedSingleDeposit(SigLockedSingleDeposit {
                 ref address,
                 ref amount,
             }) => {

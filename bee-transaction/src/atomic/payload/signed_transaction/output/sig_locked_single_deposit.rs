@@ -11,9 +11,9 @@
 
 use crate::atomic::Error;
 
-use bee_ternary::{TritBuf, T5B1Buf};
+use bee_ternary::{T5B1Buf, TritBuf};
 
-use serde::{Serialize, Serializer, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct WotsAddress(Vec<i8>);
@@ -28,14 +28,14 @@ pub enum Address {
 }
 
 impl Address {
-    pub fn from_ed25519_bytes(bytes: [u8; 32]) -> Self{
+    pub fn from_ed25519_bytes(bytes: [u8; 32]) -> Self {
         Address::Ed25519(Ed25519Address(bytes))
     }
 
     pub fn from_wots_tritbuf(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
         let trits = trits.as_i8_slice().to_vec();
         if trits.len() != 49 {
-            return Err(Error::HashError)
+            return Err(Error::HashError);
         }
         Ok(Address::Wots(WotsAddress(trits)))
     }
@@ -52,7 +52,7 @@ impl Serialize for Address {
                 serializer.serialize_field("Address Type", &0u8)?;
                 serializer.serialize_field("Address", address)?;
                 serializer.end()
-            },
+            }
             Address::Ed25519(Ed25519Address(address)) => {
                 let mut serializer = serializer.serialize_struct("Address", 3)?;
                 serializer.serialize_field("Address Type", &1u8)?;
