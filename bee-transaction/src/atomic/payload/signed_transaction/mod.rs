@@ -17,9 +17,11 @@ mod unsigned_transaction;
 use crate::atomic::payload::Payload;
 pub use crate::atomic::Error;
 pub use input::{Input, UTXOInput};
-pub use output::{Output, Address, SigLockedSingleDeposit};
-pub use unlock::UnlockBlock;
+pub use output::{Address, Output, SigLockedSingleDeposit};
+pub use unlock::{Ed25519Signature, ReferenceUnlock, Signature, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
+
+use bee_signing_ext::binary::PrivateKey;
 
 use std::{cmp::Ordering, collections::HashSet, slice::Iter};
 
@@ -199,16 +201,24 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
     true
 }
 
-#[derive(Default)]
 pub struct SignedTransactionBuilder {
-    // TODO Seed to sign
-    inputs: Vec<(Input, u8)>,
+    seed: Seed,
+    inputs: Vec<(Input, u64)>,
     outputs: Vec<Output>,
     payload: Option<Vec<Payload>>,
 }
 
 impl SignedTransactionBuilder {
-    pub fn set_inputs(mut self, inputs: Vec<(Input, u8)>) -> Self {
+    pub fn new(seed: Seed) -> Self {
+        Self {
+            seed,
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            payload: None,
+        }
+    }
+
+    pub fn set_inputs(mut self, inputs: Vec<(Input, u64)>) -> Self {
         let mut inputs = inputs;
         self.inputs.append(&mut inputs);
 
@@ -228,13 +238,37 @@ impl SignedTransactionBuilder {
         self
     }
 
-    pub fn build(self) -> SignedTransaction {
-        let mut inputs: Vec<Input> = self.inputs.into_iter().map(|(i, _)| i).collect();
-        let mut outputs: Vec<Output> = self.outputs;
+    pub fn build(self) -> Result<SignedTransaction, Error> {
+        let mut inputs = self.inputs;
+        let mut outputs = self.outputs;
+        if inputs.len() == 0 || outputs.len() == 0 {
+            return Err(Error::CountError);
+        }
         inputs.sort();
         outputs.sort();
 
-        SignedTransaction {
+        let mut unlock_blocks = Vec::new();
+        let mut last_index = (None, -1);
+        for (i, index) in &inputs {
+            if last_index.0 == Some(index) {
+                unlock_blocks.push(UnlockBlock::Reference(ReferenceUnlock {
+                    index: last_index.1 as u8,
+                }));
+            } else {
+                let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
+                let private_key = PrivateKey::generate_from_seed(&self.seed.0, *index)?;
+                let public_key = private_key.generate_public_key().to_bytes();
+                let signature = private_key.sign(&serialized_inputs)?.to_bytes().to_vec();
+                unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock {
+                    signature: Signature::Ed25519(Ed25519Signature { public_key, signature }),
+                }));
+                last_index = (Some(index), (unlock_blocks.len() - 1) as isize);
+            }
+        }
+
+        let inputs: Vec<Input> = inputs.into_iter().map(|(i, _)| i).collect();
+
+        Ok(SignedTransaction {
             unsigned_transaction: UnsignedTransaction {
                 input_count: inputs.len() as u8,
                 inputs,
@@ -243,8 +277,18 @@ impl SignedTransactionBuilder {
                 payload: self.payload,
             },
             // TODO signed the transaction
-            unlock_block_count: 0,
-            unlock_blocks: Vec::new(),
-        }
+            unlock_block_count: unlock_blocks.len() as u8,
+            unlock_blocks,
+        })
+    }
+}
+
+pub struct Seed(bee_signing_ext::binary::Seed);
+
+impl Seed {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Ok(Self(
+            bee_signing_ext::binary::Seed::from_bytes(bytes).map_err(|_| Error::HashError)?,
+        ))
     }
 }

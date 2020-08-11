@@ -1,12 +1,9 @@
-use bee_transaction::atomic::payload::signed_transaction::{
-    Input, UTXOInput,
-    SigLockedSingleDeposit, Output, Address,
-};
+use bee_transaction::atomic::payload::signed_transaction::{Address, Input, Output, SigLockedSingleDeposit, UTXOInput};
 
 #[test]
 fn input_to_bincode_serialization() {
-    let value = Input::UTXO(UTXOInput{
-        transaction_id: bee_transaction::atomic::Hash([0u8;32]),
+    let value = Input::UTXO(UTXOInput {
+        transaction_id: bee_transaction::atomic::Hash([0u8; 32]),
         output_index: 0,
     });
     let x = bincode::serialize(&value).unwrap();
@@ -15,8 +12,8 @@ fn input_to_bincode_serialization() {
 
 #[test]
 fn output_to_bincode_serialization() {
-    let value = Output::SigLockedSingleDeposit(SigLockedSingleDeposit{
-        address: Address::from_ed25519_bytes([0;32]),
+    let value = Output::SigLockedSingleDeposit(SigLockedSingleDeposit {
+        address: Address::from_ed25519_bytes([0; 32]),
         amount: 0,
     });
     let x = bincode::serialize(&value).unwrap();
