@@ -40,6 +40,8 @@ enum ReadState {
 /// It takes care of processing events into messages that can be processed by the workers.
 pub(super) struct MessageHandler {
     events: EventHandler,
+    // FIXME: see if we can implement `Stream` for the `MessageHandler` and use the
+    // `ShutdownStream` type instead.
     shutdown: ShutdownRecv,
     state: ReadState,
     /// The address of the peer. This field is only here for logging purposes.
@@ -242,9 +244,10 @@ mod tests {
         // Send all the events to the message handler.
         for event in events {
             sender.try_send(event).unwrap();
+            task::sleep(Duration::from_millis(1)).await;
         }
         // Sleep to be sure the handler had time to produce all the messages.
-        task::sleep(Duration::from_secs(1)).await;
+        task::sleep(Duration::from_millis(1)).await;
         // Send a shutdown signal.
         sender_shutdown.send(()).unwrap();
         // Await for the task with the checks to be completed.
@@ -325,12 +328,12 @@ mod tests {
 
         for event in events {
             sender.try_send(event).unwrap();
+            task::sleep(Duration::from_millis(1)).await;
         }
 
-        task::sleep(Duration::from_secs(1)).await;
         sender_shutdown.send(()).unwrap();
+        task::sleep(Duration::from_millis(1)).await;
         // Send the last event after the shutdown signal
-        task::sleep(Duration::from_secs(1)).await;
         sender.try_send(last_event).unwrap();
 
         handle.await;
