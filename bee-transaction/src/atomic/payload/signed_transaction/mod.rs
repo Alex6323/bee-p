@@ -21,7 +21,11 @@ pub use output::{Address, Output, SigLockedSingleDeposit};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, Signature, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
 
-use bee_signing_ext::binary::PrivateKey;
+use bee_crypto::ternary::sponge::Kerl;
+use bee_signing::ternary::{
+    wots::{WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder},
+    PrivateKey, PrivateKeyGenerator,
+};
 
 use std::{cmp::Ordering, collections::HashSet, slice::Iter};
 
@@ -256,12 +260,26 @@ impl SignedTransactionBuilder {
                 }));
             } else {
                 let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
-                let private_key = PrivateKey::generate_from_seed(&self.seed.0, *index)?;
-                let public_key = private_key.generate_public_key().to_bytes();
-                let signature = private_key.sign(&serialized_inputs)?.to_bytes().to_vec();
-                unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock {
-                    signature: Signature::Ed25519(Ed25519Signature { public_key, signature }),
-                }));
+                match &self.seed {
+                    Seed::Ed25519(s) => {
+                        let private_key = bee_signing_ext::binary::PrivateKey::generate_from_seed(s, *index)?;
+                        let public_key = private_key.generate_public_key().to_bytes();
+                        let signature = private_key.sign(&serialized_inputs)?.to_bytes().to_vec();
+                        unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock {
+                            signature: Signature::Ed25519(Ed25519Signature { public_key, signature }),
+                        }));
+                    }
+                    Seed::Wots(s) => {
+                        let private_key = WotsShakePrivateKeyGeneratorBuilder::<Kerl>::default()
+                            .with_security_level(WotsSecurityLevel::Medium)
+                            .build()
+                            .map_err(|_| Error::HashError)?
+                            .generate_from_seed(s, *index as usize)
+                            .map_err(|_| Error::HashError)?;
+                        // TODO create signature
+                    }
+                }
+
                 last_index = (Some(index), (unlock_blocks.len() - 1) as isize);
             }
         }
@@ -276,19 +294,33 @@ impl SignedTransactionBuilder {
                 outputs,
                 payload: self.payload,
             },
-            // TODO signed the transaction
             unlock_block_count: unlock_blocks.len() as u8,
             unlock_blocks,
         })
     }
 }
 
-pub struct Seed(bee_signing_ext::binary::Seed);
+use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
+
+pub enum Seed {
+    Ed25519(bee_signing_ext::binary::Seed),
+    Wots(bee_signing::ternary::seed::Seed),
+}
 
 impl Seed {
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Ok(Self(
+    pub fn from_ed25519_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Ok(Seed::Ed25519(
             bee_signing_ext::binary::Seed::from_bytes(bytes).map_err(|_| Error::HashError)?,
+        ))
+    }
+
+    pub fn from_wots_tritbuf(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
+        if trits.as_i8_slice().len() != 49 {
+            return Err(Error::HashError);
+        }
+        let trits: TritBuf<T1B1Buf> = trits.encode();
+        Ok(Seed::Wots(
+            bee_signing::ternary::seed::Seed::from_trits(trits).map_err(|_| Error::HashError)?,
         ))
     }
 }
