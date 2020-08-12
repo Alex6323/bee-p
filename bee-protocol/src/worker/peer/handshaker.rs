@@ -11,6 +11,7 @@
 
 use crate::{
     config::slice_eq,
+    event::HandshakeCompleted,
     message::{
         messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
     },
@@ -211,6 +212,8 @@ impl PeerHandshakerWorker {
                         info!("[{}] Handshake completed.", self.peer.address);
 
                         Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
+
+                        Protocol::get().bus.dispatch(HandshakeCompleted(address));
 
                         Protocol::send_heartbeat(
                             self.peer.epid,

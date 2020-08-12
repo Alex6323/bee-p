@@ -11,6 +11,10 @@
 
 use crate::Milestone;
 
+use bee_network::Address;
+
+pub struct HandshakeCompleted(pub Address);
+
 pub struct LastMilestone(pub Milestone);
 
 pub struct LastSolidMilestone(pub Milestone);
