@@ -10,13 +10,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common_ext::event::Bus;
-use bee_protocol::event::TpsMetrics;
+use bee_protocol::event::TpsMetricsUpdated;
 
 use log::info;
 
 use std::sync::Arc;
 
-fn tps(metrics: &TpsMetrics) {
+fn tps(metrics: &TpsMetricsUpdated) {
     info!(
         "incoming {} new {} known {} stale {} invalid {} outgoing {}",
         metrics.incoming, metrics.new, metrics.known, metrics.stale, metrics.invalid, metrics.outgoing

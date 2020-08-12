@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    event::{LastMilestone, LastSolidMilestone},
+    event::{LastMilestoneChanged, LastSolidMilestoneChanged},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::tangle,
@@ -103,12 +103,14 @@ where
                 // already vadidated.
                 if let Some(meta) = tangle().get_metadata(&milestone.hash) {
                     if meta.flags.is_solid() {
-                        Protocol::get().bus.dispatch(LastSolidMilestone(milestone.clone()));
+                        Protocol::get()
+                            .bus
+                            .dispatch(LastSolidMilestoneChanged(milestone.clone()));
                     }
                 }
 
                 if milestone.index > tangle().get_last_milestone_index() {
-                    Protocol::get().bus.dispatch(LastMilestone(milestone));
+                    Protocol::get().bus.dispatch(LastMilestoneChanged(milestone));
                 }
 
                 // TODO only trigger if index == last solid index ?

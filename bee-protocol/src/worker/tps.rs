@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{event::TpsMetrics, protocol::Protocol};
+use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 
 use bee_common::worker::Error as WorkerError;
 
@@ -42,7 +42,7 @@ impl TpsWorker {
         let invalid = Protocol::get().metrics.invalid_transactions();
         let outgoing = Protocol::get().metrics.transactions_sent();
 
-        Protocol::get().bus.dispatch(TpsMetrics {
+        Protocol::get().bus.dispatch(TpsMetricsUpdated {
             incoming: incoming - self.incoming,
             new: new - self.new,
             known: known - self.known,

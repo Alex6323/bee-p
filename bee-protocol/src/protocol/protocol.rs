@@ -11,7 +11,7 @@
 
 use crate::{
     config::ProtocolConfig,
-    event::{LastMilestone, LastSolidMilestone},
+    event::{LastMilestoneChanged, LastSolidMilestoneChanged},
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
@@ -277,12 +277,12 @@ impl Protocol {
     }
 }
 
-fn handle_last_milestone(last_milestone: &LastMilestone) {
+fn handle_last_milestone(last_milestone: &LastMilestoneChanged) {
     info!("New milestone #{}.", *last_milestone.0.index);
     tangle().update_last_milestone_index(last_milestone.0.index);
 }
 
-fn handle_last_solid_milestone(last_solid_milestone: &LastSolidMilestone) {
+fn handle_last_solid_milestone(last_solid_milestone: &LastSolidMilestoneChanged) {
     tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
     // TODO block_on ?
     block_on(Protocol::broadcast_heartbeat(

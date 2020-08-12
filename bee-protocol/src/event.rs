@@ -15,11 +15,11 @@ use bee_network::Address;
 
 pub struct HandshakeCompleted(pub Address);
 
-pub struct LastMilestone(pub Milestone);
+pub struct LastMilestoneChanged(pub Milestone);
 
-pub struct LastSolidMilestone(pub Milestone);
+pub struct LastSolidMilestoneChanged(pub Milestone);
 
-pub struct TpsMetrics {
+pub struct TpsMetricsUpdated {
     pub incoming: u64,
     pub new: u64,
     pub known: u64,
