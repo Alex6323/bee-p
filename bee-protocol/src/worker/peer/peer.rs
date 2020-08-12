@@ -137,8 +137,9 @@ impl PeerWorker {
                 debug!("[{}] Reading Heartbeat...", self.peer.address);
                 match tlv_from_bytes::<Heartbeat>(&header, bytes) {
                     Ok(message) => {
+                        // TODO Drop connection if autopeered and can't help it to sync depending on indexes.
                         self.peer
-                            .set_solid_milestone_index(message.solid_milestone_index.into());
+                            .set_last_solid_milestone_index(message.last_solid_milestone_index.into());
                         self.peer
                             .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
 

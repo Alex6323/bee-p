@@ -40,7 +40,7 @@ use std::{ptr, sync::Arc};
 use async_std::task::{block_on, spawn};
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
-use log::{info, warn};
+use log::{debug, info, warn};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -125,8 +125,9 @@ impl Protocol {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
-        Protocol::get().bus.add_listener(handle_last_milestone);
-        Protocol::get().bus.add_listener(handle_last_solid_milestone);
+        Protocol::get().bus.add_listener(on_last_solid_milestone_changed);
+        // Protocol::get().bus.add_listener(on_snapshot_milestone_changed);
+        Protocol::get().bus.add_listener(on_last_milestone_changed);
 
         shutdown.add_worker_shutdown(
             transaction_worker_shutdown_tx,
@@ -277,13 +278,32 @@ impl Protocol {
     }
 }
 
-fn handle_last_milestone(last_milestone: &LastMilestoneChanged) {
+fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
     info!("New milestone #{}.", *last_milestone.0.index);
     tangle().update_last_milestone_index(last_milestone.0.index);
+
+    // TODO block_on ?
+    // TODO uncomment on Chrysalis Pt1.
+    // block_on(Protocol::broadcast_heartbeat(
+    //     tangle().get_last_solid_milestone_index(),
+    //     tangle().get_snapshot_milestone_index(),
+    // ));
 }
 
-fn handle_last_solid_milestone(last_solid_milestone: &LastSolidMilestoneChanged) {
+// TODO Chrysalis
+// fn on_snapshot_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
+//     // TODO block_on ?
+//     // TODO uncomment on Chrysalis Pt1.
+//     // block_on(Protocol::broadcast_heartbeat(
+//     //     tangle().get_last_solid_milestone_index(),
+//     //     tangle().get_snapshot_milestone_index(),
+//     // ));
+// }
+
+fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
+    debug!("New solid milestone #{}.", *last_solid_milestone.0.index);
     tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
+
     // TODO block_on ?
     block_on(Protocol::broadcast_heartbeat(
         last_solid_milestone.0.index,

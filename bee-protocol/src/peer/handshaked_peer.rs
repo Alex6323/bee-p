@@ -28,7 +28,7 @@ pub struct HandshakedPeer {
     pub(crate) epid: EndpointId,
     pub(crate) address: Address,
     pub(crate) metrics: ProtocolMetrics,
-    pub(crate) solid_milestone_index: AtomicU32,
+    pub(crate) last_solid_milestone_index: AtomicU32,
     pub(crate) snapshot_milestone_index: AtomicU32,
     pub(crate) milestone_request: (mpsc::Sender<MilestoneRequest>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) transaction: (mpsc::Sender<TransactionMessage>, Mutex<Option<oneshot::Sender<()>>>),
@@ -49,7 +49,7 @@ impl HandshakedPeer {
             epid,
             address,
             metrics: ProtocolMetrics::default(),
-            solid_milestone_index: AtomicU32::new(0),
+            last_solid_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
             milestone_request,
             transaction,
@@ -58,12 +58,12 @@ impl HandshakedPeer {
         }
     }
 
-    pub(crate) fn set_solid_milestone_index(&self, index: MilestoneIndex) {
-        self.solid_milestone_index.store(*index, Ordering::Relaxed);
+    pub(crate) fn set_last_solid_milestone_index(&self, index: MilestoneIndex) {
+        self.last_solid_milestone_index.store(*index, Ordering::Relaxed);
     }
 
-    pub(crate) fn solid_milestone_index(&self) -> MilestoneIndex {
-        self.solid_milestone_index.load(Ordering::Relaxed).into()
+    pub(crate) fn last_solid_milestone_index(&self) -> MilestoneIndex {
+        self.last_solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
     pub(crate) fn set_snapshot_milestone_index(&self, index: MilestoneIndex) {

@@ -66,7 +66,7 @@ impl TransactionRequesterWorker {
             self.counter += 1;
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
-                if index > peer.snapshot_milestone_index() && index <= peer.solid_milestone_index() {
+                if index > peer.snapshot_milestone_index() && index <= peer.last_solid_milestone_index() {
                     SenderWorker::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
