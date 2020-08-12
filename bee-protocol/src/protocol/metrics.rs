@@ -13,12 +13,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Default)]
 pub struct ProtocolMetrics {
-    invalid_transactions_received: AtomicU64,
-    stale_transactions_received: AtomicU64,
-    new_transactions_received: AtomicU64,
-    known_transactions_received: AtomicU64,
+    invalid_transactions: AtomicU64,
+    stale_transactions: AtomicU64,
+    new_transactions: AtomicU64,
+    known_transactions: AtomicU64,
 
-    invalid_messages_received: AtomicU64,
+    invalid_messages: AtomicU64,
 
     milestone_requests_received: AtomicU64,
     transactions_received: AtomicU64,
@@ -38,44 +38,44 @@ impl ProtocolMetrics {
 }
 
 impl ProtocolMetrics {
-    pub fn invalid_transactions_received(&self) -> u64 {
-        self.invalid_transactions_received.load(Ordering::Relaxed)
+    pub fn invalid_transactions(&self) -> u64 {
+        self.invalid_transactions.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn invalid_transactions_received_inc(&self) -> u64 {
-        self.invalid_transactions_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn invalid_transactions_inc(&self) -> u64 {
+        self.invalid_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn stale_transactions_received(&self) -> u64 {
-        self.stale_transactions_received.load(Ordering::Relaxed)
+    pub fn stale_transactions(&self) -> u64 {
+        self.stale_transactions.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn stale_transactions_received_inc(&self) -> u64 {
-        self.stale_transactions_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn stale_transactions_inc(&self) -> u64 {
+        self.stale_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn new_transactions_received(&self) -> u64 {
-        self.new_transactions_received.load(Ordering::Relaxed)
+    pub fn new_transactions(&self) -> u64 {
+        self.new_transactions.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn new_transactions_received_inc(&self) -> u64 {
-        self.new_transactions_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn new_transactions_inc(&self) -> u64 {
+        self.new_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn known_transactions_received(&self) -> u64 {
-        self.known_transactions_received.load(Ordering::Relaxed)
+    pub fn known_transactions(&self) -> u64 {
+        self.known_transactions.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn known_transactions_received_inc(&self) -> u64 {
-        self.known_transactions_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn known_transactions_inc(&self) -> u64 {
+        self.known_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn invalid_messages_received(&self) -> u64 {
-        self.invalid_messages_received.load(Ordering::Relaxed)
+    pub fn invalid_messages(&self) -> u64 {
+        self.invalid_messages.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn invalid_messages_received_inc(&self) -> u64 {
-        self.invalid_messages_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn invalid_messages_inc(&self) -> u64 {
+        self.invalid_messages.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn milestone_requests_received(&self) -> u64 {
@@ -149,42 +149,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn protocol_metrics_transactions_received_test() {
+    fn protocol_metrics_transactions() {
         let metrics = ProtocolMetrics::default();
 
-        assert_eq!(metrics.invalid_transactions_received(), 0);
-        assert_eq!(metrics.stale_transactions_received(), 0);
-        assert_eq!(metrics.new_transactions_received(), 0);
-        assert_eq!(metrics.known_transactions_received(), 0);
+        assert_eq!(metrics.invalid_transactions(), 0);
+        assert_eq!(metrics.stale_transactions(), 0);
+        assert_eq!(metrics.new_transactions(), 0);
+        assert_eq!(metrics.known_transactions(), 0);
 
-        metrics.invalid_transactions_received_inc();
-        metrics.stale_transactions_received_inc();
-        metrics.new_transactions_received_inc();
-        metrics.known_transactions_received_inc();
+        metrics.invalid_transactions_inc();
+        metrics.stale_transactions_inc();
+        metrics.new_transactions_inc();
+        metrics.known_transactions_inc();
 
-        assert_eq!(metrics.invalid_transactions_received(), 1);
-        assert_eq!(metrics.stale_transactions_received(), 1);
-        assert_eq!(metrics.new_transactions_received(), 1);
-        assert_eq!(metrics.known_transactions_received(), 1);
+        assert_eq!(metrics.invalid_transactions(), 1);
+        assert_eq!(metrics.stale_transactions(), 1);
+        assert_eq!(metrics.new_transactions(), 1);
+        assert_eq!(metrics.known_transactions(), 1);
     }
 
     #[test]
-    fn protocol_metrics_messages_received_test() {
+    fn protocol_metrics_messages_received() {
         let metrics = ProtocolMetrics::default();
 
-        assert_eq!(metrics.invalid_messages_received(), 0);
+        assert_eq!(metrics.invalid_messages(), 0);
         assert_eq!(metrics.milestone_requests_received(), 0);
         assert_eq!(metrics.transactions_received(), 0);
         assert_eq!(metrics.transaction_requests_received(), 0);
         assert_eq!(metrics.heartbeats_received(), 0);
 
-        metrics.invalid_messages_received_inc();
+        metrics.invalid_messages_inc();
         metrics.milestone_requests_received_inc();
         metrics.transactions_received_inc();
         metrics.transaction_requests_received_inc();
         metrics.heartbeats_received_inc();
 
-        assert_eq!(metrics.invalid_messages_received(), 1);
+        assert_eq!(metrics.invalid_messages(), 1);
         assert_eq!(metrics.milestone_requests_received(), 1);
         assert_eq!(metrics.transactions_received(), 1);
         assert_eq!(metrics.transaction_requests_received(), 1);
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn protocol_metrics_messages_sent_test() {
+    fn protocol_metrics_messages_sent() {
         let metrics = ProtocolMetrics::default();
 
         assert_eq!(metrics.milestone_requests_sent(), 0);

@@ -9,15 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::worker::Error as WorkerError;
 use bee_common_ext::event::Bus;
 use bee_protocol::event::TpsMetrics;
 
-use async_std::{future::ready, prelude::*};
-use futures::channel::oneshot::Receiver;
 use log::info;
 
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 fn tps(metrics: &TpsMetrics) {
     info!(

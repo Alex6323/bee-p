@@ -11,6 +11,8 @@
 
 //! Heartbeat message of the protocol version 2
 
+// TODO comment/uncomment when Chrysalis Pt1 is released.
+
 use crate::message::Message;
 
 use std::{convert::TryInto, ops::Range};

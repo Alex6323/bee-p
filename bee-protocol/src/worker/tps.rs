@@ -36,10 +36,10 @@ impl TpsWorker {
 
     fn tps(&mut self) {
         let incoming = Protocol::get().metrics.transactions_received();
-        let new = Protocol::get().metrics.new_transactions_received();
-        let known = Protocol::get().metrics.known_transactions_received();
-        let stale = Protocol::get().metrics.stale_transactions_received();
-        let invalid = Protocol::get().metrics.invalid_transactions_received();
+        let new = Protocol::get().metrics.new_transactions();
+        let known = Protocol::get().metrics.known_transactions();
+        let stale = Protocol::get().metrics.stale_transactions();
+        let invalid = Protocol::get().metrics.invalid_transactions();
         let outgoing = Protocol::get().metrics.transactions_sent();
 
         Protocol::get().bus.dispatch(TpsMetrics {

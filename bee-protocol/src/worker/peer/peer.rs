@@ -82,8 +82,8 @@ impl PeerWorker {
                     Err(e) => {
                         warn!("[{}] Reading MilestoneRequest failed: {:?}.", self.peer.address, e);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                        self.peer.metrics.invalid_messages_inc();
+                        Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
@@ -105,8 +105,8 @@ impl PeerWorker {
                     Err(e) => {
                         warn!("[{}] Reading TransactionMessage failed: {:?}.", self.peer.address, e);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                        self.peer.metrics.invalid_messages_inc();
+                        Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
@@ -128,8 +128,8 @@ impl PeerWorker {
                     Err(e) => {
                         warn!("[{}] Reading TransactionRequest failed: {:?}.", self.peer.address, e);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                        self.peer.metrics.invalid_messages_inc();
+                        Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
@@ -148,8 +148,8 @@ impl PeerWorker {
                     Err(e) => {
                         warn!("[{}] Reading Heartbeat failed: {:?}.", self.peer.address, e);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                        self.peer.metrics.invalid_messages_inc();
+                        Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
@@ -159,8 +159,8 @@ impl PeerWorker {
                     self.peer.address, header.message_type
                 );
 
-                self.peer.metrics.invalid_messages_received_inc();
-                Protocol::get().metrics.invalid_messages_received_inc();
+                self.peer.metrics.invalid_messages_inc();
+                Protocol::get().metrics.invalid_messages_inc();
             }
         };
 

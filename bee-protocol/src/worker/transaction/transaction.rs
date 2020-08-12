@@ -27,11 +27,7 @@ use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use bytemuck::cast_slice;
-use futures::{
-    channel::{mpsc, oneshot},
-    stream::StreamExt,
-    SinkExt,
-};
+use futures::{channel::mpsc, stream::StreamExt, SinkExt};
 use log::{debug, error, info};
 
 type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionWorkerEvent>>;
@@ -79,7 +75,7 @@ impl TransactionWorker {
 
         if !self.cache.insert(&transaction_message.bytes) {
             debug!("Transaction already received.");
-            Protocol::get().metrics.known_transactions_received_inc();
+            Protocol::get().metrics.known_transactions_inc();
             return;
         }
 
@@ -94,21 +90,21 @@ impl TransactionWorker {
                     ),
                     Err(e) => {
                         debug!("Invalid transaction: {:?}.", e);
-                        Protocol::get().metrics.invalid_transactions_received_inc();
+                        Protocol::get().metrics.invalid_transactions_inc();
                         return;
                     }
                 }
             }
             Err(e) => {
                 debug!("Invalid transaction: {:?}.", e);
-                Protocol::get().metrics.invalid_transactions_received_inc();
+                Protocol::get().metrics.invalid_transactions_inc();
                 return;
             }
         };
 
         if hash.weight() < Protocol::get().config.mwm {
             debug!("Insufficient weight magnitude: {}.", hash.weight());
-            Protocol::get().metrics.invalid_transactions_received_inc();
+            Protocol::get().metrics.invalid_transactions_inc();
             return;
         }
 
@@ -123,7 +119,7 @@ impl TransactionWorker {
 
         // store transaction
         if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
-            Protocol::get().metrics.new_transactions_received_inc();
+            Protocol::get().metrics.new_transactions_inc();
 
             if !tangle().is_synced() && Protocol::get().requested.is_empty() {
                 Protocol::trigger_milestone_solidification().await;
@@ -177,7 +173,7 @@ impl TransactionWorker {
                 };
             }
         } else {
-            Protocol::get().metrics.known_transactions_received_inc();
+            Protocol::get().metrics.known_transactions_inc();
         }
     }
 }
@@ -195,7 +191,7 @@ mod tests {
     use bee_network::{NetworkConfig, Url};
 
     use async_std::task::{block_on, spawn};
-    use futures::sink::SinkExt;
+    use futures::{channel::oneshot, sink::SinkExt};
 
     use std::sync::Arc;
 

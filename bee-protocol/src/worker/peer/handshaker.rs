@@ -231,13 +231,13 @@ impl PeerHandshakerWorker {
                 Err(e) => {
                     warn!("[{}] Reading Handshake failed: {:?}.", self.peer.address, e);
 
-                    Protocol::get().metrics.invalid_messages_received_inc();
+                    Protocol::get().metrics.invalid_messages_inc();
                 }
             }
         } else {
             warn!("[{}] Ignoring messages until fully handshaked.", self.peer.address);
 
-            Protocol::get().metrics.invalid_messages_received_inc();
+            Protocol::get().metrics.invalid_messages_inc();
         }
 
         Ok(())
