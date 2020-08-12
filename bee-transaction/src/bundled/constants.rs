@@ -21,20 +21,6 @@ pub struct Field {
     pub tryte_offset: Offset,
 }
 
-impl Field {
-    pub fn byte_start(&self) -> usize {
-        self.trit_offset.start / 5
-    }
-
-    pub fn byte_length(&self) -> usize {
-        if self.trit_offset.length % 5 == 0 {
-            self.trit_offset.length / 5
-        } else {
-            self.trit_offset.length / 5 + 1
-        }
-    }
-}
-
 macro_rules! offsets_from_trits {
     ($start:expr, $length:expr) => {
         Field {
