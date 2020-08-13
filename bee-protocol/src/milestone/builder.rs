@@ -112,7 +112,7 @@ where
             Ok(sig) => sig,
             Err(_) => unreachable!(),
         }
-        .with_index(*self.index as u64);
+        .with_index(*self.index as usize);
         let hash = self
             .transactions
             .get(self.transactions.len() - 2)

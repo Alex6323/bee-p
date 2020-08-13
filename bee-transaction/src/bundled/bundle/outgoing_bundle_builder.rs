@@ -262,7 +262,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     pub fn sign(
         mut self,
         seed: &Seed,
-        inputs: &[(u64, Address, WotsSecurityLevel)],
+        inputs: &[(usize, Address, WotsSecurityLevel)],
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingSigned>, OutgoingBundleBuilderError> {
         // Safe to unwrap `get` because bundle is sealed.
         // Safe to unwrap `normalize` because we know the bundle hash has a valid size.
