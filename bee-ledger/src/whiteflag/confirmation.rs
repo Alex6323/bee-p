@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::worker::Error as WorkerError;
-use bee_protocol::Milestone;
+use bee_protocol::{Milestone, MilestoneIndex};
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -18,19 +18,36 @@ use futures::{
     select,
     stream::StreamExt,
 };
-use log::info;
+use log::{error, info};
+
+enum Error {
+    NonContiguousMilestone,
+}
 
 pub(crate) struct LedgerConfirmationWorkerEvent(pub(crate) Milestone);
 
-pub(crate) struct LedgerConfirmationWorker {}
+pub(crate) struct LedgerConfirmationWorker {
+    confirmed_index: MilestoneIndex,
+}
 
 impl LedgerConfirmationWorker {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(confirmed_index: MilestoneIndex) -> Self {
+        Self { confirmed_index }
     }
 
-    fn confirm(&self, milestone: Milestone) {
+    fn confirm(&self, milestone: Milestone) -> Result<(), Error> {
+        if milestone.index() != MilestoneIndex(self.confirmed_index.0 + 1) {
+            error!(
+                "Tried to confirm {} on top of {}, aborting.",
+                milestone.index().0,
+                self.confirmed_index.0
+            );
+            return Err(Error::NonContiguousMilestone);
+        }
+
         info!("Confirming milestone {}.", milestone.index().0);
+
+        Ok(())
     }
 
     pub async fn run(
@@ -48,7 +65,9 @@ impl LedgerConfirmationWorker {
                 _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
                     if let Some(LedgerConfirmationWorkerEvent(milestone)) = event {
-                        self.confirm(milestone)
+                        if let Err(_) = self.confirm(milestone) {
+                            break;
+                        }
                     }
                 }
             }

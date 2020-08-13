@@ -32,7 +32,6 @@ use futures::{
     select,
     sink::SinkExt,
     stream::{Fuse, StreamExt},
-    FutureExt,
 };
 use log::{debug, error, info, warn};
 use thiserror::Error;
@@ -111,6 +110,7 @@ impl NodeBuilder {
         };
 
         // TODO this is temporary
+        let snapshot_index = local_snapshot.metadata().index();
         let snapshot_timestamp = local_snapshot.metadata().timestamp();
 
         info!("Initializing network...");
@@ -120,7 +120,12 @@ impl NodeBuilder {
         spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
-        bee_ledger::init(local_snapshot.into_state().into_balances(), bus.clone(), &mut shutdown);
+        bee_ledger::init(
+            snapshot_index,
+            local_snapshot.into_state().into_balances(),
+            bus.clone(),
+            &mut shutdown,
+        );
 
         block_on(Protocol::init(
             self.config.protocol.clone(),
@@ -137,7 +142,6 @@ impl NodeBuilder {
         info!("Initialized.");
 
         Ok(Node {
-            config: self.config,
             network,
             events: events.fuse(),
             shutdown,
@@ -148,7 +152,6 @@ impl NodeBuilder {
 
 /// The main node type.
 pub struct Node {
-    config: NodeConfig,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
     events: Fuse<EventSubscriber>,

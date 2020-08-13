@@ -16,7 +16,7 @@ pub(crate) use confirmation::{LedgerConfirmationWorker, LedgerConfirmationWorker
 
 use bee_common::shutdown::Shutdown;
 use bee_common_ext::event::Bus;
-use bee_protocol::event::LastSolidMilestoneChanged;
+use bee_protocol::{event::LastSolidMilestoneChanged, MilestoneIndex};
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
@@ -51,7 +51,7 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
     }
 }
 
-pub(crate) fn init(bus: Arc<Bus>, shutdown: &mut Shutdown) {
+pub(crate) fn init(snapshot_index: u32, bus: Arc<Bus>, shutdown: &mut Shutdown) {
     if unsafe { !WHITE_FLAG.is_null() } {
         warn!("Already initialized.");
         return;
@@ -63,7 +63,8 @@ pub(crate) fn init(bus: Arc<Bus>, shutdown: &mut Shutdown) {
     shutdown.add_worker_shutdown(
         ledger_confirmation_worker_shutdown_tx,
         spawn(
-            LedgerConfirmationWorker::new().run(ledger_confirmation_worker_rx, ledger_confirmation_worker_shutdown_rx),
+            LedgerConfirmationWorker::new(MilestoneIndex(snapshot_index))
+                .run(ledger_confirmation_worker_rx, ledger_confirmation_worker_shutdown_rx),
         ),
     );
 

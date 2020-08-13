@@ -25,6 +25,7 @@ use futures::channel::{mpsc, oneshot};
 use std::{collections::HashMap, sync::Arc};
 
 pub fn init(
+    snapshot_index: u32,
     // TODO get concrete type
     state: HashMap<Address, u64>,
     bus: Arc<Bus>,
@@ -39,7 +40,7 @@ pub fn init(
         spawn(LedgerStateWorker::new(state).run(ledger_state_worker_rx, ledger_state_worker_shutdown_rx)),
     );
 
-    whiteflag::init(bus, shutdown);
+    whiteflag::init(snapshot_index, bus, shutdown);
 
     ledger_state_worker_tx
 }
