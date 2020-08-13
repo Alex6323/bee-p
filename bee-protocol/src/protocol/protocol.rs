@@ -47,6 +47,8 @@ static mut PROTOCOL: *const Protocol = ptr::null();
 pub struct Protocol {
     pub(crate) config: ProtocolConfig,
     pub(crate) network: Network,
+    // TODO temporary
+    pub(crate) local_snapshot_timestamp: u64,
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
@@ -63,7 +65,13 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub async fn init(config: ProtocolConfig, network: Network, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) {
+    pub async fn init(
+        config: ProtocolConfig,
+        network: Network,
+        local_snapshot_timestamp: u64,
+        bus: Arc<Bus<'static>>,
+        shutdown: &mut Shutdown,
+    ) {
         if unsafe { !PROTOCOL.is_null() } {
             warn!("Already initialized.");
             return;
@@ -106,6 +114,7 @@ impl Protocol {
         let protocol = Protocol {
             config,
             network: network.clone(),
+            local_snapshot_timestamp,
             bus,
             metrics: ProtocolMetrics::new(),
             transaction_worker: transaction_worker_tx,

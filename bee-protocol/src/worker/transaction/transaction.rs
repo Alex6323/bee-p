@@ -30,6 +30,11 @@ use bytemuck::cast_slice;
 use futures::{channel::mpsc, stream::StreamExt, SinkExt};
 use log::{debug, error, info};
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Timeframe to allow past or future transactions, 10 minutes in milliseconds.
+const ALLOWED_TIMESTAMP_WINDOW_MS: u64 = 10 * 60 * 1000;
+
 type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionWorkerEvent>>;
 
 pub(crate) struct TransactionWorkerEvent {
@@ -70,6 +75,25 @@ impl TransactionWorker {
         Ok(())
     }
 
+    fn validate_timestamp(&self, transaction: &Transaction) -> (bool, bool) {
+        // snapshotTimestamp := tangle.GetSnapshotInfo().Timestamp
+        let timestamp = transaction.get_timestamp();
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Clock may have gone backwards")
+            .as_millis() as u64;
+
+        let past = now - ALLOWED_TIMESTAMP_WINDOW_MS;
+        let future = now + ALLOWED_TIMESTAMP_WINDOW_MS;
+
+        // (is_timestamp_valid, should_broadcast)
+        (
+            timestamp >= Protocol::get().local_snapshot_timestamp && timestamp < future,
+            timestamp >= past,
+        )
+    }
+
     async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_message: TransactionMessage) {
         debug!("Processing received transaction...");
 
@@ -108,12 +132,22 @@ impl TransactionWorker {
             return;
         }
 
+        let requested = Protocol::get().requested.contains_key(&hash);
+
+        let (is_timestamp_valid, should_broadcast) = self.validate_timestamp(&transaction);
+
+        if !requested && !is_timestamp_valid {
+            debug!("Stale transaction, invalid timestamp.");
+            Protocol::get().metrics.stale_transactions_inc();
+            return;
+        }
+
         let mut metadata = TransactionMetadata::new();
 
         if transaction.is_tail() {
             metadata.flags.set_tail();
         }
-        if Protocol::get().requested.contains_key(&hash) {
+        if requested {
             metadata.flags.set_requested();
         }
 
@@ -129,7 +163,11 @@ impl TransactionWorker {
                 Some((hash, index)) => {
                     Protocol::trigger_transaction_solidification(hash, index).await;
                 }
-                None => Protocol::broadcast_transaction_message(Some(from), transaction_message).await,
+                None => {
+                    if should_broadcast {
+                        Protocol::broadcast_transaction_message(Some(from), transaction_message).await
+                    }
+                }
             };
 
             if transaction.address().eq(&Protocol::get().config.coordinator.public_key)
@@ -209,7 +247,7 @@ mod tests {
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        block_on(Protocol::init(protocol_config, network, bus, &mut shutdown));
+        block_on(Protocol::init(protocol_config, network, 0, bus, &mut shutdown));
 
         assert_eq!(tangle().len(), 0);
 

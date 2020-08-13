@@ -74,7 +74,7 @@ impl NodeBuilder {
         spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
 
         info!("Reading snapshot file...");
-        let snapshot_state = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
+        let local_snapshot = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
             Ok(local_snapshot) => {
                 info!(
                     "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
@@ -104,7 +104,7 @@ impl NodeBuilder {
                     // TODO request ?
                 }
 
-                local_snapshot.into_state()
+                local_snapshot
             }
             Err(e) => {
                 error!(
@@ -116,12 +116,16 @@ impl NodeBuilder {
             }
         };
 
+        // TODO this is temporary
+        let snapshot_timestamp = local_snapshot.metadata().timestamp();
+
         info!("Initializing ledger...");
-        bee_ledger::init(snapshot_state.into_balances(), &mut shutdown);
+        bee_ledger::init(local_snapshot.into_state().into_balances(), &mut shutdown);
 
         block_on(Protocol::init(
             self.config.protocol.clone(),
             network.clone(),
+            snapshot_timestamp,
             bus.clone(),
             &mut shutdown,
         ));
