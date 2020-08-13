@@ -15,15 +15,20 @@ mod whiteflag;
 pub use state::{LedgerStateWorker, LedgerStateWorkerEvent};
 
 use bee_common::shutdown::Shutdown;
+use bee_common_ext::event::Bus;
 use bee_transaction::bundled::Address;
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-// TODO get concrete type
-pub fn init(state: HashMap<Address, u64>, shutdown: &mut Shutdown) -> mpsc::Sender<LedgerStateWorkerEvent> {
+pub fn init(
+    // TODO get concrete type
+    state: HashMap<Address, u64>,
+    bus: Arc<Bus>,
+    shutdown: &mut Shutdown,
+) -> mpsc::Sender<LedgerStateWorkerEvent> {
     // TODO config
     let (ledger_state_worker_tx, ledger_state_worker_rx) = mpsc::channel(1000);
     let (ledger_state_worker_shutdown_tx, ledger_state_worker_shutdown_rx) = oneshot::channel();
@@ -33,17 +38,7 @@ pub fn init(state: HashMap<Address, u64>, shutdown: &mut Shutdown) -> mpsc::Send
         spawn(LedgerStateWorker::new(state).run(ledger_state_worker_rx, ledger_state_worker_shutdown_rx)),
     );
 
-    // TODO config
-    let (_, ledger_confirmation_worker_rx) = mpsc::channel(1000);
-    let (ledger_confirmation_worker_shutdown_tx, ledger_confirmation_worker_shutdown_rx) = oneshot::channel();
-
-    shutdown.add_worker_shutdown(
-        ledger_confirmation_worker_shutdown_tx,
-        spawn(
-            whiteflag::LedgerConfirmationWorker::new()
-                .run(ledger_confirmation_worker_rx, ledger_confirmation_worker_shutdown_rx),
-        ),
-    );
+    whiteflag::init(bus, shutdown);
 
     ledger_state_worker_tx
 }

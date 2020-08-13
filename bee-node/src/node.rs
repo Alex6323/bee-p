@@ -120,7 +120,7 @@ impl NodeBuilder {
         spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
-        bee_ledger::init(local_snapshot.into_state().into_balances(), &mut shutdown);
+        bee_ledger::init(local_snapshot.into_state().into_balances(), bus.clone(), &mut shutdown);
 
         block_on(Protocol::init(
             self.config.protocol.clone(),
