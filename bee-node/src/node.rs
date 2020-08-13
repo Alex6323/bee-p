@@ -162,12 +162,14 @@ impl Node {
     pub fn run_loop(&mut self) {
         info!("Running.");
 
-        let mut shutdown = shutdown_listener().fuse();
+        // TODO temporarily disabled because conflicting with receiving messages
+        // let mut shutdown = shutdown_listener().fuse();
 
         block_on(async {
             loop {
                 select! {
-                    _ = shutdown => break,
+                    // TODO temporarily disabled because conflicting with receiving messages
+                    // _ = shutdown => break,
                     event = self.events.next() => {
                         if let Some(event) = event {
                             debug!("Received event {}.", event);
