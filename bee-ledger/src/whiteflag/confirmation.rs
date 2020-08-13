@@ -35,7 +35,7 @@ impl LedgerConfirmationWorker {
         Self { confirmed_index }
     }
 
-    fn confirm(&self, milestone: Milestone) -> Result<(), Error> {
+    fn confirm(&mut self, milestone: Milestone) -> Result<(), Error> {
         if milestone.index() != MilestoneIndex(self.confirmed_index.0 + 1) {
             error!(
                 "Tried to confirm {} on top of {}, aborting.",
@@ -47,11 +47,13 @@ impl LedgerConfirmationWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
+        self.confirmed_index = milestone.index();
+
         Ok(())
     }
 
     pub async fn run(
-        self,
+        mut self,
         receiver: mpsc::UnboundedReceiver<LedgerConfirmationWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) -> Result<(), WorkerError> {
