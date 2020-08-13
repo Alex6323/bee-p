@@ -64,14 +64,8 @@ impl NodeBuilder {
         let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
-        info!("Initializing network...");
-        let (network, events) = bee_network::init(self.config.network, &mut shutdown);
-
         info!("Initializing tangle...");
         tangle::init();
-
-        info!("Starting static peer manager...");
-        spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
 
         info!("Reading snapshot file...");
         let local_snapshot = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
@@ -118,6 +112,12 @@ impl NodeBuilder {
 
         // TODO this is temporary
         let snapshot_timestamp = local_snapshot.metadata().timestamp();
+
+        info!("Initializing network...");
+        let (network, events) = bee_network::init(self.config.network, &mut shutdown);
+
+        info!("Starting static peer manager...");
+        spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
         bee_ledger::init(local_snapshot.into_state().into_balances(), &mut shutdown);
