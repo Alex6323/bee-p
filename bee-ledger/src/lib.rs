@@ -9,12 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod confirmation;
-mod merkle;
 mod state;
+mod whiteflag;
 
-pub use confirmation::{LedgerConfirmationWorker, LedgerConfirmationWorkerEvent};
-pub(crate) use merkle::Merkle;
 pub use state::{LedgerStateWorker, LedgerStateWorkerEvent};
 
 use bee_common::shutdown::Shutdown;
@@ -43,7 +40,8 @@ pub fn init(state: HashMap<Address, u64>, shutdown: &mut Shutdown) -> mpsc::Send
     shutdown.add_worker_shutdown(
         ledger_confirmation_worker_shutdown_tx,
         spawn(
-            LedgerConfirmationWorker::new().run(ledger_confirmation_worker_rx, ledger_confirmation_worker_shutdown_rx),
+            whiteflag::LedgerConfirmationWorker::new()
+                .run(ledger_confirmation_worker_rx, ledger_confirmation_worker_shutdown_rx),
         ),
     );
 
