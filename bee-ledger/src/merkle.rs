@@ -18,8 +18,8 @@ use std::marker::PhantomData;
 use bytemuck::cast_slice;
 use digest::Digest;
 
-const LEAF_PREFIX: u8 = 0x00;
-const NODE_PREFIX: u8 = 0x01;
+const LEAF_HASH_PREFIX: u8 = 0x00;
+const NODE_HASH_PREFIX: u8 = 0x01;
 
 #[derive(Default)]
 pub(crate) struct Merkle<H: Default + Digest> {
@@ -38,7 +38,7 @@ impl<H: Default + Digest> Merkle<H> {
     fn leaf(&mut self, hash: Hash) -> Vec<u8> {
         let mut hasher = H::default();
 
-        hasher.update([LEAF_PREFIX]);
+        hasher.update([LEAF_HASH_PREFIX]);
         hasher.update(cast_slice(hash.to_inner().encode::<T5B1Buf>().as_i8_slice()));
         (&hasher.finalize_reset()).to_vec()
     }
@@ -46,10 +46,11 @@ impl<H: Default + Digest> Merkle<H> {
     fn node(&mut self, hashes: &[Hash]) -> Vec<u8> {
         let mut hasher = H::default();
         let n = hashes.len() as u32 - 1;
+        // Largest power of two less than `n`.
         let k = 1 << (32 - n.leading_zeros() - 1);
 
-        hasher.update([NODE_PREFIX]);
-        hasher.update(self.hash(&hashes[0..k]));
+        hasher.update([NODE_HASH_PREFIX]);
+        hasher.update(self.hash(&hashes[..k]));
         hasher.update(self.hash(&hashes[k..]));
         (&hasher.finalize_reset()).to_vec()
     }
