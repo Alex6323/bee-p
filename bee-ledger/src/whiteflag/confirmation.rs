@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::worker::Error as WorkerError;
-use bee_crypto::ternary::Hash;
+use bee_protocol::Milestone;
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -20,20 +20,22 @@ use futures::{
 };
 use log::info;
 
-pub struct LedgerConfirmationWorkerEvent(Hash);
+pub(crate) struct LedgerConfirmationWorkerEvent(pub(crate) Milestone);
 
-pub struct LedgerConfirmationWorker {}
+pub(crate) struct LedgerConfirmationWorker {}
 
 impl LedgerConfirmationWorker {
     pub fn new() -> Self {
         Self {}
     }
 
-    fn confirm(&self, hash: Hash) {}
+    fn confirm(&self, milestone: Milestone) {
+        info!("Confirming milestone {}.", milestone.index().0);
+    }
 
     pub async fn run(
         self,
-        receiver: mpsc::Receiver<LedgerConfirmationWorkerEvent>,
+        receiver: mpsc::UnboundedReceiver<LedgerConfirmationWorkerEvent>,
         shutdown: oneshot::Receiver<()>,
     ) -> Result<(), WorkerError> {
         info!("Running.");
@@ -45,8 +47,8 @@ impl LedgerConfirmationWorker {
             select! {
                 _ = shutdown_fused => break,
                 event = receiver_fused.next() => {
-                    if let Some(LedgerConfirmationWorkerEvent(hash)) = event {
-                        self.confirm(hash)
+                    if let Some(LedgerConfirmationWorkerEvent(milestone)) = event {
+                        self.confirm(milestone)
                     }
                 }
             }

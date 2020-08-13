@@ -12,19 +12,52 @@
 mod confirmation;
 mod merkle;
 
-pub use confirmation::{LedgerConfirmationWorker, LedgerConfirmationWorkerEvent};
+pub(crate) use confirmation::{LedgerConfirmationWorker, LedgerConfirmationWorkerEvent};
 
 use bee_common::shutdown::Shutdown;
 use bee_common_ext::event::Bus;
+use bee_protocol::event::LastSolidMilestoneChanged;
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
+use log::warn;
 
-use std::sync::Arc;
+use std::{ptr, sync::Arc};
+
+struct WhiteFlag {
+    confirmation_sender: mpsc::UnboundedSender<LedgerConfirmationWorkerEvent>,
+}
+
+static mut WHITE_FLAG: *const WhiteFlag = ptr::null();
+
+fn get() -> &'static WhiteFlag {
+    if unsafe { WHITE_FLAG.is_null() } {
+        panic!("Uninitialized whiteflag.");
+    } else {
+        unsafe { &*WHITE_FLAG }
+    }
+}
+
+fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
+    if let Err(e) = get()
+        .confirmation_sender
+        .unbounded_send(LedgerConfirmationWorkerEvent(last_solid_milestone.0.clone()))
+    {
+        warn!(
+            "Sending solid milestone {:?} to confirmation failed: {:?}.",
+            last_solid_milestone.0.index(),
+            e
+        );
+    }
+}
 
 pub(crate) fn init(bus: Arc<Bus>, shutdown: &mut Shutdown) {
-    // TODO config
-    let (_, ledger_confirmation_worker_rx) = mpsc::channel(1000);
+    if unsafe { !WHITE_FLAG.is_null() } {
+        warn!("Already initialized.");
+        return;
+    }
+
+    let (ledger_confirmation_worker_tx, ledger_confirmation_worker_rx) = mpsc::unbounded();
     let (ledger_confirmation_worker_shutdown_tx, ledger_confirmation_worker_shutdown_rx) = oneshot::channel();
 
     shutdown.add_worker_shutdown(
@@ -33,4 +66,14 @@ pub(crate) fn init(bus: Arc<Bus>, shutdown: &mut Shutdown) {
             LedgerConfirmationWorker::new().run(ledger_confirmation_worker_rx, ledger_confirmation_worker_shutdown_rx),
         ),
     );
+
+    let white_flag = WhiteFlag {
+        confirmation_sender: ledger_confirmation_worker_tx,
+    };
+
+    unsafe {
+        WHITE_FLAG = Box::leak(white_flag.into()) as *const _;
+    }
+
+    bus.add_listener(on_last_solid_milestone_changed);
 }

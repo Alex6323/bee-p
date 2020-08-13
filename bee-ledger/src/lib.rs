@@ -12,7 +12,8 @@
 mod state;
 mod whiteflag;
 
-pub use state::{LedgerStateWorker, LedgerStateWorkerEvent};
+use state::LedgerStateWorker;
+pub use state::LedgerStateWorkerEvent;
 
 use bee_common::shutdown::Shutdown;
 use bee_common_ext::event::Bus;
