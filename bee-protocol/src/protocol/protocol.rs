@@ -313,8 +313,8 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
     debug!("New solid milestone #{}.", *last_solid_milestone.0.index);
     tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
 
-    // TODO block_on ?
-    block_on(Protocol::broadcast_heartbeat(
+    // TODO block_on ? spawn ?
+    spawn(Protocol::broadcast_heartbeat(
         last_solid_milestone.0.index,
         tangle().get_snapshot_milestone_index(),
     ));
