@@ -23,7 +23,7 @@ use std::collections::HashSet;
 /// associated data and metadata.
 pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
-    initial: Hash,
+    mut hash: Hash,
     matches: Match,
     mut apply: Apply,
 ) where
@@ -31,19 +31,14 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
     Match: Fn(&TxRef, &Metadata) -> bool,
     Apply: FnMut(&Hash, &TxRef, &Metadata),
 {
-    // TODO: how much space is reasonable to preallocate?
-    let mut parents = vec![initial];
+    while let Some(vtx) = tangle.vertices.get(&hash) {
+        let vtx = vtx.value();
 
-    while let Some(ref hash) = parents.pop() {
-        if let Some(vtx) = tangle.vertices.get(&hash) {
-            let vtx = vtx.value();
-
-            if !matches(vtx.transaction(), vtx.metadata()) {
-                break;
-            } else {
-                apply(&hash, vtx.transaction(), vtx.metadata());
-                parents.push(*vtx.trunk());
-            }
+        if !matches(vtx.transaction(), vtx.metadata()) {
+            break;
+        } else {
+            apply(&hash, vtx.transaction(), vtx.metadata());
+            hash = *vtx.trunk();
         }
     }
 }
@@ -54,7 +49,7 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
 /// associated data and metadata.
 pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
-    initial: Hash,
+    root: Hash,
     matches: Match,
     mut apply: Apply,
 ) where
@@ -62,7 +57,8 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
     Match: Fn(&TxRef, &Metadata) -> bool,
     Apply: FnMut(&Hash, &TxRef, &Metadata),
 {
-    let mut children = vec![initial];
+    // TODO could be simplified like visit_parents_follow_trunk ? Meaning no vector ?
+    let mut children = vec![root];
 
     while let Some(ref parent_hash) = children.pop() {
         if let Some(parent) = tangle.vertices.get(parent_hash) {
@@ -89,7 +85,7 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     tangle: &'a Tangle<Metadata>,
-    initial: Hash,
+    root: Hash,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
@@ -102,7 +98,7 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     let mut parents = Vec::new();
     let mut visited = HashSet::new();
 
-    parents.push(initial);
+    parents.push(root);
 
     while let Some(hash) = parents.pop() {
         if !visited.contains(&hash) {
@@ -133,7 +129,7 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     tangle: &'a Tangle<Metadata>,
-    initial: Hash,
+    root: Hash,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
@@ -143,7 +139,7 @@ pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     Apply: FnMut(&Hash, &TxRef, &Metadata),
     ElseApply: FnMut(&Hash),
 {
-    let mut children = vec![initial];
+    let mut children = vec![root];
     let mut visited = HashSet::new();
 
     while let Some(hash) = children.last() {

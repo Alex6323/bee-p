@@ -37,7 +37,7 @@ use bee_signing::ternary::wots::WotsPublicKey;
 
 use std::{ptr, sync::Arc};
 
-use async_std::task::{block_on, spawn};
+use async_std::task::spawn;
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
