@@ -71,11 +71,11 @@ where
     // TODO TEST
     // TODO common with outgoing bundle builder
     fn calculate_hash(&self) -> TritBuf {
-        // TODO Impl
         let mut sponge = E::default();
 
-        for _builder in &self.transactions.0 {
-            // sponge.absorb(builder.address.0);
+        for transaction in &self.transactions.0 {
+            // TODO handle res
+            sponge.absorb(&transaction.essence());
         }
 
         sponge
@@ -119,6 +119,7 @@ where
 
         let last_index = self.transactions.len() - 1;
 
+        // TODO avoid using a vec
         let bundle_hash_calculated = self.calculate_hash().as_i8_slice().to_vec();
 
         let first_branch = self.transactions.0[0].branch();

@@ -66,6 +66,9 @@ pub const INDEX_TRIT_LEN: usize = 27;
 pub const HASH_TRIT_LEN: usize = 243;
 pub const NONCE_TRIT_LEN: usize = 81;
 
+pub const ESSENCE_TRIT_LEN: usize =
+    ADDRESS_TRIT_LEN + VALUE_TRIT_LEN + TAG_TRIT_LEN + TIMESTAMP_TRIT_LEN + INDEX_TRIT_LEN + INDEX_TRIT_LEN;
+
 pub(crate) const PAYLOAD: Field = offsets_from_trits!(0, PAYLOAD_TRIT_LEN);
 pub(crate) const ADDRESS: Field = offsets_from_previous_field!(PAYLOAD, ADDRESS_TRIT_LEN);
 pub(crate) const VALUE: Field = offsets_from_previous_field!(ADDRESS, VALUE_TRIT_LEN);
