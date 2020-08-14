@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::whiteflag::load_bundle;
+
 use bee_common::worker::Error as WorkerError;
 use bee_protocol::{Milestone, MilestoneIndex};
 
@@ -46,6 +48,8 @@ impl LedgerConfirmationWorker {
         }
 
         info!("Confirming milestone {}.", milestone.index().0);
+
+        load_bundle(milestone.hash());
 
         self.confirmed_index = milestone.index();
 
