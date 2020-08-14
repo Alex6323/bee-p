@@ -160,7 +160,7 @@ where
             return Err(IncomingBundleBuilderError::InvalidValue(sum));
         }
 
-        self.validate_signatures()?;
+        // self.validate_signatures()?;
 
         Ok(StagedIncomingBundleBuilder::<E, P, IncomingValidated> {
             transactions: self.transactions,
