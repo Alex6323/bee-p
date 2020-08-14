@@ -12,16 +12,27 @@
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
 use bee_tangle::traversal::visit_parents_follow_trunk;
+use bee_transaction::bundled::BundledTransactionField;
 
 pub(crate) enum Error {
     IncompleteBundle,
 }
 
 pub(crate) fn load_bundle(hash: &Hash) -> Result<(), Error> {
+    let mut done = false;
+
     visit_parents_follow_trunk(
         tangle(),
         *hash,
-        |tx, _| tx.index() != tx.last_index(),
+        |tx, _| {
+            if done {
+                return true;
+            }
+            if tx.index().to_inner() > tx.last_index().to_inner() {
+                done = true;
+            }
+            done
+        },
         |hash, tx, meta| {
             println!(
                 "{:?}",

@@ -24,11 +24,11 @@ use std::collections::HashSet;
 pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
     mut hash: Hash,
-    matches: Match,
+    mut matches: Match,
     mut apply: Apply,
 ) where
     Metadata: Clone + Copy,
-    Match: Fn(&TxRef, &Metadata) -> bool,
+    Match: FnMut(&TxRef, &Metadata) -> bool,
     Apply: FnMut(&Hash, &TxRef, &Metadata),
 {
     while let Some(vtx) = tangle.vertices.get(&hash) {
