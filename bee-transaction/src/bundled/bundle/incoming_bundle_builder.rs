@@ -28,7 +28,8 @@ pub enum IncomingBundleBuilderError {
     InvalidValue(i64),
     InvalidSignature,
     InvalidBundleHash,
-    InvalidBranchInconsistency,
+    InvalidBranch,
+    InvalidTrunk,
 }
 
 pub trait IncomingBundleBuilderStage {}
@@ -140,17 +141,21 @@ where
             }
 
             sum += *transaction.value.to_inner();
+
             if sum.abs() > IOTA_SUPPLY {
                 return Err(IncomingBundleBuilderError::InvalidValue(sum));
             }
 
-            if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec())
-            {
+            if bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec()) {
                 return Err(IncomingBundleBuilderError::InvalidBundleHash);
             }
 
-            if index > 0 as usize && transaction.branch().ne(first_branch) {
-                return Err(IncomingBundleBuilderError::InvalidBranchInconsistency);
+            if index > 0 && index < last_index && transaction.branch().ne(first_branch) {
+                return Err(IncomingBundleBuilderError::InvalidBranch);
+            }
+
+            if index == last_index && transaction.trunk().ne(first_branch) {
+                return Err(IncomingBundleBuilderError::InvalidTrunk);
             }
 
             // TODO - for each transaction's hash check that it is its prev trunk
