@@ -12,34 +12,28 @@
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
 use bee_tangle::traversal::visit_parents_follow_trunk;
-use bee_transaction::bundled::BundledTransactionField;
+use bee_transaction::bundled::{Bundle, BundledTransactionField, IncomingBundleBuilder, IncomingBundleBuilderError};
 
-pub(crate) enum Error {
-    IncompleteBundle,
-}
-
-pub(crate) fn load_bundle(hash: &Hash) -> Result<(), Error> {
+pub(crate) fn load_bundle(hash: &Hash) -> Result<Bundle, IncomingBundleBuilderError> {
+    let mut bundle_builder = IncomingBundleBuilder::new();
     let mut done = false;
 
     visit_parents_follow_trunk(
         tangle(),
         *hash,
-        |tx, _| {
+        |transaction, _| {
             if done {
                 return false;
             }
-            if tx.index().to_inner() == tx.last_index().to_inner() {
+            if transaction.index().to_inner() == transaction.last_index().to_inner() {
                 done = true;
             }
             true
         },
-        |hash, tx, meta| {
-            println!(
-                "{:?}",
-                hash.iter_trytes().map(|trit| char::from(trit)).collect::<String>()
-            );
+        |_, transaction, _| {
+            bundle_builder.push((*(*transaction)).clone());
         },
     );
 
-    Ok(())
+    Ok(bundle_builder.validate()?.build())
 }

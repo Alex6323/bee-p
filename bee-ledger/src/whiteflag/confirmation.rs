@@ -13,6 +13,7 @@ use crate::whiteflag::load_bundle;
 
 use bee_common::worker::Error as WorkerError;
 use bee_protocol::{Milestone, MilestoneIndex};
+use bee_transaction::bundled::IncomingBundleBuilderError;
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -24,6 +25,7 @@ use log::{error, info};
 
 enum Error {
     NonContiguousMilestone,
+    InvalidBundle(IncomingBundleBuilderError),
 }
 
 pub(crate) struct LedgerConfirmationWorkerEvent(pub(crate) Milestone);
@@ -49,7 +51,21 @@ impl LedgerConfirmationWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        load_bundle(milestone.hash());
+        match load_bundle(milestone.hash()) {
+            Ok(bundle) => bundle,
+            Err(e) => {
+                error!(
+                    "Tried to confirm invalid bundle with tail {}: {:?}.",
+                    milestone
+                        .hash()
+                        .iter_trytes()
+                        .map(|trit| char::from(trit))
+                        .collect::<String>(),
+                    e
+                );
+                return Err(Error::InvalidBundle(e));
+            }
+        };
 
         self.confirmed_index = milestone.index();
 
