@@ -26,12 +26,12 @@ pub(crate) fn load_bundle(hash: &Hash) -> Result<(), Error> {
         *hash,
         |tx, _| {
             if done {
-                return true;
+                return false;
             }
             if tx.index().to_inner() > tx.last_index().to_inner() {
                 done = true;
             }
-            done
+            true
         },
         |hash, tx, meta| {
             println!(
