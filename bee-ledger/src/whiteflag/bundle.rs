@@ -28,7 +28,7 @@ pub(crate) fn load_bundle(hash: &Hash) -> Result<(), Error> {
             if done {
                 return false;
             }
-            if tx.index().to_inner() > tx.last_index().to_inner() {
+            if tx.index().to_inner() == tx.last_index().to_inner() {
                 done = true;
             }
             true
