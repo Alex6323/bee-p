@@ -38,7 +38,7 @@ impl LedgerConfirmationWorker {
     fn confirm(&mut self, milestone: Milestone) -> Result<(), Error> {
         if milestone.index() != MilestoneIndex(self.confirmed_index.0 + 1) {
             error!(
-                "Tried to confirm {} on top of {}, aborting.",
+                "Tried to confirm {} on top of {}.",
                 milestone.index().0,
                 self.confirmed_index.0
             );
@@ -68,7 +68,7 @@ impl LedgerConfirmationWorker {
                 event = receiver_fused.next() => {
                     if let Some(LedgerConfirmationWorkerEvent(milestone)) = event {
                         if let Err(_) = self.confirm(milestone) {
-                            break;
+                            panic!("Error while confirming milestone, aborting.");
                         }
                     }
                 }
