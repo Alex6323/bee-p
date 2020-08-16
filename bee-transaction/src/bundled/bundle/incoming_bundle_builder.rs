@@ -15,6 +15,7 @@ use crate::{
 };
 
 use bee_crypto::ternary::sponge::{Kerl, Sponge};
+use bee_crypto::ternary::Hash;
 use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, Signature};
 use bee_ternary::{T1B1Buf, TritBuf};
 
@@ -57,6 +58,24 @@ where
 {
     pub fn len(&self) -> usize {
         self.transactions.len()
+    }
+}
+
+// Panics if the builder is empty!
+impl<E, P, S> Vertex for StagedIncomingBundleBuilder<E, P, S>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+    S: IncomingBundleBuilderStage,
+{
+    type Hash = Hash;
+
+    fn trunk(&self) -> &Hash {
+        self.transactions.0.last().unwrap().trunk()
+    }
+
+    fn branch(&self) -> &Hash {
+        self.transactions.0.last().unwrap().branch()
     }
 }
 
