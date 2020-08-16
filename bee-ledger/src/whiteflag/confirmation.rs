@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::whiteflag::load_bundle;
+use crate::whiteflag::traversal::visit_bundles_dfs;
 
 use bee_common::worker::Error as WorkerError;
 use bee_protocol::{Milestone, MilestoneIndex};
@@ -51,21 +51,32 @@ impl LedgerConfirmationWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        match load_bundle(milestone.hash()) {
-            Ok(bundle) => bundle,
-            Err(e) => {
-                error!(
-                    "Tried to confirm invalid bundle with tail {}: {:?}.",
-                    milestone
-                        .hash()
-                        .iter_trytes()
-                        .map(|trit| char::from(trit))
-                        .collect::<String>(),
-                    e
-                );
-                return Err(Error::InvalidBundle(e));
-            }
-        };
+        // TODO temporary unwrap
+        match visit_bundles_dfs(*milestone.hash(), |hash, bundle| {
+            println!(
+                "New confirmed bundle! {}",
+                hash.iter_trytes().map(|trit| char::from(trit)).collect::<String>(),
+            );
+        }) {
+            Ok(_) => {}
+            Err(e) => error!("ERROR: {:?}", e),
+        }
+
+        // match load_bundle(milestone.hash()) {
+        //     Ok(bundle) => bundle,
+        //     Err(e) => {
+        //         error!(
+        //             "Tried to confirm invalid bundle with tail {}: {:?}.",
+        //             milestone
+        //                 .hash()
+        //                 .iter_trytes()
+        //                 .map(|trit| char::from(trit))
+        //                 .collect::<String>(),
+        //             e
+        //         );
+        //         return Err(Error::InvalidBundle(e));
+        //     }
+        // };
 
         self.confirmed_index = milestone.index();
 
