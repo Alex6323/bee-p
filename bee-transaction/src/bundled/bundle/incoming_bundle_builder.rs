@@ -49,6 +49,17 @@ pub struct StagedIncomingBundleBuilder<E, P, S> {
 
 pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
 
+impl<E, P, S> StagedIncomingBundleBuilder<E, P, S>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+    S: IncomingBundleBuilderStage,
+{
+    pub fn len(&self) -> usize {
+        self.transactions.len()
+    }
+}
+
 impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
 where
     E: Sponge + Default,
