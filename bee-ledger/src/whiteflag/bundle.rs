@@ -12,7 +12,7 @@
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
 use bee_tangle::traversal::visit_parents_follow_trunk;
-use bee_transaction::bundled::{Bundle, BundledTransactionField, IncomingBundleBuilder, IncomingBundleBuilderError};
+use bee_transaction::bundled::{Bundle, IncomingBundleBuilder, IncomingBundleBuilderError};
 
 pub(crate) fn load_bundle(hash: &Hash) -> Result<Bundle, IncomingBundleBuilderError> {
     let mut bundle_builder = IncomingBundleBuilder::new();
@@ -25,7 +25,7 @@ pub(crate) fn load_bundle(hash: &Hash) -> Result<Bundle, IncomingBundleBuilderEr
             if done {
                 return false;
             }
-            if transaction.index().to_inner() == transaction.last_index().to_inner() {
+            if transaction.index() == transaction.last_index() {
                 done = true;
             }
             true
