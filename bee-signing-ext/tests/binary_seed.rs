@@ -7,12 +7,12 @@ fn test_new_seed() {
     assert_ne!(seed.as_bytes(), Seed::rand().as_bytes());
 
     assert_eq!(
-        PrivateKey::generate_from_seed(&seed, 0).unwrap().as_bytes(),
-        PrivateKey::generate_from_seed(&seed, 0).unwrap().as_bytes()
+        PrivateKey::generate_from_seed(&seed, "m").unwrap().as_bytes(),
+        PrivateKey::generate_from_seed(&seed, "m").unwrap().as_bytes()
     );
     assert_eq!(
-        PrivateKey::generate_from_seed(&seed, 1337).unwrap().as_bytes(),
-        PrivateKey::generate_from_seed(&seed, 1337).unwrap().as_bytes()
+        PrivateKey::generate_from_seed(&seed, "m/0H/1H/2H/2H/1000000000H").unwrap().as_bytes(),
+        PrivateKey::generate_from_seed(&seed, "m/0H/1H/2H/2H/1000000000H").unwrap().as_bytes()
     );
 }
 
@@ -38,7 +38,7 @@ fn to_bytes_from_bytes() {
 
     assert_eq!(seed1.as_bytes(), seed2.as_bytes());
 
-    let private_key1 = PrivateKey::generate_from_seed(&seed1, 7).unwrap();
+    let private_key1 = PrivateKey::generate_from_seed(&seed1, "m/0H/2147483647H/1H/2147483646H/2H").unwrap();
     let private_key2 = PrivateKey::from_bytes(&private_key1.to_bytes()).unwrap();
 
     assert_eq!(private_key1.as_bytes(), private_key2.as_bytes());
@@ -52,7 +52,7 @@ fn to_bytes_from_bytes() {
 #[test]
 fn seed_sign_and_verify() {
     let seed = Seed::rand();
-    let private_key = PrivateKey::generate_from_seed(&seed, 7).unwrap();
+    let private_key = PrivateKey::generate_from_seed(&seed, "m/0H/2147483647H/1H/2147483646H/2H").unwrap();
     let public_key = private_key.generate_public_key();
     let signature = private_key.sign(&[1, 3, 3, 8]).unwrap();
     public_key.verify(&[1, 3, 3, 8], &signature).unwrap();

@@ -13,12 +13,9 @@
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 
-use blake2::{
-    digest::{Update, VariableOutput},
-    VarBlake2b,
-};
 use ed25519_dalek::{ExpandedSecretKey, Verifier, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
+use slip10::{derive_key_from_path, Curve};
 use thiserror::Error;
 use zeroize::Zeroize;
 
@@ -89,13 +86,9 @@ impl PrivateKey {
     /// # Arguments
     ///
     /// * `seed`    A seed to deterministically derive a private key from.
-    pub fn generate_from_seed(seed: &Seed, index: u64) -> Result<Self, Error> {
-        let mut subseed = seed.0.to_bytes();
-        let mut hash = VarBlake2b::new(32).map_err(|_| Error::PrivateKeyError)?;
-        hash.update(index.to_le_bytes());
-        hash.finalize_variable(|ha| {
-            subseed.iter_mut().zip(ha.iter()).for_each(|(i, h)| *i = *i ^ *h);
-        });
+    pub fn generate_from_seed(seed: &Seed, path: &str) -> Result<Self, Error> {
+        let subseed = derive_key_from_path(seed.as_bytes(), Curve::Ed25519, path).map_err(|_| Error::PrivateKeyError)?.key;
+
         Ok(Self(
             ed25519_dalek::SecretKey::from_bytes(&subseed).map_err(|_| Error::PrivateKeyError)?,
         ))
