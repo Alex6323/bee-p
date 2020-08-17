@@ -92,6 +92,9 @@ where
             None => {
                 if !tangle().is_solid_entry_point(hash) {
                     return Err(Error::MissingHash);
+                } else {
+                    visited.insert(hash.clone());
+                    hashes.pop();
                 }
             }
         }
