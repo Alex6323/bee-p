@@ -71,15 +71,14 @@ impl MsTangle {
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
-            self.propagate_state(&hash);
+            self.propagate_state(hash);
             return Some(tx);
         }
         None
     }
 
     // NOTE: not implemented as an async worker atm, but it makes things much easier
-    #[inline]
-    fn propagate_solid_flag(&self, root: Hash) {
+    fn propagate_solid(&self, root: Hash) {
         let mut children = vec![root];
 
         while let Some(ref hash) = children.pop() {
@@ -127,33 +126,33 @@ impl MsTangle {
     // missing. in this case, if the incoming transaction is solid, otrsi and ytrsi values need to be propagated to the
     // the future cone since they might not have
     // otrsi and ytrsi values set.
-    fn propagate_state(&self, root: &Hash) {
+    fn propagate_state(&self, root: Hash) {
         let mut visited = HashSet::new();
-        let mut to_visit = vec![*root];
+        let mut to_visit = vec![root];
 
-        while let Some(tx_hash) = to_visit.pop() {
-            if visited.contains(&tx_hash) {
+        while let Some(ref hash) = to_visit.pop() {
+            if visited.contains(hash) {
                 continue;
             } else {
-                visited.insert(tx_hash.clone());
+                visited.insert(*hash);
             }
 
             // get parents of transaction
-            let tx_ref = tangle().get(&tx_hash).unwrap();
+            let tx_ref = self.inner.get(&hash).unwrap();
             let trunk = tx_ref.trunk();
             let branch = tx_ref.branch();
 
             if self.is_solid_transaction(trunk) && self.is_solid_transaction(branch) {
-                self.inner.update_metadata(&tx_hash, |metadata| {
+                self.inner.update_metadata(&hash, |metadata| {
 
-                    if !self.is_solid_transaction(&tx_hash) {
+                    if !self.is_solid_transaction(&hash) {
                         metadata.flags.set_solid();
                         // This is possibly not sufficient as there is no guarantee a milestone has been validated
                         // before being solidified, we then also need to check when a milestone gets validated if it's
                         // already solid.
                         if metadata.flags.is_milestone() {
                             Protocol::get().bus.dispatch(LastSolidMilestoneChanged(Milestone {
-                                hash: tx_hash,
+                                hash: *hash,
                                 index: metadata.milestone_index,
                             }));
                         }
@@ -161,65 +160,41 @@ impl MsTangle {
                             .duration_since(UNIX_EPOCH)
                             .expect("Clock may have gone backwards")
                             .as_millis() as u64;
-                        println!("solidfied")
                     }
 
-                    // get otrsi and ytrsi from trunk
-                    let (trunk_otrsi, trunk_ytrsi) = {
-                        if self.is_solid_entry_point(tx_ref.trunk()) {
-                            let index = *self.solid_entry_points.get(tx_ref.trunk()).unwrap().value();
-                            (index, index)
-                        } else {
-                            (
-                                self.otrsi(&tx_ref.trunk()).unwrap(),
-                                self.ytrsi(&tx_ref.trunk()).unwrap(),
-                            )
-                        }
-                    };
-
-                    // get otrsi and ytrsi from branch
-                    let (branch_otrsi, branch_ytrsi) = {
-                        if self.is_solid_entry_point(tx_ref.branch()) {
-                            let index = *self.solid_entry_points.get(tx_ref.branch()).unwrap().value();
-                            (index, index)
-                        } else {
-                            (
-                                self.otrsi(&tx_ref.branch()).unwrap(),
-                                self.ytrsi(&tx_ref.branch()).unwrap(),
-                            )
-                        }
-                    };
-
                     // get best otrsi and ytrsi from parents
-                    let otrsi = max(trunk_otrsi, branch_otrsi);
-                    let ytrsi = min(trunk_ytrsi, branch_ytrsi);
-
-                    metadata.otrsi = Some(otrsi);
-                    metadata.ytrsi = Some(ytrsi);
-
-                    println!("otrsi and ytrsi values set")
+                    metadata.otrsi = Some(max(self.otrsi(trunk).unwrap(), self.otrsi(branch).unwrap()));
+                    metadata.ytrsi = Some(min(self.ytrsi(trunk).unwrap(), self.ytrsi(branch).unwrap()));
 
                 });
-            }
 
-            for child in self.inner.get_children(&tx_hash) {
-                to_visit.push(child);
-            }
+                for child in self.inner.get_children(&hash) {
+                    to_visit.push(child);
+                }
 
+            }
         }
     }
 
     fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
-        match self.get_metadata(&hash) {
-            Some(metadata) => metadata.ytrsi,
-            None => None,
+        if self.is_solid_entry_point(hash) {
+            Some(*self.solid_entry_points.get(hash).unwrap().value())
+        } else {
+            match self.get_metadata(hash) {
+                Some(metadata) => metadata.ytrsi,
+                None => None,
+            }
         }
     }
 
     fn otrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
-        match self.get_metadata(&hash) {
-            Some(metadata) => metadata.otrsi,
-            None => None,
+        if self.is_solid_entry_point(hash) {
+            Some(*self.solid_entry_points.get(hash).unwrap().value())
+        } else {
+            match self.get_metadata(hash) {
+                Some(metadata) => metadata.otrsi,
+                None => None,
+            }
         }
     }
 
