@@ -267,15 +267,20 @@ fn shutdown_listener() -> oneshot::Receiver<()> {
 }
 
 fn print_banner_and_version() {
+    let commit = if BEE_GIT_COMMIT.is_empty() {
+        "".to_owned()
+    } else {
+        "-".to_owned() + &BEE_GIT_COMMIT[0..7]
+    };
     println!(
-        "\n{}\tv{}-{}\n{}\n",
+        "\n{}\n   v{}{}\n",
         " ██████╗░███████╗███████╗
  ██╔══██╗██╔════╝██╔════╝
- ██████╦╝█████╗░░█████╗░░",
-        BEE_VERSION,
-        &BEE_GIT_COMMIT[0..7],
-        " ██╔══██╗██╔══╝░░██╔══╝░░
+ ██████╦╝█████╗░░█████╗░░
+ ██╔══██╗██╔══╝░░██╔══╝░░
  ██████╦╝███████╗███████╗
  ╚═════╝░╚══════╝╚══════╝",
+        BEE_VERSION,
+        commit,
     );
 }
