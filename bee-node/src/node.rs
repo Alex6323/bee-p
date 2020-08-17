@@ -67,7 +67,7 @@ impl NodeBuilder {
         tangle::init();
 
         info!("Reading snapshot file...");
-        let local_snapshot = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
+        let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()) {
             Ok(local_snapshot) => {
                 info!(
                     "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
