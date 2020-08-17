@@ -41,11 +41,13 @@ impl TransactionSolidifierWorker {
         traversal::visit_parents_depth_first(
             tangle(),
             root,
-            |hash, _, metadata| !metadata.flags.is_solid() && !Protocol::get().requested.contains_key(&hash),
+            |hash, _, metadata| {
+                !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+            },
             |_, _, _| {},
             |missing_hash| {
                 if !tangle().is_solid_entry_point(missing_hash)
-                    && !Protocol::get().requested.contains_key(&missing_hash)
+                    && !Protocol::get().requested_transactions.contains_key(&missing_hash)
                 {
                     missing_hashes.insert(*missing_hash);
                 }

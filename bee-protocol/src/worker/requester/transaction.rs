@@ -48,7 +48,7 @@ impl TransactionRequesterWorker {
     }
 
     async fn process_request(&mut self, hash: Hash, index: MilestoneIndex) {
-        if Protocol::get().requested.contains_key(&hash) {
+        if Protocol::get().requested_transactions.contains_key(&hash) {
             return;
         }
 
@@ -56,7 +56,7 @@ impl TransactionRequesterWorker {
             return;
         }
 
-        Protocol::get().requested.insert(hash, index);
+        Protocol::get().requested_transactions.insert(hash, index);
 
         let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
 

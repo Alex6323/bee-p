@@ -61,7 +61,7 @@ pub struct Protocol {
     pub(crate) milestone_solidifier_worker: mpsc::Sender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::Sender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
-    pub(crate) requested: DashMap<Hash, MilestoneIndex>,
+    pub(crate) requested_transactions: DashMap<Hash, MilestoneIndex>,
 }
 
 impl Protocol {
@@ -127,7 +127,7 @@ impl Protocol {
             milestone_solidifier_worker: milestone_solidifier_worker_tx,
             broadcaster_worker: broadcaster_worker_tx,
             peer_manager: PeerManager::new(network.clone()),
-            requested: Default::default(),
+            requested_transactions: Default::default(),
         };
 
         unsafe {
