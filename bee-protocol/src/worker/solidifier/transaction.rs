@@ -35,16 +35,18 @@ impl TransactionSolidifierWorker {
 
     // TODO is the index even needed ? We request one milestone at a time ? No PriorityQueue ?
 
-    async fn solidify(&self, hash: Hash, index: MilestoneIndex) -> bool {
+    async fn solidify(&self, root: Hash, index: MilestoneIndex) -> bool {
         let mut missing_hashes = HashSet::new();
 
         traversal::visit_parents_depth_first(
             tangle(),
-            hash,
-            |_, metadata| !metadata.flags.is_solid() && !Protocol::get().requested.contains_key(&hash),
+            root,
+            |hash, _, metadata| !metadata.flags.is_solid() && !Protocol::get().requested.contains_key(&hash),
             |_, _, _| {},
             |missing_hash| {
-                if !tangle().is_solid_entry_point(missing_hash) && !Protocol::get().requested.contains_key(&hash) {
+                if !tangle().is_solid_entry_point(missing_hash)
+                    && !Protocol::get().requested.contains_key(&missing_hash)
+                {
                     missing_hashes.insert(*missing_hash);
                 }
             },

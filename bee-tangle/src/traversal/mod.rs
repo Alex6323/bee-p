@@ -91,7 +91,7 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     mut else_apply: ElseApply,
 ) where
     Metadata: Clone + Copy,
-    Match: Fn(&TxRef, &Metadata) -> bool,
+    Match: Fn(&Hash, &TxRef, &Metadata) -> bool,
     Apply: FnMut(&Hash, &TxRef, &Metadata),
     ElseApply: FnMut(&Hash),
 {
@@ -108,7 +108,7 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
 
                     apply(&hash, vtx.transaction(), vtx.metadata());
 
-                    if matches(vtx.transaction(), vtx.metadata()) {
+                    if matches(&hash, vtx.transaction(), vtx.metadata()) {
                         parents.push(*vtx.trunk());
                         parents.push(*vtx.branch());
                     }
