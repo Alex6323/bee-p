@@ -20,6 +20,11 @@ pub struct TransactionMetadata {
     pub(crate) arrival_timestamp: u64,
     pub(crate) solidification_timestamp: u64,
     pub(crate) milestone_index: MilestoneIndex,
+    // maybe merge milestone_index and milestone_cone; keep it like that in the mean time to avoid conflicts;
+    pub(crate) milestone_cone_index: Option<MilestoneIndex>,
+    pub(crate) otrsi: Option<MilestoneIndex>,
+    pub(crate) ytrsi: Option<MilestoneIndex>,
+    pub(crate) num_selected_by_tsa: u8,
 }
 
 impl TransactionMetadata {
