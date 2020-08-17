@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::whiteflag::traversal::visit_bundles_dfs;
+use crate::{
+    event::MilestoneConfirmed,
+    whiteflag::{traversal::visit_bundles_dfs, WhiteFlag},
+};
 
 use bee_common::worker::Error as WorkerError;
 use bee_protocol::{Milestone, MilestoneIndex};
@@ -79,6 +82,8 @@ impl LedgerConfirmationWorker {
         // };
 
         self.confirmed_index = milestone.index();
+
+        WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
 
         Ok(())
     }

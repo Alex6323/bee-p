@@ -12,6 +12,8 @@
 mod state;
 mod whiteflag;
 
+pub mod event;
+
 use state::LedgerStateWorker;
 pub use state::LedgerStateWorkerEvent;
 
@@ -28,7 +30,7 @@ pub fn init(
     snapshot_index: u32,
     // TODO get concrete type
     state: HashMap<Address, u64>,
-    bus: Arc<Bus>,
+    bus: Arc<Bus<'static>>,
     shutdown: &mut Shutdown,
 ) -> mpsc::Sender<LedgerStateWorkerEvent> {
     // TODO config
