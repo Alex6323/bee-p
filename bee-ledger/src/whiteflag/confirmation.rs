@@ -11,12 +11,14 @@
 
 use crate::{
     event::MilestoneConfirmed,
-    whiteflag::{traversal::visit_bundles_dfs, WhiteFlag},
+    whiteflag::{
+        traversal::{visit_bundles_dfs, Error as TraversalError},
+        WhiteFlag,
+    },
 };
 
 use bee_common::worker::Error as WorkerError;
 use bee_protocol::{Milestone, MilestoneIndex};
-use bee_transaction::bundled::IncomingBundleBuilderError;
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -28,7 +30,7 @@ use log::{error, info};
 
 enum Error {
     NonContiguousMilestone,
-    InvalidBundle(IncomingBundleBuilderError),
+    InvalidPastCone(TraversalError),
 }
 
 pub(crate) struct LedgerConfirmationWorkerEvent(pub(crate) Milestone);
@@ -54,32 +56,16 @@ impl LedgerConfirmationWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        // TODO temporary unwrap
-        match visit_bundles_dfs(*milestone.hash(), |hash, bundle| {
-            println!(
-                "New confirmed bundle! {}",
-                hash.iter_trytes().map(|trit| char::from(trit)).collect::<String>(),
-            );
+        if let Err(e) = visit_bundles_dfs(*milestone.hash(), |_, bundle| {
+            bundle.ledger_diff();
         }) {
-            Ok(_) => {}
-            Err(e) => error!("ERROR: {:?}", e),
+            error!(
+                "Error occured while traversing to confirm {}: {:?}.",
+                milestone.index().0,
+                e
+            );
+            return Err(Error::InvalidPastCone(e));
         }
-
-        // match load_bundle(milestone.hash()) {
-        //     Ok(bundle) => bundle,
-        //     Err(e) => {
-        //         error!(
-        //             "Tried to confirm invalid bundle with tail {}: {:?}.",
-        //             milestone
-        //                 .hash()
-        //                 .iter_trytes()
-        //                 .map(|trit| char::from(trit))
-        //                 .collect::<String>(),
-        //             e
-        //         );
-        //         return Err(Error::InvalidBundle(e));
-        //     }
-        // };
 
         self.confirmed_index = milestone.index();
 
