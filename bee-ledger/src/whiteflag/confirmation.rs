@@ -33,6 +33,8 @@ enum Error {
     InvalidPastCone(TraversalError),
 }
 
+pub(crate) struct Confirmation {}
+
 pub(crate) struct LedgerConfirmationWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct LedgerConfirmationWorker {
@@ -56,22 +58,23 @@ impl LedgerConfirmationWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        if let Err(e) = visit_bundles_dfs(*milestone.hash(), |_, bundle| {
-            bundle.ledger_diff();
-        }) {
-            error!(
-                "Error occured while traversing to confirm {}: {:?}.",
-                milestone.index().0,
-                e
-            );
-            return Err(Error::InvalidPastCone(e));
+        match visit_bundles_dfs(*milestone.hash()) {
+            Ok(_) => {
+                self.confirmed_index = milestone.index();
+
+                WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
+
+                Ok(())
+            }
+            Err(e) => {
+                error!(
+                    "Error occured while traversing to confirm {}: {:?}.",
+                    milestone.index().0,
+                    e
+                );
+                Err(Error::InvalidPastCone(e))
+            }
         }
-
-        self.confirmed_index = milestone.index();
-
-        WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
-
-        Ok(())
     }
 
     pub async fn run(

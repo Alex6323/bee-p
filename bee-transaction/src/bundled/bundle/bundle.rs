@@ -50,7 +50,7 @@ impl Bundle {
     }
 
     // TODO TEST
-    pub fn ledger_diff(&self) -> HashMap<Address, i64> {
+    pub fn ledger_mutations(&self) -> HashMap<Address, i64> {
         let mut diff = HashMap::new();
 
         for transaction in self {

@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::whiteflag::confirmation::Confirmation;
+
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
 use bee_tangle::traversal::visit_parents_follow_trunk;
@@ -52,13 +54,17 @@ fn load_bundle_builder(hash: &Hash) -> Option<IncomingBundleBuilder> {
     }
 }
 
-pub(crate) fn visit_bundles_dfs<Apply>(root: Hash, mut apply: Apply) -> Result<(), Error>
-where
-    // Match: Fn(&TxRef) -> bool,
-    Apply: FnMut(&Hash, &Bundle),
-{
+#[inline]
+fn on_bundle(hash: &Hash, bundle: &Bundle) {
+    let bundle_mutations = bundle.ledger_mutations();
+
+    if bundle_mutations.is_empty() {}
+}
+
+pub(crate) fn visit_bundles_dfs(root: Hash) -> Result<Confirmation, Error> {
     let mut hashes = vec![root];
     let mut visited = HashSet::new();
+    let mut confirmation = Confirmation {};
 
     while let Some(hash) = hashes.last() {
         // TODO pass match to avoid repetitions
@@ -74,7 +80,7 @@ where
                         Ok(builder) => builder.build(),
                         Err(e) => return Err(Error::InvalidBundle(e)),
                     };
-                    apply(hash, &bundle);
+                    on_bundle(hash, &bundle);
                     visited.insert(hash.clone());
                     hashes.pop();
                 } else if !visited.contains(trunk) {
@@ -100,5 +106,5 @@ where
         }
     }
 
-    Ok(())
+    Ok(confirmation)
 }
