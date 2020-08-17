@@ -184,7 +184,7 @@ where
                 return Err(IncomingBundleBuilderError::InvalidBranch);
             }
 
-            if index == last_index && transaction.trunk().ne(first_branch) {
+            if last_index != 0 && index == last_index && transaction.trunk().ne(first_branch) {
                 return Err(IncomingBundleBuilderError::InvalidTrunk);
             }
 
