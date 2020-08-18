@@ -38,8 +38,7 @@ impl Protocol {
     }
 
     pub fn request_milestone_fill() {
-        let to_request_num = MILESTONE_REQUEST_RANGE - Protocol::get().requested_milestones.len();
-
+        let mut to_request_num = MILESTONE_REQUEST_RANGE - Protocol::get().requested_milestones.len();
         let mut to_request_index = *tangle().get_last_solid_milestone_index() + 1;
         let last_milestone_index = *tangle().get_last_milestone_index();
 
@@ -48,7 +47,8 @@ impl Protocol {
 
             if !tangle().contains_milestone(index) {
                 Protocol::request_milestone(index, None);
-                to_request_index = to_request_index - 1;
+                to_request_num = to_request_num - 1;
+                to_request_index = to_request_index + 1;
             }
         }
     }
