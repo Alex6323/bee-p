@@ -20,13 +20,13 @@ use crate::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
         MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent, PeerHandshakerWorker,
-        Receiver, StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
+        StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
         TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
         TransactionSolidifierWorkerEvent, TransactionWorker, TransactionWorkerEvent,
     },
 };
 
-use bee_common::shutdown::Shutdown;
+use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::{event::Bus, wait_priority_queue::WaitPriorityQueue};
 use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
@@ -146,7 +146,7 @@ impl Protocol {
                 TransactionWorker::new(
                     Protocol::get().milestone_validator_worker.clone(),
                     Protocol::get().config.workers.transaction_worker_cache,
-                    Receiver::new(transaction_worker_rx, transaction_worker_shutdown_rx),
+                    ShutdownStream::new(transaction_worker_shutdown_rx, transaction_worker_rx),
                 )
                 .run(),
             ),
@@ -155,9 +155,9 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             transaction_responder_worker_shutdown_tx,
             spawn(
-                TransactionResponderWorker::new(Receiver::new(
-                    transaction_responder_worker_rx,
+                TransactionResponderWorker::new(ShutdownStream::new(
                     transaction_responder_worker_shutdown_rx,
+                    transaction_responder_worker_rx,
                 ))
                 .run(),
             ),
@@ -166,9 +166,9 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             milestone_responder_worker_shutdown_tx,
             spawn(
-                MilestoneResponderWorker::new(Receiver::new(
-                    milestone_responder_worker_rx,
+                MilestoneResponderWorker::new(ShutdownStream::new(
                     milestone_responder_worker_shutdown_rx,
+                    milestone_responder_worker_rx,
                 ))
                 .run(),
             ),
@@ -188,9 +188,9 @@ impl Protocol {
             SpongeKind::Kerl => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
-                    MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new(Receiver::new(
-                        milestone_validator_worker_rx,
+                    MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new(ShutdownStream::new(
                         milestone_validator_worker_shutdown_rx,
+                        milestone_validator_worker_rx,
                     ))
                     .run(),
                 ),
@@ -198,9 +198,9 @@ impl Protocol {
             SpongeKind::CurlP27 => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
-                    MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new(Receiver::new(
-                        milestone_validator_worker_rx,
+                    MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new(ShutdownStream::new(
                         milestone_validator_worker_shutdown_rx,
+                        milestone_validator_worker_rx,
                     ))
                     .run(),
                 ),
@@ -208,9 +208,9 @@ impl Protocol {
             SpongeKind::CurlP81 => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
-                    MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new(Receiver::new(
-                        milestone_validator_worker_rx,
+                    MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new(ShutdownStream::new(
                         milestone_validator_worker_shutdown_rx,
+                        milestone_validator_worker_rx,
                     ))
                     .run(),
                 ),
@@ -220,9 +220,9 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             transaction_solidifier_worker_shutdown_tx,
             spawn(
-                TransactionSolidifierWorker::new(Receiver::new(
-                    transaction_solidifier_worker_rx,
+                TransactionSolidifierWorker::new(ShutdownStream::new(
                     transaction_solidifier_worker_shutdown_rx,
+                    transaction_solidifier_worker_rx,
                 ))
                 .run(),
             ),
@@ -231,9 +231,9 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             milestone_solidifier_worker_shutdown_tx,
             spawn(
-                MilestoneSolidifierWorker::new(Receiver::new(
-                    milestone_solidifier_worker_rx,
+                MilestoneSolidifierWorker::new(ShutdownStream::new(
                     milestone_solidifier_worker_shutdown_rx,
+                    milestone_solidifier_worker_rx,
                 ))
                 .run(),
             ),
@@ -244,7 +244,7 @@ impl Protocol {
             spawn(
                 BroadcasterWorker::new(
                     network,
-                    Receiver::new(broadcaster_worker_rx, broadcaster_worker_shutdown_rx),
+                    ShutdownStream::new(broadcaster_worker_shutdown_rx, broadcaster_worker_rx),
                 )
                 .run(),
             ),

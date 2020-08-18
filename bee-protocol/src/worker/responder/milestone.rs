@@ -15,7 +15,7 @@ use crate::{
     worker::SenderWorker,
 };
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::bundled::BundledTransaction as Transaction;
@@ -25,7 +25,7 @@ use futures::{channel::mpsc, stream::StreamExt};
 
 use log::info;
 
-type Receiver = crate::worker::Receiver<mpsc::Receiver<MilestoneResponderWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::Receiver<MilestoneResponderWorkerEvent>>;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,

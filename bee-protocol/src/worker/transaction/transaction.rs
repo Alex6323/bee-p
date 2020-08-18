@@ -16,7 +16,7 @@ use crate::{
     worker::{milestone_validator::MilestoneValidatorWorkerEvent, transaction::HashCache},
 };
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::{
     sponge::{CurlP81, Sponge},
     Hash,
@@ -35,7 +35,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Timeframe to allow past or future transactions, 10 minutes in milliseconds.
 const ALLOWED_TIMESTAMP_WINDOW_MS: u64 = 10 * 60 * 1000;
 
-type Receiver = crate::worker::Receiver<mpsc::Receiver<TransactionWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::Receiver<TransactionWorkerEvent>>;
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -279,7 +279,7 @@ mod tests {
             TransactionWorker::new(
                 milestone_validator_worker_sender,
                 10000,
-                Receiver::new(transaction_worker_receiver, shutdown_receiver),
+                ShutdownStream::new(shutdown_receiver, transaction_worker_receiver),
             )
             .run(),
         )

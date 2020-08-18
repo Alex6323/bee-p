@@ -15,17 +15,18 @@ use crate::{
     message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     peer::{HandshakedPeer, Peer},
     protocol::Protocol,
-    worker::{Receiver, SenderWorker},
+    worker::SenderWorker,
 };
 
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_network::{Address, EndpointId, Network};
-
-use std::sync::{Arc, Mutex};
 
 use async_std::{sync::RwLock, task::spawn};
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
+
+use std::sync::{Arc, Mutex};
 
 pub(crate) struct PeerManager {
     network: Network,
@@ -91,7 +92,7 @@ impl PeerManager {
                 SenderWorker::<MilestoneRequest>::new(
                     self.network.clone(),
                     peer.clone(),
-                    Receiver::new(milestone_request_rx, milestone_request_shutdown_rx),
+                    ShutdownStream::new(milestone_request_shutdown_rx, milestone_request_rx),
                 )
                 .run(),
             );
@@ -99,7 +100,7 @@ impl PeerManager {
                 SenderWorker::<TransactionMessage>::new(
                     self.network.clone(),
                     peer.clone(),
-                    Receiver::new(transaction_rx, transaction_shutdown_rx),
+                    ShutdownStream::new(transaction_shutdown_rx, transaction_rx),
                 )
                 .run(),
             );
@@ -107,7 +108,7 @@ impl PeerManager {
                 SenderWorker::<TransactionRequest>::new(
                     self.network.clone(),
                     peer.clone(),
-                    Receiver::new(transaction_request_rx, transaction_request_shutdown_rx),
+                    ShutdownStream::new(transaction_request_shutdown_rx, transaction_request_rx),
                 )
                 .run(),
             );
@@ -115,7 +116,7 @@ impl PeerManager {
                 SenderWorker::<Heartbeat>::new(
                     self.network.clone(),
                     peer,
-                    Receiver::new(heartbeat_rx, heartbeat_shutdown_rx),
+                    ShutdownStream::new(heartbeat_shutdown_rx, heartbeat_rx),
                 )
                 .run(),
             );

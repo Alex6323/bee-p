@@ -17,15 +17,15 @@ use crate::{
     protocol::Protocol,
 };
 
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_network::{Command::SendMessage, EndpointId, Network};
+
+use futures::{channel::mpsc, sink::SinkExt, stream::StreamExt};
+use log::warn;
 
 use std::sync::Arc;
 
-use futures::{channel::mpsc, sink::SinkExt, stream::StreamExt};
-
-use log::warn;
-
-type Receiver<M> = crate::worker::Receiver<mpsc::Receiver<M>>;
+type Receiver<M> = ShutdownStream<mpsc::Receiver<M>>;
 
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
