@@ -97,10 +97,7 @@ where
             Ok(milestone) => {
                 // TODO check multiple triggers
                 tangle().add_milestone(milestone.index, milestone.hash);
-                if Protocol::get().requested_milestones.remove(&milestone.index).is_some() {
-                    Protocol::request_milestone_fill();
-                    println!("Milestone {} was requested.", milestone.index.0);
-                }
+                Protocol::get().requested_milestones.remove(&milestone.index);
 
                 // This is possibly not sufficient as there is no guarantee a milestone has been solidified
                 // before being validated, we then also need to check when a milestone gets solidified if it's
