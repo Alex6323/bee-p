@@ -144,6 +144,7 @@ impl PeerWorker {
                             .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
                         // TODO Warn if can't help sync
 
+                        // TODO think about a better solution
                         if Protocol::get().peer_manager.handshaked_peers.len() == 1 {
                             Protocol::request_milestone_fill();
                         }
