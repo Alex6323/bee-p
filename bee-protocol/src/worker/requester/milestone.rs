@@ -54,8 +54,6 @@ impl MilestoneRequesterWorker {
             return;
         }
 
-        println!("Requesting milestone {}", index.0);
-
         match epid {
             Some(epid) => {
                 if index.0 != 0 {
