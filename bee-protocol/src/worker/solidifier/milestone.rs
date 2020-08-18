@@ -56,6 +56,8 @@ impl MilestoneSolidifierWorker {
     fn request_milestones(&self) {
         let solid_milestone_index = *tangle().get_last_solid_milestone_index() + 1;
 
+        println!("SMI {:?}", solid_milestone_index);
+
         // TODO this may request unpublished milestones
         for index in solid_milestone_index..solid_milestone_index + MILESTONE_REQUEST_RANGE as u32 {
             let index = index.into();
