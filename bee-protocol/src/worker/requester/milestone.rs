@@ -54,7 +54,9 @@ impl MilestoneRequesterWorker {
             return;
         }
 
-        Protocol::get().requested_milestones.insert(index);
+        if index.0 != 0 {
+            Protocol::get().requested_milestones.insert(index);
+        }
 
         println!("Requesting milestone {}", index.0);
 
