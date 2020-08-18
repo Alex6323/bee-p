@@ -48,11 +48,7 @@ impl StatusWorker {
             )
         };
 
-        status = format!(
-            "{} Requested {}",
-            status,
-            Protocol::get().requested_transactions.len()
-        );
+        status = format!("{} Requested {}", status, Protocol::get().requested_transactions.len());
 
         info!("{}.", status);
     }
