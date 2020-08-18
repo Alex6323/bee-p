@@ -110,8 +110,11 @@ where
                 }
 
                 if milestone.index > tangle().get_last_milestone_index() {
-                    Protocol::get().bus.dispatch(LastMilestoneChanged(milestone));
+                    Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
                 }
+
+                Protocol::get().requested_milestones.remove(&milestone.index);
+                Protocol::request_milestone_fill();
 
                 // TODO only trigger if index == last solid index ?
                 // TODO trigger only if requester is empty ? And unsynced ?

@@ -132,7 +132,7 @@ impl TransactionWorker {
             return;
         }
 
-        let requested = Protocol::get().requested.contains_key(&hash);
+        let requested = Protocol::get().requested_transactions.contains_key(&hash);
 
         let (is_timestamp_valid, should_broadcast) = self.validate_timestamp(&transaction);
 
@@ -155,11 +155,11 @@ impl TransactionWorker {
         if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
             Protocol::get().metrics.new_transactions_inc();
 
-            if !tangle().is_synced() && Protocol::get().requested.is_empty() {
+            if !tangle().is_synced() && Protocol::get().requested_transactions.is_empty() {
                 Protocol::trigger_milestone_solidification().await;
             }
 
-            match Protocol::get().requested.remove(&hash) {
+            match Protocol::get().requested_transactions.remove(&hash) {
                 Some((hash, index)) => {
                     Protocol::trigger_transaction_solidification(hash, index).await;
                 }

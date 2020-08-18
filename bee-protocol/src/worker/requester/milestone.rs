@@ -46,17 +46,24 @@ impl MilestoneRequesterWorker {
     }
 
     async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
+        if Protocol::get().requested_milestones.contains(&index) {
+            return;
+        }
+
         if Protocol::get().peer_manager.handshaked_peers.is_empty() {
             return;
         }
 
-        let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
-
         match epid {
             Some(epid) => {
+                if index.0 != 0 {
+                    Protocol::get().requested_milestones.insert(index);
+                }
                 SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
             }
             None => {
+                let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
+
                 for _ in 0..guard.len() {
                     let epid = &guard[self.counter % guard.len()];
 
@@ -64,6 +71,9 @@ impl MilestoneRequesterWorker {
 
                     if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                         if index > peer.snapshot_milestone_index() && index <= peer.last_solid_milestone_index() {
+                            if index.0 != 0 {
+                                Protocol::get().requested_milestones.insert(index);
+                            }
                             SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                             break;
                         }
