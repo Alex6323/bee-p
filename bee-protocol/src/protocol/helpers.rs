@@ -13,6 +13,7 @@ use crate::{
     message::{Heartbeat, Transaction as TransactionMessage},
     milestone::MilestoneIndex,
     protocol::Protocol,
+    tangle::tangle,
     worker::{
         BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, MilestoneSolidifierWorkerEvent, SenderWorker,
         TransactionRequesterWorkerEntry, TransactionSolidifierWorkerEvent,
@@ -25,6 +26,8 @@ use bee_network::EndpointId;
 use futures::sink::SinkExt;
 use log::warn;
 
+const MILESTONE_REQUEST_RANGE: u8 = 50;
+
 impl Protocol {
     // MilestoneRequest
 
@@ -32,6 +35,18 @@ impl Protocol {
         Protocol::get()
             .milestone_requester_worker
             .push(MilestoneRequesterWorkerEntry(index, to));
+    }
+
+    pub fn request_milestone_initial() {
+        let solid_milestone_index = *tangle().get_last_solid_milestone_index() + 1;
+
+        // TODO this may request unpublished milestones
+        for index in solid_milestone_index..solid_milestone_index + MILESTONE_REQUEST_RANGE as u32 {
+            let index = index.into();
+            if !tangle().contains_milestone(index) {
+                Protocol::request_milestone(index, None);
+            }
+        }
     }
 
     pub fn request_last_milestone(to: Option<EndpointId>) {

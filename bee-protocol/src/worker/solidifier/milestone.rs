@@ -16,8 +16,6 @@ use bee_common::worker::Error as WorkerError;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
-const MILESTONE_REQUEST_RANGE: u8 = 50;
-
 type Receiver = crate::worker::Receiver<mpsc::Receiver<MilestoneSolidifierWorkerEvent>>;
 
 pub(crate) struct MilestoneSolidifierWorkerEvent;
@@ -53,20 +51,6 @@ impl MilestoneSolidifierWorker {
     //     }
     // }
 
-    fn request_milestones(&self) {
-        let solid_milestone_index = *tangle().get_last_solid_milestone_index() + 1;
-
-        println!("SMI {:?}", solid_milestone_index);
-
-        // TODO this may request unpublished milestones
-        for index in solid_milestone_index..solid_milestone_index + MILESTONE_REQUEST_RANGE as u32 {
-            let index = index.into();
-            if !tangle().contains_milestone(index) {
-                Protocol::request_milestone(index, None);
-            }
-        }
-    }
-
     async fn solidify_milestone(&self) {
         let target_index = tangle().get_last_solid_milestone_index() + MilestoneIndex(1);
 
@@ -92,8 +76,6 @@ impl MilestoneSolidifierWorker {
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
-
-        self.request_milestones();
 
         while let Some(MilestoneSolidifierWorkerEvent) = self.receiver.next().await {
             self.solidify_milestone().await;
