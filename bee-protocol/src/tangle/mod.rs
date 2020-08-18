@@ -40,6 +40,12 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use rand::{seq::SliceRandom, thread_rng};
+
+const YTRSI_DELTA: u32 = 2; // C1
+const OTRSI_DELTA: u32 = 7; // C2
+const BELOW_MAX_DEPTH: u32 = 15; // M
+
 /// Milestone-based Tangle.
 pub struct MsTangle {
     pub(crate) inner: Tangle<TransactionMetadata>,
@@ -114,19 +120,8 @@ impl MsTangle {
         }
     }
 
-    // if the parents of this incoming transaction are solid,
-    // this incoming transaction will be marked as solid and will inherit the best otrsi and ytrsi of the parents.
-    //
-    // in case of an attack, missing transactions might not arrive at all.
-    // the propagation of otrsi and ytrsi to a non-solid cone might be unnecessary, since the TSA
-    // would not attach to a non-solid cone.
-    // therefore, if the incoming transaction is not solid, it won't propagate.
-    // this helps to avoid unnecessary tangle walks.
-    //
-    // if the children of the incoming transaction already arrived before, it means that this incoming transaction was
-    // missing. in this case, if the incoming transaction is solid, otrsi and ytrsi values need to be propagated to the
-    // the future cone since they might not have
-    // otrsi and ytrsi values set.
+    // If the parents of this incoming transaction are solid, this incoming transaction will be marked as solid too.
+    // Furthermore it will inherit the best OTRSI and YTRSI values from the parents.
     fn propagate_state(&self, root: Hash) {
         let mut visited = HashSet::new();
         let mut to_visit = vec![root];
@@ -163,12 +158,13 @@ impl MsTangle {
                     }
 
                     // get best otrsi and ytrsi from parents
-                    // TODO: in case the transaction already inherited the best otrsi and ytrsi,
-                    // continue and ignore children
+                    // future optimization: in case the transaction already inherited the best otrsi and ytrsi,
+                    // ignore children
                     metadata.otrsi = Some(max(self.otrsi(trunk).unwrap(), self.otrsi(branch).unwrap()));
                     metadata.ytrsi = Some(min(self.ytrsi(trunk).unwrap(), self.ytrsi(branch).unwrap()));
                 });
 
+                // propagate the state to the children if possible
                 for child in self.inner.get_children(&hash) {
                     to_visit.push(child);
                 }
@@ -225,6 +221,48 @@ impl MsTangle {
             to_visit.push(tx_ref.trunk().clone());
             to_visit.push(tx_ref.branch().clone());
         }
+    }
+
+    // https://github.com/gohornet/hornet/blob/chrysalis/pkg/tipselect/urts.go#L455
+    fn tip_score(&self, hash: &Hash) -> Score {
+        if !self.inner.contains(hash) {
+            return Score::LAZY;
+        }
+
+        let lsmi = *self.get_last_solid_milestone_index();
+        let otrsi = *self.otrsi(&hash).unwrap();
+        let ytrsi = *self.ytrsi(&hash).unwrap();
+
+        if (lsmi - ytrsi) > YTRSI_DELTA {
+            return Score::LAZY;
+        }
+
+        if (lsmi - otrsi) > OTRSI_DELTA {
+            return Score::LAZY;
+        }
+
+        if (lsmi - otrsi) > BELOW_MAX_DEPTH {
+            return Score::SEMI_LAZY;
+        }
+
+        Score::NON_LAZY
+    }
+
+    fn select_tip(&mut self) -> Option<Hash> {
+        let mut non_lazy_tips = Vec::new();
+        for tip in self.inner.tips() {
+            let score = self.tip_score(&tip);
+            match score {
+                Score::NON_LAZY => {
+                    non_lazy_tips.push(tip);
+                }
+                _ => (),
+            }
+        }
+        if non_lazy_tips.is_empty() {
+            return None;
+        }
+        Some(*non_lazy_tips.choose(&mut rand::thread_rng()).unwrap())
     }
 
     fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
@@ -359,6 +397,12 @@ pub fn tangle() -> &'static MsTangle {
     } else {
         unsafe { &*tangle }
     }
+}
+
+enum Score {
+    NON_LAZY,
+    SEMI_LAZY,
+    LAZY,
 }
 
 #[cfg(test)]
