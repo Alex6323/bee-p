@@ -89,7 +89,7 @@ impl MsTangle {
     }
 
     // NOTE: not implemented as an async worker atm, but it makes things much easier
-    fn propagate_solid(&self, root: Hash) {
+    fn propagate_solid_flag(&self, root: Hash) {
         let mut children = vec![root];
 
         while let Some(ref hash) = children.pop() {
