@@ -29,6 +29,7 @@ impl Protocol {
     // MilestoneRequest
 
     pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
+        Protocol::get().requested_milestones.insert(index);
         Protocol::get()
             .milestone_requester_worker
             .push(MilestoneRequesterWorkerEntry(index, to));
