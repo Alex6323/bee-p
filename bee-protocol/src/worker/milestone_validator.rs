@@ -97,7 +97,6 @@ where
             Ok(milestone) => {
                 // TODO check multiple triggers
                 tangle().add_milestone(milestone.index, milestone.hash);
-                Protocol::get().requested_milestones.remove(&milestone.index);
 
                 // This is possibly not sufficient as there is no guarantee a milestone has been solidified
                 // before being validated, we then also need to check when a milestone gets solidified if it's
@@ -111,8 +110,11 @@ where
                 }
 
                 if milestone.index > tangle().get_last_milestone_index() {
-                    Protocol::get().bus.dispatch(LastMilestoneChanged(milestone));
+                    Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
                 }
+
+                Protocol::get().requested_milestones.remove(&milestone.index);
+                Protocol::request_milestone_fill();
 
                 // TODO only trigger if index == last solid index ?
                 // TODO trigger only if requester is empty ? And unsynced ?

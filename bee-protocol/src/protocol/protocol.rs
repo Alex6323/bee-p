@@ -293,8 +293,6 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
     info!("New milestone #{}.", *last_milestone.0.index);
     tangle().update_last_milestone_index(last_milestone.0.index);
 
-    Protocol::request_milestone_fill();
-
     // TODO block_on ?
     // TODO uncomment on Chrysalis Pt1.
     // block_on(Protocol::broadcast_heartbeat(
