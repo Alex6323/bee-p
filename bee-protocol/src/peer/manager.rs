@@ -119,10 +119,6 @@ impl PeerManager {
                 )
                 .run(),
             );
-
-            if self.handshaked_peers.len() == 1 {
-                Protocol::request_milestone_initial();
-            }
         }
     }
 

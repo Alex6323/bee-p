@@ -98,6 +98,7 @@ where
                 // TODO check multiple triggers
                 tangle().add_milestone(milestone.index, milestone.hash);
                 if Protocol::get().requested_milestones.remove(&milestone.index).is_some() {
+                    Protocol::request_milestone_fill();
                     println!("Milestone {} was requested.", milestone.index.0);
                 }
 

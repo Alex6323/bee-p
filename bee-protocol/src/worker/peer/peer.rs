@@ -142,6 +142,11 @@ impl PeerWorker {
                             .set_last_solid_milestone_index(message.last_solid_milestone_index.into());
                         self.peer
                             .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
+                        // TODO Warn if can't help sync
+
+                        if Protocol::get().peer_manager.handshaked_peers.len() == 1 {
+                            Protocol::request_milestone_fill();
+                        }
 
                         self.peer.metrics.heartbeats_received_inc();
                         Protocol::get().metrics.heartbeats_received_inc();

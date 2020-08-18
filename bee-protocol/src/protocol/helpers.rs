@@ -26,7 +26,7 @@ use bee_network::EndpointId;
 use futures::sink::SinkExt;
 use log::warn;
 
-const MILESTONE_REQUEST_RANGE: u8 = 50;
+const MILESTONE_REQUEST_RANGE: usize = 50;
 
 impl Protocol {
     // MilestoneRequest
@@ -37,14 +37,18 @@ impl Protocol {
             .push(MilestoneRequesterWorkerEntry(index, to));
     }
 
-    pub fn request_milestone_initial() {
-        let solid_milestone_index = *tangle().get_last_solid_milestone_index() + 1;
+    pub fn request_milestone_fill() {
+        let to_request_num = MILESTONE_REQUEST_RANGE - Protocol::get().requested_milestones.len();
 
-        // TODO this may request unpublished milestones
-        for index in solid_milestone_index..solid_milestone_index + MILESTONE_REQUEST_RANGE as u32 {
-            let index = index.into();
+        let mut to_request_index = *tangle().get_last_solid_milestone_index() + 1;
+        let last_milestone_index = *tangle().get_last_milestone_index();
+
+        while to_request_num > 0 && to_request_index < last_milestone_index {
+            let index = to_request_index.into();
+
             if !tangle().contains_milestone(index) {
                 Protocol::request_milestone(index, None);
+                to_request_index = to_request_index - 1;
             }
         }
     }
