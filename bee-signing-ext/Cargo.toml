@@ -18,6 +18,7 @@ bee-ternary = { git = "https://github.com/iotaledger/bee.git", features = ["serd
 ed25519-dalek = { version = "1.0.0-pre.4", features = ["serde"] }
 rand = "0.7"
 serde = { version = "1.0", features = ["derive"] }
+signature = "1.2"
 slip10 = "0.1"
 thiserror = "1.0.20"
 zeroize = "1.1.0"

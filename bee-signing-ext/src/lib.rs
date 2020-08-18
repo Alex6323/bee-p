@@ -14,3 +14,5 @@
 #![warn(missing_docs)]
 
 pub mod binary;
+
+pub use signature::{Signature, Signer, Verifier, Error as SignatureError};

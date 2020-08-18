@@ -13,4 +13,4 @@
 
 pub mod ed25519;
 
-pub use ed25519::{PrivateKey, PublicKey, Seed, Signature};
+pub use ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed, Ed25519Signature};
