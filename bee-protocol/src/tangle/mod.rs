@@ -11,6 +11,7 @@
 
 pub mod flags;
 mod metadata;
+pub mod tip_selector;
 
 pub use metadata::TransactionMetadata;
 
@@ -41,6 +42,7 @@ use std::{
 };
 
 use rand::{seq::SliceRandom, thread_rng};
+use crate::tangle::tip_selector::TipSelector;
 
 const YTRSI_DELTA: u32 = 2; // C1
 const OTRSI_DELTA: u32 = 7; // C2
@@ -54,6 +56,7 @@ pub struct MsTangle {
     last_milestone_index: AtomicU32,
     last_solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
+    tip_selector: TipSelector,
 }
 
 impl Deref for MsTangle {
@@ -73,6 +76,7 @@ impl MsTangle {
             last_milestone_index: AtomicU32::new(0),
             last_solid_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
+            tip_selector: TipSelector::new(),
         }
     }
 
