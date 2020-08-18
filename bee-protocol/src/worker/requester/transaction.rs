@@ -56,8 +56,6 @@ impl TransactionRequesterWorker {
             return;
         }
 
-        Protocol::get().requested_transactions.insert(hash, index);
-
         let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
 
         for _ in 0..guard.len() {
@@ -67,6 +65,7 @@ impl TransactionRequesterWorker {
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                 if index > peer.snapshot_milestone_index() && index <= peer.last_solid_milestone_index() {
+                    Protocol::get().requested_transactions.insert(hash, index);
                     SenderWorker::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),

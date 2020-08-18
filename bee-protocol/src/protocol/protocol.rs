@@ -35,12 +35,12 @@ use bee_crypto::ternary::{
 use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::ternary::wots::WotsPublicKey;
 
-use std::{ptr, sync::Arc};
-
 use async_std::task::spawn;
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
+
+use std::{ptr, sync::Arc};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -62,6 +62,7 @@ pub struct Protocol {
     pub(crate) broadcaster_worker: mpsc::Sender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, MilestoneIndex>,
+    pub(crate) requested_milestones: DashSet<MilestoneIndex>,
 }
 
 impl Protocol {
@@ -128,6 +129,7 @@ impl Protocol {
             broadcaster_worker: broadcaster_worker_tx,
             peer_manager: PeerManager::new(network.clone()),
             requested_transactions: Default::default(),
+            requested_milestones: Default::default(),
         };
 
         unsafe {
