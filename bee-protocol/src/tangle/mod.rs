@@ -29,15 +29,16 @@ use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
 
 use dashmap::DashMap;
+use log::info;
 
 use std::{
+    cmp::{max, min},
+    collections::HashSet,
     ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
-use std::collections::HashSet;
-use std::cmp::{max, min};
 
 /// Milestone-based Tangle.
 pub struct MsTangle {
@@ -144,7 +145,6 @@ impl MsTangle {
 
             if self.is_solid_transaction(trunk) && self.is_solid_transaction(branch) {
                 self.inner.update_metadata(&hash, |metadata| {
-
                     if !self.is_solid_transaction(&hash) {
                         metadata.flags.set_solid();
                         // This is possibly not sufficient as there is no guarantee a milestone has been validated
@@ -163,16 +163,67 @@ impl MsTangle {
                     }
 
                     // get best otrsi and ytrsi from parents
+                    // TODO: in case the transaction already inherited the best otrsi and ytrsi,
+                    // continue and ignore children
                     metadata.otrsi = Some(max(self.otrsi(trunk).unwrap(), self.otrsi(branch).unwrap()));
                     metadata.ytrsi = Some(min(self.ytrsi(trunk).unwrap(), self.ytrsi(branch).unwrap()));
-
                 });
 
                 for child in self.inner.get_children(&hash) {
                     to_visit.push(child);
                 }
-
             }
+        }
+    }
+
+    // when a milestone arrives and is solid, otrsi and ytrsi of all transactions referenced by this milestone must be
+    // updated otrsi or ytrsi of transactions that are referenced by a previous milestone won't get updated
+    // set otrsi and ytrsi values of relevant transactions to:
+    // otrsi=milestone_index
+    // ytrsi=milestone_index
+    // updated otrsi and ytrsi values need to be propagated to attached children (not referenced by the milestone)
+    fn update_transactions_referenced_by_milestone(&self, milestone_index: MilestoneIndex) {
+        info!("Update transactions referenced by milestone {}.", *milestone_index);
+        let mut visited = HashSet::new();
+        let mut to_visit = vec![self.get_milestone_hash(milestone_index).unwrap()];
+
+        while let Some(hash) = to_visit.pop() {
+            if visited.contains(&hash) {
+                continue;
+            } else {
+                visited.insert(hash.clone());
+            }
+
+            if self.get_metadata(&hash).is_none() {
+                continue;
+            }
+
+            if self.get_metadata(&hash).unwrap().cone_index.is_some() {
+                continue;
+            }
+
+            tangle().update_metadata(&hash, |metadata| {
+                metadata.cone_index = Some(milestone_index);
+                metadata.otrsi = Some(milestone_index);
+                metadata.ytrsi = Some(milestone_index);
+            });
+
+            info!(
+                "Updated transaction with milestone_index {}, OTRSI {}, YTRSI {}.",
+                *self.get_metadata(&hash).unwrap().cone_index.unwrap(),
+                *self.get_metadata(&hash).unwrap().otrsi.unwrap(),
+                *self.get_metadata(&hash).unwrap().ytrsi.unwrap()
+            );
+
+            // propagate the new otrsi and ytrsi values to the children of this transaction
+            // children who already have inherited the new otrsi and ytrsi values, won't get updated
+            for child in self.get_children(&hash) {
+                self.propagate_state(child);
+            }
+
+            let tx_ref = self.get(&hash).unwrap();
+            to_visit.push(tx_ref.trunk().clone());
+            to_visit.push(tx_ref.branch().clone());
         }
     }
 
