@@ -20,16 +20,17 @@ pub(crate) use processor::{ProcessorWorker, ProcessorWorkerEvent};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::ProtocolConfig;
-    use crate::message::Transaction as TransactionMessage;
-    use crate::protocol::Protocol;
-    use crate::tangle::{self, tangle};
+    use crate::{
+        config::ProtocolConfig,
+        message::Transaction as TransactionMessage,
+        protocol::Protocol,
+        tangle::{self, tangle},
+    };
 
     use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
     use bee_common_ext::event::Bus;
     use bee_crypto::ternary::Hash;
-    use bee_network::EndpointId;
-    use bee_network::{NetworkConfig, Url};
+    use bee_network::{EndpointId, NetworkConfig, Url};
 
     use async_std::task::{self, block_on, spawn};
     use futures::{
@@ -38,8 +39,7 @@ mod tests {
         sink::SinkExt,
     };
 
-    use std::sync::Arc;
-    use std::time::Duration;
+    use std::{sync::Arc, time::Duration};
 
     #[test]
     fn test_tx_workers_with_compressed_buffer() {

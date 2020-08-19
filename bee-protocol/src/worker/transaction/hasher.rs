@@ -89,13 +89,11 @@ impl HasherWorker {
         processor_worker: &mut mpsc::UnboundedSender<ProcessorWorkerEvent>,
     ) {
         for (HasherWorkerEvent { from, transaction }, hash) in events.drain(..).zip(hashes) {
-            if let Err(e) = processor_worker
-                .unbounded_send(ProcessorWorkerEvent {
-                    hash: Hash::from_inner_unchecked(hash),
-                    from,
-                    transaction,
-                })
-            {
+            if let Err(e) = processor_worker.unbounded_send(ProcessorWorkerEvent {
+                hash: Hash::from_inner_unchecked(hash),
+                from,
+                transaction,
+            }) {
                 warn!("Sending event to the processor worker failed: {}.", e);
             }
         }
