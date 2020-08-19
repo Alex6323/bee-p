@@ -15,44 +15,28 @@ pub mod payload;
 
 pub use hash::Hash;
 pub use message::Message;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
+    #[error("Invalid amount provided.")]
     AmountError,
+    #[error("Invalid count number provided.")]
     CountError,
+    #[error("The length of the object is empty.")]
     EmptyError,
+    #[error("The object in the set must be unique.")]
     DuplicateError,
+    #[error("The position of index is not correct.")]
     IndexError,
+    #[error("The vector is not sorted by lexicographical order.")]
     OrderError,
+    #[error("The format of provided hash is not correct.")]
     HashError,
-    BincodeError(bincode::Error),
-    SigningError(bee_signing_ext::binary::ed25519::Error),
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::AmountError => "Invalid amount provided.".fmt(f),
-            Error::CountError => "Invalid count number provided.".fmt(f),
-            Error::DuplicateError => "The object in the set must be unique".fmt(f),
-            Error::EmptyError => "The length of the object is empty".fmt(f),
-            Error::IndexError => "The position of index is not correct.".fmt(f),
-            Error::OrderError => "The vector is not sorted by lexicographical order.".fmt(f),
-            Error::HashError => "The format of provided hash is not correct.".fmt(f),
-            Error::BincodeError(e) => e.fmt(f),
-            Error::SigningError(e) => e.fmt(f),
-        }
-    }
-}
-
-impl From<bincode::Error> for Error {
-    fn from(error: bincode::Error) -> Self {
-        Error::BincodeError(error)
-    }
-}
-
-impl From<bee_signing_ext::binary::ed25519::Error> for Error {
-    fn from(error: bee_signing_ext::binary::ed25519::Error) -> Self {
-        Error::SigningError(error)
-    }
+    #[error(transparent)]
+    BincodeError(#[from] bincode::Error),
+    #[error(transparent)]
+    SigningError(#[from] bee_signing_ext::binary::ed25519::Error),
+    #[error(transparent)]
+    SignatureError(#[from] bee_signing_ext::SignatureError),
 }

@@ -23,8 +23,3 @@ pub enum SignatureUnlock {
     Wots(WotsSignature),
     Ed25519(Ed25519Signature),
 }
-
-// #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-// pub struct SignatureUnlock {
-//     pub signature: Signature,
-// }
