@@ -80,18 +80,19 @@ impl NodeBuilder {
                     local_snapshot.state().balances().len()
                 );
 
+                // add solid entry points first before updating to indices below
+                // TODO index 0 ?
+                tangle::tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
+                for (hash, index) in local_snapshot.metadata().solid_entry_points() {
+                    tangle::tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
+                }
+
                 tangle::tangle().update_last_solid_milestone_index(local_snapshot.metadata().index().into());
 
                 // TODO get from database
                 tangle::tangle().update_last_milestone_index(local_snapshot.metadata().index().into());
 
                 tangle::tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
-
-                // TODO index 0 ?
-                tangle::tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
-                for (hash, index) in local_snapshot.metadata().solid_entry_points() {
-                    tangle::tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
-                }
 
                 for _seen_milestone in local_snapshot.metadata().seen_milestones() {
                     // TODO request ?

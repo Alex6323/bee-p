@@ -41,12 +41,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use rand::{seq::SliceRandom, thread_rng};
 use crate::tangle::tip_selector::TipSelector;
-
-const YTRSI_DELTA: u32 = 2; // C1
-const OTRSI_DELTA: u32 = 7; // C2
-const BELOW_MAX_DEPTH: u32 = 15; // M
 
 /// Milestone-based Tangle.
 pub struct MsTangle {
@@ -84,12 +79,14 @@ impl MsTangle {
         if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
             self.propagate_solid_flag(&hash);
             self.propagate_otrsi_and_ytrsi(&hash);
+            self.tip_selector.insert(&hash);
             return Some(tx);
         }
         None
     }
 
     // NOTE: not implemented as an async worker atm, but it makes things much easier
+    #[inline]
     fn propagate_solid_flag(&self, root: &Hash) {
         let mut children = vec![*root];
 
@@ -129,10 +126,7 @@ impl MsTangle {
     fn propagate_otrsi_and_ytrsi(&self, root: &Hash) {
         let mut children = vec![*root];
         while let Some(hash) = children.pop() {
-
             // get best otrsi and ytrsi from parents
-            // future optimization: in case the transaction already inherited the best otrsi and ytrsi,
-            // ignore children
             let tx = self.inner.get(&hash).unwrap();
             let trunk_otsri = self.otrsi(tx.trunk());
             let branch_otsri = self.otrsi(tx.branch());
@@ -142,17 +136,18 @@ impl MsTangle {
             if trunk_otsri.is_none() || branch_otsri.is_none() || trunk_ytrsi.is_none() || branch_ytrsi.is_none() {
                 continue;
             }
-            
+
             self.inner.update_metadata(&hash, |metadata| {
                 metadata.otrsi = Some(max(trunk_otsri.unwrap(), branch_otsri.unwrap()));
                 metadata.ytrsi = Some(min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap()));
             });
 
             // propagate otrsi and ytrsi to children
+            // future optimization: in case the transaction already inherited the best otrsi and ytrsi,
+            // ignore children
             for child in self.inner.get_children(&hash) {
                 children.push(child);
             }
-
         }
     }
 
@@ -174,7 +169,7 @@ impl MsTangle {
                 visited.insert(hash.clone());
             }
 
-            if self.get_metadata(&hash).is_none() {
+            if self.is_solid_entry_point(&hash) {
                 continue;
             }
 
@@ -196,7 +191,6 @@ impl MsTangle {
             );
 
             // propagate the new otrsi and ytrsi values to the children of this transaction
-            // children who already have inherited the new otrsi and ytrsi values, won't get updated
             for child in self.get_children(&hash) {
                 self.propagate_otrsi_and_ytrsi(&child);
             }
@@ -205,48 +199,6 @@ impl MsTangle {
             to_visit.push(tx_ref.trunk().clone());
             to_visit.push(tx_ref.branch().clone());
         }
-    }
-
-    // https://github.com/gohornet/hornet/blob/chrysalis/pkg/tipselect/urts.go#L455
-    fn tip_score(&self, hash: &Hash) -> Score {
-        if !self.inner.contains(hash) {
-            return Score::LAZY;
-        }
-
-        let lsmi = *self.get_last_solid_milestone_index();
-        let otrsi = *self.otrsi(&hash).unwrap();
-        let ytrsi = *self.ytrsi(&hash).unwrap();
-
-        if (lsmi - ytrsi) > YTRSI_DELTA {
-            return Score::LAZY;
-        }
-
-        if (lsmi - otrsi) > OTRSI_DELTA {
-            return Score::LAZY;
-        }
-
-        if (lsmi - otrsi) > BELOW_MAX_DEPTH {
-            return Score::SEMI_LAZY;
-        }
-
-        Score::NON_LAZY
-    }
-
-    fn select_tip(&mut self) -> Option<Hash> {
-        let mut non_lazy_tips = Vec::new();
-        for tip in self.inner.tips() {
-            let score = self.tip_score(&tip);
-            match score {
-                Score::NON_LAZY => {
-                    non_lazy_tips.push(tip);
-                }
-                _ => (),
-            }
-        }
-        if non_lazy_tips.is_empty() {
-            return None;
-        }
-        Some(*non_lazy_tips.choose(&mut rand::thread_rng()).unwrap())
     }
 
     fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
@@ -322,6 +274,7 @@ impl MsTangle {
 
     pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.last_solid_milestone_index.store(*new_index, Ordering::Relaxed);
+        self.update_transactions_referenced_by_milestone(new_index);
     }
 
     pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
@@ -381,12 +334,6 @@ pub fn tangle() -> &'static MsTangle {
     } else {
         unsafe { &*tangle }
     }
-}
-
-enum Score {
-    NON_LAZY,
-    SEMI_LAZY,
-    LAZY,
 }
 
 #[cfg(test)]
