@@ -219,6 +219,7 @@ impl PeerHandshakerWorker {
                             self.peer.epid,
                             tangle().get_last_solid_milestone_index(),
                             tangle().get_snapshot_milestone_index(),
+                            tangle().get_last_milestone_index(),
                         )
                         .await;
 

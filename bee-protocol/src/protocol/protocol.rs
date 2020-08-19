@@ -319,5 +319,6 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
     spawn(Protocol::broadcast_heartbeat(
         last_solid_milestone.0.index,
         tangle().get_snapshot_milestone_index(),
+        tangle().get_last_milestone_index(),
     ));
 }
