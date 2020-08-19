@@ -11,9 +11,9 @@ keywords = ["iota", "tangle", "bee", "framework", "node"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-common = { git = "https://github.com/christianpoveda/bee.git", branch = "btc-curl-2" }
 bee-common-ext = { path = "../bee-common-ext" }
-bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-crypto = { git = "https://github.com/christianpoveda/bee.git", branch = "btc-curl-2" }
 bee-ledger = { path = "../bee-ledger" }
 bee-network = { path = "../bee-network" }
 bee-peering = { path = "../bee-peering" }

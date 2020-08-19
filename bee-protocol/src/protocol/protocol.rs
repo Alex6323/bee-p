@@ -17,12 +17,13 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::tangle,
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
-        MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
-        MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker, StatusWorker, TpsWorker,
-        TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
-        TransactionResponderWorkerEvent, TransactionSolidifierWorker, TransactionSolidifierWorkerEvent,
-        TransactionWorker, TransactionWorkerEvent,
+        BroadcasterWorker, BroadcasterWorkerEvent, HasherWorker, HasherWorkerEvent, MilestoneRequesterWorker,
+        MilestoneRequesterWorkerEntry, MilestoneResponderWorker, MilestoneResponderWorkerEvent,
+        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
+        PeerHandshakerWorker, ProcessorWorker, ProcessorWorkerEvent,
+        StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
+        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
+        TransactionSolidifierWorkerEvent,
     },
 };
 
@@ -51,7 +52,8 @@ pub struct Protocol {
     pub(crate) local_snapshot_timestamp: u64,
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
-    pub(crate) transaction_worker: mpsc::UnboundedSender<TransactionWorkerEvent>,
+    pub(crate) hasher_worker: mpsc::UnboundedSender<HasherWorkerEvent>,
+    pub(crate) processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>,
     pub(crate) transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
@@ -77,8 +79,11 @@ impl Protocol {
             return;
         }
 
-        let (transaction_worker_tx, transaction_worker_rx) = mpsc::unbounded();
-        let (transaction_worker_shutdown_tx, transaction_worker_shutdown_rx) = oneshot::channel();
+        let (hasher_worker_tx, hasher_worker_rx) = mpsc::unbounded();
+        let (hasher_worker_shutdown_tx, hasher_worker_shutdown_rx) = oneshot::channel();
+
+        let (processor_worker_tx, processor_worker_rx) = mpsc::unbounded();
+        let (processor_worker_shutdown_tx, processor_worker_shutdown_rx) = oneshot::channel();
 
         let (transaction_responder_worker_tx, transaction_responder_worker_rx) = mpsc::unbounded();
         let (transaction_responder_worker_shutdown_tx, transaction_responder_worker_shutdown_rx) = oneshot::channel();
@@ -112,7 +117,8 @@ impl Protocol {
             local_snapshot_timestamp,
             bus,
             metrics: ProtocolMetrics::new(),
-            transaction_worker: transaction_worker_tx,
+            hasher_worker: hasher_worker_tx,
+            processor_worker: processor_worker_tx,
             transaction_responder_worker: transaction_responder_worker_tx,
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: Default::default(),
@@ -134,12 +140,23 @@ impl Protocol {
         Protocol::get().bus.add_listener(on_last_milestone_changed);
 
         shutdown.add_worker_shutdown(
-            transaction_worker_shutdown_tx,
+            hasher_worker_shutdown_tx,
             spawn(
-                TransactionWorker::new(
-                    milestone_validator_worker_tx,
+                HasherWorker::new(
+                    Protocol::get().processor_worker.clone(),
                     Protocol::get().config.workers.transaction_worker_cache,
-                    ShutdownStream::new(transaction_worker_shutdown_rx, transaction_worker_rx),
+                    ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
+                )
+                .run(),
+            ),
+        );
+
+        shutdown.add_worker_shutdown(
+            processor_worker_shutdown_tx,
+            spawn(
+                ProcessorWorker::new(
+                    milestone_validator_worker_tx,
+                    ShutdownStream::new(processor_worker_shutdown_rx, processor_worker_rx),
                 )
                 .run(),
             ),

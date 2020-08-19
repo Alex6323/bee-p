@@ -11,13 +11,13 @@ keywords = ["iota", "tangle", "bee", "framework", "protocol"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-common = { git = "https://github.com/christianpoveda/bee.git", branch = "btc-curl-2" }
 bee-common-ext = { path = "../bee-common-ext" }
-bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-crypto = { git = "https://github.com/christianpoveda/bee.git", branch = "btc-curl-2" }
 bee-network = { path = "../bee-network" }
-bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-signing = { git = "https://github.com/christianpoveda/bee.git", branch = "btc-curl-2" }
 bee-tangle = { path = "../bee-tangle" }
-bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-ternary = { git = "https://github.com/christianpoveda/bee.git", branch = "btc-curl-2" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = "1.6.2"
@@ -29,6 +29,7 @@ futures-util = "0.3.5"
 log = "0.4.8"
 serde = { version = "1.0.114", features = ["derive" ] }
 twox-hash = "1.5.0"
+pin-project = "0.4"
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }

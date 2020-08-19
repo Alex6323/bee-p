@@ -38,4 +38,4 @@ pub(crate) use solidifier::{
 };
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
-pub(crate) use transaction::{TransactionWorker, TransactionWorkerEvent};
+pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker, ProcessorWorkerEvent};
