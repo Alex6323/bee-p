@@ -193,8 +193,8 @@ impl SignedTransaction {
                     match s {
                         SignatureUnlock::Ed25519(sig) => {
                             let key = Ed25519PublicKey::from_bytes(&sig.public_key)?;
-                            let signature = Ed25Signature::from_bytes(&sig.signature).map_err(|_| Error::HashError)?;
-                            key.verify(&serialized_inputs, &signature);
+                            let signature = Ed25Signature::from_bytes(&sig.signature)?;
+                            key.verify(&serialized_inputs, &signature)?;
                         }
                         SignatureUnlock::Wots(_) => {}
                     }
@@ -290,7 +290,7 @@ impl<'a> SignedTransactionBuilder<'a> {
                         unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock::Ed25519(Ed25519Signature { public_key, signature }),
                         ));
                     }
-                    Seed::Wots(s) => {
+                    Seed::Wots(_) => {
                         // let private_key = WotsShakePrivateKeyGeneratorBuilder::<Kerl>::default()
                         //     .with_security_level(WotsSecurityLevel::Medium)
                         //     .build()
