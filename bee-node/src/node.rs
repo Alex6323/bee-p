@@ -137,7 +137,7 @@ impl NodeBuilder {
 
         info!("Initializing plugins...");
 
-        plugin::init(bus);
+        plugin::init(bus, &mut shutdown);
 
         info!("Initialized.");
 

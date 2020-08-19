@@ -9,12 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::plugin::Plugin;
+
+use bee_common::shutdown::Shutdown;
 use bee_common_ext::event::Bus;
 use bee_protocol::event::TpsMetricsUpdated;
 
 use log::info;
 
-use std::sync::Arc;
+use std::{convert::Infallible, sync::Arc};
 
 fn tps(metrics: &TpsMetricsUpdated) {
     info!(
@@ -29,8 +32,21 @@ impl TpsPlugin {
     pub(crate) fn new() -> Self {
         Self {}
     }
+}
 
-    pub(crate) fn init(&self, bus: Arc<Bus>) {
+impl Plugin for TpsPlugin {
+    type Error = Infallible;
+
+    fn name(&self) -> &str {
+        "tps"
+    }
+
+    fn init(&mut self, bus: Arc<Bus>, _: &mut Shutdown) -> Result<(), Self::Error> {
         bus.add_listener(tps);
+        Ok(())
+    }
+
+    fn start(&mut self) -> Result<(), Self::Error> {
+        Ok(())
     }
 }
