@@ -82,21 +82,21 @@ impl MsTangle {
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
-            self.propagate_state(hash);
+            self.propagate_solid_flag(&hash);
+            self.propagate_otrsi_and_ytrsi(&hash);
             return Some(tx);
         }
         None
     }
 
     // NOTE: not implemented as an async worker atm, but it makes things much easier
-    fn propagate_solid_flag(&self, root: Hash) {
-        let mut children = vec![root];
+    fn propagate_solid_flag(&self, root: &Hash) {
+        let mut children = vec![*root];
 
         while let Some(ref hash) = children.pop() {
             if self.is_solid_transaction(hash) {
                 continue;
             }
-
             if let Some(tx) = self.inner.get(&hash) {
                 if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
                     self.inner.update_metadata(&hash, |metadata| {
@@ -126,53 +126,33 @@ impl MsTangle {
 
     // If the parents of this incoming transaction are solid, this incoming transaction will be marked as solid too.
     // Furthermore it will inherit the best OTRSI and YTRSI values from the parents.
-    fn propagate_state(&self, root: Hash) {
-        let mut visited = HashSet::new();
-        let mut to_visit = vec![root];
+    fn propagate_otrsi_and_ytrsi(&self, root: &Hash) {
+        let mut children = vec![*root];
+        while let Some(hash) = children.pop() {
 
-        while let Some(ref hash) = to_visit.pop() {
-            if visited.contains(hash) {
+            // get best otrsi and ytrsi from parents
+            // future optimization: in case the transaction already inherited the best otrsi and ytrsi,
+            // ignore children
+            let tx = self.inner.get(&hash).unwrap();
+            let trunk_otsri = self.otrsi(tx.trunk());
+            let branch_otsri = self.otrsi(tx.branch());
+            let trunk_ytrsi = self.ytrsi(tx.trunk());
+            let branch_ytrsi = self.ytrsi(tx.branch());
+
+            if trunk_otsri.is_none() || branch_otsri.is_none() || trunk_ytrsi.is_none() || branch_ytrsi.is_none() {
                 continue;
-            } else {
-                visited.insert(*hash);
+            }
+            
+            self.inner.update_metadata(&hash, |metadata| {
+                metadata.otrsi = Some(max(trunk_otsri.unwrap(), branch_otsri.unwrap()));
+                metadata.ytrsi = Some(min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap()));
+            });
+
+            // propagate otrsi and ytrsi to children
+            for child in self.inner.get_children(&hash) {
+                children.push(child);
             }
 
-            // get parents of transaction
-            let tx_ref = self.inner.get(&hash).unwrap();
-            let trunk = tx_ref.trunk();
-            let branch = tx_ref.branch();
-
-            if self.is_solid_transaction(trunk) && self.is_solid_transaction(branch) {
-                self.inner.update_metadata(&hash, |metadata| {
-                    if !self.is_solid_transaction(&hash) {
-                        metadata.flags.set_solid();
-                        // This is possibly not sufficient as there is no guarantee a milestone has been validated
-                        // before being solidified, we then also need to check when a milestone gets validated if it's
-                        // already solid.
-                        if metadata.flags.is_milestone() {
-                            Protocol::get().bus.dispatch(LastSolidMilestoneChanged(Milestone {
-                                hash: *hash,
-                                index: metadata.milestone_index,
-                            }));
-                        }
-                        metadata.solidification_timestamp = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Clock may have gone backwards")
-                            .as_millis() as u64;
-                    }
-
-                    // get best otrsi and ytrsi from parents
-                    // future optimization: in case the transaction already inherited the best otrsi and ytrsi,
-                    // ignore children
-                    metadata.otrsi = Some(max(self.otrsi(trunk).unwrap(), self.otrsi(branch).unwrap()));
-                    metadata.ytrsi = Some(min(self.ytrsi(trunk).unwrap(), self.ytrsi(branch).unwrap()));
-                });
-
-                // propagate the state to the children if possible
-                for child in self.inner.get_children(&hash) {
-                    to_visit.push(child);
-                }
-            }
         }
     }
 
@@ -218,7 +198,7 @@ impl MsTangle {
             // propagate the new otrsi and ytrsi values to the children of this transaction
             // children who already have inherited the new otrsi and ytrsi values, won't get updated
             for child in self.get_children(&hash) {
-                self.propagate_state(child);
+                self.propagate_otrsi_and_ytrsi(&child);
             }
 
             let tx_ref = self.get(&hash).unwrap();
