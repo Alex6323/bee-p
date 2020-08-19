@@ -30,7 +30,7 @@ use futures::{
     task::{Context, Poll},
     Stream, StreamExt,
 };
-use log::{debug, info};
+use log::{debug, info, warn};
 use pin_project::pin_project;
 
 use std::pin::Pin;
@@ -89,12 +89,15 @@ impl HasherWorker {
         processor_worker: &mut mpsc::UnboundedSender<ProcessorWorkerEvent>,
     ) {
         for (HasherWorkerEvent { from, transaction }, hash) in events.drain(..).zip(hashes) {
-            let hash = Hash::from_inner_unchecked(hash);
-            processor_worker.unbounded_send(ProcessorWorkerEvent {
-                hash,
-                from,
-                transaction,
-            });
+            if let Err(e) = processor_worker
+                .unbounded_send(ProcessorWorkerEvent {
+                    hash: Hash::from_inner_unchecked(hash),
+                    from,
+                    transaction,
+                })
+            {
+                warn!("Sending event to the processor worker failed: {}.", e);
+            }
         }
     }
 
