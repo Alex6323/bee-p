@@ -13,7 +13,7 @@ mod reference;
 mod signature;
 
 pub use reference::ReferenceUnlock;
-pub use signature::{Ed25519Signature, Signature, SignatureUnlock, WotsSignature};
+pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
 pub enum UnlockBlock {
     Reference(ReferenceUnlock),

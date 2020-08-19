@@ -273,7 +273,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
                 .unwrap();
             // Create subseed and then sign the message
             let signature = key_generator
-                .generate_from_seed(seed, *index)
+                .generate_from_seed(seed, *index as usize)
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?
                 .sign(&message)
                 .map_err(|_| OutgoingBundleBuilderError::FailedSigningOperation)?;
