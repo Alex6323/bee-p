@@ -18,7 +18,7 @@ use crate::atomic::payload::Payload;
 pub use crate::atomic::Error;
 pub use input::{Input, UTXOInput};
 pub use output::{Address, Output, SigLockedSingleDeposit};
-pub use unlock::{Ed25519Signature, ReferenceUnlock, Signature, SignatureUnlock, UnlockBlock, WotsSignature};
+pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
 
 use bee_crypto::ternary::sponge::Kerl;
@@ -190,13 +190,13 @@ impl SignedTransaction {
 
                     // Semantic Validation: The Signature Unlock Blocks are valid, i.e. the signatures prove ownership over the addresses of the referenced UTXOs.
                     let serialized_inputs = bincode::serialize(&transaction.inputs[i]).map_err(|_| Error::HashError)?;
-                    match s.signature {
-                        Signature::Ed25519(sig) => {
+                    match s {
+                        SignatureUnlock::Ed25519(sig) => {
                             let key = Ed25519PublicKey::from_bytes(&sig.public_key)?;
                             let signature = Ed25Signature::from_bytes(&sig.signature).map_err(|_| Error::HashError)?;
                             key.verify(&serialized_inputs, &signature);
                         }
-                        Signature::Wots(_) => {}
+                        SignatureUnlock::Wots(_) => {}
                     }
                 }
             }
@@ -287,9 +287,8 @@ impl<'a> SignedTransactionBuilder<'a> {
                         let private_key = Ed25519PrivateKey::generate_from_seed(s, *index)?;
                         let public_key = private_key.generate_public_key().to_bytes();
                         let signature = private_key.sign(&serialized_inputs).to_bytes().to_vec();
-                        unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock {
-                            signature: Signature::Ed25519(Ed25519Signature { public_key, signature }),
-                        }));
+                        unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock::Ed25519(Ed25519Signature { public_key, signature }),
+                        ));
                     }
                     Seed::Wots(s) => {
                         // let private_key = WotsShakePrivateKeyGeneratorBuilder::<Kerl>::default()
