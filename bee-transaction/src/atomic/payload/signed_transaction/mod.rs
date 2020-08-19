@@ -45,6 +45,10 @@ pub struct SignedTransaction {
 }
 
 impl SignedTransaction {
+    pub fn builder<'a>(seed: Seed) -> SignedTransactionBuilder<'a> {
+        SignedTransactionBuilder::new(seed)
+    }
+
     pub fn validate(&self) -> Result<(), Error> {
         // Should we add this field? -> Transaction Type value must be 0, denoting an Unsigned Transaction
 

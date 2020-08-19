@@ -22,9 +22,9 @@ pub use signed_transaction::SignedTransaction;
 pub use unsigned_data::UnsignedData;
 
 pub enum Payload {
-    Indexation(Indexation),
-    Milestone(Milestone),
-    SignedData(SignedData),
-    SignedTransaction(SignedTransaction),
-    UnsignedData(UnsignedData),
+    Indexation(Box<Indexation>),
+    Milestone(Box<Milestone>),
+    SignedData(Box<SignedData>),
+    SignedTransaction(Box<SignedTransaction>),
+    UnsignedData(Box<UnsignedData>),
 }
