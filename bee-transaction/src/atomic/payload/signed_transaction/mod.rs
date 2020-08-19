@@ -22,7 +22,15 @@ pub use unlock::{Ed25519Signature, ReferenceUnlock, Signature, SignatureUnlock, 
 pub use unsigned_transaction::UnsignedTransaction;
 
 use bee_crypto::ternary::sponge::Kerl;
-use bee_signing_ext::Signer;
+use bee_signing_ext::{
+    binary::{
+        Ed25519Seed,
+        Ed25519PrivateKey,
+        Ed25519PublicKey,
+        Ed25519Signature as Ed25Signature
+    },
+    Signer, Verifier, Signature as SignatureTrait
+};
 use bee_signing::ternary::{
     wots::{WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder},
     PrivateKey, PrivateKeyGenerator,
@@ -179,11 +187,25 @@ impl SignedTransaction {
                             },
                         }
                     }
+
+                    // Semantic Validation: The Signature Unlock Blocks are valid, i.e. the signatures prove ownership over the addresses of the referenced UTXOs.
+                    let serialized_inputs = bincode::serialize(&transaction.inputs[i]).map_err(|_| Error::HashError)?;
+                    match s.signature {
+                        Signature::Ed25519(sig) => {
+                            let key = Ed25519PublicKey::from_bytes(&sig.public_key)?;
+                            let signature = Ed25Signature::from_bytes(&sig.signature).map_err(|_| Error::HashError)?;
+                            key.verify(&serialized_inputs, &signature);
+                        }
+                        Signature::Wots(_) => {}
+                    }
                 }
             }
         }
 
         // TODO Semantic Validation
+        // TODO The UTXOs the transaction references must be known (booked) and unspent.
+        // TODO The transaction is spending the entirety of the funds of the referenced UTXOs to the outputs.
+
 
         Ok(())
     }
@@ -262,7 +284,7 @@ impl<'a> SignedTransactionBuilder<'a> {
                 let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
                 match &self.seed {
                     Seed::Ed25519(s) => {
-                        let private_key = bee_signing_ext::binary::Ed25519PrivateKey::generate_from_seed(s, *index)?;
+                        let private_key = Ed25519PrivateKey::generate_from_seed(s, *index)?;
                         let public_key = private_key.generate_public_key().to_bytes();
                         let signature = private_key.sign(&serialized_inputs).to_bytes().to_vec();
                         unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock {
@@ -303,14 +325,14 @@ impl<'a> SignedTransactionBuilder<'a> {
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 
 pub enum Seed {
-    Ed25519(bee_signing_ext::binary::Ed25519Seed),
+    Ed25519(Ed25519Seed),
     Wots(bee_signing::ternary::seed::Seed),
 }
 
 impl Seed {
     pub fn from_ed25519_bytes(bytes: &[u8]) -> Result<Self, Error> {
         Ok(Seed::Ed25519(
-            bee_signing_ext::binary::Ed25519Seed::from_bytes(bytes).map_err(|_| Error::HashError)?,
+            Ed25519Seed::from_bytes(bytes).map_err(|_| Error::HashError)?,
         ))
     }
 
