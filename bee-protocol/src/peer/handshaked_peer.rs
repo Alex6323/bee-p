@@ -18,7 +18,7 @@ use crate::{
 use bee_network::{Address, EndpointId};
 
 use std::sync::{
-    atomic::{AtomicU32, Ordering},
+    atomic::{AtomicU32, AtomicU8, Ordering},
     Mutex,
 };
 
@@ -30,6 +30,9 @@ pub struct HandshakedPeer {
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) last_solid_milestone_index: AtomicU32,
     pub(crate) snapshot_milestone_index: AtomicU32,
+    pub(crate) last_milestone_index: AtomicU32,
+    pub(crate) connected_peers: AtomicU8,
+    pub(crate) synced_peers: AtomicU8,
     pub(crate) milestone_request: (mpsc::Sender<MilestoneRequest>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) transaction: (mpsc::Sender<TransactionMessage>, Mutex<Option<oneshot::Sender<()>>>),
     pub(crate) transaction_request: (mpsc::Sender<TransactionRequest>, Mutex<Option<oneshot::Sender<()>>>),
@@ -51,6 +54,9 @@ impl HandshakedPeer {
             metrics: ProtocolMetrics::default(),
             last_solid_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
+            last_milestone_index: AtomicU32::new(0),
+            connected_peers: AtomicU8::new(0),
+            synced_peers: AtomicU8::new(0),
             milestone_request,
             transaction,
             transaction_request,
@@ -72,5 +78,29 @@ impl HandshakedPeer {
 
     pub(crate) fn snapshot_milestone_index(&self) -> MilestoneIndex {
         self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+    }
+
+    pub(crate) fn set_last_milestone_index(&self, index: MilestoneIndex) {
+        self.last_milestone_index.store(*index, Ordering::Relaxed);
+    }
+
+    pub(crate) fn last_milestone_index(&self) -> MilestoneIndex {
+        self.last_milestone_index.load(Ordering::Relaxed).into()
+    }
+
+    pub(crate) fn set_connected_peers(&self, connected_peers: u8) {
+        self.connected_peers.store(connected_peers, Ordering::Relaxed);
+    }
+
+    pub(crate) fn connected_peers(&self) -> u8 {
+        self.connected_peers.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn set_synced_peers(&self, synced_peers: u8) {
+        self.synced_peers.store(synced_peers, Ordering::Relaxed);
+    }
+
+    pub(crate) fn synced_peers(&self) -> u8 {
+        self.synced_peers.load(Ordering::Relaxed)
     }
 }

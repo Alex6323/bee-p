@@ -16,6 +16,7 @@ use crate::{
     },
     peer::HandshakedPeer,
     protocol::Protocol,
+    tangle::tangle,
     worker::{
         peer::MessageHandler, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
     },
@@ -137,12 +138,25 @@ impl PeerWorker {
                 debug!("[{}] Reading Heartbeat...", self.peer.address);
                 match tlv_from_bytes::<Heartbeat>(&header, bytes) {
                     Ok(message) => {
-                        // TODO Drop connection if autopeered and can't help it to sync depending on indexes.
                         self.peer
                             .set_last_solid_milestone_index(message.last_solid_milestone_index.into());
                         self.peer
                             .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
-                        // TODO Warn if can't help sync
+                        self.peer.set_last_milestone_index(message.last_milestone_index.into());
+                        self.peer.set_connected_peers(message.connected_peers);
+                        self.peer.set_synced_peers(message.synced_peers);
+
+                        // // TODO Warn if can't help sync
+                        if !tangle().is_synced() {
+                            let index = *tangle().get_last_solid_milestone_index() + 1;
+
+                            if !(index > message.snapshot_milestone_index
+                                && index <= message.last_solid_milestone_index)
+                            {
+                                warn!("The peer {} can't help syncing.", self.peer.address);
+                                // TODO Drop connection if autopeered.
+                            }
+                        }
 
                         // TODO think about a better solution
                         if Protocol::get().peer_manager.handshaked_peers.len() == 1 {
