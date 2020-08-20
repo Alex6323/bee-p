@@ -290,7 +290,16 @@ impl Protocol {
 }
 
 fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
-    info!("New milestone #{}.", *last_milestone.0.index);
+    info!(
+        "New milestone #{} {}.",
+        *last_milestone.0.index,
+        last_milestone
+            .0
+            .hash()
+            .iter_trytes()
+            .map(|trit| char::from(trit))
+            .collect::<String>()
+    );
     tangle().update_last_milestone_index(last_milestone.0.index);
 
     // TODO block_on ?
