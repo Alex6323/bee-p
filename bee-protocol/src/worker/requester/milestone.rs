@@ -59,7 +59,7 @@ impl MilestoneRequesterWorker {
                 if index.0 != 0 {
                     Protocol::get().requested_milestones.insert(index);
                 }
-                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
             }
             None => {
                 let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
@@ -74,7 +74,7 @@ impl MilestoneRequesterWorker {
                             if index.0 != 0 {
                                 Protocol::get().requested_milestones.insert(index);
                             }
-                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
                             break;
                         }
                     }

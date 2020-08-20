@@ -33,20 +33,38 @@ pub struct HandshakedPeer {
     pub(crate) last_milestone_index: AtomicU32,
     pub(crate) connected_peers: AtomicU8,
     pub(crate) synced_peers: AtomicU8,
-    pub(crate) milestone_request: (mpsc::Sender<MilestoneRequest>, Mutex<Option<oneshot::Sender<()>>>),
-    pub(crate) transaction: (mpsc::Sender<TransactionMessage>, Mutex<Option<oneshot::Sender<()>>>),
-    pub(crate) transaction_request: (mpsc::Sender<TransactionRequest>, Mutex<Option<oneshot::Sender<()>>>),
-    pub(crate) heartbeat: (mpsc::Sender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
+    pub(crate) milestone_request: (
+        mpsc::UnboundedSender<MilestoneRequest>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
+    pub(crate) transaction: (
+        mpsc::UnboundedSender<TransactionMessage>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
+    pub(crate) transaction_request: (
+        mpsc::UnboundedSender<TransactionRequest>,
+        Mutex<Option<oneshot::Sender<()>>>,
+    ),
+    pub(crate) heartbeat: (mpsc::UnboundedSender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
 }
 
 impl HandshakedPeer {
     pub(crate) fn new(
         epid: EndpointId,
         address: Address,
-        milestone_request: (mpsc::Sender<MilestoneRequest>, Mutex<Option<oneshot::Sender<()>>>),
-        transaction: (mpsc::Sender<TransactionMessage>, Mutex<Option<oneshot::Sender<()>>>),
-        transaction_request: (mpsc::Sender<TransactionRequest>, Mutex<Option<oneshot::Sender<()>>>),
-        heartbeat: (mpsc::Sender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
+        milestone_request: (
+            mpsc::UnboundedSender<MilestoneRequest>,
+            Mutex<Option<oneshot::Sender<()>>>,
+        ),
+        transaction: (
+            mpsc::UnboundedSender<TransactionMessage>,
+            Mutex<Option<oneshot::Sender<()>>>,
+        ),
+        transaction_request: (
+            mpsc::UnboundedSender<TransactionRequest>,
+            Mutex<Option<oneshot::Sender<()>>>,
+        ),
+        heartbeat: (mpsc::UnboundedSender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
     ) -> Self {
         Self {
             epid,

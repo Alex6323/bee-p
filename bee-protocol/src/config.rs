@@ -50,10 +50,6 @@ struct ProtocolCoordinatorConfigBuilder {
 
 #[derive(Default, Deserialize)]
 struct ProtocolWorkersConfigBuilder {
-    milestone_request_send_worker_bound: Option<usize>,
-    transaction_send_worker_bound: Option<usize>,
-    transaction_request_send_worker_bound: Option<usize>,
-    heartbeat_send_worker_bound: Option<usize>,
     milestone_validator_worker_bound: Option<usize>,
     transaction_solidifier_worker_bound: Option<usize>,
     milestone_solidifier_worker_bound: Option<usize>,
@@ -103,34 +99,6 @@ impl ProtocolConfigBuilder {
 
     pub fn coo_sponge_type(mut self, coo_sponge_type: &str) -> Self {
         self.coordinator.sponge_type.replace(coo_sponge_type.to_string());
-        self
-    }
-
-    pub fn milestone_request_send_worker_bound(mut self, milestone_request_send_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_send_worker_bound
-            .replace(milestone_request_send_worker_bound);
-        self
-    }
-
-    pub fn transaction_send_worker_bound(mut self, transaction_send_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_send_worker_bound
-            .replace(transaction_send_worker_bound);
-        self
-    }
-
-    pub fn transaction_request_send_worker_bound(mut self, transaction_request_send_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_request_send_worker_bound
-            .replace(transaction_request_send_worker_bound);
-        self
-    }
-
-    pub fn heartbeat_send_worker_bound(mut self, heartbeat_send_worker_bound: usize) -> Self {
-        self.workers
-            .heartbeat_send_worker_bound
-            .replace(heartbeat_send_worker_bound);
         self
     }
 
@@ -259,22 +227,6 @@ impl ProtocolConfigBuilder {
                 sponge_type: coo_sponge_type,
             },
             workers: ProtocolWorkersConfig {
-                milestone_request_send_worker_bound: self
-                    .workers
-                    .milestone_request_send_worker_bound
-                    .unwrap_or(DEFAULT_MILESTONE_REQUEST_SEND_WORKER_BOUND),
-                transaction_send_worker_bound: self
-                    .workers
-                    .transaction_send_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_SEND_WORKER_BOUND),
-                transaction_request_send_worker_bound: self
-                    .workers
-                    .transaction_request_send_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_REQUEST_SEND_WORKER_BOUND),
-                heartbeat_send_worker_bound: self
-                    .workers
-                    .heartbeat_send_worker_bound
-                    .unwrap_or(DEFAULT_HEARTBEAT_SEND_WORKER_BOUND),
                 milestone_validator_worker_bound: self
                     .workers
                     .milestone_validator_worker_bound
@@ -337,10 +289,6 @@ pub struct ProtocolCoordinatorConfig {
 
 #[derive(Clone)]
 pub struct ProtocolWorkersConfig {
-    pub(crate) milestone_request_send_worker_bound: usize,
-    pub(crate) transaction_send_worker_bound: usize,
-    pub(crate) transaction_request_send_worker_bound: usize,
-    pub(crate) heartbeat_send_worker_bound: usize,
     pub(crate) milestone_validator_worker_bound: usize,
     pub(crate) transaction_solidifier_worker_bound: usize,
     pub(crate) milestone_solidifier_worker_bound: usize,

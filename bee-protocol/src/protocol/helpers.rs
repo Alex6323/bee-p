@@ -64,8 +64,8 @@ impl Protocol {
 
     // TransactionMessage
 
-    pub async fn send_transaction(to: EndpointId, transaction: &[u8]) {
-        SenderWorker::<TransactionMessage>::send(&to, TransactionMessage::new(transaction)).await;
+    pub fn send_transaction(to: EndpointId, transaction: &[u8]) {
+        SenderWorker::<TransactionMessage>::send(&to, TransactionMessage::new(transaction));
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
@@ -100,7 +100,7 @@ impl Protocol {
 
     // Heartbeat
 
-    pub async fn send_heartbeat(
+    pub fn send_heartbeat(
         to: EndpointId,
         last_solid_milestone_index: MilestoneIndex,
         snapshot_milestone_index: MilestoneIndex,
@@ -115,11 +115,10 @@ impl Protocol {
                 0,
                 0,
             ),
-        )
-        .await;
+        );
     }
 
-    pub async fn broadcast_heartbeat(
+    pub fn broadcast_heartbeat(
         last_solid_milestone_index: MilestoneIndex,
         snapshot_milestone_index: MilestoneIndex,
         last_milestone_index: MilestoneIndex,
@@ -131,7 +130,6 @@ impl Protocol {
                 snapshot_milestone_index,
                 last_milestone_index,
             )
-            .await;
         }
     }
 

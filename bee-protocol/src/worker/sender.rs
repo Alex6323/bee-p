@@ -25,7 +25,7 @@ use log::warn;
 
 use std::sync::Arc;
 
-type Receiver<M> = ShutdownStream<mpsc::Receiver<M>>;
+type Receiver<M> = ShutdownStream<mpsc::UnboundedReceiver<M>>;
 
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
@@ -44,18 +44,10 @@ macro_rules! implement_sender_worker {
                 }
             }
 
-            pub(crate) async fn send(epid: &EndpointId, message: $type) {
+            pub(crate) fn send(epid: &EndpointId, message: $type) {
                 if let Some(context) = Protocol::get().peer_manager.handshaked_peers.get(&epid) {
-                    if let Err(e) = context
-                        .$sender
-                        .0
-                        // TODO avoid clone ?
-                        .clone()
-                        .send(message)
-                        .await
-                    {
-                        // TODO log actual message type ?
-                        warn!("Sending message to {} failed: {:?}.", epid, e);
+                    if let Err(e) = context.$sender.0.unbounded_send(message) {
+                        warn!("Sending {} to {} failed: {:?}.", stringify!($type), epid, e);
                     }
                 };
             }
@@ -76,8 +68,12 @@ macro_rules! implement_sender_worker {
                             Protocol::get().metrics.$incrementor();
                         }
                         Err(e) => {
-                            // TODO log actual message type ?
-                            warn!("Sending message to {} failed: {:?}.", self.peer.epid, e);
+                            warn!(
+                                "Sending {} to {} failed: {:?}.",
+                                stringify!($type),
+                                self.peer.epid,
+                                e
+                            );
                         }
                     }
                 }

@@ -69,8 +69,7 @@ impl TransactionRequesterWorker {
                     SenderWorker::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
-                    )
-                    .await;
+                    );
                     break;
                 }
             }

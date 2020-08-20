@@ -41,7 +41,7 @@ impl MilestoneResponderWorker {
         Self { receiver }
     }
 
-    async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
+    fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
         let index = match request.index {
             0 => tangle().get_last_milestone_index(),
             _ => request.index.into(),
@@ -60,8 +60,7 @@ impl MilestoneResponderWorker {
                     TransactionMessage::new(&compress_transaction_bytes(cast_slice(
                         trits.encode::<T5B1Buf>().as_i8_slice(),
                     ))),
-                )
-                .await;
+                );
             }
             None => return,
         }
@@ -71,7 +70,7 @@ impl MilestoneResponderWorker {
         info!("Running.");
 
         while let Some(MilestoneResponderWorkerEvent { epid, request }) = self.receiver.next().await {
-            self.process_request(epid, request).await;
+            self.process_request(epid, request);
         }
 
         info!("Stopped.");

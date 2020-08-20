@@ -220,8 +220,7 @@ impl PeerHandshakerWorker {
                             tangle().get_last_solid_milestone_index(),
                             tangle().get_snapshot_milestone_index(),
                             tangle().get_last_milestone_index(),
-                        )
-                        .await;
+                        );
 
                         Protocol::request_last_milestone(Some(self.peer.epid));
                         Protocol::trigger_milestone_solidification().await;
