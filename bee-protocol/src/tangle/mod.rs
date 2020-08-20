@@ -159,43 +159,33 @@ impl MsTangle {
     // updated otrsi and ytrsi values need to be propagated to attached children (not referenced by the milestone)
     fn update_transactions_referenced_by_milestone(&self, milestone_index: MilestoneIndex) {
         if let Some(root) = self.get_milestone_hash(milestone_index) {
-            info!("Update transactions referenced by milestone {}.", &root);
+            info!("Update transactions referenced by milestone index {}.", *milestone_index);
             let mut visited = HashSet::new();
             let mut to_visit = vec![root];
-
             while let Some(hash) = to_visit.pop() {
                 if visited.contains(&hash) {
                     continue;
                 } else {
                     visited.insert(hash.clone());
                 }
-
-                if self.is_solid_entry_point(&hash) {
+                if self.get_metadata(&hash).is_none() {
                     continue;
                 }
-
-                if self.get_metadata(&hash).unwrap().cone_index.is_some() {
-                    continue;
-                }
-
                 tangle().update_metadata(&hash, |metadata| {
                     metadata.cone_index = Some(milestone_index);
                     metadata.otrsi = Some(milestone_index);
                     metadata.ytrsi = Some(milestone_index);
                 });
-
                 info!(
                     "Updated transaction with milestone_index {}, OTRSI {}, YTRSI {}.",
                     *self.get_metadata(&hash).unwrap().cone_index.unwrap(),
                     *self.get_metadata(&hash).unwrap().otrsi.unwrap(),
                     *self.get_metadata(&hash).unwrap().ytrsi.unwrap()
                 );
-
                 // propagate the new otrsi and ytrsi values to the children of this transaction
                 for child in self.get_children(&hash) {
                     self.propagate_otrsi_and_ytrsi(&child);
                 }
-
                 let tx_ref = self.get(&hash).unwrap();
                 to_visit.push(tx_ref.trunk().clone());
                 to_visit.push(tx_ref.branch().clone());
