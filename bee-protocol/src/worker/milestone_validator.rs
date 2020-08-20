@@ -16,7 +16,7 @@ use crate::{
     tangle::tangle,
 };
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
     Hash,
@@ -24,12 +24,12 @@ use bee_crypto::ternary::{
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{debug, info};
 
-use futures::{channel::mpsc, stream::StreamExt};
 use std::marker::PhantomData;
 
-type Receiver = crate::worker::Receiver<mpsc::Receiver<MilestoneValidatorWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::Receiver<MilestoneValidatorWorkerEvent>>;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {

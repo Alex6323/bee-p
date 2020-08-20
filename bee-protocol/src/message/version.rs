@@ -9,9 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::message::{v0::MESSAGES_VERSION_0, v2::MESSAGES_VERSION_2};
+// use crate::message::{v0::MESSAGES_VERSION_0, v2::MESSAGES_VERSION_2};
 
-pub(crate) const MESSAGES_VERSIONS: [u8; 1] = [MESSAGES_VERSION_0 | MESSAGES_VERSION_2];
+pub(crate) const MESSAGES_VERSIONS: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 4];
+// pub(crate) const MESSAGES_VERSIONS: [u8; 1] = [MESSAGES_VERSION_0 | MESSAGES_VERSION_2];
 
 fn common_supported_version(own_supported_versions: &[u8], supported_versions: &[u8]) -> Result<u8, u8> {
     let mut highest_supported_version: u8 = 0;

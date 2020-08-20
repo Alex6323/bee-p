@@ -17,9 +17,9 @@ use bytemuck::cast_slice;
 use serde::Deserialize;
 
 const DEFAULT_MWM: u8 = 14;
-const DEFAULT_COO_DEPTH: u8 = 24;
+const DEFAULT_COO_DEPTH: u8 = 25;
 const DEFAULT_COO_PUBLIC_KEY: &str =
-    "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9";
+    "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ";
 const DEFAULT_COO_SECURITY: u8 = 2;
 const DEFAULT_COO_SPONGE_TYPE: &str = "kerl";
 const DEFAULT_MILESTONE_REQUEST_SEND_WORKER_BOUND: usize = 1000;
@@ -250,7 +250,6 @@ impl ProtocolConfigBuilder {
         public_key_bytes.copy_from_slice(cast_slice(coo_public_key.to_inner().encode::<T5B1Buf>().as_i8_slice()));
 
         ProtocolConfig {
-            null_address: Address::zeros(),
             mwm: self.mwm.unwrap_or(DEFAULT_MWM),
             coordinator: ProtocolCoordinatorConfig {
                 depth: self.coordinator.depth.unwrap_or(DEFAULT_COO_DEPTH),
@@ -358,7 +357,6 @@ pub struct ProtocolWorkersConfig {
 
 #[derive(Clone)]
 pub struct ProtocolConfig {
-    pub(crate) null_address: Address,
     pub(crate) mwm: u8,
     pub(crate) coordinator: ProtocolCoordinatorConfig,
     pub(crate) workers: ProtocolWorkersConfig,

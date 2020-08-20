@@ -19,8 +19,8 @@ peers     = [  ]
 [protocol]
 mwm = 14
 [protocol.coordinator]
-depth           = 24
-public_key      = "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9"
+depth           = 25
+public_key      = "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ"
 security_level  = 2
 sponge_type     = "kerl"
 [protocol.workers]

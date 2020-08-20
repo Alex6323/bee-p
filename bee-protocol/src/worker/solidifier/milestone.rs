@@ -11,12 +11,12 @@
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 
 use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
-type Receiver = crate::worker::Receiver<mpsc::Receiver<MilestoneSolidifierWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::Receiver<MilestoneSolidifierWorkerEvent>>;
 
 pub(crate) struct MilestoneSolidifierWorkerEvent;
 
