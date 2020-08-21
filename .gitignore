@@ -11,7 +11,9 @@ Cargo.lock
 
 # bee-node
 bee-node/config.toml
-bee-node/snapshots
+bee-node/snapshots/comnet/*
+bee-node/snapshots/mainnet/*
+bee-node/snapshots/testnet/*
 
 # bee-storage
 bee-storage/src/backends/sqlx/schemes/postgres/cleanup.sql
