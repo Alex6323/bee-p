@@ -106,9 +106,7 @@ impl<'a> TransactionRequesterWorker<'a> {
             }
         }
         self.timeout = new_timeout();
-        if retry_counts > 0 {
-            info!("Retried {} transactions", retry_counts);
-        }
+        info!("Retried {} transactions", retry_counts);
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
