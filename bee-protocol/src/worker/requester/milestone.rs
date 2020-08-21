@@ -104,8 +104,9 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
     async fn retry_requests(&mut self) {
         let mut retry_counts = 0;
-        for mut tx in Protocol::get().requested_milestones.iter_mut() {
-            let (index, instant) = tx.pair_mut();
+
+        for mut milestone in Protocol::get().requested_milestones.iter_mut() {
+            let (index, instant) = milestone.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
                 *instant = now;
@@ -113,7 +114,10 @@ impl<'a> MilestoneRequesterWorker<'a> {
                 retry_counts += 1;
             }
         }
-        info!("Retried {} milestones", retry_counts);
+
+        if retry_counts > 0 {
+            info!("Retried {} milestones.", retry_counts);
+        }
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {

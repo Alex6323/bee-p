@@ -99,8 +99,9 @@ impl<'a> TransactionRequesterWorker<'a> {
 
     async fn retry_requests(&mut self) {
         let mut retry_counts = 0;
-        for mut tx in Protocol::get().requested_transactions.iter_mut() {
-            let (hash, (index, instant)) = tx.pair_mut();
+
+        for mut transaction in Protocol::get().requested_transactions.iter_mut() {
+            let (hash, (index, instant)) = transaction.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
                 *instant = now;
@@ -108,7 +109,10 @@ impl<'a> TransactionRequesterWorker<'a> {
                 retry_counts += 1;
             }
         }
-        info!("Retried {} transactions", retry_counts);
+
+        if retry_counts > 0 {
+            info!("Retried {} transactions.", retry_counts);
+        }
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
