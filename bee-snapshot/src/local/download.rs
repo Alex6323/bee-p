@@ -35,7 +35,7 @@ pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error
 
     rt.block_on(async move {
         for url in config.download_urls() {
-            info!("Downloading local snapshot file from {}.", url);
+            info!("Downloading local snapshot file from {}...", url);
             match reqwest::get(url).await {
                 Ok(res) => match File::create(config.file_path()) {
                     // TODO unwrap
