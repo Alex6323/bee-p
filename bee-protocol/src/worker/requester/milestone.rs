@@ -26,6 +26,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+const RETRY_INTERVAL_SECS: u64 = 5;
+
 type Receiver<'a> = ShutdownStream<WaitIncoming<'a, MilestoneRequesterWorkerEntry>>;
 
 #[derive(Eq, PartialEq)]
@@ -54,8 +56,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
         Self {
             counter: 0,
             receiver,
-
-            timeouts: interval(Duration::from_secs(5)).fuse(),
+            timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
         }
     }
 
@@ -106,7 +107,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
         for mut tx in Protocol::get().requested_milestones.iter_mut() {
             let (index, instant) = tx.pair_mut();
             let now = Instant::now();
-            if (now - *instant).as_secs() > 5 {
+            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
                 *instant = now;
                 self.process_request_unchecked(*index, None).await;
                 retry_counts += 1;

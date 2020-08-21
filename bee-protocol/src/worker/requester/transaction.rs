@@ -28,6 +28,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+const RETRY_INTERVAL_SECS: u64 = 5;
+
 type Receiver<'a> = ShutdownStream<WaitIncoming<'a, TransactionRequesterWorkerEntry>>;
 
 #[derive(Eq, PartialEq)]
@@ -56,7 +58,7 @@ impl<'a> TransactionRequesterWorker<'a> {
         Self {
             counter: 0,
             receiver,
-            timeouts: interval(Duration::from_secs(5)).fuse(),
+            timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
         }
     }
 
@@ -100,7 +102,7 @@ impl<'a> TransactionRequesterWorker<'a> {
         for mut tx in Protocol::get().requested_transactions.iter_mut() {
             let (hash, (index, instant)) = tx.pair_mut();
             let now = Instant::now();
-            if (now - *instant).as_secs() > 5 {
+            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
                 *instant = now;
                 self.process_request_unchecked(hash.clone(), *index).await;
                 retry_counts += 1;
