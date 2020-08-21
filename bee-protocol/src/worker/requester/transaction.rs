@@ -18,14 +18,20 @@ use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
+use async_std::stream::interval;
 use bytemuck::cast_slice;
 use futures::{
-    future::{BoxFuture, Fuse},
-    select, FutureExt, StreamExt,
+    channel::oneshot,
+    select,
+    stream::{BoxStream, Fuse},
+    FutureExt, StreamExt,
 };
 use log::info;
 
-use std::{cmp::Ordering, time::Instant};
+use std::{
+    cmp::Ordering,
+    time::{Duration, Instant},
+};
 
 type Receiver<'a> = ShutdownStream<WaitIncoming<'a, TransactionRequesterWorkerEntry>>;
 
@@ -47,7 +53,7 @@ impl Ord for TransactionRequesterWorkerEntry {
 pub(crate) struct TransactionRequesterWorker<'a> {
     counter: usize,
     receiver: Receiver<'a>,
-    timeout: Fuse<BoxFuture<'static, ()>>,
+    timeouts: Fuse<BoxStream<'static, ()>>,
 }
 
 impl<'a> TransactionRequesterWorker<'a> {
@@ -55,7 +61,7 @@ impl<'a> TransactionRequesterWorker<'a> {
         Self {
             counter: 0,
             receiver,
-            timeout: new_timeout(),
+            timeouts: StreamExt::fuse(interval(Duration::from_secs(5)).boxed()),
         }
     }
 
@@ -105,7 +111,6 @@ impl<'a> TransactionRequesterWorker<'a> {
                 retry_counts += 1;
             }
         }
-        self.timeout = new_timeout();
         info!("Retried {} transactions", retry_counts);
     }
 
@@ -119,19 +124,12 @@ impl<'a> TransactionRequesterWorker<'a> {
                     Some(TransactionRequesterWorkerEntry(hash, index)) => self.process_request(hash, index).await,
                     None => break,
                 },
-                _ = &mut self.timeout => self.retry_requests().await,
+                _ = self.timeouts.next() => self.retry_requests().await,
             }
         }
+
         info!("Stopped.");
 
         Ok(())
     }
-}
-
-fn new_timeout() -> Fuse<BoxFuture<'static, ()>> {
-    async {
-        async_std::task::sleep(std::time::Duration::from_secs(5)).await;
-    }
-    .boxed()
-    .fuse()
 }
