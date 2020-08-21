@@ -15,8 +15,6 @@ macro_rules! impl_delta_ops {
             access::OpError,
             storage::{rocksdb::*, Storage},
         };
-        use bee_ternary::{T5B1Buf, TritBuf, T5B1};
-        use std::collections::HashSet;
         #[cfg(feature = "rocks_db")]
         impl $object {
             async fn insert(&self, milestone_index: &MilestoneIndex, storage: &Storage) -> Result<(), OpError> {
