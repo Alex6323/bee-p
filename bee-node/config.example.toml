@@ -14,7 +14,7 @@ reconnect_interval  = 60
 [peering]
 [peering.static]
 limit     = 5
-peers     = [  ]
+peers     = [ ]
 
 [protocol]
 mwm = 14
@@ -27,4 +27,9 @@ sponge_type     = "kerl"
 status_interval = 10
 
 [snapshot.local]
-file_path = "./snapshots/mainnet/export.bin"
+file_path     = "./snapshots/mainnet/export.bin"
+download_urls = [
+  "https://ls.manapotion.io/export.bin",
+  "https://x-vps.com/export.bin",
+  "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+]

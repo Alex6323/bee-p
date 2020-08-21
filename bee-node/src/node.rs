@@ -23,7 +23,7 @@ use bee_crypto::ternary::Hash;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::local::{Error as SnapshotReadError, LocalSnapshot};
+use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
 
 use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
@@ -43,7 +43,7 @@ use std::{collections::HashMap, sync::Arc};
 pub enum Error {
     /// Occurs, when there is an error while reading the snapshot file.
     #[error("Reading the snapshot file failed.")]
-    SnapshotReadError(SnapshotReadError),
+    LocalSnapshotReadError(LocalSnapshotReadError),
 
     /// Occurs, when there is an error while shutting down the node.
     #[error("Shutting down failed.")]
@@ -65,6 +65,9 @@ impl NodeBuilder {
 
         info!("Initializing tangle...");
         tangle::init();
+
+        // TODO handle error
+        download_local_snapshot(&self.config.snapshot.local());
 
         info!("Reading snapshot file...");
         let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()) {
@@ -105,7 +108,7 @@ impl NodeBuilder {
                     self.config.snapshot.local().file_path(),
                     e
                 );
-                return Err(Error::SnapshotReadError(e));
+                return Err(Error::LocalSnapshotReadError(e));
             }
         };
 

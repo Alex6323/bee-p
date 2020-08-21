@@ -17,4 +17,6 @@ bee-transaction = { path = "../bee-transaction" }
 
 bytemuck = "1.2.0"
 log = "0.4.8"
+reqwest = { version = "0.10.7", features = ["stream"] }
 serde = { version = "1.0.114", features = ["derive" ] }
+tokio = "0.2.22"
