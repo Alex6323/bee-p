@@ -19,7 +19,6 @@ use std::error::Error;
 pub const TRANSACTION_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
 pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
 pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
-pub const MILESTONE_INDEX_TO_HASH: &str = "milestone_index_to_hash";
 pub const MILESTONE_INDEX_TO_DELTA: &str = "milestone_hash_to_delta";
 
 pub struct RocksdbBackend;
