@@ -171,7 +171,13 @@ impl Protocol {
 
         shutdown.add_worker_shutdown(
             transaction_requester_worker_shutdown_tx,
-            spawn(TransactionRequesterWorker::new().run(transaction_requester_worker_shutdown_rx)),
+            spawn(
+                TransactionRequesterWorker::new(ShutdownStream::new(
+                    transaction_requester_worker_shutdown_rx,
+                    Protocol::get().transaction_requester_worker.incoming(),
+                ))
+                .run(),
+            ),
         );
 
         shutdown.add_worker_shutdown(
