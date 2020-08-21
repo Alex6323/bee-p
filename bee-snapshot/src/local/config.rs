@@ -11,7 +11,7 @@
 
 use serde::Deserialize;
 
-const DEFAULT_FILE_PATH: &str = "./data/snapshot.bin";
+const DEFAULT_FILE_PATH: &str = "./snapshots/mainnet/export.bin";
 
 #[derive(Default, Deserialize)]
 pub struct LocalSnapshotConfigBuilder {

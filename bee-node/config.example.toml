@@ -27,4 +27,4 @@ sponge_type     = "kerl"
 status_interval = 10
 
 [snapshot.local]
-file_path = "./data/local_snapshot.bin"
+file_path = "./snapshots/mainnet/export.bin"
