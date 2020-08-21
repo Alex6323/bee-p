@@ -40,7 +40,7 @@ use dashmap::{DashMap, DashSet};
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 
-use std::{ptr, sync::Arc};
+use std::{ptr, sync::Arc, time::Instant};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -60,7 +60,7 @@ pub struct Protocol {
     pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
-    pub(crate) requested_transactions: DashMap<Hash, MilestoneIndex>,
+    pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashSet<MilestoneIndex>,
 }
 

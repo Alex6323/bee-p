@@ -148,7 +148,7 @@ impl ProcessorWorker {
             }
 
             match Protocol::get().requested_transactions.remove(&hash) {
-                Some((hash, index)) => {
+                Some((hash, (index, _))) => {
                     Protocol::trigger_transaction_solidification(hash, index);
                 }
                 None => {
