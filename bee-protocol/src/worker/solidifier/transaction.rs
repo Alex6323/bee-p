@@ -20,7 +20,7 @@ use log::info;
 
 use std::collections::HashSet;
 
-type Receiver = ShutdownStream<mpsc::Receiver<TransactionSolidifierWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionSolidifierWorkerEvent>>;
 
 pub(crate) struct TransactionSolidifierWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 

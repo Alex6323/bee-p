@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-use futures::{channel::mpsc, sink::SinkExt};
+use futures::channel::mpsc;
 use log::{debug, error, info, warn};
 
 use std::sync::Arc;
@@ -34,9 +34,9 @@ pub(crate) enum PeerWorkerError {
 
 pub struct PeerWorker {
     peer: Arc<HandshakedPeer>,
-    transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
-    transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
-    milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
+    transaction_worker: mpsc::UnboundedSender<TransactionWorkerEvent>,
+    transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
+    milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
 }
 
 impl PeerWorker {
@@ -70,11 +70,10 @@ impl PeerWorker {
                 match tlv_from_bytes::<MilestoneRequest>(&header, bytes) {
                     Ok(message) => {
                         self.milestone_responder_worker
-                            .send(MilestoneResponderWorkerEvent {
+                            .unbounded_send(MilestoneResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
                         self.peer.metrics.milestone_requests_received_inc();
@@ -93,11 +92,10 @@ impl PeerWorker {
                 match tlv_from_bytes::<TransactionMessage>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_worker
-                            .send(TransactionWorkerEvent {
+                            .unbounded_send(TransactionWorkerEvent {
                                 from: self.peer.epid,
                                 transaction: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
                         self.peer.metrics.transactions_received_inc();
@@ -116,11 +114,10 @@ impl PeerWorker {
                 match tlv_from_bytes::<TransactionRequest>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_responder_worker
-                            .send(TransactionResponderWorkerEvent {
+                            .unbounded_send(TransactionResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
                         self.peer.metrics.transaction_requests_received_inc();

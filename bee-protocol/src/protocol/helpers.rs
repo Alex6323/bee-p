@@ -69,21 +69,18 @@ impl Protocol {
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
-    pub(crate) async fn broadcast_transaction_message(source: Option<EndpointId>, transaction: TransactionMessage) {
+    pub(crate) fn broadcast_transaction_message(source: Option<EndpointId>, transaction: TransactionMessage) {
         if let Err(e) = Protocol::get()
             .broadcaster_worker
-            // TODO try to avoid
-            .clone()
-            .send(BroadcasterWorkerEvent { source, transaction })
-            .await
+            .unbounded_send(BroadcasterWorkerEvent { source, transaction })
         {
             warn!("Broadcasting transaction failed: {}.", e);
         }
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
-    pub async fn broadcast_transaction(source: Option<EndpointId>, transaction: &[u8]) {
-        Protocol::broadcast_transaction_message(source, TransactionMessage::new(transaction)).await;
+    pub fn broadcast_transaction(source: Option<EndpointId>, transaction: &[u8]) {
+        Protocol::broadcast_transaction_message(source, TransactionMessage::new(transaction));
     }
 
     // TransactionRequest
@@ -135,25 +132,19 @@ impl Protocol {
 
     // Solidifier
 
-    pub async fn trigger_transaction_solidification(hash: Hash, index: MilestoneIndex) {
+    pub fn trigger_transaction_solidification(hash: Hash, index: MilestoneIndex) {
         if let Err(e) = Protocol::get()
             .transaction_solidifier_worker
-            // TODO try to avoid clone
-            .clone()
-            .send(TransactionSolidifierWorkerEvent(hash, index))
-            .await
+            .unbounded_send(TransactionSolidifierWorkerEvent(hash, index))
         {
             warn!("Triggering transaction solidification failed: {}.", e);
         }
     }
 
-    pub async fn trigger_milestone_solidification() {
+    pub fn trigger_milestone_solidification() {
         if let Err(e) = Protocol::get()
             .milestone_solidifier_worker
-            // TODO try to avoid clone
-            .clone()
-            .send(MilestoneSolidifierWorkerEvent)
-            .await
+            .unbounded_send(MilestoneSolidifierWorkerEvent)
         {
             warn!("Triggering milestone solidification failed: {}.", e);
         }

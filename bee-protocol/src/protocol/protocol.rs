@@ -51,15 +51,15 @@ pub struct Protocol {
     pub(crate) local_snapshot_timestamp: u64,
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
-    pub(crate) transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
-    pub(crate) transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
-    pub(crate) milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
+    pub(crate) transaction_worker: mpsc::UnboundedSender<TransactionWorkerEvent>,
+    pub(crate) transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
+    pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
     pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
-    pub(crate) milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
-    pub(crate) transaction_solidifier_worker: mpsc::Sender<TransactionSolidifierWorkerEvent>,
-    pub(crate) milestone_solidifier_worker: mpsc::Sender<MilestoneSolidifierWorkerEvent>,
-    pub(crate) broadcaster_worker: mpsc::Sender<BroadcasterWorkerEvent>,
+    pub(crate) milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
+    pub(crate) transaction_solidifier_worker: mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>,
+    pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
+    pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, MilestoneIndex>,
     pub(crate) requested_milestones: DashSet<MilestoneIndex>,
@@ -78,34 +78,29 @@ impl Protocol {
             return;
         }
 
-        let (transaction_worker_tx, transaction_worker_rx) = mpsc::channel(config.workers.transaction_worker_bound);
+        let (transaction_worker_tx, transaction_worker_rx) = mpsc::unbounded();
         let (transaction_worker_shutdown_tx, transaction_worker_shutdown_rx) = oneshot::channel();
 
-        let (transaction_responder_worker_tx, transaction_responder_worker_rx) =
-            mpsc::channel(config.workers.transaction_responder_worker_bound);
+        let (transaction_responder_worker_tx, transaction_responder_worker_rx) = mpsc::unbounded();
         let (transaction_responder_worker_shutdown_tx, transaction_responder_worker_shutdown_rx) = oneshot::channel();
 
-        let (milestone_responder_worker_tx, milestone_responder_worker_rx) =
-            mpsc::channel(config.workers.milestone_responder_worker_bound);
+        let (milestone_responder_worker_tx, milestone_responder_worker_rx) = mpsc::unbounded();
         let (milestone_responder_worker_shutdown_tx, milestone_responder_worker_shutdown_rx) = oneshot::channel();
 
         let (transaction_requester_worker_shutdown_tx, transaction_requester_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_requester_worker_shutdown_tx, milestone_requester_worker_shutdown_rx) = oneshot::channel();
 
-        let (milestone_validator_worker_tx, milestone_validator_worker_rx) =
-            mpsc::channel(config.workers.milestone_validator_worker_bound);
+        let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::unbounded();
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
-        let (transaction_solidifier_worker_tx, transaction_solidifier_worker_rx) =
-            mpsc::channel(config.workers.transaction_solidifier_worker_bound);
+        let (transaction_solidifier_worker_tx, transaction_solidifier_worker_rx) = mpsc::unbounded();
         let (transaction_solidifier_worker_shutdown_tx, transaction_solidifier_worker_shutdown_rx) = oneshot::channel();
 
-        let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) =
-            mpsc::channel(config.workers.milestone_solidifier_worker_bound);
+        let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) = mpsc::unbounded();
         let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
 
-        let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::channel(config.workers.broadcaster_worker_bound);
+        let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::unbounded();
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
 
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();

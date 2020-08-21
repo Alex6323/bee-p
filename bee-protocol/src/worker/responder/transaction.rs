@@ -25,7 +25,7 @@ use bytemuck::cast_slice;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
-type Receiver = ShutdownStream<mpsc::Receiver<TransactionResponderWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionResponderWorkerEvent>>;
 
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,

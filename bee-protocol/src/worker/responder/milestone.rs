@@ -25,7 +25,7 @@ use futures::{channel::mpsc, stream::StreamExt};
 
 use log::info;
 
-type Receiver = ShutdownStream<mpsc::Receiver<MilestoneResponderWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneResponderWorkerEvent>>;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,

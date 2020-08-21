@@ -21,7 +21,7 @@ use futures::{channel::mpsc, stream::StreamExt};
 
 use log::{info, warn};
 
-type Receiver = ShutdownStream<mpsc::Receiver<BroadcasterWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>;
 
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,

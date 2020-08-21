@@ -27,7 +27,7 @@ use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, stream::StreamExt, SinkExt};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{debug, error, info};
 
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -35,7 +35,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Timeframe to allow past or future transactions, 10 minutes in milliseconds.
 const ALLOWED_TIMESTAMP_WINDOW_MS: u64 = 10 * 60 * 1000;
 
-type Receiver = ShutdownStream<mpsc::Receiver<TransactionWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionWorkerEvent>>;
 
 pub(crate) struct TransactionWorkerEvent {
     pub(crate) from: EndpointId,
@@ -43,7 +43,7 @@ pub(crate) struct TransactionWorkerEvent {
 }
 
 pub(crate) struct TransactionWorker {
-    milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
+    milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
     cache: HashCache,
     curl: CurlP81,
     receiver: Receiver,
@@ -51,7 +51,7 @@ pub(crate) struct TransactionWorker {
 
 impl TransactionWorker {
     pub(crate) fn new(
-        milestone_validator_worker: mpsc::Sender<MilestoneValidatorWorkerEvent>,
+        milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
         cache_size: usize,
         receiver: Receiver,
     ) -> Self {
@@ -67,7 +67,7 @@ impl TransactionWorker {
         info!("Running.");
 
         while let Some(TransactionWorkerEvent { from, transaction }) = self.receiver.next().await {
-            self.process_transaction_brodcast(from, transaction).await;
+            self.process_transaction_brodcast(from, transaction);
         }
 
         info!("Stopped.");
@@ -94,7 +94,7 @@ impl TransactionWorker {
         )
     }
 
-    async fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_message: TransactionMessage) {
+    fn process_transaction_brodcast(&mut self, from: EndpointId, transaction_message: TransactionMessage) {
         debug!("Processing received transaction...");
 
         if !self.cache.insert(&transaction_message.bytes) {
@@ -156,16 +156,16 @@ impl TransactionWorker {
             Protocol::get().metrics.new_transactions_inc();
 
             if !tangle().is_synced() && Protocol::get().requested_transactions.is_empty() {
-                Protocol::trigger_milestone_solidification().await;
+                Protocol::trigger_milestone_solidification();
             }
 
             match Protocol::get().requested_transactions.remove(&hash) {
                 Some((hash, index)) => {
-                    Protocol::trigger_transaction_solidification(hash, index).await;
+                    Protocol::trigger_transaction_solidification(hash, index);
                 }
                 None => {
                     if should_broadcast {
-                        Protocol::broadcast_transaction_message(Some(from), transaction_message).await
+                        Protocol::broadcast_transaction_message(Some(from), transaction_message)
                     }
                 }
             };
@@ -201,8 +201,7 @@ impl TransactionWorker {
                 if let Some(tail) = tail {
                     if let Err(e) = self
                         .milestone_validator_worker
-                        .send(MilestoneValidatorWorkerEvent(tail))
-                        .await
+                        .unbounded_send(MilestoneValidatorWorkerEvent(tail))
                     {
                         error!("Sending tail to milestone validation failed: {:?}.", e);
                     }
@@ -249,9 +248,9 @@ mod tests {
 
         assert_eq!(tangle().len(), 0);
 
-        let (transaction_worker_sender, transaction_worker_receiver) = mpsc::channel(1000);
+        let (transaction_worker_sender, transaction_worker_receiver) = mpsc::unbounded();
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
-        let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::channel(1000);
+        let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
         let mut transaction_worker_sender_clone = transaction_worker_sender;
 
