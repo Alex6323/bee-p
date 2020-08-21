@@ -38,7 +38,6 @@ pub enum Error {
     InvalidVersion,
     InvalidMilestoneHash,
     InvalidMilestoneIndex,
-    NonZeroSpentAddressesNumber,
     InvalidSolidEntryPointHash,
     InvalidSeenMilestoneHash,
     InvalidAddress,
@@ -117,11 +116,7 @@ impl LocalSnapshot {
 
         let mut buf = [0u8; std::mem::size_of::<u32>()];
         match reader.read_exact(&mut buf) {
-            Ok(_) => {
-                if u32::from_le_bytes(buf) != 0 {
-                    return Err(Error::NonZeroSpentAddressesNumber);
-                }
-            }
+            Ok(_) => {}
             Err(e) => return Err(Error::IOError(e)),
         };
 
@@ -207,7 +202,7 @@ impl LocalSnapshot {
         }
 
         // TODO spend addresses ?
-        // TODO hash
+        // TODO hash ?
 
         Ok(LocalSnapshot {
             metadata: LocalSnapshotMetadata {
