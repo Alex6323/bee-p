@@ -54,3 +54,17 @@ impl Backend for Storage {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_and_flush_rocksdb() {
+        let config_as_string = fs::read_to_string("./rocksdb.toml".to_string()).unwrap();
+        let config: config::Config = toml::from_str(&config_as_string).unwrap();
+        let db = rocksdb::RocksdbBackend::new(config).unwrap();
+        let storage = Storage { inner: db };
+        assert!(storage.inner.flush().is_ok());
+    }
+}
