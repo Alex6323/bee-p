@@ -14,7 +14,6 @@
 use crate::{
     message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     peer::{HandshakedPeer, Peer},
-    protocol::Protocol,
     worker::SenderWorker,
 };
 
@@ -83,6 +82,8 @@ impl PeerManager {
 
             self.handshaked_peers.insert(*epid, peer.clone());
             self.handshaked_peers_keys.write().await.push(*epid);
+
+            // TODO Add to shutdown ?
 
             spawn(
                 SenderWorker::<MilestoneRequest>::new(

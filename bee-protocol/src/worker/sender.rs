@@ -20,7 +20,7 @@ use crate::{
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
-use futures::{channel::mpsc, sink::SinkExt, stream::StreamExt};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::warn;
 
 use std::sync::Arc;
