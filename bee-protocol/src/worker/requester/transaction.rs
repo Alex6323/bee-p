@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
+    message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -20,7 +20,7 @@ use bee_ternary::T5B1Buf;
 
 use async_std::stream::{interval, Interval};
 use bytemuck::cast_slice;
-use futures::{channel::oneshot, select, stream::Fuse, FutureExt, StreamExt};
+use futures::{select, stream::Fuse, FutureExt, StreamExt};
 use log::info;
 
 use std::{
@@ -115,7 +115,7 @@ impl<'a> TransactionRequesterWorker<'a> {
         loop {
             select! {
                 // FIXME: Receiver is already fused
-                event = self.receiver.next().fuse() => match event {
+                entry = self.receiver.next().fuse() => match entry {
                     Some(TransactionRequesterWorkerEntry(hash, index)) => self.process_request(hash, index).await,
                     None => break,
                 },

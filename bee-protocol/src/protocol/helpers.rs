@@ -44,7 +44,7 @@ impl Protocol {
         while to_request_num > 0 && to_request_index < last_milestone_index {
             let index = to_request_index.into();
 
-            if !Protocol::get().requested_milestones.contains(&index) && !tangle().contains_milestone(index) {
+            if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
                 Protocol::request_milestone(index, None);
                 to_request_num = to_request_num - 1;
             }

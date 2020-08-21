@@ -36,7 +36,7 @@ use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::ternary::wots::WotsPublicKey;
 
 use async_std::task::spawn;
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 
@@ -61,7 +61,7 @@ pub struct Protocol {
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
-    pub(crate) requested_milestones: DashSet<MilestoneIndex>,
+    pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
 }
 
 impl Protocol {
