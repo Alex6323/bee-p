@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 #[macro_export]
-macro_rules! impl_transaction_ops {
+macro_rules! impl_transaction_metadata_ops {
     ($object:ty) => {
         use bee_storage::{
             access::OpError,
@@ -20,29 +20,29 @@ macro_rules! impl_transaction_ops {
         #[cfg(feature = "rocks_db")]
         impl $object {
             async fn insert(&self, hash: &Hash, storage: &Storage) -> Result<(), OpError> {
-                // get column family handle to hash_to_tx table in order presist the transaction;
-                let hash_to_tx = storage.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
-                let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Self::trit_len());
-                self.into_trits_allocated(tx_trit_buf.as_slice_mut());
+                let hash_to_metadata = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
                 let hash_buf = hash.encode::<T5B1Buf>();
+                let metadata_buf = bincode::serialize(&self).unwrap();
                 storage.inner.put_cf(
-                    &hash_to_tx,
+                    &hash_to_metadata,
                     cast_slice(hash_buf.as_i8_slice()),
-                    cast_slice(tx_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
+                    cast_slice(metadata_buf),
                 )?;
                 Ok(())
             }
-            async fn insert_batch(transactions: &HashMap<Hash, Transaction>, storage: &Storage) -> Result<(), OpError> {
+            async fn insert_batch(
+                transactions_metadata: &HashMap<Hash, TransactionMetadata>,
+                storage: &Storage,
+            ) -> Result<(), OpError> {
                 let mut batch = rocksdb::WriteBatch::default();
-                let hash_to_tx = storage.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
-                let mut tx_trit_buf = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-                for (hash, tx) in transactions {
-                    tx.into_trits_allocated(tx_trit_buf.as_slice_mut());
+                let hash_to_metadata = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
+                for (hash, tx_metadata) in transactions_metadata {
+                    let metadata_buf = bincode::serialize(&tx_metadata).unwrap();
                     let hash_buf = hash.encode::<T5B1Buf>();
                     batch.put_cf(
-                        &hash_to_tx,
+                        &hash_to_metadata,
                         cast_slice(hash_buf.as_i8_slice()),
-                        cast_slice(tx_trit_buf.encode::<T5B1Buf>().as_i8_slice()),
+                        cast_slice(metadata_buf),
                     );
                 }
                 let mut write_options = rocksdb::WriteOptions::default();
@@ -53,21 +53,19 @@ macro_rules! impl_transaction_ops {
             }
             async fn remove(hash: &Hash, storage: &Storage) -> Result<(), OpError> {
                 let db = &storage.inner;
-                let hash_to_tx = db.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
+                let hash_to_metadata = db.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
                 let hash_buf = self.hash().encode::<T5B1Buf>().as_i8_slice();
-                db.delete_cf(&hash_to_tx, cast_slice(hash_buf))?;
+                db.delete_cf(&hash_to_metadata, cast_slice(hash_buf))?;
                 Ok(())
             }
             async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError> {
-                let hash_to_tx = storage.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
+                let hash_to_tx = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
                 if let Some(res) = storage
                     .inner
                     .get_cf(&hash_to_tx, cast_slice(hash.encode::<T5B1Buf>().as_i8_slice()))?
                 {
-                    let trits = unsafe { Trits::<T5B1>::from_raw_unchecked(&cast_slice(&res), Self::trit_len()) }
-                        .encode::<T1B1Buf>();
-                    let transaction = Self::from_trits(&trits).unwrap();
-                    Ok(Some(transaction))
+                    let metadata: Self = bincode::deserialize(&res[..]).unwrap();
+                    Ok(Some(metadata))
                 } else {
                     Ok(None)
                 }

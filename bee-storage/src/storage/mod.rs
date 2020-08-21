@@ -21,15 +21,17 @@ use std::{error::Error, fs};
 pub trait Backend {
     /// start method should impl how to start and initialize the corrsponding database
     /// It takes config_path which define the database options, and returns Result<Self, Box<dyn Error>>
-    async fn start(config_path: String) -> Result<Self, Box<dyn Error>> where Self: Sized;
+    async fn start(config_path: String) -> Result<Self, Box<dyn Error>>
+    where
+        Self: Sized;
     /// shutdown method should impl how to shutdown the corrsponding database
     /// It takes the ownership of self, and returns () or error
     async fn shutdown(self) -> Result<(), Box<dyn Error>>;
 }
-// rocksdb storage support as backend
-#[cfg(feature = "rocks_db")]
 /// RocksDB Storage struct
 pub struct Storage {
+    // rocksdb storage support as backend
+    #[cfg(feature = "rocks_db")]
     pub inner: ::rocksdb::DB,
 }
 
@@ -47,7 +49,7 @@ impl Backend for Storage {
     /// Note: the shutdown is done through flush method and then droping the storage object
     async fn shutdown(self) -> Result<(), Box<dyn Error>> {
         if let Err(e) = self.inner.flush() {
-            return Err(Box::new(e))
+            return Err(Box::new(e));
         }
         Ok(())
     }

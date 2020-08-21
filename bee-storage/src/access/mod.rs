@@ -11,12 +11,14 @@
 
 //! A crate that contains foundational building blocks for the IOTA Tangle.
 
-pub mod transaction;
+pub mod delta;
 pub mod milestone;
+pub mod transaction;
+pub mod transaction_metadata;
 
 pub enum OpError {
     // todo add operations errors
-    Unknown(String)
+    Unknown(String),
 }
 
 #[cfg(feature = "rocks_db")]

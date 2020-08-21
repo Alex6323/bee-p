@@ -12,33 +12,26 @@
 //! A crate that contains foundational building blocks for the IOTA Tangle.
 
 use super::config::Config;
+pub use bytemuck::*;
 pub use rocksdb::*;
 use std::error::Error;
-pub use bytemuck::*;
 
-pub const TRANSACTION_CF_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
-pub const TRANSACTION_CF_HASH_TO_SOLID: &str = "transaction_hash_to_solid";
-pub const TRANSACTION_CF_HASH_TO_SNAPSHOT_INDEX: &str = "transaction_hash_to_snapshot_index";
-pub const TRANSACTION_CF_HASH_TO_APROVEES: &str = "transaction_hash_to_aprovees";
-pub const MILESTONE_CF_HASH_TO_INDEX: &str = "milestone_hash_to_index";
-pub const MILESTONE_CF_INDEX_TO_HASH: &str = "milestone_index_to_hash";
-pub const MILESTONE_CF_HASH_TO_DELTA: &str = "milestone_hash_to_delta";
+pub const TRANSACTION_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
+pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
+pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
+pub const MILESTONE_INDEX_TO_HASH: &str = "milestone_index_to_hash";
+pub const MILESTONE_INDEX_TO_DELTA: &str = "milestone_hash_to_delta";
 
-pub struct RocksdbBackend {}
+pub struct RocksdbBackend;
 
 impl RocksdbBackend {
     pub fn new(config: Config) -> Result<DB, Box<dyn Error>> {
-        let transaction_cf_hash_to_transaction =
-            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_TRANSACTION, Options::default());
-        let transaction_cf_hash_to_solid =
-            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_SOLID, Options::default());
-        let transaction_cf_hash_to_snapshot_index =
-            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_SNAPSHOT_INDEX, Options::default());
-        let transaction_cf_hash_to_aprovees =
-            ColumnFamilyDescriptor::new(TRANSACTION_CF_HASH_TO_APROVEES, Options::default());
-        let milestone_cf_hash_to_index = ColumnFamilyDescriptor::new(MILESTONE_CF_HASH_TO_INDEX, Options::default());
-        let milestone_cf_index_to_hash = ColumnFamilyDescriptor::new(MILESTONE_CF_INDEX_TO_HASH, Options::default());
-        let milestone_cf_hash_to_delta = ColumnFamilyDescriptor::new(MILESTONE_CF_HASH_TO_DELTA, Options::default());
+        let transaction_hash_to_transaction =
+            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_TRANSACTION, Options::default());
+        let transaction_hash_to_transaction_metadata =
+            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_METADATA, Options::default());
+        let milestone_hash_to_index = ColumnFamilyDescriptor::new(MILESTONE_HASH_TO_INDEX, Options::default());
+        let milestone_index_to_delta = ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_DELTA, Options::default());
         let mut opts = Options::default();
         if let Some(create_if_missing) = config.create_if_missing {
             opts.create_if_missing(create_if_missing);
@@ -103,13 +96,10 @@ impl RocksdbBackend {
             opts.set_compression_type(DBCompressionType::from(set_compression_type));
         }
         let column_familes = vec![
-            transaction_cf_hash_to_transaction,
-            transaction_cf_hash_to_solid,
-            transaction_cf_hash_to_aprovees,
-            transaction_cf_hash_to_snapshot_index,
-            milestone_cf_hash_to_index,
-            milestone_cf_index_to_hash,
-            milestone_cf_hash_to_delta,
+            transaction_hash_to_transaction,
+            transaction_hash_to_transaction_metadata,
+            milestone_hash_to_index,
+            milestone_index_to_delta,
         ];
         let db = DB::open_cf_descriptors(&opts, config.path, column_familes)?;
         Ok(db)
