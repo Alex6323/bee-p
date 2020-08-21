@@ -18,14 +18,9 @@ use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
-use async_std::stream::interval;
+use async_std::stream::{interval, Interval};
 use bytemuck::cast_slice;
-use futures::{
-    channel::oneshot,
-    select,
-    stream::{BoxStream, Fuse},
-    FutureExt, StreamExt,
-};
+use futures::{channel::oneshot, select, stream::Fuse, FutureExt, StreamExt};
 use log::info;
 
 use std::{
@@ -53,7 +48,7 @@ impl Ord for TransactionRequesterWorkerEntry {
 pub(crate) struct TransactionRequesterWorker<'a> {
     counter: usize,
     receiver: Receiver<'a>,
-    timeouts: Fuse<BoxStream<'static, ()>>,
+    timeouts: Fuse<Interval>,
 }
 
 impl<'a> TransactionRequesterWorker<'a> {
@@ -61,7 +56,7 @@ impl<'a> TransactionRequesterWorker<'a> {
         Self {
             counter: 0,
             receiver,
-            timeouts: StreamExt::fuse(interval(Duration::from_secs(5)).boxed()),
+            timeouts: interval(Duration::from_secs(5)).fuse(),
         }
     }
 
