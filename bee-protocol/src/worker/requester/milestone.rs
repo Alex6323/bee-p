@@ -47,7 +47,7 @@ impl Ord for MilestoneRequesterWorkerEntry {
 
 pub(crate) struct MilestoneRequesterWorker<'a> {
     counter: usize,
-    receiver: Receiver<'a>,
+    receiver: Fuse<Receiver<'a>>,
     timeouts: Fuse<Interval>,
 }
 
@@ -55,7 +55,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
     pub(crate) fn new(receiver: Receiver<'a>) -> Self {
         Self {
             counter: 0,
-            receiver,
+            receiver: receiver.fuse(),
             timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
         }
     }
@@ -125,8 +125,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
         loop {
             select! {
-                // FIXME: Receiver is already fused
-                entry = self.receiver.next().fuse() => match entry {
+                entry = self.receiver.next() => match entry {
                     Some(MilestoneRequesterWorkerEntry(index, epid)) => {
                         if !tangle().contains_milestone(index.into()) {
                             self.process_request(index, epid).await;

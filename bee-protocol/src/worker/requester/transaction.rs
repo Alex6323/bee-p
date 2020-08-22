@@ -9,9 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker,
-};
+use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::wait_priority_queue::WaitIncoming;
@@ -49,7 +47,7 @@ impl Ord for TransactionRequesterWorkerEntry {
 
 pub(crate) struct TransactionRequesterWorker<'a> {
     counter: usize,
-    receiver: Receiver<'a>,
+    receiver: Fuse<Receiver<'a>>,
     timeouts: Fuse<Interval>,
 }
 
@@ -57,7 +55,7 @@ impl<'a> TransactionRequesterWorker<'a> {
     pub(crate) fn new(receiver: Receiver<'a>) -> Self {
         Self {
             counter: 0,
-            receiver,
+            receiver: receiver.fuse(),
             timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
         }
     }
@@ -120,8 +118,7 @@ impl<'a> TransactionRequesterWorker<'a> {
 
         loop {
             select! {
-                // FIXME: Receiver is already fused
-                entry = self.receiver.next().fuse() => match entry {
+                entry = self.receiver.next() => match entry {
                     Some(TransactionRequesterWorkerEntry(hash, index)) => self.process_request(hash, index).await,
                     None => break,
                 },
