@@ -125,6 +125,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
         loop {
             select! {
+                _ = self.timeouts.next() => self.retry_requests().await,
                 entry = self.receiver.next() => match entry {
                     Some(MilestoneRequesterWorkerEntry(index, epid)) => {
                         if !tangle().contains_milestone(index.into()) {
@@ -133,7 +134,6 @@ impl<'a> MilestoneRequesterWorker<'a> {
                     },
                     None => break,
                 },
-                _ = self.timeouts.next() => self.retry_requests().await,
             }
         }
 

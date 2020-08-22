@@ -118,11 +118,11 @@ impl<'a> TransactionRequesterWorker<'a> {
 
         loop {
             select! {
+                _ = self.timeouts.next() => self.retry_requests().await,
                 entry = self.receiver.next() => match entry {
                     Some(TransactionRequesterWorkerEntry(hash, index)) => self.process_request(hash, index).await,
                     None => break,
                 },
-                _ = self.timeouts.next() => self.retry_requests().await,
             }
         }
 
