@@ -172,15 +172,10 @@ impl Stream for HasherWorker {
                     }
                 }
                 Poll::Ready(None) => {
-                    return if batch_size == 0 {
-                        // If the stream ended and the current batch is empty, we have nothing else
-                        // to hash.
-                        Poll::Ready(None)
-                    } else {
-                        // If the stream ended but we have some transactions in the batch, we must
-                        // hash them before being done.
-                        Poll::Ready(Some(batch_size))
-                    };
+                    // If the `receiver` stream ended, it means that either we should shutdown or
+                    // the other side of the channel disconnected. In either case, we end this
+                    // stream too without hashing the pending batch we have.
+                    return Poll::Ready(None);
                 }
             }
         }
