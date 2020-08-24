@@ -115,10 +115,6 @@ where
 
                 Protocol::get().requested_milestones.remove(&milestone.index);
                 Protocol::request_milestone_fill();
-
-                // TODO only trigger if index == last solid index ?
-                // TODO trigger only if requester is empty ? And unsynced ?
-                // Protocol::trigger_transaction_solidification(milestone.hash).await;
             }
             Err(e) => match e {
                 MilestoneValidatorWorkerError::IncompleteBundle => {}
