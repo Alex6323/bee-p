@@ -65,19 +65,6 @@ mod tests {
         let (processor_worker_shutdown_sender, processor_worker_shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
-        let mut hasher_worker_sender_clone = hasher_worker_sender;
-
-        spawn(async move {
-            let tx: [u8; 1024] = [0; 1024];
-            let message = TransactionMessage::new(&tx);
-            let epid: EndpointId = Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();
-            let event = HasherWorkerEvent {
-                from: epid,
-                transaction: message,
-            };
-            hasher_worker_sender_clone.send(event).await.unwrap();
-        });
-
         let hasher_handle = HasherWorker::new(
             processor_worker_sender,
             10000,
@@ -92,7 +79,15 @@ mod tests {
         .run();
 
         spawn(async move {
-            task::sleep(Duration::from_secs(1)).await;
+            let tx: [u8; 1024] = [0; 1024];
+            let message = TransactionMessage::new(&tx);
+            let epid: EndpointId = Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();
+            let event = HasherWorkerEvent {
+                from: epid,
+                transaction: message,
+            };
+            hasher_worker_sender.unbounded_send(event).unwrap();
+            task::sleep(Duration::from_secs(5)).await;
             hasher_worker_shutdown_sender.send(()).unwrap();
             processor_worker_shutdown_sender.send(()).unwrap();
         });
