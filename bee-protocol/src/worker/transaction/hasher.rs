@@ -116,7 +116,7 @@ impl Stream for HasherWorker {
     type Item = usize;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
-        // We need to do this because `stream` needs to be pinned to be polled.
+        // We need to do this because `receiver` needs to be pinned to be polled.
         let HasherWorkerProj {
             mut receiver,
             hasher,
@@ -133,8 +133,8 @@ impl Stream for HasherWorker {
             if batch_size == BATCH_SIZE {
                 return Poll::Ready(Some(BATCH_SIZE));
             }
-            // Otherwise we need to check if there is transactions inside `stream` that we could
-            // include in the current batch.
+            // Otherwise we need to check if there are transactions inside the `receiver` stream
+            // that we could include in the current batch.
             match receiver.as_mut().poll_next(cx) {
                 Poll::Pending => {
                     return if batch_size == 0 {
@@ -165,8 +165,8 @@ impl Stream for HasherWorker {
 
                     hasher.add(trits);
                     events.push(event);
-                    // If after adding the transaction to the batch, its size is `BATCH_SIZE` we
-                    // are ready to hash.
+                    // If after adding the transaction to the batch its size is `BATCH_SIZE` we are
+                    // ready to hash.
                     if batch_size == BATCH_SIZE - 1 {
                         return Poll::Ready(Some(BATCH_SIZE));
                     }
