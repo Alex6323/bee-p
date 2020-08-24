@@ -24,7 +24,7 @@ use std::collections::VecDeque;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
-pub(crate) const TRANSACTION_SOLIDIFIER_COUNT: usize = 15;
+pub(crate) const TRANSACTION_SOLIDIFIER_COUNT: usize = 10;
 
 pub(crate) enum MilestoneSolidifierWorkerEvent {
     ReceivedTransaction(Hash, MilestoneIndex),
