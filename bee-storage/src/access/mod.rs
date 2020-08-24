@@ -11,7 +11,7 @@
 
 //! A crate that contains foundational building blocks for the IOTA Tangle.
 
-pub mod delta;
+pub mod ledger_diff;
 pub mod milestone;
 pub mod transaction;
 pub mod transaction_metadata;

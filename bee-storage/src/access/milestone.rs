@@ -13,41 +13,53 @@ macro_rules! impl_milestone_ops {
     ($object:ty) => {
         use bee_storage::{
             access::OpError,
+            persistable::Persistable,
             storage::{rocksdb::*, Storage},
         };
-        use bee_ternary::{T5B1Buf, TritBuf, T5B1};
         use bee_transaction::bundled::BundledTransactionField;
         #[cfg(feature = "rocks_db")]
         impl $object {
             async fn insert(&self, storage: &Storage) -> Result<(), OpError> {
                 let db = &storage.inner;
                 let milestone_hash_to_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-                let hash_buf = self.hash().encode::<T5B1Buf>().as_i8_slice();
+                let mut hash_buf: Vec<u8> = Vec::new();
+                self.hash().encode(&mut hash_buf);
+                let index_buf: Vec<u8> = Vec::new();
+                self.index().encode(&mut index_buf);
                 db.put_cf(
                     &milestone_hash_to_index,
-                    cast_slice(hash_buf),
-                    self.index().to_le_bytes(),
+                    hash_buf.as_slice(),
+                    index_buf.as_slice(),
                 )?;
                 Ok(())
             }
-            async fn remove(hash: &Hash, storage: &Storage) -> Result<(), OpError> {
+            async fn remove(hash: &Hash, storage: &Storage) -> Result<(), OpError>
+            where
+                Hash: Persistable,
+            {
                 let db = &storage.inner;
                 let milestone_hash_to_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-                let hash_buf = self.hash().encode::<T5B1Buf>().as_i8_slice();
-                db.delete_cf(&milestone_hash_to_index, cast_slice(hash_buf))?;
+                let mut hash_buf: Vec<u8> = Vec::new();
+                hash.encode(&mut hash_buf);
+                db.delete_cf(&milestone_hash_to_index, hash_buf.as_slice())?;
                 Ok(())
             }
-            async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError> {
+            async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError>
+            where
+                Hash: Persistable,
+            {
                 let milestone_hash_to_index = storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-                if let Some(res) = storage.inner.get_cf(
-                    &milestone_hash_to_index,
-                    cast_slice(hash.encode::<T5B1Buf>().as_i8_slice()),
-                )? {
+                let mut hash_buf: Vec<u8> = Vec::new();
+                hash.encode(&mut hash_buf);
+                if let Some(res) = storage
+                    .inner
+                    .get_cf(&milestone_hash_to_index, hash_buf.as_slice())?
+                {
                     let mut index_buf: [u8; 4] = [0; 4];
                     index_buf.copy_from_slice(res.as_slice());
                     Ok(Some(Milestone::new(
                         hash,
-                        MilestoneIndex(u32::from_le_bytes(index_buf)),
+                        MilestoneIndex::decode(res.as_slice(), res.len()),
                     )))
                 } else {
                     Ok(None)

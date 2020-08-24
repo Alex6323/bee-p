@@ -8,9 +8,14 @@
 // Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
+#[cfg(feature = "rocks_db")]
+pub trait RocksDBPersistable {
+    fn encode(&self, buffer: &mut Vec<u8>);
+    fn decode(slice: &[u8], length: usize) -> Self
+    where
+        Self: Sized;
+}
 
-//! A crate that contains foundational building blocks for the IOTA Tangle.
-
-pub mod access;
-pub mod persistable;
-pub mod storage;
+#[cfg(feature = "rocks_db")]
+#[allow(unused_imports)]
+pub use RocksDBPersistable as Persistable;

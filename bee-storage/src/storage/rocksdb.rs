@@ -11,7 +11,7 @@
 
 //! A crate that contains foundational building blocks for the IOTA Tangle.
 
-use super::config::Config;
+use super::config::RocksDB;
 pub use bytemuck::*;
 pub use rocksdb::*;
 use std::error::Error;
@@ -19,18 +19,19 @@ use std::error::Error;
 pub const TRANSACTION_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
 pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
 pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
-pub const MILESTONE_INDEX_TO_DELTA: &str = "milestone_hash_to_delta";
+pub const MILESTONE_INDEX_TO_LEDGER_DIFF: &str = "milestone_hash_to_ledger_diff";
 
 pub struct RocksdbBackend;
 
 impl RocksdbBackend {
-    pub fn new(config: Config) -> Result<DB, Box<dyn Error>> {
+    pub fn new(config: RocksDB) -> Result<DB, Box<dyn Error>> {
         let transaction_hash_to_transaction =
             ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_TRANSACTION, Options::default());
         let transaction_hash_to_transaction_metadata =
             ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_METADATA, Options::default());
         let milestone_hash_to_index = ColumnFamilyDescriptor::new(MILESTONE_HASH_TO_INDEX, Options::default());
-        let milestone_index_to_delta = ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_DELTA, Options::default());
+        let milestone_index_to_ledger_diff =
+            ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_DIFF, Options::default());
         let mut opts = Options::default();
         if let Some(create_if_missing) = config.create_if_missing {
             opts.create_if_missing(create_if_missing);
@@ -98,7 +99,7 @@ impl RocksdbBackend {
             transaction_hash_to_transaction,
             transaction_hash_to_transaction_metadata,
             milestone_hash_to_index,
-            milestone_index_to_delta,
+            milestone_index_to_ledger_diff,
         ];
         let db = DB::open_cf_descriptors(&opts, config.path, column_familes)?;
         Ok(db)

@@ -14,9 +14,15 @@
 use rocksdb::{DBCompactionStyle, DBCompressionType};
 use serde::Deserialize;
 use std::convert::From;
-#[cfg(feature = "rocks_db")]
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
+    #[cfg(feature = "rocks_db")]
+    pub rocksdb: RocksDB,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RocksDB {
     pub path: String,
     pub create_if_missing: Option<bool>,
     pub create_missing_column_families: Option<bool>,

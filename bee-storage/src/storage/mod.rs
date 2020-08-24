@@ -42,7 +42,7 @@ impl Backend for Storage {
     async fn start(config_path: String) -> Result<Self, Box<dyn Error>> {
         let config_as_string = fs::read_to_string(config_path)?;
         let config: config::Config = toml::from_str(&config_as_string)?;
-        let db = rocksdb::RocksdbBackend::new(config)?;
+        let db = rocksdb::RocksdbBackend::new(config.rocksdb)?;
         Ok(Storage { inner: db })
     }
     /// It shutdown RocksDB instance,
@@ -58,12 +58,12 @@ impl Backend for Storage {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
+    #[cfg(feature = "rocks_db")]
     fn create_and_flush_rocksdb() {
-        let config_as_string = fs::read_to_string("./rocksdb.toml".to_string()).unwrap();
+        let config_as_string = fs::read_to_string("./config.toml".to_string()).unwrap();
         let config: config::Config = toml::from_str(&config_as_string).unwrap();
-        let db = rocksdb::RocksdbBackend::new(config).unwrap();
+        let db = rocksdb::RocksdbBackend::new(config.rocksdb).unwrap();
         let storage = Storage { inner: db };
         assert!(storage.inner.flush().is_ok());
     }

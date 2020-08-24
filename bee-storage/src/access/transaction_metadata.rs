@@ -15,35 +15,45 @@ macro_rules! impl_transaction_metadata_ops {
             access::OpError,
             storage::{rocksdb::*, Storage},
         };
-        use bee_ternary::{T5B1Buf, TritBuf, T5B1};
         use std::collections::HashMap;
         #[cfg(feature = "rocks_db")]
         impl $object {
-            async fn insert(&self, hash: &Hash, storage: &Storage) -> Result<(), OpError> {
+            async fn insert(&self, hash: &Hash, storage: &Storage) -> Result<(), OpError>
+            where
+                Self: Persistable,
+                Hash: Persistable,
+            {
                 let hash_to_metadata = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-                let hash_buf = hash.encode::<T5B1Buf>();
-                let metadata_buf = bincode::serialize(&self).unwrap();
-                storage.inner.put_cf(
-                    &hash_to_metadata,
-                    cast_slice(hash_buf.as_i8_slice()),
-                    cast_slice(metadata_buf),
-                )?;
+                let mut hash_buf: Vec<u8> = Vec::new();
+                hash.encode(&mut hash_buf);
+                let mut metadata_buf: Vec<u8> = Vec::new();
+                self.encode(&mut metadata_buf);
+                storage
+                    .inner
+                    .put_cf(&hash_to_metadata, hash_buf.as_slice(), metadata_buf.as_slice())?;
                 Ok(())
             }
-            async fn insert_batch(
-                transactions_metadata: &HashMap<Hash, TransactionMetadata>,
-                storage: &Storage,
-            ) -> Result<(), OpError> {
+            async fn insert_batch(transactions_metadata: &HashMap<Hash, Self>, storage: &Storage) -> Result<(), OpError>
+            where
+                Self: Persistable,
+                Hash: Persistable,
+            {
                 let mut batch = rocksdb::WriteBatch::default();
                 let hash_to_metadata = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
+                // reusable buffers
+                let mut hash_buf: Vec<u8> = Vec::new();
+                let mut metadata_buf: Vec<u8> = Vec::new();
                 for (hash, tx_metadata) in transactions_metadata {
                     let metadata_buf = bincode::serialize(&tx_metadata).unwrap();
                     let hash_buf = hash.encode::<T5B1Buf>();
                     batch.put_cf(
                         &hash_to_metadata,
-                        cast_slice(hash_buf.as_i8_slice()),
-                        cast_slice(metadata_buf),
+                        hash.encode(&mut hash_buf).as_slice(),
+                        tx_metadata.encode(&mut metadata_buf).as_slice(),
                     );
+                    // note: for optimization reason we used buf.set_len = 0 instead of clear()
+                    unsafe { hash_buf.set_len(0) };
+                    unsafe { metadata_buf.set_len(0) };
                 }
                 let mut write_options = rocksdb::WriteOptions::default();
                 write_options.set_sync(false);
@@ -54,17 +64,17 @@ macro_rules! impl_transaction_metadata_ops {
             async fn remove(hash: &Hash, storage: &Storage) -> Result<(), OpError> {
                 let db = &storage.inner;
                 let hash_to_metadata = db.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-                let hash_buf = self.hash().encode::<T5B1Buf>().as_i8_slice();
-                db.delete_cf(&hash_to_metadata, cast_slice(hash_buf))?;
+                let mut hash_buf: Vec<u8> = Vec::new();
+                hash.encode(&mut hash_buf);
+                db.delete_cf(&hash_to_metadata, hash_buf.as_slice())?;
                 Ok(())
             }
             async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError> {
                 let hash_to_tx = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-                if let Some(res) = storage
-                    .inner
-                    .get_cf(&hash_to_tx, cast_slice(hash.encode::<T5B1Buf>().as_i8_slice()))?
-                {
-                    let metadata: Self = bincode::deserialize(&res[..]).unwrap();
+                let mut hash_buf: Vec<u8> = Vec::new();
+                hash.encode(&mut hash_buf);
+                if let Some(res) = storage.inner.get_cf(&hash_to_tx, hash_buf.as_slice())? {
+                    let metadata: Self = Self::decode(res.as_slice(), res.len());
                     Ok(Some(metadata))
                 } else {
                     Ok(None)
