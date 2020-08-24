@@ -65,20 +65,23 @@ impl<'a> MilestoneRequesterWorker<'a> {
             return;
         }
 
-        self.process_request_unchecked(index, epid).await
+        if self.process_request_unchecked(index, epid).await {
+            if index.0 != 0 {
+                Protocol::get().requested_milestones.insert(index, Instant::now());
+            }
+        }
     }
 
-    async fn process_request_unchecked(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
+    /// Return `true` if the milestone was requested
+    async fn process_request_unchecked(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) -> bool {
         if Protocol::get().peer_manager.handshaked_peers.is_empty() {
-            return;
+            return false;
         }
 
         match epid {
             Some(epid) => {
-                if index.0 != 0 {
-                    Protocol::get().requested_milestones.insert(index, Instant::now());
-                }
                 SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+                true
             }
             None => {
                 let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
@@ -90,14 +93,13 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
                     if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                         if index > peer.snapshot_milestone_index() && index <= peer.last_solid_milestone_index() {
-                            if index.0 != 0 {
-                                Protocol::get().requested_milestones.insert(index, Instant::now());
-                            }
                             SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
-                            break;
+                            return true;
                         }
                     }
                 }
+
+                false
             }
         }
     }
@@ -109,8 +111,10 @@ impl<'a> MilestoneRequesterWorker<'a> {
             let (index, instant) = milestone.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
-                *instant = now;
-                self.process_request_unchecked(*index, None).await;
+                info!("Milestone timed out, retrying request.");
+                if self.process_request_unchecked(*index, None).await {
+                    *instant = now;
+                };
                 retry_counts += 1;
             }
         }
