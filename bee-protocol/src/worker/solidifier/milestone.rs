@@ -13,7 +13,10 @@ use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 
-use futures::{channel::mpsc, stream::{Fuse, StreamExt}};
+use futures::{
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
+};
 use log::info;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;

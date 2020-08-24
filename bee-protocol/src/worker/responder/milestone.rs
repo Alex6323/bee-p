@@ -21,7 +21,10 @@ use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, stream::{Fuse, StreamExt}};
+use futures::{
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
+};
 
 use log::info;
 

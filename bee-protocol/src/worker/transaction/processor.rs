@@ -24,7 +24,10 @@ use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN};
 
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, stream::{Fuse, StreamExt}};
+use futures::{
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
+};
 use log::{debug, error, info};
 
 use std::time::{SystemTime, UNIX_EPOCH};
