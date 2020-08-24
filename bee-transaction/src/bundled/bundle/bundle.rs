@@ -50,17 +50,7 @@ impl Bundle {
     }
 
     // TODO TEST
-    pub fn trunk(&self) -> &Hash {
-        self.head().trunk()
-    }
-
-    // TODO TEST
-    pub fn branch(&self) -> &Hash {
-        self.head().branch()
-    }
-
-    // TODO TEST
-    pub fn ledger_diff(&self) -> HashMap<Address, i64> {
+    pub fn ledger_mutations(&self) -> HashMap<Address, i64> {
         let mut diff = HashMap::new();
 
         for transaction in self {
@@ -70,6 +60,20 @@ impl Bundle {
         }
 
         diff
+    }
+}
+
+impl Vertex for Bundle {
+    type Hash = Hash;
+
+    // TODO TEST
+    fn trunk(&self) -> &Hash {
+        self.head().trunk()
+    }
+
+    // TODO TEST
+    fn branch(&self) -> &Hash {
+        self.head().branch()
     }
 }
 

@@ -16,12 +16,13 @@ use crate::{
     },
     peer::HandshakedPeer,
     protocol::Protocol,
+    tangle::tangle,
     worker::{
         peer::MessageHandler, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
     },
 };
 
-use futures::{channel::mpsc, sink::SinkExt};
+use futures::channel::mpsc;
 use log::{debug, error, info, warn};
 
 use std::sync::Arc;
@@ -33,9 +34,9 @@ pub(crate) enum PeerWorkerError {
 
 pub struct PeerWorker {
     peer: Arc<HandshakedPeer>,
-    transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
-    transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
-    milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
+    transaction_worker: mpsc::UnboundedSender<TransactionWorkerEvent>,
+    transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
+    milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
 }
 
 impl PeerWorker {
@@ -69,11 +70,10 @@ impl PeerWorker {
                 match tlv_from_bytes::<MilestoneRequest>(&header, bytes) {
                     Ok(message) => {
                         self.milestone_responder_worker
-                            .send(MilestoneResponderWorkerEvent {
+                            .unbounded_send(MilestoneResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
                         self.peer.metrics.milestone_requests_received_inc();
@@ -92,11 +92,10 @@ impl PeerWorker {
                 match tlv_from_bytes::<TransactionMessage>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_worker
-                            .send(TransactionWorkerEvent {
+                            .unbounded_send(TransactionWorkerEvent {
                                 from: self.peer.epid,
                                 transaction: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
                         self.peer.metrics.transactions_received_inc();
@@ -115,11 +114,10 @@ impl PeerWorker {
                 match tlv_from_bytes::<TransactionRequest>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_responder_worker
-                            .send(TransactionResponderWorkerEvent {
+                            .unbounded_send(TransactionResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
                         self.peer.metrics.transaction_requests_received_inc();
@@ -137,12 +135,25 @@ impl PeerWorker {
                 debug!("[{}] Reading Heartbeat...", self.peer.address);
                 match tlv_from_bytes::<Heartbeat>(&header, bytes) {
                     Ok(message) => {
-                        // TODO Drop connection if autopeered and can't help it to sync depending on indexes.
                         self.peer
                             .set_last_solid_milestone_index(message.last_solid_milestone_index.into());
                         self.peer
                             .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
-                        // TODO Warn if can't help sync
+                        self.peer.set_last_milestone_index(message.last_milestone_index.into());
+                        self.peer.set_connected_peers(message.connected_peers);
+                        self.peer.set_synced_peers(message.synced_peers);
+
+                        // // TODO Warn if can't help sync
+                        if !tangle().is_synced() {
+                            let index = *tangle().get_last_solid_milestone_index() + 1;
+
+                            if !(index > message.snapshot_milestone_index
+                                && index <= message.last_solid_milestone_index)
+                            {
+                                warn!("The peer {} can't help syncing.", self.peer.address);
+                                // TODO Drop connection if autopeered.
+                            }
+                        }
 
                         // TODO think about a better solution
                         if Protocol::get().peer_manager.handshaked_peers.len() == 1 {

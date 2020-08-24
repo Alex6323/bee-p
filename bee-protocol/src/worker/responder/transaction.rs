@@ -25,7 +25,7 @@ use bytemuck::cast_slice;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
-type Receiver = ShutdownStream<mpsc::Receiver<TransactionResponderWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionResponderWorkerEvent>>;
 
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
@@ -41,7 +41,7 @@ impl TransactionResponderWorker {
         Self { receiver }
     }
 
-    async fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
+    fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
         match Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
             Ok(hash) => {
                 match tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
@@ -56,7 +56,6 @@ impl TransactionResponderWorker {
                                 trits.encode::<T5B1Buf>().as_i8_slice(),
                             ))),
                         )
-                        .await;
                     }
                     None => {}
                 }
@@ -69,7 +68,7 @@ impl TransactionResponderWorker {
         info!("Running.");
 
         while let Some(TransactionResponderWorkerEvent { epid, request }) = self.receiver.next().await {
-            self.process_request(epid, request).await;
+            self.process_request(epid, request);
         }
 
         info!("Stopped.");

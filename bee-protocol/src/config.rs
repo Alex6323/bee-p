@@ -22,21 +22,8 @@ const DEFAULT_COO_PUBLIC_KEY: &str =
     "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ";
 const DEFAULT_COO_SECURITY: u8 = 2;
 const DEFAULT_COO_SPONGE_TYPE: &str = "kerl";
-const DEFAULT_MILESTONE_REQUEST_SEND_WORKER_BOUND: usize = 1000;
-const DEFAULT_TRANSACTION_SEND_WORKER_BOUND: usize = 1000;
-const DEFAULT_TRANSACTION_REQUEST_SEND_WORKER_BOUND: usize = 1000;
-const DEFAULT_HEARTBEAT_SEND_WORKER_BOUND: usize = 1000;
-const DEFAULT_MILESTONE_VALIDATOR_WORKER_BOUND: usize = 1000;
-const DEFAULT_TRANSACTION_SOLIDIFIER_WORKER_BOUND: usize = 1000;
-const DEFAULT_MILESTONE_SOLIDIFIER_WORKER_BOUND: usize = 1000;
-const DEFAULT_TRANSACTION_WORKER_BOUND: usize = 1000;
 const DEFAULT_TRANSACTION_WORKER_CACHE: usize = 10000;
-const DEFAULT_TRANSACTION_RESPONDER_WORKER_BOUND: usize = 1000;
-const DEFAULT_MILESTONE_RESPONDER_WORKER_BOUND: usize = 1000;
-const DEFAULT_TRANSACTION_REQUESTER_WORKER_BOUND: usize = 1000;
-const DEFAULT_MILESTONE_REQUESTER_WORKER_BOUND: usize = 1000;
-const DEFAULT_RECEIVER_WORKER_BOUND: usize = 1000;
-const DEFAULT_BROADCASTER_WORKER_BOUND: usize = 1000;
+const DEFAULT_RECEIVER_WORKER_BOUND: usize = 10000;
 const DEFAULT_STATUS_INTERVAL: u64 = 10;
 const DEFAULT_HANDSHAKE_WINDOW: u64 = 10;
 
@@ -50,21 +37,8 @@ struct ProtocolCoordinatorConfigBuilder {
 
 #[derive(Default, Deserialize)]
 struct ProtocolWorkersConfigBuilder {
-    milestone_request_send_worker_bound: Option<usize>,
-    transaction_send_worker_bound: Option<usize>,
-    transaction_request_send_worker_bound: Option<usize>,
-    heartbeat_send_worker_bound: Option<usize>,
-    milestone_validator_worker_bound: Option<usize>,
-    transaction_solidifier_worker_bound: Option<usize>,
-    milestone_solidifier_worker_bound: Option<usize>,
-    transaction_worker_bound: Option<usize>,
     transaction_worker_cache: Option<usize>,
-    transaction_responder_worker_bound: Option<usize>,
-    milestone_responder_worker_bound: Option<usize>,
-    transaction_requester_worker_bound: Option<usize>,
-    milestone_requester_worker_bound: Option<usize>,
     receiver_worker_bound: Option<usize>,
-    broadcaster_worker_bound: Option<usize>,
     status_interval: Option<u64>,
 }
 
@@ -106,100 +80,13 @@ impl ProtocolConfigBuilder {
         self
     }
 
-    pub fn milestone_request_send_worker_bound(mut self, milestone_request_send_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_send_worker_bound
-            .replace(milestone_request_send_worker_bound);
-        self
-    }
-
-    pub fn transaction_send_worker_bound(mut self, transaction_send_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_send_worker_bound
-            .replace(transaction_send_worker_bound);
-        self
-    }
-
-    pub fn transaction_request_send_worker_bound(mut self, transaction_request_send_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_request_send_worker_bound
-            .replace(transaction_request_send_worker_bound);
-        self
-    }
-
-    pub fn heartbeat_send_worker_bound(mut self, heartbeat_send_worker_bound: usize) -> Self {
-        self.workers
-            .heartbeat_send_worker_bound
-            .replace(heartbeat_send_worker_bound);
-        self
-    }
-
-    pub fn milestone_validator_worker_bound(mut self, milestone_validator_worker_bound: usize) -> Self {
-        self.workers
-            .milestone_validator_worker_bound
-            .replace(milestone_validator_worker_bound);
-        self
-    }
-
-    pub fn transaction_solidifier_worker_bound(mut self, transaction_solidifier_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_solidifier_worker_bound
-            .replace(transaction_solidifier_worker_bound);
-        self
-    }
-
-    pub fn milestone_solidifier_worker_bound(mut self, milestone_solidifier_worker_bound: usize) -> Self {
-        self.workers
-            .milestone_solidifier_worker_bound
-            .replace(milestone_solidifier_worker_bound);
-        self
-    }
-
-    pub fn transaction_worker_bound(mut self, transaction_worker_bound: usize) -> Self {
-        self.workers.transaction_worker_bound.replace(transaction_worker_bound);
-        self
-    }
-
     pub fn transaction_worker_cache(mut self, transaction_worker_cache: usize) -> Self {
         self.workers.transaction_worker_cache.replace(transaction_worker_cache);
         self
     }
 
-    pub fn transaction_responder_worker_bound(mut self, transaction_responder_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_responder_worker_bound
-            .replace(transaction_responder_worker_bound);
-        self
-    }
-
-    pub fn milestone_responder_worker_bound(mut self, milestone_responder_worker_bound: usize) -> Self {
-        self.workers
-            .milestone_responder_worker_bound
-            .replace(milestone_responder_worker_bound);
-        self
-    }
-
-    pub fn transaction_requester_worker_bound(mut self, transaction_requester_worker_bound: usize) -> Self {
-        self.workers
-            .transaction_requester_worker_bound
-            .replace(transaction_requester_worker_bound);
-        self
-    }
-
-    pub fn milestone_requester_worker_bound(mut self, milestone_requester_worker_bound: usize) -> Self {
-        self.workers
-            .milestone_requester_worker_bound
-            .replace(milestone_requester_worker_bound);
-        self
-    }
-
     pub fn receiver_worker_bound(mut self, receiver_worker_bound: usize) -> Self {
         self.workers.receiver_worker_bound.replace(receiver_worker_bound);
-        self
-    }
-
-    pub fn broadcaster_worker_bound(mut self, broadcaster_worker_bound: usize) -> Self {
-        self.workers.broadcaster_worker_bound.replace(broadcaster_worker_bound);
         self
     }
 
@@ -259,66 +146,14 @@ impl ProtocolConfigBuilder {
                 sponge_type: coo_sponge_type,
             },
             workers: ProtocolWorkersConfig {
-                milestone_request_send_worker_bound: self
-                    .workers
-                    .milestone_request_send_worker_bound
-                    .unwrap_or(DEFAULT_MILESTONE_REQUEST_SEND_WORKER_BOUND),
-                transaction_send_worker_bound: self
-                    .workers
-                    .transaction_send_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_SEND_WORKER_BOUND),
-                transaction_request_send_worker_bound: self
-                    .workers
-                    .transaction_request_send_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_REQUEST_SEND_WORKER_BOUND),
-                heartbeat_send_worker_bound: self
-                    .workers
-                    .heartbeat_send_worker_bound
-                    .unwrap_or(DEFAULT_HEARTBEAT_SEND_WORKER_BOUND),
-                milestone_validator_worker_bound: self
-                    .workers
-                    .milestone_validator_worker_bound
-                    .unwrap_or(DEFAULT_MILESTONE_VALIDATOR_WORKER_BOUND),
-                transaction_solidifier_worker_bound: self
-                    .workers
-                    .transaction_solidifier_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_SOLIDIFIER_WORKER_BOUND),
-                milestone_solidifier_worker_bound: self
-                    .workers
-                    .milestone_solidifier_worker_bound
-                    .unwrap_or(DEFAULT_MILESTONE_SOLIDIFIER_WORKER_BOUND),
-                transaction_worker_bound: self
-                    .workers
-                    .transaction_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_WORKER_BOUND),
                 transaction_worker_cache: self
                     .workers
                     .transaction_worker_cache
                     .unwrap_or(DEFAULT_TRANSACTION_WORKER_CACHE),
-                transaction_responder_worker_bound: self
-                    .workers
-                    .transaction_responder_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_RESPONDER_WORKER_BOUND),
-                milestone_responder_worker_bound: self
-                    .workers
-                    .milestone_responder_worker_bound
-                    .unwrap_or(DEFAULT_MILESTONE_RESPONDER_WORKER_BOUND),
-                transaction_requester_worker_bound: self
-                    .workers
-                    .transaction_requester_worker_bound
-                    .unwrap_or(DEFAULT_TRANSACTION_REQUESTER_WORKER_BOUND),
-                milestone_requester_worker_bound: self
-                    .workers
-                    .milestone_requester_worker_bound
-                    .unwrap_or(DEFAULT_MILESTONE_REQUESTER_WORKER_BOUND),
                 receiver_worker_bound: self
                     .workers
                     .receiver_worker_bound
                     .unwrap_or(DEFAULT_RECEIVER_WORKER_BOUND),
-                broadcaster_worker_bound: self
-                    .workers
-                    .broadcaster_worker_bound
-                    .unwrap_or(DEFAULT_BROADCASTER_WORKER_BOUND),
                 status_interval: self.workers.status_interval.unwrap_or(DEFAULT_STATUS_INTERVAL),
             },
             handshake_window: self.handshake_window.unwrap_or(DEFAULT_HANDSHAKE_WINDOW),
@@ -337,21 +172,8 @@ pub struct ProtocolCoordinatorConfig {
 
 #[derive(Clone)]
 pub struct ProtocolWorkersConfig {
-    pub(crate) milestone_request_send_worker_bound: usize,
-    pub(crate) transaction_send_worker_bound: usize,
-    pub(crate) transaction_request_send_worker_bound: usize,
-    pub(crate) heartbeat_send_worker_bound: usize,
-    pub(crate) milestone_validator_worker_bound: usize,
-    pub(crate) transaction_solidifier_worker_bound: usize,
-    pub(crate) milestone_solidifier_worker_bound: usize,
-    pub(crate) transaction_worker_bound: usize,
     pub(crate) transaction_worker_cache: usize,
-    pub(crate) transaction_responder_worker_bound: usize,
-    pub(crate) milestone_responder_worker_bound: usize,
-    pub(crate) transaction_requester_worker_bound: usize,
-    pub(crate) milestone_requester_worker_bound: usize,
     pub(crate) receiver_worker_bound: usize,
-    pub(crate) broadcaster_worker_bound: usize,
     pub(crate) status_interval: u64,
 }
 

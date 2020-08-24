@@ -13,15 +13,18 @@ use crate::{
     message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
 };
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
 use bytemuck::cast_slice;
-use futures::{channel::oneshot, future::FutureExt, select};
+use futures::StreamExt;
 use log::info;
 
 use std::cmp::Ordering;
+
+type Receiver<'a> = ShutdownStream<WaitIncoming<'a, TransactionRequesterWorkerEntry>>;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
@@ -38,13 +41,14 @@ impl Ord for TransactionRequesterWorkerEntry {
     }
 }
 
-pub(crate) struct TransactionRequesterWorker {
+pub(crate) struct TransactionRequesterWorker<'a> {
     counter: usize,
+    receiver: Receiver<'a>,
 }
 
-impl TransactionRequesterWorker {
-    pub(crate) fn new() -> Self {
-        Self { counter: 0 }
+impl<'a> TransactionRequesterWorker<'a> {
+    pub(crate) fn new(receiver: Receiver<'a>) -> Self {
+        Self { counter: 0, receiver }
     }
 
     async fn process_request(&mut self, hash: Hash, index: MilestoneIndex) {
@@ -69,29 +73,19 @@ impl TransactionRequesterWorker {
                     SenderWorker::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
-                    )
-                    .await;
+                    );
                     break;
                 }
             }
         }
     }
 
-    pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                entry = Protocol::get().transaction_requester_worker.pop() => {
-                    if let TransactionRequesterWorkerEntry(hash, index) = entry {
-                        if !tangle().is_solid_entry_point(&hash) && !tangle().contains(&hash) {
-                            self.process_request(hash, index).await;
-                        }
-                    }
-                }
+        while let Some(TransactionRequesterWorkerEntry(hash, index)) = self.receiver.next().await {
+            if !tangle().is_solid_entry_point(&hash) && !tangle().contains(&hash) {
+                self.process_request(hash, index).await;
             }
         }
 

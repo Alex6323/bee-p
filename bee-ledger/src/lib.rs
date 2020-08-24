@@ -12,6 +12,8 @@
 mod state;
 mod whiteflag;
 
+pub mod event;
+
 use state::LedgerStateWorker;
 pub use state::LedgerStateWorkerEvent;
 
@@ -28,10 +30,11 @@ pub fn init(
     snapshot_index: u32,
     // TODO get concrete type
     state: HashMap<Address, u64>,
-    bus: Arc<Bus>,
+    bus: Arc<Bus<'static>>,
     shutdown: &mut Shutdown,
 ) -> mpsc::Sender<LedgerStateWorkerEvent> {
     // TODO config
+    // TODO unbounded ?
     let (ledger_state_worker_tx, ledger_state_worker_rx) = mpsc::channel(1000);
     let (ledger_state_worker_shutdown_tx, ledger_state_worker_shutdown_rx) = oneshot::channel();
 

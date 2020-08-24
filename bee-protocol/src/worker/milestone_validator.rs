@@ -29,7 +29,7 @@ use log::{debug, info};
 
 use std::marker::PhantomData;
 
-type Receiver = ShutdownStream<mpsc::Receiver<MilestoneValidatorWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneValidatorWorkerEvent>>;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {

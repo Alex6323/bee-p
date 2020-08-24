@@ -37,4 +37,12 @@ impl TransactionMetadata {
             ..Self::default()
         }
     }
+
+    pub fn milestone_index(&self) -> MilestoneIndex {
+        self.milestone_index
+    }
+
+    pub fn is_confirmed(&self) -> bool {
+        self.flags.is_confirmed()
+    }
 }

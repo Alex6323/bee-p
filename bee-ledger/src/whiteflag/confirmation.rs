@@ -9,11 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::whiteflag::load_bundle;
+use crate::{
+    event::MilestoneConfirmed,
+    whiteflag::{
+        traversal::{visit_bundles_dfs, Error as TraversalError},
+        WhiteFlag,
+    },
+};
 
 use bee_common::worker::Error as WorkerError;
 use bee_protocol::{Milestone, MilestoneIndex};
-use bee_transaction::bundled::IncomingBundleBuilderError;
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -25,8 +30,10 @@ use log::{error, info};
 
 enum Error {
     NonContiguousMilestone,
-    InvalidBundle(IncomingBundleBuilderError),
+    InvalidPastCone(TraversalError),
 }
+
+pub(crate) struct Confirmation {}
 
 pub(crate) struct LedgerConfirmationWorkerEvent(pub(crate) Milestone);
 
@@ -51,25 +58,23 @@ impl LedgerConfirmationWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        match load_bundle(milestone.hash()) {
-            Ok(bundle) => bundle,
+        match visit_bundles_dfs(*milestone.hash()) {
+            Ok(_) => {
+                self.confirmed_index = milestone.index();
+
+                WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
+
+                Ok(())
+            }
             Err(e) => {
                 error!(
-                    "Tried to confirm invalid bundle with tail {}: {:?}.",
-                    milestone
-                        .hash()
-                        .iter_trytes()
-                        .map(|trit| char::from(trit))
-                        .collect::<String>(),
+                    "Error occured while traversing to confirm {}: {:?}.",
+                    milestone.index().0,
                     e
                 );
-                return Err(Error::InvalidBundle(e));
+                Err(Error::InvalidPastCone(e))
             }
-        };
-
-        self.confirmed_index = milestone.index();
-
-        Ok(())
+        }
     }
 
     pub async fn run(

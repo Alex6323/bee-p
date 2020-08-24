@@ -277,6 +277,7 @@ impl MsTangle {
         self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
+    // TODO reduce to one atomic value ?
     pub fn is_synced(&self) -> bool {
         self.get_last_solid_milestone_index() == self.get_last_milestone_index()
     }

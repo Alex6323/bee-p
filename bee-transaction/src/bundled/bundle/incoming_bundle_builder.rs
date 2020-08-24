@@ -14,7 +14,10 @@ use crate::{
     Vertex,
 };
 
-use bee_crypto::ternary::sponge::{Kerl, Sponge};
+use bee_crypto::ternary::{
+    sponge::{Kerl, Sponge},
+    Hash,
+};
 use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, Signature};
 use bee_ternary::{T1B1Buf, TritBuf};
 
@@ -48,6 +51,35 @@ pub struct StagedIncomingBundleBuilder<E, P, S> {
 }
 
 pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
+
+impl<E, P, S> StagedIncomingBundleBuilder<E, P, S>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+    S: IncomingBundleBuilderStage,
+{
+    pub fn len(&self) -> usize {
+        self.transactions.len()
+    }
+}
+
+// Panics if the builder is empty!
+impl<E, P, S> Vertex for StagedIncomingBundleBuilder<E, P, S>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+    S: IncomingBundleBuilderStage,
+{
+    type Hash = Hash;
+
+    fn trunk(&self) -> &Hash {
+        self.transactions.0.last().unwrap().trunk()
+    }
+
+    fn branch(&self) -> &Hash {
+        self.transactions.0.last().unwrap().branch()
+    }
+}
 
 impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
 where
@@ -154,7 +186,7 @@ where
                 return Err(IncomingBundleBuilderError::InvalidBranch);
             }
 
-            if index == last_index && transaction.trunk().ne(first_branch) {
+            if last_index != 0 && index == last_index && transaction.trunk().ne(first_branch) {
                 return Err(IncomingBundleBuilderError::InvalidTrunk);
             }
 

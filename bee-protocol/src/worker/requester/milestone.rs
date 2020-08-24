@@ -13,13 +13,16 @@ use crate::{
     message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
 };
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_network::EndpointId;
 
-use futures::{channel::oneshot, future::FutureExt, select};
+use futures::StreamExt;
 use log::info;
 
 use std::cmp::Ordering;
+
+type Receiver<'a> = ShutdownStream<WaitIncoming<'a, MilestoneRequesterWorkerEntry>>;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
@@ -36,13 +39,14 @@ impl Ord for MilestoneRequesterWorkerEntry {
     }
 }
 
-pub(crate) struct MilestoneRequesterWorker {
+pub(crate) struct MilestoneRequesterWorker<'a> {
     counter: usize,
+    receiver: Receiver<'a>,
 }
 
-impl MilestoneRequesterWorker {
-    pub(crate) fn new() -> Self {
-        Self { counter: 0 }
+impl<'a> MilestoneRequesterWorker<'a> {
+    pub(crate) fn new(receiver: Receiver<'a>) -> Self {
+        Self { counter: 0, receiver }
     }
 
     async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
@@ -59,7 +63,7 @@ impl MilestoneRequesterWorker {
                 if index.0 != 0 {
                     Protocol::get().requested_milestones.insert(index);
                 }
-                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
             }
             None => {
                 let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
@@ -74,7 +78,7 @@ impl MilestoneRequesterWorker {
                             if index.0 != 0 {
                                 Protocol::get().requested_milestones.insert(index);
                             }
-                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
                             break;
                         }
                     }
@@ -83,22 +87,12 @@ impl MilestoneRequesterWorker {
         }
     }
 
-    pub(crate) async fn run(mut self, shutdown: oneshot::Receiver<()>) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                entry = Protocol::get().milestone_requester_worker.pop() => {
-                    if let MilestoneRequesterWorkerEntry(index, epid) = entry {
-                        if !tangle().contains_milestone(index.into()) {
-                            self.process_request(index, epid).await;
-                        }
-
-                    }
-                }
+        while let Some(MilestoneRequesterWorkerEntry(index, epid)) = self.receiver.next().await {
+            if !tangle().contains_milestone(index.into()) {
+                self.process_request(index, epid).await;
             }
         }
 

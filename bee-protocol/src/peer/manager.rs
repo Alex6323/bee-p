@@ -14,7 +14,6 @@
 use crate::{
     message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     peer::{HandshakedPeer, Peer},
-    protocol::Protocol,
     worker::SenderWorker,
 };
 
@@ -54,23 +53,19 @@ impl PeerManager {
             // TODO check if not already added
 
             // SenderWorker MilestoneRequest
-            let (milestone_request_tx, milestone_request_rx) =
-                mpsc::channel(Protocol::get().config.workers.milestone_request_send_worker_bound);
+            let (milestone_request_tx, milestone_request_rx) = mpsc::unbounded();
             let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
 
             // SenderWorker TransactionMessage
-            let (transaction_tx, transaction_rx) =
-                mpsc::channel(Protocol::get().config.workers.transaction_send_worker_bound);
+            let (transaction_tx, transaction_rx) = mpsc::unbounded();
             let (transaction_shutdown_tx, transaction_shutdown_rx) = oneshot::channel();
 
             // SenderWorker TransactionRequest
-            let (transaction_request_tx, transaction_request_rx) =
-                mpsc::channel(Protocol::get().config.workers.transaction_request_send_worker_bound);
+            let (transaction_request_tx, transaction_request_rx) = mpsc::unbounded();
             let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
 
             // SenderWorker Heartbeat
-            let (heartbeat_tx, heartbeat_rx) =
-                mpsc::channel(Protocol::get().config.workers.heartbeat_send_worker_bound);
+            let (heartbeat_tx, heartbeat_rx) = mpsc::unbounded();
             let (heartbeat_shutdown_tx, heartbeat_shutdown_rx) = oneshot::channel();
 
             let peer = Arc::new(HandshakedPeer::new(
@@ -87,6 +82,8 @@ impl PeerManager {
 
             self.handshaked_peers.insert(*epid, peer.clone());
             self.handshaked_peers_keys.write().await.push(*epid);
+
+            // TODO Add to shutdown ?
 
             spawn(
                 SenderWorker::<MilestoneRequest>::new(

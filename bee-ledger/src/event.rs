@@ -9,12 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod config;
-mod download;
-mod metadata;
-mod snapshot;
+use bee_protocol::Milestone;
 
-pub use config::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
-pub use download::download_local_snapshot;
-pub use metadata::LocalSnapshotMetadata;
-pub use snapshot::{Error, LocalSnapshot};
+pub struct MilestoneConfirmed(pub Milestone);

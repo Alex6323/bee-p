@@ -16,7 +16,7 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
-type Receiver = ShutdownStream<mpsc::Receiver<MilestoneSolidifierWorkerEvent>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>;
 
 pub(crate) struct MilestoneSolidifierWorkerEvent;
 
@@ -51,7 +51,7 @@ impl MilestoneSolidifierWorker {
     //     }
     // }
 
-    async fn solidify_milestone(&self) {
+    fn solidify_milestone(&self) {
         let target_index = tangle().get_last_solid_milestone_index() + MilestoneIndex(1);
 
         // if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
@@ -69,7 +69,7 @@ impl MilestoneSolidifierWorker {
         // }
         if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
             if !tangle().is_solid_transaction(&target_hash) {
-                Protocol::trigger_transaction_solidification(target_hash, target_index).await;
+                Protocol::trigger_transaction_solidification(target_hash, target_index);
             }
         }
     }
@@ -78,7 +78,7 @@ impl MilestoneSolidifierWorker {
         info!("Running.");
 
         while let Some(MilestoneSolidifierWorkerEvent) = self.receiver.next().await {
-            self.solidify_milestone().await;
+            self.solidify_milestone();
             // while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
             //     if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
             //         break;

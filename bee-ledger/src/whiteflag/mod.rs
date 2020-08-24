@@ -9,11 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod bundle;
 mod confirmation;
 mod merkle;
+mod traversal;
 
-pub(crate) use bundle::load_bundle;
 pub(crate) use confirmation::{LedgerConfirmationWorker, LedgerConfirmationWorkerEvent};
 
 use bee_common::shutdown::Shutdown;
@@ -27,21 +26,24 @@ use log::warn;
 use std::{ptr, sync::Arc};
 
 struct WhiteFlag {
+    pub(crate) bus: Arc<Bus<'static>>,
     confirmation_sender: mpsc::UnboundedSender<LedgerConfirmationWorkerEvent>,
 }
 
 static mut WHITE_FLAG: *const WhiteFlag = ptr::null();
 
-fn get() -> &'static WhiteFlag {
-    if unsafe { WHITE_FLAG.is_null() } {
-        panic!("Uninitialized whiteflag.");
-    } else {
-        unsafe { &*WHITE_FLAG }
+impl WhiteFlag {
+    fn get() -> &'static WhiteFlag {
+        if unsafe { WHITE_FLAG.is_null() } {
+            panic!("Uninitialized whiteflag.");
+        } else {
+            unsafe { &*WHITE_FLAG }
+        }
     }
 }
 
 fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
-    if let Err(e) = get()
+    if let Err(e) = WhiteFlag::get()
         .confirmation_sender
         .unbounded_send(LedgerConfirmationWorkerEvent(last_solid_milestone.0.clone()))
     {
@@ -53,7 +55,7 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
     }
 }
 
-pub(crate) fn init(snapshot_index: u32, bus: Arc<Bus>, shutdown: &mut Shutdown) {
+pub(crate) fn init(snapshot_index: u32, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) {
     if unsafe { !WHITE_FLAG.is_null() } {
         warn!("Already initialized.");
         return;
@@ -71,6 +73,7 @@ pub(crate) fn init(snapshot_index: u32, bus: Arc<Bus>, shutdown: &mut Shutdown) 
     );
 
     let white_flag = WhiteFlag {
+        bus: bus.clone(),
         confirmation_sender: ledger_confirmation_worker_tx,
     };
 
