@@ -17,9 +17,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Copy, Clone, Default)]
 pub struct TransactionMetadata {
     pub(crate) flags: Flags,
+    pub(crate) milestone_index: MilestoneIndex,
     pub(crate) arrival_timestamp: u64,
     pub(crate) solidification_timestamp: u64,
-    pub(crate) milestone_index: MilestoneIndex,
+    pub(crate) confirmation_timestamp: u64,
 }
 
 impl TransactionMetadata {
