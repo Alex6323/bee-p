@@ -18,8 +18,8 @@ use bee_ternary::T5B1Buf;
 
 use async_std::stream::{interval, Interval};
 use bytemuck::cast_slice;
-use futures::{select, stream::Fuse, FutureExt, StreamExt};
-use log::info;
+use futures::{select, stream::Fuse, StreamExt};
+use log::{debug, info};
 
 use std::{
     cmp::Ordering,
@@ -105,7 +105,7 @@ impl<'a> TransactionRequesterWorker<'a> {
             let (hash, (index, instant)) = transaction.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
-                info!("Transaction timed out, retrying request.");
+                debug!("Transaction timed out, retrying request.");
                 if self.process_request_unchecked(hash.clone(), *index).await {
                     *instant = now;
                 }

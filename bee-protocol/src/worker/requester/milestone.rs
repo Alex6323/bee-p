@@ -18,8 +18,8 @@ use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};
-use futures::{select, stream::Fuse, FutureExt, StreamExt};
-use log::info;
+use futures::{select, stream::Fuse, StreamExt};
+use log::{debug, info};
 
 use std::{
     cmp::Ordering,
@@ -111,7 +111,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
             let (index, instant) = milestone.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
-                info!("Milestone timed out, retrying request.");
+                debug!("Milestone timed out, retrying request.");
                 if self.process_request_unchecked(*index, None).await {
                     *instant = now;
                 };
