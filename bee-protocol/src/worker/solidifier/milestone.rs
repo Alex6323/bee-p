@@ -29,44 +29,9 @@ impl MilestoneSolidifierWorker {
         Self { receiver }
     }
 
-    // async fn process_target(&self, target_index: u32) -> bool {
-    //     match tangle().get_milestone_hash(target_index.into()) {
-    //         Some(target_hash) => match self.solidify(target_hash, target_index).await {
-    //             true => {
-    //                 tangle().update_solid_milestone_index(target_index.into());
-    //                 Protocol::broadcast_heartbeat(
-    //                     *tangle().get_last_solid_milestone_index(),
-    //                     *tangle().get_snapshot_milestone_index(),
-    //                 )
-    //                 .await;
-    //                 true
-    //             }
-    //             false => false,
-    //         },
-    //         None => {
-    //             // There is a gap, request the milestone
-    //             Protocol::request_milestone(target_index, None);
-    //             false
-    //         }
-    //     }
-    // }
-
     fn solidify_milestone(&self) {
         let target_index = tangle().get_last_solid_milestone_index() + MilestoneIndex(1);
 
-        // if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-        //     if tangle().is_solid_transaction(&target_hash) {
-        //         // TODO set confirmation index + trigger ledger
-        //         tangle().update_last_solid_milestone_index(target_index);
-        //         Protocol::broadcast_heartbeat(
-        //             tangle().get_last_solid_milestone_index(),
-        //             tangle().get_snapshot_milestone_index(),
-        //         )
-        //         .await;
-        //     } else {
-        //         Protocol::trigger_transaction_solidification(target_hash, target_index).await;
-        //     }
-        // }
         if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
             if !tangle().is_solid_transaction(&target_hash) {
                 Protocol::trigger_transaction_solidification(target_hash, target_index);
@@ -79,11 +44,6 @@ impl MilestoneSolidifierWorker {
 
         while let Some(MilestoneSolidifierWorkerEvent) = self.receiver.next().await {
             self.solidify_milestone();
-            // while tangle().get_last_solid_milestone_index() < tangle().get_last_milestone_index() {
-            //     if !self.process_target(*tangle().get_last_solid_milestone_index() + 1).await {
-            //         break;
-            //     }
-            // }
         }
 
         info!("Stopped.");

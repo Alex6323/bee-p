@@ -61,7 +61,7 @@ where
         }
     }
 
-    async fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
+    fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
         // TODO also do an IncomingBundleBuilder check ?
         let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
         let mut transaction = tangle()
@@ -91,9 +91,9 @@ where
             .build())
     }
 
-    async fn process(&self, tail_hash: Hash) {
+    fn process(&self, tail_hash: Hash) {
         // TODO split
-        match self.validate_milestone(tail_hash).await {
+        match self.validate_milestone(tail_hash) {
             Ok(milestone) => {
                 // TODO check multiple triggers
                 tangle().add_milestone(milestone.index, milestone.hash);
@@ -115,10 +115,6 @@ where
 
                 Protocol::get().requested_milestones.remove(&milestone.index);
                 Protocol::request_milestone_fill();
-
-                // TODO only trigger if index == last solid index ?
-                // TODO trigger only if requester is empty ? And unsynced ?
-                // Protocol::trigger_transaction_solidification(milestone.hash).await;
             }
             Err(e) => match e {
                 MilestoneValidatorWorkerError::IncompleteBundle => {}
@@ -132,7 +128,7 @@ where
         info!("Running.");
 
         while let Some(MilestoneValidatorWorkerEvent(tail_hash)) = self.receiver.next().await {
-            self.process(tail_hash).await;
+            self.process(tail_hash);
         }
 
         info!("Stopped.");

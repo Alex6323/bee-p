@@ -17,7 +17,7 @@ use crate::{
     plugin,
 };
 
-use bee_common::shutdown::Shutdown;
+use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
 use bee_crypto::ternary::Hash;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
@@ -29,14 +29,15 @@ use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
-    select,
     sink::SinkExt,
-    stream::{Fuse, StreamExt},
+    stream::StreamExt,
 };
 use log::{debug, error, info, warn};
 use thiserror::Error;
 
 use std::{collections::HashMap, sync::Arc};
+
+type Receiver = ShutdownStream<EventSubscriber>;
 
 /// All possible node errors.
 #[derive(Error, Debug)]
@@ -145,9 +146,12 @@ impl NodeBuilder {
 
         info!("Initialized.");
 
+        let (sender, receiver) = shutdown_listener();
+
         Ok(Node {
+            sender,
             network,
-            events: events.fuse(),
+            receiver: ShutdownStream::new(receiver, events),
             shutdown,
             peers: HashMap::new(),
         })
@@ -156,9 +160,11 @@ impl NodeBuilder {
 
 /// The main node type.
 pub struct Node {
+    // TODO temporary to keep it alive
+    sender: oneshot::Sender<()>,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
-    events: Fuse<EventSubscriber>,
+    receiver: Receiver,
     shutdown: Shutdown,
     // TODO design proper type `PeerList`
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
@@ -169,35 +175,26 @@ impl Node {
     pub fn run_loop(&mut self) {
         info!("Running.");
 
-        // TODO temporarily disabled because conflicting with receiving messages
-        // let mut shutdown = shutdown_listener().fuse();
-
         block_on(async {
-            loop {
-                select! {
-                    // TODO temporarily disabled because conflicting with receiving messages
-                    // _ = shutdown => break,
-                    event = self.events.next() => {
-                        if let Some(event) = event {
-                            debug!("Received event {}.", event);
+            while let Some(event) = self.receiver.next().await {
+                debug!("Received event {}.", event);
 
-                            self.handle_event(event).await;
-                        }
-                    }
-                }
+                self.handle_event(event).await;
             }
         });
+
+        info!("Stopped.");
     }
 
     #[inline]
     async fn handle_event(&mut self, event: Event) {
         match event {
             Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
-            Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
+            Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid),
             Event::EndpointConnected {
                 epid, origin, address, ..
-            } => self.endpoint_connected_handler(epid, address, origin).await,
-            Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
+            } => self.endpoint_connected_handler(epid, address, origin),
+            Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid),
             Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
             _ => warn!("Unsupported event {}.", event),
         }
@@ -227,17 +224,17 @@ impl Node {
         }
     }
 
-    async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
+    fn endpoint_removed_handler(&mut self, epid: EndpointId) {
         info!("Endpoint {} has been removed.", epid);
     }
 
-    async fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
+    fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
         let (receiver_tx, receiver_shutdown_tx) = Protocol::register(epid, address, origin);
 
         self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx));
     }
 
-    async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
+    fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
         // TODO unregister ?
         if let Some((_, shutdown)) = self.peers.remove(&epid) {
             if let Err(e) = shutdown.send(()) {
@@ -256,18 +253,21 @@ impl Node {
 }
 
 // TODO return a Result
-fn shutdown_listener() -> oneshot::Receiver<()> {
+fn shutdown_listener() -> (oneshot::Sender<()>, oneshot::Receiver<()>) {
     let (sender, receiver) = oneshot::channel();
 
-    spawn(async move {
-        let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime.");
+    // TODO temporarily disabled because conflicting with receiving messages
 
-        rt.block_on(tokio::signal::ctrl_c()).expect("Error blocking on CTRL-C.");
+    // spawn(async move {
+    //     let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime.");
+    //
+    //     rt.block_on(tokio::signal::ctrl_c()).expect("Error blocking on CTRL-C.");
+    //
+    //     sender.send(()).expect("Error sending shutdown signal.");
+    // });
 
-        sender.send(()).expect("Error sending shutdown signal.");
-    });
-
-    receiver
+    // TODO temporarily returns sender as well
+    (sender, receiver)
 }
 
 fn print_banner_and_version() {
