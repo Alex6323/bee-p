@@ -184,7 +184,7 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             transaction_requester_worker_shutdown_tx,
             spawn(
-                TransactionRequesterWorker::new(ShutdownStream::new(
+                TransactionRequesterWorker::new(ShutdownStream::from_fused(
                     transaction_requester_worker_shutdown_rx,
                     Protocol::get().transaction_requester_worker.incoming(),
                 ))
@@ -195,7 +195,7 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             milestone_requester_worker_shutdown_tx,
             spawn(
-                MilestoneRequesterWorker::new(ShutdownStream::new(
+                MilestoneRequesterWorker::new(ShutdownStream::from_fused(
                     milestone_requester_worker_shutdown_rx,
                     Protocol::get().milestone_requester_worker.incoming(),
                 ))

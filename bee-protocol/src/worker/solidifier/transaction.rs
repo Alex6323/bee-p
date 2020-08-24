@@ -15,10 +15,10 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
 use bee_tangle::traversal;
 
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::{channel::mpsc, stream::{StreamExt, Fuse}};
 use log::info;
 
-type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionSolidifierWorkerEvent>>;
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<TransactionSolidifierWorkerEvent>>>;
 
 pub(crate) struct TransactionSolidifierWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 
