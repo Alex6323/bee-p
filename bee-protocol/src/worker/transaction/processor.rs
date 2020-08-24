@@ -21,7 +21,7 @@ use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_tangle::traversal;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
-use bee_transaction::bundled::BundledTransaction as Transaction;
+use bee_transaction::bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN};
 
 use bytemuck::cast_slice;
 use futures::{channel::mpsc, StreamExt};
@@ -95,7 +95,7 @@ impl ProcessorWorker {
         debug!("Processing received transaction...");
 
         let transaction_bytes = uncompress_transaction_bytes(&transaction_message.bytes);
-        let transaction = match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), 8019) {
+        let transaction = match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN) {
             Ok(transaction_trits) => {
                 let transaction_buf = transaction_trits.to_buf::<T5B1Buf>().encode::<T1B1Buf>();
                 match Transaction::from_trits(&transaction_buf) {

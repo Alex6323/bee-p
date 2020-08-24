@@ -22,7 +22,7 @@ use bee_crypto::ternary::{
 };
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
-use bee_transaction::bundled::BundledTransactionField;
+use bee_transaction::bundled::{BundledTransactionField, TRANSACTION_TRIT_LEN};
 
 use bytemuck::cast_slice;
 use futures::{
@@ -67,23 +67,23 @@ impl HasherWorker {
             processor_worker,
             receiver,
             cache: HashCache::new(cache_size),
-            hasher: BatchHasher::new(8019, CurlPRounds::Rounds81),
+            hasher: BatchHasher::new(TRANSACTION_TRIT_LEN, CurlPRounds::Rounds81),
             events: Vec::with_capacity(BATCH_SIZE),
         }
     }
 
-    async fn trigger_hashing(&mut self, batch_size: usize) {
+    fn trigger_hashing(&mut self, batch_size: usize) {
         if batch_size < BATCH_SIZE_THRESHOLD {
             let hashes = self.hasher.hash_unbatched();
-            Self::send_hashes(hashes, &mut self.events, &mut self.processor_worker).await
+            Self::send_hashes(hashes, &mut self.events, &mut self.processor_worker);
         } else {
             let hashes = self.hasher.hash_batched();
-            Self::send_hashes(hashes, &mut self.events, &mut self.processor_worker).await
+            Self::send_hashes(hashes, &mut self.events, &mut self.processor_worker);
         }
         // FIXME: we could store the fraction of times we use the batched hasher
     }
 
-    async fn send_hashes(
+    fn send_hashes(
         hashes: impl Iterator<Item = TritBuf>,
         events: &mut Vec<HasherWorkerEvent>,
         processor_worker: &mut mpsc::UnboundedSender<ProcessorWorkerEvent>,
@@ -103,7 +103,7 @@ impl HasherWorker {
         info!("Running.");
 
         while let Some(batch_size) = self.next().await {
-            self.trigger_hashing(batch_size).await
+            self.trigger_hashing(batch_size);
         }
 
         info!("Stopped.");
@@ -158,7 +158,7 @@ impl Stream for HasherWorker {
                     // add the transaction in the current event to the batch.
                     let transaction_bytes = uncompress_transaction_bytes(&event.transaction.bytes);
 
-                    let trits = Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), 8019)
+                    let trits = Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN)
                         .unwrap()
                         .to_buf::<T5B1Buf>()
                         .encode::<T1B1Buf>();
@@ -177,7 +177,7 @@ impl Stream for HasherWorker {
                         // to hash.
                         Poll::Ready(None)
                     } else {
-                        // IF the stream ended but we have some transactions in the batch, we must
+                        // If the stream ended but we have some transactions in the batch, we must
                         // hash them before being done.
                         Poll::Ready(Some(batch_size))
                     };
