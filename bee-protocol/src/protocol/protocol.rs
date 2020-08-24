@@ -19,10 +19,10 @@ use crate::{
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
         MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
-        MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent, PeerHandshakerWorker,
-        StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
-        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
-        TransactionSolidifierWorkerEvent, TransactionWorker, TransactionWorkerEvent,
+        MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker, StatusWorker, TpsWorker,
+        TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
+        TransactionResponderWorkerEvent, TransactionSolidifierWorker, TransactionSolidifierWorkerEvent,
+        TransactionWorker, TransactionWorkerEvent,
     },
 };
 

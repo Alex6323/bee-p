@@ -18,8 +18,6 @@ use bee_tangle::traversal;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
-use std::collections::HashSet;
-
 type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionSolidifierWorkerEvent>>;
 
 pub(crate) struct TransactionSolidifierWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
@@ -35,9 +33,7 @@ impl TransactionSolidifierWorker {
 
     // TODO is the index even needed ? We request one milestone at a time ? No PriorityQueue ?
 
-    async fn solidify(&self, root: Hash, index: MilestoneIndex) {
-        let mut missing_hashes = HashSet::new();
-
+    fn solidify(&self, root: Hash, index: MilestoneIndex) {
         traversal::visit_parents_depth_first(
             tangle(),
             root,
@@ -49,24 +45,17 @@ impl TransactionSolidifierWorker {
                 if !tangle().is_solid_entry_point(missing_hash)
                     && !Protocol::get().requested_transactions.contains_key(&missing_hash)
                 {
-                    missing_hashes.insert(*missing_hash);
+                    Protocol::request_transaction(*missing_hash, index);
                 }
             },
         );
-
-        // TODO refactor with async closures when stabilized
-        if !missing_hashes.is_empty() {
-            for missing_hash in missing_hashes {
-                Protocol::request_transaction(missing_hash, index).await;
-            }
-        }
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
         while let Some(TransactionSolidifierWorkerEvent(hash, index)) = self.receiver.next().await {
-            self.solidify(hash, index).await;
+            self.solidify(hash, index);
         }
 
         info!("Stopped.");

@@ -23,7 +23,6 @@ use crate::{
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 
-use futures::sink::SinkExt;
 use log::warn;
 
 const MILESTONE_REQUEST_RANGE: usize = 50;
@@ -85,7 +84,7 @@ impl Protocol {
 
     // TransactionRequest
 
-    pub async fn request_transaction(hash: Hash, index: MilestoneIndex) {
+    pub fn request_transaction(hash: Hash, index: MilestoneIndex) {
         Protocol::get()
             .transaction_requester_worker
             .push(TransactionRequesterWorkerEntry(hash, index));
