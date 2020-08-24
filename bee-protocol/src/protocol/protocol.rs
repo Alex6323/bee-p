@@ -22,7 +22,7 @@ use crate::{
         MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
         ProcessorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
         TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
-        TransactionSolidifierWorkerEvent,
+        TransactionSolidifierWorkerEvent, TRANSACTION_SOLIDIFIER_COUNT,
     },
 };
 
@@ -56,7 +56,6 @@ pub struct Protocol {
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
     pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
-    pub(crate) transaction_solidifier_worker: mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>,
     pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
@@ -96,9 +95,6 @@ impl Protocol {
         let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::unbounded();
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
-        let (transaction_solidifier_worker_tx, transaction_solidifier_worker_rx) = mpsc::unbounded();
-        let (transaction_solidifier_worker_shutdown_tx, transaction_solidifier_worker_shutdown_rx) = oneshot::channel();
-
         let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) = mpsc::unbounded();
         let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
 
@@ -120,7 +116,6 @@ impl Protocol {
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: Default::default(),
             milestone_requester_worker: Default::default(),
-            transaction_solidifier_worker: transaction_solidifier_worker_tx,
             milestone_solidifier_worker: milestone_solidifier_worker_tx,
             broadcaster_worker: broadcaster_worker_tx,
             peer_manager: PeerManager::new(network.clone()),
@@ -236,16 +231,26 @@ impl Protocol {
             ),
         };
 
-        shutdown.add_worker_shutdown(
-            transaction_solidifier_worker_shutdown_tx,
-            spawn(
-                TransactionSolidifierWorker::new(ShutdownStream::new(
-                    transaction_solidifier_worker_shutdown_rx,
-                    transaction_solidifier_worker_rx,
-                ))
-                .run(),
-            ),
-        );
+        let mut senders = Vec::with_capacity(TRANSACTION_SOLIDIFIER_COUNT);
+
+        for i in 0..TRANSACTION_SOLIDIFIER_COUNT {
+            let (transaction_solidifier_worker_tx, transaction_solidifier_worker_rx) = mpsc::unbounded();
+            let (transaction_solidifier_worker_shutdown_tx, transaction_solidifier_worker_shutdown_rx) =
+                oneshot::channel();
+
+            shutdown.add_worker_shutdown(
+                transaction_solidifier_worker_shutdown_tx,
+                spawn(
+                    TransactionSolidifierWorker::new(ShutdownStream::new(
+                        transaction_solidifier_worker_shutdown_rx,
+                        transaction_solidifier_worker_rx,
+                    ))
+                    .run(),
+                ),
+            );
+
+            senders.push(transaction_solidifier_worker_tx);
+        }
 
         shutdown.add_worker_shutdown(
             milestone_solidifier_worker_shutdown_tx,
@@ -253,7 +258,7 @@ impl Protocol {
                 MilestoneSolidifierWorker::new(ShutdownStream::new(
                     milestone_solidifier_worker_shutdown_rx,
                     milestone_solidifier_worker_rx,
-                ))
+                ), senders)
                 .run(),
             ),
         );

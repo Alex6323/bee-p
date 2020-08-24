@@ -12,5 +12,5 @@
 mod milestone;
 mod transaction;
 
-pub(crate) use milestone::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
+pub(crate) use milestone::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, TRANSACTION_SOLIDIFIER_COUNT};
 pub(crate) use transaction::{TransactionSolidifierWorker, TransactionSolidifierWorkerEvent};

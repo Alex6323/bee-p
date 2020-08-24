@@ -13,7 +13,7 @@ use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::milestone_validator::MilestoneValidatorWorkerEvent,
+    worker::{milestone_validator::MilestoneValidatorWorkerEvent, MilestoneSolidifierWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -147,12 +147,16 @@ impl ProcessorWorker {
             Protocol::get().metrics.new_transactions_inc();
 
             if !tangle().is_synced() && Protocol::get().requested_transactions.is_empty() {
-                Protocol::trigger_milestone_solidification();
+                Protocol::get()
+                    .milestone_solidifier_worker
+                    .unbounded_send(MilestoneSolidifierWorkerEvent::Idle);
             }
 
             match Protocol::get().requested_transactions.remove(&hash) {
                 Some((hash, (index, _))) => {
-                    Protocol::trigger_transaction_solidification(hash, index);
+                    Protocol::get()
+                        .milestone_solidifier_worker
+                        .unbounded_send(MilestoneSolidifierWorkerEvent::ReceivedTransaction(hash, index));
                 }
                 None => {
                     if should_broadcast {
