@@ -47,7 +47,7 @@ impl Ord for TransactionRequesterWorkerEntry {
 
 pub(crate) struct TransactionRequesterWorker<'a> {
     counter: usize,
-    receiver: Fuse<Receiver<'a>>,
+    receiver: Receiver<'a>,
     timeouts: Fuse<Interval>,
 }
 
@@ -55,7 +55,7 @@ impl<'a> TransactionRequesterWorker<'a> {
     pub(crate) fn new(receiver: Receiver<'a>) -> Self {
         Self {
             counter: 0,
-            receiver: receiver.fuse(),
+            receiver,
             timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
         }
     }
