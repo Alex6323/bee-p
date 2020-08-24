@@ -56,7 +56,6 @@ pub struct Protocol {
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
     pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
-    pub(crate) milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
     pub(crate) transaction_solidifier_worker: mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>,
     pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
@@ -118,7 +117,6 @@ impl Protocol {
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: Default::default(),
             milestone_requester_worker: Default::default(),
-            milestone_validator_worker: milestone_validator_worker_tx,
             transaction_solidifier_worker: transaction_solidifier_worker_tx,
             milestone_solidifier_worker: milestone_solidifier_worker_tx,
             broadcaster_worker: broadcaster_worker_tx,
@@ -139,7 +137,7 @@ impl Protocol {
             transaction_worker_shutdown_tx,
             spawn(
                 TransactionWorker::new(
-                    Protocol::get().milestone_validator_worker.clone(),
+                    milestone_validator_worker_tx,
                     Protocol::get().config.workers.transaction_worker_cache,
                     ShutdownStream::new(transaction_worker_shutdown_rx, transaction_worker_rx),
                 )
