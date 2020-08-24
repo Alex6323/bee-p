@@ -325,6 +325,7 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
             .collect::<String>()
     );
     tangle().update_last_milestone_index(last_milestone.0.index);
+
     Protocol::get()
         .milestone_solidifier_worker
         .unbounded_send(MilestoneSolidifierWorkerEvent::NewSolidMilestone(
@@ -351,6 +352,11 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
 fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
     debug!("New solid milestone #{}.", *last_solid_milestone.0.index);
     tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
+    Protocol::get()
+        .milestone_solidifier_worker
+        .unbounded_send(MilestoneSolidifierWorkerEvent::NewSolidMilestone(
+            last_solid_milestone.0.index,
+        ));
 
     Protocol::broadcast_heartbeat(
         last_solid_milestone.0.index,
