@@ -65,12 +65,17 @@ impl<'a> TransactionRequesterWorker<'a> {
             return;
         }
 
-        self.process_request_unchecked(hash, index).await;
+        if self.process_request_unchecked(hash, index).await {
+            Protocol::get()
+                .requested_transactions
+                .insert(hash, (index, Instant::now()));
+        }
     }
 
-    async fn process_request_unchecked(&mut self, hash: Hash, index: MilestoneIndex) {
+    /// Return `true` if the transaction was requested.
+    async fn process_request_unchecked(&mut self, hash: Hash, index: MilestoneIndex) -> bool {
         if Protocol::get().peer_manager.handshaked_peers.is_empty() {
-            return;
+            return false;
         }
 
         let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
@@ -82,17 +87,15 @@ impl<'a> TransactionRequesterWorker<'a> {
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                 if index > peer.snapshot_milestone_index() && index <= peer.last_solid_milestone_index() {
-                    Protocol::get()
-                        .requested_transactions
-                        .insert(hash, (index, Instant::now()));
                     SenderWorker::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
                     );
-                    break;
+                    return true;
                 }
             }
         }
+        false
     }
 
     async fn retry_requests(&mut self) {
@@ -103,8 +106,9 @@ impl<'a> TransactionRequesterWorker<'a> {
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
                 info!("Transaction timed out, retrying request.");
-                *instant = now;
-                self.process_request_unchecked(hash.clone(), *index).await;
+                if self.process_request_unchecked(hash.clone(), *index).await {
+                    *instant = now;
+                }
                 retry_counts += 1;
             }
         }
