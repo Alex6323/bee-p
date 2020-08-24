@@ -17,16 +17,13 @@ use crate::{
     },
 };
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_protocol::{Milestone, MilestoneIndex};
 
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{error, info};
+
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<LedgerConfirmationWorkerEvent>>;
 
 enum Error {
     NonContiguousMilestone,
@@ -39,11 +36,15 @@ pub(crate) struct LedgerConfirmationWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct LedgerConfirmationWorker {
     confirmed_index: MilestoneIndex,
+    receiver: Receiver,
 }
 
 impl LedgerConfirmationWorker {
-    pub fn new(confirmed_index: MilestoneIndex) -> Self {
-        Self { confirmed_index }
+    pub fn new(confirmed_index: MilestoneIndex, receiver: Receiver) -> Self {
+        Self {
+            confirmed_index,
+            receiver,
+        }
     }
 
     fn confirm(&mut self, milestone: Milestone) -> Result<(), Error> {
@@ -77,26 +78,12 @@ impl LedgerConfirmationWorker {
         }
     }
 
-    pub async fn run(
-        mut self,
-        receiver: mpsc::UnboundedReceiver<LedgerConfirmationWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(LedgerConfirmationWorkerEvent(milestone)) = event {
-                        if let Err(_) = self.confirm(milestone) {
-                            panic!("Error while confirming milestone, aborting.");
-                        }
-                    }
-                }
+        while let Some(LedgerConfirmationWorkerEvent(milestone)) = self.receiver.next().await {
+            if let Err(_) = self.confirm(milestone) {
+                panic!("Error while confirming milestone, aborting.");
             }
         }
 

@@ -15,7 +15,7 @@ mod traversal;
 
 pub(crate) use confirmation::{LedgerConfirmationWorker, LedgerConfirmationWorkerEvent};
 
-use bee_common::shutdown::Shutdown;
+use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
 use bee_protocol::{event::LastSolidMilestoneChanged, MilestoneIndex};
 
@@ -67,8 +67,11 @@ pub(crate) fn init(snapshot_index: u32, bus: Arc<Bus<'static>>, shutdown: &mut S
     shutdown.add_worker_shutdown(
         ledger_confirmation_worker_shutdown_tx,
         spawn(
-            LedgerConfirmationWorker::new(MilestoneIndex(snapshot_index))
-                .run(ledger_confirmation_worker_rx, ledger_confirmation_worker_shutdown_rx),
+            LedgerConfirmationWorker::new(
+                MilestoneIndex(snapshot_index),
+                ShutdownStream::new(ledger_confirmation_worker_shutdown_rx, ledger_confirmation_worker_rx),
+            )
+            .run(),
         ),
     );
 

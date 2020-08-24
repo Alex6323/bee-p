@@ -18,7 +18,7 @@ pub mod event;
 use state::LedgerStateWorker;
 pub use state::LedgerStateWorkerEvent;
 
-use bee_common::shutdown::Shutdown;
+use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
 use bee_transaction::bundled::Address;
 
@@ -33,15 +33,19 @@ pub fn init(
     state: HashMap<Address, u64>,
     bus: Arc<Bus<'static>>,
     shutdown: &mut Shutdown,
-) -> mpsc::Sender<LedgerStateWorkerEvent> {
-    // TODO config
-    // TODO unbounded ?
-    let (ledger_state_worker_tx, ledger_state_worker_rx) = mpsc::channel(1000);
+) -> mpsc::UnboundedSender<LedgerStateWorkerEvent> {
+    let (ledger_state_worker_tx, ledger_state_worker_rx) = mpsc::unbounded();
     let (ledger_state_worker_shutdown_tx, ledger_state_worker_shutdown_rx) = oneshot::channel();
 
     shutdown.add_worker_shutdown(
         ledger_state_worker_shutdown_tx,
-        spawn(LedgerStateWorker::new(state).run(ledger_state_worker_rx, ledger_state_worker_shutdown_rx)),
+        spawn(
+            LedgerStateWorker::new(
+                state,
+                ShutdownStream::new(ledger_state_worker_shutdown_rx, ledger_state_worker_rx),
+            )
+            .run(),
+        ),
     );
 
     whiteflag::init(snapshot_index, bus, shutdown);
