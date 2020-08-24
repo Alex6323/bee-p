@@ -20,9 +20,9 @@ use crate::{
         BroadcasterWorker, BroadcasterWorkerEvent, HasherWorker, HasherWorkerEvent, MilestoneRequesterWorker,
         MilestoneRequesterWorkerEntry, MilestoneResponderWorker, MilestoneResponderWorkerEvent,
         MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
-        ProcessorWorker, ProcessorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
-        TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent,
-        TransactionSolidifierWorker, TransactionSolidifierWorkerEvent,
+        ProcessorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
+        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
+        TransactionSolidifierWorkerEvent,
     },
 };
 
@@ -52,7 +52,6 @@ pub struct Protocol {
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) hasher_worker: mpsc::UnboundedSender<HasherWorkerEvent>,
-    pub(crate) processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>,
     pub(crate) transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
@@ -117,7 +116,6 @@ impl Protocol {
             bus,
             metrics: ProtocolMetrics::new(),
             hasher_worker: hasher_worker_tx,
-            processor_worker: processor_worker_tx,
             transaction_responder_worker: transaction_responder_worker_tx,
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: Default::default(),
@@ -142,7 +140,7 @@ impl Protocol {
             hasher_worker_shutdown_tx,
             spawn(
                 HasherWorker::new(
-                    Protocol::get().processor_worker.clone(),
+                    processor_worker_tx,
                     Protocol::get().config.workers.transaction_worker_cache,
                     ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
                 )
