@@ -53,7 +53,7 @@ impl PeerWorker {
         info!("[{}] Running.", self.peer.address);
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
-            if let Err(e) = self.process_message(&header, bytes).await {
+            if let Err(e) = self.process_message(&header, bytes) {
                 error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
         }
@@ -63,7 +63,7 @@ impl PeerWorker {
         Protocol::get().peer_manager.remove(&self.peer.epid).await;
     }
 
-    async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
+    fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
         match header.message_type {
             MilestoneRequest::ID => {
                 debug!("[{}] Reading MilestoneRequest...", self.peer.address);
