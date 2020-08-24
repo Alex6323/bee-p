@@ -35,7 +35,7 @@ impl TransactionSolidifierWorker {
 
     // TODO is the index even needed ? We request one milestone at a time ? No PriorityQueue ?
 
-    async fn solidify(&self, root: Hash, index: MilestoneIndex) -> bool {
+    async fn solidify(&self, root: Hash, index: MilestoneIndex) {
         let mut missing_hashes = HashSet::new();
 
         traversal::visit_parents_depth_first(
@@ -55,14 +55,10 @@ impl TransactionSolidifierWorker {
         );
 
         // TODO refactor with async closures when stabilized
-        if missing_hashes.is_empty() {
-            true
-        } else {
+        if !missing_hashes.is_empty() {
             for missing_hash in missing_hashes {
                 Protocol::request_transaction(missing_hash, index).await;
             }
-
-            false
         }
     }
 
