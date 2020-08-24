@@ -255,10 +255,10 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             milestone_solidifier_worker_shutdown_tx,
             spawn(
-                MilestoneSolidifierWorker::new(ShutdownStream::new(
-                    milestone_solidifier_worker_shutdown_rx,
-                    milestone_solidifier_worker_rx,
-                ), senders)
+                MilestoneSolidifierWorker::new(
+                    ShutdownStream::new(milestone_solidifier_worker_shutdown_rx, milestone_solidifier_worker_rx),
+                    senders,
+                )
                 .run(),
             ),
         );
@@ -325,6 +325,11 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
             .collect::<String>()
     );
     tangle().update_last_milestone_index(last_milestone.0.index);
+    Protocol::get()
+        .milestone_solidifier_worker
+        .unbounded_send(MilestoneSolidifierWorkerEvent::NewSolidMilestone(
+            last_milestone.0.index,
+        ));
 
     Protocol::broadcast_heartbeat(
         tangle().get_last_solid_milestone_index(),
