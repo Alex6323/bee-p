@@ -13,4 +13,4 @@ use bee_transaction::bundled::Address;
 
 use std::collections::HashMap;
 
-pub(crate) struct LedgerDiff(HashMap<Address, i64>);
+pub(crate) struct LedgerDiff(pub(crate) HashMap<Address, i64>);
