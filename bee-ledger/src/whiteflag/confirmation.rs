@@ -27,7 +27,7 @@ type Receiver = ShutdownStream<mpsc::UnboundedReceiver<LedgerConfirmationWorkerE
 
 enum Error {
     NonContiguousMilestone,
-    InvalidPastCone(TraversalError),
+    InvalidConfirmationSet(TraversalError),
 }
 
 pub(crate) struct Confirmation {}
@@ -73,7 +73,7 @@ impl LedgerConfirmationWorker {
                     milestone.index().0,
                     e
                 );
-                Err(Error::InvalidPastCone(e))
+                Err(Error::InvalidConfirmationSet(e))
             }
         }
     }
