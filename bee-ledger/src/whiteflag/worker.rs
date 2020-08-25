@@ -12,10 +12,7 @@
 use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
-    whiteflag::{
-        traversal::{visit_bundles_dfs, Error as TraversalError},
-        WhiteFlag,
-    },
+    whiteflag::{confirmation::Confirmation, traversal::Error as TraversalError, WhiteFlag},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -38,7 +35,7 @@ pub struct LedgerWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct LedgerWorker {
     index: MilestoneIndex,
-    state: LedgerState,
+    pub(crate) state: LedgerState,
     receiver: Receiver,
 }
 
@@ -60,11 +57,21 @@ impl LedgerWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        match visit_bundles_dfs(*milestone.hash()) {
+        let mut confirmation = Confirmation::new();
+
+        match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
                 self.index = milestone.index();
 
                 WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
+
+                println!(
+                    "ref {}, zero {}, conflict {}, included {}",
+                    confirmation.num_tails_referenced,
+                    confirmation.num_tails_zero_value,
+                    confirmation.num_tails_conflicting,
+                    confirmation.tails_included.len()
+                );
 
                 Ok(())
             }

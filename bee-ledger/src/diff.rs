@@ -13,4 +13,11 @@ use bee_transaction::bundled::Address;
 
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub(crate) struct LedgerDiff(pub(crate) HashMap<Address, i64>);
+
+impl LedgerDiff {
+    pub(crate) fn apply(&mut self, address: Address, diff: i64) {
+        self.0.entry(address).and_modify(|d| *d += diff).or_insert(diff);
+    }
+}

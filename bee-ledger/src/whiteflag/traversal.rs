@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::whiteflag::confirmation::Confirmation;
+use crate::whiteflag::{confirmation::Confirmation, worker::LedgerWorker};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
@@ -20,6 +20,8 @@ use bee_transaction::{
 };
 
 use std::collections::HashSet;
+
+const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 #[derive(Debug)]
 pub(crate) enum Error {
@@ -54,57 +56,80 @@ fn load_bundle_builder(hash: &Hash) -> Option<IncomingBundleBuilder> {
     }
 }
 
-#[inline]
-fn on_bundle(hash: &Hash, bundle: &Bundle) {
-    let bundle_mutations = bundle.ledger_mutations();
+impl LedgerWorker {
+    #[inline]
+    fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle, confirmation: &mut Confirmation) {
+        let (mutates, bundle_mutations) = bundle.ledger_mutations();
 
-    if bundle_mutations.is_empty() {}
-}
+        confirmation.num_tails_referenced += 1;
 
-pub(crate) fn visit_bundles_dfs(root: Hash) -> Result<Confirmation, Error> {
-    let mut hashes = vec![root];
-    let mut visited = HashSet::new();
-    let mut confirmation = Confirmation {};
+        if !mutates {
+            confirmation.num_tails_zero_value += 1;
+        } else {
+            // First pass to look for conflicts.
+            for (address, diff) in bundle_mutations.iter() {
+                let balance = *self.state.get_or_zero(&address) as i64 + diff;
 
-    while let Some(hash) = hashes.last() {
-        // TODO pass match to avoid repetitions
-        match load_bundle_builder(hash) {
-            Some(bundle_builder) => {
-                let trunk = bundle_builder.trunk();
-                let branch = bundle_builder.branch();
-                // TODO justify
-                let meta = tangle().get_metadata(hash).unwrap();
-
-                if visited.contains(trunk) && visited.contains(branch) {
-                    let bundle = match bundle_builder.validate() {
-                        Ok(builder) => builder.build(),
-                        Err(e) => return Err(Error::InvalidBundle(e)),
-                    };
-                    on_bundle(hash, &bundle);
-                    visited.insert(hash.clone());
-                    hashes.pop();
-                } else if !visited.contains(trunk) {
-                    //     if matches(vtx.transaction(), vtx.metadata()) {
-                    if !meta.is_confirmed() {
-                        hashes.push(*trunk);
-                    }
-                } else if !visited.contains(branch) {
-                    //     if matches(vtx.transaction(), vtx.metadata()) {
-                    if !meta.is_confirmed() {
-                        hashes.push(*branch);
-                    }
+                if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
+                    confirmation.num_tails_conflicting += 1;
+                    return;
                 }
             }
-            None => {
-                if !tangle().is_solid_entry_point(hash) {
-                    return Err(Error::MissingHash);
-                } else {
-                    visited.insert(hash.clone());
-                    hashes.pop();
-                }
+
+            // Second pass to mutate the state.
+            for (address, diff) in bundle_mutations {
+                self.state.apply(address.clone(), diff);
+                confirmation.diff.apply(address, diff);
             }
+
+            confirmation.tails_included.insert(*hash);
         }
     }
 
-    Ok(confirmation)
+    pub(crate) fn visit_bundles_dfs(&mut self, root: Hash, confirmation: &mut Confirmation) -> Result<(), Error> {
+        let mut hashes = vec![root];
+        let mut visited = HashSet::new();
+
+        while let Some(hash) = hashes.last() {
+            // TODO pass match to avoid repetitions
+            match load_bundle_builder(hash) {
+                Some(bundle_builder) => {
+                    let trunk = bundle_builder.trunk();
+                    let branch = bundle_builder.branch();
+                    // TODO justify
+                    let meta = tangle().get_metadata(hash).unwrap();
+
+                    if visited.contains(trunk) && visited.contains(branch) {
+                        let bundle = match bundle_builder.validate() {
+                            Ok(builder) => builder.build(),
+                            Err(e) => return Err(Error::InvalidBundle(e)),
+                        };
+                        self.on_bundle(hash, &bundle, confirmation);
+                        visited.insert(hash.clone());
+                        hashes.pop();
+                    } else if !visited.contains(trunk) {
+                        //     if matches(vtx.transaction(), vtx.metadata()) {
+                        if !meta.is_confirmed() {
+                            hashes.push(*trunk);
+                        }
+                    } else if !visited.contains(branch) {
+                        //     if matches(vtx.transaction(), vtx.metadata()) {
+                        if !meta.is_confirmed() {
+                            hashes.push(*branch);
+                        }
+                    }
+                }
+                None => {
+                    if !tangle().is_solid_entry_point(hash) {
+                        return Err(Error::MissingHash);
+                    } else {
+                        visited.insert(hash.clone());
+                        hashes.pop();
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
