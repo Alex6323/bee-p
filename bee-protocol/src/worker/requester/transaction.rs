@@ -108,8 +108,8 @@ impl<'a> TransactionRequesterWorker<'a> {
                 debug!("Transaction timed out, retrying request.");
                 if self.process_request_unchecked(hash.clone(), *index).await {
                     *instant = now;
+                    retry_counts += 1;
                 }
-                retry_counts += 1;
             }
         }
 

@@ -114,8 +114,8 @@ impl<'a> MilestoneRequesterWorker<'a> {
                 debug!("Milestone timed out, retrying request.");
                 if self.process_request_unchecked(*index, None).await {
                     *instant = now;
+                    retry_counts += 1;
                 };
-                retry_counts += 1;
             }
         }
 
