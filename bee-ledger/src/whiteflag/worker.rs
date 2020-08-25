@@ -66,7 +66,7 @@ impl LedgerWorker {
 
                 println!(
                     "ref {}, zero {}, conflict {}, included {}",
-                    confirmation.num_tails_referenced,
+                    confirmation.tails_referenced.len(),
                     confirmation.num_tails_zero_value,
                     confirmation.num_tails_conflicting,
                     confirmation.tails_included.len()
@@ -75,19 +75,28 @@ impl LedgerWorker {
                 let ms = tangle().get(milestone.hash()).unwrap();
                 let timestamp = ms.get_timestamp();
 
-                visit_parents_depth_first(
-                    tangle(),
-                    *milestone.hash(),
-                    |_, _, meta| !meta.flags().is_confirmed(),
-                    |_, _, _| {
-                        tangle().update_metadata(milestone.hash(), |meta| {
-                            meta.flags_mut().set_confirmed();
-                            meta.set_milestone_index(milestone.index());
-                            meta.set_confirmation_timestamp(timestamp);
-                        });
-                    },
-                    |_| {},
-                );
+                for hash in confirmation.tails_referenced {
+                    tangle().update_metadata(milestone.hash(), |meta| {
+                        meta.flags_mut().set_confirmed();
+                        meta.set_milestone_index(milestone.index());
+                        meta.set_confirmation_timestamp(timestamp);
+                    });
+                }
+
+                // TODO would be better if we could mutate meta through traversal
+                // visit_parents_depth_first(
+                //     tangle(),
+                //     *milestone.hash(),
+                //     |_, _, meta| !meta.flags().is_confirmed(),
+                //     |_, _, _| {
+                //         tangle().update_metadata(milestone.hash(), |meta| {
+                //             meta.flags_mut().set_confirmed();
+                //             meta.set_milestone_index(milestone.index());
+                //             meta.set_confirmation_timestamp(timestamp);
+                //         });
+                //     },
+                //     |_| {},
+                // );
 
                 WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
 
