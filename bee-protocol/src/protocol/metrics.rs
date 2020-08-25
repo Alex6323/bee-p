@@ -29,6 +29,11 @@ pub struct ProtocolMetrics {
     transactions_sent: AtomicU64,
     transaction_requests_sent: AtomicU64,
     heartbeats_sent: AtomicU64,
+
+    value_transactions: AtomicU64,
+    non_value_transactions: AtomicU64,
+    confirmed_transactions: AtomicU64,
+    conflicting_transactions: AtomicU64,
 }
 
 impl ProtocolMetrics {
@@ -141,6 +146,38 @@ impl ProtocolMetrics {
     pub(crate) fn heartbeats_sent_inc(&self) -> u64 {
         self.heartbeats_sent.fetch_add(1, Ordering::SeqCst)
     }
+
+    pub fn value_transactions(&self) -> u64 {
+        self.value_transactions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn value_transactions_inc(&self) -> u64 {
+        self.value_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn non_value_transactions(&self) -> u64 {
+        self.non_value_transactions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn non_value_transactions_inc(&self) -> u64 {
+        self.non_value_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn confirmed_transactions(&self) -> u64 {
+        self.confirmed_transactions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn confirmed_transactions_inc(&self) -> u64 {
+        self.confirmed_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn conflicting_transactions(&self) -> u64 {
+        self.conflicting_transactions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn conflicting_transactions_inc(&self) -> u64 {
+        self.conflicting_transactions.fetch_add(1, Ordering::SeqCst)
+    }
 }
 
 #[cfg(test)]
@@ -209,5 +246,25 @@ mod tests {
         assert_eq!(metrics.transactions_sent(), 1);
         assert_eq!(metrics.transaction_requests_sent(), 1);
         assert_eq!(metrics.heartbeats_sent(), 1);
+    }
+
+    #[test]
+    fn protocol_metrics_confirmation() {
+        let metrics = ProtocolMetrics::default();
+
+        assert_eq!(metrics.value_transactions(), 0);
+        assert_eq!(metrics.non_value_transactions(), 0);
+        assert_eq!(metrics.confirmed_transactions(), 0);
+        assert_eq!(metrics.conflicting_transactions(), 0);
+
+        metrics.value_transactions_inc();
+        metrics.non_value_transactions_inc();
+        metrics.confirmed_transactions_inc();
+        metrics.conflicting_transactions_inc();
+
+        assert_eq!(metrics.value_transactions(), 1);
+        assert_eq!(metrics.non_value_transactions(), 1);
+        assert_eq!(metrics.confirmed_transactions(), 1);
+        assert_eq!(metrics.conflicting_transactions(), 1);
     }
 }
