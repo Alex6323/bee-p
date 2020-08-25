@@ -77,13 +77,14 @@ impl MsTangle {
         }
     }
 
-    pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
+    pub fn insert(&self, transaction:  Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
 
+            let last_solid_milestone_index_processed = self.last_solid_milestone_index_processed.load(Ordering::Relaxed);
             let last_solid_milestone_index = self.last_solid_milestone_index.load(Ordering::Relaxed);
-            if self.last_solid_milestone_index_processed.load(Ordering::Relaxed) < last_solid_milestone_index {
-                self.last_solid_milestone_index_processed.store(last_solid_milestone_index, Ordering::Relaxed);
-                self.update_transactions_referenced_by_milestone(MilestoneIndex(last_solid_milestone_index));
+            for index in (last_solid_milestone_index_processed + 1)..(last_solid_milestone_index + 1) {
+                self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
+                self.last_solid_milestone_index_processed.store(index, Ordering::Relaxed);
             }
 
             self.propagate_solid_flag(&hash);
@@ -169,7 +170,7 @@ impl MsTangle {
     // updated otrsi and ytrsi values need to be propagated to attached children (not referenced by the milestone)
     fn update_transactions_referenced_by_milestone(&self, milestone_index: MilestoneIndex) {
         if let Some(root) = self.get_milestone_hash(milestone_index) {
-            info!("Update transactions referenced by milestone index {}.", *milestone_index);
+            info!("Updating transactions referenced by milestone {}.", *milestone_index);
             let mut visited = HashSet::new();
             let mut to_visit = vec![root];
             while let Some(hash) = to_visit.pop() {
@@ -182,6 +183,11 @@ impl MsTangle {
                 if self.get_metadata(&hash).is_none() {
                     continue;
                 }
+
+                if self.get_metadata(&hash).unwrap().cone_index.is_some() {
+                    continue;
+                }
+
                 tangle().update_metadata(&hash, |metadata| {
                     metadata.cone_index = Some(milestone_index);
                     metadata.otrsi = Some(milestone_index);
