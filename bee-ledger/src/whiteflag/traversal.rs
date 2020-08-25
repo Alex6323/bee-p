@@ -61,7 +61,8 @@ impl LedgerWorker {
     fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle, confirmation: &mut Confirmation) {
         let (mutates, bundle_mutations) = bundle.ledger_mutations();
 
-        confirmation.num_tails_referenced += 1;
+        // confirmation.num_tails_referenced += 1;
+        confirmation.tails_referenced.insert(*hash);
 
         if !mutates {
             confirmation.num_tails_zero_value += 1;
