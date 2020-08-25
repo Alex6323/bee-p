@@ -28,18 +28,7 @@ impl From<::rocksdb::Error> for OpError {
     }
 }
 
-#[macro_export]
-macro_rules! impl_ops {
-    (transaction: $object:ty) => {
-        crate::impl_transaction_ops!($object);
-    };
-    (transaction_metadata: $object:ty) => {
-        crate::impl_transaction_metadata_ops!($object);
-    };
-    (milestone: $object:ty) => {
-        crate::impl_milestone_ops!($object);
-    };
-    (ledger_diff: $object:ty) => {
-        crate::impl_ledger_diff_ops!($object);
-    };
-}
+pub use ledger_diff::LedgerDiffOps;
+pub use milestone::MilestoneOps;
+pub use transaction::TransactionOps;
+pub use transaction_metadata::TransactionMetadataOps;

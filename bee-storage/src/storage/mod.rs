@@ -58,13 +58,16 @@ impl Backend for Storage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
+    #[async_std::test]
     #[cfg(feature = "rocks_db")]
-    fn create_and_flush_rocksdb() {
-        let config_as_string = fs::read_to_string("./config.toml".to_string()).unwrap();
-        let config: config::Config = toml::from_str(&config_as_string).unwrap();
-        let db = rocksdb::RocksdbBackend::new(config.rocksdb).unwrap();
-        let storage = Storage { inner: db };
-        assert!(storage.inner.flush().is_ok());
+    async fn start_shutdown_storage() {
+        let storage: Storage = Storage::start("./config.toml".to_string()).await.unwrap();
+        assert!(storage.shutdown().await.is_ok());
+    }
+    #[async_std::test]
+    #[cfg(feature = "rocks_db")]
+    async fn insert_transaction() {
+        let (tx_hash, tx) = bee_test::transaction::create_random_tx();
+        todo!()
     }
 }

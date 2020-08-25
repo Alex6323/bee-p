@@ -11,9 +11,9 @@
 #[cfg(feature = "rocks_db")]
 pub trait RocksDBPersistable {
     /// This encode method will extend the provided buffer and return ();
-    fn encode(&self, buffer: &mut Vec<u8>);
+    fn encode_persistable(&self, buffer: &mut Vec<u8>);
     /// Decode `slice[..length]` and return Self
-    fn decode(slice: &[u8], length: usize) -> Self
+    fn decode_persistable(slice: &[u8], length: usize) -> Self
     where
         Self: Sized;
 }

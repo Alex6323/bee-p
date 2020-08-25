@@ -8,57 +8,90 @@
 // Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
+use crate::{persistable::Persistable, storage::Backend};
+use std::collections::HashMap;
+
+#[async_trait::async_trait]
+pub trait MilestoneOps<H, S, E> {
+    async fn insert(&self, storage: &S) -> Result<(), E>
+    where
+        Self: Sized,
+        S: Backend;
+    async fn insert_batch(transactions: &HashMap<H, Self>, storage: &S) -> Result<(), E>
+    where
+        Self: Sized,
+        H: Persistable,
+        S: Backend;
+    async fn remove(hash: &H, storage: &S) -> Result<(), E>
+    where
+        Self: Sized,
+        H: Persistable,
+        S: Backend;
+    async fn find_by_hash(hash: &H, storage: &S) -> Result<Option<Self>, E>
+    where
+        Self: Sized,
+        H: Persistable,
+        S: Backend;
+}
+
 #[macro_export]
+#[cfg(feature = "rocks_db")]
 macro_rules! impl_milestone_ops {
     ($object:ty) => {
         use bee_storage::{
-            access::OpError,
-            persistable::Persistable,
-            storage::{rocksdb::*, Storage},
+            access::{MilestoneOps, OpError},
+            storage::{rocksdb::*, Backend, Storage},
         };
-        use bee_transaction::bundled::BundledTransactionField;
-        #[cfg(feature = "rocks_db")]
-        impl $object {
+        use std::collections::HashMap;
+        #[async_trait::async_trait]
+        impl MilestoneOps<Hash, Storage, OpError> for $object {
             async fn insert(&self, storage: &Storage) -> Result<(), OpError> {
-                let db = &storage.inner;
-                let milestone_hash_to_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
+                // get column family handle to ms_hash_to_ms_index table in order presist the ms_index;
+                let ms_hash_to_ms_index = storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
                 let mut hash_buf = Vec::new();
-                self.hash().encode(&mut hash_buf);
+                self.hash().encode_persistable(&mut hash_buf);
                 let mut index_buf = Vec::new();
-                self.index().encode(&mut index_buf)
-                db.put_cf(
-                    &milestone_hash_to_index,
-                    hash_buf.as_slice(),
-                    index_buf.as_slice(),
-                )?;
-                Ok(())
-            }
-            async fn remove(hash: &Hash, storage: &Storage) -> Result<(), OpError>
-            where
-                Hash: Persistable,
-            {
-                let db = &storage.inner;
-                let milestone_hash_to_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-                let mut hash_buf = Vec::new();
-                hash.encode(&mut hash_buf);
-                db.delete_cf(&milestone_hash_to_index, hash_buf.as_slice())?;
-                Ok(())
-            }
-            async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError>
-            where
-                Hash: Persistable,
-            {
-                let milestone_hash_to_index = storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-                let mut hash_buf = Vec::new();
-                hash.encode(&mut hash_buf);
-                if let Some(res) = storage
+                self.index().encode_persistable(&mut index_buf);
+                storage
                     .inner
-                    .get_cf(&milestone_hash_to_index, hash_buf.as_slice())?
-                {
-                    Ok(Some(Milestone::new(
-                        hash,
-                        MilestoneIndex::decode(res.as_slice(), res.len()),
-                    )))
+                    .put_cf(&ms_hash_to_ms_index, hash_buf.as_slice(), index_buf.as_slice())?;
+                Ok(())
+            }
+            async fn insert_batch(transactions: &HashMap<Hash, Self>, storage: &Storage) -> Result<(), OpError> {
+                let mut batch = WriteBatch::default();
+                let ms_hash_to_ms_index = storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
+                // reusable buffers
+                let mut hash_buf: Vec<u8> = Vec::new();
+                let mut index_buf: Vec<u8> = Vec::new();
+                for (hash, ms_index) in transactions {
+                    hash.encode_persistable(&mut hash_buf);
+                    ms_index.encode_persistable(&mut index_buf);
+                    batch.put_cf(&ms_hash_to_ms_index, hash_buf.as_slice(), index_buf.as_slice());
+                    // note: for optimization reason we used buf.set_len = 0 instead of clear()
+                    unsafe { hash_buf.set_len(0) };
+                    unsafe { index_buf.set_len(0) };
+                }
+                let mut write_options = WriteOptions::default();
+                write_options.set_sync(false);
+                write_options.disable_wal(true);
+                storage.inner.write_opt(batch, &write_options)?;
+                Ok(())
+            }
+            async fn remove(hash: &Hash, storage: &Storage) -> Result<(), OpError> {
+                let db = &storage.inner;
+                let ms_hash_to_ms_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
+                let mut hash_buf = Vec::new();
+                hash.encode_persistable(&mut hash_buf);
+                db.delete_cf(&ms_hash_to_ms_index, hash_buf.as_slice())?;
+                Ok(())
+            }
+            async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError> {
+                let ms_hash_to_ms_index = storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
+                let mut hash_buf: Vec<u8> = Vec::new();
+                hash.encode_persistable(&mut hash_buf);
+                if let Some(res) = storage.inner.get_cf(&ms_hash_to_ms_index, hash_buf.as_slice())? {
+                    let ms_index: MilestoneIndex = MilestoneIndex::decode_persistable(res.as_slice(), res.len());
+                    Ok(Some(Milestone::new(hash, ms_index)))
                 } else {
                     Ok(None)
                 }
