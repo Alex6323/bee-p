@@ -26,13 +26,9 @@ macro_rules! impl_transaction_ops {
             {
                 // get column family handle to hash_to_tx table in order presist the transaction;
                 let hash_to_tx = storage.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
-                let mut hash_buf: Vec<u8> = Vec::new();
-                hash.encode(&mut hash_buf);
-                let mut tx_buf: Vec<u8> = Vec::new();
-                self.encode(&mut tx_buf);
                 storage
                     .inner
-                    .put_cf(&hash_to_tx, hash_buf.as_slice(), tx_buf.as_slice())?;
+                    .put_cf(&hash_to_tx, hash.encode_as_slice(), self.encode_as_slice())?;
                 Ok(())
             }
             async fn insert_batch(transactions: &HashMap<Hash, Self>, storage: &Storage) -> Result<(), OpError>
@@ -64,9 +60,7 @@ macro_rules! impl_transaction_ops {
             async fn remove(hash: &Hash, storage: &Storage) -> Result<(), OpError> {
                 let db = &storage.inner;
                 let hash_to_tx = db.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
-                let mut hash_buf: Vec<u8> = Vec::new();
-                hash.encode(&mut hash_buf);
-                db.delete_cf(&hash_to_tx, hash_buf.as_slice())?;
+                db.delete_cf(&hash_to_tx, hash.encode_as_slice())?;
                 Ok(())
             }
             async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError>
@@ -75,9 +69,7 @@ macro_rules! impl_transaction_ops {
                 Hash: Persistable,
             {
                 let hash_to_tx = storage.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
-                let mut hash_buf: Vec<u8> = Vec::new();
-                hash.encode(&mut hash_buf);
-                if let Some(res) = storage.inner.get_cf(&hash_to_tx, hash_buf.as_slice())? {
+                if let Some(res) = storage.inner.get_cf(&hash_to_tx, hash.encode_as_slice())? {
                     let transaction: Self = Self::decode(res.as_slice(), res.len());
                     Ok(Some(transaction))
                 } else {

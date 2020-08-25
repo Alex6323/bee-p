@@ -27,3 +27,19 @@ impl From<::rocksdb::Error> for OpError {
         OpError::Unknown(err.into_string())
     }
 }
+
+#[macro_export]
+macro_rules! impl_ops {
+    (transaction: $object:ty) => {
+        crate::impl_transaction_ops!($object);
+    };
+    (transaction_metadata: $object:ty) => {
+        crate::impl_transaction_metadata_ops!($object);
+    };
+    (milestone: $object:ty) => {
+        crate::impl_milestone_ops!($object);
+    };
+    (ledger_diff: $object:ty) => {
+        crate::impl_ledger_diff_ops!($object);
+    };
+}
