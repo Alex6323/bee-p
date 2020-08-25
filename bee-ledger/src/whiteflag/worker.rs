@@ -76,7 +76,7 @@ impl LedgerWorker {
                 let timestamp = ms.get_timestamp();
 
                 for hash in confirmation.tails_referenced {
-                    tangle().update_metadata(milestone.hash(), |meta| {
+                    tangle().update_metadata(&hash, |meta| {
                         meta.flags_mut().set_confirmed();
                         meta.set_milestone_index(milestone.index());
                         meta.set_confirmation_timestamp(timestamp);

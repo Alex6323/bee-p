@@ -108,14 +108,10 @@ impl LedgerWorker {
                         self.on_bundle(hash, &bundle, confirmation);
                         visited.insert(hash.clone());
                         hashes.pop();
-                    } else if !visited.contains(trunk) {
-                        if !meta.flags().is_confirmed() {
-                            hashes.push(*trunk);
-                        }
-                    } else if !visited.contains(branch) {
-                        if !meta.flags().is_confirmed() {
-                            hashes.push(*branch);
-                        }
+                    } else if !visited.contains(trunk) && !meta.flags().is_confirmed() {
+                        hashes.push(*trunk);
+                    } else if !visited.contains(branch) && !meta.flags().is_confirmed() {
+                        hashes.push(*branch);
                     }
                 }
                 None => {
