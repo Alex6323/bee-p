@@ -22,10 +22,14 @@ macro_rules! impl_milestone_ops {
             async fn insert(&self, storage: &Storage) -> Result<(), OpError> {
                 let db = &storage.inner;
                 let milestone_hash_to_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
+                let mut hash_buf = Vec::new();
+                self.hash().encode(&mut hash_buf);
+                let mut index_buf = Vec::new();
+                self.index().encode(&mut index_buf)
                 db.put_cf(
                     &milestone_hash_to_index,
-                    self.hash().encode_as_slice(),
-                    self.index().encode_as_slice(),
+                    hash_buf.as_slice(),
+                    index_buf.as_slice(),
                 )?;
                 Ok(())
             }
@@ -35,7 +39,9 @@ macro_rules! impl_milestone_ops {
             {
                 let db = &storage.inner;
                 let milestone_hash_to_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-                db.delete_cf(&milestone_hash_to_index, hash.encode_as_slice())?;
+                let mut hash_buf = Vec::new();
+                hash.encode(&mut hash_buf);
+                db.delete_cf(&milestone_hash_to_index, hash_buf.as_slice())?;
                 Ok(())
             }
             async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError>
@@ -43,9 +49,11 @@ macro_rules! impl_milestone_ops {
                 Hash: Persistable,
             {
                 let milestone_hash_to_index = storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
+                let mut hash_buf = Vec::new();
+                hash.encode(&mut hash_buf);
                 if let Some(res) = storage
                     .inner
-                    .get_cf(&milestone_hash_to_index, hash.encode_as_slice())?
+                    .get_cf(&milestone_hash_to_index, hash_buf.as_slice())?
                 {
                     Ok(Some(Milestone::new(
                         hash,

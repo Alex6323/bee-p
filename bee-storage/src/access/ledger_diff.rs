@@ -24,11 +24,10 @@ macro_rules! impl_ledger_diff_ops {
             {
                 let db = &storage.inner;
                 let milestone_index_to_ledger_diff = db.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
-                // create buffer to encode the ledger_diff
-                let mut ledger_diff_buffer: Vec<u8> = Vec::new();
-                self.encode(&mut ledger_diff_buffer);
                 let mut index_buf: Vec<u8> = Vec::new();
                 milestone_index.encode(&mut index_buf);
+                let mut ledger_diff_buffer: Vec<u8> = Vec::new();
+                self.encode(&mut ledger_diff_buffer);
                 db.put_cf(
                     &milestone_index_to_ledger_diff,
                     index_buf.as_slice(),
@@ -42,7 +41,9 @@ macro_rules! impl_ledger_diff_ops {
             {
                 let db = &storage.inner;
                 let milestone_index_to_ledger_diff = db.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
-                db.delete_cf(&milestone_index_to_ledger_diff, milestone_index.encode_as_slice())?;
+                let mut index_buf: Vec<u8> = Vec::new();
+                milestone_index.encode(&mut index_buf);
+                db.delete_cf(&milestone_index_to_ledger_diff, index_buf.as_slice())?;
                 Ok(())
             }
             async fn find_by_milestone_index(
@@ -53,9 +54,11 @@ macro_rules! impl_ledger_diff_ops {
                 Self: Persistable,
             {
                 let milestone_index_to_ledger_diff = storage.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
+                let mut index_buf: Vec<u8> = Vec::new();
+                milestone_index.encode(&mut index_buf);
                 if let Some(res) = storage
                     .inner
-                    .get_cf(&milestone_index_to_ledger_diff, milestone_index.encode_as_slice())?
+                    .get_cf(&milestone_index_to_ledger_diff, index_buf.as_slice())?
                 {
                     let ledger_diff: Self = Self::decode(res.as_slice(), res.len());
                     Ok(Some(ledger_diff))

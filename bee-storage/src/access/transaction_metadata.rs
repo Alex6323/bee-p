@@ -24,9 +24,13 @@ macro_rules! impl_transaction_metadata_ops {
                 Hash: Persistable,
             {
                 let hash_to_metadata = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
+                let mut hash_buf = Vec::new();
+                hash.encode(&mut hash_buf);
+                let mut metadata_buf = Vec::new();
+                self.encode(&mut metadata_buf);
                 storage
                     .inner
-                    .put_cf(&hash_to_metadata, hash.encode_as_slice(), self.encode_as_slice())?;
+                    .put_cf(&hash_to_metadata, hash_buf.as_slice(), metadata_buf.as_slice())?;
                 Ok(())
             }
             async fn insert_batch(transactions_metadata: &HashMap<Hash, Self>, storage: &Storage) -> Result<(), OpError>
@@ -40,11 +44,9 @@ macro_rules! impl_transaction_metadata_ops {
                 let mut hash_buf: Vec<u8> = Vec::new();
                 let mut metadata_buf: Vec<u8> = Vec::new();
                 for (hash, tx_metadata) in transactions_metadata {
-                    batch.put_cf(
-                        &hash_to_metadata,
-                        hash.encode(&mut hash_buf).as_slice(),
-                        tx_metadata.encode(&mut metadata_buf).as_slice(),
-                    );
+                    hash.encode(&mut hash_buf);
+                    tx_metadata.encode(&mut metadata_buf);
+                    batch.put_cf(&hash_to_metadata, hash_buf.as_slice(), metadata_buf.as_slice());
                     // note: for optimization reason we used buf.set_len = 0 instead of clear()
                     unsafe { hash_buf.set_len(0) };
                     unsafe { metadata_buf.set_len(0) };
@@ -58,12 +60,16 @@ macro_rules! impl_transaction_metadata_ops {
             async fn remove(hash: &Hash, storage: &Storage) -> Result<(), OpError> {
                 let db = &storage.inner;
                 let hash_to_metadata = db.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-                db.delete_cf(&hash_to_metadata, hash.encode_as_slice())?;
+                let mut hash_buf = Vec::new();
+                hash.encode(&mut hash_buf);
+                db.delete_cf(&hash_to_metadata, hash_buf.as_slice())?;
                 Ok(())
             }
             async fn find_by_hash(hash: &Hash, storage: &Storage) -> Result<Option<Self>, OpError> {
                 let hash_to_tx = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-                if let Some(res) = storage.inner.get_cf(&hash_to_tx, hash.encode_as_slice())? {
+                let mut hash_buf = Vec::new();
+                hash.encode(&mut hash_buf);
+                if let Some(res) = storage.inner.get_cf(&hash_to_tx, hash_buf.as_slice())? {
                     let metadata: Self = Self::decode(res.as_slice(), res.len());
                     Ok(Some(metadata))
                 } else {

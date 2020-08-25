@@ -12,8 +12,6 @@
 pub trait RocksDBPersistable {
     /// This encode method will extend the provided buffer and return ();
     fn encode(&self, buffer: &mut Vec<u8>);
-    /// Encode and return bytes slice
-    fn encode_as_slice(&self) -> &[u8];
     /// Decode `slice[..length]` and return Self
     fn decode(slice: &[u8], length: usize) -> Self
     where
