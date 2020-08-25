@@ -24,12 +24,15 @@ use bee_crypto::ternary::{
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::{
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
+};
 use log::{debug, info};
 
 use std::marker::PhantomData;
 
-type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneValidatorWorkerEvent>>;
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneValidatorWorkerEvent>>>;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {

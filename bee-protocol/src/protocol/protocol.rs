@@ -36,11 +36,11 @@ use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::ternary::wots::WotsPublicKey;
 
 use async_std::task::spawn;
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 
-use std::{ptr, sync::Arc};
+use std::{ptr, sync::Arc, time::Instant};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -60,8 +60,8 @@ pub struct Protocol {
     pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
-    pub(crate) requested_transactions: DashMap<Hash, MilestoneIndex>,
-    pub(crate) requested_milestones: DashSet<MilestoneIndex>,
+    pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
+    pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
 }
 
 impl Protocol {
@@ -184,7 +184,7 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             transaction_requester_worker_shutdown_tx,
             spawn(
-                TransactionRequesterWorker::new(ShutdownStream::new(
+                TransactionRequesterWorker::new(ShutdownStream::from_fused(
                     transaction_requester_worker_shutdown_rx,
                     Protocol::get().transaction_requester_worker.incoming(),
                 ))
@@ -195,7 +195,7 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             milestone_requester_worker_shutdown_tx,
             spawn(
-                MilestoneRequesterWorker::new(ShutdownStream::new(
+                MilestoneRequesterWorker::new(ShutdownStream::from_fused(
                     milestone_requester_worker_shutdown_rx,
                     Protocol::get().milestone_requester_worker.incoming(),
                 ))

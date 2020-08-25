@@ -27,8 +27,8 @@ use bee_transaction::bundled::{BundledTransactionField, TRANSACTION_TRIT_LEN};
 use bytemuck::cast_slice;
 use futures::{
     channel::mpsc,
+    stream::{Fuse, Stream, StreamExt},
     task::{Context, Poll},
-    Stream, StreamExt,
 };
 use log::{debug, info, warn};
 use pin_project::pin_project;
@@ -39,7 +39,7 @@ use std::pin::Pin;
 // of the batched one.
 const BATCH_SIZE_THRESHOLD: usize = 3;
 
-type Receiver = ShutdownStream<mpsc::UnboundedReceiver<HasherWorkerEvent>>;
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<HasherWorkerEvent>>>;
 
 pub(crate) struct HasherWorkerEvent {
     pub(crate) from: EndpointId,

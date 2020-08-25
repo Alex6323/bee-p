@@ -17,10 +17,16 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_network::EndpointId;
 
-use futures::StreamExt;
-use log::info;
+use async_std::stream::{interval, Interval};
+use futures::{select, stream::Fuse, StreamExt};
+use log::{debug, info};
 
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    time::{Duration, Instant},
+};
+
+const RETRY_INTERVAL_SECS: u64 = 5;
 
 type Receiver<'a> = ShutdownStream<WaitIncoming<'a, MilestoneRequesterWorkerEntry>>;
 
@@ -42,28 +48,40 @@ impl Ord for MilestoneRequesterWorkerEntry {
 pub(crate) struct MilestoneRequesterWorker<'a> {
     counter: usize,
     receiver: Receiver<'a>,
+    timeouts: Fuse<Interval>,
 }
 
 impl<'a> MilestoneRequesterWorker<'a> {
     pub(crate) fn new(receiver: Receiver<'a>) -> Self {
-        Self { counter: 0, receiver }
+        Self {
+            counter: 0,
+            receiver,
+            timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
+        }
     }
 
     async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
-        if Protocol::get().requested_milestones.contains(&index) {
+        if Protocol::get().requested_milestones.contains_key(&index) {
             return;
         }
 
+        if self.process_request_unchecked(index, epid).await {
+            if index.0 != 0 {
+                Protocol::get().requested_milestones.insert(index, Instant::now());
+            }
+        }
+    }
+
+    /// Return `true` if the milestone was requested
+    async fn process_request_unchecked(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) -> bool {
         if Protocol::get().peer_manager.handshaked_peers.is_empty() {
-            return;
+            return false;
         }
 
         match epid {
             Some(epid) => {
-                if index.0 != 0 {
-                    Protocol::get().requested_milestones.insert(index);
-                }
                 SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+                true
             }
             None => {
                 let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
@@ -75,24 +93,51 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
                     if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                         if index > peer.snapshot_milestone_index() && index <= peer.last_solid_milestone_index() {
-                            if index.0 != 0 {
-                                Protocol::get().requested_milestones.insert(index);
-                            }
                             SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
-                            break;
+                            return true;
                         }
                     }
                 }
+
+                false
             }
+        }
+    }
+
+    async fn retry_requests(&mut self) {
+        let mut retry_counts = 0;
+
+        for mut milestone in Protocol::get().requested_milestones.iter_mut() {
+            let (index, instant) = milestone.pair_mut();
+            let now = Instant::now();
+            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
+                debug!("Milestone timed out, retrying request.");
+                if self.process_request_unchecked(*index, None).await {
+                    *instant = now;
+                    retry_counts += 1;
+                };
+            }
+        }
+
+        if retry_counts > 0 {
+            info!("Retried {} milestones.", retry_counts);
         }
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(MilestoneRequesterWorkerEntry(index, epid)) = self.receiver.next().await {
-            if !tangle().contains_milestone(index.into()) {
-                self.process_request(index, epid).await;
+        loop {
+            select! {
+                _ = self.timeouts.next() => self.retry_requests().await,
+                entry = self.receiver.next() => match entry {
+                    Some(MilestoneRequesterWorkerEntry(index, epid)) => {
+                        if !tangle().contains_milestone(index.into()) {
+                            self.process_request(index, epid).await;
+                        }
+                    },
+                    None => break,
+                },
             }
         }
 

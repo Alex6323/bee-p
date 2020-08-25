@@ -24,7 +24,10 @@ use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN};
 
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, StreamExt};
+use futures::{
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
+};
 use log::{debug, error, info};
 
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -32,7 +35,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Timeframe to allow past or future transactions, 10 minutes in milliseconds.
 const ALLOWED_TIMESTAMP_WINDOW_MS: u64 = 10 * 60 * 1000;
 
-type Receiver = ShutdownStream<mpsc::UnboundedReceiver<ProcessorWorkerEvent>>;
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<ProcessorWorkerEvent>>>;
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) hash: Hash,
@@ -148,7 +151,7 @@ impl ProcessorWorker {
             }
 
             match Protocol::get().requested_transactions.remove(&hash) {
-                Some((hash, index)) => {
+                Some((hash, (index, _))) => {
                     Protocol::trigger_transaction_solidification(hash, index);
                 }
                 None => {
