@@ -11,8 +11,10 @@
 
 mod handshaked_peer;
 mod manager;
+mod metrics;
 mod peer;
 
 pub(crate) use handshaked_peer::HandshakedPeer;
 pub(crate) use manager::PeerManager;
+pub(crate) use metrics::PeerMetrics;
 pub(crate) use peer::Peer;

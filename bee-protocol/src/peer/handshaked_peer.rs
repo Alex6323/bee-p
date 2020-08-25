@@ -12,7 +12,7 @@
 use crate::{
     message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     milestone::MilestoneIndex,
-    protocol::ProtocolMetrics,
+    peer::PeerMetrics,
 };
 
 use bee_network::{Address, EndpointId};
@@ -27,7 +27,7 @@ use futures::channel::{mpsc, oneshot};
 pub struct HandshakedPeer {
     pub(crate) epid: EndpointId,
     pub(crate) address: Address,
-    pub(crate) metrics: ProtocolMetrics,
+    pub(crate) metrics: PeerMetrics,
     pub(crate) last_solid_milestone_index: AtomicU32,
     pub(crate) snapshot_milestone_index: AtomicU32,
     pub(crate) last_milestone_index: AtomicU32,
@@ -69,7 +69,7 @@ impl HandshakedPeer {
         Self {
             epid,
             address,
-            metrics: ProtocolMetrics::default(),
+            metrics: PeerMetrics::default(),
             last_solid_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
             last_milestone_index: AtomicU32::new(0),
