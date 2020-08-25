@@ -52,6 +52,7 @@ pub struct MsTangle {
     last_solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
     tip_selector: TipSelector,
+    last_solid_milestone_index_processed: AtomicU32,
 }
 
 impl Deref for MsTangle {
@@ -72,14 +73,23 @@ impl MsTangle {
             last_solid_milestone_index: AtomicU32::new(0),
             snapshot_milestone_index: AtomicU32::new(0),
             tip_selector: TipSelector::new(),
+            last_solid_milestone_index_processed: AtomicU32::new(0),
         }
     }
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
+
+            let last_solid_milestone_index = self.last_solid_milestone_index.load(Ordering::Relaxed);
+            if self.last_solid_milestone_index_processed.load(Ordering::Relaxed) < last_solid_milestone_index {
+                self.last_solid_milestone_index_processed.store(last_solid_milestone_index, Ordering::Relaxed);
+                self.update_transactions_referenced_by_milestone(MilestoneIndex(last_solid_milestone_index));
+            }
+
             self.propagate_solid_flag(&hash);
             self.propagate_otrsi_and_ytrsi(&hash);
-            self.tip_selector.insert(&hash);
+            //self.tip_selector.insert(&hash);
+
             return Some(tx);
         }
         None
@@ -168,6 +178,7 @@ impl MsTangle {
                 } else {
                     visited.insert(hash.clone());
                 }
+
                 if self.get_metadata(&hash).is_none() {
                     continue;
                 }
@@ -176,12 +187,7 @@ impl MsTangle {
                     metadata.otrsi = Some(milestone_index);
                     metadata.ytrsi = Some(milestone_index);
                 });
-                info!(
-                    "Updated transaction with milestone_index {}, OTRSI {}, YTRSI {}.",
-                    *self.get_metadata(&hash).unwrap().cone_index.unwrap(),
-                    *self.get_metadata(&hash).unwrap().otrsi.unwrap(),
-                    *self.get_metadata(&hash).unwrap().ytrsi.unwrap()
-                );
+
                 // propagate the new otrsi and ytrsi values to the children of this transaction
                 for child in self.get_children(&hash) {
                     self.propagate_otrsi_and_ytrsi(&child);
@@ -266,7 +272,6 @@ impl MsTangle {
 
     pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.last_solid_milestone_index.store(*new_index, Ordering::Relaxed);
-        self.update_transactions_referenced_by_milestone(new_index);
     }
 
     pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
