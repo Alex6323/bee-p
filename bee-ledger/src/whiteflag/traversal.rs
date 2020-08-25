@@ -108,13 +108,11 @@ impl LedgerWorker {
                         visited.insert(hash.clone());
                         hashes.pop();
                     } else if !visited.contains(trunk) {
-                        //     if matches(vtx.transaction(), vtx.metadata()) {
-                        if !meta.is_confirmed() {
+                        if !meta.flags().is_confirmed() {
                             hashes.push(*trunk);
                         }
                     } else if !visited.contains(branch) {
-                        //     if matches(vtx.transaction(), vtx.metadata()) {
-                        if !meta.is_confirmed() {
+                        if !meta.flags().is_confirmed() {
                             hashes.push(*branch);
                         }
                     }

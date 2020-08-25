@@ -16,7 +16,8 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_protocol::{Milestone, MilestoneIndex};
+use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
+use bee_tangle::traversal::visit_parents_depth_first;
 use bee_transaction::bundled::Address;
 
 use futures::{channel::mpsc, stream::StreamExt};
@@ -63,8 +64,6 @@ impl LedgerWorker {
             Ok(_) => {
                 self.index = milestone.index();
 
-                WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
-
                 println!(
                     "ref {}, zero {}, conflict {}, included {}",
                     confirmation.num_tails_referenced,
@@ -72,6 +71,25 @@ impl LedgerWorker {
                     confirmation.num_tails_conflicting,
                     confirmation.tails_included.len()
                 );
+
+                let ms = tangle().get(milestone.hash()).unwrap();
+                let timestamp = ms.get_timestamp();
+
+                visit_parents_depth_first(
+                    tangle(),
+                    *milestone.hash(),
+                    |_, _, meta| !meta.flags().is_confirmed(),
+                    |_, _, _| {
+                        tangle().update_metadata(milestone.hash(), |meta| {
+                            meta.flags_mut().set_confirmed();
+                            meta.set_milestone_index(milestone.index());
+                            meta.set_confirmation_timestamp(timestamp);
+                        });
+                    },
+                    |_| {},
+                );
+
+                WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
 
                 Ok(())
             }
