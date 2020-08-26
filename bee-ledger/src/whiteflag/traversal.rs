@@ -26,6 +26,7 @@ const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 #[derive(Debug)]
 pub(crate) enum Error {
     MissingHash,
+    ApproveeIsNotATail,
     InvalidBundle(IncomingBundleBuilderError),
 }
 
@@ -99,6 +100,10 @@ impl LedgerWorker {
                     let branch = bundle_builder.branch();
                     // TODO justify
                     let meta = tangle().get_metadata(hash).unwrap();
+
+                    if !meta.flags().is_tail() {
+                        return Err(Error::ApproveeIsNotATail);
+                    }
 
                     // TODO get previous meta instead of loading these bundles ?
                     if meta.flags().is_confirmed() {
