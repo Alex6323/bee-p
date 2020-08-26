@@ -12,7 +12,10 @@
 use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
-    whiteflag::{confirmation::Confirmation, merkle::Merkle, traversal::Error as TraversalError, WhiteFlag},
+    whiteflag::{
+        bundle::load_bundle_builder, confirmation::Confirmation, merkle::Merkle, traversal::Error as TraversalError,
+        WhiteFlag,
+    },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -65,8 +68,9 @@ impl LedgerWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        let ms = tangle().get(milestone.hash()).unwrap();
-        let timestamp = ms.get_timestamp();
+        // TODO handle error of both unwrap
+        let ms = load_bundle_builder(milestone.hash()).unwrap();
+        let timestamp = ms.get(0).unwrap().get_timestamp();
 
         let mut confirmation = Confirmation::new(timestamp);
 
