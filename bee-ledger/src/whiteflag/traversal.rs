@@ -9,13 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::whiteflag::{confirmation::Confirmation, worker::LedgerWorker};
+use crate::whiteflag::{bundle::load_bundle_builder, confirmation::Confirmation, worker::LedgerWorker};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
-use bee_tangle::traversal::visit_parents_follow_trunk;
 use bee_transaction::{
-    bundled::{Bundle, IncomingBundleBuilder, IncomingBundleBuilderError},
+    bundled::{Bundle, IncomingBundleBuilderError},
     Vertex,
 };
 
@@ -28,33 +27,6 @@ pub(crate) enum Error {
     MissingBundle,
     NotATail,
     InvalidBundle(IncomingBundleBuilderError),
-}
-
-fn load_bundle_builder(hash: &Hash) -> Option<IncomingBundleBuilder> {
-    let mut bundle_builder = IncomingBundleBuilder::new();
-    let mut done = false;
-
-    visit_parents_follow_trunk(
-        tangle(),
-        *hash,
-        |transaction, _| {
-            if done {
-                return false;
-            }
-            if transaction.index() == transaction.last_index() {
-                done = true;
-            }
-            true
-        },
-        |_, transaction, _| {
-            bundle_builder.push((*(*transaction)).clone());
-        },
-    );
-
-    match bundle_builder.len() {
-        0 => None,
-        _ => Some(bundle_builder),
-    }
 }
 
 impl LedgerWorker {
