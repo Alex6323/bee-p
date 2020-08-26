@@ -17,12 +17,12 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::tangle,
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
-        MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneSolidifierWorker,
-        MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker, StatusWorker, TpsWorker,
-        TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
-        TransactionResponderWorkerEvent, TransactionSolidifierWorker, TransactionSolidifierWorkerEvent,
-        TransactionWorker, TransactionWorkerEvent,
+        BroadcasterWorker, BroadcasterWorkerEvent, HasherWorker, HasherWorkerEvent, MilestoneRequesterWorker,
+        MilestoneRequesterWorkerEntry, MilestoneResponderWorker, MilestoneResponderWorkerEvent,
+        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
+        ProcessorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
+        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
+        TransactionSolidifierWorkerEvent,
     },
 };
 
@@ -36,11 +36,11 @@ use bee_network::{Address, EndpointId, Network, Origin};
 use bee_signing::ternary::wots::WotsPublicKey;
 
 use async_std::task::spawn;
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 
-use std::{ptr, sync::Arc};
+use std::{ptr, sync::Arc, time::Instant};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -51,7 +51,7 @@ pub struct Protocol {
     pub(crate) local_snapshot_timestamp: u64,
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
-    pub(crate) transaction_worker: mpsc::UnboundedSender<TransactionWorkerEvent>,
+    pub(crate) hasher_worker: mpsc::UnboundedSender<HasherWorkerEvent>,
     pub(crate) transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
@@ -60,8 +60,8 @@ pub struct Protocol {
     pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
-    pub(crate) requested_transactions: DashMap<Hash, MilestoneIndex>,
-    pub(crate) requested_milestones: DashSet<MilestoneIndex>,
+    pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
+    pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
 }
 
 impl Protocol {
@@ -77,8 +77,11 @@ impl Protocol {
             return;
         }
 
-        let (transaction_worker_tx, transaction_worker_rx) = mpsc::unbounded();
-        let (transaction_worker_shutdown_tx, transaction_worker_shutdown_rx) = oneshot::channel();
+        let (hasher_worker_tx, hasher_worker_rx) = mpsc::unbounded();
+        let (hasher_worker_shutdown_tx, hasher_worker_shutdown_rx) = oneshot::channel();
+
+        let (processor_worker_tx, processor_worker_rx) = mpsc::unbounded();
+        let (processor_worker_shutdown_tx, processor_worker_shutdown_rx) = oneshot::channel();
 
         let (transaction_responder_worker_tx, transaction_responder_worker_rx) = mpsc::unbounded();
         let (transaction_responder_worker_shutdown_tx, transaction_responder_worker_shutdown_rx) = oneshot::channel();
@@ -112,7 +115,7 @@ impl Protocol {
             local_snapshot_timestamp,
             bus,
             metrics: ProtocolMetrics::new(),
-            transaction_worker: transaction_worker_tx,
+            hasher_worker: hasher_worker_tx,
             transaction_responder_worker: transaction_responder_worker_tx,
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: Default::default(),
@@ -134,12 +137,23 @@ impl Protocol {
         Protocol::get().bus.add_listener(on_last_milestone_changed);
 
         shutdown.add_worker_shutdown(
-            transaction_worker_shutdown_tx,
+            hasher_worker_shutdown_tx,
             spawn(
-                TransactionWorker::new(
-                    milestone_validator_worker_tx,
+                HasherWorker::new(
+                    processor_worker_tx,
                     Protocol::get().config.workers.transaction_worker_cache,
-                    ShutdownStream::new(transaction_worker_shutdown_rx, transaction_worker_rx),
+                    ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
+                )
+                .run(),
+            ),
+        );
+
+        shutdown.add_worker_shutdown(
+            processor_worker_shutdown_tx,
+            spawn(
+                ProcessorWorker::new(
+                    milestone_validator_worker_tx,
+                    ShutdownStream::new(processor_worker_shutdown_rx, processor_worker_rx),
                 )
                 .run(),
             ),
@@ -170,7 +184,7 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             transaction_requester_worker_shutdown_tx,
             spawn(
-                TransactionRequesterWorker::new(ShutdownStream::new(
+                TransactionRequesterWorker::new(ShutdownStream::from_fused(
                     transaction_requester_worker_shutdown_rx,
                     Protocol::get().transaction_requester_worker.incoming(),
                 ))
@@ -181,7 +195,7 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             milestone_requester_worker_shutdown_tx,
             spawn(
-                MilestoneRequesterWorker::new(ShutdownStream::new(
+                MilestoneRequesterWorker::new(ShutdownStream::from_fused(
                     milestone_requester_worker_shutdown_rx,
                     Protocol::get().milestone_requester_worker.incoming(),
                 ))

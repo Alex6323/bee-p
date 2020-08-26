@@ -17,9 +17,7 @@ use crate::{
     peer::HandshakedPeer,
     protocol::Protocol,
     tangle::tangle,
-    worker::{
-        peer::MessageHandler, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
-    },
+    worker::{peer::MessageHandler, HasherWorkerEvent, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent},
 };
 
 use futures::channel::mpsc;
@@ -34,7 +32,7 @@ pub(crate) enum PeerWorkerError {
 
 pub struct PeerWorker {
     peer: Arc<HandshakedPeer>,
-    transaction_worker: mpsc::UnboundedSender<TransactionWorkerEvent>,
+    hasher_worker: mpsc::UnboundedSender<HasherWorkerEvent>,
     transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
     milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
 }
@@ -43,7 +41,7 @@ impl PeerWorker {
     pub fn new(peer: Arc<HandshakedPeer>) -> Self {
         Self {
             peer,
-            transaction_worker: Protocol::get().transaction_worker.clone(),
+            hasher_worker: Protocol::get().hasher_worker.clone(),
             transaction_responder_worker: Protocol::get().transaction_responder_worker.clone(),
             milestone_responder_worker: Protocol::get().milestone_responder_worker.clone(),
         }
@@ -91,8 +89,8 @@ impl PeerWorker {
                 debug!("[{}] Reading TransactionMessage...", self.peer.address);
                 match tlv_from_bytes::<TransactionMessage>(&header, bytes) {
                     Ok(message) => {
-                        self.transaction_worker
-                            .unbounded_send(TransactionWorkerEvent {
+                        self.hasher_worker
+                            .unbounded_send(HasherWorkerEvent {
                                 from: self.peer.epid,
                                 transaction: message,
                             })

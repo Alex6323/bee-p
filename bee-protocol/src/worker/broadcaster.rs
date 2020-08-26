@@ -17,11 +17,14 @@ use crate::{
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::{
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
+};
 
 use log::{info, warn};
 
-type Receiver = ShutdownStream<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>;
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,

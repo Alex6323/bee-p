@@ -30,14 +30,14 @@ use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
     sink::SinkExt,
-    stream::StreamExt,
+    stream::{Fuse, StreamExt},
 };
 use log::{debug, error, info, warn};
 use thiserror::Error;
 
 use std::{collections::HashMap, sync::Arc};
 
-type Receiver = ShutdownStream<EventSubscriber>;
+type Receiver = ShutdownStream<Fuse<EventSubscriber>>;
 
 /// All possible node errors.
 #[derive(Error, Debug)]
