@@ -64,7 +64,10 @@ impl LedgerWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        let mut confirmation = Confirmation::new();
+        let ms = tangle().get(milestone.hash()).unwrap();
+        let timestamp = ms.get_timestamp();
+
+        let mut confirmation = Confirmation::new(timestamp);
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
@@ -79,9 +82,6 @@ impl LedgerWorker {
                     confirmation.num_tails_conflicting,
                     confirmation.tails_included.len()
                 );
-
-                let ms = tangle().get(milestone.hash()).unwrap();
-                let timestamp = ms.get_timestamp();
 
                 // TODO this only actually confirm tails
                 for hash in confirmation.tails_referenced.iter() {
@@ -109,6 +109,7 @@ impl LedgerWorker {
 
                 WhiteFlag::get().bus.dispatch(MilestoneConfirmed {
                     milestone,
+                    timestamp,
                     tails_referenced: confirmation.tails_referenced.len(),
                     tails_zero_value: confirmation.num_tails_zero_value,
                     tails_conflicting: confirmation.num_tails_conflicting,

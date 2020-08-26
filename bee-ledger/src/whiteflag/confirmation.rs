@@ -17,6 +17,7 @@ use std::collections::HashSet;
 
 #[derive(Default)]
 pub(crate) struct Confirmation {
+    pub(crate) timestamp: u64,
     pub(crate) diff: LedgerDiff,
     // /// The number of tails which were referenced by the milestone.
     // pub(crate) num_tails_referenced: usize,
@@ -31,7 +32,10 @@ pub(crate) struct Confirmation {
 }
 
 impl Confirmation {
-    pub(crate) fn new() -> Confirmation {
-        Self::default()
+    pub(crate) fn new(timestamp: u64) -> Confirmation {
+        Confirmation {
+            timestamp,
+            ..Self::default()
+        }
     }
 }
