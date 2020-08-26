@@ -14,6 +14,7 @@ mod confirmation;
 mod merkle;
 mod traversal;
 mod worker;
+mod b1t6;
 
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;

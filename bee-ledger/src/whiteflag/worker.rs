@@ -13,8 +13,8 @@ use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
     whiteflag::{
-        bundle::load_bundle_builder, confirmation::Confirmation, merkle::Merkle, traversal::Error as TraversalError,
-        WhiteFlag,
+        b1t6::decode, bundle::load_bundle_builder, confirmation::Confirmation, merkle::Merkle,
+        traversal::Error as TraversalError, WhiteFlag,
     },
 };
 
@@ -72,25 +72,23 @@ impl LedgerWorker {
         }
     }
 
-    fn milestone_info(&self, hash: &Hash) -> (TritBuf, u64) {
+    fn milestone_info(&self, hash: &Hash) -> (Vec<u8>, u64) {
         // TODO handle error of both unwrap
         let ms = load_bundle_builder(hash).unwrap();
         let timestamp = ms.get(0).unwrap().get_timestamp();
-        let proof = ms
-            .get(2)
-            .unwrap()
-            .payload()
-            .to_inner()
-            .subslice(
-                ((self.coo_config.depth() as usize - 1) * HASH_LENGTH)
-                    ..((self.coo_config.depth() as usize - 1) * HASH_LENGTH + MERKLE_PROOF_LENGTH),
-            )
-            .to_buf();
-
-        println!(
-            "PROOF {:?}",
-            proof.iter_trytes().map(|trit| char::from(trit)).collect::<String>()
+        let proof = decode(
+            &ms.get(2)
+                .unwrap()
+                .payload()
+                .to_inner()
+                .subslice(
+                    ((self.coo_config.depth() as usize - 1) * HASH_LENGTH)
+                        ..((self.coo_config.depth() as usize - 1) * HASH_LENGTH + MERKLE_PROOF_LENGTH),
+                )
+                .to_buf::<T1B1Buf>(),
         );
+
+        println!("PROOF {:?}", proof);
 
         (proof, timestamp)
     }
@@ -109,21 +107,9 @@ impl LedgerWorker {
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
-                let merkle_proof_calculated = Trits::<T5B1>::try_from_raw(
-                    cast_slice(&Merkle::<Blake2b>::new().hash(&confirmation.tails_included)),
-                    MERKLE_PROOF_LENGTH,
-                )
-                .unwrap()
-                .to_buf::<T5B1Buf>()
-                .encode::<T1B1Buf>();
+                let merkle_proof_calculated = &Merkle::<Blake2b>::new().hash(&confirmation.tails_included);
 
-                println!(
-                    "proof {:?}",
-                    merkle_proof_calculated
-                        .iter_trytes()
-                        .map(|trit| char::from(trit))
-                        .collect::<String>()
-                );
+                println!("proof {:?}", merkle_proof_calculated);
 
                 self.index = milestone.index();
 
