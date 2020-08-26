@@ -25,7 +25,6 @@ pub(crate) fn decode(src: &Trits) -> Vec<u8> {
         panic!();
     }
 
-    let mut i = 0;
     let mut bytes = Vec::with_capacity(src.len() / tritsPerByte);
 
     for j in (0..src.len() - tritsPerByte).step_by(tritsPerByte) {
@@ -36,8 +35,7 @@ pub(crate) fn decode(src: &Trits) -> Vec<u8> {
             // TODO do something
             panic!()
         }
-        bytes[i] = b as u8;
-        i += 1;
+        bytes.push(b as u8);
     }
 
     bytes
