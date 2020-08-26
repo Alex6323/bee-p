@@ -17,15 +17,18 @@ use crate::{
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
-use bee_tangle::traversal::visit_parents_depth_first;
+// use bee_tangle::traversal::visit_parents_depth_first;
 use bee_transaction::bundled::Address;
 
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::{
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
+};
 use log::{error, info};
 
 use std::collections::HashMap;
 
-type Receiver = ShutdownStream<mpsc::UnboundedReceiver<LedgerWorkerEvent>>;
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>;
 
 enum Error {
     NonContiguousMilestone,
