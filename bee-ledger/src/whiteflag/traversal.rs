@@ -84,7 +84,7 @@ impl LedgerWorker {
                 confirmation.diff.apply(address, diff);
             }
 
-            confirmation.tails_included.insert(*hash);
+            confirmation.tails_included.push(*hash);
         }
     }
 

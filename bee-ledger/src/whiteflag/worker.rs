@@ -12,7 +12,7 @@
 use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
-    whiteflag::{confirmation::Confirmation, traversal::Error as TraversalError, WhiteFlag},
+    whiteflag::{confirmation::Confirmation, merkle::Merkle, traversal::Error as TraversalError, WhiteFlag},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -20,11 +20,12 @@ use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
 // use bee_tangle::traversal::visit_parents_depth_first;
 use bee_transaction::bundled::Address;
 
+use blake2::Blake2b;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{Fuse, StreamExt},
 };
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 
 use std::collections::HashMap;
 
@@ -71,6 +72,10 @@ impl LedgerWorker {
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
+                let merkle_proof = Merkle::<Blake2b>::new().hash(&confirmation.tails_included);
+
+                println!("proof {:?}", merkle_proof);
+
                 self.index = milestone.index();
 
                 // TODO debug!

@@ -28,7 +28,7 @@ pub(crate) struct Confirmation {
     /// The number of tails which were excluded as they were conflicting with the ledger state.
     pub(crate) num_tails_conflicting: usize,
     /// The tails of bundles which mutate the ledger in the order in which they were applied.
-    pub(crate) tails_included: HashSet<Hash>,
+    pub(crate) tails_included: Vec<Hash>,
 }
 
 impl Confirmation {
