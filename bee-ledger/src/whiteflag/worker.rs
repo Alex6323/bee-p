@@ -22,10 +22,11 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
 // use bee_tangle::traversal::visit_parents_depth_first;
-use bee_ternary::TritBuf;
+use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use blake2::Blake2b;
+use bytemuck::cast_slice;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{Fuse, StreamExt},
@@ -108,9 +109,21 @@ impl LedgerWorker {
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
-                let merkle_proof = Merkle::<Blake2b>::new().hash(&confirmation.tails_included);
+                let merkle_proof_calculated = Trits::<T5B1>::try_from_raw(
+                    cast_slice(&Merkle::<Blake2b>::new().hash(&confirmation.tails_included)),
+                    MERKLE_PROOF_LENGTH,
+                )
+                .unwrap()
+                .to_buf::<T5B1Buf>()
+                .encode::<T1B1Buf>();
 
-                println!("proof {:?}", merkle_proof);
+                println!(
+                    "proof {:?}",
+                    merkle_proof_calculated
+                        .iter_trytes()
+                        .map(|trit| char::from(trit))
+                        .collect::<String>()
+                );
 
                 self.index = milestone.index();
 
