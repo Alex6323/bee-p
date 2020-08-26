@@ -48,7 +48,7 @@ impl WhiteFlag {
 fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
     if let Err(e) = WhiteFlag::get()
         .confirmation_sender
-        .unbounded_send(LedgerWorkerEvent(last_solid_milestone.0.clone()))
+        .unbounded_send(LedgerWorkerEvent::Confirm(last_solid_milestone.0.clone()))
     {
         warn!(
             "Sending solid milestone {:?} to confirmation failed: {:?}.",
