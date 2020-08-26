@@ -76,17 +76,10 @@ impl LedgerWorker {
         // TODO handle error of both unwrap
         let ms = load_bundle_builder(hash).unwrap();
         let timestamp = ms.get(0).unwrap().get_timestamp();
-        let proof = decode(
-            &ms.get(2)
-                .unwrap()
-                .payload()
-                .to_inner()
-                .subslice(
-                    ((self.coo_config.depth() as usize - 1) * HASH_LENGTH)
-                        ..((self.coo_config.depth() as usize - 1) * HASH_LENGTH + MERKLE_PROOF_LENGTH),
-                )
-                .to_buf::<T1B1Buf>(),
-        );
+        let proof = decode(ms.get(2).unwrap().payload().to_inner().subslice(
+            ((self.coo_config.depth() as usize - 1) * HASH_LENGTH)
+                ..((self.coo_config.depth() as usize - 1) * HASH_LENGTH + MERKLE_PROOF_LENGTH),
+        ));
 
         println!("PROOF {:?}", proof);
 
