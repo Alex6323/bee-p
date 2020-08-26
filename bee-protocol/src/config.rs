@@ -170,6 +170,12 @@ pub struct ProtocolCoordinatorConfig {
     pub(crate) sponge_type: SpongeKind,
 }
 
+impl ProtocolCoordinatorConfig {
+    pub fn depth(&self) -> u8 {
+        self.depth
+    }
+}
+
 #[derive(Clone)]
 pub struct ProtocolWorkersConfig {
     pub(crate) transaction_worker_cache: usize,

@@ -22,7 +22,7 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
 // use bee_tangle::traversal::visit_parents_depth_first;
-use bee_transaction::bundled::Address;
+use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use blake2::Blake2b;
 use futures::{
@@ -72,6 +72,17 @@ impl LedgerWorker {
         // TODO handle error of both unwrap
         let ms = load_bundle_builder(hash).unwrap();
         let timestamp = ms.get(0).unwrap().get_timestamp();
+        let path = ms.get(2).unwrap().payload();
+
+        println!(
+            "PROOF {:?}",
+            &path
+                .to_inner()
+                .iter_trytes()
+                .map(|trit| char::from(trit))
+                .collect::<String>()
+                [(self.coo_config.depth() * 81) as usize..((self.coo_config.depth() + 1) * 81) as usize]
+        );
 
         timestamp
     }
