@@ -20,7 +20,7 @@ pub use worker::LedgerWorkerEvent;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
-use bee_protocol::{event::LastSolidMilestoneChanged, MilestoneIndex};
+use bee_protocol::{config::ProtocolCoordinatorConfig, event::LastSolidMilestoneChanged, MilestoneIndex};
 use bee_transaction::bundled::Address;
 
 use async_std::task::spawn;
@@ -63,6 +63,7 @@ pub fn init(
     index: u32,
     // TODO get concrete type
     state: HashMap<Address, u64>,
+    coo_config: ProtocolCoordinatorConfig,
     bus: Arc<Bus<'static>>,
     shutdown: &mut Shutdown,
 ) -> mpsc::UnboundedSender<LedgerWorkerEvent> {
@@ -81,6 +82,7 @@ pub fn init(
             LedgerWorker::new(
                 MilestoneIndex(index),
                 state,
+                coo_config,
                 ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
             )
             .run(),

@@ -19,7 +19,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
+use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
 // use bee_tangle::traversal::visit_parents_depth_first;
 use bee_transaction::bundled::Address;
 
@@ -47,15 +47,22 @@ pub enum LedgerWorkerEvent {
 pub(crate) struct LedgerWorker {
     index: MilestoneIndex,
     pub(crate) state: LedgerState,
+    coo_config: ProtocolCoordinatorConfig,
     receiver: Receiver,
 }
 
 impl LedgerWorker {
     // TODO pass type
-    pub fn new(index: MilestoneIndex, state: HashMap<Address, u64>, receiver: Receiver) -> Self {
+    pub fn new(
+        index: MilestoneIndex,
+        state: HashMap<Address, u64>,
+        coo_config: ProtocolCoordinatorConfig,
+        receiver: Receiver,
+    ) -> Self {
         Self {
             index,
             state: LedgerState(state),
+            coo_config,
             receiver,
         }
     }

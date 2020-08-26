@@ -189,6 +189,10 @@ impl ProtocolConfig {
     pub fn build() -> ProtocolConfigBuilder {
         ProtocolConfigBuilder::new()
     }
+
+    pub fn coordinator(&self) -> &ProtocolCoordinatorConfig {
+        &self.coordinator
+    }
 }
 
 // TODO move out of here
