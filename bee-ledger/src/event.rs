@@ -11,4 +11,10 @@
 
 use bee_protocol::Milestone;
 
-pub struct MilestoneConfirmed(pub Milestone);
+pub struct MilestoneConfirmed {
+    pub milestone: Milestone,
+    pub tails_referenced: usize,
+    pub tails_zero_value: usize,
+    pub tails_conflicting: usize,
+    pub tails_included: usize,
+}

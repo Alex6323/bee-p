@@ -78,7 +78,8 @@ impl LedgerWorker {
                 let ms = tangle().get(milestone.hash()).unwrap();
                 let timestamp = ms.get_timestamp();
 
-                for hash in confirmation.tails_referenced {
+                // TODO this only actually confirm tails
+                for hash in confirmation.tails_referenced.iter() {
                     tangle().update_metadata(&hash, |meta| {
                         meta.flags_mut().set_confirmed();
                         meta.set_milestone_index(milestone.index());
@@ -101,7 +102,13 @@ impl LedgerWorker {
                 //     |_| {},
                 // );
 
-                WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
+                WhiteFlag::get().bus.dispatch(MilestoneConfirmed {
+                    milestone,
+                    tails_referenced: confirmation.tails_referenced.len(),
+                    tails_zero_value: confirmation.num_tails_zero_value,
+                    tails_conflicting: confirmation.num_tails_conflicting,
+                    tails_included: confirmation.tails_included.len(),
+                });
 
                 Ok(())
             }
