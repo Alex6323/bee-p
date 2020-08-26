@@ -100,6 +100,13 @@ impl LedgerWorker {
                     // TODO justify
                     let meta = tangle().get_metadata(hash).unwrap();
 
+                    // TODO get previous meta instead of loading these bundles ?
+                    if meta.flags().is_confirmed() {
+                        visited.insert(hash.clone());
+                        hashes.pop();
+                        continue;
+                    }
+
                     if visited.contains(trunk) && visited.contains(branch) {
                         let bundle = match bundle_builder.validate() {
                             Ok(builder) => builder.build(),
@@ -108,9 +115,9 @@ impl LedgerWorker {
                         self.on_bundle(hash, &bundle, confirmation);
                         visited.insert(hash.clone());
                         hashes.pop();
-                    } else if !visited.contains(trunk) && !meta.flags().is_confirmed() {
+                    } else if !visited.contains(trunk) {
                         hashes.push(*trunk);
-                    } else if !visited.contains(branch) && !meta.flags().is_confirmed() {
+                    } else if !visited.contains(branch) {
                         hashes.push(*branch);
                     }
                 }
