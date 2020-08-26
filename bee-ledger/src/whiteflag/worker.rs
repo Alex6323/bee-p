@@ -19,6 +19,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_crypto::ternary::Hash;
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
 // use bee_tangle::traversal::visit_parents_depth_first;
 use bee_transaction::bundled::Address;
@@ -67,6 +68,14 @@ impl LedgerWorker {
         }
     }
 
+    fn milestone_info(&self, hash: &Hash) -> u64 {
+        // TODO handle error of both unwrap
+        let ms = load_bundle_builder(hash).unwrap();
+        let timestamp = ms.get(0).unwrap().get_timestamp();
+
+        timestamp
+    }
+
     fn confirm(&mut self, milestone: Milestone) -> Result<(), Error> {
         if milestone.index() != MilestoneIndex(self.index.0 + 1) {
             error!("Tried to confirm {} on top of {}.", milestone.index().0, self.index.0);
@@ -75,9 +84,7 @@ impl LedgerWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        // TODO handle error of both unwrap
-        let ms = load_bundle_builder(milestone.hash()).unwrap();
-        let timestamp = ms.get(0).unwrap().get_timestamp();
+        let timestamp = self.milestone_info(milestone.hash());
 
         let mut confirmation = Confirmation::new(timestamp);
 
