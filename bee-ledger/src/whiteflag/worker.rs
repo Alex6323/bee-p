@@ -19,9 +19,10 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_crypto::ternary::Hash;
+use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
 // use bee_tangle::traversal::visit_parents_depth_first;
+use bee_ternary::TritBuf;
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use blake2::Blake2b;
@@ -32,6 +33,8 @@ use futures::{
 use log::{error, info, warn};
 
 use std::collections::HashMap;
+
+const MERKLE_PROOF_LENGTH: usize = 384;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>;
 
@@ -68,23 +71,27 @@ impl LedgerWorker {
         }
     }
 
-    fn milestone_info(&self, hash: &Hash) -> u64 {
+    fn milestone_info(&self, hash: &Hash) -> (TritBuf, u64) {
         // TODO handle error of both unwrap
         let ms = load_bundle_builder(hash).unwrap();
         let timestamp = ms.get(0).unwrap().get_timestamp();
-        let path = ms.get(2).unwrap().payload();
+        let proof = ms
+            .get(2)
+            .unwrap()
+            .payload()
+            .to_inner()
+            .subslice(
+                ((self.coo_config.depth() as usize - 1) * HASH_LENGTH)
+                    ..((self.coo_config.depth() as usize - 1) * HASH_LENGTH + MERKLE_PROOF_LENGTH),
+            )
+            .to_buf();
 
         println!(
             "PROOF {:?}",
-            &path
-                .to_inner()
-                .iter_trytes()
-                .map(|trit| char::from(trit))
-                .collect::<String>()
-                [(self.coo_config.depth() * 81) as usize..((self.coo_config.depth() + 1) * 81) as usize]
+            proof.iter_trytes().map(|trit| char::from(trit)).collect::<String>()
         );
 
-        timestamp
+        (proof, timestamp)
     }
 
     fn confirm(&mut self, milestone: Milestone) -> Result<(), Error> {
@@ -95,7 +102,7 @@ impl LedgerWorker {
 
         info!("Confirming milestone {}.", milestone.index().0);
 
-        let timestamp = self.milestone_info(milestone.hash());
+        let (merkle_proof, timestamp) = self.milestone_info(milestone.hash());
 
         let mut confirmation = Confirmation::new(timestamp);
 
