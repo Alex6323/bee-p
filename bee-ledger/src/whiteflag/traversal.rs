@@ -25,8 +25,8 @@ const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 #[derive(Debug)]
 pub(crate) enum Error {
-    MissingHash,
-    ApproveeIsNotATail,
+    MissingBundle,
+    NotATail,
     InvalidBundle(IncomingBundleBuilderError),
 }
 
@@ -102,7 +102,7 @@ impl LedgerWorker {
                     let meta = tangle().get_metadata(hash).unwrap();
 
                     if !meta.flags().is_tail() {
-                        return Err(Error::ApproveeIsNotATail);
+                        return Err(Error::NotATail);
                     }
 
                     // TODO get previous meta instead of loading these bundles ?
@@ -113,6 +113,7 @@ impl LedgerWorker {
                     }
 
                     if visited.contains(trunk) && visited.contains(branch) {
+                        // TODO check valid and strict semantic
                         let bundle = match bundle_builder.validate() {
                             Ok(builder) => builder.build(),
                             Err(e) => return Err(Error::InvalidBundle(e)),
@@ -128,7 +129,7 @@ impl LedgerWorker {
                 }
                 None => {
                     if !tangle().is_solid_entry_point(hash) {
-                        return Err(Error::MissingHash);
+                        return Err(Error::MissingBundle);
                     } else {
                         visited.insert(hash.clone());
                         hashes.pop();

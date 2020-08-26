@@ -21,10 +21,10 @@ use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
 use bee_transaction::bundled::Address;
 
 use futures::{
-    channel::mpsc,
+    channel::{mpsc, oneshot},
     stream::{Fuse, StreamExt},
 };
-use log::{error, info};
+use log::{debug, error, info, warn};
 
 use std::collections::HashMap;
 
@@ -35,7 +35,10 @@ enum Error {
     InvalidConfirmationSet(TraversalError),
 }
 
-pub struct LedgerWorkerEvent(pub(crate) Milestone);
+pub enum LedgerWorkerEvent {
+    Confirm(Milestone),
+    GetBalance(Address, oneshot::Sender<u64>),
+}
 
 pub(crate) struct LedgerWorker {
     index: MilestoneIndex,
@@ -67,8 +70,10 @@ impl LedgerWorker {
             Ok(_) => {
                 self.index = milestone.index();
 
+                // TODO debug!
                 println!(
-                    "ref {}, zero {}, conflict {}, included {}",
+                    "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
+                    *milestone.index(),
                     confirmation.tails_referenced.len(),
                     confirmation.num_tails_zero_value,
                     confirmation.num_tails_conflicting,
@@ -123,12 +128,23 @@ impl LedgerWorker {
         }
     }
 
+    fn get_balance(&self, address: Address, sender: oneshot::Sender<u64>) {
+        if let Err(e) = sender.send(*self.state.get_or_zero(&address)) {
+            warn!("Failed to send balance: {:?}.", e);
+        }
+    }
+
     pub async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(LedgerWorkerEvent(milestone)) = self.receiver.next().await {
-            if let Err(_) = self.confirm(milestone) {
-                panic!("Error while confirming milestone, aborting.");
+        while let Some(event) = self.receiver.next().await {
+            match event {
+                LedgerWorkerEvent::Confirm(milestone) => {
+                    if self.confirm(milestone).is_err() {
+                        panic!("Error while confirming milestone, aborting.");
+                    }
+                }
+                LedgerWorkerEvent::GetBalance(address, sender) => self.get_balance(address, sender),
             }
         }
 
@@ -138,71 +154,6 @@ impl LedgerWorker {
     }
 }
 
-// use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-// use bee_transaction::bundled::Address;
-//
-// use futures::{
-//     channel::{mpsc, oneshot},
-//     stream::StreamExt,
-// };
-// use log::{info, warn};
-//
-// use std::collections::HashMap;
-//
-// type Receiver = ShutdownStream<mpsc::UnboundedReceiver<LedgerStateWorkerEvent>>;
-//
-// pub enum LedgerStateWorkerEvent {
-//     ApplyDiff(HashMap<Address, i64>),
-//     GetBalance(Address, oneshot::Sender<Option<u64>>),
-// }
-//
-// pub struct LedgerStateWorker {
-//     state: HashMap<Address, u64>,
-//     receiver: Receiver,
-// }
-//
-// impl LedgerStateWorker {
-//     pub fn new(state: HashMap<Address, u64>, receiver: Receiver) -> Self {
-//         Self { state, receiver }
-//     }
-//
-//     fn apply_diff(&mut self, diff: HashMap<Address, i64>) {
-//         for (key, value) in diff {
-//             self.state
-//                 .entry(key)
-//                 .and_modify(|balance| {
-//                     if *balance as i64 + value >= 0 {
-//                         *balance = (*balance as i64 + value) as u64;
-//                     } else {
-//                         warn!("Ignoring conflicting diff.");
-//                     }
-//                 })
-//                 .or_insert(value as u64);
-//         }
-//     }
-//
-//     fn get_balance(&self, address: Address, sender: oneshot::Sender<Option<u64>>) {
-//         if let Err(e) = sender.send(self.state.get(&address).cloned()) {
-//             warn!("Failed to send balance: {:?}.", e);
-//         }
-//     }
-//
-//     pub async fn run(mut self) -> Result<(), WorkerError> {
-//         info!("Running.");
-//
-//         while let Some(event) = self.receiver.next().await {
-//             match event {
-//                 LedgerStateWorkerEvent::ApplyDiff(diff) => self.apply_diff(diff),
-//                 LedgerStateWorkerEvent::GetBalance(address, sender) => self.get_balance(address, sender),
-//             }
-//         }
-//
-//         info!("Stopped.");
-//
-//         Ok(())
-//     }
-// }
-//
 // #[cfg(test)]
 // mod tests {
 //
