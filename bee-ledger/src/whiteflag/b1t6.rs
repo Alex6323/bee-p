@@ -27,10 +27,10 @@ pub(crate) fn decode(src: &Trits) -> Vec<u8> {
 
     let mut bytes = Vec::with_capacity(src.len() / TRITS_PER_BYTE);
 
-    for j in (0..src.len() - TRITS_PER_BYTE).step_by(TRITS_PER_BYTE) {
+    for j in (0..src.len()).step_by(TRITS_PER_BYTE) {
         let t1 = i8::try_from(&src[j..j + TRITS_PER_TRYTE]).unwrap();
         let t2 = i8::try_from(&src[j + TRITS_PER_TRYTE..j + TRITS_PER_BYTE]).unwrap();
-        let (b, ok) = decodeGroup(t1, t2);
+        let (b, ok) = decode_group(t1, t2);
         if !ok {
             // TODO do something
             panic!()
@@ -41,8 +41,8 @@ pub(crate) fn decode(src: &Trits) -> Vec<u8> {
     bytes
 }
 
-// // decodeGroup converts two tryte values into a byte and a success flag.
-fn decodeGroup(t1: i8, t2: i8) -> (i8, bool) {
+// // decode_group converts two tryte values into a byte and a success flag.
+fn decode_group(t1: i8, t2: i8) -> (i8, bool) {
     let v = t1 + t2 * 27;
 
     if v < i8::MIN || v > i8::MAX {
