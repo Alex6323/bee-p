@@ -17,7 +17,7 @@ pub trait MilestoneOps<H, S, E> {
     where
         Self: Sized,
         S: Backend;
-    async fn insert_batch(transactions: &HashMap<H, Self>, storage: &S) -> Result<(), E>
+    async fn insert_batch(milestones: &[Self], storage: &S) -> Result<(), E>
     where
         Self: Sized,
         H: Persistable,
@@ -57,15 +57,15 @@ macro_rules! impl_milestone_ops {
                     .put_cf(&ms_hash_to_ms_index, hash_buf.as_slice(), index_buf.as_slice())?;
                 Ok(())
             }
-            async fn insert_batch(transactions: &HashMap<Hash, Self>, storage: &Storage) -> Result<(), OpError> {
+            async fn insert_batch(milestones: &[Self], storage: &Storage) -> Result<(), OpError> {
                 let mut batch = WriteBatch::default();
                 let ms_hash_to_ms_index = storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
                 // reusable buffers
                 let mut hash_buf: Vec<u8> = Vec::new();
                 let mut index_buf: Vec<u8> = Vec::new();
-                for (hash, ms_index) in transactions {
-                    hash.encode_persistable(&mut hash_buf);
-                    ms_index.encode_persistable(&mut index_buf);
+                for milestone in milestones {
+                    milestone.hash().encode_persistable(&mut hash_buf);
+                    milestone.index().encode_persistable(&mut index_buf);
                     batch.put_cf(&ms_hash_to_ms_index, hash_buf.as_slice(), index_buf.as_slice());
                     // note: for optimization reason we used buf.set_len = 0 instead of clear()
                     unsafe { hash_buf.set_len(0) };

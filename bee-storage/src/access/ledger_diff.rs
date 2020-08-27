@@ -15,21 +15,21 @@ use std::collections::HashMap;
 pub trait LedgerDiffOps<K, S, E> {
     async fn insert(&self, storage: &S) -> Result<(), E>
     where
-        Self: Sized,
+        Self: Persistable + Sized,
         S: Backend;
-    async fn insert_batch(transactions: &HashMap<K, Self>, storage: &S) -> Result<(), E>
+    async fn insert_batch(ledger_diffs: &HashMap<K, Self>, storage: &S) -> Result<(), E>
     where
-        Self: Sized,
+        Self: Persistable + Sized,
         K: Persistable,
         S: Backend;
     async fn remove(hash: &K, storage: &S) -> Result<(), E>
     where
-        Self: Sized,
+        Self: Persistable + Sized,
         K: Persistable,
         S: Backend;
     async fn find_by_milestone_index(milestone_index: &K, storage: &S) -> Result<Option<Self>, E>
     where
-        Self: Sized,
+        Self: Persistable + Sized,
         K: Persistable,
         S: Backend;
 }
@@ -67,7 +67,7 @@ macro_rules! impl_ledger_diff_ops {
                 // reusable buffers
                 let mut index_buf: Vec<u8> = Vec::new();
                 let mut ledger_diff_buf: Vec<u8> = Vec::new();
-                for (ms_index, ledger_diff) in transactions {
+                for (ms_index, ledger_diff) in ledger_diffs {
                     ms_index.encode_persistable(&mut index_buf);
                     ledger_diff.encode_persistable(&mut ledger_diff_buf);
                     batch.put_cf(

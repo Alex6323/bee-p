@@ -18,7 +18,7 @@ pub trait TransactionMetadataOps<H, S, E> {
         Self: Persistable + Sized,
         H: Persistable,
         S: Backend;
-    async fn insert_batch(transactions: &HashMap<H, Self>, storage: &S) -> Result<(), E>
+    async fn insert_batch(metadatas: &HashMap<H, Self>, storage: &S) -> Result<(), E>
     where
         Self: Persistable + Sized,
         H: Persistable,
@@ -58,13 +58,13 @@ macro_rules! impl_transaction_metadata_ops {
                     .put_cf(&hash_to_metadata, hash_buf.as_slice(), metadata_buf.as_slice())?;
                 Ok(())
             }
-            async fn insert_batch(transactions: &HashMap<Hash, Self>, storage: &Storage) -> Result<(), OpError> {
+            async fn insert_batch(metadatas: &HashMap<Hash, Self>, storage: &Storage) -> Result<(), OpError> {
                 let mut batch = WriteBatch::default();
                 let hash_to_metadata = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
                 // reusable buffers
                 let mut hash_buf: Vec<u8> = Vec::new();
                 let mut metadata_buf: Vec<u8> = Vec::new();
-                for (hash, metadata) in transactions {
+                for (hash, metadata) in metadatas {
                     hash.encode_persistable(&mut hash_buf);
                     metadata.encode_persistable(&mut metadata_buf);
                     batch.put_cf(&hash_to_metadata, hash_buf.as_slice(), metadata_buf.as_slice());
