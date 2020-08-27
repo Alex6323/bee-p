@@ -17,7 +17,6 @@ bytemuck = "1.2.0"
 rocksdb = { version = "0.14.0", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
-async-std = "1.6.2"
 
 [dev-dependencies]
 async-std = "1.6.2"
