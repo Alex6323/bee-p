@@ -39,6 +39,7 @@ type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>
 
 enum Error {
     NonContiguousMilestone,
+    MerkleProofMismatch,
     InvalidConfirmationSet(TraversalError),
 }
 
@@ -79,8 +80,6 @@ impl LedgerWorker {
                 ..((self.coo_config.depth() as usize - 1) * HASH_LENGTH + MERKLE_PROOF_LENGTH),
         ));
 
-        println!("PROOF {:?}", proof);
-
         (proof, timestamp)
     }
 
@@ -98,9 +97,13 @@ impl LedgerWorker {
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
-                let merkle_proof_calculated = &Merkle::<Blake2b>::new().hash(&confirmation.tails_included);
-
-                println!("proof {:?}", merkle_proof_calculated);
+                if !merkle_proof.eq(&Merkle::<Blake2b>::new().hash(&confirmation.tails_included)) {
+                    error!(
+                        "The computed merkle proof on milestone {} does not match the one provided by the coordinator.",
+                        milestone.index().0,
+                    );
+                    return Err(Error::MerkleProofMismatch);
+                }
 
                 self.index = milestone.index();
 
