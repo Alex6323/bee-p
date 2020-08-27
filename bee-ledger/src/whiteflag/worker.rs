@@ -22,11 +22,9 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
 // use bee_tangle::traversal::visit_parents_depth_first;
-use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use blake2::Blake2b;
-use bytemuck::cast_slice;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{Fuse, StreamExt},

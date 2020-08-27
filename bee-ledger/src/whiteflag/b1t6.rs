@@ -43,7 +43,7 @@ pub(crate) fn decode(src: &Trits) -> Vec<u8> {
 
 // // decodeGroup converts two tryte values into a byte and a success flag.
 fn decodeGroup(t1: i8, t2: i8) -> (i8, bool) {
-    let v = t1 + t2 * 3;
+    let v = t1 + t2 * 27;
 
     if v < i8::MIN || v > i8::MAX {
         return (0, false);
