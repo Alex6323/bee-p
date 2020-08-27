@@ -13,23 +13,23 @@ use bee_ternary::Trits;
 
 use std::convert::TryFrom;
 
-const tritsPerTryte: usize = 3;
-const tritsPerByte: usize = 6;
+const TRITS_PER_TRYTE: usize = 3;
+const TRITS_PER_BYTE: usize = 6;
 
 // Decode decodes src into DecodedLen(len(in)) bytes of dst and returns the actual number of bytes written.
 // Decode expects that src contains a valid b1t6 encoding and that src has a length that is a multiple of 6,
 // it returns an error otherwise. If src does not contain trits, the behavior of Decode is undefined.
 pub(crate) fn decode(src: &Trits) -> Vec<u8> {
-    if src.len() % tritsPerByte != 0 {
+    if src.len() % TRITS_PER_BYTE != 0 {
         // TODO do something
         panic!();
     }
 
-    let mut bytes = Vec::with_capacity(src.len() / tritsPerByte);
+    let mut bytes = Vec::with_capacity(src.len() / TRITS_PER_BYTE);
 
-    for j in (0..src.len() - tritsPerByte).step_by(tritsPerByte) {
-        let t1 = i8::try_from(&src[j * 3..j * 3 + 3]).unwrap();
-        let t2 = i8::try_from(&src[(j + tritsPerTryte) * 3..(j + tritsPerTryte) * 3 + 3]).unwrap();
+    for j in (0..src.len() - TRITS_PER_BYTE).step_by(TRITS_PER_BYTE) {
+        let t1 = i8::try_from(&src[j..j + TRITS_PER_TRYTE]).unwrap();
+        let t2 = i8::try_from(&src[j + TRITS_PER_TRYTE..j + TRITS_PER_BYTE]).unwrap();
         let (b, ok) = decodeGroup(t1, t2);
         if !ok {
             // TODO do something
