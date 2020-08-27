@@ -12,9 +12,11 @@
 use crate::tangle::tangle;
 use bee_crypto::ternary::Hash;
 use bee_transaction::Vertex;
-use dashmap::DashSet;
+use dashmap::{DashSet, DashMap};
 use rand::{seq::IteratorRandom, thread_rng};
 use std::collections::HashSet;
+use bee_tangle::Tangle;
+use dashmap::mapref::entry::Entry;
 
 enum Score {
     NON_LAZY,
@@ -26,9 +28,11 @@ const C1: u32 = 8;
 const C2: u32 = 13;
 const M: u32 = 15;
 
-const SELECT_TIPS_MAX: u8 = 2;
+const MAX_CHILDREN_COUNT: u8 = 2;
+const MAX_NUM_SELECTIONS: u8 = 2;
 
 pub struct TipSelector {
+    children: DashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: DashSet<Hash>,
     semi_lazy_tips: DashSet<Hash>,
 }
@@ -36,76 +40,97 @@ pub struct TipSelector {
 impl TipSelector {
     pub(crate) fn new() -> Self {
         Self {
+            children: DashMap::new(),
             non_lazy_tips: DashSet::new(),
             semi_lazy_tips: DashSet::new(),
         }
     }
 
+    // The TSA does only make use of solid transactions.
+    // In context of the TSA, a transaction can be considered as a tip if one of the following points applies:
+    // - solid transaction without children
+    // - solid transaction with non-solid children
+    // - solid transaction with solid children but does not exceed the retention rules
+    // This function therefore expects that each hash passed is solid.
     pub fn insert(&self, hash: &Hash) {
-        self.remove_parents(&hash);
+
+        // Link parents with child
+        self.add_to_parents(hash);
+
+        //Remove tips that have more than 'MAX_CHILDREN_COUNT' children
+        self.check_solid_children_count();
+
+        // Remove tips that have been selected more than `MAX_NUM_SELECTIONS` by the TSA.
+        self.check_num_selections();
+
+        // update scores
         self.update_scores();
-        match self.tip_score(&hash) {
-            Score::NON_LAZY => {
-                self.non_lazy_tips.insert(hash.clone());
+
+    }
+
+    fn parents(&self, hash: &Hash) -> (Hash, Hash) {
+        let tx = tangle().get(hash).unwrap();
+        let trunk = tx.trunk();
+        let branch = tx.branch();
+        (*trunk, *branch)
+    }
+
+    fn add_child(&self, parent: Hash, child: Hash) {
+        match self.children.entry(parent) {
+            Entry::Occupied(mut entry) => {
+                let children = entry.get_mut();
+                children.insert(child);
             }
-            Score::SEMI_LAZY => {
-                self.semi_lazy_tips.insert(hash.clone());
+            Entry::Vacant(entry) => {
+                let mut children = HashSet::new();
+                children.insert(child);
+                entry.insert(children);
             }
-            _ => (),
         }
     }
 
-    // if the parents of this incoming transaction do exist in the pools, remove them
-    fn remove_parents(&self, hash: &Hash) {
-        let tx = tangle().get(&hash).unwrap();
-        if self.non_lazy_tips.contains(tx.trunk()) {
-            self.non_lazy_tips.remove(tx.trunk());
+    fn add_to_parents(&self, hash: &Hash) {
+        let (trunk, branch) = self.parents(hash);
+        self.add_child(trunk, *hash);
+        self.add_child(branch, *hash);
+    }
+
+    fn check_solid_children_count(&self) {
+        for (parent, children) in self.children.clone() {
+            if children.len() as u8 > MAX_CHILDREN_COUNT {
+                self.children.remove(&parent);
+                self.non_lazy_tips.remove(&parent);
+                self.semi_lazy_tips.remove(&parent);
+            }
         }
-        if self.non_lazy_tips.contains(tx.branch()) {
-            self.non_lazy_tips.remove(tx.branch());
-        }
-        if self.semi_lazy_tips.contains(tx.trunk()) {
-            self.semi_lazy_tips.remove(tx.trunk());
-        }
-        if self.semi_lazy_tips.contains(tx.branch()) {
-            self.semi_lazy_tips.remove(tx.branch());
+    }
+
+    fn check_num_selections(&self) {
+        for (hash, _) in self.children.clone() {
+            if tangle().get_metadata(&hash).unwrap().num_selected >= MAX_NUM_SELECTIONS {
+                self.children.remove(&hash);
+                self.non_lazy_tips.remove(&hash);
+                self.semi_lazy_tips.remove(&hash);
+            }
         }
     }
 
     fn update_scores(&self) {
-        // check if score changed from non-lazy to semi-lazy or lazy
-        for tip in self.non_lazy_tips.clone().iter() {
+        // reset pools
+        self.non_lazy_tips.clear();
+        self.semi_lazy_tips.clear();
+        // iter tips and assign them to the appropriate pools
+        for (tip, _) in self.children.clone() {
             match self.tip_score(&tip) {
+                Score::NON_LAZY => {
+                    self.non_lazy_tips.insert(tip);
+                }
                 Score::SEMI_LAZY => {
-                    self.non_lazy_tips.remove(&tip);
-                    self.semi_lazy_tips.insert(tip.clone());
+                    self.semi_lazy_tips.insert(tip);
                 }
                 Score::LAZY => {
-                    self.non_lazy_tips.remove(&tip);
+                    self.children.remove(&tip);
                 }
-                _ => (),
-            }
-        }
-        // check if score changed from semi-lazy to lazy
-        for tip in self.semi_lazy_tips.clone().iter() {
-            match self.tip_score(&tip) {
-                Score::LAZY => {
-                    self.semi_lazy_tips.remove(&tip);
-                }
-                _ => (),
-            }
-        }
-    }
-
-    fn remove_max_selected(&self) {
-        for tip in self.non_lazy_tips.clone() {
-            if tangle().get_metadata(&tip).unwrap().num_selected >= SELECT_TIPS_MAX {
-                self.non_lazy_tips.remove(&tip);
-            }
-        }
-        for tip in self.semi_lazy_tips.clone() {
-            if tangle().get_metadata(&tip).unwrap().num_selected >= SELECT_TIPS_MAX {
-                self.semi_lazy_tips.remove(&tip);
             }
         }
     }
@@ -139,7 +164,7 @@ impl TipSelector {
     }
 
     fn select_tips(&self, hashes: &DashSet<Hash>) -> Option<(Hash, Hash)> {
-        self.remove_max_selected();
+        self.check_num_selections();
         let mut ret = HashSet::new();
         // try to get 10x randomly a tip
         for i in 1..10 {

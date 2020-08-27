@@ -87,11 +87,11 @@ impl MsTangle {
                 self.last_solid_milestone_index_processed.store(index, Ordering::Relaxed);
             }
 
-            self.propagate_solid_flag(&hash);
             self.propagate_otrsi_and_ytrsi(&hash);
-            //self.tip_selector.insert(&hash);
+            self.propagate_solid_flag(&hash);
 
             return Some(tx);
+
         }
         None
     }
@@ -124,9 +124,12 @@ impl MsTangle {
                             .as_millis() as u64;
                     });
 
+                    self.tip_selector.insert(hash);
+
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
                     }
+
                 }
             }
         }
@@ -198,6 +201,7 @@ impl MsTangle {
                 for child in self.get_children(&hash) {
                     self.propagate_otrsi_and_ytrsi(&child);
                 }
+
                 let tx_ref = self.get(&hash).unwrap();
                 to_visit.push(tx_ref.trunk().clone());
                 to_visit.push(tx_ref.branch().clone());
@@ -225,6 +229,10 @@ impl MsTangle {
                 None => None,
             }
         }
+    }
+
+    pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
+        self.tip_selector.get_semi_lazy_tips()
     }
 
     pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {
