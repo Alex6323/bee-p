@@ -20,8 +20,6 @@ use futures::{
 };
 use log::info;
 
-use std::collections::VecDeque;
-
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
 pub(crate) const TRANSACTION_SOLIDIFIER_COUNT: usize = 10;
@@ -34,7 +32,7 @@ pub(crate) enum MilestoneSolidifierWorkerEvent {
 
 pub(crate) struct MilestoneSolidifierWorker {
     receiver: Receiver,
-    senders: VecDeque<mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>>,
+    senders: Vec<mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>>,
     lowest_index: MilestoneIndex,
 }
 
@@ -43,16 +41,11 @@ impl MilestoneSolidifierWorker {
         receiver: Receiver,
         senders: Vec<mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>>,
     ) -> Self {
+        assert_ne!(TRANSACTION_SOLIDIFIER_COUNT, 0);
         Self {
             receiver,
-            senders: senders.into_iter().collect(),
+            senders,
             lowest_index: tangle().get_last_solid_milestone_index() + MilestoneIndex(1),
-        }
-    }
-
-    fn solidify_milestone(&self, target_index: MilestoneIndex) {
-        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-            if !tangle().is_solid_transaction(&target_hash) {}
         }
     }
 
@@ -81,15 +74,12 @@ impl MilestoneSolidifierWorker {
                         self.lowest_index = self.lowest_index + MilestoneIndex(1);
                         // Compute the next target milestone index.
                         let target_index = self.lowest_index + MilestoneIndex(TRANSACTION_SOLIDIFIER_COUNT as u32);
-                        // Reassign the first worker to the next milestone.
-                        let sender = self.senders.pop_front().unwrap();
                         // Trigger solidification if we already have the milestone's transaction.
                         if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
                             if !tangle().is_solid_transaction(&target_hash) {
-                                sender.unbounded_send(TransactionSolidifierWorkerEvent(target_hash, target_index));
+                                self.senders[0].unbounded_send(TransactionSolidifierWorkerEvent(target_hash, target_index));
                             }
                         }
-                        self.senders.push_back(sender);
                     } else {
                         // We shouldn't be able to solidify any milestone that comes after
                         // `self.lowest_index`
