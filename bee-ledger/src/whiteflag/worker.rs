@@ -13,7 +13,7 @@ use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
     whiteflag::{
-        b1t6::decode, bundle::load_bundle_builder, confirmation::Confirmation, merkle_hasher::MerkleHasher,
+        b1t6::decode, bundle::load_bundle_builder, merkle_hasher::MerkleHasher, metadata::WhiteFlagMetadata,
         traversal::Error as TraversalError, WhiteFlag,
     },
 };
@@ -90,7 +90,7 @@ impl LedgerWorker {
 
         let (merkle_proof, timestamp) = self.milestone_info(milestone.hash());
 
-        let mut confirmation = Confirmation::new(milestone.index(), timestamp);
+        let mut confirmation = WhiteFlagMetadata::new(milestone.index(), timestamp);
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {

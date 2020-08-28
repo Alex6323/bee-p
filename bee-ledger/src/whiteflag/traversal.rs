@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::whiteflag::{bundle::load_bundle_builder, confirmation::Confirmation, worker::LedgerWorker};
+use crate::whiteflag::{bundle::load_bundle_builder, metadata::WhiteFlagMetadata, worker::LedgerWorker};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
@@ -31,19 +31,19 @@ pub(crate) enum Error {
 
 impl LedgerWorker {
     #[inline]
-    fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle, confirmation: &mut Confirmation) {
+    fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle, metadata: &mut WhiteFlagMetadata) {
         let mut conflicting = false;
         let (mutates, bundle_mutations) = bundle.ledger_mutations();
 
         if !mutates {
-            confirmation.num_tails_zero_value += 1;
+            metadata.num_tails_zero_value += 1;
         } else {
             // First pass to look for conflicts.
             for (address, diff) in bundle_mutations.iter() {
                 let balance = *self.state.get_or_zero(&address) as i64 + diff;
 
                 if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
-                    confirmation.num_tails_conflicting += 1;
+                    metadata.num_tails_conflicting += 1;
                     conflicting = true;
                     break;
                 }
@@ -53,14 +53,14 @@ impl LedgerWorker {
                 // Second pass to mutate the state.
                 for (address, diff) in bundle_mutations {
                     self.state.apply(address.clone(), diff);
-                    confirmation.diff.apply(address, diff);
+                    metadata.diff.apply(address, diff);
                 }
 
-                confirmation.tails_included.push(*hash);
+                metadata.tails_included.push(*hash);
             }
         }
 
-        confirmation.num_tails_referenced += 1;
+        metadata.num_tails_referenced += 1;
 
         // TODO this only actually confirm tails
         tangle().update_metadata(&hash, |meta| {
@@ -68,14 +68,14 @@ impl LedgerWorker {
                 meta.flags_mut().set_conflicting();
             }
             meta.flags_mut().set_confirmed();
-            meta.set_milestone_index(confirmation.index);
-            meta.set_confirmation_timestamp(confirmation.timestamp);
+            meta.set_milestone_index(metadata.index);
+            meta.set_confirmation_timestamp(metadata.timestamp);
             // TODO Set OTRSI, ...
             // TODO increment metrics confirmed, zero, value and conflict.
         });
     }
 
-    pub(crate) fn visit_bundles_dfs(&mut self, root: Hash, confirmation: &mut Confirmation) -> Result<(), Error> {
+    pub(crate) fn visit_bundles_dfs(&mut self, root: Hash, metadata: &mut WhiteFlagMetadata) -> Result<(), Error> {
         let mut hashes = vec![root];
         let mut visited = HashSet::new();
 
@@ -105,7 +105,7 @@ impl LedgerWorker {
                             Ok(builder) => builder.build(),
                             Err(e) => return Err(Error::InvalidBundle(e)),
                         };
-                        self.on_bundle(hash, &bundle, confirmation);
+                        self.on_bundle(hash, &bundle, metadata);
                         visited.insert(hash.clone());
                         hashes.pop();
                     } else if !visited.contains(trunk) {

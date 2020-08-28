@@ -11,8 +11,8 @@
 
 mod b1t6;
 mod bundle;
-mod confirmation;
 mod merkle_hasher;
+mod metadata;
 mod traversal;
 mod worker;
 
