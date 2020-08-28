@@ -8,23 +8,16 @@
 // Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
-
-use bee_protocol::Milestone;
-use bee_transaction::Hash;
-
-use async_trait::async_trait;
-
-use std::{collections::HashSet, fmt::Debug};
-
-#[async_trait]
-pub(crate) trait MilestoneStorage {
-    type Error: Debug;
-
-    async fn insert(&self, milestone: Milestone) -> Result<(), Self::Error>;
-
-    async fn get(&self, hash: Hash) -> Result<Milestone, Self::Error>;
-
-    async fn remove(&self, hash: Hash) -> Result<(), Self::Error>;
-
-    async fn remove_set(&self, hashes: &HashSet<Hash>) -> Result<(), Self::Error>;
+#[cfg(feature = "rocks_db")]
+pub trait RocksDBPersistable {
+    /// This encode method will extend the provided buffer and return ();
+    fn encode_persistable(&self, buffer: &mut Vec<u8>);
+    /// Decode `slice[..length]` and return Self
+    fn decode_persistable(slice: &[u8], length: usize) -> Self
+    where
+        Self: Sized;
 }
+
+#[cfg(feature = "rocks_db")]
+#[allow(unused_imports)]
+pub use RocksDBPersistable as Persistable;
