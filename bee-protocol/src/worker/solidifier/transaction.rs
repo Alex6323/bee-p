@@ -34,8 +34,6 @@ impl TransactionSolidifierWorker {
         Self { receiver }
     }
 
-    // TODO is the index even needed ? We request one milestone at a time ? No PriorityQueue ?
-
     fn solidify(&self, root: Hash, index: MilestoneIndex) {
         traversal::visit_parents_depth_first(
             tangle(),

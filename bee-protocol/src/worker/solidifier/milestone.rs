@@ -49,20 +49,32 @@ impl MilestoneSolidifierWorker {
         }
     }
 
+    fn trigger_transaction_solidification(
+        sender: &mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>,
+        hash: Hash,
+        index: MilestoneIndex,
+    ) {
+        if !tangle().is_solid_transaction(&hash) {
+            sender.unbounded_send(TransactionSolidifierWorkerEvent(hash, index));
+        }
+    }
+
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
         while let Some(event) = self.receiver.next().await {
             match event {
                 MilestoneSolidifierWorkerEvent::ReceivedTransaction(hash, index) => {
-                    if !tangle().is_solid_transaction(&hash) {
-                        // This won't underflow because `lowest_index` is the index of the
-                        // oldest non-solid milestone.
+                    if index < self.lowest_index {
+                        // We already solidified the milestone for this transaction
+                    } else {
                         let sender_pos = (index.0 - self.lowest_index.0) as usize;
                         if let Some(sender) = self.senders.get(sender_pos) {
-                            sender.unbounded_send(TransactionSolidifierWorkerEvent(hash, index));
+                            Self::trigger_transaction_solidification(sender, hash, index);
                         } else {
-                            // Transaction is too new.
+                            // This only happens if `index > self.lowest_index +
+                            // TRANSACTION_SOLIDIFIER_COUNT`. Meaning that the transaction is too
+                            // new.
                         }
                     }
                 }
@@ -76,9 +88,7 @@ impl MilestoneSolidifierWorker {
                         let target_index = self.lowest_index + MilestoneIndex(TRANSACTION_SOLIDIFIER_COUNT as u32);
                         // Trigger solidification if we already have the milestone's transaction.
                         if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-                            if !tangle().is_solid_transaction(&target_hash) {
-                                self.senders[0].unbounded_send(TransactionSolidifierWorkerEvent(target_hash, target_index));
-                            }
+                            Self::trigger_transaction_solidification(&self.senders[0], target_hash, target_index);
                         }
                     } else {
                         // We shouldn't be able to solidify any milestone that comes after
@@ -90,9 +100,7 @@ impl MilestoneSolidifierWorker {
                     for (i, sender) in self.senders.iter().enumerate() {
                         let target_index = self.lowest_index + MilestoneIndex(i as u32);
                         if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-                            if !tangle().is_solid_transaction(&target_hash) {
-                                sender.unbounded_send(TransactionSolidifierWorkerEvent(target_hash, target_index));
-                            }
+                            Self::trigger_transaction_solidification(sender, target_hash, target_index);
                         }
                     }
                 }
