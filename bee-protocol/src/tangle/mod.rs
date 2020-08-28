@@ -196,7 +196,7 @@ impl MsTangle {
                     visited.insert(hash.clone());
                 }
 
-                if self.get_metadata(&hash).is_none() {
+                if self.is_solid_entry_point(&hash) {
                     continue;
                 }
 
