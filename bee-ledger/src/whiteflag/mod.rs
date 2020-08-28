@@ -9,25 +9,30 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+mod bundle;
 mod confirmation;
 mod merkle;
 mod traversal;
+mod worker;
+mod b1t6;
 
-pub(crate) use confirmation::{LedgerConfirmationWorker, LedgerConfirmationWorkerEvent};
+use worker::LedgerWorker;
+pub use worker::LedgerWorkerEvent;
 
-use bee_common::shutdown::Shutdown;
+use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
-use bee_protocol::{event::LastSolidMilestoneChanged, MilestoneIndex};
+use bee_protocol::{config::ProtocolCoordinatorConfig, event::LastSolidMilestoneChanged, MilestoneIndex};
+use bee_transaction::bundled::Address;
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
 
-use std::{ptr, sync::Arc};
+use std::{collections::HashMap, ptr, sync::Arc};
 
 struct WhiteFlag {
     pub(crate) bus: Arc<Bus<'static>>,
-    confirmation_sender: mpsc::UnboundedSender<LedgerConfirmationWorkerEvent>,
+    confirmation_sender: mpsc::UnboundedSender<LedgerWorkerEvent>,
 }
 
 static mut WHITE_FLAG: *const WhiteFlag = ptr::null();
@@ -45,7 +50,7 @@ impl WhiteFlag {
 fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
     if let Err(e) = WhiteFlag::get()
         .confirmation_sender
-        .unbounded_send(LedgerConfirmationWorkerEvent(last_solid_milestone.0.clone()))
+        .unbounded_send(LedgerWorkerEvent::Confirm(last_solid_milestone.0.clone()))
     {
         warn!(
             "Sending solid milestone {:?} to confirmation failed: {:?}.",
@@ -55,26 +60,39 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
     }
 }
 
-pub(crate) fn init(snapshot_index: u32, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) {
-    if unsafe { !WHITE_FLAG.is_null() } {
-        warn!("Already initialized.");
-        return;
-    }
+pub fn init(
+    index: u32,
+    // TODO get concrete type
+    state: HashMap<Address, u64>,
+    coo_config: ProtocolCoordinatorConfig,
+    bus: Arc<Bus<'static>>,
+    shutdown: &mut Shutdown,
+) -> mpsc::UnboundedSender<LedgerWorkerEvent> {
+    // TODO
+    // if unsafe { !WHITE_FLAG.is_null() } {
+    //     warn!("Already initialized.");
+    //     return;
+    // }
 
-    let (ledger_confirmation_worker_tx, ledger_confirmation_worker_rx) = mpsc::unbounded();
-    let (ledger_confirmation_worker_shutdown_tx, ledger_confirmation_worker_shutdown_rx) = oneshot::channel();
+    let (ledger_worker_tx, ledger_worker_rx) = mpsc::unbounded();
+    let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
 
     shutdown.add_worker_shutdown(
-        ledger_confirmation_worker_shutdown_tx,
+        ledger_worker_shutdown_tx,
         spawn(
-            LedgerConfirmationWorker::new(MilestoneIndex(snapshot_index))
-                .run(ledger_confirmation_worker_rx, ledger_confirmation_worker_shutdown_rx),
+            LedgerWorker::new(
+                MilestoneIndex(index),
+                state,
+                coo_config,
+                ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
+            )
+            .run(),
         ),
     );
 
     let white_flag = WhiteFlag {
         bus: bus.clone(),
-        confirmation_sender: ledger_confirmation_worker_tx,
+        confirmation_sender: ledger_worker_tx.clone(),
     };
 
     unsafe {
@@ -82,4 +100,6 @@ pub(crate) fn init(snapshot_index: u32, bus: Arc<Bus<'static>>, shutdown: &mut S
     }
 
     bus.add_listener(on_last_solid_milestone_changed);
+
+    ledger_worker_tx
 }

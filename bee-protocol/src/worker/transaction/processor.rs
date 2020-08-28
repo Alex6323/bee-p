@@ -117,13 +117,13 @@ impl ProcessorWorker {
             }
         };
 
-        if hash.weight() < Protocol::get().config.mwm {
+        let requested = Protocol::get().requested_transactions.contains_key(&hash);
+
+        if !requested && hash.weight() < Protocol::get().config.mwm {
             debug!("Insufficient weight magnitude: {}.", hash.weight());
             Protocol::get().metrics.invalid_transactions_inc();
             return;
         }
-
-        let requested = Protocol::get().requested_transactions.contains_key(&hash);
 
         let (is_timestamp_valid, should_broadcast) = self.validate_timestamp(&transaction);
 

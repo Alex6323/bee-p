@@ -61,6 +61,10 @@ where
     pub fn len(&self) -> usize {
         self.transactions.len()
     }
+
+    pub fn get(&self, index: usize) -> Option<&BundledTransaction> {
+        self.transactions.get(index)
+    }
 }
 
 // Panics if the builder is empty!

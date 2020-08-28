@@ -9,99 +9,32 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    event::MilestoneConfirmed,
-    whiteflag::{
-        traversal::{visit_bundles_dfs, Error as TraversalError},
-        WhiteFlag,
-    },
-};
+use crate::diff::LedgerDiff;
 
-use bee_common::worker::Error as WorkerError;
-use bee_protocol::{Milestone, MilestoneIndex};
+use bee_crypto::ternary::Hash;
+use bee_protocol::MilestoneIndex;
 
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
-};
-use log::{error, info};
-
-enum Error {
-    NonContiguousMilestone,
-    InvalidPastCone(TraversalError),
+#[derive(Default)]
+pub(crate) struct Confirmation {
+    pub(crate) index: MilestoneIndex,
+    pub(crate) timestamp: u64,
+    pub(crate) diff: LedgerDiff,
+    /// The number of tails which were referenced by the milestone.
+    pub(crate) num_tails_referenced: usize,
+    /// The number of tails which were excluded because they were part of a zero or spam value transfer.
+    pub(crate) num_tails_zero_value: usize,
+    /// The number of tails which were excluded as they were conflicting with the ledger state.
+    pub(crate) num_tails_conflicting: usize,
+    /// The tails of bundles which mutate the ledger in the order in which they were applied.
+    pub(crate) tails_included: Vec<Hash>,
 }
 
-pub(crate) struct Confirmation {}
-
-pub(crate) struct LedgerConfirmationWorkerEvent(pub(crate) Milestone);
-
-pub(crate) struct LedgerConfirmationWorker {
-    confirmed_index: MilestoneIndex,
-}
-
-impl LedgerConfirmationWorker {
-    pub fn new(confirmed_index: MilestoneIndex) -> Self {
-        Self { confirmed_index }
-    }
-
-    fn confirm(&mut self, milestone: Milestone) -> Result<(), Error> {
-        if milestone.index() != MilestoneIndex(self.confirmed_index.0 + 1) {
-            error!(
-                "Tried to confirm {} on top of {}.",
-                milestone.index().0,
-                self.confirmed_index.0
-            );
-            return Err(Error::NonContiguousMilestone);
+impl Confirmation {
+    pub(crate) fn new(index: MilestoneIndex, timestamp: u64) -> Confirmation {
+        Confirmation {
+            index,
+            timestamp,
+            ..Self::default()
         }
-
-        info!("Confirming milestone {}.", milestone.index().0);
-
-        match visit_bundles_dfs(*milestone.hash()) {
-            Ok(_) => {
-                self.confirmed_index = milestone.index();
-
-                WhiteFlag::get().bus.dispatch(MilestoneConfirmed(milestone));
-
-                Ok(())
-            }
-            Err(e) => {
-                error!(
-                    "Error occured while traversing to confirm {}: {:?}.",
-                    milestone.index().0,
-                    e
-                );
-                Err(Error::InvalidPastCone(e))
-            }
-        }
-    }
-
-    pub async fn run(
-        mut self,
-        receiver: mpsc::UnboundedReceiver<LedgerConfirmationWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(LedgerConfirmationWorkerEvent(milestone)) = event {
-                        if let Err(_) = self.confirm(milestone) {
-                            panic!("Error while confirming milestone, aborting.");
-                        }
-                    }
-                }
-            }
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

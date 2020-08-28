@@ -9,41 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod state;
-mod whiteflag;
-
+pub mod diff;
 pub mod event;
-
-use state::LedgerStateWorker;
-pub use state::LedgerStateWorkerEvent;
-
-use bee_common::shutdown::Shutdown;
-use bee_common_ext::event::Bus;
-use bee_transaction::bundled::Address;
-
-use async_std::task::spawn;
-use futures::channel::{mpsc, oneshot};
-
-use std::{collections::HashMap, sync::Arc};
-
-pub fn init(
-    snapshot_index: u32,
-    // TODO get concrete type
-    state: HashMap<Address, u64>,
-    bus: Arc<Bus<'static>>,
-    shutdown: &mut Shutdown,
-) -> mpsc::Sender<LedgerStateWorkerEvent> {
-    // TODO config
-    // TODO unbounded ?
-    let (ledger_state_worker_tx, ledger_state_worker_rx) = mpsc::channel(1000);
-    let (ledger_state_worker_shutdown_tx, ledger_state_worker_shutdown_rx) = oneshot::channel();
-
-    shutdown.add_worker_shutdown(
-        ledger_state_worker_shutdown_tx,
-        spawn(LedgerStateWorker::new(state).run(ledger_state_worker_rx, ledger_state_worker_shutdown_rx)),
-    );
-
-    whiteflag::init(snapshot_index, bus, shutdown);
-
-    ledger_state_worker_tx
-}
+pub mod state;
+pub mod whiteflag;

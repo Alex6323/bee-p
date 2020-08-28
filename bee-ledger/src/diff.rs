@@ -9,12 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod handshaked_peer;
-mod manager;
-mod metrics;
-mod peer;
+use bee_transaction::bundled::Address;
 
-pub(crate) use handshaked_peer::HandshakedPeer;
-pub(crate) use manager::PeerManager;
-pub(crate) use metrics::PeerMetrics;
-pub(crate) use peer::Peer;
+use std::collections::HashMap;
+
+#[derive(Default)]
+pub(crate) struct LedgerDiff(pub(crate) HashMap<Address, i64>);
+
+impl LedgerDiff {
+    pub(crate) fn apply(&mut self, address: Address, diff: i64) {
+        self.0.entry(address).and_modify(|d| *d += diff).or_insert(diff);
+    }
+}

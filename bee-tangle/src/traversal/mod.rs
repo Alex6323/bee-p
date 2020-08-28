@@ -106,9 +106,9 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
                 Some(vtx) => {
                     let vtx = vtx.value();
 
-                    apply(&hash, vtx.transaction(), vtx.metadata());
-
                     if matches(&hash, vtx.transaction(), vtx.metadata()) {
+                        apply(&hash, vtx.transaction(), vtx.metadata());
+
                         parents.push(*vtx.trunk());
                         parents.push(*vtx.branch());
                     }

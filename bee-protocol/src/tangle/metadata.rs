@@ -39,11 +39,23 @@ impl TransactionMetadata {
         }
     }
 
+    pub fn flags(&self) -> &Flags {
+        &self.flags
+    }
+
+    pub fn flags_mut(&mut self) -> &mut Flags {
+        &mut self.flags
+    }
+
     pub fn milestone_index(&self) -> MilestoneIndex {
         self.milestone_index
     }
 
-    pub fn is_confirmed(&self) -> bool {
-        self.flags.is_confirmed()
+    pub fn set_milestone_index(&mut self, index: MilestoneIndex) {
+        self.milestone_index = index;
+    }
+
+    pub fn set_confirmation_timestamp(&mut self, timestamp: u64) {
+        self.confirmation_timestamp = timestamp;
     }
 }
