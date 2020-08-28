@@ -88,8 +88,6 @@ impl LedgerWorker {
             return Err(Error::NonContiguousMilestone);
         }
 
-        info!("Confirming milestone {}.", milestone.index().0);
-
         let (merkle_proof, timestamp) = self.milestone_info(milestone.hash());
 
         let mut confirmation = Confirmation::new(milestone.index(), timestamp);
@@ -106,8 +104,7 @@ impl LedgerWorker {
 
                 self.index = milestone.index();
 
-                // TODO debug!
-                println!(
+                info!(
                     "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
                     *milestone.index(),
                     confirmation.num_tails_referenced,
