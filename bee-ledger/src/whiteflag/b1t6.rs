@@ -16,9 +16,6 @@ use std::convert::TryFrom;
 const TRITS_PER_TRYTE: usize = 3;
 const TRITS_PER_BYTE: usize = 6;
 
-// Decode decodes src into DecodedLen(len(in)) bytes of dst and returns the actual number of bytes written.
-// Decode expects that src contains a valid b1t6 encoding and that src has a length that is a multiple of 6,
-// it returns an error otherwise. If src does not contain trits, the behavior of Decode is undefined.
 pub(crate) fn decode(src: &Trits) -> Vec<u8> {
     if src.len() % TRITS_PER_BYTE != 0 {
         // TODO do something
@@ -30,24 +27,19 @@ pub(crate) fn decode(src: &Trits) -> Vec<u8> {
     for j in (0..src.len()).step_by(TRITS_PER_BYTE) {
         let t1 = i8::try_from(&src[j..j + TRITS_PER_TRYTE]).unwrap();
         let t2 = i8::try_from(&src[j + TRITS_PER_TRYTE..j + TRITS_PER_BYTE]).unwrap();
-        let (b, ok) = decode_group(t1, t2);
-        if !ok {
-            // TODO do something
-            panic!()
-        }
+        let b = decode_group(t1, t2).unwrap();
         bytes.push(b as u8);
     }
 
     bytes
 }
 
-// // decode_group converts two tryte values into a byte and a success flag.
-fn decode_group(t1: i8, t2: i8) -> (i8, bool) {
+fn decode_group(t1: i8, t2: i8) -> Result<i8, ()> {
     let v = t1 + t2 * 27;
 
     if v < i8::MIN || v > i8::MAX {
-        return (0, false);
+        return Err(());
     }
 
-    (v, true)
+    Ok(v)
 }
