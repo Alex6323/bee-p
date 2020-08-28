@@ -10,11 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 pub mod constants;
 
-use std::{
-    collections::HashMap,
-    convert::TryInto,
-    hash::Hash,
-};
+use std::{collections::HashMap, convert::TryInto, hash::Hash};
 
 pub trait RocksDBPersistable {
     /// This encode method will extend the provided buffer and return ();
@@ -28,7 +24,6 @@ pub trait RocksDBPersistable {
 #[cfg(feature = "rocks_db")]
 #[allow(unused_imports)]
 pub use RocksDBPersistable as Persistable;
-
 
 // Auto implementations;
 
