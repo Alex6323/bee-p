@@ -11,7 +11,6 @@
 
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
-use bee_transaction::bundled::BundledTransactionField;
 
 use std::marker::PhantomData;
 
@@ -23,43 +22,51 @@ const LEAF_HASH_PREFIX: u8 = 0x00;
 /// Node domain separation prefix.
 const NODE_HASH_PREFIX: u8 = 0x01;
 
+/// A Merkle hasher based on a digest function.
 #[derive(Default)]
-pub(crate) struct Merkle<H: Default + Digest> {
-    hasher: PhantomData<H>,
+pub(crate) struct MerkleHasher<D: Default + Digest> {
+    /// Type marker for the digest function.
+    hasher: PhantomData<D>,
 }
 
-impl<H: Default + Digest> Merkle<H> {
+impl<D: Default + Digest> MerkleHasher<D> {
+    /// Creates a new Merkle hasher.
     pub(crate) fn new() -> Self {
         Self::default()
     }
 
+    /// Computes the largest power of two inferior to `n`.
     #[inline]
     fn largest_power_of_two(&self, n: u32) -> usize {
         1 << (32 - n.leading_zeros() - 1)
     }
 
+    /// Returns the digest of the empty hash.
     fn empty(&mut self) -> Vec<u8> {
-        (&H::digest(b"")).to_vec()
+        (&D::digest(b"")).to_vec()
     }
 
+    /// Returns the digest of a Merkle leaf.
     fn leaf(&mut self, hash: Hash) -> Vec<u8> {
-        let mut hasher = H::default();
+        let mut hasher = D::default();
 
         hasher.update([LEAF_HASH_PREFIX]);
-        hasher.update(cast_slice(hash.to_inner().encode::<T5B1Buf>().as_i8_slice()));
+        hasher.update(cast_slice(hash.encode::<T5B1Buf>().as_i8_slice()));
         (&hasher.finalize_reset()).to_vec()
     }
 
+    /// Returns the digest of a Merkle node.
     fn node(&mut self, hashes: &[Hash]) -> Vec<u8> {
-        let mut hasher = H::default();
-        let k = self.largest_power_of_two(hashes.len() as u32 - 1);
+        let mut hasher = D::default();
+        let (left, right) = hashes.split_at(self.largest_power_of_two(hashes.len() as u32 - 1));
 
         hasher.update([NODE_HASH_PREFIX]);
-        hasher.update(self.hash(&hashes[..k]));
-        hasher.update(self.hash(&hashes[k..]));
+        hasher.update(self.hash(left));
+        hasher.update(self.hash(right));
         (&hasher.finalize_reset()).to_vec()
     }
 
+    /// Returns the digest of a list of hashes.
     pub(crate) fn hash(&mut self, hashes: &[Hash]) -> Vec<u8> {
         match hashes.len() {
             0 => self.empty(),
@@ -75,12 +82,13 @@ mod tests {
     use super::*;
 
     use bee_ternary::{T1B1Buf, TryteBuf};
+    use bee_transaction::bundled::BundledTransactionField;
 
     use blake2::Blake2b;
 
     #[test]
     fn empty() {
-        let hash = Merkle::<Blake2b>::new().hash(&[]);
+        let hash = MerkleHasher::<Blake2b>::new().hash(&[]);
 
         assert_eq!(
             hex::encode(hash),
@@ -91,7 +99,7 @@ mod tests {
 
     #[test]
     fn null_leaf() {
-        let hash = Merkle::<Blake2b>::new().hash(&vec![Hash::zeros()]);
+        let hash = MerkleHasher::<Blake2b>::new().hash(&vec![Hash::zeros()]);
 
         assert_eq!(
             hex::encode(hash),
@@ -102,7 +110,7 @@ mod tests {
 
     #[test]
     fn null_node() {
-        let hash = Merkle::<Blake2b>::new().hash(&vec![Hash::zeros(), Hash::zeros()]);
+        let hash = MerkleHasher::<Blake2b>::new().hash(&vec![Hash::zeros(), Hash::zeros()]);
 
         assert_eq!(
             hex::encode(hash),
@@ -131,7 +139,7 @@ mod tests {
             ));
         }
 
-        let hash = Merkle::<Blake2b>::new().hash(&hashes);
+        let hash = MerkleHasher::<Blake2b>::new().hash(&hashes);
 
         assert_eq!(
             hex::encode(hash),

@@ -13,7 +13,7 @@ use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
     whiteflag::{
-        b1t6::decode, bundle::load_bundle_builder, confirmation::Confirmation, merkle::Merkle,
+        b1t6::decode, bundle::load_bundle_builder, confirmation::Confirmation, merkle_hasher::MerkleHasher,
         traversal::Error as TraversalError, WhiteFlag,
     },
 };
@@ -94,7 +94,7 @@ impl LedgerWorker {
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
-                if !merkle_proof.eq(&Merkle::<Blake2b>::new().hash(&confirmation.tails_included)) {
+                if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().hash(&confirmation.tails_included)) {
                     error!(
                         "The computed merkle proof on milestone {} does not match the one provided by the coordinator.",
                         milestone.index().0,
