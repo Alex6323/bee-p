@@ -18,7 +18,9 @@ use std::marker::PhantomData;
 use bytemuck::cast_slice;
 use digest::Digest;
 
+/// Leaf domain separation prefix.
 const LEAF_HASH_PREFIX: u8 = 0x00;
+/// Node domain separation prefix.
 const NODE_HASH_PREFIX: u8 = 0x01;
 
 #[derive(Default)]
@@ -29,6 +31,11 @@ pub(crate) struct Merkle<H: Default + Digest> {
 impl<H: Default + Digest> Merkle<H> {
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+
+    #[inline]
+    fn largest_power_of_two(&self, n: u32) -> usize {
+        1 << (32 - n.leading_zeros() - 1)
     }
 
     fn empty(&mut self) -> Vec<u8> {
@@ -45,9 +52,7 @@ impl<H: Default + Digest> Merkle<H> {
 
     fn node(&mut self, hashes: &[Hash]) -> Vec<u8> {
         let mut hasher = H::default();
-        let n = hashes.len() as u32 - 1;
-        // Largest power of two less than `n`.
-        let k = 1 << (32 - n.leading_zeros() - 1);
+        let k = self.largest_power_of_two(hashes.len() as u32 - 1);
 
         hasher.update([NODE_HASH_PREFIX]);
         hasher.update(self.hash(&hashes[..k]));
