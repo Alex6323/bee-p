@@ -21,7 +21,7 @@ mod tps;
 mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
-pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidatorWorkerEvent};
+pub(crate) use milestone_validator::MilestoneValidatorWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, TransactionRequesterWorker,
@@ -38,4 +38,4 @@ pub(crate) use solidifier::{
 };
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
-pub(crate) use transaction::{TransactionWorker, TransactionWorkerEvent};
+pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};

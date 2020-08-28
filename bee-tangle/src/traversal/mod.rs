@@ -13,7 +13,7 @@
 
 use crate::{tangle::Tangle, TransactionRef as TxRef};
 
-use bee_crypto::ternary::Hash as TxHash;
+use bee_crypto::ternary::Hash;
 
 use std::collections::HashSet;
 
@@ -23,27 +23,22 @@ use std::collections::HashSet;
 /// associated data and metadata.
 pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
-    initial: TxHash,
-    matches: Match,
+    mut hash: Hash,
+    mut matches: Match,
     mut apply: Apply,
 ) where
     Metadata: Clone + Copy,
-    Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&TxHash, &TxRef, &Metadata),
+    Match: FnMut(&TxRef, &Metadata) -> bool,
+    Apply: FnMut(&Hash, &TxRef, &Metadata),
 {
-    // TODO: how much space is reasonable to preallocate?
-    let mut parents = vec![initial];
+    while let Some(vtx) = tangle.vertices.get(&hash) {
+        let vtx = vtx.value();
 
-    while let Some(ref hash) = parents.pop() {
-        if let Some(vtx) = tangle.vertices.get(&hash) {
-            let vtx = vtx.value();
-
-            if !matches(vtx.transaction(), vtx.metadata()) {
-                break;
-            } else {
-                apply(&hash, vtx.transaction(), vtx.metadata());
-                parents.push(*vtx.trunk());
-            }
+        if !matches(vtx.transaction(), vtx.metadata()) {
+            break;
+        } else {
+            apply(&hash, vtx.transaction(), vtx.metadata());
+            hash = *vtx.trunk();
         }
     }
 }
@@ -54,15 +49,16 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
 /// associated data and metadata.
 pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
     tangle: &'a Tangle<Metadata>,
-    initial: TxHash,
+    root: Hash,
     matches: Match,
     mut apply: Apply,
 ) where
     Metadata: Clone + Copy,
     Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&TxHash, &TxRef, &Metadata),
+    Apply: FnMut(&Hash, &TxRef, &Metadata),
 {
-    let mut children = vec![initial];
+    // TODO could be simplified like visit_parents_follow_trunk ? Meaning no vector ?
+    let mut children = vec![root];
 
     while let Some(ref parent_hash) = children.pop() {
         if let Some(parent) = tangle.vertices.get(parent_hash) {
@@ -89,20 +85,20 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     tangle: &'a Tangle<Metadata>,
-    initial: TxHash,
+    root: Hash,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
 ) where
     Metadata: Clone + Copy,
-    Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&TxHash, &TxRef, &Metadata),
-    ElseApply: FnMut(&TxHash),
+    Match: Fn(&Hash, &TxRef, &Metadata) -> bool,
+    Apply: FnMut(&Hash, &TxRef, &Metadata),
+    ElseApply: FnMut(&Hash),
 {
     let mut parents = Vec::new();
     let mut visited = HashSet::new();
 
-    parents.push(initial);
+    parents.push(root);
 
     while let Some(hash) = parents.pop() {
         if !visited.contains(&hash) {
@@ -110,9 +106,9 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
                 Some(vtx) => {
                     let vtx = vtx.value();
 
-                    apply(&hash, vtx.transaction(), vtx.metadata());
+                    if matches(&hash, vtx.transaction(), vtx.metadata()) {
+                        apply(&hash, vtx.transaction(), vtx.metadata());
 
-                    if matches(vtx.transaction(), vtx.metadata()) {
                         parents.push(*vtx.trunk());
                         parents.push(*vtx.branch());
                     }
@@ -133,17 +129,17 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
     tangle: &'a Tangle<Metadata>,
-    initial: TxHash,
+    root: Hash,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
 ) where
     Metadata: Clone + Copy,
     Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&TxHash, &TxRef, &Metadata),
-    ElseApply: FnMut(&TxHash),
+    Apply: FnMut(&Hash, &TxRef, &Metadata),
+    ElseApply: FnMut(&Hash),
 {
-    let mut children = vec![initial];
+    let mut children = vec![root];
     let mut visited = HashSet::new();
 
     while let Some(hash) = children.last() {

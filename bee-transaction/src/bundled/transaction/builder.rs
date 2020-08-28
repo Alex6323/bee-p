@@ -10,14 +10,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::bundled::{
-    constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
+    constants::{ADDRESS, ESSENCE_TRIT_LEN, INDEX, IOTA_SUPPLY, OBSOLETE_TAG, TIMESTAMP, VALUE},
     Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Index, Nonce, Payload, Tag,
     Timestamp, Value,
 };
 
 use bee_crypto::ternary::Hash;
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};
-use bee_ternary_ext::num_conversions::i64_to_tritbuf;
 
 #[derive(Default)]
 pub struct BundledTransactionBuilder {
@@ -44,23 +43,18 @@ impl BundledTransactionBuilder {
     }
 
     pub fn essence(&self) -> TritBuf {
-        let mut essence = TritBuf::<T1B1Buf>::zeros(
-            ADDRESS.trit_offset.length
-                + VALUE.trit_offset.length
-                + OBSOLETE_TAG.trit_offset.length
-                + TIMESTAMP.trit_offset.length
-                + INDEX.trit_offset.length
-                + LAST_INDEX.trit_offset.length,
-        );
+        let mut essence = TritBuf::<T1B1Buf>::zeros(ESSENCE_TRIT_LEN);
+
         let address = self.address.as_ref().unwrap();
-        let value = i64_to_tritbuf(*self.value.as_ref().unwrap().to_inner());
+        let value = TritBuf::<T1B1Buf<_>>::from(*self.value.as_ref().unwrap().to_inner());
         let obsolete_tag = self.obsolete_tag.as_ref().unwrap();
-        let timestamp = i64_to_tritbuf(*self.timestamp.as_ref().unwrap().to_inner() as i64);
-        let index = i64_to_tritbuf(*self.index.as_ref().unwrap().to_inner() as i64);
-        let last_index = i64_to_tritbuf(*self.last_index.as_ref().unwrap().to_inner() as i64);
+        let timestamp = TritBuf::<T1B1Buf<_>>::from(*self.timestamp.as_ref().unwrap().to_inner() as i128);
+        let index = TritBuf::<T1B1Buf<_>>::from(*self.index.as_ref().unwrap().to_inner() as i128);
+        let last_index = TritBuf::<T1B1Buf<_>>::from(*self.last_index.as_ref().unwrap().to_inner() as i128);
 
         let mut start = 0;
         let mut end = ADDRESS.trit_offset.length;
+
         essence[start..end].copy_from(address.to_inner());
 
         start += ADDRESS.trit_offset.length;

@@ -14,16 +14,17 @@ use crate::{
     protocol::Protocol,
 };
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
 };
+
 use log::{info, warn};
+
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
@@ -32,11 +33,12 @@ pub(crate) struct BroadcasterWorkerEvent {
 
 pub(crate) struct BroadcasterWorker {
     network: Network,
+    receiver: Receiver,
 }
 
 impl BroadcasterWorker {
-    pub(crate) fn new(network: Network) -> Self {
-        Self { network }
+    pub(crate) fn new(network: Network, receiver: Receiver) -> Self {
+        Self { network, receiver }
     }
 
     async fn broadcast(&mut self, source: Option<EndpointId>, transaction: TransactionMessage) {
@@ -57,8 +59,8 @@ impl BroadcasterWorker {
                     .await
                 {
                     Ok(_) => {
-                        (*peer.value()).metrics.transaction_sent_inc();
-                        Protocol::get().metrics.transaction_sent_inc();
+                        (*peer.value()).metrics.transactions_sent_inc();
+                        Protocol::get().metrics.transactions_sent_inc();
                     }
                     Err(e) => {
                         warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);
@@ -68,27 +70,11 @@ impl BroadcasterWorker {
         }
     }
 
-    pub(crate) async fn run(
-        mut self,
-        receiver: mpsc::Receiver<BroadcasterWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                transaction = receiver_fused.next() => {
-                    if let Some(BroadcasterWorkerEvent{source, transaction}) = transaction {
-                        self.broadcast(source, transaction).await;
-                    }
-                },
-                _ = shutdown_fused => {
-                    break;
-                }
-            }
+        while let Some(BroadcasterWorkerEvent { source, transaction }) = self.receiver.next().await {
+            self.broadcast(source, transaction).await;
         }
 
         info!("Stopped.");

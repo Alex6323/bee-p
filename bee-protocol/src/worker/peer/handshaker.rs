@@ -11,13 +11,14 @@
 
 use crate::{
     config::slice_eq,
+    event::HandshakeCompleted,
     message::{
         messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
     },
     peer::Peer,
     protocol::Protocol,
     tangle::tangle,
-    worker::PeerWorker,
+    worker::{peer::MessageHandler, PeerWorker},
 };
 
 use bee_network::{
@@ -30,7 +31,6 @@ use async_std::{net::SocketAddr, task::spawn};
 use futures::{
     channel::{mpsc, oneshot},
     future::FutureExt,
-    select,
     stream::StreamExt,
 };
 use log::{debug, error, info, warn};
@@ -53,16 +53,6 @@ pub(crate) enum HandshakeError {
 
 #[derive(Debug)]
 pub(crate) enum PeerHandshakerWorkerError {}
-
-enum PeerReadState {
-    Header,
-    Payload(Header),
-}
-
-struct PeerReadContext {
-    state: PeerReadState,
-    buffer: Vec<u8>,
-}
 
 enum HandshakeStatus {
     Awaiting,
@@ -90,12 +80,8 @@ impl PeerHandshakerWorker {
 
         // TODO should we have a first check if already connected ?
 
-        let mut context = PeerReadContext {
-            state: PeerReadState::Header,
-            buffer: Vec::new(),
-        };
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
+        let receiver_fused = receiver.fuse();
+        let shutdown_fused = shutdown.fuse();
 
         // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
         if let Err(e) = self
@@ -116,20 +102,14 @@ impl PeerHandshakerWorker {
             warn!("[{}] Failed to send handshake: {:?}.", self.peer.address, e);
         }
 
-        loop {
-            select! {
-                event = receiver_fused.next() => {
-                    if let Some(event) = event {
-                        context = self.message_handler(context, event).await;
-                        match self.status {
-                            HandshakeStatus::Done | HandshakeStatus::Duplicate => break,
-                            _ => continue
-                        }
-                    }
-                },
-                _ = shutdown_fused => {
-                    break;
-                }
+        let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address);
+
+        while let Some((header, bytes)) = message_handler.fetch_message().await {
+            if let Err(e) = self.process_message(&header, bytes).await {
+                error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
+            }
+            if let HandshakeStatus::Done | HandshakeStatus::Duplicate = self.status {
+                break;
             }
         }
 
@@ -145,7 +125,7 @@ impl PeerHandshakerWorker {
                             .value()
                             .clone(),
                     )
-                    .run(receiver_fused, shutdown_fused),
+                    .run(message_handler),
                 );
             }
             HandshakeStatus::Duplicate => {
@@ -233,15 +213,17 @@ impl PeerHandshakerWorker {
 
                         Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
 
+                        Protocol::get().bus.dispatch(HandshakeCompleted(address));
+
                         Protocol::send_heartbeat(
                             self.peer.epid,
                             tangle().get_last_solid_milestone_index(),
                             tangle().get_snapshot_milestone_index(),
-                        )
-                        .await;
+                            tangle().get_last_milestone_index(),
+                        );
 
                         Protocol::request_last_milestone(Some(self.peer.epid));
-                        Protocol::trigger_milestone_solidification().await;
+                        Protocol::trigger_milestone_solidification();
 
                         self.status = HandshakeStatus::Done;
                     }
@@ -252,71 +234,16 @@ impl PeerHandshakerWorker {
                 Err(e) => {
                     warn!("[{}] Reading Handshake failed: {:?}.", self.peer.address, e);
 
-                    Protocol::get().metrics.invalid_messages_received_inc();
+                    Protocol::get().metrics.invalid_messages_inc();
                 }
             }
         } else {
             warn!("[{}] Ignoring messages until fully handshaked.", self.peer.address);
 
-            Protocol::get().metrics.invalid_messages_received_inc();
+            Protocol::get().metrics.invalid_messages_inc();
         }
 
         Ok(())
-    }
-
-    async fn message_handler(&mut self, mut context: PeerReadContext, mut bytes: Vec<u8>) -> PeerReadContext {
-        let mut offset = 0;
-        let mut remaining = true;
-
-        if context.buffer.is_empty() {
-            context.buffer = bytes;
-        } else {
-            context.buffer.append(&mut bytes);
-        }
-
-        while remaining {
-            context.state = match context.state {
-                PeerReadState::Header => {
-                    if offset + 3 <= context.buffer.len() {
-                        debug!("[{}] Reading Header...", self.peer.address);
-                        let header = Header::from_bytes(&context.buffer[offset..offset + 3]);
-                        offset += 3;
-
-                        PeerReadState::Payload(header)
-                    } else {
-                        remaining = false;
-
-                        PeerReadState::Header
-                    }
-                }
-                PeerReadState::Payload(header) => {
-                    if (offset + header.message_length as usize) <= context.buffer.len() {
-                        if let Err(e) = self
-                            .process_message(
-                                &header,
-                                &context.buffer[offset..offset + header.message_length as usize],
-                            )
-                            .await
-                        {
-                            error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
-                        }
-
-                        offset += header.message_length as usize;
-
-                        PeerReadState::Header
-                    } else {
-                        remaining = false;
-
-                        PeerReadState::Payload(header)
-                    }
-                }
-            };
-        }
-
-        PeerReadContext {
-            state: context.state,
-            buffer: context.buffer[offset..].to_vec(),
-        }
     }
 }
 

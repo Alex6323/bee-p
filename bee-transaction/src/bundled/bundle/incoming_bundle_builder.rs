@@ -11,12 +11,15 @@
 
 use crate::{
     bundled::{constants::IOTA_SUPPLY, Bundle, BundledTransaction, BundledTransactionField, BundledTransactions},
-    TransactionVertex,
+    Vertex,
 };
 
-use bee_crypto::ternary::{Kerl, Sponge};
+use bee_crypto::ternary::{
+    sponge::{Kerl, Sponge},
+    Hash,
+};
 use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, Signature};
-use bee_ternary::TritBuf;
+use bee_ternary::{T1B1Buf, TritBuf};
 
 use std::marker::PhantomData;
 
@@ -28,7 +31,8 @@ pub enum IncomingBundleBuilderError {
     InvalidValue(i64),
     InvalidSignature,
     InvalidBundleHash,
-    InvalidBranchInconsistency,
+    InvalidBranch,
+    InvalidTrunk,
 }
 
 pub trait IncomingBundleBuilderStage {}
@@ -47,6 +51,39 @@ pub struct StagedIncomingBundleBuilder<E, P, S> {
 }
 
 pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
+
+impl<E, P, S> StagedIncomingBundleBuilder<E, P, S>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+    S: IncomingBundleBuilderStage,
+{
+    pub fn len(&self) -> usize {
+        self.transactions.len()
+    }
+
+    pub fn get(&self, index: usize) -> Option<&BundledTransaction> {
+        self.transactions.get(index)
+    }
+}
+
+// Panics if the builder is empty!
+impl<E, P, S> Vertex for StagedIncomingBundleBuilder<E, P, S>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+    S: IncomingBundleBuilderStage,
+{
+    type Hash = Hash;
+
+    fn trunk(&self) -> &Hash {
+        self.transactions.0.last().unwrap().trunk()
+    }
+
+    fn branch(&self) -> &Hash {
+        self.transactions.0.last().unwrap().branch()
+    }
+}
 
 impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
 where
@@ -71,11 +108,11 @@ where
     // TODO TEST
     // TODO common with outgoing bundle builder
     fn calculate_hash(&self) -> TritBuf {
-        // TODO Impl
         let mut sponge = E::default();
 
-        for _builder in &self.transactions.0 {
-            // sponge.absorb(builder.address.0);
+        for transaction in &self.transactions.0 {
+            // TODO handle res
+            sponge.absorb(&transaction.essence());
         }
 
         sponge
@@ -86,10 +123,17 @@ where
     fn validate_signatures(&self) -> Result<(), IncomingBundleBuilderError> {
         // TODO no bundle should be considered valid if it contains more than MaxSecLevel transactions belonging to the
         // input address with a value != 0 (actually < 0) TODO get real values
-        let public_key = P::from_trits(TritBuf::new());
-        let signature = P::Signature::from_trits(TritBuf::new());
+        let public_key = match P::from_trits(TritBuf::new()) {
+            Ok(pk) => pk,
+            Err(_) => unreachable!(),
+        };
+        let signature = match P::Signature::from_trits(TritBuf::new()) {
+            Ok(sig) => sig,
+            Err(_) => unreachable!(),
+        };
 
-        match public_key.verify(&[], &signature) {
+        // TODO Temporary buffer
+        match public_key.verify(&TritBuf::<T1B1Buf>::zeros(1), &signature) {
             Ok(valid) => {
                 if valid {
                     Ok(())
@@ -112,6 +156,7 @@ where
 
         let last_index = self.transactions.len() - 1;
 
+        // TODO avoid using a vec
         let bundle_hash_calculated = self.calculate_hash().as_i8_slice().to_vec();
 
         let first_branch = self.transactions.0[0].branch();
@@ -132,17 +177,21 @@ where
             }
 
             sum += *transaction.value.to_inner();
+
             if sum.abs() > IOTA_SUPPLY {
                 return Err(IncomingBundleBuilderError::InvalidValue(sum));
             }
 
-            if index == 0 as usize && bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec())
-            {
+            if bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec()) {
                 return Err(IncomingBundleBuilderError::InvalidBundleHash);
             }
 
-            if index > 0 as usize && transaction.branch().ne(first_branch) {
-                return Err(IncomingBundleBuilderError::InvalidBranchInconsistency);
+            if index > 0 && index < last_index && transaction.branch().ne(first_branch) {
+                return Err(IncomingBundleBuilderError::InvalidBranch);
+            }
+
+            if last_index != 0 && index == last_index && transaction.trunk().ne(first_branch) {
+                return Err(IncomingBundleBuilderError::InvalidTrunk);
             }
 
             // TODO - for each transaction's hash check that it is its prev trunk
@@ -152,7 +201,7 @@ where
             return Err(IncomingBundleBuilderError::InvalidValue(sum));
         }
 
-        self.validate_signatures()?;
+        // self.validate_signatures()?;
 
         Ok(StagedIncomingBundleBuilder::<E, P, IncomingValidated> {
             transactions: self.transactions,

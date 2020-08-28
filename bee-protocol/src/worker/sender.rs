@@ -17,89 +17,66 @@ use crate::{
     protocol::Protocol,
 };
 
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
-use std::{marker::PhantomData, sync::Arc};
-
 use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    sink::SinkExt,
-    stream::StreamExt,
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
 };
 use log::warn;
+
+use std::sync::Arc;
+
+type Receiver<M> = ShutdownStream<Fuse<mpsc::UnboundedReceiver<M>>>;
 
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
     peer: Arc<HandshakedPeer>,
-    _message_type: PhantomData<M>,
+    receiver: Receiver<M>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl SenderWorker<$type> {
-            pub(crate) fn new(network: Network, peer: Arc<HandshakedPeer>) -> Self {
+            pub(crate) fn new(network: Network, peer: Arc<HandshakedPeer>, receiver: Receiver<$type>) -> Self {
                 Self {
                     network,
                     peer,
-                    _message_type: PhantomData,
+                    receiver,
                 }
             }
 
-            pub(crate) async fn send(epid: &EndpointId, message: $type) {
+            pub(crate) fn send(epid: &EndpointId, message: $type) {
                 if let Some(context) = Protocol::get().peer_manager.handshaked_peers.get(&epid) {
-                    if let Err(e) = context
-                        .$sender
-                        .0
-                        // TODO avoid clone ?
-                        .clone()
-                        .send(message)
-                        .await
-                    {
-                        // TODO log actual message type ?
-                        warn!("Sending message to {} failed: {:?}.", epid, e);
+                    if let Err(e) = context.$sender.0.unbounded_send(message) {
+                        warn!("Sending {} to {} failed: {:?}.", stringify!($type), epid, e);
                     }
                 };
             }
 
-            pub(crate) async fn run(
-                mut self,
-                events_receiver: mpsc::Receiver<$type>,
-                shutdown_receiver: oneshot::Receiver<()>,
-            ) {
-                let mut events_fused = events_receiver.fuse();
-                let mut shutdown_fused = shutdown_receiver.fuse();
-
-                loop {
-                    select! {
-                        message = events_fused.next() => {
-                            if let Some(message) = message {
-                                match self
-                                    .network
-                                    .send(SendMessage {
-                                        epid: self.peer.epid,
-                                        bytes: tlv_into_bytes(message),
-                                        responder: None,
-                                    })
-                                    .await
-                                {
-                                    Ok(_) => {
-                                        self.peer.metrics.$incrementor();
-                                        Protocol::get().metrics.$incrementor();
-                                    }
-                                    Err(e) => {
-                                        // TODO log actual message type ?
-                                        warn!(
-                                            "Sending message to {} failed: {:?}.",
-                                            self.peer.epid, e
-                                        );
-                                    }
-                                }
-                            }
+            pub(crate) async fn run(mut self) {
+                while let Some(message) = self.receiver.next().await {
+                    match self
+                        .network
+                        .send(SendMessage {
+                            epid: self.peer.epid,
+                            bytes: tlv_into_bytes(message),
+                            responder: None,
+                        })
+                        .await
+                    {
+                        Ok(_) => {
+                            self.peer.metrics.$incrementor();
+                            Protocol::get().metrics.$incrementor();
                         }
-                        _ = shutdown_fused => {
-                            break;
+                        Err(e) => {
+                            warn!(
+                                "Sending {} to {} failed: {:?}.",
+                                stringify!($type),
+                                self.peer.epid,
+                                e
+                            );
                         }
                     }
                 }
@@ -108,9 +85,9 @@ macro_rules! implement_sender_worker {
     };
 }
 
-implement_sender_worker!(MilestoneRequest, milestone_request, milestone_request_sent_inc);
-implement_sender_worker!(TransactionMessage, transaction, transaction_sent_inc);
-implement_sender_worker!(TransactionRequest, transaction_request, transaction_request_sent_inc);
-implement_sender_worker!(Heartbeat, heartbeat, heartbeat_sent_inc);
+implement_sender_worker!(MilestoneRequest, milestone_request, milestone_requests_sent_inc);
+implement_sender_worker!(TransactionMessage, transaction, transactions_sent_inc);
+implement_sender_worker!(TransactionRequest, transaction_request, transaction_requests_sent_inc);
+implement_sender_worker!(Heartbeat, heartbeat, heartbeats_sent_inc);
 
 // TODO is this really necessary ?

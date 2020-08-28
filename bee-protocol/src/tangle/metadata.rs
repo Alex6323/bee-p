@@ -17,9 +17,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Copy, Clone, Default)]
 pub struct TransactionMetadata {
     pub(crate) flags: Flags,
+    pub(crate) milestone_index: MilestoneIndex,
     pub(crate) arrival_timestamp: u64,
     pub(crate) solidification_timestamp: u64,
-    pub(crate) milestone_index: MilestoneIndex,
+    pub(crate) confirmation_timestamp: u64,
 }
 
 impl TransactionMetadata {
@@ -31,5 +32,25 @@ impl TransactionMetadata {
                 .as_millis() as u64,
             ..Self::default()
         }
+    }
+
+    pub fn flags(&self) -> &Flags {
+        &self.flags
+    }
+
+    pub fn flags_mut(&mut self) -> &mut Flags {
+        &mut self.flags
+    }
+
+    pub fn milestone_index(&self) -> MilestoneIndex {
+        self.milestone_index
+    }
+
+    pub fn set_milestone_index(&mut self, index: MilestoneIndex) {
+        self.milestone_index = index;
+    }
+
+    pub fn set_confirmation_timestamp(&mut self, timestamp: u64) {
+        self.confirmation_timestamp = timestamp;
     }
 }

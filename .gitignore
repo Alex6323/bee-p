@@ -10,8 +10,13 @@ Cargo.lock
 **/*.rs.bk
 
 # bee-node
-bee-node/data
 bee-node/config.toml
+bee-node/snapshots/comnet/*
+!bee-node/snapshots/comnet/.gitkeep
+bee-node/snapshots/mainnet/*
+!bee-node/snapshots/mainnet/.gitkeep
+bee-node/snapshots/testnet/*
+!bee-node/snapshots/testnet/.gitkeep
 
 # bee-storage
 bee-storage/src/backends/sqlx/schemes/postgres/cleanup.sql

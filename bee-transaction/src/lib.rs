@@ -12,4 +12,4 @@
 pub mod bundled;
 mod vertex;
 
-pub use vertex::TransactionVertex;
+pub use vertex::Vertex;

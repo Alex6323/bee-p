@@ -10,7 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod handshaker;
+mod message_handler;
 mod peer;
 
 pub(crate) use handshaker::PeerHandshakerWorker;
+use message_handler::MessageHandler;
 pub(crate) use peer::PeerWorker;

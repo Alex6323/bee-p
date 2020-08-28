@@ -18,15 +18,15 @@ pub use metadata::TransactionMetadata;
 // pub(crate) mod propagator;
 
 use crate::{
-    events::LastSolidMilestone,
+    event::LastSolidMilestoneChanged,
     milestone::{Milestone, MilestoneIndex},
     protocol::Protocol,
     tangle::flags::Flags,
 };
 
-use bee_crypto::ternary::Hash as TxHash;
+use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
-use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
+use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
 
 use dashmap::DashMap;
 
@@ -40,8 +40,8 @@ use std::{
 /// Milestone-based Tangle.
 pub struct MsTangle {
     pub(crate) inner: Tangle<TransactionMetadata>,
-    pub(crate) milestones: DashMap<MilestoneIndex, TxHash>,
-    pub(crate) solid_entry_points: DashMap<TxHash, MilestoneIndex>,
+    pub(crate) milestones: DashMap<MilestoneIndex, Hash>,
+    pub(crate) solid_entry_points: DashMap<Hash, MilestoneIndex>,
     last_milestone_index: AtomicU32,
     last_solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
@@ -67,7 +67,7 @@ impl MsTangle {
         }
     }
 
-    pub fn insert(&self, transaction: Tx, hash: TxHash, metadata: TransactionMetadata) -> Option<TxRef> {
+    pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
             self.propagate_solid_flag(hash);
             return Some(tx);
@@ -77,7 +77,7 @@ impl MsTangle {
 
     // NOTE: not implemented as an async worker atm, but it makes things much easier
     #[inline]
-    fn propagate_solid_flag(&self, root: TxHash) {
+    fn propagate_solid_flag(&self, root: Hash) {
         let mut children = vec![root];
 
         while let Some(ref hash) = children.pop() {
@@ -93,7 +93,7 @@ impl MsTangle {
                         // before being solidified, we then also need to check when a milestone gets validated if it's
                         // already solid.
                         if metadata.flags.is_milestone() {
-                            Protocol::get().bus.dispatch(LastSolidMilestone(Milestone {
+                            Protocol::get().bus.dispatch(LastSolidMilestoneChanged(Milestone {
                                 hash: *hash,
                                 index: metadata.milestone_index,
                             }));
@@ -112,11 +112,11 @@ impl MsTangle {
         }
     }
 
-    pub fn get_metadata(&self, hash: &TxHash) -> Option<TransactionMetadata> {
+    pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {
         self.inner.get_metadata(hash)
     }
 
-    pub fn add_milestone(&self, index: MilestoneIndex, hash: TxHash) {
+    pub fn add_milestone(&self, index: MilestoneIndex, hash: Hash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
         self.inner.update_metadata(&hash, |metadata| {
@@ -138,7 +138,7 @@ impl MsTangle {
     }
 
     // TODO: use combinator instead of match
-    pub fn get_milestone_hash(&self, index: MilestoneIndex) -> Option<TxHash> {
+    pub fn get_milestone_hash(&self, index: MilestoneIndex) -> Option<Hash> {
         match self.milestones.get(&index) {
             None => None,
             Some(v) => Some(*v),
@@ -173,26 +173,27 @@ impl MsTangle {
         self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
+    // TODO reduce to one atomic value ?
     pub fn is_synced(&self) -> bool {
         self.get_last_solid_milestone_index() == self.get_last_milestone_index()
     }
 
-    pub fn add_solid_entry_point(&self, hash: TxHash, index: MilestoneIndex) {
+    pub fn add_solid_entry_point(&self, hash: Hash, index: MilestoneIndex) {
         self.solid_entry_points.insert(hash, index);
     }
 
     /// Removes `hash` from the set of solid entry points.
-    pub fn remove_solid_entry_point(&self, hash: &TxHash) {
+    pub fn remove_solid_entry_point(&self, hash: &Hash) {
         self.solid_entry_points.remove(hash);
     }
 
     /// Returns whether the transaction associated with `hash` is a solid entry point.
-    pub fn is_solid_entry_point(&self, hash: &TxHash) -> bool {
+    pub fn is_solid_entry_point(&self, hash: &Hash) -> bool {
         self.solid_entry_points.contains_key(hash)
     }
 
     /// Returns whether the transaction associated with `hash` is deemed `solid`.
-    pub fn is_solid_transaction(&self, hash: &TxHash) -> bool {
+    pub fn is_solid_transaction(&self, hash: &Hash) -> bool {
         if self.is_solid_entry_point(hash) {
             true
         } else {
@@ -239,12 +240,12 @@ mod tests {
         let tangle = MsTangle::new();
 
         // Creates solid entry points
-        let sep1 = rand_trits_field::<TxHash>();
-        let sep2 = rand_trits_field::<TxHash>();
-        let sep3 = rand_trits_field::<TxHash>();
-        let sep4 = rand_trits_field::<TxHash>();
-        let sep5 = rand_trits_field::<TxHash>();
-        let sep6 = rand_trits_field::<TxHash>();
+        let sep1 = rand_trits_field::<Hash>();
+        let sep2 = rand_trits_field::<Hash>();
+        let sep3 = rand_trits_field::<Hash>();
+        let sep4 = rand_trits_field::<Hash>();
+        let sep5 = rand_trits_field::<Hash>();
+        let sep6 = rand_trits_field::<Hash>();
 
         // Adds solid entry points
         tangle.add_solid_entry_point(sep1, MilestoneIndex(0));

@@ -164,10 +164,10 @@ impl BundledTransactionField for Hash {
     }
 
     fn from_inner_unchecked(buf: <Self::Inner as ToOwned>::Owned) -> Self {
-        let mut trits = [0; 243];
-        trits.copy_from_slice(buf.as_i8_slice());
+        let mut hash = Hash::zeros();
+        (*hash).copy_from(&buf);
 
-        Self(trits)
+        hash
     }
 }
 

@@ -36,7 +36,7 @@ use bee_protocol::{Milestone, MilestoneIndex};
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::{
     Address, BundledTransaction as Transaction, BundledTransactionBuilder as TransactionBuilder,
-    BundledTransactionField, Hash, Index, Nonce, Payload, Tag, Timestamp, TransactionVertex, Value, ADDRESS_TRIT_LEN,
+    BundledTransactionField, Hash, Index, Nonce, Payload, Tag, Timestamp, Vertex, Value, ADDRESS_TRIT_LEN,
     HASH_TRIT_LEN, NONCE_TRIT_LEN, PAYLOAD_TRIT_LEN, TAG_TRIT_LEN,
 };
 

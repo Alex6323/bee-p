@@ -11,30 +11,31 @@
 
 use crate::milestone::{Milestone, MilestoneIndex};
 
-use bee_crypto::ternary::{Hash, Kerl, Sponge};
+use bee_crypto::ternary::{
+    sponge::{Kerl, Sponge},
+    Hash,
+};
 use bee_signing::ternary::{
-    mss::{MssError, MssPublicKey, MssSignature},
-    normalize_hash,
-    wots::WotsPublicKey,
+    mss::{Error as MssError, MssPublicKey, MssSignature},
+    wots::{normalize, WotsPublicKey},
     PublicKey, RecoverableSignature, Signature,
 };
-use bee_ternary::TritBuf;
-use bee_ternary_ext::num_conversions::{tritbuf_try_to_i64, TritsI64ConversionError};
+use bee_ternary::{convert::Error as ConvertError, TritBuf};
 use bee_transaction::{
     bundled::{
         BundledTransaction as Transaction, BundledTransactionField, BundledTransactions as Transactions, Payload,
     },
-    TransactionVertex,
+    Vertex,
 };
 
-use std::marker::PhantomData;
+use std::{convert::TryFrom, marker::PhantomData};
 
 #[derive(Debug)]
 pub enum MilestoneBuilderError {
     Empty,
     InvalidSignature,
     SignatureError(MssError),
-    InvalidIndex(TritsI64ConversionError),
+    InvalidIndex(ConvertError),
 }
 
 // TODO are stages really needed since it's internal ?
@@ -102,9 +103,16 @@ where
         // Safe to unwrap `transactions.get(0)` since we're sure it's not empty
         // Safe to unwrap `self.depth` since we're sure it's not None
         let public_key: MssPublicKey<M, P> =
-            MssPublicKey::<M, P>::from_trits(self.transactions.get(0).unwrap().address().to_inner().to_buf())
-                .depth(self.depth.unwrap());
-        let signature: MssSignature<M> = MssSignature::<M>::from_trits(signature_buf).index(*self.index as u64);
+            match MssPublicKey::<M, P>::from_trits(self.transactions.get(0).unwrap().address().to_inner().to_buf()) {
+                Ok(pk) => pk,
+                Err(_) => unreachable!(),
+            }
+            .with_depth(self.depth.unwrap());
+        let signature: MssSignature<M> = match MssSignature::<M>::from_trits(signature_buf) {
+            Ok(sig) => sig,
+            Err(_) => unreachable!(),
+        }
+        .with_index(*self.index as usize);
         let hash = self
             .transactions
             .get(self.transactions.len() - 2)
@@ -112,7 +120,8 @@ where
             .trunk()
             .to_inner();
 
-        match public_key.verify(normalize_hash(hash).as_i8_slice(), &signature) {
+        // Safe to unwrap because we know `hash` has a valid size since it comes from `trunk`.
+        match public_key.verify(&normalize(hash).unwrap(), &signature) {
             Ok(valid) => {
                 if valid {
                     Ok(())
@@ -138,7 +147,7 @@ where
         // TODO test invalid index
         // Safe to unwrap
         self.index = MilestoneIndex(
-            tritbuf_try_to_i64(self.transactions.get(0).unwrap().obsolete_tag().to_inner().to_buf())
+            i64::try_from(self.transactions.get(0).unwrap().obsolete_tag().to_inner())
                 .map_err(MilestoneBuilderError::InvalidIndex)? as u32,
         );
 
@@ -176,7 +185,7 @@ mod tests {
 
     use super::*;
 
-    use bee_crypto::ternary::CurlP27;
+    use bee_crypto::ternary::sponge::CurlP27;
     use bee_ternary::{T1B1Buf, TryteBuf};
 
     fn generic_validate_milestone<S: Sponge + Default>(

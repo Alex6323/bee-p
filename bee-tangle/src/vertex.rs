@@ -11,8 +11,8 @@
 
 use crate::TransactionRef as TxRef;
 
-use bee_crypto::ternary::Hash as TxHash;
-use bee_transaction::{bundled::BundledTransaction as Tx, TransactionVertex};
+use bee_crypto::ternary::Hash;
+use bee_transaction::{bundled::BundledTransaction as Tx, Vertex as MessageVertex};
 
 use async_std::sync::Arc;
 
@@ -36,11 +36,11 @@ where
         }
     }
 
-    pub fn trunk(&self) -> &TxHash {
+    pub fn trunk(&self) -> &Hash {
         self.transaction.trunk()
     }
 
-    pub fn branch(&self) -> &TxHash {
+    pub fn branch(&self) -> &Hash {
         self.transaction.branch()
     }
 

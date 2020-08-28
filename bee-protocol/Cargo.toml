@@ -11,16 +11,13 @@ keywords = ["iota", "tangle", "bee", "framework", "protocol"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-common = { git = "https://github.com/iotaledger/bee.git" }
+bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-common-ext = { path = "../bee-common-ext" }
-bee-crypto = { path = "../bee-crypto" }
-bee-event = { path = "../bee-event/bee-event" }
-bee-event-derive = { path = "../bee-event/bee-event-derive" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-network = { path = "../bee-network" }
-bee-signing = { path = "../bee-signing" }
+bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-tangle = { path = "../bee-tangle" }
-bee-ternary = { git = "https://github.com/iotaledger/bee.git" }
-bee-ternary-ext = { path = "../bee-ternary-ext" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-std = "1.6.2"
@@ -30,6 +27,7 @@ dashmap = "3.11"
 futures = "0.3.5"
 futures-util = "0.3.5"
 log = "0.4.8"
+pin-project = "0.4"
 serde = { version = "1.0.114", features = ["derive" ] }
 twox-hash = "1.5.0"
 

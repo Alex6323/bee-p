@@ -21,20 +21,6 @@ pub struct Field {
     pub tryte_offset: Offset,
 }
 
-impl Field {
-    pub fn byte_start(&self) -> usize {
-        self.trit_offset.start / 5
-    }
-
-    pub fn byte_length(&self) -> usize {
-        if self.trit_offset.length % 5 == 0 {
-            self.trit_offset.length / 5
-        } else {
-            self.trit_offset.length / 5 + 1
-        }
-    }
-}
-
 macro_rules! offsets_from_trits {
     ($start:expr, $length:expr) => {
         Field {
@@ -79,6 +65,9 @@ pub const TIMESTAMP_TRIT_LEN: usize = 27;
 pub const INDEX_TRIT_LEN: usize = 27;
 pub const HASH_TRIT_LEN: usize = 243;
 pub const NONCE_TRIT_LEN: usize = 81;
+
+pub const ESSENCE_TRIT_LEN: usize =
+    ADDRESS_TRIT_LEN + VALUE_TRIT_LEN + TAG_TRIT_LEN + TIMESTAMP_TRIT_LEN + INDEX_TRIT_LEN + INDEX_TRIT_LEN;
 
 pub(crate) const PAYLOAD: Field = offsets_from_trits!(0, PAYLOAD_TRIT_LEN);
 pub(crate) const ADDRESS: Field = offsets_from_previous_field!(PAYLOAD, ADDRESS_TRIT_LEN);
