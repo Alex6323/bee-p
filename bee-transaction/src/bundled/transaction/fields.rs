@@ -101,7 +101,7 @@ impl Persistable for Address {
     fn encode_persistable(&self, _buffer: &mut Vec<u8>) {
         todo!()
     }
-    fn decode_persistable(_slice: &[u8], _length: usize) -> Self {
+    fn decode_persistable(_slice: &[u8]) -> Self {
         todo!()
     }
 }
