@@ -124,7 +124,7 @@ impl MsTangle {
                             .as_millis() as u64;
                     });
 
-                    self.tip_selector.insert(hash);
+                    //self.tip_selector.insert(hash);
 
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
@@ -151,14 +151,27 @@ impl MsTangle {
                 continue;
             }
 
+            // check if already confirmed by update_transactions_referenced_by_milestone()
+            if self.get_metadata(&hash).unwrap().cone_index.is_some() {
+                continue;
+            }
+
+            // in case the transaction already inherited the best otrsi and ytrsi, continue
+            let current_otrsi  = self.get_metadata(&hash).unwrap().otrsi;
+            let current_ytrsi  = self.get_metadata(&hash).unwrap().ytrsi;
+            let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
+            let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
+
+            if current_otrsi.is_some() && current_ytrsi.is_some() && current_otrsi.unwrap() == best_otrsi && current_ytrsi.unwrap() == best_ytrsi {
+                continue;
+            }
+
             self.inner.update_metadata(&hash, |metadata| {
-                metadata.otrsi = Some(max(trunk_otsri.unwrap(), branch_otsri.unwrap()));
-                metadata.ytrsi = Some(min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap()));
+                metadata.otrsi = Some(best_otrsi);
+                metadata.ytrsi = Some(best_ytrsi);
             });
 
             // propagate otrsi and ytrsi to children
-            // future optimization: in case the transaction already inherited the best otrsi and ytrsi,
-            // ignore children
             for child in self.inner.get_children(&hash) {
                 children.push(child);
             }
@@ -206,6 +219,7 @@ impl MsTangle {
                 to_visit.push(tx_ref.trunk().clone());
                 to_visit.push(tx_ref.branch().clone());
             }
+
         }
     }
 

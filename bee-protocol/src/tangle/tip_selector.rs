@@ -107,10 +107,14 @@ impl TipSelector {
 
     fn check_num_selections(&self) {
         for (hash, _) in self.children.clone() {
-            if tangle().get_metadata(&hash).unwrap().num_selected >= MAX_NUM_SELECTIONS {
-                self.children.remove(&hash);
-                self.non_lazy_tips.remove(&hash);
-                self.semi_lazy_tips.remove(&hash);
+            if tangle().is_solid_entry_point(&hash) {
+                continue;
+            } else {
+                if tangle().get_metadata(&hash).unwrap().num_selected >= MAX_NUM_SELECTIONS {
+                    self.children.remove(&hash);
+                    self.non_lazy_tips.remove(&hash);
+                    self.semi_lazy_tips.remove(&hash);
+                }
             }
         }
     }
