@@ -94,7 +94,7 @@ fn visit_parents_depth_first_in_simple_graph() {
     visit_parents_depth_first(
         &tangle,
         e_hash,
-        |_, _| true,
+        |_, _, _| true,
         |_, data, _| addresses.push(data.address().clone()),
         |_| (),
     );

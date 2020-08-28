@@ -11,6 +11,7 @@
 
 use crate::{
     config::slice_eq,
+    event::HandshakeCompleted,
     message::{
         messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
     },
@@ -212,15 +213,17 @@ impl PeerHandshakerWorker {
 
                         Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
 
+                        Protocol::get().bus.dispatch(HandshakeCompleted(address));
+
                         Protocol::send_heartbeat(
                             self.peer.epid,
                             tangle().get_last_solid_milestone_index(),
                             tangle().get_snapshot_milestone_index(),
-                        )
-                        .await;
+                            tangle().get_last_milestone_index(),
+                        );
 
                         Protocol::request_last_milestone(Some(self.peer.epid));
-                        Protocol::trigger_milestone_solidification().await;
+                        Protocol::trigger_milestone_solidification();
 
                         self.status = HandshakeStatus::Done;
                     }
@@ -231,13 +234,13 @@ impl PeerHandshakerWorker {
                 Err(e) => {
                     warn!("[{}] Reading Handshake failed: {:?}.", self.peer.address, e);
 
-                    Protocol::get().metrics.invalid_messages_received_inc();
+                    Protocol::get().metrics.invalid_messages_inc();
                 }
             }
         } else {
             warn!("[{}] Ignoring messages until fully handshaked.", self.peer.address);
 
-            Protocol::get().metrics.invalid_messages_received_inc();
+            Protocol::get().metrics.invalid_messages_inc();
         }
 
         Ok(())

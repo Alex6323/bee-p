@@ -13,22 +13,27 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Default)]
 pub struct ProtocolMetrics {
-    invalid_transactions_received: AtomicU64,
-    stale_transactions_received: AtomicU64,
-    new_transactions_received: AtomicU64,
-    known_transactions_received: AtomicU64,
+    invalid_transactions: AtomicU64,
+    stale_transactions: AtomicU64,
+    new_transactions: AtomicU64,
+    known_transactions: AtomicU64,
 
-    invalid_messages_received: AtomicU64,
+    invalid_messages: AtomicU64,
 
-    milestone_request_received: AtomicU64,
-    transaction_received: AtomicU64,
-    transaction_request_received: AtomicU64,
-    heartbeat_received: AtomicU64,
+    milestone_requests_received: AtomicU64,
+    transactions_received: AtomicU64,
+    transaction_requests_received: AtomicU64,
+    heartbeats_received: AtomicU64,
 
-    milestone_request_sent: AtomicU64,
-    transaction_sent: AtomicU64,
-    transaction_request_sent: AtomicU64,
-    heartbeat_sent: AtomicU64,
+    milestone_requests_sent: AtomicU64,
+    transactions_sent: AtomicU64,
+    transaction_requests_sent: AtomicU64,
+    heartbeats_sent: AtomicU64,
+
+    value_transactions: AtomicU64,
+    non_value_transactions: AtomicU64,
+    confirmed_transactions: AtomicU64,
+    conflicting_transactions: AtomicU64,
 }
 
 impl ProtocolMetrics {
@@ -38,108 +43,140 @@ impl ProtocolMetrics {
 }
 
 impl ProtocolMetrics {
-    pub fn invalid_transactions_received(&self) -> u64 {
-        self.invalid_transactions_received.load(Ordering::Relaxed)
+    pub fn invalid_transactions(&self) -> u64 {
+        self.invalid_transactions.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn invalid_transactions_received_inc(&self) -> u64 {
-        self.invalid_transactions_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn invalid_transactions_inc(&self) -> u64 {
+        self.invalid_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn stale_transactions_received(&self) -> u64 {
-        self.stale_transactions_received.load(Ordering::Relaxed)
+    pub fn stale_transactions(&self) -> u64 {
+        self.stale_transactions.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn stale_transactions_received_inc(&self) -> u64 {
-        self.stale_transactions_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn stale_transactions_inc(&self) -> u64 {
+        self.stale_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn new_transactions_received(&self) -> u64 {
-        self.new_transactions_received.load(Ordering::Relaxed)
+    pub fn new_transactions(&self) -> u64 {
+        self.new_transactions.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn new_transactions_received_inc(&self) -> u64 {
-        self.new_transactions_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn new_transactions_inc(&self) -> u64 {
+        self.new_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn known_transactions_received(&self) -> u64 {
-        self.known_transactions_received.load(Ordering::Relaxed)
+    pub fn known_transactions(&self) -> u64 {
+        self.known_transactions.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn known_transactions_received_inc(&self) -> u64 {
-        self.known_transactions_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn known_transactions_inc(&self) -> u64 {
+        self.known_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn invalid_messages_received(&self) -> u64 {
-        self.invalid_messages_received.load(Ordering::Relaxed)
+    pub fn invalid_messages(&self) -> u64 {
+        self.invalid_messages.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn invalid_messages_received_inc(&self) -> u64 {
-        self.invalid_messages_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn invalid_messages_inc(&self) -> u64 {
+        self.invalid_messages.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn milestone_request_received(&self) -> u64 {
-        self.milestone_request_received.load(Ordering::Relaxed)
+    pub fn milestone_requests_received(&self) -> u64 {
+        self.milestone_requests_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn milestone_request_received_inc(&self) -> u64 {
-        self.milestone_request_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn milestone_requests_received_inc(&self) -> u64 {
+        self.milestone_requests_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_received(&self) -> u64 {
-        self.transaction_received.load(Ordering::Relaxed)
+    pub fn transactions_received(&self) -> u64 {
+        self.transactions_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_received_inc(&self) -> u64 {
-        self.transaction_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transactions_received_inc(&self) -> u64 {
+        self.transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_request_received(&self) -> u64 {
-        self.transaction_request_received.load(Ordering::Relaxed)
+    pub fn transaction_requests_received(&self) -> u64 {
+        self.transaction_requests_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_request_received_inc(&self) -> u64 {
-        self.transaction_request_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transaction_requests_received_inc(&self) -> u64 {
+        self.transaction_requests_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn heartbeat_received(&self) -> u64 {
-        self.heartbeat_received.load(Ordering::Relaxed)
+    pub fn heartbeats_received(&self) -> u64 {
+        self.heartbeats_received.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn heartbeat_received_inc(&self) -> u64 {
-        self.heartbeat_received.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn heartbeats_received_inc(&self) -> u64 {
+        self.heartbeats_received.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn milestone_request_sent(&self) -> u64 {
-        self.milestone_request_sent.load(Ordering::Relaxed)
+    pub fn milestone_requests_sent(&self) -> u64 {
+        self.milestone_requests_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn milestone_request_sent_inc(&self) -> u64 {
-        self.milestone_request_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn milestone_requests_sent_inc(&self) -> u64 {
+        self.milestone_requests_sent.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_sent(&self) -> u64 {
-        self.transaction_sent.load(Ordering::Relaxed)
+    pub fn transactions_sent(&self) -> u64 {
+        self.transactions_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_sent_inc(&self) -> u64 {
-        self.transaction_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transactions_sent_inc(&self) -> u64 {
+        self.transactions_sent.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn transaction_request_sent(&self) -> u64 {
-        self.transaction_request_sent.load(Ordering::Relaxed)
+    pub fn transaction_requests_sent(&self) -> u64 {
+        self.transaction_requests_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn transaction_request_sent_inc(&self) -> u64 {
-        self.transaction_request_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn transaction_requests_sent_inc(&self) -> u64 {
+        self.transaction_requests_sent.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn heartbeat_sent(&self) -> u64 {
-        self.heartbeat_sent.load(Ordering::Relaxed)
+    pub fn heartbeats_sent(&self) -> u64 {
+        self.heartbeats_sent.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn heartbeat_sent_inc(&self) -> u64 {
-        self.heartbeat_sent.fetch_add(1, Ordering::SeqCst)
+    pub(crate) fn heartbeats_sent_inc(&self) -> u64 {
+        self.heartbeats_sent.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn value_transactions(&self) -> u64 {
+        self.value_transactions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn value_transactions_inc(&self) -> u64 {
+        self.value_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn non_value_transactions(&self) -> u64 {
+        self.non_value_transactions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn non_value_transactions_inc(&self) -> u64 {
+        self.non_value_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn confirmed_transactions(&self) -> u64 {
+        self.confirmed_transactions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn confirmed_transactions_inc(&self) -> u64 {
+        self.confirmed_transactions.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn conflicting_transactions(&self) -> u64 {
+        self.conflicting_transactions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn conflicting_transactions_inc(&self) -> u64 {
+        self.conflicting_transactions.fetch_add(1, Ordering::SeqCst)
     }
 }
 
@@ -149,65 +186,85 @@ mod tests {
     use super::*;
 
     #[test]
-    fn protocol_metrics_transactions_received_test() {
+    fn protocol_metrics_transactions() {
         let metrics = ProtocolMetrics::default();
 
-        assert_eq!(metrics.invalid_transactions_received(), 0);
-        assert_eq!(metrics.stale_transactions_received(), 0);
-        assert_eq!(metrics.new_transactions_received(), 0);
-        assert_eq!(metrics.known_transactions_received(), 0);
+        assert_eq!(metrics.invalid_transactions(), 0);
+        assert_eq!(metrics.stale_transactions(), 0);
+        assert_eq!(metrics.new_transactions(), 0);
+        assert_eq!(metrics.known_transactions(), 0);
 
-        metrics.invalid_transactions_received_inc();
-        metrics.stale_transactions_received_inc();
-        metrics.new_transactions_received_inc();
-        metrics.known_transactions_received_inc();
+        metrics.invalid_transactions_inc();
+        metrics.stale_transactions_inc();
+        metrics.new_transactions_inc();
+        metrics.known_transactions_inc();
 
-        assert_eq!(metrics.invalid_transactions_received(), 1);
-        assert_eq!(metrics.stale_transactions_received(), 1);
-        assert_eq!(metrics.new_transactions_received(), 1);
-        assert_eq!(metrics.known_transactions_received(), 1);
+        assert_eq!(metrics.invalid_transactions(), 1);
+        assert_eq!(metrics.stale_transactions(), 1);
+        assert_eq!(metrics.new_transactions(), 1);
+        assert_eq!(metrics.known_transactions(), 1);
     }
 
     #[test]
-    fn protocol_metrics_messages_received_test() {
+    fn protocol_metrics_messages_received() {
         let metrics = ProtocolMetrics::default();
 
-        assert_eq!(metrics.invalid_messages_received(), 0);
-        assert_eq!(metrics.milestone_request_received(), 0);
-        assert_eq!(metrics.transaction_received(), 0);
-        assert_eq!(metrics.transaction_request_received(), 0);
-        assert_eq!(metrics.heartbeat_received(), 0);
+        assert_eq!(metrics.invalid_messages(), 0);
+        assert_eq!(metrics.milestone_requests_received(), 0);
+        assert_eq!(metrics.transactions_received(), 0);
+        assert_eq!(metrics.transaction_requests_received(), 0);
+        assert_eq!(metrics.heartbeats_received(), 0);
 
-        metrics.invalid_messages_received_inc();
-        metrics.milestone_request_received_inc();
-        metrics.transaction_received_inc();
-        metrics.transaction_request_received_inc();
-        metrics.heartbeat_received_inc();
+        metrics.invalid_messages_inc();
+        metrics.milestone_requests_received_inc();
+        metrics.transactions_received_inc();
+        metrics.transaction_requests_received_inc();
+        metrics.heartbeats_received_inc();
 
-        assert_eq!(metrics.invalid_messages_received(), 1);
-        assert_eq!(metrics.milestone_request_received(), 1);
-        assert_eq!(metrics.transaction_received(), 1);
-        assert_eq!(metrics.transaction_request_received(), 1);
-        assert_eq!(metrics.heartbeat_received(), 1);
+        assert_eq!(metrics.invalid_messages(), 1);
+        assert_eq!(metrics.milestone_requests_received(), 1);
+        assert_eq!(metrics.transactions_received(), 1);
+        assert_eq!(metrics.transaction_requests_received(), 1);
+        assert_eq!(metrics.heartbeats_received(), 1);
     }
 
     #[test]
-    fn protocol_metrics_messages_sent_test() {
+    fn protocol_metrics_messages_sent() {
         let metrics = ProtocolMetrics::default();
 
-        assert_eq!(metrics.milestone_request_sent(), 0);
-        assert_eq!(metrics.transaction_sent(), 0);
-        assert_eq!(metrics.transaction_request_sent(), 0);
-        assert_eq!(metrics.heartbeat_sent(), 0);
+        assert_eq!(metrics.milestone_requests_sent(), 0);
+        assert_eq!(metrics.transactions_sent(), 0);
+        assert_eq!(metrics.transaction_requests_sent(), 0);
+        assert_eq!(metrics.heartbeats_sent(), 0);
 
-        metrics.milestone_request_sent_inc();
-        metrics.transaction_sent_inc();
-        metrics.transaction_request_sent_inc();
-        metrics.heartbeat_sent_inc();
+        metrics.milestone_requests_sent_inc();
+        metrics.transactions_sent_inc();
+        metrics.transaction_requests_sent_inc();
+        metrics.heartbeats_sent_inc();
 
-        assert_eq!(metrics.milestone_request_sent(), 1);
-        assert_eq!(metrics.transaction_sent(), 1);
-        assert_eq!(metrics.transaction_request_sent(), 1);
-        assert_eq!(metrics.heartbeat_sent(), 1);
+        assert_eq!(metrics.milestone_requests_sent(), 1);
+        assert_eq!(metrics.transactions_sent(), 1);
+        assert_eq!(metrics.transaction_requests_sent(), 1);
+        assert_eq!(metrics.heartbeats_sent(), 1);
+    }
+
+    #[test]
+    fn protocol_metrics_confirmation() {
+        let metrics = ProtocolMetrics::default();
+
+        assert_eq!(metrics.value_transactions(), 0);
+        assert_eq!(metrics.non_value_transactions(), 0);
+        assert_eq!(metrics.confirmed_transactions(), 0);
+        assert_eq!(metrics.conflicting_transactions(), 0);
+
+        metrics.value_transactions_inc();
+        metrics.non_value_transactions_inc();
+        metrics.confirmed_transactions_inc();
+        metrics.conflicting_transactions_inc();
+
+        assert_eq!(metrics.value_transactions(), 1);
+        assert_eq!(metrics.non_value_transactions(), 1);
+        assert_eq!(metrics.confirmed_transactions(), 1);
+        assert_eq!(metrics.conflicting_transactions(), 1);
     }
 }

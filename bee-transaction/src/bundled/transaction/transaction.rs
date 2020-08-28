@@ -12,8 +12,8 @@
 use crate::{
     bundled::{
         constants::{
-            Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, INDEX, LAST_INDEX, NONCE,
-            OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
+            Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, ESSENCE_TRIT_LEN, INDEX,
+            LAST_INDEX, NONCE, OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
         },
         Address, BundledTransactionBuilder, BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, Value,
     },
@@ -243,6 +243,44 @@ impl BundledTransaction {
 
     pub const fn trit_len() -> usize {
         TRANSACTION_TRIT_LEN
+    }
+
+    pub fn essence(&self) -> TritBuf {
+        let mut essence = TritBuf::<T1B1Buf>::zeros(ESSENCE_TRIT_LEN);
+
+        let address = &self.address;
+        let value = TritBuf::<T1B1Buf<_>>::from(*self.value.to_inner());
+        let obsolete_tag = &self.obsolete_tag;
+        let timestamp = TritBuf::<T1B1Buf<_>>::from(*self.timestamp.to_inner() as i128);
+        let index = TritBuf::<T1B1Buf<_>>::from(*self.index.to_inner() as i128);
+        let last_index = TritBuf::<T1B1Buf<_>>::from(*self.last_index.to_inner() as i128);
+
+        let mut start = 0;
+        let mut end = ADDRESS.trit_offset.length;
+
+        essence[start..end].copy_from(address.to_inner());
+
+        start += ADDRESS.trit_offset.length;
+        end = start + value.len();
+        essence[start..end].copy_from(&value);
+
+        start += VALUE.trit_offset.length;
+        end = start + OBSOLETE_TAG.trit_offset.length;
+        essence[start..end].copy_from(obsolete_tag.to_inner());
+
+        start += OBSOLETE_TAG.trit_offset.length;
+        end = start + timestamp.len();
+        essence[start..end].copy_from(&timestamp);
+
+        start += TIMESTAMP.trit_offset.length;
+        end = start + index.len();
+        essence[start..end].copy_from(&index);
+
+        start += INDEX.trit_offset.length;
+        end = start + last_index.len();
+        essence[start..end].copy_from(&last_index);
+
+        essence
     }
 }
 

@@ -9,8 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod config;
+use bee_protocol::Milestone;
 
-pub(crate) use config::slice_eq;
-
-pub use config::{ProtocolConfig, ProtocolConfigBuilder};
+pub struct MilestoneConfirmed {
+    pub milestone: Milestone,
+    pub timestamp: u64,
+    pub tails_referenced: usize,
+    pub tails_zero_value: usize,
+    pub tails_conflicting: usize,
+    pub tails_included: usize,
+}

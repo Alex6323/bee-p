@@ -11,6 +11,19 @@
 
 use crate::Milestone;
 
-pub struct LastMilestone(pub Milestone);
+use bee_network::Address;
 
-pub struct LastSolidMilestone(pub Milestone);
+pub struct HandshakeCompleted(pub Address);
+
+pub struct LastMilestoneChanged(pub Milestone);
+
+pub struct LastSolidMilestoneChanged(pub Milestone);
+
+pub struct TpsMetricsUpdated {
+    pub incoming: u64,
+    pub new: u64,
+    pub known: u64,
+    pub stale: u64,
+    pub invalid: u64,
+    pub outgoing: u64,
+}

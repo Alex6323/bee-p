@@ -44,8 +44,6 @@ mod tests {
 
     struct Foo;
 
-    struct Bar;
-
     #[test]
     fn basic() {
         let bus = Bus::default();

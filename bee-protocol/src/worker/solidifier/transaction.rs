@@ -11,77 +11,54 @@
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
 use bee_tangle::traversal;
 
-use std::collections::HashSet;
-
 use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
 };
 use log::info;
 
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<TransactionSolidifierWorkerEvent>>>;
+
 pub(crate) struct TransactionSolidifierWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 
-pub(crate) struct TransactionSolidifierWorker {}
+pub(crate) struct TransactionSolidifierWorker {
+    receiver: Receiver,
+}
 
 impl TransactionSolidifierWorker {
-    pub(crate) fn new() -> Self {
-        Self {}
+    pub(crate) fn new(receiver: Receiver) -> Self {
+        Self { receiver }
     }
 
     // TODO is the index even needed ? We request one milestone at a time ? No PriorityQueue ?
 
-    async fn solidify(&self, hash: Hash, index: MilestoneIndex) -> bool {
-        let mut missing_hashes = HashSet::new();
-
+    fn solidify(&self, root: Hash, index: MilestoneIndex) {
         traversal::visit_parents_depth_first(
             tangle(),
-            hash,
-            |_, metadata| !metadata.flags.is_solid() && !Protocol::get().requested.contains_key(&hash),
+            root,
+            |hash, _, metadata| {
+                !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+            },
             |_, _, _| {},
             |missing_hash| {
-                if !tangle().is_solid_entry_point(missing_hash) && !Protocol::get().requested.contains_key(&hash) {
-                    missing_hashes.insert(*missing_hash);
+                if !tangle().is_solid_entry_point(missing_hash)
+                    && !Protocol::get().requested_transactions.contains_key(&missing_hash)
+                {
+                    Protocol::request_transaction(*missing_hash, index);
                 }
             },
         );
-
-        // TODO refactor with async closures when stabilized
-        if missing_hashes.is_empty() {
-            true
-        } else {
-            for missing_hash in missing_hashes {
-                Protocol::request_transaction(missing_hash, index).await;
-            }
-
-            false
-        }
     }
 
-    pub(crate) async fn run(
-        self,
-        receiver: mpsc::Receiver<TransactionSolidifierWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                event = receiver_fused.next() => {
-                    if let Some(TransactionSolidifierWorkerEvent(hash, index)) = event {
-                        self.solidify(hash, index).await;
-                    }
-                }
-            }
+        while let Some(TransactionSolidifierWorkerEvent(hash, index)) = self.receiver.next().await {
+            self.solidify(hash, index);
         }
 
         info!("Stopped.");

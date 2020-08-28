@@ -10,9 +10,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod config;
+mod download;
 mod metadata;
 mod snapshot;
 
 pub use config::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
+pub use download::download_local_snapshot;
 pub use metadata::LocalSnapshotMetadata;
 pub use snapshot::{Error, LocalSnapshot};

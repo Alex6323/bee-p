@@ -16,12 +16,11 @@ use crate::{
     },
     peer::HandshakedPeer,
     protocol::Protocol,
-    worker::{
-        peer::MessageHandler, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent, TransactionWorkerEvent,
-    },
+    tangle::tangle,
+    worker::{peer::MessageHandler, HasherWorkerEvent, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent},
 };
 
-use futures::{channel::mpsc, sink::SinkExt};
+use futures::channel::mpsc;
 use log::{debug, error, info, warn};
 
 use std::sync::Arc;
@@ -33,16 +32,16 @@ pub(crate) enum PeerWorkerError {
 
 pub struct PeerWorker {
     peer: Arc<HandshakedPeer>,
-    transaction_worker: mpsc::Sender<TransactionWorkerEvent>,
-    transaction_responder_worker: mpsc::Sender<TransactionResponderWorkerEvent>,
-    milestone_responder_worker: mpsc::Sender<MilestoneResponderWorkerEvent>,
+    hasher_worker: mpsc::UnboundedSender<HasherWorkerEvent>,
+    transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
+    milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
 }
 
 impl PeerWorker {
     pub fn new(peer: Arc<HandshakedPeer>) -> Self {
         Self {
             peer,
-            transaction_worker: Protocol::get().transaction_worker.clone(),
+            hasher_worker: Protocol::get().hasher_worker.clone(),
             transaction_responder_worker: Protocol::get().transaction_responder_worker.clone(),
             milestone_responder_worker: Protocol::get().milestone_responder_worker.clone(),
         }
@@ -52,7 +51,7 @@ impl PeerWorker {
         info!("[{}] Running.", self.peer.address);
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
-            if let Err(e) = self.process_message(&header, bytes).await {
+            if let Err(e) = self.process_message(&header, bytes) {
                 error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
         }
@@ -62,28 +61,27 @@ impl PeerWorker {
         Protocol::get().peer_manager.remove(&self.peer.epid).await;
     }
 
-    async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
+    fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
         match header.message_type {
             MilestoneRequest::ID => {
                 debug!("[{}] Reading MilestoneRequest...", self.peer.address);
                 match tlv_from_bytes::<MilestoneRequest>(&header, bytes) {
                     Ok(message) => {
                         self.milestone_responder_worker
-                            .send(MilestoneResponderWorkerEvent {
+                            .unbounded_send(MilestoneResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.milestone_request_received_inc();
-                        Protocol::get().metrics.milestone_request_received_inc();
+                        self.peer.metrics.milestone_requests_received_inc();
+                        Protocol::get().metrics.milestone_requests_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading MilestoneRequest failed: {:?}.", self.peer.address, e);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                        self.peer.metrics.invalid_messages_inc();
+                        Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
@@ -91,22 +89,21 @@ impl PeerWorker {
                 debug!("[{}] Reading TransactionMessage...", self.peer.address);
                 match tlv_from_bytes::<TransactionMessage>(&header, bytes) {
                     Ok(message) => {
-                        self.transaction_worker
-                            .send(TransactionWorkerEvent {
+                        self.hasher_worker
+                            .unbounded_send(HasherWorkerEvent {
                                 from: self.peer.epid,
                                 transaction: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.transaction_received_inc();
-                        Protocol::get().metrics.transaction_received_inc();
+                        self.peer.metrics.transactions_received_inc();
+                        Protocol::get().metrics.transactions_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading TransactionMessage failed: {:?}.", self.peer.address, e);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                        self.peer.metrics.invalid_messages_inc();
+                        Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
@@ -115,21 +112,20 @@ impl PeerWorker {
                 match tlv_from_bytes::<TransactionRequest>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_responder_worker
-                            .send(TransactionResponderWorkerEvent {
+                            .unbounded_send(TransactionResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
-                            .await
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.transaction_request_received_inc();
-                        Protocol::get().metrics.transaction_request_received_inc();
+                        self.peer.metrics.transaction_requests_received_inc();
+                        Protocol::get().metrics.transaction_requests_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading TransactionRequest failed: {:?}.", self.peer.address, e);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                        self.peer.metrics.invalid_messages_inc();
+                        Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
@@ -138,18 +134,38 @@ impl PeerWorker {
                 match tlv_from_bytes::<Heartbeat>(&header, bytes) {
                     Ok(message) => {
                         self.peer
-                            .set_solid_milestone_index(message.solid_milestone_index.into());
+                            .set_last_solid_milestone_index(message.last_solid_milestone_index.into());
                         self.peer
                             .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
+                        self.peer.set_last_milestone_index(message.last_milestone_index.into());
+                        self.peer.set_connected_peers(message.connected_peers);
+                        self.peer.set_synced_peers(message.synced_peers);
 
-                        self.peer.metrics.heartbeat_received_inc();
-                        Protocol::get().metrics.heartbeat_received_inc();
+                        // // TODO Warn if can't help sync
+                        if !tangle().is_synced() {
+                            let index = *tangle().get_last_solid_milestone_index() + 1;
+
+                            if !(index > message.snapshot_milestone_index
+                                && index <= message.last_solid_milestone_index)
+                            {
+                                warn!("The peer {} can't help syncing.", self.peer.address);
+                                // TODO Drop connection if autopeered.
+                            }
+                        }
+
+                        // TODO think about a better solution
+                        if Protocol::get().peer_manager.handshaked_peers.len() == 1 {
+                            Protocol::request_milestone_fill();
+                        }
+
+                        self.peer.metrics.heartbeats_received_inc();
+                        Protocol::get().metrics.heartbeats_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading Heartbeat failed: {:?}.", self.peer.address, e);
 
-                        self.peer.metrics.invalid_messages_received_inc();
-                        Protocol::get().metrics.invalid_messages_received_inc();
+                        self.peer.metrics.invalid_messages_inc();
+                        Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
@@ -159,8 +175,8 @@ impl PeerWorker {
                     self.peer.address, header.message_type
                 );
 
-                self.peer.metrics.invalid_messages_received_inc();
-                Protocol::get().metrics.invalid_messages_received_inc();
+                self.peer.metrics.invalid_messages_inc();
+                Protocol::get().metrics.invalid_messages_inc();
             }
         };
 

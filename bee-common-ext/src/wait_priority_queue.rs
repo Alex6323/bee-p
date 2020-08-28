@@ -65,7 +65,7 @@ impl<T: Ord + Eq> WaitPriorityQueue<T> {
     }
 
     /// Returns a stream of highest-priority items from this queue.
-    pub fn incoming(&self) -> impl Stream<Item = T> + FusedStream + '_ {
+    pub fn incoming<'a>(&'a self) -> WaitIncoming<'a, T> {
         WaitIncoming { queue: self }
     }
 
@@ -107,7 +107,7 @@ impl<'a, T: Ord + Eq> FusedFuture for WaitFut<'a, T> {
     }
 }
 
-pub(crate) struct WaitIncoming<'a, T: Ord + Eq> {
+pub struct WaitIncoming<'a, T: Ord + Eq> {
     queue: &'a WaitPriorityQueue<T>,
 }
 

@@ -40,6 +40,8 @@ enum ReadState {
 /// It takes care of processing events into messages that can be processed by the workers.
 pub(super) struct MessageHandler {
     events: EventHandler,
+    // FIXME: see if we can implement `Stream` for the `MessageHandler` and use the
+    // `ShutdownStream` type instead.
     shutdown: ShutdownRecv,
     state: ReadState,
     /// The address of the peer. This field is only here for logging purposes.
@@ -68,7 +70,10 @@ impl MessageHandler {
                 // Read a header.
                 ReadState::Header => {
                     // We need `HEADER_SIZE` bytes to read a header.
-                    let bytes = self.events.fetch_bytes_or_shutdown(&mut self.shutdown, HEADER_SIZE).await?;
+                    let bytes = self
+                        .events
+                        .fetch_bytes_or_shutdown(&mut self.shutdown, HEADER_SIZE)
+                        .await?;
                     debug!("[{}] Reading Header...", self.address);
                     let header = Header::from_bytes(bytes);
                     // Now we are ready to read a payload.
@@ -77,8 +82,10 @@ impl MessageHandler {
                 // Read a payload.
                 ReadState::Payload(header) => {
                     // We read the quantity of bytes stated by the header.
-                    let bytes =
-                        self.events.fetch_bytes_or_shutdown(&mut self.shutdown, header.message_length.into()).await?;
+                    let bytes = self
+                        .events
+                        .fetch_bytes_or_shutdown(&mut self.shutdown, header.message_length.into())
+                        .await?;
                     // FIXME: Avoid this clone
                     let header = header.clone();
                     // Now we are ready to read the next message's header.
@@ -172,7 +179,8 @@ mod tests {
 
     use futures::{
         channel::{mpsc, oneshot},
-        {future::FutureExt, stream::StreamExt},
+        future::FutureExt,
+        stream::StreamExt,
     };
 
     use async_std::task;
@@ -236,9 +244,10 @@ mod tests {
         // Send all the events to the message handler.
         for event in events {
             sender.try_send(event).unwrap();
+            task::sleep(Duration::from_millis(1)).await;
         }
         // Sleep to be sure the handler had time to produce all the messages.
-        task::sleep(Duration::from_secs(1)).await;
+        task::sleep(Duration::from_millis(1)).await;
         // Send a shutdown signal.
         sender_shutdown.send(()).unwrap();
         // Await for the task with the checks to be completed.
@@ -319,12 +328,12 @@ mod tests {
 
         for event in events {
             sender.try_send(event).unwrap();
+            task::sleep(Duration::from_millis(1)).await;
         }
 
-        task::sleep(Duration::from_secs(1)).await;
         sender_shutdown.send(()).unwrap();
+        task::sleep(Duration::from_millis(1)).await;
         // Send the last event after the shutdown signal
-        task::sleep(Duration::from_secs(1)).await;
         sender.try_send(last_event).unwrap();
 
         handle.await;

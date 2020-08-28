@@ -14,18 +14,18 @@
 use crate::{
     message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     peer::{HandshakedPeer, Peer},
-    protocol::Protocol,
     worker::SenderWorker,
 };
 
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_network::{Address, EndpointId, Network};
-
-use std::sync::{Arc, Mutex};
 
 use async_std::{sync::RwLock, task::spawn};
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
+
+use std::sync::{Arc, Mutex};
 
 pub(crate) struct PeerManager {
     network: Network,
@@ -53,23 +53,19 @@ impl PeerManager {
             // TODO check if not already added
 
             // SenderWorker MilestoneRequest
-            let (milestone_request_tx, milestone_request_rx) =
-                mpsc::channel(Protocol::get().config.workers.milestone_request_send_worker_bound);
+            let (milestone_request_tx, milestone_request_rx) = mpsc::unbounded();
             let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
 
             // SenderWorker TransactionMessage
-            let (transaction_tx, transaction_rx) =
-                mpsc::channel(Protocol::get().config.workers.transaction_send_worker_bound);
+            let (transaction_tx, transaction_rx) = mpsc::unbounded();
             let (transaction_shutdown_tx, transaction_shutdown_rx) = oneshot::channel();
 
             // SenderWorker TransactionRequest
-            let (transaction_request_tx, transaction_request_rx) =
-                mpsc::channel(Protocol::get().config.workers.transaction_request_send_worker_bound);
+            let (transaction_request_tx, transaction_request_rx) = mpsc::unbounded();
             let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
 
             // SenderWorker Heartbeat
-            let (heartbeat_tx, heartbeat_rx) =
-                mpsc::channel(Protocol::get().config.workers.heartbeat_send_worker_bound);
+            let (heartbeat_tx, heartbeat_rx) = mpsc::unbounded();
             let (heartbeat_shutdown_tx, heartbeat_shutdown_rx) = oneshot::channel();
 
             let peer = Arc::new(HandshakedPeer::new(
@@ -87,19 +83,40 @@ impl PeerManager {
             self.handshaked_peers.insert(*epid, peer.clone());
             self.handshaked_peers_keys.write().await.push(*epid);
 
+            // TODO Add to shutdown ?
+
             spawn(
-                SenderWorker::<MilestoneRequest>::new(self.network.clone(), peer.clone())
-                    .run(milestone_request_rx, milestone_request_shutdown_rx),
+                SenderWorker::<MilestoneRequest>::new(
+                    self.network.clone(),
+                    peer.clone(),
+                    ShutdownStream::new(milestone_request_shutdown_rx, milestone_request_rx),
+                )
+                .run(),
             );
             spawn(
-                SenderWorker::<TransactionMessage>::new(self.network.clone(), peer.clone())
-                    .run(transaction_rx, transaction_shutdown_rx),
+                SenderWorker::<TransactionMessage>::new(
+                    self.network.clone(),
+                    peer.clone(),
+                    ShutdownStream::new(transaction_shutdown_rx, transaction_rx),
+                )
+                .run(),
             );
             spawn(
-                SenderWorker::<TransactionRequest>::new(self.network.clone(), peer.clone())
-                    .run(transaction_request_rx, transaction_request_shutdown_rx),
+                SenderWorker::<TransactionRequest>::new(
+                    self.network.clone(),
+                    peer.clone(),
+                    ShutdownStream::new(transaction_request_shutdown_rx, transaction_request_rx),
+                )
+                .run(),
             );
-            spawn(SenderWorker::<Heartbeat>::new(self.network.clone(), peer).run(heartbeat_rx, heartbeat_shutdown_rx));
+            spawn(
+                SenderWorker::<Heartbeat>::new(
+                    self.network.clone(),
+                    peer,
+                    ShutdownStream::new(heartbeat_shutdown_rx, heartbeat_rx),
+                )
+                .run(),
+            );
         }
     }
 

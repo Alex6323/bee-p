@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::bundled::{
-    constants::{ADDRESS, INDEX, IOTA_SUPPLY, LAST_INDEX, OBSOLETE_TAG, TIMESTAMP, VALUE},
+    constants::{ADDRESS, ESSENCE_TRIT_LEN, INDEX, IOTA_SUPPLY, OBSOLETE_TAG, TIMESTAMP, VALUE},
     Address, BundledTransaction, BundledTransactionError, BundledTransactionField, Index, Nonce, Payload, Tag,
     Timestamp, Value,
 };
@@ -43,14 +43,8 @@ impl BundledTransactionBuilder {
     }
 
     pub fn essence(&self) -> TritBuf {
-        let mut essence = TritBuf::<T1B1Buf>::zeros(
-            ADDRESS.trit_offset.length
-                + VALUE.trit_offset.length
-                + OBSOLETE_TAG.trit_offset.length
-                + TIMESTAMP.trit_offset.length
-                + INDEX.trit_offset.length
-                + LAST_INDEX.trit_offset.length,
-        );
+        let mut essence = TritBuf::<T1B1Buf>::zeros(ESSENCE_TRIT_LEN);
+
         let address = self.address.as_ref().unwrap();
         let value = TritBuf::<T1B1Buf<_>>::from(*self.value.as_ref().unwrap().to_inner());
         let obsolete_tag = self.obsolete_tag.as_ref().unwrap();
@@ -60,6 +54,7 @@ impl BundledTransactionBuilder {
 
         let mut start = 0;
         let mut end = ADDRESS.trit_offset.length;
+
         essence[start..end].copy_from(address.to_inner());
 
         start += ADDRESS.trit_offset.length;

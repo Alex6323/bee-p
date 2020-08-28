@@ -14,36 +14,37 @@
 use crate::{
     config::NodeConfig,
     constants::{BEE_GIT_COMMIT, BEE_VERSION},
+    plugin,
 };
 
-use bee_common::shutdown::Shutdown;
+use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
 use bee_crypto::ternary::Hash;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::local::{Error as SnapshotReadError, LocalSnapshot};
+use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
 
 use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
-    select,
     sink::SinkExt,
     stream::{Fuse, StreamExt},
-    FutureExt,
 };
 use log::{debug, error, info, warn};
 use thiserror::Error;
 
 use std::{collections::HashMap, sync::Arc};
 
+type Receiver = ShutdownStream<Fuse<EventSubscriber>>;
+
 /// All possible node errors.
 #[derive(Error, Debug)]
 pub enum Error {
     /// Occurs, when there is an error while reading the snapshot file.
     #[error("Reading the snapshot file failed.")]
-    SnapshotReadError(SnapshotReadError),
+    LocalSnapshotReadError(LocalSnapshotReadError),
 
     /// Occurs, when there is an error while shutting down the node.
     #[error("Shutting down failed.")]
@@ -63,17 +64,14 @@ impl NodeBuilder {
         let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
-        info!("Initializing network...");
-        let (network, events) = bee_network::init(self.config.network, &mut shutdown);
-
         info!("Initializing tangle...");
         tangle::init();
 
-        info!("Starting static peer manager...");
-        spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
+        // TODO handle error
+        download_local_snapshot(&self.config.snapshot.local());
 
         info!("Reading snapshot file...");
-        let snapshot_state = match block_on(LocalSnapshot::from_file(self.config.snapshot.local().file_path())) {
+        let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()) {
             Ok(local_snapshot) => {
                 info!(
                     "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
@@ -103,7 +101,7 @@ impl NodeBuilder {
                     // TODO request ?
                 }
 
-                local_snapshot.into_state()
+                local_snapshot
             }
             Err(e) => {
                 error!(
@@ -111,26 +109,49 @@ impl NodeBuilder {
                     self.config.snapshot.local().file_path(),
                     e
                 );
-                return Err(Error::SnapshotReadError(e));
+                return Err(Error::LocalSnapshotReadError(e));
             }
         };
 
+        // TODO this is temporary
+        let snapshot_index = local_snapshot.metadata().index();
+        let snapshot_timestamp = local_snapshot.metadata().timestamp();
+
+        info!("Initializing network...");
+        let (network, events) = bee_network::init(self.config.network, &mut shutdown);
+
+        info!("Starting static peer manager...");
+        spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
+
         info!("Initializing ledger...");
-        bee_ledger::init(snapshot_state.into_balances(), &mut shutdown);
+        bee_ledger::whiteflag::init(
+            snapshot_index,
+            local_snapshot.into_state().into_balances(),
+            self.config.protocol.coordinator().clone(),
+            bus.clone(),
+            &mut shutdown,
+        );
 
         block_on(Protocol::init(
             self.config.protocol.clone(),
             network.clone(),
+            snapshot_timestamp,
             bus.clone(),
             &mut shutdown,
         ));
 
+        info!("Initializing plugins...");
+
+        plugin::init(bus, &mut shutdown);
+
         info!("Initialized.");
 
+        let (sender, receiver) = shutdown_listener();
+
         Ok(Node {
-            config: self.config,
+            sender,
             network,
-            events: events.fuse(),
+            receiver: ShutdownStream::new(receiver, events),
             shutdown,
             peers: HashMap::new(),
         })
@@ -139,10 +160,11 @@ impl NodeBuilder {
 
 /// The main node type.
 pub struct Node {
-    config: NodeConfig,
+    // TODO temporary to keep it alive
+    sender: oneshot::Sender<()>,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
-    events: Fuse<EventSubscriber>,
+    receiver: Receiver,
     shutdown: Shutdown,
     // TODO design proper type `PeerList`
     peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
@@ -153,33 +175,26 @@ impl Node {
     pub fn run_loop(&mut self) {
         info!("Running.");
 
-        let mut shutdown = shutdown_listener().fuse();
-
         block_on(async {
-            loop {
-                select! {
-                    _ = shutdown => break,
-                    event = self.events.next() => {
-                        if let Some(event) = event {
-                            debug!("Received event {}.", event);
+            while let Some(event) = self.receiver.next().await {
+                debug!("Received event {}.", event);
 
-                            self.handle_event(event).await;
-                        }
-                    }
-                }
+                self.handle_event(event).await;
             }
         });
+
+        info!("Stopped.");
     }
 
     #[inline]
     async fn handle_event(&mut self, event: Event) {
         match event {
             Event::EndpointAdded { epid, .. } => self.endpoint_added_handler(epid).await,
-            Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid).await,
+            Event::EndpointRemoved { epid, .. } => self.endpoint_removed_handler(epid),
             Event::EndpointConnected {
                 epid, origin, address, ..
-            } => self.endpoint_connected_handler(epid, address, origin).await,
-            Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid).await,
+            } => self.endpoint_connected_handler(epid, address, origin),
+            Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid),
             Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
             _ => warn!("Unsupported event {}.", event),
         }
@@ -209,17 +224,17 @@ impl Node {
         }
     }
 
-    async fn endpoint_removed_handler(&mut self, epid: EndpointId) {
+    fn endpoint_removed_handler(&mut self, epid: EndpointId) {
         info!("Endpoint {} has been removed.", epid);
     }
 
-    async fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
+    fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
         let (receiver_tx, receiver_shutdown_tx) = Protocol::register(epid, address, origin);
 
         self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx));
     }
 
-    async fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
+    fn endpoint_disconnected_handler(&mut self, epid: EndpointId) {
         // TODO unregister ?
         if let Some((_, shutdown)) = self.peers.remove(&epid) {
             if let Err(e) = shutdown.send(()) {
@@ -238,30 +253,38 @@ impl Node {
 }
 
 // TODO return a Result
-fn shutdown_listener() -> oneshot::Receiver<()> {
+fn shutdown_listener() -> (oneshot::Sender<()>, oneshot::Receiver<()>) {
     let (sender, receiver) = oneshot::channel();
 
-    spawn(async move {
-        let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime.");
+    // TODO temporarily disabled because conflicting with receiving messages
 
-        rt.block_on(tokio::signal::ctrl_c()).expect("Error blocking on CTRL-C.");
+    // spawn(async move {
+    //     let mut rt = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime.");
+    //
+    //     rt.block_on(tokio::signal::ctrl_c()).expect("Error blocking on CTRL-C.");
+    //
+    //     sender.send(()).expect("Error sending shutdown signal.");
+    // });
 
-        sender.send(()).expect("Error sending shutdown signal.");
-    });
-
-    receiver
+    // TODO temporarily returns sender as well
+    (sender, receiver)
 }
 
 fn print_banner_and_version() {
+    let commit = if BEE_GIT_COMMIT.is_empty() {
+        "".to_owned()
+    } else {
+        "-".to_owned() + &BEE_GIT_COMMIT[0..7]
+    };
     println!(
-        "\n{}\tv{}-{}\n{}\n",
+        "\n{}\n   v{}{}\n",
         " ██████╗░███████╗███████╗
  ██╔══██╗██╔════╝██╔════╝
- ██████╦╝█████╗░░█████╗░░",
-        BEE_VERSION,
-        &BEE_GIT_COMMIT[0..7],
-        " ██╔══██╗██╔══╝░░██╔══╝░░
+ ██████╦╝█████╗░░█████╗░░
+ ██╔══██╗██╔══╝░░██╔══╝░░
  ██████╦╝███████╗███████╗
  ╚═════╝░╚══════╝╚══════╝",
+        BEE_VERSION,
+        commit,
     );
 }

@@ -18,7 +18,7 @@ pub use metadata::TransactionMetadata;
 // pub(crate) mod propagator;
 
 use crate::{
-    events::LastSolidMilestone,
+    event::LastSolidMilestoneChanged,
     milestone::{Milestone, MilestoneIndex},
     protocol::Protocol,
     tangle::flags::Flags,
@@ -93,7 +93,7 @@ impl MsTangle {
                         // before being solidified, we then also need to check when a milestone gets validated if it's
                         // already solid.
                         if metadata.flags.is_milestone() {
-                            Protocol::get().bus.dispatch(LastSolidMilestone(Milestone {
+                            Protocol::get().bus.dispatch(LastSolidMilestoneChanged(Milestone {
                                 hash: *hash,
                                 index: metadata.milestone_index,
                             }));
@@ -173,6 +173,7 @@ impl MsTangle {
         self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
+    // TODO reduce to one atomic value ?
     pub fn is_synced(&self) -> bool {
         self.get_last_solid_milestone_index() == self.get_last_milestone_index()
     }

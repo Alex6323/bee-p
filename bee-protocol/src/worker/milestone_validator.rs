@@ -10,13 +10,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    events::{LastMilestone, LastSolidMilestone},
+    event::{LastMilestoneChanged, LastSolidMilestoneChanged},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::tangle,
 };
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
     Hash,
@@ -25,14 +25,14 @@ use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
 use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    select,
-    stream::StreamExt,
+    channel::mpsc,
+    stream::{Fuse, StreamExt},
 };
 use log::{debug, info};
 
 use std::marker::PhantomData;
+
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneValidatorWorkerEvent>>>;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -42,9 +42,10 @@ pub(crate) enum MilestoneValidatorWorkerError {
     InvalidMilestone(MilestoneBuilderError),
 }
 
-pub(crate) type MilestoneValidatorWorkerEvent = Hash;
+pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct MilestoneValidatorWorker<M, P> {
+    receiver: Receiver,
     mss_sponge: PhantomData<M>,
     public_key: PhantomData<P>,
 }
@@ -55,14 +56,15 @@ where
     P: PublicKey,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(receiver: Receiver) -> Self {
         Self {
+            receiver,
             mss_sponge: PhantomData,
             public_key: PhantomData,
         }
     }
 
-    async fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
+    fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
         // TODO also do an IncomingBundleBuilder check ?
         let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
         let mut transaction = tangle()
@@ -92,9 +94,9 @@ where
             .build())
     }
 
-    async fn process(&self, tail_hash: Hash) {
+    fn process(&self, tail_hash: Hash) {
         // TODO split
-        match self.validate_milestone(tail_hash).await {
+        match self.validate_milestone(tail_hash) {
             Ok(milestone) => {
                 // TODO check multiple triggers
                 tangle().add_milestone(milestone.index, milestone.hash);
@@ -104,17 +106,18 @@ where
                 // already vadidated.
                 if let Some(meta) = tangle().get_metadata(&milestone.hash) {
                     if meta.flags.is_solid() {
-                        Protocol::get().bus.dispatch(LastSolidMilestone(milestone.clone()));
+                        Protocol::get()
+                            .bus
+                            .dispatch(LastSolidMilestoneChanged(milestone.clone()));
                     }
                 }
 
                 if milestone.index > tangle().get_last_milestone_index() {
-                    Protocol::get().bus.dispatch(LastMilestone(milestone));
+                    Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
                 }
 
-                // TODO only trigger if index == last solid index ?
-                // TODO trigger only if requester is empty ? And unsynced ?
-                // Protocol::trigger_transaction_solidification(milestone.hash).await;
+                Protocol::get().requested_milestones.remove(&milestone.index);
+                Protocol::request_milestone_fill();
             }
             Err(e) => match e {
                 MilestoneValidatorWorkerError::IncompleteBundle => {}
@@ -124,25 +127,11 @@ where
     }
 
     // TODO PriorityQueue ?
-    pub(crate) async fn run(
-        self,
-        receiver: mpsc::Receiver<MilestoneValidatorWorkerEvent>,
-        shutdown: oneshot::Receiver<()>,
-    ) -> Result<(), WorkerError> {
+    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        let mut receiver_fused = receiver.fuse();
-        let mut shutdown_fused = shutdown.fuse();
-
-        loop {
-            select! {
-                _ = shutdown_fused => break,
-                tail_hash = receiver_fused.next() => {
-                    if let Some(tail_hash) = tail_hash {
-                        self.process(tail_hash).await;
-                    }
-                }
-            }
+        while let Some(MilestoneValidatorWorkerEvent(tail_hash)) = self.receiver.next().await {
+            self.process(tail_hash);
         }
 
         info!("Stopped.");
