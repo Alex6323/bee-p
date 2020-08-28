@@ -91,7 +91,7 @@ macro_rules! impl_transaction_ops {
                 let mut hash_buf: Vec<u8> = Vec::new();
                 hash.encode_persistable(&mut hash_buf);
                 if let Some(res) = storage.inner.get_cf(&hash_to_tx, hash_buf.as_slice())? {
-                    let transaction: Self = Self::decode_persistable(res.as_slice(), res.len());
+                    let transaction: Self = Self::decode_persistable(res.as_slice());
                     Ok(Some(transaction))
                 } else {
                     Ok(None)

@@ -89,7 +89,7 @@ macro_rules! impl_milestone_ops {
                 let mut hash_buf: Vec<u8> = Vec::new();
                 hash.encode_persistable(&mut hash_buf);
                 if let Some(res) = storage.inner.get_cf(&ms_hash_to_ms_index, hash_buf.as_slice())? {
-                    let ms_index: MilestoneIndex = MilestoneIndex::decode_persistable(res.as_slice(), res.len());
+                    let ms_index: MilestoneIndex = MilestoneIndex::decode_persistable(res.as_slice());
                     Ok(Some(Milestone::new(hash, ms_index)))
                 } else {
                     Ok(None)
