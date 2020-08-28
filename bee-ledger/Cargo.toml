@@ -18,6 +18,7 @@ bee-protocol = { path = "../bee-protocol" }
 bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
+bee-storage = { path = "../bee-storage" }
 
 async-std = "1.6.2"
 blake2 = "0.9.0"

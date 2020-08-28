@@ -11,20 +11,17 @@ keywords = ["iota", "tangle", "bee", "framework", "storage"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-protocol = { path = "../bee-protocol"}
-bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
-bee-transaction = { path = "../bee-transaction" }
-
-async-std = { version = "1.6.2", features = [ "attributes" ] }
 async-trait = "0.1.36"
-bincode = "1.2.1"
-bytemuck = "1.2.0"
-futures = "0.3.5"
-itertools = "0.9.0"
 num_cpus = "1.12.0"
-rand = "0.7.3"
+bytemuck = "1.2.0"
 rocksdb = { version = "0.14.0", default-features = false }
-sqlx = {version = "0.3.2", features = [ "postgres" ]}
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.5"
 
 [dev-dependencies]
-bee-test = { path = "../bee-test"}
+async-std = "1.6.2"
+bee-test = {path = "../bee-test"}
+
+[features]
+default = ["rocks_db"]
+rocks_db = []

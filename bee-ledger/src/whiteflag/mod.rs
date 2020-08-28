@@ -9,12 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+mod b1t6;
 mod bundle;
-mod confirmation;
-mod merkle;
+mod merkle_hasher;
+mod metadata;
 mod traversal;
 mod worker;
-mod b1t6;
 
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;

@@ -11,6 +11,8 @@
 
 use bee_transaction::bundled::Address;
 
+use bee_storage::persistable::Persistable;
+
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -19,5 +21,14 @@ pub(crate) struct LedgerDiff(pub(crate) HashMap<Address, i64>);
 impl LedgerDiff {
     pub(crate) fn apply(&mut self, address: Address, diff: i64) {
         self.0.entry(address).and_modify(|d| *d += diff).or_insert(diff);
+    }
+}
+
+impl Persistable for LedgerDiff {
+    fn encode_persistable(&self, buffer: &mut Vec<u8>) {
+        self.0.encode_persistable(buffer)
+    }
+    fn decode_persistable(slice: &[u8], length: usize) -> Self {
+        LedgerDiff(HashMap::decode_persistable(slice, length))
     }
 }

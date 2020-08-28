@@ -14,3 +14,4 @@ homepage = "https://www.iota.org"
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev", features = ["serde1"] }
+bee-storage = { path = "../bee-storage" }

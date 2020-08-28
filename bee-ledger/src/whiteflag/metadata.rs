@@ -14,12 +14,16 @@ use crate::diff::LedgerDiff;
 use bee_crypto::ternary::Hash;
 use bee_protocol::MilestoneIndex;
 
+/// White flag metadata of a milestone confirmation.
 #[derive(Default)]
-pub(crate) struct Confirmation {
+pub(crate) struct WhiteFlagMetadata {
+    /// Index of the confirming milestone.
     pub(crate) index: MilestoneIndex,
+    /// Timestamp of the confirming milestone.
     pub(crate) timestamp: u64,
+    /// The ledger differences created by the confirming milestone.
     pub(crate) diff: LedgerDiff,
-    /// The number of tails which were referenced by the milestone.
+    /// The number of tails which were referenced by the confirming milestone.
     pub(crate) num_tails_referenced: usize,
     /// The number of tails which were excluded because they were part of a zero or spam value transfer.
     pub(crate) num_tails_zero_value: usize,
@@ -29,9 +33,10 @@ pub(crate) struct Confirmation {
     pub(crate) tails_included: Vec<Hash>,
 }
 
-impl Confirmation {
-    pub(crate) fn new(index: MilestoneIndex, timestamp: u64) -> Confirmation {
-        Confirmation {
+impl WhiteFlagMetadata {
+    /// Creates a new white flag metadata.
+    pub(crate) fn new(index: MilestoneIndex, timestamp: u64) -> WhiteFlagMetadata {
+        WhiteFlagMetadata {
             index,
             timestamp,
             ..Self::default()
