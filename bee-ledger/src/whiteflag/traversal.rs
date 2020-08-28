@@ -32,10 +32,8 @@ pub(crate) enum Error {
 impl LedgerWorker {
     #[inline]
     fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle, confirmation: &mut Confirmation) {
+        let mut conflicting = false;
         let (mutates, bundle_mutations) = bundle.ledger_mutations();
-
-        // confirmation.num_tails_referenced += 1;
-        confirmation.tails_referenced.insert(*hash);
 
         if !mutates {
             confirmation.num_tails_zero_value += 1;
@@ -46,18 +44,35 @@ impl LedgerWorker {
 
                 if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
                     confirmation.num_tails_conflicting += 1;
-                    return;
+                    conflicting = true;
+                    break;
                 }
             }
 
-            // Second pass to mutate the state.
-            for (address, diff) in bundle_mutations {
-                self.state.apply(address.clone(), diff);
-                confirmation.diff.apply(address, diff);
-            }
+            if !conflicting {
+                // Second pass to mutate the state.
+                for (address, diff) in bundle_mutations {
+                    self.state.apply(address.clone(), diff);
+                    confirmation.diff.apply(address, diff);
+                }
 
-            confirmation.tails_included.push(*hash);
+                confirmation.tails_included.push(*hash);
+            }
         }
+
+        confirmation.num_tails_referenced += 1;
+
+        // TODO this only actually confirm tails
+        tangle().update_metadata(&hash, |meta| {
+            if conflicting {
+                meta.flags_mut().set_conflicting();
+            }
+            meta.flags_mut().set_confirmed();
+            meta.set_milestone_index(confirmation.index);
+            meta.set_confirmation_timestamp(confirmation.timestamp);
+            // TODO Set OTRSI, ...
+            // TODO increment metrics confirmed, zero, value and conflict.
+        });
     }
 
     pub(crate) fn visit_bundles_dfs(&mut self, root: Hash, confirmation: &mut Confirmation) -> Result<(), Error> {

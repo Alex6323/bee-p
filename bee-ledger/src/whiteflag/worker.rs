@@ -20,8 +20,7 @@ use crate::{
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
-use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
-// use bee_tangle::traversal::visit_parents_depth_first;
+use bee_protocol::{config::ProtocolCoordinatorConfig, Milestone, MilestoneIndex};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use blake2::Blake2b;
@@ -93,7 +92,7 @@ impl LedgerWorker {
 
         let (merkle_proof, timestamp) = self.milestone_info(milestone.hash());
 
-        let mut confirmation = Confirmation::new(timestamp);
+        let mut confirmation = Confirmation::new(milestone.index(), timestamp);
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
@@ -111,40 +110,16 @@ impl LedgerWorker {
                 println!(
                     "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
                     *milestone.index(),
-                    confirmation.tails_referenced.len(),
+                    confirmation.num_tails_referenced,
                     confirmation.num_tails_zero_value,
                     confirmation.num_tails_conflicting,
                     confirmation.tails_included.len()
                 );
 
-                // TODO this only actually confirm tails
-                for hash in confirmation.tails_referenced.iter() {
-                    tangle().update_metadata(&hash, |meta| {
-                        meta.flags_mut().set_confirmed();
-                        meta.set_milestone_index(milestone.index());
-                        meta.set_confirmation_timestamp(timestamp);
-                    });
-                }
-
-                // TODO would be better if we could mutate meta through traversal
-                // visit_parents_depth_first(
-                //     tangle(),
-                //     *milestone.hash(),
-                //     |_, _, meta| !meta.flags().is_confirmed(),
-                //     |_, _, _| {
-                //         tangle().update_metadata(milestone.hash(), |meta| {
-                //             meta.flags_mut().set_confirmed();
-                //             meta.set_milestone_index(milestone.index());
-                //             meta.set_confirmation_timestamp(timestamp);
-                //         });
-                //     },
-                //     |_| {},
-                // );
-
                 WhiteFlag::get().bus.dispatch(MilestoneConfirmed {
                     milestone,
                     timestamp,
-                    tails_referenced: confirmation.tails_referenced.len(),
+                    tails_referenced: confirmation.num_tails_referenced,
                     tails_zero_value: confirmation.num_tails_zero_value,
                     tails_conflicting: confirmation.num_tails_conflicting,
                     tails_included: confirmation.tails_included.len(),

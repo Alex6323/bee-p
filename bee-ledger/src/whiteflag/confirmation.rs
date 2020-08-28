@@ -12,17 +12,15 @@
 use crate::diff::LedgerDiff;
 
 use bee_crypto::ternary::Hash;
-
-use std::collections::HashSet;
+use bee_protocol::MilestoneIndex;
 
 #[derive(Default)]
 pub(crate) struct Confirmation {
+    pub(crate) index: MilestoneIndex,
     pub(crate) timestamp: u64,
     pub(crate) diff: LedgerDiff,
-    // /// The number of tails which were referenced by the milestone.
-    // pub(crate) num_tails_referenced: usize,
-    // TODO temporary until traversals can mutate the meta
-    pub(crate) tails_referenced: HashSet<Hash>,
+    /// The number of tails which were referenced by the milestone.
+    pub(crate) num_tails_referenced: usize,
     /// The number of tails which were excluded because they were part of a zero or spam value transfer.
     pub(crate) num_tails_zero_value: usize,
     /// The number of tails which were excluded as they were conflicting with the ledger state.
@@ -32,8 +30,9 @@ pub(crate) struct Confirmation {
 }
 
 impl Confirmation {
-    pub(crate) fn new(timestamp: u64) -> Confirmation {
+    pub(crate) fn new(index: MilestoneIndex, timestamp: u64) -> Confirmation {
         Confirmation {
+            index,
             timestamp,
             ..Self::default()
         }
