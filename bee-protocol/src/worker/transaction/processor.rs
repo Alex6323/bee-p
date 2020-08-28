@@ -28,7 +28,7 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::{error, info, trace};
+use log::{error, info, trace, warn};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -147,16 +147,22 @@ impl ProcessorWorker {
             Protocol::get().metrics.new_transactions_inc();
 
             if !tangle().is_synced() && Protocol::get().requested_transactions.is_empty() {
-                Protocol::get()
+                if let Err(e) = Protocol::get()
                     .milestone_solidifier_worker
-                    .unbounded_send(MilestoneSolidifierWorkerEvent::Idle);
+                    .unbounded_send(MilestoneSolidifierWorkerEvent::Idle)
+                {
+                    warn!("Could not trigger solidification for all milestones: {}", e);
+                }
             }
 
             match Protocol::get().requested_transactions.remove(&hash) {
                 Some((hash, (index, _))) => {
-                    Protocol::get()
+                    if let Err(e) = Protocol::get()
                         .milestone_solidifier_worker
-                        .unbounded_send(MilestoneSolidifierWorkerEvent::ReceivedTransaction(hash, index));
+                        .unbounded_send(MilestoneSolidifierWorkerEvent::ReceivedTransaction(hash, index))
+                    {
+                        warn!("Could not trigger solidification for transaction: {}", e);
+                    }
                 }
                 None => {
                     if should_broadcast {

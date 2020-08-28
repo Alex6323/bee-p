@@ -22,7 +22,7 @@ use crate::{
         MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
         ProcessorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
         TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
-        TransactionSolidifierWorkerEvent, TRANSACTION_SOLIDIFIER_COUNT,
+        TRANSACTION_SOLIDIFIER_COUNT,
     },
 };
 
@@ -233,7 +233,7 @@ impl Protocol {
 
         let mut senders = Vec::with_capacity(TRANSACTION_SOLIDIFIER_COUNT);
 
-        for i in 0..TRANSACTION_SOLIDIFIER_COUNT {
+        for _ in 0..TRANSACTION_SOLIDIFIER_COUNT {
             let (transaction_solidifier_worker_tx, transaction_solidifier_worker_rx) = mpsc::unbounded();
             let (transaction_solidifier_worker_shutdown_tx, transaction_solidifier_worker_shutdown_rx) =
                 oneshot::channel();
@@ -352,11 +352,16 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
 fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
     debug!("New solid milestone #{}.", *last_solid_milestone.0.index);
     tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
-    Protocol::get()
-        .milestone_solidifier_worker
-        .unbounded_send(MilestoneSolidifierWorkerEvent::NewSolidMilestone(
-            last_solid_milestone.0.index,
-        ));
+
+    if let Err(e) =
+        Protocol::get()
+            .milestone_solidifier_worker
+            .unbounded_send(MilestoneSolidifierWorkerEvent::NewSolidMilestone(
+                last_solid_milestone.0.index,
+            ))
+    {
+        warn!("Could not send new milestone to the solidifier: {}", e);
+    }
 
     Protocol::broadcast_heartbeat(
         last_solid_milestone.0.index,

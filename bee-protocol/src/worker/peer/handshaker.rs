@@ -18,7 +18,7 @@ use crate::{
     peer::Peer,
     protocol::Protocol,
     tangle::tangle,
-    worker::{peer::MessageHandler, PeerWorker, MilestoneSolidifierWorkerEvent},
+    worker::{peer::MessageHandler, MilestoneSolidifierWorkerEvent, PeerWorker},
 };
 
 use bee_network::{
@@ -223,9 +223,12 @@ impl PeerHandshakerWorker {
                         );
 
                         Protocol::request_last_milestone(Some(self.peer.epid));
-                        Protocol::get()
+                        if let Err(e) = Protocol::get()
                             .milestone_solidifier_worker
-                            .unbounded_send(MilestoneSolidifierWorkerEvent::Idle);
+                            .unbounded_send(MilestoneSolidifierWorkerEvent::Idle)
+                        {
+                            warn!("Could not trigger solidification for all milestones: {}", e);
+                        }
 
                         self.status = HandshakeStatus::Done;
                     }

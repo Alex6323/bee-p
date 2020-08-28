@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::TransactionSolidifierWorkerEvent};
+use crate::{milestone::MilestoneIndex, tangle::tangle, worker::TransactionSolidifierWorkerEvent};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
@@ -18,7 +18,7 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::info;
+use log::{debug, info, warn};
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
@@ -55,7 +55,9 @@ impl MilestoneSolidifierWorker {
         index: MilestoneIndex,
     ) {
         if !tangle().is_solid_transaction(&hash) {
-            sender.unbounded_send(TransactionSolidifierWorkerEvent(hash, index));
+            if let Err(e) = sender.unbounded_send(TransactionSolidifierWorkerEvent(hash, index)) {
+                warn!("Failed to trigger transaction solidification: {}", e);
+            }
         }
     }
 
@@ -67,6 +69,7 @@ impl MilestoneSolidifierWorker {
                 MilestoneSolidifierWorkerEvent::ReceivedTransaction(hash, index) => {
                     if index < self.lowest_index {
                         // We already solidified the milestone for this transaction
+                        debug!("Milestone {} is already solid.", index.0);
                     } else {
                         let sender_pos = (index.0 - self.lowest_index.0) as usize;
                         if let Some(sender) = self.senders.get(sender_pos) {
@@ -75,12 +78,14 @@ impl MilestoneSolidifierWorker {
                             // This only happens if `index > self.lowest_index +
                             // TRANSACTION_SOLIDIFIER_COUNT`. Meaning that the transaction is too
                             // new.
+                            debug!("Milestone {} is too new, ignoring.", index.0);
                         }
                     }
                 }
                 MilestoneSolidifierWorkerEvent::NewSolidMilestone(index) => {
                     if index < self.lowest_index {
                         // We already were notified about this milestone.
+                        debug!("Milestone {} is already solid.", index.0);
                     } else if index == self.lowest_index {
                         // Update lowest milestone index.
                         self.lowest_index = self.lowest_index + MilestoneIndex(1);
@@ -92,8 +97,8 @@ impl MilestoneSolidifierWorker {
                         }
                     } else {
                         // We shouldn't be able to solidify any milestone that comes after
-                        // `self.lowest_index`
-                        panic!();
+                        // `self.lowest_index`.
+                        panic!("Milestone was solidified too early!!!");
                     }
                 }
                 MilestoneSolidifierWorkerEvent::Idle => {

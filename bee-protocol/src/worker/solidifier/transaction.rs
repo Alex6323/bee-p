@@ -64,6 +64,3 @@ impl TransactionSolidifierWorker {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {}

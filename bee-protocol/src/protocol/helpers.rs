@@ -14,10 +14,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::tangle,
-    worker::{
-        BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, SenderWorker,
-        TransactionRequesterWorkerEntry,
-    },
+    worker::{BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, SenderWorker, TransactionRequesterWorkerEntry},
 };
 
 use bee_crypto::ternary::Hash;
