@@ -85,6 +85,7 @@ impl MsTangle {
             for index in (last_solid_milestone_index_processed + 1)..(last_solid_milestone_index + 1) {
                 self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
                 self.last_solid_milestone_index_processed.store(index, Ordering::Relaxed);
+                self.tip_selector.update_scores();
             }
 
             self.propagate_otrsi_and_ytrsi(&hash);
@@ -124,7 +125,7 @@ impl MsTangle {
                             .as_millis() as u64;
                     });
 
-                    //self.tip_selector.insert(hash);
+                    self.tip_selector.insert(hash);
 
                     for child in self.inner.get_children(&hash) {
                         children.push(child);

@@ -17,6 +17,7 @@ use rand::{seq::IteratorRandom, thread_rng};
 use std::collections::HashSet;
 use bee_tangle::Tangle;
 use dashmap::mapref::entry::Entry;
+use std::sync::{Mutex, Arc};
 
 enum Score {
     NON_LAZY,
@@ -28,13 +29,14 @@ const C1: u32 = 8;
 const C2: u32 = 13;
 const M: u32 = 15;
 
-const MAX_CHILDREN_COUNT: u8 = 2;
+const MAX_NUM_CHILDREN: u8 = 2;
 const MAX_NUM_SELECTIONS: u8 = 2;
 
 pub struct TipSelector {
     children: DashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: DashSet<Hash>,
     semi_lazy_tips: DashSet<Hash>,
+    update_score_mutex: Arc<Mutex<()>>,
 }
 
 impl TipSelector {
@@ -43,29 +45,26 @@ impl TipSelector {
             children: DashMap::new(),
             non_lazy_tips: DashSet::new(),
             semi_lazy_tips: DashSet::new(),
+            update_score_mutex: Arc::new(Mutex::new(())),
         }
     }
 
-    // The TSA does only make use of solid transactions.
-    // In context of the TSA, a transaction can be considered as a tip if one of the following points applies:
-    // - solid transaction without children
-    // - solid transaction with non-solid children
-    // - solid transaction with solid children but does not exceed the retention rules
-    // This function therefore expects that each hash passed is solid.
+    // WURTS does only support solid transactions. This function therefore expects that each passed hash is solid.
+    // In context of WURTS, a transaction can be considered as a "tip" if:
+    // - transaction is solid and has no children
+    // - transaction is solid and has only non-solid children
+    // - transaction is solid and has solid children but does not exceed the retention rules
     pub fn insert(&self, hash: &Hash) {
-
         // Link parents with child
         self.add_to_parents(hash);
+        // Remove parents that have more than 'MAX_CHILDREN_COUNT' children
+        self.check_num_children_of_parents(hash);
+    }
 
-        //Remove tips that have more than 'MAX_CHILDREN_COUNT' children
-        self.check_solid_children_count();
-
-        // Remove tips that have been selected more than `MAX_NUM_SELECTIONS` by the TSA.
-        self.check_num_selections();
-
-        // update scores
-        self.update_scores();
-
+    fn add_to_parents(&self, hash: &Hash) {
+        let (trunk, branch) = self.parents(hash);
+        self.add_child(trunk, *hash);
+        self.add_child(branch, *hash);
     }
 
     fn parents(&self, hash: &Hash) -> (Hash, Hash) {
@@ -89,41 +88,31 @@ impl TipSelector {
         }
     }
 
-    fn add_to_parents(&self, hash: &Hash) {
+    fn check_num_children_of_parents(&self, hash: &Hash) {
         let (trunk, branch) = self.parents(hash);
-        self.add_child(trunk, *hash);
-        self.add_child(branch, *hash);
+        self.check_num_children_of_parent(&trunk);
+        self.check_num_children_of_parent(&branch);
     }
 
-    fn check_solid_children_count(&self) {
-        for (parent, children) in self.children.clone() {
-            if children.len() as u8 > MAX_CHILDREN_COUNT {
-                self.children.remove(&parent);
-                self.non_lazy_tips.remove(&parent);
-                self.semi_lazy_tips.remove(&parent);
-            }
+    fn check_num_children_of_parent(&self, hash: &Hash) {
+        if self.children.get(hash).unwrap().len() as u8 > MAX_NUM_CHILDREN {
+            self.children.remove(&hash);
+            self.non_lazy_tips.remove(&hash);
+            self.semi_lazy_tips.remove(&hash);
         }
     }
 
-    fn check_num_selections(&self) {
-        for (hash, _) in self.children.clone() {
-            if tangle().is_solid_entry_point(&hash) {
-                continue;
-            } else {
-                if tangle().get_metadata(&hash).unwrap().num_selected >= MAX_NUM_SELECTIONS {
-                    self.children.remove(&hash);
-                    self.non_lazy_tips.remove(&hash);
-                    self.semi_lazy_tips.remove(&hash);
-                }
-            }
-        }
-    }
+    // further optimization: avoid allocations
+    pub fn update_scores(&self) {
 
-    fn update_scores(&self) {
+        // make sure tip selection is not performed while scores get updated
+        self.update_score_mutex.lock();
+
         // reset pools
         self.non_lazy_tips.clear();
         self.semi_lazy_tips.clear();
-        // iter tips and assign them to the appropriate pools
+
+        // iter tips and assign them to their appropriate pools
         for (tip, _) in self.children.clone() {
             match self.tip_score(&tip) {
                 Score::NON_LAZY => {
@@ -137,6 +126,7 @@ impl TipSelector {
                 }
             }
         }
+
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
@@ -168,6 +158,9 @@ impl TipSelector {
     }
 
     fn select_tips(&self, hashes: &DashSet<Hash>) -> Option<(Hash, Hash)> {
+
+        self.update_score_mutex.lock();
+
         self.check_num_selections();
         let mut ret = HashSet::new();
         // try to get 10x randomly a tip
@@ -207,4 +200,19 @@ impl TipSelector {
         }
         Some(*hashes.iter().choose(&mut rand::thread_rng()).unwrap())
     }
+
+    fn check_num_selections(&self) {
+        for (hash, _) in self.children.clone() {
+            if tangle().is_solid_entry_point(&hash) {
+                continue;
+            } else {
+                if tangle().get_metadata(&hash).unwrap().num_selected >= MAX_NUM_SELECTIONS {
+                    self.children.remove(&hash);
+                    self.non_lazy_tips.remove(&hash);
+                    self.semi_lazy_tips.remove(&hash);
+                }
+            }
+        }
+    }
+
 }
