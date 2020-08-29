@@ -15,8 +15,8 @@ use std::{collections::HashMap, convert::TryInto, hash::Hash};
 pub trait RocksDBPersistable {
     /// This encode method will extend the provided buffer and return ();
     fn encode_persistable(&self, buffer: &mut Vec<u8>);
-    /// Decode `slice[..length]` and return Self
-    fn decode_persistable(slice: &[u8], length: usize) -> Self
+    /// Decode `slice` and return Self
+    fn decode_persistable(slice: &[u8]) -> Self
     where
         Self: Sized;
 }
@@ -29,11 +29,10 @@ pub use RocksDBPersistable as Persistable;
 
 impl RocksDBPersistable for i64 {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
-        buffer.extend(&constants::LE_8_BYTES_LEN);
         buffer.extend(&i64::to_le_bytes(*self));
     }
-    fn decode_persistable(slice: &[u8], length: usize) -> Self {
-        i64::from_le_bytes(slice[..length].try_into().unwrap())
+    fn decode_persistable(slice: &[u8]) -> Self {
+        i64::from_le_bytes(slice.try_into().unwrap())
     }
 }
 
@@ -43,43 +42,54 @@ where
     V: RocksDBPersistable,
 {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
-        // extend 0-length which indicate empty hashmap;
-        buffer.extend(&constants::LE_0_BYTES_LEN);
-        // snapshot the current_length in order to later modify
-        // the length to the actual hashmap byte size;
-        let current_length = buffer.len();
         // extend key_value pairs count of the hashmap into the buffer
         buffer.extend(&i32::to_le_bytes(self.len() as i32));
+        let mut current_k_or_v_position;
+        let mut k_or_v_byte_size;
         // iter on hashmap pairs;
         for (k, v) in self {
+            // extend k-0-length;
+            buffer.extend(&constants::LE_0_BYTES_LEN);
+            current_k_or_v_position = buffer.len();
             // encode key into the buffer
             k.encode_persistable(buffer);
+            // calculate the actual byte_size of the key;
+            k_or_v_byte_size = buffer.len() - current_k_or_v_position;
+            // change the k-0-length to reflect the actual key length;
+            buffer[(current_k_or_v_position - 4)..current_k_or_v_position]
+                .copy_from_slice(&i32::to_le_bytes(k_or_v_byte_size as i32));
+            // extend v-0-length;
+            buffer.extend(&constants::LE_0_BYTES_LEN);
+            current_k_or_v_position = buffer.len();
             // encode value into the buffer
             v.encode_persistable(buffer);
+            // calculate the actual byte_size of the value;
+            k_or_v_byte_size = buffer.len() - current_k_or_v_position;
+            // change the k-0-length to reflect the actual value length;
+            buffer[(current_k_or_v_position - 4)..current_k_or_v_position]
+                .copy_from_slice(&i32::to_le_bytes(k_or_v_byte_size as i32));
         }
-        // calculate the actual byte_size of the map;
-        let map_byte_size = buffer.len() - current_length;
-        // change the 0-length to reflect the actual length;
-        buffer[(current_length - 4)..current_length].copy_from_slice(&i32::to_le_bytes(map_byte_size as i32));
     }
-    fn decode_persistable(slice: &[u8], mut _length: usize) -> Self {
+
+    fn decode_persistable(slice: &[u8]) -> Self {
+        let mut length;
         let map_len = i32::from_le_bytes(slice[0..4].try_into().unwrap()) as usize;
         let mut map: HashMap<K, V, S> = HashMap::default();
         let mut pair_start = 4;
         for _ in 0..map_len {
             // decode key_byte_size
             let key_start = pair_start + 4;
-            _length = i32::from_le_bytes(slice[pair_start..key_start].try_into().unwrap()) as usize;
-            let k = K::decode_persistable(&slice[key_start..], _length);
-            // modify pair_start to be the vtype_start
-            pair_start = key_start + _length;
+            length = i32::from_le_bytes(slice[pair_start..key_start].try_into().unwrap()) as usize;
+            let k = K::decode_persistable(&slice[key_start..length]);
+            // modify pair_start to be the vlength_start
+            pair_start = key_start + length;
             let value_start = pair_start + 4;
-            _length = i32::from_le_bytes(slice[pair_start..value_start].try_into().unwrap()) as usize;
-            let v = V::decode_persistable(&slice[value_start..], _length);
+            length = i32::from_le_bytes(slice[pair_start..value_start].try_into().unwrap()) as usize;
+            let v = V::decode_persistable(&slice[value_start..length]);
             // insert key,value
             map.insert(k, v);
             // next pair_start
-            pair_start = value_start + _length;
+            pair_start = value_start + length;
         }
         map
     }

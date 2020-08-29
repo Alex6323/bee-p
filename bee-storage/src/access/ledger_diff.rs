@@ -104,7 +104,7 @@ macro_rules! impl_ledger_diff_ops {
                     .inner
                     .get_cf(&ms_index_to_ledger_diff, index_buf.as_slice())?
                 {
-                    let ledger_diff: Self = Self::decode_persistable(res.as_slice(), res.len());
+                    let ledger_diff: Self = Self::decode_persistable(res.as_slice());
                     Ok(Some(ledger_diff))
                 } else {
                     Ok(None)

@@ -28,7 +28,7 @@ impl Persistable for LedgerDiff {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
         self.0.encode_persistable(buffer)
     }
-    fn decode_persistable(slice: &[u8], length: usize) -> Self {
-        LedgerDiff(HashMap::decode_persistable(slice, length))
+    fn decode_persistable(slice: &[u8]) -> Self {
+        LedgerDiff(HashMap::decode_persistable(slice))
     }
 }

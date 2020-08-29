@@ -15,3 +15,6 @@
 - [ ] Local snapshots
 - [ ] TSA
 - [ ] ZeroMQ
+
+# Prerequisites
+  - `Clang` and `LLVM`

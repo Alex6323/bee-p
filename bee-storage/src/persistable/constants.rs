@@ -10,4 +10,3 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub const LE_0_BYTES_LEN: [u8; 4] = [0, 0, 0, 0];
-pub const LE_8_BYTES_LEN: [u8; 4] = [8, 0, 0, 0];
