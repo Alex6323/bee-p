@@ -150,15 +150,6 @@ where
         self.tips.len()
     }
 
-    /// Returns all tips of the tangle.
-    pub fn tips(&self) -> HashSet<Hash> {
-        let mut ret = HashSet::new();
-        for tip in self.tips.iter() {
-            ret.insert(*tip);
-        }
-        ret
-    }
-
     /// Returns the number of children of a vertex.
     pub fn num_children(&self, hash: &Hash) -> usize {
         self.children.get(hash).map_or(0, |r| r.value().len())

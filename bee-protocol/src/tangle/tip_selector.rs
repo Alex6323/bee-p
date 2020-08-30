@@ -17,7 +17,7 @@ use rand::{seq::IteratorRandom, thread_rng};
 use std::collections::HashSet;
 use bee_tangle::Tangle;
 use dashmap::mapref::entry::Entry;
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, RwLock};
 
 enum Score {
     NON_LAZY,
@@ -36,7 +36,7 @@ pub struct TipSelector {
     children: DashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: DashSet<Hash>,
     semi_lazy_tips: DashSet<Hash>,
-    update_score_mutex: Arc<Mutex<()>>,
+    update_score_lock: Arc<RwLock<()>>,
 }
 
 impl TipSelector {
@@ -45,7 +45,7 @@ impl TipSelector {
             children: DashMap::new(),
             non_lazy_tips: DashSet::new(),
             semi_lazy_tips: DashSet::new(),
-            update_score_mutex: Arc::new(Mutex::new(())),
+            update_score_lock: Arc::new(RwLock::new(())),
         }
     }
 
@@ -106,7 +106,7 @@ impl TipSelector {
     pub fn update_scores(&self) {
 
         // make sure tip selection is not performed while scores get updated
-        self.update_score_mutex.lock();
+        self.update_score_lock.write().unwrap();
 
         // reset pools
         self.non_lazy_tips.clear();
@@ -159,7 +159,7 @@ impl TipSelector {
 
     fn select_tips(&self, hashes: &DashSet<Hash>) -> Option<(Hash, Hash)> {
 
-        self.update_score_mutex.lock();
+        self.update_score_lock.read().unwrap();
 
         self.check_num_selections();
         let mut ret = HashSet::new();
