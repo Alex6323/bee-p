@@ -98,7 +98,7 @@ impl LedgerWorker {
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
-                if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().hash(&confirmation.tails_included)) {
+                if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().digest(&confirmation.tails_included)) {
                     error!(
                         "The computed merkle proof on milestone {} does not match the one provided by the coordinator.",
                         milestone.index().0,
