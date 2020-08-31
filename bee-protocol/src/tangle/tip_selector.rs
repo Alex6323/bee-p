@@ -137,8 +137,6 @@ impl TipSelector {
             }
         }
 
-        info!("non-lazy {}, semi-lazy {}", self.non_lazy_tips.len(), self.semi_lazy_tips.len());
-
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
