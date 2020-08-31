@@ -18,7 +18,8 @@ use std::collections::HashSet;
 use bee_tangle::Tangle;
 use dashmap::mapref::entry::Entry;
 use std::sync::{Arc, RwLock};
-use log::info;
+use log::{info, error};
+use std::time::SystemTime;
 
 enum Score {
     NON_LAZY,
@@ -32,10 +33,11 @@ const M: u32 = 15;
 
 const MAX_NUM_CHILDREN: u8 = 2;
 const MAX_NUM_SELECTIONS: u8 = 2;
+const MAX_AGE_SECONDS: u8 = 3;
 
 #[derive(Default)]
 pub struct TipSelector {
-    hashes: DashSet<Hash>,
+    hashes: DashMap<Hash, SystemTime>,
     children: DashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: DashSet<Hash>,
     semi_lazy_tips: DashSet<Hash>,
@@ -55,15 +57,15 @@ impl TipSelector {
     pub fn insert(&self, hash: &Hash) {
         // store hash
         self.store_hash(hash);
-        // Link parents with child
+        // link parents with child
         self.add_to_parents(hash);
-        // Remove parents that have more than 'MAX_CHILDREN_COUNT' children
+        // remove parents that have more than 'MAX_CHILDREN_COUNT' children
         self.check_num_children_of_parents(hash);
 
     }
 
     fn store_hash(&self, hash: &Hash) {
-        self.hashes.insert(*hash);
+        self.hashes.insert(*hash, SystemTime::now());
         self.children.insert(*hash, HashSet::new());
     }
 
@@ -111,6 +113,23 @@ impl TipSelector {
         }
     }
 
+    fn check_age_seconds(&self) {
+        for (tip, time) in self.hashes.clone() {
+            match time.elapsed() {
+                Ok(elapsed) => {
+                    if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
+                        self.hashes.remove(&tip);
+                        self.children.remove(&tip);
+                    }
+                }
+                Err(e) => {
+                    error!("Error: {:?}", e);
+                }
+            }
+        }
+    }
+
+
     // further optimization: avoid allocations
     pub fn update_scores(&self) {
 
@@ -121,8 +140,10 @@ impl TipSelector {
         self.non_lazy_tips.clear();
         self.semi_lazy_tips.clear();
 
+        self.check_age_seconds();
+
         // iter tips and assign them to their appropriate pools
-        for tip in self.hashes.clone() {
+        for (tip, _) in self.hashes.clone() {
             match self.tip_score(&tip) {
                 Score::NON_LAZY => {
                     self.non_lazy_tips.insert(tip);
