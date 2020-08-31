@@ -105,9 +105,9 @@ impl<'a> TransactionRequesterWorker<'a> {
             let (hash, (index, instant)) = transaction.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && self.process_request_unchecked(*hash, *index).await {
-                    *instant = now;
-                    retry_counts += 1;
-                }
+                *instant = now;
+                retry_counts += 1;
+            }
         }
 
         if retry_counts > 0 {
