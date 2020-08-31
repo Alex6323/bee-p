@@ -37,20 +37,20 @@ impl StatusWorker {
 
         // TODO Threshold
         // TODO use tangle synced method
-        let mut status = if solid_milestone_index == last_milestone_index {
-            format!("Synchronized at {} -", last_milestone_index)
+        if solid_milestone_index == last_milestone_index {
+            info!("Synchronized at {}.", last_milestone_index);
         } else {
             let progress = ((solid_milestone_index - snapshot_milestone_index) as f32 * 100.0
                 / (last_milestone_index - snapshot_milestone_index) as f32) as u8;
-            format!(
-                "Synchronizing {}..{}..{} ({}%)",
-                snapshot_milestone_index, solid_milestone_index, last_milestone_index, progress
-            )
+            info!(
+                "Synchronizing {}..{}..{} ({}%) - Requested {}.",
+                snapshot_milestone_index,
+                solid_milestone_index,
+                last_milestone_index,
+                progress,
+                Protocol::get().requested_transactions.len()
+            );
         };
-
-        status = format!("{} Requested {}", status, Protocol::get().requested_transactions.len());
-
-        info!("{}.", status);
     }
 
     pub(crate) async fn run(self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
