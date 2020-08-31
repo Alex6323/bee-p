@@ -321,12 +321,11 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
     );
     tangle().update_last_milestone_index(last_milestone.0.index);
 
-    // TODO block_on ?
-    // TODO uncomment on Chrysalis Pt1.
-    // block_on(Protocol::broadcast_heartbeat(
-    //     tangle().get_last_solid_milestone_index(),
-    //     tangle().get_snapshot_milestone_index(),
-    // ));
+    Protocol::broadcast_heartbeat(
+        tangle().get_last_solid_milestone_index(),
+        tangle().get_snapshot_milestone_index(),
+        last_milestone.0.index,
+    );
 }
 
 // TODO Chrysalis
