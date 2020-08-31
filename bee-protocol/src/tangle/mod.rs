@@ -42,6 +42,7 @@ use std::{
 };
 
 use crate::tangle::tip_selector::TipSelector;
+use std::sync::{RwLock, Arc};
 
 /// Milestone-based Tangle.
 #[derive(Default)]
@@ -52,7 +53,7 @@ pub struct MsTangle {
     last_milestone_index: AtomicU32,
     last_solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
-    tip_selector: TipSelector,
+    tip_selector: Arc<RwLock<TipSelector>>,
     last_solid_milestone_index_processed: AtomicU32,
 }
 
@@ -78,7 +79,7 @@ impl MsTangle {
                 self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
                 self.last_solid_milestone_index_processed
                     .store(index, Ordering::Relaxed);
-                self.tip_selector.update_scores();
+                self.tip_selector.write().unwrap().update_scores();
             }
 
             self.propagate_otrsi_and_ytrsi(&hash);
@@ -118,7 +119,7 @@ impl MsTangle {
                             .as_millis() as u64;
                     });
 
-                    self.tip_selector.insert(hash);
+                    self.tip_selector.write().unwrap().insert(hash);
 
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
@@ -242,7 +243,7 @@ impl MsTangle {
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        self.tip_selector.get_non_lazy_tips()
+        self.tip_selector.clone().write().unwrap().get_non_lazy_tips()
     }
 
     pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {
