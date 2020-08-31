@@ -292,6 +292,9 @@ impl MsTangle {
 
     pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.last_solid_milestone_index.store(*new_index, Ordering::Relaxed);
+        if self.last_solid_milestone_index_processed.load(Ordering::Relaxed) == 0 {
+            self.last_solid_milestone_index_processed.store(*new_index, Ordering::Relaxed);
+        }
     }
 
     pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
