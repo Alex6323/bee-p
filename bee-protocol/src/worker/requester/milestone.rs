@@ -78,8 +78,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
         match epid {
             Some(epid) => {
-                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
-
+                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                 true
             }
             None => {
@@ -92,7 +91,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
                     if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                         if peer.maybe_has_data(index) {
-                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                             return true;
                         }
                     }

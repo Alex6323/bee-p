@@ -84,39 +84,6 @@ impl PeerManager {
             self.handshaked_peers_keys.write().await.push(*epid);
 
             // TODO Add to shutdown ?
-
-            spawn(
-                SenderWorker::<MilestoneRequest>::new(
-                    self.network.clone(),
-                    peer.clone(),
-                    ShutdownStream::new(milestone_request_shutdown_rx, milestone_request_rx),
-                )
-                .run(),
-            );
-            spawn(
-                SenderWorker::<TransactionMessage>::new(
-                    self.network.clone(),
-                    peer.clone(),
-                    ShutdownStream::new(transaction_shutdown_rx, transaction_rx),
-                )
-                .run(),
-            );
-            spawn(
-                SenderWorker::<TransactionRequest>::new(
-                    self.network.clone(),
-                    peer.clone(),
-                    ShutdownStream::new(transaction_request_shutdown_rx, transaction_request_rx),
-                )
-                .run(),
-            );
-            spawn(
-                SenderWorker::<Heartbeat>::new(
-                    self.network.clone(),
-                    peer,
-                    ShutdownStream::new(heartbeat_shutdown_rx, heartbeat_rx),
-                )
-                .run(),
-            );
         }
     }
 

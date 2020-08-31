@@ -84,7 +84,7 @@ impl Protocol {
 
     // Heartbeat
 
-    pub fn send_heartbeat(
+    pub async fn send_heartbeat(
         to: EndpointId,
         latest_solid_milestone_index: MilestoneIndex,
         pruning_milestone_index: MilestoneIndex,
@@ -99,10 +99,11 @@ impl Protocol {
                 0,
                 0,
             ),
-        );
+        )
+        .await;
     }
 
-    pub fn broadcast_heartbeat(
+    pub async fn broadcast_heartbeat(
         latest_solid_milestone_index: MilestoneIndex,
         pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
@@ -114,6 +115,7 @@ impl Protocol {
                 pruning_milestone_index,
                 latest_milestone_index,
             )
+            .await
         }
     }
 
