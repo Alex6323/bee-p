@@ -67,7 +67,7 @@ impl LedgerWorker {
     ) -> Self {
         Self {
             index,
-            state: LedgerState(state),
+            state: LedgerState::new(state),
             coo_config,
             bus,
             receiver,
@@ -140,7 +140,7 @@ impl LedgerWorker {
     }
 
     fn get_balance(&self, address: Address, sender: oneshot::Sender<u64>) {
-        if let Err(e) = sender.send(*self.state.get_or_zero(&address)) {
+        if let Err(e) = sender.send(self.state.get_or_zero(&address)) {
             warn!("Failed to send balance: {:?}.", e);
         }
     }

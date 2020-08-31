@@ -15,10 +15,16 @@ use bee_storage::persistable::Persistable;
 
 use std::collections::HashMap;
 
+type InnerDiff = HashMap<Address, i64>;
+
 #[derive(Default)]
-pub(crate) struct LedgerDiff(pub(crate) HashMap<Address, i64>);
+pub struct LedgerDiff(pub(crate) InnerDiff);
 
 impl LedgerDiff {
+    pub fn new(diff: InnerDiff) -> Self {
+        diff.into()
+    }
+
     pub(crate) fn apply(&mut self, address: Address, diff: i64) {
         self.0.entry(address).and_modify(|d| *d += diff).or_insert(diff);
     }
@@ -30,5 +36,20 @@ impl Persistable for LedgerDiff {
     }
     fn decode_persistable(slice: &[u8]) -> Self {
         LedgerDiff(HashMap::decode_persistable(slice))
+    }
+}
+
+impl From<InnerDiff> for LedgerDiff {
+    fn from(diff: InnerDiff) -> Self {
+        Self(diff)
+    }
+}
+
+impl IntoIterator for LedgerDiff {
+    type Item = (Address, i64);
+    type IntoIter = std::collections::hash_map::IntoIter<Address, i64>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }

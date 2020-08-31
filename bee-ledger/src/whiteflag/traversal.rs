@@ -40,7 +40,7 @@ impl LedgerWorker {
         } else {
             // First pass to look for conflicts.
             for (address, diff) in bundle_mutations.iter() {
-                let balance = *self.state.get_or_zero(&address) as i64 + diff;
+                let balance = self.state.get_or_zero(&address) as i64 + diff;
 
                 if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
                     metadata.num_tails_conflicting += 1;
@@ -52,7 +52,7 @@ impl LedgerWorker {
             if !conflicting {
                 // Second pass to mutate the state.
                 for (address, diff) in bundle_mutations {
-                    self.state.apply(address.clone(), diff);
+                    self.state.apply_single_diff(address.clone(), diff);
                     metadata.diff.apply(address, diff);
                 }
 
