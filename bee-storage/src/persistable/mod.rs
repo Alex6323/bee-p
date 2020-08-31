@@ -80,12 +80,12 @@ where
             // decode key_byte_size
             let key_start = pair_start + 4;
             length = i32::from_le_bytes(slice[pair_start..key_start].try_into().unwrap()) as usize;
-            let k = K::decode_persistable(&slice[key_start..length]);
+            let k = K::decode_persistable(&slice[key_start..(key_start + length)]);
             // modify pair_start to be the vlength_start
             pair_start = key_start + length;
             let value_start = pair_start + 4;
             length = i32::from_le_bytes(slice[pair_start..value_start].try_into().unwrap()) as usize;
-            let v = V::decode_persistable(&slice[value_start..length]);
+            let v = V::decode_persistable(&slice[value_start..(value_start + length)]);
             // insert key,value
             map.insert(k, v);
             // next pair_start
