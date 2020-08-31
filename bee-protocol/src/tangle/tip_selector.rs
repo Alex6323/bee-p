@@ -61,7 +61,8 @@ impl TipSelector {
         self.add_to_parents(hash);
         // remove parents that have more than 'MAX_CHILDREN_COUNT' children
         self.check_num_children_of_parents(hash);
-
+        // remove hashes that are too old
+        self.check_age_seconds();
     }
 
     fn store_hash(&self, hash: &Hash) {
@@ -139,8 +140,6 @@ impl TipSelector {
         // reset pools
         self.non_lazy_tips.clear();
         self.semi_lazy_tips.clear();
-
-        self.check_age_seconds();
 
         // iter tips and assign them to their appropriate pools
         for (tip, _) in self.hashes.clone() {
