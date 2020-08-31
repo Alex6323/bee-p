@@ -33,6 +33,7 @@ const MAX_NUM_CHILDREN: u8 = 2;
 const MAX_NUM_SELECTIONS: u8 = 2;
 
 pub struct TipSelector {
+    tips: DashSet<Hash>,
     children: DashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: DashSet<Hash>,
     semi_lazy_tips: DashSet<Hash>,
@@ -42,6 +43,7 @@ pub struct TipSelector {
 impl TipSelector {
     pub(crate) fn new() -> Self {
         Self {
+            tips: DashSet::new(),
             children: DashMap::new(),
             non_lazy_tips: DashSet::new(),
             semi_lazy_tips: DashSet::new(),
@@ -55,6 +57,8 @@ impl TipSelector {
     // - transaction is solid and has only non-solid children
     // - transaction is solid and has solid children but does not exceed the retention rules
     pub fn insert(&self, hash: &Hash) {
+        // insert transaction
+        self.tips.insert(*hash);
         // Link parents with child
         self.add_to_parents(hash);
         // Remove parents that have more than 'MAX_CHILDREN_COUNT' children
@@ -96,6 +100,7 @@ impl TipSelector {
 
     fn check_num_children_of_parent(&self, hash: &Hash) {
         if self.children.get(hash).unwrap().len() as u8 > MAX_NUM_CHILDREN {
+            self.tips.remove(&hash);
             self.children.remove(&hash);
             self.non_lazy_tips.remove(&hash);
             self.semi_lazy_tips.remove(&hash);
@@ -113,7 +118,7 @@ impl TipSelector {
         self.semi_lazy_tips.clear();
 
         // iter tips and assign them to their appropriate pools
-        for (tip, _) in self.children.clone() {
+        for tip in self.tips.clone() {
             match self.tip_score(&tip) {
                 Score::NON_LAZY => {
                     self.non_lazy_tips.insert(tip);
@@ -122,6 +127,7 @@ impl TipSelector {
                     self.semi_lazy_tips.insert(tip);
                 }
                 Score::LAZY => {
+                    self.tips.remove(&tip);
                     self.children.remove(&tip);
                 }
             }
