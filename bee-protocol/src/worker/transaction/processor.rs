@@ -28,7 +28,7 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::{debug, error, info};
+use log::{error, info, trace};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -95,7 +95,7 @@ impl ProcessorWorker {
     }
 
     fn process_transaction_brodcast(&mut self, hash: Hash, from: EndpointId, transaction_message: TransactionMessage) {
-        debug!("Processing received transaction...");
+        trace!("Processing received transaction...");
 
         let transaction_bytes = uncompress_transaction_bytes(&transaction_message.bytes);
         let transaction = match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN) {
@@ -104,14 +104,14 @@ impl ProcessorWorker {
                 match Transaction::from_trits(&transaction_buf) {
                     Ok(transaction) => transaction,
                     Err(e) => {
-                        debug!("Invalid transaction: {:?}.", e);
+                        trace!("Invalid transaction: {:?}.", e);
                         Protocol::get().metrics.invalid_transactions_inc();
                         return;
                     }
                 }
             }
             Err(e) => {
-                debug!("Invalid transaction: {:?}.", e);
+                trace!("Invalid transaction: {:?}.", e);
                 Protocol::get().metrics.invalid_transactions_inc();
                 return;
             }
@@ -120,7 +120,7 @@ impl ProcessorWorker {
         let requested = Protocol::get().requested_transactions.contains_key(&hash);
 
         if !requested && hash.weight() < Protocol::get().config.mwm {
-            debug!("Insufficient weight magnitude: {}.", hash.weight());
+            trace!("Insufficient weight magnitude: {}.", hash.weight());
             Protocol::get().metrics.invalid_transactions_inc();
             return;
         }
@@ -128,7 +128,7 @@ impl ProcessorWorker {
         let (is_timestamp_valid, should_broadcast) = self.validate_timestamp(&transaction);
 
         if !requested && !is_timestamp_valid {
-            debug!("Stale transaction, invalid timestamp.");
+            trace!("Stale transaction, invalid timestamp.");
             Protocol::get().metrics.stale_transactions_inc();
             return;
         }

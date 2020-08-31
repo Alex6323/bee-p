@@ -111,7 +111,6 @@ impl<'a> MilestoneRequesterWorker<'a> {
             let (index, instant) = milestone.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
-                debug!("Milestone timed out, retrying request.");
                 if self.process_request_unchecked(*index, None).await {
                     *instant = now;
                     retry_counts += 1;
@@ -120,7 +119,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
         }
 
         if retry_counts > 0 {
-            info!("Retried {} milestones.", retry_counts);
+            debug!("Retried {} milestones.", retry_counts);
         }
     }
 

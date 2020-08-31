@@ -32,7 +32,7 @@ use futures::{
     sink::SinkExt,
     stream::{Fuse, StreamExt},
 };
-use log::{debug, error, info, warn};
+use log::{error, info, trace, warn};
 use thiserror::Error;
 
 use std::{collections::HashMap, sync::Arc};
@@ -177,7 +177,7 @@ impl Node {
 
         block_on(async {
             while let Some(event) = self.receiver.next().await {
-                debug!("Received event {}.", event);
+                trace!("Received event {}.", event);
 
                 self.handle_event(event).await;
             }

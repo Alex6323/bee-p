@@ -21,7 +21,7 @@ use crate::{
 };
 
 use futures::channel::mpsc;
-use log::{debug, error, info, warn};
+use log::{error, info, trace, warn};
 
 use std::sync::Arc;
 
@@ -64,7 +64,7 @@ impl PeerWorker {
     fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
         match header.message_type {
             MilestoneRequest::ID => {
-                debug!("[{}] Reading MilestoneRequest...", self.peer.address);
+                trace!("[{}] Reading MilestoneRequest...", self.peer.address);
                 match tlv_from_bytes::<MilestoneRequest>(&header, bytes) {
                     Ok(message) => {
                         self.milestone_responder_worker
@@ -86,7 +86,7 @@ impl PeerWorker {
                 }
             }
             TransactionMessage::ID => {
-                debug!("[{}] Reading TransactionMessage...", self.peer.address);
+                trace!("[{}] Reading TransactionMessage...", self.peer.address);
                 match tlv_from_bytes::<TransactionMessage>(&header, bytes) {
                     Ok(message) => {
                         self.hasher_worker
@@ -108,7 +108,7 @@ impl PeerWorker {
                 }
             }
             TransactionRequest::ID => {
-                debug!("[{}] Reading TransactionRequest...", self.peer.address);
+                trace!("[{}] Reading TransactionRequest...", self.peer.address);
                 match tlv_from_bytes::<TransactionRequest>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_responder_worker
@@ -130,7 +130,7 @@ impl PeerWorker {
                 }
             }
             Heartbeat::ID => {
-                debug!("[{}] Reading Heartbeat...", self.peer.address);
+                trace!("[{}] Reading Heartbeat...", self.peer.address);
                 match tlv_from_bytes::<Heartbeat>(&header, bytes) {
                     Ok(message) => {
                         self.peer

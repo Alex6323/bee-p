@@ -105,7 +105,6 @@ impl<'a> TransactionRequesterWorker<'a> {
             let (hash, (index, instant)) = transaction.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
-                debug!("Transaction timed out, retrying request.");
                 if self.process_request_unchecked(hash.clone(), *index).await {
                     *instant = now;
                     retry_counts += 1;
@@ -114,7 +113,7 @@ impl<'a> TransactionRequesterWorker<'a> {
         }
 
         if retry_counts > 0 {
-            info!("Retried {} transactions.", retry_counts);
+            debug!("Retried {} transactions.", retry_counts);
         }
     }
 
