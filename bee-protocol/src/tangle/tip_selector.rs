@@ -18,6 +18,7 @@ use std::collections::HashSet;
 use bee_tangle::Tangle;
 use dashmap::mapref::entry::Entry;
 use std::sync::{Arc, RwLock};
+use log::info;
 
 enum Score {
     NON_LAZY,
@@ -37,7 +38,7 @@ pub struct TipSelector {
     children: DashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: DashSet<Hash>,
     semi_lazy_tips: DashSet<Hash>,
-    update_score_lock: Arc<RwLock<()>>,
+    lock: Arc<RwLock<()>>,
 }
 
 impl TipSelector {
@@ -47,7 +48,7 @@ impl TipSelector {
             children: DashMap::new(),
             non_lazy_tips: DashSet::new(),
             semi_lazy_tips: DashSet::new(),
-            update_score_lock: Arc::new(RwLock::new(())),
+            lock: Arc::new(RwLock::new(())),
         }
     }
 
@@ -63,6 +64,7 @@ impl TipSelector {
         self.add_to_parents(hash);
         // Remove parents that have more than 'MAX_CHILDREN_COUNT' children
         self.check_num_children_of_parents(hash);
+
     }
 
     fn add_to_parents(&self, hash: &Hash) {
@@ -99,19 +101,21 @@ impl TipSelector {
     }
 
     fn check_num_children_of_parent(&self, hash: &Hash) {
-        if self.children.get(hash).unwrap().len() as u8 > MAX_NUM_CHILDREN {
-            self.tips.remove(&hash);
-            self.children.remove(&hash);
-            self.non_lazy_tips.remove(&hash);
-            self.semi_lazy_tips.remove(&hash);
+        if let Some(children) = self.children.get(hash) {
+            if children.len() as u8 > MAX_NUM_CHILDREN {
+                self.tips.remove(&hash);
+                self.children.remove(&hash);
+                self.non_lazy_tips.remove(&hash);
+                self.semi_lazy_tips.remove(&hash);
+            }
         }
     }
 
     // further optimization: avoid allocations
     pub fn update_scores(&self) {
 
-        // make sure tip selection is not performed while scores get updated
-        self.update_score_lock.write().unwrap();
+        // make sure tip selection is not performed while updating the scores
+        self.lock.write().unwrap();
 
         // reset pools
         self.non_lazy_tips.clear();
@@ -132,6 +136,8 @@ impl TipSelector {
                 }
             }
         }
+
+        info!("non-lazy {}, semi-lazy {}", self.non_lazy_tips.len(), self.semi_lazy_tips.len());
 
     }
 
@@ -164,8 +170,8 @@ impl TipSelector {
     }
 
     fn select_tips(&self, hashes: &DashSet<Hash>) -> Option<(Hash, Hash)> {
-
-        self.update_score_lock.read().unwrap();
+        // make sure the scores will not get updated during tip selection; optimize to be able to use lock.read() instead, currently needed by num_
+        self.lock.write().unwrap();
 
         self.check_num_selections();
         let mut ret = HashSet::new();
