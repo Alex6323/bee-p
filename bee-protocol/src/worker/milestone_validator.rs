@@ -96,6 +96,9 @@ where
 
     fn process(&self, tail_hash: Hash) {
         if let Some(meta) = tangle().get_metadata(&tail_hash) {
+            if meta.flags.is_milestone() {
+                return;
+            }
             match self.validate_milestone(tail_hash) {
                 Ok(milestone) => {
                     tangle().add_milestone(milestone.index, milestone.hash);
