@@ -49,7 +49,7 @@ impl TipSelector {
         Self::default()
     }
 
-    // WURTS does only support solid transactions. This function therefore expects that each passed hash is solid.
+    // WURTS only supports solid transactions. This function therefore expects that each passed hash is solid.
     // In context of WURTS, a transaction can be considered as a "tip" if:
     // - transaction is solid and has no children
     // - transaction is solid and has only non-solid children
@@ -124,7 +124,7 @@ impl TipSelector {
                     }
                 }
                 Err(e) => {
-                    error!("Error: {:?}", e);
+                    error!("{:?}", e);
                 }
             }
         }
@@ -195,6 +195,7 @@ impl TipSelector {
 
         self.check_num_selections();
         let mut ret = HashSet::new();
+
         // try to get 10x randomly a tip
         for i in 1..10 {
             match self.select_tip(hashes) {
