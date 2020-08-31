@@ -38,6 +38,7 @@ use std::{
 };
 
 /// Milestone-based Tangle.
+#[derive(Default)]
 pub struct MsTangle {
     pub(crate) inner: Tangle<TransactionMetadata>,
     pub(crate) milestones: DashMap<MilestoneIndex, Hash>,
@@ -57,14 +58,7 @@ impl Deref for MsTangle {
 
 impl MsTangle {
     pub fn new() -> Self {
-        Self {
-            inner: Tangle::new(),
-            milestones: DashMap::new(),
-            solid_entry_points: DashMap::new(),
-            last_milestone_index: AtomicU32::new(0),
-            last_solid_milestone_index: AtomicU32::new(0),
-            snapshot_milestone_index: AtomicU32::new(0),
-        }
+        Self::default()
     }
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {

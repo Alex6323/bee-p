@@ -76,7 +76,7 @@ impl HashCache {
             self.cache.remove(&first);
         }
 
-        self.cache.insert(hash.clone());
+        self.cache.insert(hash);
         self.elem_order.push_back(hash);
 
         true

@@ -82,7 +82,7 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     // shutdown.add_worker_shutdown(udp_sd_sender, spawn(udp_worker.run()));
 
     whitelist::init();
-    shutdown.add_action(|| whitelist::drop());
+    shutdown.add_action(whitelist::drop);
 
     (Network::new(config, command_sender), events)
 }

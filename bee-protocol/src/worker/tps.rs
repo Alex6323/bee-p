@@ -62,15 +62,13 @@ impl TpsWorker {
     pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
-        loop {
-            match ready(Ok(()))
-                .delay(Duration::from_millis(1000))
-                .race(&mut shutdown)
-                .await
-            {
-                Ok(_) => self.tps(),
-                Err(_) => break,
-            }
+        while ready(Ok(()))
+            .delay(Duration::from_millis(1000))
+            .race(&mut shutdown)
+            .await
+            .is_ok()
+        {
+            self.tps();
         }
 
         info!("Stopped.");

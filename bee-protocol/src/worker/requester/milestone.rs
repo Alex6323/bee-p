@@ -65,10 +65,8 @@ impl<'a> MilestoneRequesterWorker<'a> {
             return;
         }
 
-        if self.process_request_unchecked(index, epid).await {
-            if index.0 != 0 {
-                Protocol::get().requested_milestones.insert(index, Instant::now());
-            }
+        if self.process_request_unchecked(index, epid).await && index.0 != 0 {
+            Protocol::get().requested_milestones.insert(index, Instant::now());
         }
     }
 
@@ -110,12 +108,10 @@ impl<'a> MilestoneRequesterWorker<'a> {
         for mut milestone in Protocol::get().requested_milestones.iter_mut() {
             let (index, instant) = milestone.pair_mut();
             let now = Instant::now();
-            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
-                if self.process_request_unchecked(*index, None).await {
-                    *instant = now;
-                    retry_counts += 1;
-                };
-            }
+            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && self.process_request_unchecked(*index, None).await {
+                *instant = now;
+                retry_counts += 1;
+            };
         }
 
         if retry_counts > 0 {

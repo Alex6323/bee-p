@@ -316,7 +316,7 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
             .0
             .hash()
             .iter_trytes()
-            .map(|trit| char::from(trit))
+            .map(char::from)
             .collect::<String>()
     );
     tangle().update_last_milestone_index(last_milestone.0.index);

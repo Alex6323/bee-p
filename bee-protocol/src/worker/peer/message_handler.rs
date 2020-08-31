@@ -63,7 +63,7 @@ impl MessageHandler {
     /// Fetch the header and payload of a message.
     ///
     /// This method only returns `None` if a shutdown signal is received.
-    pub(super) async fn fetch_message<'a>(&'a mut self) -> Option<(Header, &'a [u8])> {
+    pub(super) async fn fetch_message(&mut self) -> Option<(Header, &[u8])> {
         // loop until we can return the header and payload
         loop {
             match &self.state {
@@ -139,7 +139,7 @@ impl EventHandler {
     ///
     /// The future returned by this method will be ready until there are enough bytes to fullfill
     /// the request.
-    async fn fetch_bytes<'a>(&'a mut self, len: usize) -> &'a [u8] {
+    async fn fetch_bytes(&mut self, len: usize) -> &[u8] {
         // We need to be sure that we have enough bytes in the buffer.
         while self.offset + len > self.buffer.len() {
             // If there are not enough bytes in the buffer, we must receive new events

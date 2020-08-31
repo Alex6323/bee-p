@@ -104,12 +104,10 @@ impl<'a> TransactionRequesterWorker<'a> {
         for mut transaction in Protocol::get().requested_transactions.iter_mut() {
             let (hash, (index, instant)) = transaction.pair_mut();
             let now = Instant::now();
-            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS {
-                if self.process_request_unchecked(hash.clone(), *index).await {
+            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && self.process_request_unchecked(*hash, *index).await {
                     *instant = now;
                     retry_counts += 1;
                 }
-            }
         }
 
         if retry_counts > 0 {
