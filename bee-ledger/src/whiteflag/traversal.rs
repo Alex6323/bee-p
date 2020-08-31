@@ -80,24 +80,34 @@ impl LedgerWorker {
         let mut visited = HashSet::new();
 
         while let Some(hash) = hashes.last() {
+            let meta = match tangle().get_metadata(hash) {
+                Some(meta) => meta,
+                None => {
+                    if !tangle().is_solid_entry_point(hash) {
+                        return Err(Error::MissingBundle);
+                    } else {
+                        visited.insert(*hash);
+                        hashes.pop();
+                        continue;
+                    }
+                }
+            };
+
+            if !meta.flags().is_tail() {
+                return Err(Error::NotATail);
+            }
+
+            if meta.flags().is_confirmed() {
+                visited.insert(*hash);
+                hashes.pop();
+                continue;
+            }
+
             // TODO pass match to avoid repetitions
             match load_bundle_builder(hash) {
                 Some(bundle_builder) => {
                     let trunk = bundle_builder.trunk();
                     let branch = bundle_builder.branch();
-                    // TODO justify
-                    let meta = tangle().get_metadata(hash).unwrap();
-
-                    if !meta.flags().is_tail() {
-                        return Err(Error::NotATail);
-                    }
-
-                    // TODO get previous meta instead of loading these bundles ?
-                    if meta.flags().is_confirmed() {
-                        visited.insert(*hash);
-                        hashes.pop();
-                        continue;
-                    }
 
                     if visited.contains(trunk) && visited.contains(branch) {
                         // TODO check valid and strict semantic

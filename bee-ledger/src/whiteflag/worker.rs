@@ -40,6 +40,7 @@ type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>
 enum Error {
     NonContiguousMilestone,
     MerkleProofMismatch,
+    InvalidTailsCount,
     InvalidConfirmationSet(TraversalError),
 }
 
@@ -104,6 +105,22 @@ impl LedgerWorker {
                         milestone.index().0,
                     );
                     return Err(Error::MerkleProofMismatch);
+                }
+
+                if confirmation.num_tails_referenced
+                    != confirmation.num_tails_zero_value
+                        + confirmation.num_tails_conflicting
+                        + confirmation.tails_included.len()
+                {
+                    error!(
+                        "Invalid tails count at {}: referenced ({}) != zero ({}) + conflicting ({}) + included ({}).",
+                        milestone.index().0,
+                        confirmation.num_tails_referenced,
+                        confirmation.num_tails_zero_value,
+                        confirmation.num_tails_conflicting,
+                        confirmation.tails_included.len()
+                    );
+                    return Err(Error::InvalidTailsCount);
                 }
 
                 self.index = milestone.index();
