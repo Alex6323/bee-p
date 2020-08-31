@@ -36,7 +36,7 @@ const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
 // the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to widen the cone of the tangle. (non-lazy pool)
-const MAX_AGE_SECONDS_AFTER_FIRST_CHILD: u8 = 3;
+const MAX_AGE_SECONDS: u8 = 3;
 // the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
 const MAX_NUM_CHILDREN: u8 = 2;
 // the maximum count of selection a tip is allowed to get before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
@@ -129,7 +129,7 @@ impl TipSelector {
         for (tip, time) in self.hashes.clone() {
             match time.elapsed() {
                 Ok(elapsed) => {
-                    if self.num_children(&tip) > 1 && elapsed.as_secs() as u8 > MAX_AGE_SECONDS_AFTER_FIRST_CHILD {
+                    if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
                         self.hashes.remove(&tip);
                         self.children.remove(&tip);
                     }
