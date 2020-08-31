@@ -111,9 +111,9 @@ where
 
     /// Updates the metadata of a particular vertex.
     pub fn set_metadata(&self, hash: &Hash, metadata: T) {
-        self.vertices.get_mut(hash).map(|mut vtx| {
+        if let Some(mut vtx) = self.vertices.get_mut(hash) {
             *vtx.value_mut().metadata_mut() = metadata;
-        });
+        }
     }
 
     /// Updates the metadata of a vertex.
@@ -121,9 +121,9 @@ where
     where
         Update: Fn(&mut T),
     {
-        self.vertices
-            .get_mut(hash)
-            .map(|mut vtx| update(vtx.value_mut().metadata_mut()));
+        if let Some(mut vtx) = self.vertices.get_mut(hash) {
+            update(vtx.value_mut().metadata_mut())
+        }
     }
 
     /// Returns the number of transactions in the Tangle.
@@ -131,16 +131,21 @@ where
         self.vertices.len()
     }
 
+    /// Checks if the tangle is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Returns the children of a vertex.
     pub fn get_children(&self, hash: &Hash) -> HashSet<Hash> {
         let num_children = self.num_children(hash);
         let mut hashes = HashSet::with_capacity(num_children);
 
-        self.children.get(hash).map(|c| {
+        if let Some(c) = self.children.get(hash) {
             for child in c.value() {
                 hashes.insert(*child);
             }
-        });
+        }
 
         hashes
     }

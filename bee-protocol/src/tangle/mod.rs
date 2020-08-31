@@ -44,6 +44,7 @@ use std::{
 use crate::tangle::tip_selector::TipSelector;
 
 /// Milestone-based Tangle.
+#[derive(Default)]
 pub struct MsTangle {
     pub(crate) inner: Tangle<TransactionMetadata>,
     pub(crate) milestones: DashMap<MilestoneIndex, Hash>,
@@ -65,19 +66,10 @@ impl Deref for MsTangle {
 
 impl MsTangle {
     pub fn new() -> Self {
-        Self {
-            inner: Tangle::new(),
-            milestones: DashMap::new(),
-            solid_entry_points: DashMap::new(),
-            last_milestone_index: AtomicU32::new(0),
-            last_solid_milestone_index: AtomicU32::new(0),
-            snapshot_milestone_index: AtomicU32::new(0),
-            tip_selector: TipSelector::new(),
-            last_solid_milestone_index_processed: AtomicU32::new(0),
-        }
+        Self::default()
     }
 
-    pub fn insert(&self, transaction:  Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
+    pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
 
             let last_solid_milestone_index_processed = self.last_solid_milestone_index_processed.load(Ordering::Relaxed);
@@ -92,7 +84,6 @@ impl MsTangle {
             self.propagate_solid_flag(&hash);
 
             return Some(tx);
-
         }
         None
     }
@@ -106,6 +97,7 @@ impl MsTangle {
             if self.is_solid_transaction(hash) {
                 continue;
             }
+
             if let Some(tx) = self.inner.get(&hash) {
                 if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
                     self.inner.update_metadata(&hash, |metadata| {
@@ -130,7 +122,6 @@ impl MsTangle {
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
                     }
-
                 }
             }
         }

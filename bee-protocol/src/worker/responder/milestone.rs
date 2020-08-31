@@ -65,7 +65,7 @@ impl MilestoneResponderWorker {
                     ))),
                 );
             }
-            None => return,
+            None => {}
         }
     }
 

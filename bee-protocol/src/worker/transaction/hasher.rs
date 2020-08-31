@@ -30,7 +30,7 @@ use futures::{
     stream::{Fuse, Stream, StreamExt},
     task::{Context, Poll},
 };
-use log::{debug, info, warn};
+use log::{info, trace, warn};
 use pin_project::pin_project;
 
 use std::pin::Pin;
@@ -150,7 +150,7 @@ impl Stream for HasherWorker {
                 Poll::Ready(Some(event)) => {
                     // If the transaction was already received, we skip it and poll again.
                     if !cache.insert(&event.transaction.bytes) {
-                        debug!("Transaction already received.");
+                        trace!("Transaction already received.");
                         Protocol::get().metrics.known_transactions_inc();
                         continue;
                     }

@@ -33,7 +33,7 @@ use futures::{
     future::FutureExt,
     stream::StreamExt,
 };
-use log::{debug, error, info, warn};
+use log::{error, info, trace, warn};
 
 use std::{
     sync::Arc,
@@ -205,7 +205,7 @@ impl PeerHandshakerWorker {
 
     async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerHandshakerWorkerError> {
         if let Handshake::ID = header.message_type {
-            debug!("[{}] Reading Handshake...", self.peer.address);
+            trace!("[{}] Reading Handshake...", self.peer.address);
             match tlv_from_bytes::<Handshake>(&header, bytes) {
                 Ok(handshake) => match self.validate_handshake(handshake) {
                     Ok(address) => {

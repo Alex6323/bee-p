@@ -15,7 +15,7 @@ use bee_ternary::T5B1Buf;
 use std::marker::PhantomData;
 
 use bytemuck::cast_slice;
-use digest::Digest;
+use digest::{Digest, Output};
 
 /// Leaf domain separation prefix.
 const LEAF_HASH_PREFIX: u8 = 0x00;
@@ -42,37 +42,42 @@ impl<D: Default + Digest> MerkleHasher<D> {
     }
 
     /// Returns the digest of the empty hash.
-    fn empty(&mut self) -> Vec<u8> {
-        (&D::digest(b"")).to_vec()
+    fn empty(&mut self) -> Output<D> {
+        D::digest(b"")
     }
 
     /// Returns the digest of a Merkle leaf.
-    fn leaf(&mut self, hash: Hash) -> Vec<u8> {
+    fn leaf(&mut self, hash: Hash) -> Output<D> {
         let mut hasher = D::default();
 
         hasher.update([LEAF_HASH_PREFIX]);
         hasher.update(cast_slice(hash.encode::<T5B1Buf>().as_i8_slice()));
-        (&hasher.finalize_reset()).to_vec()
+        hasher.finalize_reset()
     }
 
     /// Returns the digest of a Merkle node.
-    fn node(&mut self, hashes: &[Hash]) -> Vec<u8> {
+    fn node(&mut self, hashes: &[Hash]) -> Output<D> {
         let mut hasher = D::default();
         let (left, right) = hashes.split_at(self.largest_power_of_two(hashes.len() as u32 - 1));
 
         hasher.update([NODE_HASH_PREFIX]);
-        hasher.update(self.hash(left));
-        hasher.update(self.hash(right));
-        (&hasher.finalize_reset()).to_vec()
+        hasher.update(self.digest_inner(left));
+        hasher.update(self.digest_inner(right));
+        hasher.finalize_reset()
     }
 
-    /// Returns the digest of a list of hashes.
-    pub(crate) fn hash(&mut self, hashes: &[Hash]) -> Vec<u8> {
+    /// Returns the digest of a list of hashes as an `Output<D>`.
+    fn digest_inner(&mut self, hashes: &[Hash]) -> Output<D> {
         match hashes.len() {
             0 => self.empty(),
             1 => self.leaf(hashes[0]),
             _ => self.node(hashes),
         }
+    }
+
+    /// Returns the digest of a list of hashes as a `Vec<u8>`.
+    pub(crate) fn digest(&mut self, hashes: &[Hash]) -> Vec<u8> {
+        self.digest_inner(hashes).to_vec()
     }
 }
 
@@ -88,7 +93,7 @@ mod tests {
 
     #[test]
     fn empty() {
-        let hash = MerkleHasher::<Blake2b>::new().hash(&[]);
+        let hash = MerkleHasher::<Blake2b>::new().digest(&[]);
 
         assert_eq!(
             hex::encode(hash),
@@ -99,7 +104,7 @@ mod tests {
 
     #[test]
     fn null_leaf() {
-        let hash = MerkleHasher::<Blake2b>::new().hash(&vec![Hash::zeros()]);
+        let hash = MerkleHasher::<Blake2b>::new().digest(&vec![Hash::zeros()]);
 
         assert_eq!(
             hex::encode(hash),
@@ -110,7 +115,7 @@ mod tests {
 
     #[test]
     fn null_node() {
-        let hash = MerkleHasher::<Blake2b>::new().hash(&vec![Hash::zeros(), Hash::zeros()]);
+        let hash = MerkleHasher::<Blake2b>::new().digest(&vec![Hash::zeros(), Hash::zeros()]);
 
         assert_eq!(
             hex::encode(hash),
@@ -139,7 +144,7 @@ mod tests {
             ));
         }
 
-        let hash = MerkleHasher::<Blake2b>::new().hash(&hashes);
+        let hash = MerkleHasher::<Blake2b>::new().digest(&hashes);
 
         assert_eq!(
             hex::encode(hash),

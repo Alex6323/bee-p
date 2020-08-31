@@ -14,11 +14,12 @@ use crate::{
     state::LedgerState,
     whiteflag::{
         b1t6::decode, bundle::load_bundle_builder, merkle_hasher::MerkleHasher, metadata::WhiteFlagMetadata,
-        traversal::Error as TraversalError, WhiteFlag,
+        traversal::Error as TraversalError,
     },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::event::Bus;
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_protocol::{config::ProtocolCoordinatorConfig, Milestone, MilestoneIndex};
 use bee_transaction::bundled::{Address, BundledTransactionField};
@@ -30,7 +31,7 @@ use futures::{
 };
 use log::{error, info, warn};
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 const MERKLE_PROOF_LENGTH: usize = 384;
 
@@ -51,6 +52,7 @@ pub(crate) struct LedgerWorker {
     index: MilestoneIndex,
     pub(crate) state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
+    bus: Arc<Bus<'static>>,
     receiver: Receiver,
 }
 
@@ -60,12 +62,14 @@ impl LedgerWorker {
         index: MilestoneIndex,
         state: HashMap<Address, u64>,
         coo_config: ProtocolCoordinatorConfig,
+        bus: Arc<Bus<'static>>,
         receiver: Receiver,
     ) -> Self {
         Self {
             index,
-            state: LedgerState(state),
+            state: LedgerState::new(state),
             coo_config,
+            bus,
             receiver,
         }
     }
@@ -94,7 +98,7 @@ impl LedgerWorker {
 
         match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
             Ok(_) => {
-                if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().hash(&confirmation.tails_included)) {
+                if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().digest(&confirmation.tails_included)) {
                     error!(
                         "The computed merkle proof on milestone {} does not match the one provided by the coordinator.",
                         milestone.index().0,
@@ -113,7 +117,7 @@ impl LedgerWorker {
                     confirmation.tails_included.len()
                 );
 
-                WhiteFlag::get().bus.dispatch(MilestoneConfirmed {
+                self.bus.dispatch(MilestoneConfirmed {
                     milestone,
                     timestamp,
                     tails_referenced: confirmation.num_tails_referenced,
@@ -136,7 +140,7 @@ impl LedgerWorker {
     }
 
     fn get_balance(&self, address: Address, sender: oneshot::Sender<u64>) {
-        if let Err(e) = sender.send(*self.state.get_or_zero(&address)) {
+        if let Err(e) = sender.send(self.state.get_or_zero(&address)) {
             warn!("Failed to send balance: {:?}.", e);
         }
     }

@@ -46,10 +46,10 @@ impl Protocol {
 
             if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
                 Protocol::request_milestone(index, None);
-                to_request_num = to_request_num - 1;
+                to_request_num -= 1;
             }
 
-            to_request_index = to_request_index + 1;
+            to_request_index += 1;
         }
     }
 

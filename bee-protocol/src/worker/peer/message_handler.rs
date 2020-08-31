@@ -19,7 +19,7 @@ use futures::{
     stream::{self, StreamExt},
 };
 
-use log::debug;
+use log::trace;
 
 type EventRecv = stream::Fuse<mpsc::Receiver<Vec<u8>>>;
 type ShutdownRecv = future::Fuse<oneshot::Receiver<()>>;
@@ -63,7 +63,7 @@ impl MessageHandler {
     /// Fetch the header and payload of a message.
     ///
     /// This method only returns `None` if a shutdown signal is received.
-    pub(super) async fn fetch_message<'a>(&'a mut self) -> Option<(Header, &'a [u8])> {
+    pub(super) async fn fetch_message(&mut self) -> Option<(Header, &[u8])> {
         // loop until we can return the header and payload
         loop {
             match &self.state {
@@ -74,7 +74,7 @@ impl MessageHandler {
                         .events
                         .fetch_bytes_or_shutdown(&mut self.shutdown, HEADER_SIZE)
                         .await?;
-                    debug!("[{}] Reading Header...", self.address);
+                    trace!("[{}] Reading Header...", self.address);
                     let header = Header::from_bytes(bytes);
                     // Now we are ready to read a payload.
                     self.state = ReadState::Payload(header);
@@ -139,7 +139,7 @@ impl EventHandler {
     ///
     /// The future returned by this method will be ready until there are enough bytes to fullfill
     /// the request.
-    async fn fetch_bytes<'a>(&'a mut self, len: usize) -> &'a [u8] {
+    async fn fetch_bytes(&mut self, len: usize) -> &[u8] {
         // We need to be sure that we have enough bytes in the buffer.
         while self.offset + len > self.buffer.len() {
             // If there are not enough bytes in the buffer, we must receive new events

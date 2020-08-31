@@ -31,7 +31,6 @@ use log::warn;
 use std::{collections::HashMap, ptr, sync::Arc};
 
 struct WhiteFlag {
-    pub(crate) bus: Arc<Bus<'static>>,
     confirmation_sender: mpsc::UnboundedSender<LedgerWorkerEvent>,
 }
 
@@ -84,6 +83,7 @@ pub fn init(
                 MilestoneIndex(index),
                 state,
                 coo_config,
+                bus.clone(),
                 ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
             )
             .run(),
@@ -91,7 +91,6 @@ pub fn init(
     );
 
     let white_flag = WhiteFlag {
-        bus: bus.clone(),
         confirmation_sender: ledger_worker_tx.clone(),
     };
 

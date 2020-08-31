@@ -40,7 +40,7 @@ impl LedgerWorker {
         } else {
             // First pass to look for conflicts.
             for (address, diff) in bundle_mutations.iter() {
-                let balance = *self.state.get_or_zero(&address) as i64 + diff;
+                let balance = self.state.get_or_zero(&address) as i64 + diff;
 
                 if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
                     metadata.num_tails_conflicting += 1;
@@ -52,7 +52,7 @@ impl LedgerWorker {
             if !conflicting {
                 // Second pass to mutate the state.
                 for (address, diff) in bundle_mutations {
-                    self.state.apply(address.clone(), diff);
+                    self.state.apply_single_diff(address.clone(), diff);
                     metadata.diff.apply(address, diff);
                 }
 
@@ -94,7 +94,7 @@ impl LedgerWorker {
 
                     // TODO get previous meta instead of loading these bundles ?
                     if meta.flags().is_confirmed() {
-                        visited.insert(hash.clone());
+                        visited.insert(*hash);
                         hashes.pop();
                         continue;
                     }
@@ -106,7 +106,7 @@ impl LedgerWorker {
                             Err(e) => return Err(Error::InvalidBundle(e)),
                         };
                         self.on_bundle(hash, &bundle, metadata);
-                        visited.insert(hash.clone());
+                        visited.insert(*hash);
                         hashes.pop();
                     } else if !visited.contains(trunk) {
                         hashes.push(*trunk);
@@ -118,7 +118,7 @@ impl LedgerWorker {
                     if !tangle().is_solid_entry_point(hash) {
                         return Err(Error::MissingBundle);
                     } else {
-                        visited.insert(hash.clone());
+                        visited.insert(*hash);
                         hashes.pop();
                     }
                 }

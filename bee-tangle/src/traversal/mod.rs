@@ -21,8 +21,8 @@ use std::collections::HashSet;
 /// the *trunk* edge. The walk continues as long as the visited vertices match a certain condition. For each
 /// visited vertex a customized logic can be applied. Each traversed vertex provides read access to its
 /// associated data and metadata.
-pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
-    tangle: &'a Tangle<Metadata>,
+pub fn visit_parents_follow_trunk<Metadata, Match, Apply>(
+    tangle: &Tangle<Metadata>,
     mut hash: Hash,
     mut matches: Match,
     mut apply: Apply,
@@ -47,8 +47,8 @@ pub fn visit_parents_follow_trunk<'a, Metadata, Match, Apply>(
 /// the *trunk* edge. The walk continues as long as the visited vertices match a certain condition. For each
 /// visited vertex a customized logic can be applied. Each traversed vertex provides read access to its
 /// associated data and metadata.
-pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
-    tangle: &'a Tangle<Metadata>,
+pub fn visit_children_follow_trunk<Metadata, Match, Apply>(
+    tangle: &Tangle<Metadata>,
     root: Hash,
     matches: Match,
     mut apply: Apply,
@@ -83,8 +83,8 @@ pub fn visit_children_follow_trunk<'a, Metadata, Match, Apply>(
 /// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
 /// condition. For each visited vertex customized logic can be applied depending on the availability of the
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
-pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
-    tangle: &'a Tangle<Metadata>,
+pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply>(
+    tangle: &Tangle<Metadata>,
     root: Hash,
     matches: Match,
     mut apply: Apply,
@@ -127,8 +127,8 @@ pub fn visit_parents_depth_first<'a, Metadata, Match, Apply, ElseApply>(
 /// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
 /// condition. For each visited vertex customized logic can be applied depending on the availability of the
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
-pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
-    tangle: &'a Tangle<Metadata>,
+pub fn visit_children_depth_first<Metadata, Match, Apply, ElseApply>(
+    tangle: &Tangle<Metadata>,
     root: Hash,
     matches: Match,
     mut apply: Apply,
@@ -149,16 +149,12 @@ pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
 
                 if visited.contains(vtx.trunk()) && visited.contains(vtx.branch()) {
                     apply(hash, vtx.transaction(), vtx.metadata());
-                    visited.insert(hash.clone());
+                    visited.insert(*hash);
                     children.pop();
-                } else if !visited.contains(vtx.trunk()) {
-                    if matches(vtx.transaction(), vtx.metadata()) {
-                        children.push(*vtx.trunk());
-                    }
-                } else if !visited.contains(vtx.branch()) {
-                    if matches(vtx.transaction(), vtx.metadata()) {
-                        children.push(*vtx.branch());
-                    }
+                } else if !visited.contains(vtx.trunk()) && matches(vtx.transaction(), vtx.metadata()) {
+                    children.push(*vtx.trunk());
+                } else if !visited.contains(vtx.branch()) && matches(vtx.transaction(), vtx.metadata()) {
+                    children.push(*vtx.branch());
                 }
             }
             None => {
@@ -166,7 +162,7 @@ pub fn visit_children_depth_first<'a, Metadata, Match, Apply, ElseApply>(
                 // if !tangle.solid_entry_points.contains(hash) {
                 else_apply(hash);
                 //}
-                visited.insert(hash.clone());
+                visited.insert(*hash);
                 children.pop();
             }
         }

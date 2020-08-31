@@ -56,15 +56,13 @@ impl StatusWorker {
     pub(crate) async fn run(self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
-        loop {
-            match ready(Ok(()))
-                .delay(Duration::from_millis(self.interval_ms))
-                .race(&mut shutdown)
-                .await
-            {
-                Ok(_) => self.status(),
-                Err(_) => break,
-            }
+        while ready(Ok(()))
+            .delay(Duration::from_millis(self.interval_ms))
+            .race(&mut shutdown)
+            .await
+            .is_ok()
+        {
+            self.status();
         }
 
         info!("Stopped.");
