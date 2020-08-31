@@ -95,34 +95,32 @@ where
     }
 
     fn process(&self, tail_hash: Hash) {
-        // TODO split
-        match self.validate_milestone(tail_hash) {
-            Ok(milestone) => {
-                // TODO check multiple triggers
-                tangle().add_milestone(milestone.index, milestone.hash);
+        if let Some(meta) = tangle().get_metadata(&tail_hash) {
+            match self.validate_milestone(tail_hash) {
+                Ok(milestone) => {
+                    tangle().add_milestone(milestone.index, milestone.hash);
 
-                // This is possibly not sufficient as there is no guarantee a milestone has been solidified
-                // before being validated, we then also need to check when a milestone gets solidified if it's
-                // already vadidated.
-                if let Some(meta) = tangle().get_metadata(&milestone.hash) {
+                    // This is possibly not sufficient as there is no guarantee a milestone has been solidified
+                    // before being validated, we then also need to check when a milestone gets solidified if it's
+                    // already vadidated.
                     if meta.flags.is_solid() {
                         Protocol::get()
                             .bus
                             .dispatch(LastSolidMilestoneChanged(milestone.clone()));
                     }
-                }
 
-                if milestone.index > tangle().get_last_milestone_index() {
-                    Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
-                }
+                    if milestone.index > tangle().get_last_milestone_index() {
+                        Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
+                    }
 
-                Protocol::get().requested_milestones.remove(&milestone.index);
-                Protocol::request_milestone_fill();
+                    Protocol::get().requested_milestones.remove(&milestone.index);
+                    Protocol::request_milestone_fill();
+                }
+                Err(e) => match e {
+                    MilestoneValidatorWorkerError::IncompleteBundle => {}
+                    _ => debug!("Invalid milestone bundle: {:?}.", e),
+                },
             }
-            Err(e) => match e {
-                MilestoneValidatorWorkerError::IncompleteBundle => {}
-                _ => debug!("Invalid milestone bundle: {:?}.", e),
-            },
         }
     }
 
