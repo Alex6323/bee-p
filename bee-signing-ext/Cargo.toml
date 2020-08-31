@@ -15,9 +15,9 @@ default = ["std"]
 std = []
 
 [dependencies]
-bee-common-derive = { git = "https://github.com/iotaledger/bee.git" }
-bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
-bee-ternary = { git = "https://github.com/iotaledger/bee.git", features = ["serde1"] }
+bee-common-derive = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev", features = ["serde1"] }
 
 ed25519-dalek = { version = "1.0.0-pre.4", features = ["serde"] }
 rand = "0.7"
