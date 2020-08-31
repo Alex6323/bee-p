@@ -326,12 +326,6 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
     );
     tangle().update_last_milestone_index(last_milestone.0.index);
 
-    Protocol::get()
-        .milestone_solidifier_worker
-        .unbounded_send(MilestoneSolidifierWorkerEvent::NewSolidMilestone(
-            last_milestone.0.index,
-        ));
-
     Protocol::broadcast_heartbeat(
         tangle().get_last_solid_milestone_index(),
         tangle().get_snapshot_milestone_index(),
