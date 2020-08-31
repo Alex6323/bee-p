@@ -29,13 +29,18 @@ enum Score {
     Lazy,
 }
 
-const YTRSI_DELTA: u32 = 8; // C1
-const OTRSI_DELTA: u32 = 13; // C2
-const BELOW_MAX_DEPTH: u32 = 15; // M
-
+// C1: the maximum allowed delta value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+const YTRSI_DELTA: u32 = 8;
+// C2: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
+const OTRSI_DELTA: u32 = 13;
+// M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+const BELOW_MAX_DEPTH: u32 = 15;
+// the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to widen the cone of the tangle. (non-lazy pool)
+const MAX_AGE_SECONDS_AFTER_FIRST_CHILD: u8 = 3;
+// the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
 const MAX_NUM_CHILDREN: u8 = 2;
+// the maximum count of selection a tip is allowed to get before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
 const MAX_NUM_SELECTIONS: u8 = 2;
-const MAX_AGE_SECONDS: u8 = 3;
 
 #[derive(Default)]
 pub struct TipSelector {
@@ -107,7 +112,7 @@ impl TipSelector {
 
     fn check_num_children_of_parent(&self, hash: &Hash) {
         if self.children.get(hash).is_some() {
-            if self.children.get(hash).unwrap().len() as u8 > MAX_NUM_CHILDREN {
+            if self.num_children(hash) > MAX_NUM_CHILDREN {
                 self.hashes.remove(&hash);
                 self.children.remove(&hash);
                 self.non_lazy_tips.remove(&hash);
@@ -116,11 +121,15 @@ impl TipSelector {
         }
     }
 
+    fn num_children(&self, hash: &Hash) -> u8 {
+        self.children.get(hash).unwrap().len() as u8
+    }
+
     fn check_age_seconds(&self) {
         for (tip, time) in self.hashes.clone() {
             match time.elapsed() {
                 Ok(elapsed) => {
-                    if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
+                    if self.num_children(&tip) > 1 && elapsed.as_secs() as u8 > MAX_AGE_SECONDS_AFTER_FIRST_CHILD {
                         self.hashes.remove(&tip);
                         self.children.remove(&tip);
                     }
