@@ -45,6 +45,7 @@ impl Zeroize for Ed25519Seed {
 
 impl Ed25519Seed {
     /// Creates a new random `Seed`.
+    #[cfg(feature = "std")]
     pub fn rand() -> Self {
         // `ThreadRng` implements `CryptoRng` so it is safe to use in cryptographic contexts.
         // https://rust-random.github.io/rand/rand/trait.CryptoRng.html
