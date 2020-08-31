@@ -238,7 +238,7 @@ impl MsTangle {
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        self.tip_selector.get_semi_lazy_tips()
+        self.tip_selector.get_non_lazy_tips()
     }
 
     pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {

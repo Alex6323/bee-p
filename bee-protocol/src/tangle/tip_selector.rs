@@ -33,6 +33,7 @@ const M: u32 = 15;
 const MAX_NUM_CHILDREN: u8 = 2;
 const MAX_NUM_SELECTIONS: u8 = 2;
 
+#[derive(Default)]
 pub struct TipSelector {
     tips: DashSet<Hash>,
     children: DashMap<Hash, HashSet<Hash>>,
@@ -43,13 +44,7 @@ pub struct TipSelector {
 
 impl TipSelector {
     pub(crate) fn new() -> Self {
-        Self {
-            tips: DashSet::new(),
-            children: DashMap::new(),
-            non_lazy_tips: DashSet::new(),
-            semi_lazy_tips: DashSet::new(),
-            lock: Arc::new(RwLock::new(())),
-        }
+        Self::default()
     }
 
     // WURTS does only support solid transactions. This function therefore expects that each passed hash is solid.
