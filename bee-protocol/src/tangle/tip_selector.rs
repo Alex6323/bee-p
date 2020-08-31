@@ -35,7 +35,7 @@ const MAX_NUM_SELECTIONS: u8 = 2;
 
 #[derive(Default)]
 pub struct TipSelector {
-    tips: DashSet<Hash>,
+    hashes: DashSet<Hash>,
     children: DashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: DashSet<Hash>,
     semi_lazy_tips: DashSet<Hash>,
@@ -53,13 +53,18 @@ impl TipSelector {
     // - transaction is solid and has only non-solid children
     // - transaction is solid and has solid children but does not exceed the retention rules
     pub fn insert(&self, hash: &Hash) {
-        // insert transaction
-        self.tips.insert(*hash);
+        // store hash
+        self.store_hash(hash);
         // Link parents with child
         self.add_to_parents(hash);
         // Remove parents that have more than 'MAX_CHILDREN_COUNT' children
         self.check_num_children_of_parents(hash);
 
+    }
+
+    fn store_hash(&self, hash: &Hash) {
+        self.hashes.insert(*hash);
+        self.children.insert(*hash, HashSet::new());
     }
 
     fn add_to_parents(&self, hash: &Hash) {
@@ -96,9 +101,9 @@ impl TipSelector {
     }
 
     fn check_num_children_of_parent(&self, hash: &Hash) {
-        if let Some(children) = self.children.get(hash) {
-            if children.len() as u8 > MAX_NUM_CHILDREN {
-                self.tips.remove(&hash);
+        if self.children.get(hash).is_some()  {
+            if self.children.get(hash).unwrap().len() as u8 > MAX_NUM_CHILDREN {
+                self.hashes.remove(&hash);
                 self.children.remove(&hash);
                 self.non_lazy_tips.remove(&hash);
                 self.semi_lazy_tips.remove(&hash);
@@ -117,7 +122,7 @@ impl TipSelector {
         self.semi_lazy_tips.clear();
 
         // iter tips and assign them to their appropriate pools
-        for tip in self.tips.clone() {
+        for tip in self.hashes.clone() {
             match self.tip_score(&tip) {
                 Score::NON_LAZY => {
                     self.non_lazy_tips.insert(tip);
@@ -126,7 +131,7 @@ impl TipSelector {
                     self.semi_lazy_tips.insert(tip);
                 }
                 Score::LAZY => {
-                    self.tips.remove(&tip);
+                    self.hashes.remove(&tip);
                     self.children.remove(&tip);
                 }
             }
