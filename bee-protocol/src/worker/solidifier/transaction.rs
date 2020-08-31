@@ -39,6 +39,7 @@ impl TransactionSolidifierWorker {
             tangle(),
             root,
             |hash, _, metadata| {
+                info!("{:0b}", metadata.flags);
                 !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
             },
             |_, _, _| {},
