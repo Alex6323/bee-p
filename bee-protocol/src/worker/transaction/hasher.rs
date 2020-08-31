@@ -52,7 +52,7 @@ pub(crate) struct HasherWorker {
     #[pin]
     receiver: Receiver,
     cache: HashCache,
-    hasher: BatchHasher,
+    hasher: BatchHasher<T5B1Buf>,
     events: Vec<HasherWorkerEvent>,
 }
 
