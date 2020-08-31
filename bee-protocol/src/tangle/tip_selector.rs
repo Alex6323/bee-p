@@ -11,25 +11,27 @@
 
 use crate::tangle::tangle;
 use bee_crypto::ternary::Hash;
-use bee_transaction::Vertex;
-use dashmap::{DashSet, DashMap};
-use rand::{seq::IteratorRandom, thread_rng};
-use std::collections::HashSet;
 use bee_tangle::Tangle;
-use dashmap::mapref::entry::Entry;
-use std::sync::{Arc, RwLock};
-use log::{info, error};
-use std::time::SystemTime;
+use bee_ternary::tryte::Tryte::O;
+use bee_transaction::Vertex;
+use dashmap::{mapref::entry::Entry, DashMap, DashSet};
+use log::{error, info};
+use rand::{seq::IteratorRandom, thread_rng};
+use std::{
+    collections::HashSet,
+    sync::{Arc, RwLock},
+    time::SystemTime,
+};
 
 enum Score {
-    NON_LAZY,
-    SEMI_LAZY,
-    LAZY,
+    NonLazy,
+    SemiLazy,
+    Lazy,
 }
 
-const C1: u32 = 8;
-const C2: u32 = 13;
-const M: u32 = 15;
+const YTRSI_DELTA: u32 = 8; // C1
+const OTRSI_DELTA: u32 = 13; // C2
+const BELOW_MAX_DEPTH: u32 = 15; // M
 
 const MAX_NUM_CHILDREN: u8 = 2;
 const MAX_NUM_SELECTIONS: u8 = 2;
@@ -104,7 +106,7 @@ impl TipSelector {
     }
 
     fn check_num_children_of_parent(&self, hash: &Hash) {
-        if self.children.get(hash).is_some()  {
+        if self.children.get(hash).is_some() {
             if self.children.get(hash).unwrap().len() as u8 > MAX_NUM_CHILDREN {
                 self.hashes.remove(&hash);
                 self.children.remove(&hash);
@@ -123,17 +125,13 @@ impl TipSelector {
                         self.children.remove(&tip);
                     }
                 }
-                Err(e) => {
-                    error!("{:?}", e);
-                }
+                Err(e) => error!("{:?}", e),
             }
         }
     }
 
-
     // further optimization: avoid allocations
     pub fn update_scores(&self) {
-
         // make sure tip selection is not performed while updating the scores
         self.lock.write().unwrap();
 
@@ -144,21 +142,24 @@ impl TipSelector {
         // iter tips and assign them to their appropriate pools
         for (tip, _) in self.hashes.clone() {
             match self.tip_score(&tip) {
-                Score::NON_LAZY => {
+                Score::NonLazy => {
                     self.non_lazy_tips.insert(tip);
                 }
-                Score::SEMI_LAZY => {
+                Score::SemiLazy => {
                     self.semi_lazy_tips.insert(tip);
                 }
-                Score::LAZY => {
+                Score::Lazy => {
                     self.hashes.remove(&tip);
                     self.children.remove(&tip);
                 }
             }
         }
 
-        info!("non-lazy {}, semi-lazy {}", self.non_lazy_tips.len(), self.semi_lazy_tips.len());
-
+        info!(
+            "non-lazy {}, semi-lazy {}",
+            self.non_lazy_tips.len(),
+            self.semi_lazy_tips.len()
+        );
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
@@ -166,19 +167,19 @@ impl TipSelector {
         let otrsi = *tangle().otrsi(&hash).unwrap();
         let ytrsi = *tangle().ytrsi(&hash).unwrap();
 
-        if (lsmi - ytrsi) > C1 {
-            return Score::LAZY;
+        if (lsmi - ytrsi) > YTRSI_DELTA {
+            return Score::Lazy;
         }
 
-        if (lsmi - otrsi) > C2 {
-            return Score::LAZY;
+        if (lsmi - otrsi) > BELOW_MAX_DEPTH {
+            return Score::Lazy;
         }
 
-        if (lsmi - otrsi) > M {
-            return Score::SEMI_LAZY;
+        if (lsmi - otrsi) > OTRSI_DELTA {
+            return Score::SemiLazy;
         }
 
-        Score::NON_LAZY
+        Score::NonLazy
     }
 
     pub fn get_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
@@ -190,7 +191,8 @@ impl TipSelector {
     }
 
     fn select_tips(&self, hashes: &DashSet<Hash>) -> Option<(Hash, Hash)> {
-        // make sure the scores will not get updated during tip selection; optimize to be able to use lock.read() instead, currently needed by num_
+        // make sure the scores will not get updated during tip selection; optimize to be able to use lock.read()
+        // instead, currently needed by num_
         self.lock.write().unwrap();
 
         self.check_num_selections();
@@ -247,5 +249,4 @@ impl TipSelector {
             }
         }
     }
-
 }

@@ -71,12 +71,13 @@ impl MsTangle {
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
-
-            let last_solid_milestone_index_processed = self.last_solid_milestone_index_processed.load(Ordering::Relaxed);
+            let last_solid_milestone_index_processed =
+                self.last_solid_milestone_index_processed.load(Ordering::Relaxed);
             let last_solid_milestone_index = self.last_solid_milestone_index.load(Ordering::Relaxed);
             for index in (last_solid_milestone_index_processed + 1)..(last_solid_milestone_index + 1) {
                 self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
-                self.last_solid_milestone_index_processed.store(index, Ordering::Relaxed);
+                self.last_solid_milestone_index_processed
+                    .store(index, Ordering::Relaxed);
                 self.tip_selector.update_scores();
             }
 
@@ -149,12 +150,16 @@ impl MsTangle {
             }
 
             // in case the transaction already inherited the best otrsi and ytrsi, continue
-            let current_otrsi  = self.get_metadata(&hash).unwrap().otrsi;
-            let current_ytrsi  = self.get_metadata(&hash).unwrap().ytrsi;
+            let current_otrsi = self.get_metadata(&hash).unwrap().otrsi;
+            let current_ytrsi = self.get_metadata(&hash).unwrap().ytrsi;
             let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
             let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
 
-            if current_otrsi.is_some() && current_ytrsi.is_some() && current_otrsi.unwrap() == best_otrsi && current_ytrsi.unwrap() == best_ytrsi {
+            if current_otrsi.is_some()
+                && current_ytrsi.is_some()
+                && current_otrsi.unwrap() == best_otrsi
+                && current_ytrsi.unwrap() == best_ytrsi
+            {
                 continue;
             }
 
@@ -211,7 +216,6 @@ impl MsTangle {
                 to_visit.push(tx_ref.trunk().clone());
                 to_visit.push(tx_ref.branch().clone());
             }
-
         }
     }
 
@@ -293,7 +297,8 @@ impl MsTangle {
     pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.last_solid_milestone_index.store(*new_index, Ordering::Relaxed);
         if self.last_solid_milestone_index_processed.load(Ordering::Relaxed) == 0 {
-            self.last_solid_milestone_index_processed.store(*new_index, Ordering::Relaxed);
+            self.last_solid_milestone_index_processed
+                .store(*new_index, Ordering::Relaxed);
         }
     }
 
