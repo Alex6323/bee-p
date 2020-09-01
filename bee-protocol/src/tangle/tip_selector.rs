@@ -44,7 +44,7 @@ const MAX_NUM_SELECTIONS: u8 = 2;
 
 #[derive(Default)]
 pub struct TipSelector {
-    hashes: HashMap<Hash, SystemTime>,
+    tips: HashMap<Hash, SystemTime>,
     children: HashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: HashSet<Hash>,
     semi_lazy_tips: HashSet<Hash>,
@@ -60,20 +60,20 @@ impl TipSelector {
     // - transaction is solid and has no children
     // - transaction is solid and has only non-solid children
     // - transaction is solid and has solid children but does not exceed the retention rules
-    pub fn insert(&mut self, hash: &Hash) {
-        // store hash
-        self.store(hash);
+    pub fn insert(&mut self, tip: &Hash) {
+        // store tip
+        self.store(tip);
         // link parents with child
-        self.add_to_parents(hash);
+        self.add_to_parents(tip);
         // remove parents that have more than 'MAX_CHILDREN_COUNT' children
-        self.check_num_children_of_parents(hash);
+        self.check_num_children_of_parents(tip);
         // remove hashes that are too old
         self.check_age_seconds();
     }
 
-    fn store(&mut self, hash: &Hash) {
-        self.hashes.insert(*hash, SystemTime::now());
-        self.children.insert(*hash, HashSet::new());
+    fn store(&mut self, tip: &Hash) {
+        self.tips.insert(*tip, SystemTime::now());
+        self.children.insert(*tip, HashSet::new());
     }
 
     fn add_to_parents(&mut self, hash: &Hash) {
@@ -112,7 +112,7 @@ impl TipSelector {
     fn check_num_children_of_parent(&mut self, hash: &Hash) {
         if self.children.get(hash).is_some() {
             if self.num_children(hash) > MAX_NUM_CHILDREN {
-                self.hashes.remove(&hash);
+                self.tips.remove(&hash);
                 self.children.remove(&hash);
                 self.non_lazy_tips.remove(&hash);
                 self.semi_lazy_tips.remove(&hash);
@@ -125,11 +125,11 @@ impl TipSelector {
     }
 
     fn check_age_seconds(&mut self) {
-        for (tip, time) in self.hashes.clone() {
+        for (tip, time) in self.tips.clone() {
             match time.elapsed() {
                 Ok(elapsed) => {
                     if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
-                        self.hashes.remove(&tip);
+                        self.tips.remove(&tip);
                         self.children.remove(&tip);
                     }
                 }
@@ -146,7 +146,7 @@ impl TipSelector {
         self.semi_lazy_tips.clear();
 
         // iter tips and assign them to their appropriate pools
-        for (tip, _) in self.hashes.clone() {
+        for (tip, _) in self.tips.clone() {
             match self.tip_score(&tip) {
                 Score::NonLazy => {
                     self.non_lazy_tips.insert(tip);
@@ -155,7 +155,7 @@ impl TipSelector {
                     self.semi_lazy_tips.insert(tip);
                 }
                 Score::Lazy => {
-                    self.hashes.remove(&tip);
+                    self.tips.remove(&tip);
                     self.children.remove(&tip);
                 }
             }
