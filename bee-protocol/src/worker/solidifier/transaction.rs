@@ -58,7 +58,7 @@ impl TransactionSolidifierWorker {
         info!("Running.");
 
         while let Some(TransactionSolidifierWorkerEvent(hash, index)) = self.receiver.next().await {
-            self.solidify(hash, index);
+            // self.solidify(hash, index);
         }
 
         info!("Stopped.");

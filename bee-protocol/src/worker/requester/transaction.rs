@@ -112,7 +112,7 @@ impl<'a> TransactionRequesterWorker<'a> {
         }
 
         if retry_counts > 0 {
-            debug!("Retried {} transactions.", retry_counts);
+            info!("Retried {} transactions.", retry_counts);
         }
     }
 

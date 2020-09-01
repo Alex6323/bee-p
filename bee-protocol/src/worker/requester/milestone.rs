@@ -116,7 +116,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
         }
 
         if retry_counts > 0 {
-            debug!("Retried {} milestones.", retry_counts);
+            info!("Retried {} milestones.", retry_counts);
         }
     }
 

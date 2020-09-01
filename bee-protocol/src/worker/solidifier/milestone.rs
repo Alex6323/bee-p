@@ -12,12 +12,15 @@
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_tangle::traversal;
 
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
 use log::info;
+
+const MILESTONE_COUNT: u32 = 5;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
@@ -33,11 +36,27 @@ impl MilestoneSolidifierWorker {
     }
 
     fn solidify_milestone(&self) {
-        let target_index = tangle().get_last_solid_milestone_index() + MilestoneIndex(1);
+        for i in 0..MILESTONE_COUNT {
+            let target_index = tangle().get_last_solid_milestone_index() + MilestoneIndex(i + 1);
 
-        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-            if !tangle().is_solid_transaction(&target_hash) {
-                Protocol::trigger_transaction_solidification(target_hash, target_index);
+            if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
+                if !tangle().is_solid_transaction(&target_hash) {
+                    traversal::visit_parents_depth_first(
+                        tangle(),
+                        target_hash,
+                        |hash, _, metadata| {
+                            !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+                        },
+                        |_, _, _| {},
+                        |missing_hash| {
+                            if !tangle().is_solid_entry_point(missing_hash)
+                                && !Protocol::get().requested_transactions.contains_key(&missing_hash)
+                            {
+                                Protocol::request_transaction(*missing_hash, target_index);
+                            }
+                        },
+                    );
+                }
             }
         }
     }

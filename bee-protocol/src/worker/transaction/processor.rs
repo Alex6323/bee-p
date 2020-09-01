@@ -20,7 +20,10 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
-use bee_transaction::bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN};
+use bee_transaction::{
+    bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN},
+    Vertex,
+};
 
 use bytemuck::cast_slice;
 use futures::{
@@ -146,8 +149,24 @@ impl ProcessorWorker {
             }
 
             match Protocol::get().requested_transactions.remove(&hash) {
-                Some((hash, (index, _))) => {
-                    Protocol::trigger_transaction_solidification(hash, index);
+                Some((_hash, (index, _))) => {
+                    let trunk = transaction.trunk();
+                    let branch = transaction.branch();
+
+                    if !tangle().contains(trunk)
+                        && !tangle().is_solid_entry_point(trunk)
+                        && !Protocol::get().requested_transactions.contains_key(trunk)
+                    {
+                        Protocol::request_transaction(*trunk, index);
+                    }
+                    if trunk != branch {
+                        if !tangle().contains(branch)
+                            && !tangle().is_solid_entry_point(branch)
+                            && !Protocol::get().requested_transactions.contains_key(branch)
+                        {
+                            Protocol::request_transaction(*branch, index);
+                        }
+                    }
                 }
                 None => {
                     if should_broadcast {
