@@ -245,7 +245,7 @@ impl MsTangle {
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        let mut tip_selector = self.tip_selector.write().unwrap();
+        let tip_selector = self.tip_selector.read().unwrap();
         tip_selector.get_non_lazy_tips()
     }
 

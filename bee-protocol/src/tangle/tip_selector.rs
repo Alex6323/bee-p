@@ -39,8 +39,6 @@ const BELOW_MAX_DEPTH: u32 = 15;
 const MAX_AGE_SECONDS: u8 = 3;
 // the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
 const MAX_NUM_CHILDREN: u8 = 2;
-// the maximum number of selections a tip may receive before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
-const MAX_NUM_SELECTIONS: u8 = 2;
 
 #[derive(Default)]
 pub struct TipSelector {
@@ -188,24 +186,12 @@ impl TipSelector {
         Score::NonLazy
     }
 
-    pub fn get_non_lazy_tips(&mut self) -> Option<(Hash, Hash)> {
-        match self.select_tips(&self.non_lazy_tips) {
-            Some((trunk, branch)) => {
-                self.check_num_selections_of_tips(trunk, branch);
-                Some((trunk, branch))
-            }
-            None => None
-        }
+    pub fn get_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
+        self.select_tips(&self.non_lazy_tips)
     }
 
-    pub fn get_semi_lazy_tips(&mut self) -> Option<(Hash, Hash)> {
-        match self.select_tips(&self.semi_lazy_tips) {
-            Some((trunk, branch)) => {
-                self.check_num_selections_of_tips(trunk, branch);
-                Some((trunk, branch))
-            }
-            None => None
-        }
+    pub fn get_semi_lazy_tips(&self) -> Option<(Hash, Hash)> {
+        self.select_tips(&self.semi_lazy_tips)
     }
 
     fn select_tips(&self, hashes: &HashSet<Hash>) -> Option<(Hash, Hash)> {
@@ -232,12 +218,6 @@ impl TipSelector {
             let mut iter = ret.iter();
             let tip_1 = *iter.next().unwrap();
             let tip_2 = *iter.next().unwrap();
-            tangle().update_metadata(&tip_1, |metadata| {
-                metadata.num_selected += 1;
-            });
-            tangle().update_metadata(&tip_2, |metadata| {
-                metadata.num_selected += 1;
-            });
             Some((tip_1, tip_2))
         }
 
@@ -248,22 +228,6 @@ impl TipSelector {
             return None;
         }
         Some(*hashes.iter().choose(&mut rand::thread_rng()).unwrap())
-    }
-
-    fn check_num_selections_of_tips(&mut self, tip_1: Hash, tip_2: Hash) {
-        self.check_num_selection_of_tip(&tip_1);
-        self.check_num_selection_of_tip(&tip_2);
-    }
-
-    fn check_num_selection_of_tip(&mut self, hash: &Hash) {
-        if !tangle().is_solid_entry_point(hash) {
-            if tangle().get_metadata(&hash).is_some() && tangle().get_metadata(&hash).unwrap().num_selected >= MAX_NUM_SELECTIONS {
-                self.children.remove(&hash);
-                self.non_lazy_tips.remove(&hash);
-                self.semi_lazy_tips.remove(&hash);
-            }
-        }
-
     }
 
 }
