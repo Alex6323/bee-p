@@ -45,7 +45,6 @@ pub struct TipSelector {
     tips: HashMap<Hash, SystemTime>,
     children: HashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: HashSet<Hash>,
-    semi_lazy_tips: HashSet<Hash>,
 }
 
 impl TipSelector {
@@ -113,7 +112,6 @@ impl TipSelector {
                 self.tips.remove(&hash);
                 self.children.remove(&hash);
                 self.non_lazy_tips.remove(&hash);
-                self.semi_lazy_tips.remove(&hash);
             }
         }
     }
@@ -139,9 +137,8 @@ impl TipSelector {
     // further optimization: avoid allocations
     pub fn update_scores(&mut self) {
 
-        // reset pools
+        // reset pool
         self.non_lazy_tips.clear();
-        self.semi_lazy_tips.clear();
 
         // iter tips and assign them to their appropriate pools
         for (tip, _) in self.tips.clone() {
@@ -150,7 +147,8 @@ impl TipSelector {
                     self.non_lazy_tips.insert(tip);
                 }
                 Score::SemiLazy => {
-                    self.semi_lazy_tips.insert(tip);
+                    self.tips.remove(&tip);
+                    self.children.remove(&tip);
                 }
                 Score::Lazy => {
                     self.tips.remove(&tip);
@@ -159,11 +157,7 @@ impl TipSelector {
             }
         }
 
-        info!(
-            "non-lazy {}, semi-lazy {}",
-            self.non_lazy_tips.len(),
-            self.semi_lazy_tips.len()
-        );
+        info!("non-lazy {}", self.non_lazy_tips.len());
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
@@ -188,10 +182,6 @@ impl TipSelector {
 
     pub fn get_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
         self.select_tips(&self.non_lazy_tips)
-    }
-
-    pub fn get_semi_lazy_tips(&self) -> Option<(Hash, Hash)> {
-        self.select_tips(&self.semi_lazy_tips)
     }
 
     fn select_tips(&self, hashes: &HashSet<Hash>) -> Option<(Hash, Hash)> {
