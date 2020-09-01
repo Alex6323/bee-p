@@ -44,7 +44,7 @@ macro_rules! impl_transaction_metadata_ops {
             storage::{rocksdb::*, Backend, Storage},
         };
         #[async_trait::async_trait]
-        impl TransactionOps<Hash, Storage, OpError> for $object {
+        impl TransactionMetadataOps<Hash, Storage, OpError> for $object {
             async fn insert(&self, hash: &Hash, storage: &Storage) -> Result<(), OpError> {
                 // get column family handle to hash_to_metadata table in order presist the transaction_metadata;
                 let hash_to_metadata = storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
