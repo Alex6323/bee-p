@@ -96,6 +96,9 @@ impl Persistable for TransactionMetadata {
             arrival_timestamp,
             solidification_timestamp,
             confirmation_timestamp,
+            cone_index: None,
+            otrsi: None,
+            ytrsi: None
         }
     }
 }
