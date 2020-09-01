@@ -25,7 +25,6 @@ pub struct TransactionMetadata {
     pub(crate) cone_index: Option<MilestoneIndex>,
     pub(crate) otrsi: Option<MilestoneIndex>,
     pub(crate) ytrsi: Option<MilestoneIndex>,
-    pub(crate) num_selected: u8,
 }
 
 impl TransactionMetadata {

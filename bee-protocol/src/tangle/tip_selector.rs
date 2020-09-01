@@ -210,9 +210,6 @@ impl TipSelector {
             None
         } else if ret.len() == 1 {
             let tip = ret.iter().next().unwrap();
-            tangle().update_metadata(&tip, |metadata| {
-                metadata.num_selected += 1;
-            });
             Some((*tip, *tip))
         } else {
             let mut iter = ret.iter();
