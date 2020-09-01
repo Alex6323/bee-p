@@ -64,7 +64,7 @@ impl TipSelector {
         self.add_to_parents(tip);
         // remove parents that have more than 'MAX_CHILDREN_COUNT' children
         self.check_num_children_of_parents(tip);
-        // remove hashes that are too old
+        // remove tips that are too old
         self.check_age_seconds();
     }
 
@@ -157,7 +157,7 @@ impl TipSelector {
             }
         }
 
-        info!("non-lazy {}", self.non_lazy_tips.len());
+        info!("number of non-lazy tips: {}", self.non_lazy_tips.len());
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
