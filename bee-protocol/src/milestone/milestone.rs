@@ -11,6 +11,8 @@
 
 use bee_crypto::ternary::Hash;
 
+use bee_storage::persistable::Persistable;
+
 use std::ops::{Add, Deref};
 
 /// A wrapper around a `u32` that represents a milestone index.
@@ -36,6 +38,15 @@ impl Add for MilestoneIndex {
 
     fn add(self, other: Self) -> Self {
         Self(*self + *other)
+    }
+}
+
+impl Persistable for MilestoneIndex {
+    fn encode_persistable(&self, buffer: &mut Vec<u8>) {
+        self.0.encode_persistable(buffer)
+    }
+    fn decode_persistable(slice: &[u8]) -> Self {
+        MilestoneIndex(u32::decode_persistable(slice))
     }
 }
 

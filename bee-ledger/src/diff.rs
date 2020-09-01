@@ -11,21 +11,19 @@
 
 use bee_transaction::bundled::Address;
 
-use bee_storage::persistable::Persistable;
+use bee_storage::{impl_ledger_diff_ops, persistable::Persistable};
 
 use std::collections::HashMap;
 
-type InnerDiff = HashMap<Address, i64>;
-
 #[derive(Default)]
-pub struct LedgerDiff(pub(crate) InnerDiff);
+pub struct LedgerDiff(pub(crate) HashMap<Address, i64>);
 
 impl LedgerDiff {
-    pub fn new(diff: InnerDiff) -> Self {
-        diff.into()
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub(crate) fn apply(&mut self, address: Address, diff: i64) {
+    pub(crate) fn apply_single_diff(&mut self, address: Address, diff: i64) {
         self.0.entry(address).and_modify(|d| *d += diff).or_insert(diff);
     }
 }
@@ -39,8 +37,10 @@ impl Persistable for LedgerDiff {
     }
 }
 
-impl From<InnerDiff> for LedgerDiff {
-    fn from(diff: InnerDiff) -> Self {
+impl_ledger_diff_ops!(LedgerDiff);
+
+impl From<HashMap<Address, i64>> for LedgerDiff {
+    fn from(diff: HashMap<Address, i64>) -> Self {
         Self(diff)
     }
 }

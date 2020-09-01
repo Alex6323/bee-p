@@ -37,11 +37,10 @@ pub trait MilestoneOps<H, S, E> {
 #[cfg(feature = "rocks_db")]
 macro_rules! impl_milestone_ops {
     ($object:ty) => {
-        use bee_storage::{
+        pub use bee_storage::{
             access::{MilestoneOps, OpError},
             storage::{rocksdb::*, Backend, Storage},
         };
-        use std::collections::HashMap;
         #[async_trait::async_trait]
         impl MilestoneOps<Hash, Storage, OpError> for $object {
             async fn insert(&self, storage: &Storage) -> Result<(), OpError> {

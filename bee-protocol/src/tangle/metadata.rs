@@ -11,7 +11,12 @@
 
 use crate::{milestone::MilestoneIndex, tangle::Flags};
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use bee_storage::{impl_transaction_metadata_ops, persistable::Persistable};
+
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 // TODO Should it really be copy ?
 #[derive(Copy, Clone, Default)]
@@ -58,3 +63,41 @@ impl TransactionMetadata {
         self.confirmation_timestamp = timestamp;
     }
 }
+
+impl Persistable for TransactionMetadata {
+    fn encode_persistable(&self, buffer: &mut Vec<u8>) {
+        // encode struct in order
+        // 1- encode flags
+        self.flags.bits().encode_persistable(buffer);
+        // 2- encode milestone_index
+        self.milestone_index.encode_persistable(buffer);
+        // 3- encode arrival_timestamp
+        self.arrival_timestamp.encode_persistable(buffer);
+        // 4- encode solidification_timestamp
+        self.solidification_timestamp.encode_persistable(buffer);
+        // 5- encode confirmation_timestamp
+        self.confirmation_timestamp.encode_persistable(buffer);
+    }
+    fn decode_persistable(slice: &[u8]) -> Self {
+        // decode struct in order
+        // 1- decode flags
+        let flags = Flags::from_bits(u8::decode_persistable(&slice[0..1])).unwrap();
+        // 2- decode milestone_index
+        let milestone_index = MilestoneIndex::decode_persistable(&slice[1..5]);
+        // 3- decode arrival_timestamp
+        let arrival_timestamp = u64::decode_persistable(&slice[5..13]);
+        // 4- decode solidification_timestamp
+        let solidification_timestamp = u64::decode_persistable(&slice[13..21]);
+        // 5- decode confirmation_timestamp
+        let confirmation_timestamp = u64::decode_persistable(&slice[21..29]);
+        Self {
+            flags,
+            milestone_index,
+            arrival_timestamp,
+            solidification_timestamp,
+            confirmation_timestamp,
+        }
+    }
+}
+// please uncommnet once hash type implement Persistable
+// impl_transaction_metadata_ops!(TransactionMetadata);
