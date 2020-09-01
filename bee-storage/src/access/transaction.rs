@@ -39,7 +39,7 @@ pub trait TransactionOps<H, S, E> {
 #[cfg(feature = "rocks_db")]
 macro_rules! impl_transaction_ops {
     ($object:ty) => {
-        use bee_storage::{
+        pub use bee_storage::{
             access::{OpError, TransactionOps},
             storage::{rocksdb::*, Backend, Storage},
         };

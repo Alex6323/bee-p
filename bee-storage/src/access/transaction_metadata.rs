@@ -39,11 +39,10 @@ pub trait TransactionMetadataOps<H, S, E> {
 #[cfg(feature = "rocks_db")]
 macro_rules! impl_transaction_metadata_ops {
     ($object:ty) => {
-        use bee_storage::{
+        pub use bee_storage::{
             access::{OpError, TransactionMetadataOps},
             storage::{rocksdb::*, Backend, Storage},
         };
-        use std::collections::HashMap;
         #[async_trait::async_trait]
         impl TransactionOps<Hash, Storage, OpError> for $object {
             async fn insert(&self, hash: &Hash, storage: &Storage) -> Result<(), OpError> {

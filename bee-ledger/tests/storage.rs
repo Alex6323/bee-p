@@ -9,19 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ledger::diff::LedgerDiff;
+use bee_ledger::diff::*;
 
 use bee_protocol::MilestoneIndex;
-use bee_storage::{
-    access::LedgerDiffOps,
-    storage::{Backend, Storage},
-};
 
 #[async_std::test]
 async fn persist_ledger_diff() {
     // start storage
     let storage: Storage = Storage::start("../bee-storage/config.toml".to_string()).await.unwrap();
-    // crate empty ledger_diff
+    // create empty ledger_diff
     let ledger_diff: LedgerDiff = LedgerDiff::new();
     // milestone_index
     let ms = MilestoneIndex(0);
