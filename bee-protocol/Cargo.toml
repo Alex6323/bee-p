@@ -19,6 +19,7 @@ bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
+bee-storage = { path = "../bee-storage" }
 
 async-std = "1.6.2"
 bitflags = "1.2.1"
