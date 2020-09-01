@@ -203,9 +203,7 @@ impl TipSelector {
             Some((*tip, *tip))
         } else {
             let mut iter = ret.iter();
-            let tip_1 = *iter.next().unwrap();
-            let tip_2 = *iter.next().unwrap();
-            Some((tip_1, tip_2))
+            Some((*iter.next().unwrap(), *iter.next().unwrap()))
         }
 
     }
