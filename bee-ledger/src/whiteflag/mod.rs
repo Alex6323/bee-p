@@ -16,19 +16,20 @@ mod metadata;
 mod traversal;
 mod worker;
 
+use crate::state::LedgerState;
+
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
 use bee_protocol::{config::ProtocolCoordinatorConfig, event::LastSolidMilestoneChanged, MilestoneIndex};
-use bee_transaction::bundled::Address;
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
 
-use std::{collections::HashMap, ptr, sync::Arc};
+use std::{ptr, sync::Arc};
 
 struct WhiteFlag {
     confirmation_sender: mpsc::UnboundedSender<LedgerWorkerEvent>,
@@ -61,8 +62,7 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
 
 pub fn init(
     index: u32,
-    // TODO get concrete type
-    state: HashMap<Address, u64>,
+    state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
     bus: Arc<Bus<'static>>,
     shutdown: &mut Shutdown,

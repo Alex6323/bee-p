@@ -31,7 +31,7 @@ use futures::{
 };
 use log::{error, info, warn};
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 const MERKLE_PROOF_LENGTH: usize = 384;
 
@@ -58,17 +58,16 @@ pub(crate) struct LedgerWorker {
 }
 
 impl LedgerWorker {
-    // TODO pass type
     pub fn new(
         index: MilestoneIndex,
-        state: HashMap<Address, u64>,
+        state: LedgerState,
         coo_config: ProtocolCoordinatorConfig,
         bus: Arc<Bus<'static>>,
         receiver: Receiver,
     ) -> Self {
         Self {
             index,
-            state: LedgerState::new(state),
+            state,
             coo_config,
             bus,
             receiver,

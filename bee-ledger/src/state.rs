@@ -15,20 +15,25 @@ use bee_transaction::bundled::Address;
 
 use std::{collections::HashMap, convert::From};
 
-type InnerState = HashMap<Address, u64>;
-
 #[derive(Default)]
-pub struct LedgerState(InnerState);
+pub struct LedgerState(HashMap<Address, u64>);
 
 impl LedgerState {
-    /// Creates a new `LedgerState` from its inner type.
-    pub fn new(state: InnerState) -> Self {
-        state.into()
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_capacity(cap: usize) -> Self {
+        Self(HashMap::with_capacity(cap))
     }
 
     /// Gets the balance of an address or zero.
     pub fn get_or_zero(&self, address: &Address) -> u64 {
         self.0.get(address).cloned().unwrap_or(0)
+    }
+
+    pub fn insert(&mut self, address: Address, balance: u64) -> Option<u64> {
+        self.0.insert(address, balance)
     }
 
     /// Applies a difference to an address.
@@ -44,10 +49,14 @@ impl LedgerState {
             self.apply_single_diff(address, value);
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
-impl From<InnerState> for LedgerState {
-    fn from(state: InnerState) -> Self {
+impl From<HashMap<Address, u64>> for LedgerState {
+    fn from(state: HashMap<Address, u64>) -> Self {
         Self(state)
     }
 }

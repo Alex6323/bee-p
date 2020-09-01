@@ -9,9 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata, state::SnapshotState};
+use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata};
 
 use bee_crypto::ternary::Hash;
+use bee_ledger::state::LedgerState;
 use bee_ternary::{T1B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
@@ -26,7 +27,7 @@ use log::info;
 
 pub struct LocalSnapshot {
     metadata: LocalSnapshotMetadata,
-    state: SnapshotState,
+    state: LedgerState,
 }
 
 const VERSION: u8 = 4;
@@ -169,7 +170,7 @@ impl LocalSnapshot {
 
         let mut buf_address = [0u8; 49];
         let mut buf_value = [0u8; std::mem::size_of::<u64>()];
-        let mut state = SnapshotState::with_capacity(balances_num as usize);
+        let mut state = LedgerState::with_capacity(balances_num as usize);
         let mut supply: u64 = 0;
         for i in 0..balances_num {
             let address = match reader.read_exact(&mut buf_address) {
@@ -220,11 +221,11 @@ impl LocalSnapshot {
         &self.metadata
     }
 
-    pub fn state(&self) -> &SnapshotState {
+    pub fn state(&self) -> &LedgerState {
         &self.state
     }
 
-    pub fn into_state(self) -> SnapshotState {
+    pub fn into_state(self) -> LedgerState {
         self.state
     }
 }
