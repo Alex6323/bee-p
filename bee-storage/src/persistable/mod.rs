@@ -45,6 +45,24 @@ impl RocksDBPersistable for i64 {
     }
 }
 
+impl RocksDBPersistable for u64 {
+    fn encode_persistable(&self, buffer: &mut Vec<u8>) {
+        buffer.extend(&u64::to_le_bytes(*self));
+    }
+    fn decode_persistable(slice: &[u8]) -> Self {
+        u64::from_le_bytes(slice.try_into().unwrap())
+    }
+}
+
+impl RocksDBPersistable for u8 {
+    fn encode_persistable(&self, buffer: &mut Vec<u8>) {
+        buffer.extend(&u8::to_le_bytes(*self));
+    }
+    fn decode_persistable(slice: &[u8]) -> Self {
+        u8::from_le_bytes(slice.try_into().unwrap())
+    }
+}
+
 impl<K, V, S: ::std::hash::BuildHasher + Default> RocksDBPersistable for HashMap<K, V, S>
 where
     K: Eq + Hash + RocksDBPersistable,
