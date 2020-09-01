@@ -39,7 +39,9 @@ impl TransactionSolidifierWorker {
             tangle(),
             root,
             |hash, _, metadata| {
-                !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+                !metadata.flags.is_solid()
+                    && !Protocol::get().requested_transactions.contains_key(&hash)
+                    && (!metadata.flags.is_requested() || *hash == root)
             },
             |hash, _, metadata| {
                 info!("traversing");
