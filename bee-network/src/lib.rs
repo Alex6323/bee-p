@@ -47,7 +47,7 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
 pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
 
-// NOTE: we make this an opaque type because it is exposed.
+// NOTE: we make this an opaque type because it is exported.
 // pub struct Events(stream::Fuse<mpsc::Receiver<Event>>);
 pub struct Events(mpsc::Receiver<Event>);
 
