@@ -120,7 +120,8 @@ impl MsTangle {
                             .as_millis() as u64;
                     });
 
-                    self.tip_selector.write().unwrap().insert(hash);
+                    let mut tip_selector = self.tip_selector.write().unwrap();
+                    tip_selector.insert(hash);
 
                     for child in self.inner.get_children(&hash) {
                         children.push(child);
