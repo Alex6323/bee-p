@@ -21,7 +21,7 @@ use bee_crypto::ternary::{
     Hash,
 };
 use bee_network::EndpointId;
-use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
+use bee_ternary::{T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransactionField, TRANSACTION_TRIT_LEN};
 
 use bytemuck::cast_slice;
@@ -52,7 +52,7 @@ pub(crate) struct HasherWorker {
     #[pin]
     receiver: Receiver,
     cache: HashCache,
-    hasher: BatchHasher,
+    hasher: BatchHasher<T5B1Buf>,
     events: Vec<HasherWorkerEvent>,
 }
 
@@ -160,8 +160,7 @@ impl Stream for HasherWorker {
 
                     let trits = Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN)
                         .unwrap()
-                        .to_buf::<T5B1Buf>()
-                        .encode::<T1B1Buf>();
+                        .to_buf::<T5B1Buf>();
 
                     hasher.add(trits);
                     events.push(event);

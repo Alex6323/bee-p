@@ -81,7 +81,7 @@ impl NodeBuilder {
                     local_snapshot.metadata().index(),
                     local_snapshot.metadata().solid_entry_points().len(),
                     local_snapshot.metadata().seen_milestones().len(),
-                    local_snapshot.state().balances().len()
+                    local_snapshot.state().len()
                 );
 
                 // add solid entry points first before updating to indices below
@@ -127,7 +127,7 @@ impl NodeBuilder {
         info!("Initializing ledger...");
         bee_ledger::whiteflag::init(
             snapshot_index,
-            local_snapshot.into_state().into_balances(),
+            local_snapshot.into_state(),
             self.config.protocol.coordinator().clone(),
             bus.clone(),
             &mut shutdown,

@@ -9,8 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{constants::IOTA_SUPPLY, state::SnapshotState};
+use crate::constants::IOTA_SUPPLY;
 
+use bee_ledger::state::LedgerState;
 use bee_ternary::{T1B1Buf, TryteBuf};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
@@ -35,7 +36,7 @@ pub enum Error {
 }
 
 pub struct GlobalSnapshot {
-    state: SnapshotState,
+    state: LedgerState,
 }
 
 impl GlobalSnapshot {
@@ -43,7 +44,7 @@ impl GlobalSnapshot {
         let file = File::open(path).map_err(|_| Error::FileNotFound)?;
         let reader = BufReader::new(file);
 
-        let mut state = SnapshotState::new();
+        let mut state = LedgerState::new();
         let mut supply = 0;
 
         for line in reader.lines() {
@@ -83,7 +84,7 @@ impl GlobalSnapshot {
         Ok(Self { state })
     }
 
-    pub fn state(&self) -> &SnapshotState {
+    pub fn state(&self) -> &LedgerState {
         &self.state
     }
 }
