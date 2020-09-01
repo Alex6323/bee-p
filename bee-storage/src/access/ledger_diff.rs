@@ -13,7 +13,7 @@ use std::collections::HashMap;
 
 #[async_trait::async_trait]
 pub trait LedgerDiffOps<K, S, E> {
-    async fn insert(&self, storage: &S) -> Result<(), E>
+    async fn insert(&self, milestone_index: &K, storage: &S) -> Result<(), E>
     where
         Self: Persistable + Sized,
         S: Backend;
@@ -38,11 +38,11 @@ pub trait LedgerDiffOps<K, S, E> {
 #[cfg(feature = "rocks_db")]
 macro_rules! impl_ledger_diff_ops {
     ($object:ty) => {
-        use bee_storage::{
+        use bee_protocol::MilestoneIndex;
+        pub use bee_storage::{
             access::{LedgerDiffOps, OpError},
             storage::{rocksdb::*, Backend, Storage},
         };
-        use std::collections::HashMap;
         #[async_trait::async_trait]
         impl LedgerDiffOps<MilestoneIndex, Storage, OpError> for $object {
             async fn insert(&self, milestone_index: &MilestoneIndex, storage: &Storage) -> Result<(), OpError> {

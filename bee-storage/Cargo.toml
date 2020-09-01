@@ -21,6 +21,7 @@ toml = "0.5"
 [dev-dependencies]
 async-std = "1.6.2"
 bee-test = {path = "../bee-test"}
+bee-ledger = {path = "../bee-ledger"}
 
 [features]
 default = ["rocks_db"]

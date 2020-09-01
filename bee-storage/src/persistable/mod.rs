@@ -27,6 +27,15 @@ pub use RocksDBPersistable as Persistable;
 
 // Auto implementations;
 
+impl RocksDBPersistable for u32 {
+    fn encode_persistable(&self, buffer: &mut Vec<u8>) {
+        buffer.extend(&u32::to_le_bytes(*self));
+    }
+    fn decode_persistable(slice: &[u8]) -> Self {
+        u32::from_le_bytes(slice.try_into().unwrap())
+    }
+}
+
 impl RocksDBPersistable for i64 {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&i64::to_le_bytes(*self));
@@ -80,16 +89,16 @@ where
             // decode key_byte_size
             let key_start = pair_start + 4;
             length = i32::from_le_bytes(slice[pair_start..key_start].try_into().unwrap()) as usize;
-            let k = K::decode_persistable(&slice[key_start..(key_start + length)]);
             // modify pair_start to be the vlength_start
             pair_start = key_start + length;
+            let k = K::decode_persistable(&slice[key_start..pair_start]);
             let value_start = pair_start + 4;
             length = i32::from_le_bytes(slice[pair_start..value_start].try_into().unwrap()) as usize;
-            let v = V::decode_persistable(&slice[value_start..(value_start + length)]);
-            // insert key,value
-            map.insert(k, v);
             // next pair_start
             pair_start = value_start + length;
+            let v = V::decode_persistable(&slice[value_start..pair_start]);
+            // insert key,value
+            map.insert(k, v);
         }
         map
     }

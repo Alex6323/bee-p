@@ -19,4 +19,7 @@ bee-node/snapshots/testnet/*
 !bee-node/snapshots/testnet/.gitkeep
 
 # bee-storage
-bee-storage/src/backends/sqlx/schemes/postgres/cleanup.sql
+bee-storage/dbfolder/*
+
+# bee-ledger
+bee-ledger/dbfolder/*

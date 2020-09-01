@@ -68,6 +68,6 @@ mod tests {
     #[cfg(feature = "rocks_db")]
     async fn insert_transaction() {
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();
-        // todo!()
+        // todo!() move this to bee-transaction
     }
 }

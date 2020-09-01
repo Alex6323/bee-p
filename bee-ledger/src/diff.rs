@@ -11,7 +11,7 @@
 
 use bee_transaction::bundled::Address;
 
-use bee_storage::persistable::Persistable;
+use bee_storage::{impl_ledger_diff_ops, persistable::Persistable};
 
 use std::collections::HashMap;
 
@@ -36,6 +36,8 @@ impl Persistable for LedgerDiff {
         LedgerDiff(HashMap::decode_persistable(slice))
     }
 }
+
+impl_ledger_diff_ops!(LedgerDiff);
 
 impl From<HashMap<Address, i64>> for LedgerDiff {
     fn from(diff: HashMap<Address, i64>) -> Self {
