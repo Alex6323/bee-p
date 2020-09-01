@@ -60,3 +60,12 @@ impl From<HashMap<Address, u64>> for LedgerState {
         Self(state)
     }
 }
+
+impl IntoIterator for LedgerState {
+    type Item = (Address, u64);
+    type IntoIter = std::collections::hash_map::IntoIter<Address, u64>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
