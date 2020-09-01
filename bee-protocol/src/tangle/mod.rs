@@ -79,7 +79,8 @@ impl MsTangle {
                 self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
                 self.last_solid_milestone_index_processed
                     .store(index, Ordering::Relaxed);
-                self.tip_selector.write().unwrap().update_scores();
+                let mut tip_selector = self.tip_selector.write().unwrap();
+                tip_selector.update_scores();
             }
 
             self.propagate_otrsi_and_ytrsi(&hash);
@@ -243,7 +244,8 @@ impl MsTangle {
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        self.tip_selector.clone().write().unwrap().get_non_lazy_tips()
+        let mut tip_selector = self.tip_selector.write().unwrap();
+        tip_selector.get_non_lazy_tips()
     }
 
     pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {
