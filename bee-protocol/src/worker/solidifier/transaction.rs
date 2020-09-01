@@ -42,6 +42,7 @@ impl TransactionSolidifierWorker {
                 !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
             },
             |hash, _, metadata| {
+                info!("traversing");
                 if *hash != root {
                     info!("flags: {:0b}", metadata.flags);
                 }
