@@ -41,8 +41,10 @@ impl TransactionSolidifierWorker {
             |hash, _, metadata| {
                 !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
             },
-            |_, _, metadata| {
-                info!("flags: {:0b}", metadata.flags);
+            |hash, _, metadata| {
+                if *hash != root {
+                    info!("flags: {:0b}", metadata.flags);
+                }
             },
             |missing_hash| {
                 if !tangle().is_solid_entry_point(missing_hash)
