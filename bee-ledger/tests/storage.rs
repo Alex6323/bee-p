@@ -28,8 +28,8 @@ async fn persist_ledger_diff() {
     // persist it
     assert!(ledger_diff.insert(&ms, &storage).await.is_ok());
     // find it
-    if let Ok(x) = LedgerDiff::find_by_milestone_index(&ms, &storage).await {
-        assert!(x.is_some());
+    if let Ok(same_ledger_diff) = LedgerDiff::find_by_milestone_index(&ms, &storage).await {
+        assert!(same_ledger_diff.is_some());
     } else {
         panic!("persist_ledger_diff test")
     };
