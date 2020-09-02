@@ -37,4 +37,3 @@ twox-hash = "1.5.0"
 bee-test = { path = "../bee-test" }
 
 rand = "0.7.3"
-serial_test = "0.4.0"
