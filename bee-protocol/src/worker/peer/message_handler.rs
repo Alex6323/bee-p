@@ -21,7 +21,7 @@ use futures::{
 
 use log::trace;
 
-type EventRecv = stream::Fuse<mpsc::Receiver<Vec<u8>>>;
+type EventRecv = stream::Fuse<mpsc::UnboundedReceiver<Vec<u8>>>;
 type ShutdownRecv = future::Fuse<oneshot::Receiver<()>>;
 
 /// The read state of the message handler.

@@ -292,12 +292,12 @@ impl Protocol {
         epid: EndpointId,
         address: Address,
         origin: Origin,
-    ) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
+    ) -> (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?
 
         let peer = Arc::new(Peer::new(epid, address, origin));
 
-        let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().config.workers.receiver_worker_bound);
+        let (receiver_tx, receiver_rx) = mpsc::unbounded();
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
         Protocol::get().peer_manager.add(peer.clone());

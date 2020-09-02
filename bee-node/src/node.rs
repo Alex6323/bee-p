@@ -167,7 +167,7 @@ pub struct Node {
     receiver: Receiver,
     shutdown: Shutdown,
     // TODO design proper type `PeerList`
-    peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
+    peers: HashMap<EndpointId, (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>)>,
 }
 
 impl Node {
@@ -195,7 +195,7 @@ impl Node {
                 epid, origin, address, ..
             } => self.endpoint_connected_handler(epid, address, origin),
             Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid),
-            Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
+            Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes),
             _ => warn!("Unsupported event {}.", event),
         }
     }
@@ -243,9 +243,9 @@ impl Node {
         }
     }
 
-    async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
+    fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
         if let Some(peer) = self.peers.get_mut(&epid) {
-            if let Err(e) = peer.0.send(bytes).await {
+            if let Err(e) = peer.0.unbounded_send(bytes) {
                 warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", epid, e);
             }
         }

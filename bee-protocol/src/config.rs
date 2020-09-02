@@ -23,7 +23,6 @@ const DEFAULT_COO_PUBLIC_KEY: &str =
 const DEFAULT_COO_SECURITY: u8 = 2;
 const DEFAULT_COO_SPONGE_TYPE: &str = "kerl";
 const DEFAULT_TRANSACTION_WORKER_CACHE: usize = 10000;
-const DEFAULT_RECEIVER_WORKER_BOUND: usize = 10000;
 const DEFAULT_STATUS_INTERVAL: u64 = 10;
 const DEFAULT_HANDSHAKE_WINDOW: u64 = 10;
 
@@ -38,7 +37,6 @@ struct ProtocolCoordinatorConfigBuilder {
 #[derive(Default, Deserialize)]
 struct ProtocolWorkersConfigBuilder {
     transaction_worker_cache: Option<usize>,
-    receiver_worker_bound: Option<usize>,
     status_interval: Option<u64>,
 }
 
@@ -82,11 +80,6 @@ impl ProtocolConfigBuilder {
 
     pub fn transaction_worker_cache(mut self, transaction_worker_cache: usize) -> Self {
         self.workers.transaction_worker_cache.replace(transaction_worker_cache);
-        self
-    }
-
-    pub fn receiver_worker_bound(mut self, receiver_worker_bound: usize) -> Self {
-        self.workers.receiver_worker_bound.replace(receiver_worker_bound);
         self
     }
 
@@ -150,10 +143,6 @@ impl ProtocolConfigBuilder {
                     .workers
                     .transaction_worker_cache
                     .unwrap_or(DEFAULT_TRANSACTION_WORKER_CACHE),
-                receiver_worker_bound: self
-                    .workers
-                    .receiver_worker_bound
-                    .unwrap_or(DEFAULT_RECEIVER_WORKER_BOUND),
                 status_interval: self.workers.status_interval.unwrap_or(DEFAULT_STATUS_INTERVAL),
             },
             handshake_window: self.handshake_window.unwrap_or(DEFAULT_HANDSHAKE_WINDOW),
@@ -179,7 +168,6 @@ impl ProtocolCoordinatorConfig {
 #[derive(Clone)]
 pub struct ProtocolWorkersConfig {
     pub(crate) transaction_worker_cache: usize,
-    pub(crate) receiver_worker_bound: usize,
     pub(crate) status_interval: u64,
 }
 
