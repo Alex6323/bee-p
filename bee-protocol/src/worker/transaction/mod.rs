@@ -36,7 +36,6 @@ mod tests {
     use futures::{
         channel::{mpsc, oneshot},
         join,
-        sink::SinkExt,
     };
 
     use std::{sync::Arc, time::Duration};

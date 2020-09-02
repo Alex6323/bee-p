@@ -11,12 +11,9 @@
 
 use crate::{milestone::MilestoneIndex, tangle::Flags};
 
-use bee_storage::{impl_transaction_metadata_ops, persistable::Persistable};
+use bee_storage::persistable::Persistable;
 
-use std::{
-    collections::HashMap,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // TODO Should it really be copy ?
 #[derive(Copy, Clone, Default)]
