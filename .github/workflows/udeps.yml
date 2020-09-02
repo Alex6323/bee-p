@@ -9,7 +9,7 @@ on:
       - master
 
 jobs:
-  format:
+  udeps:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -18,7 +18,7 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-          components: udeps
+          components: cargo-udeps
     - uses: actions-rs/cargo@v1
       with:
         command: udeps
