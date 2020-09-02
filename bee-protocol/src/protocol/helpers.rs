@@ -25,7 +25,7 @@ use bee_network::EndpointId;
 
 use log::warn;
 
-const MILESTONE_REQUEST_RANGE: usize = 50;
+const MILESTONE_REQUEST_RANGE: u32 = 50;
 
 impl Protocol {
     // MilestoneRequest

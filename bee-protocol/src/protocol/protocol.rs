@@ -358,6 +358,8 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
     debug!("New solid milestone {}.", *last_solid_milestone.0.index);
     tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
 
+    Protocol::request_milestone(last_solid_milestone.0.index + MilestoneIndex(1), None);
+
     Protocol::broadcast_heartbeat(
         last_solid_milestone.0.index,
         tangle().get_snapshot_milestone_index(),
