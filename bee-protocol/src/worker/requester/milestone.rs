@@ -19,7 +19,7 @@ use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};
 use futures::{select, stream::Fuse, StreamExt};
-use log::{debug, info};
+use log::info;
 
 use std::{
     cmp::Ordering,

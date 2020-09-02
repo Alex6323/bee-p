@@ -23,7 +23,6 @@ use crate::{
         MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker,
         SolidPropagatorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
         TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent,
-        TransactionSolidifierWorker, TransactionSolidifierWorkerEvent,
     },
 };
 
@@ -57,7 +56,6 @@ pub struct Protocol {
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
     pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
-    pub(crate) transaction_solidifier_worker: mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>,
     pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) bundle_validator_worker: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
@@ -99,9 +97,6 @@ impl Protocol {
         let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::unbounded();
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
-        let (transaction_solidifier_worker_tx, transaction_solidifier_worker_rx) = mpsc::unbounded();
-        let (transaction_solidifier_worker_shutdown_tx, transaction_solidifier_worker_shutdown_rx) = oneshot::channel();
-
         let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) = mpsc::unbounded();
         let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
 
@@ -129,7 +124,6 @@ impl Protocol {
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: Default::default(),
             milestone_requester_worker: Default::default(),
-            transaction_solidifier_worker: transaction_solidifier_worker_tx,
             milestone_solidifier_worker: milestone_solidifier_worker_tx,
             broadcaster_worker: broadcaster_worker_tx,
             bundle_validator_worker: bundle_validator_worker_tx,
@@ -246,17 +240,6 @@ impl Protocol {
                 ),
             ),
         };
-
-        shutdown.add_worker_shutdown(
-            transaction_solidifier_worker_shutdown_tx,
-            spawn(
-                TransactionSolidifierWorker::new(ShutdownStream::new(
-                    transaction_solidifier_worker_shutdown_rx,
-                    transaction_solidifier_worker_rx,
-                ))
-                .run(),
-            ),
-        );
 
         shutdown.add_worker_shutdown(
             milestone_solidifier_worker_shutdown_tx,

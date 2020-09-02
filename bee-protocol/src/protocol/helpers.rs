@@ -16,7 +16,7 @@ use crate::{
     tangle::tangle,
     worker::{
         BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, MilestoneSolidifierWorkerEvent, SenderWorker,
-        TransactionRequesterWorkerEntry, TransactionSolidifierWorkerEvent,
+        TransactionRequesterWorkerEntry,
     },
 };
 
@@ -132,15 +132,6 @@ impl Protocol {
     }
 
     // Solidifier
-
-    pub fn trigger_transaction_solidification(hash: Hash, index: MilestoneIndex) {
-        if let Err(e) = Protocol::get()
-            .transaction_solidifier_worker
-            .unbounded_send(TransactionSolidifierWorkerEvent(hash, index))
-        {
-            warn!("Triggering transaction solidification failed: {}.", e);
-        }
-    }
 
     pub fn trigger_milestone_solidification() {
         if let Err(e) = Protocol::get()
