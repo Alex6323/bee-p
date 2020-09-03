@@ -30,10 +30,10 @@ const MILESTONE_REQUEST_RANGE: usize = 50;
 impl Protocol {
     // MilestoneRequest
 
-    pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
+    pub fn request_milestone(index: MilestoneIndex) {
         Protocol::get()
             .milestone_requester_worker
-            .push(MilestoneRequesterWorkerEntry(index, to));
+            .push(MilestoneRequesterWorkerEntry(index));
     }
 
     pub fn request_milestone_fill() {
@@ -45,7 +45,7 @@ impl Protocol {
             let index = to_request_index.into();
 
             if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
-                Protocol::request_milestone(index, None);
+                Protocol::request_milestone(index);
                 to_request_num -= 1;
             }
 
@@ -53,8 +53,8 @@ impl Protocol {
         }
     }
 
-    pub fn request_last_milestone(to: Option<EndpointId>) {
-        Protocol::request_milestone(MilestoneIndex(0), to);
+    pub fn request_last_milestone() {
+        Protocol::request_milestone(MilestoneIndex(0));
     }
 
     pub fn milestone_requester_is_empty() -> bool {
