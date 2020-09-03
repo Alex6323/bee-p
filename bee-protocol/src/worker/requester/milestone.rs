@@ -15,6 +15,7 @@ use crate::{
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::wait_priority_queue::WaitIncoming;
+use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};
 use futures::{select, stream::Fuse, StreamExt};
@@ -30,7 +31,7 @@ const RETRY_INTERVAL_SECS: u64 = 5;
 type Receiver<'a> = ShutdownStream<WaitIncoming<'a, MilestoneRequesterWorkerEntry>>;
 
 #[derive(Eq, PartialEq)]
-pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex);
+pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
 impl PartialOrd for MilestoneRequesterWorkerEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -59,38 +60,47 @@ impl<'a> MilestoneRequesterWorker<'a> {
         }
     }
 
-    async fn process_request(&mut self, index: MilestoneIndex) {
+    async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
         if Protocol::get().requested_milestones.contains_key(&index) {
             return;
         }
 
-        if self.process_request_unchecked(index).await && index.0 != 0 {
+        if self.process_request_unchecked(index, epid).await && index.0 != 0 {
             Protocol::get().requested_milestones.insert(index, Instant::now());
         }
     }
 
     /// Return `true` if the milestone was requested
-    async fn process_request_unchecked(&mut self, index: MilestoneIndex) -> bool {
+    async fn process_request_unchecked(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) -> bool {
         if Protocol::get().peer_manager.handshaked_peers.is_empty() {
             return false;
         }
 
-        let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
+        match epid {
+            Some(epid) => {
+                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
 
-        for _ in 0..guard.len() {
-            let epid = &guard[self.counter % guard.len()];
+                true
+            }
+            None => {
+                let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
 
-            self.counter += 1;
+                for _ in 0..guard.len() {
+                    let epid = &guard[self.counter % guard.len()];
 
-            if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
-                if peer.is_solid_at(index) {
-                    SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
-                    return true;
+                    self.counter += 1;
+
+                    if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+                        if peer.is_solid_at(index) {
+                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+                            return true;
+                        }
+                    }
                 }
+
+                false
             }
         }
-
-        false
     }
 
     async fn retry_requests(&mut self) {
@@ -99,7 +109,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
         for mut milestone in Protocol::get().requested_milestones.iter_mut() {
             let (index, instant) = milestone.pair_mut();
             let now = Instant::now();
-            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && self.process_request_unchecked(*index).await {
+            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && self.process_request_unchecked(*index, None).await {
                 *instant = now;
                 retry_counts += 1;
             };
@@ -117,9 +127,9 @@ impl<'a> MilestoneRequesterWorker<'a> {
             select! {
                 _ = self.timeouts.next() => self.retry_requests().await,
                 entry = self.receiver.next() => match entry {
-                    Some(MilestoneRequesterWorkerEntry(index)) => {
+                    Some(MilestoneRequesterWorkerEntry(index, epid)) => {
                         if !tangle().contains_milestone(index.into()) {
-                            self.process_request(index).await;
+                            self.process_request(index, epid).await;
                         }
                     },
                     None => break,
