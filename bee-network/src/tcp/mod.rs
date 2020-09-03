@@ -93,7 +93,7 @@ async fn writer(epid: EpId, stream: Arc<TcpStream>, bytes_rx: BytesReceiver, sd:
                             // NOTE: if we should need it, we can raise [`Event::BytesSent`] here.
                         },
                         Err(e) => {
-                            error!("Sending bytes failed: {:?}.", e);
+                            error!("Sending bytes to {} failed: {:?}.", epid, e);
                         }
                     }
                 } else {
