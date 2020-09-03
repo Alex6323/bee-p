@@ -53,8 +53,7 @@ impl BroadcasterWorker {
                     .network
                     .send(SendMessage {
                         epid: *peer.key(),
-                        bytes: bytes.clone(),
-                        responder: None,
+                        message: bytes.clone(),
                     })
                     .await
                 {

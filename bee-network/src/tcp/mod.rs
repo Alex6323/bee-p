@@ -12,146 +12,215 @@
 pub mod connection;
 pub mod worker;
 
-use connection::TcpConnection;
+use connection::{Connection, Origin};
+
+use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
 
 use crate::{
     address::{url::Protocol, Address},
-    constants::MAX_BUFFER_SIZE,
     endpoint::{
-        origin::Origin,
-        outbox::{bytes_channel, BytesReceiver},
-        Endpoint, EndpointId as EpId,
+        connected::{channel, DataReceiver},
+        Endpoint, EndpointId,
     },
-    errors::{ConnectionError, ConnectionResult},
-    events::{Event, EventPublisher as Notifier},
+    events::{Event, EventSender},
+    MAX_TCP_BUFFER_SIZE,
 };
 
-use async_std::{net::TcpStream, sync::Arc, task::spawn};
-use futures::{channel::oneshot, prelude::*, select};
+use async_std::{
+    io::prelude::{ReadExt, WriteExt},
+    net::TcpStream,
+    sync::Arc,
+    task::{block_on, spawn},
+};
+use futures::{channel::oneshot, future::FutureExt, select, sink::SinkExt, StreamExt};
 use log::*;
+use thiserror::Error;
 
-/// Tries to connect to an endpoint.
-pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier) -> ConnectionResult<()> {
-    info!("Trying to connect to {}...", epid);
+use std::sync::atomic::Ordering;
 
-    match TcpStream::connect(**addr).await {
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("An async I/O error occured.")]
+    AsyncIoErrorOccurred(#[from] std::io::Error),
+
+    #[error("Connection attempt failed.")]
+    ConnectionAttemptFailed,
+
+    #[error("Sending an event failed.")]
+    SendingEventFailed(#[from] futures::channel::mpsc::SendError),
+}
+
+pub(crate) async fn try_connect_to(
+    epid: &EndpointId,
+    address: &Address,
+    internal_event_sender: EventSender,
+) -> Result<(), Error> {
+    debug!("Trying to connect to {}...", epid);
+
+    match TcpStream::connect(**address).await {
         Ok(stream) => {
-            let conn = match TcpConnection::new(stream, Origin::Outbound) {
+            let connection = match Connection::new(stream, Origin::Outbound) {
                 Ok(conn) => conn,
                 Err(e) => {
-                    error!["Error creating TCP connection: {:?}.", e];
-                    return Err(ConnectionError::ConnectionAttemptFailed);
+                    warn!["Error creating TCP connection: {:?}.", e];
+
+                    return Err(Error::ConnectionAttemptFailed);
                 }
             };
 
-            info!(
+            debug!(
                 "Sucessfully established connection to {} ({}).",
-                conn.remote_addr,
-                Origin::Outbound
+                connection.remote_addr, connection.origin,
             );
 
-            Ok(spawn_connection_workers(conn, notifier).await?)
+            spawn_connection_workers(connection, internal_event_sender).await?;
+
+            Ok(())
         }
         Err(e) => {
             warn!("Connecting to {} failed: {:?}.", epid, e);
-            Err(ConnectionError::ConnectionAttemptFailed)
+
+            Err(Error::ConnectionAttemptFailed)
         }
     }
 }
 
-pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> ConnectionResult<()> {
+pub(crate) async fn spawn_connection_workers(
+    connection: Connection,
+    mut internal_event_sender: EventSender,
+) -> Result<(), Error> {
     debug!("Spawning TCP connection workers...");
 
-    let addr: Address = conn.remote_addr.into();
-    let proto = Protocol::Tcp;
-    let origin = conn.origin;
+    let address: Address = connection.remote_addr.into();
+    let protocol = Protocol::Tcp;
+    let origin = connection.origin;
+    let timestamp = connection.timestamp;
 
-    let ep = Endpoint::new(addr, proto);
+    let endpoint = Endpoint::new(address, protocol);
 
-    let (sender, receiver) = bytes_channel();
+    let (data_sender, data_receiver) = channel();
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
 
-    spawn(writer(ep.id, conn.stream.clone(), receiver, shutdown_sender));
-    spawn(reader(ep.id, conn.stream.clone(), notifier.clone(), shutdown_receiver));
+    spawn_writer(endpoint.epid, connection.stream.clone(), data_receiver, shutdown_sender);
 
-    Ok(notifier.send(Event::NewConnection { ep, origin, sender }).await?)
+    spawn_reader(
+        endpoint.epid,
+        connection.stream.clone(),
+        internal_event_sender.clone(),
+        shutdown_receiver,
+    );
+
+    // NOTE: wait a little to make sure the reader/writer workers are waiting for events
+    // async_std::task::sleep(std::time::Duration::from_millis(1)).await;
+
+    block_on(internal_event_sender.send(Event::ConnectionCreated {
+        endpoint,
+        origin,
+        data_sender,
+        timestamp,
+    }))?;
+
+    Ok(())
 }
 
-async fn writer(epid: EpId, stream: Arc<TcpStream>, bytes_rx: BytesReceiver, sd: oneshot::Sender<()>) {
+fn spawn_writer(
+    epid: EndpointId,
+    stream: Arc<TcpStream>,
+    data_receiver: DataReceiver,
+    shutdown_notifier: ShutdownNotifier,
+) {
     debug!("Starting connection writer task for {}...", epid);
 
-    let mut stream = &*stream;
-    let mut bytes_rx = bytes_rx.fuse();
+    let mut fused_data_receiver = data_receiver.fuse();
 
-    loop {
-        select! {
-            bytes_out = bytes_rx.next() => {
-                if let Some(bytes_out) = bytes_out {
+    spawn(async move {
+        let mut stream = &*stream;
+        loop {
+            let data = fused_data_receiver.next().await;
 
-                    match stream.write_all(&*bytes_out).await {
-                        Ok(_) => {
-                            // NOTE: if we should need it, we can raise [`Event::BytesSent`] here.
-                        },
-                        Err(e) => {
-                            error!("Sending bytes failed: {:?}.", e);
-                        }
-                    }
-                } else {
-                    // NOTE: If the bytes sender gets dropped (which happens when the connection pool
-                    // is dropped, we break out of the loop)
-                    break;
-                }
-            }
-        }
-    }
-
-    if sd.send(()).is_err() {
-        trace!("Reader task shut down before writer task.");
-    }
-
-    debug!("Connection writer event loop for {} stopped.", epid);
-}
-
-async fn reader(epid: EpId, stream: Arc<TcpStream>, mut notifier: Notifier, mut sd: oneshot::Receiver<()>) {
-    debug!("Starting connection reader event loop for {}...", epid);
-
-    let mut stream = &*stream;
-    let mut buffer = vec![0; MAX_BUFFER_SIZE];
-    let shutdown = &mut sd;
-
-    loop {
-        select! {
-            num_read = stream.read(&mut buffer).fuse() => {
-                match num_read {
-                    Ok(num_read) => {
-                        if num_read == 0 {
-                            trace!("Received EOF (0 byte message).");
-
-                            if notifier.send(Event::LostConnection { epid }).await.is_err() {
-                                warn!("Failed to send 'LostConnection' notification.");
-                            }
-
-                            // NOTE: local reader shut down first (we were disconnected)
-                            break;
-                        } else {
-                            let mut bytes = vec![0u8; num_read];
-                            bytes.copy_from_slice(&buffer[0..num_read]);
-
-                            if notifier.send(Event::MessageReceived { epid, bytes }).await.is_err() {
-                                warn!("Failed to send 'MessageReceived' notification.");
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        error!("Receiveing bytes failed: {:?}.", e);
-                    }
-                }
-            },
-            shutdown = shutdown.fuse() => {
-                // NOTE: local writer shut down first (we disconnected)
+            if let Some(bytes) = data {
+                stream
+                    .write_all(&*bytes)
+                    .await
+                    .unwrap_or_else(|e| error!("Sending bytes failed: {:?}", e));
+            } else {
                 break;
             }
         }
+        shutdown_notifier.send(()).unwrap_or_else(|_| ());
+
+        debug!("Connection writer loop for {} stopped.", epid);
+    });
+}
+
+fn spawn_reader(
+    epid: EndpointId,
+    stream: Arc<TcpStream>,
+    mut internal_event_sender: EventSender,
+    shutdown_listener: ShutdownListener,
+) {
+    debug!("Starting connection reader task for {}...", epid);
+
+    let mut buffer = vec![0u8; MAX_TCP_BUFFER_SIZE.load(Ordering::Relaxed)];
+
+    spawn(async move {
+        let mut stream = &*stream;
+        let mut fused_shutdown = &mut shutdown_listener.fuse();
+
+        loop {
+            select! {
+                _ = fused_shutdown => {
+                    break;
+                }
+                num_read = stream.read(&mut buffer).fuse() => {
+                    match num_read {
+                        Ok(num_read) => {
+                            if !handle_read(epid, num_read, &mut internal_event_sender, &buffer).await {
+                                break;
+                            }
+                        },
+                        Err(e) => {
+                            warn!("Receiving bytes failed: {:?}.", e);
+                        }
+                    }
+                },
+            }
+        }
+        debug!("Connection reader loop for {} stopped.", epid);
+    });
+}
+
+#[inline]
+async fn handle_read(
+    epid: EndpointId,
+    num_read: usize,
+    internal_event_sender: &mut EventSender,
+    buffer: &Vec<u8>,
+) -> bool {
+    if num_read == 0 {
+        debug!("Received EOF (0 byte message).");
+
+        if internal_event_sender
+            .send(Event::ConnectionDropped { epid })
+            .await
+            .is_err()
+        {
+            warn!("Failed to inform about lost connection.");
+        }
+
+        false
+    } else {
+        let mut message = vec![0u8; num_read];
+        message.copy_from_slice(&buffer[0..num_read]);
+
+        if internal_event_sender
+            .send(Event::MessageReceived { epid, message })
+            .await
+            .is_err()
+        {
+            warn!("Failed to notify about received message.");
+        }
+
+        true
     }
-    debug!("Connection reader event loop for {} stopped.", epid);
 }

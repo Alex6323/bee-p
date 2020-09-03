@@ -20,7 +20,7 @@ use crate::{
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
 use bee_crypto::ternary::Hash;
-use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
+use bee_network::{self, Address, Command::Connect, EndpointId, Event, Events, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
 use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
@@ -37,7 +37,7 @@ use thiserror::Error;
 
 use std::{collections::HashMap, sync::Arc};
 
-type Receiver = ShutdownStream<Fuse<EventSubscriber>>;
+type Receiver = ShutdownStream<Fuse<Events>>;
 
 /// All possible node errors.
 #[derive(Error, Debug)]
@@ -64,7 +64,7 @@ impl NodeBuilder {
         let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
-        info!("Initializing tangle...");
+        info!("Initializing Tangle...");
         tangle::init();
 
         // TODO handle error
@@ -195,7 +195,7 @@ impl Node {
                 epid, origin, address, ..
             } => self.endpoint_connected_handler(epid, address, origin),
             Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid),
-            Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
+            Event::MessageReceived { epid, message, .. } => self.endpoint_bytes_received_handler(epid, message).await,
             _ => warn!("Unsupported event {}.", event),
         }
     }
@@ -219,7 +219,7 @@ impl Node {
     async fn endpoint_added_handler(&mut self, epid: EndpointId) {
         info!("Endpoint {} has been added.", epid);
 
-        if let Err(e) = self.network.send(Connect { epid, responder: None }).await {
+        if let Err(e) = self.network.send(Connect { epid }).await {
             warn!("Sending Command::Connect for {} failed: {}.", epid, e);
         }
     }

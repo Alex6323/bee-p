@@ -9,12 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::endpoint::EndpointId as EpId;
+use async_std::{
+    net::{SocketAddr, ToSocketAddrs},
+    task::block_on,
+};
+use thiserror::Error;
 
-use async_std::net::{SocketAddr, UdpSocket};
+#[derive(Debug, Error)]
+pub(crate) enum Error {
+    #[error("Address could not be parsed.")]
+    AddressParseError(#[from] std::io::Error),
 
-pub struct UdpConnection {
-    pub epid: EpId,
-    pub remote_addr: SocketAddr,
-    socket: UdpSocket,
+    #[error("Address could not be resolved.")]
+    AddressResolveError,
+}
+
+pub(crate) fn resolve_address(address: &str) -> Result<SocketAddr, Error> {
+    block_on(address.to_socket_addrs())?
+        .next()
+        .map(|a| a.into())
+        .ok_or(Error::AddressResolveError)
 }

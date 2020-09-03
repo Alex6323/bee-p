@@ -11,8 +11,6 @@
 
 use bee_network::{Address, Url};
 
-use async_std::task::block_on;
-
 pub struct ConfigBuilder {
     host_addr: Option<Address>,
     peers: Vec<Url>,
@@ -40,7 +38,7 @@ impl ConfigBuilder {
         Config {
             host_addr: self
                 .host_addr
-                .unwrap_or_else(|| block_on(Address::from_addr_str("localhost:1337")).unwrap()),
+                .unwrap_or_else(|| Address::from_str("localhost:1337").unwrap()),
             peers: self.peers,
         }
     }

@@ -9,98 +9,101 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    address::Address,
-    endpoint::{origin::Origin, whitelist},
-    events::EventPublisher as Notifier,
-};
+use crate::{address::Address, endpoint::allowlist, events::EventSender, tcp::Origin};
 
-use super::{connection::TcpConnection, spawn_connection_workers};
+use super::{connection::Connection, spawn_connection_workers};
 
-use bee_common::{shutdown::ShutdownListener as Shutdown, worker::Error as WorkerError};
+use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
-use async_std::net::TcpListener;
+use async_std::net::{TcpListener, TcpStream};
 use futures::{prelude::*, select};
 use log::*;
 
+use std::io::Error;
+
 pub(crate) struct TcpWorker {
     binding_addr: Address,
-    notifier: Notifier,
-    shutdown: Shutdown,
+    internal_event_sender: EventSender,
 }
 
 impl TcpWorker {
-    pub fn new(binding_addr: Address, notifier: Notifier, shutdown: Shutdown) -> Self {
+    pub fn new(binding_addr: Address, internal_event_sender: EventSender) -> Self {
         Self {
             binding_addr,
-            notifier,
-            shutdown,
+            internal_event_sender,
         }
     }
 
-    pub async fn run(mut self) -> Result<(), WorkerError> {
+    pub async fn run(mut self, shutdown_listener: ShutdownListener) -> Result<(), WorkerError> {
         debug!("Starting TCP worker...");
 
+        // FIXME: If another application already occupies the binding address, this line just blocks.
         let listener = TcpListener::bind(*self.binding_addr).await?;
 
-        info!("Accepting connections on {}.", listener.local_addr()?);
+        debug!("Accepting connections on {}.", listener.local_addr()?);
 
-        let mut incoming = listener.incoming().fuse();
-        let shutdown = &mut self.shutdown;
+        let mut fused_incoming_streams = listener.incoming().fuse();
+        let mut fused_shutdown_listener = shutdown_listener.fuse();
 
         loop {
             select! {
-                stream = incoming.next() => {
+                _ = fused_shutdown_listener => {
+                    break;
+                },
+                stream = fused_incoming_streams.next() => {
                     if let Some(stream) = stream {
-                        match stream {
-                            Ok(stream) => {
-
-                                let conn = match TcpConnection::new(stream, Origin::Inbound) {
-                                    Ok(conn) => conn,
-                                    Err(e) => {
-                                        error!["Creating TCP connection failed: {:?}.", e];
-                                        continue;
-                                    }
-                                };
-
-                                let whitelist = whitelist::get();
-
-                                // Update IP addresses if necessary
-                                // whitelist.refresh().await;
-
-                                // Immediatedly drop stream, if it's associated IP address isn't whitelisted
-                                if !whitelist.contains_address(&conn.remote_addr.ip()) {
-                                    warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
-                                    warn!("Connection disallowed.");
-                                    continue;
-                                }
-
-                                info!(
-                                    "Sucessfully established connection to {} ({}).",
-                                    conn.remote_addr,
-                                    Origin::Inbound
-                                );
-
-                                match spawn_connection_workers(conn, self.notifier.clone()).await {
-                                    Ok(_) => (),
-                                    Err(_) => (),
-                                }
-                            }
-                            Err(e) => {
-                                error!("Accepting connection failed: {:?}.", e);
-                            },
+                        if !self.handle_stream(stream).await? {
+                            continue;
                         }
                     } else {
                         break;
                     }
                 },
-                shutdown = shutdown.fuse() => {
-                    break;
-                }
             }
         }
 
         debug!("Stopped TCP worker.");
         Ok(())
+    }
+
+    #[inline]
+    async fn handle_stream(&mut self, stream: Result<TcpStream, Error>) -> Result<bool, WorkerError> {
+        match stream {
+            Ok(stream) => {
+                let conn = match Connection::new(stream, Origin::Inbound) {
+                    Ok(conn) => conn,
+                    Err(e) => {
+                        warn!("Creating TCP connection failed: {:?}.", e);
+
+                        return Ok(false);
+                    }
+                };
+
+                let allowlist = allowlist::get();
+
+                // Immediatedly drop stream, if it's associated IP address isn't part of the allowlist
+                if !allowlist.contains(&conn.remote_addr.ip()) {
+                    warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
+                    warn!("Connection disallowed.");
+
+                    return Ok(false);
+                }
+
+                debug!(
+                    "Sucessfully established connection to {} ({}).",
+                    conn.remote_addr,
+                    Origin::Inbound
+                );
+
+                spawn_connection_workers(conn, self.internal_event_sender.clone())
+                    .await
+                    .unwrap_or_else(|_| ());
+            }
+            Err(e) => {
+                warn!("Accepting connection failed: {:?}.", e);
+            }
+        }
+
+        Ok(true)
     }
 }

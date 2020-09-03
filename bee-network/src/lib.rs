@@ -9,80 +9,106 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! # bee-network
-//!
-//! Network layer for Bee.
-//!
-//! The main properties of its architecure are:
-//! * async (depends on async_std),
-//! * message passing in favor of shared state (mpsc, oneshot channels),
-//! * event-driven (situations are modeled as events),
-//! * command pattern
-//! * no unsafe code
-//! * very few dependencies
-//! * well documented
-
-#![warn(missing_docs)]
-#![recursion_limit = "1024"]
+//#![warn(missing_docs)]
 
 pub use address::{url::Url, Address, Port};
-pub use commands::{response_channel, Command, Requester, Responder};
+pub use commands::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
-pub use endpoint::{origin::Origin, Endpoint, EndpointId};
-pub use events::{Event, EventSubscriber};
+pub use endpoint::{Endpoint, EndpointId};
+pub use events::Event;
+pub use tcp::connection::Origin;
 
 pub use network::Network;
 
 mod address;
 mod commands;
-mod constants;
+mod config;
 mod endpoint;
-mod errors;
 mod events;
 mod network;
 mod tcp;
-// mod udp;
-mod config;
 mod utils;
 
-use endpoint::{whitelist, worker::EndpointWorker as EpWorker};
-use events::EventSubscriber as Events;
+use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
+use endpoint::{allowlist, worker::EndpointWorker};
 use tcp::worker::TcpWorker;
-// use udp::worker::UdpWorker;
 
 use bee_common::shutdown::Shutdown;
 
 use async_std::task::spawn;
-use futures::channel::oneshot;
+use futures::{
+    channel::{mpsc, oneshot},
+    stream,
+    stream::StreamExt,
+};
 
-/// Initializes the network layer.
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+
+pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
+pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
+
+pub type Events = stream::Fuse<mpsc::Receiver<Event>>;
+
+// // NOTE: we make this an opaque type because it is exported.
+// // pub struct Events(stream::Fuse<mpsc::Receiver<Event>>);
+// pub struct Events(mpsc::Receiver<Event>);
+
+// impl std::ops::Deref for Events {
+//     // type Target = stream::Fuse<mpsc::Receiver<Event>>;
+//     type Target = mpsc::Receiver<Event>;
+
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
+
+// impl std::ops::DerefMut for Events {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         &mut self.0
+//     }
+// }
+
 pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
-    let (command_sender, commands) = commands::command_channel();
-    let (event_sender, events) = events::event_channel();
-    let (internal_event_sender, internal_events) = events::event_channel();
+    // Create communication channels.
+    let (command_sender, command_receiver) = commands::channel();
+    let (event_sender, event_receiver) = events::channel();
+    let (internal_event_sender, internal_event_receiver) = events::channel();
 
-    let (epw_sd_sender, epw_shutdown) = oneshot::channel();
-    let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
-    // let (udp_sd_sender, udp_shutdown) = oneshot::channel();
+    // Create channels to signal shutdown to the workers.
+    let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
+    let (tcp_worker_shutdown_sender, tcp_worker_shutdown_receiver) = oneshot::channel();
 
-    let ep_worker = EpWorker::new(
-        commands,
-        internal_events,
-        epw_shutdown,
-        internal_event_sender.clone(),
+    // Create the worker that manages the endpoints to connect to.
+    let endpoint_worker = EndpointWorker::new(
+        command_receiver,
         event_sender,
-        config.reconnect_interval,
+        internal_event_receiver,
+        internal_event_sender.clone(),
     );
 
-    let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender, tcp_shutdown);
-    // let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
+    // Create the worker that manages the TCP connections established with the endpoints.
+    let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender);
 
-    shutdown.add_worker_shutdown(epw_sd_sender, spawn(ep_worker.run()));
-    shutdown.add_worker_shutdown(tcp_sd_sender, spawn(tcp_worker.run()));
-    // shutdown.add_worker_shutdown(udp_sd_sender, spawn(udp_worker.run()));
+    // Spawn workers, and connect them to the shutdown mechanism.
+    shutdown.add_worker_shutdown(
+        endpoint_worker_shutdown_sender,
+        // endpoint,
+        spawn(endpoint_worker.run(endpoint_worker_shutdown_receiver)),
+    );
+    shutdown.add_worker_shutdown(
+        tcp_worker_shutdown_sender,
+        // tcp,
+        spawn(tcp_worker.run(tcp_worker_shutdown_receiver)),
+    );
 
-    whitelist::init();
-    shutdown.add_action(whitelist::drop);
+    // Initialize Allowlist and make sure it gets dropped when the shutdown occurs.
+    allowlist::init();
+    shutdown.add_action(|| allowlist::drop());
 
-    (Network::new(config, command_sender), events)
+    MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
+    RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
+
+    // (Network::new(config, command_sender), Events(event_receiver.fuse()))
+    // (Network::new(config, command_sender), Events(event_receiver))
+    (Network::new(config, command_sender), event_receiver.fuse())
 }

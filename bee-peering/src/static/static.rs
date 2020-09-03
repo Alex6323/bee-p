@@ -30,9 +30,9 @@ impl StaticPeerManager {
     }
 
     async fn add_endpoint(&mut self, url: &str) {
-        match Url::from_url_str(url).await {
+        match Url::from_str(url) {
             Ok(url) => {
-                if let Err(e) = self.network.send(AddEndpoint { url, responder: None }).await {
+                if let Err(e) = self.network.send(AddEndpoint { url: url.clone() }).await {
                     warn!("Failed to add endpoint \"{}\": {}", url, e);
                 }
             }

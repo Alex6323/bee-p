@@ -23,7 +23,7 @@ use crate::{
 
 use bee_network::{
     Address,
-    Command::{Disconnect, SendMessage},
+    Command::{Disconnect, SendMessage, SetDuplicate},
     Network, Origin, Port,
 };
 
@@ -47,7 +47,6 @@ pub(crate) enum HandshakeError {
     MwmMismatch(u8, u8),
     UnsupportedVersion(u8),
     PortMismatch(u16, u16),
-    UnboundPeer,
     AlreadyHandshaked,
 }
 
@@ -88,13 +87,12 @@ impl PeerHandshakerWorker {
             .network
             .send(SendMessage {
                 epid: self.peer.epid,
-                bytes: tlv_into_bytes(Handshake::new(
-                    *self.network.config().binding_port(),
+                message: tlv_into_bytes(Handshake::new(
+                    *self.network.config().binding_port,
                     &Protocol::get().config.coordinator.public_key_bytes,
                     Protocol::get().config.mwm,
                     &MESSAGES_VERSIONS,
                 )),
-                responder: None,
             })
             .await
         {
@@ -130,14 +128,9 @@ impl PeerHandshakerWorker {
             }
             HandshakeStatus::Duplicate => {
                 info!("[{}] Closing duplicate connection.", self.peer.epid);
-                if let Err(e) = self
-                    .network
-                    .send(Disconnect {
-                        epid: self.peer.epid,
-                        responder: None,
-                    })
-                    .await
-                {
+
+                // TODO: Disconnect duplicate properly
+                if let Err(e) = self.network.send(Disconnect { epid: self.peer.epid }).await {
                     warn!("[{}] Disconnecting peer failed: {}.", self.peer.epid, e);
                 }
             }
@@ -179,7 +172,7 @@ impl PeerHandshakerWorker {
 
         let address = match self.peer.origin {
             Origin::Outbound => {
-                if self.peer.address.port() != Port(handshake.port) {
+                if self.peer.address.port() != Port::new(handshake.port) {
                     return Err(HandshakeError::PortMismatch(*self.peer.address.port(), handshake.port));
                 }
 
@@ -190,7 +183,6 @@ impl PeerHandshakerWorker {
 
                 Address::from(SocketAddr::new(self.peer.address.ip(), handshake.port))
             }
-            Origin::Unbound => return Err(HandshakeError::UnboundPeer),
         };
 
         for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
