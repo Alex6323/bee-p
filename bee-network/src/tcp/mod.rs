@@ -60,13 +60,13 @@ pub(crate) async fn try_connect(epid: &EpId, addr: &Address, notifier: Notifier)
 }
 
 pub(crate) async fn spawn_connection_workers(conn: TcpConnection, mut notifier: Notifier) -> ConnectionResult<()> {
-    debug!("Spawning TCP connection workers...");
-
     let addr: Address = conn.remote_addr.into();
     let proto = Protocol::Tcp;
     let origin = conn.origin;
 
     let ep = Endpoint::new(addr, proto);
+
+    debug!("Spawning TCP connection workers for {}...", ep.id);
 
     let (sender, receiver) = bytes_channel();
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
