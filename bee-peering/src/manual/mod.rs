@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod config;
-mod r#static;
+mod manual;
 
-pub use config::{StaticPeeringConfig, StaticPeeringConfigBuilder};
-pub use r#static::StaticPeerManager;
+pub use config::{ManualPeeringConfig, ManualPeeringConfigBuilder};
+pub use manual::ManualPeerManager;

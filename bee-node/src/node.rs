@@ -21,7 +21,7 @@ use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
 use bee_crypto::ternary::Hash;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
-use bee_peering::{PeerManager, StaticPeerManager};
+use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
 use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
 
@@ -29,7 +29,6 @@ use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
-    sink::SinkExt,
     stream::{Fuse, StreamExt},
 };
 use log::{error, info, trace, warn};
@@ -120,8 +119,8 @@ impl NodeBuilder {
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown);
 
-        info!("Starting static peer manager...");
-        spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
+        info!("Starting manual peer manager...");
+        spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
         bee_ledger::whiteflag::init(

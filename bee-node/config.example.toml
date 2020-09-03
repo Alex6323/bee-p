@@ -12,7 +12,7 @@ binding_port        = 15600
 reconnect_interval  = 60
 
 [peering]
-[peering.static]
+[peering.manual]
 limit     = 5
 peers     = [ ]
 

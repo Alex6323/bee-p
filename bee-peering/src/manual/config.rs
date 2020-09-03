@@ -17,12 +17,12 @@ const DEFAULT_LIMIT: u8 = 5;
 const DEFAULT_PEERS: Vec<String> = Vec::new();
 
 #[derive(Default, Deserialize)]
-pub struct StaticPeeringConfigBuilder {
+pub struct ManualPeeringConfigBuilder {
     pub(crate) limit: Option<u8>,
     pub(crate) peers: Option<Vec<String>>,
 }
 
-impl StaticPeeringConfigBuilder {
+impl ManualPeeringConfigBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -39,8 +39,8 @@ impl StaticPeeringConfigBuilder {
         self.peers.unwrap().push(peer.to_owned());
     }
 
-    pub fn finish(self) -> StaticPeeringConfig {
-        StaticPeeringConfig {
+    pub fn finish(self) -> ManualPeeringConfig {
+        ManualPeeringConfig {
             limit: self.limit.unwrap_or(DEFAULT_LIMIT),
             peers: self.peers.unwrap_or(DEFAULT_PEERS),
         }
@@ -48,13 +48,13 @@ impl StaticPeeringConfigBuilder {
 }
 
 #[derive(Clone)]
-pub struct StaticPeeringConfig {
+pub struct ManualPeeringConfig {
     pub(crate) limit: u8,
     pub(crate) peers: Vec<String>,
 }
 
-impl StaticPeeringConfig {
-    pub fn build() -> StaticPeeringConfigBuilder {
-        StaticPeeringConfigBuilder::new()
+impl ManualPeeringConfig {
+    pub fn build() -> ManualPeeringConfigBuilder {
+        ManualPeeringConfigBuilder::new()
     }
 }
