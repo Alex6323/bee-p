@@ -310,7 +310,7 @@ impl Protocol {
 
 fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
     info!(
-        "New milestone #{} {}.",
+        "New milestone {} {}.",
         *last_milestone.0.index,
         last_milestone
             .0
@@ -339,7 +339,7 @@ fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
 // }
 
 fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
-    debug!("New solid milestone #{}.", *last_solid_milestone.0.index);
+    debug!("New solid milestone {}.", *last_solid_milestone.0.index);
     tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
 
     Protocol::broadcast_heartbeat(
