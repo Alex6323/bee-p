@@ -143,7 +143,7 @@ async fn reader(epid: EpId, stream: Arc<TcpStream>, mut notifier: Notifier, mut 
                         }
                     },
                     Err(e) => {
-                        error!("Receiveing bytes failed: {:?}.", e);
+                        error!("Receiveing bytes from {} failed: {:?}.", epid, e);
                     }
                 }
             },
