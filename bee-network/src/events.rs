@@ -86,7 +86,7 @@ impl fmt::Display for Event {
 
             Event::ConnectionCreated { endpoint, .. } => write!(f, "Event::ConnectionCreated {{ {} }}", endpoint.epid),
 
-            Event::ConnectionDropped { epid, .. } => write!(f, "Event::ConnectionDroopped {{ {} }}", epid),
+            Event::ConnectionDropped { epid, .. } => write!(f, "Event::ConnectionDropped {{ {} }}", epid),
 
             Event::EndpointConnected {
                 epid,
