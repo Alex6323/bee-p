@@ -32,8 +32,8 @@ use log::{error, info, trace};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Timeframe to allow past or future transactions, 10 minutes in milliseconds.
-const ALLOWED_TIMESTAMP_WINDOW_MS: u64 = 10 * 60 * 1000;
+/// Timeframe to allow past or future transactions, 10 minutes in seconds.
+const ALLOWED_TIMESTAMP_WINDOW_S: u64 = 10 * 60;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<ProcessorWorkerEvent>>>;
 
@@ -82,10 +82,10 @@ impl ProcessorWorker {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Clock may have gone backwards")
-            .as_millis() as u64;
+            .as_secs() as u64;
 
-        let past = now - ALLOWED_TIMESTAMP_WINDOW_MS;
-        let future = now + ALLOWED_TIMESTAMP_WINDOW_MS;
+        let past = now - ALLOWED_TIMESTAMP_WINDOW_S;
+        let future = now + ALLOWED_TIMESTAMP_WINDOW_S;
 
         // (is_timestamp_valid, should_broadcast)
         (
