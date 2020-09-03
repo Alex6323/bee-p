@@ -121,4 +121,8 @@ impl HandshakedPeer {
     pub(crate) fn synced_peers(&self) -> u8 {
         self.synced_peers.load(Ordering::Relaxed)
     }
+
+    pub(crate) fn is_solid_at(&self, index: MilestoneIndex) -> bool {
+        index > self.snapshot_milestone_index() && index <= self.last_solid_milestone_index()
+    }
 }
