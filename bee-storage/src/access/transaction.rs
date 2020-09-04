@@ -47,9 +47,8 @@ pub trait TransactionOps<H: std::marker::Sync> {
             hash.encode_persistable(&mut hash_buf);
             tx.encode_persistable(&mut tx_buf);
             batch.put_cf(&hash_to_tx, hash_buf.as_slice(), tx_buf.as_slice());
-            // note: for optimization reason we used buf.set_len = 0 instead of clear()
-            unsafe { hash_buf.set_len(0) };
-            unsafe { tx_buf.set_len(0) };
+            hash_buf.clear();
+            tx_buf.clear();
         }
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);

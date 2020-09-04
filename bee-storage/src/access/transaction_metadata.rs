@@ -49,8 +49,8 @@ pub trait TransactionMetadataOps<H: std::marker::Sync> {
             metadata.encode_persistable(&mut metadata_buf);
             batch.put_cf(&hash_to_metadata, hash_buf.as_slice(), metadata_buf.as_slice());
             // note: for optimization reason we used buf.set_len = 0 instead of clear()
-            unsafe { hash_buf.set_len(0) };
-            unsafe { metadata_buf.set_len(0) };
+            hash_buf.clear();
+            metadata_buf.clear();
         }
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);

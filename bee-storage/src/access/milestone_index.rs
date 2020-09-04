@@ -45,9 +45,8 @@ pub trait MilestoneIndexOps<H: Persistable + Sync> {
             hash.encode_persistable(&mut hash_buf);
             index.encode_persistable(&mut index_buf);
             batch.put_cf(&ms_hash_to_ms_index, hash_buf.as_slice(), index_buf.as_slice());
-            // note: for optimization reason we used buf.set_len = 0 instead of clear()
-            unsafe { hash_buf.set_len(0) };
-            unsafe { index_buf.set_len(0) };
+            hash_buf.clear();
+            index_buf.clear();
         }
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);

@@ -53,8 +53,8 @@ pub trait LedgerDiffOps<K: Persistable + std::marker::Sync> {
                 ledger_diff_buf.as_slice(),
             );
             // note: for optimization reason we used buf.set_len = 0 instead of clear()
-            unsafe { index_buf.set_len(0) };
-            unsafe { ledger_diff_buf.set_len(0) };
+            index_buf.clear();
+            ledger_diff_buf.clear();
         }
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
