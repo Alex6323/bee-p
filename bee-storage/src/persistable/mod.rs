@@ -12,7 +12,8 @@ pub mod constants;
 
 use std::{collections::HashMap, convert::TryInto, hash::Hash};
 
-pub trait RocksDBPersistable {
+#[cfg(feature = "rocks_db")]
+pub trait Persistable {
     /// This encode method will extend the provided buffer and return ();
     fn encode_persistable(&self, buffer: &mut Vec<u8>);
     /// Decode `slice` and return Self
@@ -21,13 +22,9 @@ pub trait RocksDBPersistable {
         Self: Sized;
 }
 
-#[cfg(feature = "rocks_db")]
-#[allow(unused_imports)]
-pub use RocksDBPersistable as Persistable;
-
 // Auto implementations;
-
-impl RocksDBPersistable for u32 {
+#[cfg(feature = "rocks_db")]
+impl Persistable for u32 {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&u32::to_le_bytes(*self));
     }
@@ -35,8 +32,8 @@ impl RocksDBPersistable for u32 {
         u32::from_le_bytes(slice.try_into().unwrap())
     }
 }
-
-impl RocksDBPersistable for i64 {
+#[cfg(feature = "rocks_db")]
+impl Persistable for i64 {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&i64::to_le_bytes(*self));
     }
@@ -44,8 +41,8 @@ impl RocksDBPersistable for i64 {
         i64::from_le_bytes(slice.try_into().unwrap())
     }
 }
-
-impl RocksDBPersistable for u64 {
+#[cfg(feature = "rocks_db")]
+impl Persistable for u64 {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&u64::to_le_bytes(*self));
     }
@@ -53,8 +50,8 @@ impl RocksDBPersistable for u64 {
         u64::from_le_bytes(slice.try_into().unwrap())
     }
 }
-
-impl RocksDBPersistable for u8 {
+#[cfg(feature = "rocks_db")]
+impl Persistable for u8 {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&u8::to_le_bytes(*self));
     }
@@ -62,11 +59,11 @@ impl RocksDBPersistable for u8 {
         u8::from_le_bytes(slice.try_into().unwrap())
     }
 }
-
-impl<K, V, S: ::std::hash::BuildHasher + Default> RocksDBPersistable for HashMap<K, V, S>
+#[cfg(feature = "rocks_db")]
+impl<K, V, S: ::std::hash::BuildHasher + Default> Persistable for HashMap<K, V, S>
 where
-    K: Eq + Hash + RocksDBPersistable,
-    V: RocksDBPersistable,
+    K: Eq + Hash + Persistable,
+    V: Persistable,
 {
     fn encode_persistable(&self, buffer: &mut Vec<u8>) {
         // extend key_value pairs count of the hashmap into the buffer

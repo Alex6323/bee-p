@@ -11,7 +11,12 @@
 
 use bee_transaction::bundled::Address;
 
-use bee_storage::{impl_ledger_diff_ops, persistable::Persistable};
+use bee_protocol::MilestoneIndex;
+pub use bee_storage::{
+    access::{LedgerDiffOps, OpError},
+    persistable::Persistable,
+    storage::{Backend, Storage},
+};
 
 use std::collections::HashMap;
 
@@ -37,7 +42,7 @@ impl Persistable for LedgerDiff {
     }
 }
 
-impl_ledger_diff_ops!(LedgerDiff);
+impl LedgerDiffOps<MilestoneIndex> for LedgerDiff {}
 
 impl From<HashMap<Address, i64>> for LedgerDiff {
     fn from(diff: HashMap<Address, i64>) -> Self {

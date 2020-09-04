@@ -12,7 +12,7 @@
 //! A crate that contains foundational building blocks for the IOTA Tangle.
 
 pub mod ledger_diff;
-pub mod milestone;
+pub mod milestone_index;
 pub mod transaction;
 pub mod transaction_metadata;
 
@@ -29,6 +29,6 @@ impl From<::rocksdb::Error> for OpError {
 }
 
 pub use ledger_diff::LedgerDiffOps;
-pub use milestone::MilestoneOps;
+pub use milestone_index::MilestoneIndexOps;
 pub use transaction::TransactionOps;
 pub use transaction_metadata::TransactionMetadataOps;

@@ -92,5 +92,3 @@ impl Persistable for TransactionMetadata {
         }
     }
 }
-// please uncommnet once hash type implement Persistable
-// impl_transaction_metadata_ops!(TransactionMetadata);
