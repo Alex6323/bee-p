@@ -12,14 +12,13 @@
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    tangle::{helper::find_tail_of_bundle, tangle, TransactionMetadata},
+    tangle::{tangle, TransactionMetadata},
     worker::milestone_validator::MilestoneValidatorWorkerEvent,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
-use bee_tangle::traversal;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN};
 
@@ -162,22 +161,12 @@ impl ProcessorWorker {
             };
 
             if transaction.address().eq(&Protocol::get().config.coordinator.public_key) {
-                let tail = {
-                    if transaction.is_tail() {
-                        Some(hash)
-                    } else {
-                        find_tail_of_bundle(tangle(), hash, transaction.bundle())
-                    }
-                };
-
-                if let Some(tail) = tail {
-                    if let Err(e) = self
-                        .milestone_validator_worker
-                        .unbounded_send(MilestoneValidatorWorkerEvent(tail))
-                    {
-                        error!("Sending tail to milestone validation failed: {:?}.", e);
-                    }
-                };
+                if let Err(e) = self
+                    .milestone_validator_worker
+                    .unbounded_send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
+                {
+                    error!("Sending tail to milestone validation failed: {:?}.", e);
+                }
             }
         } else {
             Protocol::get().metrics.known_transactions_inc();

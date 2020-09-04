@@ -15,20 +15,24 @@ use bee_tangle::{traversal, Tangle};
 
 use bee_crypto::ternary::Hash;
 
-pub(crate) fn find_tail_of_bundle(
-    tangle: &Tangle<TransactionMetadata>,
-    root: Hash,
-    bundle_hash: &Hash,
-) -> Option<Hash> {
+pub(crate) fn find_tail_of_bundle(tangle: &Tangle<TransactionMetadata>, root: Hash) -> Option<Hash> {
     let mut tail = None;
+    let mut done = false;
 
     traversal::visit_children_follow_trunk(
         tangle,
         root,
-        |tx, _| tx.bundle() == bundle_hash,
-        |tx_hash, tx, _| {
+        |tx, _| {
+            if done {
+                return false;
+            }
+            done = tx.is_tail();
+
+            true
+        },
+        |hash, tx, _| {
             if tx.is_tail() {
-                tail.replace(*tx_hash);
+                tail.replace(*hash);
             }
         },
     );
