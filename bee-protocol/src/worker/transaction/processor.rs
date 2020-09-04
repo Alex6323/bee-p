@@ -12,7 +12,7 @@
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    tangle::{tangle, TransactionMetadata},
+    tangle::{helper::find_tail_of_bundle, tangle, TransactionMetadata},
     worker::milestone_validator::MilestoneValidatorWorkerEvent,
 };
 
@@ -166,20 +166,7 @@ impl ProcessorWorker {
                     if transaction.is_tail() {
                         Some(hash)
                     } else {
-                        let mut tail = None;
-
-                        traversal::visit_children_follow_trunk(
-                            tangle(),
-                            hash,
-                            |tx, _| tx.bundle() == transaction.bundle(),
-                            |tx_hash, tx, _| {
-                                if tx.is_tail() {
-                                    tail.replace(*tx_hash);
-                                }
-                            },
-                        );
-
-                        tail
+                        find_tail_of_bundle(tangle(), hash, transaction.bundle())
                     }
                 };
 

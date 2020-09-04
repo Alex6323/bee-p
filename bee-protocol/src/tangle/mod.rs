@@ -10,6 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub mod flags;
+pub mod helper;
+
 mod metadata;
 
 pub use metadata::TransactionMetadata;

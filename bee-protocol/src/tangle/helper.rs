@@ -9,31 +9,29 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A crate that contains foundational building blocks for the IOTA Tangle.
+use crate::tangle::TransactionMetadata;
 
-#![warn(missing_docs)]
+use bee_tangle::{traversal, Tangle};
 
-pub mod traversal;
+use bee_crypto::ternary::Hash;
 
-mod tangle;
-mod vertex;
+pub(crate) fn find_tail_of_bundle(
+    tangle: &Tangle<TransactionMetadata>,
+    root: Hash,
+    bundle_hash: &Hash,
+) -> Option<Hash> {
+    let mut tail = None;
 
-pub use tangle::Tangle;
+    traversal::visit_children_follow_trunk(
+        tangle,
+        root,
+        |tx, _| tx.bundle() == bundle_hash,
+        |tx_hash, tx, _| {
+            if tx.is_tail() {
+                tail.replace(*tx_hash);
+            }
+        },
+    );
 
-use bee_transaction::bundled::BundledTransaction as Transaction;
-
-use async_std::sync::Arc;
-
-use std::ops::Deref;
-
-/// A thread-safe reference to a `bee_transaction:BundledTransaction`.
-#[derive(Clone)]
-pub struct TransactionRef(pub(crate) Arc<Transaction>);
-
-impl Deref for TransactionRef {
-    type Target = Transaction;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.0
-    }
+    tail
 }
