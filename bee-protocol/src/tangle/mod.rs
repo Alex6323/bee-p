@@ -16,20 +16,11 @@ mod metadata;
 
 pub use metadata::TransactionMetadata;
 
-// TODO: reinstate the async worker
-// pub(crate) mod propagator;
-
-use crate::{
-    event::LastSolidMilestoneChanged,
-    milestone::{Milestone, MilestoneIndex},
-    protocol::Protocol,
-    tangle::flags::Flags,
-    worker::BundleValidatorWorkerEvent,
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::flags::Flags, worker::SolidPropagatorWorkerEvent};
 
 use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
-use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
+use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
 use log::error;
@@ -38,7 +29,6 @@ use std::{
     ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 /// Milestone-based Tangle.
@@ -66,58 +56,18 @@ impl MsTangle {
     }
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
-        if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
-            self.propagate_solid_flag(hash);
-            return Some(tx);
-        }
-        None
-    }
+        let opt = self.inner.insert(hash, transaction, metadata);
 
-    // NOTE: not implemented as an async worker atm, but it makes things much easier
-    #[inline]
-    fn propagate_solid_flag(&self, root: Hash) {
-        let mut children = vec![root];
-
-        while let Some(ref hash) = children.pop() {
-            if self.is_solid_transaction(hash) {
-                continue;
-            }
-
-            if let Some(tx) = self.inner.get(&hash) {
-                if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
-                    self.inner.update_metadata(&hash, |metadata| {
-                        metadata.flags.set_solid(true);
-                        // This is possibly not sufficient as there is no guarantee a milestone has been validated
-                        // before being solidified, we then also need to check when a milestone gets validated if it's
-                        // already solid.
-                        if metadata.flags.is_milestone() {
-                            Protocol::get().bus.dispatch(LastSolidMilestoneChanged(Milestone {
-                                hash: *hash,
-                                index: metadata.milestone_index,
-                            }));
-                        }
-
-                        if metadata.flags.is_tail() {
-                            if let Err(e) = Protocol::get()
-                                .bundle_validator_worker
-                                .unbounded_send(BundleValidatorWorkerEvent(*hash))
-                            {
-                                error!("Failed to send hash to bundle validator: {:?}.", e);
-                            }
-                        }
-
-                        metadata.solidification_timestamp = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Clock may have gone backwards")
-                            .as_millis() as u64;
-                    });
-
-                    for child in self.inner.get_children(&hash) {
-                        children.push(child);
-                    }
-                }
+        if opt.is_some() {
+            if let Err(e) = Protocol::get()
+                .solid_propagator_worker
+                .unbounded_send(SolidPropagatorWorkerEvent(hash))
+            {
+                error!("Failed to send hash to solid propagator: {:?}.", e);
             }
         }
+
+        opt
     }
 
     pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {

@@ -21,7 +21,6 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-
 use log::{info, warn};
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
