@@ -166,26 +166,20 @@ impl ProcessorWorker {
                     if transaction.is_tail() {
                         Some(hash)
                     } else {
-                        let mut last = None;
+                        let mut tail = None;
 
                         traversal::visit_children_follow_trunk(
                             tangle(),
                             hash,
                             |tx, _| tx.bundle() == transaction.bundle(),
                             |tx_hash, tx, _| {
-                                last.replace((*tx_hash, tx.clone()));
+                                if tx.is_tail() {
+                                    tail.replace(*tx_hash);
+                                }
                             },
                         );
 
-                        if let Some((h, t)) = last {
-                            if t.is_tail() {
-                                Some(h)
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
+                        tail
                     }
                 };
 
