@@ -37,16 +37,18 @@ impl Protocol {
     }
 
     pub fn request_milestone_fill() {
-        let mut to_request_num = MILESTONE_REQUEST_RANGE - Protocol::get().requested_milestones.len();
         let mut to_request_index = *tangle().get_last_solid_milestone_index() + 1;
         let last_milestone_index = *tangle().get_last_milestone_index();
 
-        while to_request_num > 0 && to_request_index < last_milestone_index {
+        for _ in 0..MILESTONE_REQUEST_RANGE {
             let index = to_request_index.into();
+
+            if to_request_index >= last_milestone_index {
+                break;
+            }
 
             if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
                 Protocol::request_milestone(index, None);
-                to_request_num -= 1;
             }
 
             to_request_index += 1;
