@@ -13,7 +13,7 @@ use crate::{
     event::{LastMilestoneChanged, LastSolidMilestoneChanged},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
-    tangle::tangle,
+    tangle::{helper::find_tail_of_bundle, tangle},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -42,7 +42,7 @@ pub(crate) enum MilestoneValidatorWorkerError {
     InvalidMilestone(MilestoneBuilderError),
 }
 
-pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash);
+pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash, pub(crate) bool);
 
 pub(crate) struct MilestoneValidatorWorker<M, P> {
     receiver: Receiver,
@@ -94,35 +94,45 @@ where
             .build())
     }
 
-    fn process(&self, tail_hash: Hash) {
-        if let Some(meta) = tangle().get_metadata(&tail_hash) {
-            if meta.flags.is_milestone() {
-                return;
+    fn process(&self, hash: Hash, is_tail: bool) {
+        let tail_hash = {
+            if is_tail {
+                Some(hash)
+            } else {
+                find_tail_of_bundle(tangle(), hash)
             }
-            match self.validate_milestone(tail_hash) {
-                Ok(milestone) => {
-                    tangle().add_milestone(milestone.index, milestone.hash);
+        };
 
-                    // This is possibly not sufficient as there is no guarantee a milestone has been solidified
-                    // before being validated, we then also need to check when a milestone gets solidified if it's
-                    // already vadidated.
-                    if meta.flags.is_solid() {
-                        Protocol::get()
-                            .bus
-                            .dispatch(LastSolidMilestoneChanged(milestone.clone()));
-                    }
-
-                    if milestone.index > tangle().get_last_milestone_index() {
-                        Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
-                    }
-
-                    Protocol::get().requested_milestones.remove(&milestone.index);
-                    Protocol::request_milestone_fill();
+        if let Some(tail_hash) = tail_hash {
+            if let Some(meta) = tangle().get_metadata(&tail_hash) {
+                if meta.flags.is_milestone() {
+                    return;
                 }
-                Err(e) => match e {
-                    MilestoneValidatorWorkerError::IncompleteBundle => {}
-                    _ => debug!("Invalid milestone bundle: {:?}.", e),
-                },
+                match self.validate_milestone(tail_hash) {
+                    Ok(milestone) => {
+                        tangle().add_milestone(milestone.index, milestone.hash);
+
+                        // This is possibly not sufficient as there is no guarantee a milestone has been solidified
+                        // before being validated, we then also need to check when a milestone gets solidified if it's
+                        // already vadidated.
+                        if meta.flags.is_solid() {
+                            Protocol::get()
+                                .bus
+                                .dispatch(LastSolidMilestoneChanged(milestone.clone()));
+                        }
+
+                        if milestone.index > tangle().get_last_milestone_index() {
+                            Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
+                        }
+
+                        Protocol::get().requested_milestones.remove(&milestone.index);
+                        Protocol::request_milestone_fill();
+                    }
+                    Err(e) => match e {
+                        MilestoneValidatorWorkerError::IncompleteBundle => {}
+                        _ => debug!("Invalid milestone bundle: {:?}.", e),
+                    },
+                }
             }
         }
     }
@@ -131,8 +141,8 @@ where
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(MilestoneValidatorWorkerEvent(tail_hash)) = self.receiver.next().await {
-            self.process(tail_hash);
+        while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = self.receiver.next().await {
+            self.process(hash, is_tail);
         }
 
         info!("Stopped.");

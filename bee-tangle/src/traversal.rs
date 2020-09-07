@@ -50,11 +50,11 @@ pub fn visit_parents_follow_trunk<Metadata, Match, Apply>(
 pub fn visit_children_follow_trunk<Metadata, Match, Apply>(
     tangle: &Tangle<Metadata>,
     root: Hash,
-    matches: Match,
+    mut matches: Match,
     mut apply: Apply,
 ) where
     Metadata: Clone + Copy,
-    Match: Fn(&TxRef, &Metadata) -> bool,
+    Match: FnMut(&TxRef, &Metadata) -> bool,
     Apply: FnMut(&Hash, &TxRef, &Metadata),
 {
     // TODO could be simplified like visit_parents_follow_trunk ? Meaning no vector ?

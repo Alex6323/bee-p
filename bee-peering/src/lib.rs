@@ -11,8 +11,8 @@
 
 mod config;
 mod manager;
-mod r#static;
+mod manual;
 
 pub use config::{PeeringConfig, PeeringConfigBuilder};
 pub use manager::PeerManager;
-pub use r#static::StaticPeerManager;
+pub use manual::ManualPeerManager;

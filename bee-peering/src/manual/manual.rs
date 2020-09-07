@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{r#static::config::StaticPeeringConfig, PeerManager};
+use crate::{manual::config::ManualPeeringConfig, PeerManager};
 
 use bee_network::{Command::AddEndpoint, Network, Url};
 
@@ -19,13 +19,13 @@ use log::warn;
 // Manages a peer list and watches a config file for changes
 // Sends changes (peer added/removed) to the network
 
-pub struct StaticPeerManager {
-    config: StaticPeeringConfig,
+pub struct ManualPeerManager {
+    config: ManualPeeringConfig,
     network: Network,
 }
 
-impl StaticPeerManager {
-    pub fn new(config: StaticPeeringConfig, network: Network) -> Self {
+impl ManualPeerManager {
+    pub fn new(config: ManualPeeringConfig, network: Network) -> Self {
         Self { config, network }
     }
 
@@ -44,7 +44,7 @@ impl StaticPeerManager {
 }
 
 #[async_trait]
-impl PeerManager for StaticPeerManager {
+impl PeerManager for ManualPeerManager {
     async fn run(mut self) {
         // TODO config file watcher
         // TODO use limit

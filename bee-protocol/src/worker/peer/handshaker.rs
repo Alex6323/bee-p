@@ -75,7 +75,7 @@ impl PeerHandshakerWorker {
         }
     }
 
-    pub async fn run(mut self, receiver: mpsc::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
+    pub async fn run(mut self, receiver: mpsc::UnboundedReceiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
         info!("[{}] Running.", self.peer.address);
 
         // TODO should we have a first check if already connected ?

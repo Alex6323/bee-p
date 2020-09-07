@@ -21,7 +21,7 @@ use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
 use bee_crypto::ternary::Hash;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
-use bee_peering::{PeerManager, StaticPeerManager};
+use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
 use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
 
@@ -29,7 +29,6 @@ use async_std::task::{block_on, spawn};
 use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
-    sink::SinkExt,
     stream::{Fuse, StreamExt},
 };
 use log::{error, info, trace, warn};
@@ -121,8 +120,8 @@ impl NodeBuilder {
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown);
 
-        info!("Starting static peer manager...");
-        spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
+        info!("Starting manual peer manager...");
+        spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
         bee_ledger::whiteflag::init(
@@ -168,7 +167,7 @@ pub struct Node {
     receiver: Receiver,
     shutdown: Shutdown,
     // TODO design proper type `PeerList`
-    peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
+    peers: HashMap<EndpointId, (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>)>,
 }
 
 impl Node {
@@ -196,7 +195,7 @@ impl Node {
                 epid, origin, address, ..
             } => self.endpoint_connected_handler(epid, address, origin),
             Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid),
-            Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes).await,
+            Event::MessageReceived { epid, bytes, .. } => self.endpoint_bytes_received_handler(epid, bytes),
             _ => warn!("Unsupported event {}.", event),
         }
     }
@@ -244,9 +243,9 @@ impl Node {
         }
     }
 
-    async fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
+    fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
         if let Some(peer) = self.peers.get_mut(&epid) {
-            if let Err(e) = peer.0.send(bytes).await {
+            if let Err(e) = peer.0.unbounded_send(bytes) {
                 warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", epid, e);
             }
         }
