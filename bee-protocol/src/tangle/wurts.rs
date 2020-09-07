@@ -41,7 +41,7 @@ const MAX_AGE_SECONDS: u8 = 3;
 const MAX_NUM_CHILDREN: u8 = 2;
 
 #[derive(Default)]
-pub struct WurtsTipPool {
+pub(crate) struct WurtsTipPool {
     tips: HashMap<Hash, SystemTime>,
     children: HashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: HashSet<Hash>,
@@ -57,7 +57,7 @@ impl WurtsTipPool {
     // - transaction is solid and has no children
     // - transaction is solid and has only non-solid children
     // - transaction is solid and has solid children but does not exceed the retention rules
-    pub fn insert(&mut self, tip: &Hash) {
+    pub(crate) fn insert(&mut self, tip: &Hash) {
         // store tip
         self.store(tip);
         // link parents with child
@@ -135,7 +135,7 @@ impl WurtsTipPool {
     }
 
     // further optimization: avoid allocations
-    pub fn update_scores(&mut self) {
+    pub(crate) fn update_scores(&mut self) {
 
         // reset pool
         self.non_lazy_tips.clear();

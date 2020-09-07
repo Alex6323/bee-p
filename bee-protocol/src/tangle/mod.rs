@@ -13,7 +13,7 @@ pub mod flags;
 pub mod helper;
 
 mod metadata;
-pub mod wurts;
+mod wurts;
 
 pub use metadata::TransactionMetadata;
 
