@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod broadcaster;
+mod bundle_validator;
 mod milestone_validator;
 mod peer;
 mod requester;
@@ -21,6 +22,7 @@ mod tps;
 mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
+pub(crate) use bundle_validator::BundleValidatorWorker;
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use requester::{

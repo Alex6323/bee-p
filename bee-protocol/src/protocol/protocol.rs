@@ -17,12 +17,12 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::tangle,
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, HasherWorker, HasherWorkerEvent, MilestoneRequesterWorker,
-        MilestoneRequesterWorkerEntry, MilestoneResponderWorker, MilestoneResponderWorkerEvent,
-        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
-        ProcessorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
-        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
-        TransactionSolidifierWorkerEvent,
+        BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, HasherWorker, HasherWorkerEvent,
+        MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, MilestoneResponderWorker,
+        MilestoneResponderWorkerEvent, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
+        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, StatusWorker, TpsWorker,
+        TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
+        TransactionResponderWorkerEvent, TransactionSolidifierWorker, TransactionSolidifierWorkerEvent,
     },
 };
 
@@ -104,6 +104,9 @@ impl Protocol {
 
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::unbounded();
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
+
+        let (bundle_validator_worker_tx, bundle_validator_worker_rx) = mpsc::unbounded();
+        let (bundle_validator_worker_shutdown_tx, bundle_validator_worker_shutdown_rx) = oneshot::channel();
 
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();
 
@@ -265,6 +268,17 @@ impl Protocol {
                     network,
                     ShutdownStream::new(broadcaster_worker_shutdown_rx, broadcaster_worker_rx),
                 )
+                .run(),
+            ),
+        );
+
+        shutdown.add_worker_shutdown(
+            bundle_validator_worker_shutdown_tx,
+            spawn(
+                BundleValidatorWorker::new(ShutdownStream::new(
+                    bundle_validator_worker_shutdown_rx,
+                    bundle_validator_worker_rx,
+                ))
                 .run(),
             ),
         );
