@@ -23,7 +23,7 @@ use crate::{
 use bee_crypto::ternary::Hash;
 use bee_ternary::{convert::Error as ConvertError, raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Trits, T1B1};
 
-use std::convert::TryFrom;
+use std::convert::{AsRef, TryFrom};
 
 #[derive(Debug)]
 pub enum BundledTransactionError {
@@ -296,23 +296,29 @@ impl Vertex for BundledTransaction {
     }
 }
 
-#[derive(Default)]
-pub struct BundledTransactions(pub(crate) Vec<BundledTransaction>);
+impl std::convert::AsRef<BundledTransaction> for BundledTransaction {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
 
-impl BundledTransactions {
+#[derive(Default)]
+pub struct BundledTransactions<T>(pub(crate) Vec<T>);
+
+impl<T: AsRef<BundledTransaction>> BundledTransactions<T> {
     pub fn new() -> Self {
-        Self::default()
+        Self(Vec::new())
     }
 
     pub fn get(&self, index: usize) -> Option<&BundledTransaction> {
-        self.0.get(index)
+        self.0.get(index).map(|t| t.as_ref())
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    pub fn push(&mut self, transaction: BundledTransaction) {
+    pub fn push(&mut self, transaction: T) {
         self.0.push(transaction);
     }
 }

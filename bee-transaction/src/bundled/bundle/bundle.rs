@@ -18,9 +18,9 @@ use bee_crypto::ternary::Hash;
 
 use std::collections::HashMap;
 
-pub struct Bundle(pub(crate) BundledTransactions);
+pub struct Bundle<T>(pub(crate) BundledTransactions<T>);
 
-impl Bundle {
+impl<T: AsRef<BundledTransaction>> Bundle<T> {
     // TODO TEST
     pub fn get(&self, index: usize) -> Option<&BundledTransaction> {
         self.0.get(index)
@@ -54,8 +54,9 @@ impl Bundle {
         let mut diff = HashMap::new();
 
         for transaction in self {
-            if *transaction.value.to_inner() != 0 {
-                *diff.entry(transaction.address().clone()).or_insert(0) += *transaction.value.to_inner();
+            if *transaction.as_ref().value.to_inner() != 0 {
+                *diff.entry(transaction.as_ref().address().clone()).or_insert(0) +=
+                    *transaction.as_ref().value.to_inner();
             }
         }
 
@@ -69,7 +70,7 @@ impl Bundle {
     }
 }
 
-impl Vertex for Bundle {
+impl<T: AsRef<BundledTransaction>> Vertex for Bundle<T> {
     type Hash = Hash;
 
     // TODO TEST
@@ -83,9 +84,9 @@ impl Vertex for Bundle {
     }
 }
 
-impl IntoIterator for Bundle {
-    type Item = BundledTransaction;
-    type IntoIter = std::vec::IntoIter<BundledTransaction>;
+impl<T: AsRef<BundledTransaction>> IntoIterator for Bundle<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
 
     // TODO TEST
     fn into_iter(self) -> Self::IntoIter {
@@ -93,9 +94,9 @@ impl IntoIterator for Bundle {
     }
 }
 
-impl<'a> IntoIterator for &'a Bundle {
-    type Item = &'a BundledTransaction;
-    type IntoIter = std::slice::Iter<'a, BundledTransaction>;
+impl<'a, T: AsRef<BundledTransaction>> IntoIterator for &'a Bundle<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
 
     // TODO TEST
     fn into_iter(self) -> Self::IntoIter {
@@ -103,7 +104,7 @@ impl<'a> IntoIterator for &'a Bundle {
     }
 }
 
-impl std::ops::Index<usize> for Bundle {
+impl<T: AsRef<BundledTransaction>> std::ops::Index<usize> for Bundle<T> {
     type Output = BundledTransaction;
 
     // TODO TEST

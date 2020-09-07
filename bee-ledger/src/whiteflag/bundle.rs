@@ -9,10 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::Hash;
+use bee_crypto::ternary::{sponge::Kerl, Hash};
 use bee_protocol::tangle::tangle;
-use bee_tangle::traversal::visit_parents_follow_trunk;
-use bee_transaction::bundled::IncomingBundleBuilder;
+use bee_signing::ternary::wots::WotsPublicKey;
+use bee_tangle::{traversal::visit_parents_follow_trunk, TransactionRef};
+use bee_transaction::bundled::bundle::incoming::{IncomingRaw, StagedIncomingBundleBuilder};
+
+type IncomingBundleBuilder = StagedIncomingBundleBuilder<TransactionRef, Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
 
 pub(crate) fn load_bundle_builder(hash: &Hash) -> Option<IncomingBundleBuilder> {
     let mut bundle_builder = IncomingBundleBuilder::new();
@@ -31,7 +34,7 @@ pub(crate) fn load_bundle_builder(hash: &Hash) -> Option<IncomingBundleBuilder> 
             true
         },
         |_, transaction, _| {
-            bundle_builder.push((*(*transaction)).clone());
+            bundle_builder.push(transaction.clone());
         },
     );
 

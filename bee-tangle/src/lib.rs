@@ -37,3 +37,9 @@ impl Deref for TransactionRef {
         &*self.0
     }
 }
+
+impl std::convert::AsRef<Transaction> for TransactionRef {
+    fn as_ref(&self) -> &Transaction {
+        &*self.0
+    }
+}

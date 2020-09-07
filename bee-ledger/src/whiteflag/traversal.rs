@@ -13,8 +13,9 @@ use crate::whiteflag::{bundle::load_bundle_builder, metadata::WhiteFlagMetadata,
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
+use bee_tangle::TransactionRef;
 use bee_transaction::{
-    bundled::{Bundle, IncomingBundleBuilderError},
+    bundled::{bundle::incoming::IncomingBundleBuilderError, Bundle},
     Vertex,
 };
 
@@ -31,7 +32,7 @@ pub(crate) enum Error {
 
 impl LedgerWorker {
     #[inline]
-    fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle, metadata: &mut WhiteFlagMetadata) {
+    fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle<TransactionRef>, metadata: &mut WhiteFlagMetadata) {
         let mut conflicting = false;
         let (mutates, mutations) = bundle.ledger_mutations();
 

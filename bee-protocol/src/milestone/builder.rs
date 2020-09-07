@@ -20,6 +20,7 @@ use bee_signing::ternary::{
     wots::{normalize, WotsPublicKey},
     PublicKey, RecoverableSignature, Signature,
 };
+use bee_tangle::TransactionRef;
 use bee_ternary::{convert::Error as ConvertError, TritBuf};
 use bee_transaction::{
     bundled::{
@@ -47,21 +48,23 @@ impl MilestoneBuilderStage for IncomingRaw {}
 pub struct IncomingValidated;
 impl MilestoneBuilderStage for IncomingValidated {}
 
-pub struct StagedMilestoneBuilder<E, M, P, S> {
+pub struct StagedMilestoneBuilder<T, E, M, P, S> {
     hash: Hash,
     index: MilestoneIndex,
     depth: Option<u8>,
-    transactions: Transactions,
+    transactions: Transactions<T>,
     essence_sponge: PhantomData<E>,
     mss_sponge: PhantomData<M>,
     public_key: PhantomData<P>,
     stage: PhantomData<S>,
 }
 
-pub type MilestoneBuilder<E = Kerl, M = Kerl, P = WotsPublicKey<Kerl>> = StagedMilestoneBuilder<E, M, P, IncomingRaw>;
+pub type MilestoneBuilder<T = TransactionRef, E = Kerl, M = Kerl, P = WotsPublicKey<Kerl>> =
+    StagedMilestoneBuilder<T, E, M, P, IncomingRaw>;
 
-impl<E, M, P> StagedMilestoneBuilder<E, M, P, IncomingRaw>
+impl<T, E, M, P> StagedMilestoneBuilder<T, E, M, P, IncomingRaw>
 where
+    T: AsRef<Transaction>,
     E: Sponge + Default,
     M: Sponge + Default,
     P: PublicKey,
@@ -72,7 +75,7 @@ where
             hash,
             index: MilestoneIndex(0),
             depth: None,
-            transactions: Transactions::new(),
+            transactions: Transactions::<T>::new(),
             essence_sponge: PhantomData,
             mss_sponge: PhantomData,
             public_key: PhantomData,
@@ -80,7 +83,7 @@ where
         }
     }
 
-    pub fn push(&mut self, transaction: Transaction) {
+    pub fn push(&mut self, transaction: T) {
         self.transactions.push(transaction);
     }
 
@@ -133,7 +136,7 @@ where
         }
     }
 
-    pub fn validate(mut self) -> Result<StagedMilestoneBuilder<E, M, P, IncomingValidated>, MilestoneBuilderError> {
+    pub fn validate(mut self) -> Result<StagedMilestoneBuilder<T, E, M, P, IncomingValidated>, MilestoneBuilderError> {
         if self.transactions.len() == 0 {
             return Err(MilestoneBuilderError::Empty);
         }
@@ -153,7 +156,7 @@ where
 
         self.validate_signatures()?;
 
-        Ok(StagedMilestoneBuilder::<E, M, P, IncomingValidated> {
+        Ok(StagedMilestoneBuilder::<T, E, M, P, IncomingValidated> {
             hash: self.hash,
             index: self.index,
             depth: self.depth,
@@ -166,8 +169,9 @@ where
     }
 }
 
-impl<E, M, P> StagedMilestoneBuilder<E, M, P, IncomingValidated>
+impl<T, E, M, P> StagedMilestoneBuilder<T, E, M, P, IncomingValidated>
 where
+    T: AsRef<Transaction>,
     E: Sponge + Default,
     M: Sponge + Default,
     P: PublicKey,

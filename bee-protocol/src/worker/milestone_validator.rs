@@ -22,6 +22,7 @@ use bee_crypto::ternary::{
     Hash,
 };
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
+use bee_tangle::TransactionRef;
 use bee_transaction::Vertex;
 
 use futures::{
@@ -66,7 +67,7 @@ where
 
     fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
         // TODO also do an IncomingBundleBuilder check ?
-        let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
+        let mut builder = MilestoneBuilder::<TransactionRef, Kerl, M, P>::new(tail_hash);
         let mut transaction = tangle()
             .get(&tail_hash)
             .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
@@ -76,15 +77,15 @@ where
             return Err(MilestoneValidatorWorkerError::NotATail);
         }
 
-        builder.push((*transaction).clone());
+        builder.push(transaction.clone());
 
         // TODO use walker
         for _ in 0..Protocol::get().config.coordinator.security_level {
             transaction = tangle()
-                .get((*transaction).trunk())
+                .get(transaction.as_ref().trunk())
                 .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
-            builder.push((*transaction).clone());
+            builder.push(transaction.clone());
         }
 
         Ok(builder

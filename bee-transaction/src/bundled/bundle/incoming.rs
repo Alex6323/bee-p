@@ -43,17 +43,19 @@ impl IncomingBundleBuilderStage for IncomingRaw {}
 pub struct IncomingValidated;
 impl IncomingBundleBuilderStage for IncomingValidated {}
 
-pub struct StagedIncomingBundleBuilder<E, P, S> {
-    transactions: BundledTransactions,
+pub struct StagedIncomingBundleBuilder<T, E, P, S> {
+    transactions: BundledTransactions<T>,
     essence_sponge: PhantomData<E>,
     public_key: PhantomData<P>,
     stage: PhantomData<S>,
 }
 
-pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
+pub type IncomingBundleBuilder =
+    StagedIncomingBundleBuilder<BundledTransaction, Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
 
-impl<E, P, S> StagedIncomingBundleBuilder<E, P, S>
+impl<T, E, P, S> StagedIncomingBundleBuilder<T, E, P, S>
 where
+    T: AsRef<BundledTransaction>,
     E: Sponge + Default,
     P: PublicKey,
     S: IncomingBundleBuilderStage,
@@ -68,8 +70,9 @@ where
 }
 
 // Panics if the builder is empty!
-impl<E, P, S> Vertex for StagedIncomingBundleBuilder<E, P, S>
+impl<T, E, P, S> Vertex for StagedIncomingBundleBuilder<T, E, P, S>
 where
+    T: AsRef<BundledTransaction>,
     E: Sponge + Default,
     P: PublicKey,
     S: IncomingBundleBuilderStage,
@@ -77,16 +80,17 @@ where
     type Hash = Hash;
 
     fn trunk(&self) -> &Hash {
-        self.transactions.0.last().unwrap().trunk()
+        self.transactions.0.last().unwrap().as_ref().trunk()
     }
 
     fn branch(&self) -> &Hash {
-        self.transactions.0.last().unwrap().branch()
+        self.transactions.0.last().unwrap().as_ref().branch()
     }
 }
 
-impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
+impl<T, E, P> StagedIncomingBundleBuilder<T, E, P, IncomingRaw>
 where
+    T: AsRef<BundledTransaction>,
     E: Sponge + Default,
     P: PublicKey,
 {
@@ -101,7 +105,7 @@ where
     }
 
     // TODO TEST
-    pub fn push(&mut self, transaction: BundledTransaction) {
+    pub fn push(&mut self, transaction: T) {
         self.transactions.push(transaction);
     }
 
@@ -112,7 +116,7 @@ where
 
         for transaction in &self.transactions.0 {
             // TODO handle res
-            sponge.absorb(&transaction.essence());
+            sponge.absorb(&transaction.as_ref().essence());
         }
 
         sponge
@@ -147,7 +151,9 @@ where
 
     // TODO TEST
     // TODO make it parameterized ?
-    pub fn validate(self) -> Result<StagedIncomingBundleBuilder<E, P, IncomingValidated>, IncomingBundleBuilderError> {
+    pub fn validate(
+        self,
+    ) -> Result<StagedIncomingBundleBuilder<T, E, P, IncomingValidated>, IncomingBundleBuilderError> {
         let mut sum: i64 = 0;
 
         if self.transactions.len() == 0 {
@@ -159,38 +165,38 @@ where
         // TODO avoid using a vec
         let bundle_hash_calculated = self.calculate_hash().as_i8_slice().to_vec();
 
-        let first_branch = self.transactions.0[0].branch();
+        let first_branch = self.transactions.0[0].as_ref().branch();
 
         // TODO - check trunk of the last transaction and branch is tail, the same tail
 
         for (index, transaction) in self.transactions.0.iter().enumerate() {
-            if index != *transaction.index().to_inner() {
+            if index != *transaction.as_ref().index().to_inner() {
                 return Err(IncomingBundleBuilderError::InvalidIndex(
-                    *transaction.index().to_inner(),
+                    *transaction.as_ref().index().to_inner(),
                 ));
             }
 
-            if last_index != *transaction.last_index().to_inner() {
+            if last_index != *transaction.as_ref().last_index().to_inner() {
                 return Err(IncomingBundleBuilderError::InvalidLastIndex(
-                    *transaction.last_index().to_inner(),
+                    *transaction.as_ref().last_index().to_inner(),
                 ));
             }
 
-            sum += *transaction.value.to_inner();
+            sum += *transaction.as_ref().value.to_inner();
 
             if sum.abs() > IOTA_SUPPLY {
                 return Err(IncomingBundleBuilderError::InvalidValue(sum));
             }
 
-            if bundle_hash_calculated.ne(&transaction.bundle().to_inner().as_i8_slice().to_vec()) {
+            if bundle_hash_calculated.ne(&transaction.as_ref().bundle().to_inner().as_i8_slice().to_vec()) {
                 return Err(IncomingBundleBuilderError::InvalidBundleHash);
             }
 
-            if index > 0 && index < last_index && transaction.branch().ne(first_branch) {
+            if index > 0 && index < last_index && transaction.as_ref().branch().ne(first_branch) {
                 return Err(IncomingBundleBuilderError::InvalidBranch);
             }
 
-            if last_index != 0 && index == last_index && transaction.trunk().ne(first_branch) {
+            if last_index != 0 && index == last_index && transaction.as_ref().trunk().ne(first_branch) {
                 return Err(IncomingBundleBuilderError::InvalidTrunk);
             }
 
@@ -203,7 +209,7 @@ where
 
         // self.validate_signatures()?;
 
-        Ok(StagedIncomingBundleBuilder::<E, P, IncomingValidated> {
+        Ok(StagedIncomingBundleBuilder::<T, E, P, IncomingValidated> {
             transactions: self.transactions,
             essence_sponge: PhantomData,
             public_key: PhantomData,
@@ -212,13 +218,14 @@ where
     }
 }
 
-impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingValidated>
+impl<T, E, P> StagedIncomingBundleBuilder<T, E, P, IncomingValidated>
 where
+    T: AsRef<BundledTransaction>,
     E: Sponge + Default,
     P: PublicKey,
 {
     // TODO TEST
-    pub fn build(self) -> Bundle {
+    pub fn build(self) -> Bundle<T> {
         Bundle(self.transactions)
     }
 }

@@ -11,8 +11,8 @@
 
 use crate::bundled::{
     constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
-    Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
-    BundledTransactionField, BundledTransactions, Index, Payload, Tag,
+    Address, Bundle, BundledTransaction, BundledTransactionBuilder, BundledTransactionBuilders,
+    BundledTransactionError, BundledTransactionField, BundledTransactions, Index, Payload, Tag,
 };
 
 use bee_crypto::ternary::{
@@ -345,7 +345,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
 
 impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
     // TODO TEST
-    pub fn build(self) -> Result<Bundle, OutgoingBundleBuilderError> {
+    pub fn build(self) -> Result<Bundle<BundledTransaction>, OutgoingBundleBuilderError> {
         let mut transactions = BundledTransactions::new();
 
         for transaction_builder in self.builders.0 {
