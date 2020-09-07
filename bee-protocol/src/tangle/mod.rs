@@ -84,7 +84,7 @@ impl MsTangle {
             if let Some(tx) = self.inner.get(&hash) {
                 if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
                     self.inner.update_metadata(&hash, |metadata| {
-                        metadata.flags.set_solid();
+                        metadata.flags.set_solid(true);
                         // This is possibly not sufficient as there is no guarantee a milestone has been validated
                         // before being solidified, we then also need to check when a milestone gets validated if it's
                         // already solid.
@@ -116,7 +116,7 @@ impl MsTangle {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
         self.inner.update_metadata(&hash, |metadata| {
-            metadata.flags.set_milestone();
+            metadata.flags.set_milestone(true);
             metadata.milestone_index = index
         });
     }

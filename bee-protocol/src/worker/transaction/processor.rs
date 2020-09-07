@@ -135,10 +135,10 @@ impl ProcessorWorker {
         let mut metadata = TransactionMetadata::new();
 
         if transaction.is_tail() {
-            metadata.flags.set_tail();
+            metadata.flags.set_tail(true);
         }
         if requested {
-            metadata.flags.set_requested();
+            metadata.flags.set_requested(true);
         }
 
         // store transaction
