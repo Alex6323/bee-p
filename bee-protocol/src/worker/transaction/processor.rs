@@ -134,12 +134,8 @@ impl ProcessorWorker {
 
         let mut metadata = TransactionMetadata::new();
 
-        if transaction.is_tail() {
-            metadata.flags.set_tail(true);
-        }
-        if requested {
-            metadata.flags.set_requested(true);
-        }
+        metadata.flags.set_tail(transaction.is_tail());
+        metadata.flags.set_requested(requested);
 
         // store transaction
         if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
