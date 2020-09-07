@@ -14,14 +14,12 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::tangle,
-    worker::{
-        BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, MilestoneSolidifierWorkerEvent, SenderWorker,
-        TransactionRequesterWorkerEntry,
-    },
+    worker::{BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, SenderWorker, TransactionRequesterWorkerEntry},
 };
 
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
+use bee_tangle::traversal;
 
 use log::warn;
 
@@ -134,11 +132,24 @@ impl Protocol {
     // Solidifier
 
     pub fn trigger_milestone_solidification(target_index: MilestoneIndex) {
-        if let Err(e) = Protocol::get()
-            .milestone_solidifier_worker
-            .unbounded_send(MilestoneSolidifierWorkerEvent(target_index))
-        {
-            warn!("Triggering milestone solidification failed: {}.", e);
+        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
+            if !tangle().is_solid_transaction(&target_hash) {
+                traversal::visit_parents_depth_first(
+                    tangle(),
+                    target_hash,
+                    |hash, _, metadata| {
+                        !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+                    },
+                    |_, _, _| {},
+                    |missing_hash| {
+                        if !tangle().is_solid_entry_point(missing_hash)
+                            && !Protocol::get().requested_transactions.contains_key(&missing_hash)
+                        {
+                            Protocol::request_transaction(*missing_hash, target_index);
+                        }
+                    },
+                );
+            }
         }
     }
 }

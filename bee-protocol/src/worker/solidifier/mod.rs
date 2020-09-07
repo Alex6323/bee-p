@@ -9,8 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod milestone;
 mod propagator;
 
-pub(crate) use milestone::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MILESTONE_COUNT};
 pub(crate) use propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};

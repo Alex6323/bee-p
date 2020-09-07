@@ -19,9 +19,8 @@ use crate::{
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, BundleValidatorWorkerEvent, HasherWorker,
         HasherWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, MilestoneResponderWorker,
-        MilestoneResponderWorkerEvent, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
-        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker,
-        SolidPropagatorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
+        MilestoneResponderWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker,
+        SolidPropagatorWorker, SolidPropagatorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
         TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent,
     },
 };
@@ -56,7 +55,6 @@ pub struct Protocol {
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
     pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
-    pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) bundle_validator_worker: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
@@ -97,9 +95,6 @@ impl Protocol {
         let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::unbounded();
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
-        let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) = mpsc::unbounded();
-        let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
-
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::unbounded();
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
 
@@ -124,7 +119,6 @@ impl Protocol {
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: Default::default(),
             milestone_requester_worker: Default::default(),
-            milestone_solidifier_worker: milestone_solidifier_worker_tx,
             broadcaster_worker: broadcaster_worker_tx,
             bundle_validator_worker: bundle_validator_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
@@ -240,17 +234,6 @@ impl Protocol {
                 ),
             ),
         };
-
-        shutdown.add_worker_shutdown(
-            milestone_solidifier_worker_shutdown_tx,
-            spawn(
-                MilestoneSolidifierWorker::new(ShutdownStream::new(
-                    milestone_solidifier_worker_shutdown_rx,
-                    milestone_solidifier_worker_rx,
-                ))
-                .run(),
-            ),
-        );
 
         shutdown.add_worker_shutdown(
             broadcaster_worker_shutdown_tx,

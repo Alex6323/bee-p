@@ -11,10 +11,9 @@
 
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
-    milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::{milestone_validator::MilestoneValidatorWorkerEvent, MILESTONE_COUNT},
+    worker::milestone_validator::MilestoneValidatorWorkerEvent,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};

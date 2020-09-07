@@ -19,7 +19,7 @@ use bee_ternary::T5B1Buf;
 use async_std::stream::{interval, Interval};
 use bytemuck::cast_slice;
 use futures::{select, stream::Fuse, StreamExt};
-use log::{debug, info};
+use log::info;
 
 use std::{
     cmp::Ordering,
