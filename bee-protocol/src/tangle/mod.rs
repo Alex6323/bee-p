@@ -13,7 +13,7 @@ pub mod flags;
 pub mod helper;
 
 mod metadata;
-pub mod tip_selector;
+pub mod wurts;
 
 pub use metadata::TransactionMetadata;
 
@@ -43,7 +43,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::tangle::tip_selector::TipSelector;
+use crate::tangle::wurts::WurtsTipPool;
 use std::sync::{RwLock, Arc};
 
 /// Milestone-based Tangle.
@@ -55,7 +55,7 @@ pub struct MsTangle {
     last_milestone_index: AtomicU32,
     last_solid_milestone_index: AtomicU32,
     snapshot_milestone_index: AtomicU32,
-    tip_selector: Arc<RwLock<TipSelector>>,
+    tip_pool: Arc<RwLock<WurtsTipPool>>,
     last_solid_milestone_index_processed: AtomicU32,
 }
 
@@ -81,7 +81,7 @@ impl MsTangle {
                 self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
                 self.last_solid_milestone_index_processed
                     .store(index, Ordering::Relaxed);
-                let mut tip_selector = self.tip_selector.write().unwrap();
+                let mut tip_selector = self.tip_pool.write().unwrap();
                 tip_selector.update_scores();
             }
 
@@ -122,7 +122,7 @@ impl MsTangle {
                             .as_millis() as u64;
                     });
 
-                    let mut tip_selector = self.tip_selector.write().unwrap();
+                    let mut tip_selector = self.tip_pool.write().unwrap();
                     tip_selector.insert(hash);
 
                     for child in self.inner.get_children(&hash) {
@@ -247,7 +247,7 @@ impl MsTangle {
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        let tip_selector = self.tip_selector.read().unwrap();
+        let tip_selector = self.tip_pool.read().unwrap();
         tip_selector.get_non_lazy_tips()
     }
 

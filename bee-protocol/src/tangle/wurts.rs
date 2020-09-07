@@ -41,13 +41,13 @@ const MAX_AGE_SECONDS: u8 = 3;
 const MAX_NUM_CHILDREN: u8 = 2;
 
 #[derive(Default)]
-pub struct TipSelector {
+pub struct WurtsTipPool {
     tips: HashMap<Hash, SystemTime>,
     children: HashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: HashSet<Hash>,
 }
 
-impl TipSelector {
+impl WurtsTipPool {
     pub(crate) fn new() -> Self {
         Self::default()
     }
@@ -157,7 +157,7 @@ impl TipSelector {
             }
         }
 
-        info!("number of non-lazy tips: {}", self.non_lazy_tips.len());
+        info!("Available tips (non-lazy): {}", self.non_lazy_tips.len());
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
