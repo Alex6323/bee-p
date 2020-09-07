@@ -12,5 +12,5 @@
 mod milestone;
 mod propagator;
 
-pub(crate) use milestone::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
+pub(crate) use milestone::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MILESTONE_COUNT};
 pub(crate) use propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};

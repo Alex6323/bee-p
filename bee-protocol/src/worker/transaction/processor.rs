@@ -11,9 +11,10 @@
 
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
+    milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::milestone_validator::MilestoneValidatorWorkerEvent,
+    worker::{milestone_validator::MilestoneValidatorWorkerEvent, MILESTONE_COUNT},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -145,7 +146,11 @@ impl ProcessorWorker {
             Protocol::get().metrics.new_transactions_inc();
 
             if !tangle().is_synced() && Protocol::get().requested_transactions.is_empty() {
-                Protocol::trigger_milestone_solidification();
+                let base = tangle().get_last_solid_milestone_index();
+                for i in 0..MILESTONE_COUNT {
+                    let index = base + MilestoneIndex(i + 1);
+                    Protocol::trigger_milestone_solidification(index);
+                }
             }
 
             match Protocol::get().requested_transactions.remove(&hash) {

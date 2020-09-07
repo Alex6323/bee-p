@@ -20,11 +20,11 @@ use futures::{
 };
 use log::info;
 
-const MILESTONE_COUNT: u32 = 5;
+pub(crate) const MILESTONE_COUNT: u32 = 5;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
-pub(crate) struct MilestoneSolidifierWorkerEvent;
+pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
 pub(crate) struct MilestoneSolidifierWorker {
     receiver: Receiver,
@@ -35,28 +35,24 @@ impl MilestoneSolidifierWorker {
         Self { receiver }
     }
 
-    fn solidify_milestone(&self) {
-        for i in 0..MILESTONE_COUNT {
-            let target_index = tangle().get_last_solid_milestone_index() + MilestoneIndex(i + 1);
-
-            if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-                if !tangle().is_solid_transaction(&target_hash) {
-                    traversal::visit_parents_depth_first(
-                        tangle(),
-                        target_hash,
-                        |hash, _, metadata| {
-                            !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
-                        },
-                        |_, _, _| {},
-                        |missing_hash| {
-                            if !tangle().is_solid_entry_point(missing_hash)
-                                && !Protocol::get().requested_transactions.contains_key(&missing_hash)
-                            {
-                                Protocol::request_transaction(*missing_hash, target_index);
-                            }
-                        },
-                    );
-                }
+    fn solidify_milestone(&self, target_index: MilestoneIndex) {
+        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
+            if !tangle().is_solid_transaction(&target_hash) {
+                traversal::visit_parents_depth_first(
+                    tangle(),
+                    target_hash,
+                    |hash, _, metadata| {
+                        !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+                    },
+                    |_, _, _| {},
+                    |missing_hash| {
+                        if !tangle().is_solid_entry_point(missing_hash)
+                            && !Protocol::get().requested_transactions.contains_key(&missing_hash)
+                        {
+                            Protocol::request_transaction(*missing_hash, target_index);
+                        }
+                    },
+                );
             }
         }
     }
@@ -64,8 +60,8 @@ impl MilestoneSolidifierWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(MilestoneSolidifierWorkerEvent) = self.receiver.next().await {
-            self.solidify_milestone();
+        while let Some(MilestoneSolidifierWorkerEvent(index)) = self.receiver.next().await {
+            self.solidify_milestone(index);
         }
 
         info!("Stopped.");

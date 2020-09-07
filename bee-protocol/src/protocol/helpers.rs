@@ -133,10 +133,10 @@ impl Protocol {
 
     // Solidifier
 
-    pub fn trigger_milestone_solidification() {
+    pub fn trigger_milestone_solidification(target_index: MilestoneIndex) {
         if let Err(e) = Protocol::get()
             .milestone_solidifier_worker
-            .unbounded_send(MilestoneSolidifierWorkerEvent)
+            .unbounded_send(MilestoneSolidifierWorkerEvent(target_index))
         {
             warn!("Triggering milestone solidification failed: {}.", e);
         }
