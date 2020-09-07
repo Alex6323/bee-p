@@ -123,8 +123,9 @@ where
                             Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
                         }
 
-                        Protocol::get().requested_milestones.remove(&milestone.index);
-                        Protocol::request_milestone_fill();
+                        if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
+                            Protocol::trigger_milestone_solidification(milestone.index);
+                        }
                     }
                     Err(e) => match e {
                         MilestoneValidatorWorkerError::IncompleteBundle => {}
