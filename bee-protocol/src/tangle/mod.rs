@@ -24,6 +24,7 @@ use crate::{
     milestone::{Milestone, MilestoneIndex},
     protocol::Protocol,
     tangle::flags::Flags,
+    worker::BundleValidatorWorkerEvent,
 };
 
 use bee_crypto::ternary::Hash;
@@ -31,6 +32,7 @@ use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
 
 use dashmap::DashMap;
+use log::error;
 
 use std::{
     ops::Deref,
@@ -94,6 +96,16 @@ impl MsTangle {
                                 index: metadata.milestone_index,
                             }));
                         }
+
+                        if metadata.flags.is_tail() {
+                            if let Err(e) = Protocol::get()
+                                .bundle_validator_worker
+                                .unbounded_send(BundleValidatorWorkerEvent(*hash))
+                            {
+                                error!("Failed to send hash to bundle validator: {:?}.", e);
+                            }
+                        }
+
                         metadata.solidification_timestamp = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
                             .expect("Clock may have gone backwards")
