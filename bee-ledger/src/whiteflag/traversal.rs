@@ -104,15 +104,21 @@ impl LedgerWorker {
 
             // TODO pass match to avoid repetitions
             match load_bundle_builder(tangle(), hash) {
-                Some(bundle_builder) => {
-                    let trunk = bundle_builder.trunk();
-                    let branch = bundle_builder.branch();
+                Some(builder) => {
+                    let trunk = builder.trunk();
+                    let branch = builder.branch();
 
                     if visited.contains(trunk) && visited.contains(branch) {
                         // TODO check valid and strict semantic
-                        let bundle = match bundle_builder.validate() {
-                            Ok(builder) => builder.build(),
-                            Err(e) => return Err(Error::InvalidBundle(e)),
+                        let bundle = if meta.flags().is_valid() {
+                            // We know the bundle is valid so we can safely skip validation rules.
+                            unsafe { builder.build() }
+                        } else {
+                            panic!("INVALID BUNDLE");
+                            // let bundle = match builder.validate() {
+                            //     Ok(builder) => builder.build(),
+                            //     Err(e) => return Err(Error::InvalidBundle(e)),
+                            // };
                         };
                         self.on_bundle(hash, &bundle, metadata);
                         visited.insert(*hash);
