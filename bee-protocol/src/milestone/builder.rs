@@ -52,10 +52,7 @@ pub struct StagedMilestoneBuilder<E, M, P, S> {
     index: MilestoneIndex,
     depth: Option<u8>,
     transactions: Transactions,
-    essence_sponge: PhantomData<E>,
-    mss_sponge: PhantomData<M>,
-    public_key: PhantomData<P>,
-    stage: PhantomData<S>,
+    marker: PhantomData<(E, M, P, S)>,
 }
 
 pub type MilestoneBuilder<E = Kerl, M = Kerl, P = WotsPublicKey<Kerl>> = StagedMilestoneBuilder<E, M, P, IncomingRaw>;
@@ -73,10 +70,7 @@ where
             index: MilestoneIndex(0),
             depth: None,
             transactions: Transactions::new(),
-            essence_sponge: PhantomData,
-            mss_sponge: PhantomData,
-            public_key: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         }
     }
 
@@ -158,10 +152,7 @@ where
             index: self.index,
             depth: self.depth,
             transactions: self.transactions,
-            essence_sponge: PhantomData,
-            mss_sponge: PhantomData,
-            public_key: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         })
     }
 }

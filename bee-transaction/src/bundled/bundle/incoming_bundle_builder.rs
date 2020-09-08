@@ -45,9 +45,7 @@ impl IncomingBundleBuilderStage for IncomingValidated {}
 
 pub struct StagedIncomingBundleBuilder<E, P, S> {
     transactions: BundledTransactions,
-    essence_sponge: PhantomData<E>,
-    public_key: PhantomData<P>,
-    stage: PhantomData<S>,
+    marker: PhantomData<(E, P, S)>,
 }
 
 pub type IncomingBundleBuilder = StagedIncomingBundleBuilder<Kerl, WotsPublicKey<Kerl>, IncomingRaw>;
@@ -94,9 +92,7 @@ where
     pub fn new() -> Self {
         Self {
             transactions: BundledTransactions::new(),
-            essence_sponge: PhantomData,
-            public_key: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         }
     }
 
@@ -205,9 +201,7 @@ where
 
         Ok(StagedIncomingBundleBuilder::<E, P, IncomingValidated> {
             transactions: self.transactions,
-            essence_sponge: PhantomData,
-            public_key: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         })
     }
 

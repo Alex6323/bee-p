@@ -46,8 +46,7 @@ pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash, pub(crate) bool
 
 pub(crate) struct MilestoneValidatorWorker<M, P> {
     receiver: Receiver,
-    mss_sponge: PhantomData<M>,
-    public_key: PhantomData<P>,
+    marker: PhantomData<(M, P)>,
 }
 
 impl<M, P> MilestoneValidatorWorker<M, P>
@@ -59,8 +58,7 @@ where
     pub(crate) fn new(receiver: Receiver) -> Self {
         Self {
             receiver,
-            mss_sponge: PhantomData,
-            public_key: PhantomData,
+            marker: PhantomData,
         }
     }
 
