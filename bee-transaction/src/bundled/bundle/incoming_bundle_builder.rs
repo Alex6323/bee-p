@@ -210,6 +210,10 @@ where
             stage: PhantomData,
         })
     }
+
+    pub unsafe fn build(self) -> Bundle {
+        Bundle(self.transactions)
+    }
 }
 
 impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingValidated>
