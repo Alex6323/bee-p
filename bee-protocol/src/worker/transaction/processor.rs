@@ -144,6 +144,10 @@ impl ProcessorWorker {
         if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
             Protocol::get().metrics.new_transactions_inc();
 
+            if !tangle().is_synced() && Protocol::get().requested_transactions.is_empty() {
+                Protocol::request_milestone_fill();
+            }
+
             match Protocol::get().requested_transactions.remove(&hash) {
                 Some((_hash, (index, _))) => {
                     let trunk = transaction.trunk();

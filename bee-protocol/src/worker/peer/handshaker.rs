@@ -223,7 +223,6 @@ impl PeerHandshakerWorker {
                         );
 
                         Protocol::request_last_milestone(Some(self.peer.epid));
-                        Protocol::request_milestone_fill();
 
                         self.status = HandshakeStatus::Done;
                     }

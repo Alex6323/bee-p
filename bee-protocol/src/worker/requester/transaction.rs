@@ -19,7 +19,7 @@ use bee_ternary::T5B1Buf;
 use async_std::stream::{interval, Interval};
 use bytemuck::cast_slice;
 use futures::{select, stream::Fuse, StreamExt};
-use log::info;
+use log::{debug, info};
 
 use std::{
     cmp::Ordering,
@@ -112,7 +112,7 @@ impl<'a> TransactionRequesterWorker<'a> {
         }
 
         if retry_counts > 0 {
-            info!("Retried {} transactions.", retry_counts);
+            debug!("Retried {} transactions.", retry_counts);
         }
     }
 

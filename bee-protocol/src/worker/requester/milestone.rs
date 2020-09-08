@@ -19,7 +19,7 @@ use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};
 use futures::{select, stream::Fuse, StreamExt};
-use log::info;
+use log::{debug, info};
 
 use std::{
     cmp::Ordering,
@@ -116,7 +116,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
         }
 
         if retry_counts > 0 {
-            info!("Retried {} milestones.", retry_counts);
+            debug!("Retried {} milestones.", retry_counts);
         }
     }
 
