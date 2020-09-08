@@ -21,7 +21,7 @@ use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_tangle::traversal;
 
-use log::warn;
+use log::{info, warn};
 
 const MILESTONE_REQUEST_RANGE: u32 = 50;
 
@@ -35,21 +35,16 @@ impl Protocol {
     }
 
     pub fn request_milestone_fill() {
-        let mut to_request_index = *tangle().get_last_solid_milestone_index() + 1;
+        info!("Requesting milestone fill with size {}", MILESTONE_REQUEST_RANGE);
+        let to_request_index = *tangle().get_last_solid_milestone_index() + 1;
         let last_milestone_index = *tangle().get_last_milestone_index();
 
-        for _ in 0..MILESTONE_REQUEST_RANGE {
-            let index = to_request_index.into();
-
-            if to_request_index >= last_milestone_index {
-                break;
-            }
+        for index in to_request_index..last_milestone_index.min(to_request_index + MILESTONE_REQUEST_RANGE) {
+            let index = MilestoneIndex(index);
 
             if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
                 Protocol::request_milestone(index, None);
             }
-
-            to_request_index += 1;
         }
     }
 
