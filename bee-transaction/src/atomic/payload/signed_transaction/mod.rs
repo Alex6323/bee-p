@@ -38,6 +38,7 @@ use bee_signing::ternary::{
 
 use std::{cmp::Ordering, collections::HashSet, slice::Iter};
 
+#[derive(Clone)]
 pub struct SignedTransaction {
     pub unsigned_transaction: UnsignedTransaction,
     pub unlock_block_count: u8,

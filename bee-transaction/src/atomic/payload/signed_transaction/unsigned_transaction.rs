@@ -12,6 +12,7 @@
 pub use crate::atomic::payload::signed_transaction::{input::Input, output::Output};
 use crate::atomic::payload::Payload;
 
+#[derive(Clone)]
 pub struct UnsignedTransaction {
     pub input_count: u8,
     pub inputs: Vec<Input>,

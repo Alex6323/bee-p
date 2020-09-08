@@ -14,6 +14,7 @@ use crate::{
     Vertex,
 };
 
+#[derive(Clone)]
 pub struct Message {
     pub trunk: Hash,
     pub branch: Hash,
