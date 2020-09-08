@@ -90,14 +90,14 @@ impl Node {
     fn run_loop(&mut self) {
         info!("Node running.");
 
-        let mut ctrl_c = ctrl_c_listener().fuse();
+        // let mut ctrl_c = ctrl_c_listener().fuse();
 
         block_on(async {
             loop {
                 select! {
-                    _ = ctrl_c => {
-                        break;
-                    },
+                    // _ = ctrl_c => {
+                    //     break;
+                    // },
                     event = self.events.next() => {
                         if let Some(event) = event {
                             info!("Received {}.", event);
@@ -249,18 +249,18 @@ impl NodeBuilder {
     }
 }
 
-fn ctrl_c_listener() -> oneshot::Receiver<()> {
-    let (sender, receiver) = oneshot::channel();
+// fn ctrl_c_listener() -> oneshot::Receiver<()> {
+//     let (sender, receiver) = oneshot::channel();
 
-    spawn(async move {
-        let mut tokio = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime.");
+//     spawn(async move {
+//         let mut tokio = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime.");
 
-        tokio
-            .block_on(tokio::signal::ctrl_c())
-            .expect("Error blocking on CTRL-C.");
+//         tokio
+//             .block_on(tokio::signal::ctrl_c())
+//             .expect("Error blocking on CTRL-C.");
 
-        sender.send(()).expect("Error sending shutdown signal.");
-    });
+//         sender.send(()).expect("Error sending shutdown signal.");
+//     });
 
-    receiver
-}
+//     receiver
+// }
