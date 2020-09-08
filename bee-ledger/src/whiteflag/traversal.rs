@@ -114,11 +114,13 @@ impl LedgerWorker {
                             // We know the bundle is valid so we can safely skip validation rules.
                             unsafe { builder.build() }
                         } else {
-                            panic!("INVALID BUNDLE");
-                            // let bundle = match builder.validate() {
-                            //     Ok(builder) => builder.build(),
-                            //     Err(e) => return Err(Error::InvalidBundle(e)),
-                            // };
+                            match builder.validate() {
+                                Ok(builder) => {
+                                    tangle().update_metadata(&hash, |meta| meta.flags_mut().set_valid(true));
+                                    builder.build()
+                                }
+                                Err(e) => return Err(Error::InvalidBundle(e)),
+                            }
                         };
                         self.on_bundle(hash, &bundle, metadata);
                         visited.insert(*hash);
