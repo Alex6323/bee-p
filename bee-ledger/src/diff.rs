@@ -11,13 +11,6 @@
 
 use bee_transaction::bundled::Address;
 
-use bee_protocol::MilestoneIndex;
-pub use bee_storage::{
-    access::{LedgerDiffOps, OpError},
-    persistable::Persistable,
-    storage::{Backend, Storage},
-};
-
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -31,18 +24,11 @@ impl LedgerDiff {
     pub(crate) fn apply_single_diff(&mut self, address: Address, diff: i64) {
         self.0.entry(address).and_modify(|d| *d += diff).or_insert(diff);
     }
-}
-
-impl Persistable for LedgerDiff {
-    fn encode_persistable(&self, buffer: &mut Vec<u8>) {
-        self.0.encode_persistable(buffer)
-    }
-    fn decode_persistable(slice: &[u8]) -> Self {
-        LedgerDiff(HashMap::decode_persistable(slice))
+    /// Get reference to the inner diff hashmap
+    pub fn inner(&self) -> &HashMap<Address, i64> {
+        &self.0
     }
 }
-
-impl LedgerDiffOps<MilestoneIndex> for LedgerDiff {}
 
 impl From<HashMap<Address, i64>> for LedgerDiff {
     fn from(diff: HashMap<Address, i64>) -> Self {

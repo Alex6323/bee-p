@@ -9,20 +9,38 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A crate that contains foundational building blocks for the IOTA Tangle.
-
 pub mod batch;
 pub mod delete;
 pub mod fetch;
 pub mod insert;
 
-pub use batch::{Batch, BatchBuilder};
-pub use delete::Delete;
-pub use fetch::Fetch;
-pub use insert::Insert;
+use bee_storage::access::Error;
 
-pub trait Error: std::fmt::Debug {
-    fn is_retryable(&self) -> bool;
-    fn is_still_valid(&self) -> bool;
-    fn error_msg(&self) -> Option<String>;
+#[derive(Debug)]
+pub struct OpError {
+    is_retryable: bool,
+    is_still_valid: bool,
+    error_msg: Option<String>,
+}
+
+impl Error for OpError {
+    fn is_retryable(&self) -> bool {
+        self.is_retryable
+    }
+    fn is_still_valid(&self) -> bool {
+        self.is_still_valid
+    }
+    fn error_msg(&self) -> Option<String> {
+        self.error_msg.clone()
+    }
+}
+
+impl From<::rocksdb::Error> for OpError {
+    fn from(err: ::rocksdb::Error) -> Self {
+        Self {
+            is_retryable: false,
+            is_still_valid: false,
+            error_msg: Some(err.into_string()),
+        }
+    }
 }

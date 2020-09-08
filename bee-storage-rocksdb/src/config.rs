@@ -17,7 +17,6 @@ use std::convert::From;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    #[cfg(feature = "rocks_db")]
     pub rocksdb: RocksDB,
 }
 
@@ -46,14 +45,12 @@ pub struct RocksDB {
     pub set_compression_type: Option<CompressionType>,
 }
 
-#[cfg(feature = "rocks_db")]
 #[derive(Debug, Clone, Deserialize)]
 pub enum CompactionStyle {
     Level,
     Universal,
     Fifo,
 }
-#[cfg(feature = "rocks_db")]
 impl From<CompactionStyle> for DBCompactionStyle {
     fn from(compaction_style: CompactionStyle) -> Self {
         match compaction_style {
@@ -64,7 +61,6 @@ impl From<CompactionStyle> for DBCompactionStyle {
     }
 }
 
-#[cfg(feature = "rocks_db")]
 #[derive(Debug, Clone, Deserialize)]
 pub enum CompressionType {
     None,
@@ -75,7 +71,6 @@ pub enum CompressionType {
     Lz4hc,
     Zstd,
 }
-#[cfg(feature = "rocks_db")]
 impl From<CompressionType> for DBCompressionType {
     fn from(compression_type: CompressionType) -> Self {
         match compression_type {
