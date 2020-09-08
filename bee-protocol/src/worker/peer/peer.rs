@@ -153,11 +153,6 @@ impl PeerWorker {
                             }
                         }
 
-                        // TODO think about a better solution
-                        if Protocol::get().peer_manager.handshaked_peers.len() == 1 {
-                            Protocol::request_milestone_fill();
-                        }
-
                         self.peer.metrics.heartbeats_received_inc();
                         Protocol::get().metrics.heartbeats_received_inc();
                     }
