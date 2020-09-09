@@ -149,17 +149,9 @@ impl ProcessorWorker {
                     let trunk = transaction.trunk();
                     let branch = transaction.branch();
 
-                    if !tangle().contains(trunk)
-                        && !tangle().is_solid_entry_point(trunk)
-                        && !Protocol::get().requested_transactions.contains_key(trunk)
-                    {
-                        Protocol::request_transaction(*trunk, index);
-                    }
-                    if trunk != branch
-                        && !tangle().contains(branch)
-                        && !tangle().is_solid_entry_point(branch)
-                        && !Protocol::get().requested_transactions.contains_key(branch)
-                    {
+                    Protocol::request_transaction(*trunk, index);
+
+                    if trunk != branch {
                         Protocol::request_transaction(*branch, index);
                     }
                 }

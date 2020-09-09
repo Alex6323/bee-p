@@ -66,9 +66,14 @@ impl Protocol {
     // TransactionRequest
 
     pub fn request_transaction(hash: Hash, index: MilestoneIndex) {
-        Protocol::get()
-            .transaction_requester_worker
-            .push(TransactionRequesterWorkerEntry(hash, index));
+        if !tangle().contains(&hash)
+            && !tangle().is_solid_entry_point(&hash)
+            && !Protocol::get().requested_transactions.contains_key(&hash)
+        {
+            Protocol::get()
+                .transaction_requester_worker
+                .push(TransactionRequesterWorkerEntry(hash, index));
+        }
     }
 
     pub fn transaction_requester_is_empty() -> bool {
@@ -122,13 +127,7 @@ impl Protocol {
                         !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
                     },
                     |_, _, _| {},
-                    |missing_hash| {
-                        if !tangle().is_solid_entry_point(missing_hash)
-                            && !Protocol::get().requested_transactions.contains_key(&missing_hash)
-                        {
-                            Protocol::request_transaction(*missing_hash, target_index);
-                        }
-                    },
+                    |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
                 );
             }
         }
