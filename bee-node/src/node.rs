@@ -26,7 +26,6 @@ use bee_protocol::{tangle, MilestoneIndex, Protocol};
 use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
 
 use async_std::task::{block_on, spawn};
-use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
     stream::{Fuse, StreamExt},
@@ -69,20 +68,8 @@ impl NodeBuilder {
         // TODO handle error
         download_local_snapshot(&self.config.snapshot.local());
 
-        info!("Reading snapshot file...");
         let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().path()) {
             Ok(local_snapshot) => {
-                info!(
-                    "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
-                    {} balances.",
-                    Utc.timestamp(local_snapshot.metadata().timestamp() as i64, 0)
-                        .to_rfc2822(),
-                    local_snapshot.metadata().index(),
-                    local_snapshot.metadata().solid_entry_points().len(),
-                    local_snapshot.metadata().seen_milestones().len(),
-                    local_snapshot.state().len()
-                );
-
                 tangle::tangle().update_last_solid_milestone_index(local_snapshot.metadata().index().into());
 
                 // TODO get from database

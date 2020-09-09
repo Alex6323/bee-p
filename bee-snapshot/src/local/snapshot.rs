@@ -16,14 +16,16 @@ use bee_ledger::state::LedgerState;
 use bee_ternary::{T1B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
+use chrono::{offset::TimeZone, Utc};
+
+use bytemuck::cast_slice;
+use log::{debug, info};
+
 use std::{
     collections::HashMap,
     fs::File,
     io::{BufReader, Read},
 };
-
-use bytemuck::cast_slice;
-use log::debug;
 
 pub struct LocalSnapshot {
     metadata: LocalSnapshotMetadata,
@@ -46,7 +48,8 @@ pub enum Error {
 }
 impl LocalSnapshot {
     pub fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
-        // TODO BufReader ?
+        info!("Loading snapshot file {}...", path);
+
         let file = File::open(path).map_err(|e| Error::IOError(e))?;
         let mut reader = BufReader::new(file);
 
@@ -222,6 +225,16 @@ impl LocalSnapshot {
         }
 
         // TODO hash ?
+
+        info!(
+            "Loaded snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
+            {} balances.",
+            Utc.timestamp(timestamp as i64, 0).to_rfc2822(),
+            index,
+            solid_entry_points_num,
+            seen_milestones_num,
+            state.len()
+        );
 
         Ok(LocalSnapshot {
             metadata: LocalSnapshotMetadata {
