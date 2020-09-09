@@ -11,12 +11,12 @@
 
 use serde::Deserialize;
 
-const DEFAULT_FILE_PATH: &str = "./snapshots/mainnet/export.bin";
+const DEFAULT_PATH: &str = "./snapshots/mainnet/export.bin";
 const DEFAULT_DOWNLOAD_URLS: Vec<String> = Vec::new();
 
 #[derive(Default, Deserialize)]
 pub struct LocalSnapshotConfigBuilder {
-    file_path: Option<String>,
+    path: Option<String>,
     download_urls: Option<Vec<String>>,
 }
 
@@ -25,8 +25,8 @@ impl LocalSnapshotConfigBuilder {
         Self::default()
     }
 
-    pub fn file_path(mut self, file_path: String) -> Self {
-        self.file_path.replace(file_path);
+    pub fn path(mut self, path: String) -> Self {
+        self.path.replace(path);
         self
     }
 
@@ -37,7 +37,7 @@ impl LocalSnapshotConfigBuilder {
 
     pub fn finish(self) -> LocalSnapshotConfig {
         LocalSnapshotConfig {
-            file_path: self.file_path.unwrap_or_else(|| DEFAULT_FILE_PATH.to_string()),
+            path: self.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
             download_urls: self.download_urls.unwrap_or_else(|| DEFAULT_DOWNLOAD_URLS),
         }
     }
@@ -45,7 +45,7 @@ impl LocalSnapshotConfigBuilder {
 
 #[derive(Clone)]
 pub struct LocalSnapshotConfig {
-    file_path: String,
+    path: String,
     download_urls: Vec<String>,
 }
 
@@ -54,8 +54,8 @@ impl LocalSnapshotConfig {
         LocalSnapshotConfigBuilder::new()
     }
 
-    pub fn file_path(&self) -> &String {
-        &self.file_path
+    pub fn path(&self) -> &String {
+        &self.path
     }
 
     pub fn download_urls(&self) -> &Vec<String> {

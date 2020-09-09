@@ -36,8 +36,8 @@ impl SnapshotConfigBuilder {
         Self::default()
     }
 
-    pub fn local_file_path(mut self, file_path: String) -> Self {
-        self.local = self.local.file_path(file_path);
+    pub fn local_path(mut self, path: String) -> Self {
+        self.local = self.local.path(path);
         self
     }
 

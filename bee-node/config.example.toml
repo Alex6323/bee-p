@@ -28,7 +28,7 @@ status_interval = 10
 [snapshot]
 load_type = "local"
 [snapshot.local]
-file_path     = "./snapshots/mainnet/export.bin"
+path          = "./snapshots/mainnet/export.bin"
 download_urls = [
   "https://ls.manapotion.io/export.bin",
   "https://x-vps.com/export.bin",

@@ -23,7 +23,7 @@ pub enum Error {
 // TODO remove tokio runtime when we switch bee to tokio.
 // TODO copy is not really streaming ?
 pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error> {
-    let path = config.file_path();
+    let path = config.path();
 
     if Path::new(path).exists() {
         return Ok(());
@@ -37,7 +37,7 @@ pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error
         for url in config.download_urls() {
             info!("Downloading local snapshot file from {}...", url);
             match reqwest::get(url).await {
-                Ok(res) => match File::create(config.file_path()) {
+                Ok(res) => match File::create(config.path()) {
                     // TODO unwrap
                     Ok(mut file) => match copy(&mut res.bytes().await.unwrap().as_ref(), &mut file) {
                         Ok(_) => break,

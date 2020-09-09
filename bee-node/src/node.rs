@@ -70,7 +70,7 @@ impl NodeBuilder {
         download_local_snapshot(&self.config.snapshot.local());
 
         info!("Reading snapshot file...");
-        let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()) {
+        let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().path()) {
             Ok(local_snapshot) => {
                 info!(
                     "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
@@ -105,7 +105,7 @@ impl NodeBuilder {
             Err(e) => {
                 error!(
                     "Failed to read snapshot file \"{}\": {:?}.",
-                    self.config.snapshot.local().file_path(),
+                    self.config.snapshot.local().path(),
                     e
                 );
                 return Err(Error::LocalSnapshotReadError(e));
