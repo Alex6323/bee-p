@@ -37,7 +37,7 @@ impl BundleValidatorWorker {
     fn validate(&self, tail_hash: Hash) {
         match load_bundle_builder(tangle(), &tail_hash) {
             Some(builder) => {
-                if let Ok(_) = builder.validate() {
+                if builder.validate().is_ok() {
                     tangle().update_metadata(&tail_hash, |metadata| {
                         metadata.flags.set_valid(true);
                     })

@@ -22,9 +22,9 @@ pub struct Bus<'a> {
 
 impl<'a> Bus<'a> {
     pub fn dispatch<E: Any>(&self, event: E) {
-        self.listeners
-            .get_mut(&TypeId::of::<E>())
-            .map(|mut ls| ls.iter_mut().for_each(|l| l(&event)));
+        if let Some(mut ls) = self.listeners.get_mut(&TypeId::of::<E>()) {
+            ls.iter_mut().for_each(|l| l(&event))
+        }
     }
 
     pub fn add_listener<E: Any>(&self, handler: impl Fn(&E) + Send + Sync + 'a) {

@@ -140,7 +140,7 @@ where
         };
 
         for builder in &mut self.builders.0 {
-            builder.bundle.replace(hash.clone());
+            builder.bundle.replace(hash);
         }
 
         Ok(())
@@ -344,7 +344,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
             transactions.push(
                 transaction_builder
                     .build()
-                    .map_err(|e| OutgoingBundleBuilderError::TransactionError(e))?,
+                    .map_err(OutgoingBundleBuilderError::TransactionError)?,
             );
         }
 
