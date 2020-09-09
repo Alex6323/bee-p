@@ -79,8 +79,8 @@ impl LedgerWorker {
         let ms = load_bundle_builder(tangle(), hash).unwrap();
         let timestamp = ms.get(0).unwrap().get_timestamp();
         let proof = decode(ms.get(2).unwrap().payload().to_inner().subslice(
-            ((self.coo_config.depth() as usize - 1) * HASH_LENGTH)
-                ..((self.coo_config.depth() as usize - 1) * HASH_LENGTH + MERKLE_PROOF_LENGTH),
+            (self.coo_config.depth() as usize * HASH_LENGTH)
+                ..(self.coo_config.depth() as usize * HASH_LENGTH + MERKLE_PROOF_LENGTH),
         ));
 
         (proof, timestamp)
