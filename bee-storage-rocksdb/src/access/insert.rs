@@ -23,9 +23,9 @@ impl Insert<Hash, TransactionMetadata> for Storage {
     async fn insert(&self, hash: &Hash, tx_metadata: &TransactionMetadata) -> Result<(), Self::Error> {
         let hash_to_metadata = self.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
         let mut hash_buf = Vec::new();
-        hash.encode_persistable(&mut hash_buf);
+        hash.encode_persistable::<Self>(&mut hash_buf);
         let mut metadata_buf = Vec::new();
-        tx_metadata.encode_persistable(&mut metadata_buf);
+        tx_metadata.encode_persistable::<Self>(&mut metadata_buf);
         self.inner
             .put_cf(&hash_to_metadata, hash_buf.as_slice(), metadata_buf.as_slice())?;
         Ok(())
@@ -37,9 +37,9 @@ impl Insert<MilestoneIndex, LedgerDiff> for Storage {
     async fn insert(&self, milestone_index: &MilestoneIndex, ledger_diff: &LedgerDiff) -> Result<(), Self::Error> {
         let ms_index_to_ledger_diff = self.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
         let mut index_buf = Vec::new();
-        milestone_index.encode_persistable(&mut index_buf);
+        milestone_index.encode_persistable::<Self>(&mut index_buf);
         let mut ledger_diff_buf = Vec::new();
-        ledger_diff.encode_persistable(&mut ledger_diff_buf);
+        ledger_diff.encode_persistable::<Self>(&mut ledger_diff_buf);
         self.inner.put_cf(
             &ms_index_to_ledger_diff,
             index_buf.as_slice(),
@@ -54,9 +54,9 @@ impl Insert<Hash, BundledTransaction> for Storage {
     async fn insert(&self, hash: &Hash, bundle_transaction: &BundledTransaction) -> Result<(), Self::Error> {
         let hash_to_tx = self.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
         let mut hash_buf = Vec::new();
-        hash.encode_persistable(&mut hash_buf);
+        hash.encode_persistable::<Self>(&mut hash_buf);
         let mut tx_buf = Vec::new();
-        bundle_transaction.encode_persistable(&mut tx_buf);
+        bundle_transaction.encode_persistable::<Self>(&mut tx_buf);
         self.inner.put_cf(&hash_to_tx, hash_buf.as_slice(), tx_buf.as_slice())?;
         Ok(())
     }
@@ -67,9 +67,9 @@ impl Insert<Hash, MilestoneIndex> for Storage {
     async fn insert(&self, hash: &Hash, milestone_index: &MilestoneIndex) -> Result<(), Self::Error> {
         let ms_hash_to_ms_index = self.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
         let mut hash_buf = Vec::new();
-        hash.encode_persistable(&mut hash_buf);
+        hash.encode_persistable::<Self>(&mut hash_buf);
         let mut index_buf = Vec::new();
-        milestone_index.encode_persistable(&mut index_buf);
+        milestone_index.encode_persistable::<Self>(&mut index_buf);
         self.inner
             .put_cf(&ms_hash_to_ms_index, hash_buf.as_slice(), index_buf.as_slice())?;
         Ok(())
