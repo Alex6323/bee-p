@@ -51,13 +51,19 @@ impl<'a> BatchBuilder<'a, Storage, Hash, TransactionMetadata> for StorageBatch<'
         let hash_to_metadata = self.storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
         self.key_buf.clear();
         self.value_buf.clear();
-        hash.encode_persistable(&mut self.key_buf);
-        transaction_metadata.encode_persistable(&mut self.value_buf);
+        hash.encode_persistable::<Self>(&mut self.key_buf);
+        transaction_metadata.encode_persistable::<Self>(&mut self.value_buf);
         self.batch
             .put_cf(&hash_to_metadata, self.key_buf.as_slice(), self.value_buf.as_slice());
         Ok(self)
     }
-
+    fn try_delete(mut self, hash: Hash) -> Result<Self, (Self, Self::Error)> {
+        let hash_to_metadata = self.storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
+        self.key_buf.clear();
+        hash.encode_persistable::<Self>(&mut self.key_buf);
+        self.batch.delete_cf(&hash_to_metadata, self.key_buf.as_slice());
+        Ok(self)
+    }
     fn apply(self, durability: bool) -> Result<(), Self::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
@@ -73,8 +79,8 @@ impl<'a> BatchBuilder<'a, Storage, MilestoneIndex, LedgerDiff> for StorageBatch<
         let ms_index_to_ledger_diff = self.storage.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
         self.key_buf.clear();
         self.value_buf.clear();
-        ms_index.encode_persistable(&mut self.key_buf);
-        ledger_diff.encode_persistable(&mut self.value_buf);
+        ms_index.encode_persistable::<Self>(&mut self.key_buf);
+        ledger_diff.encode_persistable::<Self>(&mut self.value_buf);
         self.batch.put_cf(
             &ms_index_to_ledger_diff,
             self.key_buf.as_slice(),
@@ -82,6 +88,15 @@ impl<'a> BatchBuilder<'a, Storage, MilestoneIndex, LedgerDiff> for StorageBatch<
         );
         Ok(self)
     }
+
+    fn try_delete(mut self, ms_index: MilestoneIndex) -> Result<Self, (Self, Self::Error)> {
+        let ms_index_to_ledger_diff = self.storage.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
+        self.key_buf.clear();
+        ms_index.encode_persistable::<Self>(&mut self.key_buf);
+        self.batch.delete_cf(&ms_index_to_ledger_diff, self.key_buf.as_slice());
+        Ok(self)
+    }
+
     fn apply(self, durability: bool) -> Result<(), Self::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
@@ -97,12 +112,21 @@ impl<'a> BatchBuilder<'a, Storage, Hash, BundledTransaction> for StorageBatch<'a
         let hash_to_tx = self.storage.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
         self.key_buf.clear();
         self.value_buf.clear();
-        hash.encode_persistable(&mut self.key_buf);
-        bundled_transaction.encode_persistable(&mut self.value_buf);
+        hash.encode_persistable::<Self>(&mut self.key_buf);
+        bundled_transaction.encode_persistable::<Self>(&mut self.value_buf);
         self.batch
             .put_cf(&hash_to_tx, self.key_buf.as_slice(), self.value_buf.as_slice());
         Ok(self)
     }
+
+    fn try_delete(mut self, hash: Hash) -> Result<Self, (Self, Self::Error)> {
+        let hash_to_tx = self.storage.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
+        self.key_buf.clear();
+        hash.encode_persistable::<Self>(&mut self.key_buf);
+        self.batch.delete_cf(&hash_to_tx, self.key_buf.as_slice());
+        Ok(self)
+    }
+
     fn apply(self, durability: bool) -> Result<(), Self::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
@@ -118,12 +142,21 @@ impl<'a> BatchBuilder<'a, Storage, Hash, MilestoneIndex> for StorageBatch<'a, Ha
         let ms_hash_to_ms_index = self.storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
         self.key_buf.clear();
         self.value_buf.clear();
-        hash.encode_persistable(&mut self.key_buf);
-        milestone_index.encode_persistable(&mut self.value_buf);
+        hash.encode_persistable::<Self>(&mut self.key_buf);
+        milestone_index.encode_persistable::<Self>(&mut self.value_buf);
         self.batch
             .put_cf(&ms_hash_to_ms_index, self.key_buf.as_slice(), self.value_buf.as_slice());
         Ok(self)
     }
+
+    fn try_delete(mut self, hash: Hash) -> Result<Self, (Self, Self::Error)> {
+        let ms_hash_to_ms_index = self.storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
+        self.key_buf.clear();
+        hash.encode_persistable::<Self>(&mut self.key_buf);
+        self.batch.delete_cf(&ms_hash_to_ms_index, self.key_buf.as_slice());
+        Ok(self)
+    }
+
     fn apply(self, durability: bool) -> Result<(), Self::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
