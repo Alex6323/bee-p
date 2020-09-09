@@ -16,8 +16,17 @@ use crate::{
 
 use serde::Deserialize;
 
+const DEFAULT_LOAD_TYPE: &str = "local";
+
+#[derive(Clone)]
+pub enum LoadType {
+    Local,
+    Global,
+}
+
 #[derive(Default, Deserialize)]
 pub struct SnapshotConfigBuilder {
+    load_type: Option<String>,
     local: LocalSnapshotConfigBuilder,
     pruning: PruningConfigBuilder,
 }
@@ -33,7 +42,14 @@ impl SnapshotConfigBuilder {
     }
 
     pub fn finish(self) -> SnapshotConfig {
+        let load_type = match self.load_type.unwrap_or_else(|| DEFAULT_LOAD_TYPE.to_owned()).as_str() {
+            "local" => LoadType::Local,
+            "global" => LoadType::Global,
+            _ => LoadType::Local,
+        };
+
         SnapshotConfig {
+            load_type,
             local: self.local.finish(),
             pruning: self.pruning.finish(),
         }
@@ -42,6 +58,7 @@ impl SnapshotConfigBuilder {
 
 #[derive(Clone)]
 pub struct SnapshotConfig {
+    load_type: LoadType,
     local: LocalSnapshotConfig,
     pruning: PruningConfig,
 }
@@ -49,6 +66,10 @@ pub struct SnapshotConfig {
 impl SnapshotConfig {
     pub fn build() -> SnapshotConfigBuilder {
         SnapshotConfigBuilder::new()
+    }
+
+    pub fn load_type(&self) -> &LoadType {
+        &self.load_type
     }
 
     pub fn local(&self) -> &LocalSnapshotConfig {
