@@ -10,7 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod milestone;
+mod propagator;
 mod transaction;
 
 pub(crate) use milestone::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
+pub(crate) use propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};
 pub(crate) use transaction::{TransactionSolidifierWorker, TransactionSolidifierWorkerEvent};
