@@ -27,7 +27,8 @@ use bee_signing_ext::{
         Ed25519Seed,
         Ed25519PrivateKey,
         Ed25519PublicKey,
-        Ed25519Signature as Ed25Signature
+        Ed25519Signature as Ed25Signature,
+        BIP32Path,
     },
     Signer, Verifier, Signature as SignatureTrait
 };
@@ -289,7 +290,8 @@ impl<'a> SignedTransactionBuilder<'a> {
                 let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
                 match &self.seed {
                     Seed::Ed25519(s) => {
-                        let private_key = Ed25519PrivateKey::generate_from_seed(s, *index)?;
+                        let path = BIP32Path::from(*index).map_err(|_| Error::PathError)?;
+                        let private_key = Ed25519PrivateKey::generate_from_seed(s, path)?;
                         let public_key = private_key.generate_public_key().to_bytes();
                         let signature = private_key.sign(&serialized_inputs).to_bytes().to_vec();
                         unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock::Ed25519(Ed25519Signature { public_key, signature }),
