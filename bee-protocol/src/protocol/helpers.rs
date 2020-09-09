@@ -36,18 +36,6 @@ impl Protocol {
         }
     }
 
-    pub fn request_milestone_fill() {
-        info!("Requesting milestone fill with size {}", MILESTONE_REQUEST_RANGE);
-        let to_request_index = *tangle().get_last_solid_milestone_index() + 1;
-        let last_milestone_index = *tangle().get_last_milestone_index();
-
-        for index in to_request_index..last_milestone_index.min(to_request_index + MILESTONE_REQUEST_RANGE) {
-            let index = MilestoneIndex(index);
-
-            Protocol::request_milestone(index, None);
-        }
-    }
-
     pub fn request_last_milestone(to: Option<EndpointId>) {
         Protocol::request_milestone(MilestoneIndex(0), to);
     }
