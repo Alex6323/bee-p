@@ -147,7 +147,7 @@ impl LocalSnapshot {
 
         let mut buf_hash = [0u8; 49];
         let mut buf_index = [0u8; std::mem::size_of::<u32>()];
-        let mut seen_milestones = Vec::with_capacity(seen_milestones_num as usize);
+        let mut seen_milestones = HashMap::with_capacity(seen_milestones_num as usize);
         for _ in 0..seen_milestones_num {
             let seen_milestone = match reader.read_exact(&mut buf_hash) {
                 Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), 243) {
@@ -158,12 +158,11 @@ impl LocalSnapshot {
                 },
                 Err(e) => Err(Error::IOError(e)),
             }?;
-            seen_milestones.push(seen_milestone);
-            // TODO should we use that ?
-            match reader.read_exact(&mut buf_index) {
+            let index = match reader.read_exact(&mut buf_index) {
                 Ok(_) => u32::from_le_bytes(buf_index),
                 Err(e) => return Err(Error::IOError(e)),
             };
+            seen_milestones.insert(seen_milestone, index);
         }
 
         // amountOfBalances * balance:value - 49 bytes + int64
