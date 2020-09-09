@@ -33,3 +33,6 @@ download_urls = [
   "https://x-vps.com/export.bin",
   "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
 ]
+[snapshot.pruning]
+enabled = true
+delay   = 60480
