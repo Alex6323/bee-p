@@ -13,11 +13,6 @@ homepage = "https://www.iota.org"
 [dependencies]
 async-trait = "0.1.36"
 
-[dev-dependencies]
-bee-test = {path = "../bee-test"}
-
-async-std = "1.6.2"
-
 [features]
 default = ["rocks_db"]
 rocks_db = []
