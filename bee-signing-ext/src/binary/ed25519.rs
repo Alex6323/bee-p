@@ -16,7 +16,7 @@ use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 use ed25519_dalek::{ExpandedSecretKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
 use signature::{Signature, Signer, Verifier};
-use slip10::{derive_key_from_path, Curve};
+use slip10::{derive_key_from_path, Curve, BIP32Path};
 use thiserror::Error;
 use zeroize::Zeroize;
 
@@ -87,7 +87,7 @@ impl Ed25519PrivateKey {
     /// # Arguments
     ///
     /// * `seed`    A seed to deterministically derive a private key from.
-    pub fn generate_from_seed(seed: &Ed25519Seed, path: &str) -> Result<Self, Error> {
+    pub fn generate_from_seed(seed: &Ed25519Seed, path: BIP32Path) -> Result<Self, Error> {
         let subseed = derive_key_from_path(seed.as_bytes(), Curve::Ed25519, path).map_err(|_| Error::PrivateKeyError)?.key;
 
         Ok(Self(

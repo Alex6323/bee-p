@@ -16,6 +16,7 @@ pub mod ed25519;
 pub mod wots;
 
 pub use ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed, Ed25519Signature};
+pub use slip10::BIP32Path;
 
 /// Errors occuring during signing operations.
 #[derive(Debug, Error)]
