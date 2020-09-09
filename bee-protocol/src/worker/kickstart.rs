@@ -17,6 +17,7 @@ use crate::{
 use bee_common::worker::Error as WorkerError;
 
 use futures::{channel::oneshot, future::Fuse, select, FutureExt};
+use log::info;
 
 pub(crate) struct KickstartWorker {
     shutdown: Fuse<oneshot::Receiver<()>>,
@@ -30,17 +31,22 @@ impl KickstartWorker {
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
+        info!("Running.");
+
         loop {
             select! {
                 _ = &mut self.shutdown => break,
                 default => {
-                    if *tangle().get_last_solid_milestone_index() + MILESTONE_REQUEST_RANGE < *tangle().get_last_milestone_index() {
+                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && *tangle().get_last_solid_milestone_index() + MILESTONE_REQUEST_RANGE < *tangle().get_last_milestone_index() {
                         Protocol::request_milestone_fill();
                         break;
                     }
                 },
             }
         }
+
+        info!("Stopped.");
+
         Ok(())
     }
 }
