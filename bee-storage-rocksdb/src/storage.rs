@@ -86,12 +86,6 @@ impl Storage {
         if let Some(set_max_write_buffer_number) = config.set_max_write_buffer_number {
             opts.set_max_write_buffer_number(set_max_write_buffer_number);
         }
-        if let Some(set_max_background_compactions) = config.set_max_background_compactions {
-            opts.set_max_background_compactions(set_max_background_compactions);
-        }
-        if let Some(set_max_background_flushes) = config.set_max_background_flushes {
-            opts.set_max_background_flushes(set_max_background_flushes);
-        }
         if let Some(set_disable_auto_compactions) = config.set_disable_auto_compactions {
             opts.set_disable_auto_compactions(set_disable_auto_compactions);
         }
