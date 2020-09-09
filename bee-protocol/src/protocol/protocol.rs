@@ -18,10 +18,11 @@ use crate::{
     tangle::tangle,
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, BundleValidatorWorkerEvent, HasherWorker,
-        HasherWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, MilestoneResponderWorker,
-        MilestoneResponderWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker,
-        SolidPropagatorWorker, SolidPropagatorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
-        TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent,
+        HasherWorkerEvent, KickstartWorker, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
+        MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
+        ProcessorWorker, SolidPropagatorWorker, SolidPropagatorWorkerEvent, StatusWorker, TpsWorker,
+        TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
+        TransactionResponderWorkerEvent,
     },
 };
 
@@ -107,6 +108,8 @@ impl Protocol {
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();
 
         let (tps_worker_shutdown_tx, tps_worker_shutdown_rx) = oneshot::channel();
+
+        let (kickstart_worker_shutdown_tx, kickstart_worker_shutdown_rx) = oneshot::channel();
 
         let protocol = Protocol {
             config,
@@ -276,6 +279,11 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             tps_worker_shutdown_tx,
             spawn(TpsWorker::new().run(tps_worker_shutdown_rx)),
+        );
+
+        shutdown.add_worker_shutdown(
+            kickstart_worker_shutdown_tx,
+            spawn(KickstartWorker::new(kickstart_worker_shutdown_rx).run()),
         );
     }
 

@@ -23,7 +23,7 @@ use bee_tangle::traversal;
 
 use log::{info, warn};
 
-const MILESTONE_REQUEST_RANGE: u32 = 50;
+pub(crate) const MILESTONE_REQUEST_RANGE: u32 = 5;
 
 impl Protocol {
     // MilestoneRequest

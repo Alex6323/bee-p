@@ -140,11 +140,6 @@ where
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        async_std::task::spawn(async {
-            async_std::task::sleep(std::time::Duration::from_secs(30)).await;
-            Protocol::request_milestone_fill();
-        });
-
         while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = self.receiver.next().await {
             self.process(hash, is_tail);
         }
