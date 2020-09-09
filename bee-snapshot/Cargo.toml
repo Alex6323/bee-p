@@ -16,6 +16,7 @@ bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-ledger = { path = "../bee-ledger" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
+bee-protocol = { path = "../bee-protocol"}
 
 bytemuck = "1.2.0"
 futures = "0.3.5"
