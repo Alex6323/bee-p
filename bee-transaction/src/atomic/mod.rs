@@ -33,6 +33,8 @@ pub enum Error {
     OrderError,
     #[error("The format of provided hash is not correct.")]
     HashError,
+    #[error("The format of provided BIP32 path is not correct.")]
+    PathError,
     #[error(transparent)]
     BincodeError(#[from] bincode::Error),
     #[error(transparent)]
