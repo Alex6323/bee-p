@@ -155,13 +155,12 @@ impl ProcessorWorker {
                     {
                         Protocol::request_transaction(*trunk, index);
                     }
-                    if trunk != branch {
-                        if !tangle().contains(branch)
-                            && !tangle().is_solid_entry_point(branch)
-                            && !Protocol::get().requested_transactions.contains_key(branch)
-                        {
-                            Protocol::request_transaction(*branch, index);
-                        }
+                    if trunk != branch
+                        && !tangle().contains(branch)
+                        && !tangle().is_solid_entry_point(branch)
+                        && !Protocol::get().requested_transactions.contains_key(branch)
+                    {
+                        Protocol::request_transaction(*branch, index);
                     }
                 }
                 None => {
