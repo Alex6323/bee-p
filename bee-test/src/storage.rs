@@ -48,8 +48,33 @@ async fn persist_ledger_diff() {
     assert!(storage.shutdown().await.is_ok())
 }
 
+#[allow(dead_code)]
+async fn batch_storage() {
+    // imports
+    use bee_ledger::diff::*;
+    use bee_protocol::MilestoneIndex;
+    use bee_storage::access::*;
+    use bee_storage_rocksdb::storage::{Backend, Storage};
+    // start storage
+    let storage: Storage = Storage::start("../bee-storage-rocksdb/config.toml".to_string())
+        .await
+        .unwrap();
+    // milestone_index
+    let ms = MilestoneIndex(0);
+    // create empty ledger_diff
+    let ledger_diff: LedgerDiff = LedgerDiff::new();
+    // create batch
+    let batch = storage.create_batch();
+    // later on insert something
+    batch.insert(&ms, &ledger_diff).delete(&ms).apply(true).await.unwrap();
+    assert!(storage.fetch(&ms).await.unwrap().is_none());
+    // shutdown storage
+    assert!(storage.shutdown().await.is_ok())
+}
+
 #[async_std::test]
 async fn storage() {
     start_and_shutdown_rocksdb_storage().await;
     persist_ledger_diff().await;
+    batch_storage().await;
 }

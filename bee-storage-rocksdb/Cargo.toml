@@ -15,7 +15,8 @@ bee-storage = {path = "../bee-storage"}
 bee-protocol = {path = "../bee-protocol"}
 bee-transaction = {path = "../bee-transaction"}
 bee-ledger = {path = "../bee-ledger"}
-bee-crypto = "0.2.0-alpha"
+bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 
 rocksdb = { version = "0.15.0", default-features = false }
 async-trait = "0.1.36"
