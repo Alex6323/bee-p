@@ -29,9 +29,11 @@ impl Protocol {
     // MilestoneRequest
 
     pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
-        Protocol::get()
-            .milestone_requester_worker
-            .push(MilestoneRequesterWorkerEntry(index, to));
+        if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
+            Protocol::get()
+                .milestone_requester_worker
+                .push(MilestoneRequesterWorkerEntry(index, to));
+        }
     }
 
     pub fn request_milestone_fill() {
@@ -42,9 +44,7 @@ impl Protocol {
         for index in to_request_index..last_milestone_index.min(to_request_index + MILESTONE_REQUEST_RANGE) {
             let index = MilestoneIndex(index);
 
-            if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
-                Protocol::request_milestone(index, None);
-            }
+            Protocol::request_milestone(index, None);
         }
     }
 
