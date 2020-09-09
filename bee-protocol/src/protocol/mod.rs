@@ -13,6 +13,5 @@ mod helpers;
 mod metrics;
 mod protocol;
 
-pub(crate) use helpers::MILESTONE_REQUEST_RANGE;
 pub use metrics::ProtocolMetrics;
 pub use protocol::Protocol;

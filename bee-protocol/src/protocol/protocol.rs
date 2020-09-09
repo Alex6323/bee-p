@@ -14,7 +14,7 @@ use crate::{
     event::{LastMilestoneChanged, LastSolidMilestoneChanged},
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
-    protocol::{ProtocolMetrics, MILESTONE_REQUEST_RANGE},
+    protocol::ProtocolMetrics,
     tangle::tangle,
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, BundleValidatorWorkerEvent, HasherWorker,
@@ -349,10 +349,7 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
     debug!("New solid milestone {}.", *last_solid_milestone.0.index);
     tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
 
-    Protocol::request_milestone(
-        last_solid_milestone.0.index + MilestoneIndex(MILESTONE_REQUEST_RANGE + 1),
-        None,
-    );
+    Protocol::request_milestone(last_solid_milestone.0.index + MilestoneIndex(1), None);
 
     Protocol::broadcast_heartbeat(
         last_solid_milestone.0.index,

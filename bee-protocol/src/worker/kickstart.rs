@@ -9,11 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    milestone::MilestoneIndex,
-    protocol::{Protocol, MILESTONE_REQUEST_RANGE},
-    tangle::tangle,
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::worker::Error as WorkerError;
 
@@ -41,10 +37,8 @@ impl KickstartWorker {
                     let next_ms = *tangle().get_last_solid_milestone_index() + 1;
                     let last_ms = *tangle().get_last_milestone_index();
 
-                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms + MILESTONE_REQUEST_RANGE <= last_ms {
-                        for index in next_ms..next_ms + MILESTONE_REQUEST_RANGE {
-                            Protocol::request_milestone(index.into(), None);
-                        }
+                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms <= last_ms {
+                        Protocol::request_milestone(MilestoneIndex(next_ms), None);
                         break;
                     }
                 },

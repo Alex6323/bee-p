@@ -21,9 +21,7 @@ use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_tangle::traversal;
 
-use log::{info, warn};
-
-pub(crate) const MILESTONE_REQUEST_RANGE: u32 = 5;
+use log::warn;
 
 impl Protocol {
     // MilestoneRequest
