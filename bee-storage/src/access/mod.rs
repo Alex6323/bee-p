@@ -16,7 +16,7 @@ pub mod delete;
 pub mod fetch;
 pub mod insert;
 
-pub use batch::{Batch, BatchBuilder};
+pub use batch::{ApplyBatch, Batch, BatchBuilder};
 pub use delete::Delete;
 pub use fetch::Fetch;
 pub use insert::Insert;
