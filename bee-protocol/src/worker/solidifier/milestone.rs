@@ -41,6 +41,7 @@ impl MilestoneSolidifierWorker {
 
     fn trigger_solidification(&mut self, target_index: MilestoneIndex) {
         if target_index != self.next_ms_index {
+            debug!("Skipping milestone {}", *target_index);
             if let Err(pos) = self.premature_ms_index.binary_search(&target_index) {
                 self.premature_ms_index.insert(pos, target_index);
             }
