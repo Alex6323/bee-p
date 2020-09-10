@@ -26,14 +26,20 @@ use crate::{
     MAX_TCP_BUFFER_SIZE,
 };
 
+use futures::{
+    channel::oneshot,
+    future::{join_all, FutureExt},
+    select,
+    sink::SinkExt,
+    StreamExt,
+};
+use log::*;
+use thiserror::Error;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
+    task::JoinHandle,
 };
-
-use futures::{channel::oneshot, future::FutureExt, select, sink::SinkExt, StreamExt};
-use log::*;
-use thiserror::Error;
 
 use std::sync::{atomic::Ordering, Arc};
 
@@ -100,24 +106,32 @@ pub(crate) async fn spawn_connection_workers(
     let (data_sender, data_receiver) = channel();
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
 
-    spawn_writer(endpoint.epid, connection.stream.clone(), data_receiver, shutdown_sender);
+    // NOTE: block until reader and writer task are spawned
+    let mut handles = Vec::with_capacity(2);
 
-    spawn_reader(
+    handles.push(spawn_writer(
+        endpoint.epid,
+        connection.stream.clone(),
+        data_receiver,
+        shutdown_sender,
+    ));
+    handles.push(spawn_reader(
         endpoint.epid,
         connection.stream.clone(),
         internal_event_sender.clone(),
         shutdown_receiver,
-    );
+    ));
 
-    // NOTE: wait a little to make sure the reader/writer workers are waiting for events
-    // async_std::task::sleep(std::time::Duration::from_millis(1)).await;
+    join_all(handles).await;
 
-    block_on(internal_event_sender.send(Event::ConnectionCreated {
-        endpoint,
-        origin,
-        data_sender,
-        timestamp,
-    }))?;
+    internal_event_sender
+        .send(Event::ConnectionCreated {
+            endpoint,
+            origin,
+            data_sender,
+            timestamp,
+        })
+        .await?;
 
     Ok(())
 }
@@ -127,29 +141,32 @@ fn spawn_writer(
     stream: Arc<TcpStream>,
     data_receiver: DataReceiver,
     shutdown_notifier: ShutdownNotifier,
-) {
+) -> JoinHandle<()> {
     debug!("Starting connection writer task for {}...", epid);
 
     let mut fused_data_receiver = data_receiver.fuse();
 
     tokio::spawn(async move {
         let mut stream = &*stream;
+
         loop {
             let data = fused_data_receiver.next().await;
 
             if let Some(bytes) = data {
                 stream
                     .write_all(&*bytes)
+                    // .fuse() // necessary?
                     .await
                     .unwrap_or_else(|e| error!("Sending bytes failed: {:?}", e));
             } else {
                 break;
             }
         }
+
         shutdown_notifier.send(()).unwrap_or_else(|_| ());
 
         debug!("Connection writer loop for {} stopped.", epid);
-    });
+    })
 }
 
 fn spawn_reader(
@@ -157,7 +174,7 @@ fn spawn_reader(
     stream: Arc<TcpStream>,
     mut internal_event_sender: EventSender,
     shutdown_listener: ShutdownListener,
-) {
+) -> JoinHandle<()> {
     debug!("Starting connection reader task for {}...", epid);
 
     let mut buffer = vec![0u8; MAX_TCP_BUFFER_SIZE.load(Ordering::Relaxed)];
@@ -185,8 +202,9 @@ fn spawn_reader(
                 },
             }
         }
+
         debug!("Connection reader loop for {} stopped.", epid);
-    });
+    })
 }
 
 #[inline]
