@@ -30,27 +30,11 @@ use log::warn;
 
 use std::{ptr, sync::Arc};
 
-struct WhiteFlag {
-    confirmation_sender: mpsc::UnboundedSender<LedgerWorkerEvent>,
-}
-
-static mut WHITE_FLAG: *const WhiteFlag = ptr::null();
-
-impl WhiteFlag {
-    fn get() -> &'static WhiteFlag {
-        if unsafe { WHITE_FLAG.is_null() } {
-            panic!("Uninitialized whiteflag.");
-        } else {
-            unsafe { &*WHITE_FLAG }
-        }
-    }
-}
+static mut SENDER: *const mpsc::UnboundedSender<worker::LedgerWorkerEvent> = ptr::null();
 
 fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
-    if let Err(e) = WhiteFlag::get()
-        .confirmation_sender
-        .unbounded_send(LedgerWorkerEvent::Confirm(last_solid_milestone.0.clone()))
-    {
+    // This is safe since the callback is only registered after setting `SENDER`.
+    if let Err(e) = unsafe { &*SENDER }.unbounded_send(LedgerWorkerEvent::Confirm(last_solid_milestone.0.clone())) {
         warn!(
             "Sending solid milestone {:?} to confirmation failed: {:?}.",
             last_solid_milestone.0.index(),
@@ -89,12 +73,8 @@ pub fn init(
         ),
     );
 
-    let white_flag = WhiteFlag {
-        confirmation_sender: ledger_worker_tx.clone(),
-    };
-
     unsafe {
-        WHITE_FLAG = Box::leak(white_flag.into()) as *const _;
+        SENDER = Box::leak(ledger_worker_tx.clone().into()) as *const _;
     }
 
     bus.add_listener(on_last_solid_milestone_changed);
