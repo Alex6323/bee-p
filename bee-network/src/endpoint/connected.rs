@@ -13,10 +13,12 @@ use crate::{address::Address, endpoint::EndpointId};
 
 use bee_common::worker::Error as WorkerError;
 
-use async_std::sync::Arc;
 use futures::{channel::mpsc, sink::SinkExt};
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    sync::Arc,
+};
 
 const DATA_CHANNEL_CAPACITY: usize = 10000;
 
