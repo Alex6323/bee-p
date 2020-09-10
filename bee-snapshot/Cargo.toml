@@ -17,6 +17,7 @@ bee-ledger = { path = "../bee-ledger" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 bee-protocol = { path = "../bee-protocol"}
+bee-tangle = { path = "../bee-tangle"}
 
 bytemuck = "1.2.0"
 chrono = "0.4.11"
@@ -25,3 +26,4 @@ log = "0.4.8"
 reqwest = { version = "0.10.7", features = ["stream"] }
 serde = { version = "1.0.114", features = ["derive" ] }
 tokio = "0.2.22"
+dashmap = "3.10"

@@ -15,7 +15,11 @@ pub use config::{PruningConfig, PruningConfigBuilder};
 
 use crate::local::{LocalSnapshotConfig, LocalSnapshotMetadata};
 
+use bee_crypto::ternary::Hash;
 use bee_protocol::{tangle::tangle, MilestoneIndex};
+use bee_tangle::traversal;
+
+use dashmap::DashMap;
 
 use log::{error, info};
 
@@ -25,11 +29,91 @@ const ADDITIONAL_PRUNING_THRESHOLD: MilestoneIndex = MilestoneIndex(50);
 pub enum Error {
     NotEnoughHistory,
     NoPruningNeeded,
+    MilestoneNotFoundInTangle,
+    SolidEntryPointNotConfirmed,
+    MetadataNotFound,
 }
 
-// TODO get the new solid entry points from MsTangle
-pub fn get_new_solid_entry_points(_target_index: MilestoneIndex) {
-    unimplemented!()
+// TODO testing
+pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMap<Hash, MilestoneIndex>, Error> {
+    let mut solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
+    solid_entry_points.insert(Hash::zeros(), MilestoneIndex(0));
+    for index in *target_index - *SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST..*target_index {
+        let mut milestone_tail_hash = Hash::zeros();
+        let mut confirmed_transaction_hashes: Vec<Hash> = Vec::new();
+
+        // Get the milestone tail hash
+        // TODO testing
+        match tangle().get_milestone_hash(MilestoneIndex(index)) {
+            None => {
+                error!("Milestone {} is not found in Tangle", index);
+                return Err(Error::MilestoneNotFoundInTangle);
+            }
+            Some(hash) => milestone_tail_hash = hash,
+        }
+        traversal::visit_parents_depth_first(
+            tangle(),
+            milestone_tail_hash,
+            |hash, _tx, metadata| {
+                ((metadata.flags.is_confirmed() && *metadata.milestone_index() >= index)
+                    || (!metadata.flags.is_confirmed()))
+                    && !tangle().is_solid_entry_point(hash)
+            },
+            |hash, _tx, metadata| {
+                if metadata.flags.is_confirmed() {
+                    confirmed_transaction_hashes.push(hash.clone())
+                }
+            },
+            |_hash| {},
+        );
+
+        for approvee in confirmed_transaction_hashes {
+            // checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
+            let mut approver_is_confirmed_by_newer_milestone = false;
+            traversal::visit_children_depth_first(
+                tangle(),
+                approvee,
+                |_tx, metadata| metadata.flags.is_confirmed(),
+                |_hash, _tx, metadata| {
+                    // TODO early abortion?
+                    if *metadata.milestone_index > index {
+                        approver_is_confirmed_by_newer_milestone = true;
+                    }
+                },
+                |_hash| {},
+            );
+
+            if approver_is_confirmed_by_newer_milestone {
+                // Find all tails
+                let mut tail_hashes: Vec<Hash> = Vec::new();
+                traversal::visit_parents_depth_first(
+                    tangle(),
+                    approvee,
+                    |_hash, _tx, metadata| !metadata.flags.is_tail(),
+                    |_hash, _tx, _metadata| {},
+                    |hash| tail_hashes.push(hash.clone()),
+                );
+
+                for tail_hash in tail_hashes {
+                    match tangle().get_metadata(&tail_hash) {
+                        None => {
+                            error!("Metadada for hash {:?} is not found in Tangle", tail_hash);
+                            return Err(Error::MetadataNotFound);
+                        }
+                        Some(metadata) => {
+                            if metadata.flags.is_confirmed() {
+                                solid_entry_points.insert(tail_hash.clone(), metadata.milestone_index);
+                            } else {
+                                error!("Solid entry point for hash {:?} is not confirmed", tail_hash);
+                                return Err(Error::SolidEntryPointNotConfirmed);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(solid_entry_points)
 }
 
 // TODO do we rename it to be prune cache?
