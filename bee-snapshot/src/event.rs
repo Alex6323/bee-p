@@ -9,10 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod config;
-pub mod constants;
-pub mod event;
-pub mod global;
-pub mod local;
-pub mod pruning;
-pub mod worker;
+use bee_protocol::Milestone;
+
+pub struct SnapshotMilestoneChanged(pub Milestone);
