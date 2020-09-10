@@ -38,33 +38,30 @@ const VERSION: u8 = 4;
 #[derive(Debug)]
 pub enum Error {
     IOError(std::io::Error),
-    InvalidVersion,
+    InvalidVersion(u8, u8),
     InvalidMilestoneHash,
-    InvalidMilestoneIndex,
     InvalidSolidEntryPointHash,
     InvalidSeenMilestoneHash,
     InvalidAddress,
-    InvalidSupply,
+    InvalidSupply(u64, u64),
 }
 impl LocalSnapshot {
     pub fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
         info!("Loading snapshot file {}...", path);
 
-        let file = File::open(path).map_err(|e| Error::IOError(e))?;
-        let mut reader = BufReader::new(file);
+        let mut reader = BufReader::new(File::open(path).map_err(|e| Error::IOError(e))?);
 
         // Version byte
 
         let mut buf = [0u8];
         let version = match reader.read_exact(&mut buf) {
-            Ok(_) => {
-                if buf[0] != VERSION {
-                    return Err(Error::InvalidVersion);
-                }
-                buf[0]
-            }
+            Ok(_) => buf[0],
             Err(e) => return Err(Error::IOError(e)),
         };
+
+        if version != VERSION {
+            return Err(Error::InvalidVersion(version, VERSION));
+        }
 
         debug!("Version: {}.", version);
 
@@ -188,7 +185,7 @@ impl LocalSnapshot {
             seen_milestones.insert(seen_milestone, index);
         }
 
-        // amountOfBalances * balance:value - 49 bytes + int64
+        // Balances
 
         let mut buf_address = [0u8; 49];
         let mut buf_value = [0u8; std::mem::size_of::<u64>()];
@@ -221,7 +218,7 @@ impl LocalSnapshot {
         }
 
         if supply != IOTA_SUPPLY {
-            return Err(Error::InvalidSupply);
+            return Err(Error::InvalidSupply(supply, IOTA_SUPPLY));
         }
 
         // TODO hash ?
