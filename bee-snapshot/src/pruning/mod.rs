@@ -129,41 +129,51 @@ pub fn prune_database(
     }
 
     // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index
-    // TODO change `LocalSnapshotMetadata.index` to MilestoneIndex?
+    // TODO change the type of `LocalSnapshotMetadata.index` to MilestoneIndex?
     if local_snapshot_metadata.index() < *ADDITIONAL_PRUNING_THRESHOLD + *ADDITIONAL_PRUNING_THRESHOLD + 1 {
         error!("Not enough histroy for pruning.");
         return Err(Error::NotEnoughHistory);
     }
 
-    // TODO change `LocalSnapshotMetadata.index` to MilestoneIndex?
+    // TODO change the type of `LocalSnapshotMetadata.index` to MilestoneIndex?
     let target_index_max = MilestoneIndex(
         local_snapshot_metadata.index() - *SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - *ADDITIONAL_PRUNING_THRESHOLD - 1,
     );
     if target_index > target_index_max {
         target_index = target_index_max;
     }
-    // TODO add pruning_index (MilestoneIndex) in the tangle or somewhere, which should be static and stateful
-    // if tangle().pruning_index() >= target_index {
-    //     error!(
-    //         "No puruning needed with purning index: {:?} and target_index: {:?}",
-    //         tangle().pruning_index(),
-    //         target_index
-    //     );
-    //     return Err(Error::NoPruningNeeded);
-    // }
 
-    // TODO add entry_point_index in the tangle or somewhere, which should be static and stateful
-    // if *tangle().entry_point_index() + *ADDITIONAL_PRUNING_THRESHOLD + 1 > *target_index {
-    //     // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points
-    //     error!(
-    //         "Not enough history! minimum index: {} should be <= target_index: {}",
-    //         *tangle().entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1,
-    //         *target_index
-    //     );
-    //     return Err(Error::NotEnoughHistory);
-    // }
+    if tangle().get_last_solid_milestone_index() >= target_index {
+        error!(
+            "No puruning needed with purning index: {:?} and target_index: {:?}",
+            tangle().get_last_solid_milestone_index(),
+            target_index
+        );
+        return Err(Error::NoPruningNeeded);
+    }
 
-    // TODO update the solid entry points in the static MsTangle
+    if tangle().get_last_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + MilestoneIndex(1) > target_index {
+        // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points
+        error!(
+            "Not enough history! minimum index: {:?} should be <= target_index: {:?}",
+            tangle().get_last_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + MilestoneIndex(1),
+            target_index
+        );
+        return Err(Error::NotEnoughHistory);
+    }
+
+    // Update the solid entry points in the static MsTangle
+    let new_solid_entry_points = get_new_solid_entry_points(target_index)?;
+
+    // TODO clear the solid_entry_points in the static MsTangle
+    // tangle().solid_entry_points().clear();
+
+    // TODO update the whole solid_entry_points in the static MsTangle w/o looping
+    for (hash, milestone_index) in new_solid_entry_points.into_iter() {
+        tangle().add_solid_entry_point(hash, milestone_index);
+    }
+
+    tangle().update_last_solid_milestone_index(target_index);
 
     // TODO prune unconfirmed transaction with milestone tangle().entry_point_index() in database
 
