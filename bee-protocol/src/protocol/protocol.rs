@@ -363,7 +363,7 @@ fn on_latest_solid_milestone_changed(latest_solid_milestone: &LatestSolidMilesto
     debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
     tangle().update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
-    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(MS_BATCH_SIZE + 1);
+    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(MS_BATCH_SIZE);
 
     if !tangle().is_synced() {
         if tangle().contains_milestone(next_ms) {
