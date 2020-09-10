@@ -9,11 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use async_std::{
-    net::{SocketAddr, ToSocketAddrs},
-    task::block_on,
-};
 use thiserror::Error;
+
+use std::net::SocketAddr;
+
+use tokio::net;
 
 #[derive(Debug, Error)]
 pub(crate) enum Error {
@@ -24,9 +24,9 @@ pub(crate) enum Error {
     AddressResolveError,
 }
 
-pub(crate) fn resolve_address(address: &str) -> Result<SocketAddr, Error> {
-    block_on(address.to_socket_addrs())?
+pub(crate) async fn resolve_address(address: &str) -> Result<SocketAddr, Error> {
+    net::lookup_host(address)
+        .await?
         .next()
-        .map(|a| a.into())
         .ok_or(Error::AddressResolveError)
 }

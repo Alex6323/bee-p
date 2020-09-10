@@ -26,17 +26,16 @@ use crate::{
     MAX_TCP_BUFFER_SIZE,
 };
 
-use async_std::{
-    io::prelude::{ReadExt, WriteExt},
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
-    sync::Arc,
-    task::{block_on, spawn},
 };
+
 use futures::{channel::oneshot, future::FutureExt, select, sink::SinkExt, StreamExt};
 use log::*;
 use thiserror::Error;
 
-use std::sync::atomic::Ordering;
+use std::sync::{atomic::Ordering, Arc};
 
 #[derive(Debug, Error)]
 pub enum Error {

@@ -35,12 +35,12 @@ use tcp::worker::TcpWorker;
 
 use bee_common::shutdown::Shutdown;
 
-use async_std::task::spawn;
 use futures::{
     channel::{mpsc, oneshot},
     stream,
     stream::StreamExt,
 };
+use tokio::spawn;
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 

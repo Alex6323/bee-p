@@ -15,9 +15,9 @@ use super::{connection::Connection, spawn_connection_workers};
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
-use async_std::net::{TcpListener, TcpStream};
 use futures::{prelude::*, select};
 use log::*;
+use tokio::net::{TcpListener, TcpStream};
 
 use std::io::Error;
 

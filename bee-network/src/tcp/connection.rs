@@ -12,10 +12,9 @@
 use super::Error;
 use crate::utils::time;
 
-use async_std::{
-    net::{SocketAddr, TcpStream},
-    sync::Arc,
-};
+use std::{net::SocketAddr, sync::Arc};
+
+use tokio::net::TcpStream;
 
 use std::fmt;
 
