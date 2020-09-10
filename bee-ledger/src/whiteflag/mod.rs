@@ -28,20 +28,7 @@ use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
 
-use std::{ptr, sync::Arc};
-
-static mut SENDER: *const mpsc::UnboundedSender<worker::LedgerWorkerEvent> = ptr::null();
-
-fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
-    // This is safe since the callback is only registered after setting `SENDER`.
-    if let Err(e) = unsafe { &*SENDER }.unbounded_send(LedgerWorkerEvent::Confirm(last_solid_milestone.0.clone())) {
-        warn!(
-            "Sending solid milestone {:?} to confirmation failed: {:?}.",
-            last_solid_milestone.0.index(),
-            e
-        );
-    }
-}
+use std::sync::Arc;
 
 pub fn init(
     index: u32,
@@ -73,11 +60,17 @@ pub fn init(
         ),
     );
 
-    unsafe {
-        SENDER = Box::leak(ledger_worker_tx.clone().into()) as *const _;
-    }
+    let ledger_worker_tx_ret = ledger_worker_tx.clone();
 
-    bus.add_listener(on_last_solid_milestone_changed);
+    bus.add_listener(move |last_solid_milestone: &LastSolidMilestoneChanged| {
+        if let Err(e) = ledger_worker_tx.unbounded_send(LedgerWorkerEvent::Confirm(last_solid_milestone.0.clone())) {
+            warn!(
+                "Sending solid milestone {:?} to confirmation failed: {:?}.",
+                last_solid_milestone.0.index(),
+                e
+            );
+        }
+    });
 
-    ledger_worker_tx
+    ledger_worker_tx_ret
 }

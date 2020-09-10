@@ -25,20 +25,7 @@ use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
 
-use std::{path::Path, ptr, sync::Arc};
-
-static mut SENDER: *const mpsc::UnboundedSender<worker::SnapshotWorkerEvent> = ptr::null();
-
-fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
-    // This is safe since the callback is only registered after setting `SENDER`.
-    if let Err(e) = unsafe { &*SENDER }.unbounded_send(worker::SnapshotWorkerEvent(last_solid_milestone.0.clone())) {
-        warn!(
-            "Failed to send milestone {} to snapshot worker: {:?}.",
-            *last_solid_milestone.0.index(),
-            e
-        )
-    }
-}
+use std::{path::Path, sync::Arc};
 
 pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) {
     // snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
@@ -102,14 +89,18 @@ pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &
     let (snapshot_worker_tx, snapshot_worker_rx) = mpsc::unbounded();
     let (snapshot_worker_shutdown_tx, snapshot_worker_shutdown_rx) = oneshot::channel();
 
-    unsafe {
-        SENDER = Box::leak(snapshot_worker_tx.into()) as *const _;
-    }
-
     shutdown.add_worker_shutdown(
         snapshot_worker_shutdown_tx,
         spawn(worker::SnapshotWorker::new(ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx)).run()),
     );
 
-    bus.add_listener(on_last_solid_milestone_changed);
+    bus.add_listener(move |last_solid_milestone: &LastSolidMilestoneChanged| {
+        if let Err(e) = snapshot_worker_tx.unbounded_send(worker::SnapshotWorkerEvent(last_solid_milestone.0.clone())) {
+            warn!(
+                "Failed to send milestone {} to snapshot worker: {:?}.",
+                *last_solid_milestone.0.index(),
+                e
+            )
+        }
+    });
 }
