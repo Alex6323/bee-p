@@ -25,10 +25,6 @@ pub enum Error {
 pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error> {
     let path = config.path();
 
-    if Path::new(path).exists() {
-        return Ok(());
-    }
-
     let mut rt = Runtime::new().unwrap();
 
     let config = config.clone();
@@ -50,6 +46,7 @@ pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error
         }
     });
 
+    // TODO here or outside ?
     if Path::new(path).exists() {
         Ok(())
     } else {

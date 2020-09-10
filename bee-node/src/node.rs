@@ -65,8 +65,7 @@ impl NodeBuilder {
         info!("Initializing tangle...");
         tangle::init();
 
-        // TODO handle error
-        download_local_snapshot(&self.config.snapshot.local());
+        bee_snapshot::init(&self.config.snapshot);
 
         let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().path()) {
             Ok(local_snapshot) => {
