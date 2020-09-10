@@ -46,7 +46,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
         // TODO testing
         match tangle().get_milestone_hash(MilestoneIndex(index)) {
             None => {
-                error!("Milestone {} is not found in Tangle", index);
+                error!("Milestone {} is not found in Tangle.", index);
                 return Err(Error::MilestoneNotFoundInTangle);
             }
             Some(hash) => milestone_tail_hash = hash,
@@ -97,14 +97,14 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                 for tail_hash in tail_hashes {
                     match tangle().get_metadata(&tail_hash) {
                         None => {
-                            error!("Metadada for hash {:?} is not found in Tangle", tail_hash);
+                            error!("Metadada for hash {:?} is not found in Tangle.", tail_hash);
                             return Err(Error::MetadataNotFound);
                         }
                         Some(metadata) => {
                             if metadata.flags.is_confirmed() {
                                 solid_entry_points.insert(tail_hash.clone(), metadata.milestone_index);
                             } else {
-                                error!("Solid entry point for hash {:?} is not confirmed", tail_hash);
+                                error!("Solid entry point for hash {:?} is not confirmed.", tail_hash);
                                 return Err(Error::SolidEntryPointNotConfirmed);
                             }
                         }
