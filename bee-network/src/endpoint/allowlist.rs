@@ -13,10 +13,10 @@ use super::EndpointId;
 
 use crate::address::url::Url;
 
-use async_std::net::IpAddr;
 use dashmap::DashMap;
 
 use std::{
+    net::IpAddr,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, Ordering},
 };

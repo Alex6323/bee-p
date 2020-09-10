@@ -132,7 +132,7 @@ fn spawn_writer(
 
     let mut fused_data_receiver = data_receiver.fuse();
 
-    spawn(async move {
+    tokio::spawn(async move {
         let mut stream = &*stream;
         loop {
             let data = fused_data_receiver.next().await;
@@ -162,7 +162,7 @@ fn spawn_reader(
 
     let mut buffer = vec![0u8; MAX_TCP_BUFFER_SIZE.load(Ordering::Relaxed)];
 
-    spawn(async move {
+    tokio::spawn(async move {
         let mut stream = &*stream;
         let mut fused_shutdown = &mut shutdown_listener.fuse();
 

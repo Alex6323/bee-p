@@ -88,10 +88,13 @@ impl Url {
         }
     }
 
-    pub fn address(&mut self, update: bool) -> Result<Address, Error> {
+    pub async fn address(&mut self, update: bool) -> Result<Address, Error> {
         if update {
             let address = &format!("{}:{}", self.host, *self.port)[..];
-            let address = net::resolve_address(address).map_err(|_| Error::ResolveFailure)?.into();
+            let address = net::resolve_address(address)
+                .await
+                .map_err(|_| Error::ResolveFailure)?
+                .into();
 
             self.address_cache = address;
         }
@@ -111,18 +114,28 @@ impl fmt::Display for Url {
 mod tests {
     use super::*;
 
-    #[test]
-    fn create_tcp_url_from_address_and_protocol() {
-        let address = Url::from_str("tcp://127.0.0.1:15600").unwrap().address(true).unwrap();
+    #[tokio::test]
+    async fn create_tcp_url_from_address_and_protocol() {
+        let address = Url::from_str("tcp://127.0.0.1:15600")
+            .unwrap()
+            .address(true)
+            .await
+            .unwrap();
+
         let url = Url::new(address, Protocol::Tcp);
 
         assert_eq!(Protocol::Tcp, url.protocol);
         assert_eq!("tcp://127.0.0.1:15600", url.to_string());
     }
 
-    #[test]
-    fn create_udp_url_from_address_and_protocol() {
-        let address = Url::from_str("udp://127.0.0.1:15600").unwrap().address(true).unwrap();
+    #[tokio::test]
+    async fn create_udp_url_from_address_and_protocol() {
+        let address = Url::from_str("udp://127.0.0.1:15600")
+            .unwrap()
+            .address(true)
+            .await
+            .unwrap();
+
         let url = Url::new(address, Protocol::Udp);
 
         assert_eq!(Protocol::Udp, url.protocol);
