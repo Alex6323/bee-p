@@ -168,7 +168,9 @@ impl Protocol {
                     tangle(),
                     target_hash,
                     |hash, _, metadata| {
-                        !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+                        !metadata.flags.is_requested()
+                            && !metadata.flags.is_solid()
+                            && !Protocol::get().requested_transactions.contains_key(&hash)
                     },
                     |_, _, _| {},
                     |_, _, _| {},
