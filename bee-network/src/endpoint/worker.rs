@@ -21,9 +21,9 @@ use crate::{
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
-use async_std::task::{self, spawn};
 use futures::{channel::mpsc, select, sink::SinkExt, stream, FutureExt, StreamExt};
 use log::*;
+use tokio::task;
 
 use std::{sync::atomic::Ordering, time::Duration};
 
@@ -230,22 +230,25 @@ async fn add_endpoint(
     url: Url,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    let endpoint = Endpoint::from_url(url.clone());
-    let epid = endpoint.epid;
+    if let Ok(endpoint) = Endpoint::from_url(url.clone()).await {
+        let epid = endpoint.epid;
 
-    if endpoints.insert(endpoint) {
-        // Add to allowlist
-        let allowlist = allowlist::get();
-        allowlist.insert(epid, url);
+        if endpoints.insert(endpoint) {
+            // Add to allowlist
+            let allowlist = allowlist::get();
+            allowlist.insert(epid, url);
 
-        internal_event_sender
-            .send(Event::EndpointAdded {
-                epid,
-                total: endpoints.len(),
-            })
-            .await?;
+            internal_event_sender
+                .send(Event::EndpointAdded {
+                    epid,
+                    total: endpoints.len(),
+                })
+                .await?;
 
-        Ok(true)
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     } else {
         Ok(false)
     }
@@ -304,7 +307,7 @@ async fn try_connect_to(
                         // connected_endpoints.insert(*epid, *address, timestamp, bytes_sender);
                         Ok(true)
                     } else {
-                        spawn(send_event_after_delay(
+                        tokio::spawn(send_event_after_delay(
                             Event::TryConnectTo { epid: *epid },
                             internal_event_sender.clone(),
                         ));
@@ -321,7 +324,7 @@ async fn try_connect_to(
 
 #[inline]
 async fn send_event_after_delay(event: Event, mut internal_event_sender: EventSender) -> Result<(), WorkerError> {
-    task::sleep(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
+    tokio::time::delay_for(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
 
     Ok(internal_event_sender.send(event).await?)
 }

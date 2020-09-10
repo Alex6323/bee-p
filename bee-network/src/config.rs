@@ -62,7 +62,7 @@ impl NetworkConfigBuilder {
     /// Builds the network config.
     pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
-            binding_port: Port::new(self.binding_port.unwrap_or(DEFAULT_BINDING_PORT)),
+            binding_port: Port(self.binding_port.unwrap_or(DEFAULT_BINDING_PORT)),
             binding_addr: self.binding_addr.unwrap_or(DEFAULT_BINDING_ADDR),
             max_tcp_buffer_size: self.max_tcp_buffer_size.unwrap_or(DEFAULT_MAX_TCP_BUFFER_SIZE),
             reconnect_interval: self.reconnect_interval.unwrap_or(DEFAULT_RECONNECT_INTERVAL),

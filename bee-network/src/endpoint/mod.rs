@@ -32,11 +32,12 @@ impl From<Address> for EndpointId {
     }
 }
 
-impl From<Url> for EndpointId {
-    fn from(mut url: Url) -> Self {
-        Self(url.address(true).unwrap().into())
-    }
-}
+// FIXME: async call in non-async trait
+// impl From<Url> for EndpointId {
+//     fn from(mut url: Url) -> Self {
+//         Self(url.address(true).unwrap().into())
+//     }
+// }
 
 impl fmt::Display for EndpointId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -60,12 +61,12 @@ impl Endpoint {
         }
     }
 
-    pub fn from_url(mut url: Url) -> Self {
-        // FIXME: unwrap
-        let address = url.address(true).unwrap();
+    // FIXME: dynamic dispatch
+    pub async fn from_url(mut url: Url) -> Result<Self, Box<dyn std::error::Error>> {
+        let address = url.address(true).await?;
         let protocol = url.protocol;
 
-        Endpoint::new(address, protocol)
+        Ok(Endpoint::new(address, protocol))
     }
 }
 

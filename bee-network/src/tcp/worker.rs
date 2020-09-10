@@ -38,7 +38,7 @@ impl TcpWorker {
         debug!("Starting TCP worker...");
 
         // FIXME: If another application already occupies the binding address, this line just blocks.
-        let listener = TcpListener::bind(*self.binding_addr).await?;
+        let mut listener = TcpListener::bind(*self.binding_addr).await?;
 
         debug!("Accepting connections on {}.", listener.local_addr()?);
 

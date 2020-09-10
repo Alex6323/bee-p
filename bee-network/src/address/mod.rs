@@ -11,7 +11,9 @@
 
 pub mod url;
 
-use async_std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
+use crate::utils::net;
+
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 use std::{fmt, ops};
 
@@ -40,17 +42,7 @@ pub enum Error {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Port(u16);
-
-impl Port {
-    pub fn new(port: u16) -> Self {
-        if port < 1024 {
-            panic!("Invalid port number");
-        }
-
-        Self(port)
-    }
-}
+pub struct Port(pub u16);
 
 impl ops::Deref for Port {
     type Target = u16;
@@ -64,11 +56,11 @@ impl ops::Deref for Port {
 pub struct Address(SocketAddr);
 
 impl Address {
-    pub fn from_str(address: &str) -> Result<Self, Error> {
+    pub async fn from_str(address: &str) -> Result<Self, Error> {
         if let Ok(address) = address.parse::<SocketAddr>() {
             Ok(Self(address))
         } else {
-            if let Ok(address) = crate::utils::net::resolve_address(address) {
+            if let Ok(address) = net::resolve_address(address).await {
                 Ok(Self(address))
             } else {
                 Err(Error::ResolveFailure)
@@ -125,17 +117,18 @@ impl fmt::Display for Address {
 mod tests {
     use super::*;
 
-    #[test]
-    fn create_address_from_str() {
-        let address = Address::from_str("localhost:15600").expect("parse error");
+    #[tokio::test]
+    async fn create_address_from_str() {
+        let address = Address::from_str("localhost:15600").await.expect("parse error");
 
         assert!(address.is_ipv4() || address.is_ipv6());
         assert_eq!(15600, *address.port());
     }
 
-    #[test]
-    fn create_address_without_port_should_panic() {
-        let address = Address::from_str("localhost");
+    #[tokio::test]
+    async fn create_address_without_port_should_panic() {
+        let address = Address::from_str("localhost").await;
+
         assert!(address.is_err());
     }
 

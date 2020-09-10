@@ -62,8 +62,8 @@ impl Allowlist {
         Self(DashMap::with_capacity(INITIAL_ALLOWLIST_CAPACITY))
     }
 
-    pub fn insert(&self, epid: EndpointId, mut url: Url) -> bool {
-        if let Ok(address) = url.address(true) {
+    pub async fn insert(&self, epid: EndpointId, mut url: Url) -> bool {
+        if let Ok(address) = url.address(true).await {
             self.0.insert(epid, (address.ip(), url));
             true
         } else {
@@ -79,12 +79,13 @@ impl Allowlist {
         self.0.iter().any(|r| &r.value().0 == address)
     }
 
-    #[allow(dead_code)]
-    pub fn refresh(&mut self) {
-        // TODO: think about the 'unwrap'. It should be save in this context.
-        self.0
-            .alter_all(|_, mut address_url| (address_url.1.address(true).unwrap().ip(), address_url.1));
-    }
+    // FIXME: async
+    // #[allow(dead_code)]
+    // pub async fn refresh(&mut self) {
+    //     // TODO: think about the 'unwrap'. It should be save in this context.
+    //     self.0
+    //         .alter_all(|_, mut address_url| (address_url.1.address(true).await.unwrap().ip(), address_url.1));
+    // }
 }
 
 #[cfg(test)]

@@ -62,13 +62,16 @@ impl Url {
     }
 
     /// NOTE: This function expects an input of the format: tcp://example.com:15600.
-    pub fn from_str(url: &str) -> Result<Self, Error> {
+    pub async fn from_str(url: &str) -> Result<Self, Error> {
         if let Ok(url) = url::Url::parse(url) {
             let host = url.host_str().ok_or(Error::UrlDestructFailure)?.to_string();
-            let port = Port::new(url.port().ok_or(Error::UrlDestructFailure)?);
+            let port = Port(url.port().ok_or(Error::UrlDestructFailure)?);
 
             let address = &format!("{}:{}", host, *port)[..];
-            let address = net::resolve_address(address).map_err(|_| Error::ResolveFailure)?.into();
+            let address = net::resolve_address(address)
+                .await
+                .map_err(|_| Error::ResolveFailure)?
+                .into();
 
             let protocol = match url.scheme() {
                 "tcp" => Protocol::Tcp,
