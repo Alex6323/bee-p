@@ -17,11 +17,17 @@ pub mod local;
 pub mod pruning;
 pub mod worker;
 
-use bee_protocol::MilestoneIndex;
+use bee_common::shutdown::Shutdown;
+use bee_common_ext::event::Bus;
+use bee_protocol::{event::LastSolidMilestoneChanged, MilestoneIndex};
 
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
-pub fn init(config: &config::SnapshotConfig) {
+fn on_last_solid_milestone_changed(_last_solid_milestone: &LastSolidMilestoneChanged) {
+    // TODO send event to worker
+}
+
+pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, _shutdown: &mut Shutdown) {
     // snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
     // if snapshotDepth < SolidEntryPointCheckThresholdFuture {
     // 	log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgLocalSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
@@ -66,46 +72,6 @@ pub fn init(config: &config::SnapshotConfig) {
     // if *forceGlobalSnapshot && snapshotTypeToLoad != "global" {
     // 	log.Fatalf("global snapshot enforced but wrong snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
     // }
-    //
-    // var err = ErrNoSnapshotSpecified
-    // switch snapshotTypeToLoad {
-    // case "global":
-    // 	if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
-    // 		err = LoadGlobalSnapshot(path,
-    // 			milestone.Index(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
-    // 	}
-    // case "local":
-    // 	if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {
-    //
-    // 		if _, fileErr := os.Stat(path); os.IsNotExist(fileErr) {
-    // 			// create dir if it not exists
-    // 			if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-    // 				log.Fatalf("could not create snapshot dir '%s'", path)
-    // 			}
-    // 			if urls := config.NodeConfig.GetStringSlice(config.CfgLocalSnapshotsDownloadURLs); len(urls) > 0 {
-    // 				log.Infof("Downloading snapshot from one of the provided sources %v", urls)
-    // 				downloadErr := downloadSnapshotFile(path, urls)
-    // 				if downloadErr != nil {
-    // 					err = errors.Wrap(downloadErr, "Error downloading snapshot file")
-    // 					break
-    // 				}
-    // 				log.Info("Snapshot download finished")
-    // 			} else {
-    // 				err = ErrNoSnapshotDownloadURL
-    // 				break
-    // 			}
-    // 		}
-    //
-    // 		err = LoadSnapshotFromFile(path)
-    // 	}
-    // default:
-    // 	log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
-    // }
-    //
-    // if err != nil {
-    // 	tangle.MarkDatabaseCorrupted()
-    // 	log.Panic(err.Error())
-    // }
 
     match config.load_type() {
         config::LoadType::Global => {
@@ -115,7 +81,10 @@ pub fn init(config: &config::SnapshotConfig) {
             if !Path::new(config.local().path()).exists() {
                 // TODO handle error
                 local::download_local_snapshot(config.local());
+                // 		err = LoadSnapshotFromFile(path)
             }
         }
     }
+
+    bus.add_listener(on_last_solid_milestone_changed);
 }

@@ -23,7 +23,7 @@ use bee_crypto::ternary::Hash;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
+use bee_snapshot::local::{Error as LocalSnapshotReadError, LocalSnapshot};
 
 use async_std::task::{block_on, spawn};
 use futures::{
@@ -65,7 +65,7 @@ impl NodeBuilder {
         info!("Initializing tangle...");
         tangle::init();
 
-        bee_snapshot::init(&self.config.snapshot);
+        bee_snapshot::init(&self.config.snapshot, bus.clone(), &mut shutdown);
 
         let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().path()) {
             Ok(local_snapshot) => {
