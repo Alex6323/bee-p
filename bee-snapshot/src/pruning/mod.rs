@@ -15,12 +15,12 @@ pub use config::{PruningConfig, PruningConfigBuilder};
 
 use crate::local::{LocalSnapshotConfig, LocalSnapshotMetadata};
 
-use bee_protocol::tangle::tangle;
+use bee_protocol::{tangle::tangle, MilestoneIndex};
 
-use log::error;
+use log::{error, info};
 
-const SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST: u32 = 50;
-const ADDITIONAL_PRUNING_THRESHOLD: u32 = 50;
+const SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST: MilestoneIndex = MilestoneIndex(50);
+const ADDITIONAL_PRUNING_THRESHOLD: MilestoneIndex = MilestoneIndex(50);
 
 pub enum Error {
     NotEnoughHistory,
@@ -28,7 +28,7 @@ pub enum Error {
 }
 
 // TODO get the new solid entry points from MsTangle
-pub fn get_new_solid_entry_points(_target_index: u32) {
+pub fn get_new_solid_entry_points(_target_index: MilestoneIndex) {
     unimplemented!()
 }
 
@@ -37,32 +37,46 @@ pub fn prune_database(
     pruning_config: &PruningConfig,
     _local_snapshot_config: &LocalSnapshotConfig,
     local_snapshot_metadata: &LocalSnapshotMetadata,
-    mut target_index: u32,
+    mut target_index: MilestoneIndex,
 ) -> Result<(), Error> {
     // TODO move this checking before enterning this function
     if !pruning_config.enabled() {
         return Ok(());
     }
 
-    if local_snapshot_metadata.index() < ADDITIONAL_PRUNING_THRESHOLD + ADDITIONAL_PRUNING_THRESHOLD + 1 {
+    // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index
+    // TODO change `LocalSnapshotMetadata.index` to MilestoneIndex?
+    if local_snapshot_metadata.index() < *ADDITIONAL_PRUNING_THRESHOLD + *ADDITIONAL_PRUNING_THRESHOLD + 1 {
         error!("Not enough histroy for pruning.");
         return Err(Error::NotEnoughHistory);
     }
 
-    let target_index_max: u32 =
-        local_snapshot_metadata.index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1;
+    // TODO change `LocalSnapshotMetadata.index` to MilestoneIndex?
+    let target_index_max = MilestoneIndex(
+        local_snapshot_metadata.index() - *SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - *ADDITIONAL_PRUNING_THRESHOLD - 1,
+    );
     if target_index > target_index_max {
         target_index = target_index_max;
     }
-
-    // TODO add pruning_index in the tangle or somewhere, which is static and stateful
+    // TODO add pruning_index (MilestoneIndex) in the tangle or somewhere, which should be static and stateful
     // if tangle().pruning_index() >= target_index {
-    //     Err(Error::NoPruningNeeded)
+    //     error!(
+    //         "No puruning needed with purning index: {:?} and target_index: {:?}",
+    //         tangle().pruning_index(),
+    //         target_index
+    //     );
+    //     return Err(Error::NoPruningNeeded);
     // }
 
-    // TODO add entry_point_index in the tangle or somewhere, which is static and stateful
-    // if tangle().entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > target_index {
-    //     Err(Error::NotEnoughHistory)
+    // TODO add entry_point_index in the tangle or somewhere, which should be static and stateful
+    // if *tangle().entry_point_index() + *ADDITIONAL_PRUNING_THRESHOLD + 1 > *target_index {
+    //     // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points
+    //     error!(
+    //         "Not enough history! minimum index: {} should be <= target_index: {}",
+    //         *tangle().entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1,
+    //         *target_index
+    //     );
+    //     return Err(Error::NotEnoughHistory);
     // }
 
     // TODO update the solid entry points in the static MsTangle
