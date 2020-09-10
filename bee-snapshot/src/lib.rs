@@ -91,7 +91,13 @@ pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &
 
     shutdown.add_worker_shutdown(
         snapshot_worker_shutdown_tx,
-        spawn(worker::SnapshotWorker::new(ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx)).run()),
+        spawn(
+            worker::SnapshotWorker::new(
+                config.clone(),
+                ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx),
+            )
+            .run(),
+        ),
     );
 
     bus.add_listener(move |last_solid_milestone: &LastSolidMilestoneChanged| {
