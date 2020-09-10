@@ -17,6 +17,7 @@ mod peer;
 mod propagator;
 mod requester;
 mod responder;
+mod solidifier;
 mod status;
 mod tps;
 mod transaction;
@@ -35,6 +36,7 @@ pub(crate) use responder::{
     MilestoneResponderWorker, MilestoneResponderWorkerEvent, TransactionResponderWorker,
     TransactionResponderWorkerEvent,
 };
+pub(crate) use solidifier::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
