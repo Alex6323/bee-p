@@ -45,6 +45,8 @@ impl SolidPropagatorWorker {
             }
 
             if let Some(tx) = tangle().get(&hash) {
+                let mut index = None;
+
                 if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
                     tangle().update_metadata(&hash, |metadata| {
                         metadata.flags.set_solid(true);
@@ -52,10 +54,7 @@ impl SolidPropagatorWorker {
                         // before being solidified, we then also need to check when a milestone gets validated if it's
                         // already solid.
                         if metadata.flags.is_milestone() {
-                            Protocol::get().bus.dispatch(LastSolidMilestoneChanged(Milestone {
-                                hash: *hash,
-                                index: metadata.milestone_index,
-                            }));
+                            index = Some(metadata.milestone_index);
                         }
                         metadata.solidification_timestamp = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
@@ -66,6 +65,12 @@ impl SolidPropagatorWorker {
                     for child in tangle().get_children(&hash) {
                         children.push(child);
                     }
+                }
+
+                if let Some(index) = index {
+                    Protocol::get()
+                        .bus
+                        .dispatch(LastSolidMilestoneChanged(Milestone { hash: *hash, index }));
                 }
             }
         }

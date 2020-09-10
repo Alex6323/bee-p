@@ -117,9 +117,9 @@ where
     }
 
     /// Updates the metadata of a vertex.
-    pub fn update_metadata<Update>(&self, hash: &Hash, update: Update)
+    pub fn update_metadata<Update>(&self, hash: &Hash, mut update: Update)
     where
-        Update: Fn(&mut T),
+        Update: FnMut(&mut T),
     {
         if let Some(mut vtx) = self.vertices.get_mut(hash) {
             update(vtx.value_mut().metadata_mut())
