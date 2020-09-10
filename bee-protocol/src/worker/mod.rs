@@ -27,6 +27,7 @@ pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEv
 pub(crate) use kickstart::KickstartWorker;
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
+pub(crate) use propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, TransactionRequesterWorker,
     TransactionRequesterWorkerEntry,
@@ -36,7 +37,6 @@ pub(crate) use responder::{
     TransactionResponderWorkerEvent,
 };
 pub(crate) use sender::SenderWorker;
-pub(crate) use propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
