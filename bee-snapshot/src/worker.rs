@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_protocol::Milestone;
 
 use futures::{
     channel::mpsc,
@@ -20,7 +21,7 @@ use log::info;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
-pub(crate) struct SnapshotWorkerEvent {}
+pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct SnapshotWorker {
     receiver: Receiver,
@@ -31,13 +32,15 @@ impl SnapshotWorker {
         Self { receiver }
     }
 
-    fn process(&mut self) {}
+    fn process(&mut self, milestone: Milestone) {
+        println!("{:?}", milestone.index());
+    }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(SnapshotWorkerEvent {}) = self.receiver.next().await {
-            self.process();
+        while let Some(SnapshotWorkerEvent(milestone)) = self.receiver.next().await {
+            self.process(milestone);
         }
 
         info!("Stopped.");
