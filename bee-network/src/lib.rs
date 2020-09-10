@@ -40,7 +40,6 @@ use futures::{
     stream,
     stream::StreamExt,
 };
-use tokio::spawn;
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
@@ -75,8 +74,8 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     let (internal_event_sender, internal_event_receiver) = events::channel();
 
     // Create channels to signal shutdown to the workers.
-    // let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
-    // let (tcp_worker_shutdown_sender, tcp_worker_shutdown_receiver) = oneshot::channel();
+    let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
+    let (tcp_worker_shutdown_sender, tcp_worker_shutdown_receiver) = oneshot::channel();
 
     // Create the worker that manages the endpoints to connect to.
     let endpoint_worker = EndpointWorker::new(
@@ -101,6 +100,9 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     //     // tcp,
     //     spawn(tcp_worker.run(tcp_worker_shutdown_receiver)),
     // );
+
+    tokio::spawn(endpoint_worker.run(endpoint_worker_shutdown_receiver));
+    tokio::spawn(tcp_worker.run(tcp_worker_shutdown_receiver));
 
     // Initialize Allowlist and make sure it gets dropped when the shutdown occurs.
     allowlist::init();

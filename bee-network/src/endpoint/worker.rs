@@ -175,8 +175,8 @@ impl EndpointWorker {
             Event::ConnectionCreated {
                 endpoint,
                 origin,
-                timestamp,
                 data_sender,
+                timestamp,
             } => {
                 let epid = endpoint.epid;
                 let address = endpoint.address;
@@ -230,25 +230,22 @@ async fn add_endpoint(
     url: Url,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    if let Ok(endpoint) = Endpoint::from_url(url.clone()).await {
-        let epid = endpoint.epid;
+    let endpoint = Endpoint::from_url(url.clone()).await;
+    let epid = endpoint.epid;
 
-        if endpoints.insert(endpoint) {
-            // Add to allowlist
-            let allowlist = allowlist::get();
-            allowlist.insert(epid, url);
+    if endpoints.insert(endpoint) {
+        // Add to allowlist
+        let allowlist = allowlist::get();
+        allowlist.insert(epid, url);
 
-            internal_event_sender
-                .send(Event::EndpointAdded {
-                    epid,
-                    total: endpoints.len(),
-                })
-                .await?;
+        internal_event_sender
+            .send(Event::EndpointAdded {
+                epid,
+                total: endpoints.len(),
+            })
+            .await?;
 
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        Ok(true)
     } else {
         Ok(false)
     }

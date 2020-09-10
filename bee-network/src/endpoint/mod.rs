@@ -61,12 +61,12 @@ impl Endpoint {
         }
     }
 
-    // FIXME: dynamic dispatch
-    pub async fn from_url(mut url: Url) -> Result<Self, Box<dyn std::error::Error>> {
-        let address = url.address(true).await?;
+    pub async fn from_url(mut url: Url) -> Self {
+        // FIXME: unwrap
+        let address = url.address(true).await.unwrap();
         let protocol = url.protocol;
 
-        Ok(Endpoint::new(address, protocol))
+        Endpoint::new(address, protocol)
     }
 }
 

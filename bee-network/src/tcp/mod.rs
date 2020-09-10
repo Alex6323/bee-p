@@ -37,11 +37,14 @@ use log::*;
 use thiserror::Error;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
+    net::{
+        tcp::{OwnedReadHalf, OwnedWriteHalf},
+        TcpStream,
+    },
     task::JoinHandle,
 };
 
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::atomic::Ordering;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -75,7 +78,7 @@ pub(crate) async fn try_connect_to(
 
             debug!(
                 "Sucessfully established connection to {} ({}).",
-                connection.remote_addr, connection.origin,
+                connection.peer_address, connection.origin,
             );
 
             spawn_connection_workers(connection, internal_event_sender).await?;
@@ -96,10 +99,16 @@ pub(crate) async fn spawn_connection_workers(
 ) -> Result<(), Error> {
     debug!("Spawning TCP connection workers...");
 
-    let address: Address = connection.remote_addr.into();
+    let Connection {
+        origin,
+        own_address,
+        peer_address,
+        reader,
+        writer,
+    } = connection;
+
+    let address: Address = peer_address.into();
     let protocol = Protocol::Tcp;
-    let origin = connection.origin;
-    let timestamp = connection.timestamp;
 
     let endpoint = Endpoint::new(address, protocol);
 
@@ -109,15 +118,10 @@ pub(crate) async fn spawn_connection_workers(
     // NOTE: block until reader and writer task are spawned
     let mut handles = Vec::with_capacity(2);
 
-    handles.push(spawn_writer(
-        endpoint.epid,
-        connection.stream.clone(),
-        data_receiver,
-        shutdown_sender,
-    ));
+    handles.push(spawn_writer(endpoint.epid, writer, data_receiver, shutdown_sender));
     handles.push(spawn_reader(
         endpoint.epid,
-        connection.stream.clone(),
+        reader,
         internal_event_sender.clone(),
         shutdown_receiver,
     ));
@@ -129,7 +133,7 @@ pub(crate) async fn spawn_connection_workers(
             endpoint,
             origin,
             data_sender,
-            timestamp,
+            timestamp: crate::utils::time::timestamp_millis(),
         })
         .await?;
 
@@ -138,7 +142,7 @@ pub(crate) async fn spawn_connection_workers(
 
 fn spawn_writer(
     epid: EndpointId,
-    stream: Arc<TcpStream>,
+    mut writer: OwnedWriteHalf,
     data_receiver: DataReceiver,
     shutdown_notifier: ShutdownNotifier,
 ) -> JoinHandle<()> {
@@ -147,13 +151,13 @@ fn spawn_writer(
     let mut fused_data_receiver = data_receiver.fuse();
 
     tokio::spawn(async move {
-        let mut stream = &*stream;
+        // let mut stream = &*stream;
 
         loop {
             let data = fused_data_receiver.next().await;
 
             if let Some(bytes) = data {
-                stream
+                writer
                     .write_all(&*bytes)
                     // .fuse() // necessary?
                     .await
@@ -171,7 +175,7 @@ fn spawn_writer(
 
 fn spawn_reader(
     epid: EndpointId,
-    stream: Arc<TcpStream>,
+    mut reader: OwnedReadHalf,
     mut internal_event_sender: EventSender,
     shutdown_listener: ShutdownListener,
 ) -> JoinHandle<()> {
@@ -180,7 +184,7 @@ fn spawn_reader(
     let mut buffer = vec![0u8; MAX_TCP_BUFFER_SIZE.load(Ordering::Relaxed)];
 
     tokio::spawn(async move {
-        let mut stream = &mut *stream;
+        // let mut stream = &mut *stream;
         let mut fused_shutdown = &mut shutdown_listener.fuse();
 
         loop {
@@ -188,7 +192,7 @@ fn spawn_reader(
                 _ = fused_shutdown => {
                     break;
                 }
-                num_read = stream.read(&mut buffer).fuse() => {
+                num_read = reader.read(&mut buffer).fuse() => {
                     match num_read {
                         Ok(num_read) => {
                             if !handle_read(epid, num_read, &mut internal_event_sender, &buffer).await {

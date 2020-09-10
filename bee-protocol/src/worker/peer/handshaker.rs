@@ -172,7 +172,7 @@ impl PeerHandshakerWorker {
 
         let address = match self.peer.origin {
             Origin::Outbound => {
-                if self.peer.address.port() != Port::new(handshake.port) {
+                if self.peer.address.port() != Port(handshake.port) {
                     return Err(HandshakeError::PortMismatch(*self.peer.address.port(), handshake.port));
                 }
 

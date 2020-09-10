@@ -82,8 +82,8 @@ impl TcpWorker {
                 let allowlist = allowlist::get();
 
                 // Immediatedly drop stream, if it's associated IP address isn't part of the allowlist
-                if !allowlist.contains(&conn.remote_addr.ip()) {
-                    warn!("Contacted by unknown IP address '{}'.", &conn.remote_addr.ip());
+                if !allowlist.contains(&conn.peer_address.ip()) {
+                    warn!("Contacted by unknown IP address '{}'.", &conn.peer_address.ip());
                     warn!("Connection disallowed.");
 
                     return Ok(false);
@@ -91,7 +91,7 @@ impl TcpWorker {
 
                 debug!(
                     "Sucessfully established connection to {} ({}).",
-                    conn.remote_addr,
+                    conn.peer_address,
                     Origin::Inbound
                 );
 

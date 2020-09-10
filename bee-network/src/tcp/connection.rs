@@ -10,11 +10,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use super::Error;
-use crate::utils::time;
+// use crate::utils::time;
 
 use std::{net::SocketAddr, sync::Arc};
 
-use tokio::net::TcpStream;
+use tokio::net::{
+    tcp::{OwnedReadHalf, OwnedWriteHalf},
+    TcpStream,
+};
 
 use std::fmt;
 
@@ -34,40 +37,45 @@ impl fmt::Display for Origin {
     }
 }
 
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct Connection {
     pub origin: Origin,
-    pub local_addr: SocketAddr,
-    pub remote_addr: SocketAddr,
-    pub stream: Arc<TcpStream>,
-    pub timestamp: u64,
+    pub own_address: SocketAddr,
+    pub peer_address: SocketAddr,
+    pub reader: OwnedReadHalf,
+    pub writer: OwnedWriteHalf,
+    /* pub stream: Arc<TcpStream>,
+     * pub timestamp: u64, */
 }
 
 impl Connection {
     pub fn new(stream: TcpStream, origin: Origin) -> Result<Self, Error> {
-        let local_addr = stream.local_addr()?;
-        let remote_addr = stream.peer_addr()?;
-        let stream = Arc::new(stream);
+        let own_address = stream.local_addr()?;
+        let peer_address = stream.peer_addr()?;
+        // let stream = Arc::new(stream);
+
+        let (reader, writer) = stream.into_split();
 
         Ok(Self {
             origin,
-            local_addr,
-            remote_addr,
-            stream,
-            timestamp: time::timestamp_millis(),
+            own_address,
+            peer_address,
+            reader,
+            writer,
+            // timestamp: time::timestamp_millis(),
         })
     }
 }
 
 impl fmt::Display for Connection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} <-> {}", self.local_addr, self.remote_addr)
+        write!(f, "{} <-> {}", self.own_address, self.peer_address)
     }
 }
 
 impl Eq for Connection {}
 impl PartialEq for Connection {
     fn eq(&self, other: &Self) -> bool {
-        self.remote_addr == other.remote_addr
+        self.peer_address == other.peer_address
     }
 }
