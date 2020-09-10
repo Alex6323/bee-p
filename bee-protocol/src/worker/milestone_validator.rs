@@ -102,7 +102,7 @@ where
         };
 
         if let Some(tail_hash) = tail_hash {
-            if let Some(meta) = tangle().get_metadata(&tail_hash) {
+            if let Some(mut meta) = tangle().get_metadata(&tail_hash) {
                 if meta.flags.is_milestone() {
                     return;
                 }
@@ -124,6 +124,8 @@ where
                         }
 
                         if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
+                            meta.flags.set_requested(true);
+
                             Protocol::trigger_milestone_solidification(milestone.index);
                         }
                     }
