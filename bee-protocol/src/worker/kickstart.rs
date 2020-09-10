@@ -16,6 +16,8 @@ use bee_common::worker::Error as WorkerError;
 use futures::{channel::oneshot, future::Fuse, select, FutureExt};
 use log::info;
 
+pub(crate) const MS_BATCH_SIZE: u32 = 5;
+
 pub(crate) struct KickstartWorker {
     shutdown: Fuse<oneshot::Receiver<()>>,
 }
@@ -38,8 +40,10 @@ impl KickstartWorker {
                     let next_ms = *tangle().get_latest_solid_milestone_index() + 1;
                     let latest_ms = *tangle().get_latest_milestone_index();
 
-                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms <= latest_ms {
-                        Protocol::request_milestone(MilestoneIndex(next_ms), None);
+                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms + MS_BATCH_SIZE < latest_ms {
+                        for index in next_ms..(next_ms + MS_BATCH_SIZE) {
+                            Protocol::request_milestone(MilestoneIndex(index), None);
+                        }
                         break;
                     }
                 },
