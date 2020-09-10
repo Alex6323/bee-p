@@ -31,6 +31,7 @@ impl KickstartWorker {
         info!("Running.");
 
         loop {
+            async_std::task::sleep(std::time::Duration::from_secs(1)).await;
             select! {
                 _ = &mut self.shutdown => break,
                 default => {
