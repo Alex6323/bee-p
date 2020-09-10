@@ -9,7 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+mod config;
+
 use crate::constants::IOTA_SUPPLY;
+
+pub use config::{GlobalSnapshotConfig, GlobalSnapshotConfigBuilder};
 
 use bee_ledger::state::LedgerState;
 use bee_ternary::{T1B1Buf, TryteBuf};

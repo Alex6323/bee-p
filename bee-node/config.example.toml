@@ -37,6 +37,9 @@ download_urls     = [
 depth             = 50
 interval_synced   = 50
 interval_unsynced = 1000
+[snapshot.global]
+path  = "./snapshots/mainnet/snapshot.txt"
+index = 1050000
 [snapshot.pruning]
 enabled = true
 delay   = 60480
