@@ -64,13 +64,6 @@ impl MilestoneSolidifierWorker {
                 );
 
                 self.next_ms_index = target_index + MilestoneIndex(1);
-
-                if let Some(first_mx_index) = self.premature_ms_index.first() {
-                    if *first_mx_index == self.next_ms_index {
-                        let target_index = self.premature_ms_index.remove(0);
-                        self.trigger_solidification(target_index);
-                    }
-                }
             }
         }
     }
@@ -78,11 +71,27 @@ impl MilestoneSolidifierWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(event) = self.receiver.next().await {
-            match event {
-                MilestoneSolidifierWorkerEvent::TriggerSolidification(index) => self.trigger_solidification(index),
-                MilestoneSolidifierWorkerEvent::SetNextMilestone(index) => {
-                    self.next_ms_index = index;
+        loop {
+            futures::select! {
+                event = self.receiver.next() => {
+                    if let Some(event) = event {
+                        match event {
+                            MilestoneSolidifierWorkerEvent::TriggerSolidification(index) => self.trigger_solidification(index),
+                            MilestoneSolidifierWorkerEvent::SetNextMilestone(index) => {
+                                self.next_ms_index = index;
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                default => {
+                    if let Some(first_mx_index) = self.premature_ms_index.first() {
+                        if *first_mx_index == self.next_ms_index {
+                            let target_index = self.premature_ms_index.remove(0);
+                            self.trigger_solidification(target_index);
+                        }
+                    }
                 }
             }
         }
