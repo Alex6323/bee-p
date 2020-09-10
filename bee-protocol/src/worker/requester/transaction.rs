@@ -108,11 +108,11 @@ impl<'a> TransactionRequesterWorker<'a> {
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                 if peer.maybe_has_data(index) {
+                    let hash = hash.as_trits().encode::<T5B1Buf>();
                     Sender::<TransactionRequest>::send(
                         epid,
-                        TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
-                    )
-                    .await;
+                        TransactionRequest::new(cast_slice(hash.as_i8_slice())),
+                    );
                     return true;
                 }
             }
@@ -128,6 +128,11 @@ impl<'a> TransactionRequesterWorker<'a> {
             let (hash, (index, instant)) = transaction.pair_mut();
             let now = Instant::now();
             if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && self.process_request_unchecked(*hash, *index).await {
+                debug!(
+                    "Retried request for transaction {} from milestone {}",
+                    hash.iter_trytes().map(char::from).collect::<String>(),
+                    **index
+                );
                 *instant = now;
                 retry_counts += 1;
             }
