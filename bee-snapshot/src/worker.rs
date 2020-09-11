@@ -21,6 +21,9 @@ use futures::{
 
 use log::info;
 
+const SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST: u32 = 50;
+const _SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE: u32 = 50;
+
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
 pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
@@ -35,27 +38,30 @@ impl SnapshotWorker {
         Self { config, receiver }
     }
 
-    fn should_snapshot(&self, _index: MilestoneIndex) -> bool {
-        // snapshotInfo := tangle.GetSnapshotInfo()
-
-        let _snapshot_interval = MilestoneIndex(if tangle().is_synced() {
+    fn should_snapshot(&self, index: MilestoneIndex) -> bool {
+        let solid_index = *index;
+        let snapshot_index = *tangle().get_snapshot_index();
+        let pruning_index = *tangle().get_pruning_index();
+        let snapshot_depth = self.config.local().depth() as u32;
+        let snapshot_interval = if tangle().is_synced() {
             self.config.local().interval_synced()
         } else {
             self.config.local().interval_unsynced()
-        } as u32);
+        } as u32;
 
-        // if (solidMilestoneIndex < snapshotDepth+snapshotInterval) || (solidMilestoneIndex-snapshotDepth) < snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast {
-        // 	// Not enough history to calculate solid entry points
-        // 	return false
-        // }
-        //
-        // return solidMilestoneIndex-(snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
+        if (solid_index < snapshot_depth + snapshot_interval)
+            || (solid_index - snapshot_depth) < pruning_index + 1 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST
+        {
+            // Not enough history to calculate solid entry points.
+            return false;
+        }
 
-        true
+        return solid_index - (snapshot_depth + snapshot_interval) >= snapshot_index;
     }
 
     fn process(&mut self, milestone: Milestone) {
         if self.should_snapshot(milestone.index()) {
+            println!("Should snapshot.");
             // if let Err(e) = createLocalSnapshot(
             //     MilestoneIndex(*milestone.index() - self.config.local().depth() as u32),
             //     self.config.local().path(),
