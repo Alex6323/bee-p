@@ -275,17 +275,6 @@ impl Protocol {
         );
 
         shutdown.add_worker_shutdown(
-            milestone_solidifier_worker_shutdown_tx,
-            spawn(
-                MilestoneSolidifierWorker::new(ShutdownStream::new(
-                    milestone_solidifier_worker_shutdown_rx,
-                    milestone_solidifier_worker_rx,
-                ))
-                .run(),
-            ),
-        );
-
-        shutdown.add_worker_shutdown(
             status_worker_shutdown_tx,
             spawn(StatusWorker::new(Protocol::get().config.workers.status_interval).run(status_worker_shutdown_rx)),
         );
@@ -295,9 +284,23 @@ impl Protocol {
             spawn(TpsWorker::new().run(tps_worker_shutdown_rx)),
         );
 
+        let (ms_send, ms_recv) = oneshot::channel();
+
         shutdown.add_worker_shutdown(
             kickstart_worker_shutdown_tx,
-            spawn(KickstartWorker::new(kickstart_worker_shutdown_rx).run()),
+            spawn(KickstartWorker::new(kickstart_worker_shutdown_rx, ms_send).run()),
+        );
+
+        shutdown.add_worker_shutdown(
+            milestone_solidifier_worker_shutdown_tx,
+            spawn(async {
+                MilestoneSolidifierWorker::new(
+                    ShutdownStream::new(milestone_solidifier_worker_shutdown_rx, milestone_solidifier_worker_rx),
+                    ms_recv,
+                )
+                .await
+                .run().await
+            }),
         );
     }
 

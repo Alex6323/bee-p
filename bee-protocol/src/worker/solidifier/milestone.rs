@@ -14,28 +14,29 @@ use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_tangle::traversal;
 
-use futures::{channel::mpsc, stream::Fuse, StreamExt};
+use futures::{
+    channel::{mpsc, oneshot},
+    stream::Fuse,
+    StreamExt,
+};
 use log::{debug, info};
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
-pub(crate) enum MilestoneSolidifierWorkerEvent {
-    TriggerSolidification(MilestoneIndex),
-    SetNextMilestone(MilestoneIndex),
-}
+pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
 pub(crate) struct MilestoneSolidifierWorker {
     receiver: Receiver,
-    premature_ms_index: Vec<MilestoneIndex>,
+    queue: Vec<MilestoneIndex>,
     next_ms_index: MilestoneIndex,
 }
 
 impl MilestoneSolidifierWorker {
-    pub(crate) fn new(receiver: Receiver) -> Self {
+    pub(crate) async fn new(receiver: Receiver, next_ms_index: oneshot::Receiver<MilestoneIndex>) -> Self {
         Self {
             receiver,
-            premature_ms_index: vec![],
-            next_ms_index: MilestoneIndex(0),
+            queue: vec![],
+            next_ms_index: next_ms_index.await.unwrap(),
         }
     }
 
@@ -63,34 +64,24 @@ impl MilestoneSolidifierWorker {
 
     fn save_index(&mut self, target_index: MilestoneIndex) {
         debug!("Storing milestone {}", *target_index);
-        if let Err(pos) = self
-            .premature_ms_index
-            .binary_search_by(|index| target_index.cmp(index))
-        {
-            self.premature_ms_index.insert(pos, target_index);
+        if let Err(pos) = self.queue.binary_search_by(|index| target_index.cmp(index)) {
+            self.queue.insert(pos, target_index);
         }
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(event) = self.receiver.next().await {
-            match event {
-                MilestoneSolidifierWorkerEvent::TriggerSolidification(index) => {
-                    self.save_index(index);
-                    while let Some(index) = self.premature_ms_index.pop() {
-                        if index == self.next_ms_index {
-                            debug!("Triggering solidification for milestone {}", *index);
-                            self.trigger_solidification_unchecked(index);
-                        } else {
-                            debug!("Milestone {} is too new", *index);
-                            self.premature_ms_index.push(index);
-                            break;
-                        }
-                    }
-                }
-                MilestoneSolidifierWorkerEvent::SetNextMilestone(index) => {
-                    self.next_ms_index = index;
+        while let Some(MilestoneSolidifierWorkerEvent(index)) = self.receiver.next().await {
+            self.save_index(index);
+            while let Some(index) = self.queue.pop() {
+                if index == self.next_ms_index {
+                    debug!("Triggering solidification for milestone {}", *index);
+                    self.trigger_solidification_unchecked(index);
+                } else {
+                    debug!("Milestone {} is too new", *index);
+                    self.queue.push(index);
+                    break;
                 }
             }
         }

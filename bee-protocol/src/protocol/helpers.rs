@@ -166,6 +166,6 @@ impl Protocol {
     pub fn trigger_milestone_solidification(target_index: MilestoneIndex) {
         Protocol::get()
             .milestone_solidifier_worker
-            .unbounded_send(MilestoneSolidifierWorkerEvent::TriggerSolidification(target_index));
+            .unbounded_send(MilestoneSolidifierWorkerEvent(target_index));
     }
 }
