@@ -11,7 +11,6 @@
 
 mod broadcaster;
 mod bundle_validator;
-mod kickstart;
 mod milestone_validator;
 mod peer;
 mod propagator;
@@ -24,7 +23,6 @@ mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
-pub(crate) use kickstart::{KickstartWorker, MS_BATCH_SIZE};
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};
@@ -36,7 +34,9 @@ pub(crate) use responder::{
     MilestoneResponderWorker, MilestoneResponderWorkerEvent, TransactionResponderWorker,
     TransactionResponderWorkerEvent,
 };
-pub(crate) use solidifier::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
+pub(crate) use solidifier::{
+    KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MS_BATCH_SIZE,
+};
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
