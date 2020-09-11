@@ -74,31 +74,23 @@ impl MilestoneSolidifierWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        loop {
-            futures::select! {
-                event = self.receiver.next() => {
-                    if let Some(event) = event {
-                        match event {
-                            MilestoneSolidifierWorkerEvent::TriggerSolidification(index) => {
-                                self.save_index(index);
-                                while let Some(index) = self.premature_ms_index.pop() {
-                                    if index == self.next_ms_index {
-                                        debug!("Triggering solidification for milestone {}", *index);
-                                        self.trigger_solidification_unchecked(index);
-                                    } else {
-                                        debug!("Milestone {} is too new", *index);
-                                        self.premature_ms_index.push(index);
-                                        break
-                                    }
-                                }
-                            },
-                            MilestoneSolidifierWorkerEvent::SetNextMilestone(index) => {
-                                self.next_ms_index = index;
-                            }
+        while let Some(event) = self.receiver.next().await {
+            match event {
+                MilestoneSolidifierWorkerEvent::TriggerSolidification(index) => {
+                    self.save_index(index);
+                    while let Some(index) = self.premature_ms_index.pop() {
+                        if index == self.next_ms_index {
+                            debug!("Triggering solidification for milestone {}", *index);
+                            self.trigger_solidification_unchecked(index);
+                        } else {
+                            debug!("Milestone {} is too new", *index);
+                            self.premature_ms_index.push(index);
+                            break;
                         }
-                    } else {
-                        break;
                     }
+                }
+                MilestoneSolidifierWorkerEvent::SetNextMilestone(index) => {
+                    self.next_ms_index = index;
                 }
             }
         }
