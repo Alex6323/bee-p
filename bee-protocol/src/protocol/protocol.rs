@@ -299,7 +299,8 @@ impl Protocol {
                     ms_recv,
                 )
                 .await
-                .run().await
+                .run()
+                .await
             }),
         );
     }
