@@ -83,17 +83,19 @@ pub fn visit_children_follow_trunk<Metadata, Match, Apply>(
 /// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
 /// condition. For each visited vertex customized logic can be applied depending on the availability of the
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
-pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply>(
+pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply>(
     tangle: &Tangle<Metadata>,
     root: Hash,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
+    mut missing_apply: MissingApply,
 ) where
     Metadata: Clone + Copy,
     Match: Fn(&Hash, &TxRef, &Metadata) -> bool,
     Apply: FnMut(&Hash, &TxRef, &Metadata),
-    ElseApply: FnMut(&Hash),
+    ElseApply: FnMut(&Hash, &TxRef, &Metadata),
+    MissingApply: FnMut(&Hash),
 {
     let mut parents = Vec::new();
     let mut visited = HashSet::new();
@@ -111,10 +113,12 @@ pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply>(
 
                         parents.push(*vtx.trunk());
                         parents.push(*vtx.branch());
+                    } else {
+                        else_apply(&hash, vtx.transaction(), vtx.metadata());
                     }
                 }
                 None => {
-                    else_apply(&hash);
+                    missing_apply(&hash);
                 }
             }
             visited.insert(hash);

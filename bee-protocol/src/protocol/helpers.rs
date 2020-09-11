@@ -127,6 +127,7 @@ impl Protocol {
                         !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
                     },
                     |_, _, _| {},
+                    |_, _, _| {},
                     |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
                 );
             }

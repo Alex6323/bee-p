@@ -120,6 +120,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                     confirmed_transaction_hashes.push(hash.clone())
                 }
             },
+            |_, _, _| {},
             |_hash| {},
         );
 
@@ -277,6 +278,7 @@ pub fn prune_database(
                 !(metadata.flags.is_confirmed() && *metadata.milestone_index() < milestone_index)
             },
             |hash, _tx, _metadata| transactions_to_prune.push(hash.clone()),
+            |_hash, _tx, _metadata| {},
             |_hash| {},
         );
         // TODO the metadata of solid entry points can be deleted from the database,

@@ -96,6 +96,7 @@ fn visit_parents_depth_first_in_simple_graph() {
         e_hash,
         |_, _, _| true,
         |_, data, _| addresses.push(data.address().clone()),
+        |_, _, _| {},
         |_| (),
     );
 
