@@ -16,7 +16,7 @@ use bee_common::worker::Error as WorkerError;
 use futures::{channel::oneshot, future::Fuse, select, FutureExt};
 use log::info;
 
-pub(crate) const MS_BATCH_SIZE: u32 = 5;
+pub(crate) const MS_BATCH_SIZE: u32 = 30;
 
 pub(crate) struct KickstartWorker {
     shutdown: Fuse<oneshot::Receiver<()>>,
