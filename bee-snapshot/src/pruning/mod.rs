@@ -19,6 +19,8 @@ use bee_crypto::ternary::Hash;
 use bee_protocol::{tangle::tangle, MilestoneIndex};
 use bee_tangle::traversal;
 
+use std::collections::HashSet;
+
 use dashmap::DashMap;
 
 use log::{error, info};
@@ -32,25 +34,83 @@ pub enum Error {
     MilestoneNotFoundInTangle,
     SolidEntryPointNotConfirmed,
     MetadataNotFound,
+    MilestoneTransactionIsNotTail,
 }
+
+// TODO
+pub fn is_solid_entry_point(hash: &Hash) -> bool {
+    unimplemented!()
+}
+
+// TODO we need the following in the traversal mod to enable us collect the tails
+//      or we enhance the visit_parents_depth_first function
+// pub fn visit_parents_depth_first_with_leaf_apply<Metadata, Match, Apply, LeafApply, ElseApply>(
+//     tangle: &Tangle<Metadata>,
+//     root: Hash,
+//     matches: Match,
+//     mut apply: Apply,
+//     mut leaf_apply: LeafApply,
+//     mut else_apply: ElseApply,
+// ) where
+//     Metadata: Clone + Copy,
+//     Match: Fn(&Hash, &TxRef, &Metadata) -> bool,
+//     Apply: FnMut(&Hash, &TxRef, &Metadata),
+//     LeafApply: FnMut(&Hash, &TxRef, &Metadata),
+//     ElseApply: FnMut(&Hash),
+// {
+//     let mut parents = Vec::new();
+//     let mut visited = HashSet::new();
+
+//     parents.push(root);
+
+//     while let Some(hash) = parents.pop() {
+//         if !visited.contains(&hash) {
+//             match tangle.vertices.get(&hash) {
+//                 Some(vtx) => {
+//                     let vtx = vtx.value();
+
+//                     if matches(&hash, vtx.transaction(), vtx.metadata()) {
+//                         apply(&hash, vtx.transaction(), vtx.metadata());
+
+//                         parents.push(*vtx.trunk());
+//                         parents.push(*vtx.branch());
+//                     } else {
+//                         leaf_apply(&hash, vtx.transaction(), vtx.metadata());
+//                     }
+//                 }
+//                 None => {
+//                     else_apply(&hash);
+//                 }
+//             }
+//             visited.insert(hash);
+//         }
+//     }
+// }
 
 // TODO testing
 pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMap<Hash, MilestoneIndex>, Error> {
     let mut solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
-    solid_entry_points.insert(Hash::zeros(), MilestoneIndex(0));
     for index in *target_index - *SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST..*target_index {
         let mut milestone_tail_hash = Hash::zeros();
         let mut confirmed_transaction_hashes: Vec<Hash> = Vec::new();
 
         // Get the milestone tail hash
-        // TODO testing
+        // NOTE this milestone hash must be tail hash
         match tangle().get_milestone_hash(MilestoneIndex(index)) {
             None => {
-                error!("Milestone {} is not found in Tangle.", index);
+                error!("Milestone index {} is not found in Tangle.", index);
                 return Err(Error::MilestoneNotFoundInTangle);
             }
-            Some(hash) => milestone_tail_hash = hash,
+            Some(hash) => {
+                if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
+                    error!("Milestone w/ hash {} is not tail.", hash);
+                    return Err(Error::MilestoneTransactionIsNotTail);
+                } else {
+                    milestone_tail_hash = hash;
+                }
+            }
         }
+        // Get all the approvees confirmed by the milestone tail
         traversal::visit_parents_depth_first(
             tangle(),
             milestone_tail_hash,
@@ -68,38 +128,24 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
         );
 
         for approvee in confirmed_transaction_hashes {
-            // checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
-            let mut approver_is_confirmed_by_newer_milestone = false;
-            traversal::visit_children_depth_first(
-                tangle(),
-                approvee,
-                |_tx, metadata| metadata.flags.is_confirmed(),
-                |_hash, _tx, metadata| {
-                    // TODO early abortion?
-                    if *metadata.milestone_index > index {
-                        approver_is_confirmed_by_newer_milestone = true;
-                    }
-                },
-                |_hash| {},
-            );
-
-            if approver_is_confirmed_by_newer_milestone {
+            // TODO is_solid_entry_point() checks whether any direct approver of the given
+            //      transaction was confirmed by a milestone which is above the target milestone.
+            if is_solid_entry_point(&approvee) {
                 // Find all tails
                 let mut tail_hashes: Vec<Hash> = Vec::new();
-                traversal::visit_parents_depth_first(
-                    tangle(),
-                    approvee,
-                    |_hash, _tx, metadata| !metadata.flags.is_tail(),
-                    |_hash, _tx, _metadata| {},
-                    |hash| tail_hashes.push(hash.clone()),
-                );
+
+                // Get all the tails
+                // traversal::visit_parents_depth_first_with_leaf_apply(
+                //     tangle(),
+                //     root,
+                //     |_hash, _tx, metadata| metadata.flags.is_tail(),
+                //     |_hash, _tx, _metadata| {},
+                //     |hash, _tx, _metadata| tail_hashes.push(hash.clone()),
+                //     |_hash| {},
+                // );
 
                 for tail_hash in tail_hashes {
                     match tangle().get_metadata(&tail_hash) {
-                        None => {
-                            error!("Metadada for hash {:?} is not found in Tangle.", tail_hash);
-                            return Err(Error::MetadataNotFound);
-                        }
                         Some(metadata) => {
                             if metadata.flags.is_confirmed() {
                                 solid_entry_points.insert(tail_hash.clone(), metadata.milestone_index);
@@ -107,6 +153,10 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                                 error!("Solid entry point for hash {:?} is not confirmed.", tail_hash);
                                 return Err(Error::SolidEntryPointNotConfirmed);
                             }
+                        }
+                        None => {
+                            error!("Metadada for hash {:?} is not found in Tangle.", tail_hash);
+                            return Err(Error::MetadataNotFound);
                         }
                     }
                 }
@@ -116,7 +166,18 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
     Ok(solid_entry_points)
 }
 
-// TODO do we rename it to be prune cache?
+pub fn get_unconfirmed_transactions(target_index: &MilestoneIndex) {
+    // NOTE w/o cache, need to traverse the whole tangle to get the unconfirmed transactions!
+    // TODO traverse the whole tangle through the approvers from solid entry points
+    unimplemented!()
+}
+
+// TODO remove the transactions in the database
+pub fn prune_unconfirmed_transactions(purning_milestone_index: &MilestoneIndex) {
+    unimplemented!()
+}
+
+// NOTE we don't prune cache, but only prune the database
 pub fn prune_database(
     pruning_config: &PruningConfig,
     _local_snapshot_config: &LocalSnapshotConfig,
@@ -143,10 +204,10 @@ pub fn prune_database(
         target_index = target_index_max;
     }
 
-    if tangle().get_latest_solid_milestone_index() >= target_index {
+    if tangle().get_pruning_index() >= target_index {
         error!(
             "No puruning needed with purning index: {:?} and target_index: {:?}",
-            tangle().get_latest_solid_milestone_index(),
+            tangle().get_pruning_index(),
             target_index
         );
         return Err(Error::NoPruningNeeded);
@@ -180,11 +241,12 @@ pub fn prune_database(
     // TODO iterate through all milestones that have to be pruned
     //      range: (milestone tangle().entry_point_index() + 1 ~ target_index)
 
-    // TODO record the pruned transaction count for logging ?
+    // TODO in record the pruned transaction count for logging ?
 
     // TODO prune the milestone by milestone_index
 
     // TODO update the tangle().pruning_index()
+    // tangle().set_pruning_milestone_index() = target_index
 
     Ok(())
 }
