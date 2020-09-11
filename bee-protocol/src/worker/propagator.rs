@@ -9,7 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{event::LatestSolidMilestoneChanged, milestone::Milestone, protocol::Protocol, tangle::tangle};
+use crate::{
+    event::{LatestSolidMilestoneChanged, TransactionSolidified},
+    milestone::Milestone,
+    protocol::Protocol,
+    tangle::tangle,
+};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
@@ -65,6 +70,8 @@ impl SolidPropagatorWorker {
                     for child in tangle().get_children(&hash) {
                         children.push(child);
                     }
+
+                    Protocol::get().bus.dispatch(TransactionSolidified(*hash));
                 }
 
                 if let Some(index) = index {
