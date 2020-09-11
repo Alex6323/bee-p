@@ -76,6 +76,8 @@ impl NodeBuilder {
 
                 tangle::tangle().update_snapshot_index(local_snapshot.metadata().index().into());
 
+                tangle::tangle().update_pruning_index(local_snapshot.metadata().index().into());
+
                 // TODO index 0 ?
                 tangle::tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
                 for (hash, index) in local_snapshot.metadata().solid_entry_points() {
