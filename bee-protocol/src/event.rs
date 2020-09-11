@@ -15,9 +15,9 @@ use bee_network::Address;
 
 pub struct HandshakeCompleted(pub Address);
 
-pub struct LastMilestoneChanged(pub Milestone);
+pub struct LatestMilestoneChanged(pub Milestone);
 
-pub struct LastSolidMilestoneChanged(pub Milestone);
+pub struct LatestSolidMilestoneChanged(pub Milestone);
 
 pub struct TpsMetricsUpdated {
     pub incoming: u64,

@@ -69,10 +69,10 @@ impl NodeBuilder {
 
         let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().path()) {
             Ok(local_snapshot) => {
-                tangle::tangle().update_last_solid_milestone_index(local_snapshot.metadata().index().into());
+                tangle::tangle().update_latest_solid_milestone_index(local_snapshot.metadata().index().into());
 
                 // TODO get from database
-                tangle::tangle().update_last_milestone_index(local_snapshot.metadata().index().into());
+                tangle::tangle().update_latest_milestone_index(local_snapshot.metadata().index().into());
 
                 tangle::tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
 

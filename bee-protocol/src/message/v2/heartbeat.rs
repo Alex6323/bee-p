@@ -17,14 +17,14 @@ use crate::message::Message;
 
 use std::{convert::TryInto, ops::Range};
 
-const LAST_SOLID_MILESTONE_INDEX_SIZE: usize = 4;
+const LATEST_SOLID_MILESTONE_INDEX_SIZE: usize = 4;
 const SNAPSHOT_MILESTONE_INDEX_SIZE: usize = 4;
-const LAST_MILESTONE_INDEX_SIZE: usize = 4;
+const LATEST_MILESTONE_INDEX_SIZE: usize = 4;
 const CONNECTED_PEERS_SIZE: usize = 1;
 const SYNCED_PEERS_SIZE: usize = 1;
-const CONSTANT_SIZE: usize = LAST_SOLID_MILESTONE_INDEX_SIZE
+const CONSTANT_SIZE: usize = LATEST_SOLID_MILESTONE_INDEX_SIZE
     + SNAPSHOT_MILESTONE_INDEX_SIZE
-    + LAST_MILESTONE_INDEX_SIZE
+    + LATEST_MILESTONE_INDEX_SIZE
     + CONNECTED_PEERS_SIZE
     + SYNCED_PEERS_SIZE;
 
@@ -36,12 +36,12 @@ const CONSTANT_SIZE: usize = LAST_SOLID_MILESTONE_INDEX_SIZE
 /// It also helps other nodes to know if they can ask it a specific transaction.
 #[derive(Default)]
 pub(crate) struct Heartbeat {
-    /// Index of the last solid milestone.
-    pub(crate) last_solid_milestone_index: u32,
+    /// Index of the latest solid milestone.
+    pub(crate) latest_solid_milestone_index: u32,
     /// Index of the snapshotted milestone.
     pub(crate) snapshot_milestone_index: u32,
-    /// Index of the last milestone.
-    pub(crate) last_milestone_index: u32,
+    /// Index of the latest milestone.
+    pub(crate) latest_milestone_index: u32,
     /// Number of connected peers.
     pub(crate) connected_peers: u8,
     /// Number of synced peers.
@@ -50,16 +50,16 @@ pub(crate) struct Heartbeat {
 
 impl Heartbeat {
     pub(crate) fn new(
-        last_solid_milestone_index: u32,
+        latest_solid_milestone_index: u32,
         snapshot_milestone_index: u32,
-        last_milestone_index: u32,
+        latest_milestone_index: u32,
         connected_peers: u8,
         synced_peers: u8,
     ) -> Self {
         Self {
-            last_solid_milestone_index,
+            latest_solid_milestone_index,
             snapshot_milestone_index,
-            last_milestone_index,
+            latest_milestone_index,
             connected_peers,
             synced_peers,
         }
@@ -76,14 +76,14 @@ impl Message for Heartbeat {
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
 
-        let (bytes, next) = bytes.split_at(LAST_SOLID_MILESTONE_INDEX_SIZE);
-        message.last_solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        let (bytes, next) = bytes.split_at(LATEST_SOLID_MILESTONE_INDEX_SIZE);
+        message.latest_solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(SNAPSHOT_MILESTONE_INDEX_SIZE);
         message.snapshot_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
-        let (bytes, next) = next.split_at(LAST_MILESTONE_INDEX_SIZE);
-        message.last_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        let (bytes, next) = next.split_at(LATEST_MILESTONE_INDEX_SIZE);
+        message.latest_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(CONNECTED_PEERS_SIZE);
         message.connected_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
@@ -99,12 +99,12 @@ impl Message for Heartbeat {
     }
 
     fn into_bytes(self, bytes: &mut [u8]) {
-        let (bytes, next) = bytes.split_at_mut(LAST_SOLID_MILESTONE_INDEX_SIZE);
-        bytes.copy_from_slice(&self.last_solid_milestone_index.to_be_bytes());
+        let (bytes, next) = bytes.split_at_mut(LATEST_SOLID_MILESTONE_INDEX_SIZE);
+        bytes.copy_from_slice(&self.latest_solid_milestone_index.to_be_bytes());
         let (bytes, next) = next.split_at_mut(SNAPSHOT_MILESTONE_INDEX_SIZE);
         bytes.copy_from_slice(&self.snapshot_milestone_index.to_be_bytes());
-        let (bytes, next) = next.split_at_mut(LAST_MILESTONE_INDEX_SIZE);
-        bytes.copy_from_slice(&self.last_milestone_index.to_be_bytes());
+        let (bytes, next) = next.split_at_mut(LATEST_MILESTONE_INDEX_SIZE);
+        bytes.copy_from_slice(&self.latest_milestone_index.to_be_bytes());
         let (bytes, next) = next.split_at_mut(CONNECTED_PEERS_SIZE);
         bytes.copy_from_slice(&self.connected_peers.to_be_bytes());
         let (bytes, _) = next.split_at_mut(SYNCED_PEERS_SIZE);
@@ -117,9 +117,9 @@ mod tests {
 
     use super::*;
 
-    const LAST_SOLID_MILESTONE_INDEX: u32 = 0x0118_1f9b;
+    const LATEST_SOLID_MILESTONE_INDEX: u32 = 0x0118_1f9b;
     const SNAPSHOT_MILESTONE_INDEX: u32 = 0x3dc2_97b4;
-    const LAST_MILESTONE_INDEX: u32 = 0x60be_20c2;
+    const LATEST_MILESTONE_INDEX: u32 = 0x60be_20c2;
     const CONNECTED_PEERS: u8 = 12;
     const SYNCED_PEERS: u8 = 5;
 
@@ -139,8 +139,8 @@ mod tests {
     fn size() {
         let message = Heartbeat::new(
             SNAPSHOT_MILESTONE_INDEX,
-            LAST_SOLID_MILESTONE_INDEX,
-            LAST_MILESTONE_INDEX,
+            LATEST_SOLID_MILESTONE_INDEX,
+            LATEST_MILESTONE_INDEX,
             CONNECTED_PEERS,
             SYNCED_PEERS,
         );
@@ -152,8 +152,8 @@ mod tests {
     fn into_from() {
         let message_from = Heartbeat::new(
             SNAPSHOT_MILESTONE_INDEX,
-            LAST_SOLID_MILESTONE_INDEX,
-            LAST_MILESTONE_INDEX,
+            LATEST_SOLID_MILESTONE_INDEX,
+            LATEST_MILESTONE_INDEX,
             CONNECTED_PEERS,
             SYNCED_PEERS,
         );
@@ -161,9 +161,9 @@ mod tests {
         message_from.into_bytes(&mut bytes);
         let message_to = Heartbeat::from_bytes(&bytes);
 
-        assert_eq!(message_to.last_solid_milestone_index, SNAPSHOT_MILESTONE_INDEX);
-        assert_eq!(message_to.snapshot_milestone_index, LAST_SOLID_MILESTONE_INDEX);
-        assert_eq!(message_to.last_milestone_index, LAST_MILESTONE_INDEX);
+        assert_eq!(message_to.latest_solid_milestone_index, SNAPSHOT_MILESTONE_INDEX);
+        assert_eq!(message_to.snapshot_milestone_index, LATEST_SOLID_MILESTONE_INDEX);
+        assert_eq!(message_to.latest_milestone_index, LATEST_MILESTONE_INDEX);
         assert_eq!(message_to.connected_peers, CONNECTED_PEERS);
         assert_eq!(message_to.synced_peers, SYNCED_PEERS);
     }

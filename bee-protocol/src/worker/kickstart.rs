@@ -35,10 +35,10 @@ impl KickstartWorker {
             select! {
                 _ = &mut self.shutdown => break,
                 default => {
-                    let next_ms = *tangle().get_last_solid_milestone_index() + 1;
-                    let last_ms = *tangle().get_last_milestone_index();
+                    let next_ms = *tangle().get_latest_solid_milestone_index() + 1;
+                    let latest_ms = *tangle().get_latest_milestone_index();
 
-                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms <= last_ms {
+                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms <= latest_ms {
                         Protocol::request_milestone(MilestoneIndex(next_ms), None);
                         break;
                     }

@@ -22,7 +22,7 @@ pub use worker::LedgerWorkerEvent;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
-use bee_protocol::{config::ProtocolCoordinatorConfig, event::LastSolidMilestoneChanged, MilestoneIndex};
+use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
@@ -62,11 +62,11 @@ pub fn init(
 
     let ledger_worker_tx_ret = ledger_worker_tx.clone();
 
-    bus.add_listener(move |last_solid_milestone: &LastSolidMilestoneChanged| {
-        if let Err(e) = ledger_worker_tx.unbounded_send(LedgerWorkerEvent::Confirm(last_solid_milestone.0.clone())) {
+    bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
+        if let Err(e) = ledger_worker_tx.unbounded_send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
             warn!(
                 "Sending solid milestone {:?} to confirmation failed: {:?}.",
-                last_solid_milestone.0.index(),
+                latest_solid_milestone.0.index(),
                 e
             );
         }

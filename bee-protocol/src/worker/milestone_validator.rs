@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    event::{LastMilestoneChanged, LastSolidMilestoneChanged},
+    event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, tangle},
@@ -116,11 +116,11 @@ where
                         if meta.flags.is_solid() {
                             Protocol::get()
                                 .bus
-                                .dispatch(LastSolidMilestoneChanged(milestone.clone()));
+                                .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
                         }
 
-                        if milestone.index > tangle().get_last_milestone_index() {
-                            Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
+                        if milestone.index > tangle().get_latest_milestone_index() {
+                            Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                         }
 
                         if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {

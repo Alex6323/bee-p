@@ -217,12 +217,12 @@ impl PeerHandshakerWorker {
 
                         Protocol::send_heartbeat(
                             self.peer.epid,
-                            tangle().get_last_solid_milestone_index(),
+                            tangle().get_latest_solid_milestone_index(),
                             tangle().get_snapshot_milestone_index(),
-                            tangle().get_last_milestone_index(),
+                            tangle().get_latest_milestone_index(),
                         );
 
-                        Protocol::request_last_milestone(Some(self.peer.epid));
+                        Protocol::request_latest_milestone(Some(self.peer.epid));
 
                         self.status = HandshakeStatus::Done;
                     }

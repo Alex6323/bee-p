@@ -11,7 +11,7 @@
 
 use crate::{
     config::ProtocolConfig,
-    event::{LastMilestoneChanged, LastSolidMilestoneChanged},
+    event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
@@ -134,9 +134,9 @@ impl Protocol {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
-        Protocol::get().bus.add_listener(on_last_solid_milestone_changed);
+        Protocol::get().bus.add_listener(on_latest_solid_milestone_changed);
         // Protocol::get().bus.add_listener(on_snapshot_milestone_changed);
-        Protocol::get().bus.add_listener(on_last_milestone_changed);
+        Protocol::get().bus.add_listener(on_latest_milestone_changed);
 
         shutdown.add_worker_shutdown(
             hasher_worker_shutdown_tx,
@@ -315,41 +315,41 @@ impl Protocol {
     }
 }
 
-fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
+fn on_latest_milestone_changed(latest_milestone: &LatestMilestoneChanged) {
     info!(
         "New milestone {} {}.",
-        *last_milestone.0.index,
-        last_milestone
+        *latest_milestone.0.index,
+        latest_milestone
             .0
             .hash()
             .iter_trytes()
             .map(char::from)
             .collect::<String>()
     );
-    tangle().update_last_milestone_index(last_milestone.0.index);
+    tangle().update_latest_milestone_index(latest_milestone.0.index);
 
     Protocol::broadcast_heartbeat(
-        tangle().get_last_solid_milestone_index(),
+        tangle().get_latest_solid_milestone_index(),
         tangle().get_snapshot_milestone_index(),
-        last_milestone.0.index,
+        latest_milestone.0.index,
     );
 }
 
 // TODO Chrysalis
-// fn on_snapshot_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
+// fn on_snapshot_milestone_changed(latest_solid_milestone: &LatestSolidMilestoneChanged) {
 //     // TODO block_on ?
 //     // TODO uncomment on Chrysalis Pt1.
 //     // block_on(Protocol::broadcast_heartbeat(
-//     //     tangle().get_last_solid_milestone_index(),
+//     //     tangle().get_latest_solid_milestone_index(),
 //     //     tangle().get_snapshot_milestone_index(),
 //     // ));
 // }
 
-fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
-    debug!("New solid milestone {}.", *last_solid_milestone.0.index);
-    tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
+fn on_latest_solid_milestone_changed(latest_solid_milestone: &LatestSolidMilestoneChanged) {
+    debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
+    tangle().update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
-    let next_ms = last_solid_milestone.0.index + MilestoneIndex(1);
+    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(1);
 
     if !tangle().is_synced() {
         if tangle().contains_milestone(next_ms) {
@@ -360,8 +360,8 @@ fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChan
     }
 
     Protocol::broadcast_heartbeat(
-        last_solid_milestone.0.index,
+        latest_solid_milestone.0.index,
         tangle().get_snapshot_milestone_index(),
-        tangle().get_last_milestone_index(),
+        tangle().get_latest_milestone_index(),
     );
 }

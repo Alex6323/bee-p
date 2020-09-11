@@ -143,20 +143,20 @@ pub fn prune_database(
         target_index = target_index_max;
     }
 
-    if tangle().get_last_solid_milestone_index() >= target_index {
+    if tangle().get_latest_solid_milestone_index() >= target_index {
         error!(
             "No puruning needed with purning index: {:?} and target_index: {:?}",
-            tangle().get_last_solid_milestone_index(),
+            tangle().get_latest_solid_milestone_index(),
             target_index
         );
         return Err(Error::NoPruningNeeded);
     }
 
-    if tangle().get_last_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + MilestoneIndex(1) > target_index {
+    if tangle().get_latest_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + MilestoneIndex(1) > target_index {
         // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points
         error!(
             "Not enough history! minimum index: {:?} should be <= target_index: {:?}",
-            tangle().get_last_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + MilestoneIndex(1),
+            tangle().get_latest_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + MilestoneIndex(1),
             target_index
         );
         return Err(Error::NotEnoughHistory);
@@ -173,7 +173,7 @@ pub fn prune_database(
         tangle().add_solid_entry_point(hash, milestone_index);
     }
 
-    tangle().update_last_solid_milestone_index(target_index);
+    tangle().update_latest_solid_milestone_index(target_index);
 
     // TODO prune unconfirmed transaction with milestone tangle().entry_point_index() in database
 

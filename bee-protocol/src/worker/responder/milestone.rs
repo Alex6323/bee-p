@@ -46,7 +46,7 @@ impl MilestoneResponderWorker {
 
     fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
         let index = match request.index {
-            0 => tangle().get_last_milestone_index(),
+            0 => tangle().get_latest_milestone_index(),
             _ => request.index.into(),
         };
 

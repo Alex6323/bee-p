@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{event::LastSolidMilestoneChanged, milestone::Milestone, protocol::Protocol, tangle::tangle};
+use crate::{event::LatestSolidMilestoneChanged, milestone::Milestone, protocol::Protocol, tangle::tangle};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
@@ -70,7 +70,7 @@ impl SolidPropagatorWorker {
                 if let Some(index) = index {
                     Protocol::get()
                         .bus
-                        .dispatch(LastSolidMilestoneChanged(Milestone { hash: *hash, index }));
+                        .dispatch(LatestSolidMilestoneChanged(Milestone { hash: *hash, index }));
                 }
             }
         }
