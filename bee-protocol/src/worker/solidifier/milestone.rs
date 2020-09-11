@@ -39,15 +39,7 @@ impl MilestoneSolidifierWorker {
         }
     }
 
-    fn trigger_solidification(&mut self, target_index: MilestoneIndex) {
-        if target_index != self.next_ms_index {
-            debug!("Skipping milestone {}", *target_index);
-            if let Err(pos) = self.premature_ms_index.binary_search(&target_index) {
-                self.premature_ms_index.insert(pos, target_index);
-            }
-            return;
-        }
-
+    fn trigger_solidification_unchecked(&mut self, target_index: MilestoneIndex) {
         if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
             if !tangle().is_solid_transaction(&target_hash) {
                 debug!("Triggered solidification for milestone {}", *target_index);
@@ -69,6 +61,16 @@ impl MilestoneSolidifierWorker {
         }
     }
 
+    fn save_index(&mut self, target_index: MilestoneIndex) {
+        debug!("Storing milestone {}", *target_index);
+        if let Err(pos) = self
+            .premature_ms_index
+            .binary_search_by(|index| target_index.cmp(index))
+        {
+            self.premature_ms_index.insert(pos, target_index);
+        }
+    }
+
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
@@ -77,21 +79,25 @@ impl MilestoneSolidifierWorker {
                 event = self.receiver.next() => {
                     if let Some(event) = event {
                         match event {
-                            MilestoneSolidifierWorkerEvent::TriggerSolidification(index) => self.trigger_solidification(index),
+                            MilestoneSolidifierWorkerEvent::TriggerSolidification(index) => {
+                                self.save_index(index);
+                                while let Some(index) = self.premature_ms_index.pop() {
+                                    if index == self.next_ms_index {
+                                        debug!("Triggering solidification for milestone {}", *index);
+                                        self.trigger_solidification_unchecked(index);
+                                    } else {
+                                        debug!("Milestone {} is too new", *index);
+                                        self.premature_ms_index.push(index);
+                                        break
+                                    }
+                                }
+                            },
                             MilestoneSolidifierWorkerEvent::SetNextMilestone(index) => {
                                 self.next_ms_index = index;
                             }
                         }
                     } else {
                         break;
-                    }
-                }
-                default => {
-                    if let Some(first_mx_index) = self.premature_ms_index.first() {
-                        if *first_mx_index == self.next_ms_index {
-                            let target_index = self.premature_ms_index.remove(0);
-                            self.trigger_solidification(target_index);
-                        }
                     }
                 }
             }
