@@ -76,10 +76,8 @@ impl MilestoneSolidifierWorker {
             self.save_index(index);
             while let Some(index) = self.queue.pop() {
                 if index == self.next_ms_index {
-                    debug!("Triggering solidification for milestone {}", *index);
                     self.trigger_solidification_unchecked(index);
                 } else {
-                    debug!("Milestone {} is too new", *index);
                     self.queue.push(index);
                     break;
                 }
