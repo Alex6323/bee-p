@@ -40,6 +40,7 @@ pub struct MsTangle {
     latest_milestone_index: AtomicU32,
     latest_solid_milestone_index: AtomicU32,
     snapshot_index: AtomicU32,
+    pruning_index: AtomicU32,
 }
 
 impl Deref for MsTangle {
@@ -129,6 +130,14 @@ impl MsTangle {
 
     pub fn update_snapshot_index(&self, new_index: MilestoneIndex) {
         self.snapshot_index.store(*new_index, Ordering::Relaxed);
+    }
+
+    pub fn get_pruning_index(&self) -> MilestoneIndex {
+        self.pruning_index.load(Ordering::Relaxed).into()
+    }
+
+    pub fn update_pruning_index(&self, new_index: MilestoneIndex) {
+        self.pruning_index.store(*new_index, Ordering::Relaxed);
     }
 
     // TODO reduce to one atomic value ?
