@@ -330,7 +330,7 @@ fn on_latest_milestone_changed(latest_milestone: &LatestMilestoneChanged) {
 
     Protocol::broadcast_heartbeat(
         tangle().get_latest_solid_milestone_index(),
-        tangle().get_snapshot_milestone_index(),
+        tangle().get_snapshot_index(),
         latest_milestone.0.index,
     );
 }
@@ -341,7 +341,7 @@ fn on_latest_milestone_changed(latest_milestone: &LatestMilestoneChanged) {
 //     // TODO uncomment on Chrysalis Pt1.
 //     // block_on(Protocol::broadcast_heartbeat(
 //     //     tangle().get_latest_solid_milestone_index(),
-//     //     tangle().get_snapshot_milestone_index(),
+//     //     tangle().get_snapshot_index(),
 //     // ));
 // }
 
@@ -361,7 +361,7 @@ fn on_latest_solid_milestone_changed(latest_solid_milestone: &LatestSolidMilesto
 
     Protocol::broadcast_heartbeat(
         latest_solid_milestone.0.index,
-        tangle().get_snapshot_milestone_index(),
+        tangle().get_snapshot_index(),
         tangle().get_latest_milestone_index(),
     );
 }

@@ -74,7 +74,7 @@ impl NodeBuilder {
                 // TODO get from database
                 tangle::tangle().update_latest_milestone_index(local_snapshot.metadata().index().into());
 
-                tangle::tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
+                tangle::tangle().update_snapshot_index(local_snapshot.metadata().index().into());
 
                 // TODO index 0 ?
                 tangle::tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));

@@ -39,7 +39,7 @@ pub struct MsTangle {
     pub(crate) solid_entry_points: DashMap<Hash, MilestoneIndex>,
     latest_milestone_index: AtomicU32,
     latest_solid_milestone_index: AtomicU32,
-    snapshot_milestone_index: AtomicU32,
+    snapshot_index: AtomicU32,
 }
 
 impl Deref for MsTangle {
@@ -123,12 +123,12 @@ impl MsTangle {
         self.latest_solid_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
-        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+    pub fn get_snapshot_index(&self) -> MilestoneIndex {
+        self.snapshot_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_snapshot_milestone_index(&self, new_index: MilestoneIndex) {
-        self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
+    pub fn update_snapshot_index(&self, new_index: MilestoneIndex) {
+        self.snapshot_index.store(*new_index, Ordering::Relaxed);
     }
 
     // TODO reduce to one atomic value ?
@@ -386,7 +386,7 @@ mod tests {
 //     solidifier_send: Sender<Option<Hash>>,
 
 //     solid_milestone_index: AtomicU32,
-//     snapshot_milestone_index: AtomicU32,
+//     snapshot_index: AtomicU32,
 //     latest_milestone_index: AtomicU32,
 
 //     drop_barrier: Arc<Barrier>,
@@ -402,7 +402,7 @@ mod tests {
 //             solid_entry_points: DashSet::new(),
 //             milestones: DashMap::new(),
 //             solid_milestone_index: AtomicU32::new(0),
-//             snapshot_milestone_index: AtomicU32::new(0),
+//             snapshot_index: AtomicU32::new(0),
 //             latest_milestone_index: AtomicU32::new(0),
 //             drop_barrier,
 //         }
@@ -536,13 +536,13 @@ mod tests {
 //     }
 
 //     /// Retreives the snapshot milestone index.
-//     pub fn get_snapshot_milestone_index(&'static self) -> MilestoneIndex {
-//         self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+//     pub fn get_snapshot_index(&'static self) -> MilestoneIndex {
+//         self.snapshot_index.load(Ordering::Relaxed).into()
 //     }
 
 //     /// Updates the snapshot milestone index to `new_index`.
-//     pub fn update_snapshot_milestone_index(&'static self, new_index: MilestoneIndex) {
-//         self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
+//     pub fn update_snapshot_index(&'static self, new_index: MilestoneIndex) {
+//         self.snapshot_index.store(*new_index, Ordering::Relaxed);
 //     }
 
 //     /// Retreives the latest milestone index.
@@ -754,13 +754,13 @@ mod tests {
 
 //     #[test]
 //     #[serial]
-//     fn update_and_get_snapshot_milestone_index() {
+//     fn update_and_get_snapshot_index() {
 //         init();
 //         let tangle = tangle();
 
-//         tangle.update_snapshot_milestone_index(1368160.into());
+//         tangle.update_snapshot_index(1368160.into());
 
-//         assert_eq!(1368160, *tangle.get_snapshot_milestone_index());
+//         assert_eq!(1368160, *tangle.get_snapshot_index());
 //         drop();
 //     }
 
