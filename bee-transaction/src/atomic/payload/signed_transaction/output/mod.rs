@@ -11,7 +11,7 @@
 
 mod sig_locked_single_deposit;
 
-pub use sig_locked_single_deposit::{Address, SigLockedSingleDeposit};
+pub use sig_locked_single_deposit::{Address, Ed25519Address, SigLockedSingleDeposit, WotsAddress};
 
 use serde::{ser::SerializeStruct, Serialize, Serializer};
 
