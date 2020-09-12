@@ -161,7 +161,7 @@ impl WurtsTipPool {
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
-        let lsmi = *tangle().get_last_solid_milestone_index();
+        let lsmi = *tangle().get_latest_solid_milestone_index();
         let otrsi = *tangle().otrsi(&hash).unwrap();
         let ytrsi = *tangle().ytrsi(&hash).unwrap();
 

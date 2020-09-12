@@ -11,6 +11,7 @@
 
 pub mod flags;
 pub mod helper;
+mod wurts;
 
 mod metadata;
 
@@ -23,13 +24,18 @@ use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
-use log::error;
+use log::{info, error};
 
 use std::{
     ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
+use crate::worker::TransactionRootSnapshotIndexPropagatorWorkerEvent;
+use std::collections::HashSet;
+use std::sync::{Arc, RwLock};
+use crate::tangle::wurts::WurtsTipPool;
+use bee_transaction::Vertex;
 
 /// Milestone-based Tangle.
 #[derive(Default)]
@@ -41,6 +47,8 @@ pub struct MsTangle {
     latest_solid_milestone_index: AtomicU32,
     snapshot_index: AtomicU32,
     pruning_index: AtomicU32,
+    tip_pool: Arc<RwLock<WurtsTipPool>>,
+    last_solid_milestone_index_processed: AtomicU32,
 }
 
 impl Deref for MsTangle {
@@ -60,6 +68,22 @@ impl MsTangle {
         let opt = self.inner.insert(hash, transaction, metadata);
 
         if opt.is_some() {
+            let last_solid_milestone_index_processed =
+                self.last_solid_milestone_index_processed.load(Ordering::Relaxed);
+            let last_solid_milestone_index = self.latest_solid_milestone_index.load(Ordering::Relaxed);
+            for index in (last_solid_milestone_index_processed + 1)..(last_solid_milestone_index + 1) {
+                self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
+                self.last_solid_milestone_index_processed
+                    .store(index, Ordering::Relaxed);
+                let mut tip_selector = self.tip_pool.write().unwrap();
+                tip_selector.update_scores();
+            }
+            if let Err(e) = Protocol::get()
+                .otrsi_and_ytrsi_propagator_worker
+                .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(hash))
+            {
+                error!("Failed to send hash to OTRSI and YTRSI  propagator: {:?}.", e);
+            }
             if let Err(e) = Protocol::get()
                 .solid_propagator_worker
                 .unbounded_send(SolidPropagatorWorkerEvent(hash))
@@ -67,8 +91,61 @@ impl MsTangle {
                 error!("Failed to send hash to solid propagator: {:?}.", e);
             }
         }
-
         opt
+    }
+
+    // when a milestone arrives and is solid, otrsi and ytrsi of all transactions referenced by this milestone must be
+    // updated otrsi or ytrsi of transactions that are referenced by a previous milestone won't get updated
+    // set otrsi and ytrsi values of relevant transactions to:
+    // otrsi=milestone_index
+    // ytrsi=milestone_index
+    // updated otrsi and ytrsi values need to be propagated to attached children (not referenced by the milestone)
+    fn update_transactions_referenced_by_milestone(&self, milestone_index: MilestoneIndex) {
+        if let Some(root) = self.get_milestone_hash(milestone_index) {
+            info!("Updating transactions referenced by milestone {}.", *milestone_index);
+            let mut visited = HashSet::new();
+            let mut to_visit = vec![root];
+            while let Some(hash) = to_visit.pop() {
+                if visited.contains(&hash) {
+                    continue;
+                } else {
+                    visited.insert(hash.clone());
+                }
+
+                if self.is_solid_entry_point(&hash) {
+                    continue;
+                }
+
+                if self.get_metadata(&hash).unwrap().cone_index.is_some() {
+                    continue;
+                }
+
+                tangle().update_metadata(&hash, |metadata| {
+                    metadata.cone_index = Some(milestone_index);
+                    metadata.otrsi = Some(milestone_index);
+                    metadata.ytrsi = Some(milestone_index);
+                });
+
+                // propagate the new otrsi and ytrsi values to the children of this transaction
+                for child in self.get_children(&hash) {
+                    if let Err(e) = Protocol::get()
+                        .otrsi_and_ytrsi_propagator_worker
+                        .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(child))
+                    {
+                        error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
+                    }
+                }
+
+                let tx_ref = self.get(&hash).unwrap();
+                to_visit.push(tx_ref.trunk().clone());
+                to_visit.push(tx_ref.branch().clone());
+            }
+        }
+    }
+
+    pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
+        let tip_selector = self.tip_pool.read().unwrap();
+        tip_selector.get_non_lazy_tips()
     }
 
     pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {
@@ -122,6 +199,10 @@ impl MsTangle {
 
     pub fn update_latest_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.latest_solid_milestone_index.store(*new_index, Ordering::Relaxed);
+        if self.last_solid_milestone_index_processed.load(Ordering::Relaxed) == 0 {
+            self.last_solid_milestone_index_processed
+                .store(*new_index, Ordering::Relaxed);
+        }
     }
 
     pub fn get_snapshot_index(&self) -> MilestoneIndex {
@@ -170,6 +251,29 @@ impl MsTangle {
                 .unwrap_or(false)
         }
     }
+
+    pub fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
+        if self.is_solid_entry_point(hash) {
+            Some(*self.solid_entry_points.get(hash).unwrap().value())
+        } else {
+            match self.get_metadata(hash) {
+                Some(metadata) => metadata.ytrsi,
+                None => None,
+            }
+        }
+    }
+
+    pub fn otrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
+        if self.is_solid_entry_point(hash) {
+            Some(*self.solid_entry_points.get(hash).unwrap().value())
+        } else {
+            match self.get_metadata(hash) {
+                Some(metadata) => metadata.otrsi,
+                None => None,
+            }
+        }
+    }
+
 }
 
 static TANGLE: AtomicPtr<MsTangle> = AtomicPtr::new(ptr::null_mut());

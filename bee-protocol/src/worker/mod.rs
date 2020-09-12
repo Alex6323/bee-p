@@ -27,7 +27,7 @@ pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEv
 pub(crate) use kickstart::KickstartWorker;
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
-pub(crate) use propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};
+pub(crate) use propagator::{TransactionRootSnapshotIndexPropagatorWorker, TransactionRootSnapshotIndexPropagatorWorkerEvent, SolidPropagatorWorker, SolidPropagatorWorkerEvent};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, TransactionRequesterWorker,
     TransactionRequesterWorkerEntry,
