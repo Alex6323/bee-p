@@ -65,19 +65,18 @@ impl MsTangle {
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         let opt = self.inner.insert(hash, transaction, metadata);
-
         if opt.is_some() {
-            if let Err(e) = Protocol::get()
-                .transaction_root_snapshot_index_propagator_worker
-                .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(hash))
-            {
-                error!("Failed to send hash to OTRSI and YTRSI  propagator: {:?}.", e);
-            }
             if let Err(e) = Protocol::get()
                 .solid_propagator_worker
                 .unbounded_send(SolidPropagatorWorkerEvent(hash))
             {
                 error!("Failed to send hash to solid propagator: {:?}.", e);
+            }
+            if let Err(e) = Protocol::get()
+                .transaction_root_snapshot_index_propagator_worker
+                .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(hash))
+            {
+                error!("Failed to send hash to TransactionRootSnapshotIndex propagator: {:?}.", e);
             }
         }
         opt
@@ -121,7 +120,7 @@ impl MsTangle {
                         .transaction_root_snapshot_index_propagator_worker
                         .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(child))
                     {
-                        error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
+                        error!("Failed to send hash to TransactionRootSnapshotIndex propagator: {:?}.", e);
                     }
                 }
 

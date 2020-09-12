@@ -14,20 +14,21 @@ mod bundle_validator;
 mod kickstart;
 mod milestone_validator;
 mod peer;
-mod propagator;
+mod solid_propagator;
 mod requester;
 mod responder;
 mod sender;
 mod status;
 mod tps;
 mod transaction;
+mod transaction_root_snapshot_index_propagator;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
 pub(crate) use kickstart::KickstartWorker;
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
-pub(crate) use propagator::{TransactionRootSnapshotIndexPropagatorWorker, TransactionRootSnapshotIndexPropagatorWorkerEvent, SolidPropagatorWorker, SolidPropagatorWorkerEvent};
+pub(crate) use solid_propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, TransactionRequesterWorker,
     TransactionRequesterWorkerEntry,
@@ -40,3 +41,6 @@ pub(crate) use sender::SenderWorker;
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
+pub(crate) use transaction_root_snapshot_index_propagator::{TransactionRootSnapshotIndexPropagatorWorker, TransactionRootSnapshotIndexPropagatorWorkerEvent};
+
+
