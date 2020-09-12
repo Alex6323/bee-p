@@ -48,7 +48,6 @@ pub struct MsTangle {
     snapshot_index: AtomicU32,
     pruning_index: AtomicU32,
     tip_pool: Arc<RwLock<WurtsTipPool>>,
-    last_solid_milestone_index_processed: AtomicU32,
 }
 
 impl Deref for MsTangle {
@@ -68,16 +67,6 @@ impl MsTangle {
         let opt = self.inner.insert(hash, transaction, metadata);
 
         if opt.is_some() {
-            let last_solid_milestone_index_processed =
-                self.last_solid_milestone_index_processed.load(Ordering::Relaxed);
-            let last_solid_milestone_index = self.latest_solid_milestone_index.load(Ordering::Relaxed);
-            for index in (last_solid_milestone_index_processed + 1)..(last_solid_milestone_index + 1) {
-                self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
-                self.last_solid_milestone_index_processed
-                    .store(index, Ordering::Relaxed);
-                let mut tip_selector = self.tip_pool.write().unwrap();
-                tip_selector.update_scores();
-            }
             if let Err(e) = Protocol::get()
                 .otrsi_and_ytrsi_propagator_worker
                 .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(hash))
@@ -199,10 +188,9 @@ impl MsTangle {
 
     pub fn update_latest_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.latest_solid_milestone_index.store(*new_index, Ordering::Relaxed);
-        if self.last_solid_milestone_index_processed.load(Ordering::Relaxed) == 0 {
-            self.last_solid_milestone_index_processed
-                .store(*new_index, Ordering::Relaxed);
-        }
+        self.update_transactions_referenced_by_milestone(new_index);
+        let mut tip_selector = self.tip_pool.write().unwrap();
+        tip_selector.update_scores();
     }
 
     pub fn get_snapshot_index(&self) -> MilestoneIndex {
