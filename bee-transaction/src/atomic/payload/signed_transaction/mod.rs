@@ -14,27 +14,20 @@ mod output;
 mod unlock;
 mod unsigned_transaction;
 
-use crate::atomic::payload::Payload;
-pub use crate::atomic::Error;
+use crate::atomic::{payload::Payload, Error};
 pub use input::{Input, UTXOInput};
-pub use output::{Address, Output, SigLockedSingleDeposit};
+pub use output::{Address, Ed25519Address, Output, SigLockedSingleDeposit, WotsAddress};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
 
 use bee_crypto::ternary::sponge::Kerl;
-use bee_signing_ext::{
-    binary::{
-        Ed25519Seed,
-        Ed25519PrivateKey,
-        Ed25519PublicKey,
-        Ed25519Signature as Ed25Signature,
-        BIP32Path,
-    },
-    Signer, Verifier, Signature as SignatureTrait
-};
 use bee_signing::ternary::{
     wots::{WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder},
     PrivateKey, PrivateKeyGenerator,
+};
+use bee_signing_ext::{
+    binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed, Ed25519Signature as Ed25Signature},
+    Signature as SignatureTrait, Signer, Verifier,
 };
 
 use std::{cmp::Ordering, collections::HashSet, slice::Iter};
@@ -194,7 +187,8 @@ impl SignedTransaction {
                         }
                     }
 
-                    // Semantic Validation: The Signature Unlock Blocks are valid, i.e. the signatures prove ownership over the addresses of the referenced UTXOs.
+                    // Semantic Validation: The Signature Unlock Blocks are valid, i.e. the signatures prove ownership
+                    // over the addresses of the referenced UTXOs.
                     let serialized_inputs = bincode::serialize(&transaction.inputs[i]).map_err(|_| Error::HashError)?;
                     match s {
                         SignatureUnlock::Ed25519(sig) => {
@@ -211,7 +205,6 @@ impl SignedTransaction {
         // TODO Semantic Validation
         // TODO The UTXOs the transaction references must be known (booked) and unspent.
         // TODO The transaction is spending the entirety of the funds of the referenced UTXOs to the outputs.
-
 
         Ok(())
     }
@@ -294,8 +287,10 @@ impl<'a> SignedTransactionBuilder<'a> {
                         let private_key = Ed25519PrivateKey::generate_from_seed(s, path)?;
                         let public_key = private_key.generate_public_key().to_bytes();
                         let signature = private_key.sign(&serialized_inputs).to_bytes().to_vec();
-                        unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock::Ed25519(Ed25519Signature { public_key, signature }),
-                        ));
+                        unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock::Ed25519(Ed25519Signature {
+                            public_key,
+                            signature,
+                        })));
                     }
                     Seed::Wots(_) => {
                         // let private_key = WotsShakePrivateKeyGeneratorBuilder::<Kerl>::default()

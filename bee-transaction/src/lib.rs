@@ -11,6 +11,7 @@
 
 pub mod atomic;
 pub mod bundled;
+pub mod prelude;
 mod vertex;
 
 pub use vertex::Vertex;
