@@ -68,7 +68,7 @@ impl MsTangle {
 
         if opt.is_some() {
             if let Err(e) = Protocol::get()
-                .otrsi_and_ytrsi_propagator_worker
+                .transaction_root_snapshot_index_propagator_worker
                 .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(hash))
             {
                 error!("Failed to send hash to OTRSI and YTRSI  propagator: {:?}.", e);
@@ -118,7 +118,7 @@ impl MsTangle {
                 // propagate the new otrsi and ytrsi values to the children of this transaction
                 for child in self.get_children(&hash) {
                     if let Err(e) = Protocol::get()
-                        .otrsi_and_ytrsi_propagator_worker
+                        .transaction_root_snapshot_index_propagator_worker
                         .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(child))
                     {
                         error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
