@@ -11,19 +11,21 @@
 
 use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata};
 
-use bee_crypto::ternary::Hash;
+use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_ledger::state::LedgerState;
 use bee_ternary::{T1B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
+
+use chrono::{offset::TimeZone, Utc};
+
+use bytemuck::cast_slice;
+use log::{debug, info};
 
 use std::{
     collections::HashMap,
     fs::File,
     io::{BufReader, Read},
 };
-
-use bytemuck::cast_slice;
-use log::info;
 
 pub struct LocalSnapshot {
     metadata: LocalSnapshotMetadata,
@@ -36,42 +38,48 @@ const VERSION: u8 = 4;
 #[derive(Debug)]
 pub enum Error {
     IOError(std::io::Error),
-    InvalidVersion,
+    InvalidVersion(u8, u8),
     InvalidMilestoneHash,
-    InvalidMilestoneIndex,
     InvalidSolidEntryPointHash,
     InvalidSeenMilestoneHash,
     InvalidAddress,
-    InvalidSupply,
+    InvalidSupply(u64, u64),
 }
 impl LocalSnapshot {
     pub fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
-        // TODO BufReader ?
-        let file = File::open(path).map_err(|e| Error::IOError(e))?;
-        let mut reader = BufReader::new(file);
+        info!("Loading snapshot file {}...", path);
+
+        let mut reader = BufReader::new(File::open(path).map_err(|e| Error::IOError(e))?);
 
         // Version byte
 
         let mut buf = [0u8];
-        match reader.read_exact(&mut buf) {
-            Ok(_) => {
-                if buf[0] != VERSION {
-                    return Err(Error::InvalidVersion);
-                }
-            }
+        let version = match reader.read_exact(&mut buf) {
+            Ok(_) => buf[0],
             Err(e) => return Err(Error::IOError(e)),
         };
+
+        if version != VERSION {
+            return Err(Error::InvalidVersion(version, VERSION));
+        }
+
+        debug!("Version: {}.", version);
 
         // Milestone hash
 
         let mut buf = [0u8; 49];
         let hash = match reader.read_exact(&mut buf) {
-            Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf), 243) {
+            Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf), HASH_LENGTH) {
                 Ok(trits) => Hash::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidMilestoneHash),
                 Err(_) => Err(Error::InvalidMilestoneHash),
             },
             Err(e) => Err(Error::IOError(e)),
         }?;
+
+        debug!(
+            "Hash: {}.",
+            hash.iter_trytes().map(|trit| char::from(trit)).collect::<String>()
+        );
 
         // Milestone index
 
@@ -81,6 +89,8 @@ impl LocalSnapshot {
             Err(e) => return Err(Error::IOError(e)),
         };
 
+        debug!("Index: {}.", index);
+
         // Timestamp
 
         let mut buf = [0u8; std::mem::size_of::<u64>()];
@@ -88,6 +98,8 @@ impl LocalSnapshot {
             Ok(_) => u64::from_le_bytes(buf),
             Err(e) => return Err(Error::IOError(e)),
         };
+
+        debug!("Timestamp: {}.", timestamp);
 
         // Number of solid entry points
 
@@ -97,6 +109,8 @@ impl LocalSnapshot {
             Err(e) => return Err(Error::IOError(e)),
         };
 
+        debug!("Solid entry points: {}.", solid_entry_points_num);
+
         // Number of seen milestones
 
         let mut buf = [0u8; std::mem::size_of::<u32>()];
@@ -104,6 +118,8 @@ impl LocalSnapshot {
             Ok(_) => u32::from_le_bytes(buf),
             Err(e) => return Err(Error::IOError(e)),
         };
+
+        debug!("Seen milestones: {}.", seen_milestones_num);
 
         // Number of balances
 
@@ -113,13 +129,17 @@ impl LocalSnapshot {
             Err(e) => return Err(Error::IOError(e)),
         };
 
+        debug!("Balances: {}.", balances_num);
+
         // Number of spent addresses
 
         let mut buf = [0u8; std::mem::size_of::<u32>()];
-        match reader.read_exact(&mut buf) {
-            Ok(_) => {}
+        let spent_addresses_num = match reader.read_exact(&mut buf) {
+            Ok(_) => u32::from_le_bytes(buf),
             Err(e) => return Err(Error::IOError(e)),
         };
+
+        debug!("Spent addresses: {}.", spent_addresses_num);
 
         // Solid entry points
 
@@ -128,7 +148,7 @@ impl LocalSnapshot {
         let mut solid_entry_points = HashMap::with_capacity(solid_entry_points_num as usize);
         for _ in 0..solid_entry_points_num {
             let hash = match reader.read_exact(&mut buf_hash) {
-                Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), 243) {
+                Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), HASH_LENGTH) {
                     Ok(trits) => {
                         Hash::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidSolidEntryPointHash)
                     }
@@ -147,10 +167,10 @@ impl LocalSnapshot {
 
         let mut buf_hash = [0u8; 49];
         let mut buf_index = [0u8; std::mem::size_of::<u32>()];
-        let mut seen_milestones = Vec::with_capacity(seen_milestones_num as usize);
+        let mut seen_milestones = HashMap::with_capacity(seen_milestones_num as usize);
         for _ in 0..seen_milestones_num {
             let seen_milestone = match reader.read_exact(&mut buf_hash) {
-                Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), 243) {
+                Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), HASH_LENGTH) {
                     Ok(trits) => {
                         Hash::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidSeenMilestoneHash)
                     }
@@ -158,15 +178,14 @@ impl LocalSnapshot {
                 },
                 Err(e) => Err(Error::IOError(e)),
             }?;
-            seen_milestones.push(seen_milestone);
-            // TODO should we use that ?
-            match reader.read_exact(&mut buf_index) {
+            let index = match reader.read_exact(&mut buf_index) {
                 Ok(_) => u32::from_le_bytes(buf_index),
                 Err(e) => return Err(Error::IOError(e)),
             };
+            seen_milestones.insert(seen_milestone, index);
         }
 
-        // amountOfBalances * balance:value - 49 bytes + int64
+        // Balances
 
         let mut buf_address = [0u8; 49];
         let mut buf_value = [0u8; std::mem::size_of::<u64>()];
@@ -174,7 +193,7 @@ impl LocalSnapshot {
         let mut supply: u64 = 0;
         for i in 0..balances_num {
             let address = match reader.read_exact(&mut buf_address) {
-                Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_address), 243) {
+                Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_address), HASH_LENGTH) {
                     Ok(trits) => Address::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidAddress),
                     Err(_) => Err(Error::InvalidAddress),
                 },
@@ -185,8 +204,8 @@ impl LocalSnapshot {
                 Err(e) => return Err(Error::IOError(e)),
             };
 
-            if i % 10_000 == 0 && i != 0 {
-                info!(
+            if i % 50_000 == 0 && i != 0 {
+                debug!(
                     "Read {}/{} ({:.0}%) balances.",
                     i,
                     balances_num,
@@ -199,11 +218,20 @@ impl LocalSnapshot {
         }
 
         if supply != IOTA_SUPPLY {
-            return Err(Error::InvalidSupply);
+            return Err(Error::InvalidSupply(supply, IOTA_SUPPLY));
         }
 
-        // TODO spend addresses ?
         // TODO hash ?
+
+        info!(
+            "Loaded snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
+            {} balances.",
+            Utc.timestamp(timestamp as i64, 0).to_rfc2822(),
+            index,
+            solid_entry_points_num,
+            seen_milestones_num,
+            state.len()
+        );
 
         Ok(LocalSnapshot {
             metadata: LocalSnapshotMetadata {

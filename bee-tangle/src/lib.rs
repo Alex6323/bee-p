@@ -13,6 +13,7 @@
 
 #![warn(missing_docs)]
 
+pub mod helper;
 pub mod traversal;
 
 mod tangle;

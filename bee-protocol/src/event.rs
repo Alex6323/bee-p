@@ -11,13 +11,16 @@
 
 use crate::Milestone;
 
+use bee_crypto::ternary::Hash;
 use bee_network::Address;
 
 pub struct HandshakeCompleted(pub Address);
 
-pub struct LastMilestoneChanged(pub Milestone);
+pub struct LatestMilestoneChanged(pub Milestone);
 
-pub struct LastSolidMilestoneChanged(pub Milestone);
+pub struct LatestSolidMilestoneChanged(pub Milestone);
+
+pub struct TransactionSolidified(pub Hash);
 
 pub struct TpsMetricsUpdated {
     pub incoming: u64,

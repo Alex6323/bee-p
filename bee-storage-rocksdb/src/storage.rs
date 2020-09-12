@@ -11,19 +11,22 @@
 
 //! A crate that contains foundational building blocks for the IOTA Tangle.
 
-use super::config::RocksDB;
-pub use bytemuck::*;
+use super::config::*;
+use async_trait::async_trait;
+pub use bee_storage::storage::Backend;
 pub use rocksdb::*;
-use std::error::Error;
+use std::{error::Error, fs};
 
 pub const TRANSACTION_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
 pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
 pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
 pub const MILESTONE_INDEX_TO_LEDGER_DIFF: &str = "milestone_hash_to_ledger_diff";
 
-pub struct RocksdbBackend;
+pub struct Storage {
+    pub inner: ::rocksdb::DB,
+}
 
-impl RocksdbBackend {
+impl Storage {
     pub fn new(config: RocksDB) -> Result<DB, Box<dyn Error>> {
         let transaction_hash_to_transaction =
             ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_TRANSACTION, Options::default());
@@ -83,12 +86,6 @@ impl RocksdbBackend {
         if let Some(set_max_write_buffer_number) = config.set_max_write_buffer_number {
             opts.set_max_write_buffer_number(set_max_write_buffer_number);
         }
-        if let Some(set_max_background_compactions) = config.set_max_background_compactions {
-            opts.set_max_background_compactions(set_max_background_compactions);
-        }
-        if let Some(set_max_background_flushes) = config.set_max_background_flushes {
-            opts.set_max_background_flushes(set_max_background_flushes);
-        }
         if let Some(set_disable_auto_compactions) = config.set_disable_auto_compactions {
             opts.set_disable_auto_compactions(set_disable_auto_compactions);
         }
@@ -103,5 +100,23 @@ impl RocksdbBackend {
         ];
         let db = DB::open_cf_descriptors(&opts, config.path, column_familes)?;
         Ok(db)
+    }
+}
+#[async_trait]
+impl Backend for Storage {
+    /// It starts RocksDB instance and then initialize the required column familes
+    async fn start(config_path: String) -> Result<Self, Box<dyn Error>> {
+        let config_as_string = fs::read_to_string(config_path)?;
+        let config: Config = toml::from_str(&config_as_string)?;
+        let db = Self::new(config.rocksdb)?;
+        Ok(Storage { inner: db })
+    }
+    /// It shutdown RocksDB instance,
+    /// Note: the shutdown is done through flush method and then droping the storage object
+    async fn shutdown(self) -> Result<(), Box<dyn Error>> {
+        if let Err(e) = self.inner.flush() {
+            return Err(Box::new(e));
+        }
+        Ok(())
     }
 }

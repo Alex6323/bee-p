@@ -11,7 +11,6 @@ binding_addr        = "0.0.0.0"
 binding_port        = 15600
 reconnect_interval  = 60
 
-[peering]
 [peering.manual]
 limit     = 5
 peers     = [ ]
@@ -19,17 +18,28 @@ peers     = [ ]
 [protocol]
 mwm = 14
 [protocol.coordinator]
-depth           = 25
+depth           = 24
 public_key      = "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ"
 security_level  = 2
 sponge_type     = "kerl"
 [protocol.workers]
 status_interval = 10
 
+[snapshot]
+load_type = "local"
 [snapshot.local]
-file_path     = "./snapshots/mainnet/export.bin"
-download_urls = [
+path              = "./snapshots/mainnet/export.bin"
+download_urls     = [
   "https://ls.manapotion.io/export.bin",
   "https://x-vps.com/export.bin",
   "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
 ]
+depth             = 50
+interval_synced   = 50
+interval_unsynced = 1000
+[snapshot.global]
+path  = "./snapshots/mainnet/snapshot.txt"
+index = 1050000
+[snapshot.pruning]
+enabled = true
+delay   = 60480

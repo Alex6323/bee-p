@@ -52,10 +52,7 @@ pub struct StagedMilestoneBuilder<E, M, P, S> {
     index: MilestoneIndex,
     depth: Option<u8>,
     transactions: Transactions,
-    essence_sponge: PhantomData<E>,
-    mss_sponge: PhantomData<M>,
-    public_key: PhantomData<P>,
-    stage: PhantomData<S>,
+    marker: PhantomData<(E, M, P, S)>,
 }
 
 pub type MilestoneBuilder<E = Kerl, M = Kerl, P = WotsPublicKey<Kerl>> = StagedMilestoneBuilder<E, M, P, IncomingRaw>;
@@ -73,10 +70,7 @@ where
             index: MilestoneIndex(0),
             depth: None,
             transactions: Transactions::new(),
-            essence_sponge: PhantomData,
-            mss_sponge: PhantomData,
-            public_key: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         }
     }
 
@@ -158,10 +152,7 @@ where
             index: self.index,
             depth: self.depth,
             transactions: self.transactions,
-            essence_sponge: PhantomData,
-            mss_sponge: PhantomData,
-            public_key: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         })
     }
 }
@@ -224,7 +215,7 @@ mod tests {
         generic_validate_milestone::<Kerl>(
             MS_HASH,
             [MS_TX_0_TRYTES, MS_TX_1_TRYTES, MS_TX_2_TRYTES].to_vec(),
-            24,
+            23,
             MilestoneIndex(1_363_619),
         );
     }
@@ -239,7 +230,7 @@ mod tests {
         generic_validate_milestone::<Kerl>(
             MS_HASH,
             [MS_TX_0_TRYTES, MS_TX_1_TRYTES, MS_TX_2_TRYTES].to_vec(),
-            24,
+            23,
             MilestoneIndex(1_367_702),
         );
     }
@@ -254,7 +245,7 @@ mod tests {
         generic_validate_milestone::<Kerl>(
             MS_HASH,
             [MS_TX_0_TRYTES, MS_TX_1_TRYTES, MS_TX_2_TRYTES].to_vec(),
-            24,
+            23,
             MilestoneIndex(1_368_168),
         );
     }
@@ -268,7 +259,7 @@ mod tests {
         generic_validate_milestone::<CurlP27>(
             MS_HASH,
             [MS_TX_0_TRYTES, MS_TX_1_TRYTES].to_vec(),
-            23,
+            22,
             MilestoneIndex(1_537_978),
         );
     }
@@ -282,7 +273,7 @@ mod tests {
         generic_validate_milestone::<CurlP27>(
             MS_HASH,
             [MS_TX_0_TRYTES, MS_TX_1_TRYTES].to_vec(),
-            23,
+            22,
             MilestoneIndex(1_538_144),
         );
     }
@@ -296,7 +287,7 @@ mod tests {
         generic_validate_milestone::<CurlP27>(
             MS_HASH,
             [MS_TX_0_TRYTES, MS_TX_1_TRYTES].to_vec(),
-            23,
+            22,
             MilestoneIndex(1_538_158),
         );
     }

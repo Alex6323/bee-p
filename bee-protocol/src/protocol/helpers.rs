@@ -14,48 +14,27 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::tangle,
-    worker::{
-        BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, MilestoneSolidifierWorkerEvent, SenderWorker,
-        TransactionRequesterWorkerEntry, TransactionSolidifierWorkerEvent,
-    },
+    worker::{BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, SenderWorker, TransactionRequesterWorkerEntry},
 };
 
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
+use bee_tangle::traversal;
 
 use log::warn;
-
-const MILESTONE_REQUEST_RANGE: usize = 50;
 
 impl Protocol {
     // MilestoneRequest
 
     pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
-        Protocol::get()
-            .milestone_requester_worker
-            .push(MilestoneRequesterWorkerEntry(index, to));
-    }
-
-    pub fn request_milestone_fill() {
-        let mut to_request_index = *tangle().get_last_solid_milestone_index() + 1;
-        let last_milestone_index = *tangle().get_last_milestone_index();
-
-        for _ in 0..MILESTONE_REQUEST_RANGE {
-            let index = to_request_index.into();
-
-            if to_request_index >= last_milestone_index {
-                break;
-            }
-
-            if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
-                Protocol::request_milestone(index, None);
-            }
-
-            to_request_index += 1;
+        if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
+            Protocol::get()
+                .milestone_requester_worker
+                .push(MilestoneRequesterWorkerEntry(index, to));
         }
     }
 
-    pub fn request_last_milestone(to: Option<EndpointId>) {
+    pub fn request_latest_milestone(to: Option<EndpointId>) {
         Protocol::request_milestone(MilestoneIndex(0), to);
     }
 
@@ -87,9 +66,14 @@ impl Protocol {
     // TransactionRequest
 
     pub fn request_transaction(hash: Hash, index: MilestoneIndex) {
-        Protocol::get()
-            .transaction_requester_worker
-            .push(TransactionRequesterWorkerEntry(hash, index));
+        if !tangle().contains(&hash)
+            && !tangle().is_solid_entry_point(&hash)
+            && !Protocol::get().requested_transactions.contains_key(&hash)
+        {
+            Protocol::get()
+                .transaction_requester_worker
+                .push(TransactionRequesterWorkerEntry(hash, index));
+        }
     }
 
     pub fn transaction_requester_is_empty() -> bool {
@@ -100,16 +84,16 @@ impl Protocol {
 
     pub fn send_heartbeat(
         to: EndpointId,
-        last_solid_milestone_index: MilestoneIndex,
+        latest_solid_milestone_index: MilestoneIndex,
         snapshot_milestone_index: MilestoneIndex,
-        last_milestone_index: MilestoneIndex,
+        latest_milestone_index: MilestoneIndex,
     ) {
         SenderWorker::<Heartbeat>::send(
             &to,
             Heartbeat::new(
-                *last_solid_milestone_index,
+                *latest_solid_milestone_index,
                 *snapshot_milestone_index,
-                *last_milestone_index,
+                *latest_milestone_index,
                 0,
                 0,
             ),
@@ -117,37 +101,36 @@ impl Protocol {
     }
 
     pub fn broadcast_heartbeat(
-        last_solid_milestone_index: MilestoneIndex,
+        latest_solid_milestone_index: MilestoneIndex,
         snapshot_milestone_index: MilestoneIndex,
-        last_milestone_index: MilestoneIndex,
+        latest_milestone_index: MilestoneIndex,
     ) {
         for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
             Protocol::send_heartbeat(
                 *entry.key(),
-                last_solid_milestone_index,
+                latest_solid_milestone_index,
                 snapshot_milestone_index,
-                last_milestone_index,
+                latest_milestone_index,
             )
         }
     }
 
     // Solidifier
 
-    pub fn trigger_transaction_solidification(hash: Hash, index: MilestoneIndex) {
-        if let Err(e) = Protocol::get()
-            .transaction_solidifier_worker
-            .unbounded_send(TransactionSolidifierWorkerEvent(hash, index))
-        {
-            warn!("Triggering transaction solidification failed: {}.", e);
-        }
-    }
-
-    pub fn trigger_milestone_solidification() {
-        if let Err(e) = Protocol::get()
-            .milestone_solidifier_worker
-            .unbounded_send(MilestoneSolidifierWorkerEvent)
-        {
-            warn!("Triggering milestone solidification failed: {}.", e);
+    pub fn trigger_milestone_solidification(target_index: MilestoneIndex) {
+        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
+            if !tangle().is_solid_transaction(&target_hash) {
+                traversal::visit_parents_depth_first(
+                    tangle(),
+                    target_hash,
+                    |hash, _, metadata| {
+                        !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+                    },
+                    |_, _, _| {},
+                    |_, _, _| {},
+                    |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
+                );
+            }
         }
     }
 }

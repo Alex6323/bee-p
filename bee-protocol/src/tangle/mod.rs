@@ -13,38 +13,23 @@ pub mod flags;
 pub mod helper;
 
 mod metadata;
-mod wurts;
 
 pub use metadata::TransactionMetadata;
 
-// TODO: reinstate the async worker
-// pub(crate) mod propagator;
-
-use crate::{
-    event::LastSolidMilestoneChanged,
-    milestone::{Milestone, MilestoneIndex},
-    protocol::Protocol,
-    tangle::flags::Flags,
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::flags::Flags, worker::SolidPropagatorWorkerEvent};
 
 use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
-use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
+use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
-use log::info;
+use log::error;
 
 use std::{
-    cmp::{max, min},
-    collections::HashSet,
     ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
-    time::{SystemTime, UNIX_EPOCH},
 };
-
-use crate::tangle::wurts::WurtsTipPool;
-use std::sync::{RwLock, Arc};
 
 /// Milestone-based Tangle.
 #[derive(Default)]
@@ -52,11 +37,10 @@ pub struct MsTangle {
     pub(crate) inner: Tangle<TransactionMetadata>,
     pub(crate) milestones: DashMap<MilestoneIndex, Hash>,
     pub(crate) solid_entry_points: DashMap<Hash, MilestoneIndex>,
-    last_milestone_index: AtomicU32,
-    last_solid_milestone_index: AtomicU32,
-    snapshot_milestone_index: AtomicU32,
-    tip_pool: Arc<RwLock<WurtsTipPool>>,
-    last_solid_milestone_index_processed: AtomicU32,
+    latest_milestone_index: AtomicU32,
+    latest_solid_milestone_index: AtomicU32,
+    snapshot_index: AtomicU32,
+    pruning_index: AtomicU32,
 }
 
 impl Deref for MsTangle {
@@ -73,182 +57,18 @@ impl MsTangle {
     }
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
-        if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
-            let last_solid_milestone_index_processed =
-                self.last_solid_milestone_index_processed.load(Ordering::Relaxed);
-            let last_solid_milestone_index = self.last_solid_milestone_index.load(Ordering::Relaxed);
-            for index in (last_solid_milestone_index_processed + 1)..(last_solid_milestone_index + 1) {
-                self.update_transactions_referenced_by_milestone(MilestoneIndex(index));
-                self.last_solid_milestone_index_processed
-                    .store(index, Ordering::Relaxed);
-                let mut tip_selector = self.tip_pool.write().unwrap();
-                tip_selector.update_scores();
-            }
+        let opt = self.inner.insert(hash, transaction, metadata);
 
-            self.propagate_otrsi_and_ytrsi(&hash);
-            self.propagate_solid_flag(&hash);
-
-            return Some(tx);
-        }
-        None
-    }
-
-    // NOTE: not implemented as an async worker atm, but it makes things much easier
-    #[inline]
-    fn propagate_solid_flag(&self, root: &Hash) {
-        let mut children = vec![*root];
-
-        while let Some(ref hash) = children.pop() {
-            if self.is_solid_transaction(hash) {
-                continue;
-            }
-
-            if let Some(tx) = self.inner.get(&hash) {
-                if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
-                    self.inner.update_metadata(&hash, |metadata| {
-                        metadata.flags.set_solid();
-                        // This is possibly not sufficient as there is no guarantee a milestone has been validated
-                        // before being solidified, we then also need to check when a milestone gets validated if it's
-                        // already solid.
-                        if metadata.flags.is_milestone() {
-                            Protocol::get().bus.dispatch(LastSolidMilestoneChanged(Milestone {
-                                hash: *hash,
-                                index: metadata.milestone_index,
-                            }));
-                        }
-                        metadata.solidification_timestamp = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Clock may have gone backwards")
-                            .as_millis() as u64;
-                    });
-
-                    let mut tip_selector = self.tip_pool.write().unwrap();
-                    tip_selector.insert(hash);
-
-                    for child in self.inner.get_children(&hash) {
-                        children.push(child);
-                    }
-                }
-            }
-        }
-    }
-
-    // If the parents of this incoming transaction are solid, this incoming transaction will be marked as solid too.
-    // Furthermore it will inherit the best OTRSI and YTRSI values from the parents.
-    fn propagate_otrsi_and_ytrsi(&self, root: &Hash) {
-        let mut children = vec![*root];
-        while let Some(hash) = children.pop() {
-            // get best otrsi and ytrsi from parents
-            let tx = self.inner.get(&hash).unwrap();
-            let trunk_otsri = self.otrsi(tx.trunk());
-            let branch_otsri = self.otrsi(tx.branch());
-            let trunk_ytrsi = self.ytrsi(tx.trunk());
-            let branch_ytrsi = self.ytrsi(tx.branch());
-
-            if trunk_otsri.is_none() || branch_otsri.is_none() || trunk_ytrsi.is_none() || branch_ytrsi.is_none() {
-                continue;
-            }
-
-            // check if already confirmed by update_transactions_referenced_by_milestone()
-            if self.get_metadata(&hash).unwrap().cone_index.is_some() {
-                continue;
-            }
-
-            // in case the transaction already inherited the best otrsi and ytrsi, continue
-            let current_otrsi = self.get_metadata(&hash).unwrap().otrsi;
-            let current_ytrsi = self.get_metadata(&hash).unwrap().ytrsi;
-            let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
-            let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
-
-            if current_otrsi.is_some()
-                && current_ytrsi.is_some()
-                && current_otrsi.unwrap() == best_otrsi
-                && current_ytrsi.unwrap() == best_ytrsi
+        if opt.is_some() {
+            if let Err(e) = Protocol::get()
+                .solid_propagator_worker
+                .unbounded_send(SolidPropagatorWorkerEvent(hash))
             {
-                continue;
-            }
-
-            self.inner.update_metadata(&hash, |metadata| {
-                metadata.otrsi = Some(best_otrsi);
-                metadata.ytrsi = Some(best_ytrsi);
-            });
-
-            // propagate otrsi and ytrsi to children
-            for child in self.inner.get_children(&hash) {
-                children.push(child);
+                error!("Failed to send hash to solid propagator: {:?}.", e);
             }
         }
-    }
 
-    // when a milestone arrives and is solid, otrsi and ytrsi of all transactions referenced by this milestone must be
-    // updated otrsi or ytrsi of transactions that are referenced by a previous milestone won't get updated
-    // set otrsi and ytrsi values of relevant transactions to:
-    // otrsi=milestone_index
-    // ytrsi=milestone_index
-    // updated otrsi and ytrsi values need to be propagated to attached children (not referenced by the milestone)
-    fn update_transactions_referenced_by_milestone(&self, milestone_index: MilestoneIndex) {
-        if let Some(root) = self.get_milestone_hash(milestone_index) {
-            info!("Updating transactions referenced by milestone {}.", *milestone_index);
-            let mut visited = HashSet::new();
-            let mut to_visit = vec![root];
-            while let Some(hash) = to_visit.pop() {
-                if visited.contains(&hash) {
-                    continue;
-                } else {
-                    visited.insert(hash.clone());
-                }
-
-                if self.is_solid_entry_point(&hash) {
-                    continue;
-                }
-
-                if self.get_metadata(&hash).unwrap().cone_index.is_some() {
-                    continue;
-                }
-
-                tangle().update_metadata(&hash, |metadata| {
-                    metadata.cone_index = Some(milestone_index);
-                    metadata.otrsi = Some(milestone_index);
-                    metadata.ytrsi = Some(milestone_index);
-                });
-
-                // propagate the new otrsi and ytrsi values to the children of this transaction
-                for child in self.get_children(&hash) {
-                    self.propagate_otrsi_and_ytrsi(&child);
-                }
-
-                let tx_ref = self.get(&hash).unwrap();
-                to_visit.push(tx_ref.trunk().clone());
-                to_visit.push(tx_ref.branch().clone());
-            }
-        }
-    }
-
-    fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
-        if self.is_solid_entry_point(hash) {
-            Some(*self.solid_entry_points.get(hash).unwrap().value())
-        } else {
-            match self.get_metadata(hash) {
-                Some(metadata) => metadata.ytrsi,
-                None => None,
-            }
-        }
-    }
-
-    fn otrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
-        if self.is_solid_entry_point(hash) {
-            Some(*self.solid_entry_points.get(hash).unwrap().value())
-        } else {
-            match self.get_metadata(hash) {
-                Some(metadata) => metadata.otrsi,
-                None => None,
-            }
-        }
-    }
-
-    pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        let tip_selector = self.tip_pool.read().unwrap();
-        tip_selector.get_non_lazy_tips()
+        opt
     }
 
     pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {
@@ -259,7 +79,7 @@ impl MsTangle {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
         self.inner.update_metadata(&hash, |metadata| {
-            metadata.flags.set_milestone();
+            metadata.flags.set_milestone(true);
             metadata.milestone_index = index
         });
     }
@@ -288,37 +108,41 @@ impl MsTangle {
         self.milestones.contains_key(&index)
     }
 
-    pub fn get_last_milestone_index(&self) -> MilestoneIndex {
-        self.last_milestone_index.load(Ordering::Relaxed).into()
+    pub fn get_latest_milestone_index(&self) -> MilestoneIndex {
+        self.latest_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_last_milestone_index(&self, new_index: MilestoneIndex) {
-        self.last_milestone_index.store(*new_index, Ordering::Relaxed);
+    pub fn update_latest_milestone_index(&self, new_index: MilestoneIndex) {
+        self.latest_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn get_last_solid_milestone_index(&self) -> MilestoneIndex {
-        self.last_solid_milestone_index.load(Ordering::Relaxed).into()
+    pub fn get_latest_solid_milestone_index(&self) -> MilestoneIndex {
+        self.latest_solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
-        self.last_solid_milestone_index.store(*new_index, Ordering::Relaxed);
-        if self.last_solid_milestone_index_processed.load(Ordering::Relaxed) == 0 {
-            self.last_solid_milestone_index_processed
-                .store(*new_index, Ordering::Relaxed);
-        }
+    pub fn update_latest_solid_milestone_index(&self, new_index: MilestoneIndex) {
+        self.latest_solid_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
-        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+    pub fn get_snapshot_index(&self) -> MilestoneIndex {
+        self.snapshot_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_snapshot_milestone_index(&self, new_index: MilestoneIndex) {
-        self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
+    pub fn update_snapshot_index(&self, new_index: MilestoneIndex) {
+        self.snapshot_index.store(*new_index, Ordering::Relaxed);
+    }
+
+    pub fn get_pruning_index(&self) -> MilestoneIndex {
+        self.pruning_index.load(Ordering::Relaxed).into()
+    }
+
+    pub fn update_pruning_index(&self, new_index: MilestoneIndex) {
+        self.pruning_index.store(*new_index, Ordering::Relaxed);
     }
 
     // TODO reduce to one atomic value ?
     pub fn is_synced(&self) -> bool {
-        self.get_last_solid_milestone_index() == self.get_last_milestone_index()
+        self.get_latest_solid_milestone_index() == self.get_latest_milestone_index()
     }
 
     pub fn add_solid_entry_point(&self, hash: Hash, index: MilestoneIndex) {
@@ -571,8 +395,8 @@ mod tests {
 //     solidifier_send: Sender<Option<Hash>>,
 
 //     solid_milestone_index: AtomicU32,
-//     snapshot_milestone_index: AtomicU32,
-//     last_milestone_index: AtomicU32,
+//     snapshot_index: AtomicU32,
+//     latest_milestone_index: AtomicU32,
 
 //     drop_barrier: Arc<Barrier>,
 // }
@@ -587,8 +411,8 @@ mod tests {
 //             solid_entry_points: DashSet::new(),
 //             milestones: DashMap::new(),
 //             solid_milestone_index: AtomicU32::new(0),
-//             snapshot_milestone_index: AtomicU32::new(0),
-//             last_milestone_index: AtomicU32::new(0),
+//             snapshot_index: AtomicU32::new(0),
+//             latest_milestone_index: AtomicU32::new(0),
 //             drop_barrier,
 //         }
 //     }
@@ -694,7 +518,7 @@ mod tests {
 
 //     /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
 //     pub fn get_latest_milestone(&'static self) -> Option<TransactionRef> {
-//         todo!("get the last milestone index, get the transaction hash from it, and query the Tangle for it")
+//         todo!("get the latest milestone index, get the transaction hash from it, and query the Tangle for it")
 //     }
 
 //     /// Returns the hash of a milestone.
@@ -721,23 +545,23 @@ mod tests {
 //     }
 
 //     /// Retreives the snapshot milestone index.
-//     pub fn get_snapshot_milestone_index(&'static self) -> MilestoneIndex {
-//         self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+//     pub fn get_snapshot_index(&'static self) -> MilestoneIndex {
+//         self.snapshot_index.load(Ordering::Relaxed).into()
 //     }
 
 //     /// Updates the snapshot milestone index to `new_index`.
-//     pub fn update_snapshot_milestone_index(&'static self, new_index: MilestoneIndex) {
-//         self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
+//     pub fn update_snapshot_index(&'static self, new_index: MilestoneIndex) {
+//         self.snapshot_index.store(*new_index, Ordering::Relaxed);
 //     }
 
-//     /// Retreives the last milestone index.
-//     pub fn get_last_milestone_index(&'static self) -> MilestoneIndex {
-//         self.last_milestone_index.load(Ordering::Relaxed).into()
+//     /// Retreives the latest milestone index.
+//     pub fn get_latest_milestone_index(&'static self) -> MilestoneIndex {
+//         self.latest_milestone_index.load(Ordering::Relaxed).into()
 //     }
 
-//     /// Updates the last milestone index to `new_index`.
-//     pub fn update_last_milestone_index(&'static self, new_index: MilestoneIndex) {
-//         self.last_milestone_index.store(*new_index, Ordering::Relaxed);
+//     /// Updates the latest milestone index to `new_index`.
+//     pub fn update_latest_milestone_index(&'static self, new_index: MilestoneIndex) {
+//         self.latest_milestone_index.store(*new_index, Ordering::Relaxed);
 //     }
 
 //     /// Adds `hash` to the set of solid entry points.
@@ -757,7 +581,7 @@ mod tests {
 
 //     /// Checks if the tangle is synced or not
 //     pub fn is_synced(&'static self) -> bool {
-//         self.get_solid_milestone_index() == self.get_last_milestone_index()
+//         self.get_solid_milestone_index() == self.get_latest_milestone_index()
 //     }
 
 //     /// Returns the current size of the Tangle.
@@ -939,13 +763,13 @@ mod tests {
 
 //     #[test]
 //     #[serial]
-//     fn update_and_get_snapshot_milestone_index() {
+//     fn update_and_get_snapshot_index() {
 //         init();
 //         let tangle = tangle();
 
-//         tangle.update_snapshot_milestone_index(1368160.into());
+//         tangle.update_snapshot_index(1368160.into());
 
-//         assert_eq!(1368160, *tangle.get_snapshot_milestone_index());
+//         assert_eq!(1368160, *tangle.get_snapshot_index());
 //         drop();
 //     }
 
@@ -963,13 +787,13 @@ mod tests {
 
 //     #[test]
 //     #[serial]
-//     fn update_and_get_last_milestone_index() {
+//     fn update_and_get_latest_milestone_index() {
 //         init();
 //         let tangle = tangle();
 
-//         tangle.update_last_milestone_index(1368168.into());
+//         tangle.update_latest_milestone_index(1368168.into());
 
-//         assert_eq!(1368168, *tangle.get_last_milestone_index());
+//         assert_eq!(1368168, *tangle.get_latest_milestone_index());
 //         drop();
 //     }
 

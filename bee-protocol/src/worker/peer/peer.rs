@@ -134,28 +134,23 @@ impl PeerWorker {
                 match tlv_from_bytes::<Heartbeat>(&header, bytes) {
                     Ok(message) => {
                         self.peer
-                            .set_last_solid_milestone_index(message.last_solid_milestone_index.into());
+                            .set_latest_solid_milestone_index(message.latest_solid_milestone_index.into());
                         self.peer
                             .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
-                        self.peer.set_last_milestone_index(message.last_milestone_index.into());
+                        self.peer.set_latest_milestone_index(message.latest_milestone_index.into());
                         self.peer.set_connected_peers(message.connected_peers);
                         self.peer.set_synced_peers(message.synced_peers);
 
                         // // TODO Warn if can't help sync
                         if !tangle().is_synced() {
-                            let index = *tangle().get_last_solid_milestone_index() + 1;
+                            let index = *tangle().get_latest_solid_milestone_index() + 1;
 
                             if !(index > message.snapshot_milestone_index
-                                && index <= message.last_solid_milestone_index)
+                                && index <= message.latest_solid_milestone_index)
                             {
                                 warn!("The peer {} can't help syncing.", self.peer.address);
                                 // TODO Drop connection if autopeered.
                             }
-                        }
-
-                        // TODO think about a better solution
-                        if Protocol::get().peer_manager.handshaked_peers.len() == 1 {
-                            Protocol::request_milestone_fill();
                         }
 
                         self.peer.metrics.heartbeats_received_inc();

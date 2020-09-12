@@ -13,15 +13,15 @@ use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
     whiteflag::{
-        b1t6::decode, bundle::load_bundle_builder, merkle_hasher::MerkleHasher, metadata::WhiteFlagMetadata,
-        traversal::Error as TraversalError,
+        b1t6::decode, merkle_hasher::MerkleHasher, metadata::WhiteFlagMetadata, traversal::Error as TraversalError,
     },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::event::Bus;
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
-use bee_protocol::{config::ProtocolCoordinatorConfig, Milestone, MilestoneIndex};
+use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
+use bee_tangle::helper::load_bundle_builder;
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use blake2::Blake2b;
@@ -76,11 +76,11 @@ impl LedgerWorker {
 
     fn milestone_info(&self, hash: &Hash) -> (Vec<u8>, u64) {
         // TODO handle error of both unwrap
-        let ms = load_bundle_builder(hash).unwrap();
+        let ms = load_bundle_builder(tangle(), hash).unwrap();
         let timestamp = ms.get(0).unwrap().get_timestamp();
         let proof = decode(ms.get(2).unwrap().payload().to_inner().subslice(
-            ((self.coo_config.depth() as usize - 1) * HASH_LENGTH)
-                ..((self.coo_config.depth() as usize - 1) * HASH_LENGTH + MERKLE_PROOF_LENGTH),
+            (self.coo_config.depth() as usize * HASH_LENGTH)
+                ..(self.coo_config.depth() as usize * HASH_LENGTH + MERKLE_PROOF_LENGTH),
         ));
 
         (proof, timestamp)

@@ -11,13 +11,19 @@
 
 use serde::Deserialize;
 
-const DEFAULT_FILE_PATH: &str = "./snapshots/mainnet/export.bin";
+const DEFAULT_PATH: &str = "./snapshots/mainnet/export.bin";
 const DEFAULT_DOWNLOAD_URLS: Vec<String> = Vec::new();
+const DEFAULT_DEPTH: usize = 50;
+const DEFAULT_INTERVAL_SYNCED: usize = 50;
+const DEFAULT_INTERVAL_UNSYNCED: usize = 1000;
 
 #[derive(Default, Deserialize)]
 pub struct LocalSnapshotConfigBuilder {
-    file_path: Option<String>,
+    path: Option<String>,
     download_urls: Option<Vec<String>>,
+    depth: Option<usize>,
+    interval_synced: Option<usize>,
+    interval_unsynced: Option<usize>,
 }
 
 impl LocalSnapshotConfigBuilder {
@@ -25,8 +31,8 @@ impl LocalSnapshotConfigBuilder {
         Self::default()
     }
 
-    pub fn file_path(mut self, file_path: String) -> Self {
-        self.file_path.replace(file_path);
+    pub fn path(mut self, path: String) -> Self {
+        self.path.replace(path);
         self
     }
 
@@ -35,18 +41,39 @@ impl LocalSnapshotConfigBuilder {
         self
     }
 
+    pub fn depth(mut self, depth: usize) -> Self {
+        self.depth.replace(depth);
+        self
+    }
+
+    pub fn interval_synced(mut self, interval_synced: usize) -> Self {
+        self.interval_synced.replace(interval_synced);
+        self
+    }
+
+    pub fn interval_unsynced(mut self, interval_unsynced: usize) -> Self {
+        self.interval_unsynced.replace(interval_unsynced);
+        self
+    }
+
     pub fn finish(self) -> LocalSnapshotConfig {
         LocalSnapshotConfig {
-            file_path: self.file_path.unwrap_or_else(|| DEFAULT_FILE_PATH.to_string()),
+            path: self.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
             download_urls: self.download_urls.unwrap_or_else(|| DEFAULT_DOWNLOAD_URLS),
+            depth: self.depth.unwrap_or(DEFAULT_DEPTH),
+            interval_synced: self.interval_synced.unwrap_or(DEFAULT_INTERVAL_SYNCED),
+            interval_unsynced: self.interval_unsynced.unwrap_or(DEFAULT_INTERVAL_UNSYNCED),
         }
     }
 }
 
 #[derive(Clone)]
 pub struct LocalSnapshotConfig {
-    file_path: String,
+    path: String,
     download_urls: Vec<String>,
+    depth: usize,
+    interval_synced: usize,
+    interval_unsynced: usize,
 }
 
 impl LocalSnapshotConfig {
@@ -54,11 +81,23 @@ impl LocalSnapshotConfig {
         LocalSnapshotConfigBuilder::new()
     }
 
-    pub fn file_path(&self) -> &String {
-        &self.file_path
+    pub fn path(&self) -> &String {
+        &self.path
     }
 
     pub fn download_urls(&self) -> &Vec<String> {
         &self.download_urls
+    }
+
+    pub fn depth(&self) -> usize {
+        self.depth
+    }
+
+    pub fn interval_synced(&self) -> usize {
+        self.interval_synced
+    }
+
+    pub fn interval_unsynced(&self) -> usize {
+        self.interval_unsynced
     }
 }

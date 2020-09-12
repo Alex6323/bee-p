@@ -46,7 +46,10 @@ impl<T: Ord + Eq> WaitPriorityQueue<T> {
         let mut inner = self.inner.lock().unwrap();
 
         inner.0.push(entry);
-        inner.1.pop_front().map(Waker::wake);
+
+        if let Some(a) = inner.1.pop_front() {
+            Waker::wake(a)
+        }
     }
 
     /// Attempts to remove the item with the highest priority from the queue, returning [`None`] if
@@ -65,7 +68,7 @@ impl<T: Ord + Eq> WaitPriorityQueue<T> {
     }
 
     /// Returns a stream of highest-priority items from this queue.
-    pub fn incoming<'a>(&'a self) -> WaitIncoming<'a, T> {
+    pub fn incoming(&self) -> WaitIncoming<T> {
         WaitIncoming { queue: self }
     }
 

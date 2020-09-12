@@ -54,8 +54,7 @@ impl OutgoingBundleBuilderStage for OutgoingAttached {}
 
 pub struct StagedOutgoingBundleBuilder<E, S> {
     builders: BundledTransactionBuilders,
-    essence_sponge: PhantomData<E>,
-    stage: PhantomData<S>,
+    marker: PhantomData<(E, S)>,
 }
 
 // TODO default to Kerl
@@ -141,7 +140,7 @@ where
         };
 
         for builder in &mut self.builders.0 {
-            builder.bundle.replace(hash.clone());
+            builder.bundle.replace(hash);
         }
 
         Ok(())
@@ -153,8 +152,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
     pub fn new() -> Self {
         Self {
             builders: BundledTransactionBuilders::default(),
-            essence_sponge: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         }
     }
 
@@ -203,8 +201,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSealed> {
             builders: self.builders,
-            essence_sponge: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         })
     }
 }
@@ -233,8 +230,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
 
         StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
-            essence_sponge: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         }
         .attach_local(trunk, branch)
     }
@@ -250,8 +246,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
 
         StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
-            essence_sponge: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         }
         .attach_remote(trunk, branch)
     }
@@ -307,8 +302,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
 
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingSigned> {
             builders: self.builders,
-            essence_sponge: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         })
     }
 }
@@ -323,8 +317,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
         // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
             builders: self.builders,
-            essence_sponge: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         })
     }
 
@@ -337,8 +330,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
         // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
             builders: self.builders,
-            essence_sponge: PhantomData,
-            stage: PhantomData,
+            marker: PhantomData,
         })
     }
 }
@@ -352,7 +344,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingAttached> {
             transactions.push(
                 transaction_builder
                     .build()
-                    .map_err(|e| OutgoingBundleBuilderError::TransactionError(e))?,
+                    .map_err(OutgoingBundleBuilderError::TransactionError)?,
             );
         }
 

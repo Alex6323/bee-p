@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    event::{LastMilestoneChanged, LastSolidMilestoneChanged},
+    event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, tangle},
@@ -46,8 +46,7 @@ pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash, pub(crate) bool
 
 pub(crate) struct MilestoneValidatorWorker<M, P> {
     receiver: Receiver,
-    mss_sponge: PhantomData<M>,
-    public_key: PhantomData<P>,
+    marker: PhantomData<(M, P)>,
 }
 
 impl<M, P> MilestoneValidatorWorker<M, P>
@@ -59,8 +58,7 @@ where
     pub(crate) fn new(receiver: Receiver) -> Self {
         Self {
             receiver,
-            mss_sponge: PhantomData,
-            public_key: PhantomData,
+            marker: PhantomData,
         }
     }
 
@@ -118,15 +116,16 @@ where
                         if meta.flags.is_solid() {
                             Protocol::get()
                                 .bus
-                                .dispatch(LastSolidMilestoneChanged(milestone.clone()));
+                                .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
                         }
 
-                        if milestone.index > tangle().get_last_milestone_index() {
-                            Protocol::get().bus.dispatch(LastMilestoneChanged(milestone.clone()));
+                        if milestone.index > tangle().get_latest_milestone_index() {
+                            Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                         }
 
-                        Protocol::get().requested_milestones.remove(&milestone.index);
-                        Protocol::request_milestone_fill();
+                        if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
+                            Protocol::trigger_milestone_solidification(milestone.index);
+                        }
                     }
                     Err(e) => match e {
                         MilestoneValidatorWorkerError::IncompleteBundle => {}

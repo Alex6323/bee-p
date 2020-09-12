@@ -11,12 +11,20 @@ keywords = ["iota", "tangle", "bee", "framework", "snapshot"]
 homepage = "https://www.iota.org"
 
 [dependencies]
+bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-common-ext = { path = "../bee-common-ext" }
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-ledger = { path = "../bee-ledger" }
+bee-protocol = { path = "../bee-protocol"}
+bee-tangle = { path = "../bee-tangle"}
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 
+async-std = "1.6.2"
 bytemuck = "1.2.0"
+chrono = "0.4.11"
+dashmap = "3.10"
+futures = "0.3.5"
 log = "0.4.8"
 reqwest = { version = "0.10.7", features = ["stream"] }
 serde = { version = "1.0.114", features = ["derive" ] }

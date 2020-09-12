@@ -9,12 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_protocol::MilestoneIndex;
 use bee_snapshot::global::{Error, GlobalSnapshot};
 
 #[test]
 fn valid() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_valid.txt")
+        GlobalSnapshot::from_file("tests/files/global_snapshot_valid.txt", MilestoneIndex(0))
             .unwrap()
             .state()
             .len(),
@@ -25,7 +26,7 @@ fn valid() {
 #[test]
 fn file_not_found() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_file_not_found.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_file_not_found.txt", MilestoneIndex(0)).err(),
         Some(Error::FileNotFound)
     );
 }
@@ -33,7 +34,7 @@ fn file_not_found() {
 #[test]
 fn empty() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_empty.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_empty.txt", MilestoneIndex(0)).err(),
         Some(Error::InvalidSupply)
     );
 }
@@ -41,7 +42,7 @@ fn empty() {
 #[test]
 fn missing_semicolon() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_missing_semicolon.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_missing_semicolon.txt", MilestoneIndex(0)).err(),
         Some(Error::MissingSemicolon)
     );
 }
@@ -49,7 +50,11 @@ fn missing_semicolon() {
 #[test]
 fn extraneous_semicolon() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_extraneous_semicolon.txt").err(),
+        GlobalSnapshot::from_file(
+            "tests/files/global_snapshot_extraneous_semicolon.txt",
+            MilestoneIndex(0)
+        )
+        .err(),
         Some(Error::ExtraneousSemicolon)
     );
 }
@@ -57,7 +62,11 @@ fn extraneous_semicolon() {
 #[test]
 fn invalid_address_tryte() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_address_tryte.txt").err(),
+        GlobalSnapshot::from_file(
+            "tests/files/global_snapshot_invalid_address_tryte.txt",
+            MilestoneIndex(0)
+        )
+        .err(),
         Some(Error::InvalidAddressTryte)
     );
 }
@@ -65,7 +74,11 @@ fn invalid_address_tryte() {
 #[test]
 fn invalid_address_length() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_address_length.txt").err(),
+        GlobalSnapshot::from_file(
+            "tests/files/global_snapshot_invalid_address_length.txt",
+            MilestoneIndex(0)
+        )
+        .err(),
         Some(Error::InvalidAddressLength)
     );
 }
@@ -73,7 +86,7 @@ fn invalid_address_length() {
 #[test]
 fn duplicate_address() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_duplicate_address.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_duplicate_address.txt", MilestoneIndex(0)).err(),
         Some(Error::DuplicateAddress)
     );
 }
@@ -81,7 +94,7 @@ fn duplicate_address() {
 #[test]
 fn invalid_balance() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_balance.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_balance.txt", MilestoneIndex(0)).err(),
         Some(Error::InvalidBalance)
     );
 }
@@ -89,7 +102,7 @@ fn invalid_balance() {
 #[test]
 fn negative_balance() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_negative_balance.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_negative_balance.txt", MilestoneIndex(0)).err(),
         Some(Error::InvalidBalance)
     );
 }
@@ -97,7 +110,7 @@ fn negative_balance() {
 #[test]
 fn overflow_balance() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_overflow_balance.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_overflow_balance.txt", MilestoneIndex(0)).err(),
         Some(Error::InvalidBalance)
     );
 }
@@ -105,7 +118,7 @@ fn overflow_balance() {
 #[test]
 fn null_balance() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_null_balance.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_null_balance.txt", MilestoneIndex(0)).err(),
         Some(Error::NullBalance)
     );
 }
@@ -113,7 +126,7 @@ fn null_balance() {
 #[test]
 fn invalid_supply_more() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_supply_more.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_supply_more.txt", MilestoneIndex(0)).err(),
         Some(Error::InvalidSupply)
     );
 }
@@ -121,7 +134,7 @@ fn invalid_supply_more() {
 #[test]
 fn invalid_supply_less() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_supply_less.txt").err(),
+        GlobalSnapshot::from_file("tests/files/global_snapshot_invalid_supply_less.txt", MilestoneIndex(0)).err(),
         Some(Error::InvalidSupply)
     );
 }
@@ -129,7 +142,11 @@ fn invalid_supply_less() {
 #[test]
 fn additional_whitespaces() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_additional_whitespaces.txt").err(),
+        GlobalSnapshot::from_file(
+            "tests/files/global_snapshot_additional_whitespaces.txt",
+            MilestoneIndex(0)
+        )
+        .err(),
         Some(Error::InvalidAddressTryte)
     );
 }
@@ -137,7 +154,7 @@ fn additional_whitespaces() {
 #[test]
 fn different_newline() {
     assert_eq!(
-        GlobalSnapshot::from_file("tests/files/global_snapshot_different_newline.txt")
+        GlobalSnapshot::from_file("tests/files/global_snapshot_different_newline.txt", MilestoneIndex(0))
             .unwrap()
             .state()
             .len(),

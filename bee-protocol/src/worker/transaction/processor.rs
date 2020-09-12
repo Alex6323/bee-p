@@ -20,7 +20,10 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
-use bee_transaction::bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN};
+use bee_transaction::{
+    bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN},
+    Vertex,
+};
 
 use bytemuck::cast_slice;
 use futures::{
@@ -134,24 +137,23 @@ impl ProcessorWorker {
 
         let mut metadata = TransactionMetadata::new();
 
-        if transaction.is_tail() {
-            metadata.flags.set_tail();
-        }
-        if requested {
-            metadata.flags.set_requested();
-        }
+        metadata.flags.set_tail(transaction.is_tail());
+        metadata.flags.set_requested(requested);
 
         // store transaction
         if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
             Protocol::get().metrics.new_transactions_inc();
 
-            if !tangle().is_synced() && Protocol::get().requested_transactions.is_empty() {
-                Protocol::trigger_milestone_solidification();
-            }
-
             match Protocol::get().requested_transactions.remove(&hash) {
-                Some((hash, (index, _))) => {
-                    Protocol::trigger_transaction_solidification(hash, index);
+                Some((_hash, (index, _))) => {
+                    let trunk = transaction.trunk();
+                    let branch = transaction.branch();
+
+                    Protocol::request_transaction(*trunk, index);
+
+                    if trunk != branch {
+                        Protocol::request_transaction(*branch, index);
+                    }
                 }
                 None => {
                     if should_broadcast {

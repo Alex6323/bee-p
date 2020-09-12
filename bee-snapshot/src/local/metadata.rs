@@ -18,7 +18,7 @@ pub struct LocalSnapshotMetadata {
     pub(crate) index: u32,
     pub(crate) timestamp: u64,
     pub(crate) solid_entry_points: HashMap<Hash, u32>,
-    pub(crate) seen_milestones: Vec<Hash>,
+    pub(crate) seen_milestones: HashMap<Hash, u32>,
 }
 
 impl LocalSnapshotMetadata {
@@ -38,7 +38,7 @@ impl LocalSnapshotMetadata {
         &self.solid_entry_points
     }
 
-    pub fn seen_milestones(&self) -> &Vec<Hash> {
+    pub fn seen_milestones(&self) -> &HashMap<Hash, u32> {
         &self.seen_milestones
     }
 }

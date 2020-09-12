@@ -29,55 +29,55 @@ impl Flags {
         self.contains(Flags::SOLID)
     }
 
-    pub fn set_solid(&mut self) {
-        self.insert(Flags::SOLID);
+    pub fn set_solid(&mut self, is_solid: bool) {
+        self.set(Flags::SOLID, is_solid);
     }
 
     pub fn is_tail(&self) -> bool {
         self.contains(Flags::TAIL)
     }
 
-    pub fn set_tail(&mut self) {
-        self.insert(Flags::TAIL);
+    pub fn set_tail(&mut self, is_tail: bool) {
+        self.set(Flags::TAIL, is_tail);
     }
 
     pub fn is_requested(&self) -> bool {
         self.contains(Flags::REQUESTED)
     }
 
-    pub fn set_requested(&mut self) {
-        self.insert(Flags::REQUESTED);
+    pub fn set_requested(&mut self, is_requested: bool) {
+        self.set(Flags::REQUESTED, is_requested);
     }
 
     pub fn is_milestone(&self) -> bool {
         self.contains(Flags::MILESTONE)
     }
 
-    pub fn set_milestone(&mut self) {
-        self.insert(Flags::MILESTONE);
+    pub fn set_milestone(&mut self, is_milestone: bool) {
+        self.set(Flags::MILESTONE, is_milestone);
     }
 
     pub fn is_confirmed(&self) -> bool {
         self.contains(Flags::CONFIRMED)
     }
 
-    pub fn set_confirmed(&mut self) {
-        self.insert(Flags::CONFIRMED);
+    pub fn set_confirmed(&mut self, is_confirmed: bool) {
+        self.set(Flags::CONFIRMED, is_confirmed);
     }
 
     pub fn is_conflicting(&self) -> bool {
         self.contains(Flags::CONFLICTING)
     }
 
-    pub fn set_conflicting(&mut self) {
-        self.insert(Flags::CONFLICTING);
+    pub fn set_conflicting(&mut self, is_conflicting: bool) {
+        self.set(Flags::CONFLICTING, is_conflicting);
     }
 
     pub fn is_valid(&self) -> bool {
         self.contains(Flags::VALID)
     }
 
-    pub fn set_valid(&mut self) {
-        self.insert(Flags::VALID);
+    pub fn set_valid(&mut self, is_valid: bool) {
+        self.set(Flags::VALID, is_valid);
     }
 }
