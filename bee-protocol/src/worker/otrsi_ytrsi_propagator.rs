@@ -93,7 +93,7 @@ impl OtrsiYtrsiPropagatorWorker {
         }
 
         if let EventContext::UpdateTransactionsReferencedByMilestone(hashes) = originType {
-            tangle().update_tip_pool_scores();
+            tangle().update_tip_pool();
         }
 
     }

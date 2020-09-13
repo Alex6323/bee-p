@@ -199,7 +199,7 @@ impl MsTangle {
         tip_selector.insert(tail, trunk, branch);
     }
 
-    pub fn update_tip_pool_scores(&self) {
+    pub fn update_tip_pool(&self) {
         let mut tip_selector = self.tip_pool.write().unwrap();
         tip_selector.update_scores();
     }
