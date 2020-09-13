@@ -35,7 +35,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 use crate::tangle::wurts::WurtsTipPool;
 use bee_transaction::Vertex;
-use crate::worker::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent, OriginType};
+use crate::worker::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent, EventContext};
 
 /// Milestone-based Tangle.
 #[derive(Default)]
@@ -74,7 +74,7 @@ impl MsTangle {
             }
             if let Err(e) = Protocol::get()
                 .otrsi_ytrsi_propagator_worker
-                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(OriginType::Insert(hash)))
+                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(EventContext::Insert(hash)))
             {
                 error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
             }
@@ -127,7 +127,7 @@ impl MsTangle {
 
             if let Err(e) = Protocol::get()
                 .otrsi_ytrsi_propagator_worker
-                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(OriginType::UpdateTransactionsReferencedByMilestone(propagateTo)))
+                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(EventContext::UpdateTransactionsReferencedByMilestone(propagateTo)))
             {
                 error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
             }

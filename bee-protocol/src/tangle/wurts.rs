@@ -153,6 +153,14 @@ impl WurtsTipPool {
 
     fn tip_score(&self, hash: &Hash) -> Score {
         let lsmi = *tangle().get_latest_solid_milestone_index();
+
+        // TODO: The solid propagator worker and the otrsi-ytrsi propagator worker are not synchronized;
+        // this could lead to a transaction in the pool that has no otrsi/ytrsi set. needs to be fixed.
+        // in the mean time, such cases are skipped by following condition:
+        if tangle().otrsi(&hash).is_none() || tangle().ytrsi(&hash).is_none() {
+            return Score::Lazy;
+        }
+
         let otrsi = *tangle().otrsi(&hash).unwrap();
         let ytrsi = *tangle().ytrsi(&hash).unwrap();
 

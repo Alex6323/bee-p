@@ -41,6 +41,6 @@ pub(crate) use sender::SenderWorker;
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
-pub(crate) use otrsi_ytrsi_propagator::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent, OriginType};
+pub(crate) use otrsi_ytrsi_propagator::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent, EventContext};
 
 
