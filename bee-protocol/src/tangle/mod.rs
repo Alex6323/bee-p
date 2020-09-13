@@ -35,7 +35,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 use crate::tangle::wurts::WurtsTipPool;
 use bee_transaction::Vertex;
-use crate::worker::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent};
+use crate::worker::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent, OriginType};
 
 /// Milestone-based Tangle.
 #[derive(Default)]
@@ -74,7 +74,7 @@ impl MsTangle {
             }
             if let Err(e) = Protocol::get()
                 .otrsi_ytrsi_propagator_worker
-                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(hash))
+                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(OriginType::Insert(hash)))
             {
                 error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
             }
@@ -93,6 +93,7 @@ impl MsTangle {
             info!("Updating transactions referenced by milestone {}.", *milestone_index);
             let mut visited = HashSet::new();
             let mut to_visit = vec![root];
+            let mut propagateTo = Vec::new();
             while let Some(hash) = to_visit.pop() {
                 if visited.contains(&hash) {
                     continue;
@@ -116,18 +117,21 @@ impl MsTangle {
 
                 // propagate the new otrsi and ytrsi values to the children of this transaction
                 for child in self.get_children(&hash) {
-                    if let Err(e) = Protocol::get()
-                        .otrsi_ytrsi_propagator_worker
-                        .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(child))
-                    {
-                        error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
-                    }
+                    propagateTo.push(child);
                 }
 
                 let tx_ref = self.get(&hash).unwrap();
                 to_visit.push(tx_ref.trunk().clone());
                 to_visit.push(tx_ref.branch().clone());
             }
+
+            if let Err(e) = Protocol::get()
+                .otrsi_ytrsi_propagator_worker
+                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(OriginType::UpdateTransactionsReferencedByMilestone(propagateTo)))
+            {
+                error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
+            }
+
         }
     }
 
@@ -188,13 +192,16 @@ impl MsTangle {
     pub fn update_latest_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.latest_solid_milestone_index.store(*new_index, Ordering::Relaxed);
         self.update_transactions_referenced_by_milestone(new_index);
-        let mut tip_selector = self.tip_pool.write().unwrap();
-        tip_selector.update_scores();
     }
 
     pub fn add_to_tip_pool(&self, tail: Hash, trunk: Hash, branch: Hash) {
         let mut tip_selector = self.tip_pool.write().unwrap();
         tip_selector.insert(tail, trunk, branch);
+    }
+
+    pub fn update_tip_pool_scores(&self) {
+        let mut tip_selector = self.tip_pool.write().unwrap();
+        tip_selector.update_scores();
     }
 
     pub fn get_snapshot_index(&self) -> MilestoneIndex {

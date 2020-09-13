@@ -28,7 +28,12 @@ use log::info;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::cmp::{max, min};
 
-pub(crate) struct OtrsiYtrsiPropagatorWorkerEvent(pub(crate) Hash);
+pub enum OriginType {
+    Insert(Hash),
+    UpdateTransactionsReferencedByMilestone(Vec<Hash>)
+}
+
+pub(crate) struct OtrsiYtrsiPropagatorWorkerEvent(pub(crate) OriginType);
 type OtrsiYtrsiPropagatorReceiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<OtrsiYtrsiPropagatorWorkerEvent>>>;
 
 pub(crate) struct OtrsiYtrsiPropagatorWorker {
@@ -40,8 +45,11 @@ impl OtrsiYtrsiPropagatorWorker {
         Self { receiver }
     }
 
-    fn propagate(&mut self, root: Hash) {
-        let mut children = vec![root];
+    fn propagate(&mut self, originType: OriginType) {
+        let mut children = match &originType {
+            OriginType::Insert(hash) => vec![*hash],
+            OriginType::UpdateTransactionsReferencedByMilestone(hashes) => hashes.clone()
+        };
         while let Some(hash) = children.pop() {
             // get best otrsi and ytrsi from parents
             let tx = tangle().get(&hash).unwrap();
@@ -83,6 +91,11 @@ impl OtrsiYtrsiPropagatorWorker {
                 children.push(child);
             }
         }
+
+        if let OriginType::UpdateTransactionsReferencedByMilestone(hashes) = originType {
+            tangle().update_tip_pool_scores();
+        }
+
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
