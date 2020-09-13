@@ -57,13 +57,13 @@ impl WurtsTipPool {
     // - transaction is solid and has no children
     // - transaction is solid and has only non-solid children
     // - transaction is solid and has solid children but does not exceed the retention rules
-    pub(crate) fn insert(&mut self, tip: &Hash) {
+    pub(crate) fn insert(&mut self, tail: Hash, trunk: Hash, branch: Hash) {
         // store tip
-        self.store(tip);
+        self.store(&tail);
         // link parents with child
-        self.add_to_parents(tip);
+        self.add_to_parents(&tail, &trunk, &branch);
         // remove parents that have more than 'MAX_CHILDREN_COUNT' children
-        self.check_num_children_of_parents(tip);
+        self.check_num_children_of_parents(&trunk, &branch);
         // remove tips that are too old
         self.check_age_seconds();
     }
@@ -73,17 +73,9 @@ impl WurtsTipPool {
         self.children.insert(*tip, HashSet::new());
     }
 
-    fn add_to_parents(&mut self, hash: &Hash) {
-        let (trunk, branch) = self.parents(hash);
-        self.add_child(trunk, *hash);
-        self.add_child(branch, *hash);
-    }
-
-    fn parents(&self, hash: &Hash) -> (Hash, Hash) {
-        let tx = tangle().get(hash).unwrap();
-        let trunk = tx.trunk();
-        let branch = tx.branch();
-        (*trunk, *branch)
+    fn add_to_parents(&mut self, hash: &Hash, trunk: &Hash, branch: &Hash) {
+        self.add_child(*trunk, *hash);
+        self.add_child(*branch, *hash);
     }
 
     fn add_child(&mut self, parent: Hash, child: Hash) {
@@ -100,10 +92,9 @@ impl WurtsTipPool {
         }
     }
 
-    fn check_num_children_of_parents(&mut self, hash: &Hash) {
-        let (trunk, branch) = self.parents(hash);
-        self.check_num_children_of_parent(&trunk);
-        self.check_num_children_of_parent(&branch);
+    fn check_num_children_of_parents(&mut self, trunk: &Hash, branch: &Hash) {
+        self.check_num_children_of_parent(trunk);
+        self.check_num_children_of_parent(branch);
     }
 
     fn check_num_children_of_parent(&mut self, hash: &Hash) {

@@ -19,7 +19,10 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::{info, warn};
+use log::{error, info, warn};
+use crate::Protocol;
+use crate::event::{BundleValidated, TransactionSolidified};
+use bee_transaction::Vertex;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BundleValidatorWorkerEvent>>>;
 
@@ -37,20 +40,30 @@ impl BundleValidatorWorker {
     fn validate(&self, tail_hash: Hash) {
         match load_bundle_builder(tangle(), &tail_hash) {
             Some(builder) => {
-                if builder.validate().is_ok() {
-                    tangle().update_metadata(&tail_hash, |metadata| {
-                        metadata.flags.set_valid(true);
-                    })
+                match builder.validate() {
+                    Ok(validated) => {
+                        tangle().update_metadata(&tail_hash, |metadata| {
+                            metadata.flags.set_valid(true);
+                        });
+                        Protocol::get().bus.dispatch(BundleValidated {
+                            tail_hash,
+                            trunk: *validated.trunk(),
+                            branch: *validated.branch()
+                        });
+                    }
+                    Err(_) => { ; }
                 }
             }
             None => {
-                warn!("Faild to validate bundle: tail not found.");
+                warn!("Failed to validate bundle: tail not found.");
             }
         }
     }
 
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
+
+        Protocol::get().bus.add_listener(on_transaction_solidified);
 
         while let Some(BundleValidatorWorkerEvent(hash)) = self.receiver.next().await {
             self.validate(hash);
@@ -60,4 +73,15 @@ impl BundleValidatorWorker {
 
         Ok(())
     }
+
 }
+
+pub fn on_transaction_solidified(event: &TransactionSolidified) {
+    if let Err(e) = Protocol::get()
+        .bundle_validator_worker
+        .unbounded_send(BundleValidatorWorkerEvent(event.0))
+    {
+        error!("Failed to send hash to bundle validator: {:?}.", e);
+    }
+}
+

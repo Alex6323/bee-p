@@ -28,15 +28,15 @@ use log::info;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::cmp::{max, min};
 
-pub(crate) struct TransactionRootSnapshotIndexPropagatorWorkerEvent(pub(crate) Hash);
-type TransactionRootSnapshotIndexPropagatorReceiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<TransactionRootSnapshotIndexPropagatorWorkerEvent>>>;
+pub(crate) struct OtrsiYtrsiPropagatorWorkerEvent(pub(crate) Hash);
+type OtrsiYtrsiPropagatorReceiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<OtrsiYtrsiPropagatorWorkerEvent>>>;
 
-pub(crate) struct TransactionRootSnapshotIndexPropagatorWorker {
-    receiver: TransactionRootSnapshotIndexPropagatorReceiver,
+pub(crate) struct OtrsiYtrsiPropagatorWorker {
+    receiver: OtrsiYtrsiPropagatorReceiver,
 }
 
-impl TransactionRootSnapshotIndexPropagatorWorker {
-    pub(crate) fn new(receiver: TransactionRootSnapshotIndexPropagatorReceiver) -> Self {
+impl OtrsiYtrsiPropagatorWorker {
+    pub(crate) fn new(receiver: OtrsiYtrsiPropagatorReceiver) -> Self {
         Self { receiver }
     }
 
@@ -88,7 +88,7 @@ impl TransactionRootSnapshotIndexPropagatorWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(TransactionRootSnapshotIndexPropagatorWorkerEvent(hash)) = self.receiver.next().await {
+        while let Some(OtrsiYtrsiPropagatorWorkerEvent(hash)) = self.receiver.next().await {
             self.propagate(hash);
         }
 

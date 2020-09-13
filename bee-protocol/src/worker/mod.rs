@@ -21,7 +21,7 @@ mod sender;
 mod status;
 mod tps;
 mod transaction;
-mod transaction_root_snapshot_index_propagator;
+mod otrsi_ytrsi_propagator;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
@@ -41,6 +41,6 @@ pub(crate) use sender::SenderWorker;
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
-pub(crate) use transaction_root_snapshot_index_propagator::{TransactionRootSnapshotIndexPropagatorWorker, TransactionRootSnapshotIndexPropagatorWorkerEvent};
+pub(crate) use otrsi_ytrsi_propagator::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent};
 
 

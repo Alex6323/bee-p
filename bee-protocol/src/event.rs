@@ -14,6 +14,12 @@ use crate::Milestone;
 use bee_crypto::ternary::Hash;
 use bee_network::Address;
 
+pub struct BundleValidated {
+    pub tail_hash: Hash,
+    pub trunk: Hash,
+    pub branch: Hash
+}
+
 pub struct HandshakeCompleted(pub Address);
 
 pub struct LatestMilestoneChanged(pub Milestone);

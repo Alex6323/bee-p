@@ -31,11 +31,11 @@ use std::{
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
-use crate::worker::TransactionRootSnapshotIndexPropagatorWorkerEvent;
 use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 use crate::tangle::wurts::WurtsTipPool;
 use bee_transaction::Vertex;
+use crate::worker::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent};
 
 /// Milestone-based Tangle.
 #[derive(Default)]
@@ -73,10 +73,10 @@ impl MsTangle {
                 error!("Failed to send hash to solid propagator: {:?}.", e);
             }
             if let Err(e) = Protocol::get()
-                .transaction_root_snapshot_index_propagator_worker
-                .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(hash))
+                .otrsi_ytrsi_propagator_worker
+                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(hash))
             {
-                error!("Failed to send hash to TransactionRootSnapshotIndex propagator: {:?}.", e);
+                error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
             }
         }
         opt
@@ -117,10 +117,10 @@ impl MsTangle {
                 // propagate the new otrsi and ytrsi values to the children of this transaction
                 for child in self.get_children(&hash) {
                     if let Err(e) = Protocol::get()
-                        .transaction_root_snapshot_index_propagator_worker
-                        .unbounded_send(TransactionRootSnapshotIndexPropagatorWorkerEvent(child))
+                        .otrsi_ytrsi_propagator_worker
+                        .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent(child))
                     {
-                        error!("Failed to send hash to TransactionRootSnapshotIndex propagator: {:?}.", e);
+                        error!("Failed to send hash to OTRSI and YTRSI propagator: {:?}.", e);
                     }
                 }
 
@@ -190,6 +190,11 @@ impl MsTangle {
         self.update_transactions_referenced_by_milestone(new_index);
         let mut tip_selector = self.tip_pool.write().unwrap();
         tip_selector.update_scores();
+    }
+
+    pub fn add_to_tip_pool(&self, tail: Hash, trunk: Hash, branch: Hash) {
+        let mut tip_selector = self.tip_pool.write().unwrap();
+        tip_selector.insert(tail, trunk, branch);
     }
 
     pub fn get_snapshot_index(&self) -> MilestoneIndex {

@@ -19,7 +19,7 @@ use crate::{
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, BundleValidatorWorkerEvent, HasherWorker,
         HasherWorkerEvent, KickstartWorker, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
-        MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneValidatorWorker, TransactionRootSnapshotIndexPropagatorWorker, TransactionRootSnapshotIndexPropagatorWorkerEvent, PeerHandshakerWorker,
+        MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneValidatorWorker, OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent, PeerHandshakerWorker,
         ProcessorWorker, SolidPropagatorWorker, SolidPropagatorWorkerEvent, StatusWorker, TpsWorker,
         TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
         TransactionResponderWorkerEvent,
@@ -41,6 +41,7 @@ use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 
 use std::{ptr, sync::Arc, time::Instant};
+use crate::event::BundleValidated;
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -59,7 +60,7 @@ pub struct Protocol {
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) bundle_validator_worker: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
-    pub(crate) transaction_root_snapshot_index_propagator_worker: mpsc::UnboundedSender<TransactionRootSnapshotIndexPropagatorWorkerEvent>,
+    pub(crate) otrsi_ytrsi_propagator_worker: mpsc::UnboundedSender<OtrsiYtrsiPropagatorWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
@@ -106,8 +107,8 @@ impl Protocol {
         let (solid_propagator_worker_tx, solid_propagator_worker_rx) = mpsc::unbounded();
         let (solid_propagator_worker_shutdown_tx, solid_propagator_worker_shutdown_rx) = oneshot::channel();
 
-        let (transaction_root_snapshot_index_propagator_worker_tx, transaction_root_snapshot_index_propagator_worker_rx) = mpsc::unbounded();
-        let (transaction_root_snapshot_index_propagator_worker_shutdown_tx, transaction_root_snapshot_index_worker_shutdown_rx) = oneshot::channel();
+        let (otrsi_ytrsi_propagator_worker_tx, otrsi_ytrsi_propagator_worker_rx) = mpsc::unbounded();
+        let (otrsi_ytrsi_propagator_worker_shutdown_tx, otrsi_ytrsi_worker_shutdown_rx) = oneshot::channel();
 
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();
 
@@ -129,7 +130,7 @@ impl Protocol {
             broadcaster_worker: broadcaster_worker_tx,
             bundle_validator_worker: bundle_validator_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
-            transaction_root_snapshot_index_propagator_worker: transaction_root_snapshot_index_propagator_worker_tx,
+            otrsi_ytrsi_propagator_worker: otrsi_ytrsi_propagator_worker_tx,
             peer_manager: PeerManager::new(network.clone()),
             requested_transactions: Default::default(),
             requested_milestones: Default::default(),
@@ -139,6 +140,7 @@ impl Protocol {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
+        Protocol::get().bus.add_listener(on_bundle_validated);
         Protocol::get().bus.add_listener(on_latest_solid_milestone_changed);
         // Protocol::get().bus.add_listener(on_snapshot_milestone_changed);
         Protocol::get().bus.add_listener(on_latest_milestone_changed);
@@ -277,11 +279,11 @@ impl Protocol {
         );
 
         shutdown.add_worker_shutdown(
-            transaction_root_snapshot_index_propagator_worker_shutdown_tx,
+            otrsi_ytrsi_propagator_worker_shutdown_tx,
             spawn(
-                TransactionRootSnapshotIndexPropagatorWorker::new(ShutdownStream::new(
-                    transaction_root_snapshot_index_worker_shutdown_rx,
-                    transaction_root_snapshot_index_propagator_worker_rx,
+                OtrsiYtrsiPropagatorWorker::new(ShutdownStream::new(
+                    otrsi_ytrsi_worker_shutdown_rx,
+                    otrsi_ytrsi_propagator_worker_rx,
                 ))
                     .run(),
             ),
@@ -329,6 +331,10 @@ impl Protocol {
 
         (receiver_tx, receiver_shutdown_tx)
     }
+}
+
+fn on_bundle_validated(bundle: &BundleValidated) {
+    tangle().add_to_tip_pool(bundle.tail_hash, bundle.trunk, bundle.branch);
 }
 
 fn on_latest_milestone_changed(latest_milestone: &LatestMilestoneChanged) {

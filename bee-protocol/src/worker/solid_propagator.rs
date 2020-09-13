@@ -24,10 +24,11 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::info;
+use log::{error, info};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::cmp::{max, min};
+use crate::worker::BundleValidatorWorkerEvent;
 
 type SolidPropagatorReceiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SolidPropagatorWorkerEvent>>>;
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
@@ -72,6 +73,14 @@ impl SolidPropagatorWorker {
                     }
 
                     Protocol::get().bus.dispatch(TransactionSolidified(*hash));
+
+                    if let Err(e) = Protocol::get()
+                        .bundle_validator_worker
+                        .unbounded_send(BundleValidatorWorkerEvent(*hash))
+                    {
+                        error!("Failed to send hash to solid propagator: {:?}.", e);
+                    }
+
                 }
 
                 if let Some(index) = index {
