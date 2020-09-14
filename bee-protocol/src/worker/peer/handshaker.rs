@@ -213,7 +213,9 @@ impl PeerHandshakerWorker {
 
                         Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
 
-                        Protocol::get().bus.dispatch(HandshakeCompleted(address));
+                        Protocol::get()
+                            .bus
+                            .dispatch(HandshakeCompleted(self.peer.epid, address));
 
                         Protocol::send_heartbeat(
                             self.peer.epid,

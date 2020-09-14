@@ -12,9 +12,9 @@
 use crate::Milestone;
 
 use bee_crypto::ternary::Hash;
-use bee_network::Address;
+use bee_network::{Address, EndpointId};
 
-pub struct HandshakeCompleted(pub Address);
+pub struct HandshakeCompleted(pub EndpointId, pub Address);
 
 pub struct LatestMilestoneChanged(pub Milestone);
 
