@@ -125,6 +125,7 @@ where
 
                         if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
                             meta.flags.set_requested(true);
+                            tangle().set_metadata(&milestone.hash, meta);
 
                             Protocol::trigger_milestone_solidification(milestone.index);
                         }
