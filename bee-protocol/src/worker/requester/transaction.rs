@@ -86,7 +86,23 @@ impl<'a> TransactionRequesterWorker<'a> {
             self.counter += 1;
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
-                if peer.has_index(index) {
+                if peer.has_data(index) {
+                    SenderWorker::<TransactionRequest>::send(
+                        epid,
+                        TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
+                    );
+                    return true;
+                }
+            }
+        }
+
+        for _ in 0..guard.len() {
+            let epid = &guard[self.counter % guard.len()];
+
+            self.counter += 1;
+
+            if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+                if peer.maybe_has_data(index) {
                     SenderWorker::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),

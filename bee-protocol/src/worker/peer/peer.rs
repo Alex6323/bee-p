@@ -145,7 +145,7 @@ impl PeerWorker {
                         if !tangle().is_synced()
                             && !self
                                 .peer
-                                .has_index(MilestoneIndex(*tangle().get_latest_solid_milestone_index() + 1))
+                                .has_data(MilestoneIndex(*tangle().get_latest_solid_milestone_index() + 1))
                         {
                             warn!("The peer {} can't help syncing.", self.peer.address);
                             // TODO drop if autopeered.

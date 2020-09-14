@@ -122,7 +122,11 @@ impl HandshakedPeer {
         self.synced_peers.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn has_index(&self, index: MilestoneIndex) -> bool {
+    pub(crate) fn has_data(&self, index: MilestoneIndex) -> bool {
         index > self.pruning_index() && index <= self.latest_solid_milestone_index()
+    }
+
+    pub(crate) fn maybe_has_data(&self, index: MilestoneIndex) -> bool {
+        index > self.pruning_index() && index <= self.latest_milestone_index()
     }
 }
