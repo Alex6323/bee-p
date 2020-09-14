@@ -10,41 +10,37 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    address::Address,
-    endpoint::{connected::DataSender, Endpoint, EndpointId},
+    endpoint::{DataSender, EndpointId},
     tcp::connection::Origin,
 };
 
-use futures::channel::mpsc;
+use tokio::sync::mpsc;
 
-use std::fmt;
+use std::{fmt, net::SocketAddr};
 
-const EVENT_CHANNEL_CAPACITY: usize = 1000;
-
-pub(crate) type EventSender = mpsc::Sender<Event>;
-pub(crate) type EventReceiver = mpsc::Receiver<Event>;
+pub(crate) type EventSender = mpsc::UnboundedSender<Event>;
+pub(crate) type EventReceiver = mpsc::UnboundedReceiver<Event>;
 
 pub(crate) fn channel() -> (EventSender, EventReceiver) {
-    mpsc::channel(EVENT_CHANNEL_CAPACITY)
+    mpsc::unbounded_channel()
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Event {
     EndpointAdded {
         epid: EndpointId,
-        total: usize,
     },
 
     EndpointRemoved {
         epid: EndpointId,
-        total: usize,
     },
 
-    ConnectionCreated {
-        endpoint: Endpoint,
+    ConnectionEstablished {
+        epid: EndpointId,
+        socket_address: SocketAddr,
         origin: Origin,
-        data_sender: DataSender,
-        timestamp: u64,
+        sender: DataSender,
     },
 
     ConnectionDropped {
@@ -53,14 +49,12 @@ pub enum Event {
 
     EndpointConnected {
         epid: EndpointId,
-        address: Address,
+        socket_address: SocketAddr,
         origin: Origin,
-        total: usize,
     },
 
     EndpointDisconnected {
         epid: EndpointId,
-        total: usize,
     },
 
     MessageReceived {
@@ -68,7 +62,7 @@ pub enum Event {
         message: Vec<u8>,
     },
 
-    TryConnectTo {
+    TimerElapsed {
         epid: EndpointId,
     },
 }
@@ -76,40 +70,31 @@ pub enum Event {
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Event::EndpointAdded { epid, total } => {
-                write!(f, "Event::EndpointAdded {{ {}, num_endpoints: {} }}", epid, total)
-            }
+            Event::EndpointAdded { epid } => write!(f, "Event::EndpointAdded {{ {} }}", epid),
 
-            Event::EndpointRemoved { epid, total } => {
-                write!(f, "Event::EndpointRemoved {{ {}, num_endpoints: {} }}", epid, total)
-            }
+            Event::EndpointRemoved { epid } => write!(f, "Event::EndpointRemoved {{ {} }}", epid),
 
-            Event::ConnectionCreated { endpoint, .. } => write!(f, "Event::ConnectionCreated {{ {} }}", endpoint.epid),
+            Event::ConnectionEstablished { epid, .. } => write!(f, "Event::ConnectionEstablished {{ {} }}", epid),
 
             Event::ConnectionDropped { epid, .. } => write!(f, "Event::ConnectionDropped {{ {} }}", epid),
 
             Event::EndpointConnected {
                 epid,
-                address,
+                socket_address,
                 origin,
-                total,
             } => write!(
                 f,
-                "Event::EndpointConnected {{ {}, address: {}, origin: {}, num_connected: {} }}",
-                epid, address, origin, total
+                "Event::EndpointConnected {{ {}, socket_address: {}, origin: {} }}",
+                epid, socket_address, origin
             ),
 
-            Event::EndpointDisconnected { epid, total } => write!(
-                f,
-                "Event::EndpointDisconnected {{ {}, num_connected: {} }}",
-                epid, total
-            ),
+            Event::EndpointDisconnected { epid } => write!(f, "Event::EndpointDisconnected {{ {} }}", epid),
 
             Event::MessageReceived { epid, message } => {
                 write!(f, "Event::MessageReceived {{ {}, num_bytes: {} }}", epid, message.len())
             }
 
-            Event::TryConnectTo { epid, .. } => write!(f, "Event::TryConnectTo {{ {} }}", epid),
+            Event::TimerElapsed { epid, .. } => write!(f, "Event::TimerElapsed {{ {} }}", epid),
         }
     }
 }

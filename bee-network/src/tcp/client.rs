@@ -9,18 +9,26 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::endpoint::EndpointId;
+use crate::{endpoint::EndpointId, events::EventSender};
+
+use super::{
+    connection::{Connection, Origin},
+    Error,
+};
+
+use log::*;
+use tokio::net::TcpStream;
 
 use std::net::SocketAddr;
 
-pub(crate) async fn try_connect_to(
-    epid: &EndpointId,
-    address: &SocketAddr,
+pub(crate) async fn connect_endpoint(
+    epid: EndpointId,
+    socket_address: SocketAddr,
     internal_event_sender: EventSender,
 ) -> Result<(), Error> {
     debug!("Trying to connect to {}...", epid);
 
-    match TcpStream::connect(*address).await {
+    match TcpStream::connect(socket_address).await {
         Ok(stream) => {
             let connection = match Connection::new(stream, Origin::Outbound) {
                 Ok(conn) => conn,
@@ -36,7 +44,7 @@ pub(crate) async fn try_connect_to(
                 connection.peer_address, connection.origin,
             );
 
-            spawn_connection_workers(connection, internal_event_sender).await?;
+            super::spawn_connection_workers(connection, internal_event_sender).await?;
 
             Ok(())
         }

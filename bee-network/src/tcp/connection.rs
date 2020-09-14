@@ -10,9 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use super::Error;
-// use crate::utils::time;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
 use tokio::net::{
     tcp::{OwnedReadHalf, OwnedWriteHalf},
@@ -44,15 +43,12 @@ pub struct Connection {
     pub peer_address: SocketAddr,
     pub reader: OwnedReadHalf,
     pub writer: OwnedWriteHalf,
-    /* pub stream: Arc<TcpStream>,
-     * pub timestamp: u64, */
 }
 
 impl Connection {
     pub fn new(stream: TcpStream, origin: Origin) -> Result<Self, Error> {
         let own_address = stream.local_addr()?;
         let peer_address = stream.peer_addr()?;
-        // let stream = Arc::new(stream);
 
         let (reader, writer) = stream.into_split();
 
@@ -62,7 +58,6 @@ impl Connection {
             peer_address,
             reader,
             writer,
-            // timestamp: time::timestamp_millis(),
         })
     }
 }

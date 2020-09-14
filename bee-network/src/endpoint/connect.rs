@@ -13,6 +13,8 @@ use super::{DataSender, EndpointId};
 
 use bee_common::worker::Error as WorkerError;
 
+use futures::sink::SinkExt;
+
 use std::{
     collections::{hash_map::Entry, HashMap},
     net::SocketAddr,
@@ -20,8 +22,6 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub(crate) struct ConnectedEndpoint {
-    epid: EndpointId,
-    socket_address: SocketAddr,
     sender: DataSender,
     duplicate_of: Option<EndpointId>,
 }
@@ -33,19 +33,11 @@ impl ConnectedEndpointList {
         Self::default()
     }
 
-    pub fn insert(
-        &mut self,
-        epid: EndpointId,
-        socket_address: SocketAddr,
-        connected_timestamp: u64,
-        sender: DataSender,
-    ) -> bool {
+    pub fn insert(&mut self, epid: EndpointId, socket_address: SocketAddr, sender: DataSender) -> bool {
         match self.0.entry(epid) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
                 entry.insert(ConnectedEndpoint {
-                    epid,
-                    socket_address,
                     sender,
                     duplicate_of: None,
                 });

@@ -13,8 +13,8 @@ pub mod connect;
 pub mod contact;
 pub mod worker;
 
+use futures::channel::mpsc;
 use thiserror::Error;
-use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use std::fmt;
@@ -71,6 +71,12 @@ impl fmt::Display for TransportProtocol {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct EndpointId(Uuid);
 
+impl EndpointId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
 impl fmt::Display for EndpointId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -81,5 +87,5 @@ pub type DataSender = mpsc::UnboundedSender<Vec<u8>>;
 pub type DataReceiver = mpsc::UnboundedReceiver<Vec<u8>>;
 
 pub fn channel() -> (DataSender, DataReceiver) {
-    mpsc::unbounded_channel()
+    mpsc::unbounded()
 }

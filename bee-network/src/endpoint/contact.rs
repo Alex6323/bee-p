@@ -1,6 +1,6 @@
 use crate::util::net;
 
-use super::{EndpointId, Error, Port, TransportProtocol};
+use super::{Error, Port, TransportProtocol};
 
 use url;
 

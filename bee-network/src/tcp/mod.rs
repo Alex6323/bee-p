@@ -18,10 +18,7 @@ use connection::{Connection, Origin};
 use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
 
 use crate::{
-    endpoint::{
-        connect::{channel, DataReceiver},
-        Endpoint, EndpointId,
-    },
+    endpoint::{channel, contact::EndpointContactParams, DataReceiver, EndpointId, TransportProtocol},
     events::{Event, EventSender},
     MAX_TCP_BUFFER_SIZE,
 };
@@ -37,10 +34,7 @@ use log::*;
 use thiserror::Error;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::{
-        tcp::{OwnedReadHalf, OwnedWriteHalf},
-        TcpStream,
-    },
+    net::tcp::{OwnedReadHalf, OwnedWriteHalf},
     task::JoinHandle,
 };
 
@@ -72,10 +66,9 @@ pub(crate) async fn spawn_connection_workers(
         writer,
     } = connection;
 
-    let address: Address = peer_address.into();
-    let protocol = Protocol::Tcp;
+    let transport_protocol = TransportProtocol::Tcp;
 
-    let endpoint = Endpoint::new(address, protocol);
+    let endpoint = EndpointContactParams::from_socket_address(socket_address, transport_protocol);
 
     let (data_sender, data_receiver) = channel();
     let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();

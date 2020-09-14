@@ -21,8 +21,8 @@ pub(crate) fn channel() -> (mpsc::UnboundedSender<Command>, mpsc::UnboundedRecei
 
 #[derive(Debug)]
 pub enum Command {
-    AddPeer { url: String },
-    RemovePeer { url: String },
+    AddContact { url: String },
+    RemoveContact { url: String },
     ConnectEndpoint { epid: EndpointId },
     DisconnectEndpoint { epid: EndpointId },
     SendMessage { epid: EndpointId, message: Vec<u8> },
@@ -32,10 +32,10 @@ pub enum Command {
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Command::AddPeer { url, .. } => write!(f, "Command::AddEndpoint {{ {} }}", url),
-            Command::RemovePeer { url, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", url),
-            Command::ConnectEndpoint { epid, .. } => write!(f, "Command::Connect {{ {} }}", epid),
-            Command::DisconnectEndpoint { epid, .. } => write!(f, "Command::Disconnect {{ {} }}", epid),
+            Command::AddContact { url, .. } => write!(f, "Command::AddContact {{ {} }}", url),
+            Command::RemoveContact { url, .. } => write!(f, "Command::RemoveContact {{ {} }}", url),
+            Command::ConnectEndpoint { epid, .. } => write!(f, "Command::ConnectEndpoint {{ {} }}", epid),
+            Command::DisconnectEndpoint { epid, .. } => write!(f, "Command::DisconnectEndpoint {{ {} }}", epid),
             Command::SendMessage { epid, .. } => write!(f, "Command::SendMessage {{ {} }}", epid),
             Command::SetDuplicate { epid, of } => write!(f, "Command::SetDuplicate {{ {} == {} }}", epid, of),
         }
