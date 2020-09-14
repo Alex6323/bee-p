@@ -122,7 +122,7 @@ impl Protocol {
             milestone_requester_worker: Default::default(),
             broadcaster_worker: broadcaster_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
-            peer_manager: PeerManager::new(network.clone()),
+            peer_manager: PeerManager::new(),
             requested_transactions: Default::default(),
             requested_milestones: Default::default(),
         };

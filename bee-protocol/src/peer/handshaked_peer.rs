@@ -9,20 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
-    milestone::MilestoneIndex,
-    peer::PeerMetrics,
-};
+use crate::{milestone::MilestoneIndex, peer::PeerMetrics};
 
 use bee_network::{Address, EndpointId};
 
-use std::sync::{
-    atomic::{AtomicU32, AtomicU8, Ordering},
-    Mutex,
-};
-
-use futures::channel::{mpsc, oneshot};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 
 pub struct HandshakedPeer {
     pub(crate) epid: EndpointId,
@@ -33,39 +24,10 @@ pub struct HandshakedPeer {
     pub(crate) latest_milestone_index: AtomicU32,
     pub(crate) connected_peers: AtomicU8,
     pub(crate) synced_peers: AtomicU8,
-    pub(crate) milestone_request: (
-        mpsc::UnboundedSender<MilestoneRequest>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) transaction: (
-        mpsc::UnboundedSender<TransactionMessage>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) transaction_request: (
-        mpsc::UnboundedSender<TransactionRequest>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) heartbeat: (mpsc::UnboundedSender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
 }
 
 impl HandshakedPeer {
-    pub(crate) fn new(
-        epid: EndpointId,
-        address: Address,
-        milestone_request: (
-            mpsc::UnboundedSender<MilestoneRequest>,
-            Mutex<Option<oneshot::Sender<()>>>,
-        ),
-        transaction: (
-            mpsc::UnboundedSender<TransactionMessage>,
-            Mutex<Option<oneshot::Sender<()>>>,
-        ),
-        transaction_request: (
-            mpsc::UnboundedSender<TransactionRequest>,
-            Mutex<Option<oneshot::Sender<()>>>,
-        ),
-        heartbeat: (mpsc::UnboundedSender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
-    ) -> Self {
+    pub(crate) fn new(epid: EndpointId, address: Address) -> Self {
         Self {
             epid,
             address,
@@ -75,10 +37,6 @@ impl HandshakedPeer {
             latest_milestone_index: AtomicU32::new(0),
             connected_peers: AtomicU8::new(0),
             synced_peers: AtomicU8::new(0),
-            milestone_request,
-            transaction,
-            transaction_request,
-            heartbeat,
         }
     }
 

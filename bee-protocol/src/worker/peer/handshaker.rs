@@ -83,7 +83,7 @@ impl PeerHandshakerWorker {
         let receiver_fused = receiver.fuse();
         let shutdown_fused = shutdown.fuse();
 
-        // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
+        // This is the only message not using a Sender because they are not running yet (awaiting handshake)
         if let Err(e) = self
             .network
             .send(SendMessage {

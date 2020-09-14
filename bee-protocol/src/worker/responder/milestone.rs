@@ -12,7 +12,7 @@
 use crate::{
     message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
     tangle::tangle,
-    worker::SenderWorker,
+    worker::Sender,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -57,7 +57,7 @@ impl MilestoneResponderWorker {
                 transaction.into_trits_allocated(&mut trits);
                 // TODO dedicated channel ? Priority Queue ?
                 // TODO compress bytes
-                SenderWorker::<TransactionMessage>::send(
+                Sender::<TransactionMessage>::send(
                     &epid,
                     // TODO try to compress lower in the pipeline ?
                     TransactionMessage::new(&compress_transaction_bytes(cast_slice(

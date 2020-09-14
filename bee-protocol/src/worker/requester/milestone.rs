@@ -9,9 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::SenderWorker,
-};
+use crate::{message::MilestoneRequest, milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::Sender};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::wait_priority_queue::WaitIncoming;
@@ -78,7 +76,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
         match epid {
             Some(epid) => {
-                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+                Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                 true
             }
             None => {
@@ -91,7 +89,7 @@ impl<'a> MilestoneRequesterWorker<'a> {
 
                     if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                         if peer.maybe_has_data(index) {
-                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
+                            Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                             return true;
                         }
                     }

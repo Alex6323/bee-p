@@ -12,7 +12,7 @@
 use crate::{
     message::{compress_transaction_bytes, Transaction as TransactionMessage, TransactionRequest},
     tangle::tangle,
-    worker::SenderWorker,
+    worker::Sender,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -52,7 +52,7 @@ impl TransactionResponderWorker {
                         let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
                         transaction.into_trits_allocated(&mut trits);
                         // TODO dedicated channel ? Priority Queue ?
-                        SenderWorker::<TransactionMessage>::send(
+                        Sender::<TransactionMessage>::send(
                             &epid,
                             // TODO try to compress lower in the pipeline ?
                             TransactionMessage::new(&compress_transaction_bytes(cast_slice(

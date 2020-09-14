@@ -14,7 +14,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::tangle,
-    worker::{BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, SenderWorker, TransactionRequesterWorkerEntry},
+    worker::{BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, Sender, TransactionRequesterWorkerEntry},
 };
 
 use bee_crypto::ternary::Hash;
@@ -47,7 +47,7 @@ impl Protocol {
     // TransactionMessage
 
     pub fn send_transaction(to: EndpointId, transaction: &[u8]) {
-        SenderWorker::<TransactionMessage>::send(&to, TransactionMessage::new(transaction));
+        Sender::<TransactionMessage>::send(&to, TransactionMessage::new(transaction));
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
@@ -90,7 +90,7 @@ impl Protocol {
         pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
     ) {
-        SenderWorker::<Heartbeat>::send(
+        Sender::<Heartbeat>::send(
             &to,
             Heartbeat::new(
                 *latest_solid_milestone_index,

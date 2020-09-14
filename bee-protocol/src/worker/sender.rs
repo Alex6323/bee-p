@@ -13,30 +13,26 @@ use crate::{
     message::{
         tlv_into_bytes, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest,
     },
-    peer::HandshakedPeer,
     protocol::Protocol,
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_network::{Command::SendMessage, EndpointId, Network};
+use bee_network::{Command::SendMessage, EndpointId};
 
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::Fuse};
 use log::warn;
 
-use std::sync::Arc;
+use std::marker::PhantomData;
 
 type Receiver<M> = ShutdownStream<Fuse<mpsc::UnboundedReceiver<M>>>;
 
-pub(crate) struct SenderWorker<M: Message> {
-    receiver: Receiver<M>,
+pub(crate) struct Sender<M: Message> {
+    marker: PhantomData<M>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
-        impl SenderWorker<$type> {
+        impl Sender<$type> {
             pub(crate) async fn send(epid: &EndpointId, message: $type) {
                 match Protocol::get()
                     .network
@@ -65,5 +61,3 @@ implement_sender_worker!(MilestoneRequest, milestone_request, milestone_requests
 implement_sender_worker!(TransactionMessage, transaction, transactions_sent_inc);
 implement_sender_worker!(TransactionRequest, transaction_request, transaction_requests_sent_inc);
 implement_sender_worker!(Heartbeat, heartbeat, heartbeats_sent_inc);
-
-// TODO is this really necessary ?
