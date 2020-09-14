@@ -12,6 +12,7 @@
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_transaction::Vertex;
 use bee_tangle::traversal;
 
 use futures::{
@@ -56,6 +57,10 @@ impl MilestoneSolidifierWorker {
                     |_, _, _| {},
                     |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
                 );
+
+                let tx = tangle().get(&target_hash).unwrap();
+                tangle().update_metadata(tx.trunk(), |meta| meta.flags.set_requested(true));
+                tangle().update_metadata(tx.branch(), |meta| meta.flags.set_requested(true));
 
                 self.next_ms_index = target_index + MilestoneIndex(1);
             }
