@@ -14,6 +14,7 @@ use crate::{
     milestone::Milestone,
     protocol::Protocol,
     tangle::tangle,
+    worker::BundleValidatorWorkerEvent,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -24,7 +25,7 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::info;
+use log::{info, warn};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -33,12 +34,16 @@ type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SolidPropagatorWorke
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct SolidPropagatorWorker {
+    bundle_validator: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
     receiver: Receiver,
 }
 
 impl SolidPropagatorWorker {
-    pub(crate) fn new(receiver: Receiver) -> Self {
-        Self { receiver }
+    pub(crate) fn new(bundle_validator: mpsc::UnboundedSender<BundleValidatorWorkerEvent>, receiver: Receiver) -> Self {
+        Self {
+            bundle_validator,
+            receiver,
+        }
     }
 
     fn propagate(&mut self, root: Hash) {
@@ -61,6 +66,13 @@ impl SolidPropagatorWorker {
                         if metadata.flags.is_milestone() {
                             index = Some(metadata.milestone_index);
                         }
+
+                        if metadata.flags.is_tail() {
+                            if let Err(e) = self.bundle_validator.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
+                                warn!("Failed to send hash to bundle validator: {:?}.", e);
+                            }
+                        }
+
                         metadata.solidification_timestamp = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
                             .expect("Clock may have gone backwards")

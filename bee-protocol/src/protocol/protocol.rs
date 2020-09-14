@@ -17,12 +17,11 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::tangle,
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, BundleValidatorWorkerEvent, HasherWorker,
-        HasherWorkerEvent, KickstartWorker, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry,
-        MilestoneResponderWorker, MilestoneResponderWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
-        ProcessorWorker, SolidPropagatorWorker, SolidPropagatorWorkerEvent, StatusWorker, TpsWorker,
-        TransactionRequesterWorker, TransactionRequesterWorkerEntry, TransactionResponderWorker,
-        TransactionResponderWorkerEvent,
+        BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, HasherWorker, HasherWorkerEvent,
+        KickstartWorker, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, MilestoneResponderWorker,
+        MilestoneResponderWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker,
+        SolidPropagatorWorker, SolidPropagatorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
+        TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent,
     },
 };
 
@@ -57,7 +56,6 @@ pub struct Protocol {
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
     pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
-    pub(crate) bundle_validator_worker: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
@@ -123,7 +121,6 @@ impl Protocol {
             transaction_requester_worker: Default::default(),
             milestone_requester_worker: Default::default(),
             broadcaster_worker: broadcaster_worker_tx,
-            bundle_validator_worker: bundle_validator_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
             peer_manager: PeerManager::new(network.clone()),
             requested_transactions: Default::default(),
@@ -263,10 +260,10 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             solid_propagator_worker_shutdown_tx,
             spawn(
-                SolidPropagatorWorker::new(ShutdownStream::new(
-                    solid_propagator_worker_shutdown_rx,
-                    solid_propagator_worker_rx,
-                ))
+                SolidPropagatorWorker::new(
+                    bundle_validator_worker_tx,
+                    ShutdownStream::new(solid_propagator_worker_shutdown_rx, solid_propagator_worker_rx),
+                )
                 .run(),
             ),
         );
