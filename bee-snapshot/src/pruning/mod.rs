@@ -19,8 +19,6 @@ use bee_crypto::ternary::Hash;
 use bee_protocol::{tangle::tangle, MilestoneIndex};
 use bee_tangle::traversal;
 
-use std::collections::HashSet;
-
 use dashmap::DashMap;
 
 use log::{error, info, warn};
@@ -37,6 +35,8 @@ pub enum Error {
     MilestoneTransactionIsNotTail,
 }
 
+/// Checks whether any direct approver of the given transaction was confirmed by a
+/// milestone which is above the target milestone.
 pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
     // Check if there is any child of the transaction is confirmed by newer milestones
     let milestone_index;
@@ -64,9 +64,9 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
 
 // TODO testing
 pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMap<Hash, MilestoneIndex>, Error> {
-    let mut solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
+    let solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
     for index in *target_index - *SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST..*target_index {
-        let mut milestone_tail_hash = Hash::zeros();
+        let milestone_tail_hash;
         let mut confirmed_transaction_hashes: Vec<Hash> = Vec::new();
 
         // Get the milestone tail hash
@@ -100,8 +100,6 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
         );
 
         for approvee in confirmed_transaction_hashes {
-            // TODO is_solid_entry_point() checks whether any direct approver of the given
-            //      transaction was confirmed by a milestone which is above the target milestone.
             if is_solid_entry_point(&approvee)? {
                 // Find all tails
                 let mut tail_hashes: Vec<Hash> = Vec::new();
@@ -221,11 +219,11 @@ pub fn prune_database(
     for milestone_index in *tangle().get_pruning_index() + 1..*target_index + 1 {
         info!("Pruning milestone {}...", milestone_index);
 
-        let pruned_transaction_count = prune_unconfirmed_transactions(&MilestoneIndex(milestone_index));
+        let pruned_unconfirmed_transactions_count = prune_unconfirmed_transactions(&MilestoneIndex(milestone_index));
 
         // Get the milestone tail hash
         // NOTE this milestone hash must be tail hash
-        let mut milestone_tail_hash;
+        let milestone_tail_hash;
         match tangle().get_milestone_hash(MilestoneIndex(milestone_index)) {
             None => {
                 warn!("Pruning milestone {} failed! Milestone not found!", milestone_index);
@@ -257,6 +255,7 @@ pub fn prune_database(
             |_hash, _tx, _metadata| {},
             |_hash| {},
         );
+
         // NOTE The metadata of solid entry points can be deleted from the database,
         //      because we only need the hashes of them, and don't have to trace their parents.
         let transactions_to_prune_count = transactions_to_prune.len();
@@ -264,8 +263,11 @@ pub fn prune_database(
 
         tangle().update_pruning_index(MilestoneIndex(milestone_index));
         info!(
-            "Pruning milestone {}. Pruned {}/{} transactions. ",
-            milestone_index, pruned_transactions_count, transactions_to_prune_count
+            "Pruning milestone {}. Pruned {}/{} transactions. Pruned {} unconfirmed transactions",
+            milestone_index,
+            pruned_transactions_count,
+            transactions_to_prune_count,
+            pruned_unconfirmed_transactions_count
         );
         // TODO trigger pruning milestone changed event
     }
