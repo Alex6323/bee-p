@@ -16,13 +16,12 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
 use async_std::stream::{interval, Interval};
 use bytemuck::cast_slice;
-use futures::{select, stream::Fuse, StreamExt};
+use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 
 use std::{
@@ -32,7 +31,7 @@ use std::{
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-type Receiver<'a> = ShutdownStream<WaitIncoming<'a, TransactionRequesterWorkerEntry>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
 
 #[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
@@ -49,14 +48,14 @@ impl Ord for TransactionRequesterWorkerEntry {
     }
 }
 
-pub(crate) struct TransactionRequesterWorker<'a> {
+pub(crate) struct TransactionRequesterWorker {
     counter: usize,
-    receiver: Receiver<'a>,
+    receiver: Receiver,
     timeouts: Fuse<Interval>,
 }
 
-impl<'a> TransactionRequesterWorker<'a> {
-    pub(crate) fn new(receiver: Receiver<'a>) -> Self {
+impl TransactionRequesterWorker {
+    pub(crate) fn new(receiver: Receiver) -> Self {
         Self {
             counter: 0,
             receiver,

@@ -54,7 +54,7 @@ pub struct Protocol {
     pub(crate) hasher_worker: mpsc::UnboundedSender<HasherWorkerEvent>,
     pub(crate) transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
-    pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
+    pub(crate) transaction_requester_worker: mpsc::UnboundedSender<TransactionRequesterWorkerEntry>,
     pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
@@ -89,6 +89,7 @@ impl Protocol {
         let (milestone_responder_worker_tx, milestone_responder_worker_rx) = mpsc::unbounded();
         let (milestone_responder_worker_shutdown_tx, milestone_responder_worker_shutdown_rx) = oneshot::channel();
 
+        let (transaction_requester_worker_tx, transaction_requester_worker_rx) = mpsc::unbounded();
         let (transaction_requester_worker_shutdown_tx, transaction_requester_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_requester_worker_shutdown_tx, milestone_requester_worker_shutdown_rx) = oneshot::channel();
@@ -123,7 +124,7 @@ impl Protocol {
             hasher_worker: hasher_worker_tx,
             transaction_responder_worker: transaction_responder_worker_tx,
             milestone_responder_worker: milestone_responder_worker_tx,
-            transaction_requester_worker: Default::default(),
+            transaction_requester_worker: transaction_requester_worker_tx,
             milestone_requester_worker: Default::default(),
             broadcaster_worker: broadcaster_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
@@ -191,7 +192,7 @@ impl Protocol {
             spawn(
                 TransactionRequesterWorker::new(ShutdownStream::from_fused(
                     transaction_requester_worker_shutdown_rx,
-                    Protocol::get().transaction_requester_worker.incoming(),
+                    transaction_requester_worker_rx,
                 ))
                 .run(),
             ),

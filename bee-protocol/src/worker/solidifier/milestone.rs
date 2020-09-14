@@ -12,8 +12,8 @@
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_transaction::Vertex;
 use bee_tangle::traversal;
+use bee_transaction::Vertex;
 
 use futures::{
     channel::{mpsc, oneshot},

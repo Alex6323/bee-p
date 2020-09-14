@@ -116,12 +116,8 @@ impl Protocol {
         {
             Protocol::get()
                 .transaction_requester_worker
-                .push(TransactionRequesterWorkerEntry(hash, index));
+                .unbounded_send(TransactionRequesterWorkerEntry(hash, index));
         }
-    }
-
-    pub fn transaction_requester_is_empty() -> bool {
-        Protocol::get().transaction_requester_worker.is_empty()
     }
 
     // Heartbeat
