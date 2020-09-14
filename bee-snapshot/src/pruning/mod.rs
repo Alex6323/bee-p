@@ -37,9 +37,29 @@ pub enum Error {
     MilestoneTransactionIsNotTail,
 }
 
-// TODO
-pub fn is_solid_entry_point(hash: &Hash) -> bool {
-    unimplemented!()
+pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
+    // Check if there is any child of the transaction is confirmed by newer milestones
+    let milestone_index;
+    if let Some(metadata) = tangle().get_metadata(hash) {
+        milestone_index = metadata.milestone_index;
+    } else {
+        error!("Metadada for hash {:?} is not found in Tangle.", hash);
+        return Err(Error::MetadataNotFound);
+    }
+    let mut is_solid = false;
+    traversal::visit_children_follow_trunk(
+        tangle(),
+        *hash,
+        |_tx, metadata| {
+            if is_solid {
+                return false;
+            }
+            is_solid = metadata.flags.is_confirmed() && metadata.milestone_index > milestone_index;
+            true
+        },
+        |_hash, _tx, _metadata| {},
+    );
+    Ok(is_solid)
 }
 
 // TODO testing
@@ -82,7 +102,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
         for approvee in confirmed_transaction_hashes {
             // TODO is_solid_entry_point() checks whether any direct approver of the given
             //      transaction was confirmed by a milestone which is above the target milestone.
-            if is_solid_entry_point(&approvee) {
+            if is_solid_entry_point(&approvee)? {
                 // Find all tails
                 let mut tail_hashes: Vec<Hash> = Vec::new();
 
