@@ -12,7 +12,6 @@
 use super::allowlist;
 
 use crate::{
-    address::url::{Protocol, Url},
     commands::Command,
     endpoint::{connected::ConnectedEndpointList, Endpoint, EndpointId, EndpointList},
     events::Event,

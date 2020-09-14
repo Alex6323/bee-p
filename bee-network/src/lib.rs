@@ -11,16 +11,14 @@
 
 //#![warn(missing_docs)]
 
-pub use address::{url::Url, Address, Port};
 pub use commands::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
-pub use endpoint::{Endpoint, EndpointId};
+pub use endpoint::EndpointId;
 pub use events::Event;
 pub use tcp::connection::Origin;
 
 pub use network::Network;
 
-mod address;
 mod commands;
 mod config;
 mod endpoint;
@@ -30,7 +28,7 @@ mod tcp;
 mod utils;
 
 use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
-use endpoint::{allowlist, worker::EndpointWorker};
+use endpoint::{access::Allowlist, worker::EndpointWorker};
 use tcp::worker::TcpWorker;
 
 use bee_common::shutdown::Shutdown;

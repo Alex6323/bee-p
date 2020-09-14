@@ -11,51 +11,13 @@
 
 use super::EndpointId;
 
-use crate::address::url::Url;
-
 use dashmap::DashMap;
 
-use std::{
-    net::IpAddr,
-    ptr,
-    sync::atomic::{AtomicBool, AtomicPtr, Ordering},
-};
-
-static ALLOWLIST: AtomicPtr<Allowlist> = AtomicPtr::new(ptr::null_mut());
-static INITIALIZED: AtomicBool = AtomicBool::new(false);
+use std::{net::IpAddr, sync::Arc};
 
 const INITIAL_ALLOWLIST_CAPACITY: usize = 16;
 
-pub fn init() {
-    if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
-        ALLOWLIST.store(Box::into_raw(Allowlist::new().into()), Ordering::Relaxed);
-    } else {
-        // drop();
-        panic!("Allowlist already initialized!");
-    }
-}
-
-pub(crate) fn get() -> &'static Allowlist {
-    let wl = ALLOWLIST.load(Ordering::Relaxed);
-    if wl.is_null() {
-        panic!("Allowlist cannot be null!");
-    } else {
-        unsafe { &*wl }
-    }
-}
-
-pub fn drop() {
-    if INITIALIZED.compare_and_swap(true, false, Ordering::Relaxed) {
-        let wl = ALLOWLIST.swap(ptr::null_mut(), Ordering::Relaxed);
-        if !wl.is_null() {
-            unsafe { Box::from_raw(wl) };
-        }
-    } else {
-        panic!("Allowlist already dropped!");
-    }
-}
-
-pub(crate) struct Allowlist(DashMap<EndpointId, (IpAddr, Url)>);
+pub(crate) struct Allowlist(Arc<DashMap<EndpointId, (IpAddr, Url)>>);
 
 impl Allowlist {
     pub fn new() -> Self {
