@@ -29,7 +29,7 @@ pub struct HandshakedPeer {
     pub(crate) address: Address,
     pub(crate) metrics: PeerMetrics,
     pub(crate) latest_solid_milestone_index: AtomicU32,
-    pub(crate) snapshot_milestone_index: AtomicU32,
+    pub(crate) pruning_index: AtomicU32,
     pub(crate) latest_milestone_index: AtomicU32,
     pub(crate) connected_peers: AtomicU8,
     pub(crate) synced_peers: AtomicU8,
@@ -71,7 +71,7 @@ impl HandshakedPeer {
             address,
             metrics: PeerMetrics::default(),
             latest_solid_milestone_index: AtomicU32::new(0),
-            snapshot_milestone_index: AtomicU32::new(0),
+            pruning_index: AtomicU32::new(0),
             latest_milestone_index: AtomicU32::new(0),
             connected_peers: AtomicU8::new(0),
             synced_peers: AtomicU8::new(0),
@@ -90,12 +90,12 @@ impl HandshakedPeer {
         self.latest_solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub(crate) fn set_snapshot_milestone_index(&self, index: MilestoneIndex) {
-        self.snapshot_milestone_index.store(*index, Ordering::Relaxed);
+    pub(crate) fn set_pruning_index(&self, index: MilestoneIndex) {
+        self.pruning_index.store(*index, Ordering::Relaxed);
     }
 
-    pub(crate) fn snapshot_milestone_index(&self) -> MilestoneIndex {
-        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+    pub(crate) fn pruning_index(&self) -> MilestoneIndex {
+        self.pruning_index.load(Ordering::Relaxed).into()
     }
 
     pub(crate) fn set_latest_milestone_index(&self, index: MilestoneIndex) {
@@ -123,6 +123,6 @@ impl HandshakedPeer {
     }
 
     pub(crate) fn is_solid_at(&self, index: MilestoneIndex) -> bool {
-        index > self.snapshot_milestone_index() && index <= self.latest_solid_milestone_index()
+        index > self.pruning_index() && index <= self.latest_solid_milestone_index()
     }
 }

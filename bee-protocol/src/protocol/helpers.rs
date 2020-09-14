@@ -85,14 +85,14 @@ impl Protocol {
     pub fn send_heartbeat(
         to: EndpointId,
         latest_solid_milestone_index: MilestoneIndex,
-        snapshot_milestone_index: MilestoneIndex,
+        pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
     ) {
         SenderWorker::<Heartbeat>::send(
             &to,
             Heartbeat::new(
                 *latest_solid_milestone_index,
-                *snapshot_milestone_index,
+                *pruning_milestone_index,
                 *latest_milestone_index,
                 0,
                 0,
@@ -102,14 +102,14 @@ impl Protocol {
 
     pub fn broadcast_heartbeat(
         latest_solid_milestone_index: MilestoneIndex,
-        snapshot_milestone_index: MilestoneIndex,
+        pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
     ) {
         for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
             Protocol::send_heartbeat(
                 *entry.key(),
                 latest_solid_milestone_index,
-                snapshot_milestone_index,
+                pruning_milestone_index,
                 latest_milestone_index,
             )
         }

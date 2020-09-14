@@ -14,6 +14,7 @@ use crate::{
         tlv_from_bytes, Header, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage,
         TransactionRequest,
     },
+    milestone::MilestoneIndex,
     peer::HandshakedPeer,
     protocol::Protocol,
     tangle::tangle,
@@ -135,22 +136,19 @@ impl PeerWorker {
                     Ok(message) => {
                         self.peer
                             .set_latest_solid_milestone_index(message.latest_solid_milestone_index.into());
+                        self.peer.set_pruning_index(message.pruning_index.into());
                         self.peer
-                            .set_snapshot_milestone_index(message.snapshot_milestone_index.into());
-                        self.peer.set_latest_milestone_index(message.latest_milestone_index.into());
+                            .set_latest_milestone_index(message.latest_milestone_index.into());
                         self.peer.set_connected_peers(message.connected_peers);
                         self.peer.set_synced_peers(message.synced_peers);
 
-                        // // TODO Warn if can't help sync
-                        if !tangle().is_synced() {
-                            let index = *tangle().get_latest_solid_milestone_index() + 1;
-
-                            if !(index > message.snapshot_milestone_index
-                                && index <= message.latest_solid_milestone_index)
-                            {
-                                warn!("The peer {} can't help syncing.", self.peer.address);
-                                // TODO Drop connection if autopeered.
-                            }
+                        if !tangle().is_synced()
+                            && !self
+                                .peer
+                                .is_solid_at(MilestoneIndex(*tangle().get_latest_solid_milestone_index() + 1))
+                        {
+                            warn!("The peer {} can't help syncing.", self.peer.address);
+                            // TODO Drop connection if autopeered.
                         }
 
                         self.peer.metrics.heartbeats_received_inc();

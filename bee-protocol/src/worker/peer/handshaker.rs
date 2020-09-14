@@ -220,7 +220,7 @@ impl PeerHandshakerWorker {
                         Protocol::send_heartbeat(
                             self.peer.epid,
                             tangle().get_latest_solid_milestone_index(),
-                            tangle().get_snapshot_index(),
+                            tangle().get_pruning_index(),
                             tangle().get_latest_milestone_index(),
                         );
 
