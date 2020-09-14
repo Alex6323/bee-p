@@ -24,29 +24,13 @@ use bytemuck::cast_slice;
 use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 
-use std::{
-    cmp::Ordering,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
 type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
 
-#[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
-
-impl PartialOrd for TransactionRequesterWorkerEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.1.partial_cmp(&self.1)
-    }
-}
-
-impl Ord for TransactionRequesterWorkerEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.1.cmp(&self.1)
-    }
-}
 
 pub(crate) struct TransactionRequesterWorker {
     counter: usize,

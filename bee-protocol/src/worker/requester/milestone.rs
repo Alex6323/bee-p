@@ -17,45 +17,28 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};
-use futures::{select, stream::Fuse, StreamExt};
+use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 
-use std::{
-    cmp::Ordering,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-type Receiver<'a> = ShutdownStream<WaitIncoming<'a, MilestoneRequesterWorkerEntry>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEntry>>;
 
-#[derive(Eq, PartialEq)]
 pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
-impl PartialOrd for MilestoneRequesterWorkerEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.0.partial_cmp(&self.0)
-    }
-}
-
-impl Ord for MilestoneRequesterWorkerEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.0.cmp(&self.0)
-    }
-}
-
-pub(crate) struct MilestoneRequesterWorker<'a> {
+pub(crate) struct MilestoneRequesterWorker {
     counter: usize,
-    receiver: Receiver<'a>,
+    receiver: Receiver,
     timeouts: Fuse<Interval>,
 }
 
-impl<'a> MilestoneRequesterWorker<'a> {
-    pub(crate) fn new(receiver: Receiver<'a>) -> Self {
+impl<'a> MilestoneRequesterWorker {
+    pub(crate) fn new(receiver: Receiver) -> Self {
         Self {
             counter: 0,
             receiver,

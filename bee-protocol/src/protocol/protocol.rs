@@ -27,7 +27,7 @@ use crate::{
 };
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::{event::Bus, wait_priority_queue::WaitPriorityQueue};
+use bee_common_ext::event::Bus;
 use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
     Hash,
@@ -55,7 +55,7 @@ pub struct Protocol {
     pub(crate) transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: mpsc::UnboundedSender<TransactionRequesterWorkerEntry>,
-    pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
+    pub(crate) milestone_requester_worker: mpsc::UnboundedSender<MilestoneRequesterWorkerEntry>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
     pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
@@ -92,6 +92,7 @@ impl Protocol {
         let (transaction_requester_worker_tx, transaction_requester_worker_rx) = mpsc::unbounded();
         let (transaction_requester_worker_shutdown_tx, transaction_requester_worker_shutdown_rx) = oneshot::channel();
 
+        let (milestone_requester_worker_tx, milestone_requester_worker_rx) = mpsc::unbounded();
         let (milestone_requester_worker_shutdown_tx, milestone_requester_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::unbounded();
@@ -125,7 +126,7 @@ impl Protocol {
             transaction_responder_worker: transaction_responder_worker_tx,
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: transaction_requester_worker_tx,
-            milestone_requester_worker: Default::default(),
+            milestone_requester_worker: milestone_requester_worker_tx,
             broadcaster_worker: broadcaster_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
             milestone_solidifier_worker: milestone_solidifier_worker_tx,
@@ -203,7 +204,7 @@ impl Protocol {
             spawn(
                 MilestoneRequesterWorker::new(ShutdownStream::from_fused(
                     milestone_requester_worker_shutdown_rx,
-                    Protocol::get().milestone_requester_worker.incoming(),
+                    milestone_requester_worker_rx,
                 ))
                 .run(),
             ),

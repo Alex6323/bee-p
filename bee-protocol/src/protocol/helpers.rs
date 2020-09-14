@@ -72,18 +72,17 @@ impl Protocol {
 
     pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
         if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
-            Protocol::get()
+            if let Err(e) = Protocol::get()
                 .milestone_requester_worker
-                .push(MilestoneRequesterWorkerEntry(index, to));
+                .unbounded_send(MilestoneRequesterWorkerEntry(index, to))
+            {
+                warn!("Requesting milestone failed: {}.", e);
+            }
         }
     }
 
     pub fn request_latest_milestone(to: Option<EndpointId>) {
-        Protocol::request_milestone(MilestoneIndex(0), to);
-    }
-
-    pub fn milestone_requester_is_empty() -> bool {
-        Protocol::get().milestone_requester_worker.is_empty()
+        Protocol::request_milestone(MilestoneIndex(0), to)
     }
 
     // TransactionMessage
@@ -114,9 +113,12 @@ impl Protocol {
             && !tangle().is_solid_entry_point(&hash)
             && !Protocol::get().requested_transactions.contains_key(&hash)
         {
-            Protocol::get()
+            if let Err(e) = Protocol::get()
                 .transaction_requester_worker
-                .unbounded_send(TransactionRequesterWorkerEntry(hash, index));
+                .unbounded_send(TransactionRequesterWorkerEntry(hash, index))
+            {
+                warn!("Requesting transaction failed: {}.", e);
+            }
         }
     }
 
