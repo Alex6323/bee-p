@@ -24,6 +24,8 @@ use bee_tangle::traversal;
 use log::warn;
 
 impl Protocol {
+    // TODO move some functions to workers
+
     // MilestoneRequest
 
     pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {

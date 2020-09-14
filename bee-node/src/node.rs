@@ -11,11 +11,7 @@
 
 #![warn(missing_docs)]
 
-use crate::{
-    config::NodeConfig,
-    constants::{BEE_GIT_COMMIT, BEE_VERSION},
-    plugin,
-};
+use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
@@ -255,23 +251,4 @@ fn shutdown_listener() -> (oneshot::Sender<()>, oneshot::Receiver<()>) {
 
     // TODO temporarily returns sender as well
     (sender, receiver)
-}
-
-fn print_banner_and_version() {
-    let commit = if BEE_GIT_COMMIT.is_empty() {
-        "".to_owned()
-    } else {
-        "-".to_owned() + &BEE_GIT_COMMIT[0..7]
-    };
-    println!(
-        "\n{}\n   v{}{}\n",
-        " ██████╗░███████╗███████╗
- ██╔══██╗██╔════╝██╔════╝
- ██████╦╝█████╗░░█████╗░░
- ██╔══██╗██╔══╝░░██╔══╝░░
- ██████╦╝███████╗███████╗
- ╚═════╝░╚══════╝╚══════╝",
-        BEE_VERSION,
-        commit,
-    );
 }
