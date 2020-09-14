@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{address::Address, endpoint::allowlist, events::EventSender, tcp::Origin};
+use crate::{events::EventSender, tcp::Origin};
 
 use super::{connection::Connection, spawn_connection_workers};
 
@@ -19,26 +19,26 @@ use futures::{prelude::*, select};
 use log::*;
 use tokio::net::{TcpListener, TcpStream};
 
-use std::io::Error;
+use std::{io::Error, net::SocketAddr};
 
-pub(crate) struct TcpWorker {
-    binding_addr: Address,
+pub(crate) struct TcpServer {
+    binding_address: SocketAddr,
     internal_event_sender: EventSender,
+    allowlist: Arc<Allowlist>,
 }
 
-impl TcpWorker {
-    pub fn new(binding_addr: Address, internal_event_sender: EventSender) -> Self {
+impl TcpServer {
+    pub fn new(binding_address: SocketAddr, internal_event_sender: EventSender) -> Self {
         Self {
-            binding_addr,
+            binding_address,
             internal_event_sender,
         }
     }
 
     pub async fn run(mut self, shutdown_listener: ShutdownListener) -> Result<(), WorkerError> {
-        debug!("Starting TCP worker...");
+        debug!("Starting TCP server...");
 
-        // FIXME: If another application already occupies the binding address, this line just blocks.
-        let mut listener = TcpListener::bind(*self.binding_addr).await?;
+        let mut listener = TcpListener::bind(self.binding_address).await?;
 
         debug!("Accepting connections on {}.", listener.local_addr()?);
 
@@ -52,7 +52,7 @@ impl TcpWorker {
                 },
                 stream = fused_incoming_streams.next() => {
                     if let Some(stream) = stream {
-                        if !self.handle_stream(stream).await? {
+                        if !self.process_stream(stream).await? {
                             continue;
                         }
                     } else {
@@ -62,12 +62,12 @@ impl TcpWorker {
             }
         }
 
-        debug!("Stopped TCP worker.");
+        debug!("Stopped TCP server.");
         Ok(())
     }
 
     #[inline]
-    async fn handle_stream(&mut self, stream: Result<TcpStream, Error>) -> Result<bool, WorkerError> {
+    async fn process_stream(&mut self, stream: Result<TcpStream, Error>) -> Result<bool, WorkerError> {
         match stream {
             Ok(stream) => {
                 let conn = match Connection::new(stream, Origin::Inbound) {

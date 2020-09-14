@@ -22,7 +22,6 @@ use std::{
 pub(crate) struct ConnectedEndpoint {
     epid: EndpointId,
     socket_address: SocketAddr,
-    connected_timestamp: u64, // NOTE: probably not necessary
     sender: DataSender,
     duplicate_of: Option<EndpointId>,
 }
@@ -47,7 +46,6 @@ impl ConnectedEndpointList {
                 entry.insert(ConnectedEndpoint {
                     epid,
                     socket_address,
-                    connected_timestamp,
                     sender,
                     duplicate_of: None,
                 });

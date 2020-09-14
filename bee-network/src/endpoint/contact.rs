@@ -1,4 +1,4 @@
-use crate::utils::net;
+use crate::util::net;
 
 use super::{EndpointId, Error, Port, TransportProtocol};
 
@@ -76,15 +76,15 @@ impl fmt::Display for EndpointContactParams {
 }
 
 #[derive(Default)]
-pub struct EndpointContactList(HashMap<EndpointId, EndpointContactParams>);
+pub struct EndpointContactList(HashMap<String, EndpointContactParams>);
 
 impl EndpointContactList {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn insert(&mut self, epid: EndpointId, params: EndpointContactParams) -> bool {
-        match self.0.entry(epid) {
+    pub fn insert(&mut self, url: String, params: EndpointContactParams) -> bool {
+        match self.0.entry(url) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
                 entry.insert(params);
@@ -94,19 +94,24 @@ impl EndpointContactList {
     }
 
     #[allow(dead_code)]
-    pub fn contains(&self, epid: &EndpointId) -> bool {
-        self.0.contains_key(epid)
+    pub fn contains(&self, url: &str) -> bool {
+        self.0.contains_key(url)
     }
-    pub fn remove(&mut self, epid: &EndpointId) -> bool {
-        self.0.remove(epid).is_some()
+    pub fn remove(&mut self, url: &str) -> bool {
+        self.0.remove(url).is_some()
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    pub fn get_mut(&mut self, epid: &EndpointId) -> Option<&mut EndpointContactParams> {
-        self.0.get_mut(epid)
+    #[allow(dead_code)]
+    pub fn get(&self, url: &str) -> Option<&EndpointContactParams> {
+        self.0.get(url)
+    }
+
+    pub fn get_mut(&mut self, url: &str) -> Option<&mut EndpointContactParams> {
+        self.0.get_mut(url)
     }
 }
 

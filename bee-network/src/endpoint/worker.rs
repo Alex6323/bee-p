@@ -9,11 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::allowlist;
+use crate::util::net::IpFilter;
 
 use crate::{
     commands::Command,
-    endpoint::{connected::ConnectedEndpointList, Endpoint, EndpointId, EndpointList},
+    endpoint::{
+        connect::ConnectedEndpointList,
+        contact::{EndpointContactList, EndpointContactParams},
+        EndpointId,
+    },
     events::Event,
     tcp, RECONNECT_INTERVAL,
 };
@@ -22,7 +26,6 @@ use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
 use futures::{channel::mpsc, select, sink::SinkExt, stream, FutureExt, StreamExt};
 use log::*;
-use tokio::task;
 
 use std::{sync::atomic::Ordering, time::Duration};
 
@@ -35,6 +38,7 @@ pub struct EndpointWorker {
     event_sender: EventSender,
     internal_event_receiver: stream::Fuse<EventReceiver>,
     internal_event_sender: EventSender,
+    ip_filter: IpFilter,
 }
 
 impl EndpointWorker {
@@ -43,19 +47,21 @@ impl EndpointWorker {
         event_sender: EventSender,
         internal_event_receiver: EventReceiver,
         internal_event_sender: EventSender,
+        ip_filter: IpFilter,
     ) -> Self {
         Self {
             command_receiver: command_receiver.fuse(),
             event_sender,
             internal_event_receiver: internal_event_receiver.fuse(),
             internal_event_sender,
+            ip_filter,
         }
     }
 
     pub async fn run(mut self, shutdown_listener: ShutdownListener) -> Result<(), WorkerError> {
         debug!("Starting endpoint worker...");
 
-        let mut endpoints = EndpointList::new();
+        let mut endpoint_contacts = EndpointContactList::new();
         let mut connected_endpoints = ConnectedEndpointList::new();
 
         let mut fused_shutdown_listener = shutdown_listener.fuse();
@@ -66,12 +72,12 @@ impl EndpointWorker {
                     break;
                 },
                 command = self.command_receiver.next() => {
-                    if !self.handle_command(command, &mut endpoints, &mut connected_endpoints).await? {
+                    if !self.handle_command(command, &mut endpoint_contacts, &mut connected_endpoints).await? {
                         break;
                     }
                 },
                 event = self.internal_event_receiver.next() => {
-                    if !self.handle_event(event, &mut endpoints, &mut connected_endpoints).await? {
+                    if !self.handle_event(event, &mut endpoint_contacts, &mut connected_endpoints).await? {
                         break;
                     }
                 },
@@ -86,7 +92,7 @@ impl EndpointWorker {
     async fn handle_command(
         &mut self,
         command: Option<Command>,
-        mut endpoints: &mut EndpointList,
+        mut endpoint_contacts: &mut EndpointContactList,
         mut connected_endpoints: &mut ConnectedEndpointList,
     ) -> Result<bool, WorkerError> {
         let command = if let Some(command) = command {
@@ -99,31 +105,31 @@ impl EndpointWorker {
         debug!("Received {}.", command);
 
         match command {
-            Command::AddEndpoint { url } => {
-                add_endpoint(&mut endpoints, url, &mut self.internal_event_sender).await?;
+            Command::AddContact { url } => {
+                add_contact(&url, &mut endpoint_contacts, &mut self.internal_event_sender).await?;
             }
 
-            Command::RemoveEndpoint { epid } => {
-                remove_endpoint(
-                    epid,
-                    &mut endpoints,
+            Command::RemoveContact { url } => {
+                remove_contact(
+                    &url,
+                    &mut endpoint_contacts,
                     &mut connected_endpoints,
                     &mut self.internal_event_sender,
                 )
                 .await?;
             }
 
-            Command::Connect { epid } => {
+            Command::ConnectEndpoint { epid } => {
                 try_connect_to(
                     epid,
-                    &mut endpoints,
+                    &mut contacts,
                     &mut connected_endpoints,
                     &mut self.internal_event_sender,
                 )
                 .await?;
             }
 
-            Command::Disconnect { epid } => {
+            Command::DisconnectEndpoint { epid } => {
                 if disconnect(epid, &mut connected_endpoints) {
                     self.event_sender
                         .send(Event::EndpointDisconnected {
@@ -138,8 +144,16 @@ impl EndpointWorker {
                 send_message(&epid, message, &mut connected_endpoints).await?;
             }
 
-            Command::SetDuplicate { epid, other } => {
-                remove_duplicate(epid, other, &mut connected_endpoints, &mut self.internal_event_sender).await?;
+            Command::SetDuplicate {
+                duplicate,
+                duplicate_of,
+            } => {
+                set_duplicate(
+                    duplicate,
+                    duplicate_of,
+                    &mut connected_endpoints,
+                    &mut self.internal_event_sender,
+                )?;
             }
         }
 
@@ -150,7 +164,7 @@ impl EndpointWorker {
     async fn handle_event(
         &mut self,
         event: Option<Event>,
-        endpoints: &mut EndpointList,
+        endpoint_contacts: &mut EndpointContactList,
         connected_endpoints: &mut ConnectedEndpointList,
     ) -> Result<bool, WorkerError> {
         let event = if let Some(event) = event {
@@ -224,40 +238,43 @@ impl EndpointWorker {
 }
 
 #[inline]
-async fn add_endpoint(
-    endpoints: &mut EndpointList,
-    url: Url,
+async fn add_contact(
+    url: &str,
+    endpoint_contacts: &mut EndpointContactList,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    let endpoint = Endpoint::from_url(url.clone()).await;
-    let epid = endpoint.epid;
+    if let Ok(contact_params) = EndpointContactParams::from_url(url.clone()) {
+        let epid = contact_params.epid;
 
-    if endpoints.insert(endpoint) {
-        // Add to allowlist
-        let allowlist = allowlist::get();
-        allowlist.insert(epid, url);
+        if endpoint_contacts.insert(endpoint) {
+            // Add to allowlist
+            let allowlist = allowlist::get();
+            allowlist.insert(epid, url);
 
-        internal_event_sender
-            .send(Event::EndpointAdded {
-                epid,
-                total: endpoints.len(),
-            })
-            .await?;
+            internal_event_sender
+                .send(Event::EndpointAdded {
+                    epid,
+                    total: endpoints.len(),
+                })
+                .await?;
 
-        Ok(true)
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     } else {
         Ok(false)
     }
 }
 
 #[inline]
-async fn remove_endpoint(
-    epid: EndpointId,
-    endpoints: &mut EndpointList,
+async fn remove_contact(
+    url: &str,
+    endpoint_contacts: &mut EndpointContactList,
     connected_endpoints: &mut ConnectedEndpointList,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    if endpoints.remove(&epid) {
+    if endpoint_contacts.remove(url) {
         if connected_endpoints.remove(&epid) {
             debug!("Removed connected endpoint {}.", epid);
         } else {
@@ -340,14 +357,11 @@ async fn send_message(
 }
 
 #[inline]
-async fn remove_duplicate(
-    epid: EndpointId,
-    other: EndpointId,
+fn set_duplicate(
+    duplicate: EndpointId,
+    duplicate_of: EndpointId,
     connected_endpoints: &mut ConnectedEndpointList,
     internal_event_sender: &mut EventSender,
-) -> Result<(), WorkerError> {
-    if connected_endpoints.set_duplicate(epid, other) && connected_endpoints.remove_duplicate(&epid, &other) {
-        internal_event_sender.send(Event::ConnectionDropped { epid }).await?;
-    }
-    Ok(())
+) -> Result<bool, WorkerError> {
+    Ok(connected_endpoints.set_duplicate(duplicate, duplicate_of))
 }

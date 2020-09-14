@@ -9,15 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// pub mod access;
 pub mod connect;
 pub mod contact;
 pub mod worker;
 
 use thiserror::Error;
 use tokio::sync::mpsc;
+use uuid::Uuid;
 
-use std::{fmt, net::SocketAddr};
+use std::fmt;
 
 /// Errors that can happen when dealing with `Address`es.
 #[derive(Debug, Error)]
@@ -69,13 +69,7 @@ impl fmt::Display for TransportProtocol {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct EndpointId(SocketAddr);
-
-impl From<SocketAddr> for EndpointId {
-    fn from(socket_address: SocketAddr) -> Self {
-        Self(socket_address)
-    }
-}
+pub struct EndpointId(Uuid);
 
 impl fmt::Display for EndpointId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -83,11 +77,9 @@ impl fmt::Display for EndpointId {
     }
 }
 
-const DATA_CHANNEL_CAPACITY: usize = 10000;
-
-pub type DataSender = mpsc::Sender<Vec<u8>>;
-pub type DataReceiver = mpsc::Receiver<Vec<u8>>;
+pub type DataSender = mpsc::UnboundedSender<Vec<u8>>;
+pub type DataReceiver = mpsc::UnboundedReceiver<Vec<u8>>;
 
 pub fn channel() -> (DataSender, DataReceiver) {
-    mpsc::channel(DATA_CHANNEL_CAPACITY)
+    mpsc::unbounded_channel()
 }

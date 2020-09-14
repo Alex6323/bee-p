@@ -25,11 +25,11 @@ mod endpoint;
 mod events;
 mod network;
 mod tcp;
-mod utils;
+mod util;
 
 use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
-use endpoint::{access::Allowlist, worker::EndpointWorker};
-use tcp::worker::TcpWorker;
+use endpoint::worker::EndpointWorker;
+use tcp::server::TcpServer;
 
 use bee_common::shutdown::Shutdown;
 

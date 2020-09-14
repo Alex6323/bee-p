@@ -9,37 +9,35 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::p2p::endpoint::{EndpointConnectionInfo, EndpointId};
+use crate::endpoint::EndpointId;
 
-use futures::channel::mpsc;
+use tokio::sync::mpsc;
 
 use std::fmt;
 
-const COMMAND_CHANNEL_CAPACITY: usize = 1000;
-
-pub(crate) fn channel() -> (mpsc::Sender<Command>, mpsc::Receiver<Command>) {
-    mpsc::channel(COMMAND_CHANNEL_CAPACITY)
+pub(crate) fn channel() -> (mpsc::UnboundedSender<Command>, mpsc::UnboundedReceiver<Command>) {
+    mpsc::unbounded_channel()
 }
 
 #[derive(Debug)]
 pub enum Command {
-    AddEndpoint { url: Url },
-    RemoveEndpoint { epid: EndpointId },
-    Connect { epid: EndpointId },
-    Disconnect { epid: EndpointId },
+    AddPeer { url: String },
+    RemovePeer { url: String },
+    ConnectEndpoint { epid: EndpointId },
+    DisconnectEndpoint { epid: EndpointId },
     SendMessage { epid: EndpointId, message: Vec<u8> },
-    SetDuplicate { epid: EndpointId, other: EndpointId },
+    SetDuplicate { epid: EndpointId, of: EndpointId },
 }
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Command::AddEndpoint { url, .. } => write!(f, "Command::AddEndpoint {{ {} }}", url),
-            Command::RemoveEndpoint { epid, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", epid),
-            Command::Connect { epid, .. } => write!(f, "Command::Connect {{ {} }}", epid),
-            Command::Disconnect { epid, .. } => write!(f, "Command::Disconnect {{ {} }}", epid),
+            Command::AddPeer { url, .. } => write!(f, "Command::AddEndpoint {{ {} }}", url),
+            Command::RemovePeer { url, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", url),
+            Command::ConnectEndpoint { epid, .. } => write!(f, "Command::Connect {{ {} }}", epid),
+            Command::DisconnectEndpoint { epid, .. } => write!(f, "Command::Disconnect {{ {} }}", epid),
             Command::SendMessage { epid, .. } => write!(f, "Command::SendMessage {{ {} }}", epid),
-            Command::SetDuplicate { epid, other } => write!(f, "Command::SetDuplicate {{ {} == {} }}", epid, other),
+            Command::SetDuplicate { epid, of } => write!(f, "Command::SetDuplicate {{ {} == {} }}", epid, of),
         }
     }
 }

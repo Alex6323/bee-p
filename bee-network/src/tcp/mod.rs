@@ -9,17 +9,17 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+pub mod client;
 pub mod connection;
-pub mod worker;
+pub mod server;
 
 use connection::{Connection, Origin};
 
 use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
 
 use crate::{
-    address::{url::Protocol, Address},
     endpoint::{
-        connected::{channel, DataReceiver},
+        connect::{channel, DataReceiver},
         Endpoint, EndpointId,
     },
     events::{Event, EventSender},
@@ -44,7 +44,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use std::sync::atomic::Ordering;
+use std::{net::SocketAddr, sync::atomic::Ordering};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -56,41 +56,6 @@ pub enum Error {
 
     #[error("Sending an event failed.")]
     SendingEventFailed(#[from] futures::channel::mpsc::SendError),
-}
-
-pub(crate) async fn try_connect_to(
-    epid: &EndpointId,
-    address: &Address,
-    internal_event_sender: EventSender,
-) -> Result<(), Error> {
-    debug!("Trying to connect to {}...", epid);
-
-    match TcpStream::connect(**address).await {
-        Ok(stream) => {
-            let connection = match Connection::new(stream, Origin::Outbound) {
-                Ok(conn) => conn,
-                Err(e) => {
-                    warn!["Error creating TCP connection: {:?}.", e];
-
-                    return Err(Error::ConnectionAttemptFailed);
-                }
-            };
-
-            debug!(
-                "Sucessfully established connection to {} ({}).",
-                connection.peer_address, connection.origin,
-            );
-
-            spawn_connection_workers(connection, internal_event_sender).await?;
-
-            Ok(())
-        }
-        Err(e) => {
-            warn!("Connecting to {} failed: {:?}.", epid, e);
-
-            Err(Error::ConnectionAttemptFailed)
-        }
-    }
 }
 
 pub(crate) async fn spawn_connection_workers(
