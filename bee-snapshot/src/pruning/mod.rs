@@ -90,7 +90,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                 traversal::visit_parents_depth_first(
                     tangle(),
                     approvee,
-                    |_hash, _tx, metadata| metadata.flags.is_tail(),
+                    |_hash, _tx, metadata| !metadata.flags.is_tail(),
                     |_hash, _tx, _metadata| {},
                     |hash, _tx, _metadata| tail_hashes.push(hash.clone()),
                     |_hash| {},
@@ -120,7 +120,8 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
 
 // TODO get the unconfirmed trnsactions in the database
 pub fn get_unconfirmed_transactions(target_index: &MilestoneIndex) -> Vec<Hash> {
-    // NOTE w/o cache, need to traverse the whole tangle to get the unconfirmed transactions!
+    // NOTE If there is no specific struct for storing th unconfirmed transaction,
+    //      then we need to traverse the whole tangle to get the unconfirmed transactions (SLOW)!
     // TODO traverse the whole tangle through the approvers from solid entry points
     unimplemented!()
 }
@@ -236,8 +237,8 @@ pub fn prune_database(
             |_hash, _tx, _metadata| {},
             |_hash| {},
         );
-        // TODO the metadata of solid entry points can be deleted from the database,
-        // because we only need the hashes of them, and don't have to trace their parents.
+        // NOTE The metadata of solid entry points can be deleted from the database,
+        //      because we only need the hashes of them, and don't have to trace their parents.
         let transactions_to_prune_count = transactions_to_prune.len();
         let pruned_transactions_count = prune_transactions(transactions_to_prune);
 
