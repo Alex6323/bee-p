@@ -42,51 +42,6 @@ pub fn is_solid_entry_point(hash: &Hash) -> bool {
     unimplemented!()
 }
 
-// TODO we need the following in the traversal mod to enable us collect the tails
-//      or we enhance the visit_parents_depth_first function
-// pub fn visit_parents_depth_first_with_leaf_apply<Metadata, Match, Apply, LeafApply, ElseApply>(
-//     tangle: &Tangle<Metadata>,
-//     root: Hash,
-//     matches: Match,
-//     mut apply: Apply,
-//     mut leaf_apply: LeafApply,
-//     mut else_apply: ElseApply,
-// ) where
-//     Metadata: Clone + Copy,
-//     Match: Fn(&Hash, &TxRef, &Metadata) -> bool,
-//     Apply: FnMut(&Hash, &TxRef, &Metadata),
-//     LeafApply: FnMut(&Hash, &TxRef, &Metadata),
-//     ElseApply: FnMut(&Hash),
-// {
-//     let mut parents = Vec::new();
-//     let mut visited = HashSet::new();
-
-//     parents.push(root);
-
-//     while let Some(hash) = parents.pop() {
-//         if !visited.contains(&hash) {
-//             match tangle.vertices.get(&hash) {
-//                 Some(vtx) => {
-//                     let vtx = vtx.value();
-
-//                     if matches(&hash, vtx.transaction(), vtx.metadata()) {
-//                         apply(&hash, vtx.transaction(), vtx.metadata());
-
-//                         parents.push(*vtx.trunk());
-//                         parents.push(*vtx.branch());
-//                     } else {
-//                         leaf_apply(&hash, vtx.transaction(), vtx.metadata());
-//                     }
-//                 }
-//                 None => {
-//                     else_apply(&hash);
-//                 }
-//             }
-//             visited.insert(hash);
-//         }
-//     }
-// }
-
 // TODO testing
 pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMap<Hash, MilestoneIndex>, Error> {
     let mut solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
@@ -132,14 +87,14 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                 let mut tail_hashes: Vec<Hash> = Vec::new();
 
                 // Get all the tails
-                // traversal::visit_parents_depth_first_with_leaf_apply(
-                //     tangle(),
-                //     root,
-                //     |_hash, _tx, metadata| metadata.flags.is_tail(),
-                //     |_hash, _tx, _metadata| {},
-                //     |hash, _tx, _metadata| tail_hashes.push(hash.clone()),
-                //     |_hash| {},
-                // );
+                traversal::visit_parents_depth_first(
+                    tangle(),
+                    approvee,
+                    |_hash, _tx, metadata| metadata.flags.is_tail(),
+                    |_hash, _tx, _metadata| {},
+                    |hash, _tx, _metadata| tail_hashes.push(hash.clone()),
+                    |_hash| {},
+                );
 
                 for tail_hash in tail_hashes {
                     match tangle().get_metadata(&tail_hash) {
