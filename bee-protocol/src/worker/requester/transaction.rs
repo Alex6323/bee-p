@@ -86,7 +86,7 @@ impl<'a> TransactionRequesterWorker<'a> {
             self.counter += 1;
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
-                if peer.is_solid_at(index) {
+                if peer.has_index(index) {
                     SenderWorker::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),

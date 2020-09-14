@@ -145,11 +145,13 @@ impl PeerWorker {
                         if !tangle().is_synced()
                             && !self
                                 .peer
-                                .is_solid_at(MilestoneIndex(*tangle().get_latest_solid_milestone_index() + 1))
+                                .has_index(MilestoneIndex(*tangle().get_latest_solid_milestone_index() + 1))
                         {
                             warn!("The peer {} can't help syncing.", self.peer.address);
-                            // TODO Drop connection if autopeered.
+                            // TODO drop if autopeered.
                         }
+
+                        // Also drop connection if autopeered and we can't help it sync
 
                         self.peer.metrics.heartbeats_received_inc();
                         Protocol::get().metrics.heartbeats_received_inc();
