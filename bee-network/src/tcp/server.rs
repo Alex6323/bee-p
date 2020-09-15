@@ -9,9 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{events::EventSender, tcp::Origin, util::net::Allowlist};
+use crate::{
+    endpoint::{Allowlist, EndpointId},
+    events::EventSender,
+    tcp::Origin,
+};
 
-use super::{connection::Connection, spawn_connection_workers};
+use super::{connection::Connection, spawn_reader_writer};
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
@@ -85,7 +89,7 @@ impl TcpServer {
             }
         }
 
-        debug!("Stopped TCP server.");
+        debug!("TCP server stopped.");
         Ok(())
     }
 }
@@ -125,7 +129,9 @@ async fn process_stream(
             );
 
             let internal_event_sender = internal_event_sender.clone();
-            spawn_connection_workers(connection, internal_event_sender)
+            let epid = EndpointId::new();
+
+            spawn_reader_writer(connection, epid, internal_event_sender)
                 .await
                 .map_err(|_| WorkerError::AsynchronousOperationFailed);
         }

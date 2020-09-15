@@ -42,7 +42,7 @@ pub enum Event {
         epid: EndpointId,
         socket_address: SocketAddr,
         origin: Origin,
-        sender: DataSender,
+        data_sender: DataSender,
     },
 
     ConnectionDropped {

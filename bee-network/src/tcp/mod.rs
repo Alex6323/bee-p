@@ -13,15 +13,15 @@ pub mod client;
 pub mod connection;
 pub mod server;
 
-use connection::{Connection, Origin};
-
-use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
-
 use crate::{
-    endpoint::{channel, contact::EndpointContactParams, DataReceiver, EndpointId, TransportProtocol},
+    endpoint::{self, DataReceiver, EndpointId},
     events::{Event, EventSender},
     MAX_TCP_BUFFER_SIZE,
 };
+
+use connection::{Connection, Origin};
+
+use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
 
 use futures::{
     channel::oneshot,
@@ -38,7 +38,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use std::{net::SocketAddr, sync::atomic::Ordering};
+use std::sync::atomic::Ordering;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -52,12 +52,11 @@ pub enum Error {
     SendingEventFailed(#[from] futures::channel::mpsc::SendError),
 }
 
-pub(crate) async fn spawn_connection_workers(
+pub(crate) async fn spawn_reader_writer(
     connection: Connection,
+    epid: EndpointId,
     mut internal_event_sender: EventSender,
 ) -> Result<(), Error> {
-    debug!("Spawning TCP connection workers...");
-
     let Connection {
         origin,
         own_address,
@@ -66,32 +65,28 @@ pub(crate) async fn spawn_connection_workers(
         writer,
     } = connection;
 
-    let transport_protocol = TransportProtocol::Tcp;
-
-    let endpoint = EndpointContactParams::from_socket_address(socket_address, transport_protocol);
-
-    let (data_sender, data_receiver) = channel();
-    let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
+    let (data_sender, data_receiver) = endpoint::channel();
+    let (shutdown_notifier, shutdown_listener) = oneshot::channel::<()>();
 
     // NOTE: block until reader and writer task are spawned
     let mut handles = Vec::with_capacity(2);
 
-    handles.push(spawn_writer(endpoint.epid, writer, data_receiver, shutdown_sender));
+    handles.push(spawn_writer(epid, writer, data_receiver, shutdown_notifier));
     handles.push(spawn_reader(
-        endpoint.epid,
+        epid,
         reader,
         internal_event_sender.clone(),
-        shutdown_receiver,
+        shutdown_listener,
     ));
 
     join_all(handles).await;
 
     internal_event_sender
-        .send(Event::ConnectionCreated {
-            endpoint,
+        .send(Event::ConnectionEstablished {
+            epid,
+            socket_address: peer_address,
             origin,
             data_sender,
-            timestamp: crate::utils::time::timestamp_millis(),
         })
         .await?;
 
@@ -104,13 +99,11 @@ fn spawn_writer(
     data_receiver: DataReceiver,
     shutdown_notifier: ShutdownNotifier,
 ) -> JoinHandle<()> {
-    debug!("Starting connection writer task for {}...", epid);
+    debug!("Starting TCP stream writer for {}...", epid);
 
     let mut fused_data_receiver = data_receiver.fuse();
 
     tokio::spawn(async move {
-        // let mut stream = &*stream;
-
         loop {
             let data = fused_data_receiver.next().await;
 
@@ -127,7 +120,7 @@ fn spawn_writer(
 
         shutdown_notifier.send(()).unwrap_or_else(|_| ());
 
-        debug!("Connection writer loop for {} stopped.", epid);
+        debug!("TCP stream writer for {} stopped.", epid);
     })
 }
 
@@ -137,7 +130,7 @@ fn spawn_reader(
     mut internal_event_sender: EventSender,
     shutdown_listener: ShutdownListener,
 ) -> JoinHandle<()> {
-    debug!("Starting connection reader task for {}...", epid);
+    debug!("Starting TCP stream reader for {}...", epid);
 
     let mut buffer = vec![0u8; MAX_TCP_BUFFER_SIZE.load(Ordering::Relaxed)];
 
@@ -153,7 +146,7 @@ fn spawn_reader(
                 num_read = reader.read(&mut buffer).fuse() => {
                     match num_read {
                         Ok(num_read) => {
-                            if !handle_read(epid, num_read, &mut internal_event_sender, &buffer).await {
+                            if !process_stream_read(epid, num_read, &mut internal_event_sender, &buffer).await {
                                 break;
                             }
                         },
@@ -165,26 +158,26 @@ fn spawn_reader(
             }
         }
 
-        debug!("Connection reader loop for {} stopped.", epid);
+        debug!("TCP stream reader for {} stopped.", epid);
     })
 }
 
 #[inline]
-async fn handle_read(
+async fn process_stream_read(
     epid: EndpointId,
     num_read: usize,
     internal_event_sender: &mut EventSender,
     buffer: &Vec<u8>,
 ) -> bool {
     if num_read == 0 {
-        debug!("Received EOF (0 byte message).");
+        debug!("Stream dropped by peer (EOF).");
 
         if internal_event_sender
             .send(Event::ConnectionDropped { epid })
             .await
             .is_err()
         {
-            warn!("Failed to inform about lost connection.");
+            warn!("Dropped internal event (OOM?)");
         }
 
         false
@@ -197,7 +190,7 @@ async fn handle_read(
             .await
             .is_err()
         {
-            warn!("Failed to notify about received message.");
+            warn!("Dropped internal event (OOM?)");
         }
 
         true

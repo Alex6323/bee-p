@@ -44,7 +44,7 @@ pub(crate) async fn connect_endpoint(
                 connection.peer_address, connection.origin,
             );
 
-            super::spawn_connection_workers(connection, internal_event_sender).await?;
+            super::spawn_reader_writer(connection, epid, internal_event_sender).await?;
 
             Ok(())
         }
