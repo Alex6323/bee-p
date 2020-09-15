@@ -58,6 +58,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
             if is_solid {
                 return false;
             }
+            // is_solid: one of the current tx's approver is confirmed by a newer milestone_index
             is_solid = metadata.flags.is_confirmed() && metadata.milestone_index > milestone_index;
             true
         },
@@ -74,20 +75,20 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
 
         // Get the milestone tail hash
         // NOTE this milestone hash must be tail hash
-        match tangle().get_milestone_hash(MilestoneIndex(index)) {
-            None => {
-                error!("Milestone index {} is not found in Tangle.", index);
-                return Err(Error::MilestoneNotFoundInTangle);
+        if let Some(hash) = tangle().get_milestone_hash(MilestoneIndex(index)) {
+            // TODO Actually we don't really need the tail, and only need one of the milestone tx.
+            //      To align with gohornet, we start from the tail milestone tx.
+            if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
+                error!("Milestone w/ hash {} is not tail.", hash);
+                return Err(Error::MilestoneTransactionIsNotTail);
+            } else {
+                milestone_tail_hash = hash;
             }
-            Some(hash) => {
-                if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
-                    error!("Milestone w/ hash {} is not tail.", hash);
-                    return Err(Error::MilestoneTransactionIsNotTail);
-                } else {
-                    milestone_tail_hash = hash;
-                }
-            }
+        } else {
+            error!("Milestone index {} is not found in Tangle.", index);
+            return Err(Error::MilestoneNotFoundInTangle);
         }
+
         // Get all the approvees confirmed by the milestone tail
         traversal::visit_parents_depth_first(
             tangle(),
@@ -101,7 +102,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                     });
                 }
             },
-            |_, _, _| {},
+            |_hash, _tx, _metadata| {},
             |_hash| {},
         );
     }
@@ -196,19 +197,18 @@ pub fn prune_database(
         // Get the milestone tail hash
         // NOTE this milestone hash must be tail hash
         let milestone_tail_hash;
-        match tangle().get_milestone_hash(MilestoneIndex(milestone_index)) {
-            None => {
-                warn!("Pruning milestone {} failed! Milestone not found!", milestone_index);
-                continue;
+        if let Some(hash) = tangle().get_milestone_hash(MilestoneIndex(milestone_index)) {
+            // TODO Actually we don't really need the tail, and only need one of the milestone tx.
+            //      To align with gohornet, we start from the tail milestone tx.
+            if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
+                error!("Milestone w/ hash {} is not tail.", hash);
+                return Err(Error::MilestoneTransactionIsNotTail);
+            } else {
+                milestone_tail_hash = hash;
             }
-            Some(hash) => {
-                if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
-                    error!("Milestone w/ hash {} is not tail.", hash);
-                    return Err(Error::MilestoneTransactionIsNotTail);
-                } else {
-                    milestone_tail_hash = hash;
-                }
-            }
+        } else {
+            warn!("Pruning milestone {} failed! Milestone not found!", milestone_index);
+            continue;
         }
 
         let mut transactions_to_prune: Vec<Hash> = Vec::new();
