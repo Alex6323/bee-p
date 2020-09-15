@@ -20,7 +20,7 @@ use dashmap::DashSet;
 use tokio::net;
 
 #[derive(Debug, Error)]
-pub(crate) enum Error {
+pub enum Error {
     #[error("Address could not be parsed.")]
     AddressParseError(#[from] std::io::Error),
 
@@ -28,24 +28,24 @@ pub(crate) enum Error {
     AddressResolveError,
 }
 
-pub(crate) async fn resolve_address(address: &str) -> Result<SocketAddr, Error> {
+pub async fn resolve_address(address: &str) -> Result<SocketAddr, Error> {
     net::lookup_host(address)
         .await?
         .next()
         .ok_or(Error::AddressResolveError)
 }
 
-const INITIAL_IP_FILTER_CAPACITY: usize = 16;
+const DEFAULT_ALLOWLIST_CAPACITY: usize = 16;
 
 #[derive(Clone, Debug)]
-pub(crate) struct IpFilter(Arc<DashSet<IpAddr>>);
+pub struct Allowlist(Arc<DashSet<IpAddr>>);
 
-impl IpFilter {
+impl Allowlist {
     pub fn new() -> Self {
-        Self(Arc::new(DashSet::with_capacity(INITIAL_IP_FILTER_CAPACITY)))
+        Self(Arc::new(DashSet::with_capacity(DEFAULT_ALLOWLIST_CAPACITY)))
     }
 
-    pub fn insert(&self, ip_address: IpAddr) -> bool {
+    pub fn add(&self, ip_address: IpAddr) -> bool {
         self.0.insert(ip_address)
     }
 
@@ -53,7 +53,7 @@ impl IpFilter {
         self.0.remove(ip_address).is_some()
     }
 
-    pub fn contains(&self, ip_address: &IpAddr) -> bool {
+    pub fn allows(&self, ip_address: &IpAddr) -> bool {
         self.0.contains(&ip_address)
     }
 

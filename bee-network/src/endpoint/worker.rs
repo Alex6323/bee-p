@@ -131,7 +131,7 @@ impl EndpointWorker {
             }
 
             Command::DisconnectEndpoint { epid } => {
-                if disconnect_endpoint(epid, &mut connected_endpoints) {
+                if disconnect_endpoint(epid, &mut connected_endpoints)? {
                     self.event_sender.send(Event::EndpointDisconnected { epid }).await?;
                 }
             }
@@ -335,12 +335,7 @@ async fn connect_endpoint(
 }
 
 #[inline]
-fn disconnect_endpoint(
-    epid: EndpointId,
-    endpoint_contacts: &mut EndpointContactList,
-    connected_endpoints: &mut ConnectedEndpointList,
-    internal_event_sender: &mut EventSender,
-) -> Result<bool, WorkerError> {
+fn disconnect_endpoint(epid: EndpointId, connected_endpoints: &mut ConnectedEndpointList) -> Result<bool, WorkerError> {
     // NOTE: removing the endpoint will drop the connection!
     Ok(connected_endpoints.remove(&epid))
 }

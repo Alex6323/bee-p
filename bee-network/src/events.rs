@@ -14,15 +14,15 @@ use crate::{
     tcp::connection::Origin,
 };
 
-use tokio::sync::mpsc;
+use futures::channel::mpsc;
 
 use std::{fmt, net::SocketAddr};
 
-pub(crate) type EventSender = mpsc::UnboundedSender<Event>;
-pub(crate) type EventReceiver = mpsc::UnboundedReceiver<Event>;
+pub type EventSender = mpsc::UnboundedSender<Event>;
+pub type EventReceiver = mpsc::UnboundedReceiver<Event>;
 
-pub(crate) fn channel() -> (EventSender, EventReceiver) {
-    mpsc::unbounded_channel()
+pub fn channel() -> (EventSender, EventReceiver) {
+    mpsc::unbounded()
 }
 
 #[derive(Debug)]

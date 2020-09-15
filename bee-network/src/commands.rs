@@ -11,12 +11,12 @@
 
 use crate::endpoint::EndpointId;
 
-use tokio::sync::mpsc;
+use futures::channel::mpsc;
 
 use std::fmt;
 
-pub(crate) fn channel() -> (mpsc::UnboundedSender<Command>, mpsc::UnboundedReceiver<Command>) {
-    mpsc::unbounded_channel()
+pub fn channel() -> (mpsc::UnboundedSender<Command>, mpsc::UnboundedReceiver<Command>) {
+    mpsc::unbounded()
 }
 
 #[derive(Debug)]

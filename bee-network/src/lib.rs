@@ -28,8 +28,9 @@ mod tcp;
 mod util;
 
 use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
-use endpoint::worker::EndpointWorker;
+use endpoint::EndpointWorker;
 use tcp::server::TcpServer;
+use util::net::IpFilter;
 
 use bee_common::shutdown::Shutdown;
 
@@ -66,14 +67,13 @@ pub type Events = stream::Fuse<mpsc::Receiver<Event>>;
 // }
 
 pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
-    // Create communication channels.
     let (command_sender, command_receiver) = commands::channel();
     let (event_sender, event_receiver) = events::channel();
     let (internal_event_sender, internal_event_receiver) = events::channel();
-
-    // Create channels to signal shutdown to the workers.
     let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
-    let (tcp_worker_shutdown_sender, tcp_worker_shutdown_receiver) = oneshot::channel();
+    let (tcp_server_shutdown_sender, tcp_server_shutdown_receiver) = oneshot::channel();
+
+    let ip_filter = IpFilter::new();
 
     // Create the worker that manages the endpoints to connect to.
     let endpoint_worker = EndpointWorker::new(
@@ -81,10 +81,10 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
         event_sender,
         internal_event_receiver,
         internal_event_sender.clone(),
+        ip_filter.clone(),
     );
 
-    // Create the worker that manages the TCP connections established with the endpoints.
-    let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender);
+    let tcp_server = TcpServer::new(config.socket_addr(), internal_event_sender);
 
     // TODO: support tokio JoinHandle
     // // Spawn workers, and connect them to the shutdown mechanism.
@@ -100,7 +100,7 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     // );
 
     tokio::spawn(endpoint_worker.run(endpoint_worker_shutdown_receiver));
-    tokio::spawn(tcp_worker.run(tcp_worker_shutdown_receiver));
+    tokio::spawn(tcp_server.run(tcp_server_shutdown_receiver));
 
     // Initialize Allowlist and make sure it gets dropped when the shutdown occurs.
     allowlist::init();

@@ -21,12 +21,12 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-pub(crate) struct ConnectedEndpoint {
+pub struct ConnectedEndpoint {
     sender: DataSender,
     duplicate_of: Option<EndpointId>,
 }
 #[derive(Default)]
-pub(crate) struct ConnectedEndpointList(HashMap<EndpointId, ConnectedEndpoint>);
+pub struct ConnectedEndpointList(HashMap<EndpointId, ConnectedEndpoint>);
 
 impl ConnectedEndpointList {
     pub fn new() -> Self {
