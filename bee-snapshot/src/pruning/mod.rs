@@ -13,7 +13,10 @@ mod config;
 
 pub use config::{PruningConfig, PruningConfigBuilder};
 
-use crate::local::{LocalSnapshotConfig, LocalSnapshotMetadata};
+use crate::{
+    constants::SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST,
+    local::{LocalSnapshotConfig, LocalSnapshotMetadata},
+};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::{
@@ -26,7 +29,6 @@ use dashmap::DashMap;
 
 use log::{error, info, warn};
 
-const SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST: MilestoneIndex = MilestoneIndex(50);
 const ADDITIONAL_PRUNING_THRESHOLD: MilestoneIndex = MilestoneIndex(50);
 
 #[derive(Debug)]
@@ -70,7 +72,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
 // TODO testing
 pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMap<Hash, MilestoneIndex>, Error> {
     let solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
-    for index in *target_index - *SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST..*target_index {
+    for index in *target_index - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST..*target_index {
         let milestone_tail_hash;
 
         // Get the milestone tail hash
@@ -148,7 +150,7 @@ pub fn prune_database(
 
     // TODO change the type of `LocalSnapshotMetadata.index` to MilestoneIndex?
     let target_index_max = MilestoneIndex(
-        local_snapshot_metadata.index() - *SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - *ADDITIONAL_PRUNING_THRESHOLD - 1,
+        local_snapshot_metadata.index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - *ADDITIONAL_PRUNING_THRESHOLD - 1,
     );
     if target_index > target_index_max {
         target_index = target_index_max;

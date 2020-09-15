@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::config::SnapshotConfig;
+use crate::{config::SnapshotConfig, constants::SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
@@ -19,9 +19,6 @@ use futures::{
     stream::{Fuse, StreamExt},
 };
 use log::info;
-
-const SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST: u32 = 50;
-const _SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE: u32 = 50;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
