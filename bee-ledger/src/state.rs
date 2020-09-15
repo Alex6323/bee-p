@@ -53,6 +53,10 @@ impl LedgerState {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Address, &u64)> {
+        self.0.iter()
+    }
 }
 
 impl From<HashMap<Address, u64>> for LedgerState {
