@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    endpoint::{Allowlist, EndpointId},
+    endpoint::{EndpointContactList, EndpointId},
     events::EventSender,
     tcp::Origin,
 };
@@ -28,7 +28,7 @@ use std::{io::Error, net::SocketAddr};
 pub struct TcpServer {
     binding_address: SocketAddr,
     internal_event_sender: EventSender,
-    allowlist: Allowlist,
+    endpoint_contacts: EndpointContactList,
     tcp_listener: TcpListener,
     shutdown_listener: ShutdownListener,
 }
@@ -38,7 +38,7 @@ impl TcpServer {
         binding_address: SocketAddr,
         internal_event_sender: EventSender,
         shutdown_listener: ShutdownListener,
-        allowlist: Allowlist,
+        endpoint_contacts: EndpointContactList,
     ) -> Self {
         debug!("Starting TCP server...");
 
@@ -54,7 +54,7 @@ impl TcpServer {
         Self {
             binding_address,
             internal_event_sender,
-            allowlist,
+            endpoint_contacts,
             tcp_listener,
             shutdown_listener,
         }
@@ -64,7 +64,7 @@ impl TcpServer {
         let TcpServer {
             mut tcp_listener,
             internal_event_sender,
-            allowlist,
+            endpoint_contacts,
             shutdown_listener,
             ..
         } = self;
@@ -79,7 +79,7 @@ impl TcpServer {
                 },
                 stream = fused_incoming_streams.next() => {
                     if let Some(stream) = stream {
-                        if !process_stream(stream, &allowlist, &internal_event_sender).await? {
+                        if !process_stream(stream, &endpoint_contacts, &internal_event_sender).await? {
                             continue;
                         }
                     } else {
@@ -97,7 +97,7 @@ impl TcpServer {
 #[inline]
 async fn process_stream(
     stream: Result<TcpStream, Error>,
-    allowlist: &Allowlist,
+    endpoint_contacts: &EndpointContactList,
     internal_event_sender: &EventSender,
 ) -> Result<bool, WorkerError> {
     match stream {
@@ -112,7 +112,8 @@ async fn process_stream(
             };
 
             let ip_address = connection.peer_address.ip();
-            if !allowlist.allows(&ip_address) {
+            // TODO: refresh IPs in certain intervals
+            if !endpoint_contacts.contains_ip_address(ip_address, false) {
                 warn!(
                     "Contacted by disallowed IP address '{}'.",
                     &connection.peer_address.ip()

@@ -24,23 +24,39 @@ pub fn channel() -> (CommandSender, CommandReceiver) {
 
 #[derive(Debug)]
 pub enum Command {
-    AddContact { url: String },
-    RemoveContact { url: String },
-    ConnectEndpoint { epid: EndpointId },
-    DisconnectEndpoint { epid: EndpointId },
-    SendMessage { epid: EndpointId, message: Vec<u8> },
-    SetDuplicate { epid: EndpointId, of: EndpointId },
+    AddEndpoint {
+        url: String,
+    },
+    RemoveEndpoint {
+        epid: EndpointId,
+    },
+    ConnectEndpoint {
+        epid: EndpointId,
+    },
+    DisconnectEndpoint {
+        epid: EndpointId,
+    },
+    SendMessage {
+        epid: EndpointId,
+        message: Vec<u8>,
+    },
+    MarkDuplicate {
+        duplicate_epid: EndpointId,
+        epid: EndpointId,
+    },
 }
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Command::AddContact { url, .. } => write!(f, "Command::AddContact {{ {} }}", url),
-            Command::RemoveContact { url, .. } => write!(f, "Command::RemoveContact {{ {} }}", url),
+            Command::AddEndpoint { url, .. } => write!(f, "Command::AddEndpoint {{ {} }}", url),
+            Command::RemoveEndpoint { epid, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", epid),
             Command::ConnectEndpoint { epid, .. } => write!(f, "Command::ConnectEndpoint {{ {} }}", epid),
             Command::DisconnectEndpoint { epid, .. } => write!(f, "Command::DisconnectEndpoint {{ {} }}", epid),
             Command::SendMessage { epid, .. } => write!(f, "Command::SendMessage {{ {} }}", epid),
-            Command::SetDuplicate { epid, of } => write!(f, "Command::SetDuplicate {{ {} == {} }}", epid, of),
+            Command::MarkDuplicate { duplicate_epid, epid } => {
+                write!(f, "Command::MarkDuplicate {{ {} == {} }}", duplicate_epid, epid)
+            }
         }
     }
 }

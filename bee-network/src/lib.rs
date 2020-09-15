@@ -28,7 +28,7 @@ mod tcp;
 mod util;
 
 use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
-use endpoint::{Allowlist, EndpointWorker};
+use endpoint::{EndpointContactList, EndpointWorker};
 use events::Events;
 use tcp::server::TcpServer;
 
@@ -48,24 +48,24 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
     let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
     let (tcp_server_shutdown_sender, tcp_server_shutdown_receiver) = oneshot::channel();
 
-    let allowlist = Allowlist::new();
+    let endpoint_contacts = EndpointContactList::new();
 
     let endpoint_worker = EndpointWorker::new(
         command_receiver,
         event_sender,
         internal_event_receiver,
         internal_event_sender.clone(),
-        allowlist.clone(),
+        endpoint_contacts.clone(),
         endpoint_worker_shutdown_receiver,
     )
     .await;
 
-    let binding_address = config.socket_addr();
+    let binding_address = config.socket_address();
     let tcp_server = TcpServer::new(
         binding_address,
         internal_event_sender,
         tcp_server_shutdown_receiver,
-        allowlist.clone(),
+        endpoint_contacts,
     )
     .await;
 

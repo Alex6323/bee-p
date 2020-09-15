@@ -1,12 +1,11 @@
-use crate::util::net::{self, Port, TransportProtocol};
+use crate::util::{self, Port, TransportProtocol};
 
-use super::Error;
+use super::{EndpointId, Error};
 
-use dashmap::DashSet;
+use dashmap::{mapref::entry::Entry, DashMap};
 use url;
 
 use std::{
-    collections::{hash_map::Entry, HashMap},
     fmt,
     net::{IpAddr, SocketAddr},
     sync::Arc,
@@ -17,7 +16,7 @@ pub struct EndpointContactParams {
     pub domain_name_or_ip_address: String,
     pub port: Port,
     pub transport_protocol: TransportProtocol,
-    dns_lookup_cache: Option<SocketAddr>,
+    pub(crate) dns_lookup_cache: Option<SocketAddr>,
 }
 
 impl EndpointContactParams {
@@ -55,7 +54,7 @@ impl EndpointContactParams {
     pub async fn socket_address(&mut self, refresh: bool) -> Result<SocketAddr, Error> {
         if refresh || self.dns_lookup_cache.is_none() {
             let address = &format!("{}:{}", self.domain_name_or_ip_address, self.port)[..];
-            let socket_address = net::resolve_address(address)
+            let socket_address = util::resolve_address(address)
                 .await
                 .map_err(|_| Error::DnsFailure)?
                 .into();
@@ -77,16 +76,18 @@ impl fmt::Display for EndpointContactParams {
     }
 }
 
-#[derive(Default)]
-pub struct EndpointContactList(HashMap<String, EndpointContactParams>);
+const DEFAULT_CONTACTLIST_CAPACITY: usize = 16;
+
+#[derive(Clone, Debug)]
+pub struct EndpointContactList(Arc<DashMap<EndpointId, EndpointContactParams>>);
 
 impl EndpointContactList {
     pub fn new() -> Self {
-        Self::default()
+        Self(Arc::new(DashMap::with_capacity(DEFAULT_CONTACTLIST_CAPACITY)))
     }
 
-    pub fn insert(&mut self, url: String, params: EndpointContactParams) -> bool {
-        match self.0.entry(url) {
+    pub fn insert(&self, epid: EndpointId, params: EndpointContactParams) -> bool {
+        match self.0.entry(epid) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
                 entry.insert(params);
@@ -95,52 +96,26 @@ impl EndpointContactList {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn contains(&self, url: &str) -> bool {
-        self.0.contains_key(url)
+    pub fn contains(&self, epid: EndpointId) -> bool {
+        self.0.contains_key(&epid)
     }
-    pub fn remove(&mut self, url: &str) -> bool {
-        self.0.remove(url).is_some()
+
+    pub fn contains_ip_address(&self, ip_address: IpAddr, refresh: bool) -> bool {
+        // TODO: 'refresh' IPs
+        self.0.iter().any(|entry| {
+            entry
+                .value()
+                .dns_lookup_cache
+                .map_or(false, |socket_address| socket_address.ip() == ip_address)
+        })
+    }
+
+    pub fn remove(&self, epid: &EndpointId) -> bool {
+        self.0.remove(epid).is_some()
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
-    }
-
-    #[allow(dead_code)]
-    pub fn get(&self, url: &str) -> Option<&EndpointContactParams> {
-        self.0.get(url)
-    }
-
-    pub fn get_mut(&mut self, url: &str) -> Option<&mut EndpointContactParams> {
-        self.0.get_mut(url)
-    }
-}
-
-const DEFAULT_ALLOWLIST_CAPACITY: usize = 16;
-
-#[derive(Clone, Debug)]
-pub struct Allowlist(Arc<DashSet<IpAddr>>);
-
-impl Allowlist {
-    pub fn new() -> Self {
-        Self(Arc::new(DashSet::with_capacity(DEFAULT_ALLOWLIST_CAPACITY)))
-    }
-
-    pub fn add(&self, ip_address: IpAddr) -> bool {
-        self.0.insert(ip_address)
-    }
-
-    pub fn remove(&self, ip_address: &IpAddr) -> bool {
-        self.0.remove(ip_address).is_some()
-    }
-
-    pub fn allows(&self, ip_address: &IpAddr) -> bool {
-        self.0.contains(&ip_address)
-    }
-
-    pub fn clear(&self) {
-        self.0.clear();
     }
 }
 

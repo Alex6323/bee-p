@@ -9,17 +9,17 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::util::net::Allowlist;
-
 use crate::{
     commands::Command,
     endpoint::{
         connect::ConnectedEndpointList,
         contact::{EndpointContactList, EndpointContactParams},
-        EndpointId, TransportProtocol,
+        EndpointId,
     },
     events::Event,
-    tcp, RECONNECT_INTERVAL,
+    tcp,
+    util::TransportProtocol,
+    RECONNECT_INTERVAL,
 };
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
@@ -38,7 +38,7 @@ pub struct EndpointWorker {
     event_sender: EventSender,
     internal_event_receiver: stream::Fuse<EventReceiver>,
     internal_event_sender: EventSender,
-    allowlist: Allowlist,
+    endpoint_contacts: EndpointContactList,
     shutdown_listener: ShutdownListener,
 }
 
@@ -48,7 +48,7 @@ impl EndpointWorker {
         event_sender: EventSender,
         internal_event_receiver: EventReceiver,
         internal_event_sender: EventSender,
-        allowlist: Allowlist,
+        endpoint_contacts: EndpointContactList,
         shutdown_listener: ShutdownListener,
     ) -> Self {
         debug!("Starting endpoint worker...");
@@ -58,7 +58,7 @@ impl EndpointWorker {
             event_sender,
             internal_event_receiver: internal_event_receiver.fuse(),
             internal_event_sender,
-            allowlist,
+            endpoint_contacts,
             shutdown_listener,
         }
     }
@@ -67,13 +67,13 @@ impl EndpointWorker {
         let EndpointWorker {
             mut command_receiver,
             mut internal_event_receiver,
+            mut internal_event_sender,
+            mut endpoint_contacts,
             shutdown_listener,
             ..
         } = self;
 
-        let mut endpoint_contacts = EndpointContactList::new();
         let mut connected_endpoints = ConnectedEndpointList::new();
-
         let mut fused_shutdown_listener = shutdown_listener.fuse();
 
         loop {
@@ -82,7 +82,7 @@ impl EndpointWorker {
                     break;
                 },
                 command = command_receiver.next() => {
-                    if !process_command(command, &mut endpoint_contacts, &mut connected_endpoints).await? {
+                    if !process_command(command, &mut endpoint_contacts, &mut connected_endpoints, &mut internal_event_sender).await? {
                         break;
                     }
                 },
@@ -104,6 +104,7 @@ async fn process_command(
     command: Option<Command>,
     mut endpoint_contacts: &mut EndpointContactList,
     mut connected_endpoints: &mut ConnectedEndpointList,
+    mut internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
     let command = if let Some(command) = command {
         command
@@ -115,16 +116,15 @@ async fn process_command(
     debug!("Received {}.", command);
 
     match command {
-        Command::AddContact { url } => {
-            add_contact(&url, &mut endpoint_contacts, &mut self.internal_event_sender).await?;
+        Command::AddEndpoint { url } => {
+            add_endpoint(&url, &mut endpoint_contacts, &mut internal_event_sender).await?;
         }
 
-        Command::RemoveContact { url } => {
-            remove_contact(
-                &url,
+        Command::RemoveEndpoint { epid } => {
+            remove_endpoint(
                 &mut endpoint_contacts,
                 &mut connected_endpoints,
-                &mut self.internal_event_sender,
+                &mut internal_event_sender,
             )
             .await?;
         }
@@ -134,7 +134,7 @@ async fn process_command(
                 epid,
                 &mut endpoint_contacts,
                 &mut connected_endpoints,
-                &mut self.internal_event_sender,
+                &mut internal_event_sender,
             )
             .await?;
         }
@@ -253,7 +253,7 @@ async fn process_event(
     Ok(true)
 }
 #[inline]
-async fn add_contact(
+async fn add_endpoint(
     url: &str,
     endpoint_contacts: &mut EndpointContactList,
     internal_event_sender: &mut EventSender,
@@ -278,8 +278,8 @@ async fn add_contact(
 }
 
 #[inline]
-async fn remove_contact(
-    url: &str,
+async fn remove_endpoint(
+    epid: EndpointId,
     endpoint_contacts: &mut EndpointContactList,
     connected_endpoints: &mut ConnectedEndpointList,
     internal_event_sender: &mut EventSender,
