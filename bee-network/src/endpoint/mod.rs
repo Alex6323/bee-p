@@ -42,36 +42,6 @@ pub enum Error {
     DnsFailure,
 }
 
-pub type Port = u16;
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum TransportProtocol {
-    Tcp,
-    Udp,
-}
-
-impl TransportProtocol {
-    pub fn is_tcp(self) -> bool {
-        self == TransportProtocol::Tcp
-    }
-
-    pub fn is_udp(self) -> bool {
-        self == TransportProtocol::Udp
-    }
-}
-
-impl fmt::Display for TransportProtocol {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let protocol = match *self {
-            TransportProtocol::Tcp => "tcp",
-            TransportProtocol::Udp => "udp",
-        };
-
-        write!(f, "{}", protocol)
-    }
-}
-
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct EndpointId(Uuid);
 

@@ -28,43 +28,18 @@ mod tcp;
 mod util;
 
 use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
-use endpoint::EndpointWorker;
+use endpoint::{Allowlist, EndpointWorker};
+use events::Events;
 use tcp::server::TcpServer;
-use util::net::Allowlist;
 
 use bee_common::shutdown::Shutdown;
 
-use futures::{
-    channel::{mpsc, oneshot},
-    stream,
-    stream::StreamExt,
-};
+use futures::{channel::oneshot, stream::StreamExt};
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
 pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
-
-pub type Events = stream::Fuse<mpsc::Receiver<Event>>;
-
-// // NOTE: we make this an opaque type because it is exported.
-// // pub struct Events(stream::Fuse<mpsc::Receiver<Event>>);
-// pub struct Events(mpsc::Receiver<Event>);
-
-// impl std::ops::Deref for Events {
-//     // type Target = stream::Fuse<mpsc::Receiver<Event>>;
-//     type Target = mpsc::Receiver<Event>;
-
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
-
-// impl std::ops::DerefMut for Events {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
 
 pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
     let (command_sender, command_receiver) = commands::channel();
@@ -94,26 +69,14 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
     )
     .await;
 
-    // TODO: support tokio JoinHandle
-    // // Spawn workers, and connect them to the shutdown mechanism.
-    // shutdown.add_worker_shutdown(
-    //     endpoint_worker_shutdown_sender,
-    //     // endpoint,
-    //     spawn(endpoint_worker.run(endpoint_worker_shutdown_receiver)),
-    // );
-    // shutdown.add_worker_shutdown(
-    //     tcp_worker_shutdown_sender,
-    //     // tcp,
-    //     spawn(tcp_worker.run(tcp_worker_shutdown_receiver)),
-    // );
+    let worker1 = tokio::spawn(endpoint_worker.run());
+    let worker2 = tokio::spawn(tcp_server.run());
 
-    tokio::spawn(endpoint_worker.run());
-    tokio::spawn(tcp_server.run());
+    // shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, worker1);
+    // shutdown.add_worker_shutdown(tcp_server_shutdown_sender, worker2);
 
     MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
     RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
 
-    // (Network::new(config, command_sender), Events(event_receiver.fuse()))
-    // (Network::new(config, command_sender), Events(event_receiver))
     (Network::new(config, command_sender), event_receiver.fuse())
 }

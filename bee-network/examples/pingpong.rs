@@ -28,7 +28,6 @@ use bee_network::{Command::*, EndpointId, Event, Events, Network, NetworkConfig,
 
 use common::*;
 
-use async_std::task::{self, block_on, spawn};
 use futures::{
     channel::{mpsc, oneshot},
     select,
@@ -49,6 +48,7 @@ mod common;
 
 const RECONNECT_INTERVAL: u64 = 5; // 5 seconds
 
+#[tokio::main]
 fn main() {
     let args = Args::from_args();
     let config = args.config();

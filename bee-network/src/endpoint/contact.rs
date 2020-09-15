@@ -1,13 +1,15 @@
-use crate::util::net;
+use crate::util::net::{self, Port, TransportProtocol};
 
-use super::{Error, Port, TransportProtocol};
+use super::Error;
 
+use dashmap::DashSet;
 use url;
 
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt,
-    net::SocketAddr,
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -112,6 +114,33 @@ impl EndpointContactList {
 
     pub fn get_mut(&mut self, url: &str) -> Option<&mut EndpointContactParams> {
         self.0.get_mut(url)
+    }
+}
+
+const DEFAULT_ALLOWLIST_CAPACITY: usize = 16;
+
+#[derive(Clone, Debug)]
+pub struct Allowlist(Arc<DashSet<IpAddr>>);
+
+impl Allowlist {
+    pub fn new() -> Self {
+        Self(Arc::new(DashSet::with_capacity(DEFAULT_ALLOWLIST_CAPACITY)))
+    }
+
+    pub fn add(&self, ip_address: IpAddr) -> bool {
+        self.0.insert(ip_address)
+    }
+
+    pub fn remove(&self, ip_address: &IpAddr) -> bool {
+        self.0.remove(ip_address).is_some()
+    }
+
+    pub fn allows(&self, ip_address: &IpAddr) -> bool {
+        self.0.contains(&ip_address)
+    }
+
+    pub fn clear(&self) {
+        self.0.clear();
     }
 }
 

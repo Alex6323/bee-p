@@ -14,7 +14,7 @@ use crate::{
     tcp::connection::Origin,
 };
 
-use futures::channel::mpsc;
+use futures::{channel::mpsc, stream};
 
 use std::{fmt, net::SocketAddr};
 
@@ -24,6 +24,8 @@ pub type EventReceiver = mpsc::UnboundedReceiver<Event>;
 pub fn channel() -> (EventSender, EventReceiver) {
     mpsc::unbounded()
 }
+
+pub type Events = stream::Fuse<EventReceiver>;
 
 #[derive(Debug)]
 #[non_exhaustive]

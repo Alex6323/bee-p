@@ -9,16 +9,17 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::address::{Address, Port};
+use crate::util::net::Port;
 
 use serde::Deserialize;
 
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 const DEFAULT_BINDING_PORT: u16 = 15600;
 const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-pub(crate) const DEFAULT_MAX_TCP_BUFFER_SIZE: usize = 1654;
-pub(crate) const DEFAULT_RECONNECT_INTERVAL: u64 = 60;
+
+pub const DEFAULT_MAX_TCP_BUFFER_SIZE: usize = 1654;
+pub const DEFAULT_RECONNECT_INTERVAL: u64 = 60;
 
 /// Network configuration builder.
 #[derive(Default, Deserialize)]
@@ -62,8 +63,8 @@ impl NetworkConfigBuilder {
     /// Builds the network config.
     pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
-            binding_port: Port(self.binding_port.unwrap_or(DEFAULT_BINDING_PORT)),
-            binding_addr: self.binding_addr.unwrap_or(DEFAULT_BINDING_ADDR),
+            binding_port: self.binding_port.unwrap_or(DEFAULT_BINDING_PORT),
+            binding_address: self.binding_addr.unwrap_or(DEFAULT_BINDING_ADDR),
             max_tcp_buffer_size: self.max_tcp_buffer_size.unwrap_or(DEFAULT_MAX_TCP_BUFFER_SIZE),
             reconnect_interval: self.reconnect_interval.unwrap_or(DEFAULT_RECONNECT_INTERVAL),
         }
@@ -73,7 +74,7 @@ impl NetworkConfigBuilder {
 #[derive(Clone, Debug)]
 pub struct NetworkConfig {
     pub binding_port: Port,
-    pub binding_addr: IpAddr,
+    pub binding_address: IpAddr,
     pub max_tcp_buffer_size: usize,
     pub reconnect_interval: u64,
 }
@@ -83,10 +84,10 @@ impl NetworkConfig {
         NetworkConfigBuilder::new()
     }
 
-    pub fn socket_addr(&self) -> Address {
-        match self.binding_addr {
-            IpAddr::V4(address) => Address::from_v4_addr_and_port(address, self.binding_port),
-            IpAddr::V6(address) => Address::from_v6_addr_and_port(address, self.binding_port),
+    pub fn socket_address(&self) -> SocketAddr {
+        match self.binding_address {
+            IpAddr::V4(address) => SocketAddr::new(IpAddr::V4(address), self.binding_port),
+            IpAddr::V6(address) => SocketAddr::new(IpAddr::V6(address), self.binding_port),
         }
     }
 }

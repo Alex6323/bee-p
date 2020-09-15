@@ -10,14 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use thiserror::Error;
-
-use std::{
-    net::{IpAddr, SocketAddr},
-    sync::Arc,
-};
-
-use dashmap::DashSet;
 use tokio::net;
+
+use std::{fmt, net::SocketAddr};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -35,29 +30,32 @@ pub async fn resolve_address(address: &str) -> Result<SocketAddr, Error> {
         .ok_or(Error::AddressResolveError)
 }
 
-const DEFAULT_ALLOWLIST_CAPACITY: usize = 16;
+pub type Port = u16;
 
-#[derive(Clone, Debug)]
-pub struct Allowlist(Arc<DashSet<IpAddr>>);
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum TransportProtocol {
+    Tcp,
+    Udp,
+}
 
-impl Allowlist {
-    pub fn new() -> Self {
-        Self(Arc::new(DashSet::with_capacity(DEFAULT_ALLOWLIST_CAPACITY)))
+impl TransportProtocol {
+    pub fn is_tcp(self) -> bool {
+        self == TransportProtocol::Tcp
     }
 
-    pub fn add(&self, ip_address: IpAddr) -> bool {
-        self.0.insert(ip_address)
+    pub fn is_udp(self) -> bool {
+        self == TransportProtocol::Udp
     }
+}
 
-    pub fn remove(&self, ip_address: &IpAddr) -> bool {
-        self.0.remove(ip_address).is_some()
-    }
+impl fmt::Display for TransportProtocol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let protocol = match *self {
+            TransportProtocol::Tcp => "tcp",
+            TransportProtocol::Udp => "udp",
+        };
 
-    pub fn allows(&self, ip_address: &IpAddr) -> bool {
-        self.0.contains(&ip_address)
-    }
-
-    pub fn clear(&self) {
-        self.0.clear();
+        write!(f, "{}", protocol)
     }
 }
