@@ -70,18 +70,8 @@ pub(crate) async fn spawn_reader_writer(
     let (data_sender, data_receiver) = endpoint::channel();
     let (shutdown_notifier, shutdown_listener) = oneshot::channel::<()>();
 
-    // NOTE: block until reader and writer task are spawned
-    let mut handles = Vec::with_capacity(2);
-
-    handles.push(spawn_writer(epid, writer, data_receiver, shutdown_notifier));
-    handles.push(spawn_reader(
-        epid,
-        reader,
-        internal_event_sender.clone(),
-        shutdown_listener,
-    ));
-
-    join_all(handles).await;
+    spawn_writer(epid, writer, data_receiver, shutdown_notifier);
+    spawn_reader(epid, reader, internal_event_sender.clone(), shutdown_listener);
 
     internal_event_sender
         .send(Event::ConnectionEstablished {

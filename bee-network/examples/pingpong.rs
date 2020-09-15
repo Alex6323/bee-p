@@ -135,19 +135,19 @@ async fn process_event(event: Event, message: &String, network: &mut Network) {
             info!("[pingpong] Removed endpoint {}.", epid);
         }
 
-        // Event::EndpointConnected { epid, origin, .. } => {
-        //     info!("[pingpong] Connected endpoint {} ({}).", epid, origin);
+        Event::EndpointConnected { epid, origin, .. } => {
+            info!("[pingpong] Connected endpoint {} ({}).", epid, origin);
 
-        //     let utf8_message = Utf8Message::new(message);
+            let utf8_message = Utf8Message::new(message);
 
-        //     network
-        //         .send(SendMessage {
-        //             receiver_epid,
-        //             message: utf8_message.as_bytes(),
-        //         })
-        //         .await
-        //         .expect("error sending message to peer");
-        // }
+            network
+                .send(SendMessage {
+                    receiver_epid: epid,
+                    message: utf8_message.as_bytes(),
+                })
+                .await
+                .expect("error sending message to peer");
+        }
 
         // Event::EndpointDisconnected { epid, .. } => {
         //     info!("Disconnected endpoint {}.", epid);
