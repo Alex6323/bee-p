@@ -61,6 +61,8 @@ impl TcpServer {
     }
 
     pub async fn run(self) -> Result<(), WorkerError> {
+        debug!("TCP server running...");
+
         let TcpServer {
             mut tcp_listener,
             internal_event_sender,
@@ -75,6 +77,7 @@ impl TcpServer {
         loop {
             select! {
                 _ = fused_shutdown_listener => {
+                    debug!("shutdown");
                     break;
                 },
                 stream = fused_incoming_streams.next() => {

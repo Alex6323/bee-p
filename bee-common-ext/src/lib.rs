@@ -13,4 +13,5 @@
 //! applications built on-top.
 
 pub mod event;
+pub mod shutdown_tokio;
 pub mod wait_priority_queue;

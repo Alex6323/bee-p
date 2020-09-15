@@ -25,7 +25,7 @@
 
 mod common;
 
-use bee_common::shutdown::Shutdown;
+use bee_common_ext::shutdown_tokio::Shutdown;
 use bee_network::{Command::*, EndpointId, Event, Events, Network, NetworkConfig, Origin};
 
 use common::*;
@@ -54,17 +54,18 @@ async fn main() {
 
     logger::init(log::LevelFilter::Debug);
 
-    let mut node = Node::builder(config).finish().await;
+    let node = Node::builder(config).finish().await;
 
     let mut network = node.network.clone();
     let config = node.config.clone();
 
     info!("Adding static peers...");
-    tokio::time::delay_for(Duration::from_secs(1)).await; // remove this?
-
+    // tokio::time::delay_for(Duration::from_secs(1)).await; // remove this?
     for url in &config.peers {
         network.send(AddEndpoint { url: url.clone() }).await.unwrap();
     }
+
+    info!("Finished.");
 
     node.run().await;
 }
@@ -82,7 +83,7 @@ impl Node {
     async fn run(self) {
         let Node {
             config,
-            network,
+            mut network,
             mut events,
             ..
         } = self;
@@ -100,7 +101,7 @@ impl Node {
                     if let Some(event) = event {
                         info!("Received {}.", event);
 
-                        process_event(event, &config.message, &network).await;
+                        process_event(event, &config.message, &mut network).await;
                     }
                 },
             }
@@ -119,85 +120,85 @@ impl Node {
 }
 
 #[inline]
-async fn process_event(event: Event, message: &String, network: &Network) {
-    // match event {
-    //     Event::EndpointAdded { epid } => {
-    //         info!("Added endpoint {} ({}).", epid);
+async fn process_event(event: Event, message: &String, network: &mut Network) {
+    match event {
+        Event::EndpointAdded { epid } => {
+            info!("Added endpoint {}.", epid);
 
-    //         network
-    //             .send(ConnectEndpoint { epid })
-    //             .await
-    //             .expect("error sending Connect command");
-    //     }
+            network
+                .send(ConnectEndpoint { epid })
+                .await
+                .expect("error sending Connect command");
+        }
 
-    //     Event::EndpointRemoved { epid, .. } => {
-    //         info!("Removed endpoint {}.", epid);
-    //     }
+        // Event::EndpointRemoved { epid, .. } => {
+        //     info!("Removed endpoint {}.", epid);
+        // }
 
-    //     Event::EndpointConnected { epid, origin, .. } => {
-    //         info!("Connected endpoint {} ({}).", epid, origin);
+        // Event::EndpointConnected { epid, origin, .. } => {
+        //     info!("Connected endpoint {} ({}).", epid, origin);
 
-    //         let utf8_message = Utf8Message::new(message);
+        //     let utf8_message = Utf8Message::new(message);
 
-    //         network
-    //             .send(SendMessage {
-    //                 receiver_epid,
-    //                 message: utf8_message.as_bytes(),
-    //             })
-    //             .await
-    //             .expect("error sending message to peer");
-    //     }
+        //     network
+        //         .send(SendMessage {
+        //             receiver_epid,
+        //             message: utf8_message.as_bytes(),
+        //         })
+        //         .await
+        //         .expect("error sending message to peer");
+        // }
 
-    //     Event::EndpointDisconnected { epid, .. } => {
-    //         info!("Disconnected endpoint {}.", epid);
+        // Event::EndpointDisconnected { epid, .. } => {
+        //     info!("Disconnected endpoint {}.", epid);
 
-    //         self.endpoints.remove(&epid);
+        //     self.endpoints.remove(&epid);
 
-    //         // TODO: remove epid from self.handshakes
-    //     }
+        //     // TODO: remove epid from self.handshakes
+        // }
 
-    //     Event::MessageReceived { epid, message, .. } => {
-    //         if !self.endpoints.contains(&epid) {
-    //             let handshake = Utf8Message::from_bytes(&message);
-    //             info!("Received handshake '{}' ({})", handshake, epid);
+        // Event::MessageReceived { epid, message, .. } => {
+        //     if !self.endpoints.contains(&epid) {
+        //         let handshake = Utf8Message::from_bytes(&message);
+        //         info!("Received handshake '{}' ({})", handshake, epid);
 
-    //             let epids = self.handshakes.entry(handshake.to_string()).or_insert(Vec::new());
-    //             if !epids.contains(&epid) {
-    //                 epids.push(epid);
-    //             }
+        //         let epids = self.handshakes.entry(handshake.to_string()).or_insert(Vec::new());
+        //         if !epids.contains(&epid) {
+        //             epids.push(epid);
+        //         }
 
-    //             if epids.len() > 1 {
-    //                 info!("'{}' and '{}' are duplicate connections.", epids[0], epids[1]);
+        //         if epids.len() > 1 {
+        //             info!("'{}' and '{}' are duplicate connections.", epids[0], epids[1]);
 
-    //                 self.network
-    //                     .send(SetDuplicate {
-    //                         epid: epids[0],
-    //                         other: epids[1],
-    //                     })
-    //                     .await
-    //                     .expect("error sending 'Disconnect'");
-    //             }
+        //             self.network
+        //                 .send(SetDuplicate {
+        //                     epid: epids[0],
+        //                     other: epids[1],
+        //                 })
+        //                 .await
+        //                 .expect("error sending 'Disconnect'");
+        //         }
 
-    //             self.endpoints.insert(epid);
-    //         } else {
-    //             let message = Utf8Message::from_bytes(&message);
-    //             info!("Received message '{}' ({})", message, epid);
-    //         }
+        //         self.endpoints.insert(epid);
+        //     } else {
+        //         let message = Utf8Message::from_bytes(&message);
+        //         info!("Received message '{}' ({})", message, epid);
+        //     }
 
-    //         // TODO: send the next message
+        //     // TODO: send the next message
 
-    //         // let utf8_message = Utf8Message::new(&self.message);
+        //     // let utf8_message = Utf8Message::new(&self.message);
 
-    //         // self.network
-    //         //     .send(SendMessage {
-    //         //         epid,
-    //         //         bytes: utf8_message.as_bytes(),
-    //         //     })
-    //         //     .await
-    //         //     .expect("error sending message to peer");
-    //     }
-    //     _ => warn!("Unsupported event {}.", event),
-    // }
+        //     // self.network
+        //     //     .send(SendMessage {
+        //     //         epid,
+        //     //         bytes: utf8_message.as_bytes(),
+        //     //     })
+        //     //     .await
+        //     //     .expect("error sending message to peer");
+        // }
+        _ => warn!("Unsupported event {}.", event),
+    }
 }
 
 fn ctrl_c_listener() -> oneshot::Receiver<()> {

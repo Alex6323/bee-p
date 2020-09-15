@@ -31,7 +31,7 @@ use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use endpoint::{EndpointContactList, EndpointWorker};
 use tcp::TcpServer;
 
-use bee_common::shutdown::Shutdown;
+use bee_common_ext::shutdown_tokio::Shutdown;
 
 use futures::{channel::oneshot, stream::StreamExt};
 
@@ -71,8 +71,8 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
     let worker1 = tokio::spawn(endpoint_worker.run());
     let worker2 = tokio::spawn(tcp_server.run());
 
-    // shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, worker1);
-    // shutdown.add_worker_shutdown(tcp_server_shutdown_sender, worker2);
+    shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, worker1);
+    shutdown.add_worker_shutdown(tcp_server_shutdown_sender, worker2);
 
     MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
     RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);

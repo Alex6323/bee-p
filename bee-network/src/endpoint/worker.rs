@@ -64,6 +64,8 @@ impl EndpointWorker {
     }
 
     pub async fn run(self) -> Result<(), WorkerError> {
+        debug!("Endpoint worker running...");
+
         let EndpointWorker {
             mut command_receiver,
             mut event_sender,
