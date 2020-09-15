@@ -9,17 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod client;
-pub mod connection;
-pub mod server;
+mod client;
+mod connection;
+mod server;
+
+pub use client::*;
+pub use connection::*;
+pub use server::*;
 
 use crate::{
     endpoint::{self, DataReceiver, EndpointId},
-    events::{Event, EventSender},
+    event::{Event, EventSender},
     MAX_TCP_BUFFER_SIZE,
 };
-
-use connection::{Connection, Origin};
 
 use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
 
@@ -84,7 +86,6 @@ pub(crate) async fn spawn_reader_writer(
     internal_event_sender
         .send(Event::ConnectionEstablished {
             epid,
-            socket_address: peer_address,
             origin,
             data_sender,
         })

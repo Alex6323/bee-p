@@ -11,26 +11,26 @@
 
 //#![warn(missing_docs)]
 
-pub use commands::Command;
+pub use command::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
 pub use endpoint::EndpointId;
-pub use events::Event;
-pub use tcp::connection::Origin;
+pub use event::Event;
+pub use tcp::Origin;
 
 pub use network::Network;
 
-mod commands;
+mod command;
 mod config;
 mod endpoint;
-mod events;
+mod event;
 mod network;
 mod tcp;
 mod util;
 
 use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use endpoint::{EndpointContactList, EndpointWorker};
-use events::Events;
-use tcp::server::TcpServer;
+use event::Events;
+use tcp::TcpServer;
 
 use bee_common::shutdown::Shutdown;
 
@@ -42,9 +42,9 @@ pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MA
 pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
 
 pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
-    let (command_sender, command_receiver) = commands::channel();
-    let (event_sender, event_receiver) = events::channel();
-    let (internal_event_sender, internal_event_receiver) = events::channel();
+    let (command_sender, command_receiver) = command::channel();
+    let (event_sender, event_receiver) = event::channel();
+    let (internal_event_sender, internal_event_receiver) = event::channel();
     let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
     let (tcp_server_shutdown_sender, tcp_server_shutdown_receiver) = oneshot::channel();
 

@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{endpoint::EndpointId, events::EventSender};
+use crate::{endpoint::EndpointId, event::EventSender};
 
 use super::{
     connection::{Connection, Origin},
@@ -21,7 +21,7 @@ use tokio::net::TcpStream;
 
 use std::net::SocketAddr;
 
-pub(crate) async fn connect_endpoint(
+pub async fn connect_endpoint(
     epid: EndpointId,
     socket_address: SocketAddr,
     internal_event_sender: EventSender,

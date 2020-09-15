@@ -86,11 +86,11 @@ impl EndpointContactList {
         Self(Arc::new(DashMap::with_capacity(DEFAULT_CONTACTLIST_CAPACITY)))
     }
 
-    pub fn insert(&self, epid: EndpointId, params: EndpointContactParams) -> bool {
+    pub fn insert(&self, epid: EndpointId, endpoint_params: EndpointContactParams) -> bool {
         match self.0.entry(epid) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
-                entry.insert(params);
+                entry.insert(endpoint_params);
                 true
             }
         }
@@ -110,12 +110,18 @@ impl EndpointContactList {
         })
     }
 
-    pub fn remove(&self, epid: &EndpointId) -> bool {
-        self.0.remove(epid).is_some()
+    pub fn remove(&self, epid: EndpointId) -> bool {
+        self.0.remove(&epid).is_some()
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn get(&self, epid: EndpointId) -> Option<EndpointContactParams> {
+        // NOTE: we might not need to clone the whole struct, but only the socket address (see where this method is
+        // actually needed)
+        self.0.get(&epid).map(|entry| entry.value().clone())
     }
 }
 

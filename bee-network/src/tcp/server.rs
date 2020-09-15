@@ -11,7 +11,7 @@
 
 use crate::{
     endpoint::{EndpointContactList, EndpointId},
-    events::EventSender,
+    event::EventSender,
     tcp::Origin,
 };
 

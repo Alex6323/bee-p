@@ -37,12 +37,12 @@ pub enum Command {
         epid: EndpointId,
     },
     SendMessage {
-        epid: EndpointId,
+        receiver_epid: EndpointId,
         message: Vec<u8>,
     },
     MarkDuplicate {
         duplicate_epid: EndpointId,
-        epid: EndpointId,
+        original_epid: EndpointId,
     },
 }
 
@@ -53,10 +53,15 @@ impl fmt::Display for Command {
             Command::RemoveEndpoint { epid, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", epid),
             Command::ConnectEndpoint { epid, .. } => write!(f, "Command::ConnectEndpoint {{ {} }}", epid),
             Command::DisconnectEndpoint { epid, .. } => write!(f, "Command::DisconnectEndpoint {{ {} }}", epid),
-            Command::SendMessage { epid, .. } => write!(f, "Command::SendMessage {{ {} }}", epid),
-            Command::MarkDuplicate { duplicate_epid, epid } => {
-                write!(f, "Command::MarkDuplicate {{ {} == {} }}", duplicate_epid, epid)
-            }
+            Command::SendMessage { receiver_epid, .. } => write!(f, "Command::SendMessage {{ {} }}", receiver_epid),
+            Command::MarkDuplicate {
+                duplicate_epid,
+                original_epid,
+            } => write!(
+                f,
+                "Command::MarkDuplicate {{ {} == {} }}",
+                duplicate_epid, original_epid
+            ),
         }
     }
 }

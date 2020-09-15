@@ -15,14 +15,11 @@ use bee_common::worker::Error as WorkerError;
 
 use futures::sink::SinkExt;
 
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    net::SocketAddr,
-};
+use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Clone, Debug)]
 pub struct ConnectedEndpoint {
-    sender: DataSender,
+    data_sender: DataSender,
     duplicate_of: Option<EndpointId>,
 }
 #[derive(Default)]
@@ -33,12 +30,12 @@ impl ConnectedEndpointList {
         Self::default()
     }
 
-    pub fn insert(&mut self, epid: EndpointId, socket_address: SocketAddr, sender: DataSender) -> bool {
+    pub fn insert(&mut self, epid: EndpointId, data_sender: DataSender) -> bool {
         match self.0.entry(epid) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
                 entry.insert(ConnectedEndpoint {
-                    sender,
+                    data_sender,
                     duplicate_of: None,
                 });
                 true
@@ -46,42 +43,42 @@ impl ConnectedEndpointList {
         }
     }
 
-    pub fn contains(&self, epid: &EndpointId) -> bool {
-        self.0.contains_key(epid)
+    pub fn contains(&self, epid: EndpointId) -> bool {
+        self.0.contains_key(&epid)
     }
 
-    pub fn remove(&mut self, epid: &EndpointId) -> bool {
+    pub fn remove(&mut self, epid: EndpointId) -> bool {
         assert!(!(self.is_duplicate(epid) && self.has_duplicate(epid).is_some()));
 
         // NOTE: here we are removing the original before the duplicate. Should we deny that?
-        if let Some(duplicate) = self.has_duplicate(epid) {
-            self.0.get_mut(duplicate).map(|v| v.duplicate_of.take());
+        if let Some(duplicate_epid) = self.has_duplicate(epid) {
+            self.0.get_mut(&duplicate_epid).map(|v| v.duplicate_of.take());
         }
 
-        self.0.remove(epid).is_some()
+        self.0.remove(&epid).is_some()
     }
 
-    pub fn set_duplicate(&mut self, duplicate: EndpointId, duplicate_of: EndpointId) -> bool {
-        self.0.get_mut(&duplicate).map_or(false, |endpoint| {
-            endpoint.duplicate_of.replace(duplicate_of);
+    pub fn mark_duplicate(&mut self, duplicate_epid: EndpointId, original_epid: EndpointId) -> bool {
+        self.0.get_mut(&duplicate_epid).map_or(false, |endpoint| {
+            endpoint.duplicate_of.replace(original_epid);
             true
         })
     }
 
-    pub fn has_duplicate(&self, epid: &EndpointId) -> Option<&EndpointId> {
+    pub fn has_duplicate(&self, epid: EndpointId) -> Option<EndpointId> {
         self.0
             .iter()
-            .find(|(_, endpoint)| endpoint.duplicate_of.map_or(false, |ref other| other == epid))
-            .map_or(None, |(duplicate, _)| Some(duplicate))
+            .find(|(_, endpoint)| endpoint.duplicate_of.map_or(false, |other| other == epid))
+            .map_or(None, |(duplicate, _)| Some(*duplicate))
     }
 
-    pub fn is_duplicate(&self, epid: &EndpointId) -> bool {
-        self.0.get(epid).map_or(false, |v| v.duplicate_of.is_some())
+    pub fn is_duplicate(&self, epid: EndpointId) -> bool {
+        self.0.get(&epid).map_or(false, |v| v.duplicate_of.is_some())
     }
 
-    pub async fn send(&mut self, data: Vec<u8>, epid: &EndpointId) -> Result<bool, WorkerError> {
-        if let Some(connected_endpoint) = self.0.get_mut(epid) {
-            connected_endpoint.sender.send(data).await?;
+    pub async fn send_message(&mut self, message: Vec<u8>, epid: EndpointId) -> Result<bool, WorkerError> {
+        if let Some(connected_endpoint) = self.0.get_mut(&epid) {
+            connected_endpoint.data_sender.send(message).await?;
 
             Ok(true)
         } else {

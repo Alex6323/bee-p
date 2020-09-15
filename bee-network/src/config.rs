@@ -9,13 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::util::net::Port;
+use crate::util::Port;
 
 use serde::Deserialize;
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-const DEFAULT_BINDING_PORT: u16 = 15600;
+const DEFAULT_BINDING_PORT: Port = 15600;
 const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
 pub const DEFAULT_MAX_TCP_BUFFER_SIZE: usize = 1654;
@@ -35,7 +35,7 @@ impl NetworkConfigBuilder {
         Self::default()
     }
 
-    pub fn binding_port(mut self, port: u16) -> Self {
+    pub fn binding_port(mut self, port: Port) -> Self {
         self.binding_port.replace(port);
         self
     }

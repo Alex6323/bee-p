@@ -11,12 +11,12 @@
 
 use crate::{
     endpoint::{DataSender, EndpointId},
-    tcp::connection::Origin,
+    tcp::Origin,
 };
 
 use futures::{channel::mpsc, stream};
 
-use std::{fmt, net::SocketAddr};
+use std::fmt;
 
 pub type EventSender = mpsc::UnboundedSender<Event>;
 pub type EventReceiver = mpsc::UnboundedReceiver<Event>;
@@ -40,7 +40,6 @@ pub enum Event {
 
     ConnectionEstablished {
         epid: EndpointId,
-        socket_address: SocketAddr,
         origin: Origin,
         data_sender: DataSender,
     },
@@ -51,7 +50,6 @@ pub enum Event {
 
     EndpointConnected {
         epid: EndpointId,
-        socket_address: SocketAddr,
         origin: Origin,
     },
 
@@ -64,7 +62,7 @@ pub enum Event {
         message: Vec<u8>,
     },
 
-    TimerElapsed {
+    ReconnectTimerElapsed {
         epid: EndpointId,
     },
 }
@@ -82,13 +80,9 @@ impl fmt::Display for Event {
 
             Event::EndpointConnected {
                 epid,
-                socket_address,
+                // socket_address,
                 origin,
-            } => write!(
-                f,
-                "Event::EndpointConnected {{ {}, socket_address: {}, origin: {} }}",
-                epid, socket_address, origin
-            ),
+            } => write!(f, "Event::EndpointConnected {{ {}, origin: {} }}", epid, origin),
 
             Event::EndpointDisconnected { epid } => write!(f, "Event::EndpointDisconnected {{ {} }}", epid),
 
@@ -96,7 +90,7 @@ impl fmt::Display for Event {
                 write!(f, "Event::MessageReceived {{ {}, num_bytes: {} }}", epid, message.len())
             }
 
-            Event::TimerElapsed { epid, .. } => write!(f, "Event::TimerElapsed {{ {} }}", epid),
+            Event::ReconnectTimerElapsed { epid, .. } => write!(f, "Event::ReconnectTimerElapsed {{ {} }}", epid),
         }
     }
 }
