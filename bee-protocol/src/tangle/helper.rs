@@ -11,7 +11,7 @@
 
 use crate::tangle::TransactionMetadata;
 
-use bee_tangle::{traversal, Tangle};
+use bee_tangle::{traversal, Tangle, TransactionRef};
 
 use bee_crypto::ternary::Hash;
 
@@ -38,4 +38,19 @@ pub(crate) fn find_tail_of_bundle(tangle: &Tangle<TransactionMetadata>, root: Ha
     );
 
     tail
+}
+
+pub fn on_all_tails<Apply: FnMut(&Hash, &TransactionRef, &TransactionMetadata)>(
+    tangle: &Tangle<TransactionMetadata>,
+    root: Hash,
+    apply: Apply,
+) {
+    traversal::visit_parents_depth_first(
+        tangle,
+        root,
+        |_, _, metadata| !metadata.flags.is_tail(),
+        |_, _, _| {},
+        apply,
+        |_| {},
+    );
 }
