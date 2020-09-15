@@ -13,18 +13,17 @@ use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata};
 
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_ledger::state::LedgerState;
-use bee_ternary::{T1B1Buf, Trits, T5B1};
+use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
-use chrono::{offset::TimeZone, Utc};
-
 use bytemuck::cast_slice;
+use chrono::{offset::TimeZone, Utc};
 use log::{debug, info};
 
 use std::{
     collections::HashMap,
-    fs::File,
-    io::{BufReader, Read},
+    fs::OpenOptions,
+    io::{BufReader, BufWriter, Read, Write},
 };
 
 pub struct LocalSnapshot {
@@ -49,7 +48,7 @@ impl LocalSnapshot {
     pub fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
         info!("Loading snapshot file {}...", path);
 
-        let mut reader = BufReader::new(File::open(path).map_err(|e| Error::IOError(e))?);
+        let mut reader = BufReader::new(OpenOptions::new().read(true).open(path).map_err(Error::IOError)?);
 
         // Version byte
 
@@ -243,6 +242,104 @@ impl LocalSnapshot {
             },
             state,
         })
+    }
+
+    pub fn to_file(&self, path: &str) -> Result<(), Error> {
+        let mut writer = BufWriter::new(
+            OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .create(true)
+                .open(path)
+                .map_err(Error::IOError)?,
+        );
+
+        // Version byte
+
+        if let Err(e) = writer.write_all(&mut [VERSION]) {
+            return Err(Error::IOError(e));
+        };
+
+        // Milestone hash
+
+        if let Err(e) = writer.write_all(&mut cast_slice(
+            self.metadata.hash.to_inner().encode::<T5B1Buf>().as_i8_slice(),
+        )) {
+            return Err(Error::IOError(e));
+        }
+
+        // Milestone index
+
+        if let Err(e) = writer.write_all(&mut self.metadata.index.to_le_bytes()) {
+            return Err(Error::IOError(e));
+        }
+
+        // Timestamp
+
+        if let Err(e) = writer.write_all(&mut self.metadata.timestamp.to_le_bytes()) {
+            return Err(Error::IOError(e));
+        }
+
+        // Number of solid entry points
+
+        if let Err(e) = writer.write_all(&mut (self.metadata.solid_entry_points.len() as u32).to_le_bytes()) {
+            return Err(Error::IOError(e));
+        }
+
+        // Number of seen milestones
+
+        if let Err(e) = writer.write_all(&mut (self.metadata.seen_milestones.len() as u32).to_le_bytes()) {
+            return Err(Error::IOError(e));
+        }
+
+        // Number of balances
+
+        if let Err(e) = writer.write_all(&mut (self.state.len() as u32).to_le_bytes()) {
+            return Err(Error::IOError(e));
+        }
+
+        // Number of spent addresses
+
+        if let Err(e) = writer.write_all(&mut 0u32.to_le_bytes()) {
+            return Err(Error::IOError(e));
+        }
+
+        // Solid entry points
+
+        for (hash, index) in self.metadata.solid_entry_points.iter() {
+            if let Err(e) = writer.write_all(&mut cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())) {
+                return Err(Error::IOError(e));
+            }
+            if let Err(e) = writer.write_all(&mut index.to_le_bytes()) {
+                return Err(Error::IOError(e));
+            }
+        }
+
+        // Seen milestones
+
+        for (hash, index) in self.metadata.seen_milestones.iter() {
+            if let Err(e) = writer.write_all(&mut cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())) {
+                return Err(Error::IOError(e));
+            }
+            if let Err(e) = writer.write_all(&mut index.to_le_bytes()) {
+                return Err(Error::IOError(e));
+            }
+        }
+
+        // Balances
+
+        for (address, balance) in self.state.iter() {
+            if let Err(e) = writer.write_all(&mut cast_slice(address.to_inner().encode::<T5B1Buf>().as_i8_slice())) {
+                return Err(Error::IOError(e));
+            }
+            if let Err(e) = writer.write_all(&mut balance.to_le_bytes()) {
+                return Err(Error::IOError(e));
+            }
+        }
+
+        // TODO hash ?
+
+        Ok(())
     }
 
     pub fn metadata(&self) -> &LocalSnapshotMetadata {
