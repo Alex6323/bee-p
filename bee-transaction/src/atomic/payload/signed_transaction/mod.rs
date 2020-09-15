@@ -283,7 +283,7 @@ impl<'a> SignedTransactionBuilder<'a> {
                 let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
                 match &self.seed {
                     Seed::Ed25519(s) => {
-                        let path = BIP32Path::from(*index).map_err(|_| Error::PathError)?;
+                        let path = BIP32Path::from_str(*index).map_err(|_| Error::PathError)?;
                         let private_key = Ed25519PrivateKey::generate_from_seed(s, path)?;
                         let public_key = private_key.generate_public_key().to_bytes();
                         let signature = private_key.sign(&serialized_inputs).to_bytes().to_vec();
