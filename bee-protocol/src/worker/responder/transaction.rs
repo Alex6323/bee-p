@@ -12,7 +12,7 @@
 use crate::{
     message::{compress_transaction_bytes, Transaction as TransactionMessage, TransactionRequest},
     tangle::tangle,
-    worker::SenderWorker,
+    worker::{SenderWorker, Worker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -21,6 +21,7 @@ use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
+use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{
     channel::mpsc,
@@ -28,20 +29,34 @@ use futures::{
 };
 use log::info;
 
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<TransactionResponderWorkerEvent>>>;
-
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: TransactionRequest,
 }
 
-pub(crate) struct TransactionResponderWorker {
-    receiver: Receiver,
+pub(crate) struct TransactionResponderWorker;
+
+#[async_trait]
+impl Worker for TransactionResponderWorker {
+    type Event = TransactionResponderWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
+            self.process_request(epid, request);
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl TransactionResponderWorker {
-    pub(crate) fn new(receiver: Receiver) -> Self {
-        Self { receiver }
+    pub(crate) fn new() -> Self {
+        Self
     }
 
     fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
@@ -65,17 +80,5 @@ impl TransactionResponderWorker {
             }
             Err(_) => {}
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(TransactionResponderWorkerEvent { epid, request }) = self.receiver.next().await {
-            self.process_request(epid, request);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

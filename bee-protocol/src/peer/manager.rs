@@ -14,7 +14,7 @@
 use crate::{
     message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
     peer::{HandshakedPeer, Peer},
-    worker::SenderWorker,
+    worker::{SenderWorker, Worker},
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
@@ -86,36 +86,22 @@ impl PeerManager {
             // TODO Add to shutdown ?
 
             spawn(
-                SenderWorker::<MilestoneRequest>::new(
-                    self.network.clone(),
-                    peer.clone(),
-                    ShutdownStream::new(milestone_request_shutdown_rx, milestone_request_rx),
-                )
-                .run(),
+                SenderWorker::<MilestoneRequest>::new(self.network.clone(), peer.clone())
+                    .run(ShutdownStream::new(milestone_request_shutdown_rx, milestone_request_rx)),
             );
             spawn(
-                SenderWorker::<TransactionMessage>::new(
-                    self.network.clone(),
-                    peer.clone(),
-                    ShutdownStream::new(transaction_shutdown_rx, transaction_rx),
-                )
-                .run(),
+                SenderWorker::<TransactionMessage>::new(self.network.clone(), peer.clone())
+                    .run(ShutdownStream::new(transaction_shutdown_rx, transaction_rx)),
             );
             spawn(
-                SenderWorker::<TransactionRequest>::new(
-                    self.network.clone(),
-                    peer.clone(),
-                    ShutdownStream::new(transaction_request_shutdown_rx, transaction_request_rx),
-                )
-                .run(),
+                SenderWorker::<TransactionRequest>::new(self.network.clone(), peer.clone()).run(ShutdownStream::new(
+                    transaction_request_shutdown_rx,
+                    transaction_request_rx,
+                )),
             );
             spawn(
-                SenderWorker::<Heartbeat>::new(
-                    self.network.clone(),
-                    peer,
-                    ShutdownStream::new(heartbeat_shutdown_rx, heartbeat_rx),
-                )
-                .run(),
+                SenderWorker::<Heartbeat>::new(self.network.clone(), peer)
+                    .run(ShutdownStream::new(heartbeat_shutdown_rx, heartbeat_rx)),
             );
         }
     }

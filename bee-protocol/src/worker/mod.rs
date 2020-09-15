@@ -40,3 +40,17 @@ pub(crate) use sender::SenderWorker;
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
+
+use bee_common::worker::Error as WorkerError;
+
+use async_trait::async_trait;
+use futures::Stream;
+
+#[async_trait]
+pub(crate) trait Worker {
+    type Event;
+
+    type Receiver: Stream<Item = Self::Event>;
+
+    async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError>;
+}

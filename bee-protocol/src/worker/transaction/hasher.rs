@@ -12,7 +12,10 @@
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    worker::transaction::{HashCache, ProcessorWorkerEvent},
+    worker::{
+        transaction::{HashCache, ProcessorWorkerEvent},
+        Worker,
+    },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -24,6 +27,7 @@ use bee_network::EndpointId;
 use bee_ternary::{T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransactionField, TRANSACTION_TRIT_LEN};
 
+use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{
     channel::mpsc,
@@ -39,46 +43,44 @@ use std::pin::Pin;
 // of the batched one.
 const BATCH_SIZE_THRESHOLD: usize = 3;
 
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<HasherWorkerEvent>>>;
-
 pub(crate) struct HasherWorkerEvent {
     pub(crate) from: EndpointId,
     pub(crate) transaction: TransactionMessage,
 }
 
-#[pin_project(project = HasherWorkerProj)]
 pub(crate) struct HasherWorker {
     processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>,
-    #[pin]
-    receiver: Receiver,
-    cache: HashCache,
-    hasher: BatchHasher<T5B1Buf>,
-    events: Vec<HasherWorkerEvent>,
+}
+
+#[async_trait]
+impl Worker for HasherWorker {
+    type Event = usize;
+    type Receiver = BatchStream;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while let Some(batch_size) = receiver.next().await {
+            self.trigger_hashing(batch_size, &mut receiver);
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl HasherWorker {
-    pub(crate) fn new(
-        processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>,
-        cache_size: usize,
-        receiver: Receiver,
-    ) -> Self {
-        assert!(BATCH_SIZE_THRESHOLD <= BATCH_SIZE);
-        Self {
-            processor_worker,
-            receiver,
-            cache: HashCache::new(cache_size),
-            hasher: BatchHasher::new(TRANSACTION_TRIT_LEN, CurlPRounds::Rounds81),
-            events: Vec::with_capacity(BATCH_SIZE),
-        }
+    pub(crate) fn new(processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>) -> Self {
+        Self { processor_worker }
     }
-
-    fn trigger_hashing(&mut self, batch_size: usize) {
+    fn trigger_hashing(&mut self, batch_size: usize, receiver: &mut <Self as Worker>::Receiver) {
         if batch_size < BATCH_SIZE_THRESHOLD {
-            let hashes = self.hasher.hash_unbatched();
-            Self::send_hashes(hashes, &mut self.events, &mut self.processor_worker);
+            let hashes = receiver.hasher.hash_unbatched();
+            Self::send_hashes(hashes, &mut receiver.events, &mut self.processor_worker);
         } else {
-            let hashes = self.hasher.hash_batched();
-            Self::send_hashes(hashes, &mut self.events, &mut self.processor_worker);
+            let hashes = receiver.hasher.hash_batched();
+            Self::send_hashes(hashes, &mut receiver.events, &mut self.processor_worker);
         }
         // FIXME: we could store the fraction of times we use the batched hasher
     }
@@ -98,26 +100,38 @@ impl HasherWorker {
             }
         }
     }
+}
 
-    pub async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
+#[pin_project(project = BatchStreamProj)]
+pub(crate) struct BatchStream {
+    #[pin]
+    receiver: ShutdownStream<Fuse<mpsc::UnboundedReceiver<HasherWorkerEvent>>>,
+    cache: HashCache,
+    hasher: BatchHasher<T5B1Buf>,
+    events: Vec<HasherWorkerEvent>,
+}
 
-        while let Some(batch_size) = self.next().await {
-            self.trigger_hashing(batch_size);
+impl BatchStream {
+    pub(crate) fn new(
+        cache_size: usize,
+        receiver: ShutdownStream<Fuse<mpsc::UnboundedReceiver<HasherWorkerEvent>>>,
+    ) -> Self {
+        assert!(BATCH_SIZE_THRESHOLD <= BATCH_SIZE);
+        Self {
+            receiver,
+            cache: HashCache::new(cache_size),
+            hasher: BatchHasher::new(TRANSACTION_TRIT_LEN, CurlPRounds::Rounds81),
+            events: Vec::with_capacity(BATCH_SIZE),
         }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }
 
-impl Stream for HasherWorker {
+impl Stream for BatchStream {
     type Item = usize;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         // We need to do this because `receiver` needs to be pinned to be polled.
-        let HasherWorkerProj {
+        let BatchStreamProj {
             mut receiver,
             hasher,
             events,

@@ -9,45 +9,49 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::Worker};
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 
-use futures::{channel::oneshot, future::Fuse, select, FutureExt};
+use async_std::stream::{interval, Interval};
+use async_trait::async_trait;
+use futures::{stream::Fuse, StreamExt};
 use log::info;
 
-pub(crate) struct KickstartWorker {
-    shutdown: Fuse<oneshot::Receiver<()>>,
-}
+use std::time::Duration;
 
-impl KickstartWorker {
-    pub(crate) fn new(shutdown: oneshot::Receiver<()>) -> Self {
-        Self {
-            shutdown: shutdown.fuse(),
-        }
-    }
+pub(crate) struct KickstartWorker;
 
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
+#[async_trait]
+impl Worker for KickstartWorker {
+    type Event = ();
+    type Receiver = ShutdownStream<Fuse<Interval>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");
 
-        loop {
-            async_std::task::sleep(std::time::Duration::from_secs(1)).await;
-            select! {
-                _ = &mut self.shutdown => break,
-                default => {
-                    let next_ms = *tangle().get_latest_solid_milestone_index() + 1;
-                    let latest_ms = *tangle().get_latest_milestone_index();
+        while let Some(()) = receiver.next().await {
+            let next_ms = *tangle().get_latest_solid_milestone_index() + 1;
+            let latest_ms = *tangle().get_latest_milestone_index();
 
-                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms <= latest_ms {
-                        Protocol::request_milestone(MilestoneIndex(next_ms), None);
-                        break;
-                    }
-                },
+            if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms <= latest_ms {
+                Protocol::request_milestone(MilestoneIndex(next_ms), None);
+                break;
             }
         }
 
         info!("Stopped.");
 
         Ok(())
+    }
+}
+
+impl KickstartWorker {
+    pub(crate) fn new() -> Self {
+        Self
+    }
+
+    pub(crate) fn interval() -> Interval {
+        interval(Duration::from_secs(1))
     }
 }

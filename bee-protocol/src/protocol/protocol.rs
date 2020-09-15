@@ -17,11 +17,10 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::tangle,
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, HasherWorker, HasherWorkerEvent,
-        KickstartWorker, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, MilestoneResponderWorker,
-        MilestoneResponderWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker,
-        SolidPropagatorWorker, SolidPropagatorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
-        TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent,
+        BroadcasterWorker, BundleValidatorWorker, HasherWorker, HasherWorkerEvent, KickstartWorker,
+        MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneValidatorWorker, PeerHandshakerWorker,
+        ProcessorWorker, SolidPropagatorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker,
+        TransactionResponderWorker, Worker,
     },
 };
 
@@ -51,12 +50,12 @@ pub struct Protocol {
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) hasher_worker: mpsc::UnboundedSender<HasherWorkerEvent>,
-    pub(crate) transaction_responder_worker: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
-    pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
-    pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
-    pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
-    pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
-    pub(crate) solid_propagator_worker: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
+    pub(crate) transaction_responder_worker: mpsc::UnboundedSender<<TransactionResponderWorker as Worker>::Event>,
+    pub(crate) milestone_responder_worker: mpsc::UnboundedSender<<MilestoneResponderWorker as Worker>::Event>,
+    pub(crate) transaction_requester_worker: WaitPriorityQueue<<TransactionRequesterWorker as Worker>::Event>,
+    pub(crate) milestone_requester_worker: WaitPriorityQueue<<MilestoneRequesterWorker as Worker>::Event>,
+    pub(crate) broadcaster_worker: mpsc::UnboundedSender<<BroadcasterWorker as Worker>::Event>,
+    pub(crate) solid_propagator_worker: mpsc::UnboundedSender<<SolidPropagatorWorker as Worker>::Event>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
@@ -138,149 +137,128 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             hasher_worker_shutdown_tx,
             spawn(
-                HasherWorker::new(
-                    processor_worker_tx,
+                HasherWorker::new(processor_worker_tx).run(<HasherWorker as Worker>::Receiver::new(
                     Protocol::get().config.workers.transaction_worker_cache,
                     ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
-                )
-                .run(),
+                )),
             ),
         );
 
         shutdown.add_worker_shutdown(
             processor_worker_shutdown_tx,
             spawn(
-                ProcessorWorker::new(
-                    milestone_validator_worker_tx,
-                    ShutdownStream::new(processor_worker_shutdown_rx, processor_worker_rx),
-                )
-                .run(),
+                ProcessorWorker::new(milestone_validator_worker_tx)
+                    .run(ShutdownStream::new(processor_worker_shutdown_rx, processor_worker_rx)),
             ),
         );
 
         shutdown.add_worker_shutdown(
             transaction_responder_worker_shutdown_tx,
-            spawn(
-                TransactionResponderWorker::new(ShutdownStream::new(
-                    transaction_responder_worker_shutdown_rx,
-                    transaction_responder_worker_rx,
-                ))
-                .run(),
-            ),
+            spawn(TransactionResponderWorker::new().run(ShutdownStream::new(
+                transaction_responder_worker_shutdown_rx,
+                transaction_responder_worker_rx,
+            ))),
         );
 
         shutdown.add_worker_shutdown(
             milestone_responder_worker_shutdown_tx,
-            spawn(
-                MilestoneResponderWorker::new(ShutdownStream::new(
-                    milestone_responder_worker_shutdown_rx,
-                    milestone_responder_worker_rx,
-                ))
-                .run(),
-            ),
+            spawn(MilestoneResponderWorker::new().run(ShutdownStream::new(
+                milestone_responder_worker_shutdown_rx,
+                milestone_responder_worker_rx,
+            ))),
         );
 
         shutdown.add_worker_shutdown(
             transaction_requester_worker_shutdown_tx,
-            spawn(
-                TransactionRequesterWorker::new(ShutdownStream::from_fused(
-                    transaction_requester_worker_shutdown_rx,
-                    Protocol::get().transaction_requester_worker.incoming(),
-                ))
-                .run(),
-            ),
+            spawn(TransactionRequesterWorker::new().run(ShutdownStream::from_fused(
+                transaction_requester_worker_shutdown_rx,
+                Protocol::get().transaction_requester_worker.incoming(),
+            ))),
         );
 
         shutdown.add_worker_shutdown(
             milestone_requester_worker_shutdown_tx,
-            spawn(
-                MilestoneRequesterWorker::new(ShutdownStream::from_fused(
-                    milestone_requester_worker_shutdown_rx,
-                    Protocol::get().milestone_requester_worker.incoming(),
-                ))
-                .run(),
-            ),
+            spawn(MilestoneRequesterWorker::new().run(ShutdownStream::from_fused(
+                milestone_requester_worker_shutdown_rx,
+                Protocol::get().milestone_requester_worker.incoming(),
+            ))),
         );
 
         match Protocol::get().config.coordinator.sponge_type {
             SpongeKind::Kerl => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
-                    MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new(ShutdownStream::new(
+                    MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new().run(ShutdownStream::new(
                         milestone_validator_worker_shutdown_rx,
                         milestone_validator_worker_rx,
-                    ))
-                    .run(),
+                    )),
                 ),
             ),
             SpongeKind::CurlP27 => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
-                    MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new(ShutdownStream::new(
+                    MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new().run(ShutdownStream::new(
                         milestone_validator_worker_shutdown_rx,
                         milestone_validator_worker_rx,
-                    ))
-                    .run(),
+                    )),
                 ),
             ),
             SpongeKind::CurlP81 => shutdown.add_worker_shutdown(
                 milestone_validator_worker_shutdown_tx,
                 spawn(
-                    MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new(ShutdownStream::new(
+                    MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new().run(ShutdownStream::new(
                         milestone_validator_worker_shutdown_rx,
                         milestone_validator_worker_rx,
-                    ))
-                    .run(),
+                    )),
                 ),
             ),
         };
 
         shutdown.add_worker_shutdown(
             broadcaster_worker_shutdown_tx,
-            spawn(
-                BroadcasterWorker::new(
-                    network,
-                    ShutdownStream::new(broadcaster_worker_shutdown_rx, broadcaster_worker_rx),
-                )
-                .run(),
-            ),
+            spawn(BroadcasterWorker::new(network).run(ShutdownStream::new(
+                broadcaster_worker_shutdown_rx,
+                broadcaster_worker_rx,
+            ))),
         );
 
         shutdown.add_worker_shutdown(
             bundle_validator_worker_shutdown_tx,
-            spawn(
-                BundleValidatorWorker::new(ShutdownStream::new(
-                    bundle_validator_worker_shutdown_rx,
-                    bundle_validator_worker_rx,
-                ))
-                .run(),
-            ),
+            spawn(BundleValidatorWorker::new().run(ShutdownStream::new(
+                bundle_validator_worker_shutdown_rx,
+                bundle_validator_worker_rx,
+            ))),
         );
 
         shutdown.add_worker_shutdown(
             solid_propagator_worker_shutdown_tx,
             spawn(
-                SolidPropagatorWorker::new(
-                    bundle_validator_worker_tx,
-                    ShutdownStream::new(solid_propagator_worker_shutdown_rx, solid_propagator_worker_rx),
-                )
-                .run(),
+                SolidPropagatorWorker::new(bundle_validator_worker_tx).run(ShutdownStream::new(
+                    solid_propagator_worker_shutdown_rx,
+                    solid_propagator_worker_rx,
+                )),
             ),
         );
 
         shutdown.add_worker_shutdown(
             status_worker_shutdown_tx,
-            spawn(StatusWorker::new(Protocol::get().config.workers.status_interval).run(status_worker_shutdown_rx)),
+            spawn(StatusWorker::new().run(ShutdownStream::new(
+                status_worker_shutdown_rx,
+                StatusWorker::interval(Protocol::get().config.workers.status_interval),
+            ))),
         );
 
         shutdown.add_worker_shutdown(
             tps_worker_shutdown_tx,
-            spawn(TpsWorker::new().run(tps_worker_shutdown_rx)),
+            spawn(TpsWorker::new().run(ShutdownStream::new(tps_worker_shutdown_rx, TpsWorker::interval()))),
         );
 
         shutdown.add_worker_shutdown(
             kickstart_worker_shutdown_tx,
-            spawn(KickstartWorker::new(kickstart_worker_shutdown_rx).run()),
+            spawn(KickstartWorker::new().run(ShutdownStream::new(
+                kickstart_worker_shutdown_rx,
+                KickstartWorker::interval(),
+            ))),
         );
     }
 

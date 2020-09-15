@@ -12,18 +12,18 @@
 use crate::{
     message::{tlv_into_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
+    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
+use async_trait::async_trait;
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
 use log::{info, warn};
-
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
@@ -32,12 +32,29 @@ pub(crate) struct BroadcasterWorkerEvent {
 
 pub(crate) struct BroadcasterWorker {
     network: Network,
-    receiver: Receiver,
+}
+
+#[async_trait]
+impl Worker for BroadcasterWorker {
+    type Event = BroadcasterWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
+            self.broadcast(source, transaction).await;
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl BroadcasterWorker {
-    pub(crate) fn new(network: Network, receiver: Receiver) -> Self {
-        Self { network, receiver }
+    pub(crate) fn new(network: Network) -> Self {
+        Self { network }
     }
 
     async fn broadcast(&mut self, source: Option<EndpointId>, transaction: TransactionMessage) {
@@ -67,17 +84,5 @@ impl BroadcasterWorker {
                 };
             }
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(BroadcasterWorkerEvent { source, transaction }) = self.receiver.next().await {
-            self.broadcast(source, transaction).await;
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

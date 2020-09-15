@@ -57,7 +57,8 @@ impl SnapshotWorker {
 
     fn process(&mut self, milestone: Milestone) {
         if self.should_snapshot(milestone.index()) {
-            // createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal);
+            // createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true,
+            // shutdownSignal);
         }
 
         if self.config.pruning().enabled() && *milestone.index() > self.config.pruning().delay() as u32 {

@@ -15,48 +15,36 @@ use crate::{
     },
     peer::HandshakedPeer,
     protocol::Protocol,
+    worker::{Worker, WorkerError},
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
+use async_trait::async_trait;
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
 use log::warn;
 
-use std::sync::Arc;
-
-type Receiver<M> = ShutdownStream<Fuse<mpsc::UnboundedReceiver<M>>>;
+use std::{marker::PhantomData, sync::Arc};
 
 pub(crate) struct SenderWorker<M: Message> {
     network: Network,
     peer: Arc<HandshakedPeer>,
-    receiver: Receiver<M>,
+    marker: PhantomData<M>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
-        impl SenderWorker<$type> {
-            pub(crate) fn new(network: Network, peer: Arc<HandshakedPeer>, receiver: Receiver<$type>) -> Self {
-                Self {
-                    network,
-                    peer,
-                    receiver,
-                }
-            }
+        #[async_trait]
+        impl Worker for SenderWorker<$type> {
+            type Event = $type;
+            type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-            pub(crate) fn send(epid: &EndpointId, message: $type) {
-                if let Some(context) = Protocol::get().peer_manager.handshaked_peers.get(&epid) {
-                    if let Err(e) = context.$sender.0.unbounded_send(message) {
-                        warn!("Sending {} to {} failed: {:?}.", stringify!($type), epid, e);
-                    }
-                };
-            }
-
-            pub(crate) async fn run(mut self) {
-                while let Some(message) = self.receiver.next().await {
+            async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+                while let Some(message) = receiver.next().await {
                     match self
                         .network
                         .send(SendMessage {
@@ -80,6 +68,26 @@ macro_rules! implement_sender_worker {
                         }
                     }
                 }
+
+                Ok(())
+            }
+        }
+
+        impl SenderWorker<$type> {
+            pub(crate) fn new(network: Network, peer: Arc<HandshakedPeer>) -> Self {
+                Self {
+                    network,
+                    peer,
+                    marker: PhantomData,
+                }
+            }
+
+            pub(crate) fn send(epid: &EndpointId, message: $type) {
+                if let Some(context) = Protocol::get().peer_manager.handshaked_peers.get(&epid) {
+                    if let Err(e) = context.$sender.0.unbounded_send(message) {
+                        warn!("Sending {} to {} failed: {:?}.", stringify!($type), epid, e);
+                    }
+                };
             }
         }
     };
