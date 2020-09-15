@@ -17,18 +17,17 @@ use bee_crypto::ternary::Hash;
 
 pub(crate) fn find_tail_of_bundle(tangle: &Tangle<TransactionMetadata>, root: Hash) -> Option<Hash> {
     let mut tail = None;
-    let mut done = false;
+    let mut bundle = None;
 
     traversal::visit_children_follow_trunk(
         tangle,
         root,
         |tx, _| {
-            if done {
-                return false;
+            if bundle.is_none() {
+                bundle.replace(*tx.bundle());
             }
-            done = tx.is_tail();
 
-            true
+            bundle.as_ref().unwrap() == tx.bundle()
         },
         |hash, tx, _| {
             if tx.is_tail() {
