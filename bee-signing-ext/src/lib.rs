@@ -15,4 +15,4 @@
 
 pub mod binary;
 
-pub use signature::{Signature, Signer, Verifier, Error as SignatureError};
+pub use signature::{Error as SignatureError, Signature, Signer, Verifier};

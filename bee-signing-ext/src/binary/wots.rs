@@ -13,7 +13,10 @@
 use crate::binary::Error;
 
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
-use bee_crypto::ternary::{HASH_LENGTH, sponge::{Kerl, Sponge}};
+use bee_crypto::ternary::{
+    sponge::{Kerl, Sponge},
+    HASH_LENGTH,
+};
 use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, Tryte, TryteBuf, T1B1};
 
 use rand::distributions::{Distribution, Uniform};
@@ -130,7 +133,12 @@ impl WotsPrivateKey {
     /// that no chunk of the private key is ever revealed, as this would allow the reconstruction of successive chunks
     /// (also known as "M-bug").
     /// Provides compatibility to the currently used key derivation.
-    pub fn generate_from_entropy(&self, seed: &WotsSeed, index: usize, security_level: WotsSecurityLevel) -> Result<Self, Error> {
+    pub fn generate_from_entropy(
+        &self,
+        seed: &WotsSeed,
+        index: usize,
+        security_level: WotsSecurityLevel,
+    ) -> Result<Self, Error> {
         let subseed = seed.subseed(index);
         let entropy = subseed.as_trits();
         if entropy.len() != HASH_LENGTH {
@@ -260,7 +268,6 @@ impl AsRef<[u8]> for WotsSignature {
         // This is the alternative suggested by documentation in std::mem::transmute
         unsafe { &*(self.0.as_i8_slice() as *const _ as *const [u8]) }
     }
-
 }
 
 impl Signature for WotsSignature {

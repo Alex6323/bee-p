@@ -1,5 +1,5 @@
+use bee_signing_ext::binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed};
 use bee_signing_ext::{Signer, Verifier};
-use bee_signing_ext::binary::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed, BIP32Path};
 
 #[test]
 fn test_new_seed() {
@@ -8,12 +8,20 @@ fn test_new_seed() {
     assert_ne!(seed.as_bytes(), Ed25519Seed::rand().as_bytes());
 
     assert_eq!(
-        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m").unwrap()).unwrap().as_bytes(),
-        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m").unwrap()).unwrap().as_bytes()
+        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m").unwrap())
+            .unwrap()
+            .as_bytes(),
+        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m").unwrap())
+            .unwrap()
+            .as_bytes()
     );
     assert_eq!(
-        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m/0H/1H/2H/2H/1000000000H").unwrap()).unwrap().as_bytes(),
-        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m/0H/1H/2H/2H/1000000000H").unwrap()).unwrap().as_bytes()
+        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m/0H/1H/2H/2H/1000000000H").unwrap())
+            .unwrap()
+            .as_bytes(),
+        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m/0H/1H/2H/2H/1000000000H").unwrap())
+            .unwrap()
+            .as_bytes()
     );
 }
 
@@ -39,7 +47,11 @@ fn to_bytes_from_bytes() {
 
     assert_eq!(seed1.as_bytes(), seed2.as_bytes());
 
-    let private_key1 = Ed25519PrivateKey::generate_from_seed(&seed1, BIP32Path::from_str("m/0H/2147483647H/1H/2147483646H/2H").unwrap()).unwrap();
+    let private_key1 = Ed25519PrivateKey::generate_from_seed(
+        &seed1,
+        BIP32Path::from_str("m/0H/2147483647H/1H/2147483646H/2H").unwrap(),
+    )
+    .unwrap();
     let private_key2 = Ed25519PrivateKey::from_bytes(&private_key1.to_bytes()).unwrap();
 
     assert_eq!(private_key1.as_bytes(), private_key2.as_bytes());
@@ -53,7 +65,11 @@ fn to_bytes_from_bytes() {
 #[test]
 fn seed_sign_and_verify() {
     let seed = Ed25519Seed::rand();
-    let private_key = Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m/0H/2147483647H/1H/2147483646H/2H").unwrap()).unwrap();
+    let private_key = Ed25519PrivateKey::generate_from_seed(
+        &seed,
+        BIP32Path::from_str("m/0H/2147483647H/1H/2147483646H/2H").unwrap(),
+    )
+    .unwrap();
     let public_key = private_key.generate_public_key();
     let signature = private_key.sign(&[1, 3, 3, 8]);
     public_key.verify(&[1, 3, 3, 8], &signature).unwrap();
