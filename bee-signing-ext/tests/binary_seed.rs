@@ -8,18 +8,18 @@ fn test_new_seed() {
     assert_ne!(seed.as_bytes(), Ed25519Seed::rand().as_bytes());
 
     assert_eq!(
-        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m").unwrap())
+        Ed25519PrivateKey::generate_from_seed(&seed, &BIP32Path::from_str("m").unwrap())
             .unwrap()
             .as_bytes(),
-        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m").unwrap())
+        Ed25519PrivateKey::generate_from_seed(&seed, &BIP32Path::from_str("m").unwrap())
             .unwrap()
             .as_bytes()
     );
     assert_eq!(
-        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m/0H/1H/2H/2H/1000000000H").unwrap())
+        Ed25519PrivateKey::generate_from_seed(&seed, &BIP32Path::from_str("m/0H/1H/2H/2H/1000000000H").unwrap())
             .unwrap()
             .as_bytes(),
-        Ed25519PrivateKey::generate_from_seed(&seed, BIP32Path::from_str("m/0H/1H/2H/2H/1000000000H").unwrap())
+        Ed25519PrivateKey::generate_from_seed(&seed, &BIP32Path::from_str("m/0H/1H/2H/2H/1000000000H").unwrap())
             .unwrap()
             .as_bytes()
     );
@@ -49,7 +49,7 @@ fn to_bytes_from_bytes() {
 
     let private_key1 = Ed25519PrivateKey::generate_from_seed(
         &seed1,
-        BIP32Path::from_str("m/0H/2147483647H/1H/2147483646H/2H").unwrap(),
+        &BIP32Path::from_str("m/0H/2147483647H/1H/2147483646H/2H").unwrap(),
     )
     .unwrap();
     let private_key2 = Ed25519PrivateKey::from_bytes(&private_key1.to_bytes()).unwrap();
@@ -67,7 +67,7 @@ fn seed_sign_and_verify() {
     let seed = Ed25519Seed::rand();
     let private_key = Ed25519PrivateKey::generate_from_seed(
         &seed,
-        BIP32Path::from_str("m/0H/2147483647H/1H/2147483646H/2H").unwrap(),
+        &BIP32Path::from_str("m/0H/2147483647H/1H/2147483646H/2H").unwrap(),
     )
     .unwrap();
     let public_key = private_key.generate_public_key();
