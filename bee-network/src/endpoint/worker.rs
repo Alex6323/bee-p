@@ -250,7 +250,7 @@ async fn add_endpoint(
     endpoint_contacts: &mut EndpointContactList,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    if let Ok(endpoint_params) = EndpointContactParams::from_url(url.clone()) {
+    if let Ok(endpoint_params) = EndpointContactParams::from_url(url.clone()).await {
         let epid = EndpointId::new();
 
         if endpoint_contacts.insert(epid, endpoint_params) {
@@ -296,15 +296,16 @@ async fn connect_endpoint(
 ) -> Result<bool, WorkerError> {
     // NOTE: 'unwrap' is safe, because we assume this method is only called correctly after making sure the endpoint is
     // still part of the contact-list.
-    let endpoint_params = endpoint_contacts.get(epid).unwrap();
+    let mut endpoint_params = endpoint_contacts.get(epid).unwrap();
     if connected_endpoints.contains(epid) {
         // NOTE: already connected
         return Ok(false);
     }
     match endpoint_params.transport_protocol {
         TransportProtocol::Tcp => {
-            // NOTE: 'unwrap' here, because the cache should never be empty at this point
-            let socket_address = endpoint_params.dns_lookup_cache.unwrap();
+            // NOTE: 'unwrap' here, because the cache should never be empty at this point.
+            // TODO: impl refresh (make sure to not operate on the clone)
+            let socket_address = endpoint_params.socket_address(false).await.unwrap();
 
             if tcp::connect_endpoint(epid, socket_address, internal_event_sender.clone())
                 .await

@@ -59,13 +59,13 @@ async fn main() {
     let mut network = node.network.clone();
     let config = node.config.clone();
 
-    info!("Adding static peers...");
+    info!("[pingpong] Adding static peers...");
     // tokio::time::delay_for(Duration::from_secs(1)).await; // remove this?
     for url in &config.peers {
         network.send(AddEndpoint { url: url.clone() }).await.unwrap();
     }
 
-    info!("Finished.");
+    info!("[pingpong] ...finished.");
 
     node.run().await;
 }
@@ -88,7 +88,7 @@ impl Node {
             ..
         } = self;
 
-        info!("Node running.");
+        info!("[pingpong] Node running.");
 
         let mut ctrl_c = ctrl_c_listener().fuse();
 
@@ -107,11 +107,11 @@ impl Node {
             }
         }
 
-        info!("Stopping node...");
+        info!("[pingpong] Stopping node...");
 
         self.shutdown.execute().await.expect("error shutting down gracefully.");
 
-        info!("Shutdown complete.");
+        info!("[pingpong] Shutdown complete.");
     }
 
     pub fn builder(config: Config) -> NodeBuilder {
@@ -123,7 +123,7 @@ impl Node {
 async fn process_event(event: Event, message: &String, network: &mut Network) {
     match event {
         Event::EndpointAdded { epid } => {
-            info!("Added endpoint {}.", epid);
+            info!("[pingpong] Added endpoint {}.", epid);
 
             network
                 .send(ConnectEndpoint { epid })
@@ -131,12 +131,12 @@ async fn process_event(event: Event, message: &String, network: &mut Network) {
                 .expect("error sending Connect command");
         }
 
-        // Event::EndpointRemoved { epid, .. } => {
-        //     info!("Removed endpoint {}.", epid);
-        // }
+        Event::EndpointRemoved { epid, .. } => {
+            info!("[pingpong] Removed endpoint {}.", epid);
+        }
 
         // Event::EndpointConnected { epid, origin, .. } => {
-        //     info!("Connected endpoint {} ({}).", epid, origin);
+        //     info!("[pingpong] Connected endpoint {} ({}).", epid, origin);
 
         //     let utf8_message = Utf8Message::new(message);
 
@@ -241,10 +241,10 @@ impl NodeBuilder {
             .reconnect_interval(RECONNECT_INTERVAL)
             .finish();
 
-        info!("Initializing network...");
+        info!("[pingpong] Initializing network...");
         let (network, events) = bee_network::init(network_config, &mut shutdown).await;
 
-        info!("Node initialized.");
+        info!("[pingpong] Node initialized.");
         Node {
             config: self.config,
             network,

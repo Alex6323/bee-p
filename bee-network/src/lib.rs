@@ -68,11 +68,11 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
     )
     .await;
 
-    let worker1 = tokio::spawn(endpoint_worker.run());
-    let worker2 = tokio::spawn(tcp_server.run());
+    let endpoint_worker = tokio::spawn(endpoint_worker.run());
+    let tcp_server = tokio::spawn(tcp_server.run());
 
-    shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, worker1);
-    shutdown.add_worker_shutdown(tcp_server_shutdown_sender, worker2);
+    shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, endpoint_worker);
+    shutdown.add_worker_shutdown(tcp_server_shutdown_sender, tcp_server);
 
     MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
     RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);

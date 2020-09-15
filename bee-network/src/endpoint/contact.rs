@@ -16,7 +16,7 @@ pub struct EndpointContactParams {
     pub domain_name_or_ip_address: String,
     pub port: Port,
     pub transport_protocol: TransportProtocol,
-    pub(crate) dns_lookup_cache: Option<SocketAddr>,
+    last_socket_address: SocketAddr,
 }
 
 impl EndpointContactParams {
@@ -25,11 +25,11 @@ impl EndpointContactParams {
             domain_name_or_ip_address: socket_address.ip().to_string(),
             port: socket_address.port(),
             transport_protocol,
-            dns_lookup_cache: Some(socket_address),
+            last_socket_address: socket_address,
         }
     }
 
-    pub fn from_url(url: &str) -> Result<Self, Error> {
+    pub async fn from_url(url: &str) -> Result<Self, Error> {
         if let Ok(url) = url::Url::parse(url) {
             let domain_name_or_ip_address = url.host_str().ok_or(Error::UrlParseFailure)?.to_string();
             let port = url.port().ok_or(Error::UrlParseFailure)?;
@@ -40,11 +40,17 @@ impl EndpointContactParams {
                 _ => return Err(Error::UnsupportedTransportProtocol),
             };
 
+            let socket_address = &format!("{}:{}", domain_name_or_ip_address, port)[..];
+            let last_socket_address = util::resolve_address(socket_address)
+                .await
+                .map_err(|_| Error::DnsFailure)?
+                .into();
+
             Ok(Self {
                 domain_name_or_ip_address,
                 port,
                 transport_protocol,
-                dns_lookup_cache: None,
+                last_socket_address,
             })
         } else {
             Err(Error::UrlParseFailure)
@@ -52,17 +58,17 @@ impl EndpointContactParams {
     }
 
     pub async fn socket_address(&mut self, refresh: bool) -> Result<SocketAddr, Error> {
-        if refresh || self.dns_lookup_cache.is_none() {
-            let address = &format!("{}:{}", self.domain_name_or_ip_address, self.port)[..];
-            let socket_address = util::resolve_address(address)
+        if refresh {
+            let socket_address = &format!("{}:{}", self.domain_name_or_ip_address, self.port)[..];
+            let socket_address = util::resolve_address(socket_address)
                 .await
                 .map_err(|_| Error::DnsFailure)?
                 .into();
 
-            self.dns_lookup_cache = Some(socket_address);
+            self.last_socket_address = socket_address;
         }
 
-        Ok(*self.dns_lookup_cache.as_ref().unwrap())
+        Ok(self.last_socket_address)
     }
 }
 
@@ -102,12 +108,9 @@ impl EndpointContactList {
 
     pub fn contains_ip_address(&self, ip_address: IpAddr, refresh: bool) -> bool {
         // TODO: 'refresh' IPs
-        self.0.iter().any(|entry| {
-            entry
-                .value()
-                .dns_lookup_cache
-                .map_or(false, |socket_address| socket_address.ip() == ip_address)
-        })
+        self.0
+            .iter()
+            .any(|entry| entry.value().last_socket_address.ip() == ip_address)
     }
 
     pub fn remove(&self, epid: EndpointId) -> bool {
@@ -118,9 +121,9 @@ impl EndpointContactList {
         self.0.len()
     }
 
+    // TODO: impl refresh
     pub fn get(&self, epid: EndpointId) -> Option<EndpointContactParams> {
-        // NOTE: we might not need to clone the whole struct, but only the socket address (see where this method is
-        // actually needed)
+        // NOTE: no async closures :(
         self.0.get(&epid).map(|entry| entry.value().clone())
     }
 }
