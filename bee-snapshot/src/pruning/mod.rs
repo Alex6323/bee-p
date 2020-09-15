@@ -102,32 +102,22 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
             |_hash| {},
         );
 
+        let mut err = false;
         for approvee in confirmed_transaction_hashes {
             if is_solid_entry_point(&approvee)? {
                 // Find all tails
-                let mut tail_hashes: Vec<Hash> = Vec::new();
-
-                helper::on_all_tails(tangle(), approvee, |hash, _tx, _metadata| {
-                    tail_hashes.push(hash.clone())
-                });
-
-                for tail_hash in tail_hashes {
-                    match tangle().get_metadata(&tail_hash) {
-                        Some(metadata) => {
-                            if metadata.flags.is_confirmed() {
-                                solid_entry_points.insert(tail_hash.clone(), metadata.milestone_index);
-                            } else {
-                                error!("Solid entry point for hash {:?} is not confirmed.", tail_hash);
-                                return Err(Error::SolidEntryPointNotConfirmed);
-                            }
-                        }
-                        None => {
-                            error!("Metadada for hash {:?} is not found in Tangle.", tail_hash);
-                            return Err(Error::MetadataNotFound);
-                        }
+                helper::on_all_tails(tangle(), approvee, |hash, _tx, metadata| {
+                    if metadata.flags.is_confirmed() {
+                        solid_entry_points.insert(hash.clone(), metadata.milestone_index);
+                    } else {
+                        error!("Solid entry point for hash {:?} is not confirmed.", hash);
+                        err = true;
                     }
-                }
+                });
             }
+        }
+        if err {
+            return Err(Error::SolidEntryPointNotConfirmed);
         }
     }
     Ok(solid_entry_points)
