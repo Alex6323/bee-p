@@ -18,14 +18,17 @@ use crate::{
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_network::{Address, EndpointId, Network};
+use bee_network::{EndpointId, Network};
 
 use async_std::{sync::RwLock, task::spawn};
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
 
-use std::sync::{Arc, Mutex};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 
 pub(crate) struct PeerManager {
     network: Network,
@@ -48,7 +51,7 @@ impl PeerManager {
         self.peers.insert(peer.epid, peer);
     }
 
-    pub(crate) async fn handshake(&self, epid: &EndpointId, address: Address) {
+    pub(crate) async fn handshake(&self, epid: &EndpointId, address: SocketAddr) {
         if self.peers.remove(epid).is_some() {
             // TODO check if not already added
 

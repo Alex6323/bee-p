@@ -52,7 +52,7 @@ impl BroadcasterWorker {
                 match self
                     .network
                     .send(SendMessage {
-                        epid: *peer.key(),
+                        receiver_epid: *peer.key(),
                         message: bytes.clone(),
                     })
                     .await

@@ -15,18 +15,21 @@ use crate::{
     peer::PeerMetrics,
 };
 
-use bee_network::{Address, EndpointId};
+use bee_network::EndpointId;
 
-use std::sync::{
-    atomic::{AtomicU32, AtomicU8, Ordering},
-    Mutex,
+use std::{
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicU32, AtomicU8, Ordering},
+        Mutex,
+    },
 };
 
 use futures::channel::{mpsc, oneshot};
 
 pub struct HandshakedPeer {
     pub(crate) epid: EndpointId,
-    pub(crate) address: Address,
+    pub(crate) address: SocketAddr,
     pub(crate) metrics: PeerMetrics,
     pub(crate) last_solid_milestone_index: AtomicU32,
     pub(crate) snapshot_milestone_index: AtomicU32,
@@ -51,7 +54,7 @@ pub struct HandshakedPeer {
 impl HandshakedPeer {
     pub(crate) fn new(
         epid: EndpointId,
-        address: Address,
+        address: SocketAddr,
         milestone_request: (
             mpsc::UnboundedSender<MilestoneRequest>,
             Mutex<Option<oneshot::Sender<()>>>,

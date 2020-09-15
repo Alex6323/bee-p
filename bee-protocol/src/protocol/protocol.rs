@@ -32,7 +32,7 @@ use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
     Hash,
 };
-use bee_network::{Address, EndpointId, Network, Origin};
+use bee_network::{EndpointId, Network, Origin};
 use bee_signing::ternary::wots::WotsPublicKey;
 
 use async_std::task::spawn;
@@ -40,7 +40,7 @@ use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 
-use std::{ptr, sync::Arc, time::Instant};
+use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -290,7 +290,7 @@ impl Protocol {
 
     pub fn register(
         epid: EndpointId,
-        address: Address,
+        address: SocketAddr,
         origin: Origin,
     ) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?

@@ -11,9 +11,9 @@
 
 use crate::Milestone;
 
-use bee_network::Address;
+use std::net::SocketAddr;
 
-pub struct HandshakeCompleted(pub Address);
+pub struct HandshakeCompleted(pub SocketAddr);
 
 pub struct LastMilestoneChanged(pub Milestone);
 

@@ -60,7 +60,7 @@ macro_rules! implement_sender_worker {
                     match self
                         .network
                         .send(SendMessage {
-                            epid: self.peer.epid,
+                            receiver_epid: self.peer.epid,
                             message: tlv_into_bytes(message),
                         })
                         .await

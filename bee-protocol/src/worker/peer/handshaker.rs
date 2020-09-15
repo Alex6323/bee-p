@@ -22,9 +22,8 @@ use crate::{
 };
 
 use bee_network::{
-    Address,
-    Command::{Disconnect, SendMessage, SetDuplicate},
-    Network, Origin, Port,
+    Command::{DisconnectEndpoint, MarkDuplicate, SendMessage},
+    Network, Origin,
 };
 
 use async_std::{net::SocketAddr, task::spawn};
@@ -86,9 +85,9 @@ impl PeerHandshakerWorker {
         if let Err(e) = self
             .network
             .send(SendMessage {
-                epid: self.peer.epid,
+                receiver_epid: self.peer.epid,
                 message: tlv_into_bytes(Handshake::new(
-                    *self.network.config().binding_port,
+                    self.network.config().binding_port,
                     &Protocol::get().config.coordinator.public_key_bytes,
                     Protocol::get().config.mwm,
                     &MESSAGES_VERSIONS,
@@ -129,8 +128,21 @@ impl PeerHandshakerWorker {
             HandshakeStatus::Duplicate => {
                 info!("[{}] Closing duplicate connection.", self.peer.epid);
 
-                // TODO: Disconnect duplicate properly
-                if let Err(e) = self.network.send(Disconnect { epid: self.peer.epid }).await {
+                // TODO: uncomment the following block once we have the epid for which this connection is a duplicate
+                // of.
+
+                // if let Err(e) = self
+                //     .network
+                //     .send(MarkDuplicate {
+                //         duplicate_epid: self.peer.epid,
+                //         original_epid: epid,
+                //     })
+                //     .await
+                // {
+                //     warn!("[{}] Resolving duplicate connection failed: {}.", self.peer.epid, e);
+                // }
+
+                if let Err(e) = self.network.send(DisconnectEndpoint { epid: self.peer.epid }).await {
                     warn!("[{}] Disconnecting peer failed: {}.", self.peer.epid, e);
                 }
             }
@@ -140,7 +152,7 @@ impl PeerHandshakerWorker {
         info!("[{}] Stopped.", self.peer.address);
     }
 
-    pub(crate) fn validate_handshake(&mut self, handshake: Handshake) -> Result<Address, HandshakeError> {
+    pub(crate) fn validate_handshake(&mut self, handshake: Handshake) -> Result<SocketAddr, HandshakeError> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Clock may have gone backwards")
@@ -172,8 +184,8 @@ impl PeerHandshakerWorker {
 
         let address = match self.peer.origin {
             Origin::Outbound => {
-                if self.peer.address.port() != Port(handshake.port) {
-                    return Err(HandshakeError::PortMismatch(*self.peer.address.port(), handshake.port));
+                if self.peer.address.port() != handshake.port {
+                    return Err(HandshakeError::PortMismatch(self.peer.address.port(), handshake.port));
                 }
 
                 self.peer.address
@@ -181,7 +193,7 @@ impl PeerHandshakerWorker {
             Origin::Inbound => {
                 // TODO check if whitelisted
 
-                Address::from(SocketAddr::new(self.peer.address.ip(), handshake.port))
+                SocketAddr::new(self.peer.address.ip(), handshake.port)
             }
         };
 
