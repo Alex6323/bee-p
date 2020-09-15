@@ -9,45 +9,54 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_network::{Address, Url};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 pub struct ConfigBuilder {
-    host_addr: Option<Address>,
-    peers: Vec<Url>,
+    binding_address: Option<SocketAddr>,
+    peers: Vec<String>,
+    message: Option<String>,
 }
 
 impl ConfigBuilder {
     pub fn new() -> Self {
         Self {
-            host_addr: None,
+            binding_address: None,
             peers: vec![],
+            message: None,
         }
     }
 
-    pub fn with_host_addr(mut self, host_addr: Address) -> Self {
-        self.host_addr.replace(host_addr);
+    pub fn with_binding_address(mut self, binding_address: SocketAddr) -> Self {
+        self.binding_address.replace(binding_address);
         self
     }
 
-    pub fn with_peer_url(mut self, peer_url: Url) -> Self {
+    pub fn with_peer_url(mut self, peer_url: String) -> Self {
         self.peers.push(peer_url);
+        self
+    }
+
+    pub fn with_message(mut self, message: String) -> Self {
+        self.message.replace(message);
         self
     }
 
     pub fn finish(self) -> Config {
         Config {
-            host_addr: self
-                .host_addr
-                .unwrap_or_else(|| Address::from_str("localhost:1337").unwrap()),
+            binding_address: self
+                .binding_address
+                .unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1337)),
             peers: self.peers,
+            message: self.message.unwrap_or("hello".into()),
         }
     }
 }
 
 #[derive(Clone)]
 pub struct Config {
-    pub host_addr: Address,
-    pub peers: Vec<Url>,
+    pub binding_address: SocketAddr,
+    pub peers: Vec<String>,
+    pub message: String,
 }
 
 impl Config {

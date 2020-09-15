@@ -14,7 +14,7 @@
 pub use command::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
 pub use endpoint::EndpointId;
-pub use event::Event;
+pub use event::{Event, Events};
 pub use tcp::Origin;
 
 pub use network::Network;
@@ -29,7 +29,6 @@ mod util;
 
 use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use endpoint::{EndpointContactList, EndpointWorker};
-use event::Events;
 use tcp::TcpServer;
 
 use bee_common::shutdown::Shutdown;

@@ -25,7 +25,7 @@ pub const DEFAULT_RECONNECT_INTERVAL: u64 = 60;
 #[derive(Default, Deserialize)]
 pub struct NetworkConfigBuilder {
     binding_port: Option<u16>,
-    binding_addr: Option<IpAddr>,
+    binding_address: Option<IpAddr>,
     max_tcp_buffer_size: Option<usize>,
     reconnect_interval: Option<u64>,
 }
@@ -40,10 +40,10 @@ impl NetworkConfigBuilder {
         self
     }
 
-    pub fn binding_addr(mut self, addr: &str) -> Self {
-        match addr.parse() {
-            Ok(addr) => {
-                self.binding_addr.replace(addr);
+    pub fn binding_address(mut self, binding_address: &str) -> Self {
+        match binding_address.parse() {
+            Ok(binding_address) => {
+                self.binding_address.replace(binding_address);
             }
             Err(e) => panic!("Error parsing address: {:?}", e),
         }
@@ -64,7 +64,7 @@ impl NetworkConfigBuilder {
     pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
             binding_port: self.binding_port.unwrap_or(DEFAULT_BINDING_PORT),
-            binding_address: self.binding_addr.unwrap_or(DEFAULT_BINDING_ADDR),
+            binding_address: self.binding_address.unwrap_or(DEFAULT_BINDING_ADDR),
             max_tcp_buffer_size: self.max_tcp_buffer_size.unwrap_or(DEFAULT_MAX_TCP_BUFFER_SIZE),
             reconnect_interval: self.reconnect_interval.unwrap_or(DEFAULT_RECONNECT_INTERVAL),
         }

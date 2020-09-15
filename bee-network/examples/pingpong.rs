@@ -23,8 +23,10 @@
 
 #![allow(dead_code, unused_imports)]
 
+mod common;
+
 use bee_common::shutdown::Shutdown;
-use bee_network::{Command::*, EndpointId, Event, Events, Network, NetworkConfig, Origin, Url};
+use bee_network::{Command::*, EndpointId, Event, Events, Network, NetworkConfig, Origin};
 
 use common::*;
 
@@ -38,42 +40,33 @@ use futures::{
 use log::*;
 use structopt::StructOpt;
 
-// use std::io::Write;
-
-use async_std::io::stdout;
-
-use std::collections::{HashMap, HashSet};
-
-mod common;
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 const RECONNECT_INTERVAL: u64 = 5; // 5 seconds
 
 #[tokio::main]
-fn main() {
+async fn main() {
     let args = Args::from_args();
     let config = args.config();
 
     logger::init(log::LevelFilter::Debug);
 
-    let mut node = Node::builder(config, args.msg).finish();
-
-    info!("Node initialized.");
+    let mut node = Node::builder(config).finish().await;
 
     let mut network = node.network.clone();
     let config = node.config.clone();
 
     info!("Adding static peers...");
-    block_on(async {
-        // FIXME: Not waiting here a little can cause a deadlock (sometimes).
-        task::sleep(std::time::Duration::from_millis(5)).await;
+    tokio::time::delay_for(Duration::from_secs(1)).await; // remove this?
 
-        for url in &config.peers {
-            network.send(AddEndpoint { url: url.clone() }).await.unwrap();
-        }
-    });
+    for url in &config.peers {
+        network.send(AddEndpoint { url: url.clone() }).await.unwrap();
+    }
 
-    node.run_loop();
-    node.shutdown();
+    node.run().await;
 }
 
 struct Node {
@@ -81,128 +74,142 @@ struct Node {
     pub network: Network,
     pub events: Events,
     shutdown: Shutdown,
-    pub message: String,
     pub handshakes: HashMap<String, Vec<EndpointId>>,
     pub endpoints: HashSet<EndpointId>,
 }
 
 impl Node {
-    fn run_loop(&mut self) {
+    async fn run(self) {
+        let Node {
+            config,
+            network,
+            mut events,
+            ..
+        } = self;
+
         info!("Node running.");
 
-        // let mut ctrl_c = ctrl_c_listener().fuse();
+        let mut ctrl_c = ctrl_c_listener().fuse();
 
-        block_on(async {
-            loop {
-                select! {
-                    // _ = ctrl_c => {
-                    //     break;
-                    // },
-                    event = self.events.next() => {
-                        if let Some(event) = event {
-                            info!("Received {}.", event);
+        loop {
+            select! {
+                _ = ctrl_c => {
+                    break;
+                },
+                event = events.next() => {
+                    if let Some(event) = event {
+                        info!("Received {}.", event);
 
-                            self.handle_event(event).await;
-                        }
-                    },
-                }
-            }
-        });
-    }
-
-    // #[inline]
-    async fn handle_event(&mut self, event: Event) {
-        match event {
-            Event::EndpointAdded { epid, total } => {
-                info!("Added endpoint {} ({}).", epid, total);
-
-                self.network
-                    .send(Connect { epid })
-                    .await
-                    .expect("error sending Connect command");
-            }
-
-            Event::EndpointRemoved { epid, .. } => {
-                info!("Removed endpoint {}.", epid);
-            }
-
-            Event::EndpointConnected { epid, origin, .. } => {
-                info!("Connected endpoint {} ({}).", epid, origin);
-
-                let utf8_message = Utf8Message::new(&self.message);
-
-                self.network
-                    .send(SendMessage {
-                        epid,
-                        message: utf8_message.as_bytes(),
-                    })
-                    .await
-                    .expect("error sending message to peer");
-            }
-
-            Event::EndpointDisconnected { epid, .. } => {
-                info!("Disconnected endpoint {}.", epid);
-
-                self.endpoints.remove(&epid);
-
-                // TODO: remove epid from self.handshakes
-            }
-
-            Event::MessageReceived { epid, message, .. } => {
-                if !self.endpoints.contains(&epid) {
-                    let handshake = Utf8Message::from_bytes(&message);
-                    info!("Received handshake '{}' ({})", handshake, epid);
-
-                    let epids = self.handshakes.entry(handshake.to_string()).or_insert(Vec::new());
-                    if !epids.contains(&epid) {
-                        epids.push(epid);
+                        process_event(event, &config.message, &network).await;
                     }
-
-                    if epids.len() > 1 {
-                        info!("'{}' and '{}' are duplicate connections.", epids[0], epids[1]);
-
-                        self.network
-                            .send(SetDuplicate {
-                                epid: epids[0],
-                                other: epids[1],
-                            })
-                            .await
-                            .expect("error sending 'Disconnect'");
-                    }
-
-                    self.endpoints.insert(epid);
-                } else {
-                    let message = Utf8Message::from_bytes(&message);
-                    info!("Received message '{}' ({})", message, epid);
-                }
-
-                // TODO: send the next message
-
-                // let utf8_message = Utf8Message::new(&self.message);
-
-                // self.network
-                //     .send(SendMessage {
-                //         epid,
-                //         bytes: utf8_message.as_bytes(),
-                //     })
-                //     .await
-                //     .expect("error sending message to peer");
+                },
             }
-            _ => warn!("Unsupported event {}.", event),
         }
-    }
 
-    fn shutdown(self) {
         info!("Stopping node...");
 
-        block_on(self.shutdown.execute()).expect("error shutting down");
+        self.shutdown.execute().await.expect("error shutting down gracefully.");
 
         info!("Shutdown complete.");
     }
 
-    pub fn builder(config: Config, message: String) -> NodeBuilder {
-        NodeBuilder { config, message }
+    pub fn builder(config: Config) -> NodeBuilder {
+        NodeBuilder { config }
     }
+}
+
+#[inline]
+async fn process_event(event: Event, message: &String, network: &Network) {
+    // match event {
+    //     Event::EndpointAdded { epid } => {
+    //         info!("Added endpoint {} ({}).", epid);
+
+    //         network
+    //             .send(ConnectEndpoint { epid })
+    //             .await
+    //             .expect("error sending Connect command");
+    //     }
+
+    //     Event::EndpointRemoved { epid, .. } => {
+    //         info!("Removed endpoint {}.", epid);
+    //     }
+
+    //     Event::EndpointConnected { epid, origin, .. } => {
+    //         info!("Connected endpoint {} ({}).", epid, origin);
+
+    //         let utf8_message = Utf8Message::new(message);
+
+    //         network
+    //             .send(SendMessage {
+    //                 receiver_epid,
+    //                 message: utf8_message.as_bytes(),
+    //             })
+    //             .await
+    //             .expect("error sending message to peer");
+    //     }
+
+    //     Event::EndpointDisconnected { epid, .. } => {
+    //         info!("Disconnected endpoint {}.", epid);
+
+    //         self.endpoints.remove(&epid);
+
+    //         // TODO: remove epid from self.handshakes
+    //     }
+
+    //     Event::MessageReceived { epid, message, .. } => {
+    //         if !self.endpoints.contains(&epid) {
+    //             let handshake = Utf8Message::from_bytes(&message);
+    //             info!("Received handshake '{}' ({})", handshake, epid);
+
+    //             let epids = self.handshakes.entry(handshake.to_string()).or_insert(Vec::new());
+    //             if !epids.contains(&epid) {
+    //                 epids.push(epid);
+    //             }
+
+    //             if epids.len() > 1 {
+    //                 info!("'{}' and '{}' are duplicate connections.", epids[0], epids[1]);
+
+    //                 self.network
+    //                     .send(SetDuplicate {
+    //                         epid: epids[0],
+    //                         other: epids[1],
+    //                     })
+    //                     .await
+    //                     .expect("error sending 'Disconnect'");
+    //             }
+
+    //             self.endpoints.insert(epid);
+    //         } else {
+    //             let message = Utf8Message::from_bytes(&message);
+    //             info!("Received message '{}' ({})", message, epid);
+    //         }
+
+    //         // TODO: send the next message
+
+    //         // let utf8_message = Utf8Message::new(&self.message);
+
+    //         // self.network
+    //         //     .send(SendMessage {
+    //         //         epid,
+    //         //         bytes: utf8_message.as_bytes(),
+    //         //     })
+    //         //     .await
+    //         //     .expect("error sending message to peer");
+    //     }
+    //     _ => warn!("Unsupported event {}.", event),
+    // }
+}
+
+fn ctrl_c_listener() -> oneshot::Receiver<()> {
+    let (sender, receiver) = oneshot::channel();
+
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.unwrap();
+
+        sender.send(()).unwrap();
+    });
+
+    receiver
 }
 
 // fn spam(mut network: Network, msg: Utf8Message, num: usize, interval: u64) {
@@ -221,46 +228,29 @@ impl Node {
 
 struct NodeBuilder {
     config: Config,
-    message: String,
 }
 
 impl NodeBuilder {
-    pub fn finish(self) -> Node {
+    pub async fn finish(self) -> Node {
         let mut shutdown = Shutdown::new();
 
-        info!("Initializing network...");
         let network_config = NetworkConfig::builder()
-            .binding_addr(&self.config.host_addr.ip().to_string())
-            .binding_port(*self.config.host_addr.port())
+            .binding_address(&self.config.binding_address.ip().to_string())
+            .binding_port(self.config.binding_address.port())
             .reconnect_interval(RECONNECT_INTERVAL)
             .finish();
 
-        let (network, events) = bee_network::init(network_config, &mut shutdown);
+        info!("Initializing network...");
+        let (network, events) = bee_network::init(network_config, &mut shutdown).await;
 
+        info!("Node initialized.");
         Node {
             config: self.config,
             network,
             events,
             shutdown,
-            message: self.message,
             handshakes: HashMap::new(),
             endpoints: HashSet::new(),
         }
     }
 }
-
-// fn ctrl_c_listener() -> oneshot::Receiver<()> {
-//     let (sender, receiver) = oneshot::channel();
-
-//     spawn(async move {
-//         let mut tokio = tokio::runtime::Runtime::new().expect("Error creating Tokio runtime.");
-
-//         tokio
-//             .block_on(tokio::signal::ctrl_c())
-//             .expect("Error blocking on CTRL-C.");
-
-//         sender.send(()).expect("Error sending shutdown signal.");
-//     });
-
-//     receiver
-// }

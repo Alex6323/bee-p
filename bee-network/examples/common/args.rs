@@ -9,35 +9,39 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_network::{Address, Url};
-
 use super::config::Config;
 
 use structopt::StructOpt;
 
+use std::net::SocketAddr;
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "pingpong", about = "bee-network example")]
 pub struct Args {
-    #[structopt(long)]
-    pub bind: String,
+    #[structopt(short = "b", long = "bind")]
+    binding_address: String,
 
-    #[structopt(long)]
-    pub peers: Vec<String>,
+    #[structopt(short = "p", long = "peers")]
+    peers: Vec<String>,
 
-    #[structopt(long)]
-    pub msg: String,
+    #[structopt(short = "m", long = "msg")]
+    message: String,
 }
 
 impl Args {
-    pub fn config(&self) -> Config {
-        let mut peers = vec![];
-        for peer in &self.peers {
-            peers.push(Url::from_str(&peer).unwrap());
-        }
+    pub fn config(self) -> Config {
+        let Args {
+            binding_address,
+            peers,
+            message,
+        } = self;
 
         Config {
-            host_addr: Address::from_str(&self.bind.clone()[..]).unwrap(),
+            binding_address: binding_address
+                .parse::<SocketAddr>()
+                .expect("error parsing binding address"),
             peers,
+            message,
         }
     }
 }
