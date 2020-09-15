@@ -14,7 +14,8 @@ mod download;
 mod metadata;
 mod snapshot;
 
+pub(crate) use download::{download_local_snapshot, Error as DownloadError};
+
 pub use config::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
-pub use download::download_local_snapshot;
 pub use metadata::LocalSnapshotMetadata;
 pub use snapshot::{Error, LocalSnapshot};

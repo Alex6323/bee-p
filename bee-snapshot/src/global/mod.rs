@@ -13,4 +13,4 @@ mod config;
 mod snapshot;
 
 pub use config::{GlobalSnapshotConfig, GlobalSnapshotConfigBuilder};
-pub use snapshot::GlobalSnapshot;
+pub use snapshot::{Error, GlobalSnapshot};

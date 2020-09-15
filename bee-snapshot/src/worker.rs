@@ -18,7 +18,6 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-
 use log::info;
 
 const SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST: u32 = 50;

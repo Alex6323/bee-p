@@ -51,7 +51,6 @@ impl GlobalSnapshot {
 
         for line in reader.lines() {
             let line = line.map_err(|_| Error::FailedIO)?;
-
             let tokens = line.split(";").collect::<Vec<&str>>();
 
             if tokens.len() < 2 {

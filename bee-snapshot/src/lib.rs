@@ -9,13 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+pub(crate) mod constants;
+pub(crate) mod pruning;
+pub(crate) mod worker;
+
 pub mod config;
-pub mod constants;
 pub mod event;
 pub mod global;
 pub mod local;
-pub mod pruning;
-pub mod worker;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
@@ -27,7 +28,13 @@ use log::warn;
 
 use std::{path::Path, sync::Arc};
 
-pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) {
+pub enum Error {
+    Global(global::Error),
+    Local(local::Error),
+    Download(local::DownloadError),
+}
+
+pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) -> Result<(), Error> {
     // snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
     // if snapshotDepth < SolidEntryPointCheckThresholdFuture {
     // 	log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgLocalSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
@@ -75,12 +82,12 @@ pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &
 
     match config.load_type() {
         config::LoadType::Global => {
-            global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()));
+            global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
+                .map_err(Error::Global)?;
         }
         config::LoadType::Local => {
             if !Path::new(config.local().path()).exists() {
-                // TODO handle error
-                local::download_local_snapshot(config.local());
+                local::download_local_snapshot(config.local()).map_err(Error::Download)?;
                 // 		err = LoadSnapshotFromFile(path)
             }
         }
@@ -101,7 +108,8 @@ pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &
     );
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = snapshot_worker_tx.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
+        if let Err(e) = snapshot_worker_tx.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone()))
+        {
             warn!(
                 "Failed to send milestone {} to snapshot worker: {:?}.",
                 *latest_solid_milestone.0.index(),
@@ -109,4 +117,6 @@ pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &
             )
         }
     });
+
+    Ok(())
 }
