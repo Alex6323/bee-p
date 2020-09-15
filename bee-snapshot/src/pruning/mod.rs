@@ -29,6 +29,7 @@ use log::{error, info, warn};
 const SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST: MilestoneIndex = MilestoneIndex(50);
 const ADDITIONAL_PRUNING_THRESHOLD: MilestoneIndex = MilestoneIndex(50);
 
+#[derive(Debug)]
 pub enum Error {
     NotEnoughHistory,
     NoPruningNeeded,
@@ -70,7 +71,6 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
     let solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
     for index in *target_index - *SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST..*target_index {
         let milestone_tail_hash;
-        let mut confirmed_transaction_hashes: Vec<Hash> = Vec::new();
 
         // Get the milestone tail hash
         // NOTE this milestone hash must be tail hash
@@ -95,30 +95,17 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
             |_hash, _tx, metadata| *metadata.milestone_index() >= index,
             |hash, _tx, metadata| {
                 if metadata.flags.is_confirmed() {
-                    confirmed_transaction_hashes.push(hash.clone())
+                    if is_solid_entry_point(&hash).unwrap() {
+                        // Find all tails
+                        helper::on_all_tails(tangle(), *hash, |hash, _tx, metadata| {
+                            solid_entry_points.insert(hash.clone(), metadata.milestone_index);
+                        });
+                    }
                 }
             },
             |_, _, _| {},
             |_hash| {},
         );
-
-        let mut err = false;
-        for approvee in confirmed_transaction_hashes {
-            if is_solid_entry_point(&approvee)? {
-                // Find all tails
-                helper::on_all_tails(tangle(), approvee, |hash, _tx, metadata| {
-                    if metadata.flags.is_confirmed() {
-                        solid_entry_points.insert(hash.clone(), metadata.milestone_index);
-                    } else {
-                        error!("Solid entry point for hash {:?} is not confirmed.", hash);
-                        err = true;
-                    }
-                });
-            }
-        }
-        if err {
-            return Err(Error::SolidEntryPointNotConfirmed);
-        }
     }
     Ok(solid_entry_points)
 }
