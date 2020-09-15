@@ -16,7 +16,10 @@ pub use config::{PruningConfig, PruningConfigBuilder};
 use crate::local::{LocalSnapshotConfig, LocalSnapshotMetadata};
 
 use bee_crypto::ternary::Hash;
-use bee_protocol::{tangle::tangle, MilestoneIndex};
+use bee_protocol::{
+    tangle::{helper, tangle},
+    MilestoneIndex,
+};
 use bee_tangle::traversal;
 
 use dashmap::DashMap;
@@ -104,15 +107,9 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                 // Find all tails
                 let mut tail_hashes: Vec<Hash> = Vec::new();
 
-                // Get all the tails
-                traversal::visit_parents_depth_first(
-                    tangle(),
-                    approvee,
-                    |_hash, _tx, metadata| !metadata.flags.is_tail(),
-                    |_hash, _tx, _metadata| {},
-                    |hash, _tx, _metadata| tail_hashes.push(hash.clone()),
-                    |_hash| {},
-                );
+                helper::on_all_tails(tangle(), approvee, |hash, _tx, _metadata| {
+                    tail_hashes.push(hash.clone())
+                });
 
                 for tail_hash in tail_hashes {
                     match tangle().get_metadata(&tail_hash) {

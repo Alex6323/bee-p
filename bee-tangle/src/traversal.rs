@@ -162,10 +162,7 @@ pub fn visit_children_depth_first<Metadata, Match, Apply, ElseApply>(
                 }
             }
             None => {
-                // NOTE: this has to be dealt at the protocol level now ;)
-                // if !tangle.solid_entry_points.contains(hash) {
                 else_apply(hash);
-                //}
                 visited.insert(*hash);
                 children.pop();
             }

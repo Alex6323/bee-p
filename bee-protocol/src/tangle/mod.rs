@@ -71,10 +71,6 @@ impl MsTangle {
         opt
     }
 
-    pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {
-        self.inner.get_metadata(hash)
-    }
-
     pub fn add_milestone(&self, index: MilestoneIndex, hash: Hash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
