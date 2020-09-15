@@ -13,10 +13,7 @@ mod config;
 
 pub use config::{PruningConfig, PruningConfigBuilder};
 
-use crate::{
-    constants::SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST,
-    local::{LocalSnapshotConfig, LocalSnapshotMetadata},
-};
+use crate::{config::SnapshotConfig, constants::SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST, local::LocalSnapshotMetadata};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::{
@@ -131,16 +128,10 @@ pub fn prune_transactions(hashes: Vec<Hash>) -> u32 {
 
 // NOTE we don't prune cache, but only prune the database
 pub fn prune_database(
-    pruning_config: &PruningConfig,
-    _local_snapshot_config: &LocalSnapshotConfig,
+    _config: &SnapshotConfig,
     local_snapshot_metadata: &LocalSnapshotMetadata,
     mut target_index: MilestoneIndex,
 ) -> Result<(), Error> {
-    // TODO move this checking before enterning this function
-    if !pruning_config.enabled() {
-        return Ok(());
-    }
-
     // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index
     // TODO change the type of `LocalSnapshotMetadata.index` to MilestoneIndex?
     if local_snapshot_metadata.index() < *ADDITIONAL_PRUNING_THRESHOLD + *ADDITIONAL_PRUNING_THRESHOLD + 1 {

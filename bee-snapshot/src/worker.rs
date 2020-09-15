@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{config::SnapshotConfig, constants::SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST};
+use crate::{config::SnapshotConfig, constants::SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST, pruning::prune_database};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
@@ -57,18 +57,12 @@ impl SnapshotWorker {
 
     fn process(&mut self, milestone: Milestone) {
         if self.should_snapshot(milestone.index()) {
-            println!("Should snapshot.");
-            // if let Err(e) = createLocalSnapshot(
-            //     MilestoneIndex(*milestone.index() - self.config.local().depth() as u32),
-            //     self.config.local().path(),
-            //     true,
-            // ) {}
+            // createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal);
         }
 
-        if self.config.pruning().enabled() && *milestone.index() as usize > self.config.pruning().delay() {
-            // if let Err(e) = prune(MilestoneIndex(
-            //     *milestone.index() - self.config.pruning().delay() as u32,
-            // )) {}
+        if self.config.pruning().enabled() && *milestone.index() > self.config.pruning().delay() as u32 {
+            // prune_database(&self.config, _, _;
+            // pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal);
         }
     }
 
