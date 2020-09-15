@@ -284,7 +284,7 @@ impl<'a> SignedTransactionBuilder<'a> {
                 match &self.seed {
                     Seed::Ed25519(s) => {
                         let path = BIP32Path::from_str(*index).map_err(|_| Error::PathError)?;
-                        let private_key = Ed25519PrivateKey::generate_from_seed(s, path)?;
+                        let private_key = Ed25519PrivateKey::generate_from_seed(s, &path)?;
                         let public_key = private_key.generate_public_key().to_bytes();
                         let signature = private_key.sign(&serialized_inputs).to_bytes().to_vec();
                         unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock::Ed25519(Ed25519Signature {
