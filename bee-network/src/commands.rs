@@ -15,7 +15,10 @@ use futures::channel::mpsc;
 
 use std::fmt;
 
-pub fn channel() -> (mpsc::UnboundedSender<Command>, mpsc::UnboundedReceiver<Command>) {
+pub type CommandSender = mpsc::UnboundedSender<Command>;
+pub type CommandReceiver = mpsc::UnboundedReceiver<Command>;
+
+pub fn channel() -> (CommandSender, CommandReceiver) {
     mpsc::unbounded()
 }
 

@@ -9,9 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{commands::Command, config::NetworkConfig};
+use crate::{
+    commands::{Command, CommandSender},
+    config::NetworkConfig,
+};
 
-use futures::{channel::mpsc, sink::SinkExt};
+use futures::sink::SinkExt;
 use thiserror::Error;
 
 use std::sync::Arc;
@@ -25,19 +28,19 @@ pub enum Error {
 #[derive(Clone, Debug)]
 pub struct Network {
     config: Arc<NetworkConfig>,
-    inner: mpsc::Sender<Command>,
+    command_sender: CommandSender,
 }
 
 impl Network {
-    pub(crate) fn new(config: NetworkConfig, cmd_sender: mpsc::Sender<Command>) -> Self {
+    pub(crate) fn new(config: NetworkConfig, command_sender: CommandSender) -> Self {
         Self {
             config: Arc::new(config),
-            inner: cmd_sender,
+            command_sender,
         }
     }
 
     pub async fn send(&mut self, command: Command) -> Result<(), Error> {
-        Ok(self.inner.send(command).await?)
+        Ok(self.command_sender.send(command).await?)
     }
 
     pub fn config(&self) -> &NetworkConfig {
