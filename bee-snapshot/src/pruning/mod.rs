@@ -94,13 +94,11 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
             milestone_tail_hash,
             |_hash, _tx, metadata| *metadata.milestone_index() >= index,
             |hash, _tx, metadata| {
-                if metadata.flags.is_confirmed() {
-                    if is_solid_entry_point(&hash).unwrap() {
-                        // Find all tails
-                        helper::on_all_tails(tangle(), *hash, |hash, _tx, metadata| {
-                            solid_entry_points.insert(hash.clone(), metadata.milestone_index);
-                        });
-                    }
+                if metadata.flags.is_confirmed() && is_solid_entry_point(&hash).unwrap() {
+                    // Find all tails
+                    helper::on_all_tails(tangle(), *hash, |hash, _tx, metadata| {
+                        solid_entry_points.insert(hash.clone(), metadata.milestone_index);
+                    });
                 }
             },
             |_, _, _| {},
