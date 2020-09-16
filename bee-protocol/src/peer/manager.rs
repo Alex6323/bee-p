@@ -20,15 +20,12 @@ use crate::{
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_network::{EndpointId, Network};
 
-use async_std::{sync::RwLock, task::spawn};
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
+use tokio::sync::{Mutex, RwLock};
 
-use std::{
-    net::SocketAddr,
-    sync::{Arc, Mutex},
-};
+use std::{net::SocketAddr, sync::Arc};
 
 pub(crate) struct PeerManager {
     network: Network,
@@ -88,7 +85,7 @@ impl PeerManager {
 
             // TODO Add to shutdown ?
 
-            spawn(
+            tokio::spawn(
                 SenderWorker::<MilestoneRequest>::new(
                     self.network.clone(),
                     peer.clone(),
@@ -96,7 +93,7 @@ impl PeerManager {
                 )
                 .run(),
             );
-            spawn(
+            tokio::spawn(
                 SenderWorker::<TransactionMessage>::new(
                     self.network.clone(),
                     peer.clone(),
@@ -104,7 +101,7 @@ impl PeerManager {
                 )
                 .run(),
             );
-            spawn(
+            tokio::spawn(
                 SenderWorker::<TransactionRequest>::new(
                     self.network.clone(),
                     peer.clone(),
@@ -112,7 +109,7 @@ impl PeerManager {
                 )
                 .run(),
             );
-            spawn(
+            tokio::spawn(
                 SenderWorker::<Heartbeat>::new(
                     self.network.clone(),
                     peer,
@@ -130,7 +127,7 @@ impl PeerManager {
         self.handshaked_peers_keys.write().await.retain(|e| e != epid);
 
         if let Some((_, peer)) = self.handshaked_peers.remove(epid) {
-            if let Ok(mut shutdown) = peer.milestone_request.1.lock() {
+            if let Ok(mut shutdown) = peer.milestone_request.1.lock().await {
                 if let Some(shutdown) = shutdown.take() {
                     if let Err(e) = shutdown.send(()) {
                         warn!("Shutting down TransactionWorker failed: {:?}.", e);

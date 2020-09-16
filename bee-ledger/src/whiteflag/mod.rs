@@ -21,11 +21,10 @@ use crate::state::LedgerState;
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
-use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::event::Bus;
+use bee_common::shutdown_stream::ShutdownStream;
+use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown};
 use bee_protocol::{config::ProtocolCoordinatorConfig, event::LastSolidMilestoneChanged, MilestoneIndex};
 
-use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
 use log::warn;
 
@@ -78,7 +77,7 @@ pub fn init(
 
     shutdown.add_worker_shutdown(
         ledger_worker_shutdown_tx,
-        spawn(
+        tokio::spawn(
             LedgerWorker::new(
                 MilestoneIndex(index),
                 state,

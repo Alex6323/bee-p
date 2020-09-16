@@ -9,8 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::shutdown::Shutdown;
-use bee_common_ext::event::Bus;
+use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown};
 
 use std::sync::Arc;
 

@@ -14,7 +14,7 @@
 pub use command::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
 pub use endpoint::EndpointId;
-pub use event::{Event, Events};
+pub use event::{Event, EventReceiver};
 pub use tcp::Origin;
 
 pub use network::Network;
@@ -33,14 +33,14 @@ use tcp::TcpServer;
 
 use bee_common_ext::shutdown_tokio::Shutdown;
 
-use futures::{channel::oneshot, stream::StreamExt};
+use futures::channel::oneshot;
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
 pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
 
-pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
+pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
     let (command_sender, command_receiver) = command::channel();
     let (event_sender, event_receiver) = event::channel();
     let (internal_event_sender, internal_event_receiver) = event::channel();
@@ -77,5 +77,5 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
     MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
     RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
 
-    (Network::new(config, command_sender), event_receiver.fuse())
+    (Network::new(config, command_sender), event_receiver)
 }

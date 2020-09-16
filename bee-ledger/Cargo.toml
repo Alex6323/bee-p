@@ -20,12 +20,12 @@ bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 bee-storage = { path = "../bee-storage" }
 
-async-std = "1.6.2"
 blake2 = "0.9.0"
 bytemuck = "1.2.0"
 digest = "0.9.0"
 futures = "0.3.5"
 log = "0.4.8"
+tokio = { version = "0.2.22", features = ["time", "io-util", "stream"] }
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }

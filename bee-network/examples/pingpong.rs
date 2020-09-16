@@ -26,7 +26,7 @@
 mod common;
 
 use bee_common_ext::shutdown_tokio::Shutdown;
-use bee_network::{Command::*, EndpointId, Event, Events, Network, NetworkConfig, Origin};
+use bee_network::{Command::*, EndpointId, Event, EventReceiver, Network, NetworkConfig, Origin};
 
 use common::*;
 
@@ -72,7 +72,7 @@ async fn main() {
 struct Node {
     config: Config,
     network: Network,
-    events: Events,
+    events: Fuse<EventReceiver>,
     shutdown: Shutdown,
     endpoints: HashSet<EndpointId>,
     handshakes: HashMap<String, Vec<EndpointId>>,
@@ -84,6 +84,7 @@ impl Node {
             config,
             mut network,
             mut events,
+            shutdown,
             mut endpoints,
             mut handshakes,
             ..
@@ -110,7 +111,7 @@ impl Node {
 
         info!("[pingpong] Stopping node...");
 
-        self.shutdown.execute().await.expect("error shutting down gracefully.");
+        shutdown.execute().await.expect("error shutting down gracefully.");
 
         info!("[pingpong] Shutdown complete.");
     }
@@ -262,7 +263,7 @@ impl NodeBuilder {
         Node {
             config: self.config,
             network,
-            events,
+            events: events.fuse(),
             shutdown,
             handshakes: HashMap::new(),
             endpoints: HashSet::new(),

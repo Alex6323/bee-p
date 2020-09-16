@@ -25,8 +25,6 @@ pub fn channel() -> (EventSender, EventReceiver) {
     mpsc::unbounded()
 }
 
-pub type Events = stream::Fuse<EventReceiver>;
-
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Event {

@@ -14,7 +14,8 @@ use bee_node::{CliArgs, Node, NodeConfigBuilder};
 
 const CONFIG_PATH: &str = "./config.toml";
 
-fn main() {
+#[tokio::main]
+async fn main() {
     match NodeConfigBuilder::from_file(CONFIG_PATH) {
         Ok(mut config_builder) => {
             CliArgs::new().apply_to_config(&mut config_builder);
@@ -24,8 +25,7 @@ fn main() {
 
             match Node::build(config).finish() {
                 Ok(mut node) => {
-                    node.run_loop();
-                    node.shutdown();
+                    node.run().await;
                 }
                 Err(e) => {
                     eprintln!("Program aborted. Error was: {}", e);

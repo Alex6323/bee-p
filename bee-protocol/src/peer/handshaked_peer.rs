@@ -17,15 +17,13 @@ use crate::{
 
 use bee_network::EndpointId;
 
+use futures::channel::{mpsc, oneshot};
+use tokio::sync::Mutex;
+
 use std::{
     net::SocketAddr,
-    sync::{
-        atomic::{AtomicU32, AtomicU8, Ordering},
-        Mutex,
-    },
+    sync::atomic::{AtomicU32, AtomicU8, Ordering},
 };
-
-use futures::channel::{mpsc, oneshot};
 
 pub struct HandshakedPeer {
     pub(crate) epid: EndpointId,
