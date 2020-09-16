@@ -13,11 +13,23 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
+use crate::prelude::Hash;
+
 use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Input {
-    UTXO(UTXOInput),
+    UTXOInput(UTXOInput),
+}
+
+impl Input {
+    /// Create a Input with UTXO variant.
+    pub fn new(transaction_id: Hash, output_index: u8) -> Self {
+        Self::UTXOInput(UTXOInput {
+            transaction_id,
+            output_index,
+        })
+    }
 }
 
 impl Serialize for Input {
@@ -26,7 +38,7 @@ impl Serialize for Input {
         S: Serializer,
     {
         match self {
-            Input::UTXO(UTXOInput {
+            Input::UTXOInput(UTXOInput {
                 ref transaction_id,
                 ref output_index,
             }) => {

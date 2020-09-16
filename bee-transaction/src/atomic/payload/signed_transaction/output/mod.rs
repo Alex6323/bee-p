@@ -11,13 +11,22 @@
 
 mod sig_locked_single_deposit;
 
-pub use sig_locked_single_deposit::{Address, Ed25519Address, SigLockedSingleDeposit, WotsAddress};
+pub use sig_locked_single_deposit::{Address, SigLockedSingleDeposit};
 
 use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Output {
     SigLockedSingleDeposit(SigLockedSingleDeposit),
+}
+
+impl Output {
+    pub fn new(address: Address, amount:u64) -> Self {
+        Output::SigLockedSingleDeposit(SigLockedSingleDeposit{
+            address,
+            amount,
+        })
+    }
 }
 
 impl Serialize for Output {
