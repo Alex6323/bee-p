@@ -24,16 +24,15 @@ use bee_tangle::traversal;
 
 use dashmap::DashMap;
 
-use log::{error, info, warn};
+use log::{info, warn};
 
 #[derive(Debug)]
 pub enum Error {
-    NotEnoughHistory,
-    NoPruningNeeded,
-    MilestoneNotFoundInTangle,
+    NotEnoughHistory(u32),
+    NoPruningNeeded(u32, u32),
+    MilestoneNotFoundInTangle(u32),
     SolidEntryPointNotConfirmed,
-    MetadataNotFound,
-    MilestoneTransactionIsNotTail,
+    MetadataNotFound(Hash),
 }
 
 /// Checks whether any direct approver of the given transaction was confirmed by a
@@ -44,8 +43,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
     if let Some(metadata) = tangle().get_metadata(hash) {
         milestone_index = metadata.milestone_index;
     } else {
-        error!("Metadada for hash {:?} is not found in Tangle.", hash);
-        return Err(Error::MetadataNotFound);
+        return Err(Error::MetadataNotFound(*hash));
     }
     let mut is_solid = false;
     traversal::visit_children_follow_trunk(
@@ -76,15 +74,8 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
             // NOTE Actually we don't really need the tail, and only need one of the milestone tx.
             //      In gohornet, we start from the tail milestone tx.
             milestone_hash = hash;
-        // if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
-        //     error!("Milestone w/ hash {} is not tail.", hash);
-        //     return Err(Error::MilestoneTransactionIsNotTail);
-        // } else {
-        //     milestone_hash = hash;
-        // }
         } else {
-            error!("Milestone index {} is not found in Tangle.", index);
-            return Err(Error::MilestoneNotFoundInTangle);
+            return Err(Error::MilestoneNotFoundInTangle(index));
         }
 
         // Get all the approvees confirmed by the milestone tail
@@ -136,12 +127,7 @@ pub fn prune_milestone(_milestone_index: MilestoneIndex) {
 pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
     // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index
     if *tangle().get_entry_point_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
-        error!(
-            "Not enough history for pruning! minimum index: {}, target index: {}",
-            SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1,
-            *target_index
-        );
-        return Err(Error::NotEnoughHistory);
+        return Err(Error::NotEnoughHistory(*tangle().get_entry_point_index()));
     }
 
     let target_index_max = MilestoneIndex(
@@ -152,24 +138,14 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
     }
 
     if tangle().get_pruning_index() >= target_index {
-        error!(
-            "No pruning needed with pruning index: {:?} and target_index: {:?}",
-            tangle().get_pruning_index(),
-            target_index
-        );
-        return Err(Error::NoPruningNeeded);
+        return Err(Error::NoPruningNeeded(*tangle().get_pruning_index(), *target_index));
     }
 
     if *tangle().get_latest_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *target_index {
         // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points
-        error!(
-            "Not enough history! minimum index: {:?} should be <= target_index: {:?}",
-            tangle().get_latest_solid_milestone_index()
-                + MilestoneIndex(ADDITIONAL_PRUNING_THRESHOLD)
-                + MilestoneIndex(1),
-            target_index
-        );
-        return Err(Error::NotEnoughHistory);
+        return Err(Error::NotEnoughHistory(
+            *tangle().get_latest_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + 1,
+        ));
     }
 
     // Update the solid entry points in the static MsTangle
@@ -200,12 +176,6 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
             // NOTE Actually we don't really need the tail, and only need one of the milestone tx.
             //      In gohornet, we start from the tail milestone tx.
             milestone_hash = hash;
-        // if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
-        //     error!("Milestone w/ hash {} is not tail.", hash);
-        //     return Err(Error::MilestoneTransactionIsNotTail);
-        // } else {
-        //     milestone_hash = hash;
-        // }
         } else {
             warn!("Pruning milestone {} failed! Milestone not found!", milestone_index);
             continue;
