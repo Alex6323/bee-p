@@ -27,8 +27,8 @@ use std::{
 };
 
 pub struct LocalSnapshot {
-    metadata: LocalSnapshotMetadata,
-    state: LedgerState,
+    pub(crate) metadata: LocalSnapshotMetadata,
+    pub(crate) state: LedgerState,
 }
 
 const VERSION: u8 = 4;
