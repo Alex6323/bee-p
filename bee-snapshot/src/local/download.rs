@@ -22,6 +22,7 @@ pub enum Error {
 
 // TODO remove tokio runtime when we switch bee to tokio.
 // TODO copy is not really streaming ?
+// TODO temporary file until fully downloaded ?
 pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error> {
     let path = config.path();
 

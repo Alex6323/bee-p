@@ -10,7 +10,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    config::SnapshotConfig, constants::SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST, local::snapshot, pruning::prune_database,
+    config::SnapshotConfig,
+    constants::{ADDITIONAL_PRUNING_THRESHOLD, SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST},
+    local::snapshot,
+    pruning::prune_database,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -28,12 +31,22 @@ pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct SnapshotWorker {
     config: SnapshotConfig,
+    delay: u32,
     receiver: Receiver,
 }
 
 impl SnapshotWorker {
     pub(crate) fn new(config: SnapshotConfig, receiver: Receiver) -> Self {
-        Self { config, receiver }
+        let delay = std::cmp::max(
+            config.pruning().delay() as u32,
+            config.local().depth() as u32 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1,
+        );
+
+        Self {
+            config,
+            delay,
+            receiver,
+        }
     }
 
     fn should_snapshot(&self, index: MilestoneIndex) -> bool {
@@ -67,10 +80,8 @@ impl SnapshotWorker {
             }
         }
 
-        if self.config.pruning().enabled() && *milestone.index() > self.config.pruning().delay() as u32 {
-            if let Err(e) = prune_database(MilestoneIndex(
-                *milestone.index() - self.config.pruning().delay() as u32,
-            )) {
+        if self.config.pruning().enabled() && *milestone.index() > self.delay {
+            if let Err(e) = prune_database(MilestoneIndex(*milestone.index() - self.delay)) {
                 error!("Failed to prune database: {:?}.", e);
             }
         }
