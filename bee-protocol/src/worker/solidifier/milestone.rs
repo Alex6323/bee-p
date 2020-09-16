@@ -44,7 +44,7 @@ impl MilestoneSolidifierWorker {
     fn trigger_solidification_unchecked(&mut self, target_index: MilestoneIndex) {
         if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
             if !tangle().is_solid_transaction(&target_hash) {
-                debug!("Triggered solidification for milestone {}", *target_index);
+                debug!("Triggered solidification for milestone {}.", *target_index);
                 traversal::visit_parents_depth_first(
                     tangle(),
                     target_hash,
@@ -68,7 +68,7 @@ impl MilestoneSolidifierWorker {
     }
 
     fn save_index(&mut self, target_index: MilestoneIndex) {
-        debug!("Storing milestone {}", *target_index);
+        debug!("Storing milestone {}.", *target_index);
         if let Err(pos) = self.queue.binary_search_by(|index| target_index.cmp(index)) {
             self.queue.insert(pos, target_index);
         }
