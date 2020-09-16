@@ -23,7 +23,7 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::{error, info};
+use log::{error, info, warn};
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
@@ -37,10 +37,18 @@ pub(crate) struct SnapshotWorker {
 
 impl SnapshotWorker {
     pub(crate) fn new(config: SnapshotConfig, receiver: Receiver) -> Self {
-        let delay = std::cmp::max(
-            config.pruning().delay() as u32,
-            config.local().depth() as u32 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1,
-        );
+        let delay_min =
+            config.local().depth() as u32 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
+        let delay = if (config.pruning().delay() as u32) < delay_min {
+            warn!(
+                "Configuration value for \"delay\" is too low ({}), value changed to {}.",
+                config.pruning().delay(),
+                delay_min
+            );
+            delay_min
+        } else {
+            config.pruning().delay() as u32
+        };
 
         Self {
             config,
