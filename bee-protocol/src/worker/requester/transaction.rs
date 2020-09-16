@@ -9,7 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::SenderWorker};
+use crate::{
+    message::TransactionRequest,
+    milestone::MilestoneIndex,
+    protocol::{Protocol, Sender},
+};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::wait_priority_queue::WaitIncoming;
@@ -87,10 +91,11 @@ impl<'a> TransactionRequesterWorker<'a> {
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                 if peer.has_data(index) {
-                    SenderWorker::<TransactionRequest>::send(
+                    Sender::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
-                    );
+                    )
+                    .await;
                     return true;
                 }
             }
@@ -103,10 +108,11 @@ impl<'a> TransactionRequesterWorker<'a> {
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                 if peer.maybe_has_data(index) {
-                    SenderWorker::<TransactionRequest>::send(
+                    Sender::<TransactionRequest>::send(
                         epid,
                         TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
-                    );
+                    )
+                    .await;
                     return true;
                 }
             }

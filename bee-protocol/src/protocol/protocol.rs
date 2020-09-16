@@ -122,7 +122,7 @@ impl Protocol {
             milestone_requester_worker: Default::default(),
             broadcaster_worker: broadcaster_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
-            peer_manager: PeerManager::new(network.clone()),
+            peer_manager: PeerManager::new(),
             requested_transactions: Default::default(),
             requested_milestones: Default::default(),
         };
@@ -325,11 +325,11 @@ fn on_latest_milestone_changed(latest_milestone: &LatestMilestoneChanged) {
     );
     tangle().update_latest_milestone_index(latest_milestone.0.index);
 
-    Protocol::broadcast_heartbeat(
+    spawn(Protocol::broadcast_heartbeat(
         tangle().get_latest_solid_milestone_index(),
         tangle().get_pruning_index(),
         latest_milestone.0.index,
-    );
+    ));
 }
 
 // TODO Chrysalis
@@ -356,9 +356,9 @@ fn on_latest_solid_milestone_changed(latest_solid_milestone: &LatestSolidMilesto
         }
     }
 
-    Protocol::broadcast_heartbeat(
+    spawn(Protocol::broadcast_heartbeat(
         latest_solid_milestone.0.index,
         tangle().get_pruning_index(),
         tangle().get_latest_milestone_index(),
-    );
+    ));
 }

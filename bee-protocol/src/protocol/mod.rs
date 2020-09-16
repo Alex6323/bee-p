@@ -13,5 +13,6 @@ mod helpers;
 mod metrics;
 mod protocol;
 
+pub(crate) use helpers::Sender;
 pub use metrics::ProtocolMetrics;
 pub use protocol::Protocol;
