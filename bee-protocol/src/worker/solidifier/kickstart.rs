@@ -16,18 +16,22 @@ use bee_common::worker::Error as WorkerError;
 use futures::{channel::oneshot, future::Fuse, select, FutureExt};
 use log::info;
 
-pub(crate) const MS_BATCH_SIZE: u32 = 30;
-
 pub(crate) struct KickstartWorker {
     shutdown: Fuse<oneshot::Receiver<()>>,
     ms_sender: oneshot::Sender<MilestoneIndex>,
+    ms_sync_count: u32,
 }
 
 impl KickstartWorker {
-    pub(crate) fn new(shutdown: oneshot::Receiver<()>, ms_sender: oneshot::Sender<MilestoneIndex>) -> Self {
+    pub(crate) fn new(
+        shutdown: oneshot::Receiver<()>,
+        ms_sender: oneshot::Sender<MilestoneIndex>,
+        ms_sync_count: u32,
+    ) -> Self {
         Self {
             shutdown: shutdown.fuse(),
             ms_sender,
+            ms_sync_count,
         }
     }
 
@@ -42,10 +46,10 @@ impl KickstartWorker {
                     let next_ms = *tangle().get_latest_solid_milestone_index() + 1;
                     let latest_ms = *tangle().get_latest_milestone_index();
 
-                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms + MS_BATCH_SIZE < latest_ms {
+                    if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms + self.ms_sync_count < latest_ms {
                         self.ms_sender.send(MilestoneIndex(next_ms));
 
-                        for index in next_ms..(next_ms + MS_BATCH_SIZE) {
+                        for index in next_ms..(next_ms + self.ms_sync_count) {
                             Protocol::request_milestone(MilestoneIndex(index), None);
                         }
                         break;

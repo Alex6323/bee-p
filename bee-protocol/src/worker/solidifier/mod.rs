@@ -13,6 +13,6 @@ mod kickstart;
 mod milestone;
 mod propagator;
 
-pub(crate) use kickstart::{KickstartWorker, MS_BATCH_SIZE};
+pub(crate) use kickstart::KickstartWorker;
 pub(crate) use milestone::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
 pub(crate) use propagator::{SolidPropagatorWorker, SolidPropagatorWorkerEvent};

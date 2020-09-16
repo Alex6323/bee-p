@@ -22,7 +22,7 @@ use crate::{
         MilestoneResponderWorkerEvent, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
         MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker,
         SolidPropagatorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
-        TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent, MS_BATCH_SIZE,
+        TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent,
     },
 };
 
@@ -290,7 +290,14 @@ impl Protocol {
 
         shutdown.add_worker_shutdown(
             kickstart_worker_shutdown_tx,
-            spawn(KickstartWorker::new(kickstart_worker_shutdown_rx, ms_send).run()),
+            spawn(
+                KickstartWorker::new(
+                    kickstart_worker_shutdown_rx,
+                    ms_send,
+                    Protocol::get().config.workers.ms_sync_count,
+                )
+                .run(),
+            ),
         );
 
         shutdown.add_worker_shutdown(
@@ -369,7 +376,8 @@ fn on_latest_solid_milestone_changed(latest_solid_milestone: &LatestSolidMilesto
     debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
     tangle().update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
-    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(MS_BATCH_SIZE);
+    let ms_sync_count = Protocol::get().config.workers.ms_sync_count;
+    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
 
     if !tangle().is_synced() {
         if tangle().contains_milestone(next_ms) {

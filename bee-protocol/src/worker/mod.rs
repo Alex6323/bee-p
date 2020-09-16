@@ -34,7 +34,7 @@ pub(crate) use responder::{
 };
 pub(crate) use solidifier::{
     KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, SolidPropagatorWorker,
-    SolidPropagatorWorkerEvent, MS_BATCH_SIZE,
+    SolidPropagatorWorkerEvent,
 };
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
