@@ -12,12 +12,12 @@
 use serde::Deserialize;
 
 const DEFAULT_ENABLED: bool = true;
-const DEFAULT_DELAY: usize = 60480;
+const DEFAULT_DELAY: u32 = 60480;
 
 #[derive(Default, Deserialize)]
 pub struct PruningConfigBuilder {
     enabled: Option<bool>,
-    delay: Option<usize>,
+    delay: Option<u32>,
 }
 
 impl PruningConfigBuilder {
@@ -30,7 +30,7 @@ impl PruningConfigBuilder {
         self
     }
 
-    pub fn delay(mut self, delay: usize) -> Self {
+    pub fn delay(mut self, delay: u32) -> Self {
         self.delay.replace(delay);
         self
     }
@@ -46,7 +46,7 @@ impl PruningConfigBuilder {
 #[derive(Clone)]
 pub struct PruningConfig {
     enabled: bool,
-    delay: usize,
+    delay: u32,
 }
 
 impl PruningConfig {
@@ -58,7 +58,7 @@ impl PruningConfig {
         self.enabled
     }
 
-    pub fn delay(&self) -> usize {
+    pub fn delay(&self) -> u32 {
         self.delay
     }
 }

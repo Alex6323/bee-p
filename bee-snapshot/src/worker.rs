@@ -38,8 +38,8 @@ pub(crate) struct SnapshotWorker {
 impl SnapshotWorker {
     pub(crate) fn new(config: SnapshotConfig, receiver: Receiver) -> Self {
         let delay_min =
-            config.local().depth() as u32 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
-        let delay = if (config.pruning().delay() as u32) < delay_min {
+            config.local().depth() + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
+        let delay = if config.pruning().delay() < delay_min {
             warn!(
                 "Configuration value for \"delay\" is too low ({}), value changed to {}.",
                 config.pruning().delay(),
@@ -47,7 +47,7 @@ impl SnapshotWorker {
             );
             delay_min
         } else {
-            config.pruning().delay() as u32
+            config.pruning().delay()
         };
 
         Self {
@@ -61,12 +61,12 @@ impl SnapshotWorker {
         let solid_index = *index;
         let snapshot_index = *tangle().get_snapshot_index();
         let pruning_index = *tangle().get_pruning_index();
-        let snapshot_depth = self.config.local().depth() as u32;
+        let snapshot_depth = self.config.local().depth();
         let snapshot_interval = if tangle().is_synced() {
             self.config.local().interval_synced()
         } else {
             self.config.local().interval_unsynced()
-        } as u32;
+        };
 
         if (solid_index < snapshot_depth + snapshot_interval)
             || (solid_index - snapshot_depth) < pruning_index + 1 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST
@@ -82,7 +82,7 @@ impl SnapshotWorker {
         if self.should_snapshot(milestone.index()) {
             if let Err(e) = snapshot(
                 self.config.local().path(),
-                *milestone.index() - self.config.local().depth() as u32,
+                *milestone.index() - self.config.local().depth(),
             ) {
                 error!("Failed to create snapshot: {:?}.", e);
             }
