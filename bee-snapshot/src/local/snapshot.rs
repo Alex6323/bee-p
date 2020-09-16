@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata};
+use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata, metadata::SnapshotMetadata};
 
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_ledger::state::LedgerState;
@@ -46,8 +46,6 @@ pub enum Error {
 }
 impl LocalSnapshot {
     pub fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
-        info!("Loading snapshot file {}...", path);
-
         let mut reader = BufReader::new(OpenOptions::new().read(true).open(path).map_err(Error::IOError)?);
 
         // Version byte
@@ -234,9 +232,14 @@ impl LocalSnapshot {
 
         Ok(LocalSnapshot {
             metadata: LocalSnapshotMetadata {
-                hash,
-                index,
-                timestamp,
+                inner: SnapshotMetadata {
+                    coordinator: Hash::zeros(),
+                    hash,
+                    snapshot_index: index,
+                    entry_point_index: index,
+                    pruning_index: index,
+                    timestamp,
+                },
                 solid_entry_points,
                 seen_milestones,
             },
@@ -263,20 +266,20 @@ impl LocalSnapshot {
         // Milestone hash
 
         if let Err(e) = writer.write_all(&mut cast_slice(
-            self.metadata.hash.to_inner().encode::<T5B1Buf>().as_i8_slice(),
+            self.metadata.inner.hash.to_inner().encode::<T5B1Buf>().as_i8_slice(),
         )) {
             return Err(Error::IOError(e));
         }
 
         // Milestone index
 
-        if let Err(e) = writer.write_all(&mut self.metadata.index.to_le_bytes()) {
+        if let Err(e) = writer.write_all(&mut self.metadata.inner.snapshot_index.to_le_bytes()) {
             return Err(Error::IOError(e));
         }
 
         // Timestamp
 
-        if let Err(e) = writer.write_all(&mut self.metadata.timestamp.to_le_bytes()) {
+        if let Err(e) = writer.write_all(&mut self.metadata.inner.timestamp.to_le_bytes()) {
             return Err(Error::IOError(e));
         }
 

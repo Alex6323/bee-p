@@ -9,36 +9,39 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::metadata::SnapshotMetadata;
-
 use bee_crypto::ternary::Hash;
 
-use std::collections::HashMap;
-
-pub struct LocalSnapshotMetadata {
-    pub(crate) inner: SnapshotMetadata,
-    pub(crate) solid_entry_points: HashMap<Hash, u32>,
-    pub(crate) seen_milestones: HashMap<Hash, u32>,
+pub struct SnapshotMetadata {
+    pub(crate) coordinator: Hash,
+    pub(crate) hash: Hash,
+    pub(crate) snapshot_index: u32,
+    pub(crate) entry_point_index: u32,
+    pub(crate) pruning_index: u32,
+    pub(crate) timestamp: u64,
 }
 
-impl LocalSnapshotMetadata {
-    pub fn hash(&self) -> &Hash {
-        &self.inner.hash
+impl SnapshotMetadata {
+    pub fn coordinator(&self) -> &Hash {
+        &self.coordinator
     }
 
-    pub fn index(&self) -> u32 {
-        self.inner.snapshot_index
+    pub fn hash(&self) -> &Hash {
+        &self.hash
+    }
+
+    pub fn snapshot_index(&self) -> u32 {
+        self.snapshot_index
+    }
+
+    pub fn entry_point_index(&self) -> u32 {
+        self.entry_point_index
+    }
+
+    pub fn pruning_index(&self) -> u32 {
+        self.pruning_index
     }
 
     pub fn timestamp(&self) -> u64 {
-        self.inner.timestamp
-    }
-
-    pub fn solid_entry_points(&self) -> &HashMap<Hash, u32> {
-        &self.solid_entry_points
-    }
-
-    pub fn seen_milestones(&self) -> &HashMap<Hash, u32> {
-        &self.seen_milestones
+        self.timestamp
     }
 }

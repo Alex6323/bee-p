@@ -17,6 +17,7 @@ pub mod config;
 pub mod event;
 pub mod global;
 pub mod local;
+pub mod metadata;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
@@ -24,7 +25,7 @@ use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
-use log::warn;
+use log::{info, warn};
 
 use std::{path::Path, sync::Arc};
 
@@ -37,14 +38,16 @@ pub enum Error {
 pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) -> Result<(), Error> {
     match config.load_type() {
         config::LoadType::Global => {
+            info!("Loading global snapshot file {}...", config.global().path());
             global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
                 .map_err(Error::Global)?;
         }
         config::LoadType::Local => {
             if !Path::new(config.local().path()).exists() {
                 local::download_local_snapshot(config.local()).map_err(Error::Download)?;
-                // 		err = LoadSnapshotFromFile(path)
             }
+            // 		err = LoadSnapshotFromFile(path)
+            info!("Loading local snapshot file {}...", config.local().path());
         }
     }
 
