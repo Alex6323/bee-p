@@ -11,7 +11,9 @@
 
 use crate::{
     config::SnapshotConfig,
-    constants::{ADDITIONAL_PRUNING_THRESHOLD, SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST},
+    constants::{
+        ADDITIONAL_PRUNING_THRESHOLD, SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE, SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST,
+    },
     local::snapshot,
     pruning::prune_database,
 };
@@ -31,12 +33,23 @@ pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct SnapshotWorker {
     config: SnapshotConfig,
+    depth: u32,
     delay: u32,
     receiver: Receiver,
 }
 
 impl SnapshotWorker {
     pub(crate) fn new(config: SnapshotConfig, receiver: Receiver) -> Self {
+        let depth = if config.local().depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
+            warn!(
+                "Configuration value for \"depth\" is too low ({}), value changed to {}.",
+                config.local().depth(),
+                SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE
+            );
+            SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE
+        } else {
+            config.local().depth()
+        };
         let delay_min =
             config.local().depth() + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
         let delay = if config.pruning().delay() < delay_min {
@@ -52,6 +65,7 @@ impl SnapshotWorker {
 
         Self {
             config,
+            depth,
             delay,
             receiver,
         }
@@ -61,29 +75,25 @@ impl SnapshotWorker {
         let solid_index = *index;
         let snapshot_index = *tangle().get_snapshot_index();
         let pruning_index = *tangle().get_pruning_index();
-        let snapshot_depth = self.config.local().depth();
         let snapshot_interval = if tangle().is_synced() {
             self.config.local().interval_synced()
         } else {
             self.config.local().interval_unsynced()
         };
 
-        if (solid_index < snapshot_depth + snapshot_interval)
-            || (solid_index - snapshot_depth) < pruning_index + 1 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST
+        if (solid_index < self.depth + snapshot_interval)
+            || (solid_index - self.depth) < pruning_index + 1 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST
         {
             // Not enough history to calculate solid entry points.
             return false;
         }
 
-        return solid_index - (snapshot_depth + snapshot_interval) >= snapshot_index;
+        return solid_index - (self.depth + snapshot_interval) >= snapshot_index;
     }
 
     fn process(&mut self, milestone: Milestone) {
         if self.should_snapshot(milestone.index()) {
-            if let Err(e) = snapshot(
-                self.config.local().path(),
-                *milestone.index() - self.config.local().depth(),
-            ) {
+            if let Err(e) = snapshot(self.config.local().path(), *milestone.index() - self.depth) {
                 error!("Failed to create snapshot: {:?}.", e);
             }
         }
