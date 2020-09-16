@@ -16,15 +16,16 @@ mod unsigned_transaction;
 
 use crate::atomic::{payload::Payload, Error};
 pub use input::{Input, UTXOInput};
-pub use output::{Address, Ed25519Address, Output, SigLockedSingleDeposit, WotsAddress};
+pub use output::{Address, Output, SigLockedSingleDeposit};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
-
+/*
 use bee_crypto::ternary::sponge::Kerl;
 use bee_signing::ternary::{
     wots::{WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder},
     PrivateKey, PrivateKeyGenerator,
 };
+*/
 use bee_signing_ext::{
     binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed, Ed25519Signature as Ed25Signature},
     Signature as SignatureTrait, Signer, Verifier,
@@ -50,7 +51,7 @@ impl SignedTransaction {
         // Inputs validation
         let transaction = &self.unsigned_transaction;
         // Inputs Count must be 0 < x < 127
-        match transaction.input_count {
+        match transaction.inputs.len() {
             1..=126 => (),
             _ => return Err(Error::CountError),
         }
@@ -64,7 +65,7 @@ impl SignedTransaction {
         for i in transaction.inputs.iter() {
             // Input Type value must be 0, denoting an UTXO Input.
             match i {
-                Input::UTXO(u) => {
+                Input::UTXOInput(u) => {
                     // Transaction Output Index must be 0 ≤ x < 127
                     match u.output_index {
                         0..=126 => (),
@@ -86,7 +87,7 @@ impl SignedTransaction {
 
         // Output validation
         // Outputs Count must be 0 < x < 127
-        match transaction.output_count {
+        match transaction.outputs.len() {
             1..=126 => (),
             _ => return Err(Error::CountError),
         }
@@ -152,8 +153,8 @@ impl SignedTransaction {
                     // differente transaction id from previous one
                     if i != 0 {
                         match &transaction.inputs[i] {
-                            Input::UTXO(u) => match &transaction.inputs[i - 1] {
-                                Input::UTXO(v) => {
+                            Input::UTXOInput(u) => match &transaction.inputs[i - 1] {
+                                Input::UTXOInput(v) => {
                                     if u.transaction_id != v.transaction_id {
                                         return Err(Error::IndexError);
                                     }
@@ -177,8 +178,8 @@ impl SignedTransaction {
                     // Since it's first input it unlocks, it must have differente transaction id from previous one
                     if i != 0 {
                         match &transaction.inputs[i] {
-                            Input::UTXO(u) => match &transaction.inputs[i - 1] {
-                                Input::UTXO(v) => {
+                            Input::UTXOInput(u) => match &transaction.inputs[i - 1] {
+                                Input::UTXOInput(v) => {
                                     if u.transaction_id == v.transaction_id {
                                         return Err(Error::IndexError);
                                     }
@@ -311,9 +312,7 @@ impl<'a> SignedTransactionBuilder<'a> {
 
         Ok(SignedTransaction {
             unsigned_transaction: UnsignedTransaction {
-                input_count: inputs.len() as u8,
                 inputs,
-                output_count: outputs.len() as u8,
                 outputs,
                 payload: self.payload,
             },

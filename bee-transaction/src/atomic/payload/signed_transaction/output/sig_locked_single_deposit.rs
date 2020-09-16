@@ -16,20 +16,14 @@ use bee_ternary::{T5B1Buf, TritBuf};
 use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct WotsAddress(Vec<i8>);
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Ed25519Address([u8; 32]);
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Address {
-    Wots(WotsAddress),
-    Ed25519(Ed25519Address),
+    Wots(Vec<i8>),
+    Ed25519([u8; 32]),
 }
 
 impl Address {
     pub fn from_ed25519_bytes(bytes: [u8; 32]) -> Self {
-        Address::Ed25519(Ed25519Address(bytes))
+        Address::Ed25519(bytes)
     }
 
     pub fn from_wots_tritbuf(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
@@ -37,7 +31,7 @@ impl Address {
         if trits.len() != 49 {
             return Err(Error::HashError);
         }
-        Ok(Address::Wots(WotsAddress(trits)))
+        Ok(Address::Wots(trits))
     }
 }
 
@@ -47,14 +41,14 @@ impl Serialize for Address {
         S: Serializer,
     {
         match self {
-            Address::Wots(WotsAddress(address)) => {
-                let mut serializer = serializer.serialize_struct("Address", 3)?;
+            Address::Wots(address) => {
+                let mut serializer = serializer.serialize_struct("Address", 2)?;
                 serializer.serialize_field("Address Type", &0u8)?;
                 serializer.serialize_field("Address", address)?;
                 serializer.end()
             }
-            Address::Ed25519(Ed25519Address(address)) => {
-                let mut serializer = serializer.serialize_struct("Address", 3)?;
+            Address::Ed25519(address) => {
+                let mut serializer = serializer.serialize_struct("Address", 2)?;
                 serializer.serialize_field("Address Type", &1u8)?;
                 serializer.serialize_field("Address", address)?;
                 serializer.end()
