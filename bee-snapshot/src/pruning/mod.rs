@@ -181,7 +181,7 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
     let new_solid_entry_points = get_new_solid_entry_points(target_index)?;
 
     // TODO clear the solid_entry_points in the static MsTangle
-    // tangle().clear_solid_entry_points()
+    tangle().clear_solid_entry_points();
 
     // TODO update the whole solid_entry_points in the static MsTangle w/o looping
     for (hash, milestone_index) in new_solid_entry_points.into_iter() {

@@ -159,6 +159,10 @@ impl MsTangle {
         self.solid_entry_points.remove(hash);
     }
 
+    pub fn clear_solid_entry_points(&self) {
+        self.solid_entry_points.clear();
+    }
+
     /// Returns whether the transaction associated with `hash` is a solid entry point.
     pub fn is_solid_entry_point(&self, hash: &Hash) -> bool {
         self.solid_entry_points.contains_key(hash)
