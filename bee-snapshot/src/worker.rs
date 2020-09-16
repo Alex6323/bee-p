@@ -59,10 +59,12 @@ impl SnapshotWorker {
 
     fn process(&mut self, milestone: Milestone) {
         if self.should_snapshot(milestone.index()) {
-            snapshot(
+            if let Err(e) = snapshot(
                 self.config.local().path(),
                 *milestone.index() - self.config.local().depth() as u32,
-            );
+            ) {
+                error!("Failed to create snapshot: {:?}.", e);
+            }
         }
 
         if self.config.pruning().enabled() && *milestone.index() > self.config.pruning().delay() as u32 {

@@ -18,7 +18,7 @@ pub(crate) use download::{download_local_snapshot, Error as DownloadError};
 
 pub use config::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
 pub use metadata::LocalSnapshotMetadata;
-pub use snapshot::{Error, LocalSnapshot};
+pub use snapshot::{Error as ReadWriteError, LocalSnapshot};
 
 use crate::metadata::SnapshotMetadata;
 
@@ -29,7 +29,10 @@ use log::{error, info};
 
 use std::collections::HashMap;
 
-pub(crate) fn snapshot(path: &str, index: u32) {
+#[derive(Debug)]
+pub(crate) enum Error {}
+
+pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
     info!("Creating local snapshot at index {}...", index);
 
     let ls = LocalSnapshot {
@@ -55,4 +58,6 @@ pub(crate) fn snapshot(path: &str, index: u32) {
     }
 
     info!("Created local snapshot at index {}.", index);
+
+    Ok(())
 }

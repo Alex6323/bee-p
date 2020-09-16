@@ -30,8 +30,8 @@ use log::{info, warn};
 use std::{path::Path, sync::Arc};
 
 pub enum Error {
-    Global(global::Error),
-    Local(local::Error),
+    Global(global::ReadWriteError),
+    Local(local::ReadWriteError),
     Download(local::DownloadError),
 }
 
