@@ -137,7 +137,7 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
     // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index
     if *tangle().get_entry_point_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
         error!(
-            "Not enough histroy for pruning! minimum index: {}, target index: {}",
+            "Not enough history for pruning! minimum index: {}, target index: {}",
             SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1,
             *target_index
         );
