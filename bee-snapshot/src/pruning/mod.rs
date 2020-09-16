@@ -31,7 +31,6 @@ pub enum Error {
     NotEnoughHistory(u32),
     NoPruningNeeded(u32, u32),
     MilestoneNotFoundInTangle(u32),
-    SolidEntryPointNotConfirmed,
     MetadataNotFound(Hash),
 }
 
