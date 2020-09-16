@@ -13,11 +13,7 @@ mod config;
 
 pub use config::{PruningConfig, PruningConfigBuilder};
 
-use crate::{
-    config::SnapshotConfig,
-    constants::{ADDITIONAL_PRUNING_THRESHOLD, SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST},
-    local::LocalSnapshotMetadata,
-};
+use crate::constants::{ADDITIONAL_PRUNING_THRESHOLD, SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::{
@@ -112,7 +108,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
 }
 
 // TODO get the unconfirmed trnsactions in the database
-pub fn get_unconfirmed_transactions(target_index: &MilestoneIndex) -> Vec<Hash> {
+pub fn get_unconfirmed_transactions(_target_index: &MilestoneIndex) -> Vec<Hash> {
     // NOTE If there is no specific struct for storing th unconfirmed transaction,
     //      then we need to traverse the whole tangle to get the unconfirmed transactions (SLOW)!
     // TODO traverse the whole tangle through the approvers from solid entry points
@@ -120,17 +116,17 @@ pub fn get_unconfirmed_transactions(target_index: &MilestoneIndex) -> Vec<Hash> 
 }
 
 // TODO remove the unconfirmed transactions in the database
-pub fn prune_unconfirmed_transactions(purning_milestone_index: &MilestoneIndex) -> u32 {
+pub fn prune_unconfirmed_transactions(_purning_milestone_index: &MilestoneIndex) -> u32 {
     unimplemented!()
 }
 
 // TODO remove the confirmed transactions in the database
-pub fn prune_transactions(hashes: Vec<Hash>) -> u32 {
+pub fn prune_transactions(_hashes: Vec<Hash>) -> u32 {
     unimplemented!()
 }
 
 // TODO prunes the milestone metadata and the ledger diffs from the database for the given milestone
-pub fn prune_milestone(milestone_index: MilestoneIndex) {
+pub fn prune_milestone(_milestone_index: MilestoneIndex) {
     // delete ledger_diff for milestone with milestone_index
     // delete milestone storage (if we have this) for milestone with milestone_index
     unimplemented!()
@@ -148,7 +144,6 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
         return Err(Error::NotEnoughHistory);
     }
 
-    // TODO change the type of `LocalSnapshotMetadata.index` to MilestoneIndex?
     let target_index_max = MilestoneIndex(
         *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
     );
@@ -180,7 +175,7 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
     // Update the solid entry points in the static MsTangle
     let new_solid_entry_points = get_new_solid_entry_points(target_index)?;
 
-    // TODO clear the solid_entry_points in the static MsTangle
+    // Clear the solid_entry_points in the static MsTangle
     tangle().clear_solid_entry_points();
 
     // TODO update the whole solid_entry_points in the static MsTangle w/o looping
