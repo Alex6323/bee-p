@@ -10,18 +10,58 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{Heartbeat, Transaction as TransactionMessage},
+    message::{
+        tlv_into_bytes, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest,
+    },
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::tangle,
-    worker::{BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, Sender, TransactionRequesterWorkerEntry},
+    worker::{BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, TransactionRequesterWorkerEntry},
 };
 
 use bee_crypto::ternary::Hash;
-use bee_network::EndpointId;
+use bee_network::{Command::SendMessage, EndpointId};
 use bee_tangle::traversal;
 
 use log::warn;
+
+use std::marker::PhantomData;
+
+pub(crate) struct Sender<M: Message> {
+    marker: PhantomData<M>,
+}
+
+macro_rules! implement_sender_worker {
+    ($type:ty, $sender:tt, $incrementor:tt) => {
+        impl Sender<$type> {
+            pub(crate) async fn send(epid: &EndpointId, message: $type) {
+                match Protocol::get()
+                    .network
+                    .clone()
+                    .send(SendMessage {
+                        epid: *epid,
+                        bytes: tlv_into_bytes(message),
+                        responder: None,
+                    })
+                    .await
+                {
+                    Ok(_) => {
+                        // self.peer.metrics.$incrementor();
+                        // Protocol::get().metrics.$incrementor();
+                    }
+                    Err(e) => {
+                        warn!("Sending {} to {} failed: {:?}.", stringify!($type), epid, e);
+                    }
+                }
+            }
+        }
+    };
+}
+
+implement_sender_worker!(MilestoneRequest, milestone_request, milestone_requests_sent_inc);
+implement_sender_worker!(TransactionMessage, transaction, transactions_sent_inc);
+implement_sender_worker!(TransactionRequest, transaction_request, transaction_requests_sent_inc);
+implement_sender_worker!(Heartbeat, heartbeat, heartbeats_sent_inc);
 
 impl Protocol {
     // TODO move some functions to workers

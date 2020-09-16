@@ -9,7 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{message::TransactionRequest, milestone::MilestoneIndex, protocol::Protocol, worker::Sender};
+use crate::{
+    message::TransactionRequest,
+    milestone::MilestoneIndex,
+    protocol::{Protocol, Sender},
+};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::wait_priority_queue::WaitIncoming;

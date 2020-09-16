@@ -11,8 +11,8 @@
 
 use crate::{
     message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
+    protocol::Sender,
     tangle::tangle,
-    worker::Sender,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
