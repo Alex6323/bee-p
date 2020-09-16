@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{constants::IOTA_SUPPLY, local::LocalSnapshotMetadata, metadata::SnapshotMetadata};
+use crate::{constants::IOTA_SUPPLY, local::LocalSnapshot, local::LocalSnapshotMetadata, metadata::SnapshotMetadata};
 
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_ledger::state::LedgerState;
@@ -25,11 +25,6 @@ use std::{
     fs::OpenOptions,
     io::{BufReader, BufWriter, Read, Write},
 };
-
-pub struct LocalSnapshot {
-    pub(crate) metadata: LocalSnapshotMetadata,
-    pub(crate) state: LedgerState,
-}
 
 const VERSION: u8 = 4;
 

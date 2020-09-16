@@ -19,7 +19,7 @@ use bee_crypto::ternary::Hash;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::local::{LocalSnapshot, ReadWriteError};
+use bee_snapshot::local::{FileError, LocalSnapshot};
 
 use async_std::task::{block_on, spawn};
 use futures::{
@@ -38,7 +38,7 @@ type Receiver = ShutdownStream<Fuse<EventSubscriber>>;
 pub enum Error {
     /// Occurs, when there is an error while reading the snapshot file.
     #[error("Reading the snapshot file failed.")]
-    LocalSnapshotReadError(ReadWriteError),
+    LocalSnapshotReadError(FileError),
 
     /// Occurs, when there is an error while shutting down the node.
     #[error("Shutting down failed.")]

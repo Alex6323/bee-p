@@ -11,14 +11,14 @@
 
 mod config;
 mod download;
+mod file;
 mod metadata;
-mod snapshot;
 
 pub(crate) use download::{download_local_snapshot, Error as DownloadError};
 
 pub use config::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
+pub use file::Error as FileError;
 pub use metadata::LocalSnapshotMetadata;
-pub use snapshot::{Error as ReadWriteError, LocalSnapshot};
 
 use crate::metadata::SnapshotMetadata;
 
@@ -28,6 +28,11 @@ use bee_ledger::state::LedgerState;
 use log::{error, info};
 
 use std::collections::HashMap;
+
+pub struct LocalSnapshot {
+    pub(crate) metadata: LocalSnapshotMetadata,
+    pub(crate) state: LedgerState,
+}
 
 #[derive(Debug)]
 pub(crate) enum Error {}
