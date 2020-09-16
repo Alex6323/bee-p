@@ -20,7 +20,7 @@ use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::info;
+use log::{error, info};
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
@@ -66,8 +66,11 @@ impl SnapshotWorker {
         }
 
         if self.config.pruning().enabled() && *milestone.index() > self.config.pruning().delay() as u32 {
-            // prune_database(&self.config, _, _;
-            // pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal);
+            if let Err(e) = prune_database(MilestoneIndex(
+                *milestone.index() - self.config.pruning().delay() as u32,
+            )) {
+                error!("Failed to prune database: {:?}.", e);
+            }
         }
     }
 

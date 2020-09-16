@@ -51,7 +51,7 @@ pub(crate) fn snapshot(path: &str, index: u32) {
     let file = path.to_string() + "_tmp";
 
     if let Err(e) = ls.to_file(&file) {
-        error!("Failed to write local snapshot to file {}.", file);
+        error!("Failed to write local snapshot to file {}: {:?}.", file, e);
     }
 
     info!("Created local snapshot at index {}.", index);
