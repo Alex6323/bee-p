@@ -139,15 +139,14 @@ pub fn prune_milestone(milestone_index: MilestoneIndex) {
 // NOTE we don't prune cache, but only prune the database
 pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
     // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index
-    // TODO Uncomment the following when we have `tangle().get_entry_point_index()`
-    // if *tangle().get_entry_point_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
-    //     error!(
-    //         "Not enough histroy for pruning! minimum index: {}, target index: {}",
-    //         SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1,
-    //         *target_index
-    //     );
-    //     return Err(Error::NotEnoughHistory);
-    // }
+    if *tangle().get_entry_point_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
+        error!(
+            "Not enough histroy for pruning! minimum index: {}, target index: {}",
+            SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1,
+            *target_index
+        );
+        return Err(Error::NotEnoughHistory);
+    }
 
     // TODO change the type of `LocalSnapshotMetadata.index` to MilestoneIndex?
     let target_index_max = MilestoneIndex(
@@ -189,8 +188,7 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
         tangle().add_solid_entry_point(hash, milestone_index);
     }
 
-    // TODO Uncomment the following when we have `tangle().update_entry_point_index()`
-    // tangle().update_entry_point_index(target_index);
+    tangle().update_entry_point_index(target_index);
 
     prune_unconfirmed_transactions(&tangle().get_pruning_index());
 
