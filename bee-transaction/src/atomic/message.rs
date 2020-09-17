@@ -14,7 +14,9 @@ use crate::{
     Vertex,
 };
 
-#[derive(Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Message {
     pub trunk: Hash,
     pub branch: Hash,

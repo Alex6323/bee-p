@@ -15,7 +15,7 @@ pub use utxo::UTXOInput;
 
 use crate::prelude::Hash;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Input {
@@ -34,15 +34,14 @@ impl Input {
     /// Convenient method to get transaction ID.
     pub fn transaction_id(&self) -> &Hash {
         match self {
-            Input::UTXOInput(u) => &u.transaction_id
+            Input::UTXOInput(u) => &u.transaction_id,
         }
-    } 
+    }
 
     /// Convenient method to get output index.
     pub fn output_index(&self) -> &u8 {
         match self {
-            Input::UTXOInput(u) => &u.output_index
+            Input::UTXOInput(u) => &u.output_index,
         }
     }
 }
-

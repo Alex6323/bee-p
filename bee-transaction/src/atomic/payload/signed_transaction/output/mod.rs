@@ -13,7 +13,7 @@ mod sig_locked_single_deposit;
 
 pub use sig_locked_single_deposit::{Address, SigLockedSingleDeposit};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Output {
@@ -21,26 +21,21 @@ pub enum Output {
 }
 
 impl Output {
-    pub fn new(address: Address, amount:u64) -> Self {
-        Output::SigLockedSingleDeposit(SigLockedSingleDeposit{
-            address,
-            amount,
-        })
+    pub fn new(address: Address, amount: u64) -> Self {
+        Output::SigLockedSingleDeposit(SigLockedSingleDeposit { address, amount })
     }
 
     /// Convenient method to get address.
     pub fn address(&self) -> &Address {
         match self {
-            Output::SigLockedSingleDeposit(s) => &s.address
+            Output::SigLockedSingleDeposit(s) => &s.address,
         }
-    } 
+    }
 
     /// Convenient method to get amount.
     pub fn amount(&self) -> &u64 {
         match self {
-            Output::SigLockedSingleDeposit(s) => &s.amount
+            Output::SigLockedSingleDeposit(s) => &s.amount,
         }
-    } 
-
+    }
 }
-
