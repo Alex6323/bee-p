@@ -15,9 +15,9 @@ pub use utxo::UTXOInput;
 
 use crate::prelude::Hash;
 
-use serde::{ser::SerializeStruct, Serialize, Serializer};
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Input {
     UTXOInput(UTXOInput),
 }
@@ -30,24 +30,19 @@ impl Input {
             output_index,
         })
     }
-}
 
-impl Serialize for Input {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
+    /// Convenient method to get transaction ID.
+    pub fn transaction_id(&self) -> &Hash {
         match self {
-            Input::UTXOInput(UTXOInput {
-                ref transaction_id,
-                ref output_index,
-            }) => {
-                let mut serializer = serializer.serialize_struct("Input", 3)?;
-                serializer.serialize_field("Input Type", &0u8)?;
-                serializer.serialize_field("Transaction ID", transaction_id)?;
-                serializer.serialize_field("Transaction Output Index", output_index)?;
-                serializer.end()
-            }
+            Input::UTXOInput(u) => &u.transaction_id
+        }
+    } 
+
+    /// Convenient method to get output index.
+    pub fn output_index(&self) -> &u8 {
+        match self {
+            Input::UTXOInput(u) => &u.output_index
         }
     }
 }
+

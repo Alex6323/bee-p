@@ -21,7 +21,9 @@ pub use signed_data::SignedData;
 pub use signed_transaction::SignedTransaction;
 pub use unsigned_data::UnsignedData;
 
-#[derive(Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Payload {
     Indexation(Box<Indexation>),
     Milestone(Box<Milestone>),

@@ -12,30 +12,12 @@
 pub use crate::atomic::payload::signed_transaction::{input::Input, output::Output};
 use crate::atomic::payload::Payload;
 
-use serde::{ser::SerializeStruct, Serialize, Serializer};
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UnsignedTransaction {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub payload: Option<Vec<Payload>>,
-}
-
-
-impl Serialize for UnsignedTransaction {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serializer = serializer.serialize_struct("UnsignedTransaction", 6)?;
-        serializer.serialize_field("Transaction Type", &0u8)?;
-        serializer.serialize_field("Input Count", &(self.inputs.len() as u8))?;
-        serializer.serialize_field("Inputs", self.inputs.as_slice())?;
-        serializer.serialize_field("Output Count", &(self.outputs.len() as u8))?;
-        serializer.serialize_field("Outputs", &self.outputs[0])?;
-        serializer.serialize_field("Payload Length", &0u8)?;
-        serializer.serialize_field("Payload", &Option::<Vec<Input>>::None)?;
-        serializer.end()
-    }
 }
 

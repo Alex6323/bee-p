@@ -1,31 +1,28 @@
 use bee_transaction::prelude::{Address, Hash, Input, Output, UnsignedTransaction};
 
 #[test]
-fn input_to_bincode_serialization() {
+fn input_to_json_serde() {
     let value = Input::new(Hash([1u8; 32]), 2);
-    let bin = bincode::serialize(&value).unwrap();
+    let json = serde_json::to_string(&value).unwrap();
 
-    let mut expected = vec![1u8; 34];
-    expected[0] = 0;
-    expected[33] = 2;
-    assert_eq!(bin, expected);
+    // TODO deserialize and verify
+    println!("{}", json);
 }
 
 #[test]
-fn output_to_bincode_serialization() {
+fn output_to_json_serde() {
     let address = Address::from_ed25519_bytes([2; 32]);
     let value = Output::new(address, 18446744073709551615);
-    let bin= bincode::serialize(&value).unwrap();
+    let _json = serde_json::to_string(&value).unwrap();
     
-    let expected = vec![0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 255, 255, 255, 255, 255, 255, 255, 255];
-    assert_eq!(bin, expected);
+    // TODO deserialize and verify
 }
 
 #[test]
-fn unsigned_transaction_to_bincode_serialization() {
+fn unsigned_transaction_to_json_serde() {
     let mut inputs = Vec::new();
     inputs.push(Input::new(Hash([1u8; 32]), 2));
-    inputs.push(Input::new(Hash([1u8; 32]), 2));
+    inputs.push(Input::new(Hash([3u8; 32]), 4));
     let address = Address::from_ed25519_bytes([2; 32]);
     let mut outputs = Vec::new();
     outputs.push(Output::new(address, 18446744073709551615));
@@ -34,7 +31,8 @@ fn unsigned_transaction_to_bincode_serialization() {
         outputs,
         payload: None,
     }; 
-    let bin = bincode::serialize(&value).unwrap();
+    let _json = serde_json::to_string(&value).unwrap();
 
-    println!("{:?}", bin);
+    // TODO deserialize and verify
 }
+

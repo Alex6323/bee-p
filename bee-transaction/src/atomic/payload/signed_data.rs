@@ -9,9 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-#[derive(Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SignedData {
     pub data: Vec<u8>,
     pub public_key: [u8; 32],
-    pub signature: [u8; 64],
+    pub signature: Vec<u8>, // TODO change beck to array with length 64
 }

@@ -13,9 +13,9 @@ mod sig_locked_single_deposit;
 
 pub use sig_locked_single_deposit::{Address, SigLockedSingleDeposit};
 
-use serde::{ser::SerializeStruct, Serialize, Serializer};
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Output {
     SigLockedSingleDeposit(SigLockedSingleDeposit),
 }
@@ -27,24 +27,20 @@ impl Output {
             amount,
         })
     }
+
+    /// Convenient method to get address.
+    pub fn address(&self) -> &Address {
+        match self {
+            Output::SigLockedSingleDeposit(s) => &s.address
+        }
+    } 
+
+    /// Convenient method to get amount.
+    pub fn amount(&self) -> &u64 {
+        match self {
+            Output::SigLockedSingleDeposit(s) => &s.amount
+        }
+    } 
+
 }
 
-impl Serialize for Output {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            Output::SigLockedSingleDeposit(SigLockedSingleDeposit {
-                ref address,
-                ref amount,
-            }) => {
-                let mut serializer = serializer.serialize_struct("Output", 3)?;
-                serializer.serialize_field("Output Type", &0u8)?;
-                serializer.serialize_field("Address", address)?;
-                serializer.serialize_field("Amount", amount)?;
-                serializer.end()
-            }
-        }
-    }
-}
