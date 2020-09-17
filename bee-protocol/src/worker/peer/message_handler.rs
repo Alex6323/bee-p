@@ -176,16 +176,14 @@ impl EventHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use futures::{
         channel::{mpsc, oneshot},
         future::FutureExt,
         stream::StreamExt,
     };
-
-    use async_std::task;
-
     use std::time::Duration;
+    use tokio::{spawn, time::delay_for};
+
     /// Generate a vector of events filled with messages of a desired length.
     fn gen_events(event_len: usize, msg_size: usize, n_msg: usize) -> Vec<Vec<u8>> {
         // Bytes of all the messages.
@@ -201,6 +199,7 @@ mod tests {
         // Finally, we split all the bytes into events.
         msgs.chunks(event_len).map(Vec::from).collect()
     }
+
     /// Test if the `MessageHandler` can produce an exact number of messages of a desired length,
     /// divided in events of an specified length. This test checks that:
     /// - The header and payload of all the messages have the right content.
@@ -215,10 +214,10 @@ mod tests {
         let mut msg_handler = MessageHandler::new(
             receiver.fuse(),
             receiver_shutdown.fuse(),
-            Address::from_addr_str("127.0.0.1:8080").await.unwrap(),
+            "127.0.0.1:8080".parse().unwrap(),
         );
         // Create the task that does the checks of the test.
-        let handle = task::spawn(async move {
+        let handle = spawn(async move {
             // The messages are expected to be filled with zeroes except for the message length
             // field of the header.
             let expected_bytes = vec![0u8; msg_len];
@@ -244,47 +243,54 @@ mod tests {
         // Send all the events to the message handler.
         for event in events {
             sender.try_send(event).unwrap();
-            task::sleep(Duration::from_millis(1)).await;
+            delay_for(Duration::from_millis(1)).await;
         }
         // Sleep to be sure the handler had time to produce all the messages.
-        task::sleep(Duration::from_millis(1)).await;
+        delay_for(Duration::from_millis(1)).await;
         // Send a shutdown signal.
         sender_shutdown.send(()).unwrap();
         // Await for the task with the checks to be completed.
         handle.await;
     }
+
     /// Test that messages are produced correctly when they are divided into one byte events.
-    #[async_std::test]
+    #[tokio::test]
     async fn one_byte_events() {
         test(1, 5, 10).await;
     }
-    /// Test that messages are produced correctly when each message fits exactly into an event.
-    #[async_std::test]
+
+    /// Test that messages are produced correctly when each mes// let epid: EndpointId =
+    /// Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();sage fits exactly into an event.
+    #[tokio::test]
     async fn one_message_per_event() {
         test(5, 5, 10).await;
     }
+
     /// Test that messages are produced correctly when two messages fit exactly into an event.
-    #[async_std::test]
+    #[tokio::test]
     async fn two_messages_per_event() {
         test(10, 5, 10).await;
     }
+
     /// Test that messages are produced correctly when a message fits exactly into two events.
-    #[async_std::test]
+    #[tokio::test]
     async fn two_events_per_message() {
         test(5, 10, 10).await;
     }
+
     /// Test that messages are produced correctly when a message does not fit in a single event and
     /// it is not aligned either.
-    #[async_std::test]
+    #[tokio::test]
     async fn misaligned_messages() {
         test(3, 5, 10).await;
     }
+
     /// Test that the handler stops producing messages after receiving the shutdown signal.
     ///
     /// This test is basically the same as the `one_message_per_event` test. But the last event is
     /// sent after the shutdown signal. As a consequence, the last message is not produced by the
     /// message handler.
-    #[async_std::test]
+    #[tokio::test]
     async fn shutdown() {
         let event_size = 5;
         let msg_size = event_size;
@@ -302,10 +308,10 @@ mod tests {
         let mut msg_handler = MessageHandler::new(
             receiver.fuse(),
             receiver_shutdown.fuse(),
-            Address::from_addr_str("127.0.0.1:8080").await.unwrap(),
+            "127.0.0.1:8080".parse().unwrap(),
         );
 
-        let handle = task::spawn(async move {
+        let handle = spawn(async move {
             let expected_bytes = vec![0u8; msg_len];
             let expected_msg = (
                 Header {
@@ -328,11 +334,11 @@ mod tests {
 
         for event in events {
             sender.try_send(event).unwrap();
-            task::sleep(Duration::from_millis(1)).await;
+            delay_for(Duration::from_millis(1)).await;
         }
 
         sender_shutdown.send(()).unwrap();
-        task::sleep(Duration::from_millis(1)).await;
+        delay_for(Duration::from_millis(1)).await;
         // Send the last event after the shutdown signal
         sender.try_send(last_event).unwrap();
 

@@ -27,35 +27,35 @@ mod tests {
         tangle::{self, tangle},
     };
 
-    use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-    use bee_common_ext::event::Bus;
+    use bee_common::shutdown_stream::ShutdownStream;
+    use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown};
     use bee_crypto::ternary::Hash;
-    use bee_network::{EndpointId, NetworkConfig, Url};
+    use bee_network::{EndpointId, NetworkConfig};
 
-    use async_std::task::{self, block_on, spawn};
     use futures::{
         channel::{mpsc, oneshot},
         join,
         sink::SinkExt,
     };
+    use tokio::{spawn, time::delay_for};
 
     use std::{sync::Arc, time::Duration};
 
-    #[test]
-    fn test_tx_workers_with_compressed_buffer() {
+    #[tokio::test]
+    async fn test_tx_workers_with_compressed_buffer() {
         let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
         // build network
-        let network_config = NetworkConfig::build().finish();
-        let (network, _) = bee_network::init(network_config, &mut shutdown);
+        let network_config = NetworkConfig::builder().finish();
+        let (network, _) = bee_network::init(network_config, &mut shutdown).await;
 
         // init tangle
         tangle::init();
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        block_on(Protocol::init(protocol_config, network, 0, bus, &mut shutdown));
+        Protocol::init(protocol_config, network, 0, bus, &mut shutdown).await;
 
         assert_eq!(tangle().len(), 0);
 
@@ -81,18 +81,18 @@ mod tests {
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
             let message = TransactionMessage::new(&tx);
-            let epid: EndpointId = Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();
+            let epid = EndpointId::new();
             let event = HasherWorkerEvent {
                 from: epid,
                 transaction: message,
             };
             hasher_worker_sender.unbounded_send(event).unwrap();
-            task::sleep(Duration::from_secs(5)).await;
+            delay_for(Duration::from_secs(5)).await;
             hasher_worker_shutdown_sender.send(()).unwrap();
             processor_worker_shutdown_sender.send(()).unwrap();
         });
 
-        let (hasher_result, processor_result) = block_on(async { join!(hasher_handle, processor_handle) });
+        let (hasher_result, processor_result) = join!(hasher_handle, processor_handle);
 
         hasher_result.unwrap();
         processor_result.unwrap();
