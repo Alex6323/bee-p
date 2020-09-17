@@ -11,26 +11,13 @@
 
 //! A module that deals with the graceful shutdown of asynchronous workers.
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown::Error as ShutdownError, worker::Error as WorkerError};
 
 use futures::channel::oneshot;
 use log::error;
-use thiserror::Error;
 use tokio::task::JoinError;
 
 use std::future::Future;
-
-/// Errors, that might occur during shutdown.
-#[derive(Error, Debug)]
-pub enum Error {
-    /// Occurs, when the shutdown signal couldn't be sent to a worker.
-    #[error("Sending the shutdown signal to a worker failed.")]
-    SendingShutdownSignalFailed,
-
-    /// Occurs, when a worker failed to shut down properly.
-    #[error("Waiting for worker to shut down failed.")]
-    WaitingforWorkerShutdownFailed(#[from] WorkerError),
-}
 
 /// A type alias for the sending side of the shutdown signal.
 pub type ShutdownNotifier = oneshot::Sender<()>;
@@ -74,11 +61,13 @@ impl Shutdown {
     }
 
     /// Executes the shutdown.
-    pub async fn execute(mut self) -> Result<(), Error> {
+    pub async fn execute(mut self) -> Result<(), ShutdownError> {
         while let Some(notifier) = self.notifiers.pop() {
             // NOTE: in case of an error the `Err` variant simply contains our shutdown signal `()` that we tried to
             // send.
-            notifier.send(()).map_err(|_| Error::SendingShutdownSignalFailed)?
+            notifier
+                .send(())
+                .map_err(|_| ShutdownError::SendingShutdownSignalFailed)?
         }
 
         while let Some(worker_shutdown) = self.worker_shutdowns.pop() {

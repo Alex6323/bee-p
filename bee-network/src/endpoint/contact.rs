@@ -133,58 +133,43 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn create_tcp_connection_info_from_address_and_protocol() {
-        let socket_address = EndpointContactParams::from_url("tcp://127.0.0.1:15600")
-            .unwrap()
-            .socket_address(true)
-            .await
-            .unwrap();
+    async fn create_ipv4_tcp_endpoint_params_from_url() {
+        let mut endpoint_params = EndpointContactParams::from_url("tcp://127.0.0.1:15600").await.unwrap();
+        let endpoint_address = endpoint_params.socket_address(false).await.unwrap();
 
-        let params = EndpointContactParams::from_socket_address(socket_address, TransportProtocol::Tcp);
-
-        assert_eq!(TransportProtocol::Tcp, params.transport_protocol);
-        assert_eq!("tcp://127.0.0.1:15600", params.to_string());
+        assert!(endpoint_address.is_ipv4());
+        assert_eq!(TransportProtocol::Tcp, endpoint_params.transport_protocol);
+        assert_eq!("tcp://127.0.0.1:15600", endpoint_params.to_string());
     }
 
     #[tokio::test]
-    async fn create_udp_connection_info_from_address_and_protocol() {
-        let socket_address = EndpointContactParams::from_url("udp://127.0.0.1:15600")
-            .unwrap()
-            .socket_address(true)
-            .await
-            .unwrap();
+    async fn create_ipv4_udp_endpoint_params_from_url() {
+        let mut endpoint_params = EndpointContactParams::from_url("udp://127.0.0.1:15600").await.unwrap();
+        let endpoint_address = endpoint_params.socket_address(false).await.unwrap();
 
-        let params = EndpointContactParams::from_socket_address(socket_address, TransportProtocol::Udp);
-
-        assert_eq!(TransportProtocol::Udp, params.transport_protocol);
-        assert_eq!("udp://127.0.0.1:15600", params.to_string());
-    }
-
-    #[test]
-    fn create_tcp_connection_info_from_url() {
-        let params = EndpointContactParams::from_url("tcp://127.0.0.1:15600").expect("parsing url failed");
-
-        assert_eq!(TransportProtocol::Tcp, params.transport_protocol);
-        assert_eq!("tcp://127.0.0.1:15600", params.to_string());
-    }
-
-    #[test]
-    fn create_udp_connection_info_from_url() {
-        let params = EndpointContactParams::from_url("udp://127.0.0.1:15600").expect("parsing url failed");
-
-        assert_eq!(TransportProtocol::Udp, params.transport_protocol);
-        assert_eq!("udp://127.0.0.1:15600", params.to_string());
+        assert!(endpoint_address.is_ipv4());
+        assert_eq!(TransportProtocol::Udp, endpoint_params.transport_protocol);
+        assert_eq!("udp://127.0.0.1:15600", endpoint_params.to_string());
     }
 
     #[tokio::test]
-    async fn create_ipv6_connection_info_from_url() {
-        let params = EndpointContactParams::from_url("tcp://[::1]:15600").expect("parsing url failed");
+    async fn create_ipv6_tcp_endpoint_params_from_url() {
+        let mut endpoint_params = EndpointContactParams::from_url("tcp://[::1]:15600").await.unwrap();
+        let endpoint_address = endpoint_params.socket_address(false).await.unwrap();
 
-        let socket_address = params.socket_address(false).await.unwrap();
+        assert!(endpoint_address.is_ipv6());
+        assert_eq!(TransportProtocol::Tcp, endpoint_params.transport_protocol);
+        assert_eq!("tcp://[::1]:15600", endpoint_params.to_string());
+    }
 
-        assert!(socket_address.is_ipv6());
-        assert_eq!(TransportProtocol::Tcp, params.transport_protocol);
-        assert_eq!("tcp://[::1]:15600", params.to_string());
+    #[tokio::test]
+    async fn create_ipv6_udp_endpoint_params_from_url() {
+        let mut endpoint_params = EndpointContactParams::from_url("udp://[::1]:15600").await.unwrap();
+        let endpoint_address = endpoint_params.socket_address(false).await.unwrap();
+
+        assert!(endpoint_address.is_ipv6());
+        assert_eq!(TransportProtocol::Udp, endpoint_params.transport_protocol);
+        assert_eq!("udp://[::1]:15600", endpoint_params.to_string());
     }
 }
 

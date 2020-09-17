@@ -16,7 +16,7 @@ use crate::{
 
 use futures::{channel::mpsc, stream};
 
-use std::fmt;
+use std::{fmt, net::SocketAddr};
 
 pub type EventSender = mpsc::UnboundedSender<Event>;
 pub type EventReceiver = mpsc::UnboundedReceiver<Event>;
@@ -38,6 +38,7 @@ pub enum Event {
 
     ConnectionEstablished {
         epid: EndpointId,
+        peer_address: SocketAddr,
         origin: Origin,
         data_sender: DataSender,
     },
@@ -48,6 +49,7 @@ pub enum Event {
 
     EndpointConnected {
         epid: EndpointId,
+        peer_address: SocketAddr,
         origin: Origin,
     },
 
@@ -78,9 +80,13 @@ impl fmt::Display for Event {
 
             Event::EndpointConnected {
                 epid,
-                // socket_address,
+                peer_address,
                 origin,
-            } => write!(f, "Event::EndpointConnected {{ {}, origin: {} }}", epid, origin),
+            } => write!(
+                f,
+                "Event::EndpointConnected {{ {}, peer_address: {}, origin: {} }}",
+                epid, peer_address, origin
+            ),
 
             Event::EndpointDisconnected { epid } => write!(f, "Event::EndpointDisconnected {{ {} }}", epid),
 

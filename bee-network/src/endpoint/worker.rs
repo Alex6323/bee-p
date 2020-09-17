@@ -198,12 +198,19 @@ async fn process_event(
 
         Event::ConnectionEstablished {
             epid,
+            peer_address,
             origin,
             data_sender,
         } => {
             connected_endpoints.insert(epid, data_sender);
 
-            event_sender.send(Event::EndpointConnected { epid, origin }).await?
+            event_sender
+                .send(Event::EndpointConnected {
+                    epid,
+                    peer_address,
+                    origin,
+                })
+                .await?
         }
 
         Event::ConnectionDropped { epid } => {

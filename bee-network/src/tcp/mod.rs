@@ -76,6 +76,7 @@ pub(crate) async fn spawn_reader_writer(
     internal_event_sender
         .send(Event::ConnectionEstablished {
             epid,
+            peer_address,
             origin,
             data_sender,
         })

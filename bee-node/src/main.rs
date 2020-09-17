@@ -23,9 +23,11 @@ async fn main() {
 
             logger_init(config.logger.clone()).unwrap();
 
-            match Node::build(config).finish() {
-                Ok(mut node) => {
-                    node.run().await;
+            match Node::builder(config).finish().await {
+                Ok(node) => {
+                    if let Err(e) = node.run().await {
+                        eprintln!("Program aborted. Error was: {}", e);
+                    }
                 }
                 Err(e) => {
                     eprintln!("Program aborted. Error was: {}", e);

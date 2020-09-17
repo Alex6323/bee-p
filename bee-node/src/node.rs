@@ -20,7 +20,7 @@ use crate::{
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown};
 use bee_crypto::ternary::Hash;
-use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Events, Network, Origin};
+use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, EventReceiver, Network, Origin};
 use bee_peering::{PeerManager, StaticPeerManager};
 use bee_protocol::{tangle, MilestoneIndex, Protocol};
 use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
@@ -34,9 +34,12 @@ use futures::{
 use log::{error, info, trace, warn};
 use thiserror::Error;
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
-type NetworkEventStream = ShutdownStream<Fuse<Events>>;
+type NetworkEventStream = ShutdownStream<Fuse<EventReceiver>>;
+
+// TODO design proper type `PeerList`
+type PeerList = HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>;
 
 /// All possible node errors.
 #[derive(Error, Debug)]
@@ -163,8 +166,7 @@ pub struct Node {
     network: Network,
     network_events: NetworkEventStream,
     shutdown: Shutdown,
-    // TODO design proper type `PeerList`
-    peers: HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>,
+    peers: PeerList,
 }
 
 impl Node {
@@ -172,17 +174,17 @@ impl Node {
         info!("Running.");
 
         let Node {
-            network,
-            network_events,
+            mut network,
+            mut network_events,
             shutdown,
-            peers,
+            mut peers,
             ..
         } = self;
 
         while let Some(event) = network_events.next().await {
             trace!("Received event {}.", event);
 
-            process_event(event, &mut network).await;
+            process_event(event, &mut network, &mut peers).await;
         }
 
         info!("Stopping...");
@@ -199,28 +201,30 @@ impl Node {
 }
 
 #[inline]
-async fn process_event(event: Event, network: &mut Network) {
+async fn process_event(event: Event, network: &mut Network, peers: &mut PeerList) {
     match event {
-        Event::EndpointAdded { epid, .. } => endpoint_added_handler(epid).await,
+        Event::EndpointAdded { epid, .. } => endpoint_added_handler(epid, network).await,
 
         Event::EndpointRemoved { epid, .. } => endpoint_removed_handler(epid).await,
 
         Event::EndpointConnected {
-            epid, origin, address, ..
-        } => self.endpoint_connected_handler(epid, address, origin),
+            epid,
+            peer_address,
+            origin,
+        } => endpoint_connected_handler(epid, peer_address, origin, peers).await,
 
-        Event::EndpointDisconnected { epid, .. } => self.endpoint_disconnected_handler(epid),
+        Event::EndpointDisconnected { epid, .. } => endpoint_disconnected_handler(epid, peers).await,
 
-        Event::MessageReceived { epid, message, .. } => self.endpoint_bytes_received_handler(epid, message).await,
+        Event::MessageReceived { epid, message, .. } => endpoint_bytes_received_handler(epid, message, peers).await,
         _ => warn!("Unsupported event {}.", event),
     }
 }
 
 #[inline]
-async fn endpoint_added_handler(epid: EndpointId) {
+async fn endpoint_added_handler(epid: EndpointId, network: &mut Network) {
     info!("Endpoint {} has been added.", epid);
 
-    if let Err(e) = self.network.send(Connect { epid }).await {
+    if let Err(e) = network.send(ConnectEndpoint { epid }).await {
         warn!("Sending Command::Connect for {} failed: {}.", epid, e);
     }
 }
@@ -231,16 +235,16 @@ async fn endpoint_removed_handler(epid: EndpointId) {
 }
 
 #[inline]
-async fn endpoint_connected_handler(epid: EndpointId, address: Address, origin: Origin) {
-    let (receiver_tx, receiver_shutdown_tx) = Protocol::register(epid, address, origin);
+async fn endpoint_connected_handler(epid: EndpointId, peer_address: SocketAddr, origin: Origin, peers: &mut PeerList) {
+    let (receiver_tx, receiver_shutdown_tx) = Protocol::register(epid, peer_address, origin);
 
-    self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx));
+    peers.insert(epid, (receiver_tx, receiver_shutdown_tx));
 }
 
 #[inline]
-async fn endpoint_disconnected_handler(epid: EndpointId) {
+async fn endpoint_disconnected_handler(epid: EndpointId, peers: &mut PeerList) {
     // TODO unregister ?
-    if let Some((_, shutdown)) = self.peers.remove(&epid) {
+    if let Some((_, shutdown)) = peers.remove(&epid) {
         if let Err(e) = shutdown.send(()) {
             warn!("Sending shutdown to {} failed: {:?}.", epid, e);
         }
@@ -248,8 +252,8 @@ async fn endpoint_disconnected_handler(epid: EndpointId) {
 }
 
 #[inline]
-async fn endpoint_bytes_received_handler(epid: EndpointId, bytes: Vec<u8>) {
-    if let Some(peer) = self.peers.get_mut(&epid) {
+async fn endpoint_bytes_received_handler(epid: EndpointId, bytes: Vec<u8>, peers: &mut PeerList) {
+    if let Some(peer) = peers.get_mut(&epid) {
         if let Err(e) = peer.0.send(bytes).await {
             warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", epid, e);
         }

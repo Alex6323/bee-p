@@ -58,13 +58,13 @@ impl Backend for Storage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[async_std::test]
+    #[tokio::test]
     #[cfg(feature = "rocks_db")]
     async fn start_shutdown_storage() {
         let storage: Storage = Storage::start("./config.toml".to_string()).await.unwrap();
         assert!(storage.shutdown().await.is_ok());
     }
-    #[async_std::test]
+    #[tokio::test]
     #[cfg(feature = "rocks_db")]
     async fn insert_transaction() {
         let (tx_hash, tx) = bee_test::transaction::create_random_tx();

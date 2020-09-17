@@ -21,6 +21,8 @@ toml = "0.5"
 [dev-dependencies]
 bee-test = {path = "../bee-test"}
 
+tokio = { version = "0.2.22", features = ["macros"] }
+
 [features]
 default = ["rocks_db"]
 rocks_db = []
