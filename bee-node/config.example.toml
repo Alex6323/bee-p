@@ -30,7 +30,6 @@ load_type = "local"
 [snapshot.local]
 path              = "./snapshots/mainnet/export.bin"
 download_urls     = [
-  "https://ls.manapotion.io/export.bin",
   "https://x-vps.com/export.bin",
   "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
 ]
