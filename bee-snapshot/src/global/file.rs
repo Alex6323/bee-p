@@ -79,12 +79,4 @@ impl GlobalSnapshot {
 
         Ok(Self { state, index })
     }
-
-    pub fn state(&self) -> &LedgerState {
-        &self.state
-    }
-
-    pub fn index(&self) -> &u32 {
-        &self.index
-    }
 }

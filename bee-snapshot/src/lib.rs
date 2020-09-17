@@ -21,35 +21,83 @@ pub mod metadata;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
-use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
+use bee_crypto::ternary::Hash;
+use bee_ledger::state::LedgerState;
+use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
 
 use async_std::task::spawn;
+use chrono::{offset::TimeZone, Utc};
 use futures::channel::{mpsc, oneshot};
 use log::{info, warn};
 
 use std::{path::Path, sync::Arc};
 
+#[derive(Debug)]
 pub enum Error {
     Global(global::FileError),
     Local(local::FileError),
     Download(local::DownloadError),
 }
 
-pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &mut Shutdown) -> Result<(), Error> {
-    match config.load_type() {
+// TODO change return type
+
+pub fn init(
+    config: &config::SnapshotConfig,
+    bus: Arc<Bus<'static>>,
+    shutdown: &mut Shutdown,
+) -> Result<(LedgerState, MilestoneIndex, u64), Error> {
+    let (state, index, timestamp) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
-            global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
-                .map_err(Error::Global)?;
+
+            let snapshot =
+                global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
+                    .map_err(Error::Global)?;
+
+            info!(
+                "Loaded global snapshot file from with index {} and {} balances.",
+                *config.global().index(),
+                snapshot.state().len()
+            );
+
+            (snapshot.into_state(), *config.global().index(), 0)
         }
         config::LoadType::Local => {
             if !Path::new(config.local().path()).exists() {
                 local::download_local_snapshot(config.local()).map_err(Error::Download)?;
             }
-            // 		err = LoadSnapshotFromFile(path)
             info!("Loading local snapshot file {}...", config.local().path());
+
+            let snapshot = local::LocalSnapshot::from_file(config.local().path()).map_err(Error::Local)?;
+
+            info!(
+                "Loaded local snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
+                {} balances.",
+                Utc.timestamp(snapshot.metadata().timestamp() as i64, 0).to_rfc2822(),
+                snapshot.metadata().index(),
+                snapshot.metadata().solid_entry_points().len(),
+                snapshot.metadata().seen_milestones().len(),
+                snapshot.state.len()
+            );
+
+            tangle().update_latest_solid_milestone_index(snapshot.metadata().index().into());
+            tangle().update_latest_milestone_index(snapshot.metadata().index().into());
+            tangle().update_snapshot_index(snapshot.metadata().index().into());
+            tangle().update_pruning_index(snapshot.metadata().index().into());
+            tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
+            for (hash, index) in snapshot.metadata().solid_entry_points() {
+                tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
+            }
+            for _seen_milestone in snapshot.metadata().seen_milestones() {
+                // TODO request ?
+            }
+
+            let index = snapshot.metadata().index();
+            let timestamp = snapshot.metadata().timestamp();
+
+            (snapshot.into_state(), index, timestamp)
         }
-    }
+    };
 
     let (snapshot_worker_tx, snapshot_worker_rx) = mpsc::unbounded();
     let (snapshot_worker_shutdown_tx, snapshot_worker_shutdown_rx) = oneshot::channel();
@@ -76,5 +124,5 @@ pub fn init(config: &config::SnapshotConfig, bus: Arc<Bus<'static>>, shutdown: &
         }
     });
 
-    Ok(())
+    Ok((state, MilestoneIndex(index), timestamp))
 }

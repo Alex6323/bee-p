@@ -16,6 +16,7 @@ use tokio::runtime::Runtime;
 
 use std::{fs::File, io::copy, path::Path};
 
+#[derive(Debug)]
 pub enum Error {
     NoWorkingDownloadSource,
 }

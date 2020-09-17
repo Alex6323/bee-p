@@ -34,6 +34,20 @@ pub struct LocalSnapshot {
     pub(crate) state: LedgerState,
 }
 
+impl LocalSnapshot {
+    pub fn metadata(&self) -> &LocalSnapshotMetadata {
+        &self.metadata
+    }
+
+    pub fn state(&self) -> &LedgerState {
+        &self.state
+    }
+
+    pub fn into_state(self) -> LedgerState {
+        self.state
+    }
+}
+
 #[derive(Debug)]
 pub(crate) enum Error {}
 

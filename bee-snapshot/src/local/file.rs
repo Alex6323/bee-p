@@ -21,8 +21,7 @@ use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use bytemuck::cast_slice;
-use chrono::{offset::TimeZone, Utc};
-use log::{debug, info};
+use log::debug;
 
 use std::{
     collections::HashMap,
@@ -219,16 +218,6 @@ impl LocalSnapshot {
 
         // TODO hash ?
 
-        info!(
-            "Loaded snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
-            {} balances.",
-            Utc.timestamp(timestamp as i64, 0).to_rfc2822(),
-            index,
-            solid_entry_points_num,
-            seen_milestones_num,
-            state.len()
-        );
-
         Ok(LocalSnapshot {
             metadata: LocalSnapshotMetadata {
                 inner: SnapshotMetadata {
@@ -342,17 +331,5 @@ impl LocalSnapshot {
         // TODO hash ?
 
         Ok(())
-    }
-
-    pub fn metadata(&self) -> &LocalSnapshotMetadata {
-        &self.metadata
-    }
-
-    pub fn state(&self) -> &LedgerState {
-        &self.state
-    }
-
-    pub fn into_state(self) -> LedgerState {
-        self.state
     }
 }
