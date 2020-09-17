@@ -13,9 +13,12 @@ use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 
 use bee_common::worker::Error as WorkerError;
 
-use async_std::{future::ready, prelude::*};
-use futures::channel::oneshot::Receiver;
+use futures::{
+    channel::oneshot::Receiver,
+    future::{ready, select, Either, FutureExt},
+};
 use log::info;
+use tokio::time::delay_for;
 
 use std::time::Duration;
 
@@ -62,11 +65,9 @@ impl TpsWorker {
     pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while ready(Ok(()))
-            .delay(Duration::from_millis(1000))
-            .race(&mut shutdown)
+        while select(delay_for(Duration::from_secs(1)), &mut shutdown)
+            .then(|either| ready(if let Either::Left(_) = either { true } else { false }))
             .await
-            .is_ok()
         {
             self.tps();
         }

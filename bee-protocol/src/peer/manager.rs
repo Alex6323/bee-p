@@ -127,11 +127,10 @@ impl PeerManager {
         self.handshaked_peers_keys.write().await.retain(|e| e != epid);
 
         if let Some((_, peer)) = self.handshaked_peers.remove(epid) {
-            if let Ok(mut shutdown) = peer.milestone_request.1.lock().await {
-                if let Some(shutdown) = shutdown.take() {
-                    if let Err(e) = shutdown.send(()) {
-                        warn!("Shutting down TransactionWorker failed: {:?}.", e);
-                    }
+            let mut shutdown = peer.milestone_request.1.lock().await;
+            if let Some(shutdown) = shutdown.take() {
+                if let Err(e) = shutdown.send(()) {
+                    warn!("Shutting down TransactionWorker failed: {:?}.", e);
                 }
             }
         }
