@@ -21,7 +21,7 @@ use log::trace;
 
 use std::net::SocketAddr;
 
-type EventRecv = stream::Fuse<mpsc::Receiver<Vec<u8>>>;
+type EventRecv = stream::Fuse<mpsc::UnboundedReceiver<Vec<u8>>>;
 type ShutdownRecv = future::Fuse<oneshot::Receiver<()>>;
 
 /// The read state of the message handler.
@@ -210,7 +210,7 @@ mod tests {
         let events = gen_events(event_size, msg_size, msg_count);
         // Create a new message handler
         let (sender_shutdown, receiver_shutdown) = oneshot::channel::<()>();
-        let (mut sender, receiver) = mpsc::channel::<Vec<u8>>(9999);
+        let (sender, receiver) = mpsc::unbounded::<Vec<u8>>();
         let mut msg_handler = MessageHandler::new(
             receiver.fuse(),
             receiver_shutdown.fuse(),
@@ -242,7 +242,7 @@ mod tests {
         });
         // Send all the events to the message handler.
         for event in events {
-            sender.try_send(event).unwrap();
+            sender.unbounded_send(event).unwrap();
             delay_for(Duration::from_millis(1)).await;
         }
         // Sleep to be sure the handler had time to produce all the messages.
@@ -303,7 +303,7 @@ mod tests {
         let last_event = events.pop().unwrap();
 
         let (sender_shutdown, receiver_shutdown) = oneshot::channel::<()>();
-        let (mut sender, receiver) = mpsc::channel::<Vec<u8>>(9999);
+        let (sender, receiver) = mpsc::unbounded::<Vec<u8>>();
 
         let mut msg_handler = MessageHandler::new(
             receiver.fuse(),
@@ -333,14 +333,14 @@ mod tests {
         });
 
         for event in events {
-            sender.try_send(event).unwrap();
+            sender.unbounded_send(event).unwrap();
             delay_for(Duration::from_millis(1)).await;
         }
 
         sender_shutdown.send(()).unwrap();
         delay_for(Duration::from_millis(1)).await;
         // Send the last event after the shutdown signal
-        sender.try_send(last_event).unwrap();
+        sender.unbounded_send(last_event).unwrap();
 
         handle.await;
     }

@@ -10,31 +10,25 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub mod flags;
+pub mod helper;
+
 mod metadata;
 
 pub use metadata::TransactionMetadata;
 
-// TODO: reinstate the async worker
-// pub(crate) mod propagator;
-
-use crate::{
-    event::LastSolidMilestoneChanged,
-    milestone::{Milestone, MilestoneIndex},
-    protocol::Protocol,
-    tangle::flags::Flags,
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::flags::Flags, worker::SolidPropagatorWorkerEvent};
 
 use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
-use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
+use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
+use log::error;
 
 use std::{
     ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 /// Milestone-based Tangle.
@@ -43,9 +37,11 @@ pub struct MsTangle {
     pub(crate) inner: Tangle<TransactionMetadata>,
     pub(crate) milestones: DashMap<MilestoneIndex, Hash>,
     pub(crate) solid_entry_points: DashMap<Hash, MilestoneIndex>,
-    last_milestone_index: AtomicU32,
-    last_solid_milestone_index: AtomicU32,
-    snapshot_milestone_index: AtomicU32,
+    latest_milestone_index: AtomicU32,
+    latest_solid_milestone_index: AtomicU32,
+    snapshot_index: AtomicU32,
+    pruning_index: AtomicU32,
+    entry_point_index: AtomicU32,
 }
 
 impl Deref for MsTangle {
@@ -62,59 +58,25 @@ impl MsTangle {
     }
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
-        if let Some(tx) = self.inner.insert(hash, transaction, metadata) {
-            self.propagate_solid_flag(hash);
-            return Some(tx);
-        }
-        None
-    }
+        let opt = self.inner.insert(hash, transaction, metadata);
 
-    // NOTE: not implemented as an async worker atm, but it makes things much easier
-    #[inline]
-    fn propagate_solid_flag(&self, root: Hash) {
-        let mut children = vec![root];
-
-        while let Some(ref hash) = children.pop() {
-            if self.is_solid_transaction(hash) {
-                continue;
-            }
-
-            if let Some(tx) = self.inner.get(&hash) {
-                if self.is_solid_transaction(tx.trunk()) && self.is_solid_transaction(tx.branch()) {
-                    self.inner.update_metadata(&hash, |metadata| {
-                        metadata.flags.set_solid();
-                        // This is possibly not sufficient as there is no guarantee a milestone has been validated
-                        // before being solidified, we then also need to check when a milestone gets validated if it's
-                        // already solid.
-                        if metadata.flags.is_milestone() {
-                            Protocol::get().bus.dispatch(LastSolidMilestoneChanged(Milestone {
-                                hash: *hash,
-                                index: metadata.milestone_index,
-                            }));
-                        }
-                        metadata.solidification_timestamp = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Clock may have gone backwards")
-                            .as_millis() as u64;
-                    });
-
-                    for child in self.inner.get_children(&hash) {
-                        children.push(child);
-                    }
-                }
+        if opt.is_some() {
+            if let Err(e) = Protocol::get()
+                .solid_propagator_worker
+                .unbounded_send(SolidPropagatorWorkerEvent(hash))
+            {
+                error!("Failed to send hash to solid propagator: {:?}.", e);
             }
         }
-    }
 
-    pub fn get_metadata(&self, hash: &Hash) -> Option<TransactionMetadata> {
-        self.inner.get_metadata(hash)
+        opt
     }
 
     pub fn add_milestone(&self, index: MilestoneIndex, hash: Hash) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
         self.inner.update_metadata(&hash, |metadata| {
-            metadata.flags.set_milestone();
+            metadata.flags.set_milestone(true);
             metadata.milestone_index = index
         });
     }
@@ -143,33 +105,49 @@ impl MsTangle {
         self.milestones.contains_key(&index)
     }
 
-    pub fn get_last_milestone_index(&self) -> MilestoneIndex {
-        self.last_milestone_index.load(Ordering::Relaxed).into()
+    pub fn get_latest_milestone_index(&self) -> MilestoneIndex {
+        self.latest_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_last_milestone_index(&self, new_index: MilestoneIndex) {
-        self.last_milestone_index.store(*new_index, Ordering::Relaxed);
+    pub fn update_latest_milestone_index(&self, new_index: MilestoneIndex) {
+        self.latest_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn get_last_solid_milestone_index(&self) -> MilestoneIndex {
-        self.last_solid_milestone_index.load(Ordering::Relaxed).into()
+    pub fn get_latest_solid_milestone_index(&self) -> MilestoneIndex {
+        self.latest_solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_last_solid_milestone_index(&self, new_index: MilestoneIndex) {
-        self.last_solid_milestone_index.store(*new_index, Ordering::Relaxed);
+    pub fn update_latest_solid_milestone_index(&self, new_index: MilestoneIndex) {
+        self.latest_solid_milestone_index.store(*new_index, Ordering::Relaxed);
     }
 
-    pub fn get_snapshot_milestone_index(&self) -> MilestoneIndex {
-        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+    pub fn get_snapshot_index(&self) -> MilestoneIndex {
+        self.snapshot_index.load(Ordering::Relaxed).into()
     }
 
-    pub fn update_snapshot_milestone_index(&self, new_index: MilestoneIndex) {
-        self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
+    pub fn update_snapshot_index(&self, new_index: MilestoneIndex) {
+        self.snapshot_index.store(*new_index, Ordering::Relaxed);
+    }
+
+    pub fn get_pruning_index(&self) -> MilestoneIndex {
+        self.pruning_index.load(Ordering::Relaxed).into()
+    }
+
+    pub fn update_pruning_index(&self, new_index: MilestoneIndex) {
+        self.pruning_index.store(*new_index, Ordering::Relaxed);
+    }
+
+    pub fn get_entry_point_index(&self) -> MilestoneIndex {
+        self.entry_point_index.load(Ordering::Relaxed).into()
+    }
+
+    pub fn update_entry_point_index(&self, new_index: MilestoneIndex) {
+        self.entry_point_index.store(*new_index, Ordering::Relaxed);
     }
 
     // TODO reduce to one atomic value ?
     pub fn is_synced(&self) -> bool {
-        self.get_last_solid_milestone_index() == self.get_last_milestone_index()
+        self.get_latest_solid_milestone_index() == self.get_latest_milestone_index()
     }
 
     pub fn add_solid_entry_point(&self, hash: Hash, index: MilestoneIndex) {
@@ -179,6 +157,10 @@ impl MsTangle {
     /// Removes `hash` from the set of solid entry points.
     pub fn remove_solid_entry_point(&self, hash: &Hash) {
         self.solid_entry_points.remove(hash);
+    }
+
+    pub fn clear_solid_entry_points(&self) {
+        self.solid_entry_points.clear();
     }
 
     /// Returns whether the transaction associated with `hash` is a solid entry point.
@@ -219,169 +201,169 @@ pub fn tangle() -> &'static MsTangle {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{tangle::TransactionMetadata, MilestoneIndex};
-
-    use bee_tangle::traversal;
-    use bee_test::{field::rand_trits_field, transaction::create_random_attached_tx};
-
-    #[test]
-    fn confirm_transaction() {
-        // Example from https://github.com/iotaledger/protocol-rfcs/blob/master/text/0005-white-flag/0005-white-flag.md
-
-        let tangle = MsTangle::new();
-
-        // Creates solid entry points
-        let sep1 = rand_trits_field::<Hash>();
-        let sep2 = rand_trits_field::<Hash>();
-        let sep3 = rand_trits_field::<Hash>();
-        let sep4 = rand_trits_field::<Hash>();
-        let sep5 = rand_trits_field::<Hash>();
-        let sep6 = rand_trits_field::<Hash>();
-
-        // Adds solid entry points
-        tangle.add_solid_entry_point(sep1, MilestoneIndex(0));
-        tangle.add_solid_entry_point(sep2, MilestoneIndex(1));
-        tangle.add_solid_entry_point(sep3, MilestoneIndex(2));
-        tangle.add_solid_entry_point(sep4, MilestoneIndex(3));
-        tangle.add_solid_entry_point(sep5, MilestoneIndex(4));
-        tangle.add_solid_entry_point(sep6, MilestoneIndex(5));
-
-        // Links transactions
-        let (a_hash, a) = create_random_attached_tx(sep1, sep2);
-        let (b_hash, b) = create_random_attached_tx(sep3, sep4);
-        let (c_hash, c) = create_random_attached_tx(sep5, sep6);
-        let (d_hash, d) = create_random_attached_tx(b_hash, a_hash);
-        let (e_hash, e) = create_random_attached_tx(b_hash, a_hash);
-        let (f_hash, f) = create_random_attached_tx(c_hash, b_hash);
-        let (g_hash, g) = create_random_attached_tx(e_hash, d_hash);
-        let (h_hash, h) = create_random_attached_tx(f_hash, e_hash);
-        let (i_hash, i) = create_random_attached_tx(c_hash, f_hash);
-        let (j_hash, j) = create_random_attached_tx(h_hash, g_hash);
-        let (k_hash, k) = create_random_attached_tx(i_hash, h_hash);
-        let (l_hash, l) = create_random_attached_tx(j_hash, g_hash);
-        let (m_hash, m) = create_random_attached_tx(h_hash, j_hash);
-        let (n_hash, n) = create_random_attached_tx(k_hash, h_hash);
-        let (o_hash, o) = create_random_attached_tx(i_hash, k_hash);
-        let (p_hash, p) = create_random_attached_tx(i_hash, k_hash);
-        let (q_hash, q) = create_random_attached_tx(m_hash, l_hash);
-        let (r_hash, r) = create_random_attached_tx(m_hash, l_hash);
-        let (s_hash, s) = create_random_attached_tx(o_hash, n_hash);
-        let (t_hash, t) = create_random_attached_tx(p_hash, o_hash);
-        let (u_hash, u) = create_random_attached_tx(r_hash, q_hash);
-        let (v_hash, v) = create_random_attached_tx(s_hash, r_hash);
-        let (w_hash, w) = create_random_attached_tx(t_hash, s_hash);
-        let (x_hash, x) = create_random_attached_tx(u_hash, q_hash);
-        let (y_hash, y) = create_random_attached_tx(v_hash, u_hash);
-        let (z_hash, z) = create_random_attached_tx(s_hash, v_hash);
-
-        // Confirms transactions
-        // TODO uncomment when confirmation index
-        // tangle.confirm_transaction(a_hash, 1);
-        // tangle.confirm_transaction(b_hash, 1);
-        // tangle.confirm_transaction(c_hash, 1);
-        // tangle.confirm_transaction(d_hash, 2);
-        // tangle.confirm_transaction(e_hash, 1);
-        // tangle.confirm_transaction(f_hash, 1);
-        // tangle.confirm_transaction(g_hash, 2);
-        // tangle.confirm_transaction(h_hash, 1);
-        // tangle.confirm_transaction(i_hash, 2);
-        // tangle.confirm_transaction(j_hash, 2);
-        // tangle.confirm_transaction(k_hash, 2);
-        // tangle.confirm_transaction(l_hash, 2);
-        // tangle.confirm_transaction(m_hash, 2);
-        // tangle.confirm_transaction(n_hash, 2);
-        // tangle.confirm_transaction(o_hash, 2);
-        // tangle.confirm_transaction(p_hash, 3);
-        // tangle.confirm_transaction(q_hash, 3);
-        // tangle.confirm_transaction(r_hash, 2);
-        // tangle.confirm_transaction(s_hash, 2);
-        // tangle.confirm_transaction(t_hash, 3);
-        // tangle.confirm_transaction(u_hash, 3);
-        // tangle.confirm_transaction(v_hash, 2);
-        // tangle.confirm_transaction(w_hash, 3);
-        // tangle.confirm_transaction(x_hash, 3);
-        // tangle.confirm_transaction(y_hash, 3);
-        // tangle.confirm_transaction(z_hash, 3);
-
-        // Constructs the graph
-        tangle.insert(a, a_hash, TransactionMetadata::new());
-        tangle.insert(b, b_hash, TransactionMetadata::new());
-        tangle.insert(c, c_hash, TransactionMetadata::new());
-        tangle.insert(d, d_hash, TransactionMetadata::new());
-        tangle.insert(e, e_hash, TransactionMetadata::new());
-        tangle.insert(f, f_hash, TransactionMetadata::new());
-        tangle.insert(g, g_hash, TransactionMetadata::new());
-        tangle.insert(h, h_hash, TransactionMetadata::new());
-        tangle.insert(i, i_hash, TransactionMetadata::new());
-        tangle.insert(j, j_hash, TransactionMetadata::new());
-        tangle.insert(k, k_hash, TransactionMetadata::new());
-        tangle.insert(l, l_hash, TransactionMetadata::new());
-        tangle.insert(m, m_hash, TransactionMetadata::new());
-        tangle.insert(n, n_hash, TransactionMetadata::new());
-        tangle.insert(o, o_hash, TransactionMetadata::new());
-        tangle.insert(p, p_hash, TransactionMetadata::new());
-        tangle.insert(q, q_hash, TransactionMetadata::new());
-        tangle.insert(r, r_hash, TransactionMetadata::new());
-        tangle.insert(s, s_hash, TransactionMetadata::new());
-        tangle.insert(t, t_hash, TransactionMetadata::new());
-        tangle.insert(u, u_hash, TransactionMetadata::new());
-        tangle.insert(v, v_hash, TransactionMetadata::new());
-        tangle.insert(w, w_hash, TransactionMetadata::new());
-        tangle.insert(x, x_hash, TransactionMetadata::new());
-        tangle.insert(y, y_hash, TransactionMetadata::new());
-        tangle.insert(z, z_hash, TransactionMetadata::new());
-
-        let mut hashes = Vec::new();
-
-        traversal::visit_children_depth_first(
-            &tangle.inner,
-            v_hash,
-            |_, _| true,
-            |hash, _tx, _metadata| hashes.push(*hash),
-            |_| (),
-        );
-
-        // TODO Remove when we have confirmation index
-        assert_eq!(hashes.len(), 18);
-
-        assert_eq!(hashes[0], a_hash);
-        assert_eq!(hashes[1], b_hash);
-        assert_eq!(hashes[2], d_hash);
-        assert_eq!(hashes[3], e_hash);
-        assert_eq!(hashes[4], g_hash);
-        assert_eq!(hashes[5], c_hash);
-        assert_eq!(hashes[6], f_hash);
-        assert_eq!(hashes[7], h_hash);
-        assert_eq!(hashes[8], j_hash);
-        assert_eq!(hashes[9], l_hash);
-        assert_eq!(hashes[10], m_hash);
-        assert_eq!(hashes[11], r_hash);
-        assert_eq!(hashes[12], i_hash);
-        assert_eq!(hashes[13], k_hash);
-        assert_eq!(hashes[14], n_hash);
-        assert_eq!(hashes[15], o_hash);
-        assert_eq!(hashes[16], s_hash);
-        assert_eq!(hashes[17], v_hash);
-
-        // TODO uncomment when we have confirmation index
-        // assert_eq!(hashes.len(), 12);
-        // assert_eq!(hashes[0], d_hash);
-        // assert_eq!(hashes[1], g_hash);
-        // assert_eq!(hashes[2], j_hash);
-        // assert_eq!(hashes[3], l_hash);
-        // assert_eq!(hashes[4], m_hash);
-        // assert_eq!(hashes[5], r_hash);
-        // assert_eq!(hashes[6], i_hash);
-        // assert_eq!(hashes[7], k_hash);
-        // assert_eq!(hashes[8], n_hash);
-        // assert_eq!(hashes[9], o_hash);
-        // assert_eq!(hashes[10], s_hash);
-        // assert_eq!(hashes[11], v_hash);
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::{tangle::TransactionMetadata, MilestoneIndex};
+//
+//     use bee_tangle::traversal;
+//     use bee_test::{field::rand_trits_field, transaction::create_random_attached_tx};
+//
+//     #[test]
+//     fn confirm_transaction() {
+//         // Example from https://github.com/iotaledger/protocol-rfcs/blob/master/text/0005-white-flag/0005-white-flag.md
+//
+//         let tangle = MsTangle::new();
+//
+//         // Creates solid entry points
+//         let sep1 = rand_trits_field::<Hash>();
+//         let sep2 = rand_trits_field::<Hash>();
+//         let sep3 = rand_trits_field::<Hash>();
+//         let sep4 = rand_trits_field::<Hash>();
+//         let sep5 = rand_trits_field::<Hash>();
+//         let sep6 = rand_trits_field::<Hash>();
+//
+//         // Adds solid entry points
+//         tangle.add_solid_entry_point(sep1, MilestoneIndex(0));
+//         tangle.add_solid_entry_point(sep2, MilestoneIndex(1));
+//         tangle.add_solid_entry_point(sep3, MilestoneIndex(2));
+//         tangle.add_solid_entry_point(sep4, MilestoneIndex(3));
+//         tangle.add_solid_entry_point(sep5, MilestoneIndex(4));
+//         tangle.add_solid_entry_point(sep6, MilestoneIndex(5));
+//
+//         // Links transactions
+//         let (a_hash, a) = create_random_attached_tx(sep1, sep2);
+//         let (b_hash, b) = create_random_attached_tx(sep3, sep4);
+//         let (c_hash, c) = create_random_attached_tx(sep5, sep6);
+//         let (d_hash, d) = create_random_attached_tx(b_hash, a_hash);
+//         let (e_hash, e) = create_random_attached_tx(b_hash, a_hash);
+//         let (f_hash, f) = create_random_attached_tx(c_hash, b_hash);
+//         let (g_hash, g) = create_random_attached_tx(e_hash, d_hash);
+//         let (h_hash, h) = create_random_attached_tx(f_hash, e_hash);
+//         let (i_hash, i) = create_random_attached_tx(c_hash, f_hash);
+//         let (j_hash, j) = create_random_attached_tx(h_hash, g_hash);
+//         let (k_hash, k) = create_random_attached_tx(i_hash, h_hash);
+//         let (l_hash, l) = create_random_attached_tx(j_hash, g_hash);
+//         let (m_hash, m) = create_random_attached_tx(h_hash, j_hash);
+//         let (n_hash, n) = create_random_attached_tx(k_hash, h_hash);
+//         let (o_hash, o) = create_random_attached_tx(i_hash, k_hash);
+//         let (p_hash, p) = create_random_attached_tx(i_hash, k_hash);
+//         let (q_hash, q) = create_random_attached_tx(m_hash, l_hash);
+//         let (r_hash, r) = create_random_attached_tx(m_hash, l_hash);
+//         let (s_hash, s) = create_random_attached_tx(o_hash, n_hash);
+//         let (t_hash, t) = create_random_attached_tx(p_hash, o_hash);
+//         let (u_hash, u) = create_random_attached_tx(r_hash, q_hash);
+//         let (v_hash, v) = create_random_attached_tx(s_hash, r_hash);
+//         let (w_hash, w) = create_random_attached_tx(t_hash, s_hash);
+//         let (x_hash, x) = create_random_attached_tx(u_hash, q_hash);
+//         let (y_hash, y) = create_random_attached_tx(v_hash, u_hash);
+//         let (z_hash, z) = create_random_attached_tx(s_hash, v_hash);
+//
+//         // Confirms transactions
+//         // TODO uncomment when confirmation index
+//         // tangle.confirm_transaction(a_hash, 1);
+//         // tangle.confirm_transaction(b_hash, 1);
+//         // tangle.confirm_transaction(c_hash, 1);
+//         // tangle.confirm_transaction(d_hash, 2);
+//         // tangle.confirm_transaction(e_hash, 1);
+//         // tangle.confirm_transaction(f_hash, 1);
+//         // tangle.confirm_transaction(g_hash, 2);
+//         // tangle.confirm_transaction(h_hash, 1);
+//         // tangle.confirm_transaction(i_hash, 2);
+//         // tangle.confirm_transaction(j_hash, 2);
+//         // tangle.confirm_transaction(k_hash, 2);
+//         // tangle.confirm_transaction(l_hash, 2);
+//         // tangle.confirm_transaction(m_hash, 2);
+//         // tangle.confirm_transaction(n_hash, 2);
+//         // tangle.confirm_transaction(o_hash, 2);
+//         // tangle.confirm_transaction(p_hash, 3);
+//         // tangle.confirm_transaction(q_hash, 3);
+//         // tangle.confirm_transaction(r_hash, 2);
+//         // tangle.confirm_transaction(s_hash, 2);
+//         // tangle.confirm_transaction(t_hash, 3);
+//         // tangle.confirm_transaction(u_hash, 3);
+//         // tangle.confirm_transaction(v_hash, 2);
+//         // tangle.confirm_transaction(w_hash, 3);
+//         // tangle.confirm_transaction(x_hash, 3);
+//         // tangle.confirm_transaction(y_hash, 3);
+//         // tangle.confirm_transaction(z_hash, 3);
+//
+//         // Constructs the graph
+//         tangle.insert(a, a_hash, TransactionMetadata::new());
+//         tangle.insert(b, b_hash, TransactionMetadata::new());
+//         tangle.insert(c, c_hash, TransactionMetadata::new());
+//         tangle.insert(d, d_hash, TransactionMetadata::new());
+//         tangle.insert(e, e_hash, TransactionMetadata::new());
+//         tangle.insert(f, f_hash, TransactionMetadata::new());
+//         tangle.insert(g, g_hash, TransactionMetadata::new());
+//         tangle.insert(h, h_hash, TransactionMetadata::new());
+//         tangle.insert(i, i_hash, TransactionMetadata::new());
+//         tangle.insert(j, j_hash, TransactionMetadata::new());
+//         tangle.insert(k, k_hash, TransactionMetadata::new());
+//         tangle.insert(l, l_hash, TransactionMetadata::new());
+//         tangle.insert(m, m_hash, TransactionMetadata::new());
+//         tangle.insert(n, n_hash, TransactionMetadata::new());
+//         tangle.insert(o, o_hash, TransactionMetadata::new());
+//         tangle.insert(p, p_hash, TransactionMetadata::new());
+//         tangle.insert(q, q_hash, TransactionMetadata::new());
+//         tangle.insert(r, r_hash, TransactionMetadata::new());
+//         tangle.insert(s, s_hash, TransactionMetadata::new());
+//         tangle.insert(t, t_hash, TransactionMetadata::new());
+//         tangle.insert(u, u_hash, TransactionMetadata::new());
+//         tangle.insert(v, v_hash, TransactionMetadata::new());
+//         tangle.insert(w, w_hash, TransactionMetadata::new());
+//         tangle.insert(x, x_hash, TransactionMetadata::new());
+//         tangle.insert(y, y_hash, TransactionMetadata::new());
+//         tangle.insert(z, z_hash, TransactionMetadata::new());
+//
+//         let mut hashes = Vec::new();
+//
+//         traversal::visit_children_depth_first(
+//             &tangle.inner,
+//             v_hash,
+//             |_, _| true,
+//             |hash, _tx, _metadata| hashes.push(*hash),
+//             |_| (),
+//         );
+//
+//         // TODO Remove when we have confirmation index
+//         assert_eq!(hashes.len(), 18);
+//
+//         assert_eq!(hashes[0], a_hash);
+//         assert_eq!(hashes[1], b_hash);
+//         assert_eq!(hashes[2], d_hash);
+//         assert_eq!(hashes[3], e_hash);
+//         assert_eq!(hashes[4], g_hash);
+//         assert_eq!(hashes[5], c_hash);
+//         assert_eq!(hashes[6], f_hash);
+//         assert_eq!(hashes[7], h_hash);
+//         assert_eq!(hashes[8], j_hash);
+//         assert_eq!(hashes[9], l_hash);
+//         assert_eq!(hashes[10], m_hash);
+//         assert_eq!(hashes[11], r_hash);
+//         assert_eq!(hashes[12], i_hash);
+//         assert_eq!(hashes[13], k_hash);
+//         assert_eq!(hashes[14], n_hash);
+//         assert_eq!(hashes[15], o_hash);
+//         assert_eq!(hashes[16], s_hash);
+//         assert_eq!(hashes[17], v_hash);
+//
+//         // TODO uncomment when we have confirmation index
+//         // assert_eq!(hashes.len(), 12);
+//         // assert_eq!(hashes[0], d_hash);
+//         // assert_eq!(hashes[1], g_hash);
+//         // assert_eq!(hashes[2], j_hash);
+//         // assert_eq!(hashes[3], l_hash);
+//         // assert_eq!(hashes[4], m_hash);
+//         // assert_eq!(hashes[5], r_hash);
+//         // assert_eq!(hashes[6], i_hash);
+//         // assert_eq!(hashes[7], k_hash);
+//         // assert_eq!(hashes[8], n_hash);
+//         // assert_eq!(hashes[9], o_hash);
+//         // assert_eq!(hashes[10], s_hash);
+//         // assert_eq!(hashes[11], v_hash);
+//     }
+// }
 
 // use crate::{
 //     milestone::MilestoneIndex,
@@ -422,8 +404,8 @@ mod tests {
 //     solidifier_send: Sender<Option<Hash>>,
 
 //     solid_milestone_index: AtomicU32,
-//     snapshot_milestone_index: AtomicU32,
-//     last_milestone_index: AtomicU32,
+//     snapshot_index: AtomicU32,
+//     latest_milestone_index: AtomicU32,
 
 //     drop_barrier: Arc<Barrier>,
 // }
@@ -438,8 +420,8 @@ mod tests {
 //             solid_entry_points: DashSet::new(),
 //             milestones: DashMap::new(),
 //             solid_milestone_index: AtomicU32::new(0),
-//             snapshot_milestone_index: AtomicU32::new(0),
-//             last_milestone_index: AtomicU32::new(0),
+//             snapshot_index: AtomicU32::new(0),
+//             latest_milestone_index: AtomicU32::new(0),
 //             drop_barrier,
 //         }
 //     }
@@ -545,7 +527,7 @@ mod tests {
 
 //     /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
 //     pub fn get_latest_milestone(&'static self) -> Option<TransactionRef> {
-//         todo!("get the last milestone index, get the transaction hash from it, and query the Tangle for it")
+//         todo!("get the latest milestone index, get the transaction hash from it, and query the Tangle for it")
 //     }
 
 //     /// Returns the hash of a milestone.
@@ -572,23 +554,23 @@ mod tests {
 //     }
 
 //     /// Retreives the snapshot milestone index.
-//     pub fn get_snapshot_milestone_index(&'static self) -> MilestoneIndex {
-//         self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+//     pub fn get_snapshot_index(&'static self) -> MilestoneIndex {
+//         self.snapshot_index.load(Ordering::Relaxed).into()
 //     }
 
 //     /// Updates the snapshot milestone index to `new_index`.
-//     pub fn update_snapshot_milestone_index(&'static self, new_index: MilestoneIndex) {
-//         self.snapshot_milestone_index.store(*new_index, Ordering::Relaxed);
+//     pub fn update_snapshot_index(&'static self, new_index: MilestoneIndex) {
+//         self.snapshot_index.store(*new_index, Ordering::Relaxed);
 //     }
 
-//     /// Retreives the last milestone index.
-//     pub fn get_last_milestone_index(&'static self) -> MilestoneIndex {
-//         self.last_milestone_index.load(Ordering::Relaxed).into()
+//     /// Retreives the latest milestone index.
+//     pub fn get_latest_milestone_index(&'static self) -> MilestoneIndex {
+//         self.latest_milestone_index.load(Ordering::Relaxed).into()
 //     }
 
-//     /// Updates the last milestone index to `new_index`.
-//     pub fn update_last_milestone_index(&'static self, new_index: MilestoneIndex) {
-//         self.last_milestone_index.store(*new_index, Ordering::Relaxed);
+//     /// Updates the latest milestone index to `new_index`.
+//     pub fn update_latest_milestone_index(&'static self, new_index: MilestoneIndex) {
+//         self.latest_milestone_index.store(*new_index, Ordering::Relaxed);
 //     }
 
 //     /// Adds `hash` to the set of solid entry points.
@@ -608,7 +590,7 @@ mod tests {
 
 //     /// Checks if the tangle is synced or not
 //     pub fn is_synced(&'static self) -> bool {
-//         self.get_solid_milestone_index() == self.get_last_milestone_index()
+//         self.get_solid_milestone_index() == self.get_latest_milestone_index()
 //     }
 
 //     /// Returns the current size of the Tangle.
@@ -790,13 +772,13 @@ mod tests {
 
 //     #[test]
 //     #[serial]
-//     fn update_and_get_snapshot_milestone_index() {
+//     fn update_and_get_snapshot_index() {
 //         init();
 //         let tangle = tangle();
 
-//         tangle.update_snapshot_milestone_index(1368160.into());
+//         tangle.update_snapshot_index(1368160.into());
 
-//         assert_eq!(1368160, *tangle.get_snapshot_milestone_index());
+//         assert_eq!(1368160, *tangle.get_snapshot_index());
 //         drop();
 //     }
 
@@ -814,13 +796,13 @@ mod tests {
 
 //     #[test]
 //     #[serial]
-//     fn update_and_get_last_milestone_index() {
+//     fn update_and_get_latest_milestone_index() {
 //         init();
 //         let tangle = tangle();
 
-//         tangle.update_last_milestone_index(1368168.into());
+//         tangle.update_latest_milestone_index(1368168.into());
 
-//         assert_eq!(1368168, *tangle.get_last_milestone_index());
+//         assert_eq!(1368168, *tangle.get_latest_milestone_index());
 //         drop();
 //     }
 

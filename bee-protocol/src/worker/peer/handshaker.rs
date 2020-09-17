@@ -74,7 +74,7 @@ impl PeerHandshakerWorker {
         }
     }
 
-    pub async fn run(mut self, receiver: mpsc::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
+    pub async fn run(mut self, receiver: mpsc::UnboundedReceiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
         info!("[{}] Running.", self.peer.address);
 
         // TODO should we have a first check if already connected ?
@@ -82,7 +82,7 @@ impl PeerHandshakerWorker {
         let receiver_fused = receiver.fuse();
         let shutdown_fused = shutdown.fuse();
 
-        // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
+        // This is the only message not using a Sender because they are not running yet (awaiting handshake)
         if let Err(e) = self
             .network
             .send(SendMessage {
@@ -218,17 +218,19 @@ impl PeerHandshakerWorker {
 
                         Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
 
-                        Protocol::get().bus.dispatch(HandshakeCompleted(address));
+                        Protocol::get()
+                            .bus
+                            .dispatch(HandshakeCompleted(self.peer.epid, address));
 
                         Protocol::send_heartbeat(
                             self.peer.epid,
-                            tangle().get_last_solid_milestone_index(),
-                            tangle().get_snapshot_milestone_index(),
-                            tangle().get_last_milestone_index(),
-                        );
+                            tangle().get_latest_solid_milestone_index(),
+                            tangle().get_pruning_index(),
+                            tangle().get_latest_milestone_index(),
+                        )
+                        .await;
 
-                        Protocol::request_last_milestone(Some(self.peer.epid));
-                        Protocol::trigger_milestone_solidification();
+                        Protocol::request_latest_milestone(Some(self.peer.epid));
 
                         self.status = HandshakeStatus::Done;
                     }
@@ -251,6 +253,3 @@ impl PeerHandshakerWorker {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {}

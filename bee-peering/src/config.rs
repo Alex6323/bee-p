@@ -9,13 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::r#static::{StaticPeeringConfig, StaticPeeringConfigBuilder};
+use crate::manual::{ManualPeeringConfig, ManualPeeringConfigBuilder};
 
 use serde::Deserialize;
 
 #[derive(Default, Deserialize)]
 pub struct PeeringConfigBuilder {
-    r#static: StaticPeeringConfigBuilder,
+    manual: ManualPeeringConfigBuilder,
 }
 
 impl PeeringConfigBuilder {
@@ -25,14 +25,14 @@ impl PeeringConfigBuilder {
 
     pub fn finish(self) -> PeeringConfig {
         PeeringConfig {
-            r#static: self.r#static.finish(),
+            manual: self.manual.finish(),
         }
     }
 }
 
 #[derive(Clone)]
 pub struct PeeringConfig {
-    pub r#static: StaticPeeringConfig,
+    pub manual: ManualPeeringConfig,
 }
 
 impl PeeringConfig {

@@ -117,9 +117,9 @@ where
     }
 
     /// Updates the metadata of a vertex.
-    pub fn update_metadata<Update>(&self, hash: &Hash, update: Update)
+    pub fn update_metadata<Update>(&self, hash: &Hash, mut update: Update)
     where
-        Update: Fn(&mut T),
+        Update: FnMut(&mut T),
     {
         if let Some(mut vtx) = self.vertices.get_mut(hash) {
             update(vtx.value_mut().metadata_mut())
@@ -138,16 +138,11 @@ where
 
     /// Returns the children of a vertex.
     pub fn get_children(&self, hash: &Hash) -> HashSet<Hash> {
-        let num_children = self.num_children(hash);
-        let mut hashes = HashSet::with_capacity(num_children);
-
         if let Some(c) = self.children.get(hash) {
-            for child in c.value() {
-                hashes.insert(*child);
-            }
+            c.value().clone()
+        } else {
+            HashSet::new()
         }
-
-        hashes
     }
 
     /// Returns the current number of tips.

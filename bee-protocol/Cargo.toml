@@ -19,7 +19,9 @@ bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
+bee-storage = { path = "../bee-storage" }
 
+async-trait = "0.1.36"
 bitflags = "1.2.1"
 bytemuck = "1.2.0"
 dashmap = "3.11"
@@ -35,5 +37,4 @@ tokio = { version = "0.2.22", features = ["sync", "time"] }
 bee-test = { path = "../bee-test" }
 
 rand = "0.7.3"
-serial_test = "0.4.0"
 tokio = { version = "0.2.22", features = ["macros"] }

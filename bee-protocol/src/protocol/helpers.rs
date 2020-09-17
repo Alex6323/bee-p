@@ -10,50 +10,72 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{Heartbeat, Transaction as TransactionMessage},
+    message::{
+        tlv_into_bytes, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest,
+    },
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::tangle,
-    worker::{
-        BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, MilestoneSolidifierWorkerEvent, SenderWorker,
-        TransactionRequesterWorkerEntry, TransactionSolidifierWorkerEvent,
-    },
+    worker::{BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, TransactionRequesterWorkerEntry},
 };
 
 use bee_crypto::ternary::Hash;
-use bee_network::EndpointId;
+use bee_network::{Command::SendMessage, EndpointId};
+use bee_tangle::traversal;
 
 use log::warn;
 
-const MILESTONE_REQUEST_RANGE: usize = 50;
+use std::marker::PhantomData;
+
+pub(crate) struct Sender<M: Message> {
+    marker: PhantomData<M>,
+}
+
+macro_rules! implement_sender_worker {
+    ($type:ty, $sender:tt, $incrementor:tt) => {
+        impl Sender<$type> {
+            pub(crate) async fn send(epid: &EndpointId, message: $type) {
+                match Protocol::get()
+                    .network
+                    .clone()
+                    .send(SendMessage {
+                        receiver_epid: *epid,
+                        message: tlv_into_bytes(message),
+                    })
+                    .await
+                {
+                    Ok(_) => {
+                        // self.peer.metrics.$incrementor();
+                        // Protocol::get().metrics.$incrementor();
+                    }
+                    Err(e) => {
+                        warn!("Sending {} to {} failed: {:?}.", stringify!($type), epid, e);
+                    }
+                }
+            }
+        }
+    };
+}
+
+implement_sender_worker!(MilestoneRequest, milestone_request, milestone_requests_sent_inc);
+implement_sender_worker!(TransactionMessage, transaction, transactions_sent_inc);
+implement_sender_worker!(TransactionRequest, transaction_request, transaction_requests_sent_inc);
+implement_sender_worker!(Heartbeat, heartbeat, heartbeats_sent_inc);
 
 impl Protocol {
+    // TODO move some functions to workers
+
     // MilestoneRequest
 
     pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
-        Protocol::get()
-            .milestone_requester_worker
-            .push(MilestoneRequesterWorkerEntry(index, to));
-    }
-
-    pub fn request_milestone_fill() {
-        let mut to_request_num = MILESTONE_REQUEST_RANGE - Protocol::get().requested_milestones.len();
-        let mut to_request_index = *tangle().get_last_solid_milestone_index() + 1;
-        let last_milestone_index = *tangle().get_last_milestone_index();
-
-        while to_request_num > 0 && to_request_index < last_milestone_index {
-            let index = to_request_index.into();
-
-            if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
-                Protocol::request_milestone(index, None);
-                to_request_num -= 1;
-            }
-
-            to_request_index += 1;
+        if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
+            Protocol::get()
+                .milestone_requester_worker
+                .push(MilestoneRequesterWorkerEntry(index, to));
         }
     }
 
-    pub fn request_last_milestone(to: Option<EndpointId>) {
+    pub fn request_latest_milestone(to: Option<EndpointId>) {
         Protocol::request_milestone(MilestoneIndex(0), to);
     }
 
@@ -64,7 +86,7 @@ impl Protocol {
     // TransactionMessage
 
     pub fn send_transaction(to: EndpointId, transaction: &[u8]) {
-        SenderWorker::<TransactionMessage>::send(&to, TransactionMessage::new(transaction));
+        Sender::<TransactionMessage>::send(&to, TransactionMessage::new(transaction));
     }
 
     // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
@@ -85,9 +107,14 @@ impl Protocol {
     // TransactionRequest
 
     pub fn request_transaction(hash: Hash, index: MilestoneIndex) {
-        Protocol::get()
-            .transaction_requester_worker
-            .push(TransactionRequesterWorkerEntry(hash, index));
+        if !tangle().contains(&hash)
+            && !tangle().is_solid_entry_point(&hash)
+            && !Protocol::get().requested_transactions.contains_key(&hash)
+        {
+            Protocol::get()
+                .transaction_requester_worker
+                .push(TransactionRequesterWorkerEntry(hash, index));
+        }
     }
 
     pub fn transaction_requester_is_empty() -> bool {
@@ -96,56 +123,57 @@ impl Protocol {
 
     // Heartbeat
 
-    pub fn send_heartbeat(
+    pub async fn send_heartbeat(
         to: EndpointId,
-        last_solid_milestone_index: MilestoneIndex,
-        snapshot_milestone_index: MilestoneIndex,
-        last_milestone_index: MilestoneIndex,
+        latest_solid_milestone_index: MilestoneIndex,
+        pruning_milestone_index: MilestoneIndex,
+        latest_milestone_index: MilestoneIndex,
     ) {
-        SenderWorker::<Heartbeat>::send(
+        Sender::<Heartbeat>::send(
             &to,
             Heartbeat::new(
-                *last_solid_milestone_index,
-                *snapshot_milestone_index,
-                *last_milestone_index,
+                *latest_solid_milestone_index,
+                *pruning_milestone_index,
+                *latest_milestone_index,
                 0,
                 0,
             ),
-        );
+        )
+        .await;
     }
 
-    pub fn broadcast_heartbeat(
-        last_solid_milestone_index: MilestoneIndex,
-        snapshot_milestone_index: MilestoneIndex,
-        last_milestone_index: MilestoneIndex,
+    pub async fn broadcast_heartbeat(
+        latest_solid_milestone_index: MilestoneIndex,
+        pruning_milestone_index: MilestoneIndex,
+        latest_milestone_index: MilestoneIndex,
     ) {
         for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
             Protocol::send_heartbeat(
                 *entry.key(),
-                last_solid_milestone_index,
-                snapshot_milestone_index,
-                last_milestone_index,
+                latest_solid_milestone_index,
+                pruning_milestone_index,
+                latest_milestone_index,
             )
+            .await
         }
     }
 
     // Solidifier
 
-    pub fn trigger_transaction_solidification(hash: Hash, index: MilestoneIndex) {
-        if let Err(e) = Protocol::get()
-            .transaction_solidifier_worker
-            .unbounded_send(TransactionSolidifierWorkerEvent(hash, index))
-        {
-            warn!("Triggering transaction solidification failed: {}.", e);
-        }
-    }
-
-    pub fn trigger_milestone_solidification() {
-        if let Err(e) = Protocol::get()
-            .milestone_solidifier_worker
-            .unbounded_send(MilestoneSolidifierWorkerEvent)
-        {
-            warn!("Triggering milestone solidification failed: {}.", e);
+    pub fn trigger_milestone_solidification(target_index: MilestoneIndex) {
+        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
+            if !tangle().is_solid_transaction(&target_hash) {
+                traversal::visit_parents_depth_first(
+                    tangle(),
+                    target_hash,
+                    |hash, _, metadata| {
+                        !metadata.flags.is_solid() && !Protocol::get().requested_transactions.contains_key(&hash)
+                    },
+                    |_, _, _| {},
+                    |_, _, _| {},
+                    |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
+                );
+            }
         }
     }
 }

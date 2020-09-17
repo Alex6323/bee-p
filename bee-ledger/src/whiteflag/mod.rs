@@ -10,7 +10,6 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod b1t6;
-mod bundle;
 mod merkle_hasher;
 mod metadata;
 mod traversal;
@@ -23,41 +22,12 @@ pub use worker::LedgerWorkerEvent;
 
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown};
-use bee_protocol::{config::ProtocolCoordinatorConfig, event::LastSolidMilestoneChanged, MilestoneIndex};
+use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use futures::channel::{mpsc, oneshot};
 use log::warn;
 
-use std::{ptr, sync::Arc};
-
-struct WhiteFlag {
-    confirmation_sender: mpsc::UnboundedSender<LedgerWorkerEvent>,
-}
-
-static mut WHITE_FLAG: *const WhiteFlag = ptr::null();
-
-impl WhiteFlag {
-    fn get() -> &'static WhiteFlag {
-        if unsafe { WHITE_FLAG.is_null() } {
-            panic!("Uninitialized whiteflag.");
-        } else {
-            unsafe { &*WHITE_FLAG }
-        }
-    }
-}
-
-fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
-    if let Err(e) = WhiteFlag::get()
-        .confirmation_sender
-        .unbounded_send(LedgerWorkerEvent::Confirm(last_solid_milestone.0.clone()))
-    {
-        warn!(
-            "Sending solid milestone {:?} to confirmation failed: {:?}.",
-            last_solid_milestone.0.index(),
-            e
-        );
-    }
-}
+use std::sync::Arc;
 
 pub fn init(
     index: u32,
@@ -89,15 +59,17 @@ pub fn init(
         ),
     );
 
-    let white_flag = WhiteFlag {
-        confirmation_sender: ledger_worker_tx.clone(),
-    };
+    let ledger_worker_tx_ret = ledger_worker_tx.clone();
 
-    unsafe {
-        WHITE_FLAG = Box::leak(white_flag.into()) as *const _;
-    }
+    bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
+        if let Err(e) = ledger_worker_tx.unbounded_send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
+            warn!(
+                "Sending solid milestone {:?} to confirmation failed: {:?}.",
+                latest_solid_milestone.0.index(),
+                e
+            );
+        }
+    });
 
-    bus.add_listener(on_last_solid_milestone_changed);
-
-    ledger_worker_tx
+    ledger_worker_tx_ret
 }

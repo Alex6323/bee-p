@@ -19,9 +19,11 @@ use crate::{
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
-use bee_tangle::traversal;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
-use bee_transaction::bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN};
+use bee_transaction::{
+    bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN},
+    Vertex,
+};
 
 use bytemuck::cast_slice;
 use futures::{
@@ -32,8 +34,8 @@ use log::{error, info, trace};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Timeframe to allow past or future transactions, 10 minutes in milliseconds.
-const ALLOWED_TIMESTAMP_WINDOW_MS: u64 = 10 * 60 * 1000;
+/// Timeframe to allow past or future transactions, 10 minutes in seconds.
+const ALLOWED_TIMESTAMP_WINDOW_S: u64 = 10 * 60;
 
 type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<ProcessorWorkerEvent>>>;
 
@@ -82,10 +84,10 @@ impl ProcessorWorker {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Clock may have gone backwards")
-            .as_millis() as u64;
+            .as_secs() as u64;
 
-        let past = now - ALLOWED_TIMESTAMP_WINDOW_MS;
-        let future = now + ALLOWED_TIMESTAMP_WINDOW_MS;
+        let past = now - ALLOWED_TIMESTAMP_WINDOW_S;
+        let future = now + ALLOWED_TIMESTAMP_WINDOW_S;
 
         // (is_timestamp_valid, should_broadcast)
         (
@@ -135,24 +137,23 @@ impl ProcessorWorker {
 
         let mut metadata = TransactionMetadata::new();
 
-        if transaction.is_tail() {
-            metadata.flags.set_tail();
-        }
-        if requested {
-            metadata.flags.set_requested();
-        }
+        metadata.flags.set_tail(transaction.is_tail());
+        metadata.flags.set_requested(requested);
 
         // store transaction
         if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
             Protocol::get().metrics.new_transactions_inc();
 
-            if !tangle().is_synced() && Protocol::get().requested_transactions.is_empty() {
-                Protocol::trigger_milestone_solidification();
-            }
-
             match Protocol::get().requested_transactions.remove(&hash) {
-                Some((hash, (index, _))) => {
-                    Protocol::trigger_transaction_solidification(hash, index);
+                Some((_hash, (index, _))) => {
+                    let trunk = transaction.trunk();
+                    let branch = transaction.branch();
+
+                    Protocol::request_transaction(*trunk, index);
+
+                    if trunk != branch {
+                        Protocol::request_transaction(*branch, index);
+                    }
                 }
                 None => {
                     if should_broadcast {
@@ -162,41 +163,12 @@ impl ProcessorWorker {
             };
 
             if transaction.address().eq(&Protocol::get().config.coordinator.public_key) {
-                let tail = {
-                    if transaction.is_tail() {
-                        Some(hash)
-                    } else {
-                        let mut last = None;
-
-                        traversal::visit_children_follow_trunk(
-                            tangle(),
-                            hash,
-                            |tx, _| tx.bundle() == transaction.bundle(),
-                            |tx_hash, tx, _| {
-                                last.replace((*tx_hash, tx.clone()));
-                            },
-                        );
-
-                        if let Some((h, t)) = last {
-                            if t.is_tail() {
-                                Some(h)
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    }
-                };
-
-                if let Some(tail) = tail {
-                    if let Err(e) = self
-                        .milestone_validator_worker
-                        .unbounded_send(MilestoneValidatorWorkerEvent(tail))
-                    {
-                        error!("Sending tail to milestone validation failed: {:?}.", e);
-                    }
-                };
+                if let Err(e) = self
+                    .milestone_validator_worker
+                    .unbounded_send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
+                {
+                    error!("Sending tail to milestone validation failed: {:?}.", e);
+                }
             }
         } else {
             Protocol::get().metrics.known_transactions_inc();

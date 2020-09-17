@@ -13,12 +13,13 @@
 
 #![warn(missing_docs)]
 
-pub use tangle::Tangle;
-
+pub mod helper;
 pub mod traversal;
 
 mod tangle;
 mod vertex;
+
+pub use tangle::Tangle;
 
 use bee_transaction::bundled::BundledTransaction as Transaction;
 

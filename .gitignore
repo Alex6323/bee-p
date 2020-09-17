@@ -18,5 +18,8 @@ bee-node/snapshots/mainnet/*
 bee-node/snapshots/testnet/*
 !bee-node/snapshots/testnet/.gitkeep
 
-# bee-storage
-bee-storage/src/backends/sqlx/schemes/postgres/cleanup.sql
+# bee-storage-rocksdb
+bee-storage-rocksdb/dbfolder/*
+
+# bee-test
+bee-test/dbfolder/*

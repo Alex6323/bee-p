@@ -16,18 +16,16 @@ use tokio::runtime::Runtime;
 
 use std::{fs::File, io::copy, path::Path};
 
+#[derive(Debug)]
 pub enum Error {
     NoWorkingDownloadSource,
 }
 
 // TODO remove tokio runtime when we switch bee to tokio.
 // TODO copy is not really streaming ?
+// TODO temporary file until fully downloaded ?
 pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error> {
-    let path = config.file_path();
-
-    if Path::new(path).exists() {
-        return Ok(());
-    }
+    let path = config.path();
 
     let mut rt = Runtime::new().unwrap();
 
@@ -37,7 +35,7 @@ pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error
         for url in config.download_urls() {
             info!("Downloading local snapshot file from {}...", url);
             match reqwest::get(url).await {
-                Ok(res) => match File::create(config.file_path()) {
+                Ok(res) => match File::create(config.path()) {
                     // TODO unwrap
                     Ok(mut file) => match copy(&mut res.bytes().await.unwrap().as_ref(), &mut file) {
                         Ok(_) => break,
@@ -50,6 +48,7 @@ pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error
         }
     });
 
+    // TODO here or outside ?
     if Path::new(path).exists() {
         Ok(())
     } else {

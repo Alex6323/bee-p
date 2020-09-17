@@ -9,4 +9,22 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub const LE_0_BYTES_LEN: [u8; 4] = [0, 0, 0, 0];
+use rocksdb::DBCompactionStyle;
+use serde::Deserialize;
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum CompactionStyle {
+    Level,
+    Universal,
+    Fifo,
+}
+
+impl From<CompactionStyle> for DBCompactionStyle {
+    fn from(compaction_style: CompactionStyle) -> Self {
+        match compaction_style {
+            CompactionStyle::Level => DBCompactionStyle::Level,
+            CompactionStyle::Universal => DBCompactionStyle::Universal,
+            CompactionStyle::Fifo => DBCompactionStyle::Fifo,
+        }
+    }
+}

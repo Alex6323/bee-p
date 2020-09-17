@@ -35,7 +35,6 @@ mod tests {
     use futures::{
         channel::{mpsc, oneshot},
         join,
-        sink::SinkExt,
     };
     use tokio::{spawn, time::delay_for};
 

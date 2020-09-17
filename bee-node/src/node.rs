@@ -11,42 +11,35 @@
 
 #![warn(missing_docs)]
 
-use crate::{
-    config::NodeConfig,
-    constants::{BEE_GIT_COMMIT, BEE_VERSION},
-    plugin,
-};
+use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
 
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown};
-use bee_crypto::ternary::Hash;
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, EventReceiver, Network, Origin};
-use bee_peering::{PeerManager, StaticPeerManager};
-use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::local::{download_local_snapshot, Error as LocalSnapshotReadError, LocalSnapshot};
+use bee_peering::{ManualPeerManager, PeerManager};
+use bee_protocol::{tangle, Protocol};
 
-use chrono::{offset::TimeZone, Utc};
 use futures::{
     channel::{mpsc, oneshot},
-    sink::SinkExt,
     stream::{Fuse, StreamExt},
 };
 use log::{error, info, trace, warn};
 use thiserror::Error;
+use tokio::spawn;
 
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 type NetworkEventStream = ShutdownStream<Fuse<EventReceiver>>;
 
 // TODO design proper type `PeerList`
-type PeerList = HashMap<EndpointId, (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>)>;
+type PeerList = HashMap<EndpointId, (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>)>;
 
 /// All possible node errors.
 #[derive(Error, Debug)]
 pub enum Error {
     /// Occurs, when there is an error while reading the snapshot file.
-    #[error("Reading the snapshot file failed.")]
-    LocalSnapshotReadError(LocalSnapshotReadError),
+    #[error("Reading snapshot file failed.")]
+    SnapshotError(bee_snapshot::Error),
 
     /// Occurs, when there is an error while shutting down the node.
     #[error("Shutting down failed.")]
@@ -72,66 +65,20 @@ impl NodeBuilder {
         info!("Initializing Tangle...");
         tangle::init();
 
-        // TODO handle error
-        download_local_snapshot(&self.config.snapshot.local());
-
-        info!("Reading snapshot file...");
-        let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().file_path()) {
-            Ok(local_snapshot) => {
-                info!(
-                    "Read snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
-                    {} balances.",
-                    Utc.timestamp(local_snapshot.metadata().timestamp() as i64, 0)
-                        .to_rfc2822(),
-                    local_snapshot.metadata().index(),
-                    local_snapshot.metadata().solid_entry_points().len(),
-                    local_snapshot.metadata().seen_milestones().len(),
-                    local_snapshot.state().len()
-                );
-
-                tangle::tangle().update_last_solid_milestone_index(local_snapshot.metadata().index().into());
-
-                // TODO get from database
-                tangle::tangle().update_last_milestone_index(local_snapshot.metadata().index().into());
-
-                tangle::tangle().update_snapshot_milestone_index(local_snapshot.metadata().index().into());
-
-                // TODO index 0 ?
-                tangle::tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
-                for (hash, index) in local_snapshot.metadata().solid_entry_points() {
-                    tangle::tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
-                }
-
-                for _seen_milestone in local_snapshot.metadata().seen_milestones() {
-                    // TODO request ?
-                }
-
-                local_snapshot
-            }
-            Err(e) => {
-                error!(
-                    "Failed to read snapshot file \"{}\": {:?}.",
-                    self.config.snapshot.local().file_path(),
-                    e
-                );
-                return Err(Error::LocalSnapshotReadError(e));
-            }
-        };
-
-        // TODO this is temporary
-        let snapshot_index = local_snapshot.metadata().index();
-        let snapshot_timestamp = local_snapshot.metadata().timestamp();
+        // TODO temporary
+        let (ledger_state, snapshot_index, snapshot_timestamp) =
+            bee_snapshot::init(&self.config.snapshot, bus.clone(), &mut shutdown).map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown).await;
 
-        info!("Starting static peer manager...");
-        tokio::spawn(StaticPeerManager::new(self.config.peering.r#static.clone(), network.clone()).run());
+        info!("Starting manual peer manager...");
+        spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
         bee_ledger::whiteflag::init(
-            snapshot_index,
-            local_snapshot.into_state(),
+            *snapshot_index,
+            ledger_state,
             self.config.protocol.coordinator().clone(),
             bus.clone(),
             &mut shutdown,
@@ -254,7 +201,7 @@ async fn endpoint_disconnected_handler(epid: EndpointId, peers: &mut PeerList) {
 #[inline]
 async fn endpoint_bytes_received_handler(epid: EndpointId, bytes: Vec<u8>, peers: &mut PeerList) {
     if let Some(peer) = peers.get_mut(&epid) {
-        if let Err(e) = peer.0.send(bytes).await {
+        if let Err(e) = peer.0.unbounded_send(bytes) {
             warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", epid, e);
         }
     }
@@ -274,23 +221,4 @@ fn ctrl_c_listener() -> oneshot::Receiver<()> {
     });
 
     receiver
-}
-
-fn print_banner_and_version() {
-    let commit = if BEE_GIT_COMMIT.is_empty() {
-        "".to_owned()
-    } else {
-        "-".to_owned() + &BEE_GIT_COMMIT[0..7]
-    };
-    println!(
-        "\n{}\n   v{}{}\n",
-        " ██████╗░███████╗███████╗
- ██╔══██╗██╔════╝██╔════╝
- ██████╦╝█████╗░░█████╗░░
- ██╔══██╗██╔══╝░░██╔══╝░░
- ██████╦╝███████╗███████╗
- ╚═════╝░╚══════╝╚══════╝",
-        BEE_VERSION,
-        commit,
-    );
 }

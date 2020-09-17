@@ -16,8 +16,6 @@ use crate::bundled::constants::{
 use bee_crypto::ternary::Hash;
 use bee_ternary::{T1B1Buf, TritBuf, Trits, T1B1};
 
-use bee_storage::persistable::Persistable;
-
 use std::cmp::PartialEq;
 
 #[derive(Debug)]
@@ -96,15 +94,6 @@ impl Address {
 }
 
 impl Eq for Address {}
-
-impl Persistable for Address {
-    fn encode_persistable(&self, _buffer: &mut Vec<u8>) {
-        todo!()
-    }
-    fn decode_persistable(_slice: &[u8]) -> Self {
-        todo!()
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Value(pub(crate) i64);

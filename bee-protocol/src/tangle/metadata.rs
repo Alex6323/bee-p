@@ -16,11 +16,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // TODO Should it really be copy ?
 #[derive(Copy, Clone, Default)]
 pub struct TransactionMetadata {
-    pub(crate) flags: Flags,
-    pub(crate) milestone_index: MilestoneIndex,
-    pub(crate) arrival_timestamp: u64,
-    pub(crate) solidification_timestamp: u64,
-    pub(crate) confirmation_timestamp: u64,
+    pub flags: Flags,
+    pub milestone_index: MilestoneIndex,
+    pub arrival_timestamp: u64,
+    pub solidification_timestamp: u64,
+    pub confirmation_timestamp: u64,
 }
 
 impl TransactionMetadata {
@@ -52,5 +52,14 @@ impl TransactionMetadata {
 
     pub fn set_confirmation_timestamp(&mut self, timestamp: u64) {
         self.confirmation_timestamp = timestamp;
+    }
+    pub fn confirmation_timestamp(&self) -> u64 {
+        self.confirmation_timestamp
+    }
+    pub fn arrival_timestamp(&self) -> u64 {
+        self.arrival_timestamp
+    }
+    pub fn solidification_timestamp(&self) -> u64 {
+        self.solidification_timestamp
     }
 }

@@ -20,6 +20,7 @@ bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 bee-storage = { path = "../bee-storage" }
 
+async-trait = "0.1.36"
 blake2 = "0.9.0"
 bytemuck = "1.2.0"
 digest = "0.9.0"

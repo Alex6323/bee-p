@@ -53,10 +53,23 @@ impl LedgerState {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Address, &u64)> {
+        self.0.iter()
+    }
 }
 
 impl From<HashMap<Address, u64>> for LedgerState {
     fn from(state: HashMap<Address, u64>) -> Self {
         Self(state)
+    }
+}
+
+impl IntoIterator for LedgerState {
+    type Item = (Address, u64);
+    type IntoIter = std::collections::hash_map::IntoIter<Address, u64>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }

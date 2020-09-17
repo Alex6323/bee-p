@@ -11,18 +11,17 @@
 
 use crate::{
     config::ProtocolConfig,
-    event::{LastMilestoneChanged, LastSolidMilestoneChanged},
+    event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
     tangle::tangle,
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, HasherWorker, HasherWorkerEvent, MilestoneRequesterWorker,
-        MilestoneRequesterWorkerEntry, MilestoneResponderWorker, MilestoneResponderWorkerEvent,
-        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
-        ProcessorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker, TransactionRequesterWorkerEntry,
-        TransactionResponderWorker, TransactionResponderWorkerEvent, TransactionSolidifierWorker,
-        TransactionSolidifierWorkerEvent,
+        BroadcasterWorker, BroadcasterWorkerEvent, BundleValidatorWorker, HasherWorker, HasherWorkerEvent,
+        KickstartWorker, MilestoneRequesterWorker, MilestoneRequesterWorkerEntry, MilestoneResponderWorker,
+        MilestoneResponderWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker,
+        SolidPropagatorWorker, SolidPropagatorWorkerEvent, StatusWorker, TpsWorker, TransactionRequesterWorker,
+        TransactionRequesterWorkerEntry, TransactionResponderWorker, TransactionResponderWorkerEvent,
     },
 };
 
@@ -56,9 +55,8 @@ pub struct Protocol {
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
     pub(crate) transaction_requester_worker: WaitPriorityQueue<TransactionRequesterWorkerEntry>,
     pub(crate) milestone_requester_worker: WaitPriorityQueue<MilestoneRequesterWorkerEntry>,
-    pub(crate) transaction_solidifier_worker: mpsc::UnboundedSender<TransactionSolidifierWorkerEvent>,
-    pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
+    pub(crate) solid_propagator_worker: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
@@ -96,18 +94,20 @@ impl Protocol {
         let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::unbounded();
         let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
-        let (transaction_solidifier_worker_tx, transaction_solidifier_worker_rx) = mpsc::unbounded();
-        let (transaction_solidifier_worker_shutdown_tx, transaction_solidifier_worker_shutdown_rx) = oneshot::channel();
-
-        let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) = mpsc::unbounded();
-        let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
-
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::unbounded();
         let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
+
+        let (bundle_validator_worker_tx, bundle_validator_worker_rx) = mpsc::unbounded();
+        let (bundle_validator_worker_shutdown_tx, bundle_validator_worker_shutdown_rx) = oneshot::channel();
+
+        let (solid_propagator_worker_tx, solid_propagator_worker_rx) = mpsc::unbounded();
+        let (solid_propagator_worker_shutdown_tx, solid_propagator_worker_shutdown_rx) = oneshot::channel();
 
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();
 
         let (tps_worker_shutdown_tx, tps_worker_shutdown_rx) = oneshot::channel();
+
+        let (kickstart_worker_shutdown_tx, kickstart_worker_shutdown_rx) = oneshot::channel();
 
         let protocol = Protocol {
             config,
@@ -120,10 +120,9 @@ impl Protocol {
             milestone_responder_worker: milestone_responder_worker_tx,
             transaction_requester_worker: Default::default(),
             milestone_requester_worker: Default::default(),
-            transaction_solidifier_worker: transaction_solidifier_worker_tx,
-            milestone_solidifier_worker: milestone_solidifier_worker_tx,
             broadcaster_worker: broadcaster_worker_tx,
-            peer_manager: PeerManager::new(network.clone()),
+            solid_propagator_worker: solid_propagator_worker_tx,
+            peer_manager: PeerManager::new(),
             requested_transactions: Default::default(),
             requested_milestones: Default::default(),
         };
@@ -132,9 +131,9 @@ impl Protocol {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
-        Protocol::get().bus.add_listener(on_last_solid_milestone_changed);
+        Protocol::get().bus.add_listener(on_latest_solid_milestone_changed);
         // Protocol::get().bus.add_listener(on_snapshot_milestone_changed);
-        Protocol::get().bus.add_listener(on_last_milestone_changed);
+        Protocol::get().bus.add_listener(on_latest_milestone_changed);
 
         shutdown.add_worker_shutdown(
             hasher_worker_shutdown_tx,
@@ -237,33 +236,33 @@ impl Protocol {
         };
 
         shutdown.add_worker_shutdown(
-            transaction_solidifier_worker_shutdown_tx,
-            spawn(
-                TransactionSolidifierWorker::new(ShutdownStream::new(
-                    transaction_solidifier_worker_shutdown_rx,
-                    transaction_solidifier_worker_rx,
-                ))
-                .run(),
-            ),
-        );
-
-        shutdown.add_worker_shutdown(
-            milestone_solidifier_worker_shutdown_tx,
-            spawn(
-                MilestoneSolidifierWorker::new(ShutdownStream::new(
-                    milestone_solidifier_worker_shutdown_rx,
-                    milestone_solidifier_worker_rx,
-                ))
-                .run(),
-            ),
-        );
-
-        shutdown.add_worker_shutdown(
             broadcaster_worker_shutdown_tx,
             spawn(
                 BroadcasterWorker::new(
                     network,
                     ShutdownStream::new(broadcaster_worker_shutdown_rx, broadcaster_worker_rx),
+                )
+                .run(),
+            ),
+        );
+
+        shutdown.add_worker_shutdown(
+            bundle_validator_worker_shutdown_tx,
+            spawn(
+                BundleValidatorWorker::new(ShutdownStream::new(
+                    bundle_validator_worker_shutdown_rx,
+                    bundle_validator_worker_rx,
+                ))
+                .run(),
+            ),
+        );
+
+        shutdown.add_worker_shutdown(
+            solid_propagator_worker_shutdown_tx,
+            spawn(
+                SolidPropagatorWorker::new(
+                    bundle_validator_worker_tx,
+                    ShutdownStream::new(solid_propagator_worker_shutdown_rx, solid_propagator_worker_rx),
                 )
                 .run(),
             ),
@@ -277,6 +276,11 @@ impl Protocol {
         shutdown.add_worker_shutdown(
             tps_worker_shutdown_tx,
             spawn(TpsWorker::new().run(tps_worker_shutdown_rx)),
+        );
+
+        shutdown.add_worker_shutdown(
+            kickstart_worker_shutdown_tx,
+            spawn(KickstartWorker::new(kickstart_worker_shutdown_rx).run()),
         );
     }
 
@@ -292,12 +296,12 @@ impl Protocol {
         epid: EndpointId,
         address: SocketAddr,
         origin: Origin,
-    ) -> (mpsc::Sender<Vec<u8>>, oneshot::Sender<()>) {
+    ) -> (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?
 
         let peer = Arc::new(Peer::new(epid, address, origin));
 
-        let (receiver_tx, receiver_rx) = mpsc::channel(Protocol::get().config.workers.receiver_worker_bound);
+        let (receiver_tx, receiver_rx) = mpsc::unbounded();
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
         Protocol::get().peer_manager.add(peer.clone());
@@ -308,43 +312,53 @@ impl Protocol {
     }
 }
 
-fn on_last_milestone_changed(last_milestone: &LastMilestoneChanged) {
+fn on_latest_milestone_changed(latest_milestone: &LatestMilestoneChanged) {
     info!(
-        "New milestone #{} {}.",
-        *last_milestone.0.index,
-        last_milestone
+        "New milestone {} {}.",
+        *latest_milestone.0.index,
+        latest_milestone
             .0
             .hash()
             .iter_trytes()
             .map(char::from)
             .collect::<String>()
     );
-    tangle().update_last_milestone_index(last_milestone.0.index);
+    tangle().update_latest_milestone_index(latest_milestone.0.index);
 
-    Protocol::broadcast_heartbeat(
-        tangle().get_last_solid_milestone_index(),
-        tangle().get_snapshot_milestone_index(),
-        last_milestone.0.index,
-    );
+    spawn(Protocol::broadcast_heartbeat(
+        tangle().get_latest_solid_milestone_index(),
+        tangle().get_pruning_index(),
+        latest_milestone.0.index,
+    ));
 }
 
 // TODO Chrysalis
-// fn on_snapshot_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
+// fn on_snapshot_milestone_changed(latest_solid_milestone: &LatestSolidMilestoneChanged) {
 //     // TODO block_on ?
 //     // TODO uncomment on Chrysalis Pt1.
 //     // block_on(Protocol::broadcast_heartbeat(
-//     //     tangle().get_last_solid_milestone_index(),
-//     //     tangle().get_snapshot_milestone_index(),
+//     //     tangle().get_latest_solid_milestone_index(),
+//     //     tangle().get_pruning_index(),
 //     // ));
 // }
 
-fn on_last_solid_milestone_changed(last_solid_milestone: &LastSolidMilestoneChanged) {
-    debug!("New solid milestone #{}.", *last_solid_milestone.0.index);
-    tangle().update_last_solid_milestone_index(last_solid_milestone.0.index);
+fn on_latest_solid_milestone_changed(latest_solid_milestone: &LatestSolidMilestoneChanged) {
+    debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
+    tangle().update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
-    Protocol::broadcast_heartbeat(
-        last_solid_milestone.0.index,
-        tangle().get_snapshot_milestone_index(),
-        tangle().get_last_milestone_index(),
-    );
+    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(1);
+
+    if !tangle().is_synced() {
+        if tangle().contains_milestone(next_ms) {
+            Protocol::trigger_milestone_solidification(next_ms);
+        } else {
+            Protocol::request_milestone(next_ms, None);
+        }
+    }
+
+    spawn(Protocol::broadcast_heartbeat(
+        latest_solid_milestone.0.index,
+        tangle().get_pruning_index(),
+        tangle().get_latest_milestone_index(),
+    ));
 }

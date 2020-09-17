@@ -9,35 +9,42 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
+use crate::tangle::tangle;
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_crypto::ternary::Hash;
+use bee_tangle::helper::load_bundle_builder;
 
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-use log::info;
+use log::{info, warn};
 
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
+type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BundleValidatorWorkerEvent>>>;
 
-pub(crate) struct MilestoneSolidifierWorkerEvent;
+pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
-pub(crate) struct MilestoneSolidifierWorker {
+pub(crate) struct BundleValidatorWorker {
     receiver: Receiver,
 }
 
-impl MilestoneSolidifierWorker {
+impl BundleValidatorWorker {
     pub(crate) fn new(receiver: Receiver) -> Self {
         Self { receiver }
     }
 
-    fn solidify_milestone(&self) {
-        let target_index = tangle().get_last_solid_milestone_index() + MilestoneIndex(1);
-
-        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-            if !tangle().is_solid_transaction(&target_hash) {
-                Protocol::trigger_transaction_solidification(target_hash, target_index);
+    fn validate(&self, tail_hash: Hash) {
+        match load_bundle_builder(tangle(), &tail_hash) {
+            Some(builder) => {
+                if builder.validate().is_ok() {
+                    tangle().update_metadata(&tail_hash, |metadata| {
+                        metadata.flags.set_valid(true);
+                    })
+                }
+            }
+            None => {
+                warn!("Faild to validate bundle: tail not found.");
             }
         }
     }
@@ -45,8 +52,8 @@ impl MilestoneSolidifierWorker {
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while let Some(MilestoneSolidifierWorkerEvent) = self.receiver.next().await {
-            self.solidify_milestone();
+        while let Some(BundleValidatorWorkerEvent(hash)) = self.receiver.next().await {
+            self.validate(hash);
         }
 
         info!("Stopped.");
@@ -54,6 +61,3 @@ impl MilestoneSolidifierWorker {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {}

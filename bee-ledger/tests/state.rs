@@ -22,7 +22,7 @@ fn get_or_zero_single_get() {
 
     inner_state.insert(addr.clone(), 42);
 
-    let state = LedgerState::new(inner_state);
+    let state: LedgerState = inner_state.into();
 
     assert_eq!(state.get_or_zero(&addr), 42);
 }
@@ -35,7 +35,7 @@ fn get_or_zero_single_zero() {
 
     inner_state.insert(addr1.clone(), 42);
 
-    let state = LedgerState::new(inner_state);
+    let state: LedgerState = inner_state.into();
 
     assert_eq!(state.get_or_zero(&addr2), 0);
 }
@@ -53,7 +53,7 @@ fn get_or_zero() {
         }
     }
 
-    let state = LedgerState::new(inner_state);
+    let state: LedgerState = inner_state.into();
 
     for i in 0..100 {
         if i % 2 == 0 {
@@ -73,7 +73,7 @@ fn apply_single_diff_mutate() {
     inner_state.insert(addr1.clone(), 21);
     inner_state.insert(addr2.clone(), 63);
 
-    let mut state = LedgerState::new(inner_state);
+    let mut state: LedgerState = inner_state.into();
 
     state.apply_single_diff(addr1.clone(), 21);
     state.apply_single_diff(addr2.clone(), -21);
@@ -87,7 +87,7 @@ fn apply_single_diff_add() {
     let inner_state = HashMap::new();
     let addr = rand_trits_field::<Address>();
 
-    let mut state = LedgerState::new(inner_state);
+    let mut state: LedgerState = inner_state.into();
 
     state.apply_single_diff(addr.clone(), 42);
 
@@ -111,8 +111,8 @@ fn apply_diff() {
         }
     }
 
-    let mut state = LedgerState::new(inner_state);
-    let diff = LedgerDiff::new(inner_diff);
+    let mut state: LedgerState = inner_state.into();
+    let diff: LedgerDiff = inner_diff.into();
 
     state.apply_diff(diff);
 

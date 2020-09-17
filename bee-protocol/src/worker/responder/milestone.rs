@@ -11,8 +11,8 @@
 
 use crate::{
     message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
+    protocol::Sender,
     tangle::tangle,
-    worker::SenderWorker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -44,9 +44,9 @@ impl MilestoneResponderWorker {
         Self { receiver }
     }
 
-    fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
+    async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
         let index = match request.index {
-            0 => tangle().get_last_milestone_index(),
+            0 => tangle().get_latest_milestone_index(),
             _ => request.index.into(),
         };
 
@@ -57,13 +57,14 @@ impl MilestoneResponderWorker {
                 transaction.into_trits_allocated(&mut trits);
                 // TODO dedicated channel ? Priority Queue ?
                 // TODO compress bytes
-                SenderWorker::<TransactionMessage>::send(
+                Sender::<TransactionMessage>::send(
                     &epid,
                     // TODO try to compress lower in the pipeline ?
                     TransactionMessage::new(&compress_transaction_bytes(cast_slice(
                         trits.encode::<T5B1Buf>().as_i8_slice(),
                     ))),
-                );
+                )
+                .await;
             }
             None => {}
         }
@@ -73,7 +74,7 @@ impl MilestoneResponderWorker {
         info!("Running.");
 
         while let Some(MilestoneResponderWorkerEvent { epid, request }) = self.receiver.next().await {
-            self.process_request(epid, request);
+            self.process_request(epid, request).await;
         }
 
         info!("Stopped.");

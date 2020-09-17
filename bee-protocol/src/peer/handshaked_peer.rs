@@ -9,11 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
-    milestone::MilestoneIndex,
-    peer::PeerMetrics,
-};
+use crate::{milestone::MilestoneIndex, peer::PeerMetrics};
 
 use bee_network::EndpointId;
 
@@ -29,82 +25,49 @@ pub struct HandshakedPeer {
     pub(crate) epid: EndpointId,
     pub(crate) address: SocketAddr,
     pub(crate) metrics: PeerMetrics,
-    pub(crate) last_solid_milestone_index: AtomicU32,
-    pub(crate) snapshot_milestone_index: AtomicU32,
-    pub(crate) last_milestone_index: AtomicU32,
+    pub(crate) latest_solid_milestone_index: AtomicU32,
+    pub(crate) pruning_index: AtomicU32,
+    pub(crate) latest_milestone_index: AtomicU32,
     pub(crate) connected_peers: AtomicU8,
     pub(crate) synced_peers: AtomicU8,
-    pub(crate) milestone_request: (
-        mpsc::UnboundedSender<MilestoneRequest>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) transaction: (
-        mpsc::UnboundedSender<TransactionMessage>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) transaction_request: (
-        mpsc::UnboundedSender<TransactionRequest>,
-        Mutex<Option<oneshot::Sender<()>>>,
-    ),
-    pub(crate) heartbeat: (mpsc::UnboundedSender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
 }
 
 impl HandshakedPeer {
-    pub(crate) fn new(
-        epid: EndpointId,
-        address: SocketAddr,
-        milestone_request: (
-            mpsc::UnboundedSender<MilestoneRequest>,
-            Mutex<Option<oneshot::Sender<()>>>,
-        ),
-        transaction: (
-            mpsc::UnboundedSender<TransactionMessage>,
-            Mutex<Option<oneshot::Sender<()>>>,
-        ),
-        transaction_request: (
-            mpsc::UnboundedSender<TransactionRequest>,
-            Mutex<Option<oneshot::Sender<()>>>,
-        ),
-        heartbeat: (mpsc::UnboundedSender<Heartbeat>, Mutex<Option<oneshot::Sender<()>>>),
-    ) -> Self {
+    pub(crate) fn new(epid: EndpointId, address: SocketAddr) -> Self {
         Self {
             epid,
             address,
             metrics: PeerMetrics::default(),
-            last_solid_milestone_index: AtomicU32::new(0),
-            snapshot_milestone_index: AtomicU32::new(0),
-            last_milestone_index: AtomicU32::new(0),
+            latest_solid_milestone_index: AtomicU32::new(0),
+            pruning_index: AtomicU32::new(0),
+            latest_milestone_index: AtomicU32::new(0),
             connected_peers: AtomicU8::new(0),
             synced_peers: AtomicU8::new(0),
-            milestone_request,
-            transaction,
-            transaction_request,
-            heartbeat,
         }
     }
 
-    pub(crate) fn set_last_solid_milestone_index(&self, index: MilestoneIndex) {
-        self.last_solid_milestone_index.store(*index, Ordering::Relaxed);
+    pub(crate) fn set_latest_solid_milestone_index(&self, index: MilestoneIndex) {
+        self.latest_solid_milestone_index.store(*index, Ordering::Relaxed);
     }
 
-    pub(crate) fn last_solid_milestone_index(&self) -> MilestoneIndex {
-        self.last_solid_milestone_index.load(Ordering::Relaxed).into()
+    pub(crate) fn latest_solid_milestone_index(&self) -> MilestoneIndex {
+        self.latest_solid_milestone_index.load(Ordering::Relaxed).into()
     }
 
-    pub(crate) fn set_snapshot_milestone_index(&self, index: MilestoneIndex) {
-        self.snapshot_milestone_index.store(*index, Ordering::Relaxed);
+    pub(crate) fn set_pruning_index(&self, index: MilestoneIndex) {
+        self.pruning_index.store(*index, Ordering::Relaxed);
     }
 
-    pub(crate) fn snapshot_milestone_index(&self) -> MilestoneIndex {
-        self.snapshot_milestone_index.load(Ordering::Relaxed).into()
+    pub(crate) fn pruning_index(&self) -> MilestoneIndex {
+        self.pruning_index.load(Ordering::Relaxed).into()
     }
 
-    pub(crate) fn set_last_milestone_index(&self, index: MilestoneIndex) {
-        self.last_milestone_index.store(*index, Ordering::Relaxed);
+    pub(crate) fn set_latest_milestone_index(&self, index: MilestoneIndex) {
+        self.latest_milestone_index.store(*index, Ordering::Relaxed);
     }
 
-    pub(crate) fn last_milestone_index(&self) -> MilestoneIndex {
-        self.last_milestone_index.load(Ordering::Relaxed).into()
+    pub(crate) fn latest_milestone_index(&self) -> MilestoneIndex {
+        self.latest_milestone_index.load(Ordering::Relaxed).into()
     }
 
     pub(crate) fn set_connected_peers(&self, connected_peers: u8) {
@@ -121,5 +84,13 @@ impl HandshakedPeer {
 
     pub(crate) fn synced_peers(&self) -> u8 {
         self.synced_peers.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn has_data(&self, index: MilestoneIndex) -> bool {
+        index > self.pruning_index() && index <= self.latest_solid_milestone_index()
+    }
+
+    pub(crate) fn maybe_has_data(&self, index: MilestoneIndex) -> bool {
+        index > self.pruning_index() && index <= self.latest_milestone_index()
     }
 }

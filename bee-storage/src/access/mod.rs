@@ -11,24 +11,18 @@
 
 //! A crate that contains foundational building blocks for the IOTA Tangle.
 
-pub mod ledger_diff;
-pub mod milestone;
-pub mod transaction;
-pub mod transaction_metadata;
+pub mod batch;
+pub mod delete;
+pub mod fetch;
+pub mod insert;
 
-pub enum OpError {
-    // todo add operations errors
-    Unknown(String),
+pub use batch::{ApplyBatch, Batch, BatchBuilder};
+pub use delete::Delete;
+pub use fetch::Fetch;
+pub use insert::Insert;
+
+pub trait Error: std::fmt::Debug {
+    fn is_retryable(&self) -> bool;
+    fn is_still_valid(&self) -> bool;
+    fn error_msg(&self) -> Option<String>;
 }
-
-#[cfg(feature = "rocks_db")]
-impl From<::rocksdb::Error> for OpError {
-    fn from(err: ::rocksdb::Error) -> Self {
-        OpError::Unknown(err.into_string())
-    }
-}
-
-pub use ledger_diff::LedgerDiffOps;
-pub use milestone::MilestoneOps;
-pub use transaction::TransactionOps;
-pub use transaction_metadata::TransactionMetadataOps;

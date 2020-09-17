@@ -35,22 +35,22 @@ impl StatusWorker {
     }
 
     fn status(&self) {
-        let snapshot_milestone_index = *tangle().get_snapshot_milestone_index();
-        let solid_milestone_index = *tangle().get_last_solid_milestone_index();
-        let last_milestone_index = *tangle().get_last_milestone_index();
+        let snapshot_index = *tangle().get_snapshot_index();
+        let latest_solid_milestone_index = *tangle().get_latest_solid_milestone_index();
+        let latest_milestone_index = *tangle().get_latest_milestone_index();
 
         // TODO Threshold
         // TODO use tangle synced method
-        if solid_milestone_index == last_milestone_index {
-            info!("Synchronized at {}.", last_milestone_index);
+        if latest_solid_milestone_index == latest_milestone_index {
+            info!("Synchronized at {}.", latest_milestone_index);
         } else {
-            let progress = ((solid_milestone_index - snapshot_milestone_index) as f32 * 100.0
-                / (last_milestone_index - snapshot_milestone_index) as f32) as u8;
+            let progress = ((latest_solid_milestone_index - snapshot_index) as f32 * 100.0
+                / (latest_milestone_index - snapshot_index) as f32) as u8;
             info!(
                 "Synchronizing {}..{}..{} ({}%) - Requested {}.",
-                snapshot_milestone_index,
-                solid_milestone_index,
-                last_milestone_index,
+                snapshot_index,
+                latest_solid_milestone_index,
+                latest_milestone_index,
                 progress,
                 Protocol::get().requested_transactions.len()
             );

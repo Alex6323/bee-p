@@ -9,17 +9,20 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::{tangle::Tangle, traversal::visit_parents_follow_trunk};
+
 use bee_crypto::ternary::Hash;
-use bee_protocol::tangle::tangle;
-use bee_tangle::traversal::visit_parents_follow_trunk;
 use bee_transaction::bundled::IncomingBundleBuilder;
 
-pub(crate) fn load_bundle_builder(hash: &Hash) -> Option<IncomingBundleBuilder> {
+pub fn load_bundle_builder<Metadata>(tangle: &Tangle<Metadata>, hash: &Hash) -> Option<IncomingBundleBuilder>
+where
+    Metadata: Clone + Copy,
+{
     let mut bundle_builder = IncomingBundleBuilder::new();
     let mut done = false;
 
     visit_parents_follow_trunk(
-        tangle(),
+        tangle,
         *hash,
         |transaction, _| {
             if done {

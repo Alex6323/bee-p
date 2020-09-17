@@ -9,10 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::whiteflag::{bundle::load_bundle_builder, metadata::WhiteFlagMetadata, worker::LedgerWorker};
+use crate::whiteflag::{metadata::WhiteFlagMetadata, worker::LedgerWorker};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
+use bee_tangle::helper::load_bundle_builder;
 use bee_transaction::{
     bundled::{Bundle, IncomingBundleBuilderError},
     Vertex,
@@ -33,13 +34,13 @@ impl LedgerWorker {
     #[inline]
     fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle, metadata: &mut WhiteFlagMetadata) {
         let mut conflicting = false;
-        let (mutates, bundle_mutations) = bundle.ledger_mutations();
+        let (mutates, mutations) = bundle.ledger_mutations();
 
         if !mutates {
             metadata.num_tails_zero_value += 1;
         } else {
             // First pass to look for conflicts.
-            for (address, diff) in bundle_mutations.iter() {
+            for (address, diff) in mutations.iter() {
                 let balance = self.state.get_or_zero(&address) as i64 + diff;
 
                 if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
@@ -51,9 +52,9 @@ impl LedgerWorker {
 
             if !conflicting {
                 // Second pass to mutate the state.
-                for (address, diff) in bundle_mutations {
+                for (address, diff) in mutations {
                     self.state.apply_single_diff(address.clone(), diff);
-                    metadata.diff.apply(address, diff);
+                    metadata.diff.apply_single_diff(address, diff);
                 }
 
                 metadata.tails_included.push(*hash);
@@ -64,10 +65,8 @@ impl LedgerWorker {
 
         // TODO this only actually confirm tails
         tangle().update_metadata(&hash, |meta| {
-            if conflicting {
-                meta.flags_mut().set_conflicting();
-            }
-            meta.flags_mut().set_confirmed();
+            meta.flags_mut().set_conflicting(conflicting);
+            meta.flags_mut().set_confirmed(true);
             meta.set_milestone_index(metadata.index);
             meta.set_confirmation_timestamp(metadata.timestamp);
             // TODO Set OTRSI, ...
@@ -104,16 +103,24 @@ impl LedgerWorker {
             }
 
             // TODO pass match to avoid repetitions
-            match load_bundle_builder(hash) {
-                Some(bundle_builder) => {
-                    let trunk = bundle_builder.trunk();
-                    let branch = bundle_builder.branch();
+            match load_bundle_builder(tangle(), hash) {
+                Some(builder) => {
+                    let trunk = builder.trunk();
+                    let branch = builder.branch();
 
                     if visited.contains(trunk) && visited.contains(branch) {
                         // TODO check valid and strict semantic
-                        let bundle = match bundle_builder.validate() {
-                            Ok(builder) => builder.build(),
-                            Err(e) => return Err(Error::InvalidBundle(e)),
+                        let bundle = if meta.flags().is_valid() {
+                            // We know the bundle is valid so we can safely skip validation rules.
+                            unsafe { builder.build() }
+                        } else {
+                            match builder.validate() {
+                                Ok(builder) => {
+                                    tangle().update_metadata(&hash, |meta| meta.flags_mut().set_valid(true));
+                                    builder.build()
+                                }
+                                Err(e) => return Err(Error::InvalidBundle(e)),
+                            }
                         };
                         self.on_bundle(hash, &bundle, metadata);
                         visited.insert(*hash);
