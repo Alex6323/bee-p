@@ -35,10 +35,10 @@ use bee_crypto::ternary::{
 use bee_network::{EndpointId, Network, Origin};
 use bee_signing::ternary::wots::WotsPublicKey;
 
-use async_std::task::spawn;
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
+use tokio::spawn;
 
 use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
 

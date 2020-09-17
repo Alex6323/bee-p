@@ -13,9 +13,13 @@ use crate::{protocol::Protocol, tangle::tangle};
 
 use bee_common::worker::Error as WorkerError;
 
-use async_std::{future::ready, prelude::*};
-use futures::channel::oneshot::Receiver;
+use futures::{
+    channel::oneshot::Receiver,
+    future::{ready, select, Either, FutureExt},
+};
+
 use log::info;
+use tokio::time::delay_for;
 
 use std::time::Duration;
 
@@ -56,11 +60,9 @@ impl StatusWorker {
     pub(crate) async fn run(self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
         info!("Running.");
 
-        while ready(Ok(()))
-            .delay(Duration::from_millis(self.interval_ms))
-            .race(&mut shutdown)
+        while select(delay_for(Duration::from_millis(self.interval_ms)), &mut shutdown)
+            .then(|either| ready(if let Either::Left(_) = either { true } else { false }))
             .await
-            .is_ok()
         {
             self.status();
         }

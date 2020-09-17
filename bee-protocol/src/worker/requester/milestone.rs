@@ -17,9 +17,9 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_network::EndpointId;
 
-use async_std::stream::{interval, Interval};
 use futures::{select, stream::Fuse, StreamExt};
 use log::{debug, info};
+use tokio::time::{interval, Interval};
 
 use std::{
     cmp::Ordering,

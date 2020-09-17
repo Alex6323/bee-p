@@ -26,15 +26,16 @@ use bee_network::{
     Network, Origin,
 };
 
-use async_std::{net::SocketAddr, task::spawn};
 use futures::{
     channel::{mpsc, oneshot},
     future::FutureExt,
     stream::StreamExt,
 };
 use log::{error, info, trace, warn};
+use tokio::spawn;
 
 use std::{
+    net::SocketAddr,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
