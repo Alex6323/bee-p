@@ -12,12 +12,11 @@
 pub use crate::atomic::payload::signed_transaction::{input::Input, output::Output};
 use crate::atomic::payload::Payload;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct UnsignedTransaction {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub payload: Option<Vec<Payload>>,
 }
-

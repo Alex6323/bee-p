@@ -13,7 +13,7 @@ use crate::atomic::Error;
 
 use bee_ternary::{T5B1Buf, TritBuf};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Address {
