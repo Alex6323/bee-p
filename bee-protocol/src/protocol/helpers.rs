@@ -136,8 +136,8 @@ impl Protocol {
                 *latest_solid_milestone_index,
                 *pruning_milestone_index,
                 *latest_milestone_index,
-                0,
-                0,
+                Protocol::get().peer_manager.connected_peers(),
+                Protocol::get().peer_manager.synced_peers(),
             ),
         )
         .await;

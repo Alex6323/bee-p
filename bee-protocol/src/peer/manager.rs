@@ -56,4 +56,14 @@ impl PeerManager {
 
         self.handshaked_peers_keys.write().await.retain(|e| e != epid);
     }
+
+    pub(crate) fn connected_peers(&self) -> u8 {
+        // TODO impl
+        0
+    }
+
+    pub(crate) fn synced_peers(&self) -> u8 {
+        // TODO impl
+        0
+    }
 }
