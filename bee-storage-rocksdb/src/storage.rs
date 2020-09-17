@@ -27,7 +27,7 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn new(config: RocksDB) -> Result<DB, Box<dyn Error>> {
+    pub fn new(config: RocksDBConfig) -> Result<DB, Box<dyn Error>> {
         let transaction_hash_to_transaction =
             ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_TRANSACTION, Options::default());
         let transaction_hash_to_transaction_metadata =
@@ -36,62 +36,28 @@ impl Storage {
         let milestone_index_to_ledger_diff =
             ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_DIFF, Options::default());
         let mut opts = Options::default();
-        if let Some(create_if_missing) = config.create_if_missing {
-            opts.create_if_missing(create_if_missing);
+
+        opts.create_if_missing(config.create_if_missing);
+        opts.create_missing_column_families(config.create_missing_column_families);
+        if config.enable_statistics {
+            opts.enable_statistics();
         }
-        if let Some(create_missing_column_families) = config.create_missing_column_families {
-            opts.create_missing_column_families(create_missing_column_families);
-        }
-        if let Some(enable_statistics) = config.enable_statistics {
-            if enable_statistics {
-                opts.enable_statistics();
-            }
-        }
-        if let Some(increase_parallelism) = config.increase_parallelism {
-            opts.increase_parallelism(increase_parallelism);
-        }
-        if let Some(optimize_for_point_lookup) = config.optimize_for_point_lookup {
-            opts.optimize_for_point_lookup(optimize_for_point_lookup);
-        }
-        if let Some(optimize_level_style_compaction) = config.optimize_level_style_compaction {
-            opts.optimize_level_style_compaction(optimize_level_style_compaction);
-        }
-        if let Some(optimize_universal_style_compaction) = config.optimize_universal_style_compaction {
-            opts.optimize_universal_style_compaction(optimize_universal_style_compaction);
-        }
-        if let Some(set_advise_random_on_open) = config.set_advise_random_on_open {
-            opts.set_advise_random_on_open(set_advise_random_on_open);
-        }
-        if let Some(set_allow_concurrent_memtable_write) = config.set_allow_concurrent_memtable_write {
-            opts.set_allow_concurrent_memtable_write(set_allow_concurrent_memtable_write);
-        }
-        if let Some(set_allow_mmap_reads) = config.set_allow_mmap_reads {
-            opts.set_allow_mmap_reads(set_allow_mmap_reads);
-        }
-        if let Some(set_allow_mmap_writes) = config.set_allow_mmap_writes {
-            opts.set_allow_mmap_writes(set_allow_mmap_writes);
-        }
-        if let Some(set_atomic_flush) = config.set_atomic_flush {
-            opts.set_atomic_flush(set_atomic_flush);
-        }
-        if let Some(set_bytes_per_sync) = config.set_bytes_per_sync {
-            opts.set_bytes_per_sync(set_bytes_per_sync);
-        }
-        if let Some(set_compaction_readahead_size) = config.set_compaction_readahead_size {
-            opts.set_compaction_readahead_size(set_compaction_readahead_size);
-        }
-        if let Some(set_compaction_style) = config.set_compaction_style {
-            opts.set_compaction_style(DBCompactionStyle::from(set_compaction_style));
-        }
-        if let Some(set_max_write_buffer_number) = config.set_max_write_buffer_number {
-            opts.set_max_write_buffer_number(set_max_write_buffer_number);
-        }
-        if let Some(set_disable_auto_compactions) = config.set_disable_auto_compactions {
-            opts.set_disable_auto_compactions(set_disable_auto_compactions);
-        }
-        if let Some(set_compression_type) = config.set_compression_type {
-            opts.set_compression_type(DBCompressionType::from(set_compression_type));
-        }
+        opts.increase_parallelism(config.increase_parallelism);
+        opts.optimize_for_point_lookup(config.optimize_for_point_lookup);
+        opts.optimize_level_style_compaction(config.optimize_level_style_compaction);
+        opts.optimize_universal_style_compaction(config.optimize_universal_style_compaction);
+        opts.set_advise_random_on_open(config.set_advise_random_on_open);
+        opts.set_allow_concurrent_memtable_write(config.set_allow_concurrent_memtable_write);
+        opts.set_allow_mmap_reads(config.set_allow_mmap_reads);
+        opts.set_allow_mmap_writes(config.set_allow_mmap_writes);
+        opts.set_atomic_flush(config.set_atomic_flush);
+        opts.set_bytes_per_sync(config.set_bytes_per_sync);
+        opts.set_compaction_readahead_size(config.set_compaction_readahead_size);
+        opts.set_compaction_style(DBCompactionStyle::from(config.set_compaction_style));
+        opts.set_max_write_buffer_number(config.set_max_write_buffer_number);
+        opts.set_disable_auto_compactions(config.set_disable_auto_compactions);
+        opts.set_compression_type(DBCompressionType::from(config.set_compression_type));
+
         let column_familes = vec![
             transaction_hash_to_transaction,
             transaction_hash_to_transaction_metadata,
@@ -99,6 +65,7 @@ impl Storage {
             milestone_index_to_ledger_diff,
         ];
         let db = DB::open_cf_descriptors(&opts, config.path, column_familes)?;
+
         Ok(db)
     }
 }
@@ -107,8 +74,8 @@ impl Backend for Storage {
     /// It starts RocksDB instance and then initialize the required column familes
     async fn start(config_path: String) -> Result<Self, Box<dyn Error>> {
         let config_as_string = fs::read_to_string(config_path)?;
-        let config: Config = toml::from_str(&config_as_string)?;
-        let db = Self::new(config.rocksdb)?;
+        let config: RocksDBConfigBuilder = toml::from_str(&config_as_string)?;
+        let db = Self::new(config.finish())?;
         Ok(Storage { inner: db })
     }
     /// It shutdown RocksDB instance,
