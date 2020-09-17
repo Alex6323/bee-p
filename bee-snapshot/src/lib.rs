@@ -54,6 +54,11 @@ pub fn init(
                 global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
                     .map_err(Error::Global)?;
 
+            tangle().clear_solid_entry_points();
+            // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
+            // because coordinator bootstraps the network by referencing the genesis tx.
+            tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(*config.global().index()));
+
             info!(
                 "Loaded global snapshot file from with index {} and {} balances.",
                 *config.global().index(),
