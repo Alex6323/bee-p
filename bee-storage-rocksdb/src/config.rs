@@ -9,11 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A crate that contains foundational building blocks for the IOTA Tangle.
+use crate::{compaction::CompactionStyle, compression::CompressionType};
 
-use rocksdb::{DBCompactionStyle, DBCompressionType};
 use serde::Deserialize;
-use std::convert::From;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -43,44 +41,4 @@ pub struct RocksDB {
     pub set_max_background_flushes: Option<i32>,
     pub set_disable_auto_compactions: Option<bool>,
     pub set_compression_type: Option<CompressionType>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub enum CompactionStyle {
-    Level,
-    Universal,
-    Fifo,
-}
-impl From<CompactionStyle> for DBCompactionStyle {
-    fn from(compaction_style: CompactionStyle) -> Self {
-        match compaction_style {
-            CompactionStyle::Level => DBCompactionStyle::Level,
-            CompactionStyle::Universal => DBCompactionStyle::Universal,
-            CompactionStyle::Fifo => DBCompactionStyle::Fifo,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub enum CompressionType {
-    None,
-    Snappy,
-    Zlib,
-    Bz2,
-    Lz4,
-    Lz4hc,
-    Zstd,
-}
-impl From<CompressionType> for DBCompressionType {
-    fn from(compression_type: CompressionType) -> Self {
-        match compression_type {
-            CompressionType::None => DBCompressionType::None,
-            CompressionType::Snappy => DBCompressionType::Snappy,
-            CompressionType::Zlib => DBCompressionType::Zlib,
-            CompressionType::Bz2 => DBCompressionType::Bz2,
-            CompressionType::Lz4 => DBCompressionType::Lz4,
-            CompressionType::Lz4hc => DBCompressionType::Lz4hc,
-            CompressionType::Zstd => DBCompressionType::Zstd,
-        }
-    }
 }
