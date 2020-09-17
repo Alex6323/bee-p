@@ -124,6 +124,8 @@ where
                         }
 
                         if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
+                            tangle().update_metadata(&milestone.hash, |meta| meta.flags.set_requested(true));
+
                             Protocol::trigger_milestone_solidification(milestone.index);
                         }
                     }

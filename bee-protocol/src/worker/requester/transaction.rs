@@ -16,47 +16,30 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
 use async_std::stream::{interval, Interval};
 use bytemuck::cast_slice;
-use futures::{select, stream::Fuse, StreamExt};
+use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 
-use std::{
-    cmp::Ordering,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-type Receiver<'a> = ShutdownStream<WaitIncoming<'a, TransactionRequesterWorkerEntry>>;
+type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
 
-#[derive(Eq, PartialEq)]
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
 
-impl PartialOrd for TransactionRequesterWorkerEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.1.partial_cmp(&self.1)
-    }
-}
-
-impl Ord for TransactionRequesterWorkerEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.1.cmp(&self.1)
-    }
-}
-
-pub(crate) struct TransactionRequesterWorker<'a> {
+pub(crate) struct TransactionRequesterWorker {
     counter: usize,
-    receiver: Receiver<'a>,
+    receiver: Receiver,
     timeouts: Fuse<Interval>,
 }
 
-impl<'a> TransactionRequesterWorker<'a> {
-    pub(crate) fn new(receiver: Receiver<'a>) -> Self {
+impl TransactionRequesterWorker {
+    pub(crate) fn new(receiver: Receiver) -> Self {
         Self {
             counter: 0,
             receiver,
@@ -91,11 +74,9 @@ impl<'a> TransactionRequesterWorker<'a> {
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                 if peer.has_data(index) {
-                    Sender::<TransactionRequest>::send(
-                        epid,
-                        TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
-                    )
-                    .await;
+                    let hash = hash.as_trits().encode::<T5B1Buf>();
+                    Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice())))
+                        .await;
                     return true;
                 }
             }
@@ -108,11 +89,9 @@ impl<'a> TransactionRequesterWorker<'a> {
 
             if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                 if peer.maybe_has_data(index) {
-                    Sender::<TransactionRequest>::send(
-                        epid,
-                        TransactionRequest::new(cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())),
-                    )
-                    .await;
+                    let hash = hash.as_trits().encode::<T5B1Buf>();
+                    Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice())))
+                        .await;
                     return true;
                 }
             }

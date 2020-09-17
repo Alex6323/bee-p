@@ -25,6 +25,7 @@ const DEFAULT_COO_SPONGE_TYPE: &str = "kerl";
 const DEFAULT_TRANSACTION_WORKER_CACHE: usize = 10000;
 const DEFAULT_STATUS_INTERVAL: u64 = 10;
 const DEFAULT_HANDSHAKE_WINDOW: u64 = 10;
+const DEFAULT_MS_SYNC_COUNT: u32 = 1;
 
 #[derive(Default, Deserialize)]
 struct ProtocolCoordinatorConfigBuilder {
@@ -38,6 +39,7 @@ struct ProtocolCoordinatorConfigBuilder {
 struct ProtocolWorkersConfigBuilder {
     transaction_worker_cache: Option<usize>,
     status_interval: Option<u64>,
+    ms_sync_count: Option<u32>,
 }
 
 #[derive(Default, Deserialize)]
@@ -80,6 +82,11 @@ impl ProtocolConfigBuilder {
 
     pub fn transaction_worker_cache(mut self, transaction_worker_cache: usize) -> Self {
         self.workers.transaction_worker_cache.replace(transaction_worker_cache);
+        self
+    }
+
+    pub fn ms_sync_count(mut self, ms_sync_count: u32) -> Self {
+        self.workers.ms_sync_count.replace(ms_sync_count);
         self
     }
 
@@ -144,6 +151,7 @@ impl ProtocolConfigBuilder {
                     .transaction_worker_cache
                     .unwrap_or(DEFAULT_TRANSACTION_WORKER_CACHE),
                 status_interval: self.workers.status_interval.unwrap_or(DEFAULT_STATUS_INTERVAL),
+                ms_sync_count: self.workers.ms_sync_count.unwrap_or(DEFAULT_MS_SYNC_COUNT),
             },
             handshake_window: self.handshake_window.unwrap_or(DEFAULT_HANDSHAKE_WINDOW),
         }
@@ -169,6 +177,7 @@ impl ProtocolCoordinatorConfig {
 pub struct ProtocolWorkersConfig {
     pub(crate) transaction_worker_cache: usize,
     pub(crate) status_interval: u64,
+    pub(crate) ms_sync_count: u32,
 }
 
 #[derive(Clone)]
