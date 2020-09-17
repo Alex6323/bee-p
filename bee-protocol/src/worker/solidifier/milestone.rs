@@ -58,10 +58,6 @@ impl MilestoneSolidifierWorker {
                     |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
                 );
 
-                let tx = tangle().get(&target_hash).unwrap();
-                tangle().update_metadata(tx.trunk(), |meta| meta.flags.set_requested(true));
-                tangle().update_metadata(tx.branch(), |meta| meta.flags.set_requested(true));
-
                 self.next_ms_index = target_index + MilestoneIndex(1);
             }
         }
