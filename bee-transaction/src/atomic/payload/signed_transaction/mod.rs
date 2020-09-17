@@ -33,7 +33,9 @@ use bee_signing_ext::{
 
 use std::{cmp::Ordering, collections::HashSet, slice::Iter};
 
-#[derive(Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SignedTransaction {
     pub unsigned_transaction: UnsignedTransaction,
     pub unlock_block_count: u8,

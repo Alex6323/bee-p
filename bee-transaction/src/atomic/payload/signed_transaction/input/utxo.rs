@@ -11,7 +11,9 @@
 
 use crate::atomic::Hash;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct UTXOInput {
     pub transaction_id: Hash,
     pub output_index: u8,

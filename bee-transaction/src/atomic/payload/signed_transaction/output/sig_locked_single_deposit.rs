@@ -13,9 +13,9 @@ use crate::atomic::Error;
 
 use bee_ternary::{T5B1Buf, TritBuf};
 
-use serde::{ser::SerializeStruct, Serialize, Serializer};
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Address {
     Wots(Vec<i8>),
     Ed25519([u8; 32]),
@@ -35,29 +35,7 @@ impl Address {
     }
 }
 
-impl Serialize for Address {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            Address::Wots(address) => {
-                let mut serializer = serializer.serialize_struct("Address", 2)?;
-                serializer.serialize_field("Address Type", &0u8)?;
-                serializer.serialize_field("Address", address)?;
-                serializer.end()
-            }
-            Address::Ed25519(address) => {
-                let mut serializer = serializer.serialize_struct("Address", 2)?;
-                serializer.serialize_field("Address Type", &1u8)?;
-                serializer.serialize_field("Address", address)?;
-                serializer.end()
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SigLockedSingleDeposit {
     pub address: Address,
     pub amount: u64,
