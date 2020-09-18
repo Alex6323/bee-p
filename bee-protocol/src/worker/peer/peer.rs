@@ -136,7 +136,7 @@ impl PeerWorker {
                     Ok(message) => {
                         self.peer
                             .set_latest_solid_milestone_index(message.latest_solid_milestone_index.into());
-                        self.peer.set_pruning_index(message.pruning_index.into());
+                        self.peer.set_pruned_index(message.pruned_index.into());
                         self.peer
                             .set_latest_milestone_index(message.latest_milestone_index.into());
                         self.peer.set_connected_peers(message.connected_peers);
