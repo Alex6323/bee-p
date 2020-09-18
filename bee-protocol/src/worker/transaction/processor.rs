@@ -13,7 +13,7 @@ use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::{milestone_validator::MilestoneValidatorWorkerEvent, Worker},
+    worker::{milestone_validator::MilestoneValidatorWorkerEvent, Worker, WorkerId},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -40,16 +40,11 @@ const ALLOWED_TIMESTAMP_WINDOW_SECS: u64 = 10 * 60;
 
 #[async_trait]
 impl Worker for ProcessorWorker {
+    const ID: WorkerId = WorkerId::processor();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = ProcessorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
-
-    fn name() -> &'static str {
-        "processor_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");

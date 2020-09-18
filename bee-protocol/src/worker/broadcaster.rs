@@ -12,7 +12,7 @@
 use crate::{
     message::{tlv_into_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    worker::Worker,
+    worker::{Worker, WorkerId},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -36,16 +36,11 @@ pub(crate) struct BroadcasterWorker {
 
 #[async_trait]
 impl Worker for BroadcasterWorker {
+    const ID: WorkerId = WorkerId::broadcaster();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = BroadcasterWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
-
-    fn name() -> &'static str {
-        "broadcaster_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");

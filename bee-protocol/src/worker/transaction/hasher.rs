@@ -14,7 +14,7 @@ use crate::{
     protocol::Protocol,
     worker::{
         transaction::{HashCache, ProcessorWorkerEvent},
-        Worker,
+        Worker, WorkerId
     },
 };
 
@@ -54,16 +54,11 @@ pub(crate) struct HasherWorker {
 
 #[async_trait]
 impl Worker for HasherWorker {
+    const ID: WorkerId = WorkerId::hasher();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = usize;
     type Receiver = BatchStream;
-
-    fn name() -> &'static str {
-        "hasher_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");

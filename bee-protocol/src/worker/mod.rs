@@ -11,6 +11,7 @@
 
 mod broadcaster;
 mod bundle_validator;
+mod id;
 mod milestone_validator;
 mod peer;
 mod requester;
@@ -22,6 +23,7 @@ mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
+pub(crate) use id::WorkerId;
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use requester::{
@@ -47,11 +49,11 @@ use futures::Stream;
 
 #[async_trait]
 pub(crate) trait Worker {
+    const ID: WorkerId;
+    const DEPS: &'static [WorkerId];
+
     type Event;
     type Receiver: Stream<Item = Self::Event>;
-
-    fn name() -> &'static str;
-    fn dependencies() -> &'static [&'static str];
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError>;
 }

@@ -9,7 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{protocol::Protocol, tangle::tangle, worker::Worker};
+use crate::{
+    protocol::Protocol,
+    tangle::tangle,
+    worker::{Worker, WorkerId},
+};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 
@@ -24,16 +28,11 @@ pub(crate) struct StatusWorker;
 
 #[async_trait]
 impl Worker for StatusWorker {
+    const ID: WorkerId = WorkerId::status();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
-
-    fn name() -> &'static str {
-        "status_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");

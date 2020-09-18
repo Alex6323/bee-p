@@ -1,27 +1,26 @@
-use crate::worker::Worker;
+use crate::worker::{Worker, WorkerId};
 
 use std::collections::HashMap;
 
 trait Node {}
 
-struct BeeNode {
-}
+struct BeeNode {}
 
 struct WorkerToAdd<N: Node> {
-    deps: &'static [&'static str],
+    deps: &'static [WorkerId],
     closure: Box<dyn FnMut(&N)>,
 }
 
 struct NodeBuilder<N: Node> {
-    workers: HashMap<&'static str, WorkerToAdd<N>>,
+    workers: HashMap<WorkerId, WorkerToAdd<N>>,
 }
 
 impl<N: Node> NodeBuilder<N> {
     fn with_worker<W: Worker>(mut self) -> Self {
         self.workers.insert(
-            W::name(),
+            W::ID,
             WorkerToAdd {
-                deps: W::dependencies(),
+                deps: W::DEPS,
                 closure: Box::new(|node| {}),
             },
         );

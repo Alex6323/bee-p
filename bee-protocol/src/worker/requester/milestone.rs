@@ -14,7 +14,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::{Protocol, Sender},
     tangle::tangle,
-    worker::Worker,
+    worker::{Worker, WorkerId},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -33,21 +33,16 @@ pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(c
 
 pub(crate) struct MilestoneRequesterWorker {
     counter: usize,
-
     timeouts: Fuse<Interval>,
 }
+
 #[async_trait]
 impl Worker for MilestoneRequesterWorker {
+    const ID: WorkerId = WorkerId::milestone_requester();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = MilestoneRequesterWorkerEntry;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEntry>>;
-
-    fn name() -> &'static str {
-        "milestone_requester_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
         async fn aux(

@@ -13,7 +13,7 @@ use crate::{
     message::TransactionRequest,
     milestone::MilestoneIndex,
     protocol::{Protocol, Sender},
-    worker::Worker,
+    worker::{Worker, WorkerId},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -39,16 +39,11 @@ pub(crate) struct TransactionRequesterWorker {
 
 #[async_trait]
 impl Worker for TransactionRequesterWorker {
+    const ID: WorkerId = WorkerId::transaction_requester();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = TransactionRequesterWorkerEntry;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
-
-    fn name() -> &'static str {
-        "transaction_requester_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
         async fn run_aux(

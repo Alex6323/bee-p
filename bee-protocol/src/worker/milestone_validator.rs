@@ -14,7 +14,7 @@ use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, tangle},
-    worker::Worker,
+    worker::{Worker, WorkerId},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -55,17 +55,12 @@ where
     P: PublicKey + Send,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
+    const ID: WorkerId = WorkerId::milestone_validator();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = MilestoneValidatorWorkerEvent;
     // TODO PriorityQueue ?
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
-
-    fn name() -> &'static str {
-        "milestone_validator_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");

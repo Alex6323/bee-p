@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{event::TpsMetricsUpdated, protocol::Protocol, worker::Worker};
+use crate::{event::TpsMetricsUpdated, protocol::Protocol, worker::{WorkerId, Worker}};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 
@@ -32,16 +32,11 @@ pub(crate) struct TpsWorker {
 
 #[async_trait]
 impl Worker for TpsWorker {
+    const ID: WorkerId = WorkerId::tps();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
-
-    fn name() -> &'static str {
-        "tps_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");

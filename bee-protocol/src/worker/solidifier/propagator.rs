@@ -14,7 +14,7 @@ use crate::{
     milestone::Milestone,
     protocol::Protocol,
     tangle::tangle,
-    worker::{BundleValidatorWorkerEvent, Worker},
+    worker::{BundleValidatorWorkerEvent, Worker, WorkerId},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -38,16 +38,11 @@ pub(crate) struct SolidPropagatorWorker {
 
 #[async_trait]
 impl Worker for SolidPropagatorWorker {
+    const ID: WorkerId = WorkerId::solid_propagator();
+    const DEPS: &'static [WorkerId] = &[];
+
     type Event = SolidPropagatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
-
-    fn name() -> &'static str {
-        "solid_propagator_worker"
-    }
-
-    fn dependencies() -> &'static [&'static str] {
-        &[]
-    }
 
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");
