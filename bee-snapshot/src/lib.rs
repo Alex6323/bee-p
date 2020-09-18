@@ -41,7 +41,7 @@ pub enum Error {
 
 // TODO change return type
 
-pub fn init(
+pub async fn init(
     config: &config::SnapshotConfig,
     bus: Arc<Bus<'static>>,
     shutdown: &mut Shutdown,
@@ -69,7 +69,9 @@ pub fn init(
         }
         config::LoadType::Local => {
             if !Path::new(config.local().path()).exists() {
-                local::download_local_snapshot(config.local()).map_err(Error::Download)?;
+                local::download_local_snapshot(config.local())
+                    .await
+                    .map_err(Error::Download)?;
             }
             info!("Loading local snapshot file {}...", config.local().path());
 

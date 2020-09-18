@@ -67,7 +67,9 @@ impl NodeBuilder {
 
         // TODO temporary
         let (ledger_state, snapshot_index, snapshot_timestamp) =
-            bee_snapshot::init(&self.config.snapshot, bus.clone(), &mut shutdown).map_err(Error::SnapshotError)?;
+            bee_snapshot::init(&self.config.snapshot, bus.clone(), &mut shutdown)
+                .await
+                .map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown).await;
