@@ -15,11 +15,9 @@ use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::event::Bus;
-use bee_crypto::ternary::Hash;
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
-use bee_protocol::{tangle, MilestoneIndex, Protocol};
-use bee_snapshot::local::{Error as LocalSnapshotReadError, LocalSnapshot};
+use bee_protocol::{tangle, Protocol};
 
 use async_std::task::{block_on, spawn};
 use futures::{
@@ -37,8 +35,8 @@ type Receiver = ShutdownStream<Fuse<EventSubscriber>>;
 #[derive(Error, Debug)]
 pub enum Error {
     /// Occurs, when there is an error while reading the snapshot file.
-    #[error("Reading the snapshot file failed.")]
-    LocalSnapshotReadError(LocalSnapshotReadError),
+    #[error("Reading snapshot file failed.")]
+    SnapshotError(bee_snapshot::Error),
 
     /// Occurs, when there is an error while shutting down the node.
     #[error("Shutting down failed.")]
@@ -61,44 +59,9 @@ impl NodeBuilder {
         info!("Initializing tangle...");
         tangle::init();
 
-        bee_snapshot::init(&self.config.snapshot, bus.clone(), &mut shutdown);
-
-        let local_snapshot = match LocalSnapshot::from_file(self.config.snapshot.local().path()) {
-            Ok(local_snapshot) => {
-                tangle::tangle().update_latest_solid_milestone_index(local_snapshot.metadata().index().into());
-
-                // TODO get from database
-                tangle::tangle().update_latest_milestone_index(local_snapshot.metadata().index().into());
-
-                tangle::tangle().update_snapshot_index(local_snapshot.metadata().index().into());
-
-                tangle::tangle().update_pruning_index(local_snapshot.metadata().index().into());
-
-                // TODO index 0 ?
-                tangle::tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
-                for (hash, index) in local_snapshot.metadata().solid_entry_points() {
-                    tangle::tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
-                }
-
-                for _seen_milestone in local_snapshot.metadata().seen_milestones() {
-                    // TODO request ?
-                }
-
-                local_snapshot
-            }
-            Err(e) => {
-                error!(
-                    "Failed to read snapshot file \"{}\": {:?}.",
-                    self.config.snapshot.local().path(),
-                    e
-                );
-                return Err(Error::LocalSnapshotReadError(e));
-            }
-        };
-
-        // TODO this is temporary
-        let snapshot_index = local_snapshot.metadata().index();
-        let snapshot_timestamp = local_snapshot.metadata().timestamp();
+        // TODO temporary
+        let (ledger_state, snapshot_index, snapshot_timestamp) =
+            bee_snapshot::init(&self.config.snapshot, bus.clone(), &mut shutdown).map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown);
@@ -108,8 +71,8 @@ impl NodeBuilder {
 
         info!("Initializing ledger...");
         bee_ledger::whiteflag::init(
-            snapshot_index,
-            local_snapshot.into_state(),
+            *snapshot_index,
+            ledger_state,
             self.config.protocol.coordinator().clone(),
             bus.clone(),
             &mut shutdown,

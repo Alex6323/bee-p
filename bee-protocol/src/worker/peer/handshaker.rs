@@ -83,7 +83,7 @@ impl PeerHandshakerWorker {
         let receiver_fused = receiver.fuse();
         let shutdown_fused = shutdown.fuse();
 
-        // This is the only message not using a SenderWorker because they are not running yet (awaiting handshake)
+        // This is the only message not using a Sender because they are not running yet (awaiting handshake)
         if let Err(e) = self
             .network
             .send(SendMessage {
@@ -222,7 +222,8 @@ impl PeerHandshakerWorker {
                             tangle().get_latest_solid_milestone_index(),
                             tangle().get_pruning_index(),
                             tangle().get_latest_milestone_index(),
-                        );
+                        )
+                        .await;
 
                         Protocol::request_latest_milestone(Some(self.peer.epid));
 
@@ -247,6 +248,3 @@ impl PeerHandshakerWorker {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {}

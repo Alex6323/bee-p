@@ -13,17 +13,17 @@ use serde::Deserialize;
 
 const DEFAULT_PATH: &str = "./snapshots/mainnet/export.bin";
 const DEFAULT_DOWNLOAD_URLS: Vec<String> = Vec::new();
-const DEFAULT_DEPTH: usize = 50;
-const DEFAULT_INTERVAL_SYNCED: usize = 50;
-const DEFAULT_INTERVAL_UNSYNCED: usize = 1000;
+const DEFAULT_DEPTH: u32 = 50;
+const DEFAULT_INTERVAL_SYNCED: u32 = 50;
+const DEFAULT_INTERVAL_UNSYNCED: u32 = 1000;
 
 #[derive(Default, Deserialize)]
 pub struct LocalSnapshotConfigBuilder {
     path: Option<String>,
     download_urls: Option<Vec<String>>,
-    depth: Option<usize>,
-    interval_synced: Option<usize>,
-    interval_unsynced: Option<usize>,
+    depth: Option<u32>,
+    interval_synced: Option<u32>,
+    interval_unsynced: Option<u32>,
 }
 
 impl LocalSnapshotConfigBuilder {
@@ -41,17 +41,17 @@ impl LocalSnapshotConfigBuilder {
         self
     }
 
-    pub fn depth(mut self, depth: usize) -> Self {
+    pub fn depth(mut self, depth: u32) -> Self {
         self.depth.replace(depth);
         self
     }
 
-    pub fn interval_synced(mut self, interval_synced: usize) -> Self {
+    pub fn interval_synced(mut self, interval_synced: u32) -> Self {
         self.interval_synced.replace(interval_synced);
         self
     }
 
-    pub fn interval_unsynced(mut self, interval_unsynced: usize) -> Self {
+    pub fn interval_unsynced(mut self, interval_unsynced: u32) -> Self {
         self.interval_unsynced.replace(interval_unsynced);
         self
     }
@@ -71,9 +71,9 @@ impl LocalSnapshotConfigBuilder {
 pub struct LocalSnapshotConfig {
     path: String,
     download_urls: Vec<String>,
-    depth: usize,
-    interval_synced: usize,
-    interval_unsynced: usize,
+    depth: u32,
+    interval_synced: u32,
+    interval_unsynced: u32,
 }
 
 impl LocalSnapshotConfig {
@@ -89,15 +89,15 @@ impl LocalSnapshotConfig {
         &self.download_urls
     }
 
-    pub fn depth(&self) -> usize {
+    pub fn depth(&self) -> u32 {
         self.depth
     }
 
-    pub fn interval_synced(&self) -> usize {
+    pub fn interval_synced(&self) -> u32 {
         self.interval_synced
     }
 
-    pub fn interval_unsynced(&self) -> usize {
+    pub fn interval_unsynced(&self) -> u32 {
         self.interval_unsynced
     }
 }

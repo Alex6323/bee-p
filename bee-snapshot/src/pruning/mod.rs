@@ -13,7 +13,7 @@ mod config;
 
 pub use config::{PruningConfig, PruningConfigBuilder};
 
-use crate::{config::SnapshotConfig, constants::SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST, local::LocalSnapshotMetadata};
+use crate::constants::{ADDITIONAL_PRUNING_THRESHOLD, SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::{
@@ -24,30 +24,25 @@ use bee_tangle::traversal;
 
 use dashmap::DashMap;
 
-use log::{error, info, warn};
-
-const ADDITIONAL_PRUNING_THRESHOLD: MilestoneIndex = MilestoneIndex(50);
+use log::{info, warn};
 
 #[derive(Debug)]
 pub enum Error {
-    NotEnoughHistory,
-    NoPruningNeeded,
-    MilestoneNotFoundInTangle,
-    SolidEntryPointNotConfirmed,
-    MetadataNotFound,
-    MilestoneTransactionIsNotTail,
+    NotEnoughHistory(u32),
+    NoPruningNeeded(u32, u32),
+    MilestoneNotFoundInTangle(u32),
+    MetadataNotFound(Hash),
 }
 
 /// Checks whether any direct approver of the given transaction was confirmed by a
 /// milestone which is above the target milestone.
 pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
-    // Check if there is any child of the transaction is confirmed by newer milestones
+    // Check if there is any approver of the transaction was confirmed by newer milestones.
     let milestone_index;
     if let Some(metadata) = tangle().get_metadata(hash) {
         milestone_index = metadata.milestone_index;
     } else {
-        error!("Metadada for hash {:?} is not found in Tangle.", hash);
-        return Err(Error::MetadataNotFound);
+        return Err(Error::MetadataNotFound(*hash));
     }
     let mut is_solid = false;
     traversal::visit_children_follow_trunk(
@@ -57,7 +52,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
             if is_solid {
                 return false;
             }
-            // is_solid: one of the current tx's approver is confirmed by a newer milestone_index
+            // `true` when one of the current tx's approver was confirmed by a newer milestone_index.
             is_solid = metadata.flags.is_confirmed() && metadata.milestone_index > milestone_index;
             true
         },
@@ -70,32 +65,24 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
 pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMap<Hash, MilestoneIndex>, Error> {
     let solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
     for index in *target_index - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST..*target_index {
-        let milestone_tail_hash;
+        let milestone_hash;
 
-        // Get the milestone tail hash
-        // NOTE this milestone hash must be tail hash
+        // NOTE Actually we don't really need the tail, and only need one of the milestone tx.
+        //      In gohornet, we start from the tail milestone tx.
         if let Some(hash) = tangle().get_milestone_hash(MilestoneIndex(index)) {
-            // TODO Actually we don't really need the tail, and only need one of the milestone tx.
-            //      To align with gohornet, we start from the tail milestone tx.
-            if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
-                error!("Milestone w/ hash {} is not tail.", hash);
-                return Err(Error::MilestoneTransactionIsNotTail);
-            } else {
-                milestone_tail_hash = hash;
-            }
+            milestone_hash = hash;
         } else {
-            error!("Milestone index {} is not found in Tangle.", index);
-            return Err(Error::MilestoneNotFoundInTangle);
+            return Err(Error::MilestoneNotFoundInTangle(index));
         }
 
-        // Get all the approvees confirmed by the milestone tail
+        // Get all the approvees confirmed by the milestone tail.
         traversal::visit_parents_depth_first(
             tangle(),
-            milestone_tail_hash,
+            milestone_hash,
             |_hash, _tx, metadata| *metadata.milestone_index() >= index,
             |hash, _tx, metadata| {
                 if metadata.flags.is_confirmed() && is_solid_entry_point(&hash).unwrap() {
-                    // Find all tails
+                    // Find all tails.
                     helper::on_all_tails(tangle(), *hash, |hash, _tx, metadata| {
                         solid_entry_points.insert(hash.clone(), metadata.milestone_index);
                     });
@@ -108,97 +95,85 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
     Ok(solid_entry_points)
 }
 
-// TODO get the unconfirmed trnsactions in the database
-pub fn get_unconfirmed_transactions(target_index: &MilestoneIndex) -> Vec<Hash> {
+// TODO get the unconfirmed trnsactions in the database.
+pub fn get_unconfirmed_transactions(_target_index: &MilestoneIndex) -> Vec<Hash> {
     // NOTE If there is no specific struct for storing th unconfirmed transaction,
     //      then we need to traverse the whole tangle to get the unconfirmed transactions (SLOW)!
-    // TODO traverse the whole tangle through the approvers from solid entry points
+    // TODO traverse the whole tangle through the approvers from solid entry points.
     unimplemented!()
 }
 
-// TODO remove the unconfirmed transactions in the database
-pub fn prune_unconfirmed_transactions(purning_milestone_index: &MilestoneIndex) -> u32 {
+// TODO remove the unconfirmed transactions in the database.
+pub fn prune_unconfirmed_transactions(_purning_milestone_index: &MilestoneIndex) -> u32 {
     unimplemented!()
 }
 
-// TODO remove the confirmed transactions in the database
-pub fn prune_transactions(hashes: Vec<Hash>) -> u32 {
+// TODO remove the confirmed transactions in the database.
+pub fn prune_transactions(_hashes: Vec<Hash>) -> u32 {
     unimplemented!()
 }
 
-// NOTE we don't prune cache, but only prune the database
-pub fn prune_database(
-    _config: &SnapshotConfig,
-    local_snapshot_metadata: &LocalSnapshotMetadata,
-    mut target_index: MilestoneIndex,
-) -> Result<(), Error> {
-    // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index
-    // TODO change the type of `LocalSnapshotMetadata.index` to MilestoneIndex?
-    if local_snapshot_metadata.index() < *ADDITIONAL_PRUNING_THRESHOLD + *ADDITIONAL_PRUNING_THRESHOLD + 1 {
-        error!("Not enough histroy for pruning.");
-        return Err(Error::NotEnoughHistory);
+// TODO prunes the milestone metadata and the ledger diffs from the database for the given milestone.
+pub fn prune_milestone(_milestone_index: MilestoneIndex) {
+    // Delete ledger_diff for milestone with milestone_index.
+    // Delete milestone storage (if we have this) for milestone with milestone_index.
+    unimplemented!()
+}
+
+// NOTE we don't prune cache, but only prune the database.
+pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
+    // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index.
+    if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
+        return Err(Error::NotEnoughHistory(*tangle().get_snapshot_index()));
     }
 
-    // TODO change the type of `LocalSnapshotMetadata.index` to MilestoneIndex?
     let target_index_max = MilestoneIndex(
-        local_snapshot_metadata.index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - *ADDITIONAL_PRUNING_THRESHOLD - 1,
+        *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
     );
     if target_index > target_index_max {
         target_index = target_index_max;
     }
 
     if tangle().get_pruning_index() >= target_index {
-        error!(
-            "No puruning needed with purning index: {:?} and target_index: {:?}",
-            tangle().get_pruning_index(),
-            target_index
-        );
-        return Err(Error::NoPruningNeeded);
+        return Err(Error::NoPruningNeeded(*tangle().get_pruning_index(), *target_index));
     }
 
-    if tangle().get_latest_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + MilestoneIndex(1) > target_index {
-        // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points
-        error!(
-            "Not enough history! minimum index: {:?} should be <= target_index: {:?}",
-            tangle().get_latest_solid_milestone_index() + ADDITIONAL_PRUNING_THRESHOLD + MilestoneIndex(1),
-            target_index
-        );
-        return Err(Error::NotEnoughHistory);
+    if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *target_index {
+        // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
+        return Err(Error::NotEnoughHistory(
+            *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1,
+        ));
     }
 
-    // Update the solid entry points in the static MsTangle
+    // Update the solid entry points in the static MsTangle.
     let new_solid_entry_points = get_new_solid_entry_points(target_index)?;
 
-    // TODO clear the solid_entry_points in the static MsTangle
-    // tangle().solid_entry_points().clear();
+    // Clear the solid_entry_points in the static MsTangle.
+    tangle().clear_solid_entry_points();
 
-    // TODO update the whole solid_entry_points in the static MsTangle w/o looping
+    // TODO update the whole solid_entry_points in the static MsTangle w/o looping.
     for (hash, milestone_index) in new_solid_entry_points.into_iter() {
         tangle().add_solid_entry_point(hash, milestone_index);
     }
 
-    tangle().update_latest_solid_milestone_index(target_index);
+    // We have to set the new solid entry point index.
+    // This way we can cleanly prune even if the pruning was aborted last time.
+    tangle().update_entry_point_index(target_index);
 
     prune_unconfirmed_transactions(&tangle().get_pruning_index());
 
-    // Iterate through all milestones that have to be pruned
+    // Iterate through all milestones that have to be pruned.
     for milestone_index in *tangle().get_pruning_index() + 1..*target_index + 1 {
         info!("Pruning milestone {}...", milestone_index);
 
+        // TODO calculate the deleted tx count and visited tx count if needed
         let pruned_unconfirmed_transactions_count = prune_unconfirmed_transactions(&MilestoneIndex(milestone_index));
 
-        // Get the milestone tail hash
-        // NOTE this milestone hash must be tail hash
-        let milestone_tail_hash;
+        // NOTE Actually we don't really need the tail, and only need one of the milestone tx.
+        //      In gohornet, we start from the tail milestone tx.
+        let milestone_hash;
         if let Some(hash) = tangle().get_milestone_hash(MilestoneIndex(milestone_index)) {
-            // TODO Actually we don't really need the tail, and only need one of the milestone tx.
-            //      To align with gohornet, we start from the tail milestone tx.
-            if !tangle().get_metadata(&hash).unwrap().flags.is_tail() {
-                error!("Milestone w/ hash {} is not tail.", hash);
-                return Err(Error::MilestoneTransactionIsNotTail);
-            } else {
-                milestone_tail_hash = hash;
-            }
+            milestone_hash = hash;
         } else {
             warn!("Pruning milestone {} failed! Milestone not found!", milestone_index);
             continue;
@@ -206,15 +181,14 @@ pub fn prune_database(
 
         let mut transactions_to_prune: Vec<Hash> = Vec::new();
 
-        // Traverse the approvees of the milestone transaction
-        // Get all the approvees confirmed by the milestone tail
-        // Ignore Tx that were confirmed by older milestones
+        // Traverse the approvees of the milestone transaction.
         traversal::visit_parents_depth_first(
             tangle(),
-            milestone_tail_hash,
-            |_hash, _tx, metadata| {
-                // TODO metadata.flags.is_confirmed() is dummy, we reserve it to align it w/ gohornet
-                !(metadata.flags.is_confirmed() && *metadata.milestone_index() < milestone_index)
+            milestone_hash,
+            |_hash, _tx, _metadata| {
+                // NOTE everything that was referenced by that milestone can be pruned
+                //      (even transactions of older milestones)
+                true
             },
             |hash, _tx, _metadata| transactions_to_prune.push(hash.clone()),
             |_hash, _tx, _metadata| {},
@@ -226,15 +200,19 @@ pub fn prune_database(
         let transactions_to_prune_count = transactions_to_prune.len();
         let pruned_transactions_count = prune_transactions(transactions_to_prune);
 
+        prune_milestone(MilestoneIndex(milestone_index));
+
         tangle().update_pruning_index(MilestoneIndex(milestone_index));
         info!(
-            "Pruning milestone {}. Pruned {}/{} transactions. Pruned {} unconfirmed transactions",
+            "Pruning milestone {}. Pruned {}/{} confirmed transactions. Pruned {} unconfirmed transactions.",
             milestone_index,
             pruned_transactions_count,
             transactions_to_prune_count,
             pruned_unconfirmed_transactions_count
         );
-        // TODO trigger pruning milestone changed event
+        // TODO trigger pruning milestone index changed event if needed.
+        //      notify peers about our new pruning milestone index by
+        //      broadcast_heartbeat()
     }
     Ok(())
 }

@@ -9,78 +9,135 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A crate that contains foundational building blocks for the IOTA Tangle.
+// TODO remove
+#![allow(dead_code)]
 
-use rocksdb::{DBCompactionStyle, DBCompressionType};
+use crate::{compaction::CompactionStyle, compression::CompressionType};
+
 use serde::Deserialize;
-use std::convert::From;
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct Config {
-    pub rocksdb: RocksDB,
+const DEFAULT_PATH: &str = "";
+const DEFAULT_CREATE_IF_MISSING: bool = true;
+const DEFAULT_CREATE_MISSING_COLUMN_FAMILIES: bool = true;
+const DEFAULT_ENABLE_STATISTICS: bool = true;
+const DEFAULT_INCREASE_PARALLELISM: i32 = 0;
+const DEFAULT_OPTIMIZE_FOR_POINT_LOOKUP: u64 = 0;
+const DEFAULT_OPTIMIZE_LEVEL_STYLE_COMPACTION: usize = 0;
+const DEFAULT_OPTIMIZE_UNIVERSAL_STYLE_COMPACTION: usize = 0;
+const DEFAULT_SET_ADVISE_RANDOM_ON_OPEN: bool = true;
+const DEFAULT_SET_ALLOW_CONCURRENT_MEMTABLE_WRITE: bool = true;
+const DEFAULT_SET_ALLOW_MMAP_READS: bool = true;
+const DEFAULT_SET_ALLOW_MMAP_WRITES: bool = true;
+const DEFAULT_SET_ATOMIC_FLUSH: bool = true;
+const DEFAULT_SET_BYTES_PER_SYNC: u64 = 0;
+const DEFAULT_SET_COMPACTION_READAHEAD_SIZE: usize = 0;
+const DEFAULT_SET_COMPACTION_STYLE: CompactionStyle = CompactionStyle::Level;
+const DEFAULT_SET_MAX_WRITE_BUFFER_NUMBER: i32 = 0;
+const DEFAULT_SET_MAX_BACKGROUND_COMPACTIONS: i32 = 0;
+const DEFAULT_SET_MAX_BACKGROUND_FLUSHES: i32 = 0;
+const DEFAULT_SET_DISABLE_AUTO_COMPACTIONS: bool = true;
+const DEFAULT_SET_COMPRESSION_TYPE: CompressionType = CompressionType::None;
+
+#[derive(Default, Deserialize)]
+pub struct RocksDBConfigBuilder {
+    path: Option<String>,
+    create_if_missing: Option<bool>,
+    create_missing_column_families: Option<bool>,
+    enable_statistics: Option<bool>,
+    increase_parallelism: Option<i32>,
+    optimize_for_point_lookup: Option<u64>,
+    optimize_level_style_compaction: Option<usize>,
+    optimize_universal_style_compaction: Option<usize>,
+    set_advise_random_on_open: Option<bool>,
+    set_allow_concurrent_memtable_write: Option<bool>,
+    set_allow_mmap_reads: Option<bool>,
+    set_allow_mmap_writes: Option<bool>,
+    set_atomic_flush: Option<bool>,
+    set_bytes_per_sync: Option<u64>,
+    set_compaction_readahead_size: Option<usize>,
+    set_compaction_style: Option<CompactionStyle>,
+    set_max_write_buffer_number: Option<i32>,
+    set_max_background_compactions: Option<i32>,
+    set_max_background_flushes: Option<i32>,
+    set_disable_auto_compactions: Option<bool>,
+    set_compression_type: Option<CompressionType>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct RocksDB {
-    pub path: String,
-    pub create_if_missing: Option<bool>,
-    pub create_missing_column_families: Option<bool>,
-    pub enable_statistics: Option<bool>,
-    pub increase_parallelism: Option<i32>,
-    pub optimize_for_point_lookup: Option<u64>,
-    pub optimize_level_style_compaction: Option<usize>,
-    pub optimize_universal_style_compaction: Option<usize>,
-    pub set_advise_random_on_open: Option<bool>,
-    pub set_allow_concurrent_memtable_write: Option<bool>,
-    pub set_allow_mmap_reads: Option<bool>,
-    pub set_allow_mmap_writes: Option<bool>,
-    pub set_atomic_flush: Option<bool>,
-    pub set_bytes_per_sync: Option<u64>,
-    pub set_compaction_readahead_size: Option<usize>,
-    pub set_compaction_style: Option<CompactionStyle>,
-    pub set_max_write_buffer_number: Option<i32>,
-    pub set_max_background_compactions: Option<i32>,
-    pub set_max_background_flushes: Option<i32>,
-    pub set_disable_auto_compactions: Option<bool>,
-    pub set_compression_type: Option<CompressionType>,
-}
+impl RocksDBConfigBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
 
-#[derive(Debug, Clone, Deserialize)]
-pub enum CompactionStyle {
-    Level,
-    Universal,
-    Fifo,
-}
-impl From<CompactionStyle> for DBCompactionStyle {
-    fn from(compaction_style: CompactionStyle) -> Self {
-        match compaction_style {
-            CompactionStyle::Level => DBCompactionStyle::Level,
-            CompactionStyle::Universal => DBCompactionStyle::Universal,
-            CompactionStyle::Fifo => DBCompactionStyle::Fifo,
+    pub fn finish(self) -> RocksDBConfig {
+        RocksDBConfig {
+            path: self.path.unwrap_or(DEFAULT_PATH.to_string()),
+            create_if_missing: self.create_if_missing.unwrap_or(DEFAULT_CREATE_IF_MISSING),
+            create_missing_column_families: self
+                .create_missing_column_families
+                .unwrap_or(DEFAULT_CREATE_MISSING_COLUMN_FAMILIES),
+            enable_statistics: self.enable_statistics.unwrap_or(DEFAULT_ENABLE_STATISTICS),
+            increase_parallelism: self.increase_parallelism.unwrap_or(DEFAULT_INCREASE_PARALLELISM),
+            optimize_for_point_lookup: self
+                .optimize_for_point_lookup
+                .unwrap_or(DEFAULT_OPTIMIZE_FOR_POINT_LOOKUP),
+            optimize_level_style_compaction: self
+                .optimize_level_style_compaction
+                .unwrap_or(DEFAULT_OPTIMIZE_LEVEL_STYLE_COMPACTION),
+            optimize_universal_style_compaction: self
+                .optimize_universal_style_compaction
+                .unwrap_or(DEFAULT_OPTIMIZE_UNIVERSAL_STYLE_COMPACTION),
+            set_advise_random_on_open: self
+                .set_advise_random_on_open
+                .unwrap_or(DEFAULT_SET_ADVISE_RANDOM_ON_OPEN),
+            set_allow_concurrent_memtable_write: self
+                .set_allow_concurrent_memtable_write
+                .unwrap_or(DEFAULT_SET_ALLOW_CONCURRENT_MEMTABLE_WRITE),
+            set_allow_mmap_reads: self.set_allow_mmap_reads.unwrap_or(DEFAULT_SET_ALLOW_MMAP_READS),
+            set_allow_mmap_writes: self.set_allow_mmap_writes.unwrap_or(DEFAULT_SET_ALLOW_MMAP_WRITES),
+            set_atomic_flush: self.set_atomic_flush.unwrap_or(DEFAULT_SET_ATOMIC_FLUSH),
+            set_bytes_per_sync: self.set_bytes_per_sync.unwrap_or(DEFAULT_SET_BYTES_PER_SYNC),
+            set_compaction_readahead_size: self
+                .set_compaction_readahead_size
+                .unwrap_or(DEFAULT_SET_COMPACTION_READAHEAD_SIZE),
+            set_compaction_style: self.set_compaction_style.unwrap_or(DEFAULT_SET_COMPACTION_STYLE),
+            set_max_write_buffer_number: self
+                .set_max_write_buffer_number
+                .unwrap_or(DEFAULT_SET_MAX_WRITE_BUFFER_NUMBER),
+            set_max_background_compactions: self
+                .set_max_background_compactions
+                .unwrap_or(DEFAULT_SET_MAX_BACKGROUND_COMPACTIONS),
+            set_max_background_flushes: self
+                .set_max_background_flushes
+                .unwrap_or(DEFAULT_SET_MAX_BACKGROUND_FLUSHES),
+            set_disable_auto_compactions: self
+                .set_disable_auto_compactions
+                .unwrap_or(DEFAULT_SET_DISABLE_AUTO_COMPACTIONS),
+            set_compression_type: self.set_compression_type.unwrap_or(DEFAULT_SET_COMPRESSION_TYPE),
         }
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub enum CompressionType {
-    None,
-    Snappy,
-    Zlib,
-    Bz2,
-    Lz4,
-    Lz4hc,
-    Zstd,
-}
-impl From<CompressionType> for DBCompressionType {
-    fn from(compression_type: CompressionType) -> Self {
-        match compression_type {
-            CompressionType::None => DBCompressionType::None,
-            CompressionType::Snappy => DBCompressionType::Snappy,
-            CompressionType::Zlib => DBCompressionType::Zlib,
-            CompressionType::Bz2 => DBCompressionType::Bz2,
-            CompressionType::Lz4 => DBCompressionType::Lz4,
-            CompressionType::Lz4hc => DBCompressionType::Lz4hc,
-            CompressionType::Zstd => DBCompressionType::Zstd,
-        }
-    }
+#[derive(Clone)]
+pub struct RocksDBConfig {
+    pub(crate) path: String,
+    pub(crate) create_if_missing: bool,
+    pub(crate) create_missing_column_families: bool,
+    pub(crate) enable_statistics: bool,
+    pub(crate) increase_parallelism: i32,
+    pub(crate) optimize_for_point_lookup: u64,
+    pub(crate) optimize_level_style_compaction: usize,
+    pub(crate) optimize_universal_style_compaction: usize,
+    pub(crate) set_advise_random_on_open: bool,
+    pub(crate) set_allow_concurrent_memtable_write: bool,
+    pub(crate) set_allow_mmap_reads: bool,
+    pub(crate) set_allow_mmap_writes: bool,
+    pub(crate) set_atomic_flush: bool,
+    pub(crate) set_bytes_per_sync: u64,
+    pub(crate) set_compaction_readahead_size: usize,
+    pub(crate) set_compaction_style: CompactionStyle,
+    pub(crate) set_max_write_buffer_number: i32,
+    pub(crate) set_max_background_compactions: i32,
+    pub(crate) set_max_background_flushes: i32,
+    pub(crate) set_disable_auto_compactions: bool,
+    pub(crate) set_compression_type: CompressionType,
 }

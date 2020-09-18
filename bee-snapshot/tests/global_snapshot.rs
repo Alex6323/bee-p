@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_protocol::MilestoneIndex;
-use bee_snapshot::global::{Error, GlobalSnapshot};
+use bee_snapshot::global::{FileError as Error, GlobalSnapshot};
 
 #[test]
 fn valid() {

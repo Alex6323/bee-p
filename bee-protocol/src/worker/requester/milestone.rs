@@ -12,50 +12,34 @@
 use crate::{
     message::MilestoneRequest,
     milestone::MilestoneIndex,
-    protocol::Protocol,
+    protocol::{Protocol, Sender},
     tangle::tangle,
-    worker::{SenderWorker, Worker},
+    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::wait_priority_queue::WaitIncoming;
 use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
-use futures::{select, stream::Fuse, StreamExt};
+use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 
-use std::{
-    cmp::Ordering,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-#[derive(Eq, PartialEq)]
 pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
-
-impl PartialOrd for MilestoneRequesterWorkerEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.0.partial_cmp(&self.0)
-    }
-}
-
-impl Ord for MilestoneRequesterWorkerEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.0.cmp(&self.0)
-    }
-}
 
 pub(crate) struct MilestoneRequesterWorker {
     counter: usize,
+
     timeouts: Fuse<Interval>,
 }
 #[async_trait]
 impl Worker for MilestoneRequesterWorker {
     type Event = MilestoneRequesterWorkerEntry;
-    type Receiver = ShutdownStream<WaitIncoming<'static, Self::Event>>;
+    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEntry>>;
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
         async fn aux(
@@ -113,8 +97,7 @@ impl MilestoneRequesterWorker {
 
         match epid {
             Some(epid) => {
-                SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
-
+                Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                 true
             }
             None => {
@@ -127,7 +110,7 @@ impl MilestoneRequesterWorker {
 
                     if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                         if peer.maybe_has_data(index) {
-                            SenderWorker::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+                            Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                             return true;
                         }
                     }

@@ -11,33 +11,24 @@
 
 // TODO get peer info
 
-use crate::{
-    message::{Heartbeat, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest},
-    peer::{HandshakedPeer, Peer},
-    worker::{SenderWorker, Worker},
-};
+use crate::peer::{HandshakedPeer, Peer};
 
-use bee_common::shutdown_stream::ShutdownStream;
-use bee_network::{Address, EndpointId, Network};
+use bee_network::{Address, EndpointId};
 
-use async_std::{sync::RwLock, task::spawn};
+use async_std::sync::RwLock;
 use dashmap::DashMap;
-use futures::channel::{mpsc, oneshot};
-use log::warn;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub(crate) struct PeerManager {
-    network: Network,
     pub(crate) peers: DashMap<EndpointId, Arc<Peer>>,
     pub(crate) handshaked_peers: DashMap<EndpointId, Arc<HandshakedPeer>>,
     pub(crate) handshaked_peers_keys: RwLock<Vec<EndpointId>>,
 }
 
 impl PeerManager {
-    pub(crate) fn new(network: Network) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            network,
             peers: Default::default(),
             handshaked_peers: Default::default(),
             handshaked_peers_keys: Default::default(),
@@ -52,57 +43,10 @@ impl PeerManager {
         if self.peers.remove(epid).is_some() {
             // TODO check if not already added
 
-            // SenderWorker MilestoneRequest
-            let (milestone_request_tx, milestone_request_rx) = mpsc::unbounded();
-            let (milestone_request_shutdown_tx, milestone_request_shutdown_rx) = oneshot::channel();
-
-            // SenderWorker TransactionMessage
-            let (transaction_tx, transaction_rx) = mpsc::unbounded();
-            let (transaction_shutdown_tx, transaction_shutdown_rx) = oneshot::channel();
-
-            // SenderWorker TransactionRequest
-            let (transaction_request_tx, transaction_request_rx) = mpsc::unbounded();
-            let (transaction_request_shutdown_tx, transaction_request_shutdown_rx) = oneshot::channel();
-
-            // SenderWorker Heartbeat
-            let (heartbeat_tx, heartbeat_rx) = mpsc::unbounded();
-            let (heartbeat_shutdown_tx, heartbeat_shutdown_rx) = oneshot::channel();
-
-            let peer = Arc::new(HandshakedPeer::new(
-                *epid,
-                address,
-                (milestone_request_tx, Mutex::new(Some(milestone_request_shutdown_tx))),
-                (transaction_tx, Mutex::new(Some(transaction_shutdown_tx))),
-                (
-                    transaction_request_tx,
-                    Mutex::new(Some(transaction_request_shutdown_tx)),
-                ),
-                (heartbeat_tx, Mutex::new(Some(heartbeat_shutdown_tx))),
-            ));
+            let peer = Arc::new(HandshakedPeer::new(*epid, address));
 
             self.handshaked_peers.insert(*epid, peer.clone());
             self.handshaked_peers_keys.write().await.push(*epid);
-
-            // TODO Add to shutdown ?
-
-            spawn(
-                SenderWorker::<MilestoneRequest>::new(self.network.clone(), peer.clone())
-                    .run(ShutdownStream::new(milestone_request_shutdown_rx, milestone_request_rx)),
-            );
-            spawn(
-                SenderWorker::<TransactionMessage>::new(self.network.clone(), peer.clone())
-                    .run(ShutdownStream::new(transaction_shutdown_rx, transaction_rx)),
-            );
-            spawn(
-                SenderWorker::<TransactionRequest>::new(self.network.clone(), peer.clone()).run(ShutdownStream::new(
-                    transaction_request_shutdown_rx,
-                    transaction_request_rx,
-                )),
-            );
-            spawn(
-                SenderWorker::<Heartbeat>::new(self.network.clone(), peer)
-                    .run(ShutdownStream::new(heartbeat_shutdown_rx, heartbeat_rx)),
-            );
         }
     }
 
@@ -111,30 +55,15 @@ impl PeerManager {
         self.peers.remove(epid);
 
         self.handshaked_peers_keys.write().await.retain(|e| e != epid);
+    }
 
-        if let Some((_, peer)) = self.handshaked_peers.remove(epid) {
-            if let Ok(mut shutdown) = peer.milestone_request.1.lock() {
-                if let Some(shutdown) = shutdown.take() {
-                    if let Err(e) = shutdown.send(()) {
-                        warn!("Shutting down TransactionWorker failed: {:?}.", e);
-                    }
-                }
-            }
-        }
+    pub(crate) fn connected_peers(&self) -> u8 {
+        // TODO impl
+        0
+    }
 
-        // TODO
-
-        // if let Err(_) = peer.milestone_request.1.send(()) {
-        //     warn!("Shutting down MilestoneRequest SenderWorker failed.");
-        // }
-        // if let Err(_) = peer.transaction.1.send(()) {
-        //     warn!("Shutting down TransactionMessage SenderWorker failed.");
-        // }
-        // if let Err(_) = peer.transaction_request.1.send(()) {
-        //     warn!("Shutting down TransactionRequest SenderWorker failed.");
-        // }
-        // if let Err(_) = peer.heartbeat.1.send(()) {
-        //     warn!("Shutting down Heartbeat SenderWorker failed.");
-        // }
+    pub(crate) fn synced_peers(&self) -> u8 {
+        // TODO impl
+        0
     }
 }

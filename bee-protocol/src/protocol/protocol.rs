@@ -18,14 +18,14 @@ use crate::{
     tangle::tangle,
     worker::{
         BroadcasterWorker, BundleValidatorWorker, HasherWorker, HasherWorkerEvent, KickstartWorker,
-        MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneValidatorWorker, PeerHandshakerWorker,
-        ProcessorWorker, SolidPropagatorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker,
-        TransactionResponderWorker, Worker,
+        MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneValidatorWorker,
+        PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker, StatusWorker, TpsWorker,
+        TransactionRequesterWorker, TransactionResponderWorker, Worker,
     },
 };
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::{event::Bus, wait_priority_queue::WaitPriorityQueue};
+use bee_common_ext::event::Bus;
 use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
     Hash,
@@ -52,10 +52,11 @@ pub struct Protocol {
     pub(crate) hasher_worker: mpsc::UnboundedSender<HasherWorkerEvent>,
     pub(crate) transaction_responder_worker: mpsc::UnboundedSender<<TransactionResponderWorker as Worker>::Event>,
     pub(crate) milestone_responder_worker: mpsc::UnboundedSender<<MilestoneResponderWorker as Worker>::Event>,
-    pub(crate) transaction_requester_worker: WaitPriorityQueue<<TransactionRequesterWorker as Worker>::Event>,
-    pub(crate) milestone_requester_worker: WaitPriorityQueue<<MilestoneRequesterWorker as Worker>::Event>,
+    pub(crate) transaction_requester_worker: mpsc::UnboundedSender<<TransactionRequesterWorker as Worker>::Event>,
+    pub(crate) milestone_requester_worker: mpsc::UnboundedSender<<MilestoneRequesterWorker as Worker>::Event>,
     pub(crate) broadcaster_worker: mpsc::UnboundedSender<<BroadcasterWorker as Worker>::Event>,
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<<SolidPropagatorWorker as Worker>::Event>,
+    pub(crate) milestone_solidifier_worker: mpsc::UnboundedSender<<MilestoneSolidifierWorker as Worker>::Event>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
@@ -86,8 +87,10 @@ impl Protocol {
         let (milestone_responder_worker_tx, milestone_responder_worker_rx) = mpsc::unbounded();
         let (milestone_responder_worker_shutdown_tx, milestone_responder_worker_shutdown_rx) = oneshot::channel();
 
+        let (transaction_requester_worker_tx, transaction_requester_worker_rx) = mpsc::unbounded();
         let (transaction_requester_worker_shutdown_tx, transaction_requester_worker_shutdown_rx) = oneshot::channel();
 
+        let (milestone_requester_worker_tx, milestone_requester_worker_rx) = mpsc::unbounded();
         let (milestone_requester_worker_shutdown_tx, milestone_requester_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::unbounded();
@@ -101,6 +104,9 @@ impl Protocol {
 
         let (solid_propagator_worker_tx, solid_propagator_worker_rx) = mpsc::unbounded();
         let (solid_propagator_worker_shutdown_tx, solid_propagator_worker_shutdown_rx) = oneshot::channel();
+
+        let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) = mpsc::unbounded();
+        let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
 
         let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();
 
@@ -117,11 +123,12 @@ impl Protocol {
             hasher_worker: hasher_worker_tx,
             transaction_responder_worker: transaction_responder_worker_tx,
             milestone_responder_worker: milestone_responder_worker_tx,
-            transaction_requester_worker: Default::default(),
-            milestone_requester_worker: Default::default(),
+            transaction_requester_worker: transaction_requester_worker_tx,
+            milestone_requester_worker: milestone_requester_worker_tx,
             broadcaster_worker: broadcaster_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
-            peer_manager: PeerManager::new(network.clone()),
+            milestone_solidifier_worker: milestone_solidifier_worker_tx,
+            peer_manager: PeerManager::new(),
             requested_transactions: Default::default(),
             requested_milestones: Default::default(),
         };
@@ -172,7 +179,7 @@ impl Protocol {
             transaction_requester_worker_shutdown_tx,
             spawn(TransactionRequesterWorker::new().run(ShutdownStream::from_fused(
                 transaction_requester_worker_shutdown_rx,
-                Protocol::get().transaction_requester_worker.incoming(),
+                transaction_requester_worker_rx,
             ))),
         );
 
@@ -180,7 +187,7 @@ impl Protocol {
             milestone_requester_worker_shutdown_tx,
             spawn(MilestoneRequesterWorker::new().run(ShutdownStream::from_fused(
                 milestone_requester_worker_shutdown_rx,
-                Protocol::get().milestone_requester_worker.incoming(),
+                milestone_requester_worker_rx,
             ))),
         );
 
@@ -253,12 +260,29 @@ impl Protocol {
             spawn(TpsWorker::new().run(ShutdownStream::new(tps_worker_shutdown_rx, TpsWorker::interval()))),
         );
 
+        let (ms_send, ms_recv) = oneshot::channel();
+
         shutdown.add_worker_shutdown(
             kickstart_worker_shutdown_tx,
-            spawn(KickstartWorker::new().run(ShutdownStream::new(
-                kickstart_worker_shutdown_rx,
-                KickstartWorker::interval(),
-            ))),
+            spawn(
+                KickstartWorker::new(ms_send, Protocol::get().config.workers.ms_sync_count).run(ShutdownStream::new(
+                    kickstart_worker_shutdown_rx,
+                    KickstartWorker::interval(),
+                )),
+            ),
+        );
+
+        shutdown.add_worker_shutdown(
+            milestone_solidifier_worker_shutdown_tx,
+            spawn(async {
+                MilestoneSolidifierWorker::new(ms_recv)
+                    .await
+                    .run(ShutdownStream::new(
+                        milestone_solidifier_worker_shutdown_rx,
+                        milestone_solidifier_worker_rx,
+                    ))
+                    .await
+            }),
         );
     }
 
@@ -303,11 +327,11 @@ fn on_latest_milestone_changed(latest_milestone: &LatestMilestoneChanged) {
     );
     tangle().update_latest_milestone_index(latest_milestone.0.index);
 
-    Protocol::broadcast_heartbeat(
+    spawn(Protocol::broadcast_heartbeat(
         tangle().get_latest_solid_milestone_index(),
         tangle().get_pruning_index(),
         latest_milestone.0.index,
-    );
+    ));
 }
 
 // TODO Chrysalis
@@ -324,7 +348,8 @@ fn on_latest_solid_milestone_changed(latest_solid_milestone: &LatestSolidMilesto
     debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
     tangle().update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
-    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(1);
+    let ms_sync_count = Protocol::get().config.workers.ms_sync_count;
+    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
 
     if !tangle().is_synced() {
         if tangle().contains_milestone(next_ms) {
@@ -334,9 +359,9 @@ fn on_latest_solid_milestone_changed(latest_solid_milestone: &LatestSolidMilesto
         }
     }
 
-    Protocol::broadcast_heartbeat(
+    spawn(Protocol::broadcast_heartbeat(
         latest_solid_milestone.0.index,
         tangle().get_pruning_index(),
         tangle().get_latest_milestone_index(),
-    );
+    ));
 }

@@ -41,6 +41,7 @@ pub struct MsTangle {
     latest_solid_milestone_index: AtomicU32,
     snapshot_index: AtomicU32,
     pruning_index: AtomicU32,
+    entry_point_index: AtomicU32,
 }
 
 impl Deref for MsTangle {
@@ -136,6 +137,14 @@ impl MsTangle {
         self.pruning_index.store(*new_index, Ordering::Relaxed);
     }
 
+    pub fn get_entry_point_index(&self) -> MilestoneIndex {
+        self.entry_point_index.load(Ordering::Relaxed).into()
+    }
+
+    pub fn update_entry_point_index(&self, new_index: MilestoneIndex) {
+        self.entry_point_index.store(*new_index, Ordering::Relaxed);
+    }
+
     // TODO reduce to one atomic value ?
     pub fn is_synced(&self) -> bool {
         self.get_latest_solid_milestone_index() == self.get_latest_milestone_index()
@@ -148,6 +157,10 @@ impl MsTangle {
     /// Removes `hash` from the set of solid entry points.
     pub fn remove_solid_entry_point(&self, hash: &Hash) {
         self.solid_entry_points.remove(hash);
+    }
+
+    pub fn clear_solid_entry_points(&self) {
+        self.solid_entry_points.clear();
     }
 
     /// Returns whether the transaction associated with `hash` is a solid entry point.

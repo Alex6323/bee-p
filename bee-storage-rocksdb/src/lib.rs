@@ -10,6 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub mod access;
+pub mod compaction;
+pub mod compression;
 pub mod config;
 pub mod persistable;
 pub mod storage;

@@ -11,8 +11,9 @@
 
 use crate::{
     message::{compress_transaction_bytes, Transaction as TransactionMessage, TransactionRequest},
+    protocol::Sender,
     tangle::tangle,
-    worker::{SenderWorker, Worker},
+    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -45,7 +46,7 @@ impl Worker for TransactionResponderWorker {
         info!("Running.");
 
         while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
-            self.process_request(epid, request);
+            self.process_request(epid, request).await;
         }
 
         info!("Stopped.");
@@ -59,7 +60,7 @@ impl TransactionResponderWorker {
         Self
     }
 
-    fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
+    async fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
         match Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
             Ok(hash) => {
                 match tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
@@ -67,13 +68,14 @@ impl TransactionResponderWorker {
                         let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
                         transaction.into_trits_allocated(&mut trits);
                         // TODO dedicated channel ? Priority Queue ?
-                        SenderWorker::<TransactionMessage>::send(
+                        Sender::<TransactionMessage>::send(
                             &epid,
                             // TODO try to compress lower in the pipeline ?
                             TransactionMessage::new(&compress_transaction_bytes(cast_slice(
                                 trits.encode::<T5B1Buf>().as_i8_slice(),
                             ))),
                         )
+                        .await
                     }
                     None => {}
                 }

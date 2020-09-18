@@ -10,7 +10,29 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod config;
-mod snapshot;
+mod file;
 
 pub use config::{GlobalSnapshotConfig, GlobalSnapshotConfigBuilder};
-pub use snapshot::{Error, GlobalSnapshot};
+pub use file::Error as FileError;
+
+use bee_ledger::state::LedgerState;
+use bee_protocol::MilestoneIndex;
+
+pub struct GlobalSnapshot {
+    index: MilestoneIndex,
+    state: LedgerState,
+}
+
+impl GlobalSnapshot {
+    pub fn index(&self) -> &MilestoneIndex {
+        &self.index
+    }
+
+    pub fn state(&self) -> &LedgerState {
+        &self.state
+    }
+
+    pub fn into_state(self) -> LedgerState {
+        self.state
+    }
+}
