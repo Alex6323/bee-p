@@ -87,11 +87,6 @@ impl Protocol {
 
     // TransactionMessage
 
-    pub fn send_transaction(to: EndpointId, transaction: &[u8]) {
-        Sender::<TransactionMessage>::send(&to, TransactionMessage::new(transaction));
-    }
-
-    // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
     pub(crate) fn broadcast_transaction_message(source: Option<EndpointId>, transaction: TransactionMessage) {
         if let Err(e) = Protocol::get()
             .broadcaster_worker
@@ -101,7 +96,6 @@ impl Protocol {
         }
     }
 
-    // This doesn't use `send_transaction` because answering a request and broadcasting are different priorities
     pub fn broadcast_transaction(source: Option<EndpointId>, transaction: &[u8]) {
         Protocol::broadcast_transaction_message(source, TransactionMessage::new(transaction));
     }
