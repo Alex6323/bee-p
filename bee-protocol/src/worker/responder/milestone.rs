@@ -17,6 +17,7 @@ use crate::{
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_network::EndpointId;
+use bee_tangle::helper::load_bundle_builder;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::bundled::BundledTransaction as Transaction;
 
@@ -50,23 +51,23 @@ impl MilestoneResponderWorker {
             _ => request.index.into(),
         };
 
-        // TODO send complete ms bundle ?
-        match tangle().get_milestone(index) {
-            Some(transaction) => {
+        if let Some(hash) = tangle().get_milestone_hash(index) {
+            if let Some(builder) = load_bundle_builder(tangle(), &hash) {
+                // This is safe because the bundle has already been validated.
+                let bundle = unsafe { builder.build() };
                 let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-                transaction.into_trits_allocated(&mut trits);
-                // TODO dedicated channel ? Priority Queue ?
-                // TODO compress bytes
-                Sender::<TransactionMessage>::send(
-                    &epid,
-                    // TODO try to compress lower in the pipeline ?
-                    TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                        trits.encode::<T5B1Buf>().as_i8_slice(),
-                    ))),
-                )
-                .await;
+
+                for transaction in bundle {
+                    transaction.into_trits_allocated(&mut trits);
+                    Sender::<TransactionMessage>::send(
+                        &epid,
+                        TransactionMessage::new(&compress_transaction_bytes(cast_slice(
+                            trits.encode::<T5B1Buf>().as_i8_slice(),
+                        ))),
+                    )
+                    .await;
+                }
             }
-            None => {}
         }
     }
 
