@@ -1,4 +1,4 @@
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
 pub(crate) struct WorkerId(usize);
 
 macro_rules! define_ids {
