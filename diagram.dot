@@ -1,0 +1,17 @@
+digraph {
+  tps_worker
+  status_worker
+  network -> handshaker_worker
+  network -> peer_worker
+  peer_worker -> milestone_responder_worker
+  peer_worker -> hasher_worker
+  peer_worker -> transaction_responder_worker
+  hasher_worker -> processor_worker
+  processor_worker -> milestone_validator_worker
+  processor_worker -> broadcaster_worker
+  processor_worker -> solid_propagator_worker
+  solid_propagator_worker -> bundle_validator_worker
+  milestone_validator_worker -> milestone_solidifier_worker
+  solidifier_kick_start_worker -> milestone_requester_worker
+  milestone_solidifier_worker -> transaction_requester_worker
+}

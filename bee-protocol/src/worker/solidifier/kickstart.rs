@@ -15,7 +15,7 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 
 use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
-use futures::{stream::Fuse, StreamExt, channel::oneshot};
+use futures::{channel::oneshot, stream::Fuse, StreamExt};
 use log::info;
 
 use std::time::Duration;
@@ -29,6 +29,14 @@ pub(crate) struct KickstartWorker {
 impl Worker for KickstartWorker {
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
+
+    fn name() -> &'static str {
+        "solidifier_kickstart_worker"
+    }
+
+    fn dependencies() -> &'static [&'static str] {
+        &[]
+    }
 
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");

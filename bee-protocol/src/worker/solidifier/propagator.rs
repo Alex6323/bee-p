@@ -41,6 +41,14 @@ impl Worker for SolidPropagatorWorker {
     type Event = SolidPropagatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
+    fn name() -> &'static str {
+        "solid_propagator_worker"
+    }
+
+    fn dependencies() -> &'static [&'static str] {
+        &[]
+    }
+
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");
 

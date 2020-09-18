@@ -42,6 +42,14 @@ impl Worker for TransactionRequesterWorker {
     type Event = TransactionRequesterWorkerEntry;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
 
+    fn name() -> &'static str {
+        "transaction_requester_worker"
+    }
+
+    fn dependencies() -> &'static [&'static str] {
+        &[]
+    }
+
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
         async fn run_aux(
             mut worker: TransactionRequesterWorker,

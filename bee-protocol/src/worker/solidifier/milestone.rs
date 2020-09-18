@@ -34,6 +34,14 @@ impl Worker for MilestoneSolidifierWorker {
     type Event = MilestoneSolidifierWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
+    fn name() -> &'static str {
+        "milestone_solidifier_worker"
+    }
+
+    fn dependencies() -> &'static [&'static str] {
+        &[]
+    }
+
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");
 

@@ -39,6 +39,14 @@ impl Worker for BroadcasterWorker {
     type Event = BroadcasterWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 
+    fn name() -> &'static str {
+        "broadcaster_worker"
+    }
+
+    fn dependencies() -> &'static [&'static str] {
+        &[]
+    }
+
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");
 

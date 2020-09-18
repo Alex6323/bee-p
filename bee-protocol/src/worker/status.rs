@@ -27,6 +27,14 @@ impl Worker for StatusWorker {
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 
+    fn name() -> &'static str {
+        "status_worker"
+    }
+
+    fn dependencies() -> &'static [&'static str] {
+        &[]
+    }
+
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");
 

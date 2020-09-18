@@ -15,6 +15,7 @@ pub mod tangle;
 
 mod message;
 mod milestone;
+mod node;
 mod peer;
 mod protocol;
 mod worker;

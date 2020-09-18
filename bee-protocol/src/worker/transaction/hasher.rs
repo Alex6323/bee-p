@@ -57,6 +57,14 @@ impl Worker for HasherWorker {
     type Event = usize;
     type Receiver = BatchStream;
 
+    fn name() -> &'static str {
+        "hasher_worker"
+    }
+
+    fn dependencies() -> &'static [&'static str] {
+        &[]
+    }
+
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");
 

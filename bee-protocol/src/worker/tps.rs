@@ -35,6 +35,14 @@ impl Worker for TpsWorker {
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 
+    fn name() -> &'static str {
+        "tps_worker"
+    }
+
+    fn dependencies() -> &'static [&'static str] {
+        &[]
+    }
+
     async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
         info!("Running.");
 

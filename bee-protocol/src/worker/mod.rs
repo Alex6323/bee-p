@@ -48,8 +48,10 @@ use futures::Stream;
 #[async_trait]
 pub(crate) trait Worker {
     type Event;
-
     type Receiver: Stream<Item = Self::Event>;
+
+    fn name() -> &'static str;
+    fn dependencies() -> &'static [&'static str];
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError>;
 }
