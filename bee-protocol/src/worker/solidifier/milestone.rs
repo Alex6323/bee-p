@@ -11,8 +11,8 @@
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
-use bee_common_ext::worker::Worker;
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_tangle::traversal;
 
 use async_trait::async_trait;

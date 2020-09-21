@@ -15,8 +15,8 @@ use crate::{
     tangle::tangle,
 };
 
-use bee_common_ext::worker::Worker;
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_network::EndpointId;
 use bee_tangle::helper::load_bundle_builder;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
