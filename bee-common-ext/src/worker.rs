@@ -11,8 +11,6 @@
 
 use crate::node::Node;
 
-use bee_common::worker::Error as WorkerError;
-
 use async_trait::async_trait;
 use futures::Stream;
 
@@ -22,8 +20,9 @@ use std::any::TypeId;
 pub trait Worker<N: Node> {
     const DEPS: &'static [TypeId] = &[];
 
+    type Error;
     type Event;
     type Receiver: Stream<Item = Self::Event>;
 
-    async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError>;
+    async fn run(self, receiver: Self::Receiver) -> Result<(), Self::Error>;
 }

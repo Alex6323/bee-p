@@ -39,10 +39,11 @@ pub(crate) struct TransactionResponderWorker;
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for TransactionResponderWorker {
+    type Error = WorkerError;
     type Event = TransactionResponderWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {

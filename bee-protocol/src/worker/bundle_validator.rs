@@ -29,10 +29,11 @@ pub(crate) struct BundleValidatorWorker;
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for BundleValidatorWorker {
+    type Error = WorkerError;
     type Event = BundleValidatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {

@@ -53,10 +53,11 @@ pub(crate) struct HasherWorker<N: Node> {
 
 #[async_trait]
 impl<N: Node + 'static + Send> Worker<N> for HasherWorker<N> {
+    type Error = WorkerError;
     type Event = usize;
     type Receiver = BatchStream;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(batch_size) = receiver.next().await {

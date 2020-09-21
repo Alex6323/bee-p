@@ -57,10 +57,11 @@ pub(crate) struct LedgerWorker {
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for LedgerWorker {
+    type Error = WorkerError;
     type Event = LedgerWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(event) = receiver.next().await {

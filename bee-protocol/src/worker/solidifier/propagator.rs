@@ -39,10 +39,11 @@ pub(crate) struct SolidPropagatorWorker {
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for SolidPropagatorWorker {
+    type Error = WorkerError;
     type Event = SolidPropagatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(SolidPropagatorWorkerEvent(hash)) = receiver.next().await {

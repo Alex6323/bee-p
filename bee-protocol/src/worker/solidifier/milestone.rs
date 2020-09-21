@@ -32,10 +32,11 @@ pub(crate) struct MilestoneSolidifierWorker {
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for MilestoneSolidifierWorker {
+    type Error = WorkerError;
     type Event = MilestoneSolidifierWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(MilestoneSolidifierWorkerEvent(index)) = receiver.next().await {

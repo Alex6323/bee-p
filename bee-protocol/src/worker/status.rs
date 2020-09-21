@@ -25,10 +25,11 @@ pub(crate) struct StatusWorker;
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for StatusWorker {
+    type Error = WorkerError;
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while receiver.next().await.is_some() {
