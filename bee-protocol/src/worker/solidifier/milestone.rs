@@ -9,12 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    milestone::MilestoneIndex,
-    protocol::Protocol,
-    tangle::tangle,
-    worker::{Worker, WorkerId},
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::Worker};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_tangle::traversal;
@@ -27,6 +22,8 @@ use futures::{
 };
 use log::{debug, info};
 
+use std::any::TypeId;
+
 pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
 pub(crate) struct MilestoneSolidifierWorker {
@@ -36,8 +33,7 @@ pub(crate) struct MilestoneSolidifierWorker {
 
 #[async_trait]
 impl Worker for MilestoneSolidifierWorker {
-    const ID: WorkerId = WorkerId::milestone_solidifier();
-    const DEPS: &'static [WorkerId] = &[];
+    const DEPS: &'static [TypeId] = &[];
 
     type Event = MilestoneSolidifierWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;

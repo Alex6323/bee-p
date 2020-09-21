@@ -9,12 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    milestone::MilestoneIndex,
-    protocol::Protocol,
-    tangle::tangle,
-    worker::{Worker, WorkerId},
-};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worker::Worker};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 
@@ -23,7 +18,7 @@ use async_trait::async_trait;
 use futures::{channel::oneshot, stream::Fuse, StreamExt};
 use log::info;
 
-use std::time::Duration;
+use std::{any::TypeId, time::Duration};
 
 pub(crate) struct KickstartWorker {
     ms_sender: oneshot::Sender<MilestoneIndex>,
@@ -32,8 +27,7 @@ pub(crate) struct KickstartWorker {
 
 #[async_trait]
 impl Worker for KickstartWorker {
-    const ID: WorkerId = WorkerId::kickstart();
-    const DEPS: &'static [WorkerId] = &[];
+    const DEPS: &'static [TypeId] = &[];
 
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;

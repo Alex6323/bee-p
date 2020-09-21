@@ -14,7 +14,7 @@ use crate::{
     protocol::Protocol,
     worker::{
         transaction::{HashCache, ProcessorWorkerEvent},
-        Worker, WorkerId
+        Worker,
     },
 };
 
@@ -37,7 +37,7 @@ use futures::{
 use log::{info, trace, warn};
 use pin_project::pin_project;
 
-use std::pin::Pin;
+use std::{any::TypeId, pin::Pin};
 
 // If a batch has less than this number of transactions, the regular CurlP hasher is used instead
 // of the batched one.
@@ -54,8 +54,7 @@ pub(crate) struct HasherWorker {
 
 #[async_trait]
 impl Worker for HasherWorker {
-    const ID: WorkerId = WorkerId::hasher();
-    const DEPS: &'static [WorkerId] = &[];
+    const DEPS: &'static [TypeId] = &[];
 
     type Event = usize;
     type Receiver = BatchStream;

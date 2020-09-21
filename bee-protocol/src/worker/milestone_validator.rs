@@ -14,7 +14,7 @@ use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, tangle},
-    worker::{Worker, WorkerId},
+    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -32,7 +32,7 @@ use futures::{
 };
 use log::{debug, info};
 
-use std::marker::PhantomData;
+use std::{any::TypeId, marker::PhantomData};
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -55,8 +55,7 @@ where
     P: PublicKey + Send,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
-    const ID: WorkerId = WorkerId::milestone_validator();
-    const DEPS: &'static [WorkerId] = &[];
+    const DEPS: &'static [TypeId] = &[];
 
     type Event = MilestoneValidatorWorkerEvent;
     // TODO PriorityQueue ?

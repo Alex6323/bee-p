@@ -13,7 +13,7 @@ use crate::{
     message::{compress_transaction_bytes, Transaction as TransactionMessage, TransactionRequest},
     protocol::Sender,
     tangle::tangle,
-    worker::{WorkerId, Worker},
+    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -30,6 +30,8 @@ use futures::{
 };
 use log::info;
 
+use std::any::TypeId;
+
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: TransactionRequest,
@@ -39,8 +41,7 @@ pub(crate) struct TransactionResponderWorker;
 
 #[async_trait]
 impl Worker for TransactionResponderWorker {
-    const ID: WorkerId = WorkerId::transaction_responder();
-    const DEPS: &'static [WorkerId] = &[];
+    const DEPS: &'static [TypeId] = &[];
 
     type Event = TransactionResponderWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;

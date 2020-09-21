@@ -12,7 +12,7 @@
 use crate::{
     message::{tlv_into_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    worker::{Worker, WorkerId},
+    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -25,6 +25,8 @@ use futures::{
 };
 use log::{info, warn};
 
+use std::any::TypeId;
+
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
     pub(crate) transaction: TransactionMessage,
@@ -36,8 +38,7 @@ pub(crate) struct BroadcasterWorker {
 
 #[async_trait]
 impl Worker for BroadcasterWorker {
-    const ID: WorkerId = WorkerId::broadcaster();
-    const DEPS: &'static [WorkerId] = &[];
+    const DEPS: &'static [TypeId] = &[];
 
     type Event = BroadcasterWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;

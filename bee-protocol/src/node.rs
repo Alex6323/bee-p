@@ -1,21 +1,34 @@
-use crate::worker::{Worker, WorkerId};
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
 
-use std::collections::{HashMap, HashSet};
+use crate::worker::Worker;
+
+use std::{
+    any::TypeId,
+    collections::{HashMap, HashSet},
+};
 
 trait Node {
     fn new() -> Self;
 }
 
 struct NodeBuilder<N: Node> {
-    deps: HashMap<WorkerId, &'static [WorkerId]>,
-    closures: HashMap<WorkerId, Box<dyn FnOnce(&N)>>,
+    deps: HashMap<TypeId, &'static [TypeId]>,
+    closures: HashMap<TypeId, Box<dyn FnOnce(&N)>>,
 }
 
 impl<N: Node> NodeBuilder<N> {
-    fn with_worker<W: Worker>(mut self) -> Self {
-        self.closures.insert(W::ID, Box::new(|node| {}));
-
-        self.deps.insert(W::ID, W::DEPS);
+    fn with_worker<W: Worker + 'static>(mut self) -> Self {
+        self.closures.insert(TypeId::of::<W>(), Box::new(|node| {}));
+        self.deps.insert(TypeId::of::<W>(), W::DEPS);
         self
     }
 
@@ -29,14 +42,14 @@ impl<N: Node> NodeBuilder<N> {
 }
 
 struct TopologicalOrder {
-    graph: HashMap<WorkerId, &'static [WorkerId]>,
-    non_visited: Vec<WorkerId>,
-    being_visited: HashSet<WorkerId>,
-    order: Vec<WorkerId>,
+    graph: HashMap<TypeId, &'static [TypeId]>,
+    non_visited: Vec<TypeId>,
+    being_visited: HashSet<TypeId>,
+    order: Vec<TypeId>,
 }
 
 impl TopologicalOrder {
-    fn visit(&mut self, id: WorkerId) {
+    fn visit(&mut self, id: TypeId) {
         if let Some(index) = self
             .non_visited
             .iter()
@@ -57,7 +70,7 @@ impl TopologicalOrder {
         }
     }
 
-    fn sort(graph: HashMap<WorkerId, &'static [WorkerId]>) -> Vec<WorkerId> {
+    fn sort(graph: HashMap<TypeId, &'static [TypeId]>) -> Vec<TypeId> {
         let non_visited = graph.keys().copied().collect();
 
         let mut this = Self {

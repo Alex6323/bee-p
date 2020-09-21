@@ -14,7 +14,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::{Protocol, Sender},
     tangle::tangle,
-    worker::{Worker, WorkerId},
+    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -25,7 +25,10 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 
-use std::time::{Duration, Instant};
+use std::{
+    any::TypeId,
+    time::{Duration, Instant},
+};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
@@ -38,8 +41,7 @@ pub(crate) struct MilestoneRequesterWorker {
 
 #[async_trait]
 impl Worker for MilestoneRequesterWorker {
-    const ID: WorkerId = WorkerId::milestone_requester();
-    const DEPS: &'static [WorkerId] = &[];
+    const DEPS: &'static [TypeId] = &[];
 
     type Event = MilestoneRequesterWorkerEntry;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEntry>>;
