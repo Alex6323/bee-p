@@ -23,8 +23,6 @@ use futures::{
 };
 use log::{debug, info};
 
-use std::any::TypeId;
-
 pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
 pub(crate) struct MilestoneSolidifierWorker {
@@ -34,8 +32,6 @@ pub(crate) struct MilestoneSolidifierWorker {
 
 #[async_trait]
 impl Worker for MilestoneSolidifierWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = MilestoneSolidifierWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 

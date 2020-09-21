@@ -30,8 +30,6 @@ use futures::{
 };
 use log::info;
 
-use std::any::TypeId;
-
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: MilestoneRequest,
@@ -41,8 +39,6 @@ pub(crate) struct MilestoneResponderWorker;
 
 #[async_trait]
 impl Worker for MilestoneResponderWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = MilestoneResponderWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 

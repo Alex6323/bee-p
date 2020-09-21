@@ -34,18 +34,13 @@ use futures::{
 };
 use log::{error, info, trace};
 
-use std::{
-    any::TypeId,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Timeframe to allow past or future transactions, 10 minutes in seconds.
 const ALLOWED_TIMESTAMP_WINDOW_SECS: u64 = 10 * 60;
 
 #[async_trait]
 impl Worker for ProcessorWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = ProcessorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 

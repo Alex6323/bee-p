@@ -25,10 +25,7 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 
-use std::{
-    any::TypeId,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
@@ -41,8 +38,6 @@ pub(crate) struct MilestoneRequesterWorker {
 
 #[async_trait]
 impl Worker for MilestoneRequesterWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = MilestoneRequesterWorkerEntry;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEntry>>;
 

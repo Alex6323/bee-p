@@ -18,7 +18,7 @@ use std::any::TypeId;
 
 #[async_trait]
 pub trait Worker {
-    const DEPS: &'static [TypeId];
+    const DEPS: &'static [TypeId] = &[];
 
     type Event;
     type Receiver: Stream<Item = Self::Event>;

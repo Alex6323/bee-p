@@ -29,10 +29,7 @@ use futures::{
 };
 use log::{info, warn};
 
-use std::{
-    any::TypeId,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
 
@@ -42,8 +39,6 @@ pub(crate) struct SolidPropagatorWorker {
 
 #[async_trait]
 impl Worker for SolidPropagatorWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = SolidPropagatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 

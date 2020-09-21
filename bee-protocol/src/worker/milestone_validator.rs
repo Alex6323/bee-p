@@ -32,7 +32,7 @@ use futures::{
 };
 use log::{debug, info};
 
-use std::{any::TypeId, marker::PhantomData};
+use std::marker::PhantomData;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -55,8 +55,6 @@ where
     P: PublicKey + Send,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = MilestoneValidatorWorkerEvent;
     // TODO PriorityQueue ?
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;

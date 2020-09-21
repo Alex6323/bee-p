@@ -30,8 +30,6 @@ use futures::{
 };
 use log::info;
 
-use std::any::TypeId;
-
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: TransactionRequest,
@@ -41,8 +39,6 @@ pub(crate) struct TransactionResponderWorker;
 
 #[async_trait]
 impl Worker for TransactionResponderWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = TransactionResponderWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 

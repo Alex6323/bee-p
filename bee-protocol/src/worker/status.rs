@@ -19,14 +19,12 @@ use async_trait::async_trait;
 use futures::{stream::Fuse, StreamExt};
 use log::info;
 
-use std::{any::TypeId, time::Duration};
+use std::time::Duration;
 
 pub(crate) struct StatusWorker;
 
 #[async_trait]
 impl Worker for StatusWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 

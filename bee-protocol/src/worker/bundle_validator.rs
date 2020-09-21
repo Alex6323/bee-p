@@ -23,16 +23,12 @@ use futures::{
 };
 use log::{info, warn};
 
-use std::any::TypeId;
-
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct BundleValidatorWorker;
 
 #[async_trait]
 impl Worker for BundleValidatorWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = BundleValidatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 

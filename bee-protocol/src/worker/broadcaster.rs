@@ -25,8 +25,6 @@ use futures::{
 };
 use log::{info, warn};
 
-use std::any::TypeId;
-
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
     pub(crate) transaction: TransactionMessage,
@@ -38,8 +36,6 @@ pub(crate) struct BroadcasterWorker {
 
 #[async_trait]
 impl Worker for BroadcasterWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = BroadcasterWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 

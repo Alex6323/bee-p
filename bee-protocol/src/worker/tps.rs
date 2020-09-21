@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use futures::{stream::Fuse, StreamExt};
 use log::info;
 
-use std::{any::TypeId, time::Duration};
+use std::time::Duration;
 
 #[derive(Default)]
 pub(crate) struct TpsWorker {
@@ -33,8 +33,6 @@ pub(crate) struct TpsWorker {
 
 #[async_trait]
 impl Worker for TpsWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 

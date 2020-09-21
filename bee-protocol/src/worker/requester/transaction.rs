@@ -26,10 +26,7 @@ use bytemuck::cast_slice;
 use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 
-use std::{
-    any::TypeId,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
@@ -42,8 +39,6 @@ pub(crate) struct TransactionRequesterWorker {
 
 #[async_trait]
 impl Worker for TransactionRequesterWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = TransactionRequesterWorkerEntry;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
 

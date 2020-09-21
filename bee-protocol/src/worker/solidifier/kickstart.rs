@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use futures::{channel::oneshot, stream::Fuse, StreamExt};
 use log::info;
 
-use std::{any::TypeId, time::Duration};
+use std::time::Duration;
 
 pub(crate) struct KickstartWorker {
     ms_sender: oneshot::Sender<MilestoneIndex>,
@@ -28,8 +28,6 @@ pub(crate) struct KickstartWorker {
 
 #[async_trait]
 impl Worker for KickstartWorker {
-    const DEPS: &'static [TypeId] = &[];
-
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 
