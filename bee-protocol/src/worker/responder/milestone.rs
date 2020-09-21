@@ -16,7 +16,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::EndpointId;
 use bee_tangle::helper::load_bundle_builder;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
@@ -38,7 +38,7 @@ pub(crate) struct MilestoneResponderWorkerEvent {
 pub(crate) struct MilestoneResponderWorker;
 
 #[async_trait]
-impl Worker for MilestoneResponderWorker {
+impl<N: Node + 'static> Worker<N> for MilestoneResponderWorker {
     type Event = MilestoneResponderWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 

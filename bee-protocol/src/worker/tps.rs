@@ -12,7 +12,7 @@
 use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 
 use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
@@ -32,7 +32,7 @@ pub(crate) struct TpsWorker {
 }
 
 #[async_trait]
-impl Worker for TpsWorker {
+impl<N: Node + 'static> Worker<N> for TpsWorker {
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 

@@ -15,7 +15,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use async_trait::async_trait;
@@ -35,7 +35,7 @@ pub(crate) struct BroadcasterWorker {
 }
 
 #[async_trait]
-impl Worker for BroadcasterWorker {
+impl<N: Node + 'static> Worker<N> for BroadcasterWorker {
     type Event = BroadcasterWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 

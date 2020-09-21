@@ -16,7 +16,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
@@ -38,14 +38,14 @@ pub(crate) struct TransactionRequesterWorker {
 }
 
 #[async_trait]
-impl Worker for TransactionRequesterWorker {
+impl<N: Node + 'static> Worker<N> for TransactionRequesterWorker {
     type Event = TransactionRequesterWorkerEntry;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
-        async fn run_aux(
+        async fn aux<N: Node + 'static>(
             mut worker: TransactionRequesterWorker,
-            mut receiver: <TransactionRequesterWorker as Worker>::Receiver,
+            mut receiver: <TransactionRequesterWorker as Worker<N>>::Receiver,
         ) -> Result<(), WorkerError> {
             info!("Running.");
 
@@ -64,7 +64,7 @@ impl Worker for TransactionRequesterWorker {
             Ok(())
         }
 
-        run_aux(self, receiver).await
+        aux::<N>(self, receiver).await
     }
 }
 

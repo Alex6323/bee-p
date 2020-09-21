@@ -17,7 +17,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
     Hash,
@@ -49,7 +49,7 @@ pub(crate) struct MilestoneValidatorWorker<M, P> {
 }
 
 #[async_trait]
-impl<M, P> Worker for MilestoneValidatorWorker<M, P>
+impl<N: Node + 'static, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
 where
     M: Sponge + Default + Send,
     P: PublicKey + Send,

@@ -28,7 +28,7 @@ mod tests {
     };
 
     use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-    use bee_common_ext::{worker::Worker, event::Bus};
+    use bee_common_ext::{event::Bus, worker::Worker};
     use bee_crypto::ternary::Hash;
     use bee_network::{EndpointId, NetworkConfig, Url};
 

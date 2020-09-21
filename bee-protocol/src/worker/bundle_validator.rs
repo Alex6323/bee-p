@@ -12,7 +12,7 @@
 use crate::tangle::tangle;
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_tangle::helper::load_bundle_builder;
 
@@ -28,7 +28,7 @@ pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 pub(crate) struct BundleValidatorWorker;
 
 #[async_trait]
-impl Worker for BundleValidatorWorker {
+impl<N: Node + 'static> Worker<N> for BundleValidatorWorker {
     type Event = BundleValidatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 

@@ -18,7 +18,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_transaction::Vertex;
 
@@ -38,7 +38,7 @@ pub(crate) struct SolidPropagatorWorker {
 }
 
 #[async_trait]
-impl Worker for SolidPropagatorWorker {
+impl<N: Node + 'static> Worker<N> for SolidPropagatorWorker {
     type Event = SolidPropagatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 

@@ -12,7 +12,7 @@
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 
 use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
@@ -27,7 +27,7 @@ pub(crate) struct KickstartWorker {
 }
 
 #[async_trait]
-impl Worker for KickstartWorker {
+impl<N: Node + 'static> Worker<N> for KickstartWorker {
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 
