@@ -92,12 +92,14 @@ impl SnapshotWorker {
     }
 
     fn should_prune(&self, mut index: MilestoneIndex) -> bool {
-        let mut pruning = false;
-        pruning |= self.config.pruning().enabled() && *index > self.delay;
+        if self.config.pruning().enabled() && *index <= self.delay {
+            return false;
+        }
 
         // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index.
-        pruning |=
-            *tangle().get_snapshot_index() >= SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
+        if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
+            return false;
+        }
 
         let target_index_max = MilestoneIndex(
             *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
@@ -106,11 +108,16 @@ impl SnapshotWorker {
         if index > target_index_max {
             index = target_index_max;
         }
-        pruning |= tangle().get_pruning_index() < index;
+
+        if tangle().get_pruning_index() >= index {
+            return false;
+        }
 
         // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
-        pruning |= *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 <= *index;
-        pruning
+        if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *index {
+            return false;
+        }
+        true
     }
 
     fn process(&mut self, milestone: Milestone) {
