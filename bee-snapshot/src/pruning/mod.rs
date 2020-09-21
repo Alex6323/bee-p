@@ -78,7 +78,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
             tangle(),
             milestone_hash,
             |_, _, metadata| *metadata.milestone_index() >= index,
-            |hash, _tx, metadata| {
+            |hash, _, metadata| {
                 if metadata.flags.is_confirmed() && is_solid_entry_point(&hash).unwrap() {
                     // Find all tails.
                     helper::on_all_tails(tangle(), *hash, |hash, _tx, metadata| {
@@ -166,7 +166,7 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
         traversal::visit_parents_depth_first(
             tangle(),
             milestone_hash,
-            |_hash, _tx, _metadata| {
+            |_, _, _| {
                 // NOTE everything that was referenced by that milestone can be pruned
                 //      (even transactions of older milestones)
                 true
