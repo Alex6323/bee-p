@@ -20,10 +20,10 @@ pub mod local;
 pub mod metadata;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::event::Bus;
+use bee_common_ext::{event::Bus, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
-use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
+use bee_protocol::{event::LatestSolidMilestoneChanged, node::BeeNode, tangle::tangle, MilestoneIndex};
 
 use async_std::task::spawn;
 use chrono::{offset::TimeZone, Utc};
@@ -109,13 +109,13 @@ pub fn init(
 
     shutdown.add_worker_shutdown(
         snapshot_worker_shutdown_tx,
-        spawn(
-            worker::SnapshotWorker::new(
-                config.clone(),
+        spawn({
+            let worker = worker::SnapshotWorker::new(config.clone());
+            Worker::<BeeNode>::run(
+                worker,
                 ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx),
             )
-            .run(),
-        ),
+        }),
     );
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {

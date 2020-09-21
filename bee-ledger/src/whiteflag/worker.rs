@@ -18,12 +18,13 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::event::Bus;
+use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
 use bee_tangle::helper::load_bundle_builder;
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
+use async_trait::async_trait;
 use blake2::Blake2b;
 use futures::{
     channel::{mpsc, oneshot},
@@ -34,8 +35,6 @@ use log::{error, info, warn};
 use std::sync::Arc;
 
 const MERKLE_PROOF_LENGTH: usize = 384;
-
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>;
 
 enum Error {
     NonContiguousMilestone,
@@ -54,7 +53,31 @@ pub(crate) struct LedgerWorker {
     pub(crate) state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
     bus: Arc<Bus<'static>>,
-    receiver: Receiver,
+}
+
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for LedgerWorker {
+    type Event = LedgerWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while let Some(event) = receiver.next().await {
+            match event {
+                LedgerWorkerEvent::Confirm(milestone) => {
+                    if self.confirm(milestone).is_err() {
+                        panic!("Error while confirming milestone, aborting.");
+                    }
+                }
+                LedgerWorkerEvent::GetBalance(address, sender) => self.get_balance(address, sender),
+            }
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl LedgerWorker {
@@ -63,14 +86,12 @@ impl LedgerWorker {
         state: LedgerState,
         coo_config: ProtocolCoordinatorConfig,
         bus: Arc<Bus<'static>>,
-        receiver: Receiver,
     ) -> Self {
         Self {
             index,
             state,
             coo_config,
             bus,
-            receiver,
         }
     }
 
@@ -159,25 +180,6 @@ impl LedgerWorker {
         if let Err(e) = sender.send(self.state.get_or_zero(&address)) {
             warn!("Failed to send balance: {:?}.", e);
         }
-    }
-
-    pub async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(event) = self.receiver.next().await {
-            match event {
-                LedgerWorkerEvent::Confirm(milestone) => {
-                    if self.confirm(milestone).is_err() {
-                        panic!("Error while confirming milestone, aborting.");
-                    }
-                }
-                LedgerWorkerEvent::GetBalance(address, sender) => self.get_balance(address, sender),
-            }
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }
 

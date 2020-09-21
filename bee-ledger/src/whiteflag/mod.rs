@@ -21,8 +21,10 @@ use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::event::Bus;
-use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
+use bee_common_ext::{event::Bus, worker::Worker};
+use bee_protocol::{
+    config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, node::BeeNode, MilestoneIndex,
+};
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
@@ -48,16 +50,10 @@ pub fn init(
 
     shutdown.add_worker_shutdown(
         ledger_worker_shutdown_tx,
-        spawn(
-            LedgerWorker::new(
-                MilestoneIndex(index),
-                state,
-                coo_config,
-                bus.clone(),
-                ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
-            )
-            .run(),
-        ),
+        spawn({
+            let worker = LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone());
+            Worker::<BeeNode>::run(worker, ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx))
+        }),
     );
 
     let ledger_worker_tx_ret = ledger_worker_tx.clone();

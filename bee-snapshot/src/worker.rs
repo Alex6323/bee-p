@@ -19,15 +19,15 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
 
+use async_trait::async_trait;
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
 use log::{error, info, warn};
-
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
 pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
@@ -35,11 +35,28 @@ pub(crate) struct SnapshotWorker {
     config: SnapshotConfig,
     depth: u32,
     delay: u32,
-    receiver: Receiver,
+}
+
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for SnapshotWorker {
+    type Event = SnapshotWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while let Some(SnapshotWorkerEvent(milestone)) = receiver.next().await {
+            self.process(milestone);
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl SnapshotWorker {
-    pub(crate) fn new(config: SnapshotConfig, receiver: Receiver) -> Self {
+    pub(crate) fn new(config: SnapshotConfig) -> Self {
         let depth = if config.local().depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
             warn!(
                 "Configuration value for \"depth\" is too low ({}), value changed to {}.",
@@ -63,12 +80,7 @@ impl SnapshotWorker {
             config.pruning().delay()
         };
 
-        Self {
-            config,
-            depth,
-            delay,
-            receiver,
-        }
+        Self { config, depth, delay }
     }
 
     fn should_snapshot(&self, index: MilestoneIndex) -> bool {
@@ -136,17 +148,5 @@ impl SnapshotWorker {
                 error!("Failed to prune database: {:?}.", e);
             }
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(SnapshotWorkerEvent(milestone)) = self.receiver.next().await {
-            self.process(milestone);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

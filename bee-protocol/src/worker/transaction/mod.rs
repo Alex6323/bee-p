@@ -13,8 +13,6 @@ mod hash_cache;
 mod hasher;
 mod processor;
 
-use crate::node::BeeNode;
-
 pub(crate) use hash_cache::HashCache;
 pub(crate) use hasher::{HasherWorker, HasherWorkerEvent};
 pub(crate) use processor::{ProcessorWorker, ProcessorWorkerEvent};
@@ -25,6 +23,7 @@ mod tests {
     use crate::{
         config::ProtocolConfig,
         message::Transaction as TransactionMessage,
+        node::BeeNode,
         protocol::Protocol,
         tangle::{self, tangle},
     };
