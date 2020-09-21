@@ -16,10 +16,12 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
 use async_std::stream::{interval, Interval};
+use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
@@ -28,21 +30,48 @@ use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
-
 pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
 
 pub(crate) struct TransactionRequesterWorker {
     counter: usize,
-    receiver: Receiver,
     timeouts: Fuse<Interval>,
 }
 
+#[async_trait]
+impl Worker for TransactionRequesterWorker {
+    type Event = TransactionRequesterWorkerEntry;
+    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
+
+    async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
+        async fn run_aux(
+            mut worker: TransactionRequesterWorker,
+            mut receiver: <TransactionRequesterWorker as Worker>::Receiver,
+        ) -> Result<(), WorkerError> {
+            info!("Running.");
+
+            loop {
+                select! {
+                    _ = worker.timeouts.next() => worker.retry_requests().await,
+                    entry = receiver.next() => match entry {
+                        Some(TransactionRequesterWorkerEntry(hash, index)) => worker.process_request(hash, index).await,
+                        None => break,
+                    },
+                }
+            }
+
+            info!("Stopped.");
+
+            Ok(())
+        }
+
+        run_aux(self, receiver).await
+    }
+}
+
 impl TransactionRequesterWorker {
-    pub(crate) fn new(receiver: Receiver) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             counter: 0,
-            receiver,
             timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
         }
     }
@@ -115,23 +144,5 @@ impl TransactionRequesterWorker {
         if retry_counts > 0 {
             debug!("Retried {} transactions.", retry_counts);
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        loop {
-            select! {
-                _ = self.timeouts.next() => self.retry_requests().await,
-                entry = self.receiver.next() => match entry {
-                    Some(TransactionRequesterWorkerEntry(hash, index)) => self.process_request(hash, index).await,
-                    None => break,
-                },
-            }
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

@@ -17,6 +17,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
@@ -25,6 +26,7 @@ use bee_transaction::{
     Vertex,
 };
 
+use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{
     channel::mpsc,
@@ -37,7 +39,28 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Timeframe to allow past or future transactions, 10 minutes in seconds.
 const ALLOWED_TIMESTAMP_WINDOW_SECS: u64 = 10 * 60;
 
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<ProcessorWorkerEvent>>>;
+#[async_trait]
+impl Worker for ProcessorWorker {
+    type Event = ProcessorWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while let Some(ProcessorWorkerEvent {
+            hash,
+            from,
+            transaction,
+        }) = receiver.next().await
+        {
+            self.process_transaction_brodcast(hash, from, transaction);
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
+}
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) hash: Hash,
@@ -47,35 +70,13 @@ pub(crate) struct ProcessorWorkerEvent {
 
 pub(crate) struct ProcessorWorker {
     milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
-    receiver: Receiver,
 }
 
 impl ProcessorWorker {
-    pub(crate) fn new(
-        milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
-        receiver: Receiver,
-    ) -> Self {
+    pub(crate) fn new(milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>) -> Self {
         Self {
             milestone_validator_worker,
-            receiver,
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(ProcessorWorkerEvent {
-            hash,
-            from,
-            transaction,
-        }) = self.receiver.next().await
-        {
-            self.process_transaction_brodcast(hash, from, transaction);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 
     fn validate_timestamp(&self, transaction: &Transaction) -> (bool, bool) {

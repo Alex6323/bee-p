@@ -16,33 +16,48 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_network::EndpointId;
 use bee_tangle::helper::load_bundle_builder;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::bundled::BundledTransaction as Transaction;
 
+use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-
 use log::info;
-
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneResponderWorkerEvent>>>;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: MilestoneRequest,
 }
 
-pub(crate) struct MilestoneResponderWorker {
-    receiver: Receiver,
+pub(crate) struct MilestoneResponderWorker;
+
+#[async_trait]
+impl Worker for MilestoneResponderWorker {
+    type Event = MilestoneResponderWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
+            self.process_request(epid, request).await;
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl MilestoneResponderWorker {
-    pub(crate) fn new(receiver: Receiver) -> Self {
-        Self { receiver }
+    pub(crate) fn new() -> Self {
+        Self
     }
 
     async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
@@ -69,17 +84,5 @@ impl MilestoneResponderWorker {
                 }
             }
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(MilestoneResponderWorkerEvent { epid, request }) = self.receiver.next().await {
-            self.process_request(epid, request).await;
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

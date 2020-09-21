@@ -14,3 +14,4 @@
 
 pub mod event;
 pub mod wait_priority_queue;
+pub mod worker;

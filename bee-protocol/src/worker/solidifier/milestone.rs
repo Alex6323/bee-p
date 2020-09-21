@@ -12,9 +12,10 @@
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_tangle::traversal;
-use bee_transaction::Vertex;
 
+use async_trait::async_trait;
 use futures::{
     channel::{mpsc, oneshot},
     stream::Fuse,
@@ -22,20 +23,42 @@ use futures::{
 };
 use log::{debug, info};
 
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
-
 pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
 pub(crate) struct MilestoneSolidifierWorker {
-    receiver: Receiver,
     queue: Vec<MilestoneIndex>,
     next_ms_index: MilestoneIndex,
 }
 
+#[async_trait]
+impl Worker for MilestoneSolidifierWorker {
+    type Event = MilestoneSolidifierWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while let Some(MilestoneSolidifierWorkerEvent(index)) = receiver.next().await {
+            self.save_index(index);
+            while let Some(index) = self.queue.pop() {
+                if index == self.next_ms_index {
+                    self.trigger_solidification_unchecked(index);
+                } else {
+                    self.queue.push(index);
+                    break;
+                }
+            }
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
+}
+
 impl MilestoneSolidifierWorker {
-    pub(crate) async fn new(receiver: Receiver, next_ms_index: oneshot::Receiver<MilestoneIndex>) -> Self {
+    pub(crate) async fn new(next_ms_index: oneshot::Receiver<MilestoneIndex>) -> Self {
         Self {
-            receiver,
             queue: vec![],
             next_ms_index: next_ms_index.await.unwrap(),
         }
@@ -68,25 +91,5 @@ impl MilestoneSolidifierWorker {
         if let Err(pos) = self.queue.binary_search_by(|index| target_index.cmp(index)) {
             self.queue.insert(pos, target_index);
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(MilestoneSolidifierWorkerEvent(index)) = self.receiver.next().await {
-            self.save_index(index);
-            while let Some(index) = self.queue.pop() {
-                if index == self.next_ms_index {
-                    self.trigger_solidification_unchecked(index);
-                } else {
-                    self.queue.push(index);
-                    break;
-                }
-            }
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

@@ -11,10 +11,12 @@
 
 use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 
-use async_std::{future::ready, prelude::*};
-use futures::channel::oneshot::Receiver;
+use async_std::stream::{interval, Interval};
+use async_trait::async_trait;
+use futures::{stream::Fuse, StreamExt};
 use log::info;
 
 use std::time::Duration;
@@ -29,9 +31,31 @@ pub(crate) struct TpsWorker {
     outgoing: u64,
 }
 
+#[async_trait]
+impl Worker for TpsWorker {
+    type Event = ();
+    type Receiver = ShutdownStream<Fuse<Interval>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while receiver.next().await.is_some() {
+            self.tps();
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
+}
+
 impl TpsWorker {
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn interval() -> Interval {
+        interval(Duration::from_secs(1))
     }
 
     fn tps(&mut self) {
@@ -57,22 +81,5 @@ impl TpsWorker {
         self.stale = stale;
         self.invalid = invalid;
         self.outgoing = outgoing;
-    }
-
-    pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while ready(Ok(()))
-            .delay(Duration::from_millis(1000))
-            .race(&mut shutdown)
-            .await
-            .is_ok()
-        {
-            self.tps();
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

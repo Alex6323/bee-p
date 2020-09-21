@@ -9,16 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod config;
-pub mod event;
-pub mod tangle;
+use bee_common::worker::Error as WorkerError;
 
-mod message;
-mod milestone;
-mod node;
-mod peer;
-mod protocol;
-mod worker;
+use async_trait::async_trait;
+use futures::Stream;
 
-pub use milestone::{Milestone, MilestoneIndex};
-pub use protocol::{Protocol, ProtocolMetrics};
+use std::any::TypeId;
+
+#[async_trait]
+pub trait Worker {
+    const DEPS: &'static [TypeId] = &[];
+
+    type Event;
+    type Receiver: Stream<Item = Self::Event>;
+
+    async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError>;
+}

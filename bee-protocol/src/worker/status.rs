@@ -11,23 +11,43 @@
 
 use crate::{protocol::Protocol, tangle::tangle};
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 
-use async_std::{future::ready, prelude::*};
-use futures::channel::oneshot::Receiver;
+use async_std::stream::{interval, Interval};
+use async_trait::async_trait;
+use futures::{stream::Fuse, StreamExt};
 use log::info;
 
 use std::time::Duration;
 
-pub(crate) struct StatusWorker {
-    interval_ms: u64,
+pub(crate) struct StatusWorker;
+
+#[async_trait]
+impl Worker for StatusWorker {
+    type Event = ();
+    type Receiver = ShutdownStream<Fuse<Interval>>;
+
+    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), WorkerError> {
+        info!("Running.");
+
+        while receiver.next().await.is_some() {
+            self.status();
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl StatusWorker {
-    pub(crate) fn new(interval_s: u64) -> Self {
-        Self {
-            interval_ms: interval_s * 1000,
-        }
+    pub(crate) fn new() -> Self {
+        Self
+    }
+
+    pub(crate) fn interval(seconds: u64) -> Interval {
+        interval(Duration::from_secs(seconds))
     }
 
     fn status(&self) {
@@ -51,22 +71,5 @@ impl StatusWorker {
                 Protocol::get().requested_transactions.len()
             );
         };
-    }
-
-    pub(crate) async fn run(self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while ready(Ok(()))
-            .delay(Duration::from_millis(self.interval_ms))
-            .race(&mut shutdown)
-            .await
-            .is_ok()
-        {
-            self.status();
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }
