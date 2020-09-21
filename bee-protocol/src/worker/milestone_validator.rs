@@ -138,7 +138,6 @@ where
         }
     }
 
-    // TODO PriorityQueue ?
     pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
         info!("Running.");
 
@@ -151,6 +150,3 @@ where
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {}

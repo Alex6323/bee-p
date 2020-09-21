@@ -45,26 +45,19 @@ impl TransactionResponderWorker {
     }
 
     async fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
-        match Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
-            Ok(hash) => {
-                match tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
-                    Some(transaction) => {
-                        let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-                        transaction.into_trits_allocated(&mut trits);
-                        // TODO dedicated channel ? Priority Queue ?
-                        Sender::<TransactionMessage>::send(
-                            &epid,
-                            // TODO try to compress lower in the pipeline ?
-                            TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                                trits.encode::<T5B1Buf>().as_i8_slice(),
-                            ))),
-                        )
-                        .await
-                    }
-                    None => {}
-                }
+        if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
+            if let Some(transaction) = tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
+                let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
+
+                transaction.into_trits_allocated(&mut trits);
+                Sender::<TransactionMessage>::send(
+                    &epid,
+                    TransactionMessage::new(&compress_transaction_bytes(cast_slice(
+                        trits.encode::<T5B1Buf>().as_i8_slice(),
+                    ))),
+                )
+                .await
             }
-            Err(_) => {}
         }
     }
 
