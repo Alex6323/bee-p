@@ -16,7 +16,7 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-trait Node {
+pub trait Node {
     fn new() -> Self;
 }
 
@@ -26,7 +26,7 @@ struct NodeBuilder<N: Node> {
 }
 
 impl<N: Node> NodeBuilder<N> {
-    fn with_worker<W: Worker + 'static>(mut self) -> Self {
+    fn with_worker<W: Worker<N> + 'static>(mut self) -> Self {
         self.closures.insert(TypeId::of::<W>(), Box::new(|node| {}));
         self.deps.insert(TypeId::of::<W>(), W::DEPS);
         self

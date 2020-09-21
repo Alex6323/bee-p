@@ -17,7 +17,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};
@@ -37,14 +37,14 @@ pub(crate) struct MilestoneRequesterWorker {
 }
 
 #[async_trait]
-impl Worker for MilestoneRequesterWorker {
+impl<N: Node + 'static> Worker<N> for MilestoneRequesterWorker {
     type Event = MilestoneRequesterWorkerEntry;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEntry>>;
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
-        async fn aux(
+        async fn aux<N: Node + 'static>(
             mut worker: MilestoneRequesterWorker,
-            mut receiver: <MilestoneRequesterWorker as Worker>::Receiver,
+            mut receiver: <MilestoneRequesterWorker as Worker<N>>::Receiver,
         ) -> Result<(), WorkerError> {
             info!("Running.");
 
@@ -67,7 +67,7 @@ impl Worker for MilestoneRequesterWorker {
             Ok(())
         }
 
-        aux(self, receiver).await
+        aux::<N>(self, receiver).await
     }
 }
 

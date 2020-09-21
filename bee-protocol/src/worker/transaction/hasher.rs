@@ -16,7 +16,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::worker::Worker;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
     Hash,
@@ -35,7 +35,7 @@ use futures::{
 use log::{info, trace, warn};
 use pin_project::pin_project;
 
-use std::pin::Pin;
+use std::{marker::PhantomData, pin::Pin};
 
 // If a batch has less than this number of transactions, the regular CurlP hasher is used instead
 // of the batched one.
@@ -46,12 +46,13 @@ pub(crate) struct HasherWorkerEvent {
     pub(crate) transaction: TransactionMessage,
 }
 
-pub(crate) struct HasherWorker {
+pub(crate) struct HasherWorker<N: Node> {
     processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>,
+    marker: PhantomData<N>,
 }
 
 #[async_trait]
-impl Worker for HasherWorker {
+impl<N: Node + 'static + Send> Worker<N> for HasherWorker<N> {
     type Event = usize;
     type Receiver = BatchStream;
 
@@ -68,12 +69,15 @@ impl Worker for HasherWorker {
     }
 }
 
-impl HasherWorker {
+impl<N: Node + 'static + Send> HasherWorker<N> {
     pub(crate) fn new(processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>) -> Self {
-        Self { processor_worker }
+        Self {
+            processor_worker,
+            marker: PhantomData,
+        }
     }
 
-    fn trigger_hashing(&mut self, batch_size: usize, receiver: &mut <Self as Worker>::Receiver) {
+    fn trigger_hashing(&mut self, batch_size: usize, receiver: &mut <Self as Worker<N>>::Receiver) {
         if batch_size < BATCH_SIZE_THRESHOLD {
             let hashes = receiver.hasher.hash_unbatched();
             Self::send_hashes(hashes, &mut receiver.events, &mut self.processor_worker);
