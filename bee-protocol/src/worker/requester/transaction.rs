@@ -30,7 +30,7 @@ use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-pub(crate) struct TransactionRequesterWorkerEntry(pub(crate) Hash, pub(crate) MilestoneIndex);
+pub(crate) struct TransactionRequesterWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 
 pub(crate) struct TransactionRequesterWorker {
     counter: usize,
@@ -39,8 +39,8 @@ pub(crate) struct TransactionRequesterWorker {
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for TransactionRequesterWorker {
-    type Event = TransactionRequesterWorkerEntry;
-    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEntry>>;
+    type Event = TransactionRequesterWorkerEvent;
+    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEvent>>;
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
         async fn aux<N: Node + 'static>(
@@ -53,7 +53,7 @@ impl<N: Node + 'static> Worker<N> for TransactionRequesterWorker {
                 select! {
                     _ = worker.timeouts.next() => worker.retry_requests().await,
                     entry = receiver.next() => match entry {
-                        Some(TransactionRequesterWorkerEntry(hash, index)) => worker.process_request(hash, index).await,
+                        Some(TransactionRequesterWorkerEvent(hash, index)) => worker.process_request(hash, index).await,
                         None => break,
                     },
                 }

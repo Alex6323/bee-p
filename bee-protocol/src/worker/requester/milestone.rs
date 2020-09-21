@@ -29,7 +29,7 @@ use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
+pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
 pub(crate) struct MilestoneRequesterWorker {
     counter: usize,
@@ -38,8 +38,8 @@ pub(crate) struct MilestoneRequesterWorker {
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for MilestoneRequesterWorker {
-    type Event = MilestoneRequesterWorkerEntry;
-    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEntry>>;
+    type Event = MilestoneRequesterWorkerEvent;
+    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>>;
 
     async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError> {
         async fn aux<N: Node + 'static>(
@@ -52,7 +52,7 @@ impl<N: Node + 'static> Worker<N> for MilestoneRequesterWorker {
                 select! {
                     _ = worker.timeouts.next() => worker.retry_requests().await,
                     entry = receiver.next() => match entry {
-                        Some(MilestoneRequesterWorkerEntry(index, epid)) => {
+                        Some(MilestoneRequesterWorkerEvent(index, epid)) => {
                             if !tangle().contains_milestone(index.into()) {
                                 worker.process_request(index, epid).await;
                             }

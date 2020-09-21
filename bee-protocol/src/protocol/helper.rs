@@ -17,8 +17,8 @@ use crate::{
     protocol::Protocol,
     tangle::tangle,
     worker::{
-        BroadcasterWorkerEvent, MilestoneRequesterWorkerEntry, MilestoneSolidifierWorkerEvent,
-        TransactionRequesterWorkerEntry,
+        BroadcasterWorkerEvent, MilestoneRequesterWorkerEvent, MilestoneSolidifierWorkerEvent,
+        TransactionRequesterWorkerEvent,
     },
 };
 
@@ -74,7 +74,7 @@ impl Protocol {
         if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
             if let Err(e) = Protocol::get()
                 .milestone_requester_worker
-                .unbounded_send(MilestoneRequesterWorkerEntry(index, to))
+                .unbounded_send(MilestoneRequesterWorkerEvent(index, to))
             {
                 warn!("Requesting milestone failed: {}.", e);
             }
@@ -109,7 +109,7 @@ impl Protocol {
         {
             if let Err(e) = Protocol::get()
                 .transaction_requester_worker
-                .unbounded_send(TransactionRequesterWorkerEntry(hash, index))
+                .unbounded_send(TransactionRequesterWorkerEvent(hash, index))
             {
                 warn!("Requesting transaction failed: {}.", e);
             }
