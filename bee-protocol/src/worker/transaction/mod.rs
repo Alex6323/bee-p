@@ -25,6 +25,7 @@ mod tests {
         message::Transaction as TransactionMessage,
         protocol::Protocol,
         tangle::{self, tangle},
+        worker::Worker,
     };
 
     use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
@@ -64,18 +65,15 @@ mod tests {
         let (processor_worker_shutdown_sender, processor_worker_shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
-        let hasher_handle = HasherWorker::new(
-            processor_worker_sender,
+        let hasher_handle = HasherWorker::new(processor_worker_sender).run(<HasherWorker as Worker>::Receiver::new(
             10000,
             ShutdownStream::new(hasher_worker_shutdown_receiver, hasher_worker_receiver),
-        )
-        .run();
+        ));
 
-        let processor_handle = ProcessorWorker::new(
-            milestone_validator_worker_sender,
-            ShutdownStream::new(processor_worker_shutdown_receiver, processor_worker_receiver),
-        )
-        .run();
+        let processor_handle = ProcessorWorker::new(milestone_validator_worker_sender).run(ShutdownStream::new(
+            processor_worker_shutdown_receiver,
+            processor_worker_receiver,
+        ));
 
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];

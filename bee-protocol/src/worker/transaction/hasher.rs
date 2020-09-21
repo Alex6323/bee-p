@@ -76,6 +76,7 @@ impl HasherWorker {
     pub(crate) fn new(processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>) -> Self {
         Self { processor_worker }
     }
+
     fn trigger_hashing(&mut self, batch_size: usize, receiver: &mut <Self as Worker>::Receiver) {
         if batch_size < BATCH_SIZE_THRESHOLD {
             let hashes = receiver.hasher.hash_unbatched();
