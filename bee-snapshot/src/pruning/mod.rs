@@ -46,7 +46,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
     traversal::visit_children_follow_trunk(
         tangle(),
         *hash,
-        |_tx, metadata| {
+        |_, metadata| {
             if is_solid {
                 return false;
             }
@@ -54,7 +54,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
             is_solid = metadata.flags.is_confirmed() && metadata.milestone_index > milestone_index;
             true
         },
-        |_hash, _tx, _metadata| {},
+        |_, _, _| {},
     );
     Ok(is_solid)
 }
@@ -77,7 +77,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
         traversal::visit_parents_depth_first(
             tangle(),
             milestone_hash,
-            |_hash, _tx, metadata| *metadata.milestone_index() >= index,
+            |_, _, metadata| *metadata.milestone_index() >= index,
             |hash, _tx, metadata| {
                 if metadata.flags.is_confirmed() && is_solid_entry_point(&hash).unwrap() {
                     // Find all tails.
@@ -86,8 +86,8 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                     });
                 }
             },
-            |_hash, _tx, _metadata| {},
-            |_hash| {},
+            |_, _, _| {},
+            |_| {},
         );
     }
     Ok(solid_entry_points)
@@ -171,9 +171,9 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
                 //      (even transactions of older milestones)
                 true
             },
-            |hash, _tx, _metadata| transactions_to_prune.push(hash.clone()),
-            |_hash, _tx, _metadata| {},
-            |_hash| {},
+            |hash, _, _| transactions_to_prune.push(hash.clone()),
+            |_, _, _| {},
+            |_| {},
         );
 
         // NOTE The metadata of solid entry points can be deleted from the database,
