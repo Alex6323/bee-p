@@ -92,7 +92,7 @@ impl SnapshotWorker {
     }
 
     fn should_prune(&self, mut index: MilestoneIndex) -> bool {
-        if self.config.pruning().enabled() && *index <= self.delay {
+        if !self.config.pruning().enabled() || *index <= self.delay {
             return false;
         }
 
