@@ -92,11 +92,15 @@ impl SnapshotWorker {
     }
 
     fn should_prune(&self, mut index: MilestoneIndex) -> bool {
-        if !self.config.pruning().enabled() || *index <= self.delay {
+        if !self.config.pruning().enabled() {
             return false;
         }
 
-        // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index.
+        if *index <= self.delay {
+            return false;
+        }
+
+        // Pruning happens after creating the snapshot so the metadata should provide the latest index.
         if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
             return false;
         }
@@ -113,10 +117,11 @@ impl SnapshotWorker {
             return false;
         }
 
-        // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
+        // We prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
         if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *index {
             return false;
         }
+
         true
     }
 
