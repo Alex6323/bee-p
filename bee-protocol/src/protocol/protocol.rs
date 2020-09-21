@@ -13,6 +13,7 @@ use crate::{
     config::ProtocolConfig,
     event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::MilestoneIndex,
+    node::BeeNode,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
     tangle::tangle,
@@ -25,7 +26,7 @@ use crate::{
 };
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::{event::Bus, node::Node, worker::Worker};
+use bee_common_ext::{event::Bus, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
     Hash,
@@ -39,14 +40,6 @@ use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 
 use std::{ptr, sync::Arc, time::Instant};
-
-pub struct BeeNode {}
-
-impl Node for BeeNode {
-    fn new() -> Self {
-        Self {}
-    }
-}
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 

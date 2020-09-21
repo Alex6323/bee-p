@@ -13,6 +13,8 @@ mod hash_cache;
 mod hasher;
 mod processor;
 
+use crate::node::BeeNode;
+
 pub(crate) use hash_cache::HashCache;
 pub(crate) use hasher::{HasherWorker, HasherWorkerEvent};
 pub(crate) use processor::{ProcessorWorker, ProcessorWorkerEvent};
@@ -64,15 +66,18 @@ mod tests {
         let (processor_worker_shutdown_sender, processor_worker_shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
-        let hasher_handle = HasherWorker::new(processor_worker_sender).run(<HasherWorker as Worker>::Receiver::new(
-            10000,
-            ShutdownStream::new(hasher_worker_shutdown_receiver, hasher_worker_receiver),
-        ));
+        let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).run(
+            <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
+                10000,
+                ShutdownStream::new(hasher_worker_shutdown_receiver, hasher_worker_receiver),
+            ),
+        );
 
-        let processor_handle = ProcessorWorker::new(milestone_validator_worker_sender).run(ShutdownStream::new(
-            processor_worker_shutdown_receiver,
-            processor_worker_receiver,
-        ));
+        let processor = ProcessorWorker::new(milestone_validator_worker_sender);
+        let processor_handle = Worker::<BeeNode>::run(
+            processor,
+            ShutdownStream::new(processor_worker_shutdown_receiver, processor_worker_receiver),
+        );
 
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];

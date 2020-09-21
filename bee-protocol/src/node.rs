@@ -9,16 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod config;
-pub mod event;
-pub mod node;
-pub mod tangle;
+use bee_common_ext::node::Node;
 
-mod message;
-mod milestone;
-mod peer;
-mod protocol;
-mod worker;
+pub struct BeeNode {}
 
-pub use milestone::{Milestone, MilestoneIndex};
-pub use protocol::{Protocol, ProtocolMetrics};
+impl Node for BeeNode {
+    fn new() -> Self {
+        Self {}
+    }
+}
