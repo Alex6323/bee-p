@@ -91,14 +91,47 @@ impl SnapshotWorker {
         return solid_index - (self.depth + snapshot_interval) >= snapshot_index;
     }
 
+    fn should_prune(&self, mut index: MilestoneIndex) -> bool {
+        if !self.config.pruning().enabled() {
+            return false;
+        }
+
+        if *index <= self.delay {
+            return false;
+        }
+
+        // Pruning happens after creating the snapshot so the metadata should provide the latest index.
+        if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
+            return false;
+        }
+
+        let target_index_max = MilestoneIndex(
+            *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
+        );
+
+        if index > target_index_max {
+            index = target_index_max;
+        }
+
+        if tangle().get_pruning_index() >= index {
+            return false;
+        }
+
+        // We prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
+        if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *index {
+            return false;
+        }
+
+        true
+    }
+
     fn process(&mut self, milestone: Milestone) {
         if self.should_snapshot(milestone.index()) {
             if let Err(e) = snapshot(self.config.local().path(), *milestone.index() - self.depth) {
                 error!("Failed to create snapshot: {:?}.", e);
             }
         }
-
-        if self.config.pruning().enabled() && *milestone.index() > self.delay {
+        if self.should_prune(milestone.index()) {
             if let Err(e) = prune_database(MilestoneIndex(*milestone.index() - self.delay)) {
                 error!("Failed to prune database: {:?}.", e);
             }

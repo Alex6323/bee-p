@@ -8,17 +8,19 @@
 // Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
+
 #[allow(dead_code)]
 async fn start_and_shutdown_rocksdb_storage() {
     // import storage
     use bee_storage_rocksdb::storage::{Backend, Storage};
     // start storage
-    let storage: Storage = Storage::start("../bee-storage-rocksdb/config.toml".to_string())
+    let storage: Storage = Storage::start("../bee-storage/bee-storage-rocksdb/config.toml".to_string())
         .await
         .unwrap();
     // shutdown storage
     assert!(storage.shutdown().await.is_ok())
 }
+
 #[allow(dead_code)]
 async fn persist_ledger_diff() {
     // imports
@@ -27,7 +29,7 @@ async fn persist_ledger_diff() {
     use bee_storage::access::{Delete, Fetch, Insert};
     use bee_storage_rocksdb::storage::{Backend, Storage};
     // start storage
-    let storage: Storage = Storage::start("../bee-storage-rocksdb/config.toml".to_string())
+    let storage: Storage = Storage::start("../bee-storage/bee-storage-rocksdb/config.toml".to_string())
         .await
         .unwrap();
     // create empty ledger_diff
@@ -56,7 +58,7 @@ async fn batch_storage() {
     use bee_storage::access::*;
     use bee_storage_rocksdb::storage::{Backend, Storage};
     // start storage
-    let storage: Storage = Storage::start("../bee-storage-rocksdb/config.toml".to_string())
+    let storage: Storage = Storage::start("../bee-storage/bee-storage-rocksdb/config.toml".to_string())
         .await
         .unwrap();
     // milestone_index
