@@ -12,10 +12,10 @@
 use crate::{
     message::{tlv_into_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use async_trait::async_trait;

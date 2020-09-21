@@ -20,12 +20,12 @@ use crate::{
         BroadcasterWorker, BundleValidatorWorker, HasherWorker, HasherWorkerEvent, KickstartWorker,
         MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneValidatorWorker,
         PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker, StatusWorker, TpsWorker,
-        TransactionRequesterWorker, TransactionResponderWorker, Worker,
+        TransactionRequesterWorker, TransactionResponderWorker,
     },
 };
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::event::Bus;
+use bee_common_ext::{event::Bus, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
     Hash,

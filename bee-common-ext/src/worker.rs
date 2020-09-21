@@ -9,9 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A crate that provides common functionalities shared across multiple crates within the Bee framework, and for
-//! applications built on-top.
+use bee_common::worker::Error as WorkerError;
 
-pub mod event;
-pub mod wait_priority_queue;
-pub mod worker;
+use async_trait::async_trait;
+use futures::Stream;
+
+use std::any::TypeId;
+
+#[async_trait]
+pub trait Worker {
+    const DEPS: &'static [TypeId];
+
+    type Event;
+    type Receiver: Stream<Item = Self::Event>;
+
+    async fn run(self, receiver: Self::Receiver) -> Result<(), WorkerError>;
+}

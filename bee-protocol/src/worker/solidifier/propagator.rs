@@ -14,10 +14,11 @@ use crate::{
     milestone::Milestone,
     protocol::Protocol,
     tangle::tangle,
-    worker::{BundleValidatorWorkerEvent, Worker},
+    worker::BundleValidatorWorkerEvent,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_crypto::ternary::Hash;
 use bee_transaction::Vertex;
 

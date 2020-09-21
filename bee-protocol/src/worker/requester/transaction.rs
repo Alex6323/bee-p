@@ -13,10 +13,10 @@ use crate::{
     message::TransactionRequest,
     milestone::MilestoneIndex,
     protocol::{Protocol, Sender},
-    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 

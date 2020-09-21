@@ -13,9 +13,9 @@ use crate::{
     message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
     protocol::Sender,
     tangle::tangle,
-    worker::Worker,
 };
 
+use bee_common_ext::worker::Worker;
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_network::EndpointId;
 use bee_tangle::helper::load_bundle_builder;

@@ -14,10 +14,10 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::{Protocol, Sender},
     tangle::tangle,
-    worker::Worker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};

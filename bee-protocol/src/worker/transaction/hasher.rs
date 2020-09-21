@@ -12,13 +12,11 @@
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    worker::{
-        transaction::{HashCache, ProcessorWorkerEvent},
-        Worker,
-    },
+    worker::transaction::{HashCache, ProcessorWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_crypto::ternary::{
     sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
     Hash,

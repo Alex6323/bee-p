@@ -13,10 +13,11 @@ use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::{milestone_validator::MilestoneValidatorWorkerEvent, Worker},
+    worker::milestone_validator::MilestoneValidatorWorkerEvent,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::worker::Worker;
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
