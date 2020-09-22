@@ -20,11 +20,12 @@ use std::any::TypeId;
 pub trait Worker<N: Node + 'static> {
     const DEPS: &'static [TypeId] = &[];
 
+    type Config;
     type Error;
     type Event;
     type Receiver: Stream<Item = Self::Event>;
 
-    async fn start(self, receiver: Self::Receiver) -> Result<(), Self::Error>;
+    async fn start(self, receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error>;
     async fn stop(self) -> Result<(), Self::Error>
     where
         Self: Sized,

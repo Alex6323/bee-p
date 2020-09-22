@@ -41,11 +41,12 @@ const ALLOWED_TIMESTAMP_WINDOW_SECS: u64 = 10 * 60;
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for ProcessorWorker {
+    type Config = ();
     type Error = WorkerError;
     type Event = ProcessorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(ProcessorWorkerEvent {

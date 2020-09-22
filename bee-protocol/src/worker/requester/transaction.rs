@@ -39,11 +39,12 @@ pub(crate) struct TransactionRequesterWorker {
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for TransactionRequesterWorker {
+    type Config = ();
     type Error = WorkerError;
     type Event = TransactionRequesterWorkerEvent;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEvent>>;
 
-    async fn start(self, receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(self, receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error> {
         async fn aux<N: Node + 'static>(
             mut worker: TransactionRequesterWorker,
             mut receiver: <TransactionRequesterWorker as Worker<N>>::Receiver,

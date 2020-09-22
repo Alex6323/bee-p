@@ -147,14 +147,13 @@ impl Protocol {
 
         shutdown.add_worker_shutdown(
             hasher_worker_shutdown_tx,
-            spawn(
-                HasherWorker::<BeeNode>::new(processor_worker_tx).start(
-                    <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
-                        Protocol::get().config.workers.transaction_worker_cache,
-                        ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
-                    ),
+            spawn(HasherWorker::<BeeNode>::new(processor_worker_tx).start(
+                <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
+                    Protocol::get().config.workers.transaction_worker_cache,
+                    ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
                 ),
-            ),
+                (),
+            )),
         );
 
         shutdown.add_worker_shutdown(
@@ -164,6 +163,7 @@ impl Protocol {
                 Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(processor_worker_shutdown_rx, processor_worker_rx),
+                    (),
                 )
             }),
         );
@@ -178,6 +178,7 @@ impl Protocol {
                         transaction_responder_worker_shutdown_rx,
                         transaction_responder_worker_rx,
                     ),
+                    (),
                 )
             }),
         );
@@ -189,6 +190,7 @@ impl Protocol {
                 Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(milestone_responder_worker_shutdown_rx, milestone_responder_worker_rx),
+                    (),
                 )
             }),
         );
@@ -203,6 +205,7 @@ impl Protocol {
                         transaction_requester_worker_shutdown_rx,
                         transaction_requester_worker_rx,
                     ),
+                    (),
                 )
             }),
         );
@@ -214,6 +217,7 @@ impl Protocol {
                 Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::from_fused(milestone_requester_worker_shutdown_rx, milestone_requester_worker_rx),
+                    (),
                 )
             }),
         );
@@ -226,6 +230,7 @@ impl Protocol {
                     Worker::<BeeNode>::start(
                         worker,
                         ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
+                        (),
                     )
                 }),
             ),
@@ -236,6 +241,7 @@ impl Protocol {
                     Worker::<BeeNode>::start(
                         worker,
                         ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
+                        (),
                     )
                 }),
             ),
@@ -246,6 +252,7 @@ impl Protocol {
                     Worker::<BeeNode>::start(
                         worker,
                         ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
+                        (),
                     )
                 }),
             ),
@@ -258,6 +265,7 @@ impl Protocol {
                 Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(broadcaster_worker_shutdown_rx, broadcaster_worker_rx),
+                    (),
                 )
             }),
         );
@@ -269,6 +277,7 @@ impl Protocol {
                 Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(bundle_validator_worker_shutdown_rx, bundle_validator_worker_rx),
+                    (),
                 )
             }),
         );
@@ -280,6 +289,7 @@ impl Protocol {
                 Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(solid_propagator_worker_shutdown_rx, solid_propagator_worker_rx),
+                    (),
                 )
             }),
         );
@@ -294,6 +304,7 @@ impl Protocol {
                         status_worker_shutdown_rx,
                         StatusWorker::interval(Protocol::get().config.workers.status_interval),
                     ),
+                    (),
                 )
             }),
         );
@@ -305,6 +316,7 @@ impl Protocol {
                 Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(tps_worker_shutdown_rx, TpsWorker::interval()),
+                    (),
                 )
             }),
         );
@@ -318,6 +330,7 @@ impl Protocol {
                 Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(kickstart_worker_shutdown_rx, KickstartWorker::interval()),
+                    (),
                 )
             }),
         );
@@ -330,6 +343,7 @@ impl Protocol {
                     Worker::<BeeNode>::start(
                         worker,
                         ShutdownStream::new(milestone_solidifier_worker_shutdown_rx, milestone_solidifier_worker_rx),
+                        (),
                     )
                     .await
                 }

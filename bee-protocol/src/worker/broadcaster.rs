@@ -36,11 +36,12 @@ pub(crate) struct BroadcasterWorker {
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for BroadcasterWorker {
+    type Config = ();
     type Error = WorkerError;
     type Event = BroadcasterWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {

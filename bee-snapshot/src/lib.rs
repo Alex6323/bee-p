@@ -114,6 +114,7 @@ pub fn init(
             Worker::<BeeNode>::start(
                 worker,
                 ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx),
+                (),
             )
         }),
     );

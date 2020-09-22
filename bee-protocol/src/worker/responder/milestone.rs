@@ -39,11 +39,12 @@ pub(crate) struct MilestoneResponderWorker;
 
 #[async_trait]
 impl<N: Node + 'static> Worker<N> for MilestoneResponderWorker {
+    type Config = ();
     type Error = WorkerError;
     type Event = MilestoneResponderWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
