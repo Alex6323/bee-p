@@ -57,6 +57,10 @@ impl LedgerState {
     pub fn iter(&self) -> impl Iterator<Item = (&Address, &u64)> {
         self.0.iter()
     }
+    /// Get reference to the inner state hashmap
+    pub fn inner(&self) -> &HashMap<Address, u64> {
+        &self.0
+    }
 }
 
 impl From<HashMap<Address, u64>> for LedgerState {
