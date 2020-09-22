@@ -42,7 +42,7 @@ impl<N: Node + 'static> Worker<N> for MilestoneRequesterWorker {
     type Event = MilestoneRequesterWorkerEvent;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>>;
 
-    async fn run(self, receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(self, receiver: Self::Receiver) -> Result<(), Self::Error> {
         async fn aux<N: Node + 'static>(
             mut worker: MilestoneRequesterWorker,
             mut receiver: <MilestoneRequesterWorker as Worker<N>>::Receiver,

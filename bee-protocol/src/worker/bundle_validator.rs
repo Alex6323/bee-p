@@ -33,7 +33,7 @@ impl<N: Node + 'static> Worker<N> for BundleValidatorWorker {
     type Event = BundleValidatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {

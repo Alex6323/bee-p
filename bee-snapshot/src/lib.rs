@@ -111,7 +111,7 @@ pub fn init(
         snapshot_worker_shutdown_tx,
         spawn({
             let worker = worker::SnapshotWorker::new(config.clone());
-            Worker::<BeeNode>::run(
+            Worker::<BeeNode>::start(
                 worker,
                 ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx),
             )

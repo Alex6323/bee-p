@@ -40,7 +40,7 @@ impl<N: Node + 'static> Worker<N> for BroadcasterWorker {
     type Event = BroadcasterWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {

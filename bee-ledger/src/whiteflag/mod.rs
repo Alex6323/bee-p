@@ -52,7 +52,7 @@ pub fn init(
         ledger_worker_shutdown_tx,
         spawn({
             let worker = LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone());
-            Worker::<BeeNode>::run(worker, ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx))
+            Worker::<BeeNode>::start(worker, ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx))
         }),
     );
 

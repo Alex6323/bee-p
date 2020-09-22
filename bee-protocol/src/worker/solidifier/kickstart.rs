@@ -32,7 +32,7 @@ impl<N: Node + 'static> Worker<N> for KickstartWorker {
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(()) = receiver.next().await {

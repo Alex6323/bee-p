@@ -43,7 +43,7 @@ impl<N: Node + 'static> Worker<N> for MilestoneResponderWorker {
     type Event = MilestoneResponderWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn run(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {

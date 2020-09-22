@@ -147,19 +147,21 @@ impl Protocol {
 
         shutdown.add_worker_shutdown(
             hasher_worker_shutdown_tx,
-            spawn(HasherWorker::<BeeNode>::new(processor_worker_tx).run(
-                <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
-                    Protocol::get().config.workers.transaction_worker_cache,
-                    ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
+            spawn(
+                HasherWorker::<BeeNode>::new(processor_worker_tx).start(
+                    <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
+                        Protocol::get().config.workers.transaction_worker_cache,
+                        ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
+                    ),
                 ),
-            )),
+            ),
         );
 
         shutdown.add_worker_shutdown(
             processor_worker_shutdown_tx,
             spawn({
                 let worker = ProcessorWorker::new(milestone_validator_worker_tx);
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(processor_worker_shutdown_rx, processor_worker_rx),
                 )
@@ -170,7 +172,7 @@ impl Protocol {
             transaction_responder_worker_shutdown_tx,
             spawn({
                 let worker = TransactionResponderWorker::new();
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(
                         transaction_responder_worker_shutdown_rx,
@@ -184,7 +186,7 @@ impl Protocol {
             milestone_responder_worker_shutdown_tx,
             spawn({
                 let worker = MilestoneResponderWorker::new();
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(milestone_responder_worker_shutdown_rx, milestone_responder_worker_rx),
                 )
@@ -195,7 +197,7 @@ impl Protocol {
             transaction_requester_worker_shutdown_tx,
             spawn({
                 let worker = TransactionRequesterWorker::new();
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::from_fused(
                         transaction_requester_worker_shutdown_rx,
@@ -209,7 +211,7 @@ impl Protocol {
             milestone_requester_worker_shutdown_tx,
             spawn({
                 let worker = MilestoneRequesterWorker::new();
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::from_fused(milestone_requester_worker_shutdown_rx, milestone_requester_worker_rx),
                 )
@@ -221,7 +223,7 @@ impl Protocol {
                 milestone_validator_worker_shutdown_tx,
                 spawn({
                     let worker = MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new();
-                    Worker::<BeeNode>::run(
+                    Worker::<BeeNode>::start(
                         worker,
                         ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
                     )
@@ -231,7 +233,7 @@ impl Protocol {
                 milestone_validator_worker_shutdown_tx,
                 spawn({
                     let worker = MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new();
-                    Worker::<BeeNode>::run(
+                    Worker::<BeeNode>::start(
                         worker,
                         ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
                     )
@@ -241,7 +243,7 @@ impl Protocol {
                 milestone_validator_worker_shutdown_tx,
                 spawn({
                     let worker = MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new();
-                    Worker::<BeeNode>::run(
+                    Worker::<BeeNode>::start(
                         worker,
                         ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
                     )
@@ -253,7 +255,7 @@ impl Protocol {
             broadcaster_worker_shutdown_tx,
             spawn({
                 let worker = BroadcasterWorker::new(network);
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(broadcaster_worker_shutdown_rx, broadcaster_worker_rx),
                 )
@@ -264,7 +266,7 @@ impl Protocol {
             bundle_validator_worker_shutdown_tx,
             spawn({
                 let worker = BundleValidatorWorker::new();
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(bundle_validator_worker_shutdown_rx, bundle_validator_worker_rx),
                 )
@@ -275,7 +277,7 @@ impl Protocol {
             solid_propagator_worker_shutdown_tx,
             spawn({
                 let worker = SolidPropagatorWorker::new(bundle_validator_worker_tx);
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(solid_propagator_worker_shutdown_rx, solid_propagator_worker_rx),
                 )
@@ -286,7 +288,7 @@ impl Protocol {
             status_worker_shutdown_tx,
             spawn({
                 let worker = StatusWorker::new();
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(
                         status_worker_shutdown_rx,
@@ -300,7 +302,7 @@ impl Protocol {
             tps_worker_shutdown_tx,
             spawn({
                 let worker = TpsWorker::new();
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(tps_worker_shutdown_rx, TpsWorker::interval()),
                 )
@@ -313,7 +315,7 @@ impl Protocol {
             kickstart_worker_shutdown_tx,
             spawn({
                 let worker = KickstartWorker::new(ms_send, Protocol::get().config.workers.ms_sync_count);
-                Worker::<BeeNode>::run(
+                Worker::<BeeNode>::start(
                     worker,
                     ShutdownStream::new(kickstart_worker_shutdown_rx, KickstartWorker::interval()),
                 )
@@ -325,7 +327,7 @@ impl Protocol {
             spawn(async {
                 {
                     let worker = MilestoneSolidifierWorker::new(ms_recv).await;
-                    Worker::<BeeNode>::run(
+                    Worker::<BeeNode>::start(
                         worker,
                         ShutdownStream::new(milestone_solidifier_worker_shutdown_rx, milestone_solidifier_worker_rx),
                     )
