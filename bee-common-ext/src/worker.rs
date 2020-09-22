@@ -25,7 +25,7 @@ pub trait Worker<N: Node + 'static> {
     type Event;
     type Receiver: Stream<Item = Self::Event>;
 
-    async fn start(self, receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error>;
+    async fn start(self, receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error>;
     async fn stop(self) -> Result<(), Self::Error>
     where
         Self: Sized,

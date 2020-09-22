@@ -37,7 +37,7 @@ impl<N: Node + 'static> Worker<N> for MilestoneSolidifierWorker {
     type Event = MilestoneSolidifierWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(MilestoneSolidifierWorkerEvent(index)) = receiver.next().await {

@@ -61,7 +61,7 @@ where
     // TODO PriorityQueue ?
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {

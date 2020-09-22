@@ -44,7 +44,7 @@ impl<N: Node + 'static> Worker<N> for TransactionRequesterWorker {
     type Event = TransactionRequesterWorkerEvent;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEvent>>;
 
-    async fn start(self, receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(self, receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
         async fn aux<N: Node + 'static>(
             mut worker: TransactionRequesterWorker,
             mut receiver: <TransactionRequesterWorker as Worker<N>>::Receiver,

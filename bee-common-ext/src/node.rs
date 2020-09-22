@@ -26,8 +26,15 @@ struct NodeBuilder<N: Node> {
 }
 
 impl<N: Node + 'static> NodeBuilder<N> {
-    fn with_worker<W: Worker<N> + 'static>(mut self) -> Self {
-        self.closures.insert(TypeId::of::<W>(), Box::new(|node| {}));
+    fn with_worker<W: Worker<N> + 'static>(self) -> Self
+    where
+        W::Config: Default,
+    {
+        self.with_worker_cfg::<W>(W::Config::default())
+    }
+
+    fn with_worker_cfg<W: Worker<N> + 'static>(mut self, _config: W::Config) -> Self {
+        self.closures.insert(TypeId::of::<W>(), Box::new(|_node| {}));
         self.deps.insert(TypeId::of::<W>(), W::DEPS);
         self
     }

@@ -58,7 +58,7 @@ impl<N: Node + 'static + Send> Worker<N> for HasherWorker<N> {
     type Event = usize;
     type Receiver = BatchStream;
 
-    async fn start(mut self, mut receiver: Self::Receiver, config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(batch_size) = receiver.next().await {
