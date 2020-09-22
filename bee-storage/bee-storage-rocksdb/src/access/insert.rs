@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_crypto::ternary::Hash;
-use bee_ledger::diff::LedgerDiff;
+use bee_ledger::{diff::LedgerDiff, state::LedgerState};
 use bee_protocol::{tangle::TransactionMetadata, MilestoneIndex};
 use bee_storage::{access::Insert, persistable::Persistable};
 use bee_transaction::bundled::BundledTransaction;
@@ -31,6 +31,7 @@ impl Insert<Hash, TransactionMetadata> for Storage {
         Ok(())
     }
 }
+
 #[async_trait::async_trait]
 impl Insert<MilestoneIndex, LedgerDiff> for Storage {
     type Error = OpError;
@@ -48,6 +49,25 @@ impl Insert<MilestoneIndex, LedgerDiff> for Storage {
         Ok(())
     }
 }
+
+#[async_trait::async_trait]
+impl Insert<MilestoneIndex, LedgerState> for Storage {
+    type Error = OpError;
+    async fn insert(&self, milestone_index: &MilestoneIndex, ledger_state: &LedgerState) -> Result<(), Self::Error> {
+        let ms_index_to_ledger_state = self.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_STATE).unwrap();
+        let mut index_buf = Vec::new();
+        milestone_index.encode_persistable::<Self>(&mut index_buf);
+        let mut ledger_state_buf = Vec::new();
+        ledger_state.encode_persistable::<Self>(&mut ledger_state_buf);
+        self.inner.put_cf(
+            &ms_index_to_ledger_state,
+            index_buf.as_slice(),
+            ledger_state_buf.as_slice(),
+        )?;
+        Ok(())
+    }
+}
+
 #[async_trait::async_trait]
 impl Insert<Hash, BundledTransaction> for Storage {
     type Error = OpError;
