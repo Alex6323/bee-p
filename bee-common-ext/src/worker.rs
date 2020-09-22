@@ -17,7 +17,7 @@ use futures::Stream;
 use std::any::TypeId;
 
 #[async_trait]
-pub trait Worker<N: Node> {
+pub trait Worker<N: Node + 'static> {
     const DEPS: &'static [TypeId] = &[];
 
     type Error;
@@ -25,4 +25,10 @@ pub trait Worker<N: Node> {
     type Receiver: Stream<Item = Self::Event>;
 
     async fn start(self, receiver: Self::Receiver) -> Result<(), Self::Error>;
+    async fn stop(self) -> Result<(), Self::Error>
+    where
+        Self: Sized,
+    {
+        Ok(())
+    }
 }

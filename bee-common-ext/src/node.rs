@@ -25,7 +25,7 @@ struct NodeBuilder<N: Node> {
     closures: HashMap<TypeId, Box<dyn FnOnce(&N)>>,
 }
 
-impl<N: Node> NodeBuilder<N> {
+impl<N: Node + 'static> NodeBuilder<N> {
     fn with_worker<W: Worker<N> + 'static>(mut self) -> Self {
         self.closures.insert(TypeId::of::<W>(), Box::new(|node| {}));
         self.deps.insert(TypeId::of::<W>(), W::DEPS);
