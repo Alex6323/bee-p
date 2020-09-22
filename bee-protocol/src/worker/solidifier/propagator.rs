@@ -18,9 +18,11 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_transaction::Vertex;
 
+use async_trait::async_trait;
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
@@ -29,21 +31,34 @@ use log::{info, warn};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SolidPropagatorWorkerEvent>>>;
-
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct SolidPropagatorWorker {
     bundle_validator: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
-    receiver: Receiver,
+}
+
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for SolidPropagatorWorker {
+    type Error = WorkerError;
+    type Event = SolidPropagatorWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+        info!("Running.");
+
+        while let Some(SolidPropagatorWorkerEvent(hash)) = receiver.next().await {
+            self.propagate(hash);
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl SolidPropagatorWorker {
-    pub(crate) fn new(bundle_validator: mpsc::UnboundedSender<BundleValidatorWorkerEvent>, receiver: Receiver) -> Self {
-        Self {
-            bundle_validator,
-            receiver,
-        }
+    pub(crate) fn new(bundle_validator: mpsc::UnboundedSender<BundleValidatorWorkerEvent>) -> Self {
+        Self { bundle_validator }
     }
 
     fn propagate(&mut self, root: Hash) {
@@ -93,17 +108,5 @@ impl SolidPropagatorWorker {
                 }
             }
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(SolidPropagatorWorkerEvent(hash)) = self.receiver.next().await {
-            self.propagate(hash);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

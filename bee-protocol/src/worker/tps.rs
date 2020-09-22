@@ -11,14 +11,18 @@
 
 use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{node::Node, worker::Worker};
 
+use async_trait::async_trait;
 use futures::{
     channel::oneshot::Receiver,
     future::{ready, select, Either, FutureExt},
+    stream::Fuse,
+    StreamExt,
 };
 use log::info;
-use tokio::time::delay_for;
+use tokio::time::{interval, Instant, Interval};
 
 use std::time::Duration;
 
@@ -32,9 +36,32 @@ pub(crate) struct TpsWorker {
     outgoing: u64,
 }
 
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for TpsWorker {
+    type Error = WorkerError;
+    type Event = Instant;
+    type Receiver = ShutdownStream<Fuse<Interval>>;
+
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+        info!("Running.");
+
+        while receiver.next().await.is_some() {
+            self.tps();
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
+}
+
 impl TpsWorker {
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn interval() -> Interval {
+        interval(Duration::from_secs(1))
     }
 
     fn tps(&mut self) {
@@ -60,20 +87,5 @@ impl TpsWorker {
         self.stale = stale;
         self.invalid = invalid;
         self.outgoing = outgoing;
-    }
-
-    pub(crate) async fn run(mut self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while select(delay_for(Duration::from_secs(1)), &mut shutdown)
-            .then(|either| ready(if let Either::Left(_) = either { true } else { false }))
-            .await
-        {
-            self.tps();
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

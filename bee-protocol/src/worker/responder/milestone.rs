@@ -16,32 +16,49 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::EndpointId;
+use bee_tangle::helper::load_bundle_builder;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
 use bee_transaction::bundled::BundledTransaction as Transaction;
 
+use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
-
 use log::info;
-
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneResponderWorkerEvent>>>;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: MilestoneRequest,
 }
 
-pub(crate) struct MilestoneResponderWorker {
-    receiver: Receiver,
+pub(crate) struct MilestoneResponderWorker;
+
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for MilestoneResponderWorker {
+    type Error = WorkerError;
+    type Event = MilestoneResponderWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+        info!("Running.");
+
+        while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
+            self.process_request(epid, request).await;
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl MilestoneResponderWorker {
-    pub(crate) fn new(receiver: Receiver) -> Self {
-        Self { receiver }
+    pub(crate) fn new() -> Self {
+        Self
     }
 
     async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
@@ -50,35 +67,23 @@ impl MilestoneResponderWorker {
             _ => request.index.into(),
         };
 
-        // TODO send complete ms bundle ?
-        match tangle().get_milestone(index) {
-            Some(transaction) => {
+        if let Some(hash) = tangle().get_milestone_hash(index) {
+            if let Some(builder) = load_bundle_builder(tangle(), &hash) {
+                // This is safe because the bundle has already been validated.
+                let bundle = unsafe { builder.build() };
                 let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-                transaction.into_trits_allocated(&mut trits);
-                // TODO dedicated channel ? Priority Queue ?
-                // TODO compress bytes
-                Sender::<TransactionMessage>::send(
-                    &epid,
-                    // TODO try to compress lower in the pipeline ?
-                    TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                        trits.encode::<T5B1Buf>().as_i8_slice(),
-                    ))),
-                )
-                .await;
+
+                for transaction in bundle {
+                    transaction.into_trits_allocated(&mut trits);
+                    Sender::<TransactionMessage>::send(
+                        &epid,
+                        TransactionMessage::new(&compress_transaction_bytes(cast_slice(
+                            trits.encode::<T5B1Buf>().as_i8_slice(),
+                        ))),
+                    )
+                    .await;
+                }
             }
-            None => {}
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(MilestoneResponderWorkerEvent { epid, request }) = self.receiver.next().await {
-            self.process_request(epid, request).await;
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

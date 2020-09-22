@@ -16,11 +16,13 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_network::EndpointId;
 use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
+use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{
     channel::mpsc,
@@ -28,55 +30,51 @@ use futures::{
 };
 use log::info;
 
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<TransactionResponderWorkerEvent>>>;
-
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: TransactionRequest,
 }
 
-pub(crate) struct TransactionResponderWorker {
-    receiver: Receiver,
-}
+pub(crate) struct TransactionResponderWorker;
 
-impl TransactionResponderWorker {
-    pub(crate) fn new(receiver: Receiver) -> Self {
-        Self { receiver }
-    }
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for TransactionResponderWorker {
+    type Error = WorkerError;
+    type Event = TransactionResponderWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
-        match Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
-            Ok(hash) => {
-                match tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
-                    Some(transaction) => {
-                        let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-                        transaction.into_trits_allocated(&mut trits);
-                        // TODO dedicated channel ? Priority Queue ?
-                        Sender::<TransactionMessage>::send(
-                            &epid,
-                            // TODO try to compress lower in the pipeline ?
-                            TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                                trits.encode::<T5B1Buf>().as_i8_slice(),
-                            ))),
-                        )
-                        .await
-                    }
-                    None => {}
-                }
-            }
-            Err(_) => {}
-        }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
         info!("Running.");
 
-        while let Some(TransactionResponderWorkerEvent { epid, request }) = self.receiver.next().await {
+        while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
             self.process_request(epid, request).await;
         }
 
         info!("Stopped.");
 
         Ok(())
+    }
+}
+
+impl TransactionResponderWorker {
+    pub(crate) fn new() -> Self {
+        Self
+    }
+
+    async fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
+        if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
+            if let Some(transaction) = tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
+                let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
+
+                transaction.into_trits_allocated(&mut trits);
+                Sender::<TransactionMessage>::send(
+                    &epid,
+                    TransactionMessage::new(&compress_transaction_bytes(cast_slice(
+                        trits.encode::<T5B1Buf>().as_i8_slice(),
+                    ))),
+                )
+                .await
+            }
+        }
     }
 }

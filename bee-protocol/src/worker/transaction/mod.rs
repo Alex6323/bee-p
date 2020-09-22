@@ -23,12 +23,13 @@ mod tests {
     use crate::{
         config::ProtocolConfig,
         message::Transaction as TransactionMessage,
+        node::BeeNode,
         protocol::Protocol,
         tangle::{self, tangle},
     };
 
     use bee_common::shutdown_stream::ShutdownStream;
-    use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown};
+    use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown, worker::Worker};
     use bee_crypto::ternary::Hash;
     use bee_network::{EndpointId, NetworkConfig};
 
@@ -64,18 +65,18 @@ mod tests {
         let (processor_worker_shutdown_sender, processor_worker_shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
-        let hasher_handle = HasherWorker::new(
-            processor_worker_sender,
-            10000,
-            ShutdownStream::new(hasher_worker_shutdown_receiver, hasher_worker_receiver),
-        )
-        .run();
+        let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).run(
+            <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
+                10000,
+                ShutdownStream::new(hasher_worker_shutdown_receiver, hasher_worker_receiver),
+            ),
+        );
 
-        let processor_handle = ProcessorWorker::new(
-            milestone_validator_worker_sender,
+        let processor = ProcessorWorker::new(milestone_validator_worker_sender);
+        let processor_handle = Worker::<BeeNode>::run(
+            processor,
             ShutdownStream::new(processor_worker_shutdown_receiver, processor_worker_receiver),
-        )
-        .run();
+        );
 
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];

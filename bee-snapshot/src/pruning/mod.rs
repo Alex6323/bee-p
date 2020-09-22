@@ -28,8 +28,6 @@ use log::{info, warn};
 
 #[derive(Debug)]
 pub enum Error {
-    NotEnoughHistory(u32),
-    NoPruningNeeded(u32, u32),
     MilestoneNotFoundInTangle(u32),
     MetadataNotFound(Hash),
 }
@@ -48,7 +46,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
     traversal::visit_children_follow_trunk(
         tangle(),
         *hash,
-        |_tx, metadata| {
+        |_, metadata| {
             if is_solid {
                 return false;
             }
@@ -56,7 +54,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
             is_solid = metadata.flags.is_confirmed() && metadata.milestone_index > milestone_index;
             true
         },
-        |_hash, _tx, _metadata| {},
+        |_, _, _| {},
     );
     Ok(is_solid)
 }
@@ -79,8 +77,8 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
         traversal::visit_parents_depth_first(
             tangle(),
             milestone_hash,
-            |_hash, _tx, metadata| *metadata.milestone_index() >= index,
-            |hash, _tx, metadata| {
+            |_, _, metadata| *metadata.milestone_index() >= index,
+            |hash, _, metadata| {
                 if metadata.flags.is_confirmed() && is_solid_entry_point(&hash).unwrap() {
                     // Find all tails.
                     helper::on_all_tails(tangle(), *hash, |hash, _tx, metadata| {
@@ -88,8 +86,8 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                     });
                 }
             },
-            |_hash, _tx, _metadata| {},
-            |_hash| {},
+            |_, _, _| {},
+            |_| {},
         );
     }
     Ok(solid_entry_points)
@@ -122,29 +120,12 @@ pub fn prune_milestone(_milestone_index: MilestoneIndex) {
 
 // NOTE we don't prune cache, but only prune the database.
 pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
-    // NOTE the pruning happens after `createLocalSnapshot`, so the metadata should provide the latest index.
-    if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
-        return Err(Error::NotEnoughHistory(*tangle().get_snapshot_index()));
-    }
-
     let target_index_max = MilestoneIndex(
         *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
     );
     if target_index > target_index_max {
         target_index = target_index_max;
     }
-
-    if tangle().get_pruning_index() >= target_index {
-        return Err(Error::NoPruningNeeded(*tangle().get_pruning_index(), *target_index));
-    }
-
-    if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *target_index {
-        // we prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
-        return Err(Error::NotEnoughHistory(
-            *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1,
-        ));
-    }
-
     // Update the solid entry points in the static MsTangle.
     let new_solid_entry_points = get_new_solid_entry_points(target_index)?;
 
@@ -185,14 +166,14 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
         traversal::visit_parents_depth_first(
             tangle(),
             milestone_hash,
-            |_hash, _tx, _metadata| {
+            |_, _, _| {
                 // NOTE everything that was referenced by that milestone can be pruned
                 //      (even transactions of older milestones)
                 true
             },
-            |hash, _tx, _metadata| transactions_to_prune.push(hash.clone()),
-            |_hash, _tx, _metadata| {},
-            |_hash| {},
+            |hash, _, _| transactions_to_prune.push(hash.clone()),
+            |_, _, _| {},
+            |_| {},
         );
 
         // NOTE The metadata of solid entry points can be deleted from the database,

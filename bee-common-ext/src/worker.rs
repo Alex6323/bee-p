@@ -9,13 +9,26 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod helper;
+use crate::node::Node;
 
-use self::helper::*;
+use async_trait::async_trait;
+use futures::Stream;
 
-#[test]
-fn count_tips() {
-    let (tangle, _, _) = create_test_tangle();
+use std::any::TypeId;
 
-    assert_eq!(1, tangle.num_tips());
+#[async_trait]
+pub trait Worker<N: Node + 'static> {
+    const DEPS: &'static [TypeId] = &[];
+
+    type Error;
+    type Event;
+    type Receiver: Stream<Item = Self::Event>;
+
+    async fn start(self, receiver: Self::Receiver) -> Result<(), Self::Error>;
+    async fn stop(self) -> Result<(), Self::Error>
+    where
+        Self: Sized,
+    {
+        Ok(())
+    }
 }

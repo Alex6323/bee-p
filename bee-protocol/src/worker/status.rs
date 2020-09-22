@@ -11,27 +11,49 @@
 
 use crate::{protocol::Protocol, tangle::tangle};
 
-use bee_common::worker::Error as WorkerError;
+use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{node::Node, worker::Worker};
 
+use async_trait::async_trait;
 use futures::{
     channel::oneshot::Receiver,
     future::{ready, select, Either, FutureExt},
+    stream::Fuse,
+    StreamExt,
 };
-
 use log::info;
-use tokio::time::delay_for;
+use tokio::time::{interval, Instant, Interval};
 
 use std::time::Duration;
 
-pub(crate) struct StatusWorker {
-    interval_ms: u64,
+pub(crate) struct StatusWorker;
+
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for StatusWorker {
+    type Error = WorkerError;
+    type Event = Instant;
+    type Receiver = ShutdownStream<Fuse<Interval>>;
+
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+        info!("Running.");
+
+        while receiver.next().await.is_some() {
+            self.status();
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl StatusWorker {
-    pub(crate) fn new(interval_s: u64) -> Self {
-        Self {
-            interval_ms: interval_s * 1000,
-        }
+    pub(crate) fn new() -> Self {
+        Self
+    }
+
+    pub(crate) fn interval(seconds: u64) -> Interval {
+        interval(Duration::from_secs(seconds))
     }
 
     fn status(&self) {
@@ -55,20 +77,5 @@ impl StatusWorker {
                 Protocol::get().requested_transactions.len()
             );
         };
-    }
-
-    pub(crate) async fn run(self, mut shutdown: Receiver<()>) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while select(delay_for(Duration::from_millis(self.interval_ms)), &mut shutdown)
-            .then(|either| ready(if let Either::Left(_) = either { true } else { false }))
-            .await
-        {
-            self.status();
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

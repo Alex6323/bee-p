@@ -17,48 +17,65 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::wait_priority_queue::WaitIncoming;
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::EndpointId;
 
-use futures::{select, stream::Fuse, StreamExt};
+use async_trait::async_trait;
+use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 use tokio::time::{interval, Interval};
 
-use std::{
-    cmp::Ordering,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-type Receiver<'a> = ShutdownStream<WaitIncoming<'a, MilestoneRequesterWorkerEntry>>;
+pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
-#[derive(Eq, PartialEq)]
-pub(crate) struct MilestoneRequesterWorkerEntry(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
-
-impl PartialOrd for MilestoneRequesterWorkerEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.0.partial_cmp(&self.0)
-    }
-}
-
-impl Ord for MilestoneRequesterWorkerEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.0.cmp(&self.0)
-    }
-}
-
-pub(crate) struct MilestoneRequesterWorker<'a> {
+pub(crate) struct MilestoneRequesterWorker {
     counter: usize,
-    receiver: Receiver<'a>,
     timeouts: Fuse<Interval>,
 }
 
-impl<'a> MilestoneRequesterWorker<'a> {
-    pub(crate) fn new(receiver: Receiver<'a>) -> Self {
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for MilestoneRequesterWorker {
+    type Error = WorkerError;
+    type Event = MilestoneRequesterWorkerEvent;
+    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>>;
+
+    async fn start(self, receiver: Self::Receiver) -> Result<(), Self::Error> {
+        async fn aux<N: Node + 'static>(
+            mut worker: MilestoneRequesterWorker,
+            mut receiver: <MilestoneRequesterWorker as Worker<N>>::Receiver,
+        ) -> Result<(), WorkerError> {
+            info!("Running.");
+
+            loop {
+                select! {
+                    _ = worker.timeouts.next() => worker.retry_requests().await,
+                    entry = receiver.next() => match entry {
+                        Some(MilestoneRequesterWorkerEvent(index, epid)) => {
+                            if !tangle().contains_milestone(index.into()) {
+                                worker.process_request(index, epid).await;
+                            }
+                        },
+                        None => break,
+                    },
+                }
+            }
+
+            info!("Stopped.");
+
+            Ok(())
+        }
+
+        aux::<N>(self, receiver).await
+    }
+}
+
+impl MilestoneRequesterWorker {
+    pub(crate) fn new() -> Self {
         Self {
             counter: 0,
-            receiver,
             timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
         }
     }
@@ -120,27 +137,5 @@ impl<'a> MilestoneRequesterWorker<'a> {
         if retry_counts > 0 {
             debug!("Retried {} milestones.", retry_counts);
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        loop {
-            select! {
-                _ = self.timeouts.next() => self.retry_requests().await,
-                entry = self.receiver.next() => match entry {
-                    Some(MilestoneRequesterWorkerEntry(index, epid)) => {
-                        if !tangle().contains_milestone(index.into()) {
-                            self.process_request(index, epid).await;
-                        }
-                    },
-                    None => break,
-                },
-            }
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

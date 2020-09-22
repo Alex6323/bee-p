@@ -19,15 +19,15 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
 
+use async_trait::async_trait;
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
 };
 use log::{error, info, warn};
-
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
 pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
@@ -35,11 +35,29 @@ pub(crate) struct SnapshotWorker {
     config: SnapshotConfig,
     depth: u32,
     delay: u32,
-    receiver: Receiver,
+}
+
+#[async_trait]
+impl<N: Node + 'static> Worker<N> for SnapshotWorker {
+    type Error = WorkerError;
+    type Event = SnapshotWorkerEvent;
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
+
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+        info!("Running.");
+
+        while let Some(SnapshotWorkerEvent(milestone)) = receiver.next().await {
+            self.process(milestone);
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl SnapshotWorker {
-    pub(crate) fn new(config: SnapshotConfig, receiver: Receiver) -> Self {
+    pub(crate) fn new(config: SnapshotConfig) -> Self {
         let depth = if config.local().depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
             warn!(
                 "Configuration value for \"depth\" is too low ({}), value changed to {}.",
@@ -63,12 +81,7 @@ impl SnapshotWorker {
             config.pruning().delay()
         };
 
-        Self {
-            config,
-            depth,
-            delay,
-            receiver,
-        }
+        Self { config, depth, delay }
     }
 
     fn should_snapshot(&self, index: MilestoneIndex) -> bool {
@@ -91,29 +104,50 @@ impl SnapshotWorker {
         return solid_index - (self.depth + snapshot_interval) >= snapshot_index;
     }
 
+    fn should_prune(&self, mut index: MilestoneIndex) -> bool {
+        if !self.config.pruning().enabled() {
+            return false;
+        }
+
+        if *index <= self.delay {
+            return false;
+        }
+
+        // Pruning happens after creating the snapshot so the metadata should provide the latest index.
+        if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
+            return false;
+        }
+
+        let target_index_max = MilestoneIndex(
+            *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
+        );
+
+        if index > target_index_max {
+            index = target_index_max;
+        }
+
+        if tangle().get_pruning_index() >= index {
+            return false;
+        }
+
+        // We prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
+        if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *index {
+            return false;
+        }
+
+        true
+    }
+
     fn process(&mut self, milestone: Milestone) {
         if self.should_snapshot(milestone.index()) {
             if let Err(e) = snapshot(self.config.local().path(), *milestone.index() - self.depth) {
                 error!("Failed to create snapshot: {:?}.", e);
             }
         }
-
-        if self.config.pruning().enabled() && *milestone.index() > self.delay {
+        if self.should_prune(milestone.index()) {
             if let Err(e) = prune_database(MilestoneIndex(*milestone.index() - self.delay)) {
                 error!("Failed to prune database: {:?}.", e);
             }
         }
-    }
-
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(SnapshotWorkerEvent(milestone)) = self.receiver.next().await {
-            self.process(milestone);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
     }
 }

@@ -17,6 +17,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
     Hash,
@@ -24,6 +25,7 @@ use bee_crypto::ternary::{
 use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
+use async_trait::async_trait;
 use futures::{
     channel::mpsc,
     stream::{Fuse, StreamExt},
@@ -31,8 +33,6 @@ use futures::{
 use log::{debug, info};
 
 use std::marker::PhantomData;
-
-type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneValidatorWorkerEvent>>>;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -45,8 +45,32 @@ pub(crate) enum MilestoneValidatorWorkerError {
 pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash, pub(crate) bool);
 
 pub(crate) struct MilestoneValidatorWorker<M, P> {
-    receiver: Receiver,
     marker: PhantomData<(M, P)>,
+}
+
+#[async_trait]
+impl<N: Node + 'static, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
+where
+    M: Sponge + Default + Send,
+    P: PublicKey + Send,
+    <P as PublicKey>::Signature: RecoverableSignature,
+{
+    type Error = WorkerError;
+    type Event = MilestoneValidatorWorkerEvent;
+    // TODO PriorityQueue ?
+    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+
+    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+        info!("Running.");
+
+        while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
+            self.process(hash, is_tail);
+        }
+
+        info!("Stopped.");
+
+        Ok(())
+    }
 }
 
 impl<M, P> MilestoneValidatorWorker<M, P>
@@ -55,11 +79,8 @@ where
     P: PublicKey,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
-    pub(crate) fn new(receiver: Receiver) -> Self {
-        Self {
-            receiver,
-            marker: PhantomData,
-        }
+    pub(crate) fn new() -> Self {
+        Self { marker: PhantomData }
     }
 
     fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
@@ -124,6 +145,8 @@ where
                         }
 
                         if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
+                            tangle().update_metadata(&milestone.hash, |meta| meta.flags.set_requested(true));
+
                             Protocol::trigger_milestone_solidification(milestone.index);
                         }
                     }
@@ -135,20 +158,4 @@ where
             }
         }
     }
-
-    // TODO PriorityQueue ?
-    pub(crate) async fn run(mut self) -> Result<(), WorkerError> {
-        info!("Running.");
-
-        while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = self.receiver.next().await {
-            self.process(hash, is_tail);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
-    }
 }
-
-#[cfg(test)]
-mod tests {}

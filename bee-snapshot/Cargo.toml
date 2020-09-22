@@ -20,6 +20,7 @@ bee-tangle = { path = "../bee-tangle"}
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 
+async-trait = "0.1.40"
 bytemuck = "1.2.0"
 chrono = "0.4.11"
 dashmap = "3.10"

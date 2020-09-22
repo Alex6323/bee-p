@@ -11,6 +11,7 @@
 
 pub mod config;
 pub mod event;
+pub mod node;
 pub mod tangle;
 
 mod message;
