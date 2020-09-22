@@ -11,7 +11,7 @@ fn input_to_json_serde() {
 
 #[test]
 fn output_to_json_serde() {
-    let address = Address::from_ed25519_bytes([2; 32]);
+    let address = Address::from_ed25519_bytes(&[2; 32]);
     let expected = Output::new(address, 18446744073709551615);
     let json = serde_json::to_string(&expected).unwrap();
     let actual = serde_json::from_str(&json).unwrap();
@@ -24,7 +24,7 @@ fn unsigned_transaction_to_json_serde() {
     let mut inputs = Vec::new();
     inputs.push(Input::new(Hash([1u8; 32]), 2));
     inputs.push(Input::new(Hash([3u8; 32]), 4));
-    let address = Address::from_ed25519_bytes([2; 32]);
+    let address = Address::from_ed25519_bytes(&[2; 32]);
     let mut outputs = Vec::new();
     outputs.push(Output::new(address, 18446744073709551615));
     let expected = UnsignedTransaction {
@@ -67,7 +67,7 @@ fn transaction_message_to_json_serde() {
     // Create single transaction payload first
     let mut inputs = Vec::new();
     inputs.push(Input::new(Hash([3u8; 32]), 4));
-    let address = Address::from_ed25519_bytes([2; 32]);
+    let address = Address::from_ed25519_bytes(&[2; 32]);
     let mut outputs = Vec::new();
     outputs.push(Output::new(address, 18446744073709551615));
     let unsigned_transaction = UnsignedTransaction {

@@ -13,7 +13,11 @@ use crate::atomic::Error;
 
 use bee_ternary::{T5B1Buf, TritBuf};
 
+use bech32::{self, ToBase32};
+use blake2::{VarBlake2b, digest::{Update, VariableOutput}};
 use serde::{Deserialize, Serialize};
+
+use std::convert::TryInto;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Address {
@@ -22,8 +26,11 @@ pub enum Address {
 }
 
 impl Address {
-    pub fn from_ed25519_bytes(bytes: [u8; 32]) -> Self {
-        Address::Ed25519(bytes)
+    pub fn from_ed25519_bytes(bytes: &[u8; 32]) -> Self {
+        let mut hasher = VarBlake2b::new(32).unwrap();
+        hasher.update(bytes);
+        let address: [u8; 32] = hasher.finalize_boxed().as_ref().try_into().expect("Array must be 32 bytes");
+        Address::Ed25519(address)
     }
 
     pub fn from_wots_tritbuf(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
@@ -32,6 +39,17 @@ impl Address {
             return Err(Error::HashError);
         }
         Ok(Address::Wots(trits))
+    }
+
+    pub fn to_bech32_string(&self) -> String { 
+        match self {
+            Address::Ed25519(a) => {
+                let mut serialized = vec![1u8];
+                a.iter().for_each(|b| serialized.push(*b));
+                bech32::encode("iot", serialized.to_base32()).expect("Valid Ed25519 address required")
+            }
+            _ => todo!()
+        }
     }
 }
 
