@@ -14,7 +14,7 @@
 use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::event::Bus;
+use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node as NodeT};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, Protocol};
@@ -53,6 +53,8 @@ impl NodeBuilder {
     pub fn finish(self) -> Result<Node, Error> {
         print_banner_and_version();
 
+        let bee_node = Arc::new(BeeNode::new());
+
         let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
@@ -61,7 +63,8 @@ impl NodeBuilder {
 
         // TODO temporary
         let (ledger_state, snapshot_index, snapshot_timestamp) =
-            bee_snapshot::init(&self.config.snapshot, bus.clone(), &mut shutdown).map_err(Error::SnapshotError)?;
+            bee_snapshot::init(&self.config.snapshot, bee_node.clone(), bus.clone(), &mut shutdown)
+                .map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network, &mut shutdown);
@@ -74,6 +77,7 @@ impl NodeBuilder {
             *snapshot_index,
             ledger_state,
             self.config.protocol.coordinator().clone(),
+            bee_node.clone(),
             bus.clone(),
             &mut shutdown,
         );
@@ -82,6 +86,7 @@ impl NodeBuilder {
             self.config.protocol.clone(),
             network.clone(),
             snapshot_timestamp,
+            bee_node.clone(),
             bus.clone(),
             &mut shutdown,
         ));
@@ -95,6 +100,7 @@ impl NodeBuilder {
         let (sender, receiver) = shutdown_listener();
 
         Ok(Node {
+            tmp_node: bee_node,
             sender,
             network,
             receiver: ShutdownStream::new(receiver, events),
@@ -106,6 +112,7 @@ impl NodeBuilder {
 
 /// The main node type.
 pub struct Node {
+    tmp_node: Arc<BeeNode>,
     // TODO temporary to keep it alive
     sender: oneshot::Sender<()>,
     // TODO those 2 fields are related; consider bundling them

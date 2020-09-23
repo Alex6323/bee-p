@@ -35,7 +35,7 @@ use futures::{
 use log::{info, trace, warn};
 use pin_project::pin_project;
 
-use std::{marker::PhantomData, pin::Pin};
+use std::{marker::PhantomData, pin::Pin, sync::Arc};
 
 // If a batch has less than this number of transactions, the regular CurlP hasher is used instead
 // of the batched one.
@@ -52,13 +52,18 @@ pub(crate) struct HasherWorker<N: Node> {
 }
 
 #[async_trait]
-impl<N: Node + 'static + Send> Worker<N> for HasherWorker<N> {
+impl<N: Node> Worker<N> for HasherWorker<N> {
     type Config = ();
     type Error = WorkerError;
     type Event = usize;
     type Receiver = BatchStream;
 
-    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(
+        mut self,
+        mut receiver: Self::Receiver,
+        _node: Arc<N>,
+        _config: Self::Config,
+    ) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(batch_size) = receiver.next().await {
@@ -71,7 +76,7 @@ impl<N: Node + 'static + Send> Worker<N> for HasherWorker<N> {
     }
 }
 
-impl<N: Node + 'static + Send> HasherWorker<N> {
+impl<N: Node> HasherWorker<N> {
     pub(crate) fn new(processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>) -> Self {
         Self {
             processor_worker,

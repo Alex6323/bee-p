@@ -16,7 +16,7 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-pub trait Node {
+pub trait Node: Send + Sync + 'static {
     fn new() -> Self;
 }
 

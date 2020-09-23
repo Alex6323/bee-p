@@ -32,7 +32,7 @@ use futures::{
 };
 use log::{debug, info};
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -49,7 +49,7 @@ pub(crate) struct MilestoneValidatorWorker<M, P> {
 }
 
 #[async_trait]
-impl<N: Node + 'static, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
+impl<N: Node, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
 where
     M: Sponge + Default + Send,
     P: PublicKey + Send,
@@ -61,7 +61,12 @@ where
     // TODO PriorityQueue ?
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(
+        mut self,
+        mut receiver: Self::Receiver,
+        _node: Arc<N>,
+        _config: Self::Config,
+    ) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {

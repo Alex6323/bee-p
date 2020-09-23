@@ -29,6 +29,8 @@ use futures::{
 };
 use log::{error, info, warn};
 
+use std::sync::Arc;
+
 pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct SnapshotWorker {
@@ -38,13 +40,18 @@ pub(crate) struct SnapshotWorker {
 }
 
 #[async_trait]
-impl<N: Node + 'static> Worker<N> for SnapshotWorker {
+impl<N: Node> Worker<N> for SnapshotWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = SnapshotWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(
+        mut self,
+        mut receiver: Self::Receiver,
+        _node: Arc<N>,
+        _config: Self::Config,
+    ) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(SnapshotWorkerEvent(milestone)) = receiver.next().await {

@@ -25,6 +25,8 @@ use futures::{
 };
 use log::{info, warn};
 
+use std::sync::Arc;
+
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
     pub(crate) transaction: TransactionMessage,
@@ -35,13 +37,18 @@ pub(crate) struct BroadcasterWorker {
 }
 
 #[async_trait]
-impl<N: Node + 'static> Worker<N> for BroadcasterWorker {
+impl<N: Node> Worker<N> for BroadcasterWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = BroadcasterWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(
+        mut self,
+        mut receiver: Self::Receiver,
+        _node: Arc<N>,
+        _config: Self::Config,
+    ) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
