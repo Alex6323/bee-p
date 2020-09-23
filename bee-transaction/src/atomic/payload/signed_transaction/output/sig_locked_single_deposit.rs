@@ -14,7 +14,10 @@ use crate::atomic::Error;
 use bee_ternary::{T5B1Buf, TritBuf};
 
 use bech32::{self, ToBase32};
-use blake2::{VarBlake2b, digest::{Update, VariableOutput}};
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use serde::{Deserialize, Serialize};
 
 use std::convert::TryInto;
@@ -29,7 +32,11 @@ impl Address {
     pub fn from_ed25519_bytes(bytes: &[u8; 32]) -> Self {
         let mut hasher = VarBlake2b::new(32).unwrap();
         hasher.update(bytes);
-        let address: [u8; 32] = hasher.finalize_boxed().as_ref().try_into().expect("Array must be 32 bytes");
+        let address: [u8; 32] = hasher
+            .finalize_boxed()
+            .as_ref()
+            .try_into()
+            .expect("Array must be 32 bytes");
         Address::Ed25519(address)
     }
 
@@ -41,14 +48,14 @@ impl Address {
         Ok(Address::Wots(trits))
     }
 
-    pub fn to_bech32_string(&self) -> String { 
+    pub fn to_bech32_string(&self) -> String {
         match self {
             Address::Ed25519(a) => {
                 let mut serialized = vec![1u8];
                 a.iter().for_each(|b| serialized.push(*b));
                 bech32::encode("iot", serialized.to_base32()).expect("Valid Ed25519 address required")
             }
-            _ => todo!()
+            _ => todo!(),
         }
     }
 }

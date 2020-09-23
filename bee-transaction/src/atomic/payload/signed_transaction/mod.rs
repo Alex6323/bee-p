@@ -15,23 +15,20 @@ mod unlock;
 mod unsigned_transaction;
 
 use crate::atomic::{payload::Payload, Error};
+
 pub use input::{Input, UTXOInput};
 pub use output::{Address, Output, SigLockedSingleDeposit};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
-// use bee_crypto::ternary::sponge::Kerl;
-// use bee_signing::ternary::{
-// wots::{WotsSecurityLevel, WotsShakePrivateKeyGeneratorBuilder},
-// PrivateKey, PrivateKeyGenerator,
-// };
+
 use bee_signing_ext::{
     binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed, Ed25519Signature as Ed25Signature},
     Signature as SignatureTrait, Signer, Verifier,
 };
 
-use std::{cmp::Ordering, collections::HashSet, slice::Iter};
-
 use serde::{Deserialize, Serialize};
+
+use std::{cmp::Ordering, collections::HashSet, slice::Iter};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SignedTransaction {

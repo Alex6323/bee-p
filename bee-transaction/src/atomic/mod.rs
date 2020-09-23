@@ -11,10 +11,12 @@
 
 mod hash;
 mod message;
+
 pub mod payload;
 
 pub use hash::Hash;
 pub use message::Message;
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
