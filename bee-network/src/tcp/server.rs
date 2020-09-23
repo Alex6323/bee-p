@@ -117,10 +117,7 @@ async fn process_stream(
             let ip_address = connection.peer_address.ip();
             // TODO: refresh IPs in certain intervals
             if !endpoint_contacts.contains_ip_address(ip_address, false) {
-                warn!(
-                    "Contacted by disallowed IP address '{}'.",
-                    &connection.peer_address.ip()
-                );
+                warn!("Contacted by unknown IP address '{}'.", &connection.peer_address.ip());
                 warn!("Connection dropped.");
 
                 return Ok(false);
