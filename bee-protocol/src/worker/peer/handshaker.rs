@@ -143,9 +143,9 @@ impl PeerHandshakerWorker {
                 //     warn!("[{}] Resolving duplicate connection failed: {}.", self.peer.epid, e);
                 // }
 
-                if let Err(e) = self.network.send(DisconnectEndpoint { epid: self.peer.epid }).await {
-                    warn!("[{}] Disconnecting peer failed: {}.", self.peer.epid, e);
-                }
+                // if let Err(e) = self.network.send(DisconnectEndpoint { epid: self.peer.epid }).await {
+                //     warn!("[{}] Disconnecting peer failed: {}.", self.peer.epid, e);
+                // }
             }
             _ => (),
         }
