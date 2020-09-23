@@ -51,8 +51,8 @@ pub(crate) struct MilestoneValidatorWorker<M, P> {
 #[async_trait]
 impl<N: Node, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
 where
-    M: Sponge + Default + Send,
-    P: PublicKey + Send,
+    M: Sponge + Default + Send + 'static,
+    P: PublicKey + Send + Sync + 'static,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
     type Config = ();

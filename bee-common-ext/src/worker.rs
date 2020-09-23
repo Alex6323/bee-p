@@ -14,10 +14,13 @@ use crate::node::Node;
 use async_trait::async_trait;
 use futures::Stream;
 
-use std::{any::TypeId, sync::Arc};
+use std::{
+    any::{Any, TypeId},
+    sync::Arc,
+};
 
 #[async_trait]
-pub trait Worker<N: Node + 'static> {
+pub trait Worker<N: Node>: Any {
     const DEPS: &'static [TypeId] = &[];
 
     type Config;

@@ -12,6 +12,7 @@
 use crate::worker::Worker;
 
 use anymap::AnyMap;
+use futures::{channel::oneshot, future::Future};
 
 use std::{
     any::TypeId,
@@ -21,6 +22,12 @@ use std::{
 
 pub trait Node: Send + Sync + 'static {
     fn new() -> Self;
+    fn spawn<W, G, F>(&self, g: G)
+    where
+        Self: Sized,
+        W: Worker<Self>,
+        G: FnOnce(oneshot::Receiver<()>) -> F,
+        F: Future<Output = ()> + Send + Sync + 'static;
 }
 
 struct NodeBuilder<N: Node> {
