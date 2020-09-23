@@ -23,19 +23,14 @@ pub enum UnlockBlock {
     Signature(SignatureUnlock),
 }
 
-impl UnlockBlock {
-    /// Create UnlockBLock from Ed25519Signature.
-    pub fn from_ed25519_signature(signature: Ed25519Signature) -> Self {
-        Self::Signature(SignatureUnlock::Ed25519(signature))
+impl From<ReferenceUnlock> for UnlockBlock {
+    fn from(reference: ReferenceUnlock) -> Self {
+        Self::Reference(reference)
     }
+}
 
-    /// Create UnlockBLock from WotsSignature.
-    pub fn from_wots_signature(signature: WotsSignature) -> Self {
-        Self::Signature(SignatureUnlock::Wots(signature))
-    }
-
-    /// Create UnlockBlock from reference index.
-    pub fn from_reference_unlock(index: u8) -> Self {
-        Self::Reference(ReferenceUnlock { index })
+impl From<SignatureUnlock> for UnlockBlock {
+    fn from(signature: SignatureUnlock) -> Self {
+        Self::Signature(signature)
     }
 }
