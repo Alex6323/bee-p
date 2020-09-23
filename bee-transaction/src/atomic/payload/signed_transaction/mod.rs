@@ -62,7 +62,7 @@ impl SignedTransaction {
         for i in transaction.inputs.iter() {
             // Input Type value must be 0, denoting an UTXO Input.
             match i {
-                Input::UTXOInput(u) => {
+                Input::UTXO(u) => {
                     // Transaction Output Index must be 0 ≤ x < 127
                     match u.output_index {
                         0..=126 => (),
@@ -150,8 +150,8 @@ impl SignedTransaction {
                     // differente transaction id from previous one
                     if i != 0 {
                         match &transaction.inputs[i] {
-                            Input::UTXOInput(u) => match &transaction.inputs[i - 1] {
-                                Input::UTXOInput(v) => {
+                            Input::UTXO(u) => match &transaction.inputs[i - 1] {
+                                Input::UTXO(v) => {
                                     if u.transaction_id != v.transaction_id {
                                         return Err(Error::IndexError);
                                     }
@@ -175,8 +175,8 @@ impl SignedTransaction {
                     // Since it's first input it unlocks, it must have differente transaction id from previous one
                     if i != 0 {
                         match &transaction.inputs[i] {
-                            Input::UTXOInput(u) => match &transaction.inputs[i - 1] {
-                                Input::UTXOInput(v) => {
+                            Input::UTXO(u) => match &transaction.inputs[i - 1] {
+                                Input::UTXO(v) => {
                                     if u.transaction_id == v.transaction_id {
                                         return Err(Error::IndexError);
                                     }
