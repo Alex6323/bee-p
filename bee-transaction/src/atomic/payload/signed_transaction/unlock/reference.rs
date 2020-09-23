@@ -15,3 +15,9 @@ use serde::{Deserialize, Serialize};
 pub struct ReferenceUnlock {
     pub index: u8,
 }
+
+impl From<u8> for ReferenceUnlock {
+    fn from(index: u8) -> Self {
+        Self { index }
+    }
+}

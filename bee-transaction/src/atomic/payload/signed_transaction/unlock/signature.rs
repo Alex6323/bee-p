@@ -25,3 +25,15 @@ pub enum SignatureUnlock {
     Wots(WotsSignature),
     Ed25519(Ed25519Signature),
 }
+
+impl From<WotsSignature> for SignatureUnlock {
+    fn from(signature: WotsSignature) -> Self {
+        Self::Wots(signature)
+    }
+}
+
+impl From<Ed25519Signature> for SignatureUnlock {
+    fn from(signature: Ed25519Signature) -> Self {
+        Self::Ed25519(signature)
+    }
+}
