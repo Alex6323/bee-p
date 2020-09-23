@@ -125,7 +125,7 @@ where
 
         if let Some(tail_hash) = tail_hash {
             if let Some(meta) = tangle().get_metadata(&tail_hash) {
-                if meta.flags.is_milestone() {
+                if meta.flags().is_milestone() {
                     return;
                 }
                 match self.validate_milestone(tail_hash) {
@@ -135,7 +135,7 @@ where
                         // This is possibly not sufficient as there is no guarantee a milestone has been solidified
                         // before being validated, we then also need to check when a milestone gets solidified if it's
                         // already vadidated.
-                        if meta.flags.is_solid() {
+                        if meta.flags().is_solid() {
                             Protocol::get()
                                 .bus
                                 .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
@@ -146,7 +146,7 @@ where
                         }
 
                         if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
-                            tangle().update_metadata(&milestone.hash, |meta| meta.flags.set_requested(true));
+                            tangle().update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
 
                             Protocol::trigger_milestone_solidification(milestone.index);
                         }

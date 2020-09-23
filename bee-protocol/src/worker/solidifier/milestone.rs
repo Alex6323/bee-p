@@ -74,8 +74,8 @@ impl MilestoneSolidifierWorker {
                     tangle(),
                     target_hash,
                     |hash, _, metadata| {
-                        (!metadata.flags.is_requested() || *hash == target_hash)
-                            && !metadata.flags.is_solid()
+                        (!metadata.flags().is_requested() || *hash == target_hash)
+                            && !metadata.flags().is_solid()
                             && !Protocol::get().requested_transactions.contains_key(&hash)
                     },
                     |_, _, _| {},

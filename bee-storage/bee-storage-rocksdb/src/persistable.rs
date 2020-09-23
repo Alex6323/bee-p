@@ -147,13 +147,14 @@ impl Persistable<Storage> for TransactionMetadata {
         let solidification_timestamp = u64::decode_persistable::<Storage>(&slice[13..21]);
         // 5- decode confirmation_timestamp
         let confirmation_timestamp = u64::decode_persistable::<Storage>(&slice[21..29]);
-        Self {
+
+        Self::new(
             flags,
             milestone_index,
             arrival_timestamp,
             solidification_timestamp,
             confirmation_timestamp,
-        }
+        )
     }
 }
 

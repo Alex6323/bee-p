@@ -57,7 +57,7 @@ impl BundleValidatorWorker {
             Some(builder) => {
                 if builder.validate().is_ok() {
                     tangle().update_metadata(&tail_hash, |metadata| {
-                        metadata.flags.set_valid(true);
+                        metadata.flags_mut().set_valid(true);
                     })
                 }
             }

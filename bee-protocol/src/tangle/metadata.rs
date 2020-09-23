@@ -16,15 +16,31 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // TODO Should it really be copy ?
 #[derive(Copy, Clone, Default)]
 pub struct TransactionMetadata {
-    pub flags: Flags,
-    pub milestone_index: MilestoneIndex,
-    pub arrival_timestamp: u64,
-    pub solidification_timestamp: u64,
-    pub confirmation_timestamp: u64,
+    flags: Flags,
+    milestone_index: MilestoneIndex,
+    arrival_timestamp: u64,
+    solidification_timestamp: u64,
+    confirmation_timestamp: u64,
 }
 
 impl TransactionMetadata {
-    pub fn new() -> Self {
+    pub fn new(
+        flags: Flags,
+        milestone_index: MilestoneIndex,
+        arrival_timestamp: u64,
+        solidification_timestamp: u64,
+        confirmation_timestamp: u64,
+    ) -> Self {
+        Self {
+            flags,
+            milestone_index,
+            arrival_timestamp,
+            solidification_timestamp,
+            confirmation_timestamp,
+        }
+    }
+
+    pub fn arrived() -> Self {
         Self {
             arrival_timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -50,16 +66,23 @@ impl TransactionMetadata {
         self.milestone_index = index;
     }
 
-    pub fn set_confirmation_timestamp(&mut self, timestamp: u64) {
-        self.confirmation_timestamp = timestamp;
-    }
-    pub fn confirmation_timestamp(&self) -> u64 {
-        self.confirmation_timestamp
-    }
     pub fn arrival_timestamp(&self) -> u64 {
         self.arrival_timestamp
     }
+
     pub fn solidification_timestamp(&self) -> u64 {
         self.solidification_timestamp
+    }
+
+    pub fn set_solidification_timestamp(&mut self, timestamp: u64) {
+        self.solidification_timestamp = timestamp;
+    }
+
+    pub fn confirmation_timestamp(&self) -> u64 {
+        self.confirmation_timestamp
+    }
+
+    pub fn set_confirmation_timestamp(&mut self, timestamp: u64) {
+        self.confirmation_timestamp = timestamp;
     }
 }

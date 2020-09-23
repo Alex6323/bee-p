@@ -136,10 +136,10 @@ impl ProcessorWorker {
             return;
         }
 
-        let mut metadata = TransactionMetadata::new();
+        let mut metadata = TransactionMetadata::arrived();
 
-        metadata.flags.set_tail(transaction.is_tail());
-        metadata.flags.set_requested(requested);
+        metadata.flags_mut().set_tail(transaction.is_tail());
+        metadata.flags_mut().set_requested(requested);
 
         // store transaction
         if let Some(transaction) = tangle().insert(transaction, hash, metadata) {

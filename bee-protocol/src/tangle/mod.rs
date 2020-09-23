@@ -76,8 +76,8 @@ impl MsTangle {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
         self.inner.update_metadata(&hash, |metadata| {
-            metadata.flags.set_milestone(true);
-            metadata.milestone_index = index
+            metadata.flags_mut().set_milestone(true);
+            metadata.set_milestone_index(index);
         });
     }
 
@@ -175,7 +175,7 @@ impl MsTangle {
         } else {
             self.inner
                 .get_metadata(hash)
-                .map(|metadata| metadata.flags.is_solid())
+                .map(|metadata| metadata.flags().is_solid())
                 .unwrap_or(false)
         }
     }
