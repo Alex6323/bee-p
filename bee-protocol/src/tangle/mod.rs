@@ -150,6 +150,10 @@ impl MsTangle {
         self.get_latest_solid_milestone_index() == self.get_latest_milestone_index()
     }
 
+    pub fn get_solid_entry_point_index(&self, hash: &Hash) -> Option<MilestoneIndex> {
+        self.solid_entry_points.get(hash).map(|i| *i)
+    }
+
     pub fn add_solid_entry_point(&self, hash: Hash, index: MilestoneIndex) {
         self.solid_entry_points.insert(hash, index);
     }
