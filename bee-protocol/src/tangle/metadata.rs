@@ -85,4 +85,20 @@ impl TransactionMetadata {
     pub fn set_confirmation_timestamp(&mut self, timestamp: u64) {
         self.confirmation_timestamp = timestamp;
     }
+
+    pub fn solidify(&mut self) {
+        self.flags.set_solid(true);
+        self.solidification_timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Clock may have gone backwards")
+            .as_millis() as u64;
+    }
+
+    pub fn confirm(&mut self) {
+        self.flags.set_confirmed(true);
+        self.confirmation_timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Clock may have gone backwards")
+            .as_millis() as u64;
+    }
 }

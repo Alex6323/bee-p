@@ -65,17 +65,19 @@ mod tests {
         let (processor_worker_shutdown_sender, processor_worker_shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
-        let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).run(
+        let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).start(
             <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
                 10000,
                 ShutdownStream::new(hasher_worker_shutdown_receiver, hasher_worker_receiver),
             ),
+            (),
         );
 
         let processor = ProcessorWorker::new(milestone_validator_worker_sender);
-        let processor_handle = Worker::<BeeNode>::run(
+        let processor_handle = Worker::<BeeNode>::start(
             processor,
             ShutdownStream::new(processor_worker_shutdown_receiver, processor_worker_receiver),
+            (),
         );
 
         spawn(async move {

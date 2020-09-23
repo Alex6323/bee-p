@@ -66,9 +66,8 @@ impl LedgerWorker {
         // TODO this only actually confirm tails
         tangle().update_metadata(&hash, |meta| {
             meta.flags_mut().set_conflicting(conflicting);
-            meta.flags_mut().set_confirmed(true);
+            meta.confirm();
             meta.set_milestone_index(metadata.index);
-            meta.set_confirmation_timestamp(metadata.timestamp);
             // TODO Set OTRSI, ...
             // TODO increment metrics confirmed, zero, value and conflict.
         });
