@@ -11,9 +11,12 @@
 
 use crate::worker::Worker;
 
+use anymap::AnyMap;
+
 use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
+    sync::Arc,
 };
 
 pub trait Node: Send + Sync + 'static {
@@ -22,7 +25,8 @@ pub trait Node: Send + Sync + 'static {
 
 struct NodeBuilder<N: Node> {
     deps: HashMap<TypeId, &'static [TypeId]>,
-    closures: HashMap<TypeId, Box<dyn FnOnce(&N)>>,
+    makers: HashMap<TypeId, Box<dyn FnOnce(&N, &mut AnyMap)>>,
+    anymap: AnyMap,
 }
 
 impl<N: Node + 'static> NodeBuilder<N> {
@@ -34,17 +38,19 @@ impl<N: Node + 'static> NodeBuilder<N> {
     }
 
     fn with_worker_cfg<W: Worker<N> + 'static>(mut self, _config: W::Config) -> Self {
-        self.closures.insert(TypeId::of::<W>(), Box::new(|_node| {}));
         self.deps.insert(TypeId::of::<W>(), W::DEPS);
+        self.makers.insert(TypeId::of::<W>(), Box::new(|_node, _anymap| {}));
         self
     }
 
-    fn finish(mut self) {
-        let order = TopologicalOrder::sort(self.deps);
-        let node = N::new();
-        for id in order {
-            self.closures.remove(&id).unwrap()(&node);
+    fn finish(mut self) -> Arc<N> {
+        let node = Arc::new(N::new());
+
+        for id in TopologicalOrder::sort(self.deps) {
+            self.makers.remove(&id).unwrap()(&node, &mut self.anymap);
         }
+
+        node
     }
 }
 
