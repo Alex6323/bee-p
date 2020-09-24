@@ -23,13 +23,12 @@ mod tests {
     use crate::{
         config::ProtocolConfig,
         message::Transaction as TransactionMessage,
-        node::BeeNode,
         protocol::Protocol,
         tangle::{self, tangle},
     };
 
     use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-    use bee_common_ext::{event::Bus, worker::Worker};
+    use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
     use bee_crypto::ternary::Hash;
     use bee_network::{EndpointId, NetworkConfig, Url};
 
@@ -43,6 +42,7 @@ mod tests {
 
     #[test]
     fn test_tx_workers_with_compressed_buffer() {
+        let bee_node = Arc::new(BeeNode::new());
         let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
@@ -55,7 +55,14 @@ mod tests {
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        block_on(Protocol::init(protocol_config, network, 0, bus, &mut shutdown));
+        block_on(Protocol::init(
+            protocol_config,
+            network,
+            0,
+            bee_node.clone(),
+            bus,
+            &mut shutdown,
+        ));
 
         assert_eq!(tangle().len(), 0);
 
@@ -70,6 +77,7 @@ mod tests {
                 10000,
                 ShutdownStream::new(hasher_worker_shutdown_receiver, hasher_worker_receiver),
             ),
+            bee_node.clone(),
             (),
         );
 
@@ -77,6 +85,7 @@ mod tests {
         let processor_handle = Worker::<BeeNode>::start(
             processor,
             ShutdownStream::new(processor_worker_shutdown_receiver, processor_worker_receiver),
+            bee_node.clone(),
             (),
         );
 
