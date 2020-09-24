@@ -40,13 +40,13 @@ impl TcpServer {
         shutdown_listener: ShutdownListener,
         endpoint_contacts: EndpointContactList,
     ) -> Self {
-        debug!("Starting TCP server...");
+        trace!("Starting TCP server...");
 
         let tcp_listener = TcpListener::bind(binding_address.clone())
             .await
             .expect("Error binding TCP server");
 
-        debug!(
+        trace!(
             "Accepting connections on {}.",
             tcp_listener.local_addr().expect("Error starting TCP server.")
         );
@@ -61,7 +61,7 @@ impl TcpServer {
     }
 
     pub async fn run(self) -> Result<(), WorkerError> {
-        debug!("TCP server running...");
+        trace!("TCP server running...");
 
         let TcpServer {
             mut tcp_listener,
@@ -77,7 +77,6 @@ impl TcpServer {
         loop {
             select! {
                 _ = fused_shutdown_listener => {
-                    debug!("shutdown");
                     break;
                 },
                 stream = fused_incoming_streams.next() => {
@@ -92,7 +91,7 @@ impl TcpServer {
             }
         }
 
-        debug!("TCP server stopped.");
+        trace!("TCP server stopped.");
         Ok(())
     }
 }
@@ -123,7 +122,7 @@ async fn process_stream(
                 return Ok(false);
             }
 
-            debug!(
+            trace!(
                 "Sucessfully established connection to {} ({}).",
                 connection.peer_address,
                 Origin::Inbound

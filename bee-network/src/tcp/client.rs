@@ -26,7 +26,7 @@ pub async fn connect_endpoint(
     socket_address: SocketAddr,
     internal_event_sender: EventSender,
 ) -> Result<(), Error> {
-    debug!("Trying to connect to {}...", epid);
+    trace!("Trying to connect to {}...", epid);
 
     match TcpStream::connect(socket_address).await {
         Ok(stream) => {
@@ -39,9 +39,10 @@ pub async fn connect_endpoint(
                 }
             };
 
-            debug!(
+            trace!(
                 "Sucessfully established connection to {} ({}).",
-                connection.peer_address, connection.origin,
+                connection.peer_address,
+                connection.origin,
             );
 
             super::spawn_reader_writer(connection, epid, internal_event_sender).await?;

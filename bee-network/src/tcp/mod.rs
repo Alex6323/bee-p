@@ -91,7 +91,7 @@ fn spawn_writer(
     data_receiver: DataReceiver,
     shutdown_notifier: ShutdownNotifier,
 ) -> JoinHandle<()> {
-    debug!("Starting TCP stream writer for {}...", epid);
+    trace!("Starting TCP stream writer for {}...", epid);
 
     let mut fused_data_receiver = data_receiver.fuse();
 
@@ -112,7 +112,7 @@ fn spawn_writer(
 
         shutdown_notifier.send(()).unwrap_or_else(|_| ());
 
-        debug!("TCP stream writer for {} stopped.", epid);
+        trace!("TCP stream writer for {} stopped.", epid);
     })
 }
 
@@ -122,7 +122,7 @@ fn spawn_reader(
     mut internal_event_sender: EventSender,
     shutdown_listener: ShutdownListener,
 ) -> JoinHandle<()> {
-    debug!("Starting TCP stream reader for {}...", epid);
+    trace!("Starting TCP stream reader for {}...", epid);
 
     let mut buffer = vec![0u8; MAX_TCP_BUFFER_SIZE.load(Ordering::Relaxed)];
 
@@ -150,7 +150,7 @@ fn spawn_reader(
             }
         }
 
-        debug!("TCP stream reader for {} stopped.", epid);
+        trace!("TCP stream reader for {} stopped.", epid);
     })
 }
 
@@ -162,7 +162,7 @@ async fn process_stream_read(
     buffer: &Vec<u8>,
 ) -> bool {
     if num_read == 0 {
-        debug!("Stream dropped by peer (EOF).");
+        trace!("Stream dropped by peer (EOF).");
 
         if internal_event_sender
             .send(Event::ConnectionDropped { epid })

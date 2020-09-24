@@ -51,7 +51,7 @@ impl EndpointWorker {
         endpoint_contacts: EndpointContactList,
         shutdown_listener: ShutdownListener,
     ) -> Self {
-        debug!("Starting endpoint worker...");
+        trace!("Starting endpoint worker...");
 
         Self {
             command_receiver: command_receiver.fuse(),
@@ -64,7 +64,7 @@ impl EndpointWorker {
     }
 
     pub async fn run(self) -> Result<(), WorkerError> {
-        debug!("Endpoint worker running...");
+        trace!("Endpoint worker running...");
 
         let EndpointWorker {
             mut command_receiver,
@@ -97,7 +97,7 @@ impl EndpointWorker {
             }
         }
 
-        debug!("Stopped endpoint worker.");
+        trace!("Stopped endpoint worker.");
         Ok(())
     }
 }
@@ -117,7 +117,7 @@ async fn process_command(
         return Ok(false);
     };
 
-    debug!("Received {}.", command);
+    trace!("Received {}.", command);
 
     match command {
         Command::AddEndpoint { url } => {
@@ -185,7 +185,7 @@ async fn process_event(
         return Ok(false);
     };
 
-    debug!("Received {}.", event);
+    trace!("Received {}.", event);
 
     match event {
         Event::EndpointAdded { epid } => {
@@ -281,9 +281,9 @@ async fn remove_endpoint(
 ) -> Result<bool, WorkerError> {
     if endpoint_contacts.remove(epid) {
         if connected_endpoints.remove(epid) {
-            debug!("Removed and disconnected endpoint {}.", epid);
+            trace!("Removed and disconnected endpoint {}.", epid);
         } else {
-            debug!("Removed endpoint {}.", epid);
+            trace!("Removed endpoint {}.", epid);
         }
 
         internal_event_sender.send(Event::EndpointRemoved { epid }).await?;
