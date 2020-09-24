@@ -40,14 +40,16 @@ async fn persist_ledger_diff() {
     assert!(storage.insert(&ms, &ledger_diff).await.is_ok());
     // fetch it
     let result = Fetch::<MilestoneIndex, LedgerDiff>::fetch(&storage, &ms).await;
-    //let result = storage.fetch(&ms).await;
+    // let result = storage.fetch(&ms).await;
     if let Ok(same_ledger_diff) = result {
         assert!(same_ledger_diff.is_some());
     } else {
         panic!("persist_ledger_diff test")
     };
     // delete
-    assert!(Delete::<MilestoneIndex, LedgerDiff>::delete(&storage, &ms).await.is_ok());
+    assert!(Delete::<MilestoneIndex, LedgerDiff>::delete(&storage, &ms)
+        .await
+        .is_ok());
     // shutdown storage
     assert!(storage.shutdown().await.is_ok())
 }
@@ -70,7 +72,7 @@ async fn batch_storage() {
     // create batch and insert ledgerDiff
     let mut batch = storage.create_batch().insert(&ms, &ledger_diff);
     // later on delete or insert something
-    batch = BatchBuilder::<'_,Storage, MilestoneIndex, LedgerDiff>::delete(batch,&ms);
+    batch = BatchBuilder::<'_, Storage, MilestoneIndex, LedgerDiff>::delete(batch, &ms);
     batch.apply(true).await.unwrap();
     let result: Result<Option<LedgerDiff>, _> = storage.fetch(&ms).await;
     assert!(result.unwrap().is_none());

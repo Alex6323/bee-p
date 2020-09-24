@@ -110,13 +110,11 @@ pub fn init(
 
     shutdown.add_worker_shutdown(
         snapshot_worker_shutdown_tx,
-        spawn(
-            worker::SnapshotWorker::new(config.clone()).start(
-                ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx),
-                bee_node,
-                (),
-            )
-        ),
+        spawn(worker::SnapshotWorker::new(config.clone()).start(
+            ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx),
+            bee_node,
+            (),
+        )),
     );
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
