@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::whiteflag::{metadata::WhiteFlagMetadata, worker::LedgerWorker};
+use crate::{state::LedgerState, whiteflag::metadata::WhiteFlagMetadata};
 
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::tangle;
@@ -30,117 +30,119 @@ pub(crate) enum Error {
     InvalidBundle(IncomingBundleBuilderError),
 }
 
-impl LedgerWorker {
-    #[inline]
-    fn on_bundle(&mut self, hash: &Hash, bundle: &Bundle, metadata: &mut WhiteFlagMetadata) {
-        let mut conflicting = false;
-        let (mutates, mutations) = bundle.ledger_mutations();
+#[inline]
+fn on_bundle(state: &mut LedgerState, hash: &Hash, bundle: &Bundle, metadata: &mut WhiteFlagMetadata) {
+    let mut conflicting = false;
+    let (mutates, mutations) = bundle.ledger_mutations();
 
-        if !mutates {
-            metadata.num_tails_zero_value += 1;
-        } else {
-            // First pass to look for conflicts.
-            for (address, diff) in mutations.iter() {
-                let balance = self.state.get_or_zero(&address) as i64 + diff;
+    if !mutates {
+        metadata.num_tails_zero_value += 1;
+    } else {
+        // First pass to look for conflicts.
+        for (address, diff) in mutations.iter() {
+            let balance = state.get_or_zero(&address) as i64 + diff;
 
-                if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
-                    metadata.num_tails_conflicting += 1;
-                    conflicting = true;
-                    break;
-                }
-            }
-
-            if !conflicting {
-                // Second pass to mutate the state.
-                for (address, diff) in mutations {
-                    self.state.apply_single_diff(address.clone(), diff);
-                    metadata.diff.apply_single_diff(address, diff);
-                }
-
-                metadata.tails_included.push(*hash);
+            if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
+                metadata.num_tails_conflicting += 1;
+                conflicting = true;
+                break;
             }
         }
 
-        metadata.num_tails_referenced += 1;
+        if !conflicting {
+            // Second pass to mutate the state.
+            for (address, diff) in mutations {
+                state.apply_single_diff(address.clone(), diff);
+                metadata.diff.apply_single_diff(address, diff);
+            }
 
-        // TODO this only actually confirm tails
-        tangle().update_metadata(&hash, |meta| {
-            meta.flags_mut().set_conflicting(conflicting);
-            meta.confirm();
-            meta.set_milestone_index(metadata.index);
-            // TODO Set OTRSI, ...
-            // TODO increment metrics confirmed, zero, value and conflict.
-        });
+            metadata.tails_included.push(*hash);
+        }
     }
 
-    pub(crate) fn visit_bundles_dfs(&mut self, root: Hash, metadata: &mut WhiteFlagMetadata) -> Result<(), Error> {
-        let mut hashes = vec![root];
-        let mut visited = HashSet::new();
+    metadata.num_tails_referenced += 1;
 
-        while let Some(hash) = hashes.last() {
-            let meta = match tangle().get_metadata(hash) {
-                Some(meta) => meta,
-                None => {
-                    if !tangle().is_solid_entry_point(hash) {
-                        return Err(Error::MissingBundle);
-                    } else {
-                        visited.insert(*hash);
-                        hashes.pop();
-                        continue;
-                    }
+    // TODO this only actually confirm tails
+    tangle().update_metadata(&hash, |meta| {
+        meta.flags_mut().set_conflicting(conflicting);
+        meta.confirm();
+        meta.set_milestone_index(metadata.index);
+        // TODO Set OTRSI, ...
+        // TODO increment metrics confirmed, zero, value and conflict.
+    });
+}
+
+pub(crate) fn visit_bundles_dfs(
+    state: &mut LedgerState,
+    root: Hash,
+    metadata: &mut WhiteFlagMetadata,
+) -> Result<(), Error> {
+    let mut hashes = vec![root];
+    let mut visited = HashSet::new();
+
+    while let Some(hash) = hashes.last() {
+        let meta = match tangle().get_metadata(hash) {
+            Some(meta) => meta,
+            None => {
+                if !tangle().is_solid_entry_point(hash) {
+                    return Err(Error::MissingBundle);
+                } else {
+                    visited.insert(*hash);
+                    hashes.pop();
+                    continue;
                 }
-            };
-
-            if !meta.flags().is_tail() {
-                return Err(Error::NotATail);
             }
+        };
 
-            if meta.flags().is_confirmed() {
-                visited.insert(*hash);
-                hashes.pop();
-                continue;
-            }
+        if !meta.flags().is_tail() {
+            return Err(Error::NotATail);
+        }
 
-            // TODO pass match to avoid repetitions
-            match load_bundle_builder(tangle(), hash) {
-                Some(builder) => {
-                    let trunk = builder.trunk();
-                    let branch = builder.branch();
+        if meta.flags().is_confirmed() {
+            visited.insert(*hash);
+            hashes.pop();
+            continue;
+        }
 
-                    if visited.contains(trunk) && visited.contains(branch) {
-                        // TODO check valid and strict semantic
-                        let bundle = if meta.flags().is_valid() {
-                            // We know the bundle is valid so we can safely skip validation rules.
-                            unsafe { builder.build() }
-                        } else {
-                            match builder.validate() {
-                                Ok(builder) => {
-                                    tangle().update_metadata(&hash, |meta| meta.flags_mut().set_valid(true));
-                                    builder.build()
-                                }
-                                Err(e) => return Err(Error::InvalidBundle(e)),
+        // TODO pass match to avoid repetitions
+        match load_bundle_builder(tangle(), hash) {
+            Some(builder) => {
+                let trunk = builder.trunk();
+                let branch = builder.branch();
+
+                if visited.contains(trunk) && visited.contains(branch) {
+                    // TODO check valid and strict semantic
+                    let bundle = if meta.flags().is_valid() {
+                        // We know the bundle is valid so we can safely skip validation rules.
+                        unsafe { builder.build() }
+                    } else {
+                        match builder.validate() {
+                            Ok(builder) => {
+                                tangle().update_metadata(&hash, |meta| meta.flags_mut().set_valid(true));
+                                builder.build()
                             }
-                        };
-                        self.on_bundle(hash, &bundle, metadata);
-                        visited.insert(*hash);
-                        hashes.pop();
-                    } else if !visited.contains(trunk) {
-                        hashes.push(*trunk);
-                    } else if !visited.contains(branch) {
-                        hashes.push(*branch);
-                    }
+                            Err(e) => return Err(Error::InvalidBundle(e)),
+                        }
+                    };
+                    on_bundle(state, hash, &bundle, metadata);
+                    visited.insert(*hash);
+                    hashes.pop();
+                } else if !visited.contains(trunk) {
+                    hashes.push(*trunk);
+                } else if !visited.contains(branch) {
+                    hashes.push(*branch);
                 }
-                None => {
-                    if !tangle().is_solid_entry_point(hash) {
-                        return Err(Error::MissingBundle);
-                    } else {
-                        visited.insert(*hash);
-                        hashes.pop();
-                    }
+            }
+            None => {
+                if !tangle().is_solid_entry_point(hash) {
+                    return Err(Error::MissingBundle);
+                } else {
+                    visited.insert(*hash);
+                    hashes.pop();
                 }
             }
         }
-
-        Ok(())
     }
+
+    Ok(())
 }

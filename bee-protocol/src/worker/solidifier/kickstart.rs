@@ -21,34 +21,31 @@ use log::info;
 
 use std::{sync::Arc, time::Duration};
 
-pub(crate) struct KickstartWorker {
-    ms_sender: oneshot::Sender<MilestoneIndex>,
-    ms_sync_count: u32,
-}
+#[derive(Default)]
+pub(crate) struct KickstartWorker {}
 
 #[async_trait]
 impl<N: Node> Worker<N> for KickstartWorker {
-    type Config = ();
+    type Config = (oneshot::Sender<MilestoneIndex>, u32);
     type Error = WorkerError;
     type Event = ();
     type Receiver = Interval;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(eceiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
             while let Some(()) = receiver.next().await {
                 let next_ms = *tangle().get_latest_solid_milestone_index() + 1;
                 let latest_ms = *tangle().get_latest_milestone_index();
 
-                if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms + self.ms_sync_count < latest_ms
-                {
+                if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms + config.1 < latest_ms {
                     Protocol::request_milestone(MilestoneIndex(next_ms), None);
-                    self.ms_sender.send(MilestoneIndex(next_ms));
+                    config.0.send(MilestoneIndex(next_ms));
 
-                    for index in next_ms..(next_ms + self.ms_sync_count) {
+                    for index in next_ms..(next_ms + config.1) {
                         Protocol::request_milestone(MilestoneIndex(index), None);
                     }
                     break;
@@ -58,19 +55,6 @@ impl<N: Node> Worker<N> for KickstartWorker {
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl KickstartWorker {
-    pub(crate) fn new(ms_sender: oneshot::Sender<MilestoneIndex>, ms_sync_count: u32) -> Self {
-        Self {
-            ms_sender,
-            ms_sync_count,
-        }
-    }
-
-    pub(crate) fn interval() -> Interval {
-        interval(Duration::from_secs(1))
+        Ok(Self::default())
     }
 }

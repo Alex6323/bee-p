@@ -22,14 +22,7 @@ use log::info;
 use std::{sync::Arc, time::Duration};
 
 #[derive(Default)]
-pub(crate) struct TpsWorker {
-    incoming: u64,
-    new: u64,
-    known: u64,
-    stale: u64,
-    invalid: u64,
-    outgoing: u64,
-}
+pub(crate) struct TpsWorker {}
 
 #[async_trait]
 impl<N: Node> Worker<N> for TpsWorker {
@@ -38,54 +31,47 @@ impl<N: Node> Worker<N> for TpsWorker {
     type Event = ();
     type Receiver = Interval;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
+
+            let mut total_incoming = 0u64;
+            let mut total_new = 0u64;
+            let mut total_known = 0u64;
+            let mut total_stale = 0u64;
+            let mut total_invalid = 0u64;
+            let mut total_outgoing = 0u64;
 
             while receiver.next().await.is_some() {
-                self.tps();
+                let incoming = Protocol::get().metrics.transactions_received();
+                let new = Protocol::get().metrics.new_transactions();
+                let known = Protocol::get().metrics.known_transactions();
+                let stale = Protocol::get().metrics.stale_transactions();
+                let invalid = Protocol::get().metrics.invalid_transactions();
+                let outgoing = Protocol::get().metrics.transactions_sent();
+
+                Protocol::get().bus.dispatch(TpsMetricsUpdated {
+                    incoming: incoming - total_incoming,
+                    new: new - total_new,
+                    known: known - total_known,
+                    stale: stale - total_stale,
+                    invalid: invalid - total_invalid,
+                    outgoing: outgoing - total_outgoing,
+                });
+
+                total_incoming = incoming;
+                total_new = new;
+                total_known = known;
+                total_stale = stale;
+                total_invalid = invalid;
+                total_outgoing = outgoing;
             }
 
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl TpsWorker {
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
-
-    pub(crate) fn interval() -> Interval {
-        interval(Duration::from_secs(1))
-    }
-
-    fn tps(&mut self) {
-        let incoming = Protocol::get().metrics.transactions_received();
-        let new = Protocol::get().metrics.new_transactions();
-        let known = Protocol::get().metrics.known_transactions();
-        let stale = Protocol::get().metrics.stale_transactions();
-        let invalid = Protocol::get().metrics.invalid_transactions();
-        let outgoing = Protocol::get().metrics.transactions_sent();
-
-        Protocol::get().bus.dispatch(TpsMetricsUpdated {
-            incoming: incoming - self.incoming,
-            new: new - self.new,
-            known: known - self.known,
-            stale: stale - self.stale,
-            invalid: invalid - self.invalid,
-            outgoing: outgoing - self.outgoing,
-        });
-
-        self.incoming = incoming;
-        self.new = new;
-        self.known = known;
-        self.stale = stale;
-        self.invalid = invalid;
-        self.outgoing = outgoing;
+        Ok(Self::default())
     }
 }

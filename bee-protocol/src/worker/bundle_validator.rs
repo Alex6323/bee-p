@@ -24,6 +24,7 @@ use std::sync::Arc;
 
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
+#[derive(Default)]
 pub(crate) struct BundleValidatorWorker;
 
 #[async_trait]
@@ -33,40 +34,30 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
     type Event = BundleValidatorWorkerEvent;
     type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, receiver);
 
             while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
-                self.validate(hash);
+                match load_bundle_builder(tangle(), &hash) {
+                    Some(builder) => {
+                        if builder.validate().is_ok() {
+                            tangle().update_metadata(&hash, |metadata| {
+                                metadata.flags_mut().set_valid(true);
+                            })
+                        }
+                    }
+                    None => {
+                        warn!("Faild to validate bundle: tail not found.");
+                    }
+                }
             }
 
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl BundleValidatorWorker {
-    pub(crate) fn new() -> Self {
-        Self
-    }
-
-    fn validate(&self, tail_hash: Hash) {
-        match load_bundle_builder(tangle(), &tail_hash) {
-            Some(builder) => {
-                if builder.validate().is_ok() {
-                    tangle().update_metadata(&tail_hash, |metadata| {
-                        metadata.flags_mut().set_valid(true);
-                    })
-                }
-            }
-            None => {
-                warn!("Faild to validate bundle: tail not found.");
-            }
-        }
+        Ok(Self::default())
     }
 }

@@ -26,31 +26,61 @@ use std::sync::Arc;
 
 pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
-pub(crate) struct MilestoneSolidifierWorker {
-    queue: Vec<MilestoneIndex>,
-    next_ms_index: MilestoneIndex,
+#[derive(Default)]
+pub(crate) struct MilestoneSolidifierWorker {}
+
+fn trigger_solidification_unchecked(target_index: MilestoneIndex, next_ms_index: &mut MilestoneIndex) {
+    if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
+        if !tangle().is_solid_transaction(&target_hash) {
+            debug!("Triggered solidification for milestone {}.", *target_index);
+            traversal::visit_parents_depth_first(
+                tangle(),
+                target_hash,
+                |hash, _, metadata| {
+                    (!metadata.flags().is_requested() || *hash == target_hash)
+                        && !metadata.flags().is_solid()
+                        && !Protocol::get().requested_transactions.contains_key(&hash)
+                },
+                |_, _, _| {},
+                |_, _, _| {},
+                |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
+            );
+
+            *next_ms_index = target_index + MilestoneIndex(1);
+        }
+    }
+}
+
+fn save_index(target_index: MilestoneIndex, queue: &mut Vec<MilestoneIndex>) {
+    debug!("Storing milestone {}.", *target_index);
+    if let Err(pos) = queue.binary_search_by(|index| target_index.cmp(index)) {
+        queue.insert(pos, target_index);
+    }
 }
 
 #[async_trait]
 impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
-    type Config = ();
+    type Config = oneshot::Receiver<MilestoneIndex>;
     type Error = WorkerError;
     type Event = MilestoneSolidifierWorkerEvent;
     type Receiver = mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, receiver);
 
+            let mut queue = vec![];
+            let mut next_ms_index = config.await.unwrap();
+
             while let Some(MilestoneSolidifierWorkerEvent(index)) = receiver.next().await {
-                self.save_index(index);
-                while let Some(index) = self.queue.pop() {
-                    if index == self.next_ms_index {
-                        self.trigger_solidification_unchecked(index);
+                save_index(index, &mut queue);
+                while let Some(index) = queue.pop() {
+                    if index == next_ms_index {
+                        trigger_solidification_unchecked(index, &mut next_ms_index);
                     } else {
-                        self.queue.push(index);
+                        queue.push(index);
                         break;
                     }
                 }
@@ -59,44 +89,6 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl MilestoneSolidifierWorker {
-    pub(crate) async fn new(next_ms_index: oneshot::Receiver<MilestoneIndex>) -> Self {
-        Self {
-            queue: vec![],
-            next_ms_index: next_ms_index.await.unwrap(),
-        }
-    }
-
-    fn trigger_solidification_unchecked(&mut self, target_index: MilestoneIndex) {
-        if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-            if !tangle().is_solid_transaction(&target_hash) {
-                debug!("Triggered solidification for milestone {}.", *target_index);
-                traversal::visit_parents_depth_first(
-                    tangle(),
-                    target_hash,
-                    |hash, _, metadata| {
-                        (!metadata.flags().is_requested() || *hash == target_hash)
-                            && !metadata.flags().is_solid()
-                            && !Protocol::get().requested_transactions.contains_key(&hash)
-                    },
-                    |_, _, _| {},
-                    |_, _, _| {},
-                    |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
-                );
-
-                self.next_ms_index = target_index + MilestoneIndex(1);
-            }
-        }
-    }
-
-    fn save_index(&mut self, target_index: MilestoneIndex) {
-        debug!("Storing milestone {}.", *target_index);
-        if let Err(pos) = self.queue.binary_search_by(|index| target_index.cmp(index)) {
-            self.queue.insert(pos, target_index);
-        }
+        Ok(Self::default())
     }
 }

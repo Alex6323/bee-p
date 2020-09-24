@@ -104,7 +104,7 @@ pub fn init(
 
     let (snapshot_worker_tx, snapshot_worker_rx) = mpsc::unbounded();
 
-    worker::SnapshotWorker::new(config.clone()).start(snapshot_worker_rx, bee_node, ());
+    worker::SnapshotWorker::start(snapshot_worker_rx, bee_node, config.clone());
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
         if let Err(e) = snapshot_worker_tx.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone()))

@@ -34,6 +34,7 @@ pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) request: MilestoneRequest,
 }
 
+#[derive(Default)]
 pub(crate) struct MilestoneResponderWorker;
 
 #[async_trait]
@@ -43,51 +44,41 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
     type Event = MilestoneResponderWorkerEvent;
     type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, receiver);
 
             while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
-                self.process_request(epid, request).await;
+                let index = match request.index {
+                    0 => tangle().get_latest_milestone_index(),
+                    _ => request.index.into(),
+                };
+
+                if let Some(hash) = tangle().get_milestone_hash(index) {
+                    if let Some(builder) = load_bundle_builder(tangle(), &hash) {
+                        // This is safe because the bundle has already been validated.
+                        let bundle = unsafe { builder.build() };
+                        let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
+
+                        for transaction in bundle {
+                            transaction.into_trits_allocated(&mut trits);
+                            Sender::<TransactionMessage>::send(
+                                &epid,
+                                TransactionMessage::new(&compress_transaction_bytes(cast_slice(
+                                    trits.encode::<T5B1Buf>().as_i8_slice(),
+                                ))),
+                            )
+                            .await;
+                        }
+                    }
+                }
             }
 
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl MilestoneResponderWorker {
-    pub(crate) fn new() -> Self {
-        Self
-    }
-
-    async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
-        let index = match request.index {
-            0 => tangle().get_latest_milestone_index(),
-            _ => request.index.into(),
-        };
-
-        if let Some(hash) = tangle().get_milestone_hash(index) {
-            if let Some(builder) = load_bundle_builder(tangle(), &hash) {
-                // This is safe because the bundle has already been validated.
-                let bundle = unsafe { builder.build() };
-                let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-
-                for transaction in bundle {
-                    transaction.into_trits_allocated(&mut trits);
-                    Sender::<TransactionMessage>::send(
-                        &epid,
-                        TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                            trits.encode::<T5B1Buf>().as_i8_slice(),
-                        ))),
-                    )
-                    .await;
-                }
-            }
-        }
+        Ok(Self::default())
     }
 }

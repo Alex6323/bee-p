@@ -20,14 +20,12 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
-use async_std::stream::{interval, Interval};
+use async_std::stream::interval;
 use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{
     channel::{mpsc, oneshot},
-    select,
-    stream::Fuse,
-    StreamExt,
+    select, StreamExt,
 };
 use log::{debug, info};
 
@@ -40,9 +38,75 @@ const RETRY_INTERVAL_SECS: u64 = 5;
 
 pub(crate) struct TransactionRequesterWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 
-pub(crate) struct TransactionRequesterWorker {
-    counter: usize,
-    timeouts: Fuse<Interval>,
+#[derive(Default)]
+pub(crate) struct TransactionRequesterWorker {}
+
+async fn process_request(hash: Hash, index: MilestoneIndex, counter: &mut usize) {
+    if Protocol::get().requested_transactions.contains_key(&hash) {
+        return;
+    }
+
+    if process_request_unchecked(hash, index, counter).await {
+        Protocol::get()
+            .requested_transactions
+            .insert(hash, (index, Instant::now()));
+    }
+}
+
+/// Return `true` if the transaction was requested.
+async fn process_request_unchecked(hash: Hash, index: MilestoneIndex, counter: &mut usize) -> bool {
+    if Protocol::get().peer_manager.handshaked_peers.is_empty() {
+        return false;
+    }
+
+    let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
+
+    for _ in 0..guard.len() {
+        let epid = &guard[*counter % guard.len()];
+
+        *counter += 1;
+
+        if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+            if peer.has_data(index) {
+                let hash = hash.as_trits().encode::<T5B1Buf>();
+                Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice()))).await;
+                return true;
+            }
+        }
+    }
+
+    for _ in 0..guard.len() {
+        let epid = &guard[*counter % guard.len()];
+
+        *counter += 1;
+
+        if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+            if peer.maybe_has_data(index) {
+                let hash = hash.as_trits().encode::<T5B1Buf>();
+                Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice()))).await;
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+async fn retry_requests(counter: &mut usize) {
+    let mut retry_counts: usize = 0;
+
+    for mut transaction in Protocol::get().requested_transactions.iter_mut() {
+        let (hash, (index, instant)) = transaction.pair_mut();
+        let now = Instant::now();
+        if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && process_request_unchecked(*hash, *index, counter).await {
+            *instant = now;
+            retry_counts += 1;
+        }
+    }
+
+    if retry_counts > 0 {
+        debug!("Retried {} transactions.", retry_counts);
+    }
 }
 
 #[async_trait]
@@ -52,9 +116,8 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
     type Event = TransactionRequesterWorkerEvent;
     type Receiver = mpsc::UnboundedReceiver<TransactionRequesterWorkerEvent>;
 
-    async fn start(self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
         async fn aux<N: Node>(
-            mut worker: TransactionRequesterWorker,
             receiver: <TransactionRequesterWorker as Worker<N>>::Receiver,
             shutdown: oneshot::Receiver<()>,
         ) {
@@ -62,11 +125,14 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, receiver);
 
+            let mut counter: usize = 0;
+            let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse();
+
             loop {
                 select! {
-                    _ = worker.timeouts.next() => worker.retry_requests().await,
+                    _ = timeouts.next() => retry_requests(&mut counter).await,
                     entry = receiver.next() => match entry {
-                        Some(TransactionRequesterWorkerEvent(hash, index)) => worker.process_request(hash, index).await,
+                        Some(TransactionRequesterWorkerEvent(hash, index)) => process_request(hash, index, &mut counter).await,
                         None => break,
                     },
                 }
@@ -75,87 +141,8 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
             info!("Stopped.");
         }
 
-        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(self, receiver, shutdown).await });
+        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(receiver, shutdown).await });
 
-        Ok(())
-    }
-}
-
-impl TransactionRequesterWorker {
-    pub(crate) fn new() -> Self {
-        Self {
-            counter: 0,
-            timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
-        }
-    }
-
-    async fn process_request(&mut self, hash: Hash, index: MilestoneIndex) {
-        if Protocol::get().requested_transactions.contains_key(&hash) {
-            return;
-        }
-
-        if self.process_request_unchecked(hash, index).await {
-            Protocol::get()
-                .requested_transactions
-                .insert(hash, (index, Instant::now()));
-        }
-    }
-
-    /// Return `true` if the transaction was requested.
-    async fn process_request_unchecked(&mut self, hash: Hash, index: MilestoneIndex) -> bool {
-        if Protocol::get().peer_manager.handshaked_peers.is_empty() {
-            return false;
-        }
-
-        let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
-
-        for _ in 0..guard.len() {
-            let epid = &guard[self.counter % guard.len()];
-
-            self.counter += 1;
-
-            if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
-                if peer.has_data(index) {
-                    let hash = hash.as_trits().encode::<T5B1Buf>();
-                    Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice())))
-                        .await;
-                    return true;
-                }
-            }
-        }
-
-        for _ in 0..guard.len() {
-            let epid = &guard[self.counter % guard.len()];
-
-            self.counter += 1;
-
-            if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
-                if peer.maybe_has_data(index) {
-                    let hash = hash.as_trits().encode::<T5B1Buf>();
-                    Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice())))
-                        .await;
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-
-    async fn retry_requests(&mut self) {
-        let mut retry_counts = 0;
-
-        for mut transaction in Protocol::get().requested_transactions.iter_mut() {
-            let (hash, (index, instant)) = transaction.pair_mut();
-            let now = Instant::now();
-            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && self.process_request_unchecked(*hash, *index).await {
-                *instant = now;
-                retry_counts += 1;
-            }
-        }
-
-        if retry_counts > 0 {
-            debug!("Retried {} transactions.", retry_counts);
-        }
+        Ok(Self::default())
     }
 }

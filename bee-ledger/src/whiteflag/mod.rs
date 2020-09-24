@@ -43,7 +43,11 @@ pub fn init(
 
     let (ledger_worker_tx, ledger_worker_rx) = mpsc::unbounded();
 
-    LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone()).start(ledger_worker_rx, bee_node, ());
+    LedgerWorker::start(
+        ledger_worker_rx,
+        bee_node,
+        (MilestoneIndex(index), state, coo_config, bus.clone()),
+    );
 
     let ledger_worker_tx_ret = ledger_worker_tx.clone();
 

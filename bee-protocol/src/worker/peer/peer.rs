@@ -93,7 +93,7 @@ impl PeerWorker {
                         self.hasher_worker
                             .unbounded_send(HasherWorkerEvent {
                                 from: self.peer.epid,
-                                transaction: message,
+                                transaction_message: message,
                             })
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 

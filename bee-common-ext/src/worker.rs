@@ -28,7 +28,9 @@ pub trait Worker<N: Node>: Any {
     type Event;
     type Receiver: Stream<Item = Self::Event>;
 
-    async fn start(self, receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<(), Self::Error>;
+    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
     async fn stop(self) -> Result<(), Self::Error>
     where
         Self: Sized,

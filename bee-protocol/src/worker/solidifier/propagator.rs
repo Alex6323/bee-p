@@ -30,81 +30,70 @@ use std::sync::Arc;
 
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
 
-pub(crate) struct SolidPropagatorWorker {
-    bundle_validator: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
-}
+#[derive(Default)]
+pub(crate) struct SolidPropagatorWorker {}
 
 #[async_trait]
 impl<N: Node> Worker<N> for SolidPropagatorWorker {
-    type Config = ();
+    type Config = mpsc::UnboundedSender<BundleValidatorWorkerEvent>;
     type Error = WorkerError;
     type Event = SolidPropagatorWorkerEvent;
     type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, receiver);
 
-            while let Some(SolidPropagatorWorkerEvent(hash)) = receiver.next().await {
-                self.propagate(hash);
+            while let Some(SolidPropagatorWorkerEvent(root)) = receiver.next().await {
+                let mut children = vec![root];
+
+                while let Some(ref hash) = children.pop() {
+                    if tangle().is_solid_transaction(hash) {
+                        continue;
+                    }
+
+                    if let Some(tx) = tangle().get(&hash) {
+                        let mut index = None;
+
+                        if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
+                            tangle().update_metadata(&hash, |metadata| {
+                                metadata.solidify();
+
+                                // This is possibly not sufficient as there is no guarantee a milestone has been validated
+                                // before being solidified, we then also need to check when a milestone gets validated if it's
+                                // already solid.
+                                if metadata.flags().is_milestone() {
+                                    index = Some(metadata.milestone_index());
+                                }
+
+                                if metadata.flags().is_tail() {
+                                    if let Err(e) = config.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
+                                        warn!("Failed to send hash to bundle validator: {:?}.", e);
+                                    }
+                                }
+                            });
+
+                            for child in tangle().get_children(&hash) {
+                                children.push(child);
+                            }
+
+                            Protocol::get().bus.dispatch(TransactionSolidified(*hash));
+                        }
+
+                        if let Some(index) = index {
+                            Protocol::get()
+                                .bus
+                                .dispatch(LatestSolidMilestoneChanged(Milestone { hash: *hash, index }));
+                        }
+                    }
+                }
             }
 
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl SolidPropagatorWorker {
-    pub(crate) fn new(bundle_validator: mpsc::UnboundedSender<BundleValidatorWorkerEvent>) -> Self {
-        Self { bundle_validator }
-    }
-
-    fn propagate(&mut self, root: Hash) {
-        let mut children = vec![root];
-
-        while let Some(ref hash) = children.pop() {
-            if tangle().is_solid_transaction(hash) {
-                continue;
-            }
-
-            if let Some(tx) = tangle().get(&hash) {
-                let mut index = None;
-
-                if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
-                    tangle().update_metadata(&hash, |metadata| {
-                        metadata.solidify();
-
-                        // This is possibly not sufficient as there is no guarantee a milestone has been validated
-                        // before being solidified, we then also need to check when a milestone gets validated if it's
-                        // already solid.
-                        if metadata.flags().is_milestone() {
-                            index = Some(metadata.milestone_index());
-                        }
-
-                        if metadata.flags().is_tail() {
-                            if let Err(e) = self.bundle_validator.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
-                                warn!("Failed to send hash to bundle validator: {:?}.", e);
-                            }
-                        }
-                    });
-
-                    for child in tangle().get_children(&hash) {
-                        children.push(child);
-                    }
-
-                    Protocol::get().bus.dispatch(TransactionSolidified(*hash));
-                }
-
-                if let Some(index) = index {
-                    Protocol::get()
-                        .bus
-                        .dispatch(LatestSolidMilestoneChanged(Milestone { hash: *hash, index }));
-                }
-            }
-        }
+        Ok(Self::default())
     }
 }

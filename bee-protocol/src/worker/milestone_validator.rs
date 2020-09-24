@@ -45,9 +45,46 @@ pub(crate) struct MilestoneValidatorWorker<M, P> {
     marker: PhantomData<(M, P)>,
 }
 
-#[async_trait]
-impl<N: Node, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
+fn validate_milestone<N, M, P>(tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError>
 where
+    N: Node,
+    M: Sponge + Default + Send + Sync + 'static,
+    P: PublicKey + Send + Sync + 'static,
+    <P as PublicKey>::Signature: RecoverableSignature,
+{
+    // TODO also do an IncomingBundleBuilder check ?
+    let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
+    let mut transaction = tangle()
+        .get(&tail_hash)
+        .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
+
+    // TODO consider using the metadata instead as it might be more efficient
+    if !transaction.is_tail() {
+        return Err(MilestoneValidatorWorkerError::NotATail);
+    }
+
+    builder.push((*transaction).clone());
+
+    // TODO use walker
+    for _ in 0..Protocol::get().config.coordinator.security_level {
+        transaction = tangle()
+            .get((*transaction).trunk())
+            .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
+
+        builder.push((*transaction).clone());
+    }
+
+    Ok(builder
+        .depth(Protocol::get().config.coordinator.depth)
+        .validate()
+        .map_err(MilestoneValidatorWorkerError::InvalidMilestone)?
+        .build())
+}
+
+#[async_trait]
+impl<N, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
+where
+    N: Node,
     M: Sponge + Default + Send + Sync + 'static,
     P: PublicKey + Send + Sync + 'static,
     <P as PublicKey>::Signature: RecoverableSignature,
@@ -57,106 +94,62 @@ where
     type Event = MilestoneValidatorWorkerEvent;
     type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, receiver);
 
             while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
-                self.process(hash, is_tail);
+                let tail_hash = {
+                    if is_tail {
+                        Some(hash)
+                    } else {
+                        find_tail_of_bundle(tangle(), hash)
+                    }
+                };
+
+                if let Some(tail_hash) = tail_hash {
+                    if let Some(meta) = tangle().get_metadata(&tail_hash) {
+                        if meta.flags().is_milestone() {
+                            return;
+                        }
+                        match validate_milestone::<N, M, P>(tail_hash) {
+                            Ok(milestone) => {
+                                tangle().add_milestone(milestone.index, milestone.hash);
+
+                                // This is possibly not sufficient as there is no guarantee a milestone has been solidified
+                                // before being validated, we then also need to check when a milestone gets solidified if it's
+                                // already vadidated.
+                                if meta.flags().is_solid() {
+                                    Protocol::get()
+                                        .bus
+                                        .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
+                                }
+
+                                if milestone.index > tangle().get_latest_milestone_index() {
+                                    Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
+                                }
+
+                                if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
+                                    tangle()
+                                        .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
+
+                                    Protocol::trigger_milestone_solidification(milestone.index);
+                                }
+                            }
+                            Err(e) => match e {
+                                MilestoneValidatorWorkerError::IncompleteBundle => {}
+                                _ => debug!("Invalid milestone bundle: {:?}.", e),
+                            },
+                        }
+                    }
+                }
             }
 
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl<M, P> MilestoneValidatorWorker<M, P>
-where
-    M: Sponge + Default,
-    P: PublicKey,
-    <P as PublicKey>::Signature: RecoverableSignature,
-{
-    pub(crate) fn new() -> Self {
-        Self { marker: PhantomData }
-    }
-
-    fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
-        // TODO also do an IncomingBundleBuilder check ?
-        let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
-        let mut transaction = tangle()
-            .get(&tail_hash)
-            .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
-
-        // TODO consider using the metadata instead as it might be more efficient
-        if !transaction.is_tail() {
-            return Err(MilestoneValidatorWorkerError::NotATail);
-        }
-
-        builder.push((*transaction).clone());
-
-        // TODO use walker
-        for _ in 0..Protocol::get().config.coordinator.security_level {
-            transaction = tangle()
-                .get((*transaction).trunk())
-                .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
-
-            builder.push((*transaction).clone());
-        }
-
-        Ok(builder
-            .depth(Protocol::get().config.coordinator.depth)
-            .validate()
-            .map_err(MilestoneValidatorWorkerError::InvalidMilestone)?
-            .build())
-    }
-
-    fn process(&self, hash: Hash, is_tail: bool) {
-        let tail_hash = {
-            if is_tail {
-                Some(hash)
-            } else {
-                find_tail_of_bundle(tangle(), hash)
-            }
-        };
-
-        if let Some(tail_hash) = tail_hash {
-            if let Some(meta) = tangle().get_metadata(&tail_hash) {
-                if meta.flags().is_milestone() {
-                    return;
-                }
-                match self.validate_milestone(tail_hash) {
-                    Ok(milestone) => {
-                        tangle().add_milestone(milestone.index, milestone.hash);
-
-                        // This is possibly not sufficient as there is no guarantee a milestone has been solidified
-                        // before being validated, we then also need to check when a milestone gets solidified if it's
-                        // already vadidated.
-                        if meta.flags().is_solid() {
-                            Protocol::get()
-                                .bus
-                                .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
-                        }
-
-                        if milestone.index > tangle().get_latest_milestone_index() {
-                            Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
-                        }
-
-                        if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
-                            tangle().update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
-
-                            Protocol::trigger_milestone_solidification(milestone.index);
-                        }
-                    }
-                    Err(e) => match e {
-                        MilestoneValidatorWorkerError::IncompleteBundle => {}
-                        _ => debug!("Invalid milestone bundle: {:?}.", e),
-                    },
-                }
-            }
-        }
+        Ok(Self { marker: PhantomData })
     }
 }

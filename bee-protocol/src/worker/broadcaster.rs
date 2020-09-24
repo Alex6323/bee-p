@@ -29,65 +29,53 @@ pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) transaction: TransactionMessage,
 }
 
-pub(crate) struct BroadcasterWorker {
-    network: Network,
-}
+#[derive(Default)]
+pub(crate) struct BroadcasterWorker {}
 
 #[async_trait]
 impl<N: Node> Worker<N> for BroadcasterWorker {
-    type Config = ();
+    type Config = Network;
     type Error = WorkerError;
     type Event = BroadcasterWorkerEvent;
     type Receiver = mpsc::UnboundedReceiver<BroadcasterWorkerEvent>;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, mut config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, receiver);
 
             while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
-                self.broadcast(source, transaction).await;
+                let bytes = tlv_into_bytes(transaction);
+
+                for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
+                    if match source {
+                        Some(source) => source != *peer.key(),
+                        None => true,
+                    } {
+                        match config
+                            .send(SendMessage {
+                                epid: *peer.key(),
+                                bytes: bytes.clone(),
+                                responder: None,
+                            })
+                            .await
+                        {
+                            Ok(_) => {
+                                (*peer.value()).metrics.transactions_sent_inc();
+                                Protocol::get().metrics.transactions_sent_inc();
+                            }
+                            Err(e) => {
+                                warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);
+                            }
+                        };
+                    }
+                }
             }
 
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl BroadcasterWorker {
-    pub(crate) fn new(network: Network) -> Self {
-        Self { network }
-    }
-
-    async fn broadcast(&mut self, source: Option<EndpointId>, transaction: TransactionMessage) {
-        let bytes = tlv_into_bytes(transaction);
-
-        for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
-            if match source {
-                Some(source) => source != *peer.key(),
-                None => true,
-            } {
-                match self
-                    .network
-                    .send(SendMessage {
-                        epid: *peer.key(),
-                        bytes: bytes.clone(),
-                        responder: None,
-                    })
-                    .await
-                {
-                    Ok(_) => {
-                        (*peer.value()).metrics.transactions_sent_inc();
-                        Protocol::get().metrics.transactions_sent_inc();
-                    }
-                    Err(e) => {
-                        warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);
-                    }
-                };
-            }
-        }
+        Ok(Self::default())
     }
 }

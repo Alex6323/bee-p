@@ -34,6 +34,7 @@ pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) request: TransactionRequest,
 }
 
+#[derive(Default)]
 pub(crate) struct TransactionResponderWorker;
 
 #[async_trait]
@@ -43,42 +44,32 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
     type Event = TransactionResponderWorkerEvent;
     type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, receiver);
 
             while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
-                self.process_request(epid, request).await;
+                if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
+                    if let Some(transaction) = tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
+                        let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
+
+                        transaction.into_trits_allocated(&mut trits);
+                        Sender::<TransactionMessage>::send(
+                            &epid,
+                            TransactionMessage::new(&compress_transaction_bytes(cast_slice(
+                                trits.encode::<T5B1Buf>().as_i8_slice(),
+                            ))),
+                        )
+                        .await
+                    }
+                }
             }
 
             info!("Stopped.");
         });
 
-        Ok(())
-    }
-}
-
-impl TransactionResponderWorker {
-    pub(crate) fn new() -> Self {
-        Self
-    }
-
-    async fn process_request(&self, epid: EndpointId, request: TransactionRequest) {
-        if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
-            if let Some(transaction) = tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
-                let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-
-                transaction.into_trits_allocated(&mut trits);
-                Sender::<TransactionMessage>::send(
-                    &epid,
-                    TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                        trits.encode::<T5B1Buf>().as_i8_slice(),
-                    ))),
-                )
-                .await
-            }
-        }
+        Ok(Self::default())
     }
 }
