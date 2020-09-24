@@ -40,7 +40,7 @@ pub enum Error {
     #[error(transparent)]
     BincodeError(#[from] bincode::Error),
     #[error(transparent)]
-    SigningError(#[from] bee_signing_ext::binary::ed25519::Error),
+    SigningError(#[from] bee_signing_ext::binary::Error),
     #[error(transparent)]
     SignatureError(#[from] bee_signing_ext::SignatureError),
 }

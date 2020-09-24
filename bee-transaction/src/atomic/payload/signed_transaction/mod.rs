@@ -16,13 +16,14 @@ mod unsigned_transaction;
 
 use crate::atomic::{payload::Payload, Error};
 
+pub use bee_signing_ext::Seed;
 pub use input::{Input, UTXOInput};
 pub use output::{Address, Output, SigLockedSingleDeposit};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
 
 use bee_signing_ext::{
-    binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed, Ed25519Signature as Ed25Signature},
+    binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature as Ed25Signature},
     Signature as SignatureTrait, Signer, Verifier,
 };
 
@@ -316,30 +317,5 @@ impl<'a> SignedTransactionBuilder<'a> {
             unlock_block_count: unlock_blocks.len() as u8,
             unlock_blocks,
         })
-    }
-}
-
-use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
-
-pub enum Seed {
-    Ed25519(Ed25519Seed),
-    Wots(bee_signing::ternary::seed::Seed),
-}
-
-impl Seed {
-    pub fn from_ed25519_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Ok(Seed::Ed25519(
-            Ed25519Seed::from_bytes(bytes).map_err(|_| Error::HashError)?,
-        ))
-    }
-
-    pub fn from_wots_tritbuf(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
-        if trits.as_i8_slice().len() != 49 {
-            return Err(Error::HashError);
-        }
-        let trits: TritBuf<T1B1Buf> = trits.encode();
-        Ok(Seed::Wots(
-            bee_signing::ternary::seed::Seed::from_trits(trits).map_err(|_| Error::HashError)?,
-        ))
     }
 }
