@@ -14,5 +14,7 @@
 #![warn(missing_docs)]
 
 pub mod binary;
+pub mod seed;
 
 pub use signature::{Error as SignatureError, Signature, Signer, Verifier};
+pub use crate::seed::Seed;

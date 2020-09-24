@@ -11,27 +11,17 @@
 
 //! Binary seed to derive private keys, public keys and signatures from.
 
+use crate::binary::Error;
+
 use bee_common_derive::{SecretDebug, SecretDisplay, SecretDrop};
 
 use ed25519_dalek::{ExpandedSecretKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
 use signature::{Signature, Signer, Verifier};
 use slip10::{derive_key_from_path, BIP32Path, Curve};
-use thiserror::Error;
 use zeroize::Zeroize;
 
 use std::convert::AsRef;
-
-/// Errors occuring during Ed25519 operations.
-#[derive(Debug, Error)]
-pub enum Error {
-    /// Convertion Error
-    #[error("Failed to convert bytes to target primitives.")]
-    ConvertError,
-    /// Private Key Error
-    #[error("Failed to generate private key.")]
-    PrivateKeyError,
-}
 
 /// Binary `Ed25519`-based `Seed` to derive private keys, public keys and signatures from.
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]

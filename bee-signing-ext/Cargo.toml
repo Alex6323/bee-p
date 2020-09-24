@@ -18,6 +18,7 @@ std = []
 bee-common-derive = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev", features = ["serde1"] }
+bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 
 ed25519-dalek = { version = "1.0.0-pre.4", features = ["serde"] }
 rand = "0.7"
