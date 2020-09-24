@@ -47,7 +47,7 @@ pub fn on_all_tails<Apply: FnMut(&Hash, &TransactionRef, &TransactionMetadata)>(
     traversal::visit_parents_depth_first(
         tangle,
         root,
-        |_, _, metadata| !metadata.flags.is_tail(),
+        |_, _, metadata| !metadata.flags().is_tail(),
         |_, _, _| {},
         apply,
         |_| {},

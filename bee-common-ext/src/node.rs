@@ -11,33 +11,53 @@
 
 use crate::worker::Worker;
 
+use anymap::AnyMap;
+use futures::{channel::oneshot, future::Future};
+
 use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
+    sync::Arc,
 };
 
-pub trait Node {
+pub trait Node: Send + Sync + 'static {
     fn new() -> Self;
+    fn spawn<W, G, F>(&self, g: G)
+    where
+        Self: Sized,
+        W: Worker<Self>,
+        G: FnOnce(oneshot::Receiver<()>) -> F,
+        F: Future<Output = ()> + Send + Sync + 'static;
 }
 
 struct NodeBuilder<N: Node> {
     deps: HashMap<TypeId, &'static [TypeId]>,
-    closures: HashMap<TypeId, Box<dyn FnOnce(&N)>>,
+    makers: HashMap<TypeId, Box<dyn FnOnce(&N, &mut AnyMap)>>,
+    anymap: AnyMap,
 }
 
 impl<N: Node + 'static> NodeBuilder<N> {
-    fn with_worker<W: Worker<N> + 'static>(mut self) -> Self {
-        self.closures.insert(TypeId::of::<W>(), Box::new(|node| {}));
+    fn with_worker<W: Worker<N> + 'static>(self) -> Self
+    where
+        W::Config: Default,
+    {
+        self.with_worker_cfg::<W>(W::Config::default())
+    }
+
+    fn with_worker_cfg<W: Worker<N> + 'static>(mut self, _config: W::Config) -> Self {
         self.deps.insert(TypeId::of::<W>(), W::DEPS);
+        self.makers.insert(TypeId::of::<W>(), Box::new(|_node, _anymap| {}));
         self
     }
 
-    fn finish(mut self) {
-        let order = TopologicalOrder::sort(self.deps);
-        let node = N::new();
-        for id in order {
-            self.closures.remove(&id).unwrap()(&node);
+    fn finish(mut self) -> Arc<N> {
+        let node = Arc::new(N::new());
+
+        for id in TopologicalOrder::sort(self.deps) {
+            self.makers.remove(&id).unwrap()(&node, &mut self.anymap);
         }
+
+        node
     }
 }
 

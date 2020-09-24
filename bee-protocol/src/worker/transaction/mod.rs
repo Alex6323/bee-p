@@ -23,13 +23,12 @@ mod tests {
     use crate::{
         config::ProtocolConfig,
         message::Transaction as TransactionMessage,
-        node::BeeNode,
         protocol::Protocol,
         tangle::{self, tangle},
     };
 
     use bee_common::shutdown_stream::ShutdownStream;
-    use bee_common_ext::{event::Bus, shutdown_tokio::Shutdown, worker::Worker};
+    use bee_common_ext::{bee_node::BeeNode, event::Bus, shutdown_tokio::Shutdown, worker::Worker};
     use bee_crypto::ternary::Hash;
     use bee_network::{EndpointId, NetworkConfig};
 
@@ -43,6 +42,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tx_workers_with_compressed_buffer() {
+        let bee_node = Arc::new(BeeNode::new());
         let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
@@ -55,7 +55,7 @@ mod tests {
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        Protocol::init(protocol_config, network, 0, bus, &mut shutdown).await;
+        Protocol::init(protocol_config, network, 0, bee_node.clone(), bus, &mut shutdown).await;
 
         assert_eq!(tangle().len(), 0);
 
@@ -65,17 +65,21 @@ mod tests {
         let (processor_worker_shutdown_sender, processor_worker_shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
-        let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).run(
+        let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).start(
             <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
                 10000,
                 ShutdownStream::new(hasher_worker_shutdown_receiver, hasher_worker_receiver),
             ),
+            bee_node.clone(),
+            (),
         );
 
         let processor = ProcessorWorker::new(milestone_validator_worker_sender);
-        let processor_handle = Worker::<BeeNode>::run(
+        let processor_handle = Worker::<BeeNode>::start(
             processor,
             ShutdownStream::new(processor_worker_shutdown_receiver, processor_worker_receiver),
+            bee_node.clone(),
+            (),
         );
 
         spawn(async move {

@@ -29,7 +29,7 @@ use futures::{
 };
 use log::{info, warn};
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::Arc;
 
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
 
@@ -38,12 +38,18 @@ pub(crate) struct SolidPropagatorWorker {
 }
 
 #[async_trait]
-impl<N: Node + 'static> Worker<N> for SolidPropagatorWorker {
+impl<N: Node> Worker<N> for SolidPropagatorWorker {
+    type Config = ();
     type Error = WorkerError;
     type Event = SolidPropagatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(
+        mut self,
+        mut receiver: Self::Receiver,
+        _node: Arc<N>,
+        _config: Self::Config,
+    ) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(SolidPropagatorWorkerEvent(hash)) = receiver.next().await {
@@ -74,24 +80,20 @@ impl SolidPropagatorWorker {
 
                 if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
                     tangle().update_metadata(&hash, |metadata| {
-                        metadata.flags.set_solid(true);
+                        metadata.solidify();
+
                         // This is possibly not sufficient as there is no guarantee a milestone has been validated
                         // before being solidified, we then also need to check when a milestone gets validated if it's
                         // already solid.
-                        if metadata.flags.is_milestone() {
-                            index = Some(metadata.milestone_index);
+                        if metadata.flags().is_milestone() {
+                            index = Some(metadata.milestone_index());
                         }
 
-                        if metadata.flags.is_tail() {
+                        if metadata.flags().is_tail() {
                             if let Err(e) = self.bundle_validator.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
                                 warn!("Failed to send hash to bundle validator: {:?}.", e);
                             }
                         }
-
-                        metadata.solidification_timestamp = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Clock may have gone backwards")
-                            .as_millis() as u64;
                     });
 
                     for child in tangle().get_children(&hash) {

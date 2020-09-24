@@ -21,6 +21,7 @@ pub const TRANSACTION_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transacti
 pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
 pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
 pub const MILESTONE_INDEX_TO_LEDGER_DIFF: &str = "milestone_hash_to_ledger_diff";
+pub const MILESTONE_INDEX_TO_LEDGER_STATE: &str = "milestone_hash_to_ledger_state";
 
 pub struct Storage {
     pub inner: ::rocksdb::DB,
@@ -35,6 +36,9 @@ impl Storage {
         let milestone_hash_to_index = ColumnFamilyDescriptor::new(MILESTONE_HASH_TO_INDEX, Options::default());
         let milestone_index_to_ledger_diff =
             ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_DIFF, Options::default());
+        let milestone_index_to_ledger_state =
+            ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_STATE, Options::default());
+
         let mut opts = Options::default();
 
         opts.create_if_missing(config.create_if_missing);
@@ -63,6 +67,7 @@ impl Storage {
             transaction_hash_to_transaction_metadata,
             milestone_hash_to_index,
             milestone_index_to_ledger_diff,
+            milestone_index_to_ledger_state,
         ];
         let db = DB::open_cf_descriptors(&opts, config.path, column_familes)?;
 

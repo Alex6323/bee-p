@@ -14,7 +14,7 @@ use bee_storage::persistable::Persistable;
 use crate::storage::Storage;
 
 use bee_crypto::ternary::Hash;
-use bee_ledger::diff::LedgerDiff;
+use bee_ledger::{diff::LedgerDiff, state::LedgerState};
 use bee_protocol::{
     tangle::{flags::Flags, TransactionMetadata},
     MilestoneIndex,
@@ -147,13 +147,14 @@ impl Persistable<Storage> for TransactionMetadata {
         let solidification_timestamp = u64::decode_persistable::<Storage>(&slice[13..21]);
         // 5- decode confirmation_timestamp
         let confirmation_timestamp = u64::decode_persistable::<Storage>(&slice[21..29]);
-        Self {
+
+        Self::new(
             flags,
             milestone_index,
             arrival_timestamp,
             solidification_timestamp,
             confirmation_timestamp,
-        }
+        )
     }
 }
 
@@ -163,6 +164,15 @@ impl Persistable<Storage> for LedgerDiff {
     }
     fn decode_persistable<Storage>(slice: &[u8]) -> Self {
         LedgerDiff::from(HashMap::decode_persistable::<Storage>(slice))
+    }
+}
+
+impl Persistable<Storage> for LedgerState {
+    fn encode_persistable<Storage>(&self, buffer: &mut Vec<u8>) {
+        self.inner().encode_persistable::<Storage>(buffer)
+    }
+    fn decode_persistable<Storage>(slice: &[u8]) -> Self {
+        Self::from(HashMap::decode_persistable::<Storage>(slice))
     }
 }
 

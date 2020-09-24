@@ -38,7 +38,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
     // Check if there is any approver of the transaction was confirmed by newer milestones.
     let milestone_index;
     if let Some(metadata) = tangle().get_metadata(hash) {
-        milestone_index = metadata.milestone_index;
+        milestone_index = metadata.milestone_index();
     } else {
         return Err(Error::MetadataNotFound(*hash));
     }
@@ -51,7 +51,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
                 return false;
             }
             // `true` when one of the current tx's approver was confirmed by a newer milestone_index.
-            is_solid = metadata.flags.is_confirmed() && metadata.milestone_index > milestone_index;
+            is_solid = metadata.flags().is_confirmed() && metadata.milestone_index() > milestone_index;
             true
         },
         |_, _, _| {},
@@ -79,10 +79,10 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
             milestone_hash,
             |_, _, metadata| *metadata.milestone_index() >= index,
             |hash, _, metadata| {
-                if metadata.flags.is_confirmed() && is_solid_entry_point(&hash).unwrap() {
+                if metadata.flags().is_confirmed() && is_solid_entry_point(&hash).unwrap() {
                     // Find all tails.
                     helper::on_all_tails(tangle(), *hash, |hash, _tx, metadata| {
-                        solid_entry_points.insert(hash.clone(), metadata.milestone_index);
+                        solid_entry_points.insert(hash.clone(), metadata.milestone_index());
                     });
                 }
             },

@@ -23,17 +23,25 @@ use futures::{
 };
 use log::{info, warn};
 
+use std::sync::Arc;
+
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct BundleValidatorWorker;
 
 #[async_trait]
-impl<N: Node + 'static> Worker<N> for BundleValidatorWorker {
+impl<N: Node> Worker<N> for BundleValidatorWorker {
+    type Config = ();
     type Error = WorkerError;
     type Event = BundleValidatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver) -> Result<(), Self::Error> {
+    async fn start(
+        mut self,
+        mut receiver: Self::Receiver,
+        _node: Arc<N>,
+        _config: Self::Config,
+    ) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
@@ -56,7 +64,7 @@ impl BundleValidatorWorker {
             Some(builder) => {
                 if builder.validate().is_ok() {
                     tangle().update_metadata(&tail_hash, |metadata| {
-                        metadata.flags.set_valid(true);
+                        metadata.flags_mut().set_valid(true);
                     })
                 }
             }

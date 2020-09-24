@@ -25,7 +25,10 @@ use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
 use tokio::time::{interval, Interval};
 
-use std::time::{Duration, Instant};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
@@ -37,13 +40,14 @@ pub(crate) struct MilestoneRequesterWorker {
 }
 
 #[async_trait]
-impl<N: Node + 'static> Worker<N> for MilestoneRequesterWorker {
+impl<N: Node> Worker<N> for MilestoneRequesterWorker {
+    type Config = ();
     type Error = WorkerError;
     type Event = MilestoneRequesterWorkerEvent;
     type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>>;
 
-    async fn start(self, receiver: Self::Receiver) -> Result<(), Self::Error> {
-        async fn aux<N: Node + 'static>(
+    async fn start(self, receiver: Self::Receiver, _node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        async fn aux<N: Node>(
             mut worker: MilestoneRequesterWorker,
             mut receiver: <MilestoneRequesterWorker as Worker<N>>::Receiver,
         ) -> Result<(), WorkerError> {

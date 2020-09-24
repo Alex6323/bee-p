@@ -76,8 +76,8 @@ impl MsTangle {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
         self.inner.update_metadata(&hash, |metadata| {
-            metadata.flags.set_milestone(true);
-            metadata.milestone_index = index
+            metadata.flags_mut().set_milestone(true);
+            metadata.set_milestone_index(index);
         });
     }
 
@@ -150,6 +150,10 @@ impl MsTangle {
         self.get_latest_solid_milestone_index() == self.get_latest_milestone_index()
     }
 
+    pub fn get_solid_entry_point_index(&self, hash: &Hash) -> Option<MilestoneIndex> {
+        self.solid_entry_points.get(hash).map(|i| *i)
+    }
+
     pub fn add_solid_entry_point(&self, hash: Hash, index: MilestoneIndex) {
         self.solid_entry_points.insert(hash, index);
     }
@@ -175,7 +179,7 @@ impl MsTangle {
         } else {
             self.inner
                 .get_metadata(hash)
-                .map(|metadata| metadata.flags.is_solid())
+                .map(|metadata| metadata.flags().is_solid())
                 .unwrap_or(false)
         }
     }

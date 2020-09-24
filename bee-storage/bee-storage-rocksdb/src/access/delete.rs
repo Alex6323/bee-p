@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_crypto::ternary::Hash;
-use bee_ledger::diff::LedgerDiff;
+use bee_ledger::{diff::LedgerDiff, state::LedgerState};
 use bee_protocol::{tangle::TransactionMetadata, MilestoneIndex};
 use bee_storage::{access::Delete, persistable::Persistable};
 use bee_transaction::bundled::BundledTransaction;
@@ -39,6 +39,19 @@ impl Delete<MilestoneIndex, LedgerDiff> for Storage {
         let mut index_buf = Vec::new();
         milestone_index.encode_persistable::<Self>(&mut index_buf);
         db.delete_cf(&ms_index_to_ledger_diff, index_buf.as_slice())?;
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Delete<MilestoneIndex, LedgerState> for Storage {
+    type Error = OpError;
+    async fn delete(&self, milestone_index: &MilestoneIndex) -> Result<(), Self::Error> {
+        let db = &self.inner;
+        let ms_index_to_ledger_state = db.cf_handle(MILESTONE_INDEX_TO_LEDGER_STATE).unwrap();
+        let mut index_buf = Vec::new();
+        milestone_index.encode_persistable::<Self>(&mut index_buf);
+        db.delete_cf(&ms_index_to_ledger_state, index_buf.as_slice())?;
         Ok(())
     }
 }
