@@ -17,11 +17,12 @@ pub use connect::*;
 pub use contact::*;
 pub use worker::*;
 
+use crate::util::TransportProtocol;
+
 use futures::channel::mpsc;
 use thiserror::Error;
-use uuid::Uuid;
 
-use std::fmt;
+use std::{fmt, net::SocketAddr as SocketAddress};
 
 /// Errors that can happen when dealing with `Address`es.
 #[derive(Debug, Error)]
@@ -38,22 +39,23 @@ pub enum Error {
     #[error("Unsupported transport protocol.")]
     UnsupportedTransportProtocol,
 
+    // TODO: rename to to 'DomainNameResolutionFailure'
     #[error("Error resolving domain name to address.")]
     DnsFailure,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct EndpointId(Uuid);
+pub struct EndpointId((TransportProtocol, SocketAddress));
 
 impl EndpointId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
+    pub fn new(transport_protocol: TransportProtocol, socket_address: SocketAddress) -> Self {
+        Self((transport_protocol, socket_address))
     }
 }
 
 impl fmt::Display for EndpointId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}://{}", (self.0).0, (self.0).1)
     }
 }
 

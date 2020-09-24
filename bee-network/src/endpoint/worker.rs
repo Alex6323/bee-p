@@ -258,7 +258,8 @@ async fn add_endpoint(
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
     if let Ok(endpoint_params) = EndpointContactParams::from_url(url.clone()).await {
-        let epid = EndpointId::new();
+        // let epid = EndpointId::new();
+        let epid = endpoint_params.create_epid();
 
         if endpoint_contacts.insert(epid, endpoint_params) {
             internal_event_sender.send(Event::EndpointAdded { epid }).await?;

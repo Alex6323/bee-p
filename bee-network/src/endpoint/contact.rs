@@ -70,6 +70,10 @@ impl EndpointContactParams {
 
         Ok(self.last_socket_address)
     }
+
+    pub fn create_epid(&self) -> EndpointId {
+        EndpointId::new(self.transport_protocol, self.last_socket_address)
+    }
 }
 
 impl fmt::Display for EndpointContactParams {

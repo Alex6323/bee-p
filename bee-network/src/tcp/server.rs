@@ -13,6 +13,7 @@ use crate::{
     endpoint::{EndpointContactList, EndpointId},
     event::EventSender,
     tcp::Origin,
+    util::TransportProtocol,
 };
 
 use super::{connection::Connection, spawn_reader_writer};
@@ -129,7 +130,7 @@ async fn process_stream(
             );
 
             let internal_event_sender = internal_event_sender.clone();
-            let epid = EndpointId::new();
+            let epid = EndpointId::new(TransportProtocol::Tcp, connection.peer_address);
 
             spawn_reader_writer(connection, epid, internal_event_sender)
                 .await

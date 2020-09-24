@@ -32,7 +32,7 @@ pub async fn resolve_address(address: &str) -> Result<SocketAddr, Error> {
 
 pub type Port = u16;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[non_exhaustive]
 pub enum TransportProtocol {
     Tcp,
