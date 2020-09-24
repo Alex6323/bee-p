@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use futures::{stream::Fuse, StreamExt};
 use log::info;
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 #[derive(Default)]
 pub(crate) struct TpsWorker {
@@ -32,13 +32,18 @@ pub(crate) struct TpsWorker {
 }
 
 #[async_trait]
-impl<N: Node + 'static> Worker<N> for TpsWorker {
+impl<N: Node> Worker<N> for TpsWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = ();
     type Receiver = ShutdownStream<Fuse<Interval>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(
+        mut self,
+        mut receiver: Self::Receiver,
+        _node: Arc<N>,
+        _config: Self::Config,
+    ) -> Result<(), Self::Error> {
         info!("Running.");
 
         while receiver.next().await.is_some() {

@@ -21,10 +21,8 @@ use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
 use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::{event::Bus, worker::Worker};
-use bee_protocol::{
-    config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, node::BeeNode, MilestoneIndex,
-};
+use bee_common_ext::{bee_node::BeeNode, event::Bus, worker::Worker};
+use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use async_std::task::spawn;
 use futures::channel::{mpsc, oneshot};
@@ -36,6 +34,7 @@ pub fn init(
     index: u32,
     state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
+    bee_node: Arc<BeeNode>,
     bus: Arc<Bus<'static>>,
     shutdown: &mut Shutdown,
 ) -> mpsc::UnboundedSender<LedgerWorkerEvent> {
@@ -50,14 +49,13 @@ pub fn init(
 
     shutdown.add_worker_shutdown(
         ledger_worker_shutdown_tx,
-        spawn({
-            let worker = LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone());
-            Worker::<BeeNode>::start(
-                worker,
+        spawn(
+            LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone()).start(
                 ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
+                bee_node,
                 (),
-            )
-        }),
+            ),
+        ),
     );
 
     let ledger_worker_tx_ret = ledger_worker_tx.clone();

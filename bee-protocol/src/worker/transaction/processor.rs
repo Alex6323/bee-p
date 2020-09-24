@@ -34,19 +34,27 @@ use futures::{
 };
 use log::{error, info, trace};
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 /// Timeframe to allow past or future transactions, 10 minutes in seconds.
 const ALLOWED_TIMESTAMP_WINDOW_SECS: u64 = 10 * 60;
 
 #[async_trait]
-impl<N: Node + 'static> Worker<N> for ProcessorWorker {
+impl<N: Node> Worker<N> for ProcessorWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = ProcessorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(mut self, mut receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(
+        mut self,
+        mut receiver: Self::Receiver,
+        _node: Arc<N>,
+        _config: Self::Config,
+    ) -> Result<(), Self::Error> {
         info!("Running.");
 
         while let Some(ProcessorWorkerEvent {

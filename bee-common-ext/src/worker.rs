@@ -14,10 +14,13 @@ use crate::node::Node;
 use async_trait::async_trait;
 use futures::Stream;
 
-use std::any::TypeId;
+use std::{
+    any::{Any, TypeId},
+    sync::Arc,
+};
 
 #[async_trait]
-pub trait Worker<N: Node + 'static> {
+pub trait Worker<N: Node>: Any {
     const DEPS: &'static [TypeId] = &[];
 
     type Config;
@@ -25,7 +28,7 @@ pub trait Worker<N: Node + 'static> {
     type Event;
     type Receiver: Stream<Item = Self::Event>;
 
-    async fn start(self, receiver: Self::Receiver, _config: Self::Config) -> Result<(), Self::Error>;
+    async fn start(self, receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<(), Self::Error>;
     async fn stop(self) -> Result<(), Self::Error>
     where
         Self: Sized,
