@@ -28,10 +28,7 @@ use bee_transaction::{
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{error, info, trace};
 
 use std::{
@@ -47,26 +44,25 @@ impl<N: Node> Worker<N> for ProcessorWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = ProcessorWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while let Some(ProcessorWorkerEvent {
-            hash,
-            from,
-            transaction,
-        }) = receiver.next().await
-        {
-            self.process_transaction_brodcast(hash, from, transaction);
-        }
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
 
-        info!("Stopped.");
+            while let Some(ProcessorWorkerEvent {
+                hash,
+                from,
+                transaction,
+            }) = receiver.next().await
+            {
+                self.process_transaction_brodcast(hash, from, transaction);
+            }
+
+            info!("Stopped.");
+        });
 
         Ok(())
     }

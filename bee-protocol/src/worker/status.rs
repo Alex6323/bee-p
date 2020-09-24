@@ -16,7 +16,7 @@ use bee_common_ext::{node::Node, worker::Worker};
 
 use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
-use futures::{stream::Fuse, StreamExt};
+use futures::StreamExt;
 use log::info;
 
 use std::{sync::Arc, time::Duration};
@@ -28,21 +28,20 @@ impl<N: Node> Worker<N> for StatusWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = ();
-    type Receiver = ShutdownStream<Fuse<Interval>>;
+    type Receiver = Interval;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while receiver.next().await.is_some() {
-            self.status();
-        }
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
 
-        info!("Stopped.");
+            while receiver.next().await.is_some() {
+                self.status();
+            }
+
+            info!("Stopped.");
+        });
 
         Ok(())
     }

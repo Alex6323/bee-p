@@ -24,10 +24,7 @@ use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
 use std::sync::Arc;
@@ -44,21 +41,20 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = MilestoneResponderWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
-            self.process_request(epid, request).await;
-        }
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
 
-        info!("Stopped.");
+            while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
+                self.process_request(epid, request).await;
+            }
+
+            info!("Stopped.");
+        });
 
         Ok(())
     }

@@ -18,7 +18,6 @@ use bee_tangle::traversal;
 use async_trait::async_trait;
 use futures::{
     channel::{mpsc, oneshot},
-    stream::Fuse,
     StreamExt,
 };
 use log::{debug, info};
@@ -37,29 +36,28 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = MilestoneSolidifierWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>>>;
+    type Receiver = mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while let Some(MilestoneSolidifierWorkerEvent(index)) = receiver.next().await {
-            self.save_index(index);
-            while let Some(index) = self.queue.pop() {
-                if index == self.next_ms_index {
-                    self.trigger_solidification_unchecked(index);
-                } else {
-                    self.queue.push(index);
-                    break;
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
+
+            while let Some(MilestoneSolidifierWorkerEvent(index)) = receiver.next().await {
+                self.save_index(index);
+                while let Some(index) = self.queue.pop() {
+                    if index == self.next_ms_index {
+                        self.trigger_solidification_unchecked(index);
+                    } else {
+                        self.queue.push(index);
+                        break;
+                    }
                 }
             }
-        }
 
-        info!("Stopped.");
+            info!("Stopped.");
+        });
 
         Ok(())
     }

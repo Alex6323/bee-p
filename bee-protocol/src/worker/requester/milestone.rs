@@ -22,7 +22,12 @@ use bee_network::EndpointId;
 
 use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
-use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
+use futures::{
+    channel::{mpsc, oneshot},
+    select,
+    stream::Fuse,
+    StreamExt,
+};
 use log::{debug, info};
 
 use std::{
@@ -44,14 +49,17 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = MilestoneRequesterWorkerEvent;
-    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>>;
+    type Receiver = mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>;
 
-    async fn start(self, receiver: Self::Receiver, _node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
         async fn aux<N: Node>(
             mut worker: MilestoneRequesterWorker,
-            mut receiver: <MilestoneRequesterWorker as Worker<N>>::Receiver,
-        ) -> Result<(), WorkerError> {
+            receiver: <MilestoneRequesterWorker as Worker<N>>::Receiver,
+            shutdown: oneshot::Receiver<()>,
+        ) {
             info!("Running.");
+
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
 
             loop {
                 select! {
@@ -68,11 +76,11 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
             }
 
             info!("Stopped.");
-
-            Ok(())
         }
 
-        aux::<N>(self, receiver).await
+        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(self, receiver, shutdown).await });
+
+        Ok(())
     }
 }
 

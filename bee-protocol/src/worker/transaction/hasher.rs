@@ -61,16 +61,19 @@ impl<N: Node> Worker<N> for HasherWorker<N> {
     async fn start(
         mut self,
         mut receiver: Self::Receiver,
-        _node: Arc<N>,
+        node: Arc<N>,
         _config: Self::Config,
     ) -> Result<(), Self::Error> {
-        info!("Running.");
+        // TODO use shutdown
+        node.spawn::<Self, _, _>(|_shutdown| async move {
+            info!("Running.");
 
-        while let Some(batch_size) = receiver.next().await {
-            self.trigger_hashing(batch_size, &mut receiver);
-        }
+            while let Some(batch_size) = receiver.next().await {
+                self.trigger_hashing(batch_size, &mut receiver);
+            }
 
-        info!("Stopped.");
+            info!("Stopped.");
+        });
 
         Ok(())
     }

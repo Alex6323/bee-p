@@ -20,12 +20,10 @@ use crate::state::LedgerState;
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
-use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{bee_node::BeeNode, event::Bus, worker::Worker};
 use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
 
-use async_std::task::spawn;
-use futures::channel::{mpsc, oneshot};
+use futures::channel::mpsc;
 use log::warn;
 
 use std::sync::Arc;
@@ -44,15 +42,8 @@ pub fn init(
     // }
 
     let (ledger_worker_tx, ledger_worker_rx) = mpsc::unbounded();
-    let (_, ledger_worker_shutdown_rx) = oneshot::channel();
 
-    spawn(
-        LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone()).start(
-            ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
-            bee_node,
-            (),
-        ),
-    );
+    LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone()).start(ledger_worker_rx, bee_node, ());
 
     let ledger_worker_tx_ret = ledger_worker_tx.clone();
 

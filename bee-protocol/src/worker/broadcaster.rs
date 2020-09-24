@@ -19,10 +19,7 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use async_trait::async_trait;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
 
 use std::sync::Arc;
@@ -41,21 +38,20 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = BroadcasterWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
+    type Receiver = mpsc::UnboundedReceiver<BroadcasterWorkerEvent>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
-            self.broadcast(source, transaction).await;
-        }
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
 
-        info!("Stopped.");
+            while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
+                self.broadcast(source, transaction).await;
+            }
+
+            info!("Stopped.");
+        });
 
         Ok(())
     }

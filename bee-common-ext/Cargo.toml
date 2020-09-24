@@ -12,6 +12,7 @@ homepage = "https://www.iota.org"
 
 [dependencies]
 anymap = "0.12.1"
+async-std = "1.6.2"
 async-trait = "0.1.40"
 dashmap = "3.11"
 futures = "0.3.5"

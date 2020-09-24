@@ -61,7 +61,6 @@ mod tests {
         let (hasher_worker_sender, hasher_worker_receiver) = mpsc::unbounded();
         let (hasher_worker_shutdown_sender, hasher_worker_shutdown_receiver) = oneshot::channel();
         let (processor_worker_sender, processor_worker_receiver) = mpsc::unbounded();
-        let (processor_worker_shutdown_sender, processor_worker_shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
         let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).start(
@@ -74,12 +73,7 @@ mod tests {
         );
 
         let processor = ProcessorWorker::new(milestone_validator_worker_sender);
-        let processor_handle = Worker::<BeeNode>::start(
-            processor,
-            ShutdownStream::new(processor_worker_shutdown_receiver, processor_worker_receiver),
-            bee_node.clone(),
-            (),
-        );
+        let processor_handle = Worker::<BeeNode>::start(processor, processor_worker_receiver, bee_node.clone(), ());
 
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
@@ -92,7 +86,7 @@ mod tests {
             hasher_worker_sender.unbounded_send(event).unwrap();
             task::sleep(Duration::from_secs(5)).await;
             hasher_worker_shutdown_sender.send(()).unwrap();
-            processor_worker_shutdown_sender.send(()).unwrap();
+            // TODO shutdown node to fix the test
         });
 
         let (hasher_result, processor_result) = block_on(async { join!(hasher_handle, processor_handle) });

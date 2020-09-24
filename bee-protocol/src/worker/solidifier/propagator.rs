@@ -23,10 +23,7 @@ use bee_crypto::ternary::Hash;
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
 
 use std::sync::Arc;
@@ -42,21 +39,20 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = SolidPropagatorWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while let Some(SolidPropagatorWorkerEvent(hash)) = receiver.next().await {
-            self.propagate(hash);
-        }
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
 
-        info!("Stopped.");
+            while let Some(SolidPropagatorWorkerEvent(hash)) = receiver.next().await {
+                self.propagate(hash);
+            }
+
+            info!("Stopped.");
+        });
 
         Ok(())
     }

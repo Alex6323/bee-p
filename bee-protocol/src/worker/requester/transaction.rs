@@ -23,7 +23,12 @@ use bee_ternary::T5B1Buf;
 use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
+use futures::{
+    channel::{mpsc, oneshot},
+    select,
+    stream::Fuse,
+    StreamExt,
+};
 use log::{debug, info};
 
 use std::{
@@ -45,14 +50,17 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = TransactionRequesterWorkerEvent;
-    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<TransactionRequesterWorkerEvent>>;
+    type Receiver = mpsc::UnboundedReceiver<TransactionRequesterWorkerEvent>;
 
-    async fn start(self, receiver: Self::Receiver, _node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+    async fn start(self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
         async fn aux<N: Node>(
             mut worker: TransactionRequesterWorker,
-            mut receiver: <TransactionRequesterWorker as Worker<N>>::Receiver,
-        ) -> Result<(), WorkerError> {
+            receiver: <TransactionRequesterWorker as Worker<N>>::Receiver,
+            shutdown: oneshot::Receiver<()>,
+        ) {
             info!("Running.");
+
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
 
             loop {
                 select! {
@@ -65,11 +73,11 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
             }
 
             info!("Stopped.");
-
-            Ok(())
         }
 
-        aux::<N>(self, receiver).await
+        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(self, receiver, shutdown).await });
+
+        Ok(())
     }
 }
 

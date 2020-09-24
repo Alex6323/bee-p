@@ -28,7 +28,7 @@ use async_trait::async_trait;
 use blake2::Blake2b;
 use futures::{
     channel::{mpsc, oneshot},
-    stream::{Fuse, StreamExt},
+    stream::StreamExt,
 };
 use log::{error, info, warn};
 
@@ -60,28 +60,27 @@ impl<N: Node> Worker<N> for LedgerWorker {
     type Config = ();
     type Error = WorkerError;
     type Event = LedgerWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>;
+    type Receiver = mpsc::UnboundedReceiver<LedgerWorkerEvent>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while let Some(event) = receiver.next().await {
-            match event {
-                LedgerWorkerEvent::Confirm(milestone) => {
-                    if self.confirm(milestone).is_err() {
-                        panic!("Error while confirming milestone, aborting.");
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
+
+            while let Some(event) = receiver.next().await {
+                match event {
+                    LedgerWorkerEvent::Confirm(milestone) => {
+                        if self.confirm(milestone).is_err() {
+                            panic!("Error while confirming milestone, aborting.");
+                        }
                     }
+                    LedgerWorkerEvent::GetBalance(address, sender) => self.get_balance(address, sender),
                 }
-                LedgerWorkerEvent::GetBalance(address, sender) => self.get_balance(address, sender),
             }
-        }
 
-        info!("Stopped.");
+            info!("Stopped.");
+        });
 
         Ok(())
     }

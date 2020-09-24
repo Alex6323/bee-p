@@ -19,13 +19,11 @@ pub mod global;
 pub mod local;
 pub mod metadata;
 
-use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{bee_node::BeeNode, event::Bus, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
 use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
 
-use async_std::task::spawn;
 use chrono::{offset::TimeZone, Utc};
 use futures::channel::{mpsc, oneshot};
 use log::{info, warn};
@@ -105,13 +103,8 @@ pub fn init(
     };
 
     let (snapshot_worker_tx, snapshot_worker_rx) = mpsc::unbounded();
-    let (_, snapshot_worker_shutdown_rx) = oneshot::channel();
 
-    spawn(worker::SnapshotWorker::new(config.clone()).start(
-        ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx),
-        bee_node,
-        (),
-    ));
+    worker::SnapshotWorker::new(config.clone()).start(snapshot_worker_rx, bee_node, ());
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
         if let Err(e) = snapshot_worker_tx.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone()))

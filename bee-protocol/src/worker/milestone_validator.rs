@@ -26,10 +26,7 @@ use bee_signing::ternary::{PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{debug, info};
 
 use std::{marker::PhantomData, sync::Arc};
@@ -51,29 +48,27 @@ pub(crate) struct MilestoneValidatorWorker<M, P> {
 #[async_trait]
 impl<N: Node, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
 where
-    M: Sponge + Default + Send + 'static,
+    M: Sponge + Default + Send + Sync + 'static,
     P: PublicKey + Send + Sync + 'static,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
     type Config = ();
     type Error = WorkerError;
     type Event = MilestoneValidatorWorkerEvent;
-    // TODO PriorityQueue ?
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(mut self, receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
-            self.process(hash, is_tail);
-        }
+            let mut receiver = ShutdownStream::new(shutdown, receiver);
 
-        info!("Stopped.");
+            while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
+                self.process(hash, is_tail);
+            }
+
+            info!("Stopped.");
+        });
 
         Ok(())
     }

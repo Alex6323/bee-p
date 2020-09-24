@@ -11,6 +11,7 @@
 
 use crate::{node::Node, worker::Worker};
 
+use async_std::task::spawn;
 use futures::{channel::oneshot, future::Future};
 
 use std::{
@@ -42,10 +43,10 @@ impl Node for BeeNode {
         if let Ok(mut tasks) = self.tasks.lock() {
             match tasks.entry(TypeId::of::<W>()) {
                 Entry::Occupied(mut entry) => {
-                    entry.get_mut().push((tx, Box::new(g(rx))));
+                    entry.get_mut().push((tx, Box::new(spawn(g(rx)))));
                 }
                 Entry::Vacant(entry) => {
-                    entry.insert(vec![(tx, Box::new(g(rx)))]);
+                    entry.insert(vec![(tx, Box::new(spawn(g(rx))))]);
                 }
             }
         }
