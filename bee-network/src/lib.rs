@@ -50,20 +50,18 @@ use events::EventSubscriber as Events;
 use tcp::worker::TcpWorker;
 // use udp::worker::UdpWorker;
 
-use bee_common::shutdown::Shutdown;
-
 use async_std::task::spawn;
 use futures::channel::oneshot;
 
 /// Initializes the network layer.
-pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events) {
+pub fn init(config: NetworkConfig) -> (Network, Events) {
     let (command_sender, commands) = commands::command_channel();
     let (event_sender, events) = events::event_channel();
     let (internal_event_sender, internal_events) = events::event_channel();
 
-    let (epw_sd_sender, epw_shutdown) = oneshot::channel();
-    let (tcp_sd_sender, tcp_shutdown) = oneshot::channel();
-    // let (udp_sd_sender, udp_shutdown) = oneshot::channel();
+    let (_, epw_shutdown) = oneshot::channel();
+    let (_, tcp_shutdown) = oneshot::channel();
+    // let (_, udp_shutdown) = oneshot::channel();
 
     let ep_worker = EpWorker::new(
         commands,
@@ -77,12 +75,13 @@ pub fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, Events)
     let tcp_worker = TcpWorker::new(config.socket_addr(), internal_event_sender, tcp_shutdown);
     // let udp_worker = UdpWorker::new(binding_addr, internal_event_sender.clone(), udp_shutdown);
 
-    shutdown.add_worker_shutdown(epw_sd_sender, spawn(ep_worker.run()));
-    shutdown.add_worker_shutdown(tcp_sd_sender, spawn(tcp_worker.run()));
-    // shutdown.add_worker_shutdown(udp_sd_sender, spawn(udp_worker.run()));
+    spawn(ep_worker.run());
+    spawn(tcp_worker.run());
+    // spawn(udp_worker.run());
 
     whitelist::init();
-    shutdown.add_action(whitelist::drop);
+
+    // TODO whitelist::drop
 
     (Network::new(config, command_sender), events)
 }

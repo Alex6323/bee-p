@@ -13,7 +13,7 @@
 
 use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
 
-use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node as NodeT};
 use bee_network::{self, Address, Command::Connect, EndpointId, Event, EventSubscriber, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
@@ -55,7 +55,6 @@ impl NodeBuilder {
 
         let bee_node = Arc::new(BeeNode::new());
 
-        let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
         info!("Initializing tangle...");
@@ -63,11 +62,10 @@ impl NodeBuilder {
 
         // TODO temporary
         let (ledger_state, snapshot_index, snapshot_timestamp) =
-            bee_snapshot::init(&self.config.snapshot, bee_node.clone(), bus.clone(), &mut shutdown)
-                .map_err(Error::SnapshotError)?;
+            bee_snapshot::init(&self.config.snapshot, bee_node.clone(), bus.clone()).map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
-        let (network, events) = bee_network::init(self.config.network, &mut shutdown);
+        let (network, events) = bee_network::init(self.config.network);
 
         info!("Starting manual peer manager...");
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
@@ -79,7 +77,6 @@ impl NodeBuilder {
             self.config.protocol.coordinator().clone(),
             bee_node.clone(),
             bus.clone(),
-            &mut shutdown,
         );
 
         block_on(Protocol::init(
@@ -88,12 +85,11 @@ impl NodeBuilder {
             snapshot_timestamp,
             bee_node.clone(),
             bus.clone(),
-            &mut shutdown,
         ));
 
         info!("Initializing plugins...");
 
-        plugin::init(bus, &mut shutdown);
+        plugin::init(bus);
 
         info!("Initialized.");
 
@@ -104,7 +100,6 @@ impl NodeBuilder {
             sender,
             network,
             receiver: ShutdownStream::new(receiver, events),
-            shutdown,
             peers: HashMap::new(),
         })
     }
@@ -118,7 +113,6 @@ pub struct Node {
     // TODO those 2 fields are related; consider bundling them
     network: Network,
     receiver: Receiver,
-    shutdown: Shutdown,
     // TODO design proper type `PeerList`
     peers: HashMap<EndpointId, (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>)>,
 }
@@ -157,7 +151,7 @@ impl Node {
     pub fn shutdown(self) -> Result<(), Error> {
         info!("Stopping...");
 
-        block_on(self.shutdown.execute())?;
+        // block_on(self.shutdown.execute())?;
 
         info!("Shutdown complete.");
 

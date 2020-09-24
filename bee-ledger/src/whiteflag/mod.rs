@@ -20,7 +20,7 @@ use crate::state::LedgerState;
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
-use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{bee_node::BeeNode, event::Bus, worker::Worker};
 use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
 
@@ -36,7 +36,6 @@ pub fn init(
     coo_config: ProtocolCoordinatorConfig,
     bee_node: Arc<BeeNode>,
     bus: Arc<Bus<'static>>,
-    shutdown: &mut Shutdown,
 ) -> mpsc::UnboundedSender<LedgerWorkerEvent> {
     // TODO
     // if unsafe { !WHITE_FLAG.is_null() } {
@@ -45,16 +44,13 @@ pub fn init(
     // }
 
     let (ledger_worker_tx, ledger_worker_rx) = mpsc::unbounded();
-    let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
+    let (_, ledger_worker_shutdown_rx) = oneshot::channel();
 
-    shutdown.add_worker_shutdown(
-        ledger_worker_shutdown_tx,
-        spawn(
-            LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone()).start(
-                ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
-                bee_node,
-                (),
-            ),
+    spawn(
+        LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone()).start(
+            ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
+            bee_node,
+            (),
         ),
     );
 

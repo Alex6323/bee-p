@@ -44,7 +44,7 @@ fn main() {
 
     logger::init(log::LevelFilter::Info);
 
-    let (network, events) = bee_network::init(NetworkConfig::build().finish(), &mut shutdown);
+    let (network, events) = bee_network::init(NetworkConfig::build().finish());
 
     let mut node = Node::builder()
         .with_network(network.clone())

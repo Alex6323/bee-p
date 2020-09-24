@@ -11,7 +11,6 @@
 
 use crate::plugin::Plugin;
 
-use bee_common::shutdown::Shutdown;
 use bee_common_ext::event::Bus;
 use bee_protocol::event::TpsMetricsUpdated;
 
@@ -41,7 +40,7 @@ impl Plugin for TpsPlugin {
         "tps"
     }
 
-    fn init(&mut self, bus: Arc<Bus>, _: &mut Shutdown) -> Result<(), Self::Error> {
+    fn init(&mut self, bus: Arc<Bus>) -> Result<(), Self::Error> {
         bus.add_listener(tps);
         Ok(())
     }

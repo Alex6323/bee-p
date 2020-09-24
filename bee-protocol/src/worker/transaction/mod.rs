@@ -27,7 +27,7 @@ mod tests {
         tangle::{self, tangle},
     };
 
-    use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
+    use bee_common::shutdown_stream::ShutdownStream;
     use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
     use bee_crypto::ternary::Hash;
     use bee_network::{EndpointId, NetworkConfig, Url};
@@ -43,26 +43,18 @@ mod tests {
     #[test]
     fn test_tx_workers_with_compressed_buffer() {
         let bee_node = Arc::new(BeeNode::new());
-        let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
         // build network
         let network_config = NetworkConfig::build().finish();
-        let (network, _) = bee_network::init(network_config, &mut shutdown);
+        let (network, _) = bee_network::init(network_config);
 
         // init tangle
         tangle::init();
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        block_on(Protocol::init(
-            protocol_config,
-            network,
-            0,
-            bee_node.clone(),
-            bus,
-            &mut shutdown,
-        ));
+        block_on(Protocol::init(protocol_config, network, 0, bee_node.clone(), bus));
 
         assert_eq!(tangle().len(), 0);
 

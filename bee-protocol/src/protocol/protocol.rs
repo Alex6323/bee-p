@@ -24,7 +24,7 @@ use crate::{
     },
 };
 
-use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{bee_node::BeeNode, event::Bus, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
@@ -72,7 +72,6 @@ impl Protocol {
         local_snapshot_timestamp: u64,
         bee_node: Arc<BeeNode>,
         bus: Arc<Bus<'static>>,
-        shutdown: &mut Shutdown,
     ) {
         if unsafe { !PROTOCOL.is_null() } {
             warn!("Already initialized.");
@@ -80,43 +79,43 @@ impl Protocol {
         }
 
         let (hasher_worker_tx, hasher_worker_rx) = mpsc::unbounded();
-        let (hasher_worker_shutdown_tx, hasher_worker_shutdown_rx) = oneshot::channel();
+        let (_, hasher_worker_shutdown_rx) = oneshot::channel();
 
         let (processor_worker_tx, processor_worker_rx) = mpsc::unbounded();
-        let (processor_worker_shutdown_tx, processor_worker_shutdown_rx) = oneshot::channel();
+        let (_, processor_worker_shutdown_rx) = oneshot::channel();
 
         let (transaction_responder_worker_tx, transaction_responder_worker_rx) = mpsc::unbounded();
-        let (transaction_responder_worker_shutdown_tx, transaction_responder_worker_shutdown_rx) = oneshot::channel();
+        let (_, transaction_responder_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_responder_worker_tx, milestone_responder_worker_rx) = mpsc::unbounded();
-        let (milestone_responder_worker_shutdown_tx, milestone_responder_worker_shutdown_rx) = oneshot::channel();
+        let (_, milestone_responder_worker_shutdown_rx) = oneshot::channel();
 
         let (transaction_requester_worker_tx, transaction_requester_worker_rx) = mpsc::unbounded();
-        let (transaction_requester_worker_shutdown_tx, transaction_requester_worker_shutdown_rx) = oneshot::channel();
+        let (_, transaction_requester_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_requester_worker_tx, milestone_requester_worker_rx) = mpsc::unbounded();
-        let (milestone_requester_worker_shutdown_tx, milestone_requester_worker_shutdown_rx) = oneshot::channel();
+        let (_, milestone_requester_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_validator_worker_tx, milestone_validator_worker_rx) = mpsc::unbounded();
-        let (milestone_validator_worker_shutdown_tx, milestone_validator_worker_shutdown_rx) = oneshot::channel();
+        let (_, milestone_validator_worker_shutdown_rx) = oneshot::channel();
 
         let (broadcaster_worker_tx, broadcaster_worker_rx) = mpsc::unbounded();
-        let (broadcaster_worker_shutdown_tx, broadcaster_worker_shutdown_rx) = oneshot::channel();
+        let (_, broadcaster_worker_shutdown_rx) = oneshot::channel();
 
         let (bundle_validator_worker_tx, bundle_validator_worker_rx) = mpsc::unbounded();
-        let (bundle_validator_worker_shutdown_tx, bundle_validator_worker_shutdown_rx) = oneshot::channel();
+        let (_, bundle_validator_worker_shutdown_rx) = oneshot::channel();
 
         let (solid_propagator_worker_tx, solid_propagator_worker_rx) = mpsc::unbounded();
-        let (solid_propagator_worker_shutdown_tx, solid_propagator_worker_shutdown_rx) = oneshot::channel();
+        let (_, solid_propagator_worker_shutdown_rx) = oneshot::channel();
 
         let (milestone_solidifier_worker_tx, milestone_solidifier_worker_rx) = mpsc::unbounded();
-        let (milestone_solidifier_worker_shutdown_tx, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
+        let (_, milestone_solidifier_worker_shutdown_rx) = oneshot::channel();
 
-        let (status_worker_shutdown_tx, status_worker_shutdown_rx) = oneshot::channel();
+        let (_, status_worker_shutdown_rx) = oneshot::channel();
 
-        let (tps_worker_shutdown_tx, tps_worker_shutdown_rx) = oneshot::channel();
+        let (_, tps_worker_shutdown_rx) = oneshot::channel();
 
-        let (kickstart_worker_shutdown_tx, kickstart_worker_shutdown_rx) = oneshot::channel();
+        let (_, kickstart_worker_shutdown_rx) = oneshot::channel();
 
         let protocol = Protocol {
             config,
@@ -145,174 +144,126 @@ impl Protocol {
         // Protocol::get().bus.add_listener(on_snapshot_milestone_changed);
         Protocol::get().bus.add_listener(on_latest_milestone_changed);
 
-        shutdown.add_worker_shutdown(
-            hasher_worker_shutdown_tx,
-            spawn(HasherWorker::<BeeNode>::new(processor_worker_tx).start(
-                <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
-                    Protocol::get().config.workers.transaction_worker_cache,
-                    ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
-                ),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(HasherWorker::<BeeNode>::new(processor_worker_tx).start(
+            <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(
+                Protocol::get().config.workers.transaction_worker_cache,
+                ShutdownStream::new(hasher_worker_shutdown_rx, hasher_worker_rx),
+            ),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            processor_worker_shutdown_tx,
-            spawn(ProcessorWorker::new(milestone_validator_worker_tx).start(
-                ShutdownStream::new(processor_worker_shutdown_rx, processor_worker_rx),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(ProcessorWorker::new(milestone_validator_worker_tx).start(
+            ShutdownStream::new(processor_worker_shutdown_rx, processor_worker_rx),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            transaction_responder_worker_shutdown_tx,
-            spawn(TransactionResponderWorker::new().start(
-                ShutdownStream::new(
-                    transaction_responder_worker_shutdown_rx,
-                    transaction_responder_worker_rx,
-                ),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(TransactionResponderWorker::new().start(
+            ShutdownStream::new(
+                transaction_responder_worker_shutdown_rx,
+                transaction_responder_worker_rx,
+            ),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            milestone_responder_worker_shutdown_tx,
-            spawn(MilestoneResponderWorker::new().start(
-                ShutdownStream::new(milestone_responder_worker_shutdown_rx, milestone_responder_worker_rx),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(MilestoneResponderWorker::new().start(
+            ShutdownStream::new(milestone_responder_worker_shutdown_rx, milestone_responder_worker_rx),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            transaction_requester_worker_shutdown_tx,
-            spawn(TransactionRequesterWorker::new().start(
-                ShutdownStream::from_fused(
-                    transaction_requester_worker_shutdown_rx,
-                    transaction_requester_worker_rx,
-                ),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(TransactionRequesterWorker::new().start(
+            ShutdownStream::from_fused(
+                transaction_requester_worker_shutdown_rx,
+                transaction_requester_worker_rx,
+            ),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            milestone_requester_worker_shutdown_tx,
-            spawn(MilestoneRequesterWorker::new().start(
-                ShutdownStream::from_fused(milestone_requester_worker_shutdown_rx, milestone_requester_worker_rx),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(MilestoneRequesterWorker::new().start(
+            ShutdownStream::from_fused(milestone_requester_worker_shutdown_rx, milestone_requester_worker_rx),
+            bee_node.clone(),
+            (),
+        ));
 
         match Protocol::get().config.coordinator.sponge_type {
-            SpongeKind::Kerl => shutdown.add_worker_shutdown(
-                milestone_validator_worker_shutdown_tx,
-                spawn(MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new().start(
+            SpongeKind::Kerl => spawn(MilestoneValidatorWorker::<Kerl, WotsPublicKey<Kerl>>::new().start(
+                ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
+                bee_node.clone(),
+                (),
+            )),
+            SpongeKind::CurlP27 => spawn(
+                MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new().start(
                     ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
                     bee_node.clone(),
                     (),
-                )),
-            ),
-            SpongeKind::CurlP27 => shutdown.add_worker_shutdown(
-                milestone_validator_worker_shutdown_tx,
-                spawn(
-                    MilestoneValidatorWorker::<CurlP27, WotsPublicKey<CurlP27>>::new().start(
-                        ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
-                        bee_node.clone(),
-                        (),
-                    ),
                 ),
             ),
-            SpongeKind::CurlP81 => shutdown.add_worker_shutdown(
-                milestone_validator_worker_shutdown_tx,
-                spawn(
-                    MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new().start(
-                        ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
-                        bee_node.clone(),
-                        (),
-                    ),
+            SpongeKind::CurlP81 => spawn(
+                MilestoneValidatorWorker::<CurlP81, WotsPublicKey<CurlP81>>::new().start(
+                    ShutdownStream::new(milestone_validator_worker_shutdown_rx, milestone_validator_worker_rx),
+                    bee_node.clone(),
+                    (),
                 ),
             ),
         };
 
-        shutdown.add_worker_shutdown(
-            broadcaster_worker_shutdown_tx,
-            spawn(BroadcasterWorker::new(network).start(
-                ShutdownStream::new(broadcaster_worker_shutdown_rx, broadcaster_worker_rx),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(BroadcasterWorker::new(network).start(
+            ShutdownStream::new(broadcaster_worker_shutdown_rx, broadcaster_worker_rx),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            bundle_validator_worker_shutdown_tx,
-            spawn(BundleValidatorWorker::new().start(
-                ShutdownStream::new(bundle_validator_worker_shutdown_rx, bundle_validator_worker_rx),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(BundleValidatorWorker::new().start(
+            ShutdownStream::new(bundle_validator_worker_shutdown_rx, bundle_validator_worker_rx),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            solid_propagator_worker_shutdown_tx,
-            spawn(SolidPropagatorWorker::new(bundle_validator_worker_tx).start(
-                ShutdownStream::new(solid_propagator_worker_shutdown_rx, solid_propagator_worker_rx),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(SolidPropagatorWorker::new(bundle_validator_worker_tx).start(
+            ShutdownStream::new(solid_propagator_worker_shutdown_rx, solid_propagator_worker_rx),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            status_worker_shutdown_tx,
-            spawn(StatusWorker::new().start(
-                ShutdownStream::new(
-                    status_worker_shutdown_rx,
-                    StatusWorker::interval(Protocol::get().config.workers.status_interval),
-                ),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(StatusWorker::new().start(
+            ShutdownStream::new(
+                status_worker_shutdown_rx,
+                StatusWorker::interval(Protocol::get().config.workers.status_interval),
+            ),
+            bee_node.clone(),
+            (),
+        ));
 
-        shutdown.add_worker_shutdown(
-            tps_worker_shutdown_tx,
-            spawn(TpsWorker::new().start(
-                ShutdownStream::new(tps_worker_shutdown_rx, TpsWorker::interval()),
-                bee_node.clone(),
-                (),
-            )),
-        );
+        spawn(TpsWorker::new().start(
+            ShutdownStream::new(tps_worker_shutdown_rx, TpsWorker::interval()),
+            bee_node.clone(),
+            (),
+        ));
 
         let (ms_send, ms_recv) = oneshot::channel();
 
-        shutdown.add_worker_shutdown(
-            kickstart_worker_shutdown_tx,
-            spawn(
-                KickstartWorker::new(ms_send, Protocol::get().config.workers.ms_sync_count).start(
-                    ShutdownStream::new(kickstart_worker_shutdown_rx, KickstartWorker::interval()),
-                    bee_node.clone(),
-                    (),
-                ),
+        spawn(
+            KickstartWorker::new(ms_send, Protocol::get().config.workers.ms_sync_count).start(
+                ShutdownStream::new(kickstart_worker_shutdown_rx, KickstartWorker::interval()),
+                bee_node.clone(),
+                (),
             ),
         );
 
-        shutdown.add_worker_shutdown(
-            milestone_solidifier_worker_shutdown_tx,
-            spawn(async move {
-                MilestoneSolidifierWorker::new(ms_recv)
-                    .await
-                    .start(
-                        ShutdownStream::new(milestone_solidifier_worker_shutdown_rx, milestone_solidifier_worker_rx),
-                        bee_node.clone(),
-                        (),
-                    )
-                    .await
-            }),
-        );
+        spawn(async move {
+            MilestoneSolidifierWorker::new(ms_recv)
+                .await
+                .start(
+                    ShutdownStream::new(milestone_solidifier_worker_shutdown_rx, milestone_solidifier_worker_rx),
+                    bee_node.clone(),
+                    (),
+                )
+                .await
+        });
     }
 
     pub(crate) fn get() -> &'static Protocol {
