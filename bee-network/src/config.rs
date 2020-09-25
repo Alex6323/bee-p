@@ -9,96 +9,85 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::address::{Address, Port};
+use crate::util::Port;
 
 use serde::Deserialize;
 
-use std::{net::IpAddr, time::Duration};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+const DEFAULT_BINDING_PORT: Port = 15600;
+const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+
+pub const DEFAULT_MAX_TCP_BUFFER_SIZE: usize = 1654;
+pub const DEFAULT_RECONNECT_INTERVAL: u64 = 60;
 
 /// Network configuration builder.
 #[derive(Default, Deserialize)]
 pub struct NetworkConfigBuilder {
     binding_port: Option<u16>,
-    binding_addr: Option<IpAddr>,
+    binding_address: Option<IpAddr>,
+    max_tcp_buffer_size: Option<usize>,
     reconnect_interval: Option<u64>,
 }
 
 impl NetworkConfigBuilder {
-    /// Creates a new config builder.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Sets the binding port for the network.
-    pub fn binding_port(mut self, port: u16) -> Self {
+    pub fn binding_port(mut self, port: Port) -> Self {
         self.binding_port.replace(port);
         self
     }
 
-    /// Sets the binding address for the network.
-    pub fn binding_addr(mut self, addr: &str) -> Self {
-        match addr.parse() {
-            Ok(addr) => {
-                self.binding_addr.replace(addr);
+    pub fn binding_address(mut self, binding_address: &str) -> Self {
+        match binding_address.parse() {
+            Ok(binding_address) => {
+                self.binding_address.replace(binding_address);
             }
             Err(e) => panic!("Error parsing address: {:?}", e),
         }
         self
     }
 
-    /// Sets the interval (in seconds) reconnection attempts occur.
     pub fn reconnect_interval(mut self, interval: u64) -> Self {
         self.reconnect_interval.replace(interval);
+        self
+    }
+
+    pub fn max_tcp_buffer_size(mut self, max_tcp_buffer_size: usize) -> Self {
+        self.max_tcp_buffer_size.replace(max_tcp_buffer_size);
         self
     }
 
     /// Builds the network config.
     pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
-            binding_port: Port(self.binding_port.unwrap_or(crate::constants::DEFAULT_BINDING_PORT)),
-            binding_addr: self.binding_addr.unwrap_or(crate::constants::DEFAULT_BINDING_ADDR),
-            reconnect_interval: Duration::from_secs(
-                self.reconnect_interval
-                    .unwrap_or(crate::constants::DEFAULT_RECONNECT_INTERVAL),
-            ),
+            binding_port: self.binding_port.unwrap_or(DEFAULT_BINDING_PORT),
+            binding_address: self.binding_address.unwrap_or(DEFAULT_BINDING_ADDR),
+            max_tcp_buffer_size: self.max_tcp_buffer_size.unwrap_or(DEFAULT_MAX_TCP_BUFFER_SIZE),
+            reconnect_interval: self.reconnect_interval.unwrap_or(DEFAULT_RECONNECT_INTERVAL),
         }
     }
 }
 
-/// Network configuration.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct NetworkConfig {
-    pub(crate) binding_port: Port,
-    pub(crate) binding_addr: IpAddr,
-    pub(crate) reconnect_interval: Duration,
+    pub binding_port: Port,
+    pub binding_address: IpAddr,
+    pub max_tcp_buffer_size: usize,
+    pub reconnect_interval: u64,
 }
 
 impl NetworkConfig {
-    /// Returns a builder for this config.
-    pub fn build() -> NetworkConfigBuilder {
+    pub fn builder() -> NetworkConfigBuilder {
         NetworkConfigBuilder::new()
     }
 
-    /// Returns the listening address.
-    pub fn socket_addr(&self) -> Address {
-        match self.binding_addr {
-            IpAddr::V4(addr) => Address::from_v4_addr_and_port(addr, self.binding_port),
-            IpAddr::V6(addr) => Address::from_v6_addr_and_port(addr, self.binding_port),
+    pub fn socket_address(&self) -> SocketAddr {
+        match self.binding_address {
+            IpAddr::V4(address) => SocketAddr::new(IpAddr::V4(address), self.binding_port),
+            IpAddr::V6(address) => SocketAddr::new(IpAddr::V6(address), self.binding_port),
         }
-    }
-
-    /// Returns the port of the listening address.
-    pub fn binding_port(&self) -> Port {
-        self.binding_port
-    }
-
-    /// Returns the listening IP address.
-    pub fn binding_addr(&self) -> IpAddr {
-        self.binding_addr
-    }
-
-    /// Returns the interval between reconnect attempts.
-    pub fn reconnect_interval(&self) -> Duration {
-        self.reconnect_interval
     }
 }

@@ -12,7 +12,6 @@
 use crate::local::LocalSnapshotConfig;
 
 use log::{error, info, warn};
-use tokio::runtime::Runtime;
 
 use std::{fs::File, io::copy, path::Path};
 
@@ -24,29 +23,27 @@ pub enum Error {
 // TODO remove tokio runtime when we switch bee to tokio.
 // TODO copy is not really streaming ?
 // TODO temporary file until fully downloaded ?
-pub fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error> {
+pub async fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error> {
     let path = config.path();
-
-    let mut rt = Runtime::new().unwrap();
 
     let config = config.clone();
 
-    rt.block_on(async move {
-        for url in config.download_urls() {
-            info!("Downloading local snapshot file from {}...", url);
-            match reqwest::get(url).await {
-                Ok(res) => match File::create(config.path()) {
-                    // TODO unwrap
-                    Ok(mut file) => match copy(&mut res.bytes().await.unwrap().as_ref(), &mut file) {
-                        Ok(_) => break,
-                        Err(e) => warn!("Copying local snapshot file failed: {:?}.", e),
-                    },
-                    Err(e) => warn!("Creating local snapshot file failed: {:?}.", e),
+    // rt.block_on(async move {
+    for url in config.download_urls() {
+        info!("Downloading local snapshot file from {}...", url);
+        match reqwest::get(url).await {
+            Ok(res) => match File::create(config.path()) {
+                // TODO unwrap
+                Ok(mut file) => match copy(&mut res.bytes().await.unwrap().as_ref(), &mut file) {
+                    Ok(_) => break,
+                    Err(e) => warn!("Copying local snapshot file failed: {:?}.", e),
                 },
-                Err(e) => warn!("Downloading local snapshot file failed: {:?}.", e),
-            }
+                Err(e) => warn!("Creating local snapshot file failed: {:?}.", e),
+            },
+            Err(e) => warn!("Downloading local snapshot file failed: {:?}.", e),
         }
-    });
+    }
+    // });
 
     // TODO here or outside ?
     if Path::new(path).exists() {

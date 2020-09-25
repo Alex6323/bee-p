@@ -11,7 +11,7 @@
 
 use crate::{manual::config::ManualPeeringConfig, PeerManager};
 
-use bee_network::{Command::AddEndpoint, Network, Url};
+use bee_network::{Command::AddEndpoint, Network};
 
 use async_trait::async_trait;
 use log::warn;
@@ -30,15 +30,8 @@ impl ManualPeerManager {
     }
 
     async fn add_endpoint(&mut self, url: &str) {
-        match Url::from_url_str(url).await {
-            Ok(url) => {
-                if let Err(e) = self.network.send(AddEndpoint { url, responder: None }).await {
-                    warn!("Failed to add endpoint \"{}\": {}", url, e);
-                }
-            }
-            Err(e) => {
-                warn!("Failed to resolve URL \"{}\": {}", url, e);
-            }
+        if let Err(e) = self.network.send(AddEndpoint { url: url.to_string() }).await {
+            warn!("Failed to add endpoint \"{}\": {}", url, e);
         }
     }
 }

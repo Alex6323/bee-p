@@ -20,7 +20,6 @@ bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 
-async-std = "1.6.2"
 async-trait = "0.1.40"
 bitflags = "1.2.1"
 bytemuck = "1.2.0"
@@ -31,8 +30,10 @@ log = "0.4.8"
 pin-project = "0.4"
 serde = { version = "1.0.114", features = ["derive" ] }
 twox-hash = "1.5.0"
+tokio = { version = "0.2.22", features = ["sync", "time"] }
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }
 
 rand = "0.7.3"
+tokio = { version = "0.2.22", features = ["macros"] }

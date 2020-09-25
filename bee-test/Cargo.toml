@@ -19,7 +19,7 @@ bee-storage-rocksdb = { path = "../bee-storage/bee-storage-rocksdb" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 
-async-std = { version = "1.6.2", features = [ "attributes" ] }
 futures = "0.3.5"
 num_cpus = "1.12.0"
 rand = "0.7.3"
+tokio = { version = "0.2.22", features = ["macros"] }

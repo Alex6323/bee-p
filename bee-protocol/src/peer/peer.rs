@@ -9,16 +9,18 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_network::{Address, EndpointId, Origin};
+use bee_network::{EndpointId, Origin};
+
+use std::net::SocketAddr;
 
 pub(crate) struct Peer {
     pub(crate) epid: EndpointId,
-    pub(crate) address: Address,
+    pub(crate) address: SocketAddr,
     pub(crate) origin: Origin,
 }
 
 impl Peer {
-    pub fn new(epid: EndpointId, address: Address, origin: Origin) -> Self {
+    pub fn new(epid: EndpointId, address: SocketAddr, origin: Origin) -> Self {
         Self { epid, address, origin }
     }
 }

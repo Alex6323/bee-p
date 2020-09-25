@@ -14,10 +14,10 @@ use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle, worke
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
-use async_std::stream::interval;
 use async_trait::async_trait;
 use futures::{channel::oneshot, StreamExt};
 use log::info;
+use tokio::time::{interval, Instant, Interval};
 
 use std::time::Duration;
 
@@ -37,7 +37,7 @@ impl<N: Node> Worker<N> for KickstartWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
-            while let Some(()) = receiver.next().await {
+            while let Some(_) = receiver.next().await {
                 let next_ms = *tangle().get_latest_solid_milestone_index() + 1;
                 let latest_ms = *tangle().get_latest_milestone_index();
 

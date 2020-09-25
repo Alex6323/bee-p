@@ -54,9 +54,8 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
                     } {
                         match config
                             .send(SendMessage {
-                                epid: *peer.key(),
-                                bytes: bytes.clone(),
-                                responder: None,
+                                receiver_epid: *peer.key(),
+                                message: bytes.clone(),
                             })
                             .await
                         {

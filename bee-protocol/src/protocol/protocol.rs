@@ -26,14 +26,14 @@ use crate::{
 
 use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
-use bee_network::{Address, EndpointId, Network, Origin};
+use bee_network::{EndpointId, Network, Origin};
 
-use async_std::task::spawn;
 use dashmap::DashMap;
 use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
+use tokio::spawn;
 
-use std::{ptr, sync::Arc, time::Instant};
+use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -166,7 +166,7 @@ impl Protocol {
     pub fn register(
         bee_node: &BeeNode,
         epid: EndpointId,
-        address: Address,
+        address: SocketAddr,
         origin: Origin,
     ) -> (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?

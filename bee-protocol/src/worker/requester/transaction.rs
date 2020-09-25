@@ -20,7 +20,6 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_ternary::T5B1Buf;
 
-use async_std::stream::interval;
 use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{
@@ -28,6 +27,7 @@ use futures::{
     select, StreamExt,
 };
 use log::{debug, info};
+use tokio::time::{interval, Interval};
 
 use std::time::{Duration, Instant};
 

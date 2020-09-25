@@ -10,45 +10,48 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    commands::{Command, CommandSender},
+    command::{Command, CommandSender},
     config::NetworkConfig,
 };
 
-use err_derive::Error;
 use futures::sink::SinkExt;
+use thiserror::Error;
+
+use std::sync::Arc;
 
 #[derive(Debug, Error)]
-pub enum NetworkError {
-    #[error(display = "error sending command")]
-    CommandSendFailure(#[source] futures::channel::mpsc::SendError),
+pub enum Error {
+    #[error("Error sending command.")]
+    CommandSendFailure(#[from] futures::channel::mpsc::SendError),
+    #[error("Error sending unbounded command.")]
+    CommandSendUnboundedFailure,
 }
 
-pub type NetworkResult = std::result::Result<(), NetworkError>;
-
-/// A wrapper around an mpsc channel half, that allows sending `Command`s to the network layer.
-///
-/// Note, that this type can be cloned to pass it to multiple threads.
 #[derive(Clone, Debug)]
 pub struct Network {
-    config: NetworkConfig,
-    inner: CommandSender,
+    config: Arc<NetworkConfig>,
+    command_sender: CommandSender,
 }
 
 impl Network {
-    /// Creates a new instance.
-    pub fn new(config: NetworkConfig, cmd_sender: CommandSender) -> Self {
+    pub(crate) fn new(config: NetworkConfig, command_sender: CommandSender) -> Self {
         Self {
-            config,
-            inner: cmd_sender,
+            config: Arc::new(config),
+            command_sender,
         }
     }
 
-    /// Sends a `Command` to the network layer.
-    pub async fn send(&mut self, command: Command) -> NetworkResult {
-        Ok(self.inner.send(command).await?)
+    pub async fn send(&mut self, command: Command) -> Result<(), Error> {
+        Ok(self.command_sender.send(command).await?)
     }
 
-    /// Provides access to the network config.
+    pub fn unbounded_send(&self, command: Command) -> Result<(), Error> {
+        Ok(self
+            .command_sender
+            .unbounded_send(command)
+            .map_err(|_| Error::CommandSendUnboundedFailure)?)
+    }
+
     pub fn config(&self) -> &NetworkConfig {
         &self.config
     }

@@ -11,8 +11,6 @@
 
 use bee_common_ext::wait_priority_queue::WaitPriorityQueue;
 
-use async_std::task::block_on;
-
 use std::cmp::Ordering;
 
 #[derive(Eq, PartialEq, Debug)]
@@ -30,8 +28,8 @@ impl Ord for TestMinHeapEntry {
     }
 }
 
-#[test]
-fn min_heap() {
+#[tokio::test]
+async fn min_heap() {
     let queue = WaitPriorityQueue::default();
 
     queue.push(TestMinHeapEntry(5, 'F'));
@@ -45,14 +43,14 @@ fn min_heap() {
     queue.push(TestMinHeapEntry(8, 'I'));
     queue.push(TestMinHeapEntry(4, 'E'));
 
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(0, 'A'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(1, 'B'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(2, 'C'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(3, 'D'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(4, 'E'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(5, 'F'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(6, 'G'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(7, 'H'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(8, 'I'));
-    assert_eq!(block_on(queue.pop()), TestMinHeapEntry(9, 'J'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(0, 'A'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(1, 'B'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(2, 'C'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(3, 'D'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(4, 'E'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(5, 'F'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(6, 'G'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(7, 'H'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(8, 'I'));
+    assert_eq!(queue.pop().await, TestMinHeapEntry(9, 'J'));
 }

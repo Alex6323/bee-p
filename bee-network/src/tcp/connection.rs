@@ -9,48 +9,68 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{endpoint::origin::Origin, errors::ConnectionResult};
+use super::Error;
 
-use async_std::{
-    net::{SocketAddr, TcpStream},
-    sync::Arc,
+use std::net::SocketAddr;
+
+use tokio::net::{
+    tcp::{OwnedReadHalf, OwnedWriteHalf},
+    TcpStream,
 };
 
 use std::fmt;
 
-#[derive(Clone)]
-pub struct TcpConnection {
-    pub origin: Origin,
-    pub local_addr: SocketAddr,
-    pub remote_addr: SocketAddr,
-    pub stream: Arc<TcpStream>,
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Origin {
+    Inbound,
+    Outbound,
 }
 
-impl TcpConnection {
-    pub fn new(stream: TcpStream, origin: Origin) -> ConnectionResult<Self> {
-        let local_addr = stream.local_addr()?;
-        let remote_addr = stream.peer_addr()?;
-        let stream = Arc::new(stream);
+impl fmt::Display for Origin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match *self {
+            Origin::Outbound => "outbound",
+            Origin::Inbound => "inbound",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+// #[derive(Clone)]
+pub struct Connection {
+    pub origin: Origin,
+    pub own_address: SocketAddr,
+    pub peer_address: SocketAddr,
+    pub reader: OwnedReadHalf,
+    pub writer: OwnedWriteHalf,
+}
+
+impl Connection {
+    pub fn new(stream: TcpStream, origin: Origin) -> Result<Self, Error> {
+        let own_address = stream.local_addr()?;
+        let peer_address = stream.peer_addr()?;
+
+        let (reader, writer) = stream.into_split();
 
         Ok(Self {
             origin,
-            local_addr,
-            remote_addr,
-            stream,
+            own_address,
+            peer_address,
+            reader,
+            writer,
         })
     }
 }
 
-impl fmt::Display for TcpConnection {
+impl fmt::Display for Connection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} <-> {}", self.local_addr, self.remote_addr)
+        write!(f, "{} <-> {}", self.own_address, self.peer_address)
     }
 }
 
-impl Eq for TcpConnection {}
-impl PartialEq for TcpConnection {
+impl Eq for Connection {}
+impl PartialEq for Connection {
     fn eq(&self, other: &Self) -> bool {
-        // TODO: use socket address instead of IP
-        self.remote_addr.ip() == other.remote_addr.ip()
+        self.peer_address == other.peer_address
     }
 }

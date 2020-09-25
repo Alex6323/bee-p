@@ -39,9 +39,8 @@ macro_rules! implement_sender_worker {
                     .network
                     .clone()
                     .send(SendMessage {
-                        epid: *epid,
-                        bytes: tlv_into_bytes(message),
-                        responder: None,
+                        receiver_epid: *epid,
+                        message: tlv_into_bytes(message),
                     })
                     .await
                 {

@@ -23,9 +23,7 @@ pub use tangle::Tangle;
 
 use bee_transaction::bundled::BundledTransaction as Transaction;
 
-use async_std::sync::Arc;
-
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 /// A thread-safe reference to a `bee_transaction:BundledTransaction`.
 #[derive(Clone)]

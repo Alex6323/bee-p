@@ -14,12 +14,12 @@ use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
-use async_std::stream::interval;
 use async_trait::async_trait;
 use futures::StreamExt;
 use log::info;
+use tokio::time::{interval, Instant, Interval};
 
-use std::{time::Duration};
+use std::time::Duration;
 
 #[derive(Default)]
 pub(crate) struct TpsWorker {}
