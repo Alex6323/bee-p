@@ -145,7 +145,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 metadata.flags_mut().set_requested(requested);
 
                 // store transaction
-                if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
+                if let Some(transaction) = tangle().insert(transaction, hash, metadata).await {
                     // TODO this was temporarily moved from the tangle.
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
@@ -160,10 +160,10 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                             let trunk = transaction.trunk();
                             let branch = transaction.branch();
 
-                            Protocol::request_transaction(&transaction_requester, *trunk, index);
+                            Protocol::request_transaction(&transaction_requester, *trunk, index).await;
 
                             if trunk != branch {
-                                Protocol::request_transaction(&transaction_requester, *branch, index);
+                                Protocol::request_transaction(&transaction_requester, *branch, index).await;
                             }
                         }
                         None => {

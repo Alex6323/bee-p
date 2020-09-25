@@ -15,45 +15,95 @@ use bee_crypto::ternary::Hash;
 use bee_transaction::{bundled::BundledTransaction as Tx, Vertex as MessageVertex};
 
 use dashmap::{mapref::entry::Entry, DashMap, DashSet};
+use lru::LruCache;
 
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    sync::{RwLock, atomic::{AtomicU64, Ordering}},
+    marker::PhantomData,
+};
+
+const CACHE_LEN: usize = 65536;
+
+pub trait Hooks<T> {
+    type Error;
+
+    fn get(&self, hash: &Hash) -> Result<(Transaction, T), Self::Error>;
+    fn insert(&self, hash: Hash, tx: Transaction, metadata: T) -> Result<(), Self::Error>;
+}
+
+pub struct NullHooks<T>(PhantomData<T>);
+
+impl<T> Default for NullHooks<T> {
+    fn default() -> Self { Self(PhantomData) }
+}
+
+impl<T> Hooks<T> for NullHooks<T> {
+    type Error = ();
+
+    fn get(&self, hash: &Hash) -> Result<(Transaction, T), Self::Error> {
+        Err(())
+    }
+
+    fn insert(&self, hash: Hash, tx: Transaction, metadata: T) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
 
 /// A foundational, thread-safe graph datastructure to represent the IOTA Tangle.
-pub struct Tangle<T>
+pub struct Tangle<T, H: Hooks<T> = NullHooks<T>>
 where
     T: Clone + Copy,
 {
     pub(crate) vertices: DashMap<Hash, Vertex<T>>,
     pub(crate) children: DashMap<Hash, HashSet<Hash>>,
     pub(crate) tips: DashSet<Hash>,
-    // TODO: PriorityQueue with customizable priority for implementing cache eviction strategy
+
+    pub(crate) cache_counter: AtomicU64,
+    pub(crate) cache_queue: RwLock<LruCache<Hash, u64>>,
+
+    pub(crate) hooks: H,
 }
 
-impl<T> Default for Tangle<T>
+impl<T, H: Hooks<T>> Default for Tangle<T, H>
 where
     T: Clone + Copy,
+    H: Default,
 {
     fn default() -> Self {
-        Self {
-            vertices: DashMap::new(),
-            children: DashMap::new(),
-            tips: DashSet::new(),
-        }
+        Self::new(H::default())
     }
 }
 
-impl<T> Tangle<T>
+impl<T, H: Hooks<T>> Tangle<T, H>
 where
     T: Clone + Copy,
 {
     /// Creates a new Tangle.
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(hooks: H) -> Self {
+        Self {
+            vertices: DashMap::new(),
+            children: DashMap::new(),
+            tips: DashSet::new(),
+
+            cache_counter: AtomicU64::new(0),
+            cache_queue: RwLock::new(LruCache::new(CACHE_LEN + 1)),
+
+            hooks,
+        }
+    }
+
+    /// Create a new tangle with the given capacity.
+    pub fn with_capacity(cap: usize) -> Self {
+        Self {
+            cache_queue: RwLock::new(LruCache::new(cap + 1)),
+            ..Self::default()
+        }
     }
 
     /// Inserts a transaction, and returns a thread-safe reference to it in case it didn't already exist.
-    pub fn insert(&self, hash: Hash, transaction: Tx, metadata: T) -> Option<TxRef> {
-        match self.vertices.entry(hash) {
+    pub async fn insert(&self, hash: Hash, transaction: Tx, metadata: T) -> Option<TxRef> {
+        let r = match self.vertices.entry(hash) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
                 self.add_child(*transaction.trunk(), hash);
@@ -73,9 +123,17 @@ where
                 let vtx = Vertex::new(transaction, metadata);
                 let tx = vtx.transaction().clone();
                 entry.insert(vtx);
+
+                // Insert cache queue entry to track eviction priority
+                self.cache_queue.write().unwrap().put(hash.clone(), self.generate_cache_index());
+
                 Some(tx)
             }
-        }
+        };
+
+        self.perform_eviction();
+
+        r
     }
 
     #[inline]
@@ -95,13 +153,30 @@ where
     }
 
     /// Get the data of a vertex associated with the given `hash`.
-    pub fn get(&self, hash: &Hash) -> Option<TxRef> {
-        self.vertices.get(hash).map(|vtx| vtx.value().transaction().clone())
+    pub async fn get(&self, hash: &Hash) -> Option<TxRef> {
+        self.pull_transaction(hash).await;
+
+        self.vertices
+            .get(hash)
+            .map(|vtx| {
+                let mut cache_queue = self.cache_queue.write().unwrap();
+                // Update hash priority
+                let entry = cache_queue.get_mut(hash);
+                let entry = if entry.is_none() {
+                    cache_queue.put(hash.clone(), 0);
+                    cache_queue.get_mut(hash)
+                } else {
+                    entry
+                };
+                *entry.unwrap() = self.generate_cache_index();
+
+                vtx.value().transaction().clone()
+            })
     }
 
     /// Returns whether the transaction is stored in the Tangle.
-    pub fn contains(&self, hash: &Hash) -> bool {
-        self.vertices.contains_key(hash)
+    pub async fn contains(&self, hash: &Hash) -> bool {
+        self.vertices.contains_key(hash) || self.pull_transaction(hash).await
     }
 
     /// Get the metadata of a vertex associated with the given `hash`.
@@ -161,12 +236,42 @@ where
         self.children.clear();
         self.tips.clear();
     }
+
+    // Attempts to pull the transaction from the storage, returns true if successful.
+    async fn pull_transaction(&self, hash: &Hash) -> bool {
+        // If the tangle already contains the tx, do no more work
+        if self.vertices.contains_key(hash) {
+            true
+        } else {
+            false
+            //todo!()
+        }
+    }
+
+    fn generate_cache_index(&self) -> u64 {
+        self.cache_counter.fetch_add(1, Ordering::Relaxed)
+    }
+
+    fn perform_eviction(&self) {
+        let mut cache = self.cache_queue.write().unwrap();
+
+        assert_eq!(cache.len(), self.len());
+
+        if cache.len() == cache.cap() {
+            let (hash, _) = cache.pop_lru().expect("Cache capacity is zero");
+
+            self.vertices.remove(&hash).expect("Expected vertex entry to exist");
+            self.children.remove(&hash);
+            self.tips.remove(&hash);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use bee_test::transaction::create_random_tx;
+    use pollster::block_on;
 
     #[test]
     fn new_tangle() {
@@ -179,18 +284,58 @@ mod tests {
 
         let (hash, tx) = create_random_tx();
 
-        let insert1 = tangle.insert(hash, tx.clone(), ());
+        let insert1 = block_on(tangle.insert(hash, tx.clone(), ()));
 
         assert!(insert1.is_some());
         assert_eq!(1, tangle.len());
-        assert!(tangle.contains(&hash));
+        assert!(block_on(tangle.contains(&hash)));
         assert_eq!(1, tangle.num_tips());
 
-        let insert2 = tangle.insert(hash, tx, ());
+        let insert2 = block_on(tangle.insert(hash, tx, ()));
 
         assert!(insert2.is_none());
         assert_eq!(1, tangle.len());
-        assert!(tangle.contains(&hash));
+        assert!(block_on(tangle.contains(&hash)));
         assert_eq!(1, tangle.num_tips());
+    }
+
+    #[test]
+    fn eviction_cap() {
+        let tangle = Tangle::with_capacity(5);
+
+        let txs = (0..10)
+            .map(|_| create_random_tx())
+            .collect::<Vec<_>>();
+
+        for (hash, tx) in txs.iter() {
+            let _ = block_on(tangle.insert(hash.clone(), tx.clone(), ()));
+        }
+
+        assert_eq!(tangle.len(), 5);
+    }
+
+    #[test]
+    fn eviction_update() {
+        let tangle = Tangle::with_capacity(5);
+
+        let txs = (0..8)
+            .map(|_| create_random_tx())
+            .collect::<Vec<_>>();
+
+        for (hash, tx) in txs.iter().take(4) {
+            let _ = block_on(tangle.insert(hash.clone(), tx.clone(), ()));
+        }
+
+        assert!(block_on(tangle.get(&txs[0].0)).is_some());
+
+        for (hash, tx) in txs.iter().skip(4) {
+            let _ = block_on(tangle.insert(hash.clone(), tx.clone(), ()));
+        }
+
+        assert!(block_on(tangle.contains(&txs[0].0)));
+
+        for entry in tangle.vertices.iter() {
+            assert!(entry.key() == &txs[0].0 || txs[4..].iter().find(|(h, _)| entry.key() == h).is_some());
+        }
     }
 }

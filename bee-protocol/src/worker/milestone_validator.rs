@@ -46,7 +46,7 @@ pub(crate) struct MilestoneValidatorWorker {
     pub(crate) tx: flume::Sender<MilestoneValidatorWorkerEvent>,
 }
 
-fn validate_milestone<N, M, P>(tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError>
+async fn validate_milestone<N, M, P>(tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError>
 where
     N: Node,
     M: Sponge + Default + Send + Sync + 'static,
@@ -57,6 +57,7 @@ where
     let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
     let mut transaction = tangle()
         .get(&tail_hash)
+        .await
         .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
     // TODO consider using the metadata instead as it might be more efficient
@@ -70,6 +71,7 @@ where
     for _ in 0..Protocol::get().config.coordinator.security_level {
         transaction = tangle()
             .get((*transaction).trunk())
+            .await
             .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
         builder.push((*transaction).clone());
@@ -98,12 +100,6 @@ where
         let (tx, rx) = flume::unbounded();
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
 
-        let validate = match config {
-            SpongeKind::Kerl => |hash| validate_milestone::<N, Kerl, WotsPublicKey<Kerl>>(hash),
-            SpongeKind::CurlP27 => |hash| validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>>(hash),
-            SpongeKind::CurlP81 => |hash| validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>>(hash),
-        };
-
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
@@ -123,7 +119,11 @@ where
                         if meta.flags().is_milestone() {
                             continue;
                         }
-                        match validate(tail_hash) {
+                        match match config {
+                            SpongeKind::Kerl => validate_milestone::<N, Kerl, WotsPublicKey<Kerl>>(tail_hash).await,
+                            SpongeKind::CurlP27 => validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>>(tail_hash).await,
+                            SpongeKind::CurlP81 => validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>>(tail_hash).await,
+                        } {
                             Ok(milestone) => {
                                 tangle().add_milestone(milestone.index, milestone.hash);
 

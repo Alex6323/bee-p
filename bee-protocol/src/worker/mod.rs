@@ -19,8 +19,10 @@ mod requester;
 mod responder;
 mod solidifier;
 mod status;
+mod storage;
 mod tps;
 mod transaction;
+mod tangle;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};

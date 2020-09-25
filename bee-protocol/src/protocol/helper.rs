@@ -82,12 +82,12 @@ impl Protocol {
 
     // TransactionRequest
 
-    pub(crate) fn request_transaction(
+    pub(crate) async fn request_transaction(
         transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
         hash: Hash,
         index: MilestoneIndex,
     ) {
-        if !tangle().contains(&hash)
+        if !tangle().contains(&hash).await
             && !tangle().is_solid_entry_point(&hash)
             && !Protocol::get().requested_transactions.contains_key(&hash)
         {

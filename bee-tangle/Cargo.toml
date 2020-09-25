@@ -15,11 +15,12 @@ bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 
 dashmap = "3.10"
+lru = "0.5"
 
 [dev-dependencies]
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-test = { path = "../bee-test" }
-
+pollster = "0.2"
 criterion = "0.3.2"
 
 [[bench]]

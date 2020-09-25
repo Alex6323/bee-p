@@ -14,11 +14,13 @@ use crate::{node::Node, worker::Worker};
 use anymap::{any::Any, Map};
 use futures::{channel::oneshot, future::Future};
 use tokio::spawn;
+use bee_storage::storage::Backend;
 
 use std::{
-    any::TypeId,
+    any::{Any, TypeId},
     collections::hash_map::{Entry, HashMap},
-    sync::Mutex,
+    sync::{Arc, Mutex},
+    marker::PhantomData,
 };
 
 #[allow(clippy::type_complexity)]
@@ -34,6 +36,8 @@ pub struct BeeNode {
             )>,
         >,
     >,
+    resources: Map<dyn AnyMapAny + Send + Sync>,
+    phantom: PhantomData<B>,
 }
 
 impl Default for BeeNode {
@@ -41,13 +45,27 @@ impl Default for BeeNode {
         Self {
             workers: Map::new(),
             tasks: Mutex::new(HashMap::new()),
+            resources: Map::new(),
+            phantom: PhantomData,
         }
     }
 }
 
 impl Node for BeeNode {
+    type Backend = B;
+
     fn new() -> Self {
         Self::default()
+    }
+
+    fn register_resource<R: Any + Send + Sync>(&mut self, res: R) {
+        self.resources.insert(Arc::new(res));
+    }
+
+    fn resource<R: Any + Send + Sync>(&self) -> &Arc<R> {
+        self.resources
+            .get()
+            .expect("Unable to fetch node resource")
     }
 
     fn spawn<W, G, F>(&self, g: G)

@@ -60,7 +60,7 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
                         continue;
                     }
 
-                    if let Some(tx) = tangle().get(&hash) {
+                    if let Some(tx) = tangle().get(&hash).await {
                         let mut index = None;
 
                         if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
