@@ -44,9 +44,6 @@ pub enum Error {
     /// Occurs, when there is an error while shutting down the node.
     #[error("Shutting down failed.")]
     ShutdownError(#[from] bee_common::shutdown::Error),
-
-    #[error("An I/O error occurred.")]
-    IoError(#[from] std::io::Error),
 }
 
 pub struct NodeBuilder {
@@ -215,11 +212,11 @@ fn ctrl_c_listener() -> oneshot::Receiver<()> {
 
     tokio::spawn(async move {
         if let Err(e) = tokio::signal::ctrl_c().await {
-            panic!("Failed to intercept CTRL-C.");
+            panic!("Failed to intercept CTRL-C: {:?}.", e);
         }
 
-        if let Err(_) = sender.send(()) {
-            panic!("Failed to send the shutdown signal.")
+        if let Err(e) = sender.send(()) {
+            panic!("Failed to send the shutdown signal: {:?}.", e);
         }
     });
 
