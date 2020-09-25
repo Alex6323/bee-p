@@ -57,8 +57,8 @@ impl MsTangle {
         Self::default()
     }
 
-    pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
-        let opt = self.inner.insert(hash, transaction, metadata);
+    pub async fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
+        let opt = self.inner.insert(hash, transaction, metadata).await;
 
         // TODO this has been temporarily moved to the processor.
         // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
@@ -89,10 +89,10 @@ impl MsTangle {
     }
 
     // TODO: use combinator instead of match
-    pub fn get_milestone(&self, index: MilestoneIndex) -> Option<TxRef> {
+    pub async fn get_milestone(&self, index: MilestoneIndex) -> Option<TxRef> {
         match self.get_milestone_hash(index) {
             None => None,
-            Some(ref hash) => self.get(hash),
+            Some(ref hash) => self.get(hash).await,
         }
     }
 

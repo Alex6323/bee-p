@@ -26,6 +26,7 @@ use bee_crypto::ternary::{
 use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
+use async_std::task;
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::{debug, info};
