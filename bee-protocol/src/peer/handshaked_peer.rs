@@ -11,13 +11,16 @@
 
 use crate::{milestone::MilestoneIndex, peer::PeerMetrics};
 
-use bee_network::{Address, EndpointId};
+use bee_network::EndpointId;
 
-use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
+use std::{
+    net::SocketAddr,
+    sync::atomic::{AtomicU32, AtomicU8, Ordering},
+};
 
 pub struct HandshakedPeer {
     pub(crate) epid: EndpointId,
-    pub(crate) address: Address,
+    pub(crate) address: SocketAddr,
     pub(crate) metrics: PeerMetrics,
     pub(crate) latest_solid_milestone_index: AtomicU32,
     pub(crate) pruned_index: AtomicU32,
@@ -27,7 +30,7 @@ pub struct HandshakedPeer {
 }
 
 impl HandshakedPeer {
-    pub(crate) fn new(epid: EndpointId, address: Address) -> Self {
+    pub(crate) fn new(epid: EndpointId, address: SocketAddr) -> Self {
         Self {
             epid,
             address,

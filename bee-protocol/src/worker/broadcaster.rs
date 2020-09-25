@@ -77,9 +77,8 @@ impl BroadcasterWorker {
                 match self
                     .network
                     .send(SendMessage {
-                        epid: *peer.key(),
-                        bytes: bytes.clone(),
-                        responder: None,
+                        receiver_epid: *peer.key(),
+                        message: bytes.clone(),
                     })
                     .await
                 {

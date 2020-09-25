@@ -12,9 +12,11 @@
 use crate::Milestone;
 
 use bee_crypto::ternary::Hash;
-use bee_network::{Address, EndpointId};
+use bee_network::EndpointId;
 
-pub struct HandshakeCompleted(pub EndpointId, pub Address);
+use std::net::SocketAddr;
+
+pub struct HandshakeCompleted(pub EndpointId, pub SocketAddr);
 
 pub struct LatestMilestoneChanged(pub Milestone);
 

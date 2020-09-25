@@ -9,112 +9,59 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod origin;
-pub mod outbox;
-pub mod store;
-pub mod whitelist;
-pub mod worker;
+mod connect;
+mod contact;
+mod worker;
 
-use crate::address::{
-    url::{Protocol, Url},
-    Address,
-};
+pub use connect::*;
+pub use contact::*;
+pub use worker::*;
 
-use std::fmt;
+use crate::util::TransportProtocol;
 
-/// The id of an `Endpoint`.
+use futures::channel::mpsc;
+use thiserror::Error;
+
+use std::{fmt, net::SocketAddr as SocketAddress};
+
+/// Errors that can happen when dealing with `Address`es.
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Error resolving domain name to address.")]
+    Io(#[from] std::io::Error),
+
+    #[error("Error parsing url.")]
+    UrlParseFailure,
+
+    #[error("Unspecified transport protocol.")]
+    UnspecifiedTransportProtocol,
+
+    #[error("Unsupported transport protocol.")]
+    UnsupportedTransportProtocol,
+
+    // TODO: rename to to 'DomainNameResolutionFailure'
+    #[error("Error resolving domain name to address.")]
+    DnsFailure,
+}
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct EndpointId {
-    inner: Address,
-}
+pub struct EndpointId((TransportProtocol, SocketAddress));
 
-impl From<Address> for EndpointId {
-    fn from(addr: Address) -> Self {
-        Self { inner: addr }
-    }
-}
-
-impl From<Url> for EndpointId {
-    fn from(url: Url) -> Self {
-        match url {
-            Url::Tcp(socket_addr) | Url::Udp(socket_addr) => Self { inner: socket_addr },
-        }
+impl EndpointId {
+    pub fn new(transport_protocol: TransportProtocol, socket_address: SocketAddress) -> Self {
+        Self((transport_protocol, socket_address))
     }
 }
 
 impl fmt::Display for EndpointId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.inner)
+        write!(f, "{}://{}", (self.0).0, (self.0).1)
     }
 }
 
-/// Represents an `Endpoint`.
-#[derive(Clone, Debug)]
-pub struct Endpoint {
-    /// The id of the endpoint.
-    pub id: EndpointId,
+pub type DataSender = mpsc::UnboundedSender<Vec<u8>>;
+pub type DataReceiver = mpsc::UnboundedReceiver<Vec<u8>>;
 
-    /// The address of the endpoint.
-    pub address: Address,
-
-    /// The protocol used to communicate with that endpoint.
-    pub protocol: Protocol,
-}
-
-impl Endpoint {
-    /// Creates a new endpoint.
-    pub fn new(address: Address, protocol: Protocol) -> Self {
-        Self {
-            id: address.into(),
-            address,
-            protocol,
-        }
-    }
-    /// Creates an endpoint from a `Url`.
-    pub fn from_url(url: Url) -> Self {
-        let address = url.address();
-        let protocol = url.protocol();
-
-        Endpoint::new(address, protocol)
-    }
-}
-
-impl Eq for Endpoint {}
-impl PartialEq for Endpoint {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use async_std::task::block_on;
-
-    #[test]
-    fn create_epid_from_address() {
-        let addr = block_on(Address::from_addr_str("127.0.0.1:16000")).unwrap();
-
-        let epid: EndpointId = addr.into();
-
-        assert_eq!("127.0.0.1:16000", epid.to_string());
-    }
-
-    #[test]
-    fn create_epid_from_url() {
-        let url = block_on(Url::from_url_str("tcp://[::1]:16000")).unwrap();
-
-        let epid: EndpointId = url.into();
-        assert_eq!("[::1]:16000", epid.to_string());
-    }
-
-    #[test]
-    fn create_endpoint_from_url() {
-        let url = block_on(Url::from_url_str("udp://[::1]:16000")).unwrap();
-        let ep = Endpoint::from_url(url);
-
-        assert_eq!("[::1]:16000", ep.id.to_string());
-        assert_eq!(Protocol::Udp, ep.protocol);
-        assert_eq!("[::1]:16000", ep.address.to_string());
-    }
+pub fn channel() -> (DataSender, DataReceiver) {
+    mpsc::unbounded()
 }

@@ -19,16 +19,16 @@ pub mod global;
 pub mod local;
 pub mod metadata;
 
-use bee_common::{shutdown::Shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::{bee_node::BeeNode, event::Bus, worker::Worker};
+use bee_common::shutdown_stream::ShutdownStream;
+use bee_common_ext::{bee_node::BeeNode, event::Bus, shutdown_tokio::Shutdown, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
 use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
 
-use async_std::task::spawn;
 use chrono::{offset::TimeZone, Utc};
 use futures::channel::{mpsc, oneshot};
 use log::{info, warn};
+use tokio::spawn;
 
 use std::{path::Path, sync::Arc};
 
@@ -41,7 +41,7 @@ pub enum Error {
 
 // TODO change return type
 
-pub fn init(
+pub async fn init(
     config: &config::SnapshotConfig,
     bee_node: Arc<BeeNode>,
     bus: Arc<Bus<'static>>,
@@ -70,7 +70,9 @@ pub fn init(
         }
         config::LoadType::Local => {
             if !Path::new(config.local().path()).exists() {
-                local::download_local_snapshot(config.local()).map_err(Error::Download)?;
+                local::download_local_snapshot(config.local())
+                    .await
+                    .map_err(Error::Download)?;
             }
             info!("Loading local snapshot file {}...", config.local().path());
 

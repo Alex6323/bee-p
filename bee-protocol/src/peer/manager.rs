@@ -13,12 +13,12 @@
 
 use crate::peer::{HandshakedPeer, Peer};
 
-use bee_network::{Address, EndpointId};
+use bee_network::EndpointId;
 
-use async_std::sync::RwLock;
 use dashmap::DashMap;
+use tokio::sync::RwLock;
 
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 pub(crate) struct PeerManager {
     pub(crate) peers: DashMap<EndpointId, Arc<Peer>>,
@@ -39,7 +39,7 @@ impl PeerManager {
         self.peers.insert(peer.epid, peer);
     }
 
-    pub(crate) async fn handshake(&self, epid: &EndpointId, address: Address) {
+    pub(crate) async fn handshake(&self, epid: &EndpointId, address: SocketAddr) {
         if self.peers.remove(epid).is_some() {
             // TODO check if not already added
 

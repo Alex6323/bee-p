@@ -80,7 +80,7 @@ async fn batch_storage() {
     assert!(storage.shutdown().await.is_ok())
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn storage() {
     start_and_shutdown_rocksdb_storage().await;
     persist_ledger_diff().await;

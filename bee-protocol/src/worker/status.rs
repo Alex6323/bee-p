@@ -14,10 +14,10 @@ use crate::{protocol::Protocol, tangle::tangle};
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
-use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
 use futures::{stream::Fuse, StreamExt};
 use log::info;
+use tokio::time::{interval, Instant, Interval};
 
 use std::{sync::Arc, time::Duration};
 
@@ -27,7 +27,7 @@ pub(crate) struct StatusWorker;
 impl<N: Node> Worker<N> for StatusWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = ();
+    type Event = Instant;
     type Receiver = ShutdownStream<Fuse<Interval>>;
 
     async fn start(

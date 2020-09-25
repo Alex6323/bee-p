@@ -14,7 +14,6 @@ homepage = "https://www.iota.org"
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 
-async-std = { version = "1.6.2", features = ["unstable"] }
 dashmap = "3.10"
 
 [dev-dependencies]

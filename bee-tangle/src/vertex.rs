@@ -14,7 +14,7 @@ use crate::TransactionRef as TxRef;
 use bee_crypto::ternary::Hash;
 use bee_transaction::{bundled::BundledTransaction as Tx, Vertex as MessageVertex};
 
-use async_std::sync::Arc;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub(crate) struct Vertex<T>

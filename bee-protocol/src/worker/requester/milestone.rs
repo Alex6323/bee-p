@@ -20,10 +20,10 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::EndpointId;
 
-use async_std::stream::{interval, Interval};
 use async_trait::async_trait;
 use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
 use log::{debug, info};
+use tokio::time::{interval, Interval};
 
 use std::{
     sync::Arc,

@@ -9,12 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::endpoint::EndpointId as EpId;
+mod net;
 
-use async_std::net::{SocketAddr, UdpSocket};
-
-pub struct UdpConnection {
-    pub epid: EpId,
-    pub remote_addr: SocketAddr,
-    socket: UdpSocket,
-}
+pub use net::*;
