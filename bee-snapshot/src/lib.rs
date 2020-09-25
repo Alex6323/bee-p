@@ -19,13 +19,12 @@ pub mod global;
 pub mod local;
 pub mod metadata;
 
-use bee_common_ext::{bee_node::BeeNode, event::Bus, worker::Worker};
+use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
 use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};
-use futures::channel::{mpsc, oneshot};
 use log::{info, warn};
 
 use std::{path::Path, sync::Arc};
@@ -41,7 +40,7 @@ pub enum Error {
 
 pub fn init(
     config: &config::SnapshotConfig,
-    bee_node: Arc<BeeNode>,
+    bee_node: &BeeNode,
     bus: Arc<Bus<'static>>,
 ) -> Result<(LedgerState, MilestoneIndex, u64), Error> {
     let (state, index, timestamp) = match config.load_type() {
@@ -102,13 +101,12 @@ pub fn init(
         }
     };
 
-    let (snapshot_worker_tx, snapshot_worker_rx) = mpsc::unbounded();
+    worker::SnapshotWorker::start(bee_node, config.clone());
 
-    worker::SnapshotWorker::start(snapshot_worker_rx, bee_node, config.clone());
+    let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = snapshot_worker_tx.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone()))
-        {
+        if let Err(e) = snapshot_worker.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
             warn!(
                 "Failed to send milestone {} to snapshot worker: {:?}.",
                 *latest_solid_milestone.0.index(),

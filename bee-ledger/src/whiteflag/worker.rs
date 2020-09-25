@@ -51,8 +51,9 @@ pub enum LedgerWorkerEvent {
     GetBalance(Address, oneshot::Sender<u64>),
 }
 
-#[derive(Default)]
-pub(crate) struct LedgerWorker {}
+pub(crate) struct LedgerWorker {
+    pub(crate) tx: mpsc::UnboundedSender<LedgerWorkerEvent>,
+}
 
 fn milestone_info(hash: &Hash, coo_config: &ProtocolCoordinatorConfig) -> (Vec<u8>, u64) {
     // TODO handle error of both unwrap
@@ -155,14 +156,14 @@ impl<N: Node> Worker<N> for LedgerWorker {
         Arc<Bus<'static>>,
     );
     type Error = WorkerError;
-    type Event = LedgerWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<LedgerWorkerEvent>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             let mut index = config.0;
             let mut state = config.1;
@@ -183,7 +184,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }
 

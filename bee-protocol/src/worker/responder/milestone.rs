@@ -27,28 +27,27 @@ use bytemuck::cast_slice;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
-use std::sync::Arc;
-
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: MilestoneRequest,
 }
 
-#[derive(Default)]
-pub(crate) struct MilestoneResponderWorker;
+pub(crate) struct MilestoneResponderWorker {
+    pub(crate) tx: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for MilestoneResponderWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = MilestoneResponderWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
                 let index = match request.index {
@@ -79,6 +78,6 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

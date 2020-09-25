@@ -18,7 +18,10 @@ use crate::{
     peer::Peer,
     protocol::Protocol,
     tangle::tangle,
-    worker::{peer::MessageHandler, PeerWorker},
+    worker::{
+        peer::MessageHandler, HasherWorkerEvent, MilestoneRequesterWorkerEvent, MilestoneResponderWorkerEvent,
+        PeerWorker, TransactionResponderWorkerEvent,
+    },
 };
 
 use bee_network::{
@@ -64,14 +67,29 @@ pub struct PeerHandshakerWorker {
     network: Network,
     peer: Arc<Peer>,
     status: HandshakeStatus,
+    hasher: mpsc::UnboundedSender<HasherWorkerEvent>,
+    transaction_responder: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
+    milestone_responder: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
+    milestone_requester: mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
 }
 
 impl PeerHandshakerWorker {
-    pub(crate) fn new(network: Network, peer: Arc<Peer>) -> Self {
+    pub(crate) fn new(
+        network: Network,
+        peer: Arc<Peer>,
+        hasher: mpsc::UnboundedSender<HasherWorkerEvent>,
+        transaction_responder: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
+        milestone_responder: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
+        milestone_requester: mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+    ) -> Self {
         Self {
             network,
             peer,
             status: HandshakeStatus::Awaiting,
+            hasher,
+            transaction_responder,
+            milestone_responder,
+            milestone_requester,
         }
     }
 
@@ -124,6 +142,9 @@ impl PeerHandshakerWorker {
                             .unwrap()
                             .value()
                             .clone(),
+                        self.hasher,
+                        self.transaction_responder,
+                        self.milestone_responder,
                     )
                     .run(message_handler),
                 );
@@ -225,7 +246,7 @@ impl PeerHandshakerWorker {
                         )
                         .await;
 
-                        Protocol::request_latest_milestone(Some(self.peer.epid));
+                        Protocol::request_latest_milestone(&self.milestone_requester, Some(self.peer.epid));
 
                         self.status = HandshakeStatus::Done;
                     }

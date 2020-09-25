@@ -14,22 +14,21 @@ use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, tangle},
+    worker::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::{
-    sponge::{Kerl, Sponge},
+    sponge::{CurlP27, CurlP81, Kerl, Sponge, SpongeKind},
     Hash,
 };
-use bee_signing::ternary::{PublicKey, RecoverableSignature};
+use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{debug, info};
-
-use std::{marker::PhantomData, sync::Arc};
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -41,8 +40,8 @@ pub(crate) enum MilestoneValidatorWorkerError {
 
 pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash, pub(crate) bool);
 
-pub(crate) struct MilestoneValidatorWorker<M, P> {
-    marker: PhantomData<(M, P)>,
+pub(crate) struct MilestoneValidatorWorker {
+    pub(crate) tx: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
 }
 
 fn validate_milestone<N, M, P>(tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError>
@@ -82,23 +81,27 @@ where
 }
 
 #[async_trait]
-impl<N, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
+impl<N> Worker<N> for MilestoneValidatorWorker
 where
     N: Node,
-    M: Sponge + Default + Send + Sync + 'static,
-    P: PublicKey + Send + Sync + 'static,
-    <P as PublicKey>::Signature: RecoverableSignature,
 {
-    type Config = ();
+    type Config = SpongeKind;
     type Error = WorkerError;
-    type Event = MilestoneValidatorWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
+
+        let validate = match config {
+            SpongeKind::Kerl => |hash| validate_milestone::<N, Kerl, WotsPublicKey<Kerl>>(hash),
+            SpongeKind::CurlP27 => |hash| validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>>(hash),
+            SpongeKind::CurlP81 => |hash| validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>>(hash),
+        };
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
                 let tail_hash = {
@@ -114,7 +117,7 @@ where
                         if meta.flags().is_milestone() {
                             return;
                         }
-                        match validate_milestone::<N, M, P>(tail_hash) {
+                        match validate(tail_hash) {
                             Ok(milestone) => {
                                 tangle().add_milestone(milestone.index, milestone.hash);
 
@@ -135,7 +138,8 @@ where
                                     tangle()
                                         .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
 
-                                    Protocol::trigger_milestone_solidification(milestone.index);
+                                    milestone_solidifier
+                                        .unbounded_send(MilestoneSolidifierWorkerEvent(milestone.index));
                                 }
                             }
                             Err(e) => match e {
@@ -150,6 +154,6 @@ where
             info!("Stopped.");
         });
 
-        Ok(Self { marker: PhantomData })
+        Ok(Self { tx })
     }
 }

@@ -26,12 +26,11 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{error, info, warn};
 
-use std::sync::Arc;
-
 pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
-#[derive(Default)]
-pub(crate) struct SnapshotWorker {}
+pub(crate) struct SnapshotWorker {
+    pub(crate) tx: mpsc::UnboundedSender<SnapshotWorkerEvent>,
+}
 
 fn should_snapshot(index: MilestoneIndex, config: &SnapshotConfig, depth: u32) -> bool {
     let solid_index = *index;
@@ -91,14 +90,14 @@ fn should_prune(mut index: MilestoneIndex, config: &SnapshotConfig, delay: u32) 
 impl<N: Node> Worker<N> for SnapshotWorker {
     type Config = SnapshotConfig;
     type Error = WorkerError;
-    type Event = SnapshotWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<SnapshotWorkerEvent>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             let depth = if config.local().depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
                 warn!(
@@ -139,6 +138,6 @@ impl<N: Node> Worker<N> for SnapshotWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

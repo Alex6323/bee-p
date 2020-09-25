@@ -12,7 +12,7 @@
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    worker::transaction::{HashCache, ProcessorWorkerEvent},
+    worker::transaction::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -35,7 +35,7 @@ use futures::{
 use log::{info, trace, warn};
 use pin_project::pin_project;
 
-use std::{marker::PhantomData, pin::Pin, sync::Arc};
+use std::pin::Pin;
 
 // If a batch has less than this number of transactions, the regular CurlP hasher is used instead
 // of the batched one.
@@ -46,8 +46,8 @@ pub(crate) struct HasherWorkerEvent {
     pub(crate) transaction_message: TransactionMessage,
 }
 
-pub(crate) struct HasherWorker<N: Node> {
-    marker: PhantomData<N>,
+pub(crate) struct HasherWorker {
+    pub(crate) tx: mpsc::UnboundedSender<HasherWorkerEvent>,
 }
 
 fn trigger_hashing(
@@ -89,25 +89,27 @@ fn send_hashes(
 }
 
 #[async_trait]
-impl<N: Node> Worker<N> for HasherWorker<N> {
-    type Config = mpsc::UnboundedSender<ProcessorWorkerEvent>;
+impl<N: Node> Worker<N> for HasherWorker {
+    type Config = usize;
     type Error = WorkerError;
-    type Event = usize;
-    type Receiver = BatchStream;
 
-    async fn start(mut receiver: Self::Receiver, node: Arc<N>, mut config: Self::Config) -> Result<Self, Self::Error> {
-        // TODO use shutdown
-        node.spawn::<Self, _, _>(|_shutdown| async move {
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let mut processor_worker = node.worker::<ProcessorWorker>().unwrap().tx.clone();
+
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            let mut receiver = BatchStream::new(config, ShutdownStream::new(shutdown, rx));
+
             info!("Running.");
 
             while let Some(batch_size) = receiver.next().await {
-                trigger_hashing(batch_size, &mut receiver, &mut config);
+                trigger_hashing(batch_size, &mut receiver, &mut processor_worker);
             }
 
             info!("Stopped.");
         });
 
-        Ok(Self { marker: PhantomData })
+        Ok(Self { tx })
     }
 }
 

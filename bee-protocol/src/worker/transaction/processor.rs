@@ -13,7 +13,10 @@ use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::milestone_validator::MilestoneValidatorWorkerEvent,
+    worker::{
+        BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
+        SolidPropagatorWorker, SolidPropagatorWorkerEvent, TransactionRequesterWorker,
+    },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -29,12 +32,9 @@ use bee_transaction::{
 use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::{channel::mpsc, stream::StreamExt};
-use log::{error, info, trace};
+use log::{error, info, trace, warn};
 
-use std::{
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) hash: Hash,
@@ -42,8 +42,9 @@ pub(crate) struct ProcessorWorkerEvent {
     pub(crate) transaction_message: TransactionMessage,
 }
 
-#[derive(Default)]
-pub(crate) struct ProcessorWorker {}
+pub(crate) struct ProcessorWorker {
+    pub(crate) tx: mpsc::UnboundedSender<ProcessorWorkerEvent>,
+}
 
 /// Timeframe to allow past or future transactions, 10 minutes in seconds.
 const ALLOWED_TIMESTAMP_WINDOW_SECS: u64 = 10 * 60;
@@ -66,16 +67,20 @@ fn validate_timestamp(transaction: &Transaction) -> (bool, bool) {
 
 #[async_trait]
 impl<N: Node> Worker<N> for ProcessorWorker {
-    type Config = mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>;
+    type Config = ();
     type Error = WorkerError;
-    type Event = ProcessorWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
+        let solid_propagator = node.worker::<SolidPropagatorWorker>().unwrap().tx.clone();
+        let broadcaster = node.worker::<BroadcasterWorker>().unwrap().tx.clone();
+        let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(ProcessorWorkerEvent {
                 hash,
@@ -129,6 +134,13 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                 // store transaction
                 if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
+                    // TODO this was temporarily moved from the tangle.
+                    // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
+                    // When the tangle is made a worker, this should be put back on.
+                    if let Err(e) = solid_propagator.unbounded_send(SolidPropagatorWorkerEvent(hash)) {
+                        error!("Failed to send hash to solid propagator: {:?}.", e);
+                    }
+
                     Protocol::get().metrics.new_transactions_inc();
 
                     match Protocol::get().requested_transactions.remove(&hash) {
@@ -136,22 +148,27 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                             let trunk = transaction.trunk();
                             let branch = transaction.branch();
 
-                            Protocol::request_transaction(*trunk, index);
+                            Protocol::request_transaction(&transaction_requester, *trunk, index);
 
                             if trunk != branch {
-                                Protocol::request_transaction(*branch, index);
+                                Protocol::request_transaction(&transaction_requester, *branch, index);
                             }
                         }
                         None => {
                             if should_broadcast {
-                                Protocol::broadcast_transaction_message(Some(from), transaction_message)
+                                if let Err(e) = broadcaster.unbounded_send(BroadcasterWorkerEvent {
+                                    source: Some(from),
+                                    transaction: transaction_message,
+                                }) {
+                                    warn!("Broadcasting transaction failed: {}.", e);
+                                }
                             }
                         }
                     };
 
                     if transaction.address().eq(&Protocol::get().config.coordinator.public_key) {
-                        if let Err(e) =
-                            config.unbounded_send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
+                        if let Err(e) = milestone_validator
+                            .unbounded_send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
                         {
                             error!("Sending tail to milestone validation failed: {:?}.", e);
                         }
@@ -164,6 +181,6 @@ impl<N: Node> Worker<N> for ProcessorWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

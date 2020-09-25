@@ -14,7 +14,7 @@ use crate::{
     milestone::Milestone,
     protocol::Protocol,
     tangle::tangle,
-    worker::BundleValidatorWorkerEvent,
+    worker::{BundleValidatorWorker, BundleValidatorWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -26,25 +26,25 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
 
-use std::sync::Arc;
-
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
 
-#[derive(Default)]
-pub(crate) struct SolidPropagatorWorker {}
+pub(crate) struct SolidPropagatorWorker {
+    pub(crate) tx: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for SolidPropagatorWorker {
-    type Config = mpsc::UnboundedSender<BundleValidatorWorkerEvent>;
+    type Config = ();
     type Error = WorkerError;
-    type Event = SolidPropagatorWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(SolidPropagatorWorkerEvent(root)) = receiver.next().await {
                 let mut children = vec![root];
@@ -69,7 +69,7 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
                                 }
 
                                 if metadata.flags().is_tail() {
-                                    if let Err(e) = config.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
+                                    if let Err(e) = bundle_validator.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
                                         warn!("Failed to send hash to bundle validator: {:?}.", e);
                                     }
                                 }
@@ -94,6 +94,6 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

@@ -11,6 +11,7 @@
 
 use crate::{node::Node, worker::Worker};
 
+use anymap::{any::Any, Map};
 use async_std::task::spawn;
 use futures::{channel::oneshot, future::Future};
 
@@ -21,12 +22,14 @@ use std::{
 };
 
 pub struct BeeNode {
+    workers: Map<dyn Any + Send + Sync>,
     tasks: Mutex<HashMap<TypeId, Vec<(oneshot::Sender<()>, Box<dyn Future<Output = ()> + Send + Sync>)>>>,
 }
 
 impl Node for BeeNode {
     fn new() -> Self {
         Self {
+            workers: Map::new(),
             tasks: Mutex::new(HashMap::new()),
         }
     }
@@ -50,5 +53,13 @@ impl Node for BeeNode {
                 }
             }
         }
+    }
+
+    fn worker<W>(&self) -> Option<&W>
+    where
+        Self: Sized,
+        W: Worker<Self> + Send + Sync,
+    {
+        self.workers.get::<W>()
     }
 }

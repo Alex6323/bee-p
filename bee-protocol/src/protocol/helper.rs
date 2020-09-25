@@ -16,15 +16,13 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::tangle,
-    worker::{
-        BroadcasterWorkerEvent, MilestoneRequesterWorkerEvent, MilestoneSolidifierWorkerEvent,
-        TransactionRequesterWorkerEvent,
-    },
+    worker::{MilestoneRequesterWorkerEvent, TransactionRequesterWorkerEvent},
 };
 
 use bee_crypto::ternary::Hash;
 use bee_network::{Command::SendMessage, EndpointId};
 
+use futures::channel::mpsc;
 use log::warn;
 
 use std::marker::PhantomData;
@@ -70,47 +68,37 @@ impl Protocol {
 
     // MilestoneRequest
 
-    pub fn request_milestone(index: MilestoneIndex, to: Option<EndpointId>) {
+    pub(crate) fn request_milestone(
+        transaction_requester: &mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+        index: MilestoneIndex,
+        to: Option<EndpointId>,
+    ) {
         if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
-            if let Err(e) = Protocol::get()
-                .milestone_requester_worker
-                .unbounded_send(MilestoneRequesterWorkerEvent(index, to))
-            {
+            if let Err(e) = transaction_requester.unbounded_send(MilestoneRequesterWorkerEvent(index, to)) {
                 warn!("Requesting milestone failed: {}.", e);
             }
         }
     }
 
-    pub fn request_latest_milestone(to: Option<EndpointId>) {
-        Protocol::request_milestone(MilestoneIndex(0), to)
-    }
-
-    // TransactionMessage
-
-    pub(crate) fn broadcast_transaction_message(source: Option<EndpointId>, transaction: TransactionMessage) {
-        if let Err(e) = Protocol::get()
-            .broadcaster_worker
-            .unbounded_send(BroadcasterWorkerEvent { source, transaction })
-        {
-            warn!("Broadcasting transaction failed: {}.", e);
-        }
-    }
-
-    pub fn broadcast_transaction(source: Option<EndpointId>, transaction: &[u8]) {
-        Protocol::broadcast_transaction_message(source, TransactionMessage::new(transaction));
+    pub(crate) fn request_latest_milestone(
+        transaction_requester: &mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+        to: Option<EndpointId>,
+    ) {
+        Protocol::request_milestone(transaction_requester, MilestoneIndex(0), to)
     }
 
     // TransactionRequest
 
-    pub fn request_transaction(hash: Hash, index: MilestoneIndex) {
+    pub(crate) fn request_transaction(
+        transaction_requester: &mpsc::UnboundedSender<TransactionRequesterWorkerEvent>,
+        hash: Hash,
+        index: MilestoneIndex,
+    ) {
         if !tangle().contains(&hash)
             && !tangle().is_solid_entry_point(&hash)
             && !Protocol::get().requested_transactions.contains_key(&hash)
         {
-            if let Err(e) = Protocol::get()
-                .transaction_requester_worker
-                .unbounded_send(TransactionRequesterWorkerEvent(hash, index))
-            {
+            if let Err(e) = transaction_requester.unbounded_send(TransactionRequesterWorkerEvent(hash, index)) {
                 warn!("Requesting transaction failed: {}.", e);
             }
         }
@@ -151,13 +139,5 @@ impl Protocol {
             )
             .await
         }
-    }
-
-    // Solidifier
-
-    pub fn trigger_milestone_solidification(target_index: MilestoneIndex) {
-        Protocol::get()
-            .milestone_solidifier_worker
-            .unbounded_send(MilestoneSolidifierWorkerEvent(target_index));
     }
 }

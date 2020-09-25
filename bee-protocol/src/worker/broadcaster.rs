@@ -22,28 +22,27 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
 
-use std::sync::Arc;
-
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
     pub(crate) transaction: TransactionMessage,
 }
 
-#[derive(Default)]
-pub(crate) struct BroadcasterWorker {}
+pub(crate) struct BroadcasterWorker {
+    pub(crate) tx: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for BroadcasterWorker {
     type Config = Network;
     type Error = WorkerError;
-    type Event = BroadcasterWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<BroadcasterWorkerEvent>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, mut config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, mut config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
                 let bytes = tlv_into_bytes(transaction);
@@ -76,6 +75,6 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

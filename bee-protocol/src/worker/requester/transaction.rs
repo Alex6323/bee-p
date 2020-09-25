@@ -29,17 +29,15 @@ use futures::{
 };
 use log::{debug, info};
 
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
 pub(crate) struct TransactionRequesterWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 
-#[derive(Default)]
-pub(crate) struct TransactionRequesterWorker {}
+pub(crate) struct TransactionRequesterWorker {
+    pub(crate) tx: mpsc::UnboundedSender<TransactionRequesterWorkerEvent>,
+}
 
 async fn process_request(hash: Hash, index: MilestoneIndex, counter: &mut usize) {
     if Protocol::get().requested_transactions.contains_key(&hash) {
@@ -113,12 +111,12 @@ async fn retry_requests(counter: &mut usize) {
 impl<N: Node> Worker<N> for TransactionRequesterWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = TransactionRequesterWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<TransactionRequesterWorkerEvent>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
         async fn aux<N: Node>(
-            receiver: <TransactionRequesterWorker as Worker<N>>::Receiver,
+            receiver: mpsc::UnboundedReceiver<TransactionRequesterWorkerEvent>,
             shutdown: oneshot::Receiver<()>,
         ) {
             info!("Running.");
@@ -141,8 +139,8 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
             info!("Stopped.");
         }
 
-        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(receiver, shutdown).await });
+        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(rx, shutdown).await });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

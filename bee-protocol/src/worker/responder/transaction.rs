@@ -27,28 +27,27 @@ use bytemuck::cast_slice;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
 
-use std::sync::Arc;
-
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: TransactionRequest,
 }
 
-#[derive(Default)]
-pub(crate) struct TransactionResponderWorker;
+pub(crate) struct TransactionResponderWorker {
+    pub(crate) tx: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for TransactionResponderWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = TransactionResponderWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
                 if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
@@ -70,6 +69,6 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

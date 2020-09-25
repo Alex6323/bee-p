@@ -9,7 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::tangle};
+use crate::{
+    milestone::MilestoneIndex,
+    protocol::Protocol,
+    tangle::tangle,
+    worker::{TransactionRequesterWorker, TransactionRequesterWorkerEvent},
+};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
@@ -22,14 +27,17 @@ use futures::{
 };
 use log::{debug, info};
 
-use std::sync::Arc;
-
 pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
-#[derive(Default)]
-pub(crate) struct MilestoneSolidifierWorker {}
+pub(crate) struct MilestoneSolidifierWorker {
+    pub(crate) tx: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
+}
 
-fn trigger_solidification_unchecked(target_index: MilestoneIndex, next_ms_index: &mut MilestoneIndex) {
+fn trigger_solidification_unchecked(
+    transaction_requester: &mpsc::UnboundedSender<TransactionRequesterWorkerEvent>,
+    target_index: MilestoneIndex,
+    next_ms_index: &mut MilestoneIndex,
+) {
     if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
         if !tangle().is_solid_transaction(&target_hash) {
             debug!("Triggered solidification for milestone {}.", *target_index);
@@ -43,7 +51,7 @@ fn trigger_solidification_unchecked(target_index: MilestoneIndex, next_ms_index:
                 },
                 |_, _, _| {},
                 |_, _, _| {},
-                |missing_hash| Protocol::request_transaction(*missing_hash, target_index),
+                |missing_hash| Protocol::request_transaction(transaction_requester, *missing_hash, target_index),
             );
 
             *next_ms_index = target_index + MilestoneIndex(1);
@@ -62,14 +70,15 @@ fn save_index(target_index: MilestoneIndex, queue: &mut Vec<MilestoneIndex>) {
 impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
     type Config = oneshot::Receiver<MilestoneIndex>;
     type Error = WorkerError;
-    type Event = MilestoneSolidifierWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<MilestoneSolidifierWorkerEvent>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             let mut queue = vec![];
             let mut next_ms_index = config.await.unwrap();
@@ -78,7 +87,7 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
                 save_index(index, &mut queue);
                 while let Some(index) = queue.pop() {
                     if index == next_ms_index {
-                        trigger_solidification_unchecked(index, &mut next_ms_index);
+                        trigger_solidification_unchecked(&transaction_requester, index, &mut next_ms_index);
                     } else {
                         queue.push(index);
                         break;
@@ -89,6 +98,6 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

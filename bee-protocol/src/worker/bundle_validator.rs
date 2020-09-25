@@ -20,25 +20,24 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
 
-use std::sync::Arc;
-
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
-#[derive(Default)]
-pub(crate) struct BundleValidatorWorker;
+pub(crate) struct BundleValidatorWorker {
+    pub(crate) tx: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for BundleValidatorWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = BundleValidatorWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<Self::Event>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
                 match load_bundle_builder(tangle(), &hash) {
@@ -58,6 +57,6 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
             info!("Stopped.");
         });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

@@ -20,10 +20,9 @@ use crate::state::LedgerState;
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
-use bee_common_ext::{bee_node::BeeNode, event::Bus, worker::Worker};
+use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
 use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
 
-use futures::channel::mpsc;
 use log::warn;
 
 use std::sync::Arc;
@@ -32,27 +31,21 @@ pub fn init(
     index: u32,
     state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
-    bee_node: Arc<BeeNode>,
+    bee_node: &BeeNode,
     bus: Arc<Bus<'static>>,
-) -> mpsc::UnboundedSender<LedgerWorkerEvent> {
+) {
     // TODO
     // if unsafe { !WHITE_FLAG.is_null() } {
     //     warn!("Already initialized.");
     //     return;
     // }
 
-    let (ledger_worker_tx, ledger_worker_rx) = mpsc::unbounded();
+    LedgerWorker::start(bee_node, (MilestoneIndex(index), state, coo_config, bus.clone()));
 
-    LedgerWorker::start(
-        ledger_worker_rx,
-        bee_node,
-        (MilestoneIndex(index), state, coo_config, bus.clone()),
-    );
-
-    let ledger_worker_tx_ret = ledger_worker_tx.clone();
+    let ledger_worker = bee_node.worker::<LedgerWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = ledger_worker_tx.unbounded_send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
+        if let Err(e) = ledger_worker.unbounded_send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
             warn!(
                 "Sending solid milestone {:?} to confirmation failed: {:?}.",
                 latest_solid_milestone.0.index(),
@@ -60,6 +53,4 @@ pub fn init(
             );
         }
     });
-
-    ledger_worker_tx_ret
 }

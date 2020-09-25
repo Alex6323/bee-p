@@ -11,13 +11,16 @@
 
 use crate::worker::Worker;
 
-use anymap::AnyMap;
-use futures::{channel::oneshot, future::Future};
+use anymap::{any::Any, Map};
+use futures::{
+    channel::oneshot,
+    future::{Future, FutureExt},
+};
 
 use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
-    sync::Arc,
+    pin::Pin,
 };
 
 pub trait Node: Send + Sync + 'static {
@@ -28,12 +31,18 @@ pub trait Node: Send + Sync + 'static {
         W: Worker<Self>,
         G: FnOnce(oneshot::Receiver<()>) -> F,
         F: Future<Output = ()> + Send + Sync + 'static;
+    fn worker<W>(&self) -> Option<&W>
+    where
+        Self: Sized,
+        W: Worker<Self> + Send + Sync;
 }
 
 struct NodeBuilder<N: Node> {
     deps: HashMap<TypeId, &'static [TypeId]>,
-    makers: HashMap<TypeId, Box<dyn FnOnce(&N, &mut AnyMap)>>,
-    anymap: AnyMap,
+    makers: HashMap<
+        TypeId,
+        Box<dyn for<'a> FnOnce(&'a N, &'a mut Map<dyn Any + Send + Sync>) -> Pin<Box<dyn Future<Output = ()> + 'a>>>,
+    >,
 }
 
 impl<N: Node + 'static> NodeBuilder<N> {
@@ -44,18 +53,30 @@ impl<N: Node + 'static> NodeBuilder<N> {
         self.with_worker_cfg::<W>(W::Config::default())
     }
 
-    fn with_worker_cfg<W: Worker<N> + 'static>(mut self, _config: W::Config) -> Self {
+    fn with_worker_cfg<W: Worker<N> + 'static>(mut self, config: W::Config) -> Self {
         self.deps.insert(TypeId::of::<W>(), W::DEPS);
-        self.makers.insert(TypeId::of::<W>(), Box::new(|_node, _anymap| {}));
+        self.makers.insert(
+            TypeId::of::<W>(),
+            Box::new(|node, anymap| {
+                W::start(node, config)
+                    .map(move |r| {
+                        r.map(|w| anymap.insert(w));
+                    })
+                    .boxed()
+            }),
+        );
         self
     }
 
-    fn finish(mut self) -> Arc<N> {
-        let node = Arc::new(N::new());
+    fn finish(mut self) -> N {
+        let node = N::new();
+        let mut anymap = Map::new();
 
         for id in TopologicalOrder::sort(self.deps) {
-            self.makers.remove(&id).unwrap()(&node, &mut self.anymap);
+            self.makers.remove(&id).unwrap()(&node, &mut anymap);
         }
+
+        // node.set_workers(self.anymap);
 
         node
     }

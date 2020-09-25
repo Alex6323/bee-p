@@ -60,14 +60,17 @@ impl MsTangle {
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         let opt = self.inner.insert(hash, transaction, metadata);
 
-        if opt.is_some() {
-            if let Err(e) = Protocol::get()
-                .solid_propagator_worker
-                .unbounded_send(SolidPropagatorWorkerEvent(hash))
-            {
-                error!("Failed to send hash to solid propagator: {:?}.", e);
-            }
-        }
+        // TODO this has been temporarily moved to the processor.
+        // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
+        // When the tangle is made a worker, this should be put back on.
+        // if opt.is_some() {
+        //     if let Err(e) = Protocol::get()
+        //         .solid_propagator_worker
+        //         .unbounded_send(SolidPropagatorWorkerEvent(hash))
+        //     {
+        //         error!("Failed to send hash to solid propagator: {:?}.", e);
+        //     }
+        // }
 
         opt
     }

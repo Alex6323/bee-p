@@ -12,23 +12,17 @@
 use crate::node::Node;
 
 use async_trait::async_trait;
-use futures::Stream;
 
-use std::{
-    any::{Any, TypeId},
-    sync::Arc,
-};
+use std::any::{Any, TypeId};
 
 #[async_trait]
-pub trait Worker<N: Node>: Any {
+pub trait Worker<N: Node>: Any + Send + Sync {
     const DEPS: &'static [TypeId] = &[];
 
     type Config;
     type Error;
-    type Event;
-    type Receiver: Stream<Item = Self::Event>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, config: Self::Config) -> Result<Self, Self::Error>
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error>
     where
         Self: Sized;
     async fn stop(self) -> Result<(), Self::Error>

@@ -81,7 +81,7 @@ mod tests {
             let epid: EndpointId = Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();
             let event = HasherWorkerEvent {
                 from: epid,
-                transaction: message,
+                transaction_message: message,
             };
             hasher_worker_sender.unbounded_send(event).unwrap();
             task::sleep(Duration::from_secs(5)).await;

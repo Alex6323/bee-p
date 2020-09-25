@@ -28,17 +28,15 @@ use futures::{
 };
 use log::{debug, info};
 
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
 pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
-#[derive(Default)]
-pub(crate) struct MilestoneRequesterWorker {}
+pub(crate) struct MilestoneRequesterWorker {
+    pub(crate) tx: mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+}
 
 async fn process_request(index: MilestoneIndex, epid: Option<EndpointId>, counter: &mut usize) {
     if Protocol::get().requested_milestones.contains_key(&index) {
@@ -103,12 +101,12 @@ async fn retry_requests(counter: &mut usize) {
 impl<N: Node> Worker<N> for MilestoneRequesterWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = MilestoneRequesterWorkerEvent;
-    type Receiver = mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>;
 
-    async fn start(receiver: Self::Receiver, node: Arc<N>, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
         async fn aux<N: Node>(
-            receiver: <MilestoneRequesterWorker as Worker<N>>::Receiver,
+            receiver: mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>,
             shutdown: oneshot::Receiver<()>,
         ) {
             info!("Running.");
@@ -135,8 +133,8 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
             info!("Stopped.");
         }
 
-        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(receiver, shutdown).await });
+        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(rx, shutdown).await });
 
-        Ok(Self::default())
+        Ok(Self { tx })
     }
 }

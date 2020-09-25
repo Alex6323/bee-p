@@ -53,7 +53,7 @@ impl NodeBuilder {
     pub fn finish(self) -> Result<Node, Error> {
         print_banner_and_version();
 
-        let bee_node = Arc::new(BeeNode::new());
+        let bee_node = BeeNode::new();
 
         let bus = Arc::new(Bus::default());
 
@@ -62,7 +62,7 @@ impl NodeBuilder {
 
         // TODO temporary
         let (ledger_state, snapshot_index, snapshot_timestamp) =
-            bee_snapshot::init(&self.config.snapshot, bee_node.clone(), bus.clone()).map_err(Error::SnapshotError)?;
+            bee_snapshot::init(&self.config.snapshot, &bee_node, bus.clone()).map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network);
@@ -75,7 +75,7 @@ impl NodeBuilder {
             *snapshot_index,
             ledger_state,
             self.config.protocol.coordinator().clone(),
-            bee_node.clone(),
+            &bee_node,
             bus.clone(),
         );
 
@@ -83,7 +83,7 @@ impl NodeBuilder {
             self.config.protocol.clone(),
             network.clone(),
             snapshot_timestamp,
-            bee_node.clone(),
+            &bee_node,
             bus.clone(),
         ));
 
@@ -107,7 +107,7 @@ impl NodeBuilder {
 
 /// The main node type.
 pub struct Node {
-    tmp_node: Arc<BeeNode>,
+    tmp_node: BeeNode,
     // TODO temporary to keep it alive
     sender: oneshot::Sender<()>,
     // TODO those 2 fields are related; consider bundling them
@@ -176,7 +176,7 @@ impl Node {
     }
 
     fn endpoint_connected_handler(&mut self, epid: EndpointId, address: Address, origin: Origin) {
-        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(epid, address, origin);
+        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(&self.tmp_node, epid, address, origin);
 
         self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx));
     }
