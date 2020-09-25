@@ -25,15 +25,9 @@ use crate::{
 
 use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
 
-use futures::{
-    channel::oneshot,
-    future::{join_all, FutureExt},
-    select,
-    sink::SinkExt,
-    StreamExt,
-};
+use futures::{channel::oneshot, future::FutureExt, select, sink::SinkExt, StreamExt};
 use log::*;
-use thiserror::Error;
+use thiserror::Error as ErrorAttr;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::tcp::{OwnedReadHalf, OwnedWriteHalf},
@@ -42,10 +36,10 @@ use tokio::{
 
 use std::sync::atomic::Ordering;
 
-#[derive(Debug, Error)]
+#[derive(Debug, ErrorAttr)]
 pub enum Error {
     #[error("An async I/O error occured.")]
-    AsyncIoErrorOccurred(#[from] std::io::Error),
+    IoError(#[from] std::io::Error),
 
     #[error("Connection attempt failed.")]
     ConnectionAttemptFailed,

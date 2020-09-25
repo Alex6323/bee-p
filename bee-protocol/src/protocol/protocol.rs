@@ -25,9 +25,7 @@ use crate::{
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{
-    bee_node::BeeNode, event::Bus, shutdown_tokio::Shutdown, wait_priority_queue::WaitPriorityQueue, worker::Worker,
-};
+use bee_common_ext::{bee_node::BeeNode, event::Bus, shutdown_tokio::Shutdown, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{CurlP27, CurlP81, Kerl, SpongeKind},
     Hash,

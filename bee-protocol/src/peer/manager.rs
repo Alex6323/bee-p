@@ -13,13 +13,10 @@
 
 use crate::peer::{HandshakedPeer, Peer};
 
-use bee_common::shutdown_stream::ShutdownStream;
-use bee_network::{EndpointId, Network};
+use bee_network::EndpointId;
 
 use dashmap::DashMap;
-use futures::channel::{mpsc, oneshot};
-use log::warn;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 
 use std::{net::SocketAddr, sync::Arc};
 

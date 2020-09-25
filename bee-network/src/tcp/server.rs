@@ -132,14 +132,15 @@ async fn process_stream(
             let internal_event_sender = internal_event_sender.clone();
             let epid = EndpointId::new(TransportProtocol::Tcp, connection.peer_address);
 
-            spawn_reader_writer(connection, epid, internal_event_sender)
+            return Ok(spawn_reader_writer(connection, epid, internal_event_sender)
                 .await
-                .map_err(|_| WorkerError::AsynchronousOperationFailed);
+                .map_err(|_| WorkerError::AsynchronousOperationFailed)
+                .is_ok());
         }
         Err(e) => {
             warn!("Accepting connection failed: {:?}.", e);
+
+            Ok(false)
         }
     }
-
-    Ok(true)
 }

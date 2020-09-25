@@ -13,9 +13,6 @@ use crate::{milestone::MilestoneIndex, peer::PeerMetrics};
 
 use bee_network::EndpointId;
 
-use futures::channel::{mpsc, oneshot};
-use tokio::sync::Mutex;
-
 use std::{
     net::SocketAddr,
     sync::atomic::{AtomicU32, AtomicU8, Ordering},

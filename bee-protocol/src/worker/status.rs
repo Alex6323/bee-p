@@ -15,12 +15,7 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
-use futures::{
-    channel::oneshot::Receiver,
-    future::{ready, select, Either, FutureExt},
-    stream::Fuse,
-    StreamExt,
-};
+use futures::{stream::Fuse, StreamExt};
 use log::info;
 use tokio::time::{interval, Instant, Interval};
 
