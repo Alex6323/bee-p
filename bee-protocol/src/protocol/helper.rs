@@ -34,16 +34,11 @@ pub(crate) struct Sender<M: Message> {
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl Sender<$type> {
-            pub(crate) async fn send(epid: &EndpointId, message: $type) {
-                match Protocol::get()
-                    .network
-                    .clone()
-                    .send(SendMessage {
-                        receiver_epid: *epid,
-                        message: tlv_into_bytes(message),
-                    })
-                    .await
-                {
+            pub(crate) fn send(epid: &EndpointId, message: $type) {
+                match Protocol::get().network.unbounded_send(SendMessage {
+                    receiver_epid: *epid,
+                    message: tlv_into_bytes(message),
+                }) {
                     Ok(_) => {
                         // self.peer.metrics.$incrementor();
                         // Protocol::get().metrics.$incrementor();
@@ -105,7 +100,7 @@ impl Protocol {
 
     // Heartbeat
 
-    pub async fn send_heartbeat(
+    pub fn send_heartbeat(
         to: EndpointId,
         latest_solid_milestone_index: MilestoneIndex,
         pruning_milestone_index: MilestoneIndex,
@@ -120,11 +115,10 @@ impl Protocol {
                 Protocol::get().peer_manager.connected_peers(),
                 Protocol::get().peer_manager.synced_peers(),
             ),
-        )
-        .await;
+        );
     }
 
-    pub async fn broadcast_heartbeat(
+    pub fn broadcast_heartbeat(
         latest_solid_milestone_index: MilestoneIndex,
         pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
@@ -135,8 +129,7 @@ impl Protocol {
                 latest_solid_milestone_index,
                 pruning_milestone_index,
                 latest_milestone_index,
-            )
-            .await
+            );
         }
     }
 }

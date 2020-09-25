@@ -101,19 +101,15 @@ impl PeerHandshakerWorker {
         let shutdown_fused = shutdown.fuse();
 
         // This is the only message not using a Sender because they are not running yet (awaiting handshake)
-        if let Err(e) = self
-            .network
-            .send(SendMessage {
-                receiver_epid: self.peer.epid,
-                message: tlv_into_bytes(Handshake::new(
-                    self.network.config().binding_port,
-                    &Protocol::get().config.coordinator.public_key_bytes,
-                    Protocol::get().config.mwm,
-                    &MESSAGES_VERSIONS,
-                )),
-            })
-            .await
-        {
+        if let Err(e) = self.network.unbounded_send(SendMessage {
+            receiver_epid: self.peer.epid,
+            message: tlv_into_bytes(Handshake::new(
+                self.network.config().binding_port,
+                &Protocol::get().config.coordinator.public_key_bytes,
+                Protocol::get().config.mwm,
+                &MESSAGES_VERSIONS,
+            )),
+        }) {
             // TODO then what ?
             warn!("[{}] Failed to send handshake: {:?}.", self.peer.address, e);
         }
@@ -155,16 +151,15 @@ impl PeerHandshakerWorker {
 
                 // if let Err(e) = self
                 //     .network
-                //     .send(MarkDuplicate {
+                //     .unbounded_send(MarkDuplicate {
                 //         duplicate_epid: self.peer.epid,
                 //         original_epid: epid,
-                //     })
-                //     .await
+                //     });
                 // {
                 //     warn!("[{}] Resolving duplicate connection failed: {}.", self.peer.epid, e);
                 // }
 
-                // if let Err(e) = self.network.send(DisconnectEndpoint { epid: self.peer.epid }).await {
+                // if let Err(e) = self.network.unbounded_send(DisconnectEndpoint { epid: self.peer.epid }) {
                 //     warn!("[{}] Disconnecting peer failed: {}.", self.peer.epid, e);
                 // }
             }
@@ -248,8 +243,7 @@ impl PeerHandshakerWorker {
                             tangle().get_latest_solid_milestone_index(),
                             tangle().get_pruning_index(),
                             tangle().get_latest_milestone_index(),
-                        )
-                        .await;
+                        );
 
                         Protocol::request_latest_milestone(&self.milestone_requester, Some(self.peer.epid));
 

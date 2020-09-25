@@ -36,7 +36,7 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
     type Config = Network;
     type Error = WorkerError;
 
-    async fn start(node: &N, mut config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
@@ -52,13 +52,10 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
                         Some(source) => source != *peer.key(),
                         None => true,
                     } {
-                        match config
-                            .send(SendMessage {
-                                receiver_epid: *peer.key(),
-                                message: bytes.clone(),
-                            })
-                            .await
-                        {
+                        match config.unbounded_send(SendMessage {
+                            receiver_epid: *peer.key(),
+                            message: bytes.clone(),
+                        }) {
                             Ok(_) => {
                                 (*peer.value()).metrics.transactions_sent_inc();
                                 Protocol::get().metrics.transactions_sent_inc();

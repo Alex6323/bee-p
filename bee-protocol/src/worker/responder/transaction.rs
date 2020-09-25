@@ -60,8 +60,7 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
                             TransactionMessage::new(&compress_transaction_bytes(cast_slice(
                                 trits.encode::<T5B1Buf>().as_i8_slice(),
                             ))),
-                        )
-                        .await
+                        );
                     }
                 }
             }

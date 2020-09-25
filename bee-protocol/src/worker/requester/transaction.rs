@@ -27,7 +27,7 @@ use futures::{
     select, StreamExt,
 };
 use log::{debug, info};
-use tokio::time::{interval, Interval};
+use tokio::time::interval;
 
 use std::time::{Duration, Instant};
 
@@ -67,7 +67,7 @@ async fn process_request_unchecked(hash: Hash, index: MilestoneIndex, counter: &
         if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
             if peer.has_data(index) {
                 let hash = hash.as_trits().encode::<T5B1Buf>();
-                Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice()))).await;
+                Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice())));
                 return true;
             }
         }
@@ -81,7 +81,7 @@ async fn process_request_unchecked(hash: Hash, index: MilestoneIndex, counter: &
         if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
             if peer.maybe_has_data(index) {
                 let hash = hash.as_trits().encode::<T5B1Buf>();
-                Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice()))).await;
+                Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice())));
                 return true;
             }
         }

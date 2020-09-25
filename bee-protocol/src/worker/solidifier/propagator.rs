@@ -37,7 +37,7 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
     type Config = ();
     type Error = WorkerError;
 
-    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
         let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
 

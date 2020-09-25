@@ -109,11 +109,12 @@ impl Protocol {
                 );
                 tangle().update_latest_milestone_index(latest_milestone.0.index);
 
-                spawn(Protocol::broadcast_heartbeat(
+                // TODO spawn ?
+                Protocol::broadcast_heartbeat(
                     tangle().get_latest_solid_milestone_index(),
                     tangle().get_pruning_index(),
                     latest_milestone.0.index,
-                ));
+                );
             });
 
         // Protocol::get()
@@ -147,11 +148,12 @@ impl Protocol {
                     }
                 }
 
-                spawn(Protocol::broadcast_heartbeat(
+                // TODO spawn ?
+                Protocol::broadcast_heartbeat(
                     latest_solid_milestone.0.index,
                     tangle().get_pruning_index(),
                     tangle().get_latest_milestone_index(),
-                ));
+                );
             });
     }
 
