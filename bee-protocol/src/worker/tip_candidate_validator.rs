@@ -26,7 +26,7 @@ use log::{info, warn};
 use std::sync::Arc;
 use crate::Protocol;
 use bee_transaction::Vertex;
-use crate::event::{BundleValidated, TipCandidateFound};
+use crate::event::{TipCandidateFound};
 use std::collections::{HashMap};
 
 pub(crate) enum TipCandidateWorkerEvent {

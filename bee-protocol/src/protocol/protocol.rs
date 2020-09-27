@@ -39,7 +39,7 @@ use log::{debug, info, warn};
 use tokio::spawn;
 
 use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
-use crate::event::{BundleValidated, TipCandidateFound};
+use crate::event::{TipCandidateFound};
 use crate::worker::{TipCandidateWorkerEvent, TipCandidateWorker, OtrsiYtrsiPropagatorWorker};
 
 static mut PROTOCOL: *const Protocol = ptr::null();

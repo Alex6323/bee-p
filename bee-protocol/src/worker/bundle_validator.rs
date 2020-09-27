@@ -26,8 +26,7 @@ use log::{info, warn};
 use std::sync::Arc;
 use crate::Protocol;
 use bee_transaction::Vertex;
-use crate::event::BundleValidated;
-use crate::worker::tip_candidate_validator::TipCandidateWorkerEvent;
+use crate::worker::tip_candidate_validator::{TipCandidateWorkerEvent, BundleInfo};
 
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
@@ -72,11 +71,17 @@ impl BundleValidatorWorker {
                     tangle().update_metadata(&tail, |metadata| {
                         metadata.flags_mut().set_valid(true);
                     });
-                    Protocol::get().bus.dispatch(BundleValidated {
-                        tail,
-                        trunk: *validated_bundle.trunk(),
-                        branch: *validated_bundle.branch()
-                    });
+                    if let Err(e) = self.tip_candidate_validator.unbounded_send(
+                        TipCandidateWorkerEvent::BundleValidated(
+                            BundleInfo {
+                                tail,
+                                trunk: *validated_bundle.trunk(),
+                                branch: *validated_bundle.branch()
+                            }
+                        )
+                    ) {
+                        warn!("Failed to send hash to tip candidate validator: {:?}.", e);
+                    }
                 }
             }
             None => {

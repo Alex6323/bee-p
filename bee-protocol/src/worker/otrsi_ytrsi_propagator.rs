@@ -26,7 +26,6 @@ use log::{info, warn};
 use std::sync::Arc;
 use crate::Protocol;
 use bee_transaction::Vertex;
-use crate::event::BundleValidated;
 use crate::worker::tip_candidate_validator::TipCandidateWorkerEvent;
 use std::cmp::{max, min};
 use crate::worker::tip_candidate_validator::TipCandidateWorkerEvent::OtrsiYtrsiPropagated;
