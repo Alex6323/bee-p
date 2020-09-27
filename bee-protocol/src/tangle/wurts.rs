@@ -77,9 +77,9 @@ impl WurtsTipPool {
             if self.tips.len() > RETENTION_LIMIT as usize {
                 if self.num_children(&tip) > 0 {
                     self.remove_tip(&tip);
-                } else {
-                    break
                 }
+            } else {
+                break
             }
         }
     }
