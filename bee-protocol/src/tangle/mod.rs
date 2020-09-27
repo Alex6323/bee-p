@@ -126,6 +126,7 @@ impl MsTangle {
 
     pub fn update_latest_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.latest_solid_milestone_index.store(*new_index, Ordering::Relaxed);
+        self.update_transactions_referenced_by_milestone(new_index);
     }
 
     pub fn get_snapshot_index(&self) -> MilestoneIndex {
