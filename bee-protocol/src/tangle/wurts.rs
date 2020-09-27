@@ -35,14 +35,14 @@ const YTRSI_DELTA: u32 = 8;
 const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
-// the maximum time a tip remains in the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
+// the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to widen the cone of the tangle. (non-lazy pool)
 const MAX_AGE_SECONDS: u8 = 3;
 // the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
 const MAX_NUM_CHILDREN: u8 = 2;
 
 #[derive(Default)]
 pub(crate) struct WurtsTipPool {
-    tips: HashMap<Hash, SystemTime>,
+    tips: HashMap<Hash, Option<SystemTime>>,
     children: HashMap<Hash, HashSet<Hash>>,
     non_lazy_tips: HashSet<Hash>,
 }
@@ -68,7 +68,7 @@ impl WurtsTipPool {
     }
 
     fn store(&mut self, tip: &Hash) {
-        self.tips.insert(*tip, SystemTime::now());
+        self.tips.insert(*tip, None);
         self.children.insert(*tip, HashSet::new());
     }
 
@@ -87,8 +87,13 @@ impl WurtsTipPool {
                 let mut children = HashSet::new();
                 children.insert(child);
                 entry.insert(children);
+                self.init_age_seconds(&parent);
             }
         }
+    }
+
+    fn init_age_seconds(&mut self, parent: &Hash) {
+        self.tips.get_mut(parent).unwrap().replace(SystemTime::now());
     }
 
     fn check_num_children_of_parents(&mut self, trunk: &Hash, branch: &Hash) {
@@ -112,14 +117,16 @@ impl WurtsTipPool {
 
     fn check_age_seconds(&mut self) {
         for (tip, time) in self.tips.clone() {
-            match time.elapsed() {
-                Ok(elapsed) => {
-                    if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
-                        self.tips.remove(&tip);
-                        self.children.remove(&tip);
+            if let Some(time) = time {
+                match time.elapsed() {
+                    Ok(elapsed) => {
+                        if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
+                            self.tips.remove(&tip);
+                            self.children.remove(&tip);
+                        }
                     }
+                    Err(e) => error!("{:?}", e),
                 }
-                Err(e) => error!("{:?}", e),
             }
         }
     }
