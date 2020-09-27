@@ -12,17 +12,20 @@
 mod broadcaster;
 mod bundle_validator;
 mod milestone_validator;
+mod otrsi_ytrsi_propagator;
 mod peer;
 mod requester;
 mod responder;
 mod solidifier;
 mod status;
+mod tip_candidate_validator;
 mod tps;
 mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
+pub(crate) use otrsi_ytrsi_propagator::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent};
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, TransactionRequesterWorker,
@@ -37,5 +40,6 @@ pub(crate) use solidifier::{
     SolidPropagatorWorkerEvent,
 };
 pub(crate) use status::StatusWorker;
+pub(crate) use tip_candidate_validator::{TipCandidateWorker, TipCandidateWorkerEvent};
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};

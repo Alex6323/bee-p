@@ -24,10 +24,16 @@ use futures::{
 use log::{info, warn};
 
 use std::sync::Arc;
+use crate::Protocol;
+use bee_transaction::Vertex;
+use crate::event::BundleValidated;
+use crate::worker::tip_candidate_validator::TipCandidateWorkerEvent;
 
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
-pub(crate) struct BundleValidatorWorker;
+pub(crate) struct BundleValidatorWorker {
+    tip_candidate_validator: mpsc::UnboundedSender<TipCandidateWorkerEvent>,
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for BundleValidatorWorker {
@@ -55,21 +61,26 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
 }
 
 impl BundleValidatorWorker {
-    pub(crate) fn new() -> Self {
-        Self
+    pub(crate) fn new(tip_candidate_validator: mpsc::UnboundedSender<TipCandidateWorkerEvent>) -> Self {
+        Self { tip_candidate_validator }
     }
 
-    fn validate(&self, tail_hash: Hash) {
-        match load_bundle_builder(tangle(), &tail_hash) {
+    fn validate(&self, tail: Hash) {
+        match load_bundle_builder(tangle(), &tail) {
             Some(builder) => {
-                if builder.validate().is_ok() {
-                    tangle().update_metadata(&tail_hash, |metadata| {
+                if let Ok(validated_bundle) = builder.validate() {
+                    tangle().update_metadata(&tail, |metadata| {
                         metadata.flags_mut().set_valid(true);
-                    })
+                    });
+                    Protocol::get().bus.dispatch(BundleValidated {
+                        tail,
+                        trunk: *validated_bundle.trunk(),
+                        branch: *validated_bundle.branch()
+                    });
                 }
             }
             None => {
-                warn!("Faild to validate bundle: tail not found.");
+                warn!("Failed to validate bundle: tail not found.");
             }
         }
     }

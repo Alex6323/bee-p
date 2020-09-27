@@ -16,11 +16,23 @@ use bee_network::EndpointId;
 
 use std::net::SocketAddr;
 
+pub struct BundleValidated {
+    pub tail: Hash,
+    pub trunk: Hash,
+    pub branch: Hash
+}
+
 pub struct HandshakeCompleted(pub EndpointId, pub SocketAddr);
 
 pub struct LatestMilestoneChanged(pub Milestone);
 
 pub struct LatestSolidMilestoneChanged(pub Milestone);
+
+pub struct TipCandidateFound {
+    pub tail: Hash,
+    pub trunk: Hash,
+    pub branch: Hash
+}
 
 pub struct TransactionSolidified(pub Hash);
 

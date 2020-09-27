@@ -13,6 +13,7 @@ pub mod flags;
 pub mod helper;
 
 mod metadata;
+mod wurts;
 
 pub use metadata::TransactionMetadata;
 
@@ -23,13 +24,18 @@ use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
-use log::error;
+use log::{info, error};
 
 use std::{
     ops::Deref,
     ptr,
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
+use std::sync::{Arc, RwLock};
+use crate::tangle::wurts::WurtsTipPool;
+use std::collections::HashSet;
+use bee_transaction::Vertex;
+use crate::worker::OtrsiYtrsiPropagatorWorkerEvent;
 
 /// Milestone-based Tangle.
 #[derive(Default)]
@@ -42,6 +48,7 @@ pub struct MsTangle {
     snapshot_index: AtomicU32,
     pruning_index: AtomicU32,
     entry_point_index: AtomicU32,
+    tip_pool: Arc<RwLock<WurtsTipPool>>,
 }
 
 impl Deref for MsTangle {
@@ -183,6 +190,92 @@ impl MsTangle {
                 .unwrap_or(false)
         }
     }
+
+    pub fn otrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
+        if self.is_solid_entry_point(hash) {
+            Some(*self.solid_entry_points.get(hash).unwrap().value())
+        } else {
+            match self.get_metadata(hash) {
+                Some(metadata) => metadata.otrsi(),
+                None => None,
+            }
+        }
+    }
+
+    pub fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
+        if self.is_solid_entry_point(hash) {
+            Some(*self.solid_entry_points.get(hash).unwrap().value())
+        } else {
+            match self.get_metadata(hash) {
+                Some(metadata) => metadata.ytrsi(),
+                None => None,
+            }
+        }
+    }
+
+    pub fn add_to_tip_pool(&self, tail: Hash, trunk: Hash, branch: Hash) {
+        let mut tip_selector = self.tip_pool.write().unwrap();
+        tip_selector.insert(tail, trunk, branch);
+    }
+
+    pub fn update_tip_pool(&self) {
+        let mut tip_selector = self.tip_pool.write().unwrap();
+        tip_selector.update_scores();
+    }
+
+    // when a milestone arrives and is solid, otrsi and ytrsi of all transactions referenced by this milestone must be
+    // updated otrsi or ytrsi of transactions that are referenced by a previous milestone won't get updated
+    // set otrsi and ytrsi values of relevant transactions to:
+    // otrsi=milestone_index
+    // ytrsi=milestone_index
+    // updated otrsi and ytrsi values need to be propagated to attached children (not referenced by the milestone)
+    fn update_transactions_referenced_by_milestone(&self, milestone_index: MilestoneIndex) {
+        if let Some(root) = self.get_milestone_hash(milestone_index) {
+            info!("Updating transactions referenced by milestone {}.", *milestone_index);
+            let mut visited = HashSet::new();
+            let mut to_visit = vec![root];
+            let mut propagateTo = Vec::new();
+            while let Some(hash) = to_visit.pop() {
+                if visited.contains(&hash) {
+                    continue;
+                } else {
+                    visited.insert(hash.clone());
+                }
+
+                if self.is_solid_entry_point(&hash) {
+                    continue;
+                }
+
+                if self.get_metadata(&hash).unwrap().cone_index().is_some() {
+                    continue;
+                }
+
+                tangle().update_metadata(&hash, |metadata| {
+                    metadata.set_cone_index(milestone_index);
+                    metadata.set_otrsi(milestone_index);
+                    metadata.set_ytrsi(milestone_index);
+                });
+
+                // propagate the new otrsi and ytrsi values to the children of this transaction
+                for child in self.get_children(&hash) {
+                    propagateTo.push(child);
+                }
+
+                let tx_ref = self.get(&hash).unwrap();
+                to_visit.push(tx_ref.trunk().clone());
+                to_visit.push(tx_ref.branch().clone());
+            }
+
+            if let Err(e) = Protocol::get()
+                .otrsi_ytrsi_propagator_worker
+                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(propagateTo))
+            {
+                error!("Failed to send hash to OTRSI/YTRSI propagator: {:?}.", e);
+            }
+
+        }
+    }
+
 }
 
 static TANGLE: AtomicPtr<MsTangle> = AtomicPtr::new(ptr::null_mut());
