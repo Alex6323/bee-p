@@ -76,6 +76,15 @@ impl MsTangle {
             }
         }
 
+        if opt.is_some() {
+            if let Err(e) = Protocol::get()
+                .otrsi_ytrsi_propagator_worker
+                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent::Default(hash))
+            {
+                error!("Failed to send hash to OTRSI/YTRSI propagator: {:?}.", e);
+            }
+        }
+
         opt
     }
 
