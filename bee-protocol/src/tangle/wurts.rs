@@ -35,6 +35,9 @@ const YTRSI_DELTA: u32 = 8;
 const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
+// the maximum amount of current tips for which "MAX_AGE_SECONDS" and "MAX_NUM_CHILDREN" are checked. if the amount of tips exceeds this limit,
+// referenced tips get removed directly to reduce the amount of tips in the network.
+const RETENTION_LIMIT: u8 = 100;
 // the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to widen the cone of the tangle. (non-lazy pool)
 const MAX_AGE_SECONDS: u8 = 3;
 // the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
@@ -57,14 +60,40 @@ impl WurtsTipPool {
     // - transaction is solid and has only non-solid children
     // - transaction is solid and has solid children but does not exceed the retention rules
     pub(crate) fn insert(&mut self, tail: Hash, trunk: Hash, branch: Hash) {
+        // remove referenced tips if retention limit is exceeded
+        self.check_retention_limit();
+        // remove tips that are too old
+        self.check_age_seconds();
         // store tip
         self.store(&tail);
         // link parents with child
         self.add_to_parents(&tail, &trunk, &branch);
         // remove parents that have more than 'MAX_CHILDREN_COUNT' children
         self.check_num_children_of_parents(&trunk, &branch);
-        // remove tips that are too old
-        self.check_age_seconds();
+
+    }
+
+    fn check_retention_limit(&mut self) {
+        for (tip, _) in self.tips.clone() {
+            if self.num_children(&tip) > RETENTION_LIMIT {
+                self.remove_tip(&tip);
+            }
+        }
+    }
+
+    fn check_age_seconds(&mut self) {
+        for (tip, time) in self.tips.clone() {
+            if let Some(time) = time {
+                match time.elapsed() {
+                    Ok(elapsed) => {
+                        if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
+                            self.remove_tip(&tip);
+                        }
+                    }
+                    Err(e) => error!("{:?}", e),
+                }
+            }
+        }
     }
 
     fn store(&mut self, tip: &Hash) {
@@ -102,9 +131,7 @@ impl WurtsTipPool {
     fn check_num_children_of_parent(&mut self, hash: &Hash) {
         if self.children.get(hash).is_some() {
             if self.num_children(hash) > MAX_NUM_CHILDREN {
-                self.tips.remove(&hash);
-                self.children.remove(&hash);
-                self.non_lazy_tips.remove(&hash);
+                self.remove_tip(&hash);
             }
         }
     }
@@ -113,20 +140,10 @@ impl WurtsTipPool {
         self.children.get(hash).unwrap().len() as u8
     }
 
-    fn check_age_seconds(&mut self) {
-        for (tip, time) in self.tips.clone() {
-            if let Some(time) = time {
-                match time.elapsed() {
-                    Ok(elapsed) => {
-                        if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
-                            self.tips.remove(&tip);
-                            self.children.remove(&tip);
-                        }
-                    }
-                    Err(e) => error!("{:?}", e),
-                }
-            }
-        }
+    fn remove_tip(&mut self, tip: &Hash) {
+        self.tips.remove(&tip);
+        self.children.remove(&tip);
+        self.non_lazy_tips.remove(&tip);
     }
 
     // further optimization: avoid allocations
