@@ -70,13 +70,16 @@ impl WurtsTipPool {
         self.add_to_parents(&tail, &trunk, &branch);
         // remove parents that have more than 'MAX_CHILDREN_COUNT' children
         self.check_num_children_of_parents(&trunk, &branch);
-
     }
 
     fn check_retention_limit(&mut self) {
         for (tip, _) in self.tips.clone() {
-            if self.num_children(&tip) > RETENTION_LIMIT {
-                self.remove_tip(&tip);
+            if self.tips.len() > RETENTION_CHECK_LIMIT as usize {
+                if self.num_children(&tip) > 0 {
+                    self.remove_tip(&tip);
+                } else {
+                    break
+                }
             }
         }
     }
