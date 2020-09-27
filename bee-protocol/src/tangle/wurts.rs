@@ -74,7 +74,7 @@ impl WurtsTipPool {
 
     fn check_retention_limit(&mut self) {
         for (tip, _) in self.tips.clone() {
-            if self.tips.len() > RETENTION_CHECK_LIMIT as usize {
+            if self.tips.len() > RETENTION_LIMIT as usize {
                 if self.num_children(&tip) > 0 {
                     self.remove_tip(&tip);
                 } else {
