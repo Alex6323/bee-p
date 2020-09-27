@@ -84,9 +84,7 @@ impl WurtsTipPool {
                 children.insert(child);
             }
             Entry::Vacant(entry) => {
-                let mut children = HashSet::new();
-                children.insert(child);
-                entry.insert(children);
+                self.store(&parent);
                 self.init_age_seconds(&parent);
             }
         }
