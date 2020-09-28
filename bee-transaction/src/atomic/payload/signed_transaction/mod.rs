@@ -39,7 +39,7 @@ pub struct SignedTransaction {
 }
 
 impl SignedTransaction {
-    pub fn builder<'a>(seed: Seed) -> SignedTransactionBuilder<'a> {
+    pub fn builder<'a>(seed: &'a Seed) -> SignedTransactionBuilder<'a> {
         SignedTransactionBuilder::new(seed)
     }
 
@@ -228,14 +228,14 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
 }
 
 pub struct SignedTransactionBuilder<'a> {
-    seed: Seed,
+    seed: &'a Seed,
     inputs: Vec<(Input, &'a BIP32Path)>,
     outputs: Vec<Output>,
     payload: Option<Vec<Payload>>,
 }
 
 impl<'a> SignedTransactionBuilder<'a> {
-    pub fn new(seed: Seed) -> Self {
+    pub fn new(seed: &'a Seed) -> Self {
         Self {
             seed,
             inputs: Vec::new(),
