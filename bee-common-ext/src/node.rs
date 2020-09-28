@@ -74,12 +74,12 @@ impl<N: Node + 'static> NodeBuilder<N> {
         self
     }
 
-    pub fn finish(mut self) -> N {
+    pub async fn finish(mut self) -> N {
         let mut node = N::new();
         let mut anymap = Map::new();
 
         for id in TopologicalOrder::sort(self.deps) {
-            self.makers.remove(&id).unwrap()(&node, &mut anymap);
+            self.makers.remove(&id).unwrap()(&node, &mut anymap).await;
         }
 
         node.set_workers(anymap);

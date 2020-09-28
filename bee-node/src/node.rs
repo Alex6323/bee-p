@@ -100,7 +100,7 @@ impl NodeBuilder {
         info!("Initializing plugins...");
         plugin::init(bus.clone());
 
-        let bee_node = node_builder.finish();
+        let bee_node = node_builder.finish().await;
 
         info!("Registering events...");
         bee_snapshot::events(&bee_node, bus.clone());
