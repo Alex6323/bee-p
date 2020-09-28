@@ -15,6 +15,5 @@
 pub mod bee_node;
 pub mod event;
 pub mod node;
-pub mod shutdown_tokio;
 pub mod wait_priority_queue;
 pub mod worker;
