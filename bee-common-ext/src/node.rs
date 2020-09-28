@@ -35,6 +35,7 @@ pub trait Node: Send + Sync + 'static {
     where
         Self: Sized,
         W: Worker<Self> + Send + Sync;
+    fn set_workers(&mut self, workers: Map<dyn Any + Send + Sync>);
 }
 
 struct NodeBuilder<N: Node> {
@@ -69,14 +70,14 @@ impl<N: Node + 'static> NodeBuilder<N> {
     }
 
     fn finish(mut self) -> N {
-        let node = N::new();
+        let mut node = N::new();
         let mut anymap = Map::new();
 
         for id in TopologicalOrder::sort(self.deps) {
             self.makers.remove(&id).unwrap()(&node, &mut anymap);
         }
 
-        // node.set_workers(self.anymap);
+        node.set_workers(anymap);
 
         node
     }
