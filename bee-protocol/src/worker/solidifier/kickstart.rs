@@ -19,7 +19,7 @@ use futures::{channel::oneshot, StreamExt};
 use log::info;
 use tokio::time::interval;
 
-use std::time::Duration;
+use std::{any::TypeId, time::Duration};
 
 #[derive(Default)]
 pub(crate) struct KickstartWorker {}
@@ -28,6 +28,10 @@ pub(crate) struct KickstartWorker {}
 impl<N: Node> Worker<N> for KickstartWorker {
     type Config = (oneshot::Sender<MilestoneIndex>, u32);
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<MilestoneRequesterWorker>()]))
+    }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
         let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();

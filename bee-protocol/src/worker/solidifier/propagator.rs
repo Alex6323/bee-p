@@ -26,6 +26,8 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
 
+use std::any::TypeId;
+
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct SolidPropagatorWorker {
@@ -36,6 +38,10 @@ pub(crate) struct SolidPropagatorWorker {
 impl<N: Node> Worker<N> for SolidPropagatorWorker {
     type Config = ();
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<BundleValidatorWorker>()]))
+    }
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();

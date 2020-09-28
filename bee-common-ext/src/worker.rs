@@ -17,14 +17,18 @@ use std::any::{Any, TypeId};
 
 #[async_trait]
 pub trait Worker<N: Node>: Any + Send + Sync {
-    const DEPS: &'static [TypeId] = &[];
-
     type Config;
     type Error;
+
+    // TODO Replace with associated constant when stabilized.
+    fn dependencies() -> &'static [TypeId] {
+        &[]
+    }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error>
     where
         Self: Sized;
+
     async fn stop(self) -> Result<(), Self::Error>
     where
         Self: Sized,

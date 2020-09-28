@@ -30,6 +30,8 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{debug, info};
 
+use std::any::TypeId;
+
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
     UnknownTail,
@@ -87,6 +89,10 @@ where
 {
     type Config = SpongeKind;
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<MilestoneSolidifierWorker>()]))
+    }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();

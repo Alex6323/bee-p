@@ -35,7 +35,7 @@ use futures::{
 use log::{info, trace, warn};
 use pin_project::pin_project;
 
-use std::pin::Pin;
+use std::{any::TypeId, pin::Pin};
 
 // If a batch has less than this number of transactions, the regular CurlP hasher is used instead
 // of the batched one.
@@ -92,6 +92,10 @@ fn send_hashes(
 impl<N: Node> Worker<N> for HasherWorker {
     type Config = usize;
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<ProcessorWorker>()]))
+    }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();

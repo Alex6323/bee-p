@@ -34,7 +34,10 @@ use bytemuck::cast_slice;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{error, info, trace, warn};
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    any::TypeId,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) hash: Hash,
@@ -69,6 +72,15 @@ fn validate_timestamp(transaction: &Transaction) -> (bool, bool) {
 impl<N: Node> Worker<N> for ProcessorWorker {
     type Config = ();
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![
+            TypeId::of::<MilestoneValidatorWorker>(),
+            TypeId::of::<SolidPropagatorWorker>(),
+            TypeId::of::<BroadcasterWorker>(),
+            TypeId::of::<TransactionRequesterWorker>(),
+        ]))
+    }
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();

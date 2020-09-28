@@ -27,6 +27,8 @@ use futures::{
 };
 use log::{debug, info};
 
+use std::any::TypeId;
+
 pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
 pub(crate) struct MilestoneSolidifierWorker {
@@ -70,6 +72,10 @@ fn save_index(target_index: MilestoneIndex, queue: &mut Vec<MilestoneIndex>) {
 impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
     type Config = oneshot::Receiver<MilestoneIndex>;
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TransactionRequesterWorker>()]))
+    }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();

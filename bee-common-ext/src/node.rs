@@ -60,7 +60,7 @@ impl<N: Node + 'static> NodeBuilder<N> {
     }
 
     pub fn with_worker_cfg<W: Worker<N> + 'static>(mut self, config: W::Config) -> Self {
-        self.deps.insert(TypeId::of::<W>(), W::DEPS);
+        self.deps.insert(TypeId::of::<W>(), W::dependencies());
         self.makers.insert(
             TypeId::of::<W>(),
             Box::new(|node, anymap| {
