@@ -229,7 +229,7 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
 
 pub struct SignedTransactionBuilder<'a> {
     seed: Seed,
-    inputs: Vec<(Input, &'a str)>,
+    inputs: Vec<(Input, &'a BIP32Path)>,
     outputs: Vec<Output>,
     payload: Option<Vec<Payload>>,
 }
@@ -244,7 +244,7 @@ impl<'a> SignedTransactionBuilder<'a> {
         }
     }
 
-    pub fn set_inputs(mut self, mut inputs: Vec<(Input, &'a str)>) -> Self {
+    pub fn set_inputs(mut self, mut inputs: Vec<(Input, &'a BIP32Path)>) -> Self {
         self.inputs.append(&mut inputs);
 
         self
@@ -274,8 +274,8 @@ impl<'a> SignedTransactionBuilder<'a> {
 
         let mut unlock_blocks = Vec::new();
         let mut last_index = (None, -1);
-        for (i, index) in &inputs {
-            if last_index.0 == Some(index) {
+        for (i, path) in &inputs {
+            if last_index.0 == Some(path) {
                 unlock_blocks.push(UnlockBlock::Reference(ReferenceUnlock {
                     index: last_index.1 as u8,
                 }));
@@ -283,7 +283,6 @@ impl<'a> SignedTransactionBuilder<'a> {
                 let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
                 match &self.seed {
                     Seed::Ed25519(s) => {
-                        let path = BIP32Path::from_str(*index).map_err(|_| Error::PathError)?;
                         let private_key = Ed25519PrivateKey::generate_from_seed(s, &path)?;
                         let public_key = private_key.generate_public_key().to_bytes();
                         let signature = private_key.sign(&serialized_inputs).to_bytes().to_vec();
@@ -303,7 +302,7 @@ impl<'a> SignedTransactionBuilder<'a> {
                     }
                 }
 
-                last_index = (Some(index), (unlock_blocks.len() - 1) as isize);
+                last_index = (Some(path), (unlock_blocks.len() - 1) as isize);
             }
         }
 
