@@ -59,8 +59,7 @@ impl NodeBuilder {
     pub async fn finish(self) -> Result<Node, Error> {
         print_banner_and_version();
 
-        let bee_node_builder = NodeBuilderB::<BeeNode>::new();
-        let bee_node = bee_node_builder.finish();
+        let node_builder = NodeBuilderB::<BeeNode>::new();
 
         let bus = Arc::new(Bus::default());
 
@@ -68,8 +67,8 @@ impl NodeBuilder {
         tangle::init();
 
         // TODO temporary
-        let (ledger_state, snapshot_index, snapshot_timestamp) =
-            bee_snapshot::init(&self.config.snapshot, &bee_node, bus.clone())
+        let (mut node_builder, ledger_state, snapshot_index, snapshot_timestamp) =
+            bee_snapshot::init(&self.config.snapshot, node_builder)
                 .await
                 .map_err(Error::SnapshotError)?;
 
@@ -80,26 +79,33 @@ impl NodeBuilder {
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
-        bee_ledger::whiteflag::init(
+        node_builder = bee_ledger::whiteflag::init(
             *snapshot_index,
             ledger_state,
             self.config.protocol.coordinator().clone(),
-            &bee_node,
+            node_builder,
             bus.clone(),
         );
 
         info!("Initializing protocol...");
-        Protocol::init(
+        node_builder = Protocol::init(
             self.config.protocol.clone(),
             network.clone(),
             snapshot_timestamp,
-            &bee_node,
+            node_builder,
             bus.clone(),
         )
         .await;
 
         info!("Initializing plugins...");
-        plugin::init(bus);
+        plugin::init(bus.clone());
+
+        let bee_node = node_builder.finish();
+
+        info!("Registering events...");
+        bee_snapshot::events(&bee_node, bus.clone());
+        bee_ledger::whiteflag::events(&bee_node, bus.clone());
+        Protocol::events(&bee_node, bus.clone());
 
         info!("Initialized.");
         Ok(Node {

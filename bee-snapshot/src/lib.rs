@@ -19,14 +19,17 @@ pub mod global;
 pub mod local;
 pub mod metadata;
 
-use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
+use bee_common_ext::{
+    bee_node::BeeNode,
+    event::Bus,
+    node::{Node, NodeBuilder},
+};
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
 use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};
 use log::{info, warn};
-use tokio::spawn;
 
 use std::{path::Path, sync::Arc};
 
@@ -41,9 +44,8 @@ pub enum Error {
 
 pub async fn init(
     config: &config::SnapshotConfig,
-    bee_node: &BeeNode,
-    bus: Arc<Bus<'static>>,
-) -> Result<(LedgerState, MilestoneIndex, u64), Error> {
+    mut node_builder: NodeBuilder<BeeNode>,
+) -> Result<(NodeBuilder<BeeNode>, LedgerState, MilestoneIndex, u64), Error> {
     let (state, index, timestamp) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
@@ -104,8 +106,12 @@ pub async fn init(
         }
     };
 
-    worker::SnapshotWorker::start(bee_node, config.clone());
+    node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
 
+    Ok((node_builder, state, MilestoneIndex(index), timestamp))
+}
+
+pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
     let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
@@ -117,6 +123,4 @@ pub async fn init(
             )
         }
     });
-
-    Ok((state, MilestoneIndex(index), timestamp))
 }

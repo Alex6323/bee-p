@@ -20,7 +20,11 @@ use crate::state::LedgerState;
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
-use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
+use bee_common_ext::{
+    bee_node::BeeNode,
+    event::Bus,
+    node::{Node, NodeBuilder},
+};
 use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use log::warn;
@@ -31,17 +35,13 @@ pub fn init(
     index: u32,
     state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
-    bee_node: &BeeNode,
+    node_builder: NodeBuilder<BeeNode>,
     bus: Arc<Bus<'static>>,
-) {
-    // TODO
-    // if unsafe { !WHITE_FLAG.is_null() } {
-    //     warn!("Already initialized.");
-    //     return;
-    // }
+) -> NodeBuilder<BeeNode> {
+    node_builder.with_worker_cfg::<LedgerWorker>((MilestoneIndex(index), state, coo_config, bus.clone()))
+}
 
-    LedgerWorker::start(bee_node, (MilestoneIndex(index), state, coo_config, bus.clone()));
-
+pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
     let ledger_worker = bee_node.worker::<LedgerWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
