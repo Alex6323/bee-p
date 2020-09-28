@@ -103,7 +103,7 @@ impl TopologicalOrder {
             .enumerate()
             .find_map(|(index, id2)| if id == *id2 { Some(index) } else { None })
         {
-            if self.being_visited.insert(id) {
+            if !self.being_visited.insert(id) {
                 panic!("Cyclic dependency detected.");
             }
 
@@ -127,8 +127,8 @@ impl TopologicalOrder {
             order: vec![],
         };
 
-        while let Some(id) = this.non_visited.pop() {
-            this.visit(id);
+        while let Some(id) = this.non_visited.last() {
+            this.visit(*id);
         }
 
         this.order
