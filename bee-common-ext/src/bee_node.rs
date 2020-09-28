@@ -12,8 +12,8 @@
 use crate::{node::Node, worker::Worker};
 
 use anymap::{any::Any, Map};
-use async_std::task::spawn;
 use futures::{channel::oneshot, future::Future};
+use tokio::spawn;
 
 use std::{
     any::TypeId,
@@ -23,7 +23,16 @@ use std::{
 
 pub struct BeeNode {
     workers: Map<dyn Any + Send + Sync>,
-    tasks: Mutex<HashMap<TypeId, Vec<(oneshot::Sender<()>, Box<dyn Future<Output = ()> + Send + Sync>)>>>,
+    tasks: Mutex<
+        HashMap<
+            TypeId,
+            Vec<(
+                oneshot::Sender<()>,
+                // TODO Result ?
+                Box<dyn Future<Output = Result<(), tokio::task::JoinError>> + Send + Sync>,
+            )>,
+        >,
+    >,
 }
 
 impl Node for BeeNode {

@@ -17,7 +17,7 @@ use bee_common_ext::{node::Node, worker::Worker};
 use async_trait::async_trait;
 use futures::StreamExt;
 use log::info;
-use tokio::time::{interval};
+use tokio::time::interval;
 
 use std::time::Duration;
 

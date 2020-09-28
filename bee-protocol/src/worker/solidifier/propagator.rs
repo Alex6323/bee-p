@@ -61,8 +61,9 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
                             tangle().update_metadata(&hash, |metadata| {
                                 metadata.solidify();
 
-                                // This is possibly not sufficient as there is no guarantee a milestone has been validated
-                                // before being solidified, we then also need to check when a milestone gets validated if it's
+                                // This is possibly not sufficient as there is no guarantee a milestone has been
+                                // validated before being solidified, we then also need
+                                // to check when a milestone gets validated if it's
                                 // already solid.
                                 if metadata.flags().is_milestone() {
                                     index = Some(metadata.milestone_index());

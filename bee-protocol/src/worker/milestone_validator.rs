@@ -121,8 +121,9 @@ where
                             Ok(milestone) => {
                                 tangle().add_milestone(milestone.index, milestone.hash);
 
-                                // This is possibly not sufficient as there is no guarantee a milestone has been solidified
-                                // before being validated, we then also need to check when a milestone gets solidified if it's
+                                // This is possibly not sufficient as there is no guarantee a milestone has been
+                                // solidified before being validated, we then also need
+                                // to check when a milestone gets solidified if it's
                                 // already vadidated.
                                 if meta.flags().is_solid() {
                                     Protocol::get()
