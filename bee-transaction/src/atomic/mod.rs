@@ -37,6 +37,8 @@ pub enum Error {
     HashError,
     #[error("The format of provided BIP32 path is not correct.")]
     PathError,
+    #[error("Missing required parameters.")]
+    MissingParameter,
     #[error(transparent)]
     BincodeError(#[from] bincode::Error),
     #[error(transparent)]

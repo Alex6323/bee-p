@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    atomic::{payload::Payload, Hash},
+    atomic::{payload::Payload, Error, Hash},
     Vertex,
 };
 
@@ -18,10 +18,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Message {
-    pub trunk: Hash,
-    pub branch: Hash,
-    pub payload: Payload,
-    pub nonce: u64,
+    trunk: Hash,
+    branch: Hash,
+    payload: Payload,
+    nonce: u64,
+}
+
+impl Message {
+    pub fn new() -> MessageBuilder {
+        MessageBuilder::new()
+    }
 }
 
 impl Vertex for Message {
@@ -33,5 +39,48 @@ impl Vertex for Message {
 
     fn branch(&self) -> &Self::Hash {
         &self.branch
+    }
+}
+
+pub struct MessageBuilder {
+    tips: Option<(Hash, Hash)>,
+    payload: Option<Payload>,
+}
+
+impl MessageBuilder {
+    pub fn new() -> Self {
+        Self {
+            tips: None,
+            payload: None,
+        }
+    }
+
+    pub fn tips(mut self, tips: (Hash, Hash)) -> Self {
+        self.tips = Some(tips);
+        self
+    }
+
+    pub fn payload(mut self, payload: Payload) -> Self {
+        self.payload = Some(payload);
+        self
+    }
+
+    pub fn buid(self) -> Result<Message, Error> {
+        let tips = match self.tips {
+            Some(t) => t,
+            None => return Err(Error::MissingParameter),
+        };
+
+        let payload = match self.payload {
+            Some(p) => p,
+            None => return Err(Error::MissingParameter),
+        };
+
+        Ok(Message {
+            trunk: tips.0,
+            branch: tips.1,
+            payload,
+            nonce: 0, // TODO PoW
+        })
     }
 }
