@@ -92,7 +92,7 @@ impl Protocol {
         StatusWorker::start(bee_node, Protocol::get().config.workers.status_interval);
         TpsWorker::start(bee_node, ());
         KickstartWorker::start(bee_node, (ms_send, Protocol::get().config.workers.ms_sync_count));
-        async { MilestoneSolidifierWorker::start(bee_node, ms_recv).await };
+        MilestoneSolidifierWorker::start(bee_node, ms_recv);
 
         Protocol::get()
             .bus
