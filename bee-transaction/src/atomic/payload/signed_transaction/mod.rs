@@ -111,11 +111,12 @@ impl SignedTransaction {
                     }
 
                     // Amount must be > 0
-                    if u.amount == 0 {
+                    let amount = u.amount.get();
+                    if amount == 0 {
                         return Err(Error::AmountError);
                     }
 
-                    total += u.amount;
+                    total += amount;
                 }
             }
         }

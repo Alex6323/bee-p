@@ -11,6 +11,8 @@
 
 use bee_transaction::prelude::*;
 
+use std::num::NonZeroU64;
+
 #[test]
 fn input_to_json_serde() {
     let expected = Input::new(Hash([1u8; 32]), 2);
@@ -23,7 +25,7 @@ fn input_to_json_serde() {
 #[test]
 fn output_to_json_serde() {
     let address = Address::from_ed25519_bytes(&[2; 32]);
-    let expected = Output::new(address, 18446744073709551615);
+    let expected = Output::new(address, NonZeroU64::new(18446744073709551615).unwrap());
     let json = serde_json::to_string(&expected).unwrap();
     let actual = serde_json::from_str(&json).unwrap();
 
@@ -37,7 +39,7 @@ fn unsigned_transaction_to_json_serde() {
     inputs.push(Input::new(Hash([3u8; 32]), 4));
     let address = Address::from_ed25519_bytes(&[2; 32]);
     let mut outputs = Vec::new();
-    outputs.push(Output::new(address, 18446744073709551615));
+    outputs.push(Output::new(address, NonZeroU64::new(18446744073709551615).unwrap()));
     let expected = UnsignedTransaction {
         inputs,
         outputs,
@@ -80,7 +82,7 @@ fn transaction_message_to_json_serde() {
     inputs.push(Input::new(Hash([3u8; 32]), 4));
     let address = Address::from_ed25519_bytes(&[2; 32]);
     let mut outputs = Vec::new();
-    outputs.push(Output::new(address, 18446744073709551615));
+    outputs.push(Output::new(address, NonZeroU64::new(18446744073709551615).unwrap()));
     let unsigned_transaction = UnsignedTransaction {
         inputs,
         outputs,

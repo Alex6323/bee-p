@@ -15,13 +15,15 @@ pub use sig_locked_single_deposit::{Address, SigLockedSingleDeposit};
 
 use serde::{Deserialize, Serialize};
 
+use std::num::NonZeroU64;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Output {
     SigLockedSingleDeposit(SigLockedSingleDeposit),
 }
 
 impl Output {
-    pub fn new(address: Address, amount: u64) -> Self {
+    pub fn new(address: Address, amount: NonZeroU64) -> Self {
         Output::SigLockedSingleDeposit(SigLockedSingleDeposit { address, amount })
     }
 
@@ -33,7 +35,7 @@ impl Output {
     }
 
     /// Convenient method to get amount.
-    pub fn amount(&self) -> &u64 {
+    pub fn amount(&self) -> &NonZeroU64 {
         match self {
             Output::SigLockedSingleDeposit(s) => &s.amount,
         }

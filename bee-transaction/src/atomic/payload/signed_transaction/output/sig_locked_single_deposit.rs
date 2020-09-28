@@ -20,7 +20,7 @@ use blake2::{
 };
 use serde::{Deserialize, Serialize};
 
-use std::convert::TryInto;
+use std::{convert::TryInto, num::NonZeroU64};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Address {
@@ -63,5 +63,5 @@ impl Address {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SigLockedSingleDeposit {
     pub address: Address,
-    pub amount: u64,
+    pub amount: NonZeroU64,
 }
