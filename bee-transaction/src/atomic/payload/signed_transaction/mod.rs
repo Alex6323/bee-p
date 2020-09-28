@@ -229,7 +229,7 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
 
 pub struct SignedTransactionBuilder<'a> {
     seed: &'a Seed,
-    inputs: Vec<(Input, &'a BIP32Path)>,
+    inputs: Vec<(Input, BIP32Path)>,
     outputs: Vec<Output>,
     payload: Option<Vec<Payload>>,
 }
@@ -244,7 +244,7 @@ impl<'a> SignedTransactionBuilder<'a> {
         }
     }
 
-    pub fn set_inputs(mut self, mut inputs: Vec<(Input, &'a BIP32Path)>) -> Self {
+    pub fn set_inputs(mut self, mut inputs: Vec<(Input, BIP32Path)>) -> Self {
         self.inputs.append(&mut inputs);
 
         self
