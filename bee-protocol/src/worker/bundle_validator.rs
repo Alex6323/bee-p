@@ -23,10 +23,12 @@ use futures::{
 };
 use log::{info, warn};
 
-use std::sync::Arc;
-use crate::Protocol;
+use crate::{
+    worker::tip_candidate_validator::{BundleInfo, TipCandidateWorkerEvent},
+    Protocol,
+};
 use bee_transaction::Vertex;
-use crate::worker::tip_candidate_validator::{TipCandidateWorkerEvent, BundleInfo};
+use std::sync::Arc;
 
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
@@ -61,7 +63,9 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
 
 impl BundleValidatorWorker {
     pub(crate) fn new(tip_candidate_validator: mpsc::UnboundedSender<TipCandidateWorkerEvent>) -> Self {
-        Self { tip_candidate_validator }
+        Self {
+            tip_candidate_validator,
+        }
     }
 
     fn validate(&self, tail: Hash) {
@@ -71,15 +75,14 @@ impl BundleValidatorWorker {
                     tangle().update_metadata(&tail, |metadata| {
                         metadata.flags_mut().set_valid(true);
                     });
-                    if let Err(e) = self.tip_candidate_validator.unbounded_send(
-                        TipCandidateWorkerEvent::BundleValidated(
-                            BundleInfo {
+                    if let Err(e) =
+                        self.tip_candidate_validator
+                            .unbounded_send(TipCandidateWorkerEvent::BundleValidated(BundleInfo {
                                 tail,
                                 trunk: *validated_bundle.trunk(),
-                                branch: *validated_bundle.branch()
-                            }
-                        )
-                    ) {
+                                branch: *validated_bundle.branch(),
+                            }))
+                    {
                         warn!("Failed to send hash to tip candidate validator: {:?}.", e);
                     }
                 }

@@ -38,9 +38,11 @@ use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 use tokio::spawn;
 
+use crate::{
+    event::TipCandidateFound,
+    worker::{OtrsiYtrsiPropagatorWorker, TipCandidateWorker, TipCandidateWorkerEvent},
+};
 use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
-use crate::event::{TipCandidateFound};
-use crate::worker::{TipCandidateWorkerEvent, TipCandidateWorker, OtrsiYtrsiPropagatorWorker};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
 
@@ -62,7 +64,8 @@ pub struct Protocol {
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<<SolidPropagatorWorker as Worker<BeeNode>>::Event>,
     pub(crate) milestone_solidifier_worker:
         mpsc::UnboundedSender<<MilestoneSolidifierWorker as Worker<BeeNode>>::Event>,
-    pub(crate) otrsi_ytrsi_propagator_worker: mpsc::UnboundedSender<<OtrsiYtrsiPropagatorWorker as Worker<BeeNode>>::Event>,
+    pub(crate) otrsi_ytrsi_propagator_worker:
+        mpsc::UnboundedSender<<OtrsiYtrsiPropagatorWorker as Worker<BeeNode>>::Event>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
@@ -122,11 +125,11 @@ impl Protocol {
         let (kickstart_worker_shutdown_tx, kickstart_worker_shutdown_rx) = oneshot::channel();
 
         let (tip_candidate_validator_worker_tx, tip_candidate_validator_worker_rx) = mpsc::unbounded();
-        let (tip_candidate_validator_worker_shutdown_tx, tip_candidate_validator_worker_shutdown_rx) = oneshot::channel();
+        let (tip_candidate_validator_worker_shutdown_tx, tip_candidate_validator_worker_shutdown_rx) =
+            oneshot::channel();
 
         let (otrsi_ytrsi_propagator_worker_tx, otrsi_ytrsi_propagator_worker_rx) = mpsc::unbounded();
         let (otrsi_ytrsi_propagator_worker_shutdown_tx, otrsi_ytrsi_propagator_worker_shutdown_rx) = oneshot::channel();
-
 
         let protocol = Protocol {
             config,
@@ -262,11 +265,13 @@ impl Protocol {
 
         shutdown.add_worker_shutdown(
             bundle_validator_worker_shutdown_tx,
-            spawn(BundleValidatorWorker::new(tip_candidate_validator_worker_tx.clone()).start(
-                ShutdownStream::new(bundle_validator_worker_shutdown_rx, bundle_validator_worker_rx),
-                bee_node.clone(),
-                (),
-            )),
+            spawn(
+                BundleValidatorWorker::new(tip_candidate_validator_worker_tx.clone()).start(
+                    ShutdownStream::new(bundle_validator_worker_shutdown_rx, bundle_validator_worker_rx),
+                    bee_node.clone(),
+                    (),
+                ),
+            ),
         );
 
         shutdown.add_worker_shutdown(
@@ -314,17 +319,25 @@ impl Protocol {
 
         shutdown.add_worker_shutdown(
             otrsi_ytrsi_propagator_worker_shutdown_tx,
-            spawn(OtrsiYtrsiPropagatorWorker::new(tip_candidate_validator_worker_tx).start(
-                ShutdownStream::new(otrsi_ytrsi_propagator_worker_shutdown_rx, otrsi_ytrsi_propagator_worker_rx),
-                bee_node.clone(),
-                (),
-            )),
+            spawn(
+                OtrsiYtrsiPropagatorWorker::new(tip_candidate_validator_worker_tx).start(
+                    ShutdownStream::new(
+                        otrsi_ytrsi_propagator_worker_shutdown_rx,
+                        otrsi_ytrsi_propagator_worker_rx,
+                    ),
+                    bee_node.clone(),
+                    (),
+                ),
+            ),
         );
 
         shutdown.add_worker_shutdown(
             tip_candidate_validator_worker_shutdown_tx,
             spawn(TipCandidateWorker::new().start(
-                ShutdownStream::new(tip_candidate_validator_worker_shutdown_rx, tip_candidate_validator_worker_rx),
+                ShutdownStream::new(
+                    tip_candidate_validator_worker_shutdown_rx,
+                    tip_candidate_validator_worker_rx,
+                ),
                 bee_node.clone(),
                 (),
             )),
@@ -343,7 +356,6 @@ impl Protocol {
                     .await
             }),
         );
-
     }
 
     pub(crate) fn get() -> &'static Protocol {

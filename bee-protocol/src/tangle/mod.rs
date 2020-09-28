@@ -24,18 +24,19 @@ use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
-use log::{info, error};
+use log::{error, info};
 
+use crate::{tangle::wurts::WurtsTipPool, worker::OtrsiYtrsiPropagatorWorkerEvent};
+use bee_transaction::Vertex;
 use std::{
+    collections::HashSet,
     ops::Deref,
     ptr,
-    sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
+    sync::{
+        atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
+        Arc, RwLock,
+    },
 };
-use std::sync::{Arc, RwLock};
-use crate::tangle::wurts::WurtsTipPool;
-use std::collections::HashSet;
-use bee_transaction::Vertex;
-use crate::worker::OtrsiYtrsiPropagatorWorkerEvent;
 
 /// Milestone-based Tangle.
 #[derive(Default)]
@@ -282,10 +283,8 @@ impl MsTangle {
             {
                 error!("Failed to send hash to OTRSI/YTRSI propagator: {:?}.", e);
             }
-
         }
     }
-
 }
 
 static TANGLE: AtomicPtr<MsTangle> = AtomicPtr::new(ptr::null_mut());

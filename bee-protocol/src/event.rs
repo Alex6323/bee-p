@@ -25,7 +25,7 @@ pub struct LatestSolidMilestoneChanged(pub Milestone);
 pub struct TipCandidateFound {
     pub tail: Hash,
     pub trunk: Hash,
-    pub branch: Hash
+    pub branch: Hash,
 }
 
 pub struct TransactionSolidified(pub Hash);

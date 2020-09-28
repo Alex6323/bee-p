@@ -23,15 +23,13 @@ use futures::{
 };
 use log::{info, warn};
 
-use std::sync::Arc;
-use crate::Protocol;
+use crate::{event::TipCandidateFound, Protocol};
 use bee_transaction::Vertex;
-use crate::event::{TipCandidateFound};
-use std::collections::{HashMap};
+use std::{collections::HashMap, sync::Arc};
 
 pub(crate) enum TipCandidateWorkerEvent {
     BundleValidated(BundleInfo),
-    OtrsiYtrsiPropagated(Hash)
+    OtrsiYtrsiPropagated(Hash),
 }
 
 pub(crate) struct BundleInfo {
@@ -72,7 +70,7 @@ impl<N: Node> Worker<N> for TipCandidateWorker {
 impl TipCandidateWorker {
     pub(crate) fn new() -> Self {
         Self {
-            not_ready_for_tip_pool: HashMap::new()
+            not_ready_for_tip_pool: HashMap::new(),
         }
     }
 
@@ -83,7 +81,7 @@ impl TipCandidateWorker {
                     Protocol::get().bus.dispatch(TipCandidateFound {
                         tail: bundle_info.tail,
                         trunk: bundle_info.trunk,
-                        branch: bundle_info.branch
+                        branch: bundle_info.branch,
                     });
                 } else {
                     self.not_ready_for_tip_pool.insert(bundle_info.tail, bundle_info);
@@ -94,11 +92,10 @@ impl TipCandidateWorker {
                     Protocol::get().bus.dispatch(TipCandidateFound {
                         tail: bundle_info.tail,
                         trunk: bundle_info.trunk,
-                        branch: bundle_info.branch
+                        branch: bundle_info.branch,
                     });
                 }
             }
         }
     }
-
 }

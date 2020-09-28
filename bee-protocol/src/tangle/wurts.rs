@@ -15,13 +15,11 @@ use bee_tangle::Tangle;
 use bee_ternary::tryte::Tryte::O;
 use bee_transaction::Vertex;
 use log::{error, info};
-use rand::{seq::IteratorRandom};
+use rand::seq::IteratorRandom;
 use std::{
-    collections::HashSet,
+    collections::{hash_map::Entry, HashMap, HashSet},
     time::SystemTime,
 };
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 
 enum Score {
     NonLazy,
@@ -29,18 +27,23 @@ enum Score {
     Lazy,
 }
 
-// C1: the maximum allowed delta value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+// C1: the maximum allowed delta value for the YTRSI of a given transaction in relation to the current LSMI before it
+// gets lazy.
 const YTRSI_DELTA: u32 = 8;
-// C2: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
+// C2: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
+// gets semi-lazy.
 const OTRSI_DELTA: u32 = 13;
-// M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+// M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
+// gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
-// the maximum amount of current tips for which "MAX_AGE_SECONDS" and "MAX_NUM_CHILDREN" are checked. if the amount of tips exceeds this limit,
-// referenced tips get removed directly to reduce the amount of tips in the network.
+// the maximum amount of current tips for which "MAX_AGE_SECONDS" and "MAX_NUM_CHILDREN" are checked. if the amount of
+// tips exceeds this limit, referenced tips get removed directly to reduce the amount of tips in the network.
 const RETENTION_LIMIT: u8 = 100;
-// the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to widen the cone of the tangle. (non-lazy pool)
+// the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to
+// widen the cone of the tangle. (non-lazy pool)
 const MAX_AGE_SECONDS: u8 = 3;
-// the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to widen the cone of the tangle. (non-lazy pool)
+// the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to
+// widen the cone of the tangle. (non-lazy pool)
 const MAX_NUM_CHILDREN: u8 = 2;
 
 #[derive(Default)]
@@ -79,7 +82,7 @@ impl WurtsTipPool {
                     self.remove_tip(&tip);
                 }
             } else {
-                break
+                break;
             }
         }
     }
@@ -151,7 +154,6 @@ impl WurtsTipPool {
 
     // further optimization: avoid allocations
     pub(crate) fn update_scores(&mut self) {
-
         // reset pool
         self.non_lazy_tips.clear();
 
@@ -220,8 +222,7 @@ impl WurtsTipPool {
         } else {
             let mut iter = ret.iter();
             Some((*iter.next().unwrap(), *iter.next().unwrap()))
-        }
-
+        };
     }
 
     fn select_tip(&self, hashes: &HashSet<Hash>) -> Option<Hash> {
@@ -230,5 +231,4 @@ impl WurtsTipPool {
         }
         Some(*hashes.iter().choose(&mut rand::thread_rng()).unwrap())
     }
-
 }

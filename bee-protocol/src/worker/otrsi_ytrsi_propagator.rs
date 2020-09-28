@@ -23,16 +23,19 @@ use futures::{
 };
 use log::{info, warn};
 
-use std::sync::Arc;
-use crate::Protocol;
+use crate::{
+    worker::tip_candidate_validator::{TipCandidateWorkerEvent, TipCandidateWorkerEvent::OtrsiYtrsiPropagated},
+    Protocol,
+};
 use bee_transaction::Vertex;
-use crate::worker::tip_candidate_validator::TipCandidateWorkerEvent;
-use std::cmp::{max, min};
-use crate::worker::tip_candidate_validator::TipCandidateWorkerEvent::OtrsiYtrsiPropagated;
+use std::{
+    cmp::{max, min},
+    sync::Arc,
+};
 
 pub(crate) enum OtrsiYtrsiPropagatorWorkerEvent {
     Default(Hash),
-    UpdateTransactionsReferencedByMilestone(Vec<Hash>)
+    UpdateTransactionsReferencedByMilestone(Vec<Hash>),
 }
 
 pub(crate) struct OtrsiYtrsiPropagatorWorker {
@@ -66,13 +69,15 @@ impl<N: Node> Worker<N> for OtrsiYtrsiPropagatorWorker {
 
 impl OtrsiYtrsiPropagatorWorker {
     pub(crate) fn new(tip_candidate_validator: mpsc::UnboundedSender<TipCandidateWorkerEvent>) -> Self {
-        Self { tip_candidate_validator }
+        Self {
+            tip_candidate_validator,
+        }
     }
 
     fn propagate(&mut self, event: OtrsiYtrsiPropagatorWorkerEvent) {
         let mut children = match &event {
             OtrsiYtrsiPropagatorWorkerEvent::Default(hash) => vec![*hash],
-            OtrsiYtrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => hashes.clone()
+            OtrsiYtrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => hashes.clone(),
         };
         while let Some(hash) = children.pop() {
             // get best otrsi and ytrsi from parents
@@ -115,14 +120,15 @@ impl OtrsiYtrsiPropagatorWorker {
                 children.push(child);
             }
 
-            if let Err(e) = self.tip_candidate_validator.unbounded_send(TipCandidateWorkerEvent::OtrsiYtrsiPropagated(hash)) {
+            if let Err(e) = self
+                .tip_candidate_validator
+                .unbounded_send(TipCandidateWorkerEvent::OtrsiYtrsiPropagated(hash))
+            {
                 warn!("Failed to send hash to tip candidate validator: {:?}.", e);
             }
-
         }
         if let OtrsiYtrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(_) = event {
             tangle().update_tip_pool();
         }
     }
-
 }
