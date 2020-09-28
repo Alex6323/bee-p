@@ -15,7 +15,7 @@ mod message;
 pub mod payload;
 
 pub use hash::Hash;
-pub use message::Message;
+pub use message::{Message, MessageBuilder};
 
 use thiserror::Error;
 

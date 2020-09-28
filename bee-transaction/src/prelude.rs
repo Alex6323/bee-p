@@ -17,5 +17,5 @@ pub use crate::atomic::{
         },
         Indexation, Milestone, Payload, SignedData, SignedTransaction, UnsignedData,
     },
-    Error, Hash, Message,
+    Error, Hash, Message, MessageBuilder,
 };

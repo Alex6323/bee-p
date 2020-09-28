@@ -99,12 +99,11 @@ fn transaction_message_to_json_serde() {
     };
 
     // Create a message from signed transaction payload.
-    let expected = Message {
-        trunk: Hash([0; 32]),
-        branch: Hash([0; 32]),
-        payload: Payload::SignedTransaction(Box::new(signed)),
-        nonce: 123321,
-    };
+    let expected = Message::new()
+        .tips((Hash([0; 32]), Hash([0; 32])))
+        .payload(Payload::SignedTransaction(Box::new(signed)))
+        .buid()
+        .unwrap();
 
     // test message on serde json
     let json = serde_json::to_string(&expected).unwrap();
