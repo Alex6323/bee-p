@@ -35,12 +35,18 @@ pub struct BeeNode {
     >,
 }
 
-impl Node for BeeNode {
-    fn new() -> Self {
+impl Default for BeeNode {
+    fn default() -> Self {
         Self {
             workers: Map::new(),
             tasks: Mutex::new(HashMap::new()),
         }
+    }
+}
+
+impl Node for BeeNode {
+    fn new() -> Self {
+        Self::default()
     }
 
     fn spawn<W, G, F>(&self, g: G)

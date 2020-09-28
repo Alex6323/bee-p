@@ -14,7 +14,11 @@
 use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node as NodeT};
+use bee_common_ext::{
+    bee_node::BeeNode,
+    event::Bus,
+    node::{Node as NodeT, NodeBuilder as NodeBuilderB},
+};
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, EventReceiver, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, Protocol};
@@ -55,7 +59,8 @@ impl NodeBuilder {
     pub async fn finish(self) -> Result<Node, Error> {
         print_banner_and_version();
 
-        let bee_node = BeeNode::new();
+        let bee_node_builder = NodeBuilderB::<BeeNode>::new();
+        let bee_node = bee_node_builder.finish();
 
         let bus = Arc::new(Bus::default());
 

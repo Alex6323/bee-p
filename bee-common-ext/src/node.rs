@@ -23,7 +23,7 @@ use std::{
     pin::Pin,
 };
 
-pub trait Node: Send + Sync + 'static {
+pub trait Node: Default + Send + Sync + 'static {
     fn new() -> Self;
     fn spawn<W, G, F>(&self, g: G)
     where
@@ -38,7 +38,8 @@ pub trait Node: Send + Sync + 'static {
     fn set_workers(&mut self, workers: Map<dyn Any + Send + Sync>);
 }
 
-struct NodeBuilder<N: Node> {
+#[derive(Default)]
+pub struct NodeBuilder<N: Node> {
     deps: HashMap<TypeId, &'static [TypeId]>,
     makers: HashMap<
         TypeId,
@@ -47,14 +48,18 @@ struct NodeBuilder<N: Node> {
 }
 
 impl<N: Node + 'static> NodeBuilder<N> {
-    fn with_worker<W: Worker<N> + 'static>(self) -> Self
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_worker<W: Worker<N> + 'static>(self) -> Self
     where
         W::Config: Default,
     {
         self.with_worker_cfg::<W>(W::Config::default())
     }
 
-    fn with_worker_cfg<W: Worker<N> + 'static>(mut self, config: W::Config) -> Self {
+    pub fn with_worker_cfg<W: Worker<N> + 'static>(mut self, config: W::Config) -> Self {
         self.deps.insert(TypeId::of::<W>(), W::DEPS);
         self.makers.insert(
             TypeId::of::<W>(),
@@ -69,7 +74,7 @@ impl<N: Node + 'static> NodeBuilder<N> {
         self
     }
 
-    fn finish(mut self) -> N {
+    pub fn finish(mut self) -> N {
         let mut node = N::new();
         let mut anymap = Map::new();
 
