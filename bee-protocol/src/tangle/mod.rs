@@ -26,7 +26,7 @@ use bee_transaction::bundled::BundledTransaction as Tx;
 use dashmap::DashMap;
 use log::{error, info};
 
-use crate::{tangle::wurts::WurtsTipPool, worker::OtrsiYtrsiPropagatorWorkerEvent};
+use crate::{tangle::wurts::WurtsTipPool, worker::TrsiPropagatorWorkerEvent};
 use bee_transaction::Vertex;
 use std::{
     collections::HashSet,
@@ -79,10 +79,10 @@ impl MsTangle {
 
         if opt.is_some() {
             if let Err(e) = Protocol::get()
-                .otrsi_ytrsi_propagator_worker
-                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent::Default(hash))
+                .trsi_propagator_worker
+                .unbounded_send(TrsiPropagatorWorkerEvent::Default(hash))
             {
-                error!("Failed to send hash to OTRSI/YTRSI propagator: {:?}.", e);
+                error!("Failed to send hash to TRSI propagator: {:?}.", e);
             }
         }
 
@@ -278,10 +278,10 @@ impl MsTangle {
             }
 
             if let Err(e) = Protocol::get()
-                .otrsi_ytrsi_propagator_worker
-                .unbounded_send(OtrsiYtrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(propagateTo))
+                .trsi_propagator_worker
+                .unbounded_send(TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(propagateTo))
             {
-                error!("Failed to send hash to OTRSI/YTRSI propagator: {:?}.", e);
+                error!("Failed to send hash to TRSI propagator: {:?}.", e);
             }
         }
     }

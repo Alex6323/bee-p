@@ -40,7 +40,7 @@ use tokio::spawn;
 
 use crate::{
     event::TipCandidateFound,
-    worker::{OtrsiYtrsiPropagatorWorker, TipCandidateWorker, TipCandidateWorkerEvent},
+    worker::{TrsiPropagatorWorker, TipCandidateWorker, TipCandidateWorkerEvent},
 };
 use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
 
@@ -64,8 +64,8 @@ pub struct Protocol {
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<<SolidPropagatorWorker as Worker<BeeNode>>::Event>,
     pub(crate) milestone_solidifier_worker:
         mpsc::UnboundedSender<<MilestoneSolidifierWorker as Worker<BeeNode>>::Event>,
-    pub(crate) otrsi_ytrsi_propagator_worker:
-        mpsc::UnboundedSender<<OtrsiYtrsiPropagatorWorker as Worker<BeeNode>>::Event>,
+    pub(crate) trsi_propagator_worker:
+        mpsc::UnboundedSender<<TrsiPropagatorWorker as Worker<BeeNode>>::Event>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
@@ -128,8 +128,8 @@ impl Protocol {
         let (tip_candidate_validator_worker_shutdown_tx, tip_candidate_validator_worker_shutdown_rx) =
             oneshot::channel();
 
-        let (otrsi_ytrsi_propagator_worker_tx, otrsi_ytrsi_propagator_worker_rx) = mpsc::unbounded();
-        let (otrsi_ytrsi_propagator_worker_shutdown_tx, otrsi_ytrsi_propagator_worker_shutdown_rx) = oneshot::channel();
+        let (trsi_propagator_worker_tx, trsi_propagator_worker_rx) = mpsc::unbounded();
+        let (trsi_propagator_worker_shutdown_tx, trsi_propagator_worker_shutdown_rx) = oneshot::channel();
 
         let protocol = Protocol {
             config,
@@ -145,7 +145,7 @@ impl Protocol {
             broadcaster_worker: broadcaster_worker_tx,
             solid_propagator_worker: solid_propagator_worker_tx,
             milestone_solidifier_worker: milestone_solidifier_worker_tx,
-            otrsi_ytrsi_propagator_worker: otrsi_ytrsi_propagator_worker_tx,
+            trsi_propagator_worker: trsi_propagator_worker_tx,
             peer_manager: PeerManager::new(),
             requested_transactions: Default::default(),
             requested_milestones: Default::default(),
@@ -318,12 +318,12 @@ impl Protocol {
         );
 
         shutdown.add_worker_shutdown(
-            otrsi_ytrsi_propagator_worker_shutdown_tx,
+            trsi_propagator_worker_shutdown_tx,
             spawn(
-                OtrsiYtrsiPropagatorWorker::new(tip_candidate_validator_worker_tx).start(
+                TrsiPropagatorWorker::new(tip_candidate_validator_worker_tx).start(
                     ShutdownStream::new(
-                        otrsi_ytrsi_propagator_worker_shutdown_rx,
-                        otrsi_ytrsi_propagator_worker_rx,
+                        trsi_propagator_worker_shutdown_rx,
+                        trsi_propagator_worker_rx,
                     ),
                     bee_node.clone(),
                     (),

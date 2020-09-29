@@ -33,20 +33,20 @@ use std::{
     sync::Arc,
 };
 
-pub(crate) enum OtrsiYtrsiPropagatorWorkerEvent {
+pub(crate) enum TrsiPropagatorWorkerEvent {
     Default(Hash),
     UpdateTransactionsReferencedByMilestone(Vec<Hash>),
 }
 
-pub(crate) struct OtrsiYtrsiPropagatorWorker {
+pub(crate) struct TrsiPropagatorWorker {
     tip_candidate_validator: mpsc::UnboundedSender<TipCandidateWorkerEvent>,
 }
 
 #[async_trait]
-impl<N: Node> Worker<N> for OtrsiYtrsiPropagatorWorker {
+impl<N: Node> Worker<N> for TrsiPropagatorWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = OtrsiYtrsiPropagatorWorkerEvent;
+    type Event = TrsiPropagatorWorkerEvent;
     type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
     async fn start(
@@ -67,17 +67,17 @@ impl<N: Node> Worker<N> for OtrsiYtrsiPropagatorWorker {
     }
 }
 
-impl OtrsiYtrsiPropagatorWorker {
+impl TrsiPropagatorWorker {
     pub(crate) fn new(tip_candidate_validator: mpsc::UnboundedSender<TipCandidateWorkerEvent>) -> Self {
         Self {
             tip_candidate_validator,
         }
     }
 
-    fn propagate(&mut self, event: OtrsiYtrsiPropagatorWorkerEvent) {
+    fn propagate(&mut self, event: TrsiPropagatorWorkerEvent) {
         let mut children = match &event {
-            OtrsiYtrsiPropagatorWorkerEvent::Default(hash) => vec![*hash],
-            OtrsiYtrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => hashes.clone(),
+            TrsiPropagatorWorkerEvent::Default(hash) => vec![*hash],
+            TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => hashes.clone(),
         };
         while let Some(hash) = children.pop() {
             // get best otrsi and ytrsi from parents
@@ -127,7 +127,7 @@ impl OtrsiYtrsiPropagatorWorker {
                 warn!("Failed to send hash to tip candidate validator: {:?}.", e);
             }
         }
-        if let OtrsiYtrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(_) = event {
+        if let TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(_) = event {
             tangle().update_tip_pool();
         }
     }

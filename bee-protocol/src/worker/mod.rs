@@ -12,7 +12,7 @@
 mod broadcaster;
 mod bundle_validator;
 mod milestone_validator;
-mod otrsi_ytrsi_propagator;
+mod trsi_propagator;
 mod peer;
 mod requester;
 mod responder;
@@ -25,7 +25,7 @@ mod transaction;
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
-pub(crate) use otrsi_ytrsi_propagator::{OtrsiYtrsiPropagatorWorker, OtrsiYtrsiPropagatorWorkerEvent};
+pub(crate) use trsi_propagator::{TrsiPropagatorWorker, TrsiPropagatorWorkerEvent};
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, TransactionRequesterWorker,
