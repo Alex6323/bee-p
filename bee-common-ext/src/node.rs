@@ -90,31 +90,28 @@ impl<N: Node + 'static> NodeBuilder<N> {
 
 struct TopologicalOrder {
     graph: HashMap<TypeId, &'static [TypeId]>,
-    non_visited: Vec<TypeId>,
+    non_visited: HashSet<TypeId>,
     being_visited: HashSet<TypeId>,
     order: Vec<TypeId>,
 }
 
 impl TopologicalOrder {
     fn visit(&mut self, id: TypeId) {
-        if let Some(index) = self
-            .non_visited
-            .iter()
-            .enumerate()
-            .find_map(|(index, id2)| if id == *id2 { Some(index) } else { None })
-        {
-            if !self.being_visited.insert(id) {
-                panic!("Cyclic dependency detected.");
-            }
-
-            for &id in self.graph[&id] {
-                self.visit(id);
-            }
-
-            self.being_visited.remove(&id);
-            self.non_visited.remove(index);
-            self.order.insert(0, id);
+        if !self.non_visited.contains(&id) {
+            return;
         }
+
+        if !self.being_visited.insert(id) {
+            panic!("Cyclic dependency detected.");
+        }
+
+        for &id in self.graph[&id] {
+            self.visit(id);
+        }
+
+        self.being_visited.remove(&id);
+        self.non_visited.remove(&id);
+        self.order.insert(0, id);
     }
 
     fn sort(graph: HashMap<TypeId, &'static [TypeId]>) -> Vec<TypeId> {
@@ -127,8 +124,8 @@ impl TopologicalOrder {
             order: vec![],
         };
 
-        while let Some(id) = this.non_visited.last() {
-            this.visit(*id);
+        while let Some(&id) = this.non_visited.iter().next() {
+            this.visit(id);
         }
 
         this.order
