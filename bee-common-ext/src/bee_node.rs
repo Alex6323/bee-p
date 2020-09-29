@@ -78,7 +78,11 @@ impl Node for BeeNode {
         self.workers.get::<W>()
     }
 
-    fn set_workers(&mut self, workers: Map<dyn Any + Send + Sync>) {
-        self.workers = workers
+    fn add_worker<W>(&mut self, worker: W)
+    where
+        Self: Sized,
+        W: Worker<Self> + Send + Sync,
+    {
+        self.workers.insert(worker);
     }
 }

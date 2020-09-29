@@ -11,14 +11,10 @@
 
 use crate::worker::Worker;
 
-use anymap::{any::Any, Map};
-use futures::{
-    channel::oneshot,
-    future::{Future, FutureExt},
-};
+use futures::{channel::oneshot, future::Future};
 
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     collections::{HashMap, HashSet},
     pin::Pin,
 };
@@ -35,16 +31,16 @@ pub trait Node: Default + Send + Sync + 'static {
     where
         Self: Sized,
         W: Worker<Self> + Send + Sync;
-    fn set_workers(&mut self, workers: Map<dyn Any + Send + Sync>);
+    fn add_worker<W>(&mut self, worker: W)
+    where
+        Self: Sized,
+        W: Worker<Self> + Send + Sync;
 }
 
 #[derive(Default)]
 pub struct NodeBuilder<N: Node> {
     deps: HashMap<TypeId, &'static [TypeId]>,
-    makers: HashMap<
-        TypeId,
-        Box<dyn for<'a> FnOnce(&'a N, &'a mut Map<dyn Any + Send + Sync>) -> Pin<Box<dyn Future<Output = ()> + 'a>>>,
-    >,
+    makers: HashMap<TypeId, Box<dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>>>,
 }
 
 impl<N: Node + 'static> NodeBuilder<N> {
@@ -63,12 +59,13 @@ impl<N: Node + 'static> NodeBuilder<N> {
         self.deps.insert(TypeId::of::<W>(), W::dependencies());
         self.makers.insert(
             TypeId::of::<W>(),
-            Box::new(|node, anymap| {
-                W::start(node, config)
-                    .map(move |r| {
-                        r.map(|w| anymap.insert(w));
-                    })
-                    .boxed()
+            Box::new(|node| {
+                Box::pin(async move {
+                    match W::start(node, config).await {
+                        Ok(w) => node.add_worker(w),
+                        Err(e) => panic!("Worker {} failed to start: {:?}.", type_name::<W>(), e),
+                    }
+                })
             }),
         );
         self
@@ -76,13 +73,10 @@ impl<N: Node + 'static> NodeBuilder<N> {
 
     pub async fn finish(mut self) -> N {
         let mut node = N::new();
-        let mut anymap = Map::new();
 
         for id in TopologicalOrder::sort(self.deps) {
-            self.makers.remove(&id).unwrap()(&node, &mut anymap).await;
+            self.makers.remove(&id).unwrap()(&mut node).await;
         }
-
-        node.set_workers(anymap);
 
         node
     }
@@ -111,7 +105,7 @@ impl TopologicalOrder {
 
         self.being_visited.remove(&id);
         self.non_visited.remove(&id);
-        self.order.insert(0, id);
+        self.order.push(id);
     }
 
     fn sort(graph: HashMap<TypeId, &'static [TypeId]>) -> Vec<TypeId> {

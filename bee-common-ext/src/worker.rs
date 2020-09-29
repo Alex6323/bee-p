@@ -18,7 +18,7 @@ use std::any::{Any, TypeId};
 #[async_trait]
 pub trait Worker<N: Node>: Any + Send + Sync {
     type Config;
-    type Error;
+    type Error: std::error::Error;
 
     // TODO Replace with associated constant when stabilized.
     fn dependencies() -> &'static [TypeId] {
