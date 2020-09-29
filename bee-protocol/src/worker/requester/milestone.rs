@@ -105,13 +105,10 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
 
-        async fn aux<N: Node>(
-            receiver: mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>,
-            shutdown: oneshot::Receiver<()>,
-        ) {
+        node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, receiver);
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
             let mut counter: usize = 0;
             let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse();
@@ -131,9 +128,7 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
             }
 
             info!("Stopped.");
-        }
-
-        node.spawn::<Self, _, _>(|shutdown| async move { aux::<N>(rx, shutdown).await });
+        });
 
         Ok(Self { tx })
     }
