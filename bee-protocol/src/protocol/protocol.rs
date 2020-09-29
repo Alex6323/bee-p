@@ -38,7 +38,7 @@ use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 use tokio::spawn;
 
-use crate::worker::{TrsiPropagatorWorker, TipCandidateWorker, TipCandidateWorkerEvent};
+use crate::worker::{TipCandidateWorker, TipCandidateWorkerEvent, TrsiPropagatorWorker};
 
 use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
 
@@ -62,8 +62,7 @@ pub struct Protocol {
     pub(crate) solid_propagator_worker: mpsc::UnboundedSender<<SolidPropagatorWorker as Worker<BeeNode>>::Event>,
     pub(crate) milestone_solidifier_worker:
         mpsc::UnboundedSender<<MilestoneSolidifierWorker as Worker<BeeNode>>::Event>,
-    pub(crate) trsi_propagator_worker:
-        mpsc::UnboundedSender<<TrsiPropagatorWorker as Worker<BeeNode>>::Event>,
+    pub(crate) trsi_propagator_worker: mpsc::UnboundedSender<<TrsiPropagatorWorker as Worker<BeeNode>>::Event>,
     pub(crate) peer_manager: PeerManager,
     pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
@@ -316,16 +315,11 @@ impl Protocol {
 
         shutdown.add_worker_shutdown(
             trsi_propagator_worker_shutdown_tx,
-            spawn(
-                TrsiPropagatorWorker::new(tip_candidate_validator_worker_tx).start(
-                    ShutdownStream::new(
-                        trsi_propagator_worker_shutdown_rx,
-                        trsi_propagator_worker_rx,
-                    ),
-                    bee_node.clone(),
-                    (),
-                ),
-            ),
+            spawn(TrsiPropagatorWorker::new(tip_candidate_validator_worker_tx).start(
+                ShutdownStream::new(trsi_propagator_worker_shutdown_rx, trsi_propagator_worker_rx),
+                bee_node.clone(),
+                (),
+            )),
         );
 
         shutdown.add_worker_shutdown(

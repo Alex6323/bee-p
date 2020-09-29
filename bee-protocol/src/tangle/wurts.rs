@@ -37,7 +37,7 @@ const OTRSI_DELTA: u32 = 13;
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
 // the maximum amount of current tips for which "MAX_AGE_SECONDS" and "MAX_NUM_CHILDREN" are checked. if the amount of
-// tips exceeds this limit, referenced tips get removed directly to reduce the amount of tips in the network.
+// tips exceeds this limit, referenced tips (tips with children) get removed directly to reduce the amount of tips in the network.
 const RETENTION_LIMIT: u8 = 100;
 // the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to
 // widen the cone of the tangle. (non-lazy pool)
@@ -57,11 +57,10 @@ impl WurtsTipPool {
     pub(crate) fn new() -> Self {
         Self::default()
     }
-    // WURTS only supports solid transactions. This function therefore expects that each passed hash is solid.
-    // In context of WURTS, a transaction can be considered as a "tip" if:
-    // - transaction is solid and has no children
-    // - transaction is solid and has only non-solid children
-    // - transaction is solid and has solid children but does not exceed the retention rules
+    // In context of WURTS, a tail of a bundle can be considered as a "tip" if:
+    // - tail is solid and has no children
+    // - tail is solid and has only non-solid children
+    // - tail is solid and has solid children but does not exceed the retention rules
     pub(crate) fn insert(&mut self, tail: Hash, trunk: Hash, branch: Hash) {
         // remove referenced tips if retention limit is exceeded
         self.check_retention_limit();

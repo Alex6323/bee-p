@@ -12,7 +12,6 @@
 mod broadcaster;
 mod bundle_validator;
 mod milestone_validator;
-mod trsi_propagator;
 mod peer;
 mod requester;
 mod responder;
@@ -21,11 +20,11 @@ mod status;
 mod tip_candidate_validator;
 mod tps;
 mod transaction;
+mod trsi_propagator;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
 pub(crate) use milestone_validator::MilestoneValidatorWorker;
-pub(crate) use trsi_propagator::{TrsiPropagatorWorker, TrsiPropagatorWorkerEvent};
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, TransactionRequesterWorker,
@@ -43,3 +42,4 @@ pub(crate) use status::StatusWorker;
 pub(crate) use tip_candidate_validator::{TipCandidateWorker, TipCandidateWorkerEvent};
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
+pub(crate) use trsi_propagator::{TrsiPropagatorWorker, TrsiPropagatorWorkerEvent};
