@@ -26,10 +26,9 @@ impl Fetch<Hash, TransactionMetadata> for Storage {
     {
         let hash_to_metadata = self.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
         let mut hash_buf: Vec<u8> = Vec::new();
-        hash.encode_persistable::<Self>(&mut hash_buf);
+        hash.write_to(&mut hash_buf);
         if let Some(res) = self.inner.get_cf(&hash_to_metadata, hash_buf.as_slice())? {
-            let transaction_metadata: TransactionMetadata =
-                TransactionMetadata::decode_persistable::<Self>(res.as_slice());
+            let transaction_metadata: TransactionMetadata = TransactionMetadata::read_from(res.as_slice());
             Ok(Some(transaction_metadata))
         } else {
             Ok(None)
@@ -46,13 +45,13 @@ impl Fetch<MilestoneIndex, LedgerDiff> for Storage {
     {
         let ms_index_to_ledger_diff = self.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
         let mut index_buf: Vec<u8> = Vec::new();
-        milestone_index.encode_persistable::<Self>(&mut index_buf);
+        milestone_index.write_to(&mut index_buf);
         if let Some(res) = self
             .inner
             .get_cf(&ms_index_to_ledger_diff, index_buf.as_slice())
             .unwrap()
         {
-            let ledger_diff: LedgerDiff = LedgerDiff::decode_persistable::<Self>(res.as_slice());
+            let ledger_diff: LedgerDiff = LedgerDiff::read_from(res.as_slice());
             Ok(Some(ledger_diff))
         } else {
             Ok(None)
@@ -69,13 +68,13 @@ impl Fetch<MilestoneIndex, LedgerState> for Storage {
     {
         let ms_index_to_ledger_state = self.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_STATE).unwrap();
         let mut index_buf: Vec<u8> = Vec::new();
-        milestone_index.encode_persistable::<Self>(&mut index_buf);
+        milestone_index.write_to(&mut index_buf);
         if let Some(res) = self
             .inner
             .get_cf(&ms_index_to_ledger_state, index_buf.as_slice())
             .unwrap()
         {
-            let ledger_state: LedgerState = LedgerState::decode_persistable::<Self>(res.as_slice());
+            let ledger_state: LedgerState = LedgerState::read_from(res.as_slice());
             Ok(Some(ledger_state))
         } else {
             Ok(None)
@@ -92,9 +91,9 @@ impl Fetch<Hash, BundledTransaction> for Storage {
     {
         let hash_to_tx = self.inner.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
         let mut hash_buf: Vec<u8> = Vec::new();
-        hash.encode_persistable::<Storage>(&mut hash_buf);
+        hash.write_to(&mut hash_buf);
         if let Some(res) = self.inner.get_cf(&hash_to_tx, hash_buf.as_slice())? {
-            let transaction: BundledTransaction = BundledTransaction::decode_persistable::<Storage>(res.as_slice());
+            let transaction: BundledTransaction = BundledTransaction::read_from(res.as_slice());
             Ok(Some(transaction))
         } else {
             Ok(None)
@@ -110,9 +109,9 @@ impl Fetch<Hash, MilestoneIndex> for Storage {
     {
         let ms_hash_to_ms_index = self.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
         let mut hash_buf: Vec<u8> = Vec::new();
-        hash.encode_persistable::<Storage>(&mut hash_buf);
+        hash.write_to(&mut hash_buf);
         if let Some(res) = self.inner.get_cf(&ms_hash_to_ms_index, hash_buf.as_slice())? {
-            let ms_index: MilestoneIndex = MilestoneIndex::decode_persistable::<Storage>(res.as_slice());
+            let ms_index: MilestoneIndex = MilestoneIndex::read_from(res.as_slice());
             Ok(Some(ms_index))
         } else {
             Ok(None)
