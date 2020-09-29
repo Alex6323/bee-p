@@ -17,60 +17,46 @@ use bee_crypto::ternary::Hash;
 use bee_tangle::helper::load_bundle_builder;
 
 use async_trait::async_trait;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
-
-use std::sync::Arc;
 
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
-pub(crate) struct BundleValidatorWorker;
+pub(crate) struct BundleValidatorWorker {
+    pub(crate) tx: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for BundleValidatorWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = BundleValidatorWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
 
-        while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
-            self.validate(hash);
-        }
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        info!("Stopped.");
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
-        Ok(())
-    }
-}
-
-impl BundleValidatorWorker {
-    pub(crate) fn new() -> Self {
-        Self
-    }
-
-    fn validate(&self, tail_hash: Hash) {
-        match load_bundle_builder(tangle(), &tail_hash) {
-            Some(builder) => {
-                if builder.validate().is_ok() {
-                    tangle().update_metadata(&tail_hash, |metadata| {
-                        metadata.flags_mut().set_valid(true);
-                    })
+            while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
+                match load_bundle_builder(tangle(), &hash) {
+                    Some(builder) => {
+                        if builder.validate().is_ok() {
+                            tangle().update_metadata(&hash, |metadata| {
+                                metadata.flags_mut().set_valid(true);
+                            })
+                        }
+                    }
+                    None => {
+                        warn!("Faild to validate bundle: tail not found.");
+                    }
                 }
             }
-            None => {
-                warn!("Faild to validate bundle: tail not found.");
-            }
-        }
+
+            info!("Stopped.");
+        });
+
+        Ok(Self { tx })
     }
 }

@@ -29,8 +29,8 @@ impl ManualPeerManager {
         Self { config, network }
     }
 
-    async fn add_endpoint(&mut self, url: &str) {
-        if let Err(e) = self.network.send(AddEndpoint { url: url.to_string() }).await {
+    fn add_endpoint(&mut self, url: &str) {
+        if let Err(e) = self.network.unbounded_send(AddEndpoint { url: url.to_string() }) {
             warn!("Failed to add endpoint \"{}\": {}", url, e);
         }
     }
@@ -42,7 +42,7 @@ impl PeerManager for ManualPeerManager {
         // TODO config file watcher
         // TODO use limit
         for peer in self.config.peers.clone() {
-            self.add_endpoint(&peer).await;
+            self.add_endpoint(&peer);
         }
     }
 }

@@ -15,68 +15,52 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
-use futures::{stream::Fuse, StreamExt};
+use futures::StreamExt;
 use log::info;
-use tokio::time::{interval, Instant, Interval};
+use tokio::time::interval;
 
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
+#[derive(Default)]
 pub(crate) struct StatusWorker;
 
 #[async_trait]
 impl<N: Node> Worker<N> for StatusWorker {
-    type Config = ();
+    type Config = u64;
     type Error = WorkerError;
-    type Event = Instant;
-    type Receiver = ShutdownStream<Fuse<Interval>>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while receiver.next().await.is_some() {
-            self.status();
-        }
+            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(config)));
 
-        info!("Stopped.");
+            while receiver.next().await.is_some() {
+                let snapshot_index = *tangle().get_snapshot_index();
+                let latest_solid_milestone_index = *tangle().get_latest_solid_milestone_index();
+                let latest_milestone_index = *tangle().get_latest_milestone_index();
 
-        Ok(())
-    }
-}
+                // TODO Threshold
+                // TODO use tangle synced method
+                if latest_solid_milestone_index == latest_milestone_index {
+                    info!("Synchronized at {}.", latest_milestone_index);
+                } else {
+                    let progress = ((latest_solid_milestone_index - snapshot_index) as f32 * 100.0
+                        / (latest_milestone_index - snapshot_index) as f32) as u8;
+                    info!(
+                        "Synchronizing {}..{}..{} ({}%) - Requested {}.",
+                        snapshot_index,
+                        latest_solid_milestone_index,
+                        latest_milestone_index,
+                        progress,
+                        Protocol::get().requested_transactions.len()
+                    );
+                };
+            }
 
-impl StatusWorker {
-    pub(crate) fn new() -> Self {
-        Self
-    }
+            info!("Stopped.");
+        });
 
-    pub(crate) fn interval(seconds: u64) -> Interval {
-        interval(Duration::from_secs(seconds))
-    }
-
-    fn status(&self) {
-        let snapshot_index = *tangle().get_snapshot_index();
-        let latest_solid_milestone_index = *tangle().get_latest_solid_milestone_index();
-        let latest_milestone_index = *tangle().get_latest_milestone_index();
-
-        // TODO Threshold
-        // TODO use tangle synced method
-        if latest_solid_milestone_index == latest_milestone_index {
-            info!("Synchronized at {}.", latest_milestone_index);
-        } else {
-            let progress = ((latest_solid_milestone_index - snapshot_index) as f32 * 100.0
-                / (latest_milestone_index - snapshot_index) as f32) as u8;
-            info!(
-                "Synchronizing {}..{}..{} ({}%) - Requested {}.",
-                snapshot_index,
-                latest_solid_milestone_index,
-                latest_milestone_index,
-                progress,
-                Protocol::get().requested_transactions.len()
-            );
-        };
+        Ok(Self::default())
     }
 }

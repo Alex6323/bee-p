@@ -14,25 +14,23 @@ use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, tangle},
+    worker::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::{
-    sponge::{Kerl, Sponge},
+    sponge::{CurlP27, CurlP81, Kerl, Sponge, SpongeKind},
     Hash,
 };
-use bee_signing::ternary::{PublicKey, RecoverableSignature};
+use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, RecoverableSignature};
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{debug, info};
 
-use std::{marker::PhantomData, sync::Arc};
+use std::any::TypeId;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -44,124 +42,125 @@ pub(crate) enum MilestoneValidatorWorkerError {
 
 pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash, pub(crate) bool);
 
-pub(crate) struct MilestoneValidatorWorker<M, P> {
-    marker: PhantomData<(M, P)>,
+pub(crate) struct MilestoneValidatorWorker {
+    pub(crate) tx: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
 }
 
-#[async_trait]
-impl<N: Node, M, P> Worker<N> for MilestoneValidatorWorker<M, P>
+fn validate_milestone<N, M, P>(tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError>
 where
-    M: Sponge + Default + Send + 'static,
+    N: Node,
+    M: Sponge + Default + Send + Sync + 'static,
     P: PublicKey + Send + Sync + 'static,
     <P as PublicKey>::Signature: RecoverableSignature,
 {
-    type Config = ();
-    type Error = WorkerError;
-    type Event = MilestoneValidatorWorkerEvent;
-    // TODO PriorityQueue ?
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
+    // TODO also do an IncomingBundleBuilder check ?
+    let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
+    let mut transaction = tangle()
+        .get(&tail_hash)
+        .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
-
-        while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
-            self.process(hash, is_tail);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
-    }
-}
-
-impl<M, P> MilestoneValidatorWorker<M, P>
-where
-    M: Sponge + Default,
-    P: PublicKey,
-    <P as PublicKey>::Signature: RecoverableSignature,
-{
-    pub(crate) fn new() -> Self {
-        Self { marker: PhantomData }
+    // TODO consider using the metadata instead as it might be more efficient
+    if !transaction.is_tail() {
+        return Err(MilestoneValidatorWorkerError::NotATail);
     }
 
-    fn validate_milestone(&self, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError> {
-        // TODO also do an IncomingBundleBuilder check ?
-        let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
-        let mut transaction = tangle()
-            .get(&tail_hash)
-            .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
+    builder.push((*transaction).clone());
 
-        // TODO consider using the metadata instead as it might be more efficient
-        if !transaction.is_tail() {
-            return Err(MilestoneValidatorWorkerError::NotATail);
-        }
+    // TODO use walker
+    for _ in 0..Protocol::get().config.coordinator.security_level {
+        transaction = tangle()
+            .get((*transaction).trunk())
+            .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
         builder.push((*transaction).clone());
-
-        // TODO use walker
-        for _ in 0..Protocol::get().config.coordinator.security_level {
-            transaction = tangle()
-                .get((*transaction).trunk())
-                .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
-
-            builder.push((*transaction).clone());
-        }
-
-        Ok(builder
-            .depth(Protocol::get().config.coordinator.depth)
-            .validate()
-            .map_err(MilestoneValidatorWorkerError::InvalidMilestone)?
-            .build())
     }
 
-    fn process(&self, hash: Hash, is_tail: bool) {
-        let tail_hash = {
-            if is_tail {
-                Some(hash)
-            } else {
-                find_tail_of_bundle(tangle(), hash)
-            }
+    Ok(builder
+        .depth(Protocol::get().config.coordinator.depth)
+        .validate()
+        .map_err(MilestoneValidatorWorkerError::InvalidMilestone)?
+        .build())
+}
+
+#[async_trait]
+impl<N> Worker<N> for MilestoneValidatorWorker
+where
+    N: Node,
+{
+    type Config = SpongeKind;
+    type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<MilestoneSolidifierWorker>()]))
+    }
+
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
+
+        let validate = match config {
+            SpongeKind::Kerl => |hash| validate_milestone::<N, Kerl, WotsPublicKey<Kerl>>(hash),
+            SpongeKind::CurlP27 => |hash| validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>>(hash),
+            SpongeKind::CurlP81 => |hash| validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>>(hash),
         };
 
-        if let Some(tail_hash) = tail_hash {
-            if let Some(meta) = tangle().get_metadata(&tail_hash) {
-                if meta.flags().is_milestone() {
-                    return;
-                }
-                match self.validate_milestone(tail_hash) {
-                    Ok(milestone) => {
-                        tangle().add_milestone(milestone.index, milestone.hash);
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-                        // This is possibly not sufficient as there is no guarantee a milestone has been solidified
-                        // before being validated, we then also need to check when a milestone gets solidified if it's
-                        // already vadidated.
-                        if meta.flags().is_solid() {
-                            Protocol::get()
-                                .bus
-                                .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
+            let mut receiver = ShutdownStream::new(shutdown, rx);
+
+            while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
+                let tail_hash = {
+                    if is_tail {
+                        Some(hash)
+                    } else {
+                        find_tail_of_bundle(tangle(), hash)
+                    }
+                };
+
+                if let Some(tail_hash) = tail_hash {
+                    if let Some(meta) = tangle().get_metadata(&tail_hash) {
+                        if meta.flags().is_milestone() {
+                            continue;
                         }
+                        match validate(tail_hash) {
+                            Ok(milestone) => {
+                                tangle().add_milestone(milestone.index, milestone.hash);
 
-                        if milestone.index > tangle().get_latest_milestone_index() {
-                            Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
-                        }
+                                // This is possibly not sufficient as there is no guarantee a milestone has been
+                                // solidified before being validated, we then also need
+                                // to check when a milestone gets solidified if it's
+                                // already vadidated.
+                                if meta.flags().is_solid() {
+                                    Protocol::get()
+                                        .bus
+                                        .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
+                                }
 
-                        if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
-                            tangle().update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
+                                if milestone.index > tangle().get_latest_milestone_index() {
+                                    Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
+                                }
 
-                            Protocol::trigger_milestone_solidification(milestone.index);
+                                if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
+                                    tangle()
+                                        .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
+
+                                    milestone_solidifier
+                                        .unbounded_send(MilestoneSolidifierWorkerEvent(milestone.index));
+                                }
+                            }
+                            Err(e) => match e {
+                                MilestoneValidatorWorkerError::IncompleteBundle => {}
+                                _ => debug!("Invalid milestone bundle: {:?}.", e),
+                            },
                         }
                     }
-                    Err(e) => match e {
-                        MilestoneValidatorWorkerError::IncompleteBundle => {}
-                        _ => debug!("Invalid milestone bundle: {:?}.", e),
-                    },
                 }
             }
-        }
+
+            info!("Stopped.");
+        });
+
+        Ok(Self { tx })
     }
 }

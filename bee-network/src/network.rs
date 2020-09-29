@@ -23,6 +23,8 @@ use std::sync::Arc;
 pub enum Error {
     #[error("Error sending command.")]
     CommandSendFailure(#[from] futures::channel::mpsc::SendError),
+    #[error("Error sending unbounded command.")]
+    CommandSendUnboundedFailure,
 }
 
 #[derive(Clone, Debug)]
@@ -41,6 +43,13 @@ impl Network {
 
     pub async fn send(&mut self, command: Command) -> Result<(), Error> {
         Ok(self.command_sender.send(command).await?)
+    }
+
+    pub fn unbounded_send(&self, command: Command) -> Result<(), Error> {
+        Ok(self
+            .command_sender
+            .unbounded_send(command)
+            .map_err(|_| Error::CommandSendUnboundedFailure)?)
     }
 
     pub fn config(&self) -> &NetworkConfig {
