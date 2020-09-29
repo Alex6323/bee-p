@@ -135,17 +135,12 @@ impl Persistable<Storage> for TransactionMetadata {
         // 5- encode confirmation_timestamp
         self.confirmation_timestamp().write_to(buffer);
         // 6- encode cone_index
-        if let Some(cone_index) = self.cone_index() {
-            cone_index.write_to(buffer)
-        }
+        self.cone_index().write_to(buffer);
         // 7- encode otrsi
-        if let Some(otrsi) = self.otrsi() {
-            otrsi.write_to(buffer)
-        }
+        self.otrsi().write_to(buffer);
         // 8- encode ytrsi
-        if let Some(ytrsi) = self.ytrsi() {
-            ytrsi.write_to(buffer)
-        }
+        self.ytrsi().write_to(buffer);
+        
     }
     fn read_from(slice: &[u8]) -> Self {
         // decode struct in order
