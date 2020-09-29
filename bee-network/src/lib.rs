@@ -31,6 +31,8 @@ use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use endpoint::{EndpointContactList, EndpointWorker};
 use tcp::TcpServer;
 
+use bee_common_ext::shutdown_tokio::Shutdown;
+
 use futures::channel::oneshot;
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -38,12 +40,12 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
 pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
 
-pub async fn init(config: NetworkConfig) -> (Network, EventReceiver) {
+pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
     let (command_sender, command_receiver) = command::channel();
     let (event_sender, event_receiver) = event::channel();
     let (internal_event_sender, internal_event_receiver) = event::channel();
-    let (_endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
-    let (_tcp_server_shutdown_sender, tcp_server_shutdown_receiver) = oneshot::channel();
+    let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
+    let (tcp_server_shutdown_sender, tcp_server_shutdown_receiver) = oneshot::channel();
 
     let endpoint_contacts = EndpointContactList::new();
 
@@ -66,11 +68,11 @@ pub async fn init(config: NetworkConfig) -> (Network, EventReceiver) {
     )
     .await;
 
-    let _endpoint_worker = tokio::spawn(endpoint_worker.run());
-    let _tcp_server = tokio::spawn(tcp_server.run());
+    let endpoint_worker = tokio::spawn(endpoint_worker.run());
+    let tcp_server = tokio::spawn(tcp_server.run());
 
-    // shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, endpoint_worker);
-    // shutdown.add_worker_shutdown(tcp_server_shutdown_sender, tcp_server);
+    shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, endpoint_worker);
+    shutdown.add_worker_shutdown(tcp_server_shutdown_sender, tcp_server);
 
     MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
     RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);

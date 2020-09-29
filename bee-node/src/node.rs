@@ -18,6 +18,7 @@ use bee_common_ext::{
     bee_node::BeeNode,
     event::Bus,
     node::{Node as NodeT, NodeBuilder as NodeBuilderB},
+    shutdown_tokio::Shutdown,
 };
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, EventReceiver, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
@@ -61,6 +62,8 @@ impl NodeBuilder {
 
         let node_builder = NodeBuilderB::<BeeNode>::new();
 
+        let mut shutdown = Shutdown::new();
+
         let bus = Arc::new(Bus::default());
 
         info!("Initializing Tangle...");
@@ -73,7 +76,7 @@ impl NodeBuilder {
                 .map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
-        let (network, events) = bee_network::init(self.config.network).await;
+        let (network, events) = bee_network::init(self.config.network, &mut shutdown).await;
 
         info!("Starting manual peer manager...");
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
@@ -112,6 +115,7 @@ impl NodeBuilder {
             tmp_node: bee_node,
             network,
             network_events: ShutdownStream::new(ctrl_c_listener(), events),
+            shutdown,
             peers: HashMap::new(),
         })
     }
@@ -123,6 +127,7 @@ pub struct Node {
     // TODO those 2 fields are related; consider bundling them
     network: Network,
     network_events: NetworkEventStream,
+    shutdown: Shutdown,
     peers: PeerList,
 }
 
