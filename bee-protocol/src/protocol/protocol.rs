@@ -38,10 +38,8 @@ use futures::channel::{mpsc, oneshot};
 use log::{debug, info, warn};
 use tokio::spawn;
 
-use crate::{
-    event::TipCandidateFound,
-    worker::{TrsiPropagatorWorker, TipCandidateWorker, TipCandidateWorkerEvent},
-};
+use crate::worker::{TrsiPropagatorWorker, TipCandidateWorker, TipCandidateWorkerEvent};
+
 use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
@@ -155,7 +153,6 @@ impl Protocol {
             PROTOCOL = Box::leak(protocol.into()) as *const _;
         }
 
-        Protocol::get().bus.add_listener(on_tip_candidate_found);
         Protocol::get().bus.add_listener(on_latest_solid_milestone_changed);
         // Protocol::get().bus.add_listener(on_snapshot_milestone_changed);
         Protocol::get().bus.add_listener(on_latest_milestone_changed);
@@ -384,10 +381,6 @@ impl Protocol {
 
         (receiver_tx, receiver_shutdown_tx)
     }
-}
-
-fn on_tip_candidate_found(bundle: &TipCandidateFound) {
-    tangle().add_to_tip_pool(bundle.tail, bundle.trunk, bundle.branch);
 }
 
 fn on_latest_milestone_changed(latest_milestone: &LatestMilestoneChanged) {

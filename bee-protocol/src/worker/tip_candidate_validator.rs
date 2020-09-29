@@ -23,7 +23,7 @@ use futures::{
 };
 use log::{info, warn};
 
-use crate::{event::TipCandidateFound, Protocol};
+use crate::Protocol;
 use bee_transaction::Vertex;
 use std::{collections::HashMap, sync::Arc};
 
@@ -78,22 +78,14 @@ impl TipCandidateWorker {
         match event {
             TipCandidateWorkerEvent::BundleValidated(bundle_info) => {
                 if tangle().otrsi(&bundle_info.tail).is_some() && tangle().ytrsi(&bundle_info.tail).is_some() {
-                    Protocol::get().bus.dispatch(TipCandidateFound {
-                        tail: bundle_info.tail,
-                        trunk: bundle_info.trunk,
-                        branch: bundle_info.branch,
-                    });
+                    tangle().add_to_tip_pool(bundle_info.tail, bundle_info.trunk, bundle_info.branch);
                 } else {
                     self.not_ready_for_tip_pool.insert(bundle_info.tail, bundle_info);
                 }
             }
             TipCandidateWorkerEvent::OtrsiYtrsiPropagated(hash) => {
                 if let Some(bundle_info) = self.not_ready_for_tip_pool.remove(&hash) {
-                    Protocol::get().bus.dispatch(TipCandidateFound {
-                        tail: bundle_info.tail,
-                        trunk: bundle_info.trunk,
-                        branch: bundle_info.branch,
-                    });
+                    tangle().add_to_tip_pool(bundle_info.tail, bundle_info.trunk, bundle_info.branch);
                 }
             }
         }
