@@ -25,7 +25,6 @@ where
 {
     pub(crate) vertices: DashMap<Hash, Vertex<T>>,
     pub(crate) children: DashMap<Hash, HashSet<Hash>>,
-    pub(crate) tips: DashSet<Hash>,
     // TODO: PriorityQueue with customizable priority for implementing cache eviction strategy
 }
 
@@ -37,7 +36,6 @@ where
         Self {
             vertices: DashMap::new(),
             children: DashMap::new(),
-            tips: DashSet::new(),
         }
     }
 }
@@ -58,18 +56,6 @@ where
             Entry::Vacant(entry) => {
                 self.add_child(*transaction.trunk(), hash);
                 self.add_child(*transaction.branch(), hash);
-
-                self.tips.remove(transaction.trunk());
-                self.tips.remove(transaction.branch());
-
-                let has_children = |hash| self.children.contains_key(hash);
-
-                if !has_children(&hash) {
-                    self.tips.insert(hash);
-                } else {
-                    self.tips.remove(&hash);
-                }
-
                 let vtx = Vertex::new(transaction, metadata);
                 let tx = vtx.transaction().clone();
                 entry.insert(vtx);
@@ -145,11 +131,6 @@ where
         }
     }
 
-    /// Returns the current number of tips.
-    pub fn num_tips(&self) -> usize {
-        self.tips.len()
-    }
-
     /// Returns the number of children of a vertex.
     pub fn num_children(&self, hash: &Hash) -> usize {
         self.children.get(hash).map_or(0, |r| r.value().len())
@@ -159,7 +140,6 @@ where
     pub fn clear(&mut self) {
         self.vertices.clear();
         self.children.clear();
-        self.tips.clear();
     }
 }
 
@@ -184,13 +164,11 @@ mod tests {
         assert!(insert1.is_some());
         assert_eq!(1, tangle.len());
         assert!(tangle.contains(&hash));
-        assert_eq!(1, tangle.num_tips());
 
         let insert2 = tangle.insert(hash, tx, ());
 
         assert!(insert2.is_none());
         assert_eq!(1, tangle.len());
         assert!(tangle.contains(&hash));
-        assert_eq!(1, tangle.num_tips());
     }
 }
