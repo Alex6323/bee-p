@@ -102,7 +102,7 @@ fn transaction_message_to_json_serde() {
     let expected = Message::new()
         .tips((Hash([0; 32]), Hash([0; 32])))
         .payload(Payload::SignedTransaction(Box::new(signed)))
-        .buid()
+        .build()
         .unwrap();
 
     // test message on serde json

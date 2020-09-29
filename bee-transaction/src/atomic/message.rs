@@ -28,6 +28,14 @@ impl Message {
     pub fn new() -> MessageBuilder {
         MessageBuilder::new()
     }
+
+    pub fn payload(&self) -> &Payload {
+        &self.payload
+    }
+
+    pub fn nonce(&self) -> &u64 {
+        &self.nonce
+    }
 }
 
 impl Vertex for Message {
@@ -65,7 +73,7 @@ impl MessageBuilder {
         self
     }
 
-    pub fn buid(self) -> Result<Message, Error> {
+    pub fn build(self) -> Result<Message, Error> {
         let tips = match self.tips {
             Some(t) => t,
             None => return Err(Error::MissingParameter),
