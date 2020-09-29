@@ -121,7 +121,7 @@ where
                 if let Some(tail_hash) = tail_hash {
                     if let Some(meta) = tangle().get_metadata(&tail_hash) {
                         if meta.flags().is_milestone() {
-                            return;
+                            continue;
                         }
                         match validate(tail_hash) {
                             Ok(milestone) => {
