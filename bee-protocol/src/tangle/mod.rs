@@ -150,7 +150,12 @@ impl MsTangle {
 
     // TODO reduce to one atomic value ?
     pub fn is_synced(&self) -> bool {
-        self.get_latest_solid_milestone_index() == self.get_latest_milestone_index()
+        self.is_synced_threshold(0)
+    }
+
+    // TODO reduce to one atomic value ?
+    pub fn is_synced_threshold(&self, threshold: u32) -> bool {
+        *self.get_latest_solid_milestone_index() >= (*self.get_latest_milestone_index() - threshold)
     }
 
     pub fn get_solid_entry_point_index(&self, hash: &Hash) -> Option<MilestoneIndex> {

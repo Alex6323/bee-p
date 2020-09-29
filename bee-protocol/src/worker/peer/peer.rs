@@ -147,7 +147,7 @@ impl PeerWorker {
                         self.peer.set_connected_peers(message.connected_peers);
                         self.peer.set_synced_peers(message.synced_peers);
 
-                        if !tangle().is_synced()
+                        if !tangle().is_synced_threshold(2)
                             && !self
                                 .peer
                                 .has_data(MilestoneIndex(*tangle().get_latest_solid_milestone_index() + 1))
