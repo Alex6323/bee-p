@@ -33,7 +33,10 @@ use log::{debug, error, info};
 
 use crate::{
     protocol::Sender,
-    worker::{TrsiPropagatorWorker, TrsiPropagatorWorkerEvent},
+    worker::{
+        milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent},
+        TrsiPropagatorWorker, TrsiPropagatorWorkerEvent,
+    },
 };
 use std::{any::TypeId, collections::HashSet};
 
@@ -98,14 +101,14 @@ where
     fn dependencies() -> &'static [TypeId] {
         Box::leak(Box::from(vec![
             TypeId::of::<MilestoneSolidifierWorker>(),
-            TypeId::of::<TrsiPropagatorWorker>(),
+            TypeId::of::<MilestoneConeUpdaterWorker>(),
         ]))
     }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
-        let trsi_propagator = node.worker::<TrsiPropagatorWorker>().unwrap().tx.clone();
+        let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
         let validate = match config {
             SpongeKind::Kerl => |hash| validate_milestone::<N, Kerl, WotsPublicKey<Kerl>>(hash),
@@ -144,13 +147,10 @@ where
                                     Protocol::get()
                                         .bus
                                         .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
-                                    let children =
-                                        update_transactions_referenced_by_milestone(tail_hash, milestone.index);
-                                    // Propagate updated OTRSI/YTRSI values to all direct/indirect approvers
-                                    if let Err(e) = trsi_propagator.unbounded_send(
-                                        TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(children),
-                                    ) {
-                                        error!("Failed to send hash to TRSI propagator: {:?}.", e);
+                                    if let Err(e) = milestone_cone_updater
+                                        .unbounded_send(MilestoneConeUpdaterWorkerEvent(milestone.clone()))
+                                    {
+                                        error!("Sending tail to milestone validation failed: {:?}.", e);
                                     }
                                 }
 
@@ -179,45 +179,4 @@ where
 
         Ok(Self { tx })
     }
-}
-
-// When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given cone must be
-// updated. This function returns the children of all updated transactions.
-fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index: MilestoneIndex) -> HashSet<Hash> {
-    info!("Updating transactions referenced by milestone {}.", *milestone_index);
-    let mut to_visit = vec![tail_hash];
-    let mut visited = HashSet::new();
-    let mut children = HashSet::new();
-
-    while let Some(hash) = to_visit.pop() {
-        if visited.contains(&hash) {
-            continue;
-        } else {
-            visited.insert(hash.clone());
-        }
-
-        if tangle().is_solid_entry_point(&hash) {
-            continue;
-        }
-
-        if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
-            continue;
-        }
-
-        tangle().update_metadata(&hash, |metadata| {
-            metadata.set_cone_index(milestone_index);
-            metadata.set_otrsi(milestone_index);
-            metadata.set_ytrsi(milestone_index);
-        });
-
-        for child in tangle().get_children(&hash) {
-            children.insert(child);
-        }
-
-        let tx_ref = tangle().get(&hash).unwrap();
-        to_visit.push(tx_ref.trunk().clone());
-        to_visit.push(tx_ref.branch().clone());
-    }
-
-    children
 }

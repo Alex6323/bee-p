@@ -11,6 +11,7 @@
 
 mod broadcaster;
 mod bundle_validator;
+mod milestone_cone_updater;
 mod milestone_validator;
 mod peer;
 mod requester;

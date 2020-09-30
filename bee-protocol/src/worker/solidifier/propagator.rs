@@ -24,8 +24,9 @@ use bee_transaction::Vertex;
 
 use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
-use log::{info, warn};
+use log::{info, error, warn};
 
+use crate::worker::milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 use std::any::TypeId;
 
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
@@ -40,12 +41,16 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<BundleValidatorWorker>()]))
+        Box::leak(Box::from(vec![
+            TypeId::of::<BundleValidatorWorker>(),
+            TypeId::of::<MilestoneConeUpdaterWorker>(),
+        ]))
     }
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
         let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
+        let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -93,6 +98,11 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
                             Protocol::get()
                                 .bus
                                 .dispatch(LatestSolidMilestoneChanged(Milestone { hash: *hash, index }));
+                            if let Err(e) = milestone_cone_updater
+                                .unbounded_send(MilestoneConeUpdaterWorkerEvent(Milestone { hash: *hash, index }))
+                            {
+                                error!("Sending tail to milestone validation failed: {:?}.", e);
+                            }
                         }
                     }
                 }
