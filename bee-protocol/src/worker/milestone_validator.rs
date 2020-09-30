@@ -96,7 +96,10 @@ where
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<MilestoneSolidifierWorker>()]))
+        Box::leak(Box::from(vec![
+            TypeId::of::<MilestoneValidatorWorker>(),
+            TypeId::of::<TrsiPropagatorWorker>(),
+        ]))
     }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
@@ -158,7 +161,6 @@ where
                                 if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
                                     tangle()
                                         .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
-
                                     milestone_solidifier
                                         .unbounded_send(MilestoneSolidifierWorkerEvent(milestone.index));
                                 }
@@ -179,7 +181,7 @@ where
     }
 }
 
-// When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given milestone cone must be
+// When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given cone must be
 // updated. This function returns the children of all updated transactions.
 fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index: MilestoneIndex) -> HashSet<Hash> {
     info!("Updating transactions referenced by milestone {}.", *milestone_index);
