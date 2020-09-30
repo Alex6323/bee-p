@@ -97,7 +97,7 @@ where
 
     fn dependencies() -> &'static [TypeId] {
         Box::leak(Box::from(vec![
-            TypeId::of::<MilestoneValidatorWorker>(),
+            TypeId::of::<MilestoneSolidifierWorker>(),
             TypeId::of::<TrsiPropagatorWorker>(),
         ]))
     }
