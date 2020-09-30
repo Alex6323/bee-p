@@ -24,7 +24,7 @@ use bee_transaction::Vertex;
 
 use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
-use log::{info, error, warn};
+use log::{error, info, warn};
 
 use crate::worker::milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 use std::any::TypeId;
