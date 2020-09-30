@@ -141,10 +141,6 @@ where
                                     Protocol::get()
                                         .bus
                                         .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
-                                }
-
-                                if milestone.index > tangle().get_latest_milestone_index() {
-                                    Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                                     let children =
                                         update_transactions_referenced_by_milestone(tail_hash, milestone.index);
                                     // Propagate updated OTRSI/YTRSI values to all direct/indirect approvers
@@ -153,6 +149,10 @@ where
                                     ) {
                                         error!("Failed to send hash to TRSI propagator: {:?}.", e);
                                     }
+                                }
+
+                                if milestone.index > tangle().get_latest_milestone_index() {
+                                    Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                                 }
 
                                 if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
@@ -180,7 +180,7 @@ where
 }
 
 // When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given milestone cone must be
-// updated. This function returns all updated transactions.
+// updated. This function returns the children of all updated transactions.
 fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index: MilestoneIndex) -> HashSet<Hash> {
     info!("Updating transactions referenced by milestone {}.", *milestone_index);
     let mut to_visit = vec![tail_hash];
