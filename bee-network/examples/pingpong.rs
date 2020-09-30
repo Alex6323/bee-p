@@ -25,7 +25,6 @@
 
 mod common;
 
-use bee_common_ext::shutdown_tokio::Shutdown;
 use bee_network::{Command::*, EndpointId, Event, EventReceiver, Network, NetworkConfig, Origin};
 
 use common::*;
@@ -73,7 +72,6 @@ struct Node {
     config: Config,
     network: Network,
     events: Fuse<EventReceiver>,
-    shutdown: Shutdown,
     endpoints: HashSet<EndpointId>,
     handshakes: HashMap<String, Vec<EndpointId>>,
 }
@@ -84,7 +82,6 @@ impl Node {
             config,
             mut network,
             mut events,
-            shutdown,
             mut endpoints,
             mut handshakes,
             ..
@@ -110,8 +107,6 @@ impl Node {
         }
 
         info!("[pingpong] Stopping node...");
-
-        shutdown.execute().await.expect("error shutting down gracefully.");
 
         info!("[pingpong] Shutdown complete.");
     }
@@ -248,8 +243,6 @@ struct NodeBuilder {
 
 impl NodeBuilder {
     pub async fn finish(self) -> Node {
-        let mut shutdown = Shutdown::new();
-
         let network_config = NetworkConfig::builder()
             .binding_address(&self.config.binding_address.ip().to_string())
             .binding_port(self.config.binding_address.port())
@@ -257,14 +250,13 @@ impl NodeBuilder {
             .finish();
 
         info!("[pingpong] Initializing network...");
-        let (network, events) = bee_network::init(network_config, &mut shutdown).await;
+        let (network, events) = bee_network::init(network_config).await;
 
         info!("[pingpong] Node initialized.");
         Node {
             config: self.config,
             network,
             events: events.fuse(),
-            shutdown,
             handshakes: HashMap::new(),
             endpoints: HashSet::new(),
         }

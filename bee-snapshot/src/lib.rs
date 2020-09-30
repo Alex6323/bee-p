@@ -19,16 +19,17 @@ pub mod global;
 pub mod local;
 pub mod metadata;
 
-use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{bee_node::BeeNode, event::Bus, shutdown_tokio::Shutdown, worker::Worker};
+use bee_common_ext::{
+    bee_node::BeeNode,
+    event::Bus,
+    node::{Node, NodeBuilder},
+};
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
 use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};
-use futures::channel::{mpsc, oneshot};
 use log::{info, warn};
-use tokio::spawn;
 
 use std::{path::Path, sync::Arc};
 
@@ -43,10 +44,8 @@ pub enum Error {
 
 pub async fn init(
     config: &config::SnapshotConfig,
-    bee_node: Arc<BeeNode>,
-    bus: Arc<Bus<'static>>,
-    shutdown: &mut Shutdown,
-) -> Result<(LedgerState, MilestoneIndex, u64), Error> {
+    mut node_builder: NodeBuilder<BeeNode>,
+) -> Result<(NodeBuilder<BeeNode>, LedgerState, MilestoneIndex, u64), Error> {
     let (state, index, timestamp) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
@@ -107,21 +106,16 @@ pub async fn init(
         }
     };
 
-    let (snapshot_worker_tx, snapshot_worker_rx) = mpsc::unbounded();
-    let (snapshot_worker_shutdown_tx, snapshot_worker_shutdown_rx) = oneshot::channel();
+    node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
 
-    shutdown.add_worker_shutdown(
-        snapshot_worker_shutdown_tx,
-        spawn(worker::SnapshotWorker::new(config.clone()).start(
-            ShutdownStream::new(snapshot_worker_shutdown_rx, snapshot_worker_rx),
-            bee_node,
-            (),
-        )),
-    );
+    Ok((node_builder, state, MilestoneIndex(index), timestamp))
+}
+
+pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
+    let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = snapshot_worker_tx.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone()))
-        {
+        if let Err(e) = snapshot_worker.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
             warn!(
                 "Failed to send milestone {} to snapshot worker: {:?}.",
                 *latest_solid_milestone.0.index(),
@@ -129,6 +123,4 @@ pub async fn init(
             )
         }
     });
-
-    Ok((state, MilestoneIndex(index), timestamp))
 }

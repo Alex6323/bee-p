@@ -19,13 +19,8 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use async_trait::async_trait;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
-
-use std::sync::Arc;
 
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
@@ -33,64 +28,49 @@ pub(crate) struct BroadcasterWorkerEvent {
 }
 
 pub(crate) struct BroadcasterWorker {
-    network: Network,
+    pub(crate) tx: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
 }
 
 #[async_trait]
 impl<N: Node> Worker<N> for BroadcasterWorker {
-    type Config = ();
+    type Config = Network;
     type Error = WorkerError;
-    type Event = BroadcasterWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<BroadcasterWorkerEvent>>>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
 
-        while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
-            self.broadcast(source, transaction).await;
-        }
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        info!("Stopped.");
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
-        Ok(())
-    }
-}
+            while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
+                let bytes = tlv_into_bytes(transaction);
 
-impl BroadcasterWorker {
-    pub(crate) fn new(network: Network) -> Self {
-        Self { network }
-    }
-
-    async fn broadcast(&mut self, source: Option<EndpointId>, transaction: TransactionMessage) {
-        let bytes = tlv_into_bytes(transaction);
-
-        for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
-            if match source {
-                Some(source) => source != *peer.key(),
-                None => true,
-            } {
-                match self
-                    .network
-                    .send(SendMessage {
-                        receiver_epid: *peer.key(),
-                        message: bytes.clone(),
-                    })
-                    .await
-                {
-                    Ok(_) => {
-                        (*peer.value()).metrics.transactions_sent_inc();
-                        Protocol::get().metrics.transactions_sent_inc();
+                for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
+                    if match source {
+                        Some(source) => source != *peer.key(),
+                        None => true,
+                    } {
+                        match config.unbounded_send(SendMessage {
+                            receiver_epid: *peer.key(),
+                            message: bytes.clone(),
+                        }) {
+                            Ok(_) => {
+                                (*peer.value()).metrics.transactions_sent_inc();
+                                Protocol::get().metrics.transactions_sent_inc();
+                            }
+                            Err(e) => {
+                                warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);
+                            }
+                        };
                     }
-                    Err(e) => {
-                        warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);
-                    }
-                };
+                }
             }
-        }
+
+            info!("Stopped.");
+        });
+
+        Ok(Self { tx })
     }
 }

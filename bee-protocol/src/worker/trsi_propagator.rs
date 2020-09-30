@@ -9,28 +9,23 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::tangle::tangle;
+use crate::{
+    tangle::tangle,
+    worker::{TipCandidateValidatorWorker, TipCandidateValidatorWorkerEvent},
+};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
-use bee_tangle::helper::load_bundle_builder;
+use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{info, warn};
 
-use crate::{
-    worker::tip_candidate_validator::{TipCandidateWorkerEvent, TipCandidateWorkerEvent::OtrsiYtrsiPropagated},
-    Protocol,
-};
-use bee_transaction::Vertex;
 use std::{
+    any::TypeId,
     cmp::{max, min},
-    sync::Arc,
 };
 
 pub(crate) enum TrsiPropagatorWorkerEvent {
@@ -39,96 +34,91 @@ pub(crate) enum TrsiPropagatorWorkerEvent {
 }
 
 pub(crate) struct TrsiPropagatorWorker {
-    tip_candidate_validator: mpsc::UnboundedSender<TipCandidateWorkerEvent>,
+    pub(crate) tx: mpsc::UnboundedSender<TrsiPropagatorWorkerEvent>,
 }
 
 #[async_trait]
 impl<N: Node> Worker<N> for TrsiPropagatorWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = TrsiPropagatorWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
-
-        while let Some(event) = receiver.next().await {
-            self.propagate(event);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
-    }
-}
-
-impl TrsiPropagatorWorker {
-    pub(crate) fn new(tip_candidate_validator: mpsc::UnboundedSender<TipCandidateWorkerEvent>) -> Self {
-        Self {
-            tip_candidate_validator,
-        }
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TipCandidateValidatorWorker>()]))
     }
 
-    fn propagate(&mut self, event: TrsiPropagatorWorkerEvent) {
-        let mut children = match &event {
-            TrsiPropagatorWorkerEvent::Default(hash) => vec![*hash],
-            TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => hashes.clone(),
-        };
-        while let Some(hash) = children.pop() {
-            // get best otrsi and ytrsi from parents
-            let tx = tangle().get(&hash).unwrap();
-            let trunk_otsri = tangle().otrsi(tx.trunk());
-            let branch_otsri = tangle().otrsi(tx.branch());
-            let trunk_ytrsi = tangle().ytrsi(tx.trunk());
-            let branch_ytrsi = tangle().ytrsi(tx.branch());
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let tip_candidate_validator = node.worker::<TipCandidateValidatorWorker>().unwrap().tx.clone();
 
-            if trunk_otsri.is_none() || branch_otsri.is_none() || trunk_ytrsi.is_none() || branch_ytrsi.is_none() {
-                continue;
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
+
+            let mut receiver = ShutdownStream::new(shutdown, rx);
+
+            while let Some(event) = receiver.next().await {
+                let mut children = match &event {
+                    TrsiPropagatorWorkerEvent::Default(hash) => vec![*hash],
+                    TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => hashes.clone(),
+                };
+                while let Some(hash) = children.pop() {
+                    // get best otrsi and ytrsi from parents
+                    let tx = tangle().get(&hash).unwrap();
+                    let trunk_otsri = tangle().otrsi(tx.trunk());
+                    let branch_otsri = tangle().otrsi(tx.branch());
+                    let trunk_ytrsi = tangle().ytrsi(tx.trunk());
+                    let branch_ytrsi = tangle().ytrsi(tx.branch());
+
+                    if trunk_otsri.is_none()
+                        || branch_otsri.is_none()
+                        || trunk_ytrsi.is_none()
+                        || branch_ytrsi.is_none()
+                    {
+                        continue;
+                    }
+
+                    // check if already confirmed by update_transactions_referenced_by_milestone()
+                    if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
+                        continue;
+                    }
+
+                    // in case the transaction already inherited the best otrsi and ytrsi, continue
+                    let current_otrsi = tangle().get_metadata(&hash).unwrap().otrsi();
+                    let current_ytrsi = tangle().get_metadata(&hash).unwrap().ytrsi();
+                    let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
+                    let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
+
+                    if current_otrsi.is_some()
+                        && current_ytrsi.is_some()
+                        && current_otrsi.unwrap() == best_otrsi
+                        && current_ytrsi.unwrap() == best_ytrsi
+                    {
+                        continue;
+                    }
+
+                    tangle().update_metadata(&hash, |metadata| {
+                        metadata.set_otrsi(best_otrsi);
+                        metadata.set_ytrsi(best_ytrsi);
+                    });
+
+                    // propagate otrsi and ytrsi to children
+                    for child in tangle().get_children(&hash) {
+                        children.push(child);
+                    }
+
+                    if let Err(e) =
+                        tip_candidate_validator.unbounded_send(TipCandidateValidatorWorkerEvent::TrsiPropagated(hash))
+                    {
+                        warn!("Failed to send hash to tip candidate validator: {:?}.", e);
+                    }
+                }
+                if let TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(_) = event {
+                    tangle().update_tip_pool();
+                }
             }
 
-            // check if already confirmed by update_transactions_referenced_by_milestone()
-            if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
-                continue;
-            }
+            info!("Stopped.");
+        });
 
-            // in case the transaction already inherited the best otrsi and ytrsi, continue
-            let current_otrsi = tangle().get_metadata(&hash).unwrap().otrsi();
-            let current_ytrsi = tangle().get_metadata(&hash).unwrap().ytrsi();
-            let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
-            let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
-
-            if current_otrsi.is_some()
-                && current_ytrsi.is_some()
-                && current_otrsi.unwrap() == best_otrsi
-                && current_ytrsi.unwrap() == best_ytrsi
-            {
-                continue;
-            }
-
-            tangle().update_metadata(&hash, |metadata| {
-                metadata.set_otrsi(best_otrsi);
-                metadata.set_ytrsi(best_ytrsi);
-            });
-
-            // propagate otrsi and ytrsi to children
-            for child in tangle().get_children(&hash) {
-                children.push(child);
-            }
-
-            if let Err(e) = self
-                .tip_candidate_validator
-                .unbounded_send(TipCandidateWorkerEvent::OtrsiYtrsiPropagated(hash))
-            {
-                warn!("Failed to send hash to tip candidate validator: {:?}.", e);
-            }
-        }
-        if let TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(_) = event {
-            tangle().update_tip_pool();
-        }
+        Ok(Self { tx })
     }
 }

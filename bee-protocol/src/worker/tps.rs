@@ -15,78 +15,61 @@ use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
-use futures::{stream::Fuse, StreamExt};
+use futures::StreamExt;
 use log::info;
-use tokio::time::{interval, Instant, Interval};
+use tokio::time::interval;
 
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 #[derive(Default)]
-pub(crate) struct TpsWorker {
-    incoming: u64,
-    new: u64,
-    known: u64,
-    stale: u64,
-    invalid: u64,
-    outgoing: u64,
-}
+pub(crate) struct TpsWorker {}
 
 #[async_trait]
 impl<N: Node> Worker<N> for TpsWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = Instant;
-    type Receiver = ShutdownStream<Fuse<Interval>>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        while receiver.next().await.is_some() {
-            self.tps();
-        }
+            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
-        info!("Stopped.");
+            let mut total_incoming = 0u64;
+            let mut total_new = 0u64;
+            let mut total_known = 0u64;
+            let mut total_stale = 0u64;
+            let mut total_invalid = 0u64;
+            let mut total_outgoing = 0u64;
 
-        Ok(())
-    }
-}
+            while receiver.next().await.is_some() {
+                let incoming = Protocol::get().metrics.transactions_received();
+                let new = Protocol::get().metrics.new_transactions();
+                let known = Protocol::get().metrics.known_transactions();
+                let stale = Protocol::get().metrics.stale_transactions();
+                let invalid = Protocol::get().metrics.invalid_transactions();
+                let outgoing = Protocol::get().metrics.transactions_sent();
 
-impl TpsWorker {
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
+                Protocol::get().bus.dispatch(TpsMetricsUpdated {
+                    incoming: incoming - total_incoming,
+                    new: new - total_new,
+                    known: known - total_known,
+                    stale: stale - total_stale,
+                    invalid: invalid - total_invalid,
+                    outgoing: outgoing - total_outgoing,
+                });
 
-    pub(crate) fn interval() -> Interval {
-        interval(Duration::from_secs(1))
-    }
+                total_incoming = incoming;
+                total_new = new;
+                total_known = known;
+                total_stale = stale;
+                total_invalid = invalid;
+                total_outgoing = outgoing;
+            }
 
-    fn tps(&mut self) {
-        let incoming = Protocol::get().metrics.transactions_received();
-        let new = Protocol::get().metrics.new_transactions();
-        let known = Protocol::get().metrics.known_transactions();
-        let stale = Protocol::get().metrics.stale_transactions();
-        let invalid = Protocol::get().metrics.invalid_transactions();
-        let outgoing = Protocol::get().metrics.transactions_sent();
-
-        Protocol::get().bus.dispatch(TpsMetricsUpdated {
-            incoming: incoming - self.incoming,
-            new: new - self.new,
-            known: known - self.known,
-            stale: stale - self.stale,
-            invalid: invalid - self.invalid,
-            outgoing: outgoing - self.outgoing,
+            info!("Stopped.");
         });
 
-        self.incoming = incoming;
-        self.new = new;
-        self.known = known;
-        self.stale = stale;
-        self.invalid = invalid;
-        self.outgoing = outgoing;
+        Ok(Self::default())
     }
 }

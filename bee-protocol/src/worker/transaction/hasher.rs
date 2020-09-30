@@ -12,7 +12,7 @@
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    worker::transaction::{HashCache, ProcessorWorkerEvent},
+    worker::transaction::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -35,7 +35,7 @@ use futures::{
 use log::{info, trace, warn};
 use pin_project::pin_project;
 
-use std::{marker::PhantomData, pin::Pin, sync::Arc};
+use std::{any::TypeId, pin::Pin};
 
 // If a batch has less than this number of transactions, the regular CurlP hasher is used instead
 // of the batched one.
@@ -43,72 +43,77 @@ const BATCH_SIZE_THRESHOLD: usize = 3;
 
 pub(crate) struct HasherWorkerEvent {
     pub(crate) from: EndpointId,
-    pub(crate) transaction: TransactionMessage,
+    pub(crate) transaction_message: TransactionMessage,
 }
 
-pub(crate) struct HasherWorker<N: Node> {
-    processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>,
-    marker: PhantomData<N>,
+pub(crate) struct HasherWorker {
+    pub(crate) tx: mpsc::UnboundedSender<HasherWorkerEvent>,
+}
+
+fn trigger_hashing(
+    batch_size: usize,
+    receiver: &mut BatchStream,
+    processor_worker: &mut mpsc::UnboundedSender<ProcessorWorkerEvent>,
+) {
+    if batch_size < BATCH_SIZE_THRESHOLD {
+        let hashes = receiver.hasher.hash_unbatched();
+        send_hashes(hashes, &mut receiver.events, processor_worker);
+    } else {
+        let hashes = receiver.hasher.hash_batched();
+        send_hashes(hashes, &mut receiver.events, processor_worker);
+    }
+    // FIXME: we could store the fraction of times we use the batched hasher
+}
+
+fn send_hashes(
+    hashes: impl Iterator<Item = TritBuf>,
+    events: &mut Vec<HasherWorkerEvent>,
+    processor_worker: &mut mpsc::UnboundedSender<ProcessorWorkerEvent>,
+) {
+    for (
+        HasherWorkerEvent {
+            from,
+            transaction_message,
+        },
+        hash,
+    ) in events.drain(..).zip(hashes)
+    {
+        if let Err(e) = processor_worker.unbounded_send(ProcessorWorkerEvent {
+            hash: Hash::from_inner_unchecked(hash),
+            from,
+            transaction_message,
+        }) {
+            warn!("Sending event to the processor worker failed: {}.", e);
+        }
+    }
 }
 
 #[async_trait]
-impl<N: Node> Worker<N> for HasherWorker<N> {
-    type Config = ();
+impl<N: Node> Worker<N> for HasherWorker {
+    type Config = usize;
     type Error = WorkerError;
-    type Event = usize;
-    type Receiver = BatchStream;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
-
-        while let Some(batch_size) = receiver.next().await {
-            self.trigger_hashing(batch_size, &mut receiver);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
-    }
-}
-
-impl<N: Node> HasherWorker<N> {
-    pub(crate) fn new(processor_worker: mpsc::UnboundedSender<ProcessorWorkerEvent>) -> Self {
-        Self {
-            processor_worker,
-            marker: PhantomData,
-        }
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<ProcessorWorker>()]))
     }
 
-    fn trigger_hashing(&mut self, batch_size: usize, receiver: &mut <Self as Worker<N>>::Receiver) {
-        if batch_size < BATCH_SIZE_THRESHOLD {
-            let hashes = receiver.hasher.hash_unbatched();
-            Self::send_hashes(hashes, &mut receiver.events, &mut self.processor_worker);
-        } else {
-            let hashes = receiver.hasher.hash_batched();
-            Self::send_hashes(hashes, &mut receiver.events, &mut self.processor_worker);
-        }
-        // FIXME: we could store the fraction of times we use the batched hasher
-    }
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let mut processor_worker = node.worker::<ProcessorWorker>().unwrap().tx.clone();
 
-    fn send_hashes(
-        hashes: impl Iterator<Item = TritBuf>,
-        events: &mut Vec<HasherWorkerEvent>,
-        processor_worker: &mut mpsc::UnboundedSender<ProcessorWorkerEvent>,
-    ) {
-        for (HasherWorkerEvent { from, transaction }, hash) in events.drain(..).zip(hashes) {
-            if let Err(e) = processor_worker.unbounded_send(ProcessorWorkerEvent {
-                hash: Hash::from_inner_unchecked(hash),
-                from,
-                transaction,
-            }) {
-                warn!("Sending event to the processor worker failed: {}.", e);
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            let mut receiver = BatchStream::new(config, ShutdownStream::new(shutdown, rx));
+
+            info!("Running.");
+
+            while let Some(batch_size) = receiver.next().await {
+                trigger_hashing(batch_size, &mut receiver, &mut processor_worker);
             }
-        }
+
+            info!("Stopped.");
+        });
+
+        Ok(Self { tx })
     }
 }
 
@@ -173,14 +178,14 @@ impl Stream for BatchStream {
                 }
                 Poll::Ready(Some(event)) => {
                     // If the transaction was already received, we skip it and poll again.
-                    if !cache.insert(&event.transaction.bytes) {
+                    if !cache.insert(&event.transaction_message.bytes) {
                         trace!("Transaction already received.");
                         Protocol::get().metrics.known_transactions_inc();
                         continue;
                     }
                     // Given that the current batch has less than `BATCH_SIZE` transactions. We can
                     // add the transaction in the current event to the batch.
-                    let transaction_bytes = uncompress_transaction_bytes(&event.transaction.bytes);
+                    let transaction_bytes = uncompress_transaction_bytes(&event.transaction_message.bytes);
 
                     let trits = Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN)
                         .unwrap()

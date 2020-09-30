@@ -13,7 +13,10 @@ use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
     whiteflag::{
-        b1t6::decode, merkle_hasher::MerkleHasher, metadata::WhiteFlagMetadata, traversal::Error as TraversalError,
+        b1t6::decode,
+        merkle_hasher::MerkleHasher,
+        metadata::WhiteFlagMetadata,
+        traversal::{visit_bundles_dfs, Error as TraversalError},
     },
 };
 
@@ -28,7 +31,7 @@ use async_trait::async_trait;
 use blake2::Blake2b;
 use futures::{
     channel::{mpsc, oneshot},
-    stream::{Fuse, StreamExt},
+    stream::StreamExt,
 };
 use log::{error, info, warn};
 
@@ -49,144 +52,139 @@ pub enum LedgerWorkerEvent {
 }
 
 pub(crate) struct LedgerWorker {
-    index: MilestoneIndex,
-    pub(crate) state: LedgerState,
-    coo_config: ProtocolCoordinatorConfig,
-    bus: Arc<Bus<'static>>,
+    pub(crate) tx: mpsc::UnboundedSender<LedgerWorkerEvent>,
 }
 
-#[async_trait]
-impl<N: Node> Worker<N> for LedgerWorker {
-    type Config = ();
-    type Error = WorkerError;
-    type Event = LedgerWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<LedgerWorkerEvent>>>;
+fn milestone_info(hash: &Hash, coo_config: &ProtocolCoordinatorConfig) -> (Vec<u8>, u64) {
+    // TODO handle error of both unwrap
+    let ms = load_bundle_builder(tangle(), hash).unwrap();
+    let timestamp = ms.get(0).unwrap().get_timestamp();
+    let proof = decode(ms.get(2).unwrap().payload().to_inner().subslice(
+        (coo_config.depth() as usize * HASH_LENGTH)..(coo_config.depth() as usize * HASH_LENGTH + MERKLE_PROOF_LENGTH),
+    ));
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    (proof, timestamp)
+}
 
-        while let Some(event) = receiver.next().await {
-            match event {
-                LedgerWorkerEvent::Confirm(milestone) => {
-                    if self.confirm(milestone).is_err() {
-                        panic!("Error while confirming milestone, aborting.");
-                    }
-                }
-                LedgerWorkerEvent::GetBalance(address, sender) => self.get_balance(address, sender),
+fn confirm(
+    milestone: Milestone,
+    index: &mut MilestoneIndex,
+    state: &mut LedgerState,
+    coo_config: &ProtocolCoordinatorConfig,
+    bus: &Arc<Bus<'static>>,
+) -> Result<(), Error> {
+    if milestone.index() != MilestoneIndex(index.0 + 1) {
+        error!("Tried to confirm {} on top of {}.", milestone.index().0, index.0);
+        return Err(Error::NonContiguousMilestone);
+    }
+
+    let (merkle_proof, timestamp) = milestone_info(milestone.hash(), coo_config);
+
+    let mut confirmation = WhiteFlagMetadata::new(milestone.index(), timestamp);
+
+    match visit_bundles_dfs(state, *milestone.hash(), &mut confirmation) {
+        Ok(_) => {
+            if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().digest(&confirmation.tails_included)) {
+                error!(
+                    "The computed merkle proof on milestone {} does not match the one provided by the coordinator.",
+                    milestone.index().0,
+                );
+                return Err(Error::MerkleProofMismatch);
             }
-        }
 
-        info!("Stopped.");
-
-        Ok(())
-    }
-}
-
-impl LedgerWorker {
-    pub fn new(
-        index: MilestoneIndex,
-        state: LedgerState,
-        coo_config: ProtocolCoordinatorConfig,
-        bus: Arc<Bus<'static>>,
-    ) -> Self {
-        Self {
-            index,
-            state,
-            coo_config,
-            bus,
-        }
-    }
-
-    fn milestone_info(&self, hash: &Hash) -> (Vec<u8>, u64) {
-        // TODO handle error of both unwrap
-        let ms = load_bundle_builder(tangle(), hash).unwrap();
-        let timestamp = ms.get(0).unwrap().get_timestamp();
-        let proof = decode(ms.get(2).unwrap().payload().to_inner().subslice(
-            (self.coo_config.depth() as usize * HASH_LENGTH)
-                ..(self.coo_config.depth() as usize * HASH_LENGTH + MERKLE_PROOF_LENGTH),
-        ));
-
-        (proof, timestamp)
-    }
-
-    fn confirm(&mut self, milestone: Milestone) -> Result<(), Error> {
-        if milestone.index() != MilestoneIndex(self.index.0 + 1) {
-            error!("Tried to confirm {} on top of {}.", milestone.index().0, self.index.0);
-            return Err(Error::NonContiguousMilestone);
-        }
-
-        let (merkle_proof, timestamp) = self.milestone_info(milestone.hash());
-
-        let mut confirmation = WhiteFlagMetadata::new(milestone.index(), timestamp);
-
-        match self.visit_bundles_dfs(*milestone.hash(), &mut confirmation) {
-            Ok(_) => {
-                if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().digest(&confirmation.tails_included)) {
-                    error!(
-                        "The computed merkle proof on milestone {} does not match the one provided by the coordinator.",
-                        milestone.index().0,
-                    );
-                    return Err(Error::MerkleProofMismatch);
-                }
-
-                if confirmation.num_tails_referenced
-                    != confirmation.num_tails_zero_value
-                        + confirmation.num_tails_conflicting
-                        + confirmation.tails_included.len()
-                {
-                    error!(
-                        "Invalid tails count at {}: referenced ({}) != zero ({}) + conflicting ({}) + included ({}).",
-                        milestone.index().0,
-                        confirmation.num_tails_referenced,
-                        confirmation.num_tails_zero_value,
-                        confirmation.num_tails_conflicting,
-                        confirmation.tails_included.len()
-                    );
-                    return Err(Error::InvalidTailsCount);
-                }
-
-                self.index = milestone.index();
-
-                info!(
-                    "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
-                    *milestone.index(),
+            if confirmation.num_tails_referenced
+                != confirmation.num_tails_zero_value
+                    + confirmation.num_tails_conflicting
+                    + confirmation.tails_included.len()
+            {
+                error!(
+                    "Invalid tails count at {}: referenced ({}) != zero ({}) + conflicting ({}) + included ({}).",
+                    milestone.index().0,
                     confirmation.num_tails_referenced,
                     confirmation.num_tails_zero_value,
                     confirmation.num_tails_conflicting,
                     confirmation.tails_included.len()
                 );
-
-                self.bus.dispatch(MilestoneConfirmed {
-                    milestone,
-                    timestamp,
-                    tails_referenced: confirmation.num_tails_referenced,
-                    tails_zero_value: confirmation.num_tails_zero_value,
-                    tails_conflicting: confirmation.num_tails_conflicting,
-                    tails_included: confirmation.tails_included.len(),
-                });
-
-                Ok(())
+                return Err(Error::InvalidTailsCount);
             }
-            Err(e) => {
-                error!(
-                    "Error occured while traversing to confirm {}: {:?}.",
-                    milestone.index().0,
-                    e
-                );
-                Err(Error::InvalidConfirmationSet(e))
-            }
+
+            *index = milestone.index();
+
+            info!(
+                "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
+                *milestone.index(),
+                confirmation.num_tails_referenced,
+                confirmation.num_tails_zero_value,
+                confirmation.num_tails_conflicting,
+                confirmation.tails_included.len()
+            );
+
+            bus.dispatch(MilestoneConfirmed {
+                milestone,
+                timestamp,
+                tails_referenced: confirmation.num_tails_referenced,
+                tails_zero_value: confirmation.num_tails_zero_value,
+                tails_conflicting: confirmation.num_tails_conflicting,
+                tails_included: confirmation.tails_included.len(),
+            });
+
+            Ok(())
+        }
+        Err(e) => {
+            error!(
+                "Error occured while traversing to confirm {}: {:?}.",
+                milestone.index().0,
+                e
+            );
+            Err(Error::InvalidConfirmationSet(e))
         }
     }
+}
 
-    fn get_balance(&self, address: Address, sender: oneshot::Sender<u64>) {
-        if let Err(e) = sender.send(self.state.get_or_zero(&address)) {
-            warn!("Failed to send balance: {:?}.", e);
-        }
+fn get_balance(state: &LedgerState, address: Address, sender: oneshot::Sender<u64>) {
+    if let Err(e) = sender.send(state.get_or_zero(&address)) {
+        warn!("Failed to send balance: {:?}.", e);
+    }
+}
+
+#[async_trait]
+impl<N: Node> Worker<N> for LedgerWorker {
+    type Config = (
+        MilestoneIndex,
+        LedgerState,
+        ProtocolCoordinatorConfig,
+        Arc<Bus<'static>>,
+    );
+    type Error = WorkerError;
+
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
+
+            let mut receiver = ShutdownStream::new(shutdown, rx);
+
+            let mut index = config.0;
+            let mut state = config.1;
+            let coo_config = config.2;
+            let bus = config.3;
+
+            while let Some(event) = receiver.next().await {
+                match event {
+                    LedgerWorkerEvent::Confirm(milestone) => {
+                        if confirm(milestone, &mut index, &mut state, &coo_config, &bus).is_err() {
+                            panic!("Error while confirming milestone, aborting.");
+                        }
+                    }
+                    LedgerWorkerEvent::GetBalance(address, sender) => get_balance(&state, address, sender),
+                }
+            }
+
+            info!("Stopped.");
+        });
+
+        Ok(Self { tx })
     }
 }
 

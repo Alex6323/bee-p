@@ -20,11 +20,13 @@ use crate::state::LedgerState;
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
-use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{bee_node::BeeNode, event::Bus, shutdown_tokio::Shutdown, worker::Worker};
+use bee_common_ext::{
+    bee_node::BeeNode,
+    event::Bus,
+    node::{Node, NodeBuilder},
+};
 use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
 
-use futures::channel::{mpsc, oneshot};
 use log::warn;
 
 use std::sync::Arc;
@@ -33,34 +35,17 @@ pub fn init(
     index: u32,
     state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
-    bee_node: Arc<BeeNode>,
+    node_builder: NodeBuilder<BeeNode>,
     bus: Arc<Bus<'static>>,
-    shutdown: &mut Shutdown,
-) -> mpsc::UnboundedSender<LedgerWorkerEvent> {
-    // TODO
-    // if unsafe { !WHITE_FLAG.is_null() } {
-    //     warn!("Already initialized.");
-    //     return;
-    // }
+) -> NodeBuilder<BeeNode> {
+    node_builder.with_worker_cfg::<LedgerWorker>((MilestoneIndex(index), state, coo_config, bus.clone()))
+}
 
-    let (ledger_worker_tx, ledger_worker_rx) = mpsc::unbounded();
-    let (ledger_worker_shutdown_tx, ledger_worker_shutdown_rx) = oneshot::channel();
-
-    shutdown.add_worker_shutdown(
-        ledger_worker_shutdown_tx,
-        tokio::spawn(
-            LedgerWorker::new(MilestoneIndex(index), state, coo_config, bus.clone()).start(
-                ShutdownStream::new(ledger_worker_shutdown_rx, ledger_worker_rx),
-                bee_node,
-                (),
-            ),
-        ),
-    );
-
-    let ledger_worker_tx_ret = ledger_worker_tx.clone();
+pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
+    let ledger_worker = bee_node.worker::<LedgerWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = ledger_worker_tx.unbounded_send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
+        if let Err(e) = ledger_worker.unbounded_send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
             warn!(
                 "Sending solid milestone {:?} to confirmation failed: {:?}.",
                 latest_solid_milestone.0.index(),
@@ -68,6 +53,4 @@ pub fn init(
             );
         }
     });
-
-    ledger_worker_tx_ret
 }

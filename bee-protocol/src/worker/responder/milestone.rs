@@ -24,74 +24,59 @@ use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::info;
-
-use std::sync::Arc;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: MilestoneRequest,
 }
 
-pub(crate) struct MilestoneResponderWorker;
+pub(crate) struct MilestoneResponderWorker {
+    pub(crate) tx: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for MilestoneResponderWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = MilestoneResponderWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
 
-        while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
-            self.process_request(epid, request).await;
-        }
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        info!("Stopped.");
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
-        Ok(())
-    }
-}
+            while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
+                let index = match request.index {
+                    0 => tangle().get_latest_milestone_index(),
+                    _ => request.index.into(),
+                };
 
-impl MilestoneResponderWorker {
-    pub(crate) fn new() -> Self {
-        Self
-    }
+                if let Some(hash) = tangle().get_milestone_hash(index) {
+                    if let Some(builder) = load_bundle_builder(tangle(), &hash) {
+                        // This is safe because the bundle has already been validated.
+                        let bundle = unsafe { builder.build() };
+                        let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
 
-    async fn process_request(&self, epid: EndpointId, request: MilestoneRequest) {
-        let index = match request.index {
-            0 => tangle().get_latest_milestone_index(),
-            _ => request.index.into(),
-        };
-
-        if let Some(hash) = tangle().get_milestone_hash(index) {
-            if let Some(builder) = load_bundle_builder(tangle(), &hash) {
-                // This is safe because the bundle has already been validated.
-                let bundle = unsafe { builder.build() };
-                let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
-
-                for transaction in bundle {
-                    transaction.into_trits_allocated(&mut trits);
-                    Sender::<TransactionMessage>::send(
-                        &epid,
-                        TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                            trits.encode::<T5B1Buf>().as_i8_slice(),
-                        ))),
-                    )
-                    .await;
+                        for transaction in bundle {
+                            transaction.into_trits_allocated(&mut trits);
+                            Sender::<TransactionMessage>::send(
+                                &epid,
+                                TransactionMessage::new(&compress_transaction_bytes(cast_slice(
+                                    trits.encode::<T5B1Buf>().as_i8_slice(),
+                                ))),
+                            );
+                        }
+                    }
                 }
             }
-        }
+
+            info!("Stopped.");
+        });
+
+        Ok(Self { tx })
     }
 }

@@ -28,7 +28,7 @@ mod tests {
     };
 
     use bee_common::shutdown_stream::ShutdownStream;
-    use bee_common_ext::{bee_node::BeeNode, event::Bus, shutdown_tokio::Shutdown, worker::Worker};
+    use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
     use bee_crypto::ternary::Hash;
     use bee_network::{EndpointId, NetworkConfig};
 
@@ -43,26 +43,24 @@ mod tests {
     #[tokio::test]
     async fn test_tx_workers_with_compressed_buffer() {
         let bee_node = Arc::new(BeeNode::new());
-        let mut shutdown = Shutdown::new();
         let bus = Arc::new(Bus::default());
 
         // build network
         let network_config = NetworkConfig::builder().finish();
-        let (network, _) = bee_network::init(network_config, &mut shutdown).await;
+        let (network, _) = bee_network::init(network_config);
 
         // init tangle
         tangle::init();
 
         // init protocol
         let protocol_config = ProtocolConfig::build().finish();
-        Protocol::init(protocol_config, network, 0, bee_node.clone(), bus, &mut shutdown).await;
+        Protocol::init(protocol_config, network, 0, bee_node.clone(), bus).await;
 
         assert_eq!(tangle().len(), 0);
 
         let (hasher_worker_sender, hasher_worker_receiver) = mpsc::unbounded();
         let (hasher_worker_shutdown_sender, hasher_worker_shutdown_receiver) = oneshot::channel();
         let (processor_worker_sender, processor_worker_receiver) = mpsc::unbounded();
-        let (processor_worker_shutdown_sender, processor_worker_shutdown_receiver) = oneshot::channel();
         let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
 
         let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).start(
@@ -75,12 +73,7 @@ mod tests {
         );
 
         let processor = ProcessorWorker::new(milestone_validator_worker_sender);
-        let processor_handle = Worker::<BeeNode>::start(
-            processor,
-            ShutdownStream::new(processor_worker_shutdown_receiver, processor_worker_receiver),
-            bee_node.clone(),
-            (),
-        );
+        let processor_handle = Worker::<BeeNode>::start(processor, processor_worker_receiver, bee_node.clone(), ());
 
         spawn(async move {
             let tx: [u8; 1024] = [0; 1024];
@@ -88,12 +81,12 @@ mod tests {
             let epid = EndpointId::new();
             let event = HasherWorkerEvent {
                 from: epid,
-                transaction: message,
+                transaction_message: message,
             };
             hasher_worker_sender.unbounded_send(event).unwrap();
             delay_for(Duration::from_secs(5)).await;
             hasher_worker_shutdown_sender.send(()).unwrap();
-            processor_worker_shutdown_sender.send(()).unwrap();
+            // TODO shutdown node to fix the test
         });
 
         let (hasher_result, processor_result) = join!(hasher_handle, processor_handle);

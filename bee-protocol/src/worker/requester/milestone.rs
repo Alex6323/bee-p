@@ -21,45 +21,102 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::EndpointId;
 
 use async_trait::async_trait;
-use futures::{channel::mpsc, select, stream::Fuse, StreamExt};
+use futures::{channel::mpsc, select, StreamExt};
 use log::{debug, info};
-use tokio::time::{interval, Interval};
+use tokio::time::interval;
 
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
 pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
 pub(crate) struct MilestoneRequesterWorker {
-    counter: usize,
-    timeouts: Fuse<Interval>,
+    pub(crate) tx: mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+}
+
+async fn process_request(index: MilestoneIndex, epid: Option<EndpointId>, counter: &mut usize) {
+    if Protocol::get().requested_milestones.contains_key(&index) {
+        return;
+    }
+
+    if process_request_unchecked(index, epid, counter).await && index.0 != 0 {
+        Protocol::get().requested_milestones.insert(index, Instant::now());
+    }
+}
+
+/// Return `true` if the milestone was requested
+async fn process_request_unchecked(index: MilestoneIndex, epid: Option<EndpointId>, counter: &mut usize) -> bool {
+    if Protocol::get().peer_manager.handshaked_peers.is_empty() {
+        return false;
+    }
+
+    match epid {
+        Some(epid) => {
+            Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+            true
+        }
+        None => {
+            let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
+
+            for _ in 0..guard.len() {
+                let epid = &guard[*counter % guard.len()];
+
+                *counter += 1;
+
+                if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+                    if peer.maybe_has_data(index) {
+                        Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+                        return true;
+                    }
+                }
+            }
+
+            false
+        }
+    }
+}
+
+async fn retry_requests(counter: &mut usize) {
+    let mut retry_counts: usize = 0;
+
+    for mut milestone in Protocol::get().requested_milestones.iter_mut() {
+        let (index, instant) = milestone.pair_mut();
+        let now = Instant::now();
+        if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && process_request_unchecked(*index, None, counter).await {
+            *instant = now;
+            retry_counts += 1;
+        };
+    }
+
+    if retry_counts > 0 {
+        debug!("Retried {} milestones.", retry_counts);
+    }
 }
 
 #[async_trait]
 impl<N: Node> Worker<N> for MilestoneRequesterWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = MilestoneRequesterWorkerEvent;
-    type Receiver = ShutdownStream<mpsc::UnboundedReceiver<MilestoneRequesterWorkerEvent>>;
 
-    async fn start(self, receiver: Self::Receiver, _node: Arc<N>, _config: Self::Config) -> Result<(), Self::Error> {
-        async fn aux<N: Node>(
-            mut worker: MilestoneRequesterWorker,
-            mut receiver: <MilestoneRequesterWorker as Worker<N>>::Receiver,
-        ) -> Result<(), WorkerError> {
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+
+        node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
+
+            let mut receiver = ShutdownStream::new(shutdown, rx);
+
+            let mut counter: usize = 0;
+            let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse();
 
             loop {
                 select! {
-                    _ = worker.timeouts.next() => worker.retry_requests().await,
+                    _ = timeouts.next() => retry_requests(&mut counter).await,
                     entry = receiver.next() => match entry {
                         Some(MilestoneRequesterWorkerEvent(index, epid)) => {
                             if !tangle().contains_milestone(index.into()) {
-                                worker.process_request(index, epid).await;
+                                process_request(index, epid, &mut counter).await;
                             }
                         },
                         None => break,
@@ -68,78 +125,8 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
             }
 
             info!("Stopped.");
+        });
 
-            Ok(())
-        }
-
-        aux::<N>(self, receiver).await
-    }
-}
-
-impl MilestoneRequesterWorker {
-    pub(crate) fn new() -> Self {
-        Self {
-            counter: 0,
-            timeouts: interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse(),
-        }
-    }
-
-    async fn process_request(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) {
-        if Protocol::get().requested_milestones.contains_key(&index) {
-            return;
-        }
-
-        if self.process_request_unchecked(index, epid).await && index.0 != 0 {
-            Protocol::get().requested_milestones.insert(index, Instant::now());
-        }
-    }
-
-    /// Return `true` if the milestone was requested
-    async fn process_request_unchecked(&mut self, index: MilestoneIndex, epid: Option<EndpointId>) -> bool {
-        if Protocol::get().peer_manager.handshaked_peers.is_empty() {
-            return false;
-        }
-
-        match epid {
-            Some(epid) => {
-                Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
-                true
-            }
-            None => {
-                let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
-
-                for _ in 0..guard.len() {
-                    let epid = &guard[self.counter % guard.len()];
-
-                    self.counter += 1;
-
-                    if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
-                        if peer.maybe_has_data(index) {
-                            Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
-                            return true;
-                        }
-                    }
-                }
-
-                false
-            }
-        }
-    }
-
-    async fn retry_requests(&mut self) {
-        let mut retry_counts = 0;
-
-        for mut milestone in Protocol::get().requested_milestones.iter_mut() {
-            let (index, instant) = milestone.pair_mut();
-            let now = Instant::now();
-            if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && self.process_request_unchecked(*index, None).await {
-                *instant = now;
-                retry_counts += 1;
-            };
-        }
-
-        if retry_counts > 0 {
-            debug!("Retried {} milestones.", retry_counts);
-        }
+        Ok(Self { tx })
     }
 }

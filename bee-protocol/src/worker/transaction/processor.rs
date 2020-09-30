@@ -13,7 +13,11 @@ use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{tangle, TransactionMetadata},
-    worker::milestone_validator::MilestoneValidatorWorkerEvent,
+    worker::{
+        BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
+        SolidPropagatorWorker, SolidPropagatorWorkerEvent, TransactionRequesterWorker, TrsiPropagatorWorker,
+        TrsiPropagatorWorkerEvent,
+    },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -28,159 +32,174 @@ use bee_transaction::{
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
-use log::{error, info, trace};
+use futures::{channel::mpsc, stream::StreamExt};
+use log::{error, info, trace, warn};
 
 use std::{
-    sync::Arc,
+    any::TypeId,
     time::{SystemTime, UNIX_EPOCH},
 };
 
+pub(crate) struct ProcessorWorkerEvent {
+    pub(crate) hash: Hash,
+    pub(crate) from: EndpointId,
+    pub(crate) transaction_message: TransactionMessage,
+}
+
+pub(crate) struct ProcessorWorker {
+    pub(crate) tx: mpsc::UnboundedSender<ProcessorWorkerEvent>,
+}
+
 /// Timeframe to allow past or future transactions, 10 minutes in seconds.
 const ALLOWED_TIMESTAMP_WINDOW_SECS: u64 = 10 * 60;
+
+fn validate_timestamp(transaction: &Transaction) -> (bool, bool) {
+    let timestamp = transaction.get_timestamp();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Clock may have gone backwards")
+        .as_secs() as u64;
+    let past = now - ALLOWED_TIMESTAMP_WINDOW_SECS;
+    let future = now + ALLOWED_TIMESTAMP_WINDOW_SECS;
+
+    // (is_timestamp_valid, should_broadcast)
+    (
+        timestamp >= Protocol::get().local_snapshot_timestamp && timestamp < future,
+        timestamp >= past,
+    )
+}
 
 #[async_trait]
 impl<N: Node> Worker<N> for ProcessorWorker {
     type Config = ();
     type Error = WorkerError;
-    type Event = ProcessorWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<Self::Event>>>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
-
-        while let Some(ProcessorWorkerEvent {
-            hash,
-            from,
-            transaction,
-        }) = receiver.next().await
-        {
-            self.process_transaction_brodcast(hash, from, transaction);
-        }
-
-        info!("Stopped.");
-
-        Ok(())
-    }
-}
-
-pub(crate) struct ProcessorWorkerEvent {
-    pub(crate) hash: Hash,
-    pub(crate) from: EndpointId,
-    pub(crate) transaction: TransactionMessage,
-}
-
-pub(crate) struct ProcessorWorker {
-    milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
-}
-
-impl ProcessorWorker {
-    pub(crate) fn new(milestone_validator_worker: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>) -> Self {
-        Self {
-            milestone_validator_worker,
-        }
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![
+            TypeId::of::<MilestoneValidatorWorker>(),
+            TypeId::of::<SolidPropagatorWorker>(),
+            TypeId::of::<BroadcasterWorker>(),
+            TypeId::of::<TransactionRequesterWorker>(),
+            TypeId::of::<TrsiPropagatorWorker>(),
+        ]))
     }
 
-    fn validate_timestamp(&self, transaction: &Transaction) -> (bool, bool) {
-        let timestamp = transaction.get_timestamp();
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Clock may have gone backwards")
-            .as_secs() as u64;
-        let past = now - ALLOWED_TIMESTAMP_WINDOW_SECS;
-        let future = now + ALLOWED_TIMESTAMP_WINDOW_SECS;
+    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
+        let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
+        let solid_propagator = node.worker::<SolidPropagatorWorker>().unwrap().tx.clone();
+        let broadcaster = node.worker::<BroadcasterWorker>().unwrap().tx.clone();
+        let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
+        let trsi_propagator = node.worker::<TrsiPropagatorWorker>().unwrap().tx.clone();
 
-        // (is_timestamp_valid, should_broadcast)
-        (
-            timestamp >= Protocol::get().local_snapshot_timestamp && timestamp < future,
-            timestamp >= past,
-        )
-    }
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-    fn process_transaction_brodcast(&mut self, hash: Hash, from: EndpointId, transaction_message: TransactionMessage) {
-        trace!("Processing received transaction...");
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
-        let transaction_bytes = uncompress_transaction_bytes(&transaction_message.bytes);
-        let transaction = match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN) {
-            Ok(transaction_trits) => {
-                let transaction_buf = transaction_trits.to_buf::<T5B1Buf>().encode::<T1B1Buf>();
-                match Transaction::from_trits(&transaction_buf) {
-                    Ok(transaction) => transaction,
-                    Err(e) => {
-                        trace!("Invalid transaction: {:?}.", e);
-                        Protocol::get().metrics.invalid_transactions_inc();
-                        return;
+            while let Some(ProcessorWorkerEvent {
+                hash,
+                from,
+                transaction_message,
+            }) = receiver.next().await
+            {
+                trace!("Processing received transaction...");
+
+                let transaction_bytes = uncompress_transaction_bytes(&transaction_message.bytes);
+                let transaction =
+                    match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN) {
+                        Ok(transaction_trits) => {
+                            let transaction_buf = transaction_trits.to_buf::<T5B1Buf>().encode::<T1B1Buf>();
+                            match Transaction::from_trits(&transaction_buf) {
+                                Ok(transaction) => transaction,
+                                Err(e) => {
+                                    trace!("Invalid transaction: {:?}.", e);
+                                    Protocol::get().metrics.invalid_transactions_inc();
+                                    return;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            trace!("Invalid transaction: {:?}.", e);
+                            Protocol::get().metrics.invalid_transactions_inc();
+                            return;
+                        }
+                    };
+
+                let requested = Protocol::get().requested_transactions.contains_key(&hash);
+
+                if !requested && hash.weight() < Protocol::get().config.mwm {
+                    trace!("Insufficient weight magnitude: {}.", hash.weight());
+                    Protocol::get().metrics.invalid_transactions_inc();
+                    return;
+                }
+
+                let (is_timestamp_valid, should_broadcast) = validate_timestamp(&transaction);
+
+                if !requested && !is_timestamp_valid {
+                    trace!("Stale transaction, invalid timestamp.");
+                    Protocol::get().metrics.stale_transactions_inc();
+                    return;
+                }
+
+                let mut metadata = TransactionMetadata::arrived();
+
+                metadata.flags_mut().set_tail(transaction.is_tail());
+                metadata.flags_mut().set_requested(requested);
+
+                // store transaction
+                if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
+                    // TODO this was temporarily moved from the tangle.
+                    // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
+                    // When the tangle is made a worker, this should be put back on.
+
+                    if let Err(e) = solid_propagator.unbounded_send(SolidPropagatorWorkerEvent(hash)) {
+                        error!("Failed to send hash to solid propagator: {:?}.", e);
                     }
+                    if let Err(e) = trsi_propagator.unbounded_send(TrsiPropagatorWorkerEvent::Default(hash)) {
+                        error!("Failed to send hash to TRSI propagator: {:?}.", e);
+                    }
+
+                    Protocol::get().metrics.new_transactions_inc();
+
+                    match Protocol::get().requested_transactions.remove(&hash) {
+                        Some((_, (index, _))) => {
+                            let trunk = transaction.trunk();
+                            let branch = transaction.branch();
+
+                            Protocol::request_transaction(&transaction_requester, *trunk, index);
+
+                            if trunk != branch {
+                                Protocol::request_transaction(&transaction_requester, *branch, index);
+                            }
+                        }
+                        None => {
+                            if should_broadcast {
+                                if let Err(e) = broadcaster.unbounded_send(BroadcasterWorkerEvent {
+                                    source: Some(from),
+                                    transaction: transaction_message,
+                                }) {
+                                    warn!("Broadcasting transaction failed: {}.", e);
+                                }
+                            }
+                        }
+                    };
+
+                    if transaction.address().eq(&Protocol::get().config.coordinator.public_key) {
+                        if let Err(e) = milestone_validator
+                            .unbounded_send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
+                        {
+                            error!("Sending tail to milestone validation failed: {:?}.", e);
+                        }
+                    }
+                } else {
+                    Protocol::get().metrics.known_transactions_inc();
                 }
             }
-            Err(e) => {
-                trace!("Invalid transaction: {:?}.", e);
-                Protocol::get().metrics.invalid_transactions_inc();
-                return;
-            }
-        };
 
-        let requested = Protocol::get().requested_transactions.contains_key(&hash);
+            info!("Stopped.");
+        });
 
-        if !requested && hash.weight() < Protocol::get().config.mwm {
-            trace!("Insufficient weight magnitude: {}.", hash.weight());
-            Protocol::get().metrics.invalid_transactions_inc();
-            return;
-        }
-
-        let (is_timestamp_valid, should_broadcast) = self.validate_timestamp(&transaction);
-
-        if !requested && !is_timestamp_valid {
-            trace!("Stale transaction, invalid timestamp.");
-            Protocol::get().metrics.stale_transactions_inc();
-            return;
-        }
-
-        let mut metadata = TransactionMetadata::arrived();
-
-        metadata.flags_mut().set_tail(transaction.is_tail());
-        metadata.flags_mut().set_requested(requested);
-
-        // store transaction
-        if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
-            Protocol::get().metrics.new_transactions_inc();
-
-            match Protocol::get().requested_transactions.remove(&hash) {
-                Some((_, (index, _))) => {
-                    let trunk = transaction.trunk();
-                    let branch = transaction.branch();
-
-                    Protocol::request_transaction(*trunk, index);
-
-                    if trunk != branch {
-                        Protocol::request_transaction(*branch, index);
-                    }
-                }
-                None => {
-                    if should_broadcast {
-                        Protocol::broadcast_transaction_message(Some(from), transaction_message)
-                    }
-                }
-            };
-
-            if transaction.address().eq(&Protocol::get().config.coordinator.public_key) {
-                if let Err(e) = self
-                    .milestone_validator_worker
-                    .unbounded_send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
-                {
-                    error!("Sending tail to milestone validation failed: {:?}.", e);
-                }
-            }
-        } else {
-            Protocol::get().metrics.known_transactions_inc();
-        }
+        Ok(Self { tx })
     }
 }

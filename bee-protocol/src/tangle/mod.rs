@@ -17,7 +17,7 @@ mod wurts;
 
 pub use metadata::TransactionMetadata;
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::flags::Flags, worker::SolidPropagatorWorkerEvent};
+use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::flags::Flags};
 
 use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
@@ -68,23 +68,27 @@ impl MsTangle {
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         let opt = self.inner.insert(hash, transaction, metadata);
 
-        if opt.is_some() {
-            if let Err(e) = Protocol::get()
-                .solid_propagator_worker
-                .unbounded_send(SolidPropagatorWorkerEvent(hash))
-            {
-                error!("Failed to send hash to solid propagator: {:?}.", e);
-            }
-        }
+        // TODO this has been temporarily moved to the processor.
+        // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
+        // When the tangle is made a worker, this should be put back on.
 
-        if opt.is_some() {
-            if let Err(e) = Protocol::get()
-                .trsi_propagator_worker
-                .unbounded_send(TrsiPropagatorWorkerEvent::Default(hash))
-            {
-                error!("Failed to send hash to TRSI propagator: {:?}.", e);
-            }
-        }
+        // if opt.is_some() {
+        //     if let Err(e) = Protocol::get()
+        //         .solid_propagator_worker
+        //         .unbounded_send(SolidPropagatorWorkerEvent(hash))
+        //     {
+        //         error!("Failed to send hash to solid propagator: {:?}.", e);
+        //     }
+        // }
+
+        // if opt.is_some() {
+        //     if let Err(e) = Protocol::get()
+        //         .trsi_propagator_worker
+        //         .unbounded_send(TrsiPropagatorWorkerEvent::Default(hash))
+        //     {
+        //         error!("Failed to send hash to TRSI propagator: {:?}.", e);
+        //     }
+        // }
 
         opt
     }
@@ -165,7 +169,12 @@ impl MsTangle {
 
     // TODO reduce to one atomic value ?
     pub fn is_synced(&self) -> bool {
-        self.get_latest_solid_milestone_index() == self.get_latest_milestone_index()
+        self.is_synced_threshold(0)
+    }
+
+    // TODO reduce to one atomic value ?
+    pub fn is_synced_threshold(&self, threshold: u32) -> bool {
+        *self.get_latest_solid_milestone_index() >= (*self.get_latest_milestone_index() - threshold)
     }
 
     pub fn get_solid_entry_point_index(&self, hash: &Hash) -> Option<MilestoneIndex> {
@@ -277,10 +286,9 @@ impl MsTangle {
                 to_visit.push(tx_ref.branch().clone());
             }
 
-            if let Err(e) = Protocol::get()
-                .trsi_propagator_worker
-                .unbounded_send(TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(propagateTo))
-            {
+            if let Err(e) = Protocol::get().trsi_propagator_worker.unbounded_send(
+                TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(propagateTo),
+            ) {
                 error!("Failed to send hash to TRSI propagator: {:?}.", e);
             }
         }

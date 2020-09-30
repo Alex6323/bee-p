@@ -11,9 +11,6 @@
 
 use crate::tangle::tangle;
 use bee_crypto::ternary::Hash;
-use bee_tangle::Tangle;
-use bee_ternary::tryte::Tryte::O;
-use bee_transaction::Vertex;
 use log::{error, info};
 use rand::seq::IteratorRandom;
 use std::{

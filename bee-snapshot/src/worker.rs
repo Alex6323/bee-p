@@ -23,139 +23,121 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
 
 use async_trait::async_trait;
-use futures::{
-    channel::mpsc,
-    stream::{Fuse, StreamExt},
-};
+use futures::{channel::mpsc, stream::StreamExt};
 use log::{error, info, warn};
-
-use std::sync::Arc;
 
 pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct SnapshotWorker {
-    config: SnapshotConfig,
-    depth: u32,
-    delay: u32,
+    pub(crate) tx: mpsc::UnboundedSender<SnapshotWorkerEvent>,
+}
+
+fn should_snapshot(index: MilestoneIndex, config: &SnapshotConfig, depth: u32) -> bool {
+    let solid_index = *index;
+    let snapshot_index = *tangle().get_snapshot_index();
+    let pruning_index = *tangle().get_pruning_index();
+    let snapshot_interval = if tangle().is_synced() {
+        config.local().interval_synced()
+    } else {
+        config.local().interval_unsynced()
+    };
+
+    if (solid_index < depth + snapshot_interval)
+        || (solid_index - depth) < pruning_index + 1 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST
+    {
+        // Not enough history to calculate solid entry points.
+        return false;
+    }
+
+    return solid_index - (depth + snapshot_interval) >= snapshot_index;
+}
+
+fn should_prune(mut index: MilestoneIndex, config: &SnapshotConfig, delay: u32) -> bool {
+    if !config.pruning().enabled() {
+        return false;
+    }
+
+    if *index <= delay {
+        return false;
+    }
+
+    // Pruning happens after creating the snapshot so the metadata should provide the latest index.
+    if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
+        return false;
+    }
+
+    let target_index_max = MilestoneIndex(
+        *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
+    );
+
+    if index > target_index_max {
+        index = target_index_max;
+    }
+
+    if tangle().get_pruning_index() >= index {
+        return false;
+    }
+
+    // We prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
+    if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *index {
+        return false;
+    }
+
+    true
 }
 
 #[async_trait]
 impl<N: Node> Worker<N> for SnapshotWorker {
-    type Config = ();
+    type Config = SnapshotConfig;
     type Error = WorkerError;
-    type Event = SnapshotWorkerEvent;
-    type Receiver = ShutdownStream<Fuse<mpsc::UnboundedReceiver<SnapshotWorkerEvent>>>;
 
-    async fn start(
-        mut self,
-        mut receiver: Self::Receiver,
-        _node: Arc<N>,
-        _config: Self::Config,
-    ) -> Result<(), Self::Error> {
-        info!("Running.");
+    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+        let (tx, rx) = mpsc::unbounded();
 
-        while let Some(SnapshotWorkerEvent(milestone)) = receiver.next().await {
-            self.process(milestone);
-        }
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            info!("Running.");
 
-        info!("Stopped.");
+            let mut receiver = ShutdownStream::new(shutdown, rx);
 
-        Ok(())
-    }
-}
-
-impl SnapshotWorker {
-    pub(crate) fn new(config: SnapshotConfig) -> Self {
-        let depth = if config.local().depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
-            warn!(
-                "Configuration value for \"depth\" is too low ({}), value changed to {}.",
-                config.local().depth(),
+            let depth = if config.local().depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
+                warn!(
+                    "Configuration value for \"depth\" is too low ({}), value changed to {}.",
+                    config.local().depth(),
+                    SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE
+                );
                 SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE
-            );
-            SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE
-        } else {
-            config.local().depth()
-        };
-        let delay_min =
-            config.local().depth() + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
-        let delay = if config.pruning().delay() < delay_min {
-            warn!(
-                "Configuration value for \"delay\" is too low ({}), value changed to {}.",
-                config.pruning().delay(),
+            } else {
+                config.local().depth()
+            };
+            let delay_min =
+                config.local().depth() + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
+            let delay = if config.pruning().delay() < delay_min {
+                warn!(
+                    "Configuration value for \"delay\" is too low ({}), value changed to {}.",
+                    config.pruning().delay(),
+                    delay_min
+                );
                 delay_min
-            );
-            delay_min
-        } else {
-            config.pruning().delay()
-        };
+            } else {
+                config.pruning().delay()
+            };
 
-        Self { config, depth, delay }
-    }
-
-    fn should_snapshot(&self, index: MilestoneIndex) -> bool {
-        let solid_index = *index;
-        let snapshot_index = *tangle().get_snapshot_index();
-        let pruning_index = *tangle().get_pruning_index();
-        let snapshot_interval = if tangle().is_synced() {
-            self.config.local().interval_synced()
-        } else {
-            self.config.local().interval_unsynced()
-        };
-
-        if (solid_index < self.depth + snapshot_interval)
-            || (solid_index - self.depth) < pruning_index + 1 + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST
-        {
-            // Not enough history to calculate solid entry points.
-            return false;
-        }
-
-        return solid_index - (self.depth + snapshot_interval) >= snapshot_index;
-    }
-
-    fn should_prune(&self, mut index: MilestoneIndex) -> bool {
-        if !self.config.pruning().enabled() {
-            return false;
-        }
-
-        if *index <= self.delay {
-            return false;
-        }
-
-        // Pruning happens after creating the snapshot so the metadata should provide the latest index.
-        if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
-            return false;
-        }
-
-        let target_index_max = MilestoneIndex(
-            *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
-        );
-
-        if index > target_index_max {
-            index = target_index_max;
-        }
-
-        if tangle().get_pruning_index() >= index {
-            return false;
-        }
-
-        // We prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
-        if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *index {
-            return false;
-        }
-
-        true
-    }
-
-    fn process(&mut self, milestone: Milestone) {
-        if self.should_snapshot(milestone.index()) {
-            if let Err(e) = snapshot(self.config.local().path(), *milestone.index() - self.depth) {
-                error!("Failed to create snapshot: {:?}.", e);
+            while let Some(SnapshotWorkerEvent(milestone)) = receiver.next().await {
+                if should_snapshot(milestone.index(), &config, depth) {
+                    if let Err(e) = snapshot(config.local().path(), *milestone.index() - depth) {
+                        error!("Failed to create snapshot: {:?}.", e);
+                    }
+                }
+                if should_prune(milestone.index(), &config, delay) {
+                    if let Err(e) = prune_database(MilestoneIndex(*milestone.index() - delay)) {
+                        error!("Failed to prune database: {:?}.", e);
+                    }
+                }
             }
-        }
-        if self.should_prune(milestone.index()) {
-            if let Err(e) = prune_database(MilestoneIndex(*milestone.index() - self.delay)) {
-                error!("Failed to prune database: {:?}.", e);
-            }
-        }
+
+            info!("Stopped.");
+        });
+
+        Ok(Self { tx })
     }
 }

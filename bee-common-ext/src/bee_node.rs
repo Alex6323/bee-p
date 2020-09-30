@@ -11,7 +11,9 @@
 
 use crate::{node::Node, worker::Worker};
 
+use anymap::{any::Any, Map};
 use futures::{channel::oneshot, future::Future};
+use tokio::spawn;
 
 use std::{
     any::TypeId,
@@ -20,14 +22,31 @@ use std::{
 };
 
 pub struct BeeNode {
-    tasks: Mutex<HashMap<TypeId, Vec<(oneshot::Sender<()>, Box<dyn Future<Output = ()> + Send + Sync>)>>>,
+    workers: Map<dyn Any + Send + Sync>,
+    tasks: Mutex<
+        HashMap<
+            TypeId,
+            Vec<(
+                oneshot::Sender<()>,
+                // TODO Result ?
+                Box<dyn Future<Output = Result<(), tokio::task::JoinError>> + Send + Sync>,
+            )>,
+        >,
+    >,
+}
+
+impl Default for BeeNode {
+    fn default() -> Self {
+        Self {
+            workers: Map::new(),
+            tasks: Mutex::new(HashMap::new()),
+        }
+    }
 }
 
 impl Node for BeeNode {
     fn new() -> Self {
-        Self {
-            tasks: Mutex::new(HashMap::new()),
-        }
+        Self::default()
     }
 
     fn spawn<W, G, F>(&self, g: G)
@@ -42,12 +61,28 @@ impl Node for BeeNode {
         if let Ok(mut tasks) = self.tasks.lock() {
             match tasks.entry(TypeId::of::<W>()) {
                 Entry::Occupied(mut entry) => {
-                    entry.get_mut().push((tx, Box::new(g(rx))));
+                    entry.get_mut().push((tx, Box::new(spawn(g(rx)))));
                 }
                 Entry::Vacant(entry) => {
-                    entry.insert(vec![(tx, Box::new(g(rx)))]);
+                    entry.insert(vec![(tx, Box::new(spawn(g(rx))))]);
                 }
             }
         }
+    }
+
+    fn worker<W>(&self) -> Option<&W>
+    where
+        Self: Sized,
+        W: Worker<Self> + Send + Sync,
+    {
+        self.workers.get::<W>()
+    }
+
+    fn add_worker<W>(&mut self, worker: W)
+    where
+        Self: Sized,
+        W: Worker<Self> + Send + Sync,
+    {
+        self.workers.insert(worker);
     }
 }
