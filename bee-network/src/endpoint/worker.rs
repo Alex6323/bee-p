@@ -149,7 +149,7 @@ async fn process_command(
                 event_sender
                     .send_async(Event::EndpointDisconnected { epid })
                     .await
-                    .map_err(|_| WorkerError::SendingMessageFailed)?;
+                    .map_err(|e| WorkerError(Box::new(e)))?;
             }
         }
 
@@ -195,14 +195,14 @@ async fn process_event(
             event_sender
                 .send_async(Event::EndpointAdded { epid })
                 .await
-                .map_err(|_| WorkerError::SendingMessageFailed)?;
+                .map_err(|e| WorkerError(Box::new(e)))?;
         }
 
         Event::EndpointRemoved { epid } => {
             event_sender
                 .send_async(Event::EndpointRemoved { epid })
                 .await
-                .map_err(|_| WorkerError::SendingMessageFailed)?;
+                .map_err(|e| WorkerError(Box::new(e)))?;
         }
 
         Event::ConnectionEstablished {
@@ -220,7 +220,7 @@ async fn process_event(
                     origin,
                 })
                 .await
-                .map_err(|_| WorkerError::SendingMessageFailed)?
+                .map_err(|e| WorkerError(Box::new(e)))?
         }
 
         Event::ConnectionDropped { epid } => {
@@ -230,7 +230,7 @@ async fn process_event(
                     event_sender
                         .send_async(Event::EndpointDisconnected { epid })
                         .await
-                        .map_err(|_| WorkerError::SendingMessageFailed)?;
+                        .map_err(|e| WorkerError(Box::new(e)))?;
                 } else {
                     warn!("ConnectionDropped fired, but endpoint was already unregistered.");
                 }
@@ -244,7 +244,7 @@ async fn process_event(
                     event_sender
                         .send_async(Event::EndpointDisconnected { epid })
                         .await
-                        .map_err(|_| WorkerError::SendingMessageFailed)?;
+                        .map_err(|e| WorkerError(Box::new(e)))?;
                 } else {
                     warn!("ConnectionDropped fired, but endpoint was already unregistered.");
                 }
@@ -260,7 +260,7 @@ async fn process_event(
         Event::MessageReceived { epid, message } => event_sender
             .send_async(Event::MessageReceived { epid, message })
             .await
-            .map_err(|_| WorkerError::SendingMessageFailed)?,
+            .map_err(|e| WorkerError(Box::new(e)))?,
 
         Event::ReconnectTimerElapsed { epid } => {
             connect_endpoint(epid, endpoint_contacts, connected_endpoints, &mut internal_event_sender).await?;
@@ -284,7 +284,7 @@ async fn add_endpoint(
             internal_event_sender
                 .send_async(Event::EndpointAdded { epid })
                 .await
-                .map_err(|_| WorkerError::SendingMessageFailed)?;
+                .map_err(|e| WorkerError(Box::new(e)))?;
 
             Ok(true)
         } else {
@@ -312,7 +312,7 @@ async fn remove_endpoint(
         internal_event_sender
             .send_async(Event::EndpointRemoved { epid })
             .await
-            .map_err(|_| WorkerError::SendingMessageFailed)?;
+            .map_err(|e| WorkerError(Box::new(e)))?;
 
         Ok(true)
     } else {
@@ -370,7 +370,7 @@ async fn send_event_after_delay(event: Event, internal_event_sender: EventSender
     Ok(internal_event_sender
         .send_async(event)
         .await
-        .map_err(|_| WorkerError::SendingMessageFailed)?)
+        .map_err(|e| WorkerError(Box::new(e)))?)
 }
 
 #[inline]

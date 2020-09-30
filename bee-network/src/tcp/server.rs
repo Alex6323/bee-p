@@ -134,7 +134,7 @@ async fn process_stream(
 
             return Ok(spawn_reader_writer(connection, epid, internal_event_sender)
                 .await
-                .map_err(|_| WorkerError::AsynchronousOperationFailed)
+                .map_err(|e| WorkerError(Box::new(e)))
                 .is_ok());
         }
         Err(e) => {

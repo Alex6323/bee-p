@@ -80,7 +80,7 @@ impl ConnectedEndpointList {
                 .data_sender
                 .send_async(message)
                 .await
-                .map_err(|_| WorkerError::SendingMessageFailed)?;
+                .map_err(|e| WorkerError(Box::new(e)))?;
 
             Ok(true)
         } else {
