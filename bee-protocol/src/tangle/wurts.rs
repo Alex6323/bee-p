@@ -34,7 +34,8 @@ const OTRSI_DELTA: u32 = 13;
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
 // the maximum amount of current tips for which "MAX_AGE_SECONDS" and "MAX_NUM_CHILDREN" are checked. if the amount of
-// tips exceeds this limit, referenced tips (tips with children) get removed directly to reduce the amount of tips in the network.
+// tips exceeds this limit, referenced tips (tips with children) get removed directly to reduce the amount of tips in
+// the network.
 const RETENTION_LIMIT: u8 = 100;
 // the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to
 // widen the cone of the tangle. (non-lazy pool)

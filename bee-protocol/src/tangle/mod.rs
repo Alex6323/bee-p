@@ -140,7 +140,6 @@ impl MsTangle {
 
     pub fn update_latest_solid_milestone_index(&self, new_index: MilestoneIndex) {
         self.latest_solid_milestone_index.store(*new_index, Ordering::Relaxed);
-        self.update_transactions_referenced_by_milestone(new_index);
     }
 
     pub fn get_snapshot_index(&self) -> MilestoneIndex {
@@ -241,57 +240,6 @@ impl MsTangle {
     pub fn update_tip_pool(&self) {
         let mut tip_selector = self.tip_pool.write().unwrap();
         tip_selector.update_scores();
-    }
-
-    // when a milestone arrives and is solid, otrsi and ytrsi of all transactions referenced by this milestone must be
-    // updated otrsi or ytrsi of transactions that are referenced by a previous milestone won't get updated
-    // set otrsi and ytrsi values of relevant transactions to:
-    // otrsi=milestone_index
-    // ytrsi=milestone_index
-    // updated otrsi and ytrsi values need to be propagated to attached children (not referenced by the milestone)
-    fn update_transactions_referenced_by_milestone(&self, milestone_index: MilestoneIndex) {
-        if let Some(root) = self.get_milestone_hash(milestone_index) {
-            info!("Updating transactions referenced by milestone {}.", *milestone_index);
-            let mut visited = HashSet::new();
-            let mut to_visit = vec![root];
-            let mut propagateTo = Vec::new();
-            while let Some(hash) = to_visit.pop() {
-                if visited.contains(&hash) {
-                    continue;
-                } else {
-                    visited.insert(hash.clone());
-                }
-
-                if self.is_solid_entry_point(&hash) {
-                    continue;
-                }
-
-                if self.get_metadata(&hash).unwrap().cone_index().is_some() {
-                    continue;
-                }
-
-                tangle().update_metadata(&hash, |metadata| {
-                    metadata.set_cone_index(milestone_index);
-                    metadata.set_otrsi(milestone_index);
-                    metadata.set_ytrsi(milestone_index);
-                });
-
-                // propagate the new otrsi and ytrsi values to the children of this transaction
-                for child in self.get_children(&hash) {
-                    propagateTo.push(child);
-                }
-
-                let tx_ref = self.get(&hash).unwrap();
-                to_visit.push(tx_ref.trunk().clone());
-                to_visit.push(tx_ref.branch().clone());
-            }
-
-            if let Err(e) = Protocol::get().trsi_propagator_worker.unbounded_send(
-                TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(propagateTo),
-            ) {
-                error!("Failed to send hash to TRSI propagator: {:?}.", e);
-            }
-        }
     }
 
     pub fn get_tips_to_approve(&self) -> Option<(Hash, Hash)> {

@@ -26,11 +26,12 @@ use log::{info, warn};
 use std::{
     any::TypeId,
     cmp::{max, min},
+    collections::HashSet,
 };
 
 pub(crate) enum TrsiPropagatorWorkerEvent {
     Default(Hash),
-    UpdateTransactionsReferencedByMilestone(Vec<Hash>),
+    UpdateTransactionsReferencedByMilestone(HashSet<Hash>),
 }
 
 pub(crate) struct TrsiPropagatorWorker {
@@ -58,7 +59,9 @@ impl<N: Node> Worker<N> for TrsiPropagatorWorker {
             while let Some(event) = receiver.next().await {
                 let mut children = match &event {
                     TrsiPropagatorWorkerEvent::Default(hash) => vec![*hash],
-                    TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => hashes.clone(),
+                    TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => {
+                        hashes.clone().into_iter().collect()
+                    }
                 };
                 while let Some(hash) = children.pop() {
                     // get best otrsi and ytrsi from parents
