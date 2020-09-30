@@ -17,7 +17,7 @@ use tokio::spawn;
 use bee_storage::storage::Backend;
 
 use std::{
-    any::{Any, TypeId},
+    any::{Any, TypeId, type_name},
     collections::hash_map::{Entry, HashMap},
     sync::{Arc, Mutex},
     marker::PhantomData,
@@ -61,10 +61,11 @@ impl<B: Backend> Node for BeeNode<B> {
         self.resources.insert(Arc::new(res));
     }
 
+    #[track_caller]
     fn resource<R: Any + Send + Sync>(&self) -> &Arc<R> {
         self.resources
             .get()
-            .expect("Unable to fetch node resource")
+            .unwrap_or_else(|| panic!("Unable to fetch node resource {}", type_name::<R>()))
     }
 
     fn spawn<W, G, F>(&self, g: G)

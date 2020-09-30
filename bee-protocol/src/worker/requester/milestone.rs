@@ -14,6 +14,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::{Protocol, Sender},
     tangle::MsTangle,
+    worker::TangleWorker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -25,7 +26,10 @@ use futures::{select, StreamExt};
 use log::{debug, info};
 use tokio::time::interval;
 
-use std::time::{Duration, Instant};
+use std::{
+    time::{Duration, Instant},
+    any::TypeId,
+};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
@@ -98,6 +102,10 @@ async fn retry_requests(counter: &mut usize) {
 impl<N: Node> Worker<N> for MilestoneRequesterWorker {
     type Config = ();
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+    }
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();

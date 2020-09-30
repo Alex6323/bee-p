@@ -14,7 +14,7 @@ use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, MsTangle},
-    worker::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent},
+    worker::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -94,7 +94,10 @@ where
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<MilestoneSolidifierWorker>()]))
+        Box::leak(Box::from(vec![
+            TypeId::of::<MilestoneSolidifierWorker>(),
+            TypeId::of::<TangleWorker>(),
+        ]))
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {

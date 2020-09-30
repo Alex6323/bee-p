@@ -9,7 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::MsTangle, worker::MilestoneRequesterWorker};
+use crate::{
+    milestone::MilestoneIndex,
+    protocol::Protocol,
+    tangle::MsTangle,
+    worker::{MilestoneRequesterWorker, TangleWorker},
+};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
@@ -30,7 +35,10 @@ impl<N: Node> Worker<N> for KickstartWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<MilestoneRequesterWorker>()]))
+        Box::leak(Box::from(vec![
+            TypeId::of::<MilestoneRequesterWorker>(),
+            TypeId::of::<TangleWorker>(),
+        ]))
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {

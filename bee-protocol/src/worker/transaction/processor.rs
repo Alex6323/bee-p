@@ -15,7 +15,7 @@ use crate::{
     tangle::{MsTangle, TransactionMetadata},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
-        SolidPropagatorWorker, SolidPropagatorWorkerEvent, TransactionRequesterWorker,
+        SolidPropagatorWorker, SolidPropagatorWorkerEvent, TransactionRequesterWorker, TangleWorker,
     },
 };
 
@@ -75,6 +75,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
     fn dependencies() -> &'static [TypeId] {
         Box::leak(Box::from(vec![
+            TypeId::of::<TangleWorker>(),
             TypeId::of::<MilestoneValidatorWorker>(),
             TypeId::of::<SolidPropagatorWorker>(),
             TypeId::of::<BroadcasterWorker>(),

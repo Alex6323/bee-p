@@ -13,6 +13,7 @@ use crate::{
     message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
     protocol::Sender,
     tangle::MsTangle,
+    worker::TangleWorker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -27,6 +28,8 @@ use bytemuck::cast_slice;
 use futures::stream::StreamExt;
 use log::info;
 
+use std::any::TypeId;
+
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) epid: EndpointId,
     pub(crate) request: MilestoneRequest,
@@ -40,6 +43,10 @@ pub(crate) struct MilestoneResponderWorker {
 impl<N: Node> Worker<N> for MilestoneResponderWorker {
     type Config = ();
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+    }
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();

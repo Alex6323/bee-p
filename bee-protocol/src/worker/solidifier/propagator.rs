@@ -14,7 +14,7 @@ use crate::{
     milestone::Milestone,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{BundleValidatorWorker, BundleValidatorWorkerEvent},
+    worker::{BundleValidatorWorker, BundleValidatorWorkerEvent, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -40,7 +40,10 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<BundleValidatorWorker>()]))
+        Box::leak(Box::from(vec![
+            TypeId::of::<BundleValidatorWorker>(),
+            TypeId::of::<TangleWorker>(),
+        ]))
     }
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {

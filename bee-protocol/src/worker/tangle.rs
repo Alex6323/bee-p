@@ -23,7 +23,7 @@ impl<N: Node> Worker<N> for TangleWorker {
     type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+        Box::leak(Box::from(vec![TypeId::of::<StorageWorker>()]))
     }
 
     async fn start(
