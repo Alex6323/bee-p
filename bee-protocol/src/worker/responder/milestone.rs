@@ -24,7 +24,7 @@ use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::stream::StreamExt;
 use log::info;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
@@ -33,7 +33,7 @@ pub(crate) struct MilestoneResponderWorkerEvent {
 }
 
 pub(crate) struct MilestoneResponderWorker {
-    pub(crate) tx: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
+    pub(crate) tx: flume::Sender<MilestoneResponderWorkerEvent>,
 }
 
 #[async_trait]
@@ -42,12 +42,12 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
                 let index = match request.index {

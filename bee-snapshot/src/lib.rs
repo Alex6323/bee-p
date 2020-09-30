@@ -115,7 +115,7 @@ pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
     let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = snapshot_worker.unbounded_send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
+        if let Err(e) = snapshot_worker.send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
             warn!(
                 "Failed to send milestone {} to snapshot worker: {:?}.",
                 *latest_solid_milestone.0.index(),

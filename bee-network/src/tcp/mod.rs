@@ -25,7 +25,7 @@ use crate::{
 
 use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
 
-use futures::{channel::oneshot, future::FutureExt, select, sink::SinkExt, StreamExt};
+use futures::{channel::oneshot, future::FutureExt, select, StreamExt};
 use log::*;
 use thiserror::Error as ErrorAttr;
 use tokio::{
@@ -45,13 +45,13 @@ pub enum Error {
     ConnectionAttemptFailed,
 
     #[error("Sending an event failed.")]
-    SendingEventFailed(#[from] futures::channel::mpsc::SendError),
+    SendingEventFailed,
 }
 
 pub(crate) async fn spawn_reader_writer(
     connection: Connection,
     epid: EndpointId,
-    mut internal_event_sender: EventSender,
+    internal_event_sender: EventSender,
 ) -> Result<(), Error> {
     let Connection {
         origin,
@@ -68,13 +68,14 @@ pub(crate) async fn spawn_reader_writer(
     spawn_reader(epid, reader, internal_event_sender.clone(), shutdown_listener);
 
     internal_event_sender
-        .send(Event::ConnectionEstablished {
+        .send_async(Event::ConnectionEstablished {
             epid,
             peer_address,
             origin,
             data_sender,
         })
-        .await?;
+        .await
+        .map_err(|_| Error::SendingEventFailed)?;
 
     Ok(())
 }
@@ -87,7 +88,7 @@ fn spawn_writer(
 ) -> JoinHandle<()> {
     trace!("Starting TCP stream writer for {}...", epid);
 
-    let mut fused_data_receiver = data_receiver.fuse();
+    let mut fused_data_receiver = data_receiver.into_stream().fuse();
 
     tokio::spawn(async move {
         loop {
@@ -159,7 +160,7 @@ async fn process_stream_read(
         trace!("Stream dropped by peer (EOF).");
 
         if internal_event_sender
-            .send(Event::ConnectionDropped { epid })
+            .send_async(Event::ConnectionDropped { epid })
             .await
             .is_err()
         {
@@ -172,7 +173,7 @@ async fn process_stream_read(
         message.copy_from_slice(&buffer[0..num_read]);
 
         if internal_event_sender
-            .send(Event::MessageReceived { epid, message })
+            .send_async(Event::MessageReceived { epid, message })
             .await
             .is_err()
         {

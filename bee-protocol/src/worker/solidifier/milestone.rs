@@ -21,10 +21,7 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_tangle::traversal;
 
 use async_trait::async_trait;
-use futures::{
-    channel::{mpsc, oneshot},
-    StreamExt,
-};
+use futures::{channel::oneshot, StreamExt};
 use log::{debug, info};
 
 use std::any::TypeId;
@@ -32,11 +29,11 @@ use std::any::TypeId;
 pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
 pub(crate) struct MilestoneSolidifierWorker {
-    pub(crate) tx: mpsc::UnboundedSender<MilestoneSolidifierWorkerEvent>,
+    pub(crate) tx: flume::Sender<MilestoneSolidifierWorkerEvent>,
 }
 
 fn trigger_solidification_unchecked(
-    transaction_requester: &mpsc::UnboundedSender<TransactionRequesterWorkerEvent>,
+    transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
     target_index: MilestoneIndex,
     next_ms_index: &mut MilestoneIndex,
 ) {
@@ -78,13 +75,13 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
     }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
         let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut queue = vec![];
             let mut next_ms_index = config.await.unwrap();

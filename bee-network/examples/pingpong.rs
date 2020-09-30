@@ -30,7 +30,7 @@ use bee_network::{Command::*, EndpointId, Event, EventReceiver, Network, Network
 use common::*;
 
 use futures::{
-    channel::{mpsc, oneshot},
+    channel::oneshot,
     select,
     sink::SinkExt,
     stream::{Fuse, StreamExt},

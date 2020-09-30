@@ -11,9 +11,9 @@ keywords = ["iota", "tangle", "bee", "framework", "node"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-common = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
 bee-common-ext = { path = "../bee-common-ext" }
-bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-crypto = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
 bee-ledger = { path = "../bee-ledger" }
 bee-network = { path = "../bee-network" }
 bee-peering = { path = "../bee-peering" }
@@ -21,6 +21,7 @@ bee-protocol = { path = "../bee-protocol" }
 bee-snapshot = { path = "../bee-snapshot" }
 bee-transaction = { path = "../bee-transaction" }
 
+flume = "0.9.1"
 futures = "0.3.5"
 log = "0.4.8"
 serde = { version = "1.0.114", features = ["derive" ] }

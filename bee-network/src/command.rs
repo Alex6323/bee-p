@@ -11,15 +11,13 @@
 
 use crate::endpoint::EndpointId;
 
-use futures::channel::mpsc;
-
 use std::fmt;
 
-pub type CommandSender = mpsc::UnboundedSender<Command>;
-pub type CommandReceiver = mpsc::UnboundedReceiver<Command>;
+pub type CommandSender = flume::Sender<Command>;
+pub type CommandReceiver = flume::Receiver<Command>;
 
 pub fn channel() -> (CommandSender, CommandReceiver) {
-    mpsc::unbounded()
+    flume::unbounded()
 }
 
 #[derive(Debug)]

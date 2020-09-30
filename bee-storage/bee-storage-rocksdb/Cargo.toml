@@ -11,11 +11,11 @@ keywords = ["iota", "tangle", "bee", "framework", "storage", "rocksdb"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-crypto = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
 bee-ledger = { path = "../../bee-ledger" }
 bee-protocol = { path = "../../bee-protocol" }
 bee-storage = { path = "../bee-storage" }
-bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-ternary = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
 bee-transaction = { path = "../../bee-transaction" }
 
 async-trait = "0.1.36"

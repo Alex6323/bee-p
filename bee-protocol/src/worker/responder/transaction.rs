@@ -24,7 +24,7 @@ use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransac
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::stream::StreamExt;
 use log::info;
 
 pub(crate) struct TransactionResponderWorkerEvent {
@@ -33,7 +33,7 @@ pub(crate) struct TransactionResponderWorkerEvent {
 }
 
 pub(crate) struct TransactionResponderWorker {
-    pub(crate) tx: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
+    pub(crate) tx: flume::Sender<TransactionResponderWorkerEvent>,
 }
 
 #[async_trait]
@@ -42,12 +42,12 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
                 if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {

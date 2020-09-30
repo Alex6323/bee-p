@@ -23,13 +23,13 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
 
 use async_trait::async_trait;
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::stream::StreamExt;
 use log::{error, info, warn};
 
 pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct SnapshotWorker {
-    pub(crate) tx: mpsc::UnboundedSender<SnapshotWorkerEvent>,
+    pub(crate) tx: flume::Sender<SnapshotWorkerEvent>,
 }
 
 fn should_snapshot(index: MilestoneIndex, config: &SnapshotConfig, depth: u32) -> bool {
@@ -92,12 +92,12 @@ impl<N: Node> Worker<N> for SnapshotWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let depth = if config.local().depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
                 warn!(

@@ -21,7 +21,6 @@ use crate::{
     worker::{peer::MessageHandler, HasherWorkerEvent, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent},
 };
 
-use futures::channel::mpsc;
 use log::{error, info, trace, warn};
 
 use std::sync::Arc;
@@ -33,17 +32,17 @@ pub(crate) enum PeerWorkerError {
 
 pub struct PeerWorker {
     peer: Arc<HandshakedPeer>,
-    hasher: mpsc::UnboundedSender<HasherWorkerEvent>,
-    transaction_responder: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
-    milestone_responder: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
+    hasher: flume::Sender<HasherWorkerEvent>,
+    transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
+    milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
 }
 
 impl PeerWorker {
     pub(crate) fn new(
         peer: Arc<HandshakedPeer>,
-        hasher: mpsc::UnboundedSender<HasherWorkerEvent>,
-        transaction_responder: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
-        milestone_responder: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
+        hasher: flume::Sender<HasherWorkerEvent>,
+        transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
+        milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
     ) -> Self {
         Self {
             peer,
@@ -74,7 +73,7 @@ impl PeerWorker {
                 match tlv_from_bytes::<MilestoneRequest>(&header, bytes) {
                     Ok(message) => {
                         self.milestone_responder
-                            .unbounded_send(MilestoneResponderWorkerEvent {
+                            .send(MilestoneResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
@@ -96,7 +95,7 @@ impl PeerWorker {
                 match tlv_from_bytes::<TransactionMessage>(&header, bytes) {
                     Ok(message) => {
                         self.hasher
-                            .unbounded_send(HasherWorkerEvent {
+                            .send(HasherWorkerEvent {
                                 from: self.peer.epid,
                                 transaction_message: message,
                             })
@@ -118,7 +117,7 @@ impl PeerWorker {
                 match tlv_from_bytes::<TransactionRequest>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_responder
-                            .unbounded_send(TransactionResponderWorkerEvent {
+                            .send(TransactionResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })

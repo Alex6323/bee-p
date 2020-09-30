@@ -22,10 +22,7 @@ use bee_ternary::T5B1Buf;
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{
-    channel::{mpsc, oneshot},
-    select, StreamExt,
-};
+use futures::{select, StreamExt};
 use log::{debug, info};
 use tokio::time::interval;
 
@@ -36,7 +33,7 @@ const RETRY_INTERVAL_SECS: u64 = 5;
 pub(crate) struct TransactionRequesterWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 
 pub(crate) struct TransactionRequesterWorker {
-    pub(crate) tx: mpsc::UnboundedSender<TransactionRequesterWorkerEvent>,
+    pub(crate) tx: flume::Sender<TransactionRequesterWorkerEvent>,
 }
 
 async fn process_request(hash: Hash, index: MilestoneIndex, counter: &mut usize) {
@@ -113,12 +110,12 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut counter: usize = 0;
             let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse();

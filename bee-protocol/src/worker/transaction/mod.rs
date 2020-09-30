@@ -32,10 +32,7 @@ mod tests {
     use bee_crypto::ternary::Hash;
     use bee_network::{EndpointId, NetworkConfig};
 
-    use futures::{
-        channel::{mpsc, oneshot},
-        join,
-    };
+    use futures::{channel::oneshot, join};
     use tokio::{spawn, time::delay_for};
 
     use std::{sync::Arc, time::Duration};
@@ -58,10 +55,10 @@ mod tests {
 
         assert_eq!(tangle().len(), 0);
 
-        let (hasher_worker_sender, hasher_worker_receiver) = mpsc::unbounded();
+        let (hasher_worker_sender, hasher_worker_receiver) = flume::unbounded();
         let (hasher_worker_shutdown_sender, hasher_worker_shutdown_receiver) = oneshot::channel();
-        let (processor_worker_sender, processor_worker_receiver) = mpsc::unbounded();
-        let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = mpsc::unbounded();
+        let (processor_worker_sender, processor_worker_receiver) = flume::unbounded();
+        let (milestone_validator_worker_sender, _milestone_validator_worker_receiver) = flume::unbounded();
 
         let hasher_handle = HasherWorker::<BeeNode>::new(processor_worker_sender).start(
             <HasherWorker<BeeNode> as Worker<BeeNode>>::Receiver::new(

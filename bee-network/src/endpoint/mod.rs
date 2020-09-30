@@ -19,7 +19,6 @@ pub use worker::*;
 
 use crate::util::TransportProtocol;
 
-use futures::channel::mpsc;
 use thiserror::Error;
 
 use std::{fmt, net::SocketAddr as SocketAddress};
@@ -59,9 +58,9 @@ impl fmt::Display for EndpointId {
     }
 }
 
-pub type DataSender = mpsc::UnboundedSender<Vec<u8>>;
-pub type DataReceiver = mpsc::UnboundedReceiver<Vec<u8>>;
+pub type DataSender = flume::Sender<Vec<u8>>;
+pub type DataReceiver = flume::Receiver<Vec<u8>>;
 
 pub fn channel() -> (DataSender, DataReceiver) {
-    mpsc::unbounded()
+    flume::unbounded()
 }

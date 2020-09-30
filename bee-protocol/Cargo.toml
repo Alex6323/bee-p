@@ -11,19 +11,20 @@ keywords = ["iota", "tangle", "bee", "framework", "protocol"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-common = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
 bee-common-ext = { path = "../bee-common-ext" }
-bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-crypto = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
 bee-network = { path = "../bee-network" }
-bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-signing = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
 bee-tangle = { path = "../bee-tangle" }
-bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-ternary = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
 bee-transaction = { path = "../bee-transaction" }
 
 async-trait = "0.1.40"
 bitflags = "1.2.1"
 bytemuck = "1.2.0"
 dashmap = "3.11"
+flume = "0.9.1"
 futures = "0.3.5"
 futures-util = "0.3.5"
 log = "0.4.8"
