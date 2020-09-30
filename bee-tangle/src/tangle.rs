@@ -20,12 +20,38 @@ use lru::LruCache;
 use std::{
     collections::HashSet,
     sync::{RwLock, atomic::{AtomicU64, Ordering}},
+    marker::PhantomData,
 };
 
 const CACHE_LEN: usize = 65536;
 
+pub trait Hooks<T> {
+    type Error;
+
+    fn get(&self, hash: &Hash) -> Result<(Transaction, T), Self::Error>;
+    fn insert(&self, hash: Hash, tx: Transaction, metadata: T) -> Result<(), Self::Error>;
+}
+
+pub struct NullHooks<T>(PhantomData<T>);
+
+impl<T> Default for NullHooks<T> {
+    fn default() -> Self { Self(PhantomData) }
+}
+
+impl<T> Hooks<T> for NullHooks<T> {
+    type Error = ();
+
+    fn get(&self, hash: &Hash) -> Result<(Transaction, T), Self::Error> {
+        Err(())
+    }
+
+    fn insert(&self, hash: Hash, tx: Transaction, metadata: T) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
 /// A foundational, thread-safe graph datastructure to represent the IOTA Tangle.
-pub struct Tangle<T>
+pub struct Tangle<T, H: Hooks<T> = NullHooks<T>>
 where
     T: Clone + Copy,
 {
@@ -35,13 +61,26 @@ where
 
     pub(crate) cache_counter: AtomicU64,
     pub(crate) cache_queue: RwLock<LruCache<Hash, u64>>,
+
+    pub(crate) hooks: H,
 }
 
-impl<T> Default for Tangle<T>
+impl<T, H: Hooks<T>> Default for Tangle<T, H>
+where
+    T: Clone + Copy,
+    H: Default,
+{
+    fn default() -> Self {
+        Self::new(H::default())
+    }
+}
+
+impl<T, H: Hooks<T>> Tangle<T, H>
 where
     T: Clone + Copy,
 {
-    fn default() -> Self {
+    /// Creates a new Tangle.
+    pub fn new(hooks: H) -> Self {
         Self {
             vertices: DashMap::new(),
             children: DashMap::new(),
@@ -49,17 +88,9 @@ where
 
             cache_counter: AtomicU64::new(0),
             cache_queue: RwLock::new(LruCache::new(CACHE_LEN + 1)),
-        }
-    }
-}
 
-impl<T> Tangle<T>
-where
-    T: Clone + Copy,
-{
-    /// Creates a new Tangle.
-    pub fn new() -> Self {
-        Self::default()
+            hooks,
+        }
     }
 
     /// Create a new tangle with the given capacity.
