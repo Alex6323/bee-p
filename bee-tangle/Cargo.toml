@@ -11,13 +11,13 @@ keywords = ["iota", "tangle", "bee", "framework"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-crypto = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
 
 dashmap = "3.10"
 
 [dev-dependencies]
-bee-crypto = { git = "https://github.com/thibault-martinez/bee.git", branch = "worker-error-remove-mpsc" }
+bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-test = { path = "../bee-test" }
 
 criterion = "0.3.2"
