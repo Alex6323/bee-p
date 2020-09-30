@@ -26,7 +26,8 @@ use bee_common_ext::{
 };
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
-use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
+use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::MsTangle, MilestoneIndex};
+use bee_storage::storage::Backend;
 
 use chrono::{offset::TimeZone, Utc};
 use log::{info, warn};
@@ -42,10 +43,11 @@ pub enum Error {
 
 // TODO change return type
 
-pub async fn init(
+pub async fn init<B: Backend>(
+    // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
-    mut node_builder: NodeBuilder<BeeNode>,
-) -> Result<(NodeBuilder<BeeNode>, LedgerState, MilestoneIndex, u64), Error> {
+    mut node_builder: NodeBuilder<BeeNode<B>>,
+) -> Result<(NodeBuilder<BeeNode<B>>, LedgerState, MilestoneIndex, u64), Error> {
     let (state, index, timestamp) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
@@ -54,10 +56,10 @@ pub async fn init(
                 global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
                     .map_err(Error::Global)?;
 
-            tangle().clear_solid_entry_points();
+            // tangle.clear_solid_entry_points();
             // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
             // because coordinator bootstraps the network by referencing the genesis tx.
-            tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(*config.global().index()));
+            // tangle.add_solid_entry_point(Hash::zeros(), MilestoneIndex(*config.global().index()));
 
             info!(
                 "Loaded global snapshot file from with index {} and {} balances.",
@@ -87,13 +89,13 @@ pub async fn init(
                 snapshot.state.len()
             );
 
-            tangle().update_latest_solid_milestone_index(snapshot.metadata().index().into());
-            tangle().update_latest_milestone_index(snapshot.metadata().index().into());
-            tangle().update_snapshot_index(snapshot.metadata().index().into());
-            tangle().update_pruning_index(snapshot.metadata().index().into());
-            tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
+            // tangle.update_latest_solid_milestone_index(snapshot.metadata().index().into());
+            // tangle.update_latest_milestone_index(snapshot.metadata().index().into());
+            // tangle.update_snapshot_index(snapshot.metadata().index().into());
+            // tangle.update_pruning_index(snapshot.metadata().index().into());
+            // tangle.add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
             for (hash, index) in snapshot.metadata().solid_entry_points() {
-                tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
+                // tangle.add_solid_entry_point(*hash, MilestoneIndex(*index));
             }
             for _seen_milestone in snapshot.metadata().seen_milestones() {
                 // TODO request ?
@@ -111,7 +113,7 @@ pub async fn init(
     Ok((node_builder, state, MilestoneIndex(index), timestamp))
 }
 
-pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
+pub fn events<B: Backend>(bee_node: &BeeNode<B>, bus: Arc<Bus<'static>>) {
     let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {

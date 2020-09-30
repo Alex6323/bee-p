@@ -18,6 +18,7 @@ use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder as NodeBui
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, Protocol};
+use bee_storage::storage::Backend;
 
 use futures::{
     channel::oneshot,
@@ -27,7 +28,12 @@ use log::{error, info, trace, warn};
 use thiserror::Error;
 use tokio::spawn;
 
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::Arc,
+    marker::PhantomData,
+};
 
 type NetworkEventStream = ShutdownStream<Fuse<flume::r#async::RecvStream<'static, Event>>>;
 
@@ -46,23 +52,21 @@ pub enum Error {
     ShutdownError(#[from] bee_common::shutdown::Error),
 }
 
-pub struct NodeBuilder {
+pub struct NodeBuilder<B: Backend> {
     config: NodeConfig,
+    phantom: PhantomData<B>,
 }
 
-impl NodeBuilder {
+impl<B: Backend> NodeBuilder<B> {
     /// Finishes the build process of a new node.
-    pub async fn finish(self) -> Result<Node, Error> {
+    pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
-        let node_builder = NodeBuilderB::<BeeNode>::new();
+        let node_builder = NodeBuilderB::<BeeNode<B>>::new();
 
         let mut shutdown = Shutdown::new();
 
         let bus = Arc::new(Bus::default());
-
-        info!("Initializing Tangle...");
-        tangle::init();
 
         // TODO temporary
         let (mut node_builder, ledger_state, snapshot_index, snapshot_timestamp) =
@@ -117,8 +121,8 @@ impl NodeBuilder {
 }
 
 /// The main node type.
-pub struct Node {
-    tmp_node: BeeNode,
+pub struct Node<B> {
+    tmp_node: BeeNode<B>,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
     network_events: NetworkEventStream,
@@ -127,7 +131,7 @@ pub struct Node {
     peers: PeerList,
 }
 
-impl Node {
+impl<B: Backend> Node<B> {
     #[allow(missing_docs)]
     pub async fn run(mut self) -> Result<(), Error> {
         info!("Running.");
@@ -155,8 +159,8 @@ impl Node {
     }
 
     /// Returns a builder to create a node.
-    pub fn builder(config: NodeConfig) -> NodeBuilder {
-        NodeBuilder { config }
+    pub fn builder(config: NodeConfig) -> NodeBuilder<B> {
+        NodeBuilder { config, phantom: PhantomData }
     }
 
     #[inline]

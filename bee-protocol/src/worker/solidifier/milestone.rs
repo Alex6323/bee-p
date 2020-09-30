@@ -12,13 +12,14 @@
 use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
-    tangle::tangle,
-    worker::{TransactionRequesterWorker, TransactionRequesterWorkerEvent},
+    tangle::MsTangle,
+    worker::{TransactionRequesterWorker, TransactionRequesterWorkerEvent, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_tangle::traversal;
+use bee_storage::storage::Backend;
 
 use async_trait::async_trait;
 use futures::{channel::oneshot, StreamExt};
@@ -32,19 +33,21 @@ pub(crate) struct MilestoneSolidifierWorker {
     pub(crate) tx: flume::Sender<MilestoneSolidifierWorkerEvent>,
 }
 
-async fn trigger_solidification_unchecked(
+async fn trigger_solidification_unchecked<B: Backend>(
+    tangle: &MsTangle<B>,
     transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
     target_index: MilestoneIndex,
     next_ms_index: &mut MilestoneIndex,
 ) {
-    if let Some(target_hash) = tangle().get_milestone_hash(target_index) {
-        if !tangle().is_solid_transaction(&target_hash) {
+    if let Some(target_hash) = tangle.get_milestone_hash(target_index) {
+        if !tangle.is_solid_transaction(&target_hash) {
             debug!("Triggered solidification for milestone {}.", *target_index);
 
+            // TODO: This wouldn't be necessary if the traversal code wasn't closure-driven
             let mut missing = Vec::new();
 
             traversal::visit_parents_depth_first(
-                tangle(),
+                &**tangle,
                 target_hash,
                 |hash, _, metadata| {
                     (!metadata.flags().is_requested() || *hash == target_hash)
@@ -57,7 +60,7 @@ async fn trigger_solidification_unchecked(
             );
 
             for missing_hash in missing {
-                Protocol::request_transaction(transaction_requester, missing_hash, target_index).await;
+                Protocol::request_transaction(tangle, transaction_requester, missing_hash, target_index).await;
             }
 
             *next_ms_index = target_index + MilestoneIndex(1);
@@ -78,12 +81,17 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<TransactionRequesterWorker>()]))
+        Box::leak(Box::from(vec![
+            TypeId::of::<TransactionRequesterWorker>(),
+            TypeId::of::<TangleWorker>(),
+        ]))
     }
 
-    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -97,7 +105,7 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
                 save_index(index, &mut queue);
                 while let Some(index) = queue.pop() {
                     if index == next_ms_index {
-                        trigger_solidification_unchecked(&transaction_requester, index, &mut next_ms_index).await;
+                        trigger_solidification_unchecked(&tangle, &transaction_requester, index, &mut next_ms_index).await;
                     } else {
                         queue.push(index);
                         break;

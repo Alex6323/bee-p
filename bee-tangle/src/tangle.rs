@@ -28,8 +28,8 @@ const CACHE_LEN: usize = 65536;
 pub trait Hooks<T> {
     type Error;
 
-    fn get(&self, hash: &Hash) -> Result<(Transaction, T), Self::Error>;
-    fn insert(&self, hash: Hash, tx: Transaction, metadata: T) -> Result<(), Self::Error>;
+    fn get(&self, hash: &Hash) -> Result<(Tx, T), Self::Error>;
+    fn insert(&self, hash: Hash, tx: Tx, metadata: T) -> Result<(), Self::Error>;
 }
 
 pub struct NullHooks<T>(PhantomData<T>);
@@ -41,17 +41,17 @@ impl<T> Default for NullHooks<T> {
 impl<T> Hooks<T> for NullHooks<T> {
     type Error = ();
 
-    fn get(&self, hash: &Hash) -> Result<(Transaction, T), Self::Error> {
+    fn get(&self, hash: &Hash) -> Result<(Tx, T), Self::Error> {
         Err(())
     }
 
-    fn insert(&self, hash: Hash, tx: Transaction, metadata: T) -> Result<(), Self::Error> {
+    fn insert(&self, hash: Hash, tx: Tx, metadata: T) -> Result<(), Self::Error> {
         Ok(())
     }
 }
 
 /// A foundational, thread-safe graph datastructure to represent the IOTA Tangle.
-pub struct Tangle<T, H: Hooks<T> = NullHooks<T>>
+pub struct Tangle<T, H = NullHooks<T>>
 where
     T: Clone + Copy,
 {
@@ -94,10 +94,10 @@ where
     }
 
     /// Create a new tangle with the given capacity.
-    pub fn with_capacity(cap: usize) -> Self {
+    pub fn with_capacity(self, cap: usize) -> Self {
         Self {
             cache_queue: RwLock::new(LruCache::new(cap + 1)),
-            ..Self::default()
+            ..self
         }
     }
 
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn eviction_cap() {
-        let tangle = Tangle::with_capacity(5);
+        let tangle = Tangle::default().with_capacity(5);
 
         let txs = (0..10)
             .map(|_| create_random_tx())
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn eviction_update() {
-        let tangle = Tangle::with_capacity(5);
+        let tangle = Tangle::default().with_capacity(5);
 
         let txs = (0..8)
             .map(|_| create_random_tx())

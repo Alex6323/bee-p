@@ -12,7 +12,8 @@
 use crate::{
     message::{compress_transaction_bytes, Transaction as TransactionMessage, TransactionRequest},
     protocol::Sender,
-    tangle::tangle,
+    tangle::MsTangle,
+    worker::TangleWorker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -26,6 +27,8 @@ use async_trait::async_trait;
 use bytemuck::cast_slice;
 use futures::stream::StreamExt;
 use log::info;
+
+use std::any::TypeId;
 
 pub(crate) struct TransactionResponderWorkerEvent {
     pub(crate) epid: EndpointId,
@@ -41,8 +44,14 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
     type Config = ();
     type Error = WorkerError;
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+    }
+
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -51,7 +60,7 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
 
             while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
                 if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
-                    if let Some(transaction) = tangle().get(&Hash::from_inner_unchecked(hash.encode())).await {
+                    if let Some(transaction) = tangle.get(&Hash::from_inner_unchecked(hash.encode())).await {
                         let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
 
                         transaction.as_trits_allocated(&mut trits);

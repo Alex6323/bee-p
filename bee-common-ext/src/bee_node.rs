@@ -11,21 +11,21 @@
 
 use crate::{node::Node, worker::Worker};
 
-use anymap::{any::Any, Map};
+use anymap::{any::Any as AnyMapAny, Map};
 use futures::{channel::oneshot, future::Future};
 use tokio::spawn;
 use bee_storage::storage::Backend;
 
 use std::{
-    any::{Any, TypeId},
+    any::{Any, TypeId, type_name},
     collections::hash_map::{Entry, HashMap},
     sync::{Arc, Mutex},
     marker::PhantomData,
 };
 
 #[allow(clippy::type_complexity)]
-pub struct BeeNode {
-    workers: Map<dyn Any + Send + Sync>,
+pub struct BeeNode<B> {
+    workers: Map<dyn AnyMapAny + Send + Sync>,
     tasks: Mutex<
         HashMap<
             TypeId,
@@ -40,7 +40,7 @@ pub struct BeeNode {
     phantom: PhantomData<B>,
 }
 
-impl Default for BeeNode {
+impl<B> Default for BeeNode<B> {
     fn default() -> Self {
         Self {
             workers: Map::new(),
@@ -51,7 +51,7 @@ impl Default for BeeNode {
     }
 }
 
-impl Node for BeeNode {
+impl<B: Backend> Node for BeeNode<B> {
     type Backend = B;
 
     fn new() -> Self {
@@ -62,10 +62,11 @@ impl Node for BeeNode {
         self.resources.insert(Arc::new(res));
     }
 
+    #[track_caller]
     fn resource<R: Any + Send + Sync>(&self) -> &Arc<R> {
         self.resources
             .get()
-            .expect("Unable to fetch node resource")
+            .unwrap_or_else(|| panic!("Unable to fetch node resource {}", type_name::<R>()))
     }
 
     fn spawn<W, G, F>(&self, g: G)

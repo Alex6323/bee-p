@@ -11,7 +11,9 @@
 
 //! Collection of Tangle traversal functions.
 
-use crate::{tangle::Tangle, TransactionRef as TxRef};
+// TODO: Refactor all of this into methods on `Tangle`.
+
+use crate::{tangle::{Tangle, Hooks}, TransactionRef as TxRef};
 
 use bee_crypto::ternary::Hash;
 
@@ -21,8 +23,8 @@ use std::collections::HashSet;
 /// the *trunk* edge. The walk continues as long as the visited vertices match a certain condition. For each
 /// visited vertex a customized logic can be applied. Each traversed vertex provides read access to its
 /// associated data and metadata.
-pub fn visit_parents_follow_trunk<Metadata, Match, Apply>(
-    tangle: &Tangle<Metadata>,
+pub fn visit_parents_follow_trunk<Metadata, Match, Apply, H: Hooks<Metadata>>(
+    tangle: &Tangle<Metadata, H>,
     mut hash: Hash,
     mut matches: Match,
     mut apply: Apply,
@@ -47,8 +49,8 @@ pub fn visit_parents_follow_trunk<Metadata, Match, Apply>(
 /// the *trunk* edge. The walk continues as long as the visited vertices match a certain condition. For each
 /// visited vertex a customized logic can be applied. Each traversed vertex provides read access to its
 /// associated data and metadata.
-pub fn visit_children_follow_trunk<Metadata, Match, Apply>(
-    tangle: &Tangle<Metadata>,
+pub fn visit_children_follow_trunk<Metadata, Match, Apply, H: Hooks<Metadata>>(
+    tangle: &Tangle<Metadata, H>,
     root: Hash,
     mut matches: Match,
     mut apply: Apply,
@@ -83,8 +85,8 @@ pub fn visit_children_follow_trunk<Metadata, Match, Apply>(
 /// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
 /// condition. For each visited vertex customized logic can be applied depending on the availability of the
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
-pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply>(
-    tangle: &Tangle<Metadata>,
+pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply, H: Hooks<Metadata>>(
+    tangle: &Tangle<Metadata, H>,
     root: Hash,
     matches: Match,
     mut apply: Apply,
@@ -131,8 +133,8 @@ pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply
 /// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
 /// condition. For each visited vertex customized logic can be applied depending on the availability of the
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
-pub fn visit_children_depth_first<Metadata, Match, Apply, ElseApply>(
-    tangle: &Tangle<Metadata>,
+pub fn visit_children_depth_first<Metadata, Match, Apply, ElseApply, H: Hooks<Metadata>>(
+    tangle: &Tangle<Metadata, H>,
     root: Hash,
     matches: Match,
     mut apply: Apply,

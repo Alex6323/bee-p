@@ -17,7 +17,7 @@ use crate::{
     },
     peer::Peer,
     protocol::Protocol,
-    tangle::tangle,
+    tangle::MsTangle,
     worker::{
         peer::message_handler::MessageHandler, HasherWorkerEvent, MilestoneRequesterWorkerEvent,
         MilestoneResponderWorkerEvent, PeerWorker, TransactionResponderWorkerEvent,
@@ -25,6 +25,7 @@ use crate::{
 };
 
 use bee_network::{Command::SendMessage, Network, Origin};
+use bee_storage::storage::Backend;
 
 use futures::{channel::oneshot, future::FutureExt};
 use log::{error, info, trace, warn};
@@ -85,7 +86,7 @@ impl PeerHandshakerWorker {
         }
     }
 
-    pub async fn run(mut self, receiver: flume::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
+    pub async fn run<B: Backend>(mut self, tangle: Arc<MsTangle<B>>, receiver: flume::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
         info!("[{}] Running.", self.peer.address);
 
         // TODO should we have a first check if already connected ?
@@ -110,7 +111,7 @@ impl PeerHandshakerWorker {
         let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address);
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
-            if let Err(e) = self.process_message(&header, bytes).await {
+            if let Err(e) = self.process_message(&tangle, &header, bytes).await {
                 error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
             if let HandshakeStatus::Done | HandshakeStatus::Duplicate = self.status {
@@ -133,7 +134,7 @@ impl PeerHandshakerWorker {
                         self.transaction_responder,
                         self.milestone_responder,
                     )
-                    .run(message_handler),
+                    .run(tangle.clone(), message_handler),
                 );
             }
             HandshakeStatus::Duplicate => {
@@ -217,7 +218,7 @@ impl PeerHandshakerWorker {
         Ok(address)
     }
 
-    async fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerHandshakerWorkerError> {
+    async fn process_message<B: Backend>(&mut self, tangle: &MsTangle<B>, header: &Header, bytes: &[u8]) -> Result<(), PeerHandshakerWorkerError> {
         if let Handshake::ID = header.message_type {
             trace!("[{}] Reading Handshake...", self.peer.address);
             match tlv_from_bytes::<Handshake>(&header, bytes) {
@@ -233,12 +234,12 @@ impl PeerHandshakerWorker {
 
                         Protocol::send_heartbeat(
                             self.peer.epid,
-                            tangle().get_latest_solid_milestone_index(),
-                            tangle().get_pruning_index(),
-                            tangle().get_latest_milestone_index(),
+                            tangle.get_latest_solid_milestone_index(),
+                            tangle.get_pruning_index(),
+                            tangle.get_latest_milestone_index(),
                         );
 
-                        Protocol::request_latest_milestone(&self.milestone_requester, Some(self.peer.epid));
+                        Protocol::request_latest_milestone(tangle, &self.milestone_requester, Some(self.peer.epid));
 
                         self.status = HandshakeStatus::Done;
                     }

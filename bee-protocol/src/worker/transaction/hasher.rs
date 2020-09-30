@@ -98,7 +98,7 @@ impl<N: Node> Worker<N> for HasherWorker {
         Box::leak(Box::from(vec![TypeId::of::<ProcessorWorker>()]))
     }
 
-    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let mut processor_worker = node.worker::<ProcessorWorker>().unwrap().tx.clone();
 
