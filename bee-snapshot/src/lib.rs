@@ -44,7 +44,7 @@ pub enum Error {
 // TODO change return type
 
 pub async fn init<B: Backend>(
-    tangle: &MsTangle<B>,
+    // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
     mut node_builder: NodeBuilder<BeeNode<B>>,
 ) -> Result<(NodeBuilder<BeeNode<B>>, LedgerState, MilestoneIndex, u64), Error> {
@@ -56,10 +56,10 @@ pub async fn init<B: Backend>(
                 global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
                     .map_err(Error::Global)?;
 
-            tangle.clear_solid_entry_points();
+            // tangle.clear_solid_entry_points();
             // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
             // because coordinator bootstraps the network by referencing the genesis tx.
-            tangle.add_solid_entry_point(Hash::zeros(), MilestoneIndex(*config.global().index()));
+            // tangle.add_solid_entry_point(Hash::zeros(), MilestoneIndex(*config.global().index()));
 
             info!(
                 "Loaded global snapshot file from with index {} and {} balances.",
@@ -89,13 +89,13 @@ pub async fn init<B: Backend>(
                 snapshot.state.len()
             );
 
-            tangle.update_latest_solid_milestone_index(snapshot.metadata().index().into());
-            tangle.update_latest_milestone_index(snapshot.metadata().index().into());
-            tangle.update_snapshot_index(snapshot.metadata().index().into());
-            tangle.update_pruning_index(snapshot.metadata().index().into());
-            tangle.add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
+            // tangle.update_latest_solid_milestone_index(snapshot.metadata().index().into());
+            // tangle.update_latest_milestone_index(snapshot.metadata().index().into());
+            // tangle.update_snapshot_index(snapshot.metadata().index().into());
+            // tangle.update_pruning_index(snapshot.metadata().index().into());
+            // tangle.add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
             for (hash, index) in snapshot.metadata().solid_entry_points() {
-                tangle.add_solid_entry_point(*hash, MilestoneIndex(*index));
+                // tangle.add_solid_entry_point(*hash, MilestoneIndex(*index));
             }
             for _seen_milestone in snapshot.metadata().seen_milestones() {
                 // TODO request ?

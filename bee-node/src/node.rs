@@ -28,7 +28,12 @@ use log::{error, info, trace, warn};
 use thiserror::Error;
 use tokio::spawn;
 
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::Arc,
+    marker::PhantomData,
+};
 
 type NetworkEventStream = ShutdownStream<Fuse<flume::r#async::RecvStream<'static, Event>>>;
 
@@ -47,13 +52,14 @@ pub enum Error {
     ShutdownError(#[from] bee_common::shutdown::Error),
 }
 
-pub struct NodeBuilder {
+pub struct NodeBuilder<B: Backend> {
     config: NodeConfig,
+    phantom: PhantomData<B>,
 }
 
-impl NodeBuilder {
+impl<B: Backend> NodeBuilder<B> {
     /// Finishes the build process of a new node.
-    pub async fn finish<B: Backend>(self) -> Result<Node<B>, Error> {
+    pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
         let node_builder = NodeBuilderB::<BeeNode<B>>::new();
@@ -151,8 +157,8 @@ impl<B: Backend> Node<B> {
     }
 
     /// Returns a builder to create a node.
-    pub fn builder(config: NodeConfig) -> NodeBuilder {
-        NodeBuilder { config }
+    pub fn builder(config: NodeConfig) -> NodeBuilder<B> {
+        NodeBuilder { config, phantom: PhantomData }
     }
 
     #[inline]
