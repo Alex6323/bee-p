@@ -17,11 +17,11 @@ use bee_crypto::ternary::{
     sponge::{Kerl, Sponge},
     HASH_LENGTH,
 };
-use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, Tryte, TryteBuf, T1B1};
+use bee_ternary::{Btrit, T1B1Buf, Trit, TritBuf, Trits, Tryte, T1B1};
 
 use rand::distributions::{Distribution, Uniform};
 use serde::{Deserialize, Serialize};
-use signature::{Signature, Signer, Verifier};
+use signature::Signature;
 use zeroize::Zeroize;
 
 use core::convert::AsRef;
