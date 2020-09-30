@@ -11,6 +11,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use alloc::vec::Vec;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SignedData {
     pub data: Vec<u8>,

@@ -20,7 +20,8 @@ use blake2::{
 };
 use serde::{Deserialize, Serialize};
 
-use std::{convert::TryInto, num::NonZeroU64};
+use alloc::{string::String, vec::Vec};
+use core::{convert::TryInto, num::NonZeroU64};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Address {
@@ -51,7 +52,8 @@ impl Address {
     pub fn to_bech32_string(&self) -> String {
         match self {
             Address::Ed25519(a) => {
-                let mut serialized = vec![1u8];
+                let mut serialized = Vec::new();
+                serialized.push(1u8);
                 a.iter().for_each(|b| serialized.push(*b));
                 bech32::encode("iot", serialized.to_base32()).expect("Valid Ed25519 address required")
             }

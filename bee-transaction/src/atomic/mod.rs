@@ -17,32 +17,57 @@ pub mod payload;
 pub use hash::Hash;
 pub use message::{Message, MessageBuilder};
 
-use thiserror::Error;
+use core::fmt;
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum Error {
-    #[error("Invalid amount provided.")]
     AmountError,
-    #[error("Invalid count number provided.")]
     CountError,
-    #[error("The length of the object is empty.")]
     EmptyError,
-    #[error("The object in the set must be unique.")]
     DuplicateError,
-    #[error("The position of index is not correct.")]
     IndexError,
-    #[error("The vector is not sorted by lexicographical order.")]
     OrderError,
-    #[error("The format of provided hash is not correct.")]
     HashError,
-    #[error("The format of provided BIP32 path is not correct.")]
     PathError,
-    #[error("Missing required parameters.")]
     MissingParameter,
-    #[error(transparent)]
-    BincodeError(#[from] bincode::Error),
-    #[error(transparent)]
-    SigningError(#[from] bee_signing_ext::binary::Error),
-    #[error(transparent)]
-    SignatureError(#[from] bee_signing_ext::SignatureError),
+    BincodeError(bincode::Error),
+    SigningError(bee_signing_ext::binary::Error),
+    SignatureError(bee_signing_ext::SignatureError),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::AmountError => write!(f, "Invalid amount provided."),
+            Error::CountError => write!(f, "Invalid count number provided."),
+            Error::EmptyError => write!(f, "The length of the object is empty."),
+            Error::DuplicateError => write!(f, "The object in the set must be unique."),
+            Error::IndexError => write!(f, "The position of index is not correct."),
+            Error::OrderError => write!(f, "The vector is not sorted by lexicographical order."),
+            Error::HashError => write!(f, "The format of provided hash is not correct."),
+            Error::PathError => write!(f, "The format of provided BIP32 path is not correct."),
+            Error::MissingParameter => write!(f, "Missing required parameters."),
+            Error::BincodeError(e) => write!(f, "{}", e),
+            Error::SigningError(e) => write!(f, "{}", e),
+            Error::SignatureError(e) => write!(f, "{}", e),
+        }
+    }
+}
+
+impl From<bincode::Error> for Error {
+    fn from(error: bincode::Error) -> Self {
+        Error::BincodeError(error)
+    }
+}
+
+impl From<bee_signing_ext::binary::Error> for Error {
+    fn from(error: bee_signing_ext::binary::Error) -> Self {
+        Error::SigningError(error)
+    }
+}
+
+impl From<bee_signing_ext::SignatureError> for Error {
+    fn from(error: bee_signing_ext::SignatureError) -> Self {
+        Error::SignatureError(error)
+    }
 }

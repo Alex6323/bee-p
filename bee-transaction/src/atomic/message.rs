@@ -25,7 +25,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new() -> MessageBuilder {
+    pub fn builder() -> MessageBuilder {
         MessageBuilder::new()
     }
 
@@ -50,6 +50,7 @@ impl Vertex for Message {
     }
 }
 
+#[derive(Debug, Default)]
 pub struct MessageBuilder {
     tips: Option<(Hash, Hash)>,
     payload: Option<Payload>,
@@ -57,10 +58,7 @@ pub struct MessageBuilder {
 
 impl MessageBuilder {
     pub fn new() -> Self {
-        Self {
-            tips: None,
-            payload: None,
-        }
+        Default::default()
     }
 
     pub fn tips(mut self, tips: (Hash, Hash)) -> Self {

@@ -24,6 +24,8 @@ pub use unsigned_data::UnsignedData;
 
 use serde::{Deserialize, Serialize};
 
+use alloc::boxed::Box;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Payload {
     Indexation(Box<Indexation>),

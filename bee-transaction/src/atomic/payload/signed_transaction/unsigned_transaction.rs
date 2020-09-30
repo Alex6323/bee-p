@@ -14,6 +14,8 @@ use crate::atomic::payload::Payload;
 
 use serde::{Deserialize, Serialize};
 
+use alloc::vec::Vec;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct UnsignedTransaction {
     pub inputs: Vec<Input>,

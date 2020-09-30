@@ -99,7 +99,7 @@ fn transaction_message_to_json_serde() {
     };
 
     // Create a message from signed transaction payload.
-    let expected = Message::new()
+    let expected = Message::builder()
         .tips((Hash([0; 32]), Hash([0; 32])))
         .payload(Payload::SignedTransaction(Box::new(signed)))
         .build()

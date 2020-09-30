@@ -29,7 +29,8 @@ use bee_signing_ext::{
 
 use serde::{Deserialize, Serialize};
 
-use std::{cmp::Ordering, collections::HashSet, slice::Iter};
+use alloc::vec::Vec;
+use core::{cmp::Ordering, slice::Iter};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SignedTransaction {
@@ -39,7 +40,7 @@ pub struct SignedTransaction {
 }
 
 impl SignedTransaction {
-    pub fn builder<'a>(seed: &'a Seed) -> SignedTransactionBuilder<'a> {
+    pub fn builder(seed: &Seed) -> SignedTransactionBuilder {
         SignedTransactionBuilder::new(seed)
     }
 
@@ -55,11 +56,11 @@ impl SignedTransaction {
         }
 
         // At least one input must be specified
-        if transaction.inputs.len() == 0 {
+        if transaction.inputs.is_empty() {
             return Err(Error::EmptyError);
         }
 
-        let mut combination = HashSet::new();
+        let mut combination = Vec::new();
         for i in transaction.inputs.iter() {
             // Input Type value must be 0, denoting an UTXO Input.
             match i {
@@ -71,7 +72,7 @@ impl SignedTransaction {
                     }
 
                     // Every combination of Transaction ID + Transaction Output Index must be unique in the inputs set.
-                    if combination.insert(u) == false {
+                    if !insert_combination(&mut combination, u) {
                         return Err(Error::DuplicateError);
                     }
                 }
@@ -79,7 +80,7 @@ impl SignedTransaction {
         }
 
         // Inputs must be in lexicographical order of their serialized form.
-        if is_sorted(transaction.inputs.iter()) == false {
+        if !is_sorted(transaction.inputs.iter()) {
             return Err(Error::OrderError);
         }
 
@@ -91,12 +92,12 @@ impl SignedTransaction {
         }
 
         // At least one output must be specified
-        if transaction.outputs.len() == 0 {
+        if transaction.outputs.is_empty() {
             return Err(Error::EmptyError);
         }
 
         let mut total = 0;
-        let mut combination = HashSet::new();
+        let mut combination = Vec::new();
         for i in transaction.outputs.iter() {
             // Output Type must be 0, denoting a SigLockedSingleDeposit.
             match i {
@@ -106,7 +107,7 @@ impl SignedTransaction {
                     // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
 
                     // The Address must be unique in the set of SigLockedSingleDeposits
-                    if combination.insert(&u.address) == false {
+                    if !insert_combination(&mut combination, &u.address) {
                         return Err(Error::DuplicateError);
                     }
 
@@ -122,7 +123,7 @@ impl SignedTransaction {
         }
 
         // Outputs must be in lexicographical order by their serialized form
-        if is_sorted(transaction.outputs.iter()) == false {
+        if !is_sorted(transaction.outputs.iter()) {
             return Err(Error::OrderError);
         }
 
@@ -142,7 +143,7 @@ impl SignedTransaction {
         }
 
         // Unlock Block Type must either be 0 or 1, denoting a Signature Unlock Block or Reference Unlock block.
-        let mut combination = HashSet::new();
+        let mut combination = Vec::new();
         for (i, block) in self.unlock_blocks.iter().enumerate() {
             // Signature Unlock Blocks must define either an Ed25519- or WOTS Signature
             match block {
@@ -170,7 +171,7 @@ impl SignedTransaction {
                 UnlockBlock::Signature(s) => {
                     // A Signature Unlock Block unlocking multiple inputs must only appear once (be unique) and be
                     // positioned at same index of the first input it unlocks.
-                    if combination.insert(s) == false {
+                    if !insert_combination(&mut combination, s) {
                         return Err(Error::DuplicateError);
                     }
 
@@ -210,6 +211,19 @@ impl SignedTransaction {
     }
 }
 
+fn insert_combination<T: PartialEq>(combination: &mut Vec<T>, element: T) -> bool {
+    let res = combination.iter().fold(true, |mut acc, i| {
+        if i == &element {
+            acc = false;
+        }
+        acc
+    });
+    if res {
+        combination.push(element);
+    }
+    res
+}
+
 fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
     let mut iterator = iterator;
     let mut last = match iterator.next() {
@@ -217,7 +231,7 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
         None => return true,
     };
 
-    while let Some(curr) = iterator.next() {
+    for curr in iterator {
         if let Ordering::Greater = &last.cmp(&curr) {
             return false;
         }
@@ -266,7 +280,7 @@ impl<'a> SignedTransactionBuilder<'a> {
     pub fn build(self) -> Result<SignedTransaction, Error> {
         let mut inputs = self.inputs;
         let mut outputs = self.outputs;
-        if inputs.len() == 0 || outputs.len() == 0 {
+        if inputs.is_empty() || outputs.is_empty() {
             return Err(Error::CountError);
         }
         inputs.sort();

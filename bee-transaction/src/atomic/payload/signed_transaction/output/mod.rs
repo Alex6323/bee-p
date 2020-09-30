@@ -15,7 +15,7 @@ pub use sig_locked_single_deposit::{Address, SigLockedSingleDeposit};
 
 use serde::{Deserialize, Serialize};
 
-use std::num::NonZeroU64;
+use core::num::NonZeroU64;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Output {
