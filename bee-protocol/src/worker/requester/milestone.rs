@@ -40,7 +40,9 @@ async fn process_request(index: MilestoneIndex, epid: Option<EndpointId>, counte
         return;
     }
 
-    if process_request_unchecked(index, epid, counter).await && index.0 != 0 {
+    process_request_unchecked(index, epid, counter).await;
+
+    if index.0 != 0 {
         Protocol::get().requested_milestones.insert(index, Instant::now());
     }
 }
