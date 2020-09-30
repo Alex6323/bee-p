@@ -12,9 +12,10 @@
 //! Signing scheme primitives.
 
 #![warn(missing_docs)]
+#![no_std]
 
 pub mod binary;
 pub mod seed;
 
-pub use signature::{Error as SignatureError, Signature, Signer, Verifier};
 pub use crate::seed::Seed;
+pub use signature::{Error as SignatureError, Signature, Signer, Verifier};

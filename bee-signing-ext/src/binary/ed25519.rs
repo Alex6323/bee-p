@@ -21,7 +21,7 @@ use signature::{Signature, Signer, Verifier};
 use slip10::{derive_key_from_path, BIP32Path, Curve};
 use zeroize::Zeroize;
 
-use std::convert::AsRef;
+use core::convert::AsRef;
 
 /// Binary `Ed25519`-based `Seed` to derive private keys, public keys and signatures from.
 #[derive(SecretDebug, SecretDisplay, SecretDrop)]

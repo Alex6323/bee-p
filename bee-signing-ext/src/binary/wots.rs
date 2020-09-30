@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use signature::{Signature, Signer, Verifier};
 use zeroize::Zeroize;
 
-use std::convert::AsRef;
+use core::convert::AsRef;
 
 /// Length of a message fragment.
 pub const MESSAGE_FRAGMENT_LENGTH: usize = 27;

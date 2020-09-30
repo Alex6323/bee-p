@@ -1,5 +1,7 @@
-use bee_signing_ext::binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed};
-use bee_signing_ext::{Signer, Verifier};
+use bee_signing_ext::{
+    binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed},
+    Signer, Verifier,
+};
 
 #[test]
 fn test_new_seed() {

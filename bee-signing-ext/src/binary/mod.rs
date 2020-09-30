@@ -10,33 +10,46 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 //! Binary signing scheme primitives.
-use thiserror::Error;
 
 pub mod ed25519;
+#[cfg(feature = "std")]
 pub mod wots;
 
 pub use ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Seed, Ed25519Signature};
 pub use slip10::BIP32Path;
 
+use core::fmt;
+
 /// Errors occuring during signing operations.
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum Error {
     /// Convertion Error
-    #[error("Failed to convert bytes to target primitives.")]
     ConvertError,
     /// Invalid seed length.
-    #[error("Invalid seed length, should be 243 trits, was {0}.")]
     InvalidLength(usize),
     /// Private Key Error
-    #[error("Failed to generate private key.")]
     PrivateKeyError,
     /// Last trit of the entropy is not null.
-    #[error("Last trit of the entropy is not null.")]
     NonNullEntropyLastTrit,
     /// Failed sponge operation.
-    #[error("Failed sponge operation.")]
     FailedSpongeOperation,
     /// Invalid signature length.
-    #[error("Invalid signature length, should be a multiple of 6561 trits, was {0}.")]
     InvalidSignatureLength(usize),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::ConvertError => write!(f, "Failed to convert bytes to target primitives."),
+            Error::InvalidLength(l) => write!(f, "Invalid seed length, should be 243 trits, was {}", l),
+            Error::PrivateKeyError => write!(f, "Failed to generate private key."),
+            Error::NonNullEntropyLastTrit => write!(f, "Last trit of the entropy is not null."),
+            Error::FailedSpongeOperation => write!(f, "Failed sponge operation."),
+            Error::InvalidSignatureLength(l) => write!(
+                f,
+                "Invalid signature length, should be a multiple of 6561 trits, was {}",
+                l
+            ),
+        }
+    }
 }
