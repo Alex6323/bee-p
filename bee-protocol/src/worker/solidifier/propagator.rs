@@ -13,7 +13,7 @@ use crate::{
     event::{LatestSolidMilestoneChanged, TransactionSolidified},
     milestone::Milestone,
     protocol::Protocol,
-    tangle::tangle,
+    tangle::MsTangle,
     worker::{BundleValidatorWorker, BundleValidatorWorkerEvent},
 };
 
@@ -43,9 +43,11 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
         Box::leak(Box::from(vec![TypeId::of::<BundleValidatorWorker>()]))
     }
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -56,15 +58,15 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
                 let mut children = vec![root];
 
                 while let Some(ref hash) = children.pop() {
-                    if tangle().is_solid_transaction(hash) {
+                    if tangle.is_solid_transaction(hash) {
                         continue;
                     }
 
-                    if let Some(tx) = tangle().get(&hash) {
+                    if let Some(tx) = tangle.get(&hash).await {
                         let mut index = None;
 
-                        if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
-                            tangle().update_metadata(&hash, |metadata| {
+                        if tangle.is_solid_transaction(tx.trunk()) && tangle.is_solid_transaction(tx.branch()) {
+                            tangle.update_metadata(&hash, |metadata| {
                                 metadata.solidify();
 
                                 // This is possibly not sufficient as there is no guarantee a milestone has been
@@ -82,7 +84,7 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
                                 }
                             });
 
-                            for child in tangle().get_children(&hash) {
+                            for child in tangle.get_children(&hash) {
                                 children.push(child);
                             }
 

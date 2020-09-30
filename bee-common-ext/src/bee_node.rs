@@ -11,7 +11,7 @@
 
 use crate::{node::Node, worker::Worker};
 
-use anymap::{any::Any, Map};
+use anymap::{any::Any as AnyMapAny, Map};
 use futures::{channel::oneshot, future::Future};
 use tokio::spawn;
 use bee_storage::storage::Backend;
@@ -23,8 +23,8 @@ use std::{
     marker::PhantomData,
 };
 
-pub struct BeeNode {
-    workers: Map<dyn Any + Send + Sync>,
+pub struct BeeNode<B> {
+    workers: Map<dyn AnyMapAny + Send + Sync>,
     tasks: Mutex<
         HashMap<
             TypeId,
@@ -39,7 +39,7 @@ pub struct BeeNode {
     phantom: PhantomData<B>,
 }
 
-impl Default for BeeNode {
+impl<B> Default for BeeNode<B> {
     fn default() -> Self {
         Self {
             workers: Map::new(),
@@ -50,7 +50,7 @@ impl Default for BeeNode {
     }
 }
 
-impl Node for BeeNode {
+impl<B: Backend> Node for BeeNode<B> {
     type Backend = B;
 
     fn new() -> Self {

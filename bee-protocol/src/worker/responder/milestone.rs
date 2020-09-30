@@ -12,7 +12,7 @@
 use crate::{
     message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
     protocol::Sender,
-    tangle::tangle,
+    tangle::MsTangle,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -41,8 +41,10 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
     type Config = ();
     type Error = WorkerError;
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -51,12 +53,12 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
 
             while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
                 let index = match request.index {
-                    0 => tangle().get_latest_milestone_index(),
+                    0 => tangle.get_latest_milestone_index(),
                     _ => request.index.into(),
                 };
 
-                if let Some(hash) = tangle().get_milestone_hash(index) {
-                    if let Some(builder) = load_bundle_builder(tangle(), &hash) {
+                if let Some(hash) = tangle.get_milestone_hash(index) {
+                    if let Some(builder) = load_bundle_builder(&tangle, &hash) {
                         // This is safe because the bundle has already been validated.
                         let bundle = unsafe { builder.build() };
                         let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());

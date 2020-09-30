@@ -18,9 +18,12 @@ pub use metadata::TransactionMetadata;
 
 use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::flags::Flags, worker::SolidPropagatorWorkerEvent};
 
+use std::sync::Arc;
+
 use bee_crypto::ternary::Hash;
-use bee_tangle::{Tangle, TransactionRef as TxRef};
+use bee_tangle::{Tangle, TransactionRef as TxRef, Hooks};
 use bee_transaction::bundled::BundledTransaction as Tx;
+use bee_storage::storage::Backend;
 
 use dashmap::DashMap;
 use log::error;
@@ -31,10 +34,27 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
 
+pub struct StorageHooks<B> {
+    storage: Arc<B>,
+}
+
+impl<B: Backend> Hooks<TransactionMetadata> for StorageHooks<B> {
+    type Error = ();
+
+    fn get(&self, hash: &Hash) -> Result<(Tx, TransactionMetadata), Self::Error> {
+        println!("Attempted to fetch {:?} from storage", hash);
+        Err(())
+    }
+
+    fn insert(&self, hash: Hash, tx: Tx, metadata: TransactionMetadata) -> Result<(), Self::Error> {
+        println!("Attempted to insert {:?} into storage", hash);
+        Ok(())
+    }
+}
+
 /// Milestone-based Tangle.
-#[derive(Default)]
-pub struct MsTangle {
-    pub(crate) inner: Tangle<TransactionMetadata>,
+pub struct MsTangle<B> {
+    pub(crate) inner: Tangle<TransactionMetadata, StorageHooks<B>>,
     pub(crate) milestones: DashMap<MilestoneIndex, Hash>,
     pub(crate) solid_entry_points: DashMap<Hash, MilestoneIndex>,
     latest_milestone_index: AtomicU32,
@@ -44,17 +64,28 @@ pub struct MsTangle {
     entry_point_index: AtomicU32,
 }
 
-impl Deref for MsTangle {
-    type Target = Tangle<TransactionMetadata>;
+impl<B> Deref for MsTangle<B> {
+    type Target = Tangle<TransactionMetadata, StorageHooks<B>>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl MsTangle {
-    pub fn new() -> Self {
-        Self::default()
+impl<B: Backend> MsTangle<B> {
+    pub fn new(storage: Arc<B>) -> Self {
+        Self {
+            inner: Tangle::new(StorageHooks {
+                storage,
+            }),
+            milestones: Default::default(),
+            solid_entry_points: Default::default(),
+            latest_milestone_index: Default::default(),
+            latest_solid_milestone_index: Default::default(),
+            snapshot_index: Default::default(),
+            pruning_index: Default::default(),
+            entry_point_index: Default::default(),
+        }
     }
 
     pub async fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
@@ -193,25 +224,25 @@ impl MsTangle {
     }
 }
 
-static TANGLE: AtomicPtr<MsTangle> = AtomicPtr::new(ptr::null_mut());
-static INITIALIZED: AtomicBool = AtomicBool::new(false);
+// static TANGLE: AtomicPtr<MsTangle> = AtomicPtr::new(ptr::null_mut());
+// static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-pub fn init() {
-    if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
-        TANGLE.store(Box::into_raw(MsTangle::new().into()), Ordering::Relaxed);
-    } else {
-        panic!("Tangle already initialized");
-    }
-}
+// pub fn init() {
+//     if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
+//         TANGLE.store(Box::into_raw(MsTangle::new().into()), Ordering::Relaxed);
+//     } else {
+//         panic!("Tangle already initialized");
+//     }
+// }
 
-pub fn tangle() -> &'static MsTangle {
-    let tangle = TANGLE.load(Ordering::Relaxed);
-    if tangle.is_null() {
-        panic!("Tangle cannot be null");
-    } else {
-        unsafe { &*tangle }
-    }
-}
+// pub fn tangle() -> &'static MsTangle {
+//     let tangle = TANGLE.load(Ordering::Relaxed);
+//     if tangle.is_null() {
+//         panic!("Tangle cannot be null");
+//     } else {
+//         unsafe { &*tangle }
+//     }
+// }
 
 // #[cfg(test)]
 // mod tests {

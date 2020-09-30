@@ -12,7 +12,7 @@
 use crate::{
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
-    tangle::{tangle, TransactionMetadata},
+    tangle::{MsTangle, TransactionMetadata},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
         SolidPropagatorWorker, SolidPropagatorWorkerEvent, TransactionRequesterWorker,
@@ -82,12 +82,14 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         ]))
     }
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
         let solid_propagator = node.worker::<SolidPropagatorWorker>().unwrap().tx.clone();
         let broadcaster = node.worker::<BroadcasterWorker>().unwrap().tx.clone();
         let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -145,7 +147,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 metadata.flags_mut().set_requested(requested);
 
                 // store transaction
-                if let Some(transaction) = tangle().insert(transaction, hash, metadata) {
+                if let Some(transaction) = tangle.insert(transaction, hash, metadata).await {
                     // TODO this was temporarily moved from the tangle.
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
@@ -160,10 +162,10 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                             let trunk = transaction.trunk();
                             let branch = transaction.branch();
 
-                            Protocol::request_transaction(&transaction_requester, *trunk, index);
+                            Protocol::request_transaction(&tangle, &transaction_requester, *trunk, index).await;
 
                             if trunk != branch {
-                                Protocol::request_transaction(&transaction_requester, *branch, index);
+                                Protocol::request_transaction(&tangle, &transaction_requester, *branch, index).await;
                             }
                         }
                         None => {

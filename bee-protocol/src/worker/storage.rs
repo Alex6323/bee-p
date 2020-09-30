@@ -3,27 +3,45 @@ use bee_common_ext::{
     node::Node,
 };
 use bee_common::shutdown_stream::ShutdownStream;
+use bee_storage::storage::Backend;
 use async_trait::async_trait;
-use std::error::Error;
+use log::info;
+use std::{
+    any::Any,
+    error,
+    fmt,
+};
+
+#[derive(Debug)]
+pub struct Error(Box<dyn error::Error>);
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl error::Error for Error {}
 
 pub struct StorageWorker;
 
 #[async_trait]
 impl<N: Node> Worker<N> for StorageWorker {
     type Config = String; // TODO: Replace with N::Backend::Config
-    type Error = Box<dyn Error>;
-    type Event = ();
-    type Receiver = ShutdownStream<Fuse<Interval>>;
+    type Error = Error;
 
     async fn start(
-        self,
-        receiver: Self::Receiver,
-        node: Arc<N>,
-    ) -> Result<(), Self::Error> {
+        node: &mut N,
+        config: Self::Config,
+    ) -> Result<Self, Self::Error> {
+        info!("Starting Tangle worker...");
+
         let config_path = todo!();
 
-        let backend = N::Backend::start(config_path).await?;
+        let backend = N::Backend::start(config_path).await.map_err(Error)?;
 
         node.register_resource(backend);
+
+        Ok(Self)
     }
 }

@@ -13,7 +13,7 @@ use crate::{
     message::MilestoneRequest,
     milestone::MilestoneIndex,
     protocol::{Protocol, Sender},
-    tangle::tangle,
+    tangle::MsTangle,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -99,8 +99,10 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
     type Config = ();
     type Error = WorkerError;
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -115,7 +117,7 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
                     _ = timeouts.next() => retry_requests(&mut counter).await,
                     entry = receiver.next() => match entry {
                         Some(MilestoneRequesterWorkerEvent(index, epid)) => {
-                            if !tangle().contains_milestone(index.into()) {
+                            if !tangle.contains_milestone(index.into()) {
                                 process_request(index, epid, &mut counter).await;
                             }
                         },

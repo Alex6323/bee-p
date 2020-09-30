@@ -19,6 +19,7 @@ use std::{
     any::{type_name, TypeId},
     collections::{HashMap, HashSet},
     pin::Pin,
+    sync::Arc,
 };
 
 pub trait Node: Default + Send + Sync + 'static {

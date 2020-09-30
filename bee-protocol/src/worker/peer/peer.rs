@@ -17,9 +17,11 @@ use crate::{
     milestone::MilestoneIndex,
     peer::HandshakedPeer,
     protocol::Protocol,
-    tangle::tangle,
+    tangle::MsTangle,
     worker::{peer::MessageHandler, HasherWorkerEvent, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent},
 };
+
+use bee_storage::storage::Backend;
 
 use log::{error, info, trace, warn};
 
@@ -52,11 +54,11 @@ impl PeerWorker {
         }
     }
 
-    pub(super) async fn run(mut self, mut message_handler: MessageHandler) {
+    pub(super) async fn run<B: Backend>(mut self, tangle: Arc<MsTangle<B>>, mut message_handler: MessageHandler) {
         info!("[{}] Running.", self.peer.address);
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
-            if let Err(e) = self.process_message(&header, bytes) {
+            if let Err(e) = self.process_message(&tangle, &header, bytes) {
                 error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
         }
@@ -66,7 +68,7 @@ impl PeerWorker {
         Protocol::get().peer_manager.remove(&self.peer.epid).await;
     }
 
-    fn process_message(&mut self, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
+    fn process_message<B: Backend>(&mut self, tangle: &MsTangle<B>, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
         match header.message_type {
             MilestoneRequest::ID => {
                 trace!("[{}] Reading MilestoneRequest...", self.peer.address);
@@ -146,10 +148,10 @@ impl PeerWorker {
                         self.peer.set_connected_peers(message.connected_peers);
                         self.peer.set_synced_peers(message.synced_peers);
 
-                        if !tangle().is_synced_threshold(2)
+                        if !tangle.is_synced_threshold(2)
                             && !self
                                 .peer
-                                .has_data(MilestoneIndex(*tangle().get_latest_solid_milestone_index() + 1))
+                                .has_data(MilestoneIndex(*tangle.get_latest_solid_milestone_index() + 1))
                         {
                             warn!("The peer {} can't help syncing.", self.peer.address);
                             // TODO drop if autopeered.

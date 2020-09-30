@@ -18,6 +18,7 @@ use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder as NodeBui
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, Protocol};
+use bee_storage::storage::Backend;
 
 use futures::{
     channel::oneshot,
@@ -52,17 +53,14 @@ pub struct NodeBuilder {
 
 impl NodeBuilder {
     /// Finishes the build process of a new node.
-    pub async fn finish(self) -> Result<Node, Error> {
+    pub async fn finish<B: Backend>(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
-        let node_builder = NodeBuilderB::<BeeNode>::new();
+        let node_builder = NodeBuilderB::<BeeNode<B>>::new();
 
         let mut shutdown = Shutdown::new();
 
         let bus = Arc::new(Bus::default());
-
-        info!("Initializing Tangle...");
-        tangle::init();
 
         // TODO temporary
         let (mut node_builder, ledger_state, snapshot_index, snapshot_timestamp) =
@@ -117,8 +115,8 @@ impl NodeBuilder {
 }
 
 /// The main node type.
-pub struct Node {
-    tmp_node: BeeNode,
+pub struct Node<B> {
+    tmp_node: BeeNode<B>,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
     network_events: NetworkEventStream,
@@ -126,7 +124,7 @@ pub struct Node {
     peers: PeerList,
 }
 
-impl Node {
+impl<B: Backend> Node<B> {
     pub async fn run(mut self) -> Result<(), Error> {
         info!("Running.");
 

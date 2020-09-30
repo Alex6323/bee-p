@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{protocol::Protocol, tangle::tangle};
+use crate::{protocol::Protocol, tangle::MsTangle};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
@@ -29,16 +29,18 @@ impl<N: Node> Worker<N> for StatusWorker {
     type Config = u64;
     type Error = WorkerError;
 
-    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(config)));
 
             while receiver.next().await.is_some() {
-                let snapshot_index = *tangle().get_snapshot_index();
-                let latest_solid_milestone_index = *tangle().get_latest_solid_milestone_index();
-                let latest_milestone_index = *tangle().get_latest_milestone_index();
+                let snapshot_index = *tangle.get_snapshot_index();
+                let latest_solid_milestone_index = *tangle.get_latest_solid_milestone_index();
+                let latest_milestone_index = *tangle.get_latest_milestone_index();
 
                 // TODO Threshold
                 // TODO use tangle synced method

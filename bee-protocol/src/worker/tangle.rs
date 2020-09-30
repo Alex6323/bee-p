@@ -1,9 +1,13 @@
-use std::any::TypeId;
+use std::{
+    any::TypeId,
+    convert::Infallible,
+};
 use bee_common_ext::{
     worker::Worker,
     node::Node,
 };
 use bee_common::shutdown_stream::ShutdownStream;
+use log::info;
 use async_trait::async_trait;
 
 use crate::{
@@ -15,20 +19,24 @@ pub struct TangleWorker;
 
 #[async_trait]
 impl<N: Node> Worker<N> for TangleWorker {
-    const DEPS: &'static [TypeId] = &[TypeId::of::<TangleWorker>()];
-
     type Config = ();
-    type Error = WorkerError;
-    type Event = ();
-    type Receiver = ShutdownStream<Fuse<Interval>>;
+    type Error = Infallible;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+    }
 
     async fn start(
-        self,
-        receiver: Self::Receiver,
-        node: Arc<N>,
-    ) -> Result<(), Self::Error> {
-        let tangle = MsTangle::<N::Backend>::new();
+        node: &mut N,
+        config: Self::Config,
+    ) -> Result<Self, Self::Error> {
+        info!("Starting Tangle worker...");
+
+        let storage = node.storage().clone();
+        let tangle = MsTangle::<N::Backend>::new(storage);
 
         node.register_resource(tangle);
+
+        Ok(Self)
     }
 }

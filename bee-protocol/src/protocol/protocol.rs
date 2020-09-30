@@ -15,12 +15,13 @@ use crate::{
     milestone::MilestoneIndex,
     peer::{Peer, PeerManager},
     protocol::ProtocolMetrics,
-    tangle::tangle,
+    tangle::MsTangle,
     worker::{
         BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneRequesterWorker,
         MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
         PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker, StatusWorker, TpsWorker,
         TransactionRequesterWorker, TransactionResponderWorker,
+        StorageWorker, TangleWorker,
     },
 };
 
@@ -31,6 +32,7 @@ use bee_common_ext::{
 };
 use bee_crypto::ternary::Hash;
 use bee_network::{EndpointId, Network, Origin};
+use bee_storage::storage::Backend;
 
 use dashmap::DashMap;
 use futures::channel::oneshot;
@@ -54,13 +56,13 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub async fn init(
+    pub async fn init<B: Backend>(
         config: ProtocolConfig,
         network: Network,
         local_snapshot_timestamp: u64,
-        node_builder: NodeBuilder<BeeNode>,
+        node_builder: NodeBuilder<BeeNode<B>>,
         bus: Arc<Bus<'static>>,
-    ) -> NodeBuilder<BeeNode> {
+    ) -> NodeBuilder<BeeNode<B>> {
         let protocol = Protocol {
             config,
             network: network.clone(),
@@ -79,6 +81,8 @@ impl Protocol {
         let (ms_send, ms_recv) = oneshot::channel();
 
         node_builder
+            .with_worker::<StorageWorker>()
+            .with_worker::<TangleWorker>()
             .with_worker_cfg::<HasherWorker>(Protocol::get().config.workers.transaction_worker_cache)
             .with_worker::<ProcessorWorker>()
             .with_worker::<TransactionResponderWorker>()
@@ -95,8 +99,9 @@ impl Protocol {
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
     }
 
-    pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
-        bus.add_listener(|latest_milestone: &LatestMilestoneChanged| {
+    pub fn events<B: Backend>(bee_node: &BeeNode<B>, bus: Arc<Bus<'static>>) {
+        let tangle = bee_node.resource::<MsTangle<B>>().clone();
+        bus.add_listener(move |latest_milestone: &LatestMilestoneChanged| {
             info!(
                 "New milestone {} {}.",
                 *latest_milestone.0.index,
@@ -107,12 +112,12 @@ impl Protocol {
                     .map(char::from)
                     .collect::<String>()
             );
-            tangle().update_latest_milestone_index(latest_milestone.0.index);
+            tangle.update_latest_milestone_index(latest_milestone.0.index);
 
             // TODO spawn ?
             Protocol::broadcast_heartbeat(
-                tangle().get_latest_solid_milestone_index(),
-                tangle().get_pruning_index(),
+                tangle.get_latest_solid_milestone_index(),
+                tangle.get_pruning_index(),
                 latest_milestone.0.index,
             );
         });
@@ -129,26 +134,27 @@ impl Protocol {
         let milestone_solidifier = bee_node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
         let milestone_requester = bee_node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
+        let tangle = bee_node.resource::<MsTangle<B>>().clone();
         bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
             debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
-            tangle().update_latest_solid_milestone_index(latest_solid_milestone.0.index);
+            tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
             let ms_sync_count = Protocol::get().config.workers.ms_sync_count;
             let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
 
-            if !tangle().is_synced() {
-                if tangle().contains_milestone(next_ms) {
+            if !tangle.is_synced() {
+                if tangle.contains_milestone(next_ms) {
                     milestone_solidifier.send(MilestoneSolidifierWorkerEvent(next_ms));
                 } else {
-                    Protocol::request_milestone(&milestone_requester, next_ms, None);
+                    Protocol::request_milestone(&tangle, &milestone_requester, next_ms, None);
                 }
             }
 
             // TODO spawn ?
             Protocol::broadcast_heartbeat(
                 latest_solid_milestone.0.index,
-                tangle().get_pruning_index(),
-                tangle().get_latest_milestone_index(),
+                tangle.get_pruning_index(),
+                tangle.get_latest_milestone_index(),
             );
         });
     }
@@ -161,8 +167,8 @@ impl Protocol {
         }
     }
 
-    pub fn register(
-        bee_node: &BeeNode,
+    pub fn register<B: Backend>(
+        bee_node: &BeeNode<B>,
         epid: EndpointId,
         address: SocketAddr,
         origin: Origin,
@@ -176,6 +182,7 @@ impl Protocol {
 
         Protocol::get().peer_manager.add(peer.clone());
 
+        let tangle = bee_node.resource::<MsTangle<B>>().clone();
         spawn(
             PeerHandshakerWorker::new(
                 Protocol::get().network.clone(),
@@ -185,7 +192,7 @@ impl Protocol {
                 bee_node.worker::<MilestoneResponderWorker>().unwrap().tx.clone(),
                 bee_node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
             )
-            .run(receiver_rx, receiver_shutdown_rx),
+            .run(tangle, receiver_rx, receiver_shutdown_rx),
         );
 
         (receiver_tx, receiver_shutdown_tx)

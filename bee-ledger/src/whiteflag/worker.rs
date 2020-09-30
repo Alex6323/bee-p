@@ -23,9 +23,10 @@ use crate::{
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
-use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::tangle, Milestone, MilestoneIndex};
+use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, Milestone, MilestoneIndex};
 use bee_tangle::helper::load_bundle_builder;
 use bee_transaction::bundled::{Address, BundledTransactionField};
+use bee_storage::storage::Backend;
 
 use async_trait::async_trait;
 use blake2::Blake2b;
@@ -52,9 +53,9 @@ pub(crate) struct LedgerWorker {
     pub(crate) tx: flume::Sender<LedgerWorkerEvent>,
 }
 
-fn milestone_info(hash: &Hash, coo_config: &ProtocolCoordinatorConfig) -> (Vec<u8>, u64) {
+fn milestone_info<B: Backend>(tangle: &MsTangle<B>, hash: &Hash, coo_config: &ProtocolCoordinatorConfig) -> (Vec<u8>, u64) {
     // TODO handle error of both unwrap
-    let ms = load_bundle_builder(tangle(), hash).unwrap();
+    let ms = load_bundle_builder(tangle, hash).unwrap();
     let timestamp = ms.get(0).unwrap().get_timestamp();
     let proof = decode(ms.get(2).unwrap().payload().to_inner().subslice(
         (coo_config.depth() as usize * HASH_LENGTH)..(coo_config.depth() as usize * HASH_LENGTH + MERKLE_PROOF_LENGTH),
@@ -63,7 +64,8 @@ fn milestone_info(hash: &Hash, coo_config: &ProtocolCoordinatorConfig) -> (Vec<u
     (proof, timestamp)
 }
 
-fn confirm(
+fn confirm<B: Backend>(
+    tangle: &MsTangle<B>,
     milestone: Milestone,
     index: &mut MilestoneIndex,
     state: &mut LedgerState,
@@ -75,11 +77,11 @@ fn confirm(
         return Err(Error::NonContiguousMilestone);
     }
 
-    let (merkle_proof, timestamp) = milestone_info(milestone.hash(), coo_config);
+    let (merkle_proof, timestamp) = milestone_info(tangle, milestone.hash(), coo_config);
 
     let mut confirmation = WhiteFlagMetadata::new(milestone.index(), timestamp);
 
-    match visit_bundles_dfs(state, *milestone.hash(), &mut confirmation) {
+    match visit_bundles_dfs(tangle, state, *milestone.hash(), &mut confirmation) {
         Ok(_) => {
             if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().digest(&confirmation.tails_included)) {
                 error!(
@@ -154,8 +156,10 @@ impl<N: Node> Worker<N> for LedgerWorker {
     );
     type Error = WorkerError;
 
-    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -170,7 +174,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
             while let Some(event) = receiver.next().await {
                 match event {
                     LedgerWorkerEvent::Confirm(milestone) => {
-                        if confirm(milestone, &mut index, &mut state, &coo_config, &bus).is_err() {
+                        if confirm(&tangle, milestone, &mut index, &mut state, &coo_config, &bus).is_err() {
                             panic!("Error while confirming milestone, aborting.");
                         }
                     }

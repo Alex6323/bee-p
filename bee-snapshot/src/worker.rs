@@ -20,7 +20,8 @@ use crate::{
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_protocol::{tangle::tangle, Milestone, MilestoneIndex};
+use bee_protocol::{tangle::MsTangle, Milestone, MilestoneIndex};
+use bee_storage::storage::Backend;
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
@@ -32,11 +33,11 @@ pub(crate) struct SnapshotWorker {
     pub(crate) tx: flume::Sender<SnapshotWorkerEvent>,
 }
 
-fn should_snapshot(index: MilestoneIndex, config: &SnapshotConfig, depth: u32) -> bool {
+fn should_snapshot<B: Backend>(tangle: &MsTangle<B>, index: MilestoneIndex, config: &SnapshotConfig, depth: u32) -> bool {
     let solid_index = *index;
-    let snapshot_index = *tangle().get_snapshot_index();
-    let pruning_index = *tangle().get_pruning_index();
-    let snapshot_interval = if tangle().is_synced() {
+    let snapshot_index = *tangle.get_snapshot_index();
+    let pruning_index = *tangle.get_pruning_index();
+    let snapshot_interval = if tangle.is_synced() {
         config.local().interval_synced()
     } else {
         config.local().interval_unsynced()
@@ -52,7 +53,7 @@ fn should_snapshot(index: MilestoneIndex, config: &SnapshotConfig, depth: u32) -
     return solid_index - (depth + snapshot_interval) >= snapshot_index;
 }
 
-fn should_prune(mut index: MilestoneIndex, config: &SnapshotConfig, delay: u32) -> bool {
+fn should_prune<B: Backend>(tangle: &MsTangle<B>, mut index: MilestoneIndex, config: &SnapshotConfig, delay: u32) -> bool {
     if !config.pruning().enabled() {
         return false;
     }
@@ -62,24 +63,24 @@ fn should_prune(mut index: MilestoneIndex, config: &SnapshotConfig, delay: u32) 
     }
 
     // Pruning happens after creating the snapshot so the metadata should provide the latest index.
-    if *tangle().get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
+    if *tangle.get_snapshot_index() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1 {
         return false;
     }
 
     let target_index_max = MilestoneIndex(
-        *tangle().get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
+        *tangle.get_snapshot_index() - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST - ADDITIONAL_PRUNING_THRESHOLD - 1,
     );
 
     if index > target_index_max {
         index = target_index_max;
     }
 
-    if tangle().get_pruning_index() >= index {
+    if tangle.get_pruning_index() >= index {
         return false;
     }
 
     // We prune in "ADDITIONAL_PRUNING_THRESHOLD" steps to recalculate the solid_entry_points.
-    if *tangle().get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *index {
+    if *tangle.get_entry_point_index() + ADDITIONAL_PRUNING_THRESHOLD + 1 > *index {
         return false;
     }
 
@@ -91,8 +92,10 @@ impl<N: Node> Worker<N> for SnapshotWorker {
     type Config = SnapshotConfig;
     type Error = WorkerError;
 
-    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -123,13 +126,13 @@ impl<N: Node> Worker<N> for SnapshotWorker {
             };
 
             while let Some(SnapshotWorkerEvent(milestone)) = receiver.next().await {
-                if should_snapshot(milestone.index(), &config, depth) {
+                if should_snapshot(&tangle, milestone.index(), &config, depth) {
                     if let Err(e) = snapshot(config.local().path(), *milestone.index() - depth) {
                         error!("Failed to create snapshot: {:?}.", e);
                     }
                 }
-                if should_prune(milestone.index(), &config, delay) {
-                    if let Err(e) = prune_database(MilestoneIndex(*milestone.index() - delay)) {
+                if should_prune(&tangle, milestone.index(), &config, delay) {
+                    if let Err(e) = prune_database(&tangle, MilestoneIndex(*milestone.index() - delay)) {
                         error!("Failed to prune database: {:?}.", e);
                     }
                 }

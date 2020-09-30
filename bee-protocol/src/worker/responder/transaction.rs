@@ -12,7 +12,7 @@
 use crate::{
     message::{compress_transaction_bytes, Transaction as TransactionMessage, TransactionRequest},
     protocol::Sender,
-    tangle::tangle,
+    tangle::MsTangle,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -41,8 +41,10 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
     type Config = ();
     type Error = WorkerError;
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -51,7 +53,7 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
 
             while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
                 if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
-                    if let Some(transaction) = tangle().get(&Hash::from_inner_unchecked(hash.encode())) {
+                    if let Some(transaction) = tangle.get(&Hash::from_inner_unchecked(hash.encode())).await {
                         let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
 
                         transaction.into_trits_allocated(&mut trits);
