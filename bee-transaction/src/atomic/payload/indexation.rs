@@ -14,6 +14,16 @@ use serde::{Deserialize, Serialize};
 pub const TAG_LENGTH: usize = 16;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct Indexation {
-    pub tag: [u8; TAG_LENGTH],
+pub struct Indexation([u8; TAG_LENGTH]);
+
+impl From<[u8; TAG_LENGTH]> for Indexation {
+    fn from(bytes: [u8; TAG_LENGTH]) -> Self {
+        Indexation(bytes)
+    }
+}
+
+impl Indexation {
+    pub fn new(bytes: [u8; TAG_LENGTH]) -> Self {
+        bytes.into()
+    }
 }
