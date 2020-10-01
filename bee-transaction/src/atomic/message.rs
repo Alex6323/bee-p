@@ -18,8 +18,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Message {
-    trunk: Hash,
-    branch: Hash,
+    parent1: Hash,
+    parent2: Hash,
     payload: Payload,
     nonce: u64,
 }
@@ -42,11 +42,11 @@ impl Vertex for Message {
     type Hash = Hash;
 
     fn trunk(&self) -> &Self::Hash {
-        &self.trunk
+        &self.parent1
     }
 
     fn branch(&self) -> &Self::Hash {
-        &self.branch
+        &self.parent2
     }
 }
 
@@ -83,8 +83,8 @@ impl MessageBuilder {
         };
 
         Ok(Message {
-            trunk: tips.0,
-            branch: tips.1,
+            parent1: tips.0,
+            parent2: tips.1,
             payload,
             nonce: 0, // TODO PoW
         })
