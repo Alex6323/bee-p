@@ -14,14 +14,14 @@ use futures::{
     channel::oneshot,
     future::{self, FutureExt},
     select,
-    stream::{self, StreamExt},
+    stream::StreamExt,
 };
 
 use log::trace;
 
 use std::net::SocketAddr;
 
-type EventRecv = stream::Fuse<flume::r#async::RecvStream<'static, std::vec::Vec<u8>>>;
+type EventRecv = flume::r#async::RecvStream<'static, std::vec::Vec<u8>>;
 type ShutdownRecv = future::Fuse<oneshot::Receiver<()>>;
 
 /// The read state of the message handler.

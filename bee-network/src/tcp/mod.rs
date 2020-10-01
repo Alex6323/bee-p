@@ -88,7 +88,7 @@ fn spawn_writer(
 ) -> JoinHandle<()> {
     trace!("Starting TCP stream writer for {}...", epid);
 
-    let mut fused_data_receiver = data_receiver.into_stream().fuse();
+    let mut fused_data_receiver = data_receiver.into_stream();
 
     tokio::spawn(async move {
         loop {

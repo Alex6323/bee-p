@@ -29,7 +29,7 @@ use bee_network::{
     Network, Origin,
 };
 
-use futures::{channel::oneshot, future::FutureExt, stream::StreamExt};
+use futures::{channel::oneshot, future::FutureExt};
 use log::{error, info, trace, warn};
 use tokio::spawn;
 
@@ -93,7 +93,7 @@ impl PeerHandshakerWorker {
 
         // TODO should we have a first check if already connected ?
 
-        let receiver_fused = receiver.into_stream().fuse();
+        let receiver_fused = receiver.into_stream();
         let shutdown_fused = shutdown.fuse();
 
         // This is the only message not using a Sender because they are not running yet (awaiting handshake)

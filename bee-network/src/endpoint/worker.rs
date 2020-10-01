@@ -24,7 +24,7 @@ use crate::{
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
-use futures::{select, stream, FutureExt, StreamExt};
+use futures::{select, FutureExt, StreamExt};
 use log::*;
 
 use std::{sync::atomic::Ordering, time::Duration};
@@ -34,9 +34,9 @@ type EventReceiver = flume::Receiver<Event>;
 type EventSender = flume::Sender<Event>;
 
 pub struct EndpointWorker {
-    command_receiver: stream::Fuse<flume::r#async::RecvStream<'static, Command>>,
+    command_receiver: flume::r#async::RecvStream<'static, Command>,
     event_sender: EventSender,
-    internal_event_receiver: stream::Fuse<flume::r#async::RecvStream<'static, Event>>,
+    internal_event_receiver: flume::r#async::RecvStream<'static, Event>,
     internal_event_sender: EventSender,
     endpoint_contacts: EndpointContactList,
     shutdown_listener: ShutdownListener,
@@ -54,9 +54,9 @@ impl EndpointWorker {
         trace!("Starting endpoint worker...");
 
         Self {
-            command_receiver: command_receiver.into_stream().fuse(),
+            command_receiver: command_receiver.into_stream(),
             event_sender,
-            internal_event_receiver: internal_event_receiver.into_stream().fuse(),
+            internal_event_receiver: internal_event_receiver.into_stream(),
             internal_event_sender,
             endpoint_contacts,
             shutdown_listener,
