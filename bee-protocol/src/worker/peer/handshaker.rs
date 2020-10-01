@@ -29,11 +29,7 @@ use bee_network::{
     Network, Origin,
 };
 
-use futures::{
-    channel::{mpsc, oneshot},
-    future::FutureExt,
-    stream::StreamExt,
-};
+use futures::{channel::oneshot, future::FutureExt};
 use log::{error, info, trace, warn};
 use tokio::spawn;
 
@@ -66,20 +62,20 @@ pub struct PeerHandshakerWorker {
     network: Network,
     peer: Arc<Peer>,
     status: HandshakeStatus,
-    hasher: mpsc::UnboundedSender<HasherWorkerEvent>,
-    transaction_responder: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
-    milestone_responder: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
-    milestone_requester: mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+    hasher: flume::Sender<HasherWorkerEvent>,
+    transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
+    milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
+    milestone_requester: flume::Sender<MilestoneRequesterWorkerEvent>,
 }
 
 impl PeerHandshakerWorker {
     pub(crate) fn new(
         network: Network,
         peer: Arc<Peer>,
-        hasher: mpsc::UnboundedSender<HasherWorkerEvent>,
-        transaction_responder: mpsc::UnboundedSender<TransactionResponderWorkerEvent>,
-        milestone_responder: mpsc::UnboundedSender<MilestoneResponderWorkerEvent>,
-        milestone_requester: mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+        hasher: flume::Sender<HasherWorkerEvent>,
+        transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
+        milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
+        milestone_requester: flume::Sender<MilestoneRequesterWorkerEvent>,
     ) -> Self {
         Self {
             network,
@@ -92,12 +88,12 @@ impl PeerHandshakerWorker {
         }
     }
 
-    pub async fn run(mut self, receiver: mpsc::UnboundedReceiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
+    pub async fn run(mut self, receiver: flume::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
         info!("[{}] Running.", self.peer.address);
 
         // TODO should we have a first check if already connected ?
 
-        let receiver_fused = receiver.fuse();
+        let receiver_fused = receiver.into_stream();
         let shutdown_fused = shutdown.fuse();
 
         // This is the only message not using a Sender because they are not running yet (awaiting handshake)

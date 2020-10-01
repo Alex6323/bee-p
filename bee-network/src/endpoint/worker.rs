@@ -24,19 +24,19 @@ use crate::{
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
-use futures::{channel::mpsc, select, sink::SinkExt, stream, FutureExt, StreamExt};
+use futures::{select, FutureExt, StreamExt};
 use log::*;
 
 use std::{sync::atomic::Ordering, time::Duration};
 
-type CommandReceiver = mpsc::UnboundedReceiver<Command>;
-type EventReceiver = mpsc::UnboundedReceiver<Event>;
-type EventSender = mpsc::UnboundedSender<Event>;
+type CommandReceiver = flume::Receiver<Command>;
+type EventReceiver = flume::Receiver<Event>;
+type EventSender = flume::Sender<Event>;
 
 pub struct EndpointWorker {
-    command_receiver: stream::Fuse<CommandReceiver>,
+    command_receiver: flume::r#async::RecvStream<'static, Command>,
     event_sender: EventSender,
-    internal_event_receiver: stream::Fuse<EventReceiver>,
+    internal_event_receiver: flume::r#async::RecvStream<'static, Event>,
     internal_event_sender: EventSender,
     endpoint_contacts: EndpointContactList,
     shutdown_listener: ShutdownListener,
@@ -54,9 +54,9 @@ impl EndpointWorker {
         trace!("Starting endpoint worker...");
 
         Self {
-            command_receiver: command_receiver.fuse(),
+            command_receiver: command_receiver.into_stream(),
             event_sender,
-            internal_event_receiver: internal_event_receiver.fuse(),
+            internal_event_receiver: internal_event_receiver.into_stream(),
             internal_event_sender,
             endpoint_contacts,
             shutdown_listener,
@@ -146,7 +146,10 @@ async fn process_command(
 
         Command::DisconnectEndpoint { epid } => {
             if disconnect_endpoint(epid, &mut connected_endpoints)? {
-                event_sender.send(Event::EndpointDisconnected { epid }).await?;
+                event_sender
+                    .send_async(Event::EndpointDisconnected { epid })
+                    .await
+                    .map_err(|e| WorkerError(Box::new(e)))?;
             }
         }
 
@@ -189,11 +192,17 @@ async fn process_event(
 
     match event {
         Event::EndpointAdded { epid } => {
-            event_sender.send(Event::EndpointAdded { epid }).await?;
+            event_sender
+                .send_async(Event::EndpointAdded { epid })
+                .await
+                .map_err(|e| WorkerError(Box::new(e)))?;
         }
 
         Event::EndpointRemoved { epid } => {
-            event_sender.send(Event::EndpointRemoved { epid }).await?;
+            event_sender
+                .send_async(Event::EndpointRemoved { epid })
+                .await
+                .map_err(|e| WorkerError(Box::new(e)))?;
         }
 
         Event::ConnectionEstablished {
@@ -205,19 +214,23 @@ async fn process_event(
             connected_endpoints.insert(epid, data_sender);
 
             event_sender
-                .send(Event::EndpointConnected {
+                .send_async(Event::EndpointConnected {
                     epid,
                     peer_address,
                     origin,
                 })
-                .await?
+                .await
+                .map_err(|e| WorkerError(Box::new(e)))?
         }
 
         Event::ConnectionDropped { epid } => {
             // NOTE: we allow duplicates to be disconnected (no reconnect)
             if connected_endpoints.is_duplicate(epid) {
                 if connected_endpoints.remove(epid) {
-                    event_sender.send(Event::EndpointDisconnected { epid }).await?;
+                    event_sender
+                        .send_async(Event::EndpointDisconnected { epid })
+                        .await
+                        .map_err(|e| WorkerError(Box::new(e)))?;
                 } else {
                     warn!("ConnectionDropped fired, but endpoint was already unregistered.");
                 }
@@ -228,7 +241,10 @@ async fn process_event(
             if connected_endpoints.has_duplicate(epid).is_some() {
                 warn!("A connection was dropped that still has a connected duplicate."); // Should we also disconnect the duplicate?
                 if connected_endpoints.remove(epid) {
-                    event_sender.send(Event::EndpointDisconnected { epid }).await?;
+                    event_sender
+                        .send_async(Event::EndpointDisconnected { epid })
+                        .await
+                        .map_err(|e| WorkerError(Box::new(e)))?;
                 } else {
                     warn!("ConnectionDropped fired, but endpoint was already unregistered.");
                 }
@@ -241,7 +257,10 @@ async fn process_event(
             }
         }
 
-        Event::MessageReceived { epid, message } => event_sender.send(Event::MessageReceived { epid, message }).await?,
+        Event::MessageReceived { epid, message } => event_sender
+            .send_async(Event::MessageReceived { epid, message })
+            .await
+            .map_err(|e| WorkerError(Box::new(e)))?,
 
         Event::ReconnectTimerElapsed { epid } => {
             connect_endpoint(epid, endpoint_contacts, connected_endpoints, &mut internal_event_sender).await?;
@@ -262,7 +281,10 @@ async fn add_endpoint(
         let epid = endpoint_params.create_epid();
 
         if endpoint_contacts.insert(epid, endpoint_params) {
-            internal_event_sender.send(Event::EndpointAdded { epid }).await?;
+            internal_event_sender
+                .send_async(Event::EndpointAdded { epid })
+                .await
+                .map_err(|e| WorkerError(Box::new(e)))?;
 
             Ok(true)
         } else {
@@ -287,7 +309,10 @@ async fn remove_endpoint(
             trace!("Removed endpoint {}.", epid);
         }
 
-        internal_event_sender.send(Event::EndpointRemoved { epid }).await?;
+        internal_event_sender
+            .send_async(Event::EndpointRemoved { epid })
+            .await
+            .map_err(|e| WorkerError(Box::new(e)))?;
 
         Ok(true)
     } else {
@@ -339,10 +364,13 @@ fn disconnect_endpoint(epid: EndpointId, connected_endpoints: &mut ConnectedEndp
 }
 
 #[inline]
-async fn send_event_after_delay(event: Event, mut internal_event_sender: EventSender) -> Result<(), WorkerError> {
+async fn send_event_after_delay(event: Event, internal_event_sender: EventSender) -> Result<(), WorkerError> {
     tokio::time::delay_for(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
 
-    Ok(internal_event_sender.send(event).await?)
+    Ok(internal_event_sender
+        .send_async(event)
+        .await
+        .map_err(|e| WorkerError(Box::new(e)))?)
 }
 
 #[inline]

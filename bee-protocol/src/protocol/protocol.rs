@@ -33,7 +33,7 @@ use bee_crypto::ternary::Hash;
 use bee_network::{EndpointId, Network, Origin};
 
 use dashmap::DashMap;
-use futures::channel::{mpsc, oneshot};
+use futures::channel::oneshot;
 use log::{debug, info};
 use tokio::spawn;
 
@@ -138,7 +138,7 @@ impl Protocol {
 
             if !tangle().is_synced() {
                 if tangle().contains_milestone(next_ms) {
-                    milestone_solidifier.unbounded_send(MilestoneSolidifierWorkerEvent(next_ms));
+                    milestone_solidifier.send(MilestoneSolidifierWorkerEvent(next_ms));
                 } else {
                     Protocol::request_milestone(&milestone_requester, next_ms, None);
                 }
@@ -166,12 +166,12 @@ impl Protocol {
         epid: EndpointId,
         address: SocketAddr,
         origin: Origin,
-    ) -> (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>) {
+    ) -> (flume::Sender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?
 
         let peer = Arc::new(Peer::new(epid, address, origin));
 
-        let (receiver_tx, receiver_rx) = mpsc::unbounded();
+        let (receiver_tx, receiver_rx) = flume::unbounded();
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
         Protocol::get().peer_manager.add(peer.clone());

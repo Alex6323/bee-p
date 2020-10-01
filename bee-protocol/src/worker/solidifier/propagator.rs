@@ -23,7 +23,7 @@ use bee_crypto::ternary::Hash;
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::stream::StreamExt;
 use log::{info, warn};
 
 use std::any::TypeId;
@@ -31,7 +31,7 @@ use std::any::TypeId;
 pub(crate) struct SolidPropagatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct SolidPropagatorWorker {
-    pub(crate) tx: mpsc::UnboundedSender<SolidPropagatorWorkerEvent>,
+    pub(crate) tx: flume::Sender<SolidPropagatorWorkerEvent>,
 }
 
 #[async_trait]
@@ -44,13 +44,13 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
     }
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
         let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(SolidPropagatorWorkerEvent(root)) = receiver.next().await {
                 let mut children = vec![root];
@@ -76,7 +76,7 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
                                 }
 
                                 if metadata.flags().is_tail() {
-                                    if let Err(e) = bundle_validator.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
+                                    if let Err(e) = bundle_validator.send(BundleValidatorWorkerEvent(*hash)) {
                                         warn!("Failed to send hash to bundle validator: {:?}.", e);
                                     }
                                 }

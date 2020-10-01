@@ -11,17 +11,17 @@
 use crate::message::{Header, HEADER_SIZE};
 
 use futures::{
-    channel::{mpsc, oneshot},
+    channel::oneshot,
     future::{self, FutureExt},
     select,
-    stream::{self, StreamExt},
+    stream::StreamExt,
 };
 
 use log::trace;
 
 use std::net::SocketAddr;
 
-type EventRecv = stream::Fuse<mpsc::UnboundedReceiver<Vec<u8>>>;
+type EventRecv = flume::r#async::RecvStream<'static, std::vec::Vec<u8>>;
 type ShutdownRecv = future::Fuse<oneshot::Receiver<()>>;
 
 /// The read state of the message handler.
@@ -176,11 +176,7 @@ impl EventHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::{
-        channel::{mpsc, oneshot},
-        future::FutureExt,
-        stream::StreamExt,
-    };
+    use futures::{channel::oneshot, future::FutureExt, stream::StreamExt};
     use std::time::Duration;
     use tokio::{spawn, time::delay_for};
 
@@ -210,7 +206,7 @@ mod tests {
         let events = gen_events(event_size, msg_size, msg_count);
         // Create a new message handler
         let (sender_shutdown, receiver_shutdown) = oneshot::channel::<()>();
-        let (sender, receiver) = mpsc::unbounded::<Vec<u8>>();
+        let (sender, receiver) = flume::unbounded::<Vec<u8>>();
         let mut msg_handler = MessageHandler::new(
             receiver.fuse(),
             receiver_shutdown.fuse(),
@@ -303,7 +299,7 @@ mod tests {
         let last_event = events.pop().unwrap();
 
         let (sender_shutdown, receiver_shutdown) = oneshot::channel::<()>();
-        let (sender, receiver) = mpsc::unbounded::<Vec<u8>>();
+        let (sender, receiver) = flume::unbounded::<Vec<u8>>();
 
         let mut msg_handler = MessageHandler::new(
             receiver.fuse(),

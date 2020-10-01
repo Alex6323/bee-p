@@ -29,10 +29,7 @@ use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use async_trait::async_trait;
 use blake2::Blake2b;
-use futures::{
-    channel::{mpsc, oneshot},
-    stream::StreamExt,
-};
+use futures::{channel::oneshot, stream::StreamExt};
 use log::{error, info, warn};
 
 use std::sync::Arc;
@@ -52,7 +49,7 @@ pub enum LedgerWorkerEvent {
 }
 
 pub(crate) struct LedgerWorker {
-    pub(crate) tx: mpsc::UnboundedSender<LedgerWorkerEvent>,
+    pub(crate) tx: flume::Sender<LedgerWorkerEvent>,
 }
 
 fn milestone_info(hash: &Hash, coo_config: &ProtocolCoordinatorConfig) -> (Vec<u8>, u64) {
@@ -158,12 +155,12 @@ impl<N: Node> Worker<N> for LedgerWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut index = config.0;
             let mut state = config.1;
@@ -203,7 +200,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
 //     fn get_balances() {
 //         let mut rng = rand::thread_rng();
 //         let mut state = HashMap::new();
-//         let (mut tx, rx) = mpsc::unbounded();
+//         let (mut tx, rx) = flume::unbounded();
 //         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
 //
 //         for _ in 0..100 {
@@ -224,7 +221,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
 //     fn get_balances_not_found() {
 //         let mut rng = rand::thread_rng();
 //         let mut state = HashMap::new();
-//         let (mut tx, rx) = mpsc::unbounded();
+//         let (mut tx, rx) = flume::unbounded();
 //         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
 //
 //         for _ in 0..100 {
@@ -249,7 +246,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
 //     fn apply_diff_on_not_found() {
 //         let mut rng = rand::thread_rng();
 //         let mut diff = HashMap::new();
-//         let (mut tx, rx) = mpsc::unbounded();
+//         let (mut tx, rx) = flume::unbounded();
 //         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
 //
 //         for _ in 0..100 {

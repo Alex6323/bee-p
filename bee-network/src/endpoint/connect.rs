@@ -13,8 +13,6 @@ use super::{DataSender, EndpointId};
 
 use bee_common::worker::Error as WorkerError;
 
-use futures::sink::SinkExt;
-
 use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Clone, Debug)]
@@ -78,7 +76,11 @@ impl ConnectedEndpointList {
 
     pub async fn send_message(&mut self, message: Vec<u8>, epid: EndpointId) -> Result<bool, WorkerError> {
         if let Some(connected_endpoint) = self.0.get_mut(&epid) {
-            connected_endpoint.data_sender.send(message).await?;
+            connected_endpoint
+                .data_sender
+                .send_async(message)
+                .await
+                .map_err(|e| WorkerError(Box::new(e)))?;
 
             Ok(true)
         } else {

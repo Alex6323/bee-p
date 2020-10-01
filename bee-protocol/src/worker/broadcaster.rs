@@ -19,7 +19,7 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::{Command::SendMessage, EndpointId, Network};
 
 use async_trait::async_trait;
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::stream::StreamExt;
 use log::{info, warn};
 
 pub(crate) struct BroadcasterWorkerEvent {
@@ -28,7 +28,7 @@ pub(crate) struct BroadcasterWorkerEvent {
 }
 
 pub(crate) struct BroadcasterWorker {
-    pub(crate) tx: mpsc::UnboundedSender<BroadcasterWorkerEvent>,
+    pub(crate) tx: flume::Sender<BroadcasterWorkerEvent>,
 }
 
 #[async_trait]
@@ -37,12 +37,12 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
                 let bytes = tlv_into_bytes(transaction);

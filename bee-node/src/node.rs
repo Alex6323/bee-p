@@ -14,18 +14,13 @@
 use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{
-    bee_node::BeeNode,
-    event::Bus,
-    node::{Node as NodeT, NodeBuilder as NodeBuilderB},
-    shutdown_tokio::Shutdown,
-};
-use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, EventReceiver, Network, Origin};
+use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder as NodeBuilderB, shutdown_tokio::Shutdown};
+use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::{tangle, Protocol};
 
 use futures::{
-    channel::{mpsc, oneshot},
+    channel::oneshot,
     stream::{Fuse, StreamExt},
 };
 use log::{error, info, trace, warn};
@@ -34,10 +29,10 @@ use tokio::spawn;
 
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
-type NetworkEventStream = ShutdownStream<Fuse<EventReceiver>>;
+type NetworkEventStream = ShutdownStream<Fuse<flume::r#async::RecvStream<'static, Event>>>;
 
 // TODO design proper type `PeerList`
-type PeerList = HashMap<EndpointId, (mpsc::UnboundedSender<Vec<u8>>, oneshot::Sender<()>)>;
+type PeerList = HashMap<EndpointId, (flume::Sender<Vec<u8>>, oneshot::Sender<()>)>;
 
 /// All possible node errors.
 #[derive(Error, Debug)]
@@ -114,7 +109,7 @@ impl NodeBuilder {
         Ok(Node {
             tmp_node: bee_node,
             network,
-            network_events: ShutdownStream::new(ctrl_c_listener(), events),
+            network_events: ShutdownStream::new(ctrl_c_listener(), events.into_stream()),
             shutdown,
             peers: HashMap::new(),
         })
@@ -216,7 +211,7 @@ impl Node {
     #[inline]
     fn endpoint_bytes_received_handler(&mut self, epid: EndpointId, bytes: Vec<u8>) {
         if let Some(peer) = self.peers.get_mut(&epid) {
-            if let Err(e) = peer.0.unbounded_send(bytes) {
+            if let Err(e) = peer.0.send(bytes) {
                 warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", epid, e);
             }
         }

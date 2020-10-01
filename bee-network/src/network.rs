@@ -14,7 +14,6 @@ use crate::{
     config::NetworkConfig,
 };
 
-use futures::sink::SinkExt;
 use thiserror::Error;
 
 use std::sync::Arc;
@@ -22,7 +21,7 @@ use std::sync::Arc;
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Error sending command.")]
-    CommandSendFailure(#[from] futures::channel::mpsc::SendError),
+    CommandSendFailure,
     #[error("Error sending unbounded command.")]
     CommandSendUnboundedFailure,
 }
@@ -42,13 +41,17 @@ impl Network {
     }
 
     pub async fn send(&mut self, command: Command) -> Result<(), Error> {
-        Ok(self.command_sender.send(command).await?)
+        Ok(self
+            .command_sender
+            .send_async(command)
+            .await
+            .map_err(|_| Error::CommandSendFailure)?)
     }
 
     pub fn unbounded_send(&self, command: Command) -> Result<(), Error> {
         Ok(self
             .command_sender
-            .unbounded_send(command)
+            .send(command)
             .map_err(|_| Error::CommandSendUnboundedFailure)?)
     }
 

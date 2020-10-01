@@ -21,10 +21,7 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::EndpointId;
 
 use async_trait::async_trait;
-use futures::{
-    channel::{mpsc, oneshot},
-    select, StreamExt,
-};
+use futures::{select, StreamExt};
 use log::{debug, info};
 use tokio::time::interval;
 
@@ -35,7 +32,7 @@ const RETRY_INTERVAL_SECS: u64 = 5;
 pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
 pub(crate) struct MilestoneRequesterWorker {
-    pub(crate) tx: mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+    pub(crate) tx: flume::Sender<MilestoneRequesterWorkerEvent>,
 }
 
 async fn process_request(index: MilestoneIndex, epid: Option<EndpointId>, counter: &mut usize) {
@@ -103,12 +100,12 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut counter: usize = 0;
             let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse();
