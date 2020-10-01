@@ -66,7 +66,7 @@ impl SignedTransaction {
             match i {
                 Input::UTXO(u) => {
                     // Transaction Output Index must be 0 ≤ x < 127
-                    match u.output_index {
+                    match u.index() {
                         0..=126 => (),
                         _ => return Err(Error::CountError),
                     }
@@ -155,7 +155,7 @@ impl SignedTransaction {
                         match &transaction.inputs[i] {
                             Input::UTXO(u) => match &transaction.inputs[i - 1] {
                                 Input::UTXO(v) => {
-                                    if u.transaction_id != v.transaction_id {
+                                    if u.id() != v.id() {
                                         return Err(Error::IndexError);
                                     }
                                 }
@@ -180,7 +180,7 @@ impl SignedTransaction {
                         match &transaction.inputs[i] {
                             Input::UTXO(u) => match &transaction.inputs[i - 1] {
                                 Input::UTXO(v) => {
-                                    if u.transaction_id == v.transaction_id {
+                                    if u.id() == v.id() {
                                         return Err(Error::IndexError);
                                     }
                                 }

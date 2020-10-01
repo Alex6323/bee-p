@@ -22,26 +22,24 @@ pub enum Input {
     UTXO(UTXOInput),
 }
 
-impl Input {
-    /// Create a Input with UTXO variant.
-    pub fn new(transaction_id: Hash, output_index: u8) -> Self {
-        Self::UTXO(UTXOInput {
-            transaction_id,
-            output_index,
-        })
+impl From<UTXOInput> for Input {
+    fn from(input: UTXOInput) -> Self {
+        Self::UTXO(input)
     }
+}
 
+impl Input {
     /// Convenient method to get transaction ID.
     pub fn transaction_id(&self) -> &Hash {
         match self {
-            Input::UTXO(u) => &u.transaction_id,
+            Input::UTXO(u) => &u.id(),
         }
     }
 
     /// Convenient method to get output index.
-    pub fn output_index(&self) -> &u8 {
+    pub fn output_index(&self) -> u8 {
         match self {
-            Input::UTXO(u) => &u.output_index,
+            Input::UTXO(u) => u.index(),
         }
     }
 }

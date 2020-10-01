@@ -15,6 +15,20 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct UTXOInput {
-    pub transaction_id: Hash,
-    pub output_index: u8,
+    id: Hash,
+    index: u8,
+}
+
+impl UTXOInput {
+    pub fn new(id: Hash, index: u8) -> Self {
+        Self { id, index }
+    }
+
+    pub fn id(&self) -> &Hash {
+        &self.id
+    }
+
+    pub fn index(&self) -> u8 {
+        self.index
+    }
 }
