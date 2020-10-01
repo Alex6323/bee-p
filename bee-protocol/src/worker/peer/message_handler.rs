@@ -176,7 +176,7 @@ impl EventHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::{channel::oneshot, future::FutureExt, stream::StreamExt};
+    use futures::{channel::oneshot, future::FutureExt};
     use std::time::Duration;
     use tokio::{spawn, time::delay_for};
 
@@ -208,7 +208,7 @@ mod tests {
         let (sender_shutdown, receiver_shutdown) = oneshot::channel::<()>();
         let (sender, receiver) = flume::unbounded::<Vec<u8>>();
         let mut msg_handler = MessageHandler::new(
-            receiver.fuse(),
+            receiver.into_stream(),
             receiver_shutdown.fuse(),
             "127.0.0.1:8080".parse().unwrap(),
         );
@@ -238,7 +238,7 @@ mod tests {
         });
         // Send all the events to the message handler.
         for event in events {
-            sender.unbounded_send(event).unwrap();
+            sender.send(event).unwrap();
             delay_for(Duration::from_millis(1)).await;
         }
         // Sleep to be sure the handler had time to produce all the messages.
@@ -302,7 +302,7 @@ mod tests {
         let (sender, receiver) = flume::unbounded::<Vec<u8>>();
 
         let mut msg_handler = MessageHandler::new(
-            receiver.fuse(),
+            receiver.into_stream(),
             receiver_shutdown.fuse(),
             "127.0.0.1:8080".parse().unwrap(),
         );
@@ -329,14 +329,14 @@ mod tests {
         });
 
         for event in events {
-            sender.unbounded_send(event).unwrap();
+            sender.send(event).unwrap();
             delay_for(Duration::from_millis(1)).await;
         }
 
         sender_shutdown.send(()).unwrap();
         delay_for(Duration::from_millis(1)).await;
         // Send the last event after the shutdown signal
-        sender.unbounded_send(last_event).unwrap();
+        sender.send(last_event).unwrap();
 
         handle.await;
     }
