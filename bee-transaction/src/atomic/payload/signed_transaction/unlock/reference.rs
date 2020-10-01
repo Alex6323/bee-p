@@ -12,12 +12,16 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct ReferenceUnlock {
-    pub index: u8,
-}
+pub struct ReferenceUnlock(u8);
 
 impl From<u8> for ReferenceUnlock {
     fn from(index: u8) -> Self {
-        Self { index }
+        Self(index)
+    }
+}
+
+impl ReferenceUnlock {
+    fn new(index: u8) -> Self {
+        index.into()
     }
 }
