@@ -34,7 +34,7 @@ pub(crate) struct Sender<M: Message> {
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl Sender<$type> {
-            pub(crate) fn send(epid: &EndpointId, message: $type) {
+            pub(crate) async fn send(epid: &EndpointId, message: $type) {
                 match Protocol::get().network.unbounded_send(SendMessage {
                     receiver_epid: *epid,
                     message: tlv_into_bytes(message),
@@ -69,7 +69,7 @@ impl Protocol {
         to: Option<EndpointId>,
     ) {
         if !Protocol::get().requested_milestones.contains_key(&index) && !tangle.contains_milestone(index) {
-            if let Err(e) = transaction_requester.unbounded_send(MilestoneRequesterWorkerEvent(index, to)) {
+            if let Err(e) = transaction_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
                 warn!("Requesting milestone failed: {}.", e);
             }
         }
