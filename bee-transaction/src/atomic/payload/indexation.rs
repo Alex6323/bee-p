@@ -11,7 +11,9 @@
 
 use serde::{Deserialize, Serialize};
 
+pub const TAG_LENGTH: usize = 16;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Indexation {
-    pub tag: [u8; 16],
+    pub tag: [u8; TAG_LENGTH],
 }
