@@ -11,5 +11,7 @@
 
 use serde::{Deserialize, Serialize};
 
+pub const HASH_LENGTH: usize = 32;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct Hash(pub [u8; 32]);
+pub struct Hash(pub [u8; HASH_LENGTH]);

@@ -14,7 +14,7 @@ mod message;
 
 pub mod payload;
 
-pub use hash::Hash;
+pub use hash::{Hash, HASH_LENGTH};
 pub use message::{Message, MessageBuilder};
 
 use core::fmt;
