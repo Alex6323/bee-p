@@ -164,7 +164,7 @@ impl SignedTransaction {
                     }
 
                     // The reference index must therefore be < the index of the Reference Unlock Block
-                    if r.index >= i as u8 {
+                    if r.index() >= i as u8 {
                         return Err(Error::IndexError);
                     }
                 }
@@ -290,9 +290,7 @@ impl<'a> SignedTransactionBuilder<'a> {
         let mut last_index = (None, -1);
         for (i, path) in &inputs {
             if last_index.0 == Some(path) {
-                unlock_blocks.push(UnlockBlock::Reference(ReferenceUnlock {
-                    index: last_index.1 as u8,
-                }));
+                unlock_blocks.push(UnlockBlock::Reference(ReferenceUnlock::new(last_index.1 as u8)));
             } else {
                 let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
                 match &self.seed {

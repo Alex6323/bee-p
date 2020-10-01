@@ -21,7 +21,11 @@ impl From<u8> for ReferenceUnlock {
 }
 
 impl ReferenceUnlock {
-    fn new(index: u8) -> Self {
+    pub fn new(index: u8) -> Self {
         index.into()
+    }
+
+    pub fn index(&self) -> u8 {
+        self.0
     }
 }
