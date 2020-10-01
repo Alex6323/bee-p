@@ -92,16 +92,16 @@ impl Message for Handshake {
         let mut message = Self::default();
 
         let (bytes, next) = bytes.split_at(PORT_SIZE);
-        message.port = u16::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.port = u16::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(TIMESTAMP_SIZE);
-        message.timestamp = u64::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.timestamp = u64::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(COORDINATOR_SIZE);
         message.coordinator.copy_from_slice(bytes);
 
         let (bytes, next) = next.split_at(MINIMUM_WEIGHT_MAGNITUDE_SIZE);
-        message.minimum_weight_magnitude = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.minimum_weight_magnitude = u8::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         message.supported_versions = next.to_vec();
 
@@ -114,16 +114,16 @@ impl Message for Handshake {
 
     fn into_bytes(self, bytes: &mut [u8]) {
         let (bytes, next) = bytes.split_at_mut(PORT_SIZE);
-        bytes.copy_from_slice(&self.port.to_be_bytes());
+        bytes.copy_from_slice(&self.port.to_le_bytes());
 
         let (bytes, next) = next.split_at_mut(TIMESTAMP_SIZE);
-        bytes.copy_from_slice(&self.timestamp.to_be_bytes());
+        bytes.copy_from_slice(&self.timestamp.to_le_bytes());
 
         let (bytes, next) = next.split_at_mut(COORDINATOR_SIZE);
         bytes.copy_from_slice(&self.coordinator);
 
         let (bytes, next) = next.split_at_mut(MINIMUM_WEIGHT_MAGNITUDE_SIZE);
-        bytes.copy_from_slice(&self.minimum_weight_magnitude.to_be_bytes());
+        bytes.copy_from_slice(&self.minimum_weight_magnitude.to_le_bytes());
 
         next.copy_from_slice(&self.supported_versions);
     }

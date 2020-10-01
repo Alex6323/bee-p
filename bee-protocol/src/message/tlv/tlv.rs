@@ -160,7 +160,7 @@ mod tests {
             let bytes_to = tlv_into_bytes(message);
 
             assert_eq!(bytes_to[0], M::ID);
-            assert_eq!(u16::from_be_bytes(bytes_to[1..3].try_into().unwrap()), length as u16);
+            assert_eq!(u16::from_le_bytes(bytes_to[1..3].try_into().unwrap()), length as u16);
             assert!(slice_eq(&bytes_from, &bytes_to[3..]));
         }
     }

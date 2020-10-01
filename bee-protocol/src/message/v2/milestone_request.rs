@@ -41,7 +41,7 @@ impl Message for MilestoneRequest {
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut message = Self::default();
 
-        message.index = u32::from_be_bytes(bytes[0..INDEX_SIZE].try_into().expect("Invalid buffer size"));
+        message.index = u32::from_le_bytes(bytes[0..INDEX_SIZE].try_into().expect("Invalid buffer size"));
 
         message
     }
@@ -51,7 +51,7 @@ impl Message for MilestoneRequest {
     }
 
     fn into_bytes(self, bytes: &mut [u8]) {
-        bytes.copy_from_slice(&self.index.to_be_bytes())
+        bytes.copy_from_slice(&self.index.to_le_bytes())
     }
 }
 

@@ -31,12 +31,12 @@ impl Header {
         Self {
             message_type: bytes[0],
             // TODO propagate error
-            message_length: u16::from_be_bytes(bytes[HEADER_TYPE_SIZE..HEADER_SIZE].try_into().unwrap()),
+            message_length: u16::from_le_bytes(bytes[HEADER_TYPE_SIZE..HEADER_SIZE].try_into().unwrap()),
         }
     }
 
     pub(crate) fn to_bytes(&self, bytes: &mut [u8]) {
         bytes[0] = self.message_type;
-        bytes[1..].copy_from_slice(&self.message_length.to_be_bytes());
+        bytes[1..].copy_from_slice(&self.message_length.to_le_bytes());
     }
 }

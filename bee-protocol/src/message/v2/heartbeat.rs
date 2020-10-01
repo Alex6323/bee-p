@@ -77,19 +77,19 @@ impl Message for Heartbeat {
         let mut message = Self::default();
 
         let (bytes, next) = bytes.split_at(LATEST_SOLID_MILESTONE_INDEX_SIZE);
-        message.latest_solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.latest_solid_milestone_index = u32::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(PRUNED_INDEX_SIZE);
-        message.pruned_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.pruned_index = u32::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(LATEST_MILESTONE_INDEX_SIZE);
-        message.latest_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.latest_milestone_index = u32::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(CONNECTED_PEERS_SIZE);
-        message.connected_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.connected_peers = u8::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, _) = next.split_at(SYNCED_PEERS_SIZE);
-        message.synced_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        message.synced_peers = u8::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         message
     }
@@ -100,15 +100,15 @@ impl Message for Heartbeat {
 
     fn into_bytes(self, bytes: &mut [u8]) {
         let (bytes, next) = bytes.split_at_mut(LATEST_SOLID_MILESTONE_INDEX_SIZE);
-        bytes.copy_from_slice(&self.latest_solid_milestone_index.to_be_bytes());
+        bytes.copy_from_slice(&self.latest_solid_milestone_index.to_le_bytes());
         let (bytes, next) = next.split_at_mut(PRUNED_INDEX_SIZE);
-        bytes.copy_from_slice(&self.pruned_index.to_be_bytes());
+        bytes.copy_from_slice(&self.pruned_index.to_le_bytes());
         let (bytes, next) = next.split_at_mut(LATEST_MILESTONE_INDEX_SIZE);
-        bytes.copy_from_slice(&self.latest_milestone_index.to_be_bytes());
+        bytes.copy_from_slice(&self.latest_milestone_index.to_le_bytes());
         let (bytes, next) = next.split_at_mut(CONNECTED_PEERS_SIZE);
-        bytes.copy_from_slice(&self.connected_peers.to_be_bytes());
+        bytes.copy_from_slice(&self.connected_peers.to_le_bytes());
         let (bytes, _) = next.split_at_mut(SYNCED_PEERS_SIZE);
-        bytes.copy_from_slice(&self.synced_peers.to_be_bytes());
+        bytes.copy_from_slice(&self.synced_peers.to_le_bytes());
     }
 }
 
