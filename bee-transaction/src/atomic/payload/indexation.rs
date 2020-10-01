@@ -18,7 +18,7 @@ pub struct Indexation([u8; TAG_LENGTH]);
 
 impl From<[u8; TAG_LENGTH]> for Indexation {
     fn from(bytes: [u8; TAG_LENGTH]) -> Self {
-        Indexation(bytes)
+        Self(bytes)
     }
 }
 

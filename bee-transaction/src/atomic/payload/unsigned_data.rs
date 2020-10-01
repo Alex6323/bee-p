@@ -14,6 +14,16 @@ use serde::{Deserialize, Serialize};
 use alloc::vec::Vec;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct UnsignedData {
-    pub data: Vec<u8>,
+pub struct UnsignedData(Vec<u8>);
+
+impl From<Vec<u8>> for UnsignedData {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self(bytes)
+    }
+}
+
+impl UnsignedData {
+    pub fn new(bytes: Vec<u8>) -> Self {
+        bytes.into()
+    }
 }
