@@ -107,12 +107,12 @@ impl SignedTransaction {
                     // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
 
                     // The Address must be unique in the set of SigLockedSingleDeposits
-                    if !insert_combination(&mut combination, &u.address) {
+                    if !insert_combination(&mut combination, u.address()) {
                         return Err(Error::DuplicateError);
                     }
 
                     // Amount must be > 0
-                    let amount = u.amount.get();
+                    let amount = u.amount().get();
                     if amount == 0 {
                         return Err(Error::AmountError);
                     }

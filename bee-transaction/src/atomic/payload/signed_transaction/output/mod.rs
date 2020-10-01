@@ -22,22 +22,24 @@ pub enum Output {
     SigLockedSingleDeposit(SigLockedSingleDeposit),
 }
 
-impl Output {
-    pub fn new(address: Address, amount: NonZeroU64) -> Self {
-        Output::SigLockedSingleDeposit(SigLockedSingleDeposit { address, amount })
+impl From<SigLockedSingleDeposit> for Output {
+    fn from(output: SigLockedSingleDeposit) -> Self {
+        Self::SigLockedSingleDeposit(output)
     }
+}
 
+impl Output {
     /// Convenient method to get address.
     pub fn address(&self) -> &Address {
         match self {
-            Output::SigLockedSingleDeposit(s) => &s.address,
+            Output::SigLockedSingleDeposit(s) => &s.address(),
         }
     }
 
     /// Convenient method to get amount.
-    pub fn amount(&self) -> &NonZeroU64 {
+    pub fn amount(&self) -> NonZeroU64 {
         match self {
-            Output::SigLockedSingleDeposit(s) => &s.amount,
+            Output::SigLockedSingleDeposit(s) => s.amount(),
         }
     }
 }

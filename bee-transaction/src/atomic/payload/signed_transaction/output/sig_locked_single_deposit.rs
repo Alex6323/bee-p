@@ -64,6 +64,20 @@ impl Address {
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SigLockedSingleDeposit {
-    pub address: Address,
-    pub amount: NonZeroU64,
+    address: Address,
+    amount: NonZeroU64,
+}
+
+impl SigLockedSingleDeposit {
+    pub fn new(address: Address, amount: NonZeroU64) -> Self {
+        Self { address, amount }
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub fn amount(&self) -> NonZeroU64 {
+        self.amount
+    }
 }
