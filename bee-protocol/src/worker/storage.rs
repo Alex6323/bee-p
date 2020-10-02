@@ -34,8 +34,6 @@ impl<N: Node> Worker<N> for StorageWorker {
         node: &mut N,
         config: Self::Config,
     ) -> Result<Self, Self::Error> {
-        info!("Starting Tangle worker...");
-
         let backend = N::Backend::start(config).await.map_err(Error)?;
 
         node.register_resource(backend);
