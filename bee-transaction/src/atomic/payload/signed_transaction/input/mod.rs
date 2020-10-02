@@ -13,8 +13,6 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
-use crate::prelude::Hash;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -25,21 +23,5 @@ pub enum Input {
 impl From<UTXOInput> for Input {
     fn from(input: UTXOInput) -> Self {
         Self::UTXO(input)
-    }
-}
-
-impl Input {
-    /// Convenient method to get transaction ID.
-    pub fn transaction_id(&self) -> &Hash {
-        match self {
-            Input::UTXO(u) => &u.id(),
-        }
-    }
-
-    /// Convenient method to get output index.
-    pub fn output_index(&self) -> u8 {
-        match self {
-            Input::UTXO(u) => u.index(),
-        }
     }
 }
