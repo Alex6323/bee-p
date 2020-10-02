@@ -17,6 +17,7 @@ use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
     time::SystemTime,
 };
+use std::time::Instant;
 
 enum Score {
     NonLazy,
@@ -45,130 +46,112 @@ const MAX_AGE_SECONDS: u8 = 3;
 const MAX_NUM_CHILDREN: u8 = 2;
 
 #[derive(Default)]
+struct TipMetadata {
+    children: HashSet<Hash>,
+    age_seconds_after_first_child: Option<Instant>,
+}
+
+#[derive(Default)]
 pub(crate) struct WurtsTipPool {
-    tips: HashMap<Hash, Option<SystemTime>>,
-    children: HashMap<Hash, HashSet<Hash>>,
+    tips: HashMap<Hash, TipMetadata>,
     non_lazy_tips: HashSet<Hash>,
+}
+
+impl TipMetadata {
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
 }
 
 impl WurtsTipPool {
     pub(crate) fn new() -> Self {
         Self::default()
     }
-    // In context of WURTS, a tail of a bundle can be considered as a "tip" if:
-    // - tail is solid and has no children
-    // - tail is solid and has only non-solid children
-    // - tail is solid and has solid children but does not exceed the retention rules
+
     pub(crate) fn insert(&mut self, tail: Hash, trunk: Hash, branch: Hash) {
-        // remove referenced tips if retention limit is exceeded
-        self.check_retention_limit();
-        // remove tips that are too old
-        self.check_age_seconds();
-        // store tip
-        self.store(&tail);
-        // link parents with child
-        self.add_to_parents(&tail, &trunk, &branch);
-        // remove parents that have more than 'MAX_CHILDREN_COUNT' children
-        self.check_num_children_of_parents(&trunk, &branch);
-    }
 
-    fn check_retention_limit(&mut self) {
-        for (tip, _) in self.tips.clone() {
-            if self.tips.len() > RETENTION_LIMIT as usize {
-                if self.num_children(&tip) > 0 {
-                    self.remove_tip(&tip);
-                }
+        let is_non_lazy = {
+            // if parents are considered as non-lazy, child will be considered as non-lazy too
+            if self.non_lazy_tips.contains(&trunk) && self.non_lazy_tips.contains(&branch) {
+                true
             } else {
-                break;
-            }
-        }
-    }
-
-    fn check_age_seconds(&mut self) {
-        for (tip, time) in self.tips.clone() {
-            if let Some(time) = time {
-                match time.elapsed() {
-                    Ok(elapsed) => {
-                        if elapsed.as_secs() as u8 > MAX_AGE_SECONDS {
-                            self.remove_tip(&tip);
-                        }
-                    }
-                    Err(e) => error!("{:?}", e),
+                // in case parents are not present, calculate score of the tip
+                match self.tip_score(&tail) {
+                    Score::NonLazy => true,
+                    _ => false
                 }
             }
+        };
+
+        if is_non_lazy {
+            self.tips.insert(tail, TipMetadata::new());
+            self.link_parents_with_child(&tail, &trunk, &branch);
+            self.non_lazy_tips.insert(tail);
+            self.check_retention_rules_for_parent(&trunk);
+            self.check_retention_rules_for_parent(&branch);
         }
+
     }
 
-    fn store(&mut self, tip: &Hash) {
-        self.tips.insert(*tip, None);
-        self.children.insert(*tip, HashSet::new());
-    }
 
-    fn add_to_parents(&mut self, hash: &Hash, trunk: &Hash, branch: &Hash) {
+    fn link_parents_with_child(&mut self, hash: &Hash, trunk: &Hash, branch: &Hash) {
         self.add_child(*trunk, *hash);
         self.add_child(*branch, *hash);
     }
 
     fn add_child(&mut self, parent: Hash, child: Hash) {
-        match self.children.entry(parent) {
+        match self.tips.entry(parent) {
             Entry::Occupied(mut entry) => {
-                let children = entry.get_mut();
-                children.insert(child);
+                let metadata = entry.get_mut();
+                metadata.children.insert(child);
             }
             Entry::Vacant(entry) => {
-                self.store(&parent);
-                self.init_age_seconds(&parent);
+                let mut metadata = TipMetadata::new();
+                metadata.children.insert(child);
+                metadata.age_seconds_after_first_child = Some(Instant::now());
+                entry.insert(metadata);
             }
         }
     }
 
-    fn init_age_seconds(&mut self, parent: &Hash) {
-        self.tips.get_mut(parent).unwrap().replace(SystemTime::now());
-    }
-
-    fn check_num_children_of_parents(&mut self, trunk: &Hash, branch: &Hash) {
-        self.check_num_children_of_parent(trunk);
-        self.check_num_children_of_parent(branch);
-    }
-
-    fn check_num_children_of_parent(&mut self, hash: &Hash) {
-        if self.children.get(hash).is_some() {
-            if self.num_children(hash) > MAX_NUM_CHILDREN {
-                self.remove_tip(&hash);
+    fn check_retention_rules_for_parent(&mut self, parent: &Hash) {
+        let should_remove = {
+            if self.non_lazy_tips.len() > RETENTION_LIMIT as usize {
+                true
+            } else if self.tips.get(parent).unwrap().children.len() as u8 > MAX_NUM_CHILDREN {
+                true
+            } else if self.tips.get(parent).unwrap().age_seconds_after_first_child.unwrap().elapsed().as_secs() as u8 > MAX_AGE_SECONDS {
+                true
+            } else {
+                false
             }
+        };
+        if should_remove {
+            self.tips.remove(parent);
+            self.non_lazy_tips.remove(parent);
         }
-    }
-
-    fn num_children(&self, hash: &Hash) -> u8 {
-        self.children.get(hash).unwrap().len() as u8
-    }
-
-    fn remove_tip(&mut self, tip: &Hash) {
-        self.tips.remove(&tip);
-        self.children.remove(&tip);
-        self.non_lazy_tips.remove(&tip);
     }
 
     // further optimization: avoid allocations
     pub(crate) fn update_scores(&mut self) {
-        // reset pool
-        self.non_lazy_tips.clear();
 
-        // iter tips and assign them to their appropriate pools
-        for (tip, _) in self.tips.clone() {
+        let mut to_remove = Vec::new();
+
+        for (tip, _) in &self.tips {
             match self.tip_score(&tip) {
-                Score::NonLazy => {
-                    self.non_lazy_tips.insert(tip);
-                }
                 Score::SemiLazy => {
-                    self.tips.remove(&tip);
-                    self.children.remove(&tip);
+                    to_remove.push(*tip);
                 }
                 Score::Lazy => {
-                    self.tips.remove(&tip);
-                    self.children.remove(&tip);
+                    to_remove.push(*tip);
                 }
+                _ => {}
             }
+        }
+
+        for tip in to_remove {
+            self.tips.remove(&tip);
+            self.non_lazy_tips.remove(&tip);
         }
 
         info!("Available tips (non-lazy): {}", self.non_lazy_tips.len());
