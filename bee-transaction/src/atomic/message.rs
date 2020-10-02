@@ -33,8 +33,8 @@ impl Message {
         &self.payload
     }
 
-    pub fn nonce(&self) -> &u64 {
-        &self.nonce
+    pub fn nonce(&self) -> u64 {
+        self.nonce
     }
 }
 
