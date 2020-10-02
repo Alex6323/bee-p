@@ -11,12 +11,12 @@
 
 use crate::worker::Worker;
 
-use std::any::Any;
 use futures::{channel::oneshot, future::Future};
+use log::info;
 use bee_storage::storage::Backend;
 
 use std::{
-    any::{type_name, TypeId},
+    any::{Any, TypeId, type_name},
     collections::{HashMap, HashSet},
     pin::Pin,
     sync::Arc,
@@ -77,6 +77,7 @@ impl<N: Node + 'static> NodeBuilder<N> {
             TypeId::of::<W>(),
             Box::new(|node| {
                 Box::pin(async move {
+                    info!("Initializing worker `{}`...", type_name::<W>());
                     match W::start(node, config).await {
                         Ok(w) => node.add_worker(w),
                         Err(e) => panic!("Worker {} failed to start: {:?}.", type_name::<W>(), e),

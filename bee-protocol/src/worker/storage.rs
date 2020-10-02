@@ -27,18 +27,14 @@ pub struct StorageWorker;
 
 #[async_trait]
 impl<N: Node> Worker<N> for StorageWorker {
-    type Config = String; // TODO: Replace with N::Backend::Config
+    type Config = <N::Backend as Backend>::Config;
     type Error = Error;
 
     async fn start(
         node: &mut N,
         config: Self::Config,
     ) -> Result<Self, Self::Error> {
-        info!("Starting Tangle worker...");
-
-        let config_path = todo!();
-
-        let backend = N::Backend::start(config_path).await.map_err(Error)?;
+        let backend = N::Backend::start(config).await.map_err(Error)?;
 
         node.register_resource(backend);
 

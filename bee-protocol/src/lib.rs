@@ -23,3 +23,5 @@ mod worker;
 
 pub use milestone::{Milestone, MilestoneIndex};
 pub use protocol::{Protocol, ProtocolMetrics};
+
+pub use worker::{StorageWorker, TangleWorker};

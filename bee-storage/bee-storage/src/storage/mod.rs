@@ -13,14 +13,18 @@
 
 use async_trait::async_trait;
 use std::error::Error;
+use serde::de::DeserializeOwned;
 
 #[async_trait]
 /// Trait to be implemented on storage backend,
 /// which determine how to start and shutdown the storage
 pub trait Backend: Sized + Send + Sync + 'static {
+    type ConfigBuilder: Default + DeserializeOwned + Into<Self::Config>;
+    type Config: Send;
+
     /// start method should impl how to start and initialize the corrsponding database
     /// It takes config_path which define the database options, and returns Result<Self, Box<dyn Error>>
-    async fn start(config_path: String) -> Result<Self, Box<dyn Error>>;
+    async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>>;
     /// shutdown method should impl how to shutdown the corrsponding database
     /// It takes the ownership of self, and returns () or error
     async fn shutdown(self) -> Result<(), Box<dyn Error>>;

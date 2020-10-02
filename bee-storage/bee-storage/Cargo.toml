@@ -12,6 +12,7 @@ homepage = "https://www.iota.org"
 
 [dependencies]
 async-trait = "0.1.36"
+serde = { version = "1.0.114", features = ["derive" ] }
 
 [features]
 default = ["rocks_db"]

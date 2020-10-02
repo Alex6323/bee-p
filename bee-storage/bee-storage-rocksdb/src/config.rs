@@ -69,50 +69,56 @@ impl RocksDBConfigBuilder {
     }
 
     pub fn finish(self) -> RocksDBConfig {
+        RocksDBConfig::from(self)
+    }
+}
+
+impl From<RocksDBConfigBuilder> for RocksDBConfig {
+    fn from(builder: RocksDBConfigBuilder) -> Self {
         RocksDBConfig {
-            path: self.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
-            create_if_missing: self.create_if_missing.unwrap_or(DEFAULT_CREATE_IF_MISSING),
-            create_missing_column_families: self
+            path: builder.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
+            create_if_missing: builder.create_if_missing.unwrap_or(DEFAULT_CREATE_IF_MISSING),
+            create_missing_column_families: builder
                 .create_missing_column_families
                 .unwrap_or(DEFAULT_CREATE_MISSING_COLUMN_FAMILIES),
-            enable_statistics: self.enable_statistics.unwrap_or(DEFAULT_ENABLE_STATISTICS),
-            increase_parallelism: self.increase_parallelism.unwrap_or(DEFAULT_INCREASE_PARALLELISM),
-            optimize_for_point_lookup: self
+            enable_statistics: builder.enable_statistics.unwrap_or(DEFAULT_ENABLE_STATISTICS),
+            increase_parallelism: builder.increase_parallelism.unwrap_or(DEFAULT_INCREASE_PARALLELISM),
+            optimize_for_point_lookup: builder
                 .optimize_for_point_lookup
                 .unwrap_or(DEFAULT_OPTIMIZE_FOR_POINT_LOOKUP),
-            optimize_level_style_compaction: self
+            optimize_level_style_compaction: builder
                 .optimize_level_style_compaction
                 .unwrap_or(DEFAULT_OPTIMIZE_LEVEL_STYLE_COMPACTION),
-            optimize_universal_style_compaction: self
+            optimize_universal_style_compaction: builder
                 .optimize_universal_style_compaction
                 .unwrap_or(DEFAULT_OPTIMIZE_UNIVERSAL_STYLE_COMPACTION),
-            set_advise_random_on_open: self
+            set_advise_random_on_open: builder
                 .set_advise_random_on_open
                 .unwrap_or(DEFAULT_SET_ADVISE_RANDOM_ON_OPEN),
-            set_allow_concurrent_memtable_write: self
+            set_allow_concurrent_memtable_write: builder
                 .set_allow_concurrent_memtable_write
                 .unwrap_or(DEFAULT_SET_ALLOW_CONCURRENT_MEMTABLE_WRITE),
-            set_allow_mmap_reads: self.set_allow_mmap_reads.unwrap_or(DEFAULT_SET_ALLOW_MMAP_READS),
-            set_allow_mmap_writes: self.set_allow_mmap_writes.unwrap_or(DEFAULT_SET_ALLOW_MMAP_WRITES),
-            set_atomic_flush: self.set_atomic_flush.unwrap_or(DEFAULT_SET_ATOMIC_FLUSH),
-            set_bytes_per_sync: self.set_bytes_per_sync.unwrap_or(DEFAULT_SET_BYTES_PER_SYNC),
-            set_compaction_readahead_size: self
+            set_allow_mmap_reads: builder.set_allow_mmap_reads.unwrap_or(DEFAULT_SET_ALLOW_MMAP_READS),
+            set_allow_mmap_writes: builder.set_allow_mmap_writes.unwrap_or(DEFAULT_SET_ALLOW_MMAP_WRITES),
+            set_atomic_flush: builder.set_atomic_flush.unwrap_or(DEFAULT_SET_ATOMIC_FLUSH),
+            set_bytes_per_sync: builder.set_bytes_per_sync.unwrap_or(DEFAULT_SET_BYTES_PER_SYNC),
+            set_compaction_readahead_size: builder
                 .set_compaction_readahead_size
                 .unwrap_or(DEFAULT_SET_COMPACTION_READAHEAD_SIZE),
-            set_compaction_style: self.set_compaction_style.unwrap_or(DEFAULT_SET_COMPACTION_STYLE),
-            set_max_write_buffer_number: self
+            set_compaction_style: builder.set_compaction_style.unwrap_or(DEFAULT_SET_COMPACTION_STYLE),
+            set_max_write_buffer_number: builder
                 .set_max_write_buffer_number
                 .unwrap_or(DEFAULT_SET_MAX_WRITE_BUFFER_NUMBER),
-            set_max_background_compactions: self
+            set_max_background_compactions: builder
                 .set_max_background_compactions
                 .unwrap_or(DEFAULT_SET_MAX_BACKGROUND_COMPACTIONS),
-            set_max_background_flushes: self
+            set_max_background_flushes: builder
                 .set_max_background_flushes
                 .unwrap_or(DEFAULT_SET_MAX_BACKGROUND_FLUSHES),
-            set_disable_auto_compactions: self
+            set_disable_auto_compactions: builder
                 .set_disable_auto_compactions
                 .unwrap_or(DEFAULT_SET_DISABLE_AUTO_COMPACTIONS),
-            set_compression_type: self.set_compression_type.unwrap_or(DEFAULT_SET_COMPRESSION_TYPE),
+            set_compression_type: builder.set_compression_type.unwrap_or(DEFAULT_SET_COMPRESSION_TYPE),
         }
     }
 }

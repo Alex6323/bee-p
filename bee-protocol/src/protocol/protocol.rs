@@ -58,6 +58,7 @@ pub struct Protocol {
 impl Protocol {
     pub async fn init<B: Backend>(
         config: ProtocolConfig,
+        database_config: B::Config,
         network: Network,
         local_snapshot_timestamp: u64,
         node_builder: NodeBuilder<BeeNode<B>>,
@@ -81,7 +82,7 @@ impl Protocol {
         let (ms_send, ms_recv) = oneshot::channel();
 
         node_builder
-            .with_worker::<StorageWorker>()
+            .with_worker_cfg::<StorageWorker>(database_config)
             .with_worker::<TangleWorker>()
             .with_worker_cfg::<HasherWorker>(Protocol::get().config.workers.transaction_worker_cache)
             .with_worker::<ProcessorWorker>()

@@ -43,5 +43,5 @@ pub(crate) use solidifier::{
 pub(crate) use status::StatusWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
-pub(crate) use storage::StorageWorker;
-pub(crate) use tangle::TangleWorker;
+pub use storage::StorageWorker;
+pub use tangle::TangleWorker;
