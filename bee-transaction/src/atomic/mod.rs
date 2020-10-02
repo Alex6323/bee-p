@@ -30,7 +30,6 @@ pub enum Error {
     HashError,
     PathError,
     MissingParameter,
-    BincodeError(bincode::Error),
     SigningError(bee_signing_ext::binary::Error),
     SignatureError(bee_signing_ext::SignatureError),
 }
@@ -47,16 +46,9 @@ impl fmt::Display for Error {
             Error::HashError => write!(f, "The format of provided hash is not correct."),
             Error::PathError => write!(f, "The format of provided BIP32 path is not correct."),
             Error::MissingParameter => write!(f, "Missing required parameters."),
-            Error::BincodeError(e) => write!(f, "{}", e),
             Error::SigningError(e) => write!(f, "{}", e),
             Error::SignatureError(e) => write!(f, "{}", e),
         }
-    }
-}
-
-impl From<bincode::Error> for Error {
-    fn from(error: bincode::Error) -> Self {
-        Error::BincodeError(error)
     }
 }
 

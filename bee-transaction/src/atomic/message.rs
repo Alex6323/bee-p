@@ -14,9 +14,7 @@ use crate::{
     Vertex,
 };
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Message {
     parent1: Hash,
     parent2: Hash,

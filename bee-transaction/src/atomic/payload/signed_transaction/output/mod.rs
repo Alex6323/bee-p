@@ -15,9 +15,7 @@ mod sig_locked_single_deposit;
 pub use address::{Address, Ed25519Address, WotsAddress};
 pub use sig_locked_single_deposit::SigLockedSingleDeposit;
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Output {
     SigLockedSingleDeposit(SigLockedSingleDeposit),
 }

@@ -14,11 +14,10 @@ use blake2::{
     digest::{Update, VariableOutput},
     VarBlake2b,
 };
-use serde::{Deserialize, Serialize};
 
 use core::convert::TryInto;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Ed25519Address([u8; 32]);
 
 impl From<[u8; 32]> for Ed25519Address {

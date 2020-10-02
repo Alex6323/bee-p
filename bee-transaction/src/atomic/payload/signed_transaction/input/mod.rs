@@ -13,9 +13,7 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Input {
     UTXO(UTXOInput),
 }

@@ -27,12 +27,10 @@ use bee_signing_ext::{
     Signature as SignatureTrait, Signer, Verifier,
 };
 
-use serde::{Deserialize, Serialize};
-
 use alloc::vec::Vec;
 use core::{cmp::Ordering, slice::Iter};
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SignedTransaction {
     pub unsigned_transaction: UnsignedTransaction,
     pub unlock_block_count: u8,
@@ -190,7 +188,9 @@ impl SignedTransaction {
 
                     // Semantic Validation: The Signature Unlock Blocks are valid, i.e. the signatures prove ownership
                     // over the addresses of the referenced UTXOs.
-                    let serialized_inputs = bincode::serialize(&transaction.inputs[i]).map_err(|_| Error::HashError)?;
+                    // let serialized_inputs = bincode::serialize(&transaction.inputs[i]).map_err(|_| Error::HashError)?;
+                    // TODO
+                    let serialized_inputs = [];
                     match s {
                         SignatureUnlock::Ed25519(sig) => {
                             let key = Ed25519PublicKey::from_bytes(&sig.public_key)?;
@@ -292,7 +292,9 @@ impl<'a> SignedTransactionBuilder<'a> {
             if last_index.0 == Some(path) {
                 unlock_blocks.push(UnlockBlock::Reference(ReferenceUnlock::new(last_index.1 as u8)));
             } else {
-                let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
+                let serialized_inputs = [];
+                // TODO
+                // let serialized_inputs = bincode::serialize(i).map_err(|_| Error::HashError)?;
                 match &self.seed {
                     Seed::Ed25519(s) => {
                         let private_key = Ed25519PrivateKey::generate_from_seed(s, &path)?;

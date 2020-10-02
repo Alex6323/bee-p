@@ -11,11 +11,9 @@
 
 use crate::atomic::payload::signed_transaction::Address;
 
-use serde::{Deserialize, Serialize};
-
 use core::num::NonZeroU64;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SigLockedSingleDeposit {
     address: Address,
     amount: NonZeroU64,

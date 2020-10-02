@@ -15,11 +15,9 @@ mod wots;
 pub use ed25519::Ed25519Address;
 pub use wots::WotsAddress;
 
-use serde::{Deserialize, Serialize};
-
 use alloc::string::String;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Address {
     Wots(WotsAddress),
     Ed25519(Ed25519Address),
