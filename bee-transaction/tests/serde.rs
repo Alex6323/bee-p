@@ -15,7 +15,7 @@ use std::num::NonZeroU64;
 
 #[test]
 fn input_to_json_serde() {
-    let expected = Input::new(Hash([1u8; 32]), 2);
+    let expected = Input::from(UTXOInput::new(Hash::new([1u8; 32]), 2));
     let json = serde_json::to_string(&expected).unwrap();
     let actual = serde_json::from_str(&json).unwrap();
 
@@ -24,8 +24,11 @@ fn input_to_json_serde() {
 
 #[test]
 fn output_to_json_serde() {
-    let address = Address::from_ed25519_bytes(&[2; 32]);
-    let expected = Output::new(address, NonZeroU64::new(18446744073709551615).unwrap());
+    let address = Address::from(Ed25519Address::new([2; 32]));
+    let expected = Output::from(SigLockedSingleDeposit::new(
+        address,
+        NonZeroU64::new(18446744073709551615).unwrap(),
+    ));
     let json = serde_json::to_string(&expected).unwrap();
     let actual = serde_json::from_str(&json).unwrap();
 
@@ -35,11 +38,14 @@ fn output_to_json_serde() {
 #[test]
 fn unsigned_transaction_to_json_serde() {
     let mut inputs = Vec::new();
-    inputs.push(Input::new(Hash([1u8; 32]), 2));
-    inputs.push(Input::new(Hash([3u8; 32]), 4));
-    let address = Address::from_ed25519_bytes(&[2; 32]);
+    inputs.push(Input::from(UTXOInput::new(Hash::new([1u8; 32]), 2)));
+    inputs.push(Input::from(UTXOInput::new(Hash::new([3u8; 32]), 4)));
+    let address = Address::from(Ed25519Address::new([2; 32]));
     let mut outputs = Vec::new();
-    outputs.push(Output::new(address, NonZeroU64::new(18446744073709551615).unwrap()));
+    outputs.push(Output::from(SigLockedSingleDeposit::new(
+        address,
+        NonZeroU64::new(18446744073709551615).unwrap(),
+    )));
     let expected = UnsignedTransaction {
         inputs,
         outputs,
@@ -79,10 +85,13 @@ fn unlock_block_to_json_serde() {
 fn transaction_message_to_json_serde() {
     // Create single transaction payload first
     let mut inputs = Vec::new();
-    inputs.push(Input::new(Hash([3u8; 32]), 4));
-    let address = Address::from_ed25519_bytes(&[2; 32]);
+    inputs.push(Input::from(UTXOInput::new(Hash::new([3u8; 32]), 4)));
+    let address = Address::from(Ed25519Address::new([2; 32]));
     let mut outputs = Vec::new();
-    outputs.push(Output::new(address, NonZeroU64::new(18446744073709551615).unwrap()));
+    outputs.push(Output::from(SigLockedSingleDeposit::new(
+        address,
+        NonZeroU64::new(18446744073709551615).unwrap(),
+    )));
     let unsigned_transaction = UnsignedTransaction {
         inputs,
         outputs,
@@ -100,7 +109,7 @@ fn transaction_message_to_json_serde() {
 
     // Create a message from signed transaction payload.
     let expected = Message::builder()
-        .tips((Hash([0; 32]), Hash([0; 32])))
+        .tips((Hash::new([0; 32]), Hash::new([0; 32])))
         .payload(Payload::SignedTransaction(Box::new(signed)))
         .build()
         .unwrap();

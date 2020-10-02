@@ -9,21 +9,27 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod address;
-mod sig_locked_single_deposit;
-
-pub use address::{Address, Ed25519Address, WotsAddress};
-pub use sig_locked_single_deposit::SigLockedSingleDeposit;
+use bee_ternary::{T5B1Buf, TritBuf};
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub enum Output {
-    SigLockedSingleDeposit(SigLockedSingleDeposit),
+pub struct WotsAddress(Vec<i8>);
+
+impl From<&TritBuf<T5B1Buf>> for WotsAddress {
+    fn from(trits: &TritBuf<T5B1Buf>) -> Self {
+        let trits = trits.as_i8_slice().to_vec();
+        // TODO TRyInto
+        // if trits.len() != 49 {
+        //     return Err(Error::HashError);
+        // }
+        // Ok(Address::Wots(trits))
+        Self(trits)
+    }
 }
 
-impl From<SigLockedSingleDeposit> for Output {
-    fn from(output: SigLockedSingleDeposit) -> Self {
-        Self::SigLockedSingleDeposit(output)
+impl WotsAddress {
+    pub fn new(trits: &TritBuf<T5B1Buf>) -> Self {
+        trits.into()
     }
 }

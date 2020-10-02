@@ -12,8 +12,9 @@
 pub use crate::atomic::{
     payload::{
         signed_transaction::{
-            Address, Ed25519Signature, Input, Output, ReferenceUnlock, Seed, SigLockedSingleDeposit, SignatureUnlock,
-            SignedTransactionBuilder, UTXOInput, UnlockBlock, UnsignedTransaction, WotsSignature,
+            Address, Ed25519Address, Ed25519Signature, Input, Output, ReferenceUnlock, Seed, SigLockedSingleDeposit,
+            SignatureUnlock, SignedTransactionBuilder, UTXOInput, UnlockBlock, UnsignedTransaction, WotsAddress,
+            WotsSignature,
         },
         Indexation, Milestone, Payload, SignedData, SignedTransaction, UnsignedData,
     },

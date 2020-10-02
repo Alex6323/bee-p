@@ -9,21 +9,39 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod address;
-mod sig_locked_single_deposit;
+mod ed25519;
+mod wots;
 
-pub use address::{Address, Ed25519Address, WotsAddress};
-pub use sig_locked_single_deposit::SigLockedSingleDeposit;
+pub use ed25519::Ed25519Address;
+pub use wots::WotsAddress;
 
 use serde::{Deserialize, Serialize};
 
+use alloc::string::String;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub enum Output {
-    SigLockedSingleDeposit(SigLockedSingleDeposit),
+pub enum Address {
+    Wots(WotsAddress),
+    Ed25519(Ed25519Address),
 }
 
-impl From<SigLockedSingleDeposit> for Output {
-    fn from(output: SigLockedSingleDeposit) -> Self {
-        Self::SigLockedSingleDeposit(output)
+impl From<WotsAddress> for Address {
+    fn from(address: WotsAddress) -> Self {
+        Self::Wots(address)
+    }
+}
+
+impl From<Ed25519Address> for Address {
+    fn from(address: Ed25519Address) -> Self {
+        Self::Ed25519(address)
+    }
+}
+
+impl Address {
+    pub fn to_bech32(&self) -> String {
+        match self {
+            Address::Ed25519(a) => a.to_bech32(),
+            _ => todo!(),
+        }
     }
 }

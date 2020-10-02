@@ -18,7 +18,7 @@ use crate::atomic::{payload::Payload, Error};
 
 pub use bee_signing_ext::Seed;
 pub use input::{Input, UTXOInput};
-pub use output::{Address, Output, SigLockedSingleDeposit};
+pub use output::{Address, Ed25519Address, Output, SigLockedSingleDeposit, WotsAddress};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
 
