@@ -49,6 +49,7 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
 
             while let Some(MilestoneConeUpdaterWorkerEvent(milestone)) = receiver.next().await {
                 update_transactions_referenced_by_milestone(milestone.hash, milestone.index);
+                tangle().update_tip_pool();
             }
 
             info!("Stopped.");
