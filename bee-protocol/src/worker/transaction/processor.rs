@@ -15,8 +15,7 @@ use crate::{
     tangle::{tangle, TransactionMetadata},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
-        SolidPropagatorWorker, SolidPropagatorWorkerEvent, TransactionRequesterWorker, TrsiPropagatorWorker,
-        TrsiPropagatorWorkerEvent,
+        PropagatorWorker, PropagatorWorkerEvent, TransactionRequesterWorker,
     },
 };
 
@@ -77,20 +76,18 @@ impl<N: Node> Worker<N> for ProcessorWorker {
     fn dependencies() -> &'static [TypeId] {
         Box::leak(Box::from(vec![
             TypeId::of::<MilestoneValidatorWorker>(),
-            TypeId::of::<SolidPropagatorWorker>(),
+            TypeId::of::<PropagatorWorker>(),
             TypeId::of::<BroadcasterWorker>(),
             TypeId::of::<TransactionRequesterWorker>(),
-            TypeId::of::<TrsiPropagatorWorker>(),
         ]))
     }
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
-        let solid_propagator = node.worker::<SolidPropagatorWorker>().unwrap().tx.clone();
+        let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
         let broadcaster = node.worker::<BroadcasterWorker>().unwrap().tx.clone();
         let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
-        let trsi_propagator = node.worker::<TrsiPropagatorWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -153,11 +150,8 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
 
-                    if let Err(e) = solid_propagator.unbounded_send(SolidPropagatorWorkerEvent(hash)) {
-                        error!("Failed to send hash to solid propagator: {:?}.", e);
-                    }
-                    if let Err(e) = trsi_propagator.unbounded_send(TrsiPropagatorWorkerEvent::Default(hash)) {
-                        error!("Failed to send hash to TRSI propagator: {:?}.", e);
+                    if let Err(e) = propagator.unbounded_send(PropagatorWorkerEvent::Default(hash)) {
+                        error!("Failed to send hash to propagator: {:?}.", e);
                     }
 
                     Protocol::get().metrics.new_transactions_inc();

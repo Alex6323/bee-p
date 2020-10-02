@@ -33,10 +33,7 @@ use log::{debug, error, info};
 
 use crate::{
     protocol::Sender,
-    worker::{
-        milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent},
-        TrsiPropagatorWorker, TrsiPropagatorWorkerEvent,
-    },
+    worker::milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent},
 };
 use std::{any::TypeId, collections::HashSet};
 

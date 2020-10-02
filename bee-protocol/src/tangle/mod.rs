@@ -26,7 +26,7 @@ use bee_transaction::bundled::BundledTransaction as Tx;
 use dashmap::DashMap;
 use log::{error, info};
 
-use crate::{tangle::wurts::WurtsTipPool, worker::TrsiPropagatorWorkerEvent};
+use crate::tangle::wurts::WurtsTipPool;
 use bee_transaction::Vertex;
 use std::{
     collections::HashSet,
@@ -74,19 +74,10 @@ impl MsTangle {
 
         // if opt.is_some() {
         //     if let Err(e) = Protocol::get()
-        //         .solid_propagator_worker
-        //         .unbounded_send(SolidPropagatorWorkerEvent(hash))
+        //         .propagator_worker
+        //         .unbounded_send(PropagatorWorkerEvent(hash))
         //     {
-        //         error!("Failed to send hash to solid propagator: {:?}.", e);
-        //     }
-        // }
-
-        // if opt.is_some() {
-        //     if let Err(e) = Protocol::get()
-        //         .trsi_propagator_worker
-        //         .unbounded_send(TrsiPropagatorWorkerEvent::Default(hash))
-        //     {
-        //         error!("Failed to send hash to TRSI propagator: {:?}.", e);
+        //         error!("Failed to send hash to propagator: {:?}.", e);
         //     }
         // }
 

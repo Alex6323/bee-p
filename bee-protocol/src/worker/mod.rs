@@ -18,10 +18,8 @@ mod requester;
 mod responder;
 mod solidifier;
 mod status;
-mod tip_candidate_validator;
 mod tps;
 mod transaction;
-mod trsi_propagator;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
@@ -37,11 +35,8 @@ pub(crate) use responder::{
     TransactionResponderWorkerEvent,
 };
 pub(crate) use solidifier::{
-    KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, SolidPropagatorWorker,
-    SolidPropagatorWorkerEvent,
+    KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, PropagatorWorker, PropagatorWorkerEvent,
 };
 pub(crate) use status::StatusWorker;
-pub(crate) use tip_candidate_validator::{TipCandidateValidatorWorker, TipCandidateValidatorWorkerEvent};
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
-pub(crate) use trsi_propagator::{TrsiPropagatorWorker, TrsiPropagatorWorkerEvent};

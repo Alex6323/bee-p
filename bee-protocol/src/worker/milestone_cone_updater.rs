@@ -9,11 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    tangle::tangle,
-    worker::tip_candidate_validator::{BundleInfo, TipCandidateValidatorWorker, TipCandidateValidatorWorkerEvent},
-    Milestone, MilestoneIndex,
-};
+use crate::{tangle::tangle, Milestone, MilestoneIndex};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
@@ -25,7 +21,7 @@ use async_trait::async_trait;
 use futures::{channel::mpsc, stream::StreamExt};
 use log::{error, info, warn};
 
-use crate::worker::{TrsiPropagatorWorker, TrsiPropagatorWorkerEvent};
+use crate::worker::{PropagatorWorker, PropagatorWorkerEvent};
 use std::{any::TypeId, collections::HashSet};
 
 pub(crate) struct MilestoneConeUpdaterWorkerEvent(pub(crate) Milestone);
@@ -40,12 +36,12 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<TrsiPropagatorWorker>()]))
+        Box::leak(Box::from(vec![TypeId::of::<PropagatorWorker>()]))
     }
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
-        let trsi_propagator = node.worker::<TrsiPropagatorWorker>().unwrap().tx.clone();
+        let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -55,10 +51,10 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
             while let Some(MilestoneConeUpdaterWorkerEvent(milestone)) = receiver.next().await {
                 let children = update_transactions_referenced_by_milestone(milestone.hash, milestone.index);
                 // Propagate updated OTRSI/YTRSI values to all direct/indirect approvers
-                if let Err(e) = trsi_propagator.unbounded_send(
-                    TrsiPropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(children),
-                ) {
-                    error!("Failed to send hash to TRSI propagator: {:?}.", e);
+                if let Err(e) =
+                    propagator.unbounded_send(PropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(children))
+                {
+                    error!("Failed to send hash to propagator: {:?}.", e);
                 }
             }
 

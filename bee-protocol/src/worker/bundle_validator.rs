@@ -9,10 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    tangle::tangle,
-    worker::tip_candidate_validator::{BundleInfo, TipCandidateValidatorWorker, TipCandidateValidatorWorkerEvent},
-};
+use crate::tangle::tangle;
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
@@ -37,13 +34,8 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
     type Config = ();
     type Error = WorkerError;
 
-    fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<TipCandidateValidatorWorker>()]))
-    }
-
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
-        let tip_candidate_validator = node.worker::<TipCandidateValidatorWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -57,15 +49,7 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
                             tangle().update_metadata(&hash, |metadata| {
                                 metadata.flags_mut().set_valid(true);
                             });
-                            if let Err(e) = tip_candidate_validator.unbounded_send(
-                                TipCandidateValidatorWorkerEvent::BundleValidated(BundleInfo {
-                                    tail: hash,
-                                    trunk: *bundle.trunk(),
-                                    branch: *bundle.branch(),
-                                }),
-                            ) {
-                                warn!("Failed to send hash to tip candidate validator: {:?}.", e);
-                            }
+                            tangle().add_to_tip_pool(hash, *bundle.trunk(), *bundle.branch());
                         }
                     }
                     None => {

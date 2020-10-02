@@ -19,8 +19,8 @@ use crate::{
     worker::{
         BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneRequesterWorker,
         MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker, StatusWorker, TipCandidateValidatorWorker,
-        TpsWorker, TransactionRequesterWorker, TransactionResponderWorker, TrsiPropagatorWorker,
+        PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker,
+        TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
     },
 };
 
@@ -89,13 +89,11 @@ impl Protocol {
             .with_worker_cfg::<MilestoneValidatorWorker>(Protocol::get().config.coordinator.sponge_type)
             .with_worker_cfg::<BroadcasterWorker>(network)
             .with_worker::<BundleValidatorWorker>()
-            .with_worker::<SolidPropagatorWorker>()
+            .with_worker::<PropagatorWorker>()
             .with_worker_cfg::<StatusWorker>(Protocol::get().config.workers.status_interval)
             .with_worker::<TpsWorker>()
             .with_worker_cfg::<KickstartWorker>((ms_send, Protocol::get().config.workers.ms_sync_count))
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
-            .with_worker::<TrsiPropagatorWorker>()
-            .with_worker::<TipCandidateValidatorWorker>()
             .with_worker::<MilestoneConeUpdaterWorker>()
     }
 
