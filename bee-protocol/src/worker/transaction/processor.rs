@@ -38,7 +38,6 @@ use std::{
     any::TypeId,
     time::{SystemTime, UNIX_EPOCH},
 };
-use crate::worker::{PropagatorWorkerEvent, PropagatorWorker};
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) hash: Hash,

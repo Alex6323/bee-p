@@ -31,7 +31,7 @@ use std::{
 pub(crate) struct MilestoneConeUpdaterWorkerEvent(pub(crate) Milestone);
 
 pub(crate) struct MilestoneConeUpdaterWorker {
-    pub(crate) tx: mpsc::UnboundedSender<MilestoneConeUpdaterWorkerEvent>,
+    pub(crate) tx: flume::Sender<MilestoneConeUpdaterWorkerEvent>,
 }
 
 #[async_trait]
@@ -40,12 +40,12 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(MilestoneConeUpdaterWorkerEvent(milestone)) = receiver.next().await {
                 // When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given cone must be

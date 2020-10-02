@@ -32,7 +32,7 @@ use futures::stream::StreamExt;
 use log::{debug, error, info};
 
 use std::any::TypeId;
-use crate::worker::MilestoneConeUpdaterWorker;
+use crate::worker::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -142,7 +142,7 @@ where
                                         .bus
                                         .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
                                     if let Err(e) = milestone_cone_updater
-                                        .unbounded_send(MilestoneConeUpdaterWorkerEvent(milestone.clone()))
+                                        .send(MilestoneConeUpdaterWorkerEvent(milestone.clone()))
                                     {
                                         error!("Sending tail to milestone validation failed: {:?}.", e);
                                     }
