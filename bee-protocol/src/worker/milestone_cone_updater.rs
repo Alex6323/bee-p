@@ -48,7 +48,10 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(MilestoneConeUpdaterWorkerEvent(milestone)) = receiver.next().await {
+                // When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given cone must be
+                // updated. Furthermore, updated values will be propagated to the future.
                 update_transactions_referenced_by_milestone(milestone.hash, milestone.index);
+                // Update tip pool after all values got updated.
                 tangle().update_tip_pool();
             }
 
@@ -59,8 +62,7 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
     }
 }
 
-// When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given cone must be
-// updated. This function returns the children of all updated transactions.
+
 fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index: MilestoneIndex) {
     info!("Updating transactions referenced by milestone {}.", *milestone_index);
     let mut to_visit = vec![tail_hash];
@@ -113,7 +115,7 @@ fn update_children(mut children: Vec<Hash>) {
             continue;
         }
 
-        // skip if transaction is part of the confirmed cone
+        // skip if transaction was already updated
         if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
             continue;
         }
