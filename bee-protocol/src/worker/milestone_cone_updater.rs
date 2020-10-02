@@ -97,10 +97,10 @@ fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index:
         to_visit.push(tx_ref.branch().clone());
     }
 
-    update_trsi_values(children.clone().into_iter().collect());
+    update_children(children.clone().into_iter().collect());
 }
 
-fn update_trsi_values(mut children: Vec<Hash>) {
+fn update_children(mut children: Vec<Hash>) {
     while let Some(hash) = children.pop() {
         // get best otrsi and ytrsi from parents
         let tx = tangle().get(&hash).unwrap();
@@ -113,7 +113,7 @@ fn update_trsi_values(mut children: Vec<Hash>) {
             continue;
         }
 
-        // check if already confirmed by update_transactions_referenced_by_milestone()
+        // skip if transaction is part of the confirmed cone
         if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
             continue;
         }

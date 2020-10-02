@@ -64,83 +64,62 @@ impl<N: Node> Worker<N> for PropagatorWorker {
             while let Some(PropagatorWorkerEvent(hash)) = receiver.next().await {
                 let mut children = vec![hash];
 
-                while let Some(hash) = children.pop() {
-                    // get best otrsi and ytrsi from parents
-                    let tx = tangle().get(&hash).unwrap();
-                    let trunk_otsri = tangle().otrsi(tx.trunk());
-                    let branch_otsri = tangle().otrsi(tx.branch());
-                    let trunk_ytrsi = tangle().ytrsi(tx.trunk());
-                    let branch_ytrsi = tangle().ytrsi(tx.branch());
-
-                    if trunk_otsri.is_none()
-                        || branch_otsri.is_none()
-                        || trunk_ytrsi.is_none()
-                        || branch_ytrsi.is_none()
-                    {
+                while let Some(ref hash) = children.pop() {
+                    if tangle().is_solid_transaction(hash) {
                         continue;
                     }
 
-                    // check if already confirmed by update_transactions_referenced_by_milestone()
-                    if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
-                        continue;
-                    }
+                    if let Some(tx) = tangle().get(&hash) {
+                        if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
+                            // get otrsi and ytrsi from parents
+                            let trunk_otsri = tangle().otrsi(tx.trunk());
+                            let branch_otsri = tangle().otrsi(tx.branch());
+                            let trunk_ytrsi = tangle().ytrsi(tx.trunk());
+                            let branch_ytrsi = tangle().ytrsi(tx.branch());
 
-                    // in case the transaction already inherited the best otrsi and ytrsi, continue
-                    let current_otrsi = tangle().get_metadata(&hash).unwrap().otrsi();
-                    let current_ytrsi = tangle().get_metadata(&hash).unwrap().ytrsi();
-                    let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
-                    let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
+                            let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
+                            let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
 
-                    if current_otrsi.is_some()
-                        && current_ytrsi.is_some()
-                        && current_otrsi.unwrap() == best_otrsi
-                        && current_ytrsi.unwrap() == best_ytrsi
-                    {
-                        continue;
-                    }
+                            let mut index = None;
 
-                    tangle().update_metadata(&hash, |metadata| {
-                        metadata.set_otrsi(best_otrsi);
-                        metadata.set_ytrsi(best_ytrsi);
-                    });
+                            tangle().update_metadata(&hash, |metadata| {
+                                metadata.solidify();
 
-                    if !tangle().is_solid_transaction(&hash) {
-                        let mut index = None;
-                        tangle().update_metadata(&hash, |metadata| {
-                            metadata.solidify();
+                                // This is possibly not sufficient as there is no guarantee a milestone has been
+                                // validated before being solidified, we then also need
+                                // to check when a milestone gets validated if it's
+                                // already solid.
+                                if metadata.flags().is_milestone() {
+                                    index = Some(metadata.milestone_index());
+                                }
 
-                            // This is possibly not sufficient as there is no guarantee a milestone has been
-                            // validated before being solidified, we then also need
-                            // to check when a milestone gets validated if it's
-                            // already solid.
-                            if metadata.flags().is_milestone() {
-                                index = Some(metadata.milestone_index());
+                                metadata.set_otrsi(best_otrsi);
+                                metadata.set_ytrsi(best_ytrsi);
+                            });
+
+                            for child in tangle().get_children(&hash) {
+                                children.push(child);
                             }
 
-                            if metadata.flags().is_tail() {
-                                if let Err(e) = bundle_validator.unbounded_send(BundleValidatorWorkerEvent(hash)) {
+                            Protocol::get().bus.dispatch(TransactionSolidified(*hash));
+
+                            if tangle().get_metadata(&hash).unwrap().flags().is_tail() {
+                                if let Err(e) = bundle_validator.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
                                     warn!("Failed to send hash to bundle validator: {:?}.", e);
                                 }
                             }
-                        });
 
-                        Protocol::get().bus.dispatch(TransactionSolidified(hash));
-
-                        if let Some(index) = index {
-                            Protocol::get()
-                                .bus
-                                .dispatch(LatestSolidMilestoneChanged(Milestone { hash, index }));
-                            if let Err(e) = milestone_cone_updater
-                                .unbounded_send(MilestoneConeUpdaterWorkerEvent(Milestone { hash, index }))
-                            {
-                                error!("Sending tail to milestone validation failed: {:?}.", e);
+                            if let Some(index) = index {
+                                Protocol::get()
+                                    .bus
+                                    .dispatch(LatestSolidMilestoneChanged(Milestone { hash: *hash, index }));
+                                if let Err(e) = milestone_cone_updater
+                                    .unbounded_send(MilestoneConeUpdaterWorkerEvent(Milestone { hash: *hash, index }))
+                                {
+                                    error!("Sending hash to `MilestoneConeUpdater` failed: {:?}.", e);
+                                }
                             }
                         }
-                    }
-
-                    // propagate to children
-                    for child in tangle().get_children(&hash) {
-                        children.push(child);
                     }
                 }
             }
