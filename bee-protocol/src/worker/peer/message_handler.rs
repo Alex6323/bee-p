@@ -11,17 +11,17 @@
 use crate::message::{Header, HEADER_SIZE};
 
 use futures::{
-    channel::{mpsc, oneshot},
+    channel::oneshot,
     future::{self, FutureExt},
     select,
-    stream::{self, StreamExt},
+    stream::StreamExt,
 };
 
 use log::trace;
 
 use std::net::SocketAddr;
 
-type EventRecv = stream::Fuse<mpsc::UnboundedReceiver<Vec<u8>>>;
+type EventRecv = flume::r#async::RecvStream<'static, std::vec::Vec<u8>>;
 type ShutdownRecv = future::Fuse<oneshot::Receiver<()>>;
 
 /// The read state of the message handler.
@@ -176,11 +176,7 @@ impl EventHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::{
-        channel::{mpsc, oneshot},
-        future::FutureExt,
-        stream::StreamExt,
-    };
+    use futures::{channel::oneshot, future::FutureExt};
     use std::time::Duration;
     use tokio::{spawn, time::delay_for};
 
@@ -210,9 +206,9 @@ mod tests {
         let events = gen_events(event_size, msg_size, msg_count);
         // Create a new message handler
         let (sender_shutdown, receiver_shutdown) = oneshot::channel::<()>();
-        let (sender, receiver) = mpsc::unbounded::<Vec<u8>>();
+        let (sender, receiver) = flume::unbounded::<Vec<u8>>();
         let mut msg_handler = MessageHandler::new(
-            receiver.fuse(),
+            receiver.into_stream(),
             receiver_shutdown.fuse(),
             "127.0.0.1:8080".parse().unwrap(),
         );
@@ -242,7 +238,7 @@ mod tests {
         });
         // Send all the events to the message handler.
         for event in events {
-            sender.unbounded_send(event).unwrap();
+            sender.send(event).unwrap();
             delay_for(Duration::from_millis(1)).await;
         }
         // Sleep to be sure the handler had time to produce all the messages.
@@ -303,10 +299,10 @@ mod tests {
         let last_event = events.pop().unwrap();
 
         let (sender_shutdown, receiver_shutdown) = oneshot::channel::<()>();
-        let (sender, receiver) = mpsc::unbounded::<Vec<u8>>();
+        let (sender, receiver) = flume::unbounded::<Vec<u8>>();
 
         let mut msg_handler = MessageHandler::new(
-            receiver.fuse(),
+            receiver.into_stream(),
             receiver_shutdown.fuse(),
             "127.0.0.1:8080".parse().unwrap(),
         );
@@ -333,14 +329,14 @@ mod tests {
         });
 
         for event in events {
-            sender.unbounded_send(event).unwrap();
+            sender.send(event).unwrap();
             delay_for(Duration::from_millis(1)).await;
         }
 
         sender_shutdown.send(()).unwrap();
         delay_for(Duration::from_millis(1)).await;
         // Send the last event after the shutdown signal
-        sender.unbounded_send(last_event).unwrap();
+        sender.send(last_event).unwrap();
 
         handle.await;
     }

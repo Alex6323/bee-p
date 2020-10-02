@@ -14,15 +14,13 @@ use crate::{
     tcp::Origin,
 };
 
-use futures::{channel::mpsc, stream};
-
 use std::{fmt, net::SocketAddr};
 
-pub type EventSender = mpsc::UnboundedSender<Event>;
-pub type EventReceiver = mpsc::UnboundedReceiver<Event>;
+pub type EventSender = flume::Sender<Event>;
+pub type EventReceiver = flume::Receiver<Event>;
 
 pub fn channel() -> (EventSender, EventReceiver) {
-    mpsc::unbounded()
+    flume::unbounded()
 }
 
 #[derive(Debug)]

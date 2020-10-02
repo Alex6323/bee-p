@@ -18,7 +18,7 @@ use bee_tangle::helper::load_bundle_builder;
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::stream::StreamExt;
 use log::{info, warn};
 
 use std::any::TypeId;
@@ -26,7 +26,7 @@ use std::any::TypeId;
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct BundleValidatorWorker {
-    pub(crate) tx: mpsc::UnboundedSender<BundleValidatorWorkerEvent>,
+    pub(crate) tx: flume::Sender<BundleValidatorWorkerEvent>,
 }
 
 #[async_trait]
@@ -35,12 +35,12 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
     type Error = WorkerError;
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
                 match load_bundle_builder(tangle(), &hash) {

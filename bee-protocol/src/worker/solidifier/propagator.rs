@@ -23,8 +23,8 @@ use bee_crypto::ternary::Hash;
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{channel::mpsc, stream::StreamExt};
-use log::{error, info, warn};
+use futures::stream::StreamExt;
+use log::{info, error, warn};
 
 use crate::worker::milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 use std::{
@@ -36,7 +36,7 @@ use std::{
 pub(crate) struct PropagatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct PropagatorWorker {
-    pub(crate) tx: mpsc::UnboundedSender<PropagatorWorkerEvent>,
+    pub(crate) tx: flume::Sender<PropagatorWorkerEvent>,
 }
 
 #[async_trait]
@@ -52,14 +52,14 @@ impl<N: Node> Worker<N> for PropagatorWorker {
     }
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
         let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
         let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(PropagatorWorkerEvent(hash)) = receiver.next().await {
                 let mut children = vec![hash];
@@ -104,7 +104,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                             Protocol::get().bus.dispatch(TransactionSolidified(*hash));
 
                             if tangle().get_metadata(&hash).unwrap().flags().is_tail() {
-                                if let Err(e) = bundle_validator.unbounded_send(BundleValidatorWorkerEvent(*hash)) {
+                                if let Err(e) = bundle_validator.send(BundleValidatorWorkerEvent(*hash)) {
                                     warn!("Failed to send hash to bundle validator: {:?}.", e);
                                 }
                             }
@@ -114,7 +114,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                                     .bus
                                     .dispatch(LatestSolidMilestoneChanged(Milestone { hash: *hash, index }));
                                 if let Err(e) = milestone_cone_updater
-                                    .unbounded_send(MilestoneConeUpdaterWorkerEvent(Milestone { hash: *hash, index }))
+                                    .send(MilestoneConeUpdaterWorkerEvent(Milestone { hash: *hash, index }))
                                 {
                                     error!("Sending hash to `MilestoneConeUpdater` failed: {:?}.", e);
                                 }

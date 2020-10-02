@@ -45,7 +45,7 @@ pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
     let ledger_worker = bee_node.worker::<LedgerWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = ledger_worker.unbounded_send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
+        if let Err(e) = ledger_worker.send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
             warn!(
                 "Sending solid milestone {:?} to confirmation failed: {:?}.",
                 latest_solid_milestone.0.index(),

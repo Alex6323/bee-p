@@ -31,13 +31,14 @@ use bee_transaction::{
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::stream::StreamExt;
 use log::{error, info, trace, warn};
 
 use std::{
     any::TypeId,
     time::{SystemTime, UNIX_EPOCH},
 };
+use crate::worker::{PropagatorWorkerEvent, PropagatorWorker};
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) hash: Hash,
@@ -46,7 +47,7 @@ pub(crate) struct ProcessorWorkerEvent {
 }
 
 pub(crate) struct ProcessorWorker {
-    pub(crate) tx: mpsc::UnboundedSender<ProcessorWorkerEvent>,
+    pub(crate) tx: flume::Sender<ProcessorWorkerEvent>,
 }
 
 /// Timeframe to allow past or future transactions, 10 minutes in seconds.
@@ -83,7 +84,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
     }
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
         let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
         let broadcaster = node.worker::<BroadcasterWorker>().unwrap().tx.clone();
@@ -92,7 +93,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(ProcessorWorkerEvent {
                 hash,
@@ -150,7 +151,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
 
-                    if let Err(e) = propagator.unbounded_send(PropagatorWorkerEvent(hash)) {
+                    if let Err(e) = propagator.send(PropagatorWorkerEvent(hash)) {
                         error!("Failed to send hash to propagator: {:?}.", e);
                     }
 
@@ -169,7 +170,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         }
                         None => {
                             if should_broadcast {
-                                if let Err(e) = broadcaster.unbounded_send(BroadcasterWorkerEvent {
+                                if let Err(e) = broadcaster.send(BroadcasterWorkerEvent {
                                     source: Some(from),
                                     transaction: transaction_message,
                                 }) {
@@ -180,8 +181,8 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     };
 
                     if transaction.address().eq(&Protocol::get().config.coordinator.public_key) {
-                        if let Err(e) = milestone_validator
-                            .unbounded_send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
+                        if let Err(e) =
+                            milestone_validator.send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
                         {
                             error!("Sending tail to milestone validation failed: {:?}.", e);
                         }

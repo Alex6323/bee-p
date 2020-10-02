@@ -25,12 +25,13 @@
 
 mod common;
 
-use bee_network::{Command::*, EndpointId, Event, EventReceiver, Network, NetworkConfig, Origin};
-
 use common::*;
 
+use bee_common_ext::shutdown_tokio::Shutdown;
+use bee_network::{Command::*, EndpointId, Event, EventReceiver, Network, NetworkConfig, Origin};
+
 use futures::{
-    channel::{mpsc, oneshot},
+    channel::oneshot,
     select,
     sink::SinkExt,
     stream::{Fuse, StreamExt},
@@ -71,7 +72,7 @@ async fn main() {
 struct Node {
     config: Config,
     network: Network,
-    events: Fuse<EventReceiver>,
+    events: flume::r#async::RecvStream<'static, Event>,
     endpoints: HashSet<EndpointId>,
     handshakes: HashMap<String, Vec<EndpointId>>,
 }
@@ -249,14 +250,16 @@ impl NodeBuilder {
             .reconnect_interval(RECONNECT_INTERVAL)
             .finish();
 
+        let mut shutdown = Shutdown::new();
+
         info!("[pingpong] Initializing network...");
-        let (network, events) = bee_network::init(network_config).await;
+        let (network, events) = bee_network::init(network_config, &mut shutdown).await;
 
         info!("[pingpong] Node initialized.");
         Node {
             config: self.config,
             network,
-            events: events.fuse(),
+            events: events.into_stream(),
             handshakes: HashMap::new(),
             endpoints: HashSet::new(),
         }

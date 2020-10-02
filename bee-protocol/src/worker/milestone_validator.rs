@@ -28,14 +28,11 @@ use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, RecoverableSignature}
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{channel::mpsc, stream::StreamExt};
+use futures::stream::StreamExt;
 use log::{debug, error, info};
 
-use crate::{
-    protocol::Sender,
-    worker::milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent},
-};
-use std::{any::TypeId, collections::HashSet};
+use std::any::TypeId;
+use crate::worker::MilestoneConeUpdaterWorker;
 
 #[derive(Debug)]
 pub(crate) enum MilestoneValidatorWorkerError {
@@ -48,7 +45,7 @@ pub(crate) enum MilestoneValidatorWorkerError {
 pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) Hash, pub(crate) bool);
 
 pub(crate) struct MilestoneValidatorWorker {
-    pub(crate) tx: mpsc::UnboundedSender<MilestoneValidatorWorkerEvent>,
+    pub(crate) tx: flume::Sender<MilestoneValidatorWorkerEvent>,
 }
 
 fn validate_milestone<N, M, P>(tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError>
@@ -103,7 +100,7 @@ where
     }
 
     async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = mpsc::unbounded();
+        let (tx, rx) = flume::unbounded();
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
         let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
@@ -116,7 +113,7 @@ where
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx);
+            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
                 let tail_hash = {
@@ -158,8 +155,8 @@ where
                                 if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
                                     tangle()
                                         .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
-                                    milestone_solidifier
-                                        .unbounded_send(MilestoneSolidifierWorkerEvent(milestone.index));
+
+                                    milestone_solidifier.send(MilestoneSolidifierWorkerEvent(milestone.index));
                                 }
                             }
                             Err(e) => match e {

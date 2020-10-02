@@ -22,7 +22,6 @@ use crate::{
 use bee_crypto::ternary::Hash;
 use bee_network::{Command::SendMessage, EndpointId};
 
-use futures::channel::mpsc;
 use log::warn;
 
 use std::marker::PhantomData;
@@ -63,19 +62,19 @@ impl Protocol {
     // MilestoneRequest
 
     pub(crate) fn request_milestone(
-        transaction_requester: &mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+        transaction_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
         index: MilestoneIndex,
         to: Option<EndpointId>,
     ) {
         if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
-            if let Err(e) = transaction_requester.unbounded_send(MilestoneRequesterWorkerEvent(index, to)) {
+            if let Err(e) = transaction_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
                 warn!("Requesting milestone failed: {}.", e);
             }
         }
     }
 
     pub(crate) fn request_latest_milestone(
-        transaction_requester: &mpsc::UnboundedSender<MilestoneRequesterWorkerEvent>,
+        transaction_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
         to: Option<EndpointId>,
     ) {
         Protocol::request_milestone(transaction_requester, MilestoneIndex(0), to)
@@ -84,7 +83,7 @@ impl Protocol {
     // TransactionRequest
 
     pub(crate) fn request_transaction(
-        transaction_requester: &mpsc::UnboundedSender<TransactionRequesterWorkerEvent>,
+        transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
         hash: Hash,
         index: MilestoneIndex,
     ) {
@@ -92,7 +91,7 @@ impl Protocol {
             && !tangle().is_solid_entry_point(&hash)
             && !Protocol::get().requested_transactions.contains_key(&hash)
         {
-            if let Err(e) = transaction_requester.unbounded_send(TransactionRequesterWorkerEvent(hash, index)) {
+            if let Err(e) = transaction_requester.send(TransactionRequesterWorkerEvent(hash, index)) {
                 warn!("Requesting transaction failed: {}.", e);
             }
         }
