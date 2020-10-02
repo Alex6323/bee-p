@@ -119,6 +119,7 @@ impl ProtocolMetrics {
         self.milestone_requests_sent.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn milestone_requests_sent_inc(&self) -> u64 {
         self.milestone_requests_sent.fetch_add(1, Ordering::SeqCst)
     }
@@ -135,6 +136,7 @@ impl ProtocolMetrics {
         self.transaction_requests_sent.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn transaction_requests_sent_inc(&self) -> u64 {
         self.transaction_requests_sent.fetch_add(1, Ordering::SeqCst)
     }
@@ -143,6 +145,7 @@ impl ProtocolMetrics {
         self.heartbeats_sent.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn heartbeats_sent_inc(&self) -> u64 {
         self.heartbeats_sent.fetch_add(1, Ordering::SeqCst)
     }
@@ -151,6 +154,7 @@ impl ProtocolMetrics {
         self.value_bundles.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn value_bundles_inc(&self) -> u64 {
         self.value_bundles.fetch_add(1, Ordering::SeqCst)
     }
@@ -159,6 +163,7 @@ impl ProtocolMetrics {
         self.non_value_bundles.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn non_value_bundles_inc(&self) -> u64 {
         self.non_value_bundles.fetch_add(1, Ordering::SeqCst)
     }
@@ -167,6 +172,7 @@ impl ProtocolMetrics {
         self.confirmed_bundles.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn confirmed_bundles_inc(&self) -> u64 {
         self.confirmed_bundles.fetch_add(1, Ordering::SeqCst)
     }
@@ -175,6 +181,7 @@ impl ProtocolMetrics {
         self.conflicting_bundles.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn conflicting_bundles_inc(&self) -> u64 {
         self.conflicting_bundles.fetch_add(1, Ordering::SeqCst)
     }

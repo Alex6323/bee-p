@@ -16,14 +16,13 @@ mod metadata;
 
 pub use metadata::TransactionMetadata;
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::flags::Flags, worker::SolidPropagatorWorkerEvent};
+use crate::{milestone::MilestoneIndex, tangle::flags::Flags};
 
 use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
-use log::error;
 
 use std::{
     ops::Deref,

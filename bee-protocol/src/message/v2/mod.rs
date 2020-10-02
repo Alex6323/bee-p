@@ -17,6 +17,7 @@ mod transaction;
 mod transaction_request;
 
 /// Version identifier of the messages version 2
+#[allow(dead_code)]
 pub(crate) const MESSAGES_VERSION_2: u8 = 1 << 1;
 
 pub(crate) use heartbeat::Heartbeat;

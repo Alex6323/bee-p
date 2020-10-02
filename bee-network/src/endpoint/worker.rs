@@ -387,7 +387,7 @@ fn mark_duplicate(
     duplicate_epid: EndpointId,
     original_epid: EndpointId,
     connected_endpoints: &mut ConnectedEndpointList,
-    internal_event_sender: &mut EventSender,
+    _internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
     Ok(connected_endpoints.mark_duplicate(duplicate_epid, original_epid))
 }

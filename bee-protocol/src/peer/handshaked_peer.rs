@@ -71,6 +71,7 @@ impl HandshakedPeer {
         self.connected_peers.store(connected_peers, Ordering::Relaxed);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn connected_peers(&self) -> u8 {
         self.connected_peers.load(Ordering::Relaxed)
     }
@@ -79,6 +80,7 @@ impl HandshakedPeer {
         self.synced_peers.store(synced_peers, Ordering::Relaxed);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn synced_peers(&self) -> u8 {
         self.synced_peers.load(Ordering::Relaxed)
     }
