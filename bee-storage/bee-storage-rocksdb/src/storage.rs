@@ -76,11 +76,14 @@ impl Storage {
 }
 #[async_trait]
 impl Backend for Storage {
+    type ConfigBuilder = RocksDBConfigBuilder;
+    type Config = RocksDBConfig;
+
     /// It starts RocksDB instance and then initialize the required column familes
-    async fn start(config_path: String) -> Result<Self, Box<dyn Error>> {
-        let config_as_string = fs::read_to_string(config_path)?;
-        let config: RocksDBConfigBuilder = toml::from_str(&config_as_string)?;
-        let db = Self::new(config.finish())?;
+    async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>> {
+        // let config_as_string = fs::read_to_string(config_path)?;
+        // let config: RocksDBConfigBuilder = toml::from_str(&config_as_string)?;
+        let db = Self::new(config)?;
         Ok(Storage { inner: db })
     }
     /// It shutdown RocksDB instance,

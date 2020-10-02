@@ -53,7 +53,7 @@ pub enum Error {
 }
 
 pub struct NodeBuilder<B: Backend> {
-    config: NodeConfig,
+    config: NodeConfig<B>,
     phantom: PhantomData<B>,
 }
 
@@ -91,7 +91,8 @@ impl<B: Backend> NodeBuilder<B> {
 
         info!("Initializing protocol...");
         node_builder = Protocol::init(
-            self.config.protocol.clone(),
+            self.config.protocol,
+            self.config.database,
             network.clone(),
             snapshot_timestamp,
             node_builder,
@@ -157,7 +158,7 @@ impl<B: Backend> Node<B> {
     }
 
     /// Returns a builder to create a node.
-    pub fn builder(config: NodeConfig) -> NodeBuilder<B> {
+    pub fn builder(config: NodeConfig<B>) -> NodeBuilder<B> {
         NodeBuilder { config, phantom: PhantomData }
     }
 
