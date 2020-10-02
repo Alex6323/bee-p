@@ -14,4 +14,16 @@ use serde::{Deserialize, Serialize};
 pub const HASH_LENGTH: usize = 32;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct Hash(pub [u8; HASH_LENGTH]);
+pub struct Hash([u8; HASH_LENGTH]);
+
+impl From<[u8; HASH_LENGTH]> for Hash {
+    fn from(bytes: [u8; HASH_LENGTH]) -> Self {
+        Self(bytes)
+    }
+}
+
+impl Hash {
+    pub fn new(bytes: [u8; HASH_LENGTH]) -> Self {
+        bytes.into()
+    }
+}
