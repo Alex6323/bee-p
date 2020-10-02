@@ -41,7 +41,6 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
 
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
-        let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
