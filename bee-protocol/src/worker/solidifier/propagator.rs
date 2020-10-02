@@ -33,10 +33,7 @@ use std::{
     collections::HashSet,
 };
 
-pub(crate) enum PropagatorWorkerEvent {
-    Default(Hash),
-    UpdateTransactionsReferencedByMilestone(HashSet<Hash>),
-}
+pub(crate) struct PropagatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct PropagatorWorker {
     pub(crate) tx: mpsc::UnboundedSender<PropagatorWorkerEvent>,
@@ -64,13 +61,8 @@ impl<N: Node> Worker<N> for PropagatorWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, rx);
 
-            while let Some(event) = receiver.next().await {
-                let mut children = match &event {
-                    PropagatorWorkerEvent::Default(hash) => vec![*hash],
-                    PropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(hashes) => {
-                        hashes.clone().into_iter().collect()
-                    }
-                };
+            while let Some(PropagatorWorkerEvent(hash)) = receiver.next().await {
+                let mut children = vec![hash];
 
                 while let Some(hash) = children.pop() {
                     // get best otrsi and ytrsi from parents
@@ -150,10 +142,6 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                     for child in tangle().get_children(&hash) {
                         children.push(child);
                     }
-                }
-
-                if let PropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(_) = event {
-                    tangle().update_tip_pool();
                 }
             }
 

@@ -150,7 +150,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
 
-                    if let Err(e) = propagator.unbounded_send(PropagatorWorkerEvent::Default(hash)) {
+                    if let Err(e) = propagator.unbounded_send(PropagatorWorkerEvent(hash)) {
                         error!("Failed to send hash to propagator: {:?}.", e);
                     }
 

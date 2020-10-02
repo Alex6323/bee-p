@@ -22,7 +22,11 @@ use futures::{channel::mpsc, stream::StreamExt};
 use log::{error, info, warn};
 
 use crate::worker::{PropagatorWorker, PropagatorWorkerEvent};
-use std::{any::TypeId, collections::HashSet};
+use std::{
+    any::TypeId,
+    cmp::{max, min},
+    collections::HashSet,
+};
 
 pub(crate) struct MilestoneConeUpdaterWorkerEvent(pub(crate) Milestone);
 
@@ -35,10 +39,6 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
     type Config = ();
     type Error = WorkerError;
 
-    fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<PropagatorWorker>()]))
-    }
-
     async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = mpsc::unbounded();
         let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
@@ -49,13 +49,7 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx);
 
             while let Some(MilestoneConeUpdaterWorkerEvent(milestone)) = receiver.next().await {
-                let children = update_transactions_referenced_by_milestone(milestone.hash, milestone.index);
-                // Propagate updated OTRSI/YTRSI values to all direct/indirect approvers
-                if let Err(e) =
-                    propagator.unbounded_send(PropagatorWorkerEvent::UpdateTransactionsReferencedByMilestone(children))
-                {
-                    error!("Failed to send hash to propagator: {:?}.", e);
-                }
+                update_transactions_referenced_by_milestone(milestone.hash, milestone.index);
             }
 
             info!("Stopped.");
@@ -67,7 +61,7 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
 
 // When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given cone must be
 // updated. This function returns the children of all updated transactions.
-fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index: MilestoneIndex) -> HashSet<Hash> {
+fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index: MilestoneIndex) {
     info!("Updating transactions referenced by milestone {}.", *milestone_index);
     let mut to_visit = vec![tail_hash];
     let mut visited = HashSet::new();
@@ -103,5 +97,49 @@ fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index:
         to_visit.push(tx_ref.branch().clone());
     }
 
-    children
+    update_trsi_values(children.clone().into_iter().collect());
+}
+
+fn update_trsi_values(mut children: Vec<Hash>) {
+    while let Some(hash) = children.pop() {
+        // get best otrsi and ytrsi from parents
+        let tx = tangle().get(&hash).unwrap();
+        let trunk_otsri = tangle().otrsi(tx.trunk());
+        let branch_otsri = tangle().otrsi(tx.branch());
+        let trunk_ytrsi = tangle().ytrsi(tx.trunk());
+        let branch_ytrsi = tangle().ytrsi(tx.branch());
+
+        if trunk_otsri.is_none() || branch_otsri.is_none() || trunk_ytrsi.is_none() || branch_ytrsi.is_none() {
+            continue;
+        }
+
+        // check if already confirmed by update_transactions_referenced_by_milestone()
+        if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
+            continue;
+        }
+
+        // in case the transaction already inherited the best otrsi and ytrsi, continue
+        let current_otrsi = tangle().get_metadata(&hash).unwrap().otrsi();
+        let current_ytrsi = tangle().get_metadata(&hash).unwrap().ytrsi();
+        let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
+        let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
+
+        if current_otrsi.is_some()
+            && current_ytrsi.is_some()
+            && current_otrsi.unwrap() == best_otrsi
+            && current_ytrsi.unwrap() == best_ytrsi
+        {
+            continue;
+        }
+
+        tangle().update_metadata(&hash, |metadata| {
+            metadata.set_otrsi(best_otrsi);
+            metadata.set_ytrsi(best_ytrsi);
+        });
+
+        // propagate to children
+        for child in tangle().get_children(&hash) {
+            children.push(child);
+        }
+    }
 }
