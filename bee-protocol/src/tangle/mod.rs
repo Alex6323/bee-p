@@ -233,9 +233,9 @@ impl MsTangle {
         tip_selector.update();
     }
 
-    pub fn get_tips_to_approve(&self) -> Option<(Hash, Hash)> {
+    pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
         let tip_selector = self.tip_pool.read().unwrap();
-        tip_selector.get_non_lazy_tips()
+        tip_selector.two_non_lazy_tips()
     }
 }
 

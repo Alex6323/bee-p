@@ -12,7 +12,7 @@
 use crate::tangle::tangle;
 use bee_crypto::ternary::Hash;
 use log::{error, info};
-use rand::seq::IteratorRandom;
+use rand::seq::{SliceRandom, IteratorRandom};
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
     time::SystemTime,
@@ -34,12 +34,11 @@ const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
-// if the amount of non-lazy tips does exceed the `RETENTION_LIMIT` limit, remove both parents of the given tip.
-// if the amount of non-lazy tips does not exceed the `RETENTION_LIMIT`, check "MAX_AGE_SECONDS" and "MAX_NUM_CHILDREN".
-const RETENTION_LIMIT: u8 = 100;
+// if the amount of non-lazy tips does exceed the capacity limit, remove the parents of the incoming tip.
+const MAX_CAPACITY_NON_LAZY: u8 = 100;
 // the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to
 // widen the cone of the tangle.
-const MAX_AGE_SECONDS: u8 = 3;
+const MAX_AGE_SECONDS_FIRST_CHILD: u8 = 3;
 // the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to
 // widen the cone of the tangle.
 const MAX_NUM_CHILDREN: u8 = 2;
@@ -130,11 +129,11 @@ impl WurtsTipPool {
 
     fn check_retention_rules_for_parent(&mut self, parent: &Hash) {
         let should_remove = {
-            if self.non_lazy_tips.len() > RETENTION_LIMIT as usize {
+            if self.non_lazy_tips.len() > MAX_CAPACITY_NON_LAZY as usize {
                 true
             } else if self.tips.get(parent).unwrap().children.len() as u8 > MAX_NUM_CHILDREN {
                 true
-            } else if self.tips.get(parent).unwrap().time_first_child.unwrap().elapsed().as_secs() as u8 > MAX_AGE_SECONDS {
+            } else if self.tips.get(parent).unwrap().time_first_child.unwrap().elapsed().as_secs() as u8 > MAX_AGE_SECONDS_FIRST_CHILD {
                 true
             } else {
                 false
@@ -191,37 +190,24 @@ impl WurtsTipPool {
         Score::NonLazy
     }
 
-    pub fn get_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
+    pub fn two_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
         self.select_tips(&self.non_lazy_tips)
     }
 
     fn select_tips(&self, hashes: &HashSet<Hash>) -> Option<(Hash, Hash)> {
-        let mut ret = HashSet::new();
-
-        for i in 1..10 {
-            match self.select_tip(hashes) {
-                Some(tip) => {
-                    ret.insert(tip);
-                }
-                None => (),
-            }
-        }
-
-        return if ret.is_empty() {
+        return if hashes.is_empty() {
             None
-        } else if ret.len() == 1 {
-            let tip = ret.iter().next().unwrap();
+        } else if hashes.len() == 1 {
+            let tip = hashes.iter().next().unwrap();
             Some((*tip, *tip))
-        } else {
-            let mut iter = ret.iter();
+        } else if hashes.len() == 2 {
+            let mut iter = hashes.iter();
             Some((*iter.next().unwrap(), *iter.next().unwrap()))
+        } else {
+            let random_tips = hashes.iter().choose_multiple(&mut rand::thread_rng(), 2);
+            let mut iter = random_tips.iter();
+            Some((**iter.next().unwrap(), **iter.next().unwrap()))
         };
     }
 
-    fn select_tip(&self, hashes: &HashSet<Hash>) -> Option<Hash> {
-        if hashes.is_empty() {
-            return None;
-        }
-        Some(*hashes.iter().choose(&mut rand::thread_rng()).unwrap())
-    }
 }
