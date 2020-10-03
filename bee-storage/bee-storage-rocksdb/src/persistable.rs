@@ -140,7 +140,6 @@ impl Persistable<Storage> for TransactionMetadata {
         self.otrsi().write_to(buffer);
         // 8- encode ytrsi
         self.ytrsi().write_to(buffer);
-        
     }
     fn read_from(slice: &[u8]) -> Self {
         // decode struct in order
