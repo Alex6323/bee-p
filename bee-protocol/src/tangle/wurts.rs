@@ -106,6 +106,9 @@ impl WurtsTipPool {
             Entry::Occupied(mut entry) => {
                 let metadata = entry.get_mut();
                 metadata.children.insert(child);
+                if metadata.time_first_child == None {
+                    metadata.time_first_child = Some(Instant::now());
+                }
             }
             Entry::Vacant(entry) => {
                 let mut metadata = TipMetadata::new();
