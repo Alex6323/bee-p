@@ -33,11 +33,11 @@ const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
-// If the maximum amount of non-lazy tips exceed this limit, remove the parent(s) of the inserted tip to compensate (to
-// some extent) for the excess. This rule is used to reduce the amount of tips in the network.
+// If the amount of non-lazy tips exceed this limit, remove the parent(s) of the inserted tip to compensate for the excess.
+// This rule helps to reduce the amount of tips in the network.
 const MAX_LIMIT_NON_LAZY: u8 = 100;
-// The maximum time a tip remains in the tip pool after having the first child. This rule is used to
-// widen the cone of the tangle.
+// The maximum time a tip remains in the tip pool after having the first child.
+// This rule helps to widen the tangle.
 const MAX_AGE_SECONDS_AFTER_FIRST_CHILD: u8 = 3;
 // The maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. This rule is
 // used to widen the cone of the tangle.
@@ -151,7 +151,7 @@ impl WurtsTipPool {
         }
     }
 
-    pub(crate) fn update(&mut self) {
+    pub(crate) fn update_scores(&mut self) {
         let mut to_remove = Vec::new();
 
         for (tip, _) in &self.tips {
@@ -209,13 +209,13 @@ impl WurtsTipPool {
             let mut iter = hashes.iter();
             Some((*iter.next().unwrap(), *iter.next().unwrap()))
         } else {
-            let random_tips = hashes.iter().choose_multiple(&mut rand::thread_rng(), 2);
-            let mut iter = random_tips.iter();
+            let tips = hashes.iter().choose_multiple(&mut rand::thread_rng(), 2);
+            let mut iter = tips.iter();
             Some((**iter.next().unwrap(), **iter.next().unwrap()))
         };
     }
 
-    pub(crate) fn clean_parents(&mut self) {
+    pub(crate) fn reduce_tips(&mut self) {
         let mut to_remove = Vec::new();
         for (tip, metadata) in &self.tips {
             let should_remove = {

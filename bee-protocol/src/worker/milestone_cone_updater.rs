@@ -49,7 +49,7 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
                 // must be updated. Furthermore, updated values will be propagated to the future.
                 update_transactions_referenced_by_milestone(milestone.hash, milestone.index);
                 // Update tip pool after all values got updated.
-                tangle().update_tip_pool();
+                tangle().update_tip_scores();
             }
 
             info!("Stopped.");

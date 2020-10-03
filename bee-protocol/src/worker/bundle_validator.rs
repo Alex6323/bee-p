@@ -47,7 +47,7 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
                             tangle().update_metadata(&hash, |metadata| {
                                 metadata.flags_mut().set_valid(true);
                             });
-                            tangle().add_to_tip_pool(hash, *bundle.trunk(), *bundle.branch());
+                            tangle().insert_tip(hash, *bundle.trunk(), *bundle.branch());
                         }
                     }
                     None => {
