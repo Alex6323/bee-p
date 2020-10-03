@@ -34,21 +34,20 @@ const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
-// the maximum amount of current tips for which "MAX_AGE_SECONDS" and "MAX_NUM_CHILDREN" are checked. if the amount of
-// tips exceeds this limit, referenced tips (tips with children) get removed directly to reduce the amount of tips in
-// the network.
+// if the amount of non-lazy tips does exceed the `RETENTION_LIMIT` limit, remove both parents of the given tip.
+// if the amount of non-lazy tips does not exceed the `RETENTION_LIMIT`, check "MAX_AGE_SECONDS" and "MAX_NUM_CHILDREN".
 const RETENTION_LIMIT: u8 = 100;
 // the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to
-// widen the cone of the tangle. (non-lazy pool)
+// widen the cone of the tangle.
 const MAX_AGE_SECONDS: u8 = 3;
 // the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to
-// widen the cone of the tangle. (non-lazy pool)
+// widen the cone of the tangle.
 const MAX_NUM_CHILDREN: u8 = 2;
 
 #[derive(Default)]
 struct TipMetadata {
     children: HashSet<Hash>,
-    age_seconds_after_first_child: Option<Instant>,
+    time_first_child: Option<Instant>,
 }
 
 #[derive(Default)]
@@ -84,19 +83,22 @@ impl WurtsTipPool {
         };
 
         if is_non_lazy {
+            self.non_lazy_tips.insert(tail);
             self.tips.insert(tail, TipMetadata::new());
             self.link_parents_with_child(&tail, &trunk, &branch);
-            self.non_lazy_tips.insert(tail);
-            self.check_retention_rules_for_parent(&trunk);
-            self.check_retention_rules_for_parent(&branch);
+            self.check_retention_rules_for_parents(&trunk, &branch);
         }
 
     }
 
 
     fn link_parents_with_child(&mut self, hash: &Hash, trunk: &Hash, branch: &Hash) {
-        self.add_child(*trunk, *hash);
-        self.add_child(*branch, *hash);
+        if trunk == branch {
+            self.add_child(*trunk, *hash);
+        } else {
+            self.add_child(*trunk, *hash);
+            self.add_child(*branch, *hash);
+        }
     }
 
     fn add_child(&mut self, parent: Hash, child: Hash) {
@@ -108,9 +110,18 @@ impl WurtsTipPool {
             Entry::Vacant(entry) => {
                 let mut metadata = TipMetadata::new();
                 metadata.children.insert(child);
-                metadata.age_seconds_after_first_child = Some(Instant::now());
+                metadata.time_first_child = Some(Instant::now());
                 entry.insert(metadata);
             }
+        }
+    }
+
+    fn check_retention_rules_for_parents(&mut self, trunk: &Hash, branch: &Hash) {
+        if trunk == branch {
+            self.check_retention_rules_for_parent(trunk);
+        } else {
+            self.check_retention_rules_for_parent(trunk);
+            self.check_retention_rules_for_parent(branch);
         }
     }
 
@@ -120,7 +131,7 @@ impl WurtsTipPool {
                 true
             } else if self.tips.get(parent).unwrap().children.len() as u8 > MAX_NUM_CHILDREN {
                 true
-            } else if self.tips.get(parent).unwrap().age_seconds_after_first_child.unwrap().elapsed().as_secs() as u8 > MAX_AGE_SECONDS {
+            } else if self.tips.get(parent).unwrap().time_first_child.unwrap().elapsed().as_secs() as u8 > MAX_AGE_SECONDS {
                 true
             } else {
                 false
@@ -132,8 +143,7 @@ impl WurtsTipPool {
         }
     }
 
-    // further optimization: avoid allocations
-    pub(crate) fn update_scores(&mut self) {
+    pub(crate) fn update(&mut self) {
 
         let mut to_remove = Vec::new();
 

@@ -230,7 +230,7 @@ impl MsTangle {
 
     pub fn update_tip_pool(&self) {
         let mut tip_selector = self.tip_pool.write().unwrap();
-        tip_selector.update_scores();
+        tip_selector.update();
     }
 
     pub fn get_tips_to_approve(&self) -> Option<(Hash, Hash)> {
