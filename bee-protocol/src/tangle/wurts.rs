@@ -33,8 +33,8 @@ const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
-// If the amount of non-lazy tips exceed this limit, remove the parent(s) of the inserted tip to compensate for the excess.
-// This rule helps to reduce the amount of tips in the network.
+// If the amount of non-lazy tips exceed this limit, remove the parent(s) of the inserted tip to compensate for the
+// excess. This rule helps to reduce the amount of tips in the network.
 const MAX_LIMIT_NON_LAZY: u8 = 100;
 // The maximum time a tip remains in the tip pool after having the first child.
 // This rule helps to widen the tangle.
