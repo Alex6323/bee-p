@@ -37,7 +37,7 @@ use futures::channel::oneshot;
 use log::{debug, info};
 use tokio::spawn;
 
-use crate::worker::MilestoneConeUpdaterWorker;
+use crate::worker::{MilestoneConeUpdaterWorker, TipPoolCleaner};
 use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
 
 static mut PROTOCOL: *const Protocol = ptr::null();
@@ -95,6 +95,7 @@ impl Protocol {
             .with_worker_cfg::<KickstartWorker>((ms_send, Protocol::get().config.workers.ms_sync_count))
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
             .with_worker::<MilestoneConeUpdaterWorker>()
+            .with_worker::<TipPoolCleaner>()
     }
 
     pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {

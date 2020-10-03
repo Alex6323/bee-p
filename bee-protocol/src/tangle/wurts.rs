@@ -211,4 +211,26 @@ impl WurtsTipPool {
         };
     }
 
+    pub(crate) fn clean_parents(&mut self) {
+        let mut to_remove = Vec::new();
+        for (tip, metadata) in &self.tips {
+            let should_remove = {
+                if metadata.children.len() == 0 {
+                    false
+                } else if (metadata.time_first_child.unwrap().elapsed().as_secs() as u8) < MAX_AGE_SECONDS_AFTER_FIRST_CHILD {
+                    false
+                } else {
+                    true
+                }
+            };
+            if should_remove {
+                to_remove.push(*tip);
+            }
+        }
+        for tip in to_remove {
+            self.tips.remove(&tip);
+            self.non_lazy_tips.remove(&tip);
+        }
+    }
+
 }

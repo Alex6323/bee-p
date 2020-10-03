@@ -237,6 +237,11 @@ impl MsTangle {
         let tip_selector = self.tip_pool.read().unwrap();
         tip_selector.two_non_lazy_tips()
     }
+
+    pub fn clean_tip_pool(&self) {
+        let mut tip_selector = self.tip_pool.write().unwrap();
+        tip_selector.clean_parents();
+    }
 }
 
 static TANGLE: AtomicPtr<MsTangle> = AtomicPtr::new(ptr::null_mut());
