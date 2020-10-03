@@ -19,8 +19,8 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::time::Duration;
 use crate::tangle::tangle;
+use std::time::Duration;
 
 #[derive(Default)]
 pub(crate) struct TipPoolCleaner {}

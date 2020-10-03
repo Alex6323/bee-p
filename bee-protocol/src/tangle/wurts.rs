@@ -12,12 +12,11 @@
 use crate::tangle::tangle;
 use bee_crypto::ternary::Hash;
 use log::{error, info};
-use rand::seq::{SliceRandom, IteratorRandom};
+use rand::seq::{IteratorRandom, SliceRandom};
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
-    time::SystemTime,
+    time::{Instant, SystemTime},
 };
-use std::time::Instant;
 
 enum Score {
     NonLazy,
@@ -34,14 +33,14 @@ const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
-// If the maximum amount of non-lazy tips exceed this limit, remove the parent(s) of the inserted tip to compensate (to some extent) for the excess.
-// This rule is used to reduce the amount of tips in the network.
+// If the maximum amount of non-lazy tips exceed this limit, remove the parent(s) of the inserted tip to compensate (to
+// some extent) for the excess. This rule is used to reduce the amount of tips in the network.
 const MAX_LIMIT_NON_LAZY: u8 = 100;
 // The maximum time a tip remains in the tip pool after having the first child. This rule is used to
 // widen the cone of the tangle.
 const MAX_AGE_SECONDS_AFTER_FIRST_CHILD: u8 = 3;
-// The maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. This rule is used to
-// widen the cone of the tangle.
+// The maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. This rule is
+// used to widen the cone of the tangle.
 const MAX_NUM_CHILDREN: u8 = 2;
 
 #[derive(Default)]
@@ -68,7 +67,6 @@ impl WurtsTipPool {
     }
 
     pub(crate) fn insert(&mut self, tail: Hash, trunk: Hash, branch: Hash) {
-
         let is_non_lazy = {
             // if parents are considered as non-lazy, child will be considered as non-lazy too
             if self.non_lazy_tips.contains(&trunk) && self.non_lazy_tips.contains(&branch) {
@@ -77,7 +75,7 @@ impl WurtsTipPool {
                 // in case parents are not present, calculate score of the tip
                 match self.tip_score(&tail) {
                     Score::NonLazy => true,
-                    _ => false
+                    _ => false,
                 }
             }
         };
@@ -88,9 +86,7 @@ impl WurtsTipPool {
             self.link_parents_with_child(&tail, &trunk, &branch);
             self.check_retention_rules_for_parents(&trunk, &branch);
         }
-
     }
-
 
     fn link_parents_with_child(&mut self, hash: &Hash, trunk: &Hash, branch: &Hash) {
         if trunk == branch {
@@ -134,7 +130,16 @@ impl WurtsTipPool {
                 true
             } else if self.tips.get(parent).unwrap().children.len() as u8 > MAX_NUM_CHILDREN {
                 true
-            } else if self.tips.get(parent).unwrap().time_first_child.unwrap().elapsed().as_secs() as u8 > MAX_AGE_SECONDS_AFTER_FIRST_CHILD {
+            } else if self
+                .tips
+                .get(parent)
+                .unwrap()
+                .time_first_child
+                .unwrap()
+                .elapsed()
+                .as_secs() as u8
+                > MAX_AGE_SECONDS_AFTER_FIRST_CHILD
+            {
                 true
             } else {
                 false
@@ -147,7 +152,6 @@ impl WurtsTipPool {
     }
 
     pub(crate) fn update(&mut self) {
-
         let mut to_remove = Vec::new();
 
         for (tip, _) in &self.tips {
@@ -167,7 +171,7 @@ impl WurtsTipPool {
             self.non_lazy_tips.remove(&tip);
         }
 
-        info!("non-lazy: {}", self.non_lazy_tips.len());
+        info!("non-lazy {}", self.non_lazy_tips.len());
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
@@ -217,7 +221,9 @@ impl WurtsTipPool {
             let should_remove = {
                 if metadata.children.len() == 0 {
                     false
-                } else if (metadata.time_first_child.unwrap().elapsed().as_secs() as u8) < MAX_AGE_SECONDS_AFTER_FIRST_CHILD {
+                } else if (metadata.time_first_child.unwrap().elapsed().as_secs() as u8)
+                    < MAX_AGE_SECONDS_AFTER_FIRST_CHILD
+                {
                     false
                 } else {
                     true
@@ -232,5 +238,4 @@ impl WurtsTipPool {
             self.non_lazy_tips.remove(&tip);
         }
     }
-
 }

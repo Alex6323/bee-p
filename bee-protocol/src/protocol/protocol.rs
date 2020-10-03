@@ -19,8 +19,8 @@ use crate::{
     worker::{
         BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneRequesterWorker,
         MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker,
-        TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
+        PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker,
+        TransactionResponderWorker,
     },
 };
 
