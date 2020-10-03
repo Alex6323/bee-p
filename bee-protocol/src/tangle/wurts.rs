@@ -34,12 +34,13 @@ const OTRSI_DELTA: u32 = 13;
 // M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
-// if the amount of non-lazy tips does exceed the capacity limit, remove the parents of the incoming tip.
-const MAX_CAPACITY_NON_LAZY: u8 = 100;
-// the maximum time a tip remains in the tip pool after it was referenced by the first transaction. this is used to
+// If the maximum amount of non-lazy tips exceed this limit, remove the parent(s) of the inserted tip to compensate (to some extent) for the excess.
+// This rule is used to reduce the amount of tips in the network.
+const MAX_LIMIT_NON_LAZY: u8 = 100;
+// The maximum time a tip remains in the tip pool after having the first child. This rule is used to
 // widen the cone of the tangle.
-const MAX_AGE_SECONDS_FIRST_CHILD: u8 = 3;
-// the maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. this is used to
+const MAX_AGE_SECONDS_AFTER_FIRST_CHILD: u8 = 3;
+// The maximum amount of children a tip is allowed to have before the tip is removed from the tip pool. This rule is used to
 // widen the cone of the tangle.
 const MAX_NUM_CHILDREN: u8 = 2;
 
@@ -129,11 +130,11 @@ impl WurtsTipPool {
 
     fn check_retention_rules_for_parent(&mut self, parent: &Hash) {
         let should_remove = {
-            if self.non_lazy_tips.len() > MAX_CAPACITY_NON_LAZY as usize {
+            if self.non_lazy_tips.len() > MAX_LIMIT_NON_LAZY as usize {
                 true
             } else if self.tips.get(parent).unwrap().children.len() as u8 > MAX_NUM_CHILDREN {
                 true
-            } else if self.tips.get(parent).unwrap().time_first_child.unwrap().elapsed().as_secs() as u8 > MAX_AGE_SECONDS_FIRST_CHILD {
+            } else if self.tips.get(parent).unwrap().time_first_child.unwrap().elapsed().as_secs() as u8 > MAX_AGE_SECONDS_AFTER_FIRST_CHILD {
                 true
             } else {
                 false
@@ -166,7 +167,7 @@ impl WurtsTipPool {
             self.non_lazy_tips.remove(&tip);
         }
 
-        info!("Available tips (non-lazy): {}", self.non_lazy_tips.len());
+        info!("non-lazy: {}", self.non_lazy_tips.len());
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {

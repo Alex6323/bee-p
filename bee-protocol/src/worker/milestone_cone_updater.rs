@@ -64,7 +64,7 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
 
 
 fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index: MilestoneIndex) {
-    info!("Updating transactions referenced by milestone {}.", *milestone_index);
+
     let mut to_visit = vec![tail_hash];
     let mut visited = HashSet::new();
     let mut children = HashSet::new();
