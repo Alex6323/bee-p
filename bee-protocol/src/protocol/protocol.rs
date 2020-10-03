@@ -34,7 +34,7 @@ use bee_network::{EndpointId, Network, Origin};
 
 use dashmap::DashMap;
 use futures::channel::oneshot;
-use log::{debug, info};
+use log::{debug, error, info};
 use tokio::spawn;
 
 use crate::worker::{MilestoneConeUpdaterWorker, TipPoolCleaner};
@@ -139,12 +139,12 @@ impl Protocol {
             let ms_sync_count = Protocol::get().config.workers.ms_sync_count;
             let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
 
-            if !tangle().is_synced() {
-                if tangle().contains_milestone(next_ms) {
-                    milestone_solidifier.send(MilestoneSolidifierWorkerEvent(next_ms));
-                } else {
-                    Protocol::request_milestone(&milestone_requester, next_ms, None);
+            if tangle().contains_milestone(next_ms) {
+                if let Err(e) = milestone_solidifier.send(MilestoneSolidifierWorkerEvent(next_ms)) {
+                    error!("Sending solidification event failed: {}", e);
                 }
+            } else {
+                Protocol::request_milestone(&milestone_requester, next_ms, None);
             }
 
             // TODO spawn ?

@@ -17,19 +17,15 @@ mod wurts;
 
 pub use metadata::TransactionMetadata;
 
-use crate::{milestone::MilestoneIndex, protocol::Protocol, tangle::flags::Flags};
+use crate::{milestone::MilestoneIndex, tangle::flags::Flags};
 
 use bee_crypto::ternary::Hash;
 use bee_tangle::{Tangle, TransactionRef as TxRef};
 use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
-use log::{error, info};
 
-use crate::tangle::wurts::WurtsTipPool;
-use bee_transaction::Vertex;
 use std::{
-    collections::HashSet,
     ops::Deref,
     ptr,
     sync::{
@@ -71,7 +67,6 @@ impl MsTangle {
         // TODO this has been temporarily moved to the processor.
         // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
         // When the tangle is made a worker, this should be put back on.
-
         // if opt.is_some() {
         //     if let Err(e) = Protocol::get()
         //         .propagator_worker

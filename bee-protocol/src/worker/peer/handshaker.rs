@@ -24,10 +24,7 @@ use crate::{
     },
 };
 
-use bee_network::{
-    Command::{DisconnectEndpoint, MarkDuplicate, SendMessage},
-    Network, Origin,
-};
+use bee_network::{Command::SendMessage, Network, Origin};
 
 use futures::{channel::oneshot, future::FutureExt};
 use log::{error, info, trace, warn};

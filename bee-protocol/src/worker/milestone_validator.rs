@@ -156,7 +156,11 @@ where
                                     tangle()
                                         .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
 
-                                    milestone_solidifier.send(MilestoneSolidifierWorkerEvent(milestone.index));
+                                    if let Err(e) =
+                                        milestone_solidifier.send(MilestoneSolidifierWorkerEvent(milestone.index))
+                                    {
+                                        error!("Sending solidification event failed: {}", e);
+                                    }
                                 }
                             }
                             Err(e) => match e {

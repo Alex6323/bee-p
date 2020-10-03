@@ -122,11 +122,13 @@ pub struct Node {
     // TODO those 2 fields are related; consider bundling them
     network: Network,
     network_events: NetworkEventStream,
+    #[allow(dead_code)]
     shutdown: Shutdown,
     peers: PeerList,
 }
 
 impl Node {
+    #[allow(missing_docs)]
     pub async fn run(mut self) -> Result<(), Error> {
         info!("Running.");
 

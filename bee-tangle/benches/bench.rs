@@ -14,9 +14,7 @@ extern crate criterion;
 
 use criterion::Criterion;
 
-use bee_tangle::Tangle;
-
-fn bench_insert_transaction(c: &mut Criterion) {
+fn bench_insert_transaction(_c: &mut Criterion) {
     todo!("insert a few thousand transactions as fast as possible")
 }
 

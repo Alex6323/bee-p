@@ -108,7 +108,7 @@ where
 
         for transaction in &self.transactions.0 {
             // TODO handle res
-            sponge.absorb(&transaction.essence());
+            debug_assert!(sponge.absorb(&transaction.essence()).is_ok());
         }
 
         sponge
@@ -116,6 +116,7 @@ where
             .unwrap_or_else(|_| panic!("Panicked when unwrapping the sponge hash function."))
     }
 
+    #[allow(dead_code)]
     fn validate_signatures(&self) -> Result<(), IncomingBundleBuilderError> {
         // TODO no bundle should be considered valid if it contains more than MaxSecLevel transactions belonging to the
         // input address with a value != 0 (actually < 0) TODO get real values
@@ -230,6 +231,7 @@ mod tests {
 
     use bee_crypto::ternary::Hash;
 
+    #[allow(dead_code)]
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
         BundledTransactionBuilder::new()
             .with_payload(Payload::zeros())

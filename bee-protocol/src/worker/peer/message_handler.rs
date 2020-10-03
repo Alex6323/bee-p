@@ -246,7 +246,7 @@ mod tests {
         // Send a shutdown signal.
         sender_shutdown.send(()).unwrap();
         // Await for the task with the checks to be completed.
-        handle.await;
+        assert!(handle.await.is_ok());
     }
 
     /// Test that messages are produced correctly when they are divided into one byte events.
@@ -338,6 +338,6 @@ mod tests {
         // Send the last event after the shutdown signal
         sender.send(last_event).unwrap();
 
-        handle.await;
+        assert!(handle.await.is_ok());
     }
 }
