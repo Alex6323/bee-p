@@ -55,10 +55,10 @@ pub(crate) async fn spawn_reader_writer(
 ) -> Result<(), Error> {
     let Connection {
         origin,
-        own_address,
         peer_address,
         reader,
         writer,
+        ..
     } = connection;
 
     let (data_sender, data_receiver) = endpoint::channel();

@@ -13,9 +13,13 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Default)]
 pub struct PeerMetrics {
+    #[allow(dead_code)]
     invalid_transactions: AtomicU64,
+    #[allow(dead_code)]
     stale_transactions: AtomicU64,
+    #[allow(dead_code)]
     new_transactions: AtomicU64,
+    #[allow(dead_code)]
     known_transactions: AtomicU64,
 
     invalid_messages: AtomicU64,
@@ -25,51 +29,57 @@ pub struct PeerMetrics {
     transaction_requests_received: AtomicU64,
     heartbeats_received: AtomicU64,
 
+    #[allow(dead_code)]
     milestone_requests_sent: AtomicU64,
     transactions_sent: AtomicU64,
+    #[allow(dead_code)]
     transaction_requests_sent: AtomicU64,
+    #[allow(dead_code)]
     heartbeats_sent: AtomicU64,
 }
 
 impl PeerMetrics {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-impl PeerMetrics {
+    #[allow(dead_code)]
     pub fn invalid_transactions(&self) -> u64 {
         self.invalid_transactions.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn invalid_transactions_inc(&self) -> u64 {
         self.invalid_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn stale_transactions(&self) -> u64 {
         self.stale_transactions.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn stale_transactions_inc(&self) -> u64 {
         self.stale_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn new_transactions(&self) -> u64 {
         self.new_transactions.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn new_transactions_inc(&self) -> u64 {
         self.new_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn known_transactions(&self) -> u64 {
         self.known_transactions.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn known_transactions_inc(&self) -> u64 {
         self.known_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn invalid_messages(&self) -> u64 {
         self.invalid_messages.load(Ordering::Relaxed)
     }
@@ -78,6 +88,7 @@ impl PeerMetrics {
         self.invalid_messages.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn milestone_requests_received(&self) -> u64 {
         self.milestone_requests_received.load(Ordering::Relaxed)
     }
@@ -86,6 +97,7 @@ impl PeerMetrics {
         self.milestone_requests_received.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn transactions_received(&self) -> u64 {
         self.transactions_received.load(Ordering::Relaxed)
     }
@@ -94,6 +106,7 @@ impl PeerMetrics {
         self.transactions_received.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn transaction_requests_received(&self) -> u64 {
         self.transaction_requests_received.load(Ordering::Relaxed)
     }
@@ -102,6 +115,7 @@ impl PeerMetrics {
         self.transaction_requests_received.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn heartbeats_received(&self) -> u64 {
         self.heartbeats_received.load(Ordering::Relaxed)
     }
@@ -110,14 +124,17 @@ impl PeerMetrics {
         self.heartbeats_received.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn milestone_requests_sent(&self) -> u64 {
         self.milestone_requests_sent.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn milestone_requests_sent_inc(&self) -> u64 {
         self.milestone_requests_sent.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn transactions_sent(&self) -> u64 {
         self.transactions_sent.load(Ordering::Relaxed)
     }
@@ -126,18 +143,22 @@ impl PeerMetrics {
         self.transactions_sent.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn transaction_requests_sent(&self) -> u64 {
         self.transaction_requests_sent.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn transaction_requests_sent_inc(&self) -> u64 {
         self.transaction_requests_sent.fetch_add(1, Ordering::SeqCst)
     }
 
+    #[allow(dead_code)]
     pub fn heartbeats_sent(&self) -> u64 {
         self.heartbeats_sent.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn heartbeats_sent_inc(&self) -> u64 {
         self.heartbeats_sent.fetch_add(1, Ordering::SeqCst)
     }

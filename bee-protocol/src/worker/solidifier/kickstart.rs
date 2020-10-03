@@ -16,7 +16,7 @@ use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
 use futures::{channel::oneshot, StreamExt};
-use log::info;
+use log::{error, info};
 use tokio::time::interval;
 
 use std::{any::TypeId, time::Duration};
@@ -47,7 +47,9 @@ impl<N: Node> Worker<N> for KickstartWorker {
 
                 if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms + config.1 < latest_ms {
                     Protocol::request_milestone(&milestone_requester, MilestoneIndex(next_ms), None);
-                    config.0.send(MilestoneIndex(next_ms));
+                    if let Err(_) = config.0.send(MilestoneIndex(next_ms)) {
+                        error!("Could not set first non-solid milestone");
+                    }
 
                     for index in next_ms..(next_ms + config.1) {
                         Protocol::request_milestone(&milestone_requester, MilestoneIndex(index), None);

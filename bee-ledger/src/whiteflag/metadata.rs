@@ -20,6 +20,7 @@ pub(crate) struct WhiteFlagMetadata {
     /// Index of the confirming milestone.
     pub(crate) index: MilestoneIndex,
     /// Timestamp of the confirming milestone.
+    #[allow(dead_code)]
     pub(crate) timestamp: u64,
     /// The ledger differences created by the confirming milestone.
     pub(crate) diff: LedgerDiff,

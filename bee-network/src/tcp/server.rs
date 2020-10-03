@@ -27,6 +27,7 @@ use tokio::net::{TcpListener, TcpStream};
 use std::{io::Error, net::SocketAddr};
 
 pub struct TcpServer {
+    #[allow(dead_code)]
     binding_address: SocketAddr,
     internal_event_sender: EventSender,
     endpoint_contacts: EndpointContactList,

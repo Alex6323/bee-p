@@ -31,6 +31,7 @@ pub struct EndpointContactParams {
 }
 
 impl EndpointContactParams {
+    #[allow(dead_code)]
     pub fn from_socket_address(socket_address: SocketAddr, transport_protocol: TransportProtocol) -> Self {
         Self {
             domain_name_or_ip_address: socket_address.ip().to_string(),
@@ -121,7 +122,7 @@ impl EndpointContactList {
         self.0.contains_key(&epid)
     }
 
-    pub fn contains_ip_address(&self, ip_address: IpAddr, refresh: bool) -> bool {
+    pub fn contains_ip_address(&self, ip_address: IpAddr, _refresh: bool) -> bool {
         // TODO: 'refresh' IPs
         self.0
             .iter()
@@ -132,6 +133,7 @@ impl EndpointContactList {
         self.0.remove(&epid).is_some()
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.0.len()
     }

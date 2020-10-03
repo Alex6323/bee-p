@@ -93,7 +93,8 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
     Ok(solid_entry_points)
 }
 
-// TODO get the unconfirmed trnsactions in the database.
+#[allow(dead_code)]
+// TODO get the unconfirmed transactions in the database.
 pub fn get_unconfirmed_transactions(_target_index: &MilestoneIndex) -> Vec<Hash> {
     // NOTE If there is no specific struct for storing th unconfirmed transaction,
     //      then we need to traverse the whole tangle to get the unconfirmed transactions (SLOW)!
