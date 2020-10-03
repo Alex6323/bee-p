@@ -30,7 +30,6 @@ use crate::worker::milestone_cone_updater::{MilestoneConeUpdaterWorker, Mileston
 use std::{
     any::TypeId,
     cmp::{max, min},
-    collections::HashSet,
 };
 
 pub(crate) struct PropagatorWorkerEvent(pub(crate) Hash);

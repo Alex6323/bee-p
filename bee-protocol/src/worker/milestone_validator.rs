@@ -15,7 +15,6 @@ use crate::{
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, tangle},
     worker::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent},
-    MilestoneIndex,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};

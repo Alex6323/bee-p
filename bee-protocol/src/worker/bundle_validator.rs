@@ -21,8 +21,6 @@ use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::{info, warn};
 
-use std::any::TypeId;
-
 pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
 
 pub(crate) struct BundleValidatorWorker {

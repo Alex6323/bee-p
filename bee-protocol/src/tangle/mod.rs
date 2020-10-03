@@ -25,6 +25,7 @@ use bee_transaction::bundled::BundledTransaction as Tx;
 
 use dashmap::DashMap;
 
+use crate::tangle::wurts::WurtsTipPool;
 use std::{
     ops::Deref,
     ptr,

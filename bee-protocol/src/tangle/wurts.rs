@@ -11,11 +11,11 @@
 
 use crate::tangle::tangle;
 use bee_crypto::ternary::Hash;
-use log::{error, info};
-use rand::seq::{IteratorRandom, SliceRandom};
+use log::info;
+use rand::seq::IteratorRandom;
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
-    time::{Instant, SystemTime},
+    time::Instant,
 };
 
 enum Score {

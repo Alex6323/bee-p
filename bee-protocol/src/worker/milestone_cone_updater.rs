@@ -14,16 +14,13 @@ use crate::{tangle::tangle, Milestone, MilestoneIndex};
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_crypto::ternary::Hash;
-use bee_tangle::helper::load_bundle_builder;
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::{channel::mpsc, stream::StreamExt};
-use log::{error, info, warn};
+use futures::stream::StreamExt;
+use log::info;
 
-use crate::worker::{PropagatorWorker, PropagatorWorkerEvent};
 use std::{
-    any::TypeId,
     cmp::{max, min},
     collections::HashSet,
 };
