@@ -231,7 +231,7 @@ impl MsTangle {
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
         let pool = self.tip_pool.read().unwrap();
-        pool.select_two_non_lazy_tips()
+        pool.two_non_lazy_tips()
     }
 
     pub fn reduce_tips(&self) {

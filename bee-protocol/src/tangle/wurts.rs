@@ -190,22 +190,19 @@ impl WurtsTipPool {
         Score::NonLazy
     }
 
-    pub fn select_two_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
-        self.select_two_tips(&self.non_lazy_tips)
-    }
-
-    fn select_two_tips(&self, hashes: &HashSet<Hash>) -> Option<(Hash, Hash)> {
-        return if hashes.is_empty() {
+    pub fn two_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
+        let non_lazy_tips = &self.non_lazy_tips;
+        return if non_lazy_tips.is_empty() {
             None
-        } else if hashes.len() == 1 {
-            let tip = hashes.iter().next().unwrap();
+        } else if non_lazy_tips.len() == 1 {
+            let tip = non_lazy_tips.iter().next().unwrap();
             Some((*tip, *tip))
-        } else if hashes.len() == 2 {
-            let mut iter = hashes.iter();
+        } else if non_lazy_tips.len() == 2 {
+            let mut iter = non_lazy_tips.iter();
             Some((*iter.next().unwrap(), *iter.next().unwrap()))
         } else {
-            let tips = hashes.iter().choose_multiple(&mut rand::thread_rng(), 2);
-            let mut iter = tips.iter();
+            let hashes = non_lazy_tips.iter().choose_multiple(&mut rand::thread_rng(), 2);
+            let mut iter = hashes.iter();
             Some((**iter.next().unwrap(), **iter.next().unwrap()))
         };
     }
