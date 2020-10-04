@@ -24,5 +24,6 @@ pub trait Plugin {
 }
 
 pub(crate) fn init(bus: Arc<Bus>) {
-    debug_assert!(tps::TpsPlugin::new().init(bus).is_ok());
+    let result = tps::TpsPlugin::new().init(bus);
+    debug_assert!(result.is_ok());
 }
