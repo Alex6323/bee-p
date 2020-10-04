@@ -67,24 +67,14 @@ impl WurtsTipPool {
     }
 
     pub(crate) fn insert(&mut self, tail: Hash, trunk: Hash, branch: Hash) {
-        let is_non_lazy = {
-            // if parents are considered as non-lazy, child will be considered as non-lazy too
-            if self.non_lazy_tips.contains(&trunk) && self.non_lazy_tips.contains(&branch) {
-                true
-            } else {
-                // in case parents are not present, calculate score of the tip
-                match self.tip_score(&tail) {
-                    Score::NonLazy => true,
-                    _ => false,
-                }
-            }
-        };
-
-        if is_non_lazy {
-            self.non_lazy_tips.insert(tail);
-            self.tips.insert(tail, TipMetadata::new());
-            self.link_parents_with_child(&tail, &trunk, &branch);
-            self.check_retention_rules_for_parents(&trunk, &branch);
+        match self.tip_score(&tail) {
+            Score::NonLazy => {
+                self.non_lazy_tips.insert(tail);
+                self.tips.insert(tail, TipMetadata::new());
+                self.link_parents_with_child(&tail, &trunk, &branch);
+                self.check_retention_rules_for_parents(&trunk, &branch);
+            },
+            _ => {},
         }
     }
 
@@ -175,8 +165,13 @@ impl WurtsTipPool {
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
-        let lsmi = *tangle().get_latest_solid_milestone_index();
 
+        // in case the tip was pruned by the node, consider tip as lazy
+        if !tangle().contains(hash) {
+            return Score::Lazy;
+        }
+
+        let lsmi = *tangle().get_latest_solid_milestone_index();
         let otrsi = *tangle().otrsi(&hash).unwrap();
         let ytrsi = *tangle().ytrsi(&hash).unwrap();
 
@@ -195,11 +190,11 @@ impl WurtsTipPool {
         Score::NonLazy
     }
 
-    pub fn two_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
-        self.select_tips(&self.non_lazy_tips)
+    pub fn select_two_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
+        self.select_two_tips(&self.non_lazy_tips)
     }
 
-    fn select_tips(&self, hashes: &HashSet<Hash>) -> Option<(Hash, Hash)> {
+    fn select_two_tips(&self, hashes: &HashSet<Hash>) -> Option<(Hash, Hash)> {
         return if hashes.is_empty() {
             None
         } else if hashes.len() == 1 {

@@ -220,23 +220,23 @@ impl MsTangle {
     }
 
     pub fn insert_tip(&self, tail: Hash, trunk: Hash, branch: Hash) {
-        let mut tip_selector = self.tip_pool.write().unwrap();
-        tip_selector.insert(tail, trunk, branch);
+        let mut pool = self.tip_pool.write().unwrap();
+        pool.insert(tail, trunk, branch);
     }
 
     pub fn update_tip_scores(&self) {
-        let mut tip_selector = self.tip_pool.write().unwrap();
-        tip_selector.update_scores();
+        let mut pool = self.tip_pool.write().unwrap();
+        pool.update_scores();
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        let tip_selector = self.tip_pool.read().unwrap();
-        tip_selector.two_non_lazy_tips()
+        let pool = self.tip_pool.read().unwrap();
+        pool.select_two_non_lazy_tips()
     }
 
     pub fn reduce_tips(&self) {
-        let mut tip_selector = self.tip_pool.write().unwrap();
-        tip_selector.reduce_tips();
+        let mut pool = self.tip_pool.write().unwrap();
+        pool.reduce_tips();
     }
 }
 
