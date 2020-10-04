@@ -108,7 +108,8 @@ where
 
         for transaction in &self.transactions.0 {
             // TODO handle res
-            debug_assert!(sponge.absorb(&transaction.essence()).is_ok());
+            let res = sponge.absorb(&transaction.essence());
+            debug_assert!(res.is_ok());
         }
 
         sponge
