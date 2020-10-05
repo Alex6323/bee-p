@@ -78,7 +78,7 @@ impl<B: Backend> NodeBuilder<B> {
         info!("Initializing ledger...");
         node_builder = bee_ledger::whiteflag::init(
             snapshot_metadata.index(),
-            snapshot_state,
+            snapshot_state.into(),
             self.config.protocol.coordinator().clone(),
             node_builder,
             bus.clone(),

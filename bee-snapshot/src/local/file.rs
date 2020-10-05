@@ -12,7 +12,6 @@
 use crate::{constants::IOTA_SUPPLY, header::SnapshotHeader, local::LocalSnapshot, metadata::SnapshotMetadata};
 
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
-use bee_ledger::state::LedgerState;
 use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
@@ -180,7 +179,7 @@ impl LocalSnapshot {
 
         let mut buf_address = [0u8; 49];
         let mut buf_value = [0u8; std::mem::size_of::<u64>()];
-        let mut state = LedgerState::with_capacity(balances_num as usize);
+        let mut state = HashMap::with_capacity(balances_num as usize);
         let mut supply: u64 = 0;
         for i in 0..balances_num {
             let address = match reader.read_exact(&mut buf_address) {

@@ -21,7 +21,7 @@ pub use file::Error as FileError;
 use crate::{header::SnapshotHeader, metadata::SnapshotMetadata};
 
 use bee_crypto::ternary::Hash;
-use bee_ledger::state::LedgerState;
+use bee_transaction::bundled::Address;
 
 use log::{error, info};
 
@@ -29,7 +29,7 @@ use std::collections::HashMap;
 
 pub struct LocalSnapshot {
     pub(crate) metadata: SnapshotMetadata,
-    pub(crate) state: LedgerState,
+    pub(crate) state: HashMap<Address, u64>,
 }
 
 impl LocalSnapshot {
@@ -37,7 +37,7 @@ impl LocalSnapshot {
         &self.metadata
     }
 
-    pub fn state(&self) -> &LedgerState {
+    pub fn state(&self) -> &HashMap<Address, u64> {
         &self.state
     }
 }
@@ -61,7 +61,7 @@ pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
             solid_entry_points: HashMap::new(),
             seen_milestones: HashMap::new(),
         },
-        state: LedgerState::new(),
+        state: HashMap::new(),
     };
 
     let file = path.to_string() + "_tmp";

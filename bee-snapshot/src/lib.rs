@@ -28,7 +28,7 @@ use bee_common_ext::{
     node::{Node, NodeBuilder},
 };
 use bee_crypto::ternary::Hash;
-use bee_ledger::state::LedgerState;
+use bee_transaction::bundled::Address;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 use bee_storage::storage::Backend;
 
@@ -50,7 +50,7 @@ pub async fn init<B: Backend>(
     // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
     mut node_builder: NodeBuilder<BeeNode<B>>,
-) -> Result<(NodeBuilder<BeeNode<B>>, LedgerState, SnapshotMetadata), Error> {
+) -> Result<(NodeBuilder<BeeNode<B>>, HashMap<Address, u64>, SnapshotMetadata), Error> {
     let (state, metadata) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
