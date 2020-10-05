@@ -12,15 +12,13 @@
 mod config;
 mod download;
 mod file;
-mod metadata;
 
 pub(crate) use download::{download_local_snapshot, Error as DownloadError};
 
 pub use config::{LocalSnapshotConfig, LocalSnapshotConfigBuilder};
 pub use file::Error as FileError;
-pub use metadata::LocalSnapshotMetadata;
 
-use crate::metadata::SnapshotMetadata;
+use crate::{header::SnapshotHeader, metadata::SnapshotMetadata};
 
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
@@ -30,21 +28,17 @@ use log::{error, info};
 use std::collections::HashMap;
 
 pub struct LocalSnapshot {
-    pub(crate) metadata: LocalSnapshotMetadata,
+    pub(crate) metadata: SnapshotMetadata,
     pub(crate) state: LedgerState,
 }
 
 impl LocalSnapshot {
-    pub fn metadata(&self) -> &LocalSnapshotMetadata {
+    pub fn metadata(&self) -> &SnapshotMetadata {
         &self.metadata
     }
 
     pub fn state(&self) -> &LedgerState {
         &self.state
-    }
-
-    pub fn into_state(self) -> LedgerState {
-        self.state
     }
 }
 
@@ -55,8 +49,8 @@ pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
     info!("Creating local snapshot at index {}...", index);
 
     let ls = LocalSnapshot {
-        metadata: LocalSnapshotMetadata {
-            inner: SnapshotMetadata {
+        metadata: SnapshotMetadata {
+            header: SnapshotHeader {
                 coordinator: Hash::zeros(),
                 hash: Hash::zeros(),
                 snapshot_index: index,

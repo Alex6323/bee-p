@@ -19,8 +19,8 @@ use bee_ledger::state::LedgerState;
 use bee_protocol::MilestoneIndex;
 
 pub struct GlobalSnapshot {
-    index: MilestoneIndex,
-    state: LedgerState,
+    pub(crate) index: MilestoneIndex,
+    pub(crate) state: LedgerState,
 }
 
 impl GlobalSnapshot {
@@ -30,9 +30,5 @@ impl GlobalSnapshot {
 
     pub fn state(&self) -> &LedgerState {
         &self.state
-    }
-
-    pub fn into_state(self) -> LedgerState {
-        self.state
     }
 }

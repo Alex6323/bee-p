@@ -17,7 +17,7 @@ use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder as NodeBuilderB, shutdown_tokio::Shutdown};
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
-use bee_protocol::{tangle, Protocol};
+use bee_protocol::Protocol;
 use bee_storage::storage::Backend;
 
 use futures::{
@@ -28,12 +28,7 @@ use log::{error, info, trace, warn};
 use thiserror::Error;
 use tokio::spawn;
 
-use std::{
-    collections::HashMap,
-    net::SocketAddr,
-    sync::Arc,
-    marker::PhantomData,
-};
+use std::{collections::HashMap, marker::PhantomData, net::SocketAddr, sync::Arc};
 
 type NetworkEventStream = ShutdownStream<Fuse<flume::r#async::RecvStream<'static, Event>>>;
 
@@ -69,7 +64,7 @@ impl<B: Backend> NodeBuilder<B> {
         let bus = Arc::new(Bus::default());
 
         // TODO temporary
-        let (mut node_builder, ledger_state, snapshot_index, snapshot_timestamp) =
+        let (mut node_builder, snapshot_state, snapshot_metadata) =
             bee_snapshot::init(&self.config.snapshot, node_builder)
                 .await
                 .map_err(Error::SnapshotError)?;
@@ -82,8 +77,8 @@ impl<B: Backend> NodeBuilder<B> {
 
         info!("Initializing ledger...");
         node_builder = bee_ledger::whiteflag::init(
-            *snapshot_index,
-            ledger_state,
+            snapshot_metadata.index(),
+            snapshot_state,
             self.config.protocol.coordinator().clone(),
             node_builder,
             bus.clone(),
@@ -94,7 +89,7 @@ impl<B: Backend> NodeBuilder<B> {
             self.config.protocol,
             self.config.database,
             network.clone(),
-            snapshot_timestamp,
+            snapshot_metadata.timestamp(),
             node_builder,
             bus.clone(),
         )
@@ -159,7 +154,10 @@ impl<B: Backend> Node<B> {
 
     /// Returns a builder to create a node.
     pub fn builder(config: NodeConfig<B>) -> NodeBuilder<B> {
-        NodeBuilder { config, phantom: PhantomData }
+        NodeBuilder {
+            config,
+            phantom: PhantomData,
+        }
     }
 
     #[inline]
