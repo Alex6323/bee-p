@@ -9,12 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use alloc::vec::Vec;
+use alloc::boxed::Box;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Milestone {
     pub index: u32,
     pub timestamp: u64,
-    pub merkle_proof: Vec<u8>, // TODO length is 64, change back to array since next version will support all traits
-    pub signature: Vec<u8>,    // TODO length is 64
+    pub merkle_proof: Box<[u8]>, // TODO length is 64, change back to array since next version will support all traits
+    pub signature: Box<[u8]>,    // TODO length is 64
 }
