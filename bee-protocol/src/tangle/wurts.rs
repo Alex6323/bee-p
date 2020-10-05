@@ -73,8 +73,8 @@ impl WurtsTipPool {
                 self.tips.insert(tail, TipMetadata::new());
                 self.link_parents_with_child(&tail, &trunk, &branch);
                 self.check_retention_rules_for_parents(&trunk, &branch);
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
@@ -165,7 +165,6 @@ impl WurtsTipPool {
     }
 
     fn tip_score(&self, hash: &Hash) -> Score {
-
         // in case the tip was pruned by the node, consider tip as lazy
         if !tangle().contains(hash) {
             return Score::Lazy;
