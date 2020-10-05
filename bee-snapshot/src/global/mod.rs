@@ -16,15 +16,14 @@ pub use config::{GlobalSnapshotConfig, GlobalSnapshotConfigBuilder};
 pub use file::Error as FileError;
 
 use bee_ledger::state::LedgerState;
-use bee_protocol::MilestoneIndex;
 
 pub struct GlobalSnapshot {
-    pub(crate) index: MilestoneIndex,
+    pub(crate) index: u32,
     pub(crate) state: LedgerState,
 }
 
 impl GlobalSnapshot {
-    pub fn index(&self) -> &MilestoneIndex {
+    pub fn index(&self) -> &u32 {
         &self.index
     }
 

@@ -11,7 +11,7 @@
 
 pub(crate) mod constants;
 pub(crate) mod pruning;
-pub(crate) mod worker;
+// pub(crate) mod worker;
 
 pub mod config;
 pub mod event;
@@ -29,7 +29,7 @@ use bee_common_ext::{
 };
 use bee_crypto::ternary::Hash;
 use bee_ledger::state::LedgerState;
-use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
+// use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 use bee_storage::storage::Backend;
 
 use chrono::{offset::TimeZone, Utc};
@@ -55,9 +55,8 @@ pub async fn init<B: Backend>(
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
 
-            let snapshot =
-                global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
-                    .map_err(Error::Global)?;
+            let snapshot = global::GlobalSnapshot::from_file(config.global().path(), *config.global().index())
+                .map_err(Error::Global)?;
 
             info!(
                 "Loaded global snapshot file from with index {} and {} balances.",
@@ -70,15 +69,15 @@ pub async fn init<B: Backend>(
             let mut solid_entry_points = HashMap::new();
             // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
             // because coordinator bootstraps the network by referencing the genesis tx.
-            solid_entry_points.insert(Hash::zeros(), *index);
+            solid_entry_points.insert(Hash::zeros(), index);
 
             let metadata = SnapshotMetadata {
                 header: SnapshotHeader {
                     coordinator: Hash::zeros(),
                     hash: Hash::zeros(),
-                    snapshot_index: *index,
-                    entry_point_index: *index,
-                    pruning_index: *index,
+                    snapshot_index: index,
+                    entry_point_index: index,
+                    pruning_index: index,
                     // TODO from conf ?
                     timestamp: 0,
                 },
@@ -126,21 +125,21 @@ pub async fn init<B: Backend>(
         }
     };
 
-    node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
+    // node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
 
     Ok((node_builder, state, metadata))
 }
 
 pub fn events<B: Backend>(bee_node: &BeeNode<B>, bus: Arc<Bus<'static>>) {
-    let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
-
-    bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = snapshot_worker.send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
-            warn!(
-                "Failed to send milestone {} to snapshot worker: {:?}.",
-                *latest_solid_milestone.0.index(),
-                e
-            )
-        }
-    });
+    // let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
+    //
+    // bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
+    //     if let Err(e) = snapshot_worker.send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
+    //         warn!(
+    //             "Failed to send milestone {} to snapshot worker: {:?}.",
+    //             *latest_solid_milestone.0.index(),
+    //             e
+    //         )
+    //     }
+    // });
 }

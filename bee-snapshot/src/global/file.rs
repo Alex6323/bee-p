@@ -12,7 +12,6 @@
 use crate::{constants::IOTA_SUPPLY, global::GlobalSnapshot};
 
 use bee_ledger::state::LedgerState;
-use bee_protocol::MilestoneIndex;
 use bee_ternary::{T1B1Buf, TryteBuf};
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
@@ -37,7 +36,7 @@ pub enum Error {
 }
 
 impl GlobalSnapshot {
-    pub fn from_file(path: &str, index: MilestoneIndex) -> Result<Self, Error> {
+    pub fn from_file(path: &str, index: u32) -> Result<Self, Error> {
         let file = File::open(path).map_err(|_| Error::FileNotFound)?;
         let reader = BufReader::new(file);
 
