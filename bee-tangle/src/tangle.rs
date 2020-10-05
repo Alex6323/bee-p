@@ -103,6 +103,8 @@ where
 
     /// Inserts a transaction, and returns a thread-safe reference to it in case it didn't already exist.
     pub async fn insert(&self, hash: Hash, transaction: Tx, metadata: T) -> Option<TxRef> {
+        println!("Insert!");
+
         let r = match self.vertices.entry(hash) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {

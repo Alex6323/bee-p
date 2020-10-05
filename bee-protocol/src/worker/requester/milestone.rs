@@ -57,7 +57,7 @@ async fn process_request_unchecked(index: MilestoneIndex, epid: Option<EndpointI
 
     match epid {
         Some(epid) => {
-            Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+            Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
             true
         }
         None => {
@@ -70,7 +70,7 @@ async fn process_request_unchecked(index: MilestoneIndex, epid: Option<EndpointI
 
                 if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
                     if peer.maybe_has_data(index) {
-                        Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+                        Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index)).await;
                         return true;
                     }
                 }

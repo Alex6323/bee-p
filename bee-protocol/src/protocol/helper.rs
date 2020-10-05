@@ -103,7 +103,7 @@ impl Protocol {
 
     // Heartbeat
 
-    pub fn send_heartbeat(
+    pub async fn send_heartbeat(
         to: EndpointId,
         latest_solid_milestone_index: MilestoneIndex,
         pruning_milestone_index: MilestoneIndex,
@@ -118,7 +118,7 @@ impl Protocol {
                 Protocol::get().peer_manager.connected_peers(),
                 Protocol::get().peer_manager.synced_peers(),
             ),
-        );
+        ).await;
     }
 
     pub fn broadcast_heartbeat(
