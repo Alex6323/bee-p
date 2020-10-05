@@ -27,8 +27,8 @@ use log::{debug, info};
 use tokio::time::interval;
 
 use std::{
-    time::{Duration, Instant},
     any::TypeId,
+    time::{Duration, Instant},
 };
 
 const RETRY_INTERVAL_SECS: u64 = 5;

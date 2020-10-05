@@ -12,8 +12,8 @@
 //! A crate that contains foundational building blocks for the IOTA Tangle.
 
 use async_trait::async_trait;
-use std::error::Error;
 use serde::de::DeserializeOwned;
+use std::error::Error;
 
 #[async_trait]
 /// Trait to be implemented on storage backend,

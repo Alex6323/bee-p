@@ -10,7 +10,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 #![allow(missing_docs)]
 
-use crate::{tangle::{Tangle, Hooks}, traversal::visit_parents_follow_trunk};
+use crate::{
+    tangle::{Hooks, Tangle},
+    traversal::visit_parents_follow_trunk,
+};
 
 use bee_crypto::ternary::Hash;
 use bee_transaction::bundled::IncomingBundleBuilder;

@@ -15,7 +15,7 @@ use super::config::*;
 use async_trait::async_trait;
 pub use bee_storage::storage::Backend;
 pub use rocksdb::*;
-use std::{error::Error, fs};
+use std::error::Error;
 
 pub const TRANSACTION_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
 pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
@@ -81,7 +81,9 @@ impl Backend for Storage {
 
     /// It starts RocksDB instance and then initialize the required column familes
     async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>> {
-        Ok(Storage { inner: Self::try_new(config)? })
+        Ok(Storage {
+            inner: Self::try_new(config)?,
+        })
     }
     /// It shutdown RocksDB instance,
     /// Note: the shutdown is done through flush method and then droping the storage object

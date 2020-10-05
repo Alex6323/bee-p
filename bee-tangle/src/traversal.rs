@@ -13,7 +13,10 @@
 
 // TODO: Refactor all of this into methods on `Tangle`.
 
-use crate::{tangle::{Tangle, Hooks}, TransactionRef as TxRef};
+use crate::{
+    tangle::{Hooks, Tangle},
+    TransactionRef as TxRef,
+};
 
 use bee_crypto::ternary::Hash;
 

@@ -24,8 +24,8 @@ use bee_crypto::ternary::{
     Hash,
 };
 use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, RecoverableSignature};
-use bee_transaction::Vertex;
 use bee_storage::storage::Backend;
+use bee_transaction::Vertex;
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
@@ -47,7 +47,10 @@ pub(crate) struct MilestoneValidatorWorker {
     pub(crate) tx: flume::Sender<MilestoneValidatorWorkerEvent>,
 }
 
-async fn validate_milestone<N, M, P, B: Backend>(tangle: &MsTangle<B>, tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError>
+async fn validate_milestone<N, M, P, B: Backend>(
+    tangle: &MsTangle<B>,
+    tail_hash: Hash,
+) -> Result<Milestone, MilestoneValidatorWorkerError>
 where
     N: Node,
     M: Sponge + Default + Send + Sync + 'static,
@@ -124,9 +127,17 @@ where
                             continue;
                         }
                         match match config {
-                            SpongeKind::Kerl => validate_milestone::<N, Kerl, WotsPublicKey<Kerl>, N::Backend>(&tangle, tail_hash).await,
-                            SpongeKind::CurlP27 => validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>, N::Backend>(&tangle, tail_hash).await,
-                            SpongeKind::CurlP81 => validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>, N::Backend>(&tangle, tail_hash).await,
+                            SpongeKind::Kerl => {
+                                validate_milestone::<N, Kerl, WotsPublicKey<Kerl>, N::Backend>(&tangle, tail_hash).await
+                            }
+                            SpongeKind::CurlP27 => {
+                                validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>, N::Backend>(&tangle, tail_hash)
+                                    .await
+                            }
+                            SpongeKind::CurlP81 => {
+                                validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>, N::Backend>(&tangle, tail_hash)
+                                    .await
+                            }
                         } {
                             Ok(milestone) => {
                                 tangle.add_milestone(milestone.index, milestone.hash);

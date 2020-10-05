@@ -37,6 +37,5 @@ tokio = { version = "0.2.22", features = ["sync", "time"] }
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }
-pollster = "0.2"
 rand = "0.7.3"
 tokio = { version = "0.2.22", features = ["macros"] }

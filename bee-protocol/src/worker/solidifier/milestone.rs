@@ -13,13 +13,13 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{TransactionRequesterWorker, TransactionRequesterWorkerEvent, TangleWorker},
+    worker::{TangleWorker, TransactionRequesterWorker, TransactionRequesterWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_tangle::traversal;
 use bee_storage::storage::Backend;
+use bee_tangle::traversal;
 
 use async_trait::async_trait;
 use futures::{channel::oneshot, StreamExt};
@@ -105,7 +105,8 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
                 save_index(index, &mut queue);
                 while let Some(index) = queue.pop() {
                     if index == next_ms_index {
-                        trigger_solidification_unchecked(&tangle, &transaction_requester, index, &mut next_ms_index).await;
+                        trigger_solidification_unchecked(&tangle, &transaction_requester, index, &mut next_ms_index)
+                            .await;
                     } else {
                         queue.push(index);
                         break;

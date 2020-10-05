@@ -23,17 +23,17 @@ use crate::{
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 use bee_crypto::ternary::{Hash, HASH_LENGTH};
-use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, Milestone, MilestoneIndex};
+use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, Milestone, MilestoneIndex, TangleWorker};
+use bee_storage::storage::Backend;
 use bee_tangle::helper::load_bundle_builder;
 use bee_transaction::bundled::{Address, BundledTransactionField};
-use bee_storage::storage::Backend;
 
 use async_trait::async_trait;
 use blake2::Blake2b;
 use futures::{channel::oneshot, stream::StreamExt};
 use log::{error, info, warn};
 
-use std::sync::Arc;
+use std::{any::TypeId, sync::Arc};
 
 const MERKLE_PROOF_LENGTH: usize = 384;
 
@@ -53,7 +53,11 @@ pub(crate) struct LedgerWorker {
     pub(crate) tx: flume::Sender<LedgerWorkerEvent>,
 }
 
-fn milestone_info<B: Backend>(tangle: &MsTangle<B>, hash: &Hash, coo_config: &ProtocolCoordinatorConfig) -> (Vec<u8>, u64) {
+fn milestone_info<B: Backend>(
+    tangle: &MsTangle<B>,
+    hash: &Hash,
+    coo_config: &ProtocolCoordinatorConfig,
+) -> (Vec<u8>, u64) {
     // TODO handle error of both unwrap
     let ms = load_bundle_builder(tangle, hash).unwrap();
     let timestamp = ms.get(0).unwrap().get_timestamp();
@@ -155,6 +159,10 @@ impl<N: Node> Worker<N> for LedgerWorker {
         Arc<Bus<'static>>,
     );
     type Error = WorkerError;
+
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+    }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();

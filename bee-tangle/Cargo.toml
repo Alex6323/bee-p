@@ -16,6 +16,8 @@ bee-transaction = { path = "../bee-transaction" }
 
 dashmap = "3.10"
 lru = "0.5"
+async-trait = "0.1.40"
+log = "0.4.8"
 
 [dev-dependencies]
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }

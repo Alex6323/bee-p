@@ -21,32 +21,34 @@ use crate::{milestone::MilestoneIndex, tangle::flags::Flags};
 use std::sync::Arc;
 
 use bee_crypto::ternary::Hash;
-use bee_tangle::{Tangle, TransactionRef as TxRef, Hooks};
-use bee_transaction::bundled::BundledTransaction as Tx;
 use bee_storage::storage::Backend;
+use bee_tangle::{Hooks, Tangle, TransactionRef as TxRef};
+use bee_transaction::bundled::BundledTransaction as Tx;
 
+use async_trait::async_trait;
 use dashmap::DashMap;
 
 use std::{
     ops::Deref,
-    ptr,
-    sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
+    sync::atomic::{AtomicU32, Ordering},
 };
 
 pub struct StorageHooks<B> {
+    #[allow(dead_code)]
     storage: Arc<B>,
 }
 
+#[async_trait]
 impl<B: Backend> Hooks<TransactionMetadata> for StorageHooks<B> {
     type Error = ();
 
-    fn get(&self, hash: &Hash) -> Result<(Tx, TransactionMetadata), Self::Error> {
-        println!("Attempted to fetch {:?} from storage", hash);
+    async fn get(&self, _hash: &Hash) -> Result<(Tx, TransactionMetadata), Self::Error> {
+        // println!("Attempted to fetch {:?} from storage", hash);
         Err(())
     }
 
-    fn insert(&self, hash: Hash, tx: Tx, metadata: TransactionMetadata) -> Result<(), Self::Error> {
-        println!("Attempted to insert {:?} into storage", hash);
+    async fn insert(&self, _hash: Hash, _tx: Tx, _metadata: TransactionMetadata) -> Result<(), Self::Error> {
+        // println!("Attempted to insert {:?} into storage", hash);
         Ok(())
     }
 }
@@ -74,9 +76,7 @@ impl<B> Deref for MsTangle<B> {
 impl<B: Backend> MsTangle<B> {
     pub fn new(storage: Arc<B>) -> Self {
         Self {
-            inner: Tangle::new(StorageHooks {
-                storage,
-            }),
+            inner: Tangle::new(StorageHooks { storage }),
             milestones: Default::default(),
             solid_entry_points: Default::default(),
             latest_milestone_index: Default::default(),
@@ -221,26 +221,6 @@ impl<B: Backend> MsTangle<B> {
         }
     }
 }
-
-// static TANGLE: AtomicPtr<MsTangle> = AtomicPtr::new(ptr::null_mut());
-// static INITIALIZED: AtomicBool = AtomicBool::new(false);
-
-// pub fn init() {
-//     if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
-//         TANGLE.store(Box::into_raw(MsTangle::new().into()), Ordering::Relaxed);
-//     } else {
-//         panic!("Tangle already initialized");
-//     }
-// }
-
-// pub fn tangle() -> &'static MsTangle {
-//     let tangle = TANGLE.load(Ordering::Relaxed);
-//     if tangle.is_null() {
-//         panic!("Tangle cannot be null");
-//     } else {
-//         unsafe { &*tangle }
-//     }
-// }
 
 // #[cfg(test)]
 // mod tests {

@@ -20,20 +20,19 @@ pub mod header;
 pub mod local;
 pub mod metadata;
 
-use {global::GlobalSnapshot, header::SnapshotHeader, local::LocalSnapshot, metadata::SnapshotMetadata};
+use global::GlobalSnapshot;
+use header::SnapshotHeader;
+use local::LocalSnapshot;
+use metadata::SnapshotMetadata;
 
-use bee_common_ext::{
-    bee_node::BeeNode,
-    event::Bus,
-    node::{Node, NodeBuilder},
-};
+use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder};
 use bee_crypto::ternary::Hash;
 use bee_transaction::bundled::Address;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 use bee_storage::storage::Backend;
 
 use chrono::{offset::TimeZone, Utc};
-use log::{info, warn};
+use log::info;
 
 use std::{collections::HashMap, path::Path, sync::Arc};
 
@@ -49,9 +48,9 @@ pub enum Error {
 pub async fn init<B: Backend>(
     // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
-    mut node_builder: NodeBuilder<BeeNode<B>>,
+    node_builder: NodeBuilder<BeeNode<B>>,
 ) -> Result<(NodeBuilder<BeeNode<B>>, HashMap<Address, u64>, SnapshotMetadata), Error> {
-    let (state, metadata) = match config.load_type() {
+    let (state, mut metadata) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
 
@@ -66,11 +65,6 @@ pub async fn init<B: Backend>(
 
             let GlobalSnapshot { state, index } = snapshot;
 
-            let mut solid_entry_points = HashMap::new();
-            // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
-            // because coordinator bootstraps the network by referencing the genesis tx.
-            solid_entry_points.insert(Hash::zeros(), index);
-
             let metadata = SnapshotMetadata {
                 header: SnapshotHeader {
                     coordinator: Hash::zeros(),
@@ -81,7 +75,7 @@ pub async fn init<B: Backend>(
                     // TODO from conf ?
                     timestamp: 0,
                 },
-                solid_entry_points,
+                solid_entry_points: HashMap::new(),
                 seen_milestones: HashMap::new(),
             };
 
@@ -107,30 +101,22 @@ pub async fn init<B: Backend>(
                 snapshot.state.len()
             );
 
-            // tangle.update_latest_solid_milestone_index(snapshot.metadata().index().into());
-            // tangle.update_latest_milestone_index(snapshot.metadata().index().into());
-            // tangle.update_snapshot_index(snapshot.metadata().index().into());
-            // tangle.update_pruning_index(snapshot.metadata().index().into());
-            // tangle.add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
-            for (hash, index) in snapshot.metadata().solid_entry_points() {
-                // tangle.add_solid_entry_point(*hash, MilestoneIndex(*index));
-            }
-            for _seen_milestone in snapshot.metadata().seen_milestones() {
-                // TODO request ?
-            }
-
             let LocalSnapshot { metadata, state } = snapshot;
 
             (state, metadata)
         }
     };
 
+    // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
+    // because coordinator bootstraps the network by referencing the genesis tx.
+    metadata.solid_entry_points.insert(Hash::zeros(), metadata.index());
+
     // node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
 
     Ok((node_builder, state, metadata))
 }
 
-pub fn events<B: Backend>(bee_node: &BeeNode<B>, bus: Arc<Bus<'static>>) {
+pub fn events<B: Backend>(_bee_node: &BeeNode<B>, _bus: Arc<Bus<'static>>) {
     // let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
     //
     // bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {

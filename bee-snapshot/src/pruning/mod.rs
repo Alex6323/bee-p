@@ -61,8 +61,8 @@ pub use config::{PruningConfig, PruningConfigBuilder};
 // }
 
 // // TODO testing
-// pub fn get_new_solid_entry_points<B: Backend>(tangle: &MsTangle<B>, target_index: MilestoneIndex) -> Result<DashMap<Hash, MilestoneIndex>, Error> {
-//     let solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
+// pub fn get_new_solid_entry_points<B: Backend>(tangle: &MsTangle<B>, target_index: MilestoneIndex) ->
+// Result<DashMap<Hash, MilestoneIndex>, Error> {     let solid_entry_points = DashMap::<Hash, MilestoneIndex>::new();
 //     for index in *target_index - SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST..*target_index {
 //         let milestone_hash;
 

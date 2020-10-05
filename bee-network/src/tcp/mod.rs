@@ -105,7 +105,7 @@ fn spawn_writer(
             }
         }
 
-        shutdown_notifier.send(()).unwrap_or_else(|_| ());
+        let _ = shutdown_notifier.send(());
 
         trace!("TCP stream writer for {} stopped.", epid);
     })

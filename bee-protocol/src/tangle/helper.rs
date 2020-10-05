@@ -11,11 +11,14 @@
 
 use crate::tangle::TransactionMetadata;
 
-use bee_tangle::{traversal, Tangle, Hooks, TransactionRef};
+use bee_tangle::{traversal, Hooks, Tangle, TransactionRef};
 
 use bee_crypto::ternary::Hash;
 
-pub(crate) fn find_tail_of_bundle<H: Hooks<TransactionMetadata>>(tangle: &Tangle<TransactionMetadata, H>, root: Hash) -> Option<Hash> {
+pub(crate) fn find_tail_of_bundle<H: Hooks<TransactionMetadata>>(
+    tangle: &Tangle<TransactionMetadata, H>,
+    root: Hash,
+) -> Option<Hash> {
     let mut tail = None;
     let mut bundle = None;
 

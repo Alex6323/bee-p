@@ -15,7 +15,7 @@ use crate::{
     tangle::{MsTangle, TransactionMetadata},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
-        SolidPropagatorWorker, SolidPropagatorWorkerEvent, TransactionRequesterWorker, TangleWorker,
+        SolidPropagatorWorker, SolidPropagatorWorkerEvent, TangleWorker, TransactionRequesterWorker,
     },
 };
 
@@ -63,7 +63,7 @@ fn validate_timestamp(transaction: &Transaction) -> (bool, bool) {
 
     // (is_timestamp_valid, should_broadcast)
     (
-        timestamp >= Protocol::get().local_snapshot_timestamp && timestamp < future,
+        timestamp >= Protocol::get().snapshot_timestamp && timestamp < future,
         timestamp >= past,
     )
 }

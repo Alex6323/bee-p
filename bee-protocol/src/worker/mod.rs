@@ -20,9 +20,9 @@ mod responder;
 mod solidifier;
 mod status;
 mod storage;
+mod tangle;
 mod tps;
 mod transaction;
-mod tangle;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
@@ -41,7 +41,7 @@ pub(crate) use solidifier::{
     SolidPropagatorWorkerEvent,
 };
 pub(crate) use status::StatusWorker;
-pub(crate) use tps::TpsWorker;
-pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
 pub use storage::StorageWorker;
 pub use tangle::TangleWorker;
+pub(crate) use tps::TpsWorker;
+pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};

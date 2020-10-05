@@ -45,6 +45,7 @@ impl LocalSnapshot {
 #[derive(Debug)]
 pub(crate) enum Error {}
 
+#[allow(dead_code)] // TODO: When pruning is enabled
 pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
     info!("Creating local snapshot at index {}...", index);
 

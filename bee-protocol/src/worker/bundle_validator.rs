@@ -48,7 +48,7 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
-                match load_bundle_builder(&**&*tangle, &hash) {
+                match load_bundle_builder(&*tangle, &hash) {
                     Some(builder) => {
                         if builder.validate().is_ok() {
                             tangle.update_metadata(&hash, |metadata| {

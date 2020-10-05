@@ -11,12 +11,12 @@
 
 use crate::worker::Worker;
 
+use bee_storage::storage::Backend;
 use futures::{channel::oneshot, future::Future};
 use log::info;
-use bee_storage::storage::Backend;
 
 use std::{
-    any::{Any, TypeId, type_name},
+    any::{type_name, Any, TypeId},
     collections::{HashMap, HashSet},
     pin::Pin,
     sync::Arc,
@@ -32,7 +32,7 @@ pub trait Node: Default + Send + Sync + 'static {
         Self: Sized,
         W: Worker<Self>,
         G: FnOnce(oneshot::Receiver<()>) -> F,
-        F: Future<Output = ()> + Send + Sync + 'static;
+        F: Future<Output = ()> + Send + 'static;
 
     fn worker<W>(&self) -> Option<&W>
     where
@@ -48,7 +48,9 @@ pub trait Node: Default + Send + Sync + 'static {
 
     fn resource<R: Any + Send + Sync>(&self) -> &Arc<R>;
 
-    fn storage(&self) -> &Arc<Self::Backend> { self.resource() }
+    fn storage(&self) -> &Arc<Self::Backend> {
+        self.resource()
+    }
 }
 
 type Maker<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>;

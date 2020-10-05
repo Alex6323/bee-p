@@ -41,7 +41,7 @@ pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
     //   e
 
     pollster::block_on(async {
-        let tangle = Tangle::new();
+        let tangle = Tangle::default();
 
         let (a_hash, a) = create_random_tx();
         let (b_hash, b) = create_random_tx();

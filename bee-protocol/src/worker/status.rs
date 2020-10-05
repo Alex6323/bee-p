@@ -19,10 +19,7 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::{
-    time::Duration,
-    any::TypeId,
-};
+use std::{any::TypeId, time::Duration};
 
 #[derive(Default)]
 pub(crate) struct StatusWorker;

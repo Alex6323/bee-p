@@ -12,15 +12,15 @@
 use crate::{node::Node, worker::Worker};
 
 use anymap::{any::Any as AnyMapAny, Map};
+use bee_storage::storage::Backend;
 use futures::{channel::oneshot, future::Future};
 use tokio::spawn;
-use bee_storage::storage::Backend;
 
 use std::{
-    any::{Any, TypeId, type_name},
+    any::{type_name, Any, TypeId},
     collections::hash_map::{Entry, HashMap},
-    sync::{Arc, Mutex},
     marker::PhantomData,
+    sync::{Arc, Mutex},
 };
 
 #[allow(clippy::type_complexity)]
@@ -74,7 +74,7 @@ impl<B: Backend> Node for BeeNode<B> {
         Self: Sized,
         W: Worker<Self>,
         G: FnOnce(oneshot::Receiver<()>) -> F,
-        F: Future<Output = ()> + Send + Sync + 'static,
+        F: Future<Output = ()> + Send + 'static,
     {
         let (tx, rx) = oneshot::channel();
 

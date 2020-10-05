@@ -86,7 +86,12 @@ impl PeerHandshakerWorker {
         }
     }
 
-    pub async fn run<B: Backend>(mut self, tangle: Arc<MsTangle<B>>, receiver: flume::Receiver<Vec<u8>>, shutdown: oneshot::Receiver<()>) {
+    pub async fn run<B: Backend>(
+        mut self,
+        tangle: Arc<MsTangle<B>>,
+        receiver: flume::Receiver<Vec<u8>>,
+        shutdown: oneshot::Receiver<()>,
+    ) {
         info!("[{}] Running.", self.peer.address);
 
         // TODO should we have a first check if already connected ?
@@ -218,7 +223,12 @@ impl PeerHandshakerWorker {
         Ok(address)
     }
 
-    async fn process_message<B: Backend>(&mut self, tangle: &MsTangle<B>, header: &Header, bytes: &[u8]) -> Result<(), PeerHandshakerWorkerError> {
+    async fn process_message<B: Backend>(
+        &mut self,
+        tangle: &MsTangle<B>,
+        header: &Header,
+        bytes: &[u8],
+    ) -> Result<(), PeerHandshakerWorkerError> {
         if let Handshake::ID = header.message_type {
             trace!("[{}] Reading Handshake...", self.peer.address);
             match tlv_from_bytes::<Handshake>(&header, bytes) {
@@ -237,7 +247,8 @@ impl PeerHandshakerWorker {
                             tangle.get_latest_solid_milestone_index(),
                             tangle.get_pruning_index(),
                             tangle.get_latest_milestone_index(),
-                        ).await;
+                        )
+                        .await;
 
                         Protocol::request_latest_milestone(tangle, &self.milestone_requester, Some(self.peer.epid));
 

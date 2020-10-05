@@ -19,9 +19,8 @@ use crate::{
     worker::{
         BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneRequesterWorker,
         MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker, StatusWorker, TpsWorker,
-        TransactionRequesterWorker, TransactionResponderWorker,
-        StorageWorker, TangleWorker,
+        PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker, StatusWorker, StorageWorker, TangleWorker,
+        TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
     },
 };
 
@@ -32,6 +31,7 @@ use bee_common_ext::{
 };
 use bee_crypto::ternary::Hash;
 use bee_network::{EndpointId, Network, Origin};
+use bee_snapshot::metadata::SnapshotMetadata;
 use bee_storage::storage::Backend;
 
 use dashmap::DashMap;
@@ -47,7 +47,7 @@ pub struct Protocol {
     pub(crate) config: ProtocolConfig,
     pub(crate) network: Network,
     // TODO temporary
-    pub(crate) local_snapshot_timestamp: u64,
+    pub(crate) snapshot_timestamp: u64,
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) peer_manager: PeerManager,
@@ -60,14 +60,14 @@ impl Protocol {
         config: ProtocolConfig,
         database_config: B::Config,
         network: Network,
-        local_snapshot_timestamp: u64,
+        snapshot_metadata: SnapshotMetadata,
         node_builder: NodeBuilder<BeeNode<B>>,
         bus: Arc<Bus<'static>>,
     ) -> NodeBuilder<BeeNode<B>> {
         let protocol = Protocol {
             config,
             network: network.clone(),
-            local_snapshot_timestamp,
+            snapshot_timestamp: snapshot_metadata.timestamp(),
             bus,
             metrics: ProtocolMetrics::new(),
             peer_manager: PeerManager::new(),
@@ -83,7 +83,7 @@ impl Protocol {
 
         node_builder
             .with_worker_cfg::<StorageWorker>(database_config)
-            .with_worker::<TangleWorker>()
+            .with_worker_cfg::<TangleWorker>(snapshot_metadata)
             .with_worker_cfg::<HasherWorker>(Protocol::get().config.workers.transaction_worker_cache)
             .with_worker::<ProcessorWorker>()
             .with_worker::<TransactionResponderWorker>()

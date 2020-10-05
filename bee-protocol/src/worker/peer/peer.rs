@@ -71,7 +71,12 @@ impl PeerWorker {
         Protocol::get().peer_manager.remove(&self.peer.epid).await;
     }
 
-    fn process_message<B: Backend>(&mut self, tangle: &MsTangle<B>, header: &Header, bytes: &[u8]) -> Result<(), PeerWorkerError> {
+    fn process_message<B: Backend>(
+        &mut self,
+        tangle: &MsTangle<B>,
+        header: &Header,
+        bytes: &[u8],
+    ) -> Result<(), PeerWorkerError> {
         match header.message_type {
             MilestoneRequest::ID => {
                 trace!("[{}] Reading MilestoneRequest...", self.peer.address);

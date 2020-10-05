@@ -77,7 +77,8 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
                                 TransactionMessage::new(&compress_transaction_bytes(cast_slice(
                                     trits.encode::<T5B1Buf>().as_i8_slice(),
                                 ))),
-                            ).await;
+                            )
+                            .await;
                         }
                     }
                 }
