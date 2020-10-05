@@ -10,12 +10,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bech32::{self, ToBase32};
-use blake2::{
-    digest::{Update, VariableOutput},
-    VarBlake2b,
-};
 
-use core::convert::TryInto;
+// use blake2::{
+//     digest::{Update, VariableOutput},
+//     VarBlake2b,
+// };
+//
+// use core::convert::TryInto;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Ed25519Address([u8; 32]);

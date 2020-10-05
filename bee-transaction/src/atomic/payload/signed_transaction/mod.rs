@@ -278,7 +278,7 @@ impl<'a> SignedTransactionBuilder<'a> {
 
         let mut unlock_blocks = Vec::new();
         let mut last_index = (None, -1);
-        for (i, path) in &inputs {
+        for (_i, path) in &inputs {
             if last_index.0 == Some(path) {
                 unlock_blocks.push(UnlockBlock::Reference(ReferenceUnlock::new(last_index.1 as u8)));
             } else {
