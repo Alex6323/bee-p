@@ -94,7 +94,7 @@ fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index:
     }
 }
 
-fn update_future_cone(mut child: Hash) {
+fn update_future_cone(child: Hash) {
     let mut children = vec![child];
     while let Some(hash) = children.pop() {
         // in case the transaction is referenced by the milestone, OTRSI/YTRSI values are already up-to-date
@@ -104,16 +104,20 @@ fn update_future_cone(mut child: Hash) {
 
         // get best OTRSI/YTRSI values from parents
         let tx = tangle().get(&hash).unwrap();
-        let trunk_otsri = tangle().otrsi(tx.trunk()).unwrap();
-        let branch_otsri = tangle().otrsi(tx.branch()).unwrap();
-        let trunk_ytrsi = tangle().ytrsi(tx.trunk()).unwrap();
-        let branch_ytrsi = tangle().ytrsi(tx.branch()).unwrap();
+        let trunk_otsri = tangle().otrsi(tx.trunk());
+        let branch_otsri = tangle().otrsi(tx.branch());
+        let trunk_ytrsi = tangle().ytrsi(tx.trunk());
+        let branch_ytrsi = tangle().ytrsi(tx.branch());
+
+        if trunk_otsri.is_none() || branch_otsri.is_none() || trunk_ytrsi.is_none() || branch_ytrsi.is_none() {
+            continue;
+        }
 
         // in case the transaction already inherited the best OTRSI/YTRSI values, continue
         let current_otrsi = tangle().otrsi(&hash).unwrap();
         let current_ytrsi = tangle().ytrsi(&hash).unwrap();
-        let best_otrsi = max(trunk_otsri, branch_otsri);
-        let best_ytrsi = min(trunk_ytrsi, branch_ytrsi);
+        let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
+        let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
 
         if current_otrsi == best_otrsi && current_ytrsi == best_ytrsi {
             continue;
