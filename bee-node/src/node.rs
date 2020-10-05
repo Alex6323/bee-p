@@ -89,7 +89,7 @@ impl<B: Backend> NodeBuilder<B> {
             self.config.protocol,
             self.config.database,
             network.clone(),
-            snapshot_metadata.timestamp(),
+            snapshot_metadata,
             node_builder,
             bus.clone(),
         )

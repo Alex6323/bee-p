@@ -51,7 +51,7 @@ pub async fn init<B: Backend>(
     config: &config::SnapshotConfig,
     mut node_builder: NodeBuilder<BeeNode<B>>,
 ) -> Result<(NodeBuilder<BeeNode<B>>, HashMap<Address, u64>, SnapshotMetadata), Error> {
-    let (state, metadata) = match config.load_type() {
+    let (state, mut metadata) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
 
@@ -66,11 +66,6 @@ pub async fn init<B: Backend>(
 
             let GlobalSnapshot { state, index } = snapshot;
 
-            let mut solid_entry_points = HashMap::new();
-            // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
-            // because coordinator bootstraps the network by referencing the genesis tx.
-            solid_entry_points.insert(Hash::zeros(), index);
-
             let metadata = SnapshotMetadata {
                 header: SnapshotHeader {
                     coordinator: Hash::zeros(),
@@ -81,7 +76,7 @@ pub async fn init<B: Backend>(
                     // TODO from conf ?
                     timestamp: 0,
                 },
-                solid_entry_points,
+                solid_entry_points: HashMap::new(),
                 seen_milestones: HashMap::new(),
             };
 
@@ -107,23 +102,15 @@ pub async fn init<B: Backend>(
                 snapshot.state.len()
             );
 
-            // tangle.update_latest_solid_milestone_index(snapshot.metadata().index().into());
-            // tangle.update_latest_milestone_index(snapshot.metadata().index().into());
-            // tangle.update_snapshot_index(snapshot.metadata().index().into());
-            // tangle.update_pruning_index(snapshot.metadata().index().into());
-            // tangle.add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
-            for (hash, index) in snapshot.metadata().solid_entry_points() {
-                // tangle.add_solid_entry_point(*hash, MilestoneIndex(*index));
-            }
-            for _seen_milestone in snapshot.metadata().seen_milestones() {
-                // TODO request ?
-            }
-
             let LocalSnapshot { metadata, state } = snapshot;
 
             (state, metadata)
         }
     };
+
+    // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
+    // because coordinator bootstraps the network by referencing the genesis tx.
+    metadata.solid_entry_points.insert(Hash::zeros(), metadata.index());
 
     // node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
 
