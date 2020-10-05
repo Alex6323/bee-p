@@ -13,7 +13,7 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Input {
     UTXO(UTXOInput),
 }

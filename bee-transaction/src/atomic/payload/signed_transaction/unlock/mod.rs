@@ -15,7 +15,7 @@ mod signature;
 pub use reference::ReferenceUnlock;
 pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum UnlockBlock {
     Reference(ReferenceUnlock),
     Signature(SignatureUnlock),

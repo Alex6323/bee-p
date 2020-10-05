@@ -24,7 +24,7 @@ pub use unsigned_data::UnsignedData;
 
 use alloc::boxed::Box;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug)]
 pub enum Payload {
     Indexation(Box<Indexation>),
     Milestone(Box<Milestone>),

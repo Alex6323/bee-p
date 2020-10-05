@@ -34,7 +34,7 @@ const INPUT_OUTPUT_COUNT_MAX: usize = 127;
 const INPUT_OUTPUT_COUNT_RANGE: Range<usize> = 1..INPUT_OUTPUT_COUNT_MAX + 1;
 const INPUT_OUTPUT_INDEX_RANGE: Range<u8> = 0..INPUT_OUTPUT_COUNT_MAX as u8;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug)]
 pub struct SignedTransaction {
     pub unsigned_transaction: UnsignedTransaction,
     pub unlock_blocks: Vec<UnlockBlock>,
@@ -60,7 +60,6 @@ impl SignedTransaction {
             return Err(Error::EmptyError);
         }
 
-        let mut combination = Vec::new();
         for i in transaction.inputs.iter() {
             // Input Type value must be 0, denoting an UTXO Input.
             match i {
@@ -71,7 +70,7 @@ impl SignedTransaction {
                     }
 
                     // Every combination of Transaction ID + Transaction Output Index must be unique in the inputs set.
-                    if !insert_combination(&mut combination, u) {
+                    if transaction.inputs.iter().filter(|j| *j == i).count() > 1 {
                         return Err(Error::DuplicateError);
                     }
                 }
@@ -96,7 +95,6 @@ impl SignedTransaction {
         }
 
         let mut total = 0;
-        let mut combination = Vec::new();
         for i in transaction.outputs.iter() {
             // Output Type must be 0, denoting a SigLockedSingleDeposit.
             match i {
@@ -106,7 +104,15 @@ impl SignedTransaction {
                     // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
 
                     // The Address must be unique in the set of SigLockedSingleDeposits
-                    if !insert_combination(&mut combination, u.address()) {
+                    if transaction
+                        .outputs
+                        .iter()
+                        .filter(|j| match *j {
+                            output::Output::SigLockedSingleDeposit(s) => s.address() == u.address(),
+                        })
+                        .count()
+                        > 1
+                    {
                         return Err(Error::DuplicateError);
                     }
 
@@ -141,7 +147,6 @@ impl SignedTransaction {
             return Err(Error::CountError);
         }
 
-        let mut combination = Vec::new();
         for (i, block) in self.unlock_blocks.iter().enumerate() {
             // Signature Unlock Blocks must define either an Ed25519- or WOTS Signature
             match block {
@@ -169,7 +174,7 @@ impl SignedTransaction {
                 UnlockBlock::Signature(s) => {
                     // A Signature Unlock Block unlocking multiple inputs must only appear once (be unique) and be
                     // positioned at same index of the first input it unlocks.
-                    if !insert_combination(&mut combination, s) {
+                    if self.unlock_blocks.iter().filter(|j| *j == block).count() > 1 {
                         return Err(Error::DuplicateError);
                     }
 
@@ -209,14 +214,6 @@ impl SignedTransaction {
 
         Ok(())
     }
-}
-
-fn insert_combination<T: PartialEq>(combination: &mut Vec<T>, element: T) -> bool {
-    let res = combination.iter().any(|i| i == &element);
-    if res {
-        combination.push(element);
-    }
-    res
 }
 
 fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {

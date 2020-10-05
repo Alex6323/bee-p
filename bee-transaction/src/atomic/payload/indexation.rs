@@ -11,7 +11,7 @@
 
 pub const TAG_LENGTH: usize = 16;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug)]
 pub struct Indexation([u8; TAG_LENGTH]);
 
 impl From<[u8; TAG_LENGTH]> for Indexation {

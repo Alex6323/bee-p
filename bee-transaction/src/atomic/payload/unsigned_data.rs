@@ -11,7 +11,7 @@
 
 use alloc::vec::Vec;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug)]
 pub struct UnsignedData(Vec<u8>);
 
 impl From<Vec<u8>> for UnsignedData {

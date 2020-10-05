@@ -11,16 +11,16 @@
 
 use alloc::vec::Vec;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct WotsSignature(pub Vec<i8>);
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Ed25519Signature {
     pub public_key: [u8; 32],
     pub signature: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum SignatureUnlock {
     Wots(WotsSignature),
     Ed25519(Ed25519Signature),

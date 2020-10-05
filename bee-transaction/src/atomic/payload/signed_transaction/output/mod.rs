@@ -15,7 +15,7 @@ mod sig_locked_single_deposit;
 pub use address::{Address, Ed25519Address, WotsAddress};
 pub use sig_locked_single_deposit::SigLockedSingleDeposit;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug)]
 pub enum Output {
     SigLockedSingleDeposit(SigLockedSingleDeposit),
 }

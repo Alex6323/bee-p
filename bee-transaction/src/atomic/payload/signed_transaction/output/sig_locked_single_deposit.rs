@@ -13,7 +13,7 @@ use crate::atomic::payload::signed_transaction::Address;
 
 use core::num::NonZeroU64;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug)]
 pub struct SigLockedSingleDeposit {
     address: Address,
     amount: NonZeroU64,

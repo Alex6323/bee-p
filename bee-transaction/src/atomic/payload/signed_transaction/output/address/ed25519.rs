@@ -18,7 +18,7 @@ use bech32::{self, ToBase32};
 //
 // use core::convert::TryInto;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Ed25519Address([u8; 32]);
 
 impl From<[u8; 32]> for Ed25519Address {

@@ -11,7 +11,7 @@
 
 use crate::atomic::Hash;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct UTXOInput {
     id: Hash,
     index: u8,

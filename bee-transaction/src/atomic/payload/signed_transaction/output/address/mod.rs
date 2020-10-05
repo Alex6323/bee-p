@@ -17,7 +17,7 @@ pub use wots::WotsAddress;
 
 use alloc::string::String;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Address {
     Wots(WotsAddress),
     Ed25519(Ed25519Address),
