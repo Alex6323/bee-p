@@ -11,7 +11,7 @@
 
 use bee_ternary::{T5B1Buf, TritBuf};
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct WotsAddress(Vec<i8>);
 
 impl From<&TritBuf<T5B1Buf>> for WotsAddress {

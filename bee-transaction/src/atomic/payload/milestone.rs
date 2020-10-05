@@ -11,7 +11,7 @@
 
 use alloc::boxed::Box;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Milestone {
     pub index: u32,
     pub timestamp: u64,

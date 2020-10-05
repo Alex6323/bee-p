@@ -12,7 +12,7 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct SignedData {
     pub data: Vec<u8>,
     pub public_key: [u8; 32],

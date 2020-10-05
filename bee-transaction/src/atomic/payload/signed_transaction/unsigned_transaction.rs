@@ -14,7 +14,7 @@ use crate::atomic::payload::Payload;
 
 use alloc::vec::Vec;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct UnsignedTransaction {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,

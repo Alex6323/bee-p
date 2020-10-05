@@ -14,7 +14,7 @@ use crate::{
     Vertex,
 };
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Message {
     parent1: Hash,
     parent2: Hash,

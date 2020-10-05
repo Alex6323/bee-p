@@ -34,7 +34,7 @@ const INPUT_OUTPUT_COUNT_MAX: usize = 127;
 const INPUT_OUTPUT_COUNT_RANGE: Range<usize> = 1..INPUT_OUTPUT_COUNT_MAX + 1;
 const INPUT_OUTPUT_INDEX_RANGE: Range<u8> = 0..INPUT_OUTPUT_COUNT_MAX as u8;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct SignedTransaction {
     pub unsigned_transaction: UnsignedTransaction,
     pub unlock_blocks: Vec<UnlockBlock>,
@@ -79,9 +79,10 @@ impl SignedTransaction {
         }
 
         // Inputs must be in lexicographical order of their serialized form.
-        if !is_sorted(transaction.inputs.iter()) {
-            return Err(Error::OrderError);
-        }
+        // TODO
+        // if !is_sorted(transaction.inputs.iter()) {
+        //     return Err(Error::OrderError);
+        // }
 
         // Output validation
         // Outputs Count must be 0 < x <= 127
@@ -121,9 +122,10 @@ impl SignedTransaction {
         }
 
         // Outputs must be in lexicographical order by their serialized form
-        if !is_sorted(transaction.outputs.iter()) {
-            return Err(Error::OrderError);
-        }
+        // TODO
+        // if !is_sorted(transaction.outputs.iter()) {
+        //     return Err(Error::OrderError);
+        // }
 
         // Accumulated output balance must not exceed the total supply of tokens 2'779'530'283'277'761
         if total > 2779530283277761 {
@@ -276,8 +278,10 @@ impl<'a> SignedTransactionBuilder<'a> {
         if inputs.is_empty() || outputs.is_empty() {
             return Err(Error::CountError);
         }
-        inputs.sort();
-        outputs.sort();
+
+        // TODO
+        // inputs.sort();
+        // outputs.sort();
 
         let mut unlock_blocks = Vec::new();
         let mut last_index = (None, -1);
