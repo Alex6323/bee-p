@@ -28,12 +28,15 @@ use bee_signing_ext::{
 };
 
 use alloc::vec::Vec;
-use core::{cmp::Ordering, slice::Iter};
+use core::{cmp::Ordering, ops::Range, slice::Iter};
+
+const INPUT_OUTPUT_COUNT_MAX: usize = 127;
+const INPUT_OUTPUT_COUNT_RANGE: Range<usize> = 1..INPUT_OUTPUT_COUNT_MAX + 1;
+const INPUT_OUTPUT_INDEX_RANGE: Range<u8> = 0..INPUT_OUTPUT_COUNT_MAX as u8;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SignedTransaction {
     pub unsigned_transaction: UnsignedTransaction,
-    pub unlock_block_count: u8,
     pub unlock_blocks: Vec<UnlockBlock>,
 }
 
@@ -47,8 +50,8 @@ impl SignedTransaction {
 
         // Inputs validation
         let transaction = &self.unsigned_transaction;
-        // Inputs Count must be 0 < x < 127
-        if !(1..127).contains(&transaction.inputs.len()) {
+        // Inputs Count must be 0 < x <= 127
+        if !INPUT_OUTPUT_COUNT_RANGE.contains(&transaction.inputs.len()) {
             return Err(Error::CountError);
         }
 
@@ -63,7 +66,7 @@ impl SignedTransaction {
             match i {
                 Input::UTXO(u) => {
                     // Transaction Output Index must be 0 ≤ x < 127
-                    if !(0..127).contains(&u.index()) {
+                    if !INPUT_OUTPUT_INDEX_RANGE.contains(&u.index()) {
                         return Err(Error::CountError);
                     }
 
@@ -81,8 +84,8 @@ impl SignedTransaction {
         }
 
         // Output validation
-        // Outputs Count must be 0 < x < 127
-        if !(1..127).contains(&transaction.outputs.len()) {
+        // Outputs Count must be 0 < x <= 127
+        if !INPUT_OUTPUT_COUNT_RANGE.contains(&transaction.outputs.len()) {
             return Err(Error::CountError);
         }
 
@@ -132,7 +135,7 @@ impl SignedTransaction {
 
         // Unlock Blocks validation
         // Unlock Blocks Count must match the amount of inputs. Must be 0 < x < 127.
-        if !(1..127).contains(&self.unlock_block_count) {
+        if !INPUT_OUTPUT_COUNT_RANGE.contains(&self.unlock_blocks.len()) {
             return Err(Error::CountError);
         }
 
@@ -318,7 +321,6 @@ impl<'a> SignedTransactionBuilder<'a> {
                 outputs,
                 payload: self.payload,
             },
-            unlock_block_count: unlock_blocks.len() as u8,
             unlock_blocks,
         })
     }
