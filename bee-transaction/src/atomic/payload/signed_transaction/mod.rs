@@ -48,9 +48,8 @@ impl SignedTransaction {
         // Inputs validation
         let transaction = &self.unsigned_transaction;
         // Inputs Count must be 0 < x < 127
-        match transaction.inputs.len() {
-            1..=126 => (),
-            _ => return Err(Error::CountError),
+        if !(1..127).contains(&transaction.inputs.len()) {
+            return Err(Error::CountError);
         }
 
         // At least one input must be specified
@@ -64,9 +63,8 @@ impl SignedTransaction {
             match i {
                 Input::UTXO(u) => {
                     // Transaction Output Index must be 0 ≤ x < 127
-                    match u.index() {
-                        0..=126 => (),
-                        _ => return Err(Error::CountError),
+                    if !(0..127).contains(&u.index()) {
+                        return Err(Error::CountError);
                     }
 
                     // Every combination of Transaction ID + Transaction Output Index must be unique in the inputs set.
@@ -84,9 +82,8 @@ impl SignedTransaction {
 
         // Output validation
         // Outputs Count must be 0 < x < 127
-        match transaction.outputs.len() {
-            1..=126 => (),
-            _ => return Err(Error::CountError),
+        if !(1..127).contains(&transaction.outputs.len()) {
+            return Err(Error::CountError);
         }
 
         // At least one output must be specified
@@ -135,12 +132,10 @@ impl SignedTransaction {
 
         // Unlock Blocks validation
         // Unlock Blocks Count must match the amount of inputs. Must be 0 < x < 127.
-        match self.unlock_block_count {
-            1..=126 => (),
-            _ => return Err(Error::CountError),
+        if !(1..127).contains(&self.unlock_block_count) {
+            return Err(Error::CountError);
         }
 
-        // Unlock Block Type must either be 0 or 1, denoting a Signature Unlock Block or Reference Unlock block.
         let mut combination = Vec::new();
         for (i, block) in self.unlock_blocks.iter().enumerate() {
             // Signature Unlock Blocks must define either an Ed25519- or WOTS Signature
@@ -212,12 +207,7 @@ impl SignedTransaction {
 }
 
 fn insert_combination<T: PartialEq>(combination: &mut Vec<T>, element: T) -> bool {
-    let res = combination.iter().fold(true, |mut acc, i| {
-        if i == &element {
-            acc = false;
-        }
-        acc
-    });
+    let res = combination.iter().any(|i| i == &element);
     if res {
         combination.push(element);
     }
