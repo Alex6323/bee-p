@@ -193,8 +193,8 @@ impl SignedTransaction {
 
                     // Semantic Validation: The Signature Unlock Blocks are valid, i.e. the signatures prove ownership
                     // over the addresses of the referenced UTXOs.
-                    // let serialized_inputs = bincode::serialize(&transaction.inputs[i]).map_err(|_| Error::HashError)?;
-                    // TODO
+                    // let serialized_inputs = bincode::serialize(&transaction.inputs[i]).map_err(|_|
+                    // Error::HashError)?; TODO
                     let serialized_inputs = [];
                     match s {
                         SignatureUnlock::Ed25519(sig) => {
