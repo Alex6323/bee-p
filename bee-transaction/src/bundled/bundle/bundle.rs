@@ -31,6 +31,10 @@ impl Bundle {
         self.0.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     // TODO TEST
     pub fn hash(&self) -> &Hash {
         // Safe to unwrap because empty bundles can't be built

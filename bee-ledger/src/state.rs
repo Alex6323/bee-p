@@ -54,6 +54,10 @@ impl LedgerState {
         self.0.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (&Address, &u64)> {
         self.0.iter()
     }

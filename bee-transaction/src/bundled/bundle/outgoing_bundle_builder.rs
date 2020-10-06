@@ -147,15 +147,17 @@ where
     }
 }
 
-impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
+impl<E: Sponge + Default> Default for StagedOutgoingBundleBuilder<E, OutgoingRaw> {
     // TODO TEST
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self {
             builders: BundledTransactionBuilders::default(),
             marker: PhantomData,
         }
     }
+}
 
+impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
     // TODO TEST
     pub fn push(&mut self, builder: BundledTransactionBuilder) {
         self.builders.push(builder);
@@ -168,7 +170,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingRaw> {
         let mut sum: i64 = 0;
         let last_index = self.builders.len() - 1;
 
-        if self.builders.len() == 0 {
+        if self.builders.is_empty() {
             return Err(OutgoingBundleBuilderError::Empty);
         }
 
@@ -383,7 +385,7 @@ mod tests {
 
     fn bundle_builder_signature_check(security: WotsSecurityLevel) -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
-        let mut bundle_builder = OutgoingBundleBuilder::new();
+        let mut bundle_builder = OutgoingBundleBuilder::default();
         let seed = Seed::rand();
         let privkey = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
             .with_security_level(security)
@@ -438,7 +440,7 @@ mod tests {
 
     fn bundle_builder_different_security_check() -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
-        let mut bundle_builder = OutgoingBundleBuilder::new();
+        let mut bundle_builder = OutgoingBundleBuilder::default();
         let seed = Seed::rand();
         let address_low = Address::from_inner_unchecked(
             WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
@@ -533,7 +535,7 @@ mod tests {
     #[test]
     fn outgoing_bundle_builder_data_test() -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 3;
-        let mut bundle_builder = OutgoingBundleBuilder::new();
+        let mut bundle_builder = OutgoingBundleBuilder::default();
 
         for i in 0..bundle_size {
             bundle_builder.push(default_transaction_builder(i, bundle_size - 1));

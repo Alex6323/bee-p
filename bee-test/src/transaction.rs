@@ -31,9 +31,9 @@ pub fn clone_tx(tx: &Transaction) -> Transaction {
         .with_last_index(tx.last_index().clone())
         .with_tag(tx.tag().clone())
         .with_attachment_ts(tx.attachment_ts().clone())
-        .with_bundle(tx.bundle().clone())
-        .with_trunk(tx.trunk().clone())
-        .with_branch(tx.branch().clone())
+        .with_bundle(*tx.bundle())
+        .with_trunk(*tx.trunk())
+        .with_branch(*tx.branch())
         .with_attachment_lbts(tx.attachment_lbts().clone())
         .with_attachment_ubts(tx.attachment_ubts().clone())
         .with_nonce(tx.nonce().clone());

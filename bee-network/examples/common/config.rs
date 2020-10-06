@@ -45,9 +45,9 @@ impl ConfigBuilder {
         Config {
             binding_address: self
                 .binding_address
-                .unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1337)),
+                .unwrap_or_else(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1337)),
             peers: self.peers,
-            message: self.message.unwrap_or("hello".into()),
+            message: self.message.unwrap_or_else(|| "hello".into()),
         }
     }
 }

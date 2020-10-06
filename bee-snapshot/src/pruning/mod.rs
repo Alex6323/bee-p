@@ -29,7 +29,7 @@ use log::{info, warn};
 #[derive(Debug)]
 pub enum Error {
     MilestoneNotFoundInTangle(u32),
-    MetadataNotFound(Hash),
+    MetadataNotFound(Box<Hash>),
 }
 
 /// Checks whether any direct approver of the given transaction was confirmed by a
@@ -40,7 +40,7 @@ pub fn is_solid_entry_point(hash: &Hash) -> Result<bool, Error> {
     if let Some(metadata) = tangle().get_metadata(hash) {
         milestone_index = metadata.milestone_index();
     } else {
-        return Err(Error::MetadataNotFound(*hash));
+        return Err(Error::MetadataNotFound(Box::new(*hash)));
     }
     let mut is_solid = false;
     traversal::visit_children_follow_trunk(
@@ -82,7 +82,7 @@ pub fn get_new_solid_entry_points(target_index: MilestoneIndex) -> Result<DashMa
                 if metadata.flags().is_confirmed() && is_solid_entry_point(&hash).unwrap() {
                     // Find all tails.
                     helper::on_all_tails(tangle(), *hash, |hash, _tx, metadata| {
-                        solid_entry_points.insert(hash.clone(), metadata.milestone_index());
+                        solid_entry_points.insert(*hash, metadata.milestone_index());
                     });
                 }
             },
@@ -172,7 +172,7 @@ pub fn prune_database(mut target_index: MilestoneIndex) -> Result<(), Error> {
                 //      (even transactions of older milestones)
                 true
             },
-            |hash, _, _| transactions_to_prune.push(hash.clone()),
+            |hash, _, _| transactions_to_prune.push(*hash),
             |_, _, _| {},
             |_| {},
         );

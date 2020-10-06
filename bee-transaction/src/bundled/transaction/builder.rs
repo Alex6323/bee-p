@@ -210,6 +210,10 @@ impl BundledTransactionBuilders {
         self.0.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn push(&mut self, transaction_builder: BundledTransactionBuilder) {
         self.0.push(transaction_builder);
     }
@@ -269,7 +273,7 @@ mod tests {
         let raw_tx_bytes: &mut [i8] = &mut [0 as i8; TRANSACTION_TRIT_LEN];
         let tx_trits = unsafe { Trits::<T1B1>::from_raw_unchecked_mut(raw_tx_bytes, TRANSACTION_TRIT_LEN) };
 
-        tx.into_trits_allocated(tx_trits);
+        tx.as_trits_allocated(tx_trits);
         let tx2 = BundledTransaction::from_trits(tx_trits).unwrap();
 
         assert_eq!(tx.payload, tx2.payload);

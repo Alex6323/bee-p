@@ -26,13 +26,16 @@ pub struct CliArgs {
     log_level: Option<LevelFilter>,
 }
 
-impl CliArgs {
-    pub fn new() -> Self {
+impl Default for CliArgs {
+    fn default() -> Self {
         Self::from_args()
     }
+}
 
+impl CliArgs {
     pub fn apply_to_config(self, config: &mut NodeConfigBuilder) {
-        self.log_level
-            .map(|log_level| config.logger.level(LOGGER_STDOUT_NAME, log_level));
+        if let Some(log_level) = self.log_level {
+            config.logger.level(LOGGER_STDOUT_NAME, log_level);
+        }
     }
 }
