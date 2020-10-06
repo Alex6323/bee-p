@@ -111,6 +111,7 @@ impl TransactionMetadata {
     pub fn set_ytrsi(&mut self, ytrsi: MilestoneIndex) {
         self.ytrsi = Some(ytrsi);
     }
+
     pub fn confirmation_timestamp(&self) -> u64 {
         self.confirmation_timestamp
     }
