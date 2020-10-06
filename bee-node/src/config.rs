@@ -42,7 +42,7 @@ impl NodeConfigBuilder {
     /// Creates a node config builder from a local config file.
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         match fs::read_to_string(path) {
-            Ok(toml) => toml::from_str::<Self>(&toml).map_err(|e| Error::NodeConfigBuilderCreationFailure(e)),
+            Ok(toml) => toml::from_str::<Self>(&toml).map_err(Error::NodeConfigBuilderCreationFailure),
             Err(e) => Err(Error::ConfigFileReadFailure(e)),
         }
     }

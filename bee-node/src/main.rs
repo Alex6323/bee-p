@@ -18,7 +18,7 @@ const CONFIG_PATH: &str = "./config.toml";
 async fn main() {
     match NodeConfigBuilder::from_file(CONFIG_PATH) {
         Ok(mut config_builder) => {
-            CliArgs::new().apply_to_config(&mut config_builder);
+            CliArgs::default().apply_to_config(&mut config_builder);
             let config = config_builder.finish();
 
             logger_init(config.logger.clone()).unwrap();
