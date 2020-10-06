@@ -31,7 +31,7 @@ use std::{
     ptr,
     sync::{
         atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
-        Arc, RwLock,
+        Arc, Mutex,
     },
 };
 
@@ -46,7 +46,7 @@ pub struct MsTangle {
     snapshot_index: AtomicU32,
     pruning_index: AtomicU32,
     entry_point_index: AtomicU32,
-    tip_pool: Arc<RwLock<WurtsTipPool>>,
+    tip_pool: Arc<Mutex<WurtsTipPool>>,
 }
 
 impl Deref for MsTangle {
@@ -220,22 +220,22 @@ impl MsTangle {
     }
 
     pub fn insert_tip(&self, tail: Hash, trunk: Hash, branch: Hash) {
-        let mut pool = self.tip_pool.write().unwrap();
+        let mut pool = self.tip_pool.lock().unwrap();
         pool.insert(tail, trunk, branch);
     }
 
     pub fn update_tip_scores(&self) {
-        let mut pool = self.tip_pool.write().unwrap();
+        let mut pool = self.tip_pool.lock().unwrap();
         pool.update_scores();
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        let pool = self.tip_pool.read().unwrap();
+        let pool = self.tip_pool.lock().unwrap();
         pool.two_non_lazy_tips()
     }
 
     pub fn reduce_tips(&self) {
-        let mut pool = self.tip_pool.write().unwrap();
+        let mut pool = self.tip_pool.lock().unwrap();
         pool.reduce_tips();
     }
 }
