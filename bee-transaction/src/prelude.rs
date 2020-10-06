@@ -9,12 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
-
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
-
-mod vertex;
-
-pub use vertex::Vertex;
+pub use crate::atomic::{
+    payload::{
+        signed_transaction::{
+            Address, Ed25519Address, Ed25519Signature, Input, Output, ReferenceUnlock, Seed,
+            SignatureSingleDepositOutput, SignatureUnlock, SignedTransactionBuilder, UTXOInput, UnlockBlock,
+            UnsignedTransaction, WotsAddress, WotsSignature,
+        },
+        Indexation, Milestone, Payload, SignedData, SignedTransaction, UnsignedData,
+    },
+    Error, Hash, Message, MessageBuilder,
+};

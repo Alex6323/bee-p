@@ -9,12 +9,26 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+mod reference;
+mod signature;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+pub use reference::ReferenceUnlock;
+pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
-mod vertex;
+#[derive(Debug, Eq, PartialEq)]
+pub enum UnlockBlock {
+    Reference(ReferenceUnlock),
+    Signature(SignatureUnlock),
+}
 
-pub use vertex::Vertex;
+impl From<ReferenceUnlock> for UnlockBlock {
+    fn from(reference: ReferenceUnlock) -> Self {
+        Self::Reference(reference)
+    }
+}
+
+impl From<SignatureUnlock> for UnlockBlock {
+    fn from(signature: SignatureUnlock) -> Self {
+        Self::Signature(signature)
+    }
+}

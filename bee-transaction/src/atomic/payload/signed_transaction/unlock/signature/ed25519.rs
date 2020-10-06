@@ -9,12 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+use alloc::vec::Vec;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+#[derive(Debug, Eq, PartialEq)]
+pub struct Ed25519Signature {
+    public_key: [u8; 32],
+    signature: Vec<u8>,
+}
 
-mod vertex;
+impl Ed25519Signature {
+    pub fn new(public_key: [u8; 32], signature: Vec<u8>) -> Self {
+        Self { public_key, signature }
+    }
 
-pub use vertex::Vertex;
+    pub fn public_key(&self) -> &[u8; 32] {
+        &self.public_key
+    }
+
+    pub fn signature(&self) -> &Vec<u8> {
+        &self.signature
+    }
+}

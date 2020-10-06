@@ -9,12 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+use alloc::{boxed::Box, vec::Vec};
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+#[derive(Debug)]
+pub struct SignedData {
+    data: Vec<u8>,
+    // TODO Hash type ?
+    public_key: [u8; 32],
+    // TODO change back to array with length 64.
+    // TODO what kind of sig ?
+    signature: Box<[u8]>,
+}
 
-mod vertex;
-
-pub use vertex::Vertex;
+impl SignedData {
+    pub fn new(data: Vec<u8>, public_key: [u8; 32], signature: Box<[u8]>) -> Self {
+        Self {
+            data,
+            public_key,
+            signature,
+        }
+    }
+}

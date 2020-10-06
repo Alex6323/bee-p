@@ -9,12 +9,26 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+mod ed25519;
+mod wots;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+pub use ed25519::Ed25519Signature;
+pub use wots::WotsSignature;
 
-mod vertex;
+#[derive(Debug, Eq, PartialEq)]
+pub enum SignatureUnlock {
+    Wots(WotsSignature),
+    Ed25519(Ed25519Signature),
+}
 
-pub use vertex::Vertex;
+impl From<WotsSignature> for SignatureUnlock {
+    fn from(signature: WotsSignature) -> Self {
+        Self::Wots(signature)
+    }
+}
+
+impl From<Ed25519Signature> for SignatureUnlock {
+    fn from(signature: Ed25519Signature) -> Self {
+        Self::Ed25519(signature)
+    }
+}

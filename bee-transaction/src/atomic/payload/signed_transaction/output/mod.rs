@@ -9,12 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+mod address;
+mod signature_single_deposit;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+pub use address::{Address, Ed25519Address, WotsAddress};
+pub use signature_single_deposit::SignatureSingleDepositOutput;
 
-mod vertex;
+#[derive(Debug)]
+pub enum Output {
+    SignatureSingleDeposit(SignatureSingleDepositOutput),
+}
 
-pub use vertex::Vertex;
+impl From<SignatureSingleDepositOutput> for Output {
+    fn from(output: SignatureSingleDepositOutput) -> Self {
+        Self::SignatureSingleDeposit(output)
+    }
+}

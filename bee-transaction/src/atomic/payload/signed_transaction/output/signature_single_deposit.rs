@@ -9,12 +9,26 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+use crate::atomic::payload::signed_transaction::Address;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+use core::num::NonZeroU64;
 
-mod vertex;
+#[derive(Debug)]
+pub struct SignatureSingleDepositOutput {
+    address: Address,
+    amount: NonZeroU64,
+}
 
-pub use vertex::Vertex;
+impl SignatureSingleDepositOutput {
+    pub fn new(address: Address, amount: NonZeroU64) -> Self {
+        Self { address, amount }
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub fn amount(&self) -> NonZeroU64 {
+        self.amount
+    }
+}

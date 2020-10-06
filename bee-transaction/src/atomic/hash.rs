@@ -9,12 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+pub const HASH_LENGTH: usize = 32;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+#[derive(Debug, Eq, PartialEq)]
+pub struct Hash([u8; HASH_LENGTH]);
 
-mod vertex;
+impl From<[u8; HASH_LENGTH]> for Hash {
+    fn from(bytes: [u8; HASH_LENGTH]) -> Self {
+        Self(bytes)
+    }
+}
 
-pub use vertex::Vertex;
+impl Hash {
+    pub fn new(bytes: [u8; HASH_LENGTH]) -> Self {
+        bytes.into()
+    }
+}
