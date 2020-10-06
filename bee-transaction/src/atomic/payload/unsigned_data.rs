@@ -9,12 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+use alloc::vec::Vec;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+#[derive(Debug)]
+pub struct UnsignedData(Vec<u8>);
 
-mod vertex;
+impl From<Vec<u8>> for UnsignedData {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self(bytes)
+    }
+}
 
-pub use vertex::Vertex;
+impl UnsignedData {
+    pub fn new(bytes: Vec<u8>) -> Self {
+        bytes.into()
+    }
+}

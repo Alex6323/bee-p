@@ -9,12 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+use core::ops::Range;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
-
-mod vertex;
-
-pub use vertex::Vertex;
+const INPUT_OUTPUT_COUNT_MAX: usize = 127;
+pub(crate) const INPUT_OUTPUT_COUNT_RANGE: Range<usize> = 1..INPUT_OUTPUT_COUNT_MAX + 1;
+pub(crate) const INPUT_OUTPUT_INDEX_RANGE: Range<u8> = 0..INPUT_OUTPUT_COUNT_MAX as u8;

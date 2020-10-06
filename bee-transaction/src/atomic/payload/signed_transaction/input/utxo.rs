@@ -9,12 +9,29 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+use crate::atomic::{payload::signed_transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error, Hash};
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+#[derive(Debug, Eq, PartialEq)]
+pub struct UTXOInput {
+    id: Hash,
+    index: u8,
+}
 
-mod vertex;
+// TODO builder ?
+impl UTXOInput {
+    pub fn new(id: Hash, index: u8) -> Result<Self, Error> {
+        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
+            return Err(Error::InvalidIndex);
+        }
 
-pub use vertex::Vertex;
+        Ok(Self { id, index })
+    }
+
+    pub fn id(&self) -> &Hash {
+        &self.id
+    }
+
+    pub fn index(&self) -> u8 {
+        self.index
+    }
+}

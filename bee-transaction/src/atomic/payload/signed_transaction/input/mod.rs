@@ -9,12 +9,17 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+mod utxo;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+pub use utxo::UTXOInput;
 
-mod vertex;
+#[derive(Debug, Eq, PartialEq)]
+pub enum Input {
+    UTXO(UTXOInput),
+}
 
-pub use vertex::Vertex;
+impl From<UTXOInput> for Input {
+    fn from(input: UTXOInput) -> Self {
+        Self::UTXO(input)
+    }
+}

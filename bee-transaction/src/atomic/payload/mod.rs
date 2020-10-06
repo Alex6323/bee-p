@@ -9,12 +9,26 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+mod indexation;
+mod milestone;
+mod signed_data;
+mod unsigned_data;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+pub mod signed_transaction;
 
-mod vertex;
+pub use indexation::{Indexation, TAG_LENGTH};
+pub use milestone::Milestone;
+pub use signed_data::SignedData;
+pub use signed_transaction::SignedTransaction;
+pub use unsigned_data::UnsignedData;
 
-pub use vertex::Vertex;
+use alloc::boxed::Box;
+
+#[derive(Debug)]
+pub enum Payload {
+    SignedTransaction(Box<SignedTransaction>),
+    Milestone(Box<Milestone>),
+    Indexation(Box<Indexation>),
+    UnsignedData(Box<UnsignedData>),
+    SignedData(Box<SignedData>),
+}

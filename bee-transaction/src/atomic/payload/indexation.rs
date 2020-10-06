@@ -9,12 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-extern crate alloc;
+pub const TAG_LENGTH: usize = 16;
 
-pub mod atomic;
-pub mod bundled;
-pub mod prelude;
+#[derive(Debug)]
+pub struct Indexation([u8; TAG_LENGTH]);
 
-mod vertex;
+impl From<[u8; TAG_LENGTH]> for Indexation {
+    fn from(bytes: [u8; TAG_LENGTH]) -> Self {
+        Self(bytes)
+    }
+}
 
-pub use vertex::Vertex;
+impl Indexation {
+    pub fn new(bytes: [u8; TAG_LENGTH]) -> Self {
+        bytes.into()
+    }
+}
