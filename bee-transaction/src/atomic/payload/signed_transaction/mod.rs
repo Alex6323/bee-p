@@ -18,7 +18,7 @@ use crate::atomic::{payload::Payload, Error};
 
 pub use bee_signing_ext::Seed;
 pub use input::{Input, UTXOInput};
-pub use output::{Address, Ed25519Address, Output, SigLockedSingleDeposit, WotsAddress};
+pub use output::{Address, Ed25519Address, Output, SignatureSingleDepositOutput, WotsAddress};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
 
@@ -98,7 +98,7 @@ impl SignedTransaction {
         for i in transaction.outputs.iter() {
             // Output Type must be 0, denoting a SigLockedSingleDeposit.
             match i {
-                output::Output::SigLockedSingleDeposit(u) => {
+                output::Output::SignatureSingleDeposit(u) => {
                     // Address Type must either be 0 or 1, denoting a WOTS- or Ed25519 address.
 
                     // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
@@ -108,7 +108,7 @@ impl SignedTransaction {
                         .outputs
                         .iter()
                         .filter(|j| match *j {
-                            output::Output::SigLockedSingleDeposit(s) => s.address() == u.address(),
+                            output::Output::SignatureSingleDeposit(s) => s.address() == u.address(),
                         })
                         .count()
                         > 1

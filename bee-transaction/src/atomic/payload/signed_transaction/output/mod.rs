@@ -10,18 +10,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod address;
-mod sig_locked_single_deposit;
+mod signature_single_deposit;
 
 pub use address::{Address, Ed25519Address, WotsAddress};
-pub use sig_locked_single_deposit::SigLockedSingleDeposit;
+pub use signature_single_deposit::SignatureSingleDepositOutput;
 
 #[derive(Debug)]
 pub enum Output {
-    SigLockedSingleDeposit(SigLockedSingleDeposit),
+    SignatureSingleDeposit(SignatureSingleDepositOutput),
 }
 
-impl From<SigLockedSingleDeposit> for Output {
-    fn from(output: SigLockedSingleDeposit) -> Self {
-        Self::SigLockedSingleDeposit(output)
+impl From<SignatureSingleDepositOutput> for Output {
+    fn from(output: SignatureSingleDepositOutput) -> Self {
+        Self::SignatureSingleDeposit(output)
     }
 }
