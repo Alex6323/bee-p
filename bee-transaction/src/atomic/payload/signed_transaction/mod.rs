@@ -216,6 +216,7 @@ impl SignedTransaction {
     }
 }
 
+#[allow(dead_code)]
 fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
     let mut iterator = iterator;
     let mut last = match iterator.next() {
@@ -270,8 +271,8 @@ impl<'a> SignedTransactionBuilder<'a> {
     }
 
     pub fn build(self) -> Result<SignedTransaction, Error> {
-        let mut inputs = self.inputs;
-        let mut outputs = self.outputs;
+        let inputs = self.inputs;
+        let outputs = self.outputs;
 
         if inputs.is_empty() || outputs.is_empty() {
             return Err(Error::CountError);

@@ -19,7 +19,7 @@ pub fn load_bundle_builder<Metadata>(tangle: &Tangle<Metadata>, hash: &Hash) -> 
 where
     Metadata: Clone + Copy,
 {
-    let mut bundle_builder = IncomingBundleBuilder::new();
+    let mut bundle_builder = IncomingBundleBuilder::default();
     let mut done = false;
 
     visit_parents_follow_trunk(

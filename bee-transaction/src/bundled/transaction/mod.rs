@@ -11,6 +11,7 @@
 
 mod builder;
 mod fields;
+#[allow(clippy::module_inception)]
 mod transaction;
 
 pub use builder::{BundledTransactionBuilder, BundledTransactionBuilders};

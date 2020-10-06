@@ -83,19 +83,24 @@ where
     }
 }
 
-impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
+impl<E, P> Default for StagedIncomingBundleBuilder<E, P, IncomingRaw>
 where
     E: Sponge + Default,
     P: PublicKey,
 {
-    // TODO TEST
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self {
             transactions: BundledTransactions::new(),
             marker: PhantomData,
         }
     }
+}
 
+impl<E, P> StagedIncomingBundleBuilder<E, P, IncomingRaw>
+where
+    E: Sponge + Default,
+    P: PublicKey,
+{
     // TODO TEST
     pub fn push(&mut self, transaction: BundledTransaction) {
         self.transactions.push(transaction);
@@ -148,7 +153,7 @@ where
     pub fn validate(self) -> Result<StagedIncomingBundleBuilder<E, P, IncomingValidated>, IncomingBundleBuilderError> {
         let mut sum: i64 = 0;
 
-        if self.transactions.len() == 0 {
+        if self.transactions.is_empty() {
             return Err(IncomingBundleBuilderError::Empty);
         }
 
