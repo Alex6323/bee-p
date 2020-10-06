@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::Hash;
+use crate::atomic::{payload::signed_transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error, Hash};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct UTXOInput {
@@ -17,9 +17,14 @@ pub struct UTXOInput {
     index: u8,
 }
 
+// TODO builder ?
 impl UTXOInput {
-    pub fn new(id: Hash, index: u8) -> Self {
-        Self { id, index }
+    pub fn new(id: Hash, index: u8) -> Result<Self, Error> {
+        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
+            return Err(Error::InvalidIndex);
+        }
+
+        Ok(Self { id, index })
     }
 
     pub fn id(&self) -> &Hash {
