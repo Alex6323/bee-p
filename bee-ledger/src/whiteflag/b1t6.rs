@@ -35,11 +35,7 @@ pub(crate) fn decode(src: &Trits) -> Vec<u8> {
 }
 
 fn decode_group(t1: i8, t2: i8) -> Result<i8, ()> {
-    let v = t1 + t2 * 27;
+    let v = t1 as isize + t2 as isize * 27;
 
-    if v < i8::MIN || v > i8::MAX {
-        return Err(());
-    }
-
-    Ok(v)
+    i8::try_from(v).map_err(|_| ())
 }
