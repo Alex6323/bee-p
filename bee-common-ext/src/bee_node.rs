@@ -21,7 +21,6 @@ use std::{
     sync::Mutex,
 };
 
-
 #[allow(clippy::type_complexity)]
 pub struct BeeNode {
     workers: Map<dyn Any + Send + Sync>,
