@@ -11,36 +11,24 @@
 
 use bech32::{self, ToBase32};
 
-// use blake2::{
-//     digest::{Update, VariableOutput},
-//     VarBlake2b,
-// };
-//
-// use core::convert::TryInto;
+const ADDRESS_LENGTH: usize = 32;
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Ed25519Address([u8; 32]);
+pub struct Ed25519Address([u8; ADDRESS_LENGTH]);
 
-impl From<[u8; 32]> for Ed25519Address {
-    fn from(bytes: [u8; 32]) -> Self {
-        // let mut hasher = VarBlake2b::new(32).unwrap();
-        // hasher.update(bytes);
-        // let address: [u8; 32] = hasher
-        //     .finalize_boxed()
-        //     .as_ref()
-        //     .try_into()
-        //     .expect("Array must be 32 bytes");
+impl From<[u8; ADDRESS_LENGTH]> for Ed25519Address {
+    fn from(bytes: [u8; ADDRESS_LENGTH]) -> Self {
         Self(bytes)
     }
 }
 
 impl Ed25519Address {
-    pub fn new(address: [u8; 32]) -> Self {
+    pub fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
         address.into()
     }
 
     pub fn len(&self) -> usize {
-        32
+        ADDRESS_LENGTH
     }
 
     pub fn to_bech32(&self) -> String {
