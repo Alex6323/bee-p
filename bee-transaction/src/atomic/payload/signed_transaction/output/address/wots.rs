@@ -15,7 +15,8 @@ use bee_ternary::{T5B1Buf, TritBuf};
 
 use bytemuck::cast_slice;
 
-use std::convert::{TryFrom, TryInto};
+use alloc::{string::String, vec::Vec};
+use core::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct WotsAddress(Vec<u8>);

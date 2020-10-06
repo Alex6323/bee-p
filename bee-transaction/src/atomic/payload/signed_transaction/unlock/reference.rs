@@ -11,7 +11,7 @@
 
 use crate::atomic::{payload::signed_transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
 
-use std::convert::{TryFrom, TryInto};
+use core::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ReferenceUnlock(u8);

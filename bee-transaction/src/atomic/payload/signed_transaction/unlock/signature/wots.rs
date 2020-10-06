@@ -16,7 +16,7 @@ use bee_ternary::{T5B1Buf, TritBuf};
 use bytemuck::cast_slice;
 
 use alloc::vec::Vec;
-use std::convert::{TryFrom, TryInto};
+use core::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct WotsSignature(Vec<u8>);

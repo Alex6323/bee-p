@@ -11,6 +11,8 @@
 
 use bech32::{self, ToBase32};
 
+use alloc::{string::String, vec};
+
 const ADDRESS_LENGTH: usize = 32;
 
 #[derive(Debug, Eq, PartialEq)]
