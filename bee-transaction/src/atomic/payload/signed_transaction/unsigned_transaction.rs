@@ -10,13 +10,76 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub use crate::atomic::payload::signed_transaction::{input::Input, output::Output};
-use crate::atomic::payload::Payload;
+use crate::atomic::{payload::Payload, Error};
 
 use alloc::vec::Vec;
 
+// TODO remove pub(crate)
 #[derive(Debug)]
 pub struct UnsignedTransaction {
-    pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
-    pub payload: Option<Vec<Payload>>,
+    pub(crate) inputs: Vec<Input>,
+    pub(crate) outputs: Vec<Output>,
+    pub(crate) payload: Option<Payload>,
+}
+
+impl UnsignedTransaction {
+    pub fn builder() -> UnsignedTransactionBuilder {
+        UnsignedTransactionBuilder::new()
+    }
+
+    pub fn inputs(&self) -> &Vec<Input> {
+        &self.inputs
+    }
+
+    pub fn outputs(&self) -> &Vec<Output> {
+        &self.outputs
+    }
+
+    pub fn payload(&self) -> &Option<Payload> {
+        &self.payload
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct UnsignedTransactionBuilder {
+    inputs: Vec<Input>,
+    outputs: Vec<Output>,
+    payload: Option<Payload>,
+}
+
+impl UnsignedTransactionBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add_input(mut self, input: Input) -> Self {
+        self.inputs.push(input);
+        self
+    }
+
+    pub fn add_output(mut self, output: Output) -> Self {
+        self.outputs.push(output);
+        self
+    }
+
+    pub fn with_payload(mut self, payload: Payload) -> Self {
+        self.payload = Some(payload);
+        self
+    }
+
+    pub fn finish(self) -> Result<UnsignedTransaction, Error> {
+        if self.inputs.is_empty() {
+            return Err(Error::NoInput);
+        }
+
+        if self.outputs.is_empty() {
+            return Err(Error::NoOutput);
+        }
+
+        Ok(UnsignedTransaction {
+            inputs: self.inputs,
+            outputs: self.outputs,
+            payload: self.payload,
+        })
+    }
 }

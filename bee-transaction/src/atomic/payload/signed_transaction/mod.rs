@@ -51,16 +51,16 @@ impl SignedTransaction {
         // Inputs validation
         let transaction = &self.unsigned_transaction;
         // Inputs Count must be 0 < x <= 127
-        if !INPUT_OUTPUT_COUNT_RANGE.contains(&transaction.inputs.len()) {
+        if !INPUT_OUTPUT_COUNT_RANGE.contains(&transaction.inputs().len()) {
             return Err(Error::CountError);
         }
 
         // At least one input must be specified
-        if transaction.inputs.is_empty() {
-            return Err(Error::EmptyError);
+        if transaction.inputs().is_empty() {
+            return Err(Error::NoInput);
         }
 
-        for i in transaction.inputs.iter() {
+        for i in transaction.inputs().iter() {
             // Input Type value must be 0, denoting an UTXO Input.
             match i {
                 Input::UTXO(u) => {
@@ -70,7 +70,7 @@ impl SignedTransaction {
                     }
 
                     // Every combination of Transaction ID + Transaction Output Index must be unique in the inputs set.
-                    if transaction.inputs.iter().filter(|j| *j == i).count() > 1 {
+                    if transaction.inputs().iter().filter(|j| *j == i).count() > 1 {
                         return Err(Error::DuplicateError);
                     }
                 }
@@ -85,17 +85,17 @@ impl SignedTransaction {
 
         // Output validation
         // Outputs Count must be 0 < x <= 127
-        if !INPUT_OUTPUT_COUNT_RANGE.contains(&transaction.outputs.len()) {
+        if !INPUT_OUTPUT_COUNT_RANGE.contains(&transaction.outputs().len()) {
             return Err(Error::CountError);
         }
 
         // At least one output must be specified
-        if transaction.outputs.is_empty() {
-            return Err(Error::EmptyError);
+        if transaction.outputs().is_empty() {
+            return Err(Error::NoOutput);
         }
 
         let mut total = 0;
-        for i in transaction.outputs.iter() {
+        for i in transaction.outputs().iter() {
             // Output Type must be 0, denoting a SigLockedSingleDeposit.
             match i {
                 output::Output::SignatureSingleDeposit(u) => {
@@ -105,7 +105,7 @@ impl SignedTransaction {
 
                     // The Address must be unique in the set of SigLockedSingleDeposits
                     if transaction
-                        .outputs
+                        .outputs()
                         .iter()
                         .filter(|j| match *j {
                             output::Output::SignatureSingleDeposit(s) => s.address() == u.address(),
@@ -155,8 +155,8 @@ impl SignedTransaction {
                     // Unlock Block. Since it's not the first input it unlocks, it must have
                     // differente transaction id from previous one
                     if i != 0 {
-                        match &transaction.inputs[i] {
-                            Input::UTXO(u) => match &transaction.inputs[i - 1] {
+                        match &transaction.inputs()[i] {
+                            Input::UTXO(u) => match &transaction.inputs()[i - 1] {
                                 Input::UTXO(v) => {
                                     if u.id() != v.id() {
                                         return Err(Error::IndexError);
@@ -180,8 +180,8 @@ impl SignedTransaction {
 
                     // Since it's first input it unlocks, it must have differente transaction id from previous one
                     if i != 0 {
-                        match &transaction.inputs[i] {
-                            Input::UTXO(u) => match &transaction.inputs[i - 1] {
+                        match &transaction.inputs()[i] {
+                            Input::UTXO(u) => match &transaction.inputs()[i - 1] {
                                 Input::UTXO(v) => {
                                     if u.id() == v.id() {
                                         return Err(Error::IndexError);
@@ -237,7 +237,7 @@ pub struct SignedTransactionBuilder<'a> {
     seed: &'a Seed,
     inputs: Vec<(Input, BIP32Path)>,
     outputs: Vec<Output>,
-    payload: Option<Vec<Payload>>,
+    payload: Option<Payload>,
 }
 
 impl<'a> SignedTransactionBuilder<'a> {
@@ -263,7 +263,7 @@ impl<'a> SignedTransactionBuilder<'a> {
         self
     }
 
-    pub fn set_payload(mut self, payload: Vec<Payload>) -> Self {
+    pub fn set_payload(mut self, payload: Payload) -> Self {
         self.payload = Some(payload);
 
         self
@@ -272,6 +272,7 @@ impl<'a> SignedTransactionBuilder<'a> {
     pub fn build(self) -> Result<SignedTransaction, Error> {
         let mut inputs = self.inputs;
         let mut outputs = self.outputs;
+
         if inputs.is_empty() || outputs.is_empty() {
             return Err(Error::CountError);
         }
@@ -316,6 +317,7 @@ impl<'a> SignedTransactionBuilder<'a> {
 
         let inputs: Vec<Input> = inputs.into_iter().map(|(i, _)| i).collect();
 
+        // TODO use UnsignedTransactionBuilder
         Ok(SignedTransaction {
             unsigned_transaction: UnsignedTransaction {
                 inputs,

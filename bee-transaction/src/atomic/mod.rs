@@ -23,7 +23,8 @@ use core::fmt;
 pub enum Error {
     AmountError,
     CountError,
-    EmptyError,
+    NoInput,
+    NoOutput,
     DuplicateError,
     IndexError,
     OrderError,
@@ -39,7 +40,8 @@ impl fmt::Display for Error {
         match self {
             Error::AmountError => write!(f, "Invalid amount provided."),
             Error::CountError => write!(f, "Invalid count number provided."),
-            Error::EmptyError => write!(f, "The length of the object is empty."),
+            Error::NoInput => write!(f, "No input provided."),
+            Error::NoOutput => write!(f, "No output provided."),
             Error::DuplicateError => write!(f, "The object in the set must be unique."),
             Error::IndexError => write!(f, "The position of index is not correct."),
             Error::OrderError => write!(f, "The vector is not sorted by lexicographical order."),
