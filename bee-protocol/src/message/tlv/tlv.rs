@@ -13,6 +13,7 @@
 
 use crate::message::{Header, Message, HEADER_SIZE};
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub(crate) enum TlvError {
     InvalidAdvertisedType(u8, u8),

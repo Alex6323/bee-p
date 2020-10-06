@@ -14,5 +14,4 @@ mod message_handler;
 mod peer;
 
 pub(crate) use handshaker::PeerHandshakerWorker;
-use message_handler::MessageHandler;
 pub(crate) use peer::PeerWorker;

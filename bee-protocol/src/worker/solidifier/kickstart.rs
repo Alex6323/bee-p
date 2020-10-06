@@ -41,13 +41,13 @@ impl<N: Node> Worker<N> for KickstartWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
-            while let Some(_) = receiver.next().await {
+            while receiver.next().await.is_some() {
                 let next_ms = *tangle().get_latest_solid_milestone_index() + 1;
                 let latest_ms = *tangle().get_latest_milestone_index();
 
-                if Protocol::get().peer_manager.handshaked_peers.len() != 0 && next_ms + config.1 < latest_ms {
+                if !Protocol::get().peer_manager.handshaked_peers.is_empty() && next_ms + config.1 < latest_ms {
                     Protocol::request_milestone(&milestone_requester, MilestoneIndex(next_ms), None);
-                    if let Err(_) = config.0.send(MilestoneIndex(next_ms)) {
+                    if config.0.send(MilestoneIndex(next_ms)).is_err() {
                         error!("Could not set first non-solid milestone");
                     }
 
