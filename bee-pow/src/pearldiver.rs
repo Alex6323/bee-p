@@ -71,10 +71,8 @@ impl PearlDiver {
                         if let Some(nonce) = find_nonce(&state_thr, &difficulty) {
                             *pdstate.write().unwrap() = PearlDiverState::Completed(Some(nonce));
                             break;
-                        } else {
-                            if inner_increment(&mut state_thr) {
-                                break;
-                            }
+                        } else if inner_increment(&mut state_thr) {
+                            break;
                         }
                     }
                 });
@@ -120,10 +118,7 @@ fn inner_increment(prestate: &mut PowCurlState) -> Exhausted {
     // we have not exhausted the search space until each add
     // operation produces a carry
     for i in INNER_INCR_START..HASH_LEN {
-        if {
-            let with_carry = prestate.bit_add(i);
-            !with_carry
-        } {
+        if !prestate.bit_add(i) {
             return false;
         }
     }
@@ -189,8 +184,8 @@ unsafe fn transform(pre: &mut PowCurlState, tmp: &mut PowCurlState) {
 
             let delta = (alpha | !gamma) & (sigma ^ kappa);
 
-            *ltmp.offset(j as isize) = !delta;
-            *htmp.offset(j as isize) = (alpha ^ gamma) | delta;
+            *ltmp.add(j) = !delta;
+            *htmp.add(j) = (alpha ^ gamma) | delta;
         }
 
         lswp = lpre;
@@ -213,8 +208,8 @@ unsafe fn transform(pre: &mut PowCurlState, tmp: &mut PowCurlState) {
 
         let delta = (alpha | !gamma) & (sigma ^ kappa);
 
-        *lpre.offset(j as isize) = !delta;
-        *hpre.offset(j as isize) = (alpha ^ gamma) | delta;
+        *lpre.add(j) = !delta;
+        *hpre.add(j) = (alpha ^ gamma) | delta;
     }
 }
 
