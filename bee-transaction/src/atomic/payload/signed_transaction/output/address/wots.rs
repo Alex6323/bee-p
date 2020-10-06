@@ -9,26 +9,34 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::atomic::Error;
+
 use bee_ternary::{T5B1Buf, TritBuf};
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct WotsAddress(Vec<i8>);
+use bytemuck::cast_slice;
 
-impl From<&TritBuf<T5B1Buf>> for WotsAddress {
-    fn from(trits: &TritBuf<T5B1Buf>) -> Self {
-        let trits = trits.as_i8_slice().to_vec();
-        // TODO TRyInto
-        // if trits.len() != 49 {
-        //     return Err(Error::HashError);
-        // }
-        // Ok(Address::Wots(trits))
-        Self(trits)
+use std::convert::{TryFrom, TryInto};
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct WotsAddress(Vec<u8>);
+
+impl TryFrom<&TritBuf<T5B1Buf>> for WotsAddress {
+    type Error = Error;
+
+    fn try_from(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
+        // TODO const
+        if trits.len() != 243 {
+            return Err(Error::InvalidAddress);
+        }
+
+        Ok(Self(cast_slice(trits.as_i8_slice()).to_vec()))
     }
 }
 
+// TODO builder ?
 impl WotsAddress {
-    pub fn new(trits: &TritBuf<T5B1Buf>) -> Self {
-        trits.into()
+    pub fn new(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
+        trits.try_into()
     }
 
     pub fn to_bech32(&self) -> String {

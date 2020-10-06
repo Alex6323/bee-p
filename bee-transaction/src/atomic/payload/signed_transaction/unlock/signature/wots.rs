@@ -9,7 +9,40 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::atomic::Error;
+
+use bee_ternary::{T5B1Buf, TritBuf};
+
+use bytemuck::cast_slice;
+
 use alloc::vec::Vec;
+use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct WotsSignature(pub Vec<i8>);
+pub struct WotsSignature(Vec<u8>);
+
+impl TryFrom<&TritBuf<T5B1Buf>> for WotsSignature {
+    type Error = Error;
+
+    fn try_from(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
+        // TODO const
+        if trits.len() % 6561 != 0 {
+            return Err(Error::InvalidSignature);
+        }
+
+        let fragments = trits.len() / 6561;
+
+        if fragments < 1 || fragments > 3 {
+            return Err(Error::InvalidSignature);
+        }
+
+        Ok(Self(cast_slice(trits.as_i8_slice()).to_vec()))
+    }
+}
+
+// TODO builder ?
+impl WotsSignature {
+    pub fn new(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
+        trits.try_into()
+    }
+}

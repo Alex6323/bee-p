@@ -17,6 +17,7 @@ bee-signing-ext = { git ="https://github.com/wusyong/bee-p", branch = "sign-ext"
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev", features = ["serde1"] }
 
 bech32 = "0.7.2"
+bytemuck = "1.2.0"
 thiserror = "1.0"
 
 [dev-dependencies]

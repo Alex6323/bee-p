@@ -28,6 +28,8 @@ pub enum Error {
     DuplicateError,
     // TODO add index
     InvalidIndex,
+    InvalidAddress,
+    InvalidSignature,
     OrderError,
     HashError,
     PathError,
@@ -45,6 +47,8 @@ impl fmt::Display for Error {
             Error::NoOutput => write!(f, "No output provided."),
             Error::DuplicateError => write!(f, "The object in the set must be unique."),
             Error::InvalidIndex => write!(f, "Invalid index provided."),
+            Error::InvalidAddress => write!(f, "Invalid address provided."),
+            Error::InvalidSignature => write!(f, "Invalid signature provided."),
             Error::OrderError => write!(f, "The vector is not sorted by lexicographical order."),
             Error::HashError => write!(f, "The format of provided hash is not correct."),
             Error::PathError => write!(f, "The format of provided BIP32 path is not correct."),
