@@ -30,4 +30,9 @@ impl WotsAddress {
     pub fn new(trits: &TritBuf<T5B1Buf>) -> Self {
         trits.into()
     }
+
+    pub fn to_bech32(&self) -> String {
+        // TODO
+        String::from("")
+    }
 }

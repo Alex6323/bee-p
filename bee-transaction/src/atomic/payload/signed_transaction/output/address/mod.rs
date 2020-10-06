@@ -38,8 +38,8 @@ impl From<Ed25519Address> for Address {
 impl Address {
     pub fn to_bech32(&self) -> String {
         match self {
-            Address::Ed25519(a) => a.to_bech32(),
-            _ => todo!(),
+            Address::Wots(address) => address.to_bech32(),
+            Address::Ed25519(address) => address.to_bech32(),
         }
     }
 }
