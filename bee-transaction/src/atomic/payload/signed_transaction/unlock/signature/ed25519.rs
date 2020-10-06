@@ -13,6 +13,20 @@ use alloc::vec::Vec;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Ed25519Signature {
-    pub public_key: [u8; 32],
-    pub signature: Vec<u8>,
+    public_key: [u8; 32],
+    signature: Vec<u8>,
+}
+
+impl Ed25519Signature {
+    pub fn new(public_key: [u8; 32], signature: Vec<u8>) -> Self {
+        Self { public_key, signature }
+    }
+
+    pub fn public_key(&self) -> &[u8; 32] {
+        &self.public_key
+    }
+
+    pub fn signature(&self) -> &Vec<u8> {
+        &self.signature
+    }
 }
