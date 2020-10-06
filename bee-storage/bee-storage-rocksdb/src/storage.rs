@@ -28,7 +28,7 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn new(config: RocksDBConfig) -> Result<DB, Box<dyn Error>> {
+    pub fn try_new(config: RocksDBConfig) -> Result<DB, Box<dyn Error>> {
         let transaction_hash_to_transaction =
             ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_TRANSACTION, Options::default());
         let transaction_hash_to_transaction_metadata =
@@ -80,7 +80,7 @@ impl Backend for Storage {
     async fn start(config_path: String) -> Result<Self, Box<dyn Error>> {
         let config_as_string = fs::read_to_string(config_path)?;
         let config: RocksDBConfigBuilder = toml::from_str(&config_as_string)?;
-        let db = Self::new(config.finish())?;
+        let db = Self::try_new(config.finish())?;
         Ok(Storage { inner: db })
     }
     /// It shutdown RocksDB instance,
