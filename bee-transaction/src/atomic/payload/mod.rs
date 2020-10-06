@@ -26,9 +26,9 @@ use alloc::boxed::Box;
 
 #[derive(Debug)]
 pub enum Payload {
-    Indexation(Box<Indexation>),
-    Milestone(Box<Milestone>),
-    SignedData(Box<SignedData>),
     SignedTransaction(Box<SignedTransaction>),
+    Milestone(Box<Milestone>),
+    Indexation(Box<Indexation>),
     UnsignedData(Box<UnsignedData>),
+    SignedData(Box<SignedData>),
 }
