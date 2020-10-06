@@ -9,18 +9,28 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::atomic::{payload::signed_transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
+
+use std::convert::{TryFrom, TryInto};
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct ReferenceUnlock(u8);
 
-impl From<u8> for ReferenceUnlock {
-    fn from(index: u8) -> Self {
-        Self(index)
+impl TryFrom<u8> for ReferenceUnlock {
+    type Error = Error;
+
+    fn try_from(index: u8) -> Result<Self, Self::Error> {
+        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
+            return Err(Self::Error::InvalidIndex);
+        }
+
+        Ok(Self(index))
     }
 }
 
 impl ReferenceUnlock {
-    pub fn new(index: u8) -> Self {
-        index.into()
+    pub fn new(index: u8) -> Result<Self, Error> {
+        index.try_into()
     }
 
     pub fn index(&self) -> u8 {

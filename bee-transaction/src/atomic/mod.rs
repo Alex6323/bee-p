@@ -26,7 +26,8 @@ pub enum Error {
     NoInput,
     NoOutput,
     DuplicateError,
-    IndexError,
+    // TODO add index
+    InvalidIndex,
     OrderError,
     HashError,
     PathError,
@@ -43,7 +44,7 @@ impl fmt::Display for Error {
             Error::NoInput => write!(f, "No input provided."),
             Error::NoOutput => write!(f, "No output provided."),
             Error::DuplicateError => write!(f, "The object in the set must be unique."),
-            Error::IndexError => write!(f, "The position of index is not correct."),
+            Error::InvalidIndex => write!(f, "Invalid index provided."),
             Error::OrderError => write!(f, "The vector is not sorted by lexicographical order."),
             Error::HashError => write!(f, "The format of provided hash is not correct."),
             Error::PathError => write!(f, "The format of provided BIP32 path is not correct."),

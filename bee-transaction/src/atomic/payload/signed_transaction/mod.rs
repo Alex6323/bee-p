@@ -9,6 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+mod constants;
 mod input;
 mod output;
 mod unlock;
@@ -16,11 +17,14 @@ mod unsigned_transaction;
 
 use crate::atomic::{payload::Payload, Error};
 
-pub use bee_signing_ext::Seed;
+use constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
+
 pub use input::{Input, UTXOInput};
 pub use output::{Address, Ed25519Address, Output, SignatureSingleDepositOutput, WotsAddress};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 pub use unsigned_transaction::UnsignedTransaction;
+
+pub use bee_signing_ext::Seed;
 
 use bee_signing_ext::{
     binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature as Ed25Signature},
@@ -28,11 +32,7 @@ use bee_signing_ext::{
 };
 
 use alloc::vec::Vec;
-use core::{cmp::Ordering, ops::Range, slice::Iter};
-
-const INPUT_OUTPUT_COUNT_MAX: usize = 127;
-const INPUT_OUTPUT_COUNT_RANGE: Range<usize> = 1..INPUT_OUTPUT_COUNT_MAX + 1;
-const INPUT_OUTPUT_INDEX_RANGE: Range<u8> = 0..INPUT_OUTPUT_COUNT_MAX as u8;
+use core::{cmp::Ordering, slice::Iter};
 
 #[derive(Debug)]
 pub struct SignedTransaction {
@@ -159,7 +159,7 @@ impl SignedTransaction {
                             Input::UTXO(u) => match &transaction.inputs()[i - 1] {
                                 Input::UTXO(v) => {
                                     if u.id() != v.id() {
-                                        return Err(Error::IndexError);
+                                        return Err(Error::InvalidIndex);
                                     }
                                 }
                             },
@@ -168,7 +168,7 @@ impl SignedTransaction {
 
                     // The reference index must therefore be < the index of the Reference Unlock Block
                     if r.index() >= i as u8 {
-                        return Err(Error::IndexError);
+                        return Err(Error::InvalidIndex);
                     }
                 }
                 UnlockBlock::Signature(s) => {
@@ -184,7 +184,7 @@ impl SignedTransaction {
                             Input::UTXO(u) => match &transaction.inputs()[i - 1] {
                                 Input::UTXO(v) => {
                                     if u.id() == v.id() {
-                                        return Err(Error::IndexError);
+                                        return Err(Error::InvalidIndex);
                                     }
                                 }
                             },
@@ -285,7 +285,10 @@ impl<'a> SignedTransactionBuilder<'a> {
         let mut last_index = (None, -1);
         for (_i, path) in &inputs {
             if last_index.0 == Some(path) {
-                unlock_blocks.push(UnlockBlock::Reference(ReferenceUnlock::new(last_index.1 as u8)));
+                // TODO justify unwrap
+                unlock_blocks.push(UnlockBlock::Reference(
+                    ReferenceUnlock::new(last_index.1 as u8).unwrap(),
+                ));
             } else {
                 let serialized_inputs = [];
                 // TODO
