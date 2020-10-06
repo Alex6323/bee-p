@@ -27,6 +27,14 @@ impl Message {
         MessageBuilder::new()
     }
 
+    pub fn parent1(&self) -> &Hash {
+        &self.parent1
+    }
+
+    pub fn parent2(&self) -> &Hash {
+        &self.parent2
+    }
+
     pub fn payload(&self) -> &Payload {
         &self.payload
     }
@@ -50,7 +58,8 @@ impl Vertex for Message {
 
 #[derive(Debug, Default)]
 pub struct MessageBuilder {
-    tips: Option<(Hash, Hash)>,
+    parent1: Option<Hash>,
+    parent2: Option<Hash>,
     payload: Option<Payload>,
 }
 
@@ -59,8 +68,13 @@ impl MessageBuilder {
         Default::default()
     }
 
-    pub fn tips(mut self, tips: (Hash, Hash)) -> Self {
-        self.tips = Some(tips);
+    pub fn parent1(mut self, parent1: Hash) -> Self {
+        self.parent1 = Some(parent1);
+        self
+    }
+
+    pub fn parent2(mut self, parent2: Hash) -> Self {
+        self.parent2 = Some(parent2);
         self
     }
 
@@ -70,21 +84,12 @@ impl MessageBuilder {
     }
 
     pub fn build(self) -> Result<Message, Error> {
-        let tips = match self.tips {
-            Some(t) => t,
-            None => return Err(Error::MissingParameter),
-        };
-
-        let payload = match self.payload {
-            Some(p) => p,
-            None => return Err(Error::MissingParameter),
-        };
-
         Ok(Message {
-            parent1: tips.0,
-            parent2: tips.1,
-            payload,
-            nonce: 0, // TODO PoW
+            parent1: self.parent1.ok_or(Error::MissingField("parent1"))?,
+            parent2: self.parent2.ok_or(Error::MissingField("parent2"))?,
+            payload: self.payload.ok_or(Error::MissingField("payload"))?,
+            // TODO PoW
+            nonce: 0,
         })
     }
 }

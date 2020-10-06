@@ -29,7 +29,7 @@ pub enum Error {
     OrderError,
     HashError,
     PathError,
-    MissingParameter,
+    MissingField(&'static str),
     SigningError(bee_signing_ext::binary::Error),
     SignatureError(bee_signing_ext::SignatureError),
 }
@@ -45,7 +45,7 @@ impl fmt::Display for Error {
             Error::OrderError => write!(f, "The vector is not sorted by lexicographical order."),
             Error::HashError => write!(f, "The format of provided hash is not correct."),
             Error::PathError => write!(f, "The format of provided BIP32 path is not correct."),
-            Error::MissingParameter => write!(f, "Missing required parameters."),
+            Error::MissingField(s) => write!(f, "Missing required field: {}.", s),
             Error::SigningError(e) => write!(f, "{}", e),
             Error::SignatureError(e) => write!(f, "{}", e),
         }
