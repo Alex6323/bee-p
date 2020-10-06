@@ -13,27 +13,3 @@ use alloc::vec::Vec;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct WotsSignature(pub Vec<i8>);
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct Ed25519Signature {
-    pub public_key: [u8; 32],
-    pub signature: Vec<u8>,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum SignatureUnlock {
-    Wots(WotsSignature),
-    Ed25519(Ed25519Signature),
-}
-
-impl From<WotsSignature> for SignatureUnlock {
-    fn from(signature: WotsSignature) -> Self {
-        Self::Wots(signature)
-    }
-}
-
-impl From<Ed25519Signature> for SignatureUnlock {
-    fn from(signature: Ed25519Signature) -> Self {
-        Self::Ed25519(signature)
-    }
-}
