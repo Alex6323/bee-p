@@ -9,12 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 
 #[derive(Debug)]
 pub struct SignedData {
-    pub data: Vec<u8>,
-    pub public_key: [u8; 32],
-    pub signature: Box<[u8]>, // TODO change beck to array with length 64
+    data: Vec<u8>,
+    // TODO Hash type ?
+    public_key: [u8; 32],
+    // TODO change back to array with length 64.
+    // TODO what kind of sig ?
+    signature: Box<[u8]>,
+}
+
+impl SignedData {
+    pub fn new(data: Vec<u8>, public_key: [u8; 32], signature: Box<[u8]>) -> Self {
+        Self {
+            data,
+            public_key,
+            signature,
+        }
+    }
 }
