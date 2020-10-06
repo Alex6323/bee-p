@@ -13,8 +13,21 @@ use alloc::boxed::Box;
 
 #[derive(Debug)]
 pub struct Milestone {
-    pub index: u32,
-    pub timestamp: u64,
-    pub merkle_proof: Box<[u8]>, // TODO length is 64, change back to array since next version will support all traits
-    pub signature: Box<[u8]>,    // TODO length is 64
+    index: u32,
+    timestamp: u64,
+    // TODO length is 64, change to array when std::array::LengthAtMost32 disappears.
+    merkle_proof: Box<[u8]>,
+    // TODO length is 64, change to array when std::array::LengthAtMost32 disappears.
+    signatures: Vec<Box<[u8]>>,
+}
+
+impl Milestone {
+    pub fn new(index: u32, timestamp: u64, merkle_proof: Box<[u8]>, signatures: Vec<Box<[u8]>>) -> Self {
+        Self {
+            index,
+            timestamp,
+            merkle_proof,
+            signatures,
+        }
+    }
 }
