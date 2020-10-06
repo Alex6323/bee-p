@@ -120,7 +120,7 @@ impl Node {
 #[inline]
 async fn process_event(
     event: Event,
-    message: &String,
+    message: &str,
     network: &mut Network,
     endpoints: &mut HashSet<EndpointId>,
     handshakes: &mut HashMap<String, Vec<EndpointId>>,
@@ -159,7 +159,7 @@ async fn process_event(
                 let handshake = Utf8Message::from_bytes(&message);
                 info!("[pingpong] Received handshake '{}' ({})", handshake, epid);
 
-                let epids = handshakes.entry(handshake.to_string()).or_insert(Vec::new());
+                let epids = handshakes.entry(handshake.to_string()).or_insert_with(Vec::new);
                 if !epids.contains(&epid) {
                     epids.push(epid);
                 }
