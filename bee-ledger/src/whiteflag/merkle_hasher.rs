@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn null_leaf() {
-        let hash = MerkleHasher::<Blake2b>::new().digest(&vec![Hash::zeros()]);
+        let hash = MerkleHasher::<Blake2b>::new().digest(&[Hash::zeros()]);
 
         assert_eq!(
             hex::encode(hash),
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn null_node() {
-        let hash = MerkleHasher::<Blake2b>::new().digest(&vec![Hash::zeros(), Hash::zeros()]);
+        let hash = MerkleHasher::<Blake2b>::new().digest(&[Hash::zeros(), Hash::zeros()]);
 
         assert_eq!(
             hex::encode(hash),

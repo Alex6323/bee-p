@@ -179,7 +179,7 @@ mod tests {
 
         let (hash, tx) = create_random_tx();
 
-        let insert1 = tangle.insert(hash.clone(), tx.clone(), ());
+        let insert1 = tangle.insert(hash, tx.clone(), ());
 
         assert!(insert1.is_some());
         assert_eq!(1, tangle.len());
