@@ -46,8 +46,9 @@ impl GlobalSnapshot {
 
         for line in reader.lines() {
             let line = line.map_err(|_| Error::FailedIO)?;
-            let tokens = line.split(";").collect::<Vec<&str>>();
+            let tokens = line.split(';').collect::<Vec<&str>>();
 
+            #[allow(clippy::comparison_chain)]
             if tokens.len() < 2 {
                 return Err(Error::MissingSemicolon);
             } else if tokens.len() > 2 {

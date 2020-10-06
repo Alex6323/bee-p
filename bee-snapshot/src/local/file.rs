@@ -71,10 +71,7 @@ impl LocalSnapshot {
             Err(e) => Err(Error::IOError(e)),
         }?;
 
-        debug!(
-            "Hash: {}.",
-            hash.iter_trytes().map(|trit| char::from(trit)).collect::<String>()
-        );
+        debug!("Hash: {}.", hash.iter_trytes().map(char::from).collect::<String>());
 
         // Milestone index
 
@@ -247,13 +244,13 @@ impl LocalSnapshot {
 
         // Version byte
 
-        if let Err(e) = writer.write_all(&mut [VERSION]) {
+        if let Err(e) = writer.write_all(&[VERSION]) {
             return Err(Error::IOError(e));
         };
 
         // Milestone hash
 
-        if let Err(e) = writer.write_all(&mut cast_slice(
+        if let Err(e) = writer.write_all(&cast_slice(
             self.metadata.inner.hash.to_inner().encode::<T5B1Buf>().as_i8_slice(),
         )) {
             return Err(Error::IOError(e));
@@ -261,47 +258,47 @@ impl LocalSnapshot {
 
         // Milestone index
 
-        if let Err(e) = writer.write_all(&mut self.metadata.inner.snapshot_index.to_le_bytes()) {
+        if let Err(e) = writer.write_all(&self.metadata.inner.snapshot_index.to_le_bytes()) {
             return Err(Error::IOError(e));
         }
 
         // Timestamp
 
-        if let Err(e) = writer.write_all(&mut self.metadata.inner.timestamp.to_le_bytes()) {
+        if let Err(e) = writer.write_all(&self.metadata.inner.timestamp.to_le_bytes()) {
             return Err(Error::IOError(e));
         }
 
         // Number of solid entry points
 
-        if let Err(e) = writer.write_all(&mut (self.metadata.solid_entry_points.len() as u32).to_le_bytes()) {
+        if let Err(e) = writer.write_all(&(self.metadata.solid_entry_points.len() as u32).to_le_bytes()) {
             return Err(Error::IOError(e));
         }
 
         // Number of seen milestones
 
-        if let Err(e) = writer.write_all(&mut (self.metadata.seen_milestones.len() as u32).to_le_bytes()) {
+        if let Err(e) = writer.write_all(&(self.metadata.seen_milestones.len() as u32).to_le_bytes()) {
             return Err(Error::IOError(e));
         }
 
         // Number of balances
 
-        if let Err(e) = writer.write_all(&mut (self.state.len() as u32).to_le_bytes()) {
+        if let Err(e) = writer.write_all(&(self.state.len() as u32).to_le_bytes()) {
             return Err(Error::IOError(e));
         }
 
         // Number of spent addresses
 
-        if let Err(e) = writer.write_all(&mut 0u32.to_le_bytes()) {
+        if let Err(e) = writer.write_all(&0u32.to_le_bytes()) {
             return Err(Error::IOError(e));
         }
 
         // Solid entry points
 
         for (hash, index) in self.metadata.solid_entry_points.iter() {
-            if let Err(e) = writer.write_all(&mut cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())) {
+            if let Err(e) = writer.write_all(&cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())) {
                 return Err(Error::IOError(e));
             }
-            if let Err(e) = writer.write_all(&mut index.to_le_bytes()) {
+            if let Err(e) = writer.write_all(&index.to_le_bytes()) {
                 return Err(Error::IOError(e));
             }
         }
@@ -309,10 +306,10 @@ impl LocalSnapshot {
         // Seen milestones
 
         for (hash, index) in self.metadata.seen_milestones.iter() {
-            if let Err(e) = writer.write_all(&mut cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())) {
+            if let Err(e) = writer.write_all(&cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())) {
                 return Err(Error::IOError(e));
             }
-            if let Err(e) = writer.write_all(&mut index.to_le_bytes()) {
+            if let Err(e) = writer.write_all(&index.to_le_bytes()) {
                 return Err(Error::IOError(e));
             }
         }
@@ -320,10 +317,10 @@ impl LocalSnapshot {
         // Balances
 
         for (address, balance) in self.state.iter() {
-            if let Err(e) = writer.write_all(&mut cast_slice(address.to_inner().encode::<T5B1Buf>().as_i8_slice())) {
+            if let Err(e) = writer.write_all(&cast_slice(address.to_inner().encode::<T5B1Buf>().as_i8_slice())) {
                 return Err(Error::IOError(e));
             }
-            if let Err(e) = writer.write_all(&mut balance.to_le_bytes()) {
+            if let Err(e) = writer.write_all(&balance.to_le_bytes()) {
                 return Err(Error::IOError(e));
             }
         }
