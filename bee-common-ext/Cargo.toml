@@ -13,12 +13,10 @@ homepage = "https://www.iota.org"
 [dependencies]
 bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 
-anymap = "0.12.1"
 async-trait = "0.1.40"
 dashmap = "3.11"
 futures = "0.3.5"
 log = "0.4.11"
-thiserror = "1.0.20"
 tokio = { version = "0.2.22", features = ["rt-core"] }
 bee-storage = { path = "../bee-storage/bee-storage/" }
 

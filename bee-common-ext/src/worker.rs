@@ -16,7 +16,7 @@ use async_trait::async_trait;
 use std::any::{Any, TypeId};
 
 #[async_trait]
-pub trait Worker<N: Node>: Any + Send + Sync {
+pub trait Worker<N: Node>: Any + Send + Sync + Sized {
     type Config;
     type Error: std::error::Error;
 
@@ -29,7 +29,7 @@ pub trait Worker<N: Node>: Any + Send + Sync {
     where
         Self: Sized;
 
-    async fn stop(self) -> Result<(), Self::Error>
+    async fn stop(self, _node: &mut N) -> Result<(), Self::Error>
     where
         Self: Sized,
     {

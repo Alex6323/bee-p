@@ -11,21 +11,25 @@
 
 use crate::worker::Worker;
 
+use async_trait::async_trait;
+use bee_common::shutdown;
 use bee_storage::storage::Backend;
 use futures::{channel::oneshot, future::Future};
-use log::info;
 
-use std::{
-    any::{type_name, Any, TypeId},
-    collections::{HashMap, HashSet},
-    pin::Pin,
-    sync::Arc,
-};
+use std::{any::Any, sync::Arc};
 
-pub trait Node: Default + Send + Sync + 'static {
+#[async_trait]
+pub trait Node: Send + Sized + 'static {
+    type Builder: NodeBuilder<Self>;
     type Backend: Backend;
 
-    fn new() -> Self;
+    fn build() -> Self::Builder {
+        Self::Builder::default()
+    }
+
+    async fn stop(mut self) -> Result<(), shutdown::Error>
+    where
+        Self: Sized;
 
     fn spawn<W, G, F>(&self, g: G)
     where
@@ -39,11 +43,6 @@ pub trait Node: Default + Send + Sync + 'static {
         Self: Sized,
         W: Worker<Self> + Send + Sync;
 
-    fn add_worker<W>(&mut self, worker: W)
-    where
-        Self: Sized,
-        W: Worker<Self> + Send + Sync;
-
     fn register_resource<R: Any + Send + Sync>(&mut self, res: R);
 
     fn resource<R: Any + Send + Sync>(&self) -> &Arc<R>;
@@ -53,94 +52,13 @@ pub trait Node: Default + Send + Sync + 'static {
     }
 }
 
-type Maker<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
-
-#[derive(Default)]
-pub struct NodeBuilder<N: Node> {
-    deps: HashMap<TypeId, &'static [TypeId]>,
-    makers: HashMap<TypeId, Box<Maker<N>>>,
-}
-
-impl<N: Node + 'static> NodeBuilder<N> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn with_worker<W: Worker<N> + 'static>(self) -> Self
+#[async_trait(?Send)]
+pub trait NodeBuilder<N: Node>: Default {
+    fn with_worker<W: Worker<N> + 'static>(self) -> Self
     where
-        W::Config: Default,
-    {
-        self.with_worker_cfg::<W>(W::Config::default())
-    }
+        W::Config: Default;
 
-    pub fn with_worker_cfg<W: Worker<N> + 'static>(mut self, config: W::Config) -> Self {
-        self.deps.insert(TypeId::of::<W>(), W::dependencies());
-        self.makers.insert(
-            TypeId::of::<W>(),
-            Box::new(|node| {
-                Box::pin(async move {
-                    info!("Initializing worker `{}`...", type_name::<W>());
-                    match W::start(node, config).await {
-                        Ok(w) => node.add_worker(w),
-                        Err(e) => panic!("Worker {} failed to start: {:?}.", type_name::<W>(), e),
-                    }
-                })
-            }),
-        );
-        self
-    }
+    fn with_worker_cfg<W: Worker<N> + 'static>(self, config: W::Config) -> Self;
 
-    pub async fn finish(mut self) -> N {
-        let mut node = N::new();
-
-        for id in TopologicalOrder::sort(self.deps) {
-            self.makers.remove(&id).unwrap()(&mut node).await;
-        }
-
-        node
-    }
-}
-
-struct TopologicalOrder {
-    graph: HashMap<TypeId, &'static [TypeId]>,
-    non_visited: HashSet<TypeId>,
-    being_visited: HashSet<TypeId>,
-    order: Vec<TypeId>,
-}
-
-impl TopologicalOrder {
-    fn visit(&mut self, id: TypeId) {
-        if !self.non_visited.contains(&id) {
-            return;
-        }
-
-        if !self.being_visited.insert(id) {
-            panic!("Cyclic dependency detected.");
-        }
-
-        for &id in self.graph[&id] {
-            self.visit(id);
-        }
-
-        self.being_visited.remove(&id);
-        self.non_visited.remove(&id);
-        self.order.push(id);
-    }
-
-    fn sort(graph: HashMap<TypeId, &'static [TypeId]>) -> Vec<TypeId> {
-        let non_visited = graph.keys().copied().collect();
-
-        let mut this = Self {
-            graph,
-            non_visited,
-            being_visited: HashSet::new(),
-            order: vec![],
-        };
-
-        while let Some(&id) = this.non_visited.iter().next() {
-            this.visit(id);
-        }
-
-        this.order
-    }
+    async fn finish(self) -> N;
 }

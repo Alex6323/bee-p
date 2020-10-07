@@ -11,10 +11,14 @@
 
 #![warn(missing_docs)]
 
-use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
+use crate::{banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin};
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder as NodeBuilderB, shutdown_tokio::Shutdown};
+use bee_common_ext::{
+    event::Bus,
+    node::{Node as _, NodeBuilder as _},
+    shutdown_tokio::Shutdown,
+};
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::Protocol;
@@ -57,7 +61,7 @@ impl<B: Backend> NodeBuilder<B> {
     pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
-        let node_builder = NodeBuilderB::<BeeNode<B>>::new();
+        let node_builder = BeeNode::<B>::build();
 
         let mut shutdown = Shutdown::new();
 
@@ -65,7 +69,7 @@ impl<B: Backend> NodeBuilder<B> {
 
         // TODO temporary
         let (mut node_builder, snapshot_state, snapshot_metadata) =
-            bee_snapshot::init(&self.config.snapshot, node_builder)
+            bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
                 .await
                 .map_err(Error::SnapshotError)?;
 
@@ -76,7 +80,7 @@ impl<B: Backend> NodeBuilder<B> {
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
-        node_builder = bee_ledger::whiteflag::init(
+        node_builder = bee_ledger::whiteflag::init::<BeeNode<B>>(
             snapshot_metadata.index(),
             snapshot_state.into(),
             self.config.protocol.coordinator().clone(),
@@ -85,7 +89,7 @@ impl<B: Backend> NodeBuilder<B> {
         );
 
         info!("Initializing protocol...");
-        node_builder = Protocol::init(
+        node_builder = Protocol::init::<BeeNode<B>>(
             self.config.protocol,
             self.config.database,
             network.clone(),
@@ -132,13 +136,6 @@ impl<B: Backend> Node<B> {
     pub async fn run(mut self) -> Result<(), Error> {
         info!("Running.");
 
-        // let Node {
-        //     mut network,
-        //     mut network_events,
-        //     mut peers,
-        //     ..
-        // } = self;
-
         while let Some(event) = self.network_events.next().await {
             trace!("Received event {}.", event);
 
@@ -147,7 +144,7 @@ impl<B: Backend> Node<B> {
 
         info!("Stopping...");
 
-        // shutdown.execute().await?;
+        self.tmp_node.stop().await.expect("Failed to properly stop node");
 
         info!("Stopped.");
 

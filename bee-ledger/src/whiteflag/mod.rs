@@ -21,29 +21,27 @@ use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
 use bee_common_ext::{
-    bee_node::BeeNode,
     event::Bus,
     node::{Node, NodeBuilder},
 };
 use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
-use bee_storage::storage::Backend;
 
 use log::warn;
 
 use std::sync::Arc;
 
-pub fn init<B: Backend>(
+pub fn init<N: Node>(
     index: u32,
     state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
-    node_builder: NodeBuilder<BeeNode<B>>,
+    node_builder: N::Builder,
     bus: Arc<Bus<'static>>,
-) -> NodeBuilder<BeeNode<B>> {
+) -> N::Builder {
     node_builder.with_worker_cfg::<LedgerWorker>((MilestoneIndex(index), state, coo_config, bus.clone()))
 }
 
-pub fn events<B: Backend>(bee_node: &BeeNode<B>, bus: Arc<Bus<'static>>) {
-    let ledger_worker = bee_node.worker::<LedgerWorker>().unwrap().tx.clone();
+pub fn events<N: Node>(node: &N, bus: Arc<Bus<'static>>) {
+    let ledger_worker = node.worker::<LedgerWorker>().unwrap().tx.clone();
 
     bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
         if let Err(e) = ledger_worker.send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {

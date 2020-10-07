@@ -25,7 +25,6 @@ use crate::{
 };
 
 use bee_common_ext::{
-    bee_node::BeeNode,
     event::Bus,
     node::{Node, NodeBuilder},
 };
@@ -56,14 +55,14 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub async fn init<B: Backend>(
+    pub async fn init<N: Node>(
         config: ProtocolConfig,
-        database_config: B::Config,
+        database_config: <N::Backend as Backend>::Config,
         network: Network,
         snapshot_metadata: SnapshotMetadata,
-        node_builder: NodeBuilder<BeeNode<B>>,
+        node_builder: N::Builder,
         bus: Arc<Bus<'static>>,
-    ) -> NodeBuilder<BeeNode<B>> {
+    ) -> N::Builder {
         let protocol = Protocol {
             config,
             network: network.clone(),
@@ -100,8 +99,8 @@ impl Protocol {
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
     }
 
-    pub fn events<B: Backend>(bee_node: &BeeNode<B>, bus: Arc<Bus<'static>>) {
-        let tangle = bee_node.resource::<MsTangle<B>>().clone();
+    pub fn events<N: Node>(node: &N, bus: Arc<Bus<'static>>) {
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
         bus.add_listener(move |latest_milestone: &LatestMilestoneChanged| {
             info!(
                 "New milestone {} {}.",
@@ -132,10 +131,10 @@ impl Protocol {
         //     ));
         // });
 
-        let milestone_solidifier = bee_node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
-        let milestone_requester = bee_node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
+        let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
+        let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
-        let tangle = bee_node.resource::<MsTangle<B>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
         bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
             debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
             tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
@@ -168,8 +167,8 @@ impl Protocol {
         }
     }
 
-    pub fn register<B: Backend>(
-        bee_node: &BeeNode<B>,
+    pub fn register<N: Node>(
+        node: &N,
         epid: EndpointId,
         address: SocketAddr,
         origin: Origin,
@@ -183,15 +182,15 @@ impl Protocol {
 
         Protocol::get().peer_manager.add(peer.clone());
 
-        let tangle = bee_node.resource::<MsTangle<B>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
         spawn(
             PeerHandshakerWorker::new(
                 Protocol::get().network.clone(),
                 peer,
-                bee_node.worker::<HasherWorker>().unwrap().tx.clone(),
-                bee_node.worker::<TransactionResponderWorker>().unwrap().tx.clone(),
-                bee_node.worker::<MilestoneResponderWorker>().unwrap().tx.clone(),
-                bee_node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
+                node.worker::<HasherWorker>().unwrap().tx.clone(),
+                node.worker::<TransactionResponderWorker>().unwrap().tx.clone(),
+                node.worker::<MilestoneResponderWorker>().unwrap().tx.clone(),
+                node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
             )
             .run(tangle, receiver_rx, receiver_shutdown_rx),
         );

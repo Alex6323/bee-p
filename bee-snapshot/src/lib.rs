@@ -25,11 +25,10 @@ use header::SnapshotHeader;
 use local::LocalSnapshot;
 use metadata::SnapshotMetadata;
 
-use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder};
+use bee_common_ext::{event::Bus, node::Node};
 use bee_crypto::ternary::Hash;
 use bee_transaction::bundled::Address;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
-use bee_storage::storage::Backend;
 
 use chrono::{offset::TimeZone, Utc};
 use log::info;
@@ -45,11 +44,11 @@ pub enum Error {
 
 // TODO change return type
 
-pub async fn init<B: Backend>(
+pub async fn init<N: Node>(
     // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
-    node_builder: NodeBuilder<BeeNode<B>>,
-) -> Result<(NodeBuilder<BeeNode<B>>, HashMap<Address, u64>, SnapshotMetadata), Error> {
+    node_builder: N::Builder,
+) -> Result<(N::Builder, HashMap<Address, u64>, SnapshotMetadata), Error> {
     let (state, mut metadata) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
@@ -116,8 +115,8 @@ pub async fn init<B: Backend>(
     Ok((node_builder, state, metadata))
 }
 
-pub fn events<B: Backend>(_bee_node: &BeeNode<B>, _bus: Arc<Bus<'static>>) {
-    // let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
+pub fn events<N: Node>(_node: &N, _bus: Arc<Bus<'static>>) {
+    // let snapshot_worker = node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
     //
     // bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
     //     if let Err(e) = snapshot_worker.send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {

@@ -12,7 +12,6 @@
 //! A crate that provides common functionalities shared across multiple crates within the Bee framework, and for
 //! applications built on-top.
 
-pub mod bee_node;
 pub mod event;
 pub mod node;
 pub mod shutdown_tokio;
