@@ -19,8 +19,8 @@ use crate::{
     protocol::Protocol,
     tangle::tangle,
     worker::{
-        peer::MessageHandler, HasherWorkerEvent, MilestoneRequesterWorkerEvent, MilestoneResponderWorkerEvent,
-        PeerWorker, TransactionResponderWorkerEvent,
+        peer::message_handler::MessageHandler, HasherWorkerEvent, MilestoneRequesterWorkerEvent,
+        MilestoneResponderWorkerEvent, PeerWorker, TransactionResponderWorkerEvent,
     },
 };
 

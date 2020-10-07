@@ -15,9 +15,11 @@
 use dashmap::DashMap;
 use std::any::{Any, TypeId};
 
+type Listener<'a> = dyn Fn(&dyn Any) + Send + Sync + 'a;
+
 #[derive(Default)]
 pub struct Bus<'a> {
-    listeners: DashMap<TypeId, Vec<Box<dyn Fn(&dyn Any) + Send + Sync + 'a>>>,
+    listeners: DashMap<TypeId, Vec<Box<Listener<'a>>>>,
 }
 
 impl<'a> Bus<'a> {

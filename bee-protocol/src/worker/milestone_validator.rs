@@ -151,7 +151,7 @@ where
                                     Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                                 }
 
-                                if let Some(_) = Protocol::get().requested_milestones.remove(&milestone.index) {
+                                if Protocol::get().requested_milestones.remove(&milestone.index).is_some() {
                                     tangle()
                                         .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
 

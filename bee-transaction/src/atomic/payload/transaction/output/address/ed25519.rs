@@ -33,6 +33,10 @@ impl Ed25519Address {
         ADDRESS_LENGTH
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn to_bech32(&self) -> String {
         let mut serialized = vec![1u8];
         serialized.extend_from_slice(&self.0);

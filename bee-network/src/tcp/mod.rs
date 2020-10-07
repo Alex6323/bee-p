@@ -154,7 +154,7 @@ async fn process_stream_read(
     epid: EndpointId,
     num_read: usize,
     internal_event_sender: &mut EventSender,
-    buffer: &Vec<u8>,
+    buffer: &[u8],
 ) -> bool {
     if num_read == 0 {
         trace!("Stream dropped by peer (EOF).");

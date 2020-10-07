@@ -44,7 +44,7 @@ impl TcpServer {
     ) -> Self {
         trace!("Starting TCP server...");
 
-        let tcp_listener = TcpListener::bind(binding_address.clone())
+        let tcp_listener = TcpListener::bind(binding_address)
             .await
             .expect("Error binding TCP server");
 
@@ -133,10 +133,9 @@ async fn process_stream(
             let internal_event_sender = internal_event_sender.clone();
             let epid = EndpointId::new(TransportProtocol::Tcp, connection.peer_address);
 
-            return Ok(spawn_reader_writer(connection, epid, internal_event_sender)
+            Ok(spawn_reader_writer(connection, epid, internal_event_sender)
                 .await
-                .map_err(|e| WorkerError(Box::new(e)))
-                .is_ok());
+                .is_ok())
         }
         Err(e) => {
             warn!("Accepting connection failed: {:?}.", e);

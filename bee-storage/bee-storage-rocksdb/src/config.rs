@@ -70,7 +70,7 @@ impl RocksDBConfigBuilder {
 
     pub fn finish(self) -> RocksDBConfig {
         RocksDBConfig {
-            path: self.path.unwrap_or(DEFAULT_PATH.to_string()),
+            path: self.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
             create_if_missing: self.create_if_missing.unwrap_or(DEFAULT_CREATE_IF_MISSING),
             create_missing_column_families: self
                 .create_missing_column_families

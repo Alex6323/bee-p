@@ -128,7 +128,7 @@ where
     }
 
     pub fn validate(mut self) -> Result<StagedMilestoneBuilder<E, M, P, IncomingValidated>, MilestoneBuilderError> {
-        if self.transactions.len() == 0 {
+        if self.transactions.is_empty() {
             return Err(MilestoneBuilderError::Empty);
         }
 

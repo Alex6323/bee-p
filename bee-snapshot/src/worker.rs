@@ -49,7 +49,7 @@ fn should_snapshot(index: MilestoneIndex, config: &SnapshotConfig, depth: u32) -
         return false;
     }
 
-    return solid_index - (depth + snapshot_interval) >= snapshot_index;
+    solid_index - (depth + snapshot_interval) >= snapshot_index
 }
 
 fn should_prune(mut index: MilestoneIndex, config: &SnapshotConfig, delay: u32) -> bool {

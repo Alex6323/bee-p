@@ -37,10 +37,12 @@ pub trait Node: Default + Send + Sync + 'static {
         W: Worker<Self> + Send + Sync;
 }
 
+type Maker<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+
 #[derive(Default)]
 pub struct NodeBuilder<N: Node> {
     deps: HashMap<TypeId, &'static [TypeId]>,
-    makers: HashMap<TypeId, Box<dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>>>,
+    makers: HashMap<TypeId, Box<Maker<N>>>,
 }
 
 impl<N: Node + 'static> NodeBuilder<N> {

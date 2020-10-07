@@ -44,9 +44,9 @@ pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
 
     let (a_hash, a) = create_random_tx();
     let (b_hash, b) = create_random_tx();
-    let (c_hash, c) = create_random_attached_tx(a_hash.clone(), b_hash.clone());
-    let (d_hash, d) = create_random_attached_tx(a_hash.clone(), c_hash.clone());
-    let (e_hash, e) = create_random_attached_tx(d_hash.clone(), c_hash.clone());
+    let (c_hash, c) = create_random_attached_tx(a_hash, b_hash);
+    let (d_hash, d) = create_random_attached_tx(a_hash, c_hash);
+    let (e_hash, e) = create_random_attached_tx(d_hash, c_hash);
 
     assert_eq!(*c.trunk(), b_hash);
     assert_eq!(*c.branch(), a_hash);

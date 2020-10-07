@@ -18,7 +18,10 @@ use crate::{
     peer::HandshakedPeer,
     protocol::Protocol,
     tangle::tangle,
-    worker::{peer::MessageHandler, HasherWorkerEvent, MilestoneResponderWorkerEvent, TransactionResponderWorkerEvent},
+    worker::{
+        peer::message_handler::MessageHandler, HasherWorkerEvent, MilestoneResponderWorkerEvent,
+        TransactionResponderWorkerEvent,
+    },
 };
 
 use log::{error, info, trace, warn};

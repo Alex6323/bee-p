@@ -9,22 +9,22 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub use crate::atomic::payload::signed_transaction::{input::Input, output::Output};
+pub use crate::atomic::payload::transaction::{input::Input, output::Output};
 use crate::atomic::{payload::Payload, Error};
 
 use alloc::vec::Vec;
 
 // TODO remove pub(crate)
 #[derive(Debug)]
-pub struct UnsignedTransaction {
+pub struct TransactionEssence {
     pub(crate) inputs: Vec<Input>,
     pub(crate) outputs: Vec<Output>,
     pub(crate) payload: Option<Payload>,
 }
 
-impl UnsignedTransaction {
-    pub fn builder() -> UnsignedTransactionBuilder {
-        UnsignedTransactionBuilder::new()
+impl TransactionEssence {
+    pub fn builder() -> TransactionEssenceBuilder {
+        TransactionEssenceBuilder::new()
     }
 
     pub fn inputs(&self) -> &Vec<Input> {
@@ -41,13 +41,13 @@ impl UnsignedTransaction {
 }
 
 #[derive(Debug, Default)]
-pub struct UnsignedTransactionBuilder {
+pub struct TransactionEssenceBuilder {
     inputs: Vec<Input>,
     outputs: Vec<Output>,
     payload: Option<Payload>,
 }
 
-impl UnsignedTransactionBuilder {
+impl TransactionEssenceBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -67,7 +67,7 @@ impl UnsignedTransactionBuilder {
         self
     }
 
-    pub fn finish(self) -> Result<UnsignedTransaction, Error> {
+    pub fn finish(self) -> Result<TransactionEssence, Error> {
         if self.inputs.is_empty() {
             return Err(Error::NoInput);
         }
@@ -76,7 +76,7 @@ impl UnsignedTransactionBuilder {
             return Err(Error::NoOutput);
         }
 
-        Ok(UnsignedTransaction {
+        Ok(TransactionEssence {
             inputs: self.inputs,
             outputs: self.outputs,
             payload: self.payload,

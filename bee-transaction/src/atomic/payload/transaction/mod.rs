@@ -10,19 +10,19 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod constants;
+mod essence;
 mod input;
 mod output;
 mod unlock;
-mod unsigned_transaction;
 
 use crate::atomic::{payload::Payload, Error};
 
 use constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
 
+pub use essence::TransactionEssence;
 pub use input::{Input, UTXOInput};
-pub use output::{Address, Ed25519Address, Output, SignatureSingleDepositOutput, WotsAddress};
+pub use output::{Address, Ed25519Address, Output, SignatureLockedSingleOutput, WotsAddress};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
-pub use unsigned_transaction::UnsignedTransaction;
 
 pub use bee_signing_ext::Seed;
 
@@ -35,21 +35,21 @@ use alloc::vec::Vec;
 use core::{cmp::Ordering, slice::Iter};
 
 #[derive(Debug)]
-pub struct SignedTransaction {
-    pub unsigned_transaction: UnsignedTransaction,
+pub struct Transaction {
+    pub essence: TransactionEssence,
     pub unlock_blocks: Vec<UnlockBlock>,
 }
 
-impl SignedTransaction {
-    pub fn builder(seed: &Seed) -> SignedTransactionBuilder {
-        SignedTransactionBuilder::new(seed)
+impl Transaction {
+    pub fn builder(seed: &Seed) -> TransactionBuilder {
+        TransactionBuilder::new(seed)
     }
 
     pub fn validate(&self) -> Result<(), Error> {
         // Should we add this field? -> Transaction Type value must be 0, denoting an Unsigned Transaction
 
         // Inputs validation
-        let transaction = &self.unsigned_transaction;
+        let transaction = &self.essence;
         // Inputs Count must be 0 < x <= 127
         if !INPUT_OUTPUT_COUNT_RANGE.contains(&transaction.inputs().len()) {
             return Err(Error::CountError);
@@ -96,9 +96,9 @@ impl SignedTransaction {
 
         let mut total = 0;
         for i in transaction.outputs().iter() {
-            // Output Type must be 0, denoting a SigLockedSingleDeposit.
+            // Output Type must be 0, denoting a SignatureLockedSingle.
             match i {
-                output::Output::SignatureSingleDeposit(u) => {
+                output::Output::SignatureLockedSingle(u) => {
                     // Address Type must either be 0 or 1, denoting a WOTS- or Ed25519 address.
 
                     // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
@@ -108,7 +108,7 @@ impl SignedTransaction {
                         .outputs()
                         .iter()
                         .filter(|j| match *j {
-                            output::Output::SignatureSingleDeposit(s) => s.address() == u.address(),
+                            output::Output::SignatureLockedSingle(s) => s.address() == u.address(),
                         })
                         .count()
                         > 1
@@ -216,6 +216,7 @@ impl SignedTransaction {
     }
 }
 
+#[allow(dead_code)]
 fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
     let mut iterator = iterator;
     let mut last = match iterator.next() {
@@ -233,14 +234,14 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
     true
 }
 
-pub struct SignedTransactionBuilder<'a> {
+pub struct TransactionBuilder<'a> {
     seed: &'a Seed,
     inputs: Vec<(Input, BIP32Path)>,
     outputs: Vec<Output>,
     payload: Option<Payload>,
 }
 
-impl<'a> SignedTransactionBuilder<'a> {
+impl<'a> TransactionBuilder<'a> {
     pub fn new(seed: &'a Seed) -> Self {
         Self {
             seed,
@@ -269,9 +270,9 @@ impl<'a> SignedTransactionBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Result<SignedTransaction, Error> {
-        let mut inputs = self.inputs;
-        let mut outputs = self.outputs;
+    pub fn build(self) -> Result<Transaction, Error> {
+        let inputs = self.inputs;
+        let outputs = self.outputs;
 
         if inputs.is_empty() || outputs.is_empty() {
             return Err(Error::CountError);
@@ -319,9 +320,9 @@ impl<'a> SignedTransactionBuilder<'a> {
 
         let inputs: Vec<Input> = inputs.into_iter().map(|(i, _)| i).collect();
 
-        // TODO use UnsignedTransactionBuilder
-        Ok(SignedTransaction {
-            unsigned_transaction: UnsignedTransaction {
+        // TODO use TransactionEssenceBuilder
+        Ok(Transaction {
+            essence: TransactionEssence {
                 inputs,
                 outputs,
                 payload: self.payload,

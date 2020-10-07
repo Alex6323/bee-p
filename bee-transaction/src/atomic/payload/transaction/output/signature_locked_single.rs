@@ -9,19 +9,26 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod address;
-mod signature_single_deposit;
+use crate::atomic::payload::transaction::Address;
 
-pub use address::{Address, Ed25519Address, WotsAddress};
-pub use signature_single_deposit::SignatureSingleDepositOutput;
+use core::num::NonZeroU64;
 
 #[derive(Debug)]
-pub enum Output {
-    SignatureSingleDeposit(SignatureSingleDepositOutput),
+pub struct SignatureLockedSingleOutput {
+    address: Address,
+    amount: NonZeroU64,
 }
 
-impl From<SignatureSingleDepositOutput> for Output {
-    fn from(output: SignatureSingleDepositOutput) -> Self {
-        Self::SignatureSingleDeposit(output)
+impl SignatureLockedSingleOutput {
+    pub fn new(address: Address, amount: NonZeroU64) -> Self {
+        Self { address, amount }
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub fn amount(&self) -> NonZeroU64 {
+        self.amount
     }
 }

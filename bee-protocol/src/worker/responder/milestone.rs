@@ -62,7 +62,7 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
                         let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
 
                         for transaction in bundle {
-                            transaction.into_trits_allocated(&mut trits);
+                            transaction.as_trits_allocated(&mut trits);
                             Sender::<TransactionMessage>::send(
                                 &epid,
                                 TransactionMessage::new(&compress_transaction_bytes(cast_slice(

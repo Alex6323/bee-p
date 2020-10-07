@@ -67,7 +67,7 @@ impl ConnectedEndpointList {
         self.0
             .iter()
             .find(|(_, endpoint)| endpoint.duplicate_of.map_or(false, |other| other == epid))
-            .map_or(None, |(duplicate, _)| Some(*duplicate))
+            .map(|(duplicate, _)| *duplicate)
     }
 
     pub fn is_duplicate(&self, epid: EndpointId) -> bool {

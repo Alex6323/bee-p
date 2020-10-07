@@ -33,7 +33,7 @@ fn get_or_zero_single_zero() {
     let addr1 = rand_trits_field::<Address>();
     let addr2 = rand_trits_field::<Address>();
 
-    inner_state.insert(addr1.clone(), 42);
+    inner_state.insert(addr1, 42);
 
     let state: LedgerState = inner_state.into();
 
@@ -55,11 +55,11 @@ fn get_or_zero() {
 
     let state: LedgerState = inner_state.into();
 
-    for i in 0..100 {
+    for (i, addr) in addrs.iter().enumerate() {
         if i % 2 == 0 {
-            assert_eq!(state.get_or_zero(&addrs[i]), i as u64);
+            assert_eq!(state.get_or_zero(addr), i as u64);
         } else {
-            assert_eq!(state.get_or_zero(&addrs[i]), 0u64);
+            assert_eq!(state.get_or_zero(addr), 0u64);
         }
     }
 }
@@ -116,13 +116,13 @@ fn apply_diff() {
 
     state.apply_diff(diff);
 
-    for i in 0..100 {
+    for (i, addr) in addrs.iter().enumerate() {
         if i % 3 == 0 {
-            assert_eq!(state.get_or_zero(&addrs[i]), (200 + i) as u64);
+            assert_eq!(state.get_or_zero(addr), (200 + i) as u64);
         } else if i % 3 == 1 {
-            assert_eq!(state.get_or_zero(&addrs[i]), (200 - i) as u64);
+            assert_eq!(state.get_or_zero(addr), (200 - i) as u64);
         } else {
-            assert_eq!(state.get_or_zero(&addrs[i]), 200 as u64);
+            assert_eq!(state.get_or_zero(addr), 200 as u64);
         }
     }
 }

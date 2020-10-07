@@ -63,8 +63,8 @@ impl MsTangle {
     }
 
     pub fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
-        let opt = self.inner.insert(hash, transaction, metadata);
-
+        // let opt = self.inner.insert(hash, transaction, metadata);
+        //
         // TODO this has been temporarily moved to the processor.
         // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
         // When the tangle is made a worker, this should be put back on.
@@ -76,8 +76,9 @@ impl MsTangle {
         //         error!("Failed to send hash to propagator: {:?}.", e);
         //     }
         // }
-
-        opt
+        //
+        // opt
+        self.inner.insert(hash, transaction, metadata)
     }
 
     pub fn add_milestone(&self, index: MilestoneIndex, hash: Hash) {

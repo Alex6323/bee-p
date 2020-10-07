@@ -133,7 +133,7 @@ impl BundledTransaction {
         Ok(transaction)
     }
 
-    pub fn into_trits_allocated(&self, buf: &mut Trits<T1B1>) {
+    pub fn as_trits_allocated(&self, buf: &mut Trits<T1B1>) {
         let mut copy_field = |layout: Field, field: &Trits<T1B1>| {
             buf[layout.trit_offset.start..][..layout.trit_offset.length].copy_from(&field[0..layout.trit_offset.length])
         };
@@ -310,6 +310,10 @@ impl BundledTransactions {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn push(&mut self, transaction: BundledTransaction) {

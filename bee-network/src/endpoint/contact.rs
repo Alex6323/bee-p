@@ -14,7 +14,6 @@ use crate::util::{self, Port, TransportProtocol};
 use super::{EndpointId, Error};
 
 use dashmap::{mapref::entry::Entry, DashMap};
-use url;
 
 use std::{
     fmt,
@@ -55,8 +54,7 @@ impl EndpointContactParams {
             let socket_address = &format!("{}:{}", domain_name_or_ip_address, port)[..];
             let last_socket_address = util::resolve_address(socket_address)
                 .await
-                .map_err(|_| Error::DnsFailure)?
-                .into();
+                .map_err(|_| Error::DnsFailure)?;
 
             Ok(Self {
                 domain_name_or_ip_address,
@@ -74,8 +72,7 @@ impl EndpointContactParams {
             let socket_address = &format!("{}:{}", self.domain_name_or_ip_address, self.port)[..];
             let socket_address = util::resolve_address(socket_address)
                 .await
-                .map_err(|_| Error::DnsFailure)?
-                .into();
+                .map_err(|_| Error::DnsFailure)?;
 
             self.last_socket_address = socket_address;
         }
