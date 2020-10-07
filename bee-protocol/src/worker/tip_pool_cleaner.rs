@@ -21,10 +21,10 @@ use crate::tangle::tangle;
 use std::time::Duration;
 
 #[derive(Default)]
-pub(crate) struct TipPoolCleaner {}
+pub(crate) struct TipPoolCleanerWorker {}
 
 #[async_trait]
-impl<N: Node> Worker<N> for TipPoolCleaner {
+impl<N: Node> Worker<N> for TipPoolCleanerWorker {
     type Config = ();
     type Error = WorkerError;
 

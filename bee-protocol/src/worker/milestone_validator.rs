@@ -14,7 +14,10 @@ use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, tangle},
-    worker::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent},
+    worker::{
+        MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent, MilestoneSolidifierWorker,
+        MilestoneSolidifierWorkerEvent,
+    },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -30,7 +33,6 @@ use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::{debug, error, info};
 
-use crate::worker::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 use std::any::TypeId;
 
 #[derive(Debug)]
