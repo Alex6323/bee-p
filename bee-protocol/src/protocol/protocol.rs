@@ -17,10 +17,10 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::tangle,
     worker::{
-        BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneRequesterWorker,
-        MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, TpsWorker, TransactionRequesterWorker,
-        TransactionResponderWorker,
+        BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneConeUpdaterWorker,
+        MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
+        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker,
+        TipPoolCleanerWorker, TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
     },
 };
 
@@ -37,7 +37,6 @@ use futures::channel::oneshot;
 use log::{debug, error, info};
 use tokio::spawn;
 
-use crate::worker::{MilestoneConeUpdaterWorker, TipPoolCleanerWorker};
 use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
 
 static mut PROTOCOL: *const Protocol = ptr::null();

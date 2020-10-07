@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::tangle::tangle;
+
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
@@ -17,7 +19,6 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use crate::tangle::tangle;
 use std::time::Duration;
 
 #[derive(Default)]
