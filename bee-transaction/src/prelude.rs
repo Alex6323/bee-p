@@ -16,7 +16,7 @@ pub use crate::atomic::{
             SignatureSingleDepositOutput, SignatureUnlock, SignedTransactionBuilder, UTXOInput, UnlockBlock,
             UnsignedTransaction, WotsAddress, WotsSignature,
         },
-        Indexation, Milestone, Payload, SignedData, SignedTransaction, UnsignedData,
+        Indexation, Milestone, Payload, SignedTransaction,
     },
     Error, Hash, Message, MessageBuilder,
 };
