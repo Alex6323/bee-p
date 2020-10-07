@@ -11,7 +11,7 @@
 
 pub const HASH_LENGTH: usize = 32;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Hash([u8; HASH_LENGTH]);
 
 impl From<[u8; HASH_LENGTH]> for Hash {
