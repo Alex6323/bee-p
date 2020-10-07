@@ -49,23 +49,19 @@ struct TipMetadata {
     time_first_child: Option<Instant>,
 }
 
-#[derive(Default)]
-pub(crate) struct WurtsTipPool {
-    tips: HashMap<Hash, TipMetadata>,
-    non_lazy_tips: HashSet<Hash>,
-}
-
 impl TipMetadata {
     pub(crate) fn new() -> Self {
         Self::default()
     }
 }
 
-impl WurtsTipPool {
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
+#[derive(Default)]
+pub(crate) struct WurtsTipPool {
+    tips: HashMap<Hash, TipMetadata>,
+    non_lazy_tips: HashSet<Hash>,
+}
 
+impl WurtsTipPool {
     pub(crate) fn insert(&mut self, tail: Hash, trunk: Hash, branch: Hash) {
         match self.tip_score(&tail) {
             Score::NonLazy => {
