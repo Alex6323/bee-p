@@ -219,23 +219,19 @@ impl MsTangle {
     }
 
     pub fn insert_tip(&self, tail: Hash, trunk: Hash, branch: Hash) {
-        let mut pool = self.tip_pool.lock().unwrap();
-        pool.insert(tail, trunk, branch);
+        self.tip_pool.lock().unwrap().insert(tail, trunk, branch);
     }
 
     pub fn update_tip_scores(&self) {
-        let mut pool = self.tip_pool.lock().unwrap();
-        pool.update_scores();
+        self.tip_pool.lock().unwrap().update_scores();
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        let pool = self.tip_pool.lock().unwrap();
-        pool.two_non_lazy_tips()
+        self.tip_pool.lock().unwrap().two_non_lazy_tips()
     }
 
     pub fn reduce_tips(&self) {
-        let mut pool = self.tip_pool.lock().unwrap();
-        pool.reduce_tips();
+        self.tip_pool.lock().unwrap().reduce_tips();
     }
 }
 
