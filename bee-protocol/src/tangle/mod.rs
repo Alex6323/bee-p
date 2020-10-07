@@ -199,23 +199,25 @@ impl MsTangle {
     }
 
     pub fn otrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
-        if let Some(sep) = self.solid_entry_points.get(hash) {
-            Some(*sep.value())
-        } else {
-            match self.get_metadata(hash) {
-                Some(metadata) => metadata.otrsi(),
-                None => None,
+        match self.solid_entry_points.get(hash) {
+            Some(sep) => Some(*sep.value()),
+            None => {
+                match self.get_metadata(hash) {
+                    Some(metadata) => metadata.otrsi(),
+                    None => None,
+                }
             }
         }
     }
 
     pub fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
-        if let Some(sep) = self.solid_entry_points.get(hash) {
-            Some(*sep.value())
-        } else {
-            match self.get_metadata(hash) {
-                Some(metadata) => metadata.ytrsi(),
-                None => None,
+        match self.solid_entry_points.get(hash) {
+            Some(sep) => Some(*sep.value()),
+            None => {
+                match self.get_metadata(hash) {
+                    Some(metadata) => metadata.ytrsi(),
+                    None => None,
+                }
             }
         }
     }
