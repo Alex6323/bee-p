@@ -12,17 +12,17 @@
 mod indexation;
 mod milestone;
 
-pub mod signed_transaction;
+pub mod transaction;
 
 pub use indexation::Indexation;
 pub use milestone::Milestone;
-pub use signed_transaction::SignedTransaction;
+pub use transaction::Transaction;
 
 use alloc::boxed::Box;
 
 #[derive(Debug)]
 pub enum Payload {
-    SignedTransaction(Box<SignedTransaction>),
+    Transaction(Box<Transaction>),
     Milestone(Box<Milestone>),
     Indexation(Box<Indexation>),
 }

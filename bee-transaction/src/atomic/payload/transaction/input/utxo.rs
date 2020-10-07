@@ -9,31 +9,29 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::{payload::signed_transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
-
-use core::convert::{TryFrom, TryInto};
+use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error, Hash};
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct ReferenceUnlock(u8);
-
-impl TryFrom<u8> for ReferenceUnlock {
-    type Error = Error;
-
-    fn try_from(index: u8) -> Result<Self, Self::Error> {
-        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
-            return Err(Self::Error::InvalidIndex);
-        }
-
-        Ok(Self(index))
-    }
+pub struct UTXOInput {
+    id: Hash,
+    index: u8,
 }
 
-impl ReferenceUnlock {
-    pub fn new(index: u8) -> Result<Self, Error> {
-        index.try_into()
+// TODO builder ?
+impl UTXOInput {
+    pub fn new(id: Hash, index: u8) -> Result<Self, Error> {
+        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
+            return Err(Error::InvalidIndex);
+        }
+
+        Ok(Self { id, index })
+    }
+
+    pub fn id(&self) -> &Hash {
+        &self.id
     }
 
     pub fn index(&self) -> u8 {
-        self.0
+        self.index
     }
 }

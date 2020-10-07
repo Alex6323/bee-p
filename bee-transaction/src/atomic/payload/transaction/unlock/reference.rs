@@ -9,26 +9,31 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::payload::signed_transaction::Address;
+use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
 
-use core::num::NonZeroU64;
+use core::convert::{TryFrom, TryInto};
 
-#[derive(Debug)]
-pub struct SignatureSingleDepositOutput {
-    address: Address,
-    amount: NonZeroU64,
+#[derive(Debug, Eq, PartialEq)]
+pub struct ReferenceUnlock(u8);
+
+impl TryFrom<u8> for ReferenceUnlock {
+    type Error = Error;
+
+    fn try_from(index: u8) -> Result<Self, Self::Error> {
+        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
+            return Err(Self::Error::InvalidIndex);
+        }
+
+        Ok(Self(index))
+    }
 }
 
-impl SignatureSingleDepositOutput {
-    pub fn new(address: Address, amount: NonZeroU64) -> Self {
-        Self { address, amount }
+impl ReferenceUnlock {
+    pub fn new(index: u8) -> Result<Self, Error> {
+        index.try_into()
     }
 
-    pub fn address(&self) -> &Address {
-        &self.address
-    }
-
-    pub fn amount(&self) -> NonZeroU64 {
-        self.amount
+    pub fn index(&self) -> u8 {
+        self.0
     }
 }
