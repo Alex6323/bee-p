@@ -11,7 +11,9 @@
 
 use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error, Hash};
 
-#[derive(Debug, Eq, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct UTXOInput {
     id: Hash,
     index: u8,

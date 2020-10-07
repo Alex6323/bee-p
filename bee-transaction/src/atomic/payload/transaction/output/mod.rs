@@ -15,7 +15,9 @@ mod signature_locked_single;
 pub use address::{Address, Ed25519Address, WotsAddress};
 pub use signature_locked_single::SignatureLockedSingleOutput;
 
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize, Serialize)]
 pub enum Output {
     SignatureLockedSingle(SignatureLockedSingleOutput),
 }

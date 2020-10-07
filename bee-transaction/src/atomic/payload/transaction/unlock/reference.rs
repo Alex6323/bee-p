@@ -11,9 +11,11 @@
 
 use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
 
+use serde::{Deserialize, Serialize};
+
 use core::convert::{TryFrom, TryInto};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct ReferenceUnlock(u8);
 
 impl TryFrom<u8> for ReferenceUnlock {

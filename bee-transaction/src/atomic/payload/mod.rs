@@ -18,9 +18,11 @@ pub use indexation::Indexation;
 pub use milestone::Milestone;
 pub use transaction::Transaction;
 
+use serde::{Deserialize, Serialize};
+
 use alloc::boxed::Box;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Payload {
     Transaction(Box<Transaction>),
     Milestone(Box<Milestone>),

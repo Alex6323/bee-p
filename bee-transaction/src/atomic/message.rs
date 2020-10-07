@@ -14,7 +14,9 @@ use crate::{
     Vertex,
 };
 
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Message {
     parent1: Hash,
     parent2: Hash,

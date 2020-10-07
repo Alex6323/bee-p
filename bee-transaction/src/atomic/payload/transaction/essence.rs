@@ -12,10 +12,12 @@
 pub use crate::atomic::payload::transaction::{input::Input, output::Output};
 use crate::atomic::{payload::Payload, Error};
 
+use serde::{Deserialize, Serialize};
+
 use alloc::vec::Vec;
 
 // TODO remove pub(crate)
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TransactionEssence {
     pub(crate) inputs: Vec<Input>,
     pub(crate) outputs: Vec<Output>,

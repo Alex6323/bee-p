@@ -15,7 +15,9 @@ mod wots;
 pub use ed25519::Ed25519Signature;
 pub use wots::WotsSignature;
 
-#[derive(Debug, Eq, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum SignatureUnlock {
     Wots(WotsSignature),
     Ed25519(Ed25519Signature),

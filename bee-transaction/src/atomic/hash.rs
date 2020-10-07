@@ -9,9 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use serde::{Deserialize, Serialize};
+
 pub const HASH_LENGTH: usize = 32;
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Hash([u8; HASH_LENGTH]);
 
 impl From<[u8; HASH_LENGTH]> for Hash {
