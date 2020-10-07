@@ -16,6 +16,7 @@ mod bundle_validator;
 mod milestone_cone_updater;
 mod milestone_validator;
 mod peer;
+mod propagator;
 mod requester;
 mod responder;
 mod solidifier;
@@ -29,6 +30,7 @@ pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEv
 pub(crate) use milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidatorWorkerEvent};
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
+pub(crate) use propagator::{PropagatorWorker, PropagatorWorkerEvent};
 pub(crate) use requester::{
     MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, TransactionRequesterWorker,
     TransactionRequesterWorkerEvent,
@@ -37,9 +39,7 @@ pub(crate) use responder::{
     MilestoneResponderWorker, MilestoneResponderWorkerEvent, TransactionResponderWorker,
     TransactionResponderWorkerEvent,
 };
-pub(crate) use solidifier::{
-    KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, PropagatorWorker, PropagatorWorkerEvent,
-};
+pub(crate) use solidifier::{KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
 pub(crate) use status::StatusWorker;
 pub(crate) use tip_pool_cleaner::TipPoolCleanerWorker;
 pub(crate) use tps::TpsWorker;

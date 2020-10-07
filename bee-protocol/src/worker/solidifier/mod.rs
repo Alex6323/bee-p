@@ -11,8 +11,6 @@
 
 mod kickstart;
 mod milestone;
-mod propagator;
 
 pub(crate) use kickstart::KickstartWorker;
 pub(crate) use milestone::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
-pub(crate) use propagator::{PropagatorWorker, PropagatorWorkerEvent};
