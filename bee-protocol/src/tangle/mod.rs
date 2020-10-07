@@ -87,6 +87,10 @@ impl<B: Backend> MsTangle<B> {
         }
     }
 
+    pub async fn shutdown(self) {
+        // TODO: Write back changes by calling self.inner.shutdown().await
+    }
+
     pub async fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
         // TODO this has been temporarily moved to the processor.
         // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.

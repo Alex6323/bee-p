@@ -9,15 +9,21 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::MilestoneIndex;
+use crate::{tangle::MsTangle, worker::storage::StorageWorker, MilestoneIndex};
 
-use async_trait::async_trait;
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_snapshot::metadata::SnapshotMetadata;
-use std::{any::TypeId, convert::Infallible};
 
-use crate::{tangle::MsTangle, worker::storage::StorageWorker};
+use async_trait::async_trait;
+use log::{error, warn};
+use tokio::time::interval;
+
+use std::{
+    any::TypeId,
+    convert::Infallible,
+    time::{Duration, Instant},
+};
 
 pub struct TangleWorker;
 
@@ -63,5 +69,39 @@ impl<N: Node> Worker<N> for TangleWorker {
         });
 
         Ok(Self)
+    }
+
+    async fn stop(self, node: &mut N) -> Result<(), Self::Error> {
+        let tangle = if let Some(tangle) = node.remove_resource::<MsTangle<N::Backend>>() {
+            tangle
+        } else {
+            warn!(
+                "The tangle was still in use by other users when the tangle worker stopped. \
+                This is a bug, but not a critical one. From here, we'll revert to polling the \
+                tangle until other users are finished with it."
+            );
+
+            let poll_start = Instant::now();
+            let poll_freq = 20;
+            let mut interval = interval(Duration::from_millis(poll_freq));
+            loop {
+                match node.remove_resource::<MsTangle<N::Backend>>() {
+                    Some(tangle) => break tangle,
+                    None => {
+                        if Instant::now().duration_since(poll_start) > Duration::from_secs(5) {
+                            error!(
+                                "Tangle shutdown polling period elapsed. The tangle will be dropped \
+                            without proper shutdown. This should be considered a bug."
+                            );
+                            return Ok(());
+                        } else {
+                            interval.tick().await;
+                        }
+                    }
+                }
+            }
+        };
+
+        Ok(tangle.shutdown().await)
     }
 }

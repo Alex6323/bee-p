@@ -32,7 +32,7 @@ use log::{error, info, trace, warn};
 use thiserror::Error;
 use tokio::spawn;
 
-use std::{collections::HashMap, marker::PhantomData, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 type NetworkEventStream = ShutdownStream<Fuse<flume::r#async::RecvStream<'static, Event>>>;
 
@@ -53,7 +53,6 @@ pub enum Error {
 
 pub struct NodeBuilder<B: Backend> {
     config: NodeConfig<B>,
-    phantom: PhantomData<B>,
 }
 
 impl<B: Backend> NodeBuilder<B> {
@@ -144,6 +143,11 @@ impl<B: Backend> Node<B> {
 
         info!("Stopping...");
 
+        for (_, (_, shutdown)) in self.peers.into_iter() {
+            // TODO: Should we handle this error?
+            let _ = shutdown.send(());
+        }
+
         self.tmp_node.stop().await.expect("Failed to properly stop node");
 
         info!("Stopped.");
@@ -153,10 +157,7 @@ impl<B: Backend> Node<B> {
 
     /// Returns a builder to create a node.
     pub fn builder(config: NodeConfig<B>) -> NodeBuilder<B> {
-        NodeBuilder {
-            config,
-            phantom: PhantomData,
-        }
+        NodeBuilder { config }
     }
 
     #[inline]

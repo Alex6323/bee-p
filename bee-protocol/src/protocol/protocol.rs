@@ -114,12 +114,11 @@ impl Protocol {
             );
             tangle.update_latest_milestone_index(latest_milestone.0.index);
 
-            // TODO spawn ?
-            spawn(Protocol::broadcast_heartbeat(
+            Protocol::broadcast_heartbeat(
                 tangle.get_latest_solid_milestone_index(),
                 tangle.get_pruning_index(),
                 latest_milestone.0.index,
-            ));
+            );
         });
 
         // bus.add_listener(|latest_solid_milestone: &LatestSolidMilestoneChanged| {
@@ -150,12 +149,11 @@ impl Protocol {
                 Protocol::request_milestone(&tangle, &milestone_requester, next_ms, None);
             }
 
-            // TODO spawn ?
-            spawn(Protocol::broadcast_heartbeat(
+            Protocol::broadcast_heartbeat(
                 latest_solid_milestone.0.index,
                 tangle.get_pruning_index(),
                 tangle.get_latest_milestone_index(),
-            ));
+            );
         });
     }
 

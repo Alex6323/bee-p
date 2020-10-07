@@ -247,8 +247,7 @@ impl PeerHandshakerWorker {
                             tangle.get_latest_solid_milestone_index(),
                             tangle.get_pruning_index(),
                             tangle.get_latest_milestone_index(),
-                        )
-                        .await;
+                        );
 
                         Protocol::request_latest_milestone(tangle, &self.milestone_requester, Some(self.peer.epid));
 

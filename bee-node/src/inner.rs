@@ -9,27 +9,25 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use anymap::{any::Any as AnyMapAny, Map};
-use async_trait::async_trait;
 use bee_common::shutdown;
 use bee_common_ext::{
     node::{Node, NodeBuilder},
     worker::Worker,
 };
 use bee_storage::storage::Backend;
+
+use anymap::{any::Any as AnyMapAny, Map};
+use async_trait::async_trait;
 use futures::{channel::oneshot, future::Future};
 use log::info;
 use tokio::spawn;
 
 use std::{
     any::{type_name, Any, TypeId},
-    collections::{
-        hash_map::{Entry, HashMap},
-        HashSet,
-    },
+    collections::{HashMap, HashSet},
     marker::PhantomData,
     pin::Pin,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 type WorkerStart<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
@@ -38,15 +36,13 @@ type WorkerStop<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output 
 #[allow(clippy::type_complexity)]
 pub struct BeeNode<B> {
     workers: Map<dyn AnyMapAny + Send + Sync>,
-    tasks: Mutex<
-        HashMap<
-            TypeId,
-            Vec<(
-                oneshot::Sender<()>,
-                // TODO Result ?
-                Box<dyn Future<Output = Result<(), tokio::task::JoinError>> + Send + Sync>,
-            )>,
-        >,
+    tasks: HashMap<
+        TypeId,
+        Vec<(
+            oneshot::Sender<()>,
+            // TODO Result ?
+            Box<dyn Future<Output = Result<(), tokio::task::JoinError>> + Send + Sync + Unpin>,
+        )>,
     >,
     resources: Map<dyn AnyMapAny + Send + Sync>,
     worker_stops: HashMap<TypeId, Box<WorkerStop<Self>>>,
@@ -75,8 +71,13 @@ impl<B: Backend> Node for BeeNode<B> {
     where
         Self: Sized,
     {
-        for id in self.worker_order.clone() {
+        for id in self.worker_order.clone().into_iter().rev() {
             self.worker_stops.remove(&id).unwrap()(&mut self).await;
+            for (shutdown, task_fut) in self.tasks.remove(&id).unwrap_or_default() {
+                let _ = shutdown.send(());
+                // TODO: Should we handle thie error?
+                let _ = task_fut.await; //.map_err(|e| shutdown::Error::from(worker::Error(Box::new(e))))?;
+            }
         }
 
         Ok(())
@@ -86,6 +87,10 @@ impl<B: Backend> Node for BeeNode<B> {
         self.resources.insert(Arc::new(res));
     }
 
+    fn remove_resource<R: Any + Send + Sync>(&mut self) -> Option<R> {
+        Arc::try_unwrap(self.resources.remove()?).ok()
+    }
+
     #[track_caller]
     fn resource<R: Any + Send + Sync>(&self) -> &Arc<R> {
         self.resources
@@ -93,7 +98,7 @@ impl<B: Backend> Node for BeeNode<B> {
             .unwrap_or_else(|| panic!("Unable to fetch node resource {}", type_name::<R>()))
     }
 
-    fn spawn<W, G, F>(&self, g: G)
+    fn spawn<W, G, F>(&mut self, g: G)
     where
         Self: Sized,
         W: Worker<Self>,
@@ -102,16 +107,10 @@ impl<B: Backend> Node for BeeNode<B> {
     {
         let (tx, rx) = oneshot::channel();
 
-        if let Ok(mut tasks) = self.tasks.lock() {
-            match tasks.entry(TypeId::of::<W>()) {
-                Entry::Occupied(mut entry) => {
-                    entry.get_mut().push((tx, Box::new(spawn(g(rx)))));
-                }
-                Entry::Vacant(entry) => {
-                    entry.insert(vec![(tx, Box::new(spawn(g(rx))))]);
-                }
-            }
-        }
+        self.tasks
+            .entry(TypeId::of::<W>())
+            .or_default()
+            .push((tx, Box::new(spawn(g(rx)))));
     }
 
     fn worker<W>(&self) -> Option<&W>
@@ -180,7 +179,7 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
     async fn finish(mut self) -> BeeNode<B> {
         let mut node = BeeNode {
             workers: Map::new(),
-            tasks: Mutex::new(HashMap::new()),
+            tasks: HashMap::new(),
             resources: Map::new(),
             phantom: PhantomData,
             worker_stops: self.worker_stops,

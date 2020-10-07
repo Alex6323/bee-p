@@ -17,10 +17,10 @@ bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-network = { path = "../bee-network" }
 bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-snapshot = { path = "../bee-snapshot" }
+bee-storage = { path = "../bee-storage/bee-storage" }
 bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
-bee-storage = { path = "../bee-storage/bee-storage" }
 
 async-trait = "0.1.40"
 bitflags = "1.2.1"
@@ -32,10 +32,11 @@ futures-util = "0.3.5"
 log = "0.4.8"
 pin-project = "0.4"
 serde = { version = "1.0.114", features = ["derive" ] }
-twox-hash = "1.5.0"
 tokio = { version = "0.2.22", features = ["sync", "time"] }
+twox-hash = "1.5.0"
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }
+
 rand = "0.7.3"
 tokio = { version = "0.2.22", features = ["macros"] }

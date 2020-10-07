@@ -31,7 +31,7 @@ pub trait Node: Send + Sized + 'static {
     where
         Self: Sized;
 
-    fn spawn<W, G, F>(&self, g: G)
+    fn spawn<W, G, F>(&mut self, g: G)
     where
         Self: Sized,
         W: Worker<Self>,
@@ -44,6 +44,8 @@ pub trait Node: Send + Sized + 'static {
         W: Worker<Self> + Send + Sync;
 
     fn register_resource<R: Any + Send + Sync>(&mut self, res: R);
+
+    fn remove_resource<R: Any + Send + Sync>(&mut self) -> Option<R>;
 
     fn resource<R: Any + Send + Sync>(&self) -> &Arc<R>;
 
