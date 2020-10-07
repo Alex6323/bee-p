@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use alloc::vec::Vec;
 use core::convert::{TryFrom, TryInto};
 
-#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct WotsSignature(Vec<u8>);
 
 impl TryFrom<&TritBuf<T5B1Buf>> for WotsSignature {

@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use alloc::vec::Vec;
 
 // TODO remove pub(crate)
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TransactionEssence {
     pub(crate) inputs: Vec<Input>,
     pub(crate) outputs: Vec<Output>,

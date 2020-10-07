@@ -17,7 +17,7 @@ pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum UnlockBlock {
     Reference(ReferenceUnlock),
     Signature(SignatureUnlock),
