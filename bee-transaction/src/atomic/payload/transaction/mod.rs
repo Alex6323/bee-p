@@ -21,7 +21,7 @@ use constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
 
 pub use essence::TransactionEssence;
 pub use input::{Input, UTXOInput};
-pub use output::{Address, Ed25519Address, Output, SignatureSingleDepositOutput, WotsAddress};
+pub use output::{Address, Ed25519Address, Output, SignatureLockedSingleOutput, WotsAddress};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 
 pub use bee_signing_ext::Seed;
@@ -96,9 +96,9 @@ impl Transaction {
 
         let mut total = 0;
         for i in transaction.outputs().iter() {
-            // Output Type must be 0, denoting a SigLockedSingleDeposit.
+            // Output Type must be 0, denoting a SignatureLockedSingle.
             match i {
-                output::Output::SignatureSingleDeposit(u) => {
+                output::Output::SignatureLockedSingle(u) => {
                     // Address Type must either be 0 or 1, denoting a WOTS- or Ed25519 address.
 
                     // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
@@ -108,7 +108,7 @@ impl Transaction {
                         .outputs()
                         .iter()
                         .filter(|j| match *j {
-                            output::Output::SignatureSingleDeposit(s) => s.address() == u.address(),
+                            output::Output::SignatureLockedSingle(s) => s.address() == u.address(),
                         })
                         .count()
                         > 1

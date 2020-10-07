@@ -14,12 +14,12 @@ use crate::atomic::payload::transaction::Address;
 use core::num::NonZeroU64;
 
 #[derive(Debug)]
-pub struct SignatureSingleDepositOutput {
+pub struct SignatureLockedSingleOutput {
     address: Address,
     amount: NonZeroU64,
 }
 
-impl SignatureSingleDepositOutput {
+impl SignatureLockedSingleOutput {
     pub fn new(address: Address, amount: NonZeroU64) -> Self {
         Self { address, amount }
     }
