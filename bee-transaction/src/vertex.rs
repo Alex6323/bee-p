@@ -10,9 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub trait Vertex {
-    type Hash;
+    type Id;
 
-    fn trunk(&self) -> &Self::Hash;
+    fn trunk(&self) -> &Self::Id;
 
-    fn branch(&self) -> &Self::Hash;
+    fn branch(&self) -> &Self::Id;
 }

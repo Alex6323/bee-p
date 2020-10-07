@@ -74,7 +74,7 @@ impl Bundle {
 }
 
 impl Vertex for Bundle {
-    type Hash = Hash;
+    type Id = Hash;
 
     // TODO TEST
     fn trunk(&self) -> &Hash {

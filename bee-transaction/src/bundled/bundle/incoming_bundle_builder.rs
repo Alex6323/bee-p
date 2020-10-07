@@ -72,7 +72,7 @@ where
     P: PublicKey,
     S: IncomingBundleBuilderStage,
 {
-    type Hash = Hash;
+    type Id = Hash;
 
     fn trunk(&self) -> &Hash {
         self.transactions.0.last().unwrap().trunk()

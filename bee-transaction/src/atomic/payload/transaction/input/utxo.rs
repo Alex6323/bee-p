@@ -9,19 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error, Hash};
+use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error, MessageId};
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct UTXOInput {
-    id: Hash,
+    id: MessageId,
     index: u8,
 }
 
 // TODO builder ?
 impl UTXOInput {
-    pub fn new(id: Hash, index: u8) -> Result<Self, Error> {
+    pub fn new(id: MessageId, index: u8) -> Result<Self, Error> {
         if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
             return Err(Error::InvalidIndex);
         }
@@ -29,7 +29,7 @@ impl UTXOInput {
         Ok(Self { id, index })
     }
 
-    pub fn id(&self) -> &Hash {
+    pub fn id(&self) -> &MessageId {
         &self.id
     }
 

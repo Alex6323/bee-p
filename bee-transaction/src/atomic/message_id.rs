@@ -11,19 +11,19 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const HASH_LENGTH: usize = 32;
+pub const MESSAGE_ID_LENGTH: usize = 32;
 
 #[derive(Clone, Debug, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
-pub struct Hash([u8; HASH_LENGTH]);
+pub struct MessageId([u8; MESSAGE_ID_LENGTH]);
 
-impl From<[u8; HASH_LENGTH]> for Hash {
-    fn from(bytes: [u8; HASH_LENGTH]) -> Self {
+impl From<[u8; MESSAGE_ID_LENGTH]> for MessageId {
+    fn from(bytes: [u8; MESSAGE_ID_LENGTH]) -> Self {
         Self(bytes)
     }
 }
 
-impl Hash {
-    pub fn new(bytes: [u8; HASH_LENGTH]) -> Self {
+impl MessageId {
+    pub fn new(bytes: [u8; MESSAGE_ID_LENGTH]) -> Self {
         bytes.into()
     }
 }

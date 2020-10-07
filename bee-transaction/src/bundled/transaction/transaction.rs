@@ -285,13 +285,13 @@ impl BundledTransaction {
 }
 
 impl Vertex for BundledTransaction {
-    type Hash = Hash;
+    type Id = Hash;
 
-    fn trunk(&self) -> &Self::Hash {
+    fn trunk(&self) -> &Self::Id {
         &self.trunk
     }
 
-    fn branch(&self) -> &Self::Hash {
+    fn branch(&self) -> &Self::Id {
         &self.branch
     }
 }
