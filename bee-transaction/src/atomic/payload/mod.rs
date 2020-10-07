@@ -14,7 +14,7 @@ mod milestone;
 
 pub mod signed_transaction;
 
-pub use indexation::{Indexation, TAG_LENGTH};
+pub use indexation::Indexation;
 pub use milestone::Milestone;
 pub use signed_transaction::SignedTransaction;
 
