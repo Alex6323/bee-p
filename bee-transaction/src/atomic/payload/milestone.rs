@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Milestone {
     index: u32,
     timestamp: u64,

@@ -36,7 +36,7 @@ use serde::{Deserialize, Serialize};
 use alloc::vec::Vec;
 use core::{cmp::Ordering, slice::Iter};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
     pub essence: TransactionEssence,
     pub unlock_blocks: Vec<UnlockBlock>,

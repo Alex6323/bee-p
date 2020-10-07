@@ -17,7 +17,7 @@ use alloc::{string::String, vec};
 
 const ADDRESS_LENGTH: usize = 32;
 
-#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Address([u8; ADDRESS_LENGTH]);
 
 impl From<[u8; ADDRESS_LENGTH]> for Ed25519Address {

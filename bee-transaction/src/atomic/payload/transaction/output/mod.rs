@@ -17,7 +17,7 @@ pub use signature_locked_single::SignatureLockedSingleOutput;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Output {
     SignatureLockedSingle(SignatureLockedSingleOutput),
 }

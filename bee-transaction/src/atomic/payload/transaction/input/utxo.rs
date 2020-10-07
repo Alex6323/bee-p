@@ -13,7 +13,7 @@ use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, E
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct UTXOInput {
     id: Hash,
     index: u8,

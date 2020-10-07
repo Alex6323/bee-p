@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use alloc::vec::Vec;
 
-#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Signature {
     public_key: [u8; 32],
     signature: Vec<u8>,

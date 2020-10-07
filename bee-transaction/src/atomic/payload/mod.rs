@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use alloc::boxed::Box;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Payload {
     Transaction(Box<Transaction>),
     Milestone(Box<Milestone>),
