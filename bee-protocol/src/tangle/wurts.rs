@@ -191,7 +191,7 @@ impl WurtsTipPool {
 
     pub fn two_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
         let non_lazy_tips = &self.non_lazy_tips;
-        return if non_lazy_tips.is_empty() {
+        if non_lazy_tips.is_empty() {
             None
         } else if non_lazy_tips.len() == 1 {
             let tip = non_lazy_tips.iter().next().unwrap();
@@ -203,7 +203,7 @@ impl WurtsTipPool {
             let hashes = non_lazy_tips.iter().choose_multiple(&mut rand::thread_rng(), 2);
             let mut iter = hashes.iter();
             Some((**iter.next().unwrap(), **iter.next().unwrap()))
-        };
+        }
     }
 
     pub(crate) fn reduce_tips(&mut self) {
