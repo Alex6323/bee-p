@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 pub const MESSAGE_ID_LENGTH: usize = 32;
 
-#[derive(Clone, Debug, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct MessageId([u8; MESSAGE_ID_LENGTH]);
 
 impl From<[u8; MESSAGE_ID_LENGTH]> for MessageId {
@@ -25,5 +25,17 @@ impl From<[u8; MESSAGE_ID_LENGTH]> for MessageId {
 impl MessageId {
     pub fn new(bytes: [u8; MESSAGE_ID_LENGTH]) -> Self {
         bytes.into()
+    }
+}
+
+impl core::fmt::Display for MessageId {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}", hex::encode(self.0))
+    }
+}
+
+impl core::fmt::Debug for MessageId {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "MessageId({})", hex::encode(self.0))
     }
 }
