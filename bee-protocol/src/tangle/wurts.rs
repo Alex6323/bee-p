@@ -108,23 +108,18 @@ impl WurtsTipPool {
     }
 
     fn check_retention_rules_for_parent(&mut self, parent: &Hash) {
-        let should_remove = {
-            if self.non_lazy_tips.len() > MAX_LIMIT_NON_LAZY as usize {
-                true
-            } else if self.tips.get(parent).unwrap().children.len() as u8 > MAX_NUM_CHILDREN {
-                true
-            } else {
-                self.tips
-                    .get(parent)
-                    .unwrap()
-                    .time_first_child
-                    .unwrap()
-                    .elapsed()
-                    .as_secs() as u8
-                    > MAX_AGE_SECONDS_AFTER_FIRST_CHILD
-            }
-        };
-        if should_remove {
+        if self.non_lazy_tips.len() > MAX_LIMIT_NON_LAZY as usize
+            || self.tips.get(parent).unwrap().children.len() as u8 > MAX_NUM_CHILDREN
+            || self
+                .tips
+                .get(parent)
+                .unwrap()
+                .time_first_child
+                .unwrap()
+                .elapsed()
+                .as_secs() as u8
+                > MAX_AGE_SECONDS_AFTER_FIRST_CHILD
+        {
             self.tips.remove(parent);
             self.non_lazy_tips.remove(parent);
         }
@@ -198,12 +193,10 @@ impl WurtsTipPool {
     pub(crate) fn reduce_tips(&mut self) {
         let mut to_remove = Vec::new();
         for (tip, metadata) in &self.tips {
-            let should_remove = match metadata.time_first_child {
-                Some(age) => age.elapsed().as_secs() as u8 > MAX_AGE_SECONDS_AFTER_FIRST_CHILD,
-                None => false,
-            };
-            if should_remove {
-                to_remove.push(*tip);
+            if let Some(age) = metadata.time_first_child {
+                if age.elapsed().as_secs() as u8 > MAX_AGE_SECONDS_AFTER_FIRST_CHILD {
+                    to_remove.push(*tip);
+                }
             }
         }
         for tip in to_remove {
