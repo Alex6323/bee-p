@@ -9,19 +9,21 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub const HASH_LENGTH: usize = 32;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Eq, Hash, PartialEq)]
-pub struct Hash([u8; HASH_LENGTH]);
+pub const MESSAGE_ID_LENGTH: usize = 32;
 
-impl From<[u8; HASH_LENGTH]> for Hash {
-    fn from(bytes: [u8; HASH_LENGTH]) -> Self {
+#[derive(Clone, Debug, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
+pub struct MessageId([u8; MESSAGE_ID_LENGTH]);
+
+impl From<[u8; MESSAGE_ID_LENGTH]> for MessageId {
+    fn from(bytes: [u8; MESSAGE_ID_LENGTH]) -> Self {
         Self(bytes)
     }
 }
 
-impl Hash {
-    pub fn new(bytes: [u8; HASH_LENGTH]) -> Self {
+impl MessageId {
+    pub fn new(bytes: [u8; MESSAGE_ID_LENGTH]) -> Self {
         bytes.into()
     }
 }

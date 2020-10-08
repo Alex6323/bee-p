@@ -370,6 +370,7 @@ dependencies = [
  "bee-ternary",
  "bytemuck",
  "hex-literal",
+ "serde",
  "thiserror",
 ]
 

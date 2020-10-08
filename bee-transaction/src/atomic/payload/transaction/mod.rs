@@ -31,10 +31,12 @@ use bee_signing_ext::{
     Signature as SignatureTrait, Signer, Verifier,
 };
 
+use serde::{Deserialize, Serialize};
+
 use alloc::vec::Vec;
 use core::{cmp::Ordering, slice::Iter};
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
     pub essence: TransactionEssence,
     pub unlock_blocks: Vec<UnlockBlock>,

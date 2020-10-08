@@ -9,13 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod hash;
 mod message;
+mod message_id;
 
 pub mod payload;
 
-pub use hash::{Hash, HASH_LENGTH};
 pub use message::{Message, MessageBuilder};
+pub use message_id::{MessageId, MESSAGE_ID_LENGTH};
 
 use core::fmt;
 

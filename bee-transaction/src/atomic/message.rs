@@ -10,14 +10,16 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    atomic::{payload::Payload, Error, Hash},
+    atomic::{payload::Payload, Error, MessageId},
     Vertex,
 };
 
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Message {
-    parent1: Hash,
-    parent2: Hash,
+    parent1: MessageId,
+    parent2: MessageId,
     payload: Payload,
     nonce: u64,
 }
@@ -27,11 +29,11 @@ impl Message {
         MessageBuilder::new()
     }
 
-    pub fn parent1(&self) -> &Hash {
+    pub fn parent1(&self) -> &MessageId {
         &self.parent1
     }
 
-    pub fn parent2(&self) -> &Hash {
+    pub fn parent2(&self) -> &MessageId {
         &self.parent2
     }
 
@@ -45,21 +47,21 @@ impl Message {
 }
 
 impl Vertex for Message {
-    type Hash = Hash;
+    type Id = MessageId;
 
-    fn trunk(&self) -> &Self::Hash {
+    fn trunk(&self) -> &Self::Id {
         &self.parent1
     }
 
-    fn branch(&self) -> &Self::Hash {
+    fn branch(&self) -> &Self::Id {
         &self.parent2
     }
 }
 
 #[derive(Debug, Default)]
 pub struct MessageBuilder {
-    parent1: Option<Hash>,
-    parent2: Option<Hash>,
+    parent1: Option<MessageId>,
+    parent2: Option<MessageId>,
     payload: Option<Payload>,
 }
 
@@ -68,12 +70,12 @@ impl MessageBuilder {
         Default::default()
     }
 
-    pub fn parent1(mut self, parent1: Hash) -> Self {
+    pub fn parent1(mut self, parent1: MessageId) -> Self {
         self.parent1 = Some(parent1);
         self
     }
 
-    pub fn parent2(mut self, parent2: Hash) -> Self {
+    pub fn parent2(mut self, parent2: MessageId) -> Self {
         self.parent2 = Some(parent2);
         self
     }

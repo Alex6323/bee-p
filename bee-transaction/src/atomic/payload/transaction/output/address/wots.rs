@@ -15,10 +15,12 @@ use bee_ternary::{T5B1Buf, TritBuf};
 
 use bytemuck::cast_slice;
 
+use serde::{Deserialize, Serialize};
+
 use alloc::{string::String, vec::Vec};
 use core::convert::{TryFrom, TryInto};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct WotsAddress(Vec<u8>);
 
 impl TryFrom<&TritBuf<T5B1Buf>> for WotsAddress {

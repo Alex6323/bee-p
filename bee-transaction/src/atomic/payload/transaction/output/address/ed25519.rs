@@ -11,11 +11,13 @@
 
 use bech32::{self, ToBase32};
 
+use serde::{Deserialize, Serialize};
+
 use alloc::{string::String, vec};
 
 const ADDRESS_LENGTH: usize = 32;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Address([u8; ADDRESS_LENGTH]);
 
 impl From<[u8; ADDRESS_LENGTH]> for Ed25519Address {
