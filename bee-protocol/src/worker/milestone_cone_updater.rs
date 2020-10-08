@@ -63,11 +63,11 @@ fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index:
     let mut to_visit = vec![tail_hash];
     let mut visited = HashSet::new();
 
-    while let Some(hash) = to_visit.pop() {
-        if visited.contains(&hash) {
+    while let Some(ref hash) = to_visit.pop() {
+        if visited.contains(hash) {
             continue;
         } else {
-            visited.insert(hash.clone());
+            visited.insert(*hash);
         }
 
         if tangle().is_solid_entry_point(&hash) {
@@ -89,8 +89,8 @@ fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index:
         }
 
         let tx_ref = tangle().get(&hash).unwrap();
-        to_visit.push(tx_ref.trunk().clone());
-        to_visit.push(tx_ref.branch().clone());
+        to_visit.push(*tx_ref.trunk());
+        to_visit.push(*tx_ref.branch());
     }
 }
 
