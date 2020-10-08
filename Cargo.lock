@@ -2,6 +2,15 @@
 # It is not intended for manual editing.
 [[package]]
 name = "ahash"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29661b60bec623f0586702976ff4d0c9942dcb6723161c2df0eea78455cfedfb"
+dependencies = [
+ "const-random",
+]
+
+[[package]]
+name = "ahash"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8fd72866655d1904d6b0997d0b07ba561047d070fbe29de039031c641b61217"
@@ -63,6 +72,12 @@ dependencies = [
 
 [[package]]
 name = "autocfg"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d49d90015b3c36167a20fe2810c5cd875ad504b39cff3d4eae7977e6b7c1cb2"
+
+[[package]]
+name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
@@ -86,7 +101,7 @@ version = "0.1.0-alpha"
 [[package]]
 name = "bee-common"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#9f7130a3935c6c3bcf522457dc38600f66d45a6a"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#3ece4c59e98d0354cc8fce183325577a11318f13"
 dependencies = [
  "chrono",
  "fern",
@@ -99,7 +114,7 @@ dependencies = [
 [[package]]
 name = "bee-common-derive"
 version = "0.1.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#9f7130a3935c6c3bcf522457dc38600f66d45a6a"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#3ece4c59e98d0354cc8fce183325577a11318f13"
 dependencies = [
  "quote",
  "syn",
@@ -109,20 +124,19 @@ dependencies = [
 name = "bee-common-ext"
 version = "0.1.0-alpha"
 dependencies = [
- "anymap",
  "async-trait",
  "bee-common",
+ "bee-storage",
  "dashmap",
  "futures",
  "log",
- "thiserror",
  "tokio",
 ]
 
 [[package]]
 name = "bee-crypto"
 version = "0.2.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#9f7130a3935c6c3bcf522457dc38600f66d45a6a"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#3ece4c59e98d0354cc8fce183325577a11318f13"
 dependencies = [
  "bee-ternary",
  "byteorder",
@@ -140,6 +154,7 @@ dependencies = [
  "bee-common-ext",
  "bee-crypto",
  "bee-protocol",
+ "bee-storage",
  "bee-tangle",
  "bee-ternary",
  "bee-test",
@@ -178,6 +193,8 @@ dependencies = [
 name = "bee-node"
 version = "0.1.0-alpha"
 dependencies = [
+ "anymap",
+ "async-trait",
  "bee-common",
  "bee-common-ext",
  "bee-crypto",
@@ -186,6 +203,8 @@ dependencies = [
  "bee-peering",
  "bee-protocol",
  "bee-snapshot",
+ "bee-storage",
+ "bee-storage-rocksdb",
  "bee-transaction",
  "flume",
  "futures",
@@ -226,6 +245,8 @@ dependencies = [
  "bee-crypto",
  "bee-network",
  "bee-signing",
+ "bee-snapshot",
+ "bee-storage",
  "bee-tangle",
  "bee-ternary",
  "bee-test",
@@ -240,6 +261,7 @@ dependencies = [
  "pin-project",
  "rand",
  "serde",
+ "spin",
  "tokio",
  "twox-hash",
 ]
@@ -247,7 +269,7 @@ dependencies = [
 [[package]]
 name = "bee-signing"
 version = "0.1.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#9f7130a3935c6c3bcf522457dc38600f66d45a6a"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#3ece4c59e98d0354cc8fce183325577a11318f13"
 dependencies = [
  "bee-common-derive",
  "bee-crypto",
@@ -283,15 +305,12 @@ dependencies = [
  "bee-common",
  "bee-common-ext",
  "bee-crypto",
- "bee-ledger",
- "bee-protocol",
- "bee-tangle",
+ "bee-storage",
  "bee-ternary",
  "bee-transaction",
  "bytemuck",
  "chrono",
  "dashmap",
- "flume",
  "futures",
  "log",
  "reqwest",
@@ -304,6 +323,7 @@ name = "bee-storage"
 version = "0.1.0-alpha"
 dependencies = [
  "async-trait",
+ "serde",
 ]
 
 [[package]]
@@ -319,24 +339,27 @@ dependencies = [
  "bee-transaction",
  "rocksdb",
  "serde",
- "toml",
 ]
 
 [[package]]
 name = "bee-tangle"
 version = "0.1.0-alpha"
 dependencies = [
+ "async-trait",
  "bee-crypto",
  "bee-test",
  "bee-transaction",
  "criterion",
  "dashmap",
+ "log",
+ "lru",
+ "pollster",
 ]
 
 [[package]]
 name = "bee-ternary"
 version = "0.3.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#9f7130a3935c6c3bcf522457dc38600f66d45a6a"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#3ece4c59e98d0354cc8fce183325577a11318f13"
 dependencies = [
  "num-traits",
  "serde",
@@ -357,6 +380,7 @@ dependencies = [
  "num_cpus",
  "rand",
  "tokio",
+ "toml",
 ]
 
 [[package]]
@@ -560,9 +584,9 @@ dependencies = [
 
 [[package]]
 name = "const-random"
-version = "0.1.8"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f1af9ac737b2dd2d577701e59fd09ba34822f6f2ebdb30a7647405d9e55e16a"
+checksum = "02dc82c12dc2ee6e1ded861cf7d582b46f66f796d1b6c93fa28b911ead95da02"
 dependencies = [
  "const-random-macro",
  "proc-macro-hack",
@@ -570,11 +594,11 @@ dependencies = [
 
 [[package]]
 name = "const-random-macro"
-version = "0.1.8"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25e4c606eb459dd29f7c57b2e0879f2b6f14ee130918c2b78ccb58a9624e6c7a"
+checksum = "fc757bbb9544aa296c2ae00c679e81f886b37e28e59097defe0cf524306f6685"
 dependencies = [
- "getrandom",
+ "getrandom 0.2.0",
  "proc-macro-hack",
 ]
 
@@ -677,7 +701,7 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "058ed274caafc1f60c4997b5fc07bf7dc7cca454af7c6e81edffe5f33f70dace"
 dependencies = [
- "autocfg",
+ "autocfg 1.0.1",
  "cfg-if",
  "crossbeam-utils",
  "lazy_static",
@@ -703,7 +727,7 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3c7c73a2d1e9fc0886a08b93e98eb643461230d5f1925e4036204d5f2e261a8"
 dependencies = [
- "autocfg",
+ "autocfg 1.0.1",
  "cfg-if",
  "lazy_static",
 ]
@@ -775,7 +799,7 @@ version = "3.11.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f260e2fc850179ef410018660006951c1b55b79e8087e87111a2c388994b9b5"
 dependencies = [
- "ahash",
+ "ahash 0.3.8",
  "cfg-if",
  "num_cpus",
 ]
@@ -1024,6 +1048,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "getrandom"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee8025cf36f917e6a52cce185b7c7177689b838b7ec138364e50cc2277a56cf4"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "wasi 0.9.0+wasi-snapshot-preview1",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1056,6 +1091,16 @@ checksum = "d36fab90f82edc3c747f9d438e06cf0a491055896f2a279638bb5beed6c40177"
 
 [[package]]
 name = "hashbrown"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e6073d0ca812575946eb5f35ff68dbe519907b25c42530389ff946dc84c6ead"
+dependencies = [
+ "ahash 0.2.19",
+ "autocfg 0.1.7",
+]
+
+[[package]]
+name = "hashbrown"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
@@ -1071,9 +1116,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.16"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c30f6d0bc6b00693347368a67d41b58f2fb851215ff1da49e90fe2c5c667151"
+checksum = "5aca5565f760fb5b220e499d72710ed156fdb74e631659e99377d9ebfbd13ae8"
 dependencies = [
  "libc",
 ]
@@ -1196,8 +1241,8 @@ version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55e2e4c765aa53a0424761bf9f41aa7a6ac1efa87238f59560640e27fca028f2"
 dependencies = [
- "autocfg",
- "hashbrown",
+ "autocfg 1.0.1",
+ "hashbrown 0.9.1",
 ]
 
 [[package]]
@@ -1324,6 +1369,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lru"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35c456c123957de3a220cd03786e0d86aa542a88b46029973b542f426da6ef34"
+dependencies = [
+ "hashbrown 0.6.3",
+]
+
+[[package]]
 name = "matches"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1347,7 +1401,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "043175f069eda7b85febe4a74abbaeff828d9f8b448515d3151a14a3542811aa"
 dependencies = [
- "autocfg",
+ "autocfg 1.0.1",
 ]
 
 [[package]]
@@ -1453,7 +1507,7 @@ version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d59457e662d541ba17869cf51cf177c0b5f0cbf476c66bdc90bf1edac4f875b"
 dependencies = [
- "autocfg",
+ "autocfg 1.0.1",
  "num-traits",
 ]
 
@@ -1463,7 +1517,7 @@ version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac267bcc07f48ee5f8935ab0d24f316fb722d7a1292e2913f0cc196b29ffd611"
 dependencies = [
- "autocfg",
+ "autocfg 1.0.1",
 ]
 
 [[package]]
@@ -1526,7 +1580,7 @@ version = "0.9.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a842db4709b604f0fe5d1170ae3565899be2ad3d9cbc72dedc789ac0511f78de"
 dependencies = [
- "autocfg",
+ "autocfg 1.0.1",
  "cc",
  "libc",
  "pkg-config",
@@ -1594,6 +1648,12 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
 ]
+
+[[package]]
+name = "pollster"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9824e18e85003f0b5a38fa1932ae8be8c2aac9447c2f28ab6f9704dbe0a1ab58"
 
 [[package]]
 name = "ppv-lite86"
@@ -1677,7 +1737,7 @@ version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a6b1679d49b24bbfe0c803429aa1874472f50d9b363131f0e89fc356b544d03"
 dependencies = [
- "getrandom",
+ "getrandom 0.1.15",
  "libc",
  "rand_chacha",
  "rand_core",
@@ -1700,7 +1760,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90bde5296fc891b0cef12a6d03ddccc162ce7b2aff54160af9338f8d40df6d19"
 dependencies = [
- "getrandom",
+ "getrandom 0.1.15",
 ]
 
 [[package]]
@@ -1718,7 +1778,7 @@ version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcf6960dc9a5b4ee8d3e4c5787b4a112a8818e0290a42ff664ad60692fdf2032"
 dependencies = [
- "autocfg",
+ "autocfg 1.0.1",
  "crossbeam-deque",
  "either",
  "rayon-core",
@@ -2047,6 +2107,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "spin"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
 name = "spinning_top"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2063,9 +2129,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "structopt"
-version = "0.3.18"
+version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a33f6461027d7f08a13715659b2948e1602c31a3756aeae9378bfe7518c72e82"
+checksum = "a7a7159e7d0dbcab6f9c980d7971ef50f3ff5753081461eeda120d5974a4ee95"
 dependencies = [
  "clap",
  "lazy_static",
@@ -2074,9 +2140,9 @@ dependencies = [
 
 [[package]]
 name = "structopt-derive"
-version = "0.4.11"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c92e775028122a4b3dd55d58f14fc5120289c69bee99df1d117ae30f84b225c9"
+checksum = "8fc47de4dfba76248d1e9169ccff240eea2a4dc1e34e309b95b2393109b4b383"
 dependencies = [
  "heck",
  "proc-macro-error",
@@ -2148,18 +2214,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dfdd070ccd8ccb78f4ad66bf1982dc37f620ef696c6b5028fe2ed83dd3d0d08"
+checksum = "318234ffa22e0920fe9a40d7b8369b5f649d490980cf7aadcf1eb91594869b42"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd80fc12f73063ac132ac92aceea36734f04a1d93c1240c6944e23a3b8841793"
+checksum = "cae2447b6282786c3493999f40a9be2a6ad20cb8bd268b0a0dbf5a065535c0ab"
 dependencies = [
  "proc-macro2",
  "quote",
