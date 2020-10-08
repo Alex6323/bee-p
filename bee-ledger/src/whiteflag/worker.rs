@@ -167,7 +167,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");

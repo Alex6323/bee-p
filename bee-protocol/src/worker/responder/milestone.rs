@@ -51,7 +51,7 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");

@@ -24,6 +24,7 @@ use crate::{
     },
 };
 
+use bee_common_ext::node::ResHandle;
 use bee_storage::storage::Backend;
 
 use log::{error, info, trace, warn};
@@ -57,7 +58,7 @@ impl PeerWorker {
         }
     }
 
-    pub(super) async fn run<B: Backend>(mut self, tangle: Arc<MsTangle<B>>, mut message_handler: MessageHandler) {
+    pub(super) async fn run<B: Backend>(mut self, tangle: ResHandle<MsTangle<B>>, mut message_handler: MessageHandler) {
         info!("[{}] Running.", self.peer.address);
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {

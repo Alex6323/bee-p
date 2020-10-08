@@ -107,7 +107,7 @@ where
         let (tx, rx) = flume::unbounded();
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");

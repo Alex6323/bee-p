@@ -11,7 +11,7 @@
 
 use bee_common::shutdown;
 use bee_common_ext::{
-    node::{Node, NodeBuilder},
+    node::{Node, NodeBuilder, ResHandle},
     worker::Worker,
 };
 use bee_storage::storage::Backend;
@@ -27,7 +27,6 @@ use std::{
     collections::{HashMap, HashSet},
     marker::PhantomData,
     pin::Pin,
-    sync::Arc,
 };
 
 type WorkerStart<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
@@ -72,30 +71,31 @@ impl<B: Backend> Node for BeeNode<B> {
         Self: Sized,
     {
         for id in self.worker_order.clone().into_iter().rev() {
-            self.worker_stops.remove(&id).unwrap()(&mut self).await;
             for (shutdown, task_fut) in self.tasks.remove(&id).unwrap_or_default() {
                 let _ = shutdown.send(());
-                // TODO: Should we handle thie error?
+                // TODO: Should we handle this error?
                 let _ = task_fut.await; //.map_err(|e| shutdown::Error::from(worker::Error(Box::new(e))))?;
             }
+            self.worker_stops.remove(&id).unwrap()(&mut self).await;
         }
 
         Ok(())
     }
 
     fn register_resource<R: Any + Send + Sync>(&mut self, res: R) {
-        self.resources.insert(Arc::new(res));
+        self.resources.insert(ResHandle::new(res));
     }
 
     fn remove_resource<R: Any + Send + Sync>(&mut self) -> Option<R> {
-        Arc::try_unwrap(self.resources.remove()?).ok()
+        self.resources.remove::<ResHandle<R>>()?.try_unwrap()
     }
 
     #[track_caller]
-    fn resource<R: Any + Send + Sync>(&self) -> &Arc<R> {
+    fn resource<R: Any + Send + Sync>(&self) -> ResHandle<R> {
         self.resources
-            .get()
+            .get::<ResHandle<R>>()
             .unwrap_or_else(|| panic!("Unable to fetch node resource {}", type_name::<R>()))
+            .clone()
     }
 
     fn spawn<W, G, F>(&mut self, g: G)

@@ -50,7 +50,7 @@ impl<N: Node> Worker<N> for SolidPropagatorWorker {
         let (tx, rx) = flume::unbounded();
         let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");

@@ -24,6 +24,7 @@ use crate::{
     },
 };
 
+use bee_common_ext::node::ResHandle;
 use bee_network::{Command::SendMessage, Network, Origin};
 use bee_storage::storage::Backend;
 
@@ -88,7 +89,7 @@ impl PeerHandshakerWorker {
 
     pub async fn run<B: Backend>(
         mut self,
-        tangle: Arc<MsTangle<B>>,
+        tangle: ResHandle<MsTangle<B>>,
         receiver: flume::Receiver<Vec<u8>>,
         shutdown: oneshot::Receiver<()>,
     ) {

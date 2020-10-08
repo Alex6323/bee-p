@@ -129,7 +129,6 @@ pub struct Node<B> {
     shutdown: Shutdown,
     peers: PeerList,
 }
-
 impl<B: Backend> Node<B> {
     #[allow(missing_docs)]
     pub async fn run(mut self) -> Result<(), Error> {

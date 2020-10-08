@@ -37,12 +37,12 @@ impl<N: Node> Worker<N> for TangleWorker {
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
-        let storage = node.storage().clone();
+        let storage = node.storage();
         let tangle = MsTangle::<N::Backend>::new(storage);
 
         node.register_resource(tangle);
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         tangle.update_latest_solid_milestone_index(config.index().into());
         tangle.update_latest_milestone_index(config.index().into());

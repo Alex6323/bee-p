@@ -44,7 +44,7 @@ impl<N: Node> Worker<N> for KickstartWorker {
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");

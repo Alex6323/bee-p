@@ -38,9 +38,9 @@ use futures::channel::oneshot;
 use log::{debug, error, info};
 use tokio::spawn;
 
-use std::{net::SocketAddr, ptr, sync::Arc, time::Instant};
+use std::{net::SocketAddr, sync::Arc, time::Instant};
 
-static mut PROTOCOL: *const Protocol = ptr::null();
+static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);
 
 pub struct Protocol {
     pub(crate) config: ProtocolConfig,
@@ -74,9 +74,7 @@ impl Protocol {
             requested_milestones: Default::default(),
         };
 
-        unsafe {
-            PROTOCOL = Box::leak(protocol.into()) as *const _;
-        }
+        *PROTOCOL.write() = Some(Box::leak(Box::new(protocol)));
 
         let (ms_send, ms_recv) = oneshot::channel();
 
@@ -100,7 +98,7 @@ impl Protocol {
     }
 
     pub fn events<N: Node>(node: &N, bus: Arc<Bus<'static>>) {
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
         bus.add_listener(move |latest_milestone: &LatestMilestoneChanged| {
             info!(
                 "New milestone {} {}.",
@@ -133,7 +131,7 @@ impl Protocol {
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
         let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
         bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
             debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
             tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
@@ -158,11 +156,7 @@ impl Protocol {
     }
 
     pub(crate) fn get() -> &'static Protocol {
-        if unsafe { PROTOCOL.is_null() } {
-            panic!("Uninitialized protocol.");
-        } else {
-            unsafe { &*PROTOCOL }
-        }
+        *PROTOCOL.read().as_ref().expect("Uninitialized protocol.")
     }
 
     pub fn register<N: Node>(
@@ -180,7 +174,7 @@ impl Protocol {
 
         Protocol::get().peer_manager.add(peer.clone());
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
         spawn(
             PeerHandshakerWorker::new(
                 Protocol::get().network.clone(),

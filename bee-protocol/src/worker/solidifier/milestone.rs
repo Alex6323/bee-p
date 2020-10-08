@@ -91,7 +91,7 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
         let (tx, rx) = flume::unbounded();
         let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>().clone();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");

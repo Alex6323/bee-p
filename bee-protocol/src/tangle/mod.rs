@@ -18,8 +18,7 @@ pub use metadata::TransactionMetadata;
 
 use crate::{milestone::MilestoneIndex, tangle::flags::Flags};
 
-use std::sync::Arc;
-
+use bee_common_ext::node::ResHandle;
 use bee_crypto::ternary::Hash;
 use bee_storage::storage::Backend;
 use bee_tangle::{Hooks, Tangle, TransactionRef as TxRef};
@@ -35,7 +34,7 @@ use std::{
 
 pub struct StorageHooks<B> {
     #[allow(dead_code)]
-    storage: Arc<B>,
+    storage: ResHandle<B>,
 }
 
 #[async_trait]
@@ -74,7 +73,7 @@ impl<B> Deref for MsTangle<B> {
 }
 
 impl<B: Backend> MsTangle<B> {
-    pub fn new(storage: Arc<B>) -> Self {
+    pub fn new(storage: ResHandle<B>) -> Self {
         Self {
             inner: Tangle::new(StorageHooks { storage }),
             milestones: Default::default(),
