@@ -29,7 +29,7 @@ use std::{
     },
 };
 
-const CACHE_LEN: usize = 65536;
+const CACHE_LEN: usize = 1_000_000;
 
 /// A trait used to provide hooks for a tangle. The tangle acts as an in-memory cache and will use hooks to extend its
 /// effective volume. When an entry doesn't exist in the tangle cache and needs fetching, or when an entry gets
