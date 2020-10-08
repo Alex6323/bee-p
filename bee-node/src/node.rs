@@ -11,13 +11,18 @@
 
 #![warn(missing_docs)]
 
-use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
+use crate::{banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin};
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder as NodeBuilderB, shutdown_tokio::Shutdown};
+use bee_common_ext::{
+    event::Bus,
+    node::{Node as _, NodeBuilder as _},
+    shutdown_tokio::Shutdown,
+};
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
-use bee_protocol::{tangle, Protocol};
+use bee_protocol::Protocol;
+use bee_storage::storage::Backend;
 
 use futures::{
     channel::oneshot,
@@ -46,27 +51,24 @@ pub enum Error {
     ShutdownError(#[from] bee_common::shutdown::Error),
 }
 
-pub struct NodeBuilder {
-    config: NodeConfig,
+pub struct NodeBuilder<B: Backend> {
+    config: NodeConfig<B>,
 }
 
-impl NodeBuilder {
+impl<B: Backend> NodeBuilder<B> {
     /// Finishes the build process of a new node.
-    pub async fn finish(self) -> Result<Node, Error> {
+    pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
-        let node_builder = NodeBuilderB::<BeeNode>::new();
+        let node_builder = BeeNode::<B>::build();
 
         let mut shutdown = Shutdown::new();
 
         let bus = Arc::new(Bus::default());
 
-        info!("Initializing Tangle...");
-        tangle::init();
-
         // TODO temporary
-        let (mut node_builder, ledger_state, snapshot_index, snapshot_timestamp) =
-            bee_snapshot::init(&self.config.snapshot, node_builder)
+        let (mut node_builder, snapshot_state, snapshot_metadata) =
+            bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
                 .await
                 .map_err(Error::SnapshotError)?;
 
@@ -77,19 +79,20 @@ impl NodeBuilder {
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
-        node_builder = bee_ledger::whiteflag::init(
-            *snapshot_index,
-            ledger_state,
+        node_builder = bee_ledger::whiteflag::init::<BeeNode<B>>(
+            snapshot_metadata.index(),
+            snapshot_state.into(),
             self.config.protocol.coordinator().clone(),
             node_builder,
             bus.clone(),
         );
 
         info!("Initializing protocol...");
-        node_builder = Protocol::init(
-            self.config.protocol.clone(),
+        node_builder = Protocol::init::<BeeNode<B>>(
+            self.config.protocol,
+            self.config.database,
             network.clone(),
-            snapshot_timestamp,
+            snapshot_metadata,
             node_builder,
             bus.clone(),
         )
@@ -117,8 +120,8 @@ impl NodeBuilder {
 }
 
 /// The main node type.
-pub struct Node {
-    tmp_node: BeeNode,
+pub struct Node<B> {
+    tmp_node: BeeNode<B>,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
     network_events: NetworkEventStream,
@@ -126,18 +129,10 @@ pub struct Node {
     shutdown: Shutdown,
     peers: PeerList,
 }
-
-impl Node {
+impl<B: Backend> Node<B> {
     #[allow(missing_docs)]
     pub async fn run(mut self) -> Result<(), Error> {
         info!("Running.");
-
-        // let Node {
-        //     mut network,
-        //     mut network_events,
-        //     mut peers,
-        //     ..
-        // } = self;
 
         while let Some(event) = self.network_events.next().await {
             trace!("Received event {}.", event);
@@ -147,7 +142,12 @@ impl Node {
 
         info!("Stopping...");
 
-        // shutdown.execute().await?;
+        for (_, (_, shutdown)) in self.peers.into_iter() {
+            // TODO: Should we handle this error?
+            let _ = shutdown.send(());
+        }
+
+        self.tmp_node.stop().await.expect("Failed to properly stop node");
 
         info!("Stopped.");
 
@@ -155,7 +155,7 @@ impl Node {
     }
 
     /// Returns a builder to create a node.
-    pub fn builder(config: NodeConfig) -> NodeBuilder {
+    pub fn builder(config: NodeConfig<B>) -> NodeBuilder<B> {
         NodeBuilder { config }
     }
 

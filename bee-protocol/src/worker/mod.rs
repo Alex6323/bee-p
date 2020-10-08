@@ -19,6 +19,8 @@ mod requester;
 mod responder;
 mod solidifier;
 mod status;
+mod storage;
+mod tangle;
 mod tps;
 mod transaction;
 
@@ -39,5 +41,7 @@ pub(crate) use solidifier::{
     SolidPropagatorWorkerEvent,
 };
 pub(crate) use status::StatusWorker;
+pub use storage::StorageWorker;
+pub use tangle::TangleWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};

@@ -11,119 +11,135 @@
 
 use crate::worker::Worker;
 
+use bee_common::shutdown;
+use bee_storage::storage::Backend;
+
+use async_trait::async_trait;
 use futures::{channel::oneshot, future::Future};
+use log::warn;
 
 use std::{
-    any::{type_name, TypeId},
-    collections::{HashMap, HashSet},
-    pin::Pin,
+    any::{type_name, Any},
+    collections::HashMap,
+    ops::Deref,
+    panic::Location,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex,
+    },
 };
 
-pub trait Node: Default + Send + Sync + 'static {
-    fn new() -> Self;
-    fn spawn<W, G, F>(&self, g: G)
+#[async_trait]
+pub trait Node: Send + Sized + 'static {
+    type Builder: NodeBuilder<Self>;
+    type Backend: Backend;
+
+    fn build() -> Self::Builder {
+        Self::Builder::default()
+    }
+
+    async fn stop(mut self) -> Result<(), shutdown::Error>
+    where
+        Self: Sized;
+
+    fn spawn<W, G, F>(&mut self, g: G)
     where
         Self: Sized,
         W: Worker<Self>,
         G: FnOnce(oneshot::Receiver<()>) -> F,
-        F: Future<Output = ()> + Send + Sync + 'static;
+        F: Future<Output = ()> + Send + 'static;
+
     fn worker<W>(&self) -> Option<&W>
     where
         Self: Sized,
         W: Worker<Self> + Send + Sync;
-    fn add_worker<W>(&mut self, worker: W)
+
+    fn register_resource<R: Any + Send + Sync>(&mut self, res: R);
+
+    fn remove_resource<R: Any + Send + Sync>(&mut self) -> Option<R>;
+
+    #[track_caller]
+    fn resource<R: Any + Send + Sync>(&self) -> ResHandle<R>;
+
+    fn storage(&self) -> ResHandle<Self::Backend> {
+        self.resource()
+    }
+}
+
+#[async_trait(?Send)]
+pub trait NodeBuilder<N: Node>: Default {
+    fn with_worker<W: Worker<N> + 'static>(self) -> Self
     where
-        Self: Sized,
-        W: Worker<Self> + Send + Sync;
+        W::Config: Default;
+
+    fn with_worker_cfg<W: Worker<N> + 'static>(self, config: W::Config) -> Self;
+
+    async fn finish(self) -> N;
 }
 
-type Maker<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+static RES_ID: AtomicUsize = AtomicUsize::new(0);
 
-#[derive(Default)]
-pub struct NodeBuilder<N: Node> {
-    deps: HashMap<TypeId, &'static [TypeId]>,
-    makers: HashMap<TypeId, Box<Maker<N>>>,
+pub struct ResHandle<R> {
+    id: Option<usize>,
+    inner: Arc<(R, Mutex<HashMap<usize, &'static Location<'static>>>)>,
 }
 
-impl<N: Node + 'static> NodeBuilder<N> {
-    pub fn new() -> Self {
-        Self::default()
+impl<R> ResHandle<R> {
+    pub fn new(res: R) -> Self {
+        Self {
+            id: None,
+            inner: Arc::new((res, Mutex::new(HashMap::new()))),
+        }
     }
 
-    pub fn with_worker<W: Worker<N> + 'static>(self) -> Self
+    pub fn try_unwrap(self) -> Option<R>
     where
-        W::Config: Default,
+        R: Any,
     {
-        self.with_worker_cfg::<W>(W::Config::default())
-    }
-
-    pub fn with_worker_cfg<W: Worker<N> + 'static>(mut self, config: W::Config) -> Self {
-        self.deps.insert(TypeId::of::<W>(), W::dependencies());
-        self.makers.insert(
-            TypeId::of::<W>(),
-            Box::new(|node| {
-                Box::pin(async move {
-                    match W::start(node, config).await {
-                        Ok(w) => node.add_worker(w),
-                        Err(e) => panic!("Worker {} failed to start: {:?}.", type_name::<W>(), e),
-                    }
-                })
-            }),
-        );
-        self
-    }
-
-    pub async fn finish(mut self) -> N {
-        let mut node = N::new();
-
-        for id in TopologicalOrder::sort(self.deps) {
-            self.makers.remove(&id).unwrap()(&mut node).await;
+        match Arc::try_unwrap(self.inner.clone()) {
+            Ok((res, _)) => Some(res),
+            Err(inner) => {
+                let usages = inner
+                    .1
+                    .lock()
+                    .unwrap()
+                    .values()
+                    .fold(String::new(), |s, loc| format!("{}\n- {}", s, loc));
+                warn!(
+                    "Attempted to gain ownership resource `{}` but it is still being used in the following places: {}",
+                    type_name::<R>(),
+                    usages,
+                );
+                None
+            }
         }
-
-        node
     }
 }
 
-struct TopologicalOrder {
-    graph: HashMap<TypeId, &'static [TypeId]>,
-    non_visited: HashSet<TypeId>,
-    being_visited: HashSet<TypeId>,
-    order: Vec<TypeId>,
+impl<R> Clone for ResHandle<R> {
+    #[track_caller]
+    fn clone(&self) -> Self {
+        let new_id = RES_ID.fetch_add(1, Ordering::Relaxed);
+        self.inner.1.lock().unwrap().insert(new_id, Location::caller());
+        Self {
+            id: Some(new_id),
+            inner: self.inner.clone(),
+        }
+    }
 }
 
-impl TopologicalOrder {
-    fn visit(&mut self, id: TypeId) {
-        if !self.non_visited.contains(&id) {
-            return;
-        }
+impl<R> Deref for ResHandle<R> {
+    type Target = R;
 
-        if !self.being_visited.insert(id) {
-            panic!("Cyclic dependency detected.");
-        }
-
-        for &id in self.graph[&id] {
-            self.visit(id);
-        }
-
-        self.being_visited.remove(&id);
-        self.non_visited.remove(&id);
-        self.order.push(id);
+    fn deref(&self) -> &Self::Target {
+        &self.inner.0
     }
+}
 
-    fn sort(graph: HashMap<TypeId, &'static [TypeId]>) -> Vec<TypeId> {
-        let non_visited = graph.keys().copied().collect();
-
-        let mut this = Self {
-            graph,
-            non_visited,
-            being_visited: HashSet::new(),
-            order: vec![],
-        };
-
-        while let Some(&id) = this.non_visited.iter().next() {
-            this.visit(id);
+impl<R> Drop for ResHandle<R> {
+    fn drop(&mut self) {
+        if let Some(id) = self.id {
+            self.inner.1.lock().unwrap().remove(&id);
         }
-
-        this.order
     }
 }

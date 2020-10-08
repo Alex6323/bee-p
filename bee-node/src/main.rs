@@ -23,7 +23,10 @@ async fn main() {
 
             logger_init(config.logger.clone()).unwrap();
 
-            match Node::builder(config).finish().await {
+            match Node::<bee_storage_rocksdb::storage::Storage>::builder(config)
+                .finish()
+                .await
+            {
                 Ok(node) => {
                     if let Err(e) = node.run().await {
                         eprintln!("Program aborted. Error was: {}", e);

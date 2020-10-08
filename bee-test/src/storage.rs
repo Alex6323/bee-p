@@ -9,14 +9,21 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_storage_rocksdb::config::{RocksDBConfig, RocksDBConfigBuilder};
+
+fn get_config() -> RocksDBConfig {
+    let buf = std::fs::read_to_string("../bee-storage/bee-storage-rocksdb/config.toml").unwrap();
+    toml::from_str::<RocksDBConfigBuilder>(&buf)
+        .expect("Failed to deserialize config data")
+        .into()
+}
+
 #[allow(dead_code)]
 async fn start_and_shutdown_rocksdb_storage() {
     // import storage
     use bee_storage_rocksdb::storage::{Backend, Storage};
     // start storage
-    let storage: Storage = Storage::start("../bee-storage/bee-storage-rocksdb/config.toml".to_string())
-        .await
-        .unwrap();
+    let storage: Storage = Storage::start(get_config()).await.unwrap();
     // shutdown storage
     assert!(storage.shutdown().await.is_ok())
 }
@@ -29,9 +36,7 @@ async fn persist_ledger_diff() {
     use bee_storage::access::{Delete, Fetch, Insert};
     use bee_storage_rocksdb::storage::{Backend, Storage};
     // start storage
-    let storage: Storage = Storage::start("../bee-storage/bee-storage-rocksdb/config.toml".to_string())
-        .await
-        .unwrap();
+    let storage: Storage = Storage::start(get_config()).await.unwrap();
     // create empty ledger_diff
     let ledger_diff: LedgerDiff = LedgerDiff::new();
     // milestone_index
@@ -62,9 +67,7 @@ async fn batch_storage() {
     use bee_storage::access::*;
     use bee_storage_rocksdb::storage::{Backend, Storage};
     // start storage
-    let storage: Storage = Storage::start("../bee-storage/bee-storage-rocksdb/config.toml".to_string())
-        .await
-        .unwrap();
+    let storage: Storage = Storage::start(get_config()).await.unwrap();
     // milestone_index
     let ms = MilestoneIndex(0);
     // create empty ledger_diff

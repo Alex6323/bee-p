@@ -20,7 +20,11 @@ bee-peering = { path = "../bee-peering" }
 bee-protocol = { path = "../bee-protocol" }
 bee-snapshot = { path = "../bee-snapshot" }
 bee-transaction = { path = "../bee-transaction" }
+bee-storage = { path = "../bee-storage/bee-storage" }
+bee-storage-rocksdb = { path = "../bee-storage/bee-storage-rocksdb" }
 
+anymap = "0.12.1"
+async-trait = "0.1.40"
 flume = "0.9.1"
 futures = "0.3.5"
 log = "0.4.8"

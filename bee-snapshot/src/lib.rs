@@ -11,27 +11,29 @@
 
 pub(crate) mod constants;
 pub(crate) mod pruning;
-pub(crate) mod worker;
+// pub(crate) mod worker;
 
 pub mod config;
 pub mod event;
 pub mod global;
+pub mod header;
 pub mod local;
 pub mod metadata;
 
-use bee_common_ext::{
-    bee_node::BeeNode,
-    event::Bus,
-    node::{Node, NodeBuilder},
-};
+use global::GlobalSnapshot;
+use header::SnapshotHeader;
+use local::LocalSnapshot;
+use metadata::SnapshotMetadata;
+
+use bee_common_ext::{event::Bus, node::Node};
 use bee_crypto::ternary::Hash;
-use bee_ledger::state::LedgerState;
-use bee_protocol::{event::LatestSolidMilestoneChanged, tangle::tangle, MilestoneIndex};
+use bee_transaction::bundled::Address;
+// use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};
-use log::{info, warn};
+use log::info;
 
-use std::{path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 #[derive(Debug)]
 pub enum Error {
@@ -42,22 +44,17 @@ pub enum Error {
 
 // TODO change return type
 
-pub async fn init(
+pub async fn init<N: Node>(
+    // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
-    mut node_builder: NodeBuilder<BeeNode>,
-) -> Result<(NodeBuilder<BeeNode>, LedgerState, MilestoneIndex, u64), Error> {
-    let (state, index, timestamp) = match config.load_type() {
+    node_builder: N::Builder,
+) -> Result<(N::Builder, HashMap<Address, u64>, SnapshotMetadata), Error> {
+    let (state, mut metadata) = match config.load_type() {
         config::LoadType::Global => {
             info!("Loading global snapshot file {}...", config.global().path());
 
-            let snapshot =
-                global::GlobalSnapshot::from_file(config.global().path(), MilestoneIndex(*config.global().index()))
-                    .map_err(Error::Global)?;
-
-            tangle().clear_solid_entry_points();
-            // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
-            // because coordinator bootstraps the network by referencing the genesis tx.
-            tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(*config.global().index()));
+            let snapshot = global::GlobalSnapshot::from_file(config.global().path(), *config.global().index())
+                .map_err(Error::Global)?;
 
             info!(
                 "Loaded global snapshot file from with index {} and {} balances.",
@@ -65,7 +62,23 @@ pub async fn init(
                 snapshot.state().len()
             );
 
-            (snapshot.into_state(), *config.global().index(), 0)
+            let GlobalSnapshot { state, index } = snapshot;
+
+            let metadata = SnapshotMetadata {
+                header: SnapshotHeader {
+                    coordinator: Hash::zeros(),
+                    hash: Hash::zeros(),
+                    snapshot_index: index,
+                    entry_point_index: index,
+                    pruning_index: index,
+                    // TODO from conf ?
+                    timestamp: 0,
+                },
+                solid_entry_points: HashMap::new(),
+                seen_milestones: HashMap::new(),
+            };
+
+            (state, metadata)
         }
         config::LoadType::Local => {
             if !Path::new(config.local().path()).exists() {
@@ -87,40 +100,31 @@ pub async fn init(
                 snapshot.state.len()
             );
 
-            tangle().update_latest_solid_milestone_index(snapshot.metadata().index().into());
-            tangle().update_latest_milestone_index(snapshot.metadata().index().into());
-            tangle().update_snapshot_index(snapshot.metadata().index().into());
-            tangle().update_pruning_index(snapshot.metadata().index().into());
-            tangle().add_solid_entry_point(Hash::zeros(), MilestoneIndex(0));
-            for (hash, index) in snapshot.metadata().solid_entry_points() {
-                tangle().add_solid_entry_point(*hash, MilestoneIndex(*index));
-            }
-            for _seen_milestone in snapshot.metadata().seen_milestones() {
-                // TODO request ?
-            }
+            let LocalSnapshot { metadata, state } = snapshot;
 
-            let index = snapshot.metadata().index();
-            let timestamp = snapshot.metadata().timestamp();
-
-            (snapshot.into_state(), index, timestamp)
+            (state, metadata)
         }
     };
 
-    node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
+    // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
+    // because coordinator bootstraps the network by referencing the genesis tx.
+    metadata.solid_entry_points.insert(Hash::zeros(), metadata.index());
 
-    Ok((node_builder, state, MilestoneIndex(index), timestamp))
+    // node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
+
+    Ok((node_builder, state, metadata))
 }
 
-pub fn events(bee_node: &BeeNode, bus: Arc<Bus<'static>>) {
-    let snapshot_worker = bee_node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
-
-    bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = snapshot_worker.send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
-            warn!(
-                "Failed to send milestone {} to snapshot worker: {:?}.",
-                *latest_solid_milestone.0.index(),
-                e
-            )
-        }
-    });
+pub fn events<N: Node>(_node: &N, _bus: Arc<Bus<'static>>) {
+    // let snapshot_worker = node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
+    //
+    // bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
+    //     if let Err(e) = snapshot_worker.send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
+    //         warn!(
+    //             "Failed to send milestone {} to snapshot worker: {:?}.",
+    //             *latest_solid_milestone.0.index(),
+    //             e
+    //         )
+    //     }
+    // });
 }

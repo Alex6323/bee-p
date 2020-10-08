@@ -19,7 +19,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub(crate) struct Vertex<T>
 where
-    T: Clone + Copy,
+    T: Clone,
 {
     transaction: TxRef,
     metadata: T,
@@ -27,7 +27,7 @@ where
 
 impl<T> Vertex<T>
 where
-    T: Clone + Copy,
+    T: Clone,
 {
     pub fn new(transaction: Tx, metadata: T) -> Self {
         Self {

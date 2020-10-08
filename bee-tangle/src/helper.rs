@@ -10,12 +10,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 #![allow(missing_docs)]
 
-use crate::{tangle::Tangle, traversal::visit_parents_follow_trunk};
+use crate::{
+    tangle::{Hooks, Tangle},
+    traversal::visit_parents_follow_trunk,
+};
 
 use bee_crypto::ternary::Hash;
 use bee_transaction::bundled::IncomingBundleBuilder;
 
-pub fn load_bundle_builder<Metadata>(tangle: &Tangle<Metadata>, hash: &Hash) -> Option<IncomingBundleBuilder>
+pub fn load_bundle_builder<Metadata, H: Hooks<Metadata>>(
+    tangle: &Tangle<Metadata, H>,
+    hash: &Hash,
+) -> Option<IncomingBundleBuilder>
 where
     Metadata: Clone + Copy,
 {

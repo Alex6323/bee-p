@@ -15,24 +15,21 @@ mod file;
 pub use config::{GlobalSnapshotConfig, GlobalSnapshotConfigBuilder};
 pub use file::Error as FileError;
 
-use bee_ledger::state::LedgerState;
-use bee_protocol::MilestoneIndex;
+use bee_transaction::bundled::Address;
+
+use std::collections::HashMap;
 
 pub struct GlobalSnapshot {
-    index: MilestoneIndex,
-    state: LedgerState,
+    pub(crate) index: u32,
+    pub(crate) state: HashMap<Address, u64>,
 }
 
 impl GlobalSnapshot {
-    pub fn index(&self) -> &MilestoneIndex {
+    pub fn index(&self) -> &u32 {
         &self.index
     }
 
-    pub fn state(&self) -> &LedgerState {
+    pub fn state(&self) -> &HashMap<Address, u64> {
         &self.state
-    }
-
-    pub fn into_state(self) -> LedgerState {
-        self.state
     }
 }
