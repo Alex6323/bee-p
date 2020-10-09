@@ -36,6 +36,6 @@ impl core::fmt::Display for MessageId {
 
 impl core::fmt::Debug for MessageId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "MessageId({})", hex::encode(self.0))
+        write!(f, "MessageId({})", self.to_string())
     }
 }

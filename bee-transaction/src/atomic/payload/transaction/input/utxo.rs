@@ -37,3 +37,9 @@ impl UTXOInput {
         self.index
     }
 }
+
+impl core::fmt::Display for UTXOInput {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}{}", self.id.to_string(), hex::encode(self.index.to_le_bytes()))
+    }
+}
