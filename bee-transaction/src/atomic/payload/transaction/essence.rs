@@ -19,8 +19,8 @@ use alloc::vec::Vec;
 // TODO remove pub(crate)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TransactionEssence {
-    pub(crate) inputs: Vec<Input>,
-    pub(crate) outputs: Vec<Output>,
+    pub(crate) inputs: Box<[Input]>,
+    pub(crate) outputs: Box<[Output]>,
     pub(crate) payload: Option<Payload>,
 }
 
@@ -29,11 +29,11 @@ impl TransactionEssence {
         TransactionEssenceBuilder::new()
     }
 
-    pub fn inputs(&self) -> &Vec<Input> {
+    pub fn inputs(&self) -> &Box<[Input]> {
         &self.inputs
     }
 
-    pub fn outputs(&self) -> &Vec<Output> {
+    pub fn outputs(&self) -> &Box<[Output]> {
         &self.outputs
     }
 
@@ -79,8 +79,8 @@ impl TransactionEssenceBuilder {
         }
 
         Ok(TransactionEssence {
-            inputs: self.inputs,
-            outputs: self.outputs,
+            inputs: self.inputs.into_boxed_slice(),
+            outputs: self.outputs.into_boxed_slice(),
             payload: self.payload,
         })
     }

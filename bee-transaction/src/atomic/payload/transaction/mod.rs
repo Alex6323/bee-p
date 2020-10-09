@@ -320,13 +320,17 @@ impl<'a> TransactionBuilder<'a> {
             }
         }
 
-        let inputs: Vec<Input> = inputs.into_iter().map(|(i, _)| i).collect();
+        let inputs: Box<[Input]> = inputs
+            .into_iter()
+            .map(|(i, _)| i)
+            .collect::<Vec<Input>>()
+            .into_boxed_slice();
 
         // TODO use TransactionEssenceBuilder
         Ok(Transaction {
             essence: TransactionEssence {
                 inputs,
-                outputs,
+                outputs: outputs.into_boxed_slice(),
                 payload: self.payload,
             },
             unlock_blocks,
