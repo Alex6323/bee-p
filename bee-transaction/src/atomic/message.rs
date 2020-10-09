@@ -16,7 +16,7 @@ use crate::{
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
     parent1: MessageId,
     parent2: MessageId,
