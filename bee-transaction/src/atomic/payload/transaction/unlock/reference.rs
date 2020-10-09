@@ -49,12 +49,12 @@ impl Packable for ReferenceUnlock {
         0u16.len_bytes()
     }
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
-        u16::from(self.0).pack_bytes(buffer);
+    fn pack<B: BufMut>(&self, buffer: &mut B) {
+        self.0.pack(buffer);
     }
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
-        let index = u16::unpack_bytes(buffer);
+    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+        let index = u16::unpack(buffer);
         Self(index)
     }
 }

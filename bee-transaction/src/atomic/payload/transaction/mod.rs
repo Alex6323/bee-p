@@ -55,22 +55,22 @@ impl Packable for Transaction {
             + self.unlock_blocks.iter().map(|block| block.len_bytes()).sum::<usize>()
     }
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
-        self.essence.pack_bytes(buffer);
+    fn pack<B: BufMut>(&self, buffer: &mut B) {
+        self.essence.pack(buffer);
 
-        (self.unlock_blocks.len() as u16).pack_bytes(buffer);
+        (self.unlock_blocks.len() as u16).pack(buffer);
         for unlock_block in &self.unlock_blocks {
-            unlock_block.pack_bytes(buffer);
+            unlock_block.pack(buffer);
         }
     }
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
-        let essence = TransactionEssence::unpack_bytes(buffer);
+    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+        let essence = TransactionEssence::unpack(buffer);
 
-        let unlock_blocks_len = u16::unpack_bytes(buffer);
+        let unlock_blocks_len = u16::unpack(buffer);
         let mut unlock_blocks = vec![];
         for _ in 0..unlock_blocks_len {
-            let unlock_block = UnlockBlock::unpack_bytes(buffer);
+            let unlock_block = UnlockBlock::unpack(buffer);
             unlock_blocks.push(unlock_block);
         }
 

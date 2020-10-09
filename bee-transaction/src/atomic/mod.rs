@@ -97,11 +97,11 @@ mod tests {
 
         let mut buffer = vec![];
 
-        msg.pack_bytes(&mut buffer);
+        msg.pack(&mut buffer);
 
         println!("{:x?}", buffer);
 
-        let msg_unpacked = Message::unpack_bytes(&mut buffer.as_slice());
+        let msg_unpacked = Message::unpack(&mut buffer.as_slice());
 
         println!("{:?}", msg);
         println!("{:?}", msg_unpacked);

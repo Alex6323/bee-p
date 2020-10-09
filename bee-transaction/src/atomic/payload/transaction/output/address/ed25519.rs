@@ -65,12 +65,12 @@ impl Packable for Ed25519Address {
         ADDRESS_LENGTH
     }
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
-        Self::pack_slice(self.0.as_ref(), buffer)
+    fn pack<B: BufMut>(&self, buffer: &mut B) {
+        Self::pack_bytes(self.0.as_ref(), buffer)
     }
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
-        let vec = Self::unpack_vec(buffer, ADDRESS_LENGTH);
+    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+        let vec = Self::unpack_bytes(buffer, ADDRESS_LENGTH);
         let bytes = unsafe { *(vec.as_slice() as *const [u8] as *const [u8; ADDRESS_LENGTH]) };
 
         Self(bytes)

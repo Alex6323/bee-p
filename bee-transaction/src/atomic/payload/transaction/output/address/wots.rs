@@ -69,12 +69,12 @@ impl Packable for WotsAddress {
         243
     }
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
-        Self::pack_slice(self.0.as_ref(), buffer);
+    fn pack<B: BufMut>(&self, buffer: &mut B) {
+        Self::pack_bytes(self.0.as_ref(), buffer);
     }
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
-        let bytes = Self::unpack_vec(buffer, 243).into_boxed_slice();
+    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+        let bytes = Self::unpack_bytes(buffer, 243).into_boxed_slice();
         Self(bytes)
     }
 }

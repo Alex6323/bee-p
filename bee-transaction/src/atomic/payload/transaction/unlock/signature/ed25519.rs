@@ -40,16 +40,16 @@ impl Packable for Ed25519Signature {
         32 + 64
     }
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
-        Self::pack_slice(self.public_key.as_ref(), buffer);
-        Self::pack_slice(self.signature.as_slice(), buffer);
+    fn pack<B: BufMut>(&self, buffer: &mut B) {
+        Self::pack_bytes(self.public_key.as_ref(), buffer);
+        Self::pack_bytes(self.signature.as_slice(), buffer);
     }
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
-        let public_key_vec = Self::unpack_vec(buffer, 32);
+    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+        let public_key_vec = Self::unpack_bytes(buffer, 32);
         let public_key = unsafe { *(public_key_vec.as_slice() as *const [u8] as *const [u8; 32]) };
 
-        let signature = Self::unpack_vec(buffer, 64);
+        let signature = Self::unpack_bytes(buffer, 64);
 
         Self { public_key, signature }
     }

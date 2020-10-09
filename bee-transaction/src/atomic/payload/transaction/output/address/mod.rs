@@ -56,23 +56,23 @@ impl Packable for Address {
         }
     }
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+    fn pack<B: BufMut>(&self, buffer: &mut B) {
         match self {
             Self::Wots(address) => {
-                0u8.pack_bytes(buffer);
-                address.pack_bytes(buffer);
+                0u8.pack(buffer);
+                address.pack(buffer);
             }
             Self::Ed25519(address) => {
-                1u8.pack_bytes(buffer);
-                address.pack_bytes(buffer);
+                1u8.pack(buffer);
+                address.pack(buffer);
             }
         }
     }
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
-        match u8::unpack_bytes(buffer) {
-            0 => Self::Wots(WotsAddress::unpack_bytes(buffer)),
-            1 => Self::Ed25519(Ed25519Address::unpack_bytes(buffer)),
+    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+        match u8::unpack(buffer) {
+            0 => Self::Wots(WotsAddress::unpack(buffer)),
+            1 => Self::Ed25519(Ed25519Address::unpack(buffer)),
             _ => unreachable!(),
         }
     }

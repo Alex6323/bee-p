@@ -41,28 +41,28 @@ impl Packable for Payload {
             }
     }
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+    fn pack<B: BufMut>(&self, buffer: &mut B) {
         match self {
             Self::Transaction(transaction) => {
-                0u32.pack_bytes(buffer);
-                transaction.pack_bytes(buffer);
+                0u32.pack(buffer);
+                transaction.pack(buffer);
             }
             Self::Milestone(milestone) => {
-                1u32.pack_bytes(buffer);
-                milestone.pack_bytes(buffer);
+                1u32.pack(buffer);
+                milestone.pack(buffer);
             }
             Self::Indexation(indexation) => {
-                2u32.pack_bytes(buffer);
-                indexation.pack_bytes(buffer);
+                2u32.pack(buffer);
+                indexation.pack(buffer);
             }
         }
     }
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
-        match u32::unpack_bytes(buffer) {
-            0 => Self::Transaction(Box::new(Transaction::unpack_bytes(buffer))),
-            1 => Self::Milestone(Box::new(Milestone::unpack_bytes(buffer))),
-            2 => Self::Indexation(Box::new(Indexation::unpack_bytes(buffer))),
+    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+        match u32::unpack(buffer) {
+            0 => Self::Transaction(Box::new(Transaction::unpack(buffer))),
+            1 => Self::Milestone(Box::new(Milestone::unpack(buffer))),
+            2 => Self::Indexation(Box::new(Indexation::unpack(buffer))),
             _ => unreachable!(),
         }
     }

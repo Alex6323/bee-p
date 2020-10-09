@@ -30,21 +30,21 @@ impl Packable for Indexation {
         0u32.len_bytes() + self.index.as_bytes().len() + 0u32.len_bytes() + self.data.len()
     }
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
-        (self.index.as_bytes().len() as u32).pack_bytes(buffer);
-        Self::pack_slice(self.index.as_bytes(), buffer);
+    fn pack<B: BufMut>(&self, buffer: &mut B) {
+        (self.index.as_bytes().len() as u32).pack(buffer);
+        Self::pack_bytes(self.index.as_bytes(), buffer);
 
-        (self.data.len() as u32).pack_bytes(buffer);
-        Self::pack_slice(self.data.as_ref(), buffer);
+        (self.data.len() as u32).pack(buffer);
+        Self::pack_bytes(self.data.as_ref(), buffer);
     }
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
-        let index_len = u32::unpack_bytes(buffer) as usize;
-        let index_vec = Self::unpack_vec(buffer, index_len);
+    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+        let index_len = u32::unpack(buffer) as usize;
+        let index_vec = Self::unpack_bytes(buffer, index_len);
         let index = String::from_utf8(index_vec).unwrap();
 
-        let data_len = u32::unpack_bytes(buffer) as usize;
-        let data = Self::unpack_vec(buffer, data_len).into_boxed_slice();
+        let data_len = u32::unpack(buffer) as usize;
+        let data = Self::unpack_bytes(buffer, data_len).into_boxed_slice();
 
         Self { index, data }
     }

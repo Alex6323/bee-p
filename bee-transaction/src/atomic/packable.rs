@@ -14,21 +14,21 @@ pub use bytes::{Buf, BufMut};
 pub trait Packable {
     fn len_bytes(&self) -> usize;
 
-    fn pack_bytes<B: BufMut>(&self, buffer: &mut B);
+    fn pack<B: BufMut>(&self, buffer: &mut B);
 
-    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self;
+    fn unpack<B: Buf>(buffer: &mut B) -> Self;
 
-    fn pack_slice<B: BufMut>(slice: &[u8], buffer: &mut B) {
+    fn pack_bytes<B: BufMut>(slice: &[u8], buffer: &mut B) {
         for byte in slice {
-            byte.pack_bytes(buffer);
+            byte.pack(buffer);
         }
     }
 
-    fn unpack_vec<B: Buf>(buffer: &mut B, len: usize) -> Vec<u8> {
+    fn unpack_bytes<B: Buf>(buffer: &mut B, len: usize) -> Vec<u8> {
         let mut vec = vec![];
 
         for _ in 0..len {
-            let byte = u8::unpack_bytes(buffer);
+            let byte = u8::unpack(buffer);
             vec.push(byte);
         }
 
@@ -43,11 +43,11 @@ macro_rules! impl_packable_for_num {
                 std::mem::size_of::<$ty>()
             }
 
-            fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+            fn pack<B: BufMut>(&self, buffer: &mut B) {
                 buffer.put(self.to_le_bytes().as_ref());
             }
 
-            fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+            fn unpack<B: Buf>(buffer: &mut B) -> Self {
                 let mut bytes = [0; std::mem::size_of::<$ty>()];
                 buffer.copy_to_slice(&mut bytes);
                 $ty::from_le_bytes(bytes)
