@@ -85,7 +85,7 @@ impl WriteBytes for u8 {
     }
 
     fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.to_be_bytes().as_ref().write_bytes(buffer);
+        self.to_le_bytes().as_ref().write_bytes(buffer);
     }
 }
 
@@ -95,7 +95,7 @@ impl WriteBytes for u16 {
     }
 
     fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.to_be_bytes().as_ref().write_bytes(buffer);
+        self.to_le_bytes().as_ref().write_bytes(buffer);
     }
 }
 
@@ -105,7 +105,7 @@ impl WriteBytes for u32 {
     }
 
     fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.to_be_bytes().as_ref().write_bytes(buffer);
+        self.to_le_bytes().as_ref().write_bytes(buffer);
     }
 }
 
@@ -115,7 +115,7 @@ impl WriteBytes for u64 {
     }
 
     fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.to_be_bytes().as_ref().write_bytes(buffer);
+        self.to_le_bytes().as_ref().write_bytes(buffer);
     }
 }
 
