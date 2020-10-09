@@ -17,7 +17,7 @@ use alloc::{string::String, vec};
 
 const ADDRESS_LENGTH: usize = 32;
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Address([u8; ADDRESS_LENGTH]);
 
 impl From<[u8; ADDRESS_LENGTH]> for Ed25519Address {
@@ -43,5 +43,17 @@ impl Ed25519Address {
         let mut serialized = vec![1u8];
         serialized.extend_from_slice(&self.0);
         bech32::encode("iot", serialized.to_base32()).expect("Valid Ed25519 address required")
+    }
+}
+
+impl core::fmt::Display for Ed25519Address {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}", self.to_bech32())
+    }
+}
+
+impl core::fmt::Debug for Ed25519Address {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "Ed25519Address({})", self.to_string())
     }
 }

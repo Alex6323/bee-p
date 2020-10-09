@@ -58,7 +58,7 @@ impl Vertex for Message {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct MessageBuilder {
     parent1: Option<MessageId>,
     parent2: Option<MessageId>,

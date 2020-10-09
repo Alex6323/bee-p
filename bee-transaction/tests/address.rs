@@ -32,3 +32,15 @@ fn generate_bech32_string() {
         "iot1q9f0mlq8yxpx2nck8a0slxnzr4ef2ek8f5gqxlzd0wasgp73utryjtzcp98"
     );
 }
+
+#[test]
+fn to_string() {
+    let mut bytes = [0; 32];
+    let vec = hex::decode("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649").unwrap();
+    bytes.copy_from_slice(&vec);
+    let address = Ed25519Address::new(bytes);
+    assert_eq!(
+        address.to_string(),
+        "iot1q9f0mlq8yxpx2nck8a0slxnzr4ef2ek8f5gqxlzd0wasgp73utryjtzcp98"
+    );
+}
