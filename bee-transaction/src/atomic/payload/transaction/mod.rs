@@ -169,7 +169,7 @@ impl Transaction {
                     }
 
                     // The reference index must therefore be < the index of the Reference Unlock Block
-                    if r.index() >= i as u8 {
+                    if r.index() >= i as u16 {
                         return Err(Error::InvalidIndex);
                     }
                 }
@@ -290,7 +290,7 @@ impl<'a> TransactionBuilder<'a> {
             if last_index.0 == Some(path) {
                 // TODO justify unwrap
                 unlock_blocks.push(UnlockBlock::Reference(
-                    ReferenceUnlock::new(last_index.1 as u8).unwrap(),
+                    ReferenceUnlock::new(last_index.1 as u16).unwrap(),
                 ));
             } else {
                 let serialized_inputs = [];

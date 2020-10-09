@@ -16,12 +16,12 @@ use serde::{Deserialize, Serialize};
 use core::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct ReferenceUnlock(u8);
+pub struct ReferenceUnlock(u16);
 
-impl TryFrom<u8> for ReferenceUnlock {
+impl TryFrom<u16> for ReferenceUnlock {
     type Error = Error;
 
-    fn try_from(index: u8) -> Result<Self, Self::Error> {
+    fn try_from(index: u16) -> Result<Self, Self::Error> {
         if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
             return Err(Self::Error::InvalidIndex);
         }
@@ -31,11 +31,11 @@ impl TryFrom<u8> for ReferenceUnlock {
 }
 
 impl ReferenceUnlock {
-    pub fn new(index: u8) -> Result<Self, Error> {
+    pub fn new(index: u16) -> Result<Self, Error> {
         index.try_into()
     }
 
-    pub fn index(&self) -> u8 {
+    pub fn index(&self) -> u16 {
         self.0
     }
 }

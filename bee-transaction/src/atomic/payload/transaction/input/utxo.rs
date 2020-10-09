@@ -16,12 +16,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct UTXOInput {
     id: MessageId,
-    index: u8,
+    index: u16,
 }
 
 // TODO builder ?
 impl UTXOInput {
-    pub fn new(id: MessageId, index: u8) -> Result<Self, Error> {
+    pub fn new(id: MessageId, index: u16) -> Result<Self, Error> {
         if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
             return Err(Error::InvalidIndex);
         }
@@ -33,7 +33,7 @@ impl UTXOInput {
         &self.id
     }
 
-    pub fn index(&self) -> u8 {
+    pub fn index(&self) -> u16 {
         self.index
     }
 }

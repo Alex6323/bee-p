@@ -13,4 +13,4 @@ use core::ops::Range;
 
 const INPUT_OUTPUT_COUNT_MAX: usize = 127;
 pub(crate) const INPUT_OUTPUT_COUNT_RANGE: Range<usize> = 1..INPUT_OUTPUT_COUNT_MAX + 1;
-pub(crate) const INPUT_OUTPUT_INDEX_RANGE: Range<u8> = 0..INPUT_OUTPUT_COUNT_MAX as u8;
+pub(crate) const INPUT_OUTPUT_INDEX_RANGE: Range<u16> = 0..INPUT_OUTPUT_COUNT_MAX as u16;
