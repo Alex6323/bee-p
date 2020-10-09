@@ -13,6 +13,7 @@ mod constants;
 mod essence;
 mod input;
 mod output;
+mod transaction_id;
 mod unlock;
 
 use crate::atomic::{payload::Payload, Error};
@@ -22,6 +23,7 @@ use constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
 pub use essence::TransactionEssence;
 pub use input::{Input, UTXOInput};
 pub use output::{Address, Ed25519Address, Output, SignatureLockedSingleOutput, WotsAddress};
+pub use transaction_id::TransactionId;
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 
 pub use bee_signing_ext::Seed;
