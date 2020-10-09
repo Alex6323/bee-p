@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    config::{slice_eq, ProtocolConfig},
+    config::ProtocolConfig,
     event::HandshakeCompleted,
     message::{
         messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
@@ -184,7 +184,7 @@ impl PeerHandshakerWorker {
             ));
         }
 
-        if !slice_eq(&self.config.coordinator.public_key_bytes, &handshake.coordinator) {
+        if !self.config.coordinator.public_key_bytes.eq(&handshake.coordinator) {
             return Err(HandshakeError::CoordinatorMismatch);
         }
 

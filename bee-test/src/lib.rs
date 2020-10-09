@@ -13,6 +13,5 @@
 
 pub mod field;
 pub mod milestone;
-pub mod slices;
 pub mod storage;
 pub mod transaction;

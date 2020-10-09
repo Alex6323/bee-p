@@ -197,18 +197,3 @@ impl ProtocolConfig {
         &self.coordinator
     }
 }
-
-// TODO move out of here
-pub(crate) fn slice_eq(a: &[u8; 49], b: &[u8; 49]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-
-    for i in 0..a.len() {
-        if a[i] != b[i] {
-            return false;
-        }
-    }
-
-    true
-}
