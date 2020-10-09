@@ -29,11 +29,11 @@ impl TransactionEssence {
         TransactionEssenceBuilder::new()
     }
 
-    pub fn inputs(&self) -> &Box<[Input]> {
+    pub fn inputs(&self) -> &[Input] {
         &self.inputs
     }
 
-    pub fn outputs(&self) -> &Box<[Output]> {
+    pub fn outputs(&self) -> &[Output] {
         &self.outputs
     }
 
