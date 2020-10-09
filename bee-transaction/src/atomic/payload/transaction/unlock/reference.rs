@@ -9,13 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
+use crate::atomic::{
+    packable::{Buf, BufMut, Packable},
+    payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE,
+    Error,
+};
 
 use serde::{Deserialize, Serialize};
 
 use core::convert::{TryFrom, TryInto};
-
-use super::super::WriteBytes;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct ReferenceUnlock(u16);
@@ -42,12 +44,17 @@ impl ReferenceUnlock {
     }
 }
 
-impl WriteBytes for ReferenceUnlock {
+impl Packable for ReferenceUnlock {
     fn len_bytes(&self) -> usize {
         0u16.len_bytes()
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        u16::from(self.0).write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        u16::from(self.0).pack_bytes(buffer);
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let index = u16::unpack_bytes(buffer);
+        Self(index)
     }
 }

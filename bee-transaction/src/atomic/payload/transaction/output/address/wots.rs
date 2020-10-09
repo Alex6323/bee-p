@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::Error;
+use crate::atomic::{
+    packable::{Buf, BufMut, Packable},
+    Error,
+};
 
 use bee_ternary::{T5B1Buf, TritBuf};
 
@@ -19,8 +22,6 @@ use serde::{Deserialize, Serialize};
 
 use alloc::string::String;
 use core::convert::{TryFrom, TryInto};
-
-use super::super::WriteBytes;
 
 // TODO length is 243, change to array when std::array::LengthAtMost32 disappears.
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
@@ -63,12 +64,17 @@ impl core::fmt::Debug for WotsAddress {
     }
 }
 
-impl WriteBytes for WotsAddress {
+impl Packable for WotsAddress {
     fn len_bytes(&self) -> usize {
         243
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.0.as_ref().write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        Self::pack_slice(self.0.as_ref(), buffer);
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let bytes = Self::unpack_vec(buffer, 243).into_boxed_slice();
+        Self(bytes)
     }
 }

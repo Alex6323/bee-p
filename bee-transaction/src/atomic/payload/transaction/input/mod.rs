@@ -13,28 +13,35 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
-use serde::{Deserialize, Serialize};
+use crate::atomic::packable::{Buf, BufMut, Packable};
 
-use super::super::WriteBytes;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Input {
     UTXO(UTXOInput),
 }
 
-impl WriteBytes for Input {
+impl Packable for Input {
     fn len_bytes(&self) -> usize {
         match self {
             Self::UTXO(utxo_input) => 0u8.len_bytes() + utxo_input.len_bytes(),
         }
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
         match self {
             Self::UTXO(utxo_input) => {
-                0u8.write_bytes(buffer);
-                utxo_input.write_bytes(buffer);
+                0u8.pack_bytes(buffer);
+                utxo_input.pack_bytes(buffer);
             }
+        }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        match u8::unpack_bytes(buffer) {
+            0 => Self::UTXO(UTXOInput::unpack_bytes(buffer)),
+            _ => unreachable!(),
         }
     }
 }

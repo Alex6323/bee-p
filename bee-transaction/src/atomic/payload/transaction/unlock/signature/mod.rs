@@ -15,9 +15,9 @@ mod wots;
 pub use ed25519::Ed25519Signature;
 pub use wots::WotsSignature;
 
-use serde::{Deserialize, Serialize};
+use crate::atomic::packable::{Buf, BufMut, Packable};
 
-use super::WriteBytes;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum SignatureUnlock {
@@ -37,7 +37,7 @@ impl From<Ed25519Signature> for SignatureUnlock {
     }
 }
 
-impl WriteBytes for SignatureUnlock {
+impl Packable for SignatureUnlock {
     fn len_bytes(&self) -> usize {
         0u8.len_bytes()
             + match self {
@@ -46,16 +46,24 @@ impl WriteBytes for SignatureUnlock {
             }
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
         match self {
             Self::Wots(signature) => {
-                0u8.write_bytes(buffer);
-                signature.write_bytes(buffer);
+                0u8.pack_bytes(buffer);
+                signature.pack_bytes(buffer);
             }
             Self::Ed25519(signature) => {
-                1u8.write_bytes(buffer);
-                signature.write_bytes(buffer);
+                1u8.pack_bytes(buffer);
+                signature.pack_bytes(buffer);
             }
+        }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        match u8::unpack_bytes(buffer) {
+            0 => Self::Wots(WotsSignature::unpack_bytes(buffer)),
+            1 => Self::Ed25519(Ed25519Signature::unpack_bytes(buffer)),
+            _ => unreachable!(),
         }
     }
 }

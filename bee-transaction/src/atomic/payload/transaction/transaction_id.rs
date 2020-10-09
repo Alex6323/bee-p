@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::atomic::packable::{Buf, BufMut, Packable};
+
 use serde::{Deserialize, Serialize};
 
 pub const TRANSACTION_ID_LENGTH: usize = 32;
@@ -37,5 +39,21 @@ impl core::fmt::Display for TransactionId {
 impl core::fmt::Debug for TransactionId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "TransactionId({})", self.to_string())
+    }
+}
+
+impl Packable for TransactionId {
+    fn len_bytes(&self) -> usize {
+        TRANSACTION_ID_LENGTH
+    }
+
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        Self::pack_slice(&self.0, buffer);
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let vec = Self::unpack_vec(buffer, TRANSACTION_ID_LENGTH);
+        let bytes = unsafe { *(vec.as_slice() as *const [u8] as *const [u8; TRANSACTION_ID_LENGTH]) };
+        Self(bytes)
     }
 }

@@ -15,9 +15,9 @@ mod signature;
 pub use reference::ReferenceUnlock;
 pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
-use serde::{Deserialize, Serialize};
+use crate::atomic::packable::{Buf, BufMut, Packable};
 
-use super::WriteBytes;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum UnlockBlock {
@@ -37,7 +37,7 @@ impl From<SignatureUnlock> for UnlockBlock {
     }
 }
 
-impl WriteBytes for UnlockBlock {
+impl Packable for UnlockBlock {
     fn len_bytes(&self) -> usize {
         0u8.len_bytes()
             + match self {
@@ -45,16 +45,25 @@ impl WriteBytes for UnlockBlock {
                 Self::Signature(signature) => signature.len_bytes(),
             }
     }
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
         match self {
             Self::Reference(reference) => {
-                0u8.write_bytes(buffer);
-                reference.write_bytes(buffer);
+                0u8.pack_bytes(buffer);
+                reference.pack_bytes(buffer);
             }
             Self::Signature(signature) => {
-                0u8.write_bytes(buffer);
-                signature.write_bytes(buffer);
+                0u8.pack_bytes(buffer);
+                signature.pack_bytes(buffer);
             }
+        }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        match u8::unpack_bytes(buffer) {
+            0 => Self::Reference(ReferenceUnlock::unpack_bytes(buffer)),
+            1 => Self::Signature(SignatureUnlock::unpack_bytes(buffer)),
+            _ => unreachable!(),
         }
     }
 }

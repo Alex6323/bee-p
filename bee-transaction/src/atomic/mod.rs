@@ -11,6 +11,7 @@
 
 mod message;
 mod message_id;
+mod packable;
 
 pub mod payload;
 
@@ -71,77 +72,10 @@ impl From<bee_signing_ext::SignatureError> for Error {
     }
 }
 
-use std::io::prelude::*;
-
-trait WriteBytes {
-    fn len_bytes(&self) -> usize;
-
-    fn write_bytes(&self, buffer: &mut Vec<u8>);
-}
-
-impl WriteBytes for u8 {
-    fn len_bytes(&self) -> usize {
-        1
-    }
-
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.to_le_bytes().as_ref().write_bytes(buffer);
-    }
-}
-
-impl WriteBytes for u16 {
-    fn len_bytes(&self) -> usize {
-        2
-    }
-
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.to_le_bytes().as_ref().write_bytes(buffer);
-    }
-}
-
-impl WriteBytes for u32 {
-    fn len_bytes(&self) -> usize {
-        4
-    }
-
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.to_le_bytes().as_ref().write_bytes(buffer);
-    }
-}
-
-impl WriteBytes for u64 {
-    fn len_bytes(&self) -> usize {
-        8
-    }
-
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.to_le_bytes().as_ref().write_bytes(buffer);
-    }
-}
-
-impl WriteBytes for &[u8] {
-    fn len_bytes(&self) -> usize {
-        self.len()
-    }
-
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        buffer.write_all(self).unwrap();
-    }
-}
-
-impl<T: WriteBytes + ?Sized> WriteBytes for Box<T> {
-    fn len_bytes(&self) -> usize {
-        self.as_ref().len_bytes()
-    }
-
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.as_ref().write_bytes(buffer)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use packable::Packable;
 
     #[test]
     fn it_works() {
@@ -161,10 +95,15 @@ mod tests {
             .build()
             .unwrap();
 
-        let mut buffer = Vec::with_capacity(1000);
+        let mut buffer = vec![];
 
-        msg.write_bytes(&mut buffer);
+        msg.pack_bytes(&mut buffer);
 
         println!("{:x?}", buffer);
+
+        let msg_unpacked = Message::unpack_bytes(&mut buffer.as_slice());
+
+        println!("{:?}", msg);
+        println!("{:?}", msg_unpacked);
     }
 }

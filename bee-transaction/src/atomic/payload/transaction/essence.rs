@@ -9,14 +9,18 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub use crate::atomic::payload::transaction::{input::Input, output::Output};
-use crate::atomic::{payload::Payload, Error};
+use crate::atomic::{
+    packable::{Buf, BufMut, Packable},
+    payload::{
+        transaction::{input::Input, output::Output},
+        Payload,
+    },
+    Error,
+};
 
 use serde::{Deserialize, Serialize};
 
 use alloc::vec::Vec;
-
-use super::super::WriteBytes;
 
 // TODO remove pub(crate)
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -44,7 +48,7 @@ impl TransactionEssence {
     }
 }
 
-impl WriteBytes for TransactionEssence {
+impl Packable for TransactionEssence {
     fn len_bytes(&self) -> usize {
         0u8.len_bytes()
             + 0u16.len_bytes()
@@ -55,24 +59,58 @@ impl WriteBytes for TransactionEssence {
             + self.payload.iter().map(|payload| payload.len_bytes()).sum::<usize>()
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        0u8.write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        0u8.pack_bytes(buffer);
 
-        (self.inputs.len() as u16).write_bytes(buffer);
+        (self.inputs.len() as u16).pack_bytes(buffer);
         for input in self.inputs.as_ref() {
-            input.write_bytes(buffer);
+            input.pack_bytes(buffer);
         }
 
-        (self.outputs.len() as u16).write_bytes(buffer);
+        (self.outputs.len() as u16).pack_bytes(buffer);
         for output in self.outputs.as_ref() {
-            output.write_bytes(buffer);
+            output.pack_bytes(buffer);
         }
 
         if let Some(payload) = &self.payload {
-            (payload.len_bytes() as u32).write_bytes(buffer);
-            payload.write_bytes(buffer);
+            (payload.len_bytes() as u32).pack_bytes(buffer);
+            payload.pack_bytes(buffer);
         } else {
-            0u32.write_bytes(buffer);
+            0u32.pack_bytes(buffer);
+        }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        assert_eq!(0u8, u8::unpack_bytes(buffer));
+
+        let inputs_len = u16::unpack_bytes(buffer);
+        let mut inputs = vec![];
+        for _ in 0..inputs_len {
+            let input = Input::unpack_bytes(buffer);
+            inputs.push(input);
+        }
+
+        let outputs_len = u16::unpack_bytes(buffer);
+        let mut outputs = vec![];
+        for _ in 0..outputs_len {
+            let output = Output::unpack_bytes(buffer);
+            outputs.push(output);
+        }
+
+        let payload_len = u32::unpack_bytes(buffer) as usize;
+        let payload = if payload_len > 0 {
+            let payload = Payload::unpack_bytes(buffer);
+            assert_eq!(payload_len, payload.len_bytes());
+
+            Some(payload)
+        } else {
+            None
+        };
+
+        Self {
+            inputs: inputs.into_boxed_slice(),
+            outputs: outputs.into_boxed_slice(),
+            payload,
         }
     }
 }

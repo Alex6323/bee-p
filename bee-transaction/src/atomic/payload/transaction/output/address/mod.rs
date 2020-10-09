@@ -15,11 +15,11 @@ mod wots;
 pub use ed25519::Ed25519Address;
 pub use wots::WotsAddress;
 
+use crate::atomic::packable::{Buf, BufMut, Packable};
+
 use serde::{Deserialize, Serialize};
 
 use alloc::string::String;
-
-use super::super::super::WriteBytes;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Address {
@@ -48,7 +48,7 @@ impl Address {
     }
 }
 
-impl WriteBytes for Address {
+impl Packable for Address {
     fn len_bytes(&self) -> usize {
         match self {
             Self::Wots(address) => 0u8.len_bytes() + address.len_bytes(),
@@ -56,16 +56,24 @@ impl WriteBytes for Address {
         }
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
         match self {
             Self::Wots(address) => {
-                0u8.write_bytes(buffer);
-                address.write_bytes(buffer);
+                0u8.pack_bytes(buffer);
+                address.pack_bytes(buffer);
             }
             Self::Ed25519(address) => {
-                1u8.write_bytes(buffer);
-                address.write_bytes(buffer);
+                1u8.pack_bytes(buffer);
+                address.pack_bytes(buffer);
             }
+        }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        match u8::unpack_bytes(buffer) {
+            0 => Self::Wots(WotsAddress::unpack_bytes(buffer)),
+            1 => Self::Ed25519(Ed25519Address::unpack_bytes(buffer)),
+            _ => unreachable!(),
         }
     }
 }

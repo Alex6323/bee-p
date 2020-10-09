@@ -17,7 +17,7 @@ pub use signature_locked_single::SignatureLockedSingleOutput;
 
 use serde::{Deserialize, Serialize};
 
-use super::super::WriteBytes;
+use crate::atomic::packable::{Buf, BufMut, Packable};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Output {
@@ -30,18 +30,26 @@ impl From<SignatureLockedSingleOutput> for Output {
     }
 }
 
-impl WriteBytes for Output {
+impl Packable for Output {
     fn len_bytes(&self) -> usize {
         match self {
             Self::SignatureLockedSingle(output) => 0u8.len_bytes() + output.len_bytes(),
         }
     }
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
         match self {
             Self::SignatureLockedSingle(output) => {
-                0u8.write_bytes(buffer);
-                output.write_bytes(buffer);
+                0u8.pack_bytes(buffer);
+                output.pack_bytes(buffer);
             }
+        }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        match u8::unpack_bytes(buffer) {
+            0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack_bytes(buffer)),
+            _ => unreachable!(),
         }
     }
 }

@@ -9,13 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::atomic::packable::{Buf, BufMut, Packable};
+
 use bech32::{self, ToBase32};
 
 use serde::{Deserialize, Serialize};
 
 use alloc::{string::String, vec};
-
-use super::super::WriteBytes;
 
 const ADDRESS_LENGTH: usize = 32;
 
@@ -60,11 +60,19 @@ impl core::fmt::Debug for Ed25519Address {
     }
 }
 
-impl WriteBytes for Ed25519Address {
+impl Packable for Ed25519Address {
     fn len_bytes(&self) -> usize {
         ADDRESS_LENGTH
     }
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.0.as_ref().write_bytes(buffer);
+
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        Self::pack_slice(self.0.as_ref(), buffer)
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let vec = Self::unpack_vec(buffer, ADDRESS_LENGTH);
+        let bytes = unsafe { *(vec.as_slice() as *const [u8] as *const [u8; ADDRESS_LENGTH]) };
+
+        Self(bytes)
     }
 }

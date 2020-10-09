@@ -16,7 +16,11 @@ mod output;
 mod transaction_id;
 mod unlock;
 
-use crate::atomic::{payload::Payload, Error};
+use crate::atomic::{
+    packable::{Buf, BufMut, Packable},
+    payload::Payload,
+    Error,
+};
 
 use constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
 
@@ -38,28 +42,39 @@ use serde::{Deserialize, Serialize};
 use alloc::vec::Vec;
 use core::{cmp::Ordering, slice::Iter};
 
-use super::WriteBytes;
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
     pub essence: TransactionEssence,
     pub unlock_blocks: Vec<UnlockBlock>,
 }
 
-impl WriteBytes for Transaction {
+impl Packable for Transaction {
     fn len_bytes(&self) -> usize {
         self.essence.len_bytes()
             + 0u16.len_bytes()
             + self.unlock_blocks.iter().map(|block| block.len_bytes()).sum::<usize>()
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.essence.write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        self.essence.pack_bytes(buffer);
 
-        (self.unlock_blocks.len() as u16).write_bytes(buffer);
+        (self.unlock_blocks.len() as u16).pack_bytes(buffer);
         for unlock_block in &self.unlock_blocks {
-            unlock_block.write_bytes(buffer);
+            unlock_block.pack_bytes(buffer);
         }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let essence = TransactionEssence::unpack_bytes(buffer);
+
+        let unlock_blocks_len = u16::unpack_bytes(buffer);
+        let mut unlock_blocks = vec![];
+        for _ in 0..unlock_blocks_len {
+            let unlock_block = UnlockBlock::unpack_bytes(buffer);
+            unlock_blocks.push(unlock_block);
+        }
+
+        Self { essence, unlock_blocks }
     }
 }
 

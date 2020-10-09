@@ -9,9 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use serde::{Deserialize, Serialize};
+use crate::atomic::packable::{Buf, BufMut, Packable};
 
-use super::WriteBytes;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Indexation {
@@ -25,16 +25,27 @@ impl Indexation {
     }
 }
 
-impl WriteBytes for Indexation {
+impl Packable for Indexation {
     fn len_bytes(&self) -> usize {
         0u32.len_bytes() + self.index.as_bytes().len() + 0u32.len_bytes() + self.data.len()
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        (self.index.as_bytes().len() as u32).write_bytes(buffer);
-        self.index.as_bytes().write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        (self.index.as_bytes().len() as u32).pack_bytes(buffer);
+        Self::pack_slice(self.index.as_bytes(), buffer);
 
-        (self.data.len() as u32).write_bytes(buffer);
-        self.data.as_ref().write_bytes(buffer);
+        (self.data.len() as u32).pack_bytes(buffer);
+        Self::pack_slice(self.data.as_ref(), buffer);
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let index_len = u32::unpack_bytes(buffer) as usize;
+        let index_vec = Self::unpack_vec(buffer, index_len);
+        let index = String::from_utf8(index_vec).unwrap();
+
+        let data_len = u32::unpack_bytes(buffer) as usize;
+        let data = Self::unpack_vec(buffer, data_len).into_boxed_slice();
+
+        Self { index, data }
     }
 }

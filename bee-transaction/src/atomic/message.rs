@@ -10,13 +10,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    atomic::{payload::Payload, Error, MessageId},
+    atomic::{
+        packable::{Buf, BufMut, Packable},
+        payload::Payload,
+        Error, MessageId,
+    },
     Vertex,
 };
 
 use serde::{Deserialize, Serialize};
-
-use super::WriteBytes;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
@@ -48,7 +50,7 @@ impl Message {
     }
 }
 
-impl WriteBytes for Message {
+impl Packable for Message {
     fn len_bytes(&self) -> usize {
         0u8.len_bytes()
             + self.parent1.len_bytes()
@@ -58,16 +60,36 @@ impl WriteBytes for Message {
             + 0u64.len_bytes()
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        1u8.write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        1u8.pack_bytes(buffer);
 
-        self.parent1.write_bytes(buffer);
-        self.parent2.write_bytes(buffer);
+        self.parent1.pack_bytes(buffer);
+        self.parent2.pack_bytes(buffer);
 
-        (self.payload.len_bytes() as u32).write_bytes(buffer);
-        self.payload.write_bytes(buffer);
+        (self.payload.len_bytes() as u32).pack_bytes(buffer);
+        self.payload.pack_bytes(buffer);
 
-        self.nonce.write_bytes(buffer);
+        self.nonce.pack_bytes(buffer);
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        assert_eq!(1u8, u8::unpack_bytes(buffer));
+
+        let parent1 = MessageId::unpack_bytes(buffer);
+        let parent2 = MessageId::unpack_bytes(buffer);
+
+        let payload_len = u32::unpack_bytes(buffer) as usize;
+        let payload = Payload::unpack_bytes(buffer);
+        assert_eq!(payload_len, payload.len_bytes());
+
+        let nonce = u64::unpack_bytes(buffer);
+
+        Self {
+            parent1,
+            parent2,
+            payload,
+            nonce,
+        }
     }
 }
 

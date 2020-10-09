@@ -9,11 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::atomic::packable::{Buf, BufMut, Packable};
+
 use serde::{Deserialize, Serialize};
 
 use alloc::vec::Vec;
-
-use super::super::WriteBytes;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Signature {
@@ -35,13 +35,22 @@ impl Ed25519Signature {
     }
 }
 
-impl WriteBytes for Ed25519Signature {
+impl Packable for Ed25519Signature {
     fn len_bytes(&self) -> usize {
         32 + 64
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.public_key.as_ref().write_bytes(buffer);
-        self.signature.as_slice().write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        Self::pack_slice(self.public_key.as_ref(), buffer);
+        Self::pack_slice(self.signature.as_slice(), buffer);
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let public_key_vec = Self::unpack_vec(buffer, 32);
+        let public_key = unsafe { *(public_key_vec.as_slice() as *const [u8] as *const [u8; 32]) };
+
+        let signature = Self::unpack_vec(buffer, 64);
+
+        Self { public_key, signature }
     }
 }

@@ -9,11 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::atomic::packable::{Buf, BufMut, Packable};
+
 use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
-
-use super::WriteBytes;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Milestone {
@@ -36,20 +36,45 @@ impl Milestone {
     }
 }
 
-impl WriteBytes for Milestone {
+impl Packable for Milestone {
     fn len_bytes(&self) -> usize {
         self.index.len_bytes() + self.timestamp.len_bytes() + 64 + 64 * self.signatures.len()
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.index.write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        self.index.pack_bytes(buffer);
 
-        self.timestamp.write_bytes(buffer);
+        self.timestamp.pack_bytes(buffer);
 
-        self.merkle_proof.as_ref().write_bytes(buffer);
+        Self::pack_slice(self.merkle_proof.as_ref(), buffer);
+
+        (self.signatures.len() as u32).pack_bytes(buffer);
 
         for signature in &self.signatures {
-            signature.as_ref().write_bytes(buffer);
+            Self::pack_slice(signature.as_ref(), buffer);
+        }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let index = u32::unpack_bytes(buffer);
+
+        let timestamp = u64::unpack_bytes(buffer);
+
+        let merkle_proof = Self::unpack_vec(buffer, 64).into_boxed_slice();
+
+        let mut signatures = vec![];
+        let signatures_len = u32::unpack_bytes(buffer);
+
+        for _ in 0..signatures_len {
+            let signature = Self::unpack_vec(buffer, 64).into_boxed_slice();
+            signatures.push(signature);
+        }
+
+        Self {
+            index,
+            timestamp,
+            merkle_proof,
+            signatures,
         }
     }
 }

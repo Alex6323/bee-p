@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::Error;
+use crate::atomic::{
+    packable::{Buf, BufMut, Packable},
+    Error,
+};
 
 use bee_ternary::{T5B1Buf, TritBuf};
 
@@ -18,8 +21,6 @@ use serde::{Deserialize, Serialize};
 
 use alloc::vec::Vec;
 use core::convert::{TryFrom, TryInto};
-
-use super::super::WriteBytes;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct WotsSignature(Vec<u8>);
@@ -50,13 +51,20 @@ impl WotsSignature {
     }
 }
 
-impl WriteBytes for WotsSignature {
+impl Packable for WotsSignature {
     fn len_bytes(&self) -> usize {
-        0u32.len_bytes() + self.0.as_slice().len_bytes()
+        0u32.len_bytes() + self.0.len()
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        (self.0.as_slice().len_bytes() as u32).write_bytes(buffer);
-        self.0.as_slice().write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        let Self(bytes) = self;
+        (bytes.len() as u32).pack_bytes(buffer);
+        Self::pack_slice(bytes.as_slice(), buffer);
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let bytes_len = u32::unpack_bytes(buffer) as usize;
+        let bytes = Self::unpack_vec(buffer, bytes_len);
+        Self(bytes)
     }
 }

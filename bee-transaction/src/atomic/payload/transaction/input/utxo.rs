@@ -10,13 +10,12 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::atomic::{
+    packable::{Buf, BufMut, Packable},
     payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, TransactionId},
     Error,
 };
 
 use serde::{Deserialize, Serialize};
-
-use super::WriteBytes;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct UTXOInput {
@@ -49,13 +48,20 @@ impl core::fmt::Display for UTXOInput {
     }
 }
 
-impl WriteBytes for UTXOInput {
+impl Packable for UTXOInput {
     fn len_bytes(&self) -> usize {
         self.id.len_bytes() + self.index.len_bytes()
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
-        self.id.write_bytes(buffer);
-        self.index.write_bytes(buffer);
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
+        self.id.pack_bytes(buffer);
+        self.index.pack_bytes(buffer);
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        let id = TransactionId::unpack_bytes(buffer);
+        let index = u16::unpack_bytes(buffer);
+
+        Self { id, index }
     }
 }

@@ -18,11 +18,11 @@ pub use indexation::Indexation;
 pub use milestone::Milestone;
 pub use transaction::Transaction;
 
+use crate::atomic::packable::{Buf, BufMut, Packable};
+
 use serde::{Deserialize, Serialize};
 
 use alloc::boxed::Box;
-
-use super::WriteBytes;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Payload {
@@ -31,7 +31,7 @@ pub enum Payload {
     Indexation(Box<Indexation>),
 }
 
-impl WriteBytes for Payload {
+impl Packable for Payload {
     fn len_bytes(&self) -> usize {
         0u32.len_bytes()
             + match self {
@@ -41,20 +41,29 @@ impl WriteBytes for Payload {
             }
     }
 
-    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+    fn pack_bytes<B: BufMut>(&self, buffer: &mut B) {
         match self {
             Self::Transaction(transaction) => {
-                0u32.write_bytes(buffer);
-                transaction.write_bytes(buffer);
+                0u32.pack_bytes(buffer);
+                transaction.pack_bytes(buffer);
             }
             Self::Milestone(milestone) => {
-                1u32.write_bytes(buffer);
-                milestone.write_bytes(buffer);
+                1u32.pack_bytes(buffer);
+                milestone.pack_bytes(buffer);
             }
             Self::Indexation(indexation) => {
-                2u32.write_bytes(buffer);
-                indexation.write_bytes(buffer);
+                2u32.pack_bytes(buffer);
+                indexation.pack_bytes(buffer);
             }
+        }
+    }
+
+    fn unpack_bytes<B: Buf>(buffer: &mut B) -> Self {
+        match u32::unpack_bytes(buffer) {
+            0 => Self::Transaction(Box::new(Transaction::unpack_bytes(buffer))),
+            1 => Self::Milestone(Box::new(Milestone::unpack_bytes(buffer))),
+            2 => Self::Indexation(Box::new(Indexation::unpack_bytes(buffer))),
+            _ => unreachable!(),
         }
     }
 }
