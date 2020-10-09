@@ -55,7 +55,7 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub async fn init<N: Node>(
+    pub fn init<N: Node>(
         config: ProtocolConfig,
         database_config: <N::Backend as Backend>::Config,
         network: Network,

@@ -20,7 +20,6 @@ pub enum Error {
     NoWorkingDownloadSource,
 }
 
-// TODO remove tokio runtime when we switch bee to tokio.
 // TODO copy is not really streaming ?
 // TODO temporary file until fully downloaded ?
 pub async fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(), Error> {
@@ -28,7 +27,6 @@ pub async fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(),
 
     let config = config.clone();
 
-    // rt.block_on(async move {
     for url in config.download_urls() {
         info!("Downloading local snapshot file from {}...", url);
         match reqwest::get(url).await {
@@ -43,7 +41,6 @@ pub async fn download_local_snapshot(config: &LocalSnapshotConfig) -> Result<(),
             Err(e) => warn!("Downloading local snapshot file failed: {:?}.", e),
         }
     }
-    // });
 
     // TODO here or outside ?
     if Path::new(path).exists() {

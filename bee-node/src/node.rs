@@ -95,8 +95,7 @@ impl<B: Backend> NodeBuilder<B> {
             snapshot_metadata,
             node_builder,
             bus.clone(),
-        )
-        .await;
+        );
 
         info!("Initializing plugins...");
         plugin::init(bus.clone());
