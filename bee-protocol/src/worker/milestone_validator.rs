@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
+    config::ProtocolConfig,
     event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
@@ -49,6 +50,7 @@ pub(crate) struct MilestoneValidatorWorker {
 
 async fn validate_milestone<N, M, P, B: Backend>(
     tangle: &MsTangle<B>,
+    config: &ProtocolConfig,
     tail_hash: Hash,
 ) -> Result<Milestone, MilestoneValidatorWorkerError>
 where
@@ -72,7 +74,7 @@ where
     builder.push((*transaction).clone());
 
     // TODO use walker
-    for _ in 0..Protocol::get().config.coordinator.security_level {
+    for _ in 0..config.coordinator.security_level {
         transaction = tangle
             .get((*transaction).trunk())
             .await
@@ -82,7 +84,7 @@ where
     }
 
     Ok(builder
-        .depth(Protocol::get().config.coordinator.depth)
+        .depth(config.coordinator.depth)
         .validate()
         .map_err(MilestoneValidatorWorkerError::InvalidMilestone)?
         .build())
@@ -93,7 +95,7 @@ impl<N> Worker<N> for MilestoneValidatorWorker
 where
     N: Node,
 {
-    type Config = SpongeKind;
+    type Config = ProtocolConfig;
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
@@ -126,17 +128,24 @@ where
                         if meta.flags().is_milestone() {
                             continue;
                         }
-                        match match config {
+                        match match config.coordinator.sponge_type {
                             SpongeKind::Kerl => {
-                                validate_milestone::<N, Kerl, WotsPublicKey<Kerl>, N::Backend>(&tangle, tail_hash).await
+                                validate_milestone::<N, Kerl, WotsPublicKey<Kerl>, N::Backend>(
+                                    &tangle, &config, tail_hash,
+                                )
+                                .await
                             }
                             SpongeKind::CurlP27 => {
-                                validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>, N::Backend>(&tangle, tail_hash)
-                                    .await
+                                validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>, N::Backend>(
+                                    &tangle, &config, tail_hash,
+                                )
+                                .await
                             }
                             SpongeKind::CurlP81 => {
-                                validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>, N::Backend>(&tangle, tail_hash)
-                                    .await
+                                validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>, N::Backend>(
+                                    &tangle, &config, tail_hash,
+                                )
+                                .await
                             }
                         } {
                             Ok(milestone) => {

@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    config::slice_eq,
+    config::{slice_eq, ProtocolConfig},
     event::HandshakeCompleted,
     message::{
         messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
@@ -59,6 +59,7 @@ enum HandshakeStatus {
 
 pub struct PeerHandshakerWorker {
     network: Network,
+    config: ProtocolConfig,
     peer: Arc<Peer>,
     status: HandshakeStatus,
     hasher: flume::Sender<HasherWorkerEvent>,
@@ -70,6 +71,7 @@ pub struct PeerHandshakerWorker {
 impl PeerHandshakerWorker {
     pub(crate) fn new(
         network: Network,
+        config: ProtocolConfig,
         peer: Arc<Peer>,
         hasher: flume::Sender<HasherWorkerEvent>,
         transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
@@ -78,6 +80,7 @@ impl PeerHandshakerWorker {
     ) -> Self {
         Self {
             network,
+            config,
             peer,
             status: HandshakeStatus::Awaiting,
             hasher,
@@ -105,8 +108,8 @@ impl PeerHandshakerWorker {
             receiver_epid: self.peer.epid,
             message: tlv_into_bytes(Handshake::new(
                 self.network.config().binding_port,
-                &Protocol::get().config.coordinator.public_key_bytes,
-                Protocol::get().config.mwm,
+                &self.config.coordinator.public_key_bytes,
+                self.config.mwm,
                 &MESSAGES_VERSIONS,
             )),
         }) {
@@ -175,22 +178,19 @@ impl PeerHandshakerWorker {
             .expect("Clock may have gone backwards")
             .as_millis() as u64;
 
-        if ((timestamp - handshake.timestamp) as i64).abs() as u64 > Protocol::get().config.handshake_window * 1000 {
+        if ((timestamp - handshake.timestamp) as i64).abs() as u64 > self.config.handshake_window * 1000 {
             return Err(HandshakeError::InvalidTimestampDiff(
                 ((timestamp - handshake.timestamp) as i64).abs(),
             ));
         }
 
-        if !slice_eq(
-            &Protocol::get().config.coordinator.public_key_bytes,
-            &handshake.coordinator,
-        ) {
+        if !slice_eq(&self.config.coordinator.public_key_bytes, &handshake.coordinator) {
             return Err(HandshakeError::CoordinatorMismatch);
         }
 
-        if Protocol::get().config.mwm != handshake.minimum_weight_magnitude {
+        if self.config.mwm != handshake.minimum_weight_magnitude {
             return Err(HandshakeError::MwmMismatch(
-                Protocol::get().config.mwm,
+                self.config.mwm,
                 handshake.minimum_weight_magnitude,
             ));
         }

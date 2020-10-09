@@ -21,7 +21,7 @@ use std::error::Error;
 /// which determine how to start and shutdown the storage
 pub trait Backend: Sized + Send + Sync + 'static {
     type ConfigBuilder: Default + DeserializeOwned + Into<Self::Config>;
-    type Config: Send;
+    type Config: Clone + Send;
 
     /// start method should impl how to start and initialize the corrsponding database
     /// It takes config_path which define the database options, and returns Result<Self, Box<dyn Error>>

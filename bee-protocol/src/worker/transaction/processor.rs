@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
+    config::ProtocolConfig,
     message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
     protocol::Protocol,
     tangle::{MsTangle, TransactionMetadata},
@@ -70,7 +71,7 @@ fn validate_timestamp(transaction: &Transaction) -> (bool, bool) {
 
 #[async_trait]
 impl<N: Node> Worker<N> for ProcessorWorker {
-    type Config = ();
+    type Config = ProtocolConfig;
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
@@ -83,7 +84,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         ]))
     }
 
-    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
         let solid_propagator = node.worker::<SolidPropagatorWorker>().unwrap().tx.clone();
@@ -128,7 +129,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                 let requested = Protocol::get().requested_transactions.contains_key(&hash);
 
-                if !requested && hash.weight() < Protocol::get().config.mwm {
+                if !requested && hash.weight() < config.mwm {
                     trace!("Insufficient weight magnitude: {}.", hash.weight());
                     Protocol::get().metrics.invalid_transactions_inc();
                     return;
@@ -181,7 +182,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         }
                     };
 
-                    if transaction.address().eq(&Protocol::get().config.coordinator.public_key) {
+                    if transaction.address().eq(&config.coordinator.public_key) {
                         if let Err(e) =
                             milestone_validator.send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
                         {

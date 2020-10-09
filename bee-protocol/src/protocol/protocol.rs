@@ -43,7 +43,6 @@ use std::{net::SocketAddr, sync::Arc, time::Instant};
 static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);
 
 pub struct Protocol {
-    pub(crate) config: ProtocolConfig,
     pub(crate) network: Network,
     // TODO temporary
     pub(crate) snapshot_timestamp: u64,
@@ -64,7 +63,6 @@ impl Protocol {
         bus: Arc<Bus<'static>>,
     ) -> N::Builder {
         let protocol = Protocol {
-            config,
             network: network.clone(),
             snapshot_timestamp: snapshot_metadata.timestamp(),
             bus,
@@ -81,23 +79,23 @@ impl Protocol {
         node_builder
             .with_worker_cfg::<StorageWorker>(database_config)
             .with_worker_cfg::<TangleWorker>(snapshot_metadata)
-            .with_worker_cfg::<HasherWorker>(Protocol::get().config.workers.transaction_worker_cache)
-            .with_worker::<ProcessorWorker>()
+            .with_worker_cfg::<HasherWorker>(config.workers.transaction_worker_cache)
+            .with_worker_cfg::<ProcessorWorker>(config.clone())
             .with_worker::<TransactionResponderWorker>()
             .with_worker::<MilestoneResponderWorker>()
             .with_worker::<TransactionRequesterWorker>()
             .with_worker::<MilestoneRequesterWorker>()
-            .with_worker_cfg::<MilestoneValidatorWorker>(Protocol::get().config.coordinator.sponge_type)
+            .with_worker_cfg::<MilestoneValidatorWorker>(config.clone())
             .with_worker_cfg::<BroadcasterWorker>(network)
             .with_worker::<BundleValidatorWorker>()
             .with_worker::<SolidPropagatorWorker>()
-            .with_worker_cfg::<StatusWorker>(Protocol::get().config.workers.status_interval)
+            .with_worker_cfg::<StatusWorker>(config.workers.status_interval)
             .with_worker::<TpsWorker>()
-            .with_worker_cfg::<KickstartWorker>((ms_send, Protocol::get().config.workers.ms_sync_count))
+            .with_worker_cfg::<KickstartWorker>((ms_send, config.workers.ms_sync_count))
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
     }
 
-    pub fn events<N: Node>(node: &N, bus: Arc<Bus<'static>>) {
+    pub fn events<N: Node>(node: &N, config: ProtocolConfig, bus: Arc<Bus<'static>>) {
         let tangle = node.resource::<MsTangle<N::Backend>>();
         bus.add_listener(move |latest_milestone: &LatestMilestoneChanged| {
             info!(
@@ -136,7 +134,7 @@ impl Protocol {
             debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
             tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
-            let ms_sync_count = Protocol::get().config.workers.ms_sync_count;
+            let ms_sync_count = config.workers.ms_sync_count;
             let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
 
             if tangle.contains_milestone(next_ms) {
@@ -161,6 +159,7 @@ impl Protocol {
 
     pub fn register<N: Node>(
         node: &N,
+        config: &ProtocolConfig,
         epid: EndpointId,
         address: SocketAddr,
         origin: Origin,
@@ -178,6 +177,7 @@ impl Protocol {
         spawn(
             PeerHandshakerWorker::new(
                 Protocol::get().network.clone(),
+                config.clone(),
                 peer,
                 node.worker::<HasherWorker>().unwrap().tx.clone(),
                 node.worker::<TransactionResponderWorker>().unwrap().tx.clone(),

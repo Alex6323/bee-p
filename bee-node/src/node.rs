@@ -73,7 +73,7 @@ impl<B: Backend> NodeBuilder<B> {
                 .map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
-        let (network, events) = bee_network::init(self.config.network, &mut shutdown).await;
+        let (network, events) = bee_network::init(self.config.network.clone(), &mut shutdown).await;
 
         info!("Starting manual peer manager...");
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
@@ -89,8 +89,8 @@ impl<B: Backend> NodeBuilder<B> {
 
         info!("Initializing protocol...");
         node_builder = Protocol::init::<BeeNode<B>>(
-            self.config.protocol,
-            self.config.database,
+            self.config.protocol.clone(),
+            self.config.database.clone(),
             network.clone(),
             snapshot_metadata,
             node_builder,
@@ -105,10 +105,11 @@ impl<B: Backend> NodeBuilder<B> {
         info!("Registering events...");
         bee_snapshot::events(&bee_node, bus.clone());
         bee_ledger::whiteflag::events(&bee_node, bus.clone());
-        Protocol::events(&bee_node, bus.clone());
+        Protocol::events(&bee_node, self.config.protocol.clone(), bus.clone());
 
         info!("Initialized.");
         Ok(Node {
+            config: self.config,
             tmp_node: bee_node,
             network,
             network_events: ShutdownStream::new(ctrl_c_listener(), events.into_stream()),
@@ -119,7 +120,7 @@ impl<B: Backend> NodeBuilder<B> {
 }
 
 /// The main node type.
-pub struct Node<B> {
+pub struct Node<B: Backend> {
     tmp_node: BeeNode<B>,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
@@ -127,6 +128,7 @@ pub struct Node<B> {
     #[allow(dead_code)]
     shutdown: Shutdown,
     peers: PeerList,
+    config: NodeConfig<B>,
 }
 impl<B: Backend> Node<B> {
     #[allow(missing_docs)]
@@ -194,7 +196,8 @@ impl<B: Backend> Node<B> {
 
     #[inline]
     fn endpoint_connected_handler(&mut self, epid: EndpointId, peer_address: SocketAddr, origin: Origin) {
-        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(&self.tmp_node, epid, peer_address, origin);
+        let (receiver_tx, receiver_shutdown_tx) =
+            Protocol::register(&self.tmp_node, &self.config.protocol, epid, peer_address, origin);
 
         self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx));
     }
