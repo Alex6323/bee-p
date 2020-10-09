@@ -38,10 +38,29 @@ use serde::{Deserialize, Serialize};
 use alloc::vec::Vec;
 use core::{cmp::Ordering, slice::Iter};
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
     pub essence: TransactionEssence,
     pub unlock_blocks: Vec<UnlockBlock>,
+}
+
+impl WriteBytes for Transaction {
+    fn len_bytes(&self) -> usize {
+        self.essence.len_bytes()
+            + 0u16.len_bytes()
+            + self.unlock_blocks.iter().map(|block| block.len_bytes()).sum::<usize>()
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        self.essence.write_bytes(buffer);
+
+        (self.unlock_blocks.len() as u16).write_bytes(buffer);
+        for unlock_block in &self.unlock_blocks {
+            unlock_block.write_bytes(buffer);
+        }
+    }
 }
 
 impl Transaction {

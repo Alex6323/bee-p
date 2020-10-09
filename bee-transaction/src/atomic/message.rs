@@ -16,6 +16,8 @@ use crate::{
 
 use serde::{Deserialize, Serialize};
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
     parent1: MessageId,
@@ -43,6 +45,29 @@ impl Message {
 
     pub fn nonce(&self) -> u64 {
         self.nonce
+    }
+}
+
+impl WriteBytes for Message {
+    fn len_bytes(&self) -> usize {
+        0u8.len_bytes()
+            + self.parent1.len_bytes()
+            + self.parent2.len_bytes()
+            + 0u32.len_bytes()
+            + self.payload.len_bytes()
+            + 0u64.len_bytes()
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        1u8.write_bytes(buffer);
+
+        self.parent1.write_bytes(buffer);
+        self.parent2.write_bytes(buffer);
+
+        (self.payload.len_bytes() as u32).write_bytes(buffer);
+        self.payload.write_bytes(buffer);
+
+        self.nonce.write_bytes(buffer);
     }
 }
 

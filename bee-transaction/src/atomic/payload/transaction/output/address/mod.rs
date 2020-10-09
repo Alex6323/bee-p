@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 
 use alloc::string::String;
 
+use super::super::super::WriteBytes;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Address {
     Wots(WotsAddress),
@@ -42,6 +44,28 @@ impl Address {
         match self {
             Address::Wots(address) => address.to_bech32(),
             Address::Ed25519(address) => address.to_bech32(),
+        }
+    }
+}
+
+impl WriteBytes for Address {
+    fn len_bytes(&self) -> usize {
+        match self {
+            Self::Wots(address) => 0u8.len_bytes() + address.len_bytes(),
+            Self::Ed25519(address) => 1u8.len_bytes() + address.len_bytes(),
+        }
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        match self {
+            Self::Wots(address) => {
+                0u8.write_bytes(buffer);
+                address.write_bytes(buffer);
+            }
+            Self::Ed25519(address) => {
+                1u8.write_bytes(buffer);
+                address.write_bytes(buffer);
+            }
         }
     }
 }

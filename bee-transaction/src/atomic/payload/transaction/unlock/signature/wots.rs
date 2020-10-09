@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 use alloc::vec::Vec;
 use core::convert::{TryFrom, TryInto};
 
+use super::super::WriteBytes;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct WotsSignature(Vec<u8>);
 
@@ -45,5 +47,16 @@ impl TryFrom<&TritBuf<T5B1Buf>> for WotsSignature {
 impl WotsSignature {
     pub fn new(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
         trits.try_into()
+    }
+}
+
+impl WriteBytes for WotsSignature {
+    fn len_bytes(&self) -> usize {
+        0u32.len_bytes() + self.0.as_slice().len_bytes()
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        (self.0.as_slice().len_bytes() as u32).write_bytes(buffer);
+        self.0.as_slice().write_bytes(buffer);
     }
 }

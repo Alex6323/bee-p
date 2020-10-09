@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 
 use core::convert::{TryFrom, TryInto};
 
+use super::super::WriteBytes;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct ReferenceUnlock(u16);
 
@@ -37,5 +39,15 @@ impl ReferenceUnlock {
 
     pub fn index(&self) -> u16 {
         self.0
+    }
+}
+
+impl WriteBytes for ReferenceUnlock {
+    fn len_bytes(&self) -> usize {
+        0u16.len_bytes()
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        u16::from(self.0).write_bytes(buffer);
     }
 }

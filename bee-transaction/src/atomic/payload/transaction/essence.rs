@@ -16,6 +16,8 @@ use serde::{Deserialize, Serialize};
 
 use alloc::vec::Vec;
 
+use super::super::WriteBytes;
+
 // TODO remove pub(crate)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TransactionEssence {
@@ -39,6 +41,39 @@ impl TransactionEssence {
 
     pub fn payload(&self) -> &Option<Payload> {
         &self.payload
+    }
+}
+
+impl WriteBytes for TransactionEssence {
+    fn len_bytes(&self) -> usize {
+        0u8.len_bytes()
+            + 0u16.len_bytes()
+            + self.inputs.iter().map(|input| input.len_bytes()).sum::<usize>()
+            + 0u16.len_bytes()
+            + self.outputs.iter().map(|output| output.len_bytes()).sum::<usize>()
+            + 0u32.len_bytes()
+            + self.payload.iter().map(|payload| payload.len_bytes()).sum::<usize>()
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        0u8.write_bytes(buffer);
+
+        (self.inputs.len() as u16).write_bytes(buffer);
+        for input in self.inputs.as_ref() {
+            input.write_bytes(buffer);
+        }
+
+        (self.outputs.len() as u16).write_bytes(buffer);
+        for output in self.outputs.as_ref() {
+            output.write_bytes(buffer);
+        }
+
+        if let Some(payload) = &self.payload {
+            (payload.len_bytes() as u32).write_bytes(buffer);
+            payload.write_bytes(buffer);
+        } else {
+            0u32.write_bytes(buffer);
+        }
     }
 }
 

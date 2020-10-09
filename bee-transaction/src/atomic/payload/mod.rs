@@ -22,9 +22,39 @@ use serde::{Deserialize, Serialize};
 
 use alloc::boxed::Box;
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Payload {
     Transaction(Box<Transaction>),
     Milestone(Box<Milestone>),
     Indexation(Box<Indexation>),
+}
+
+impl WriteBytes for Payload {
+    fn len_bytes(&self) -> usize {
+        0u32.len_bytes()
+            + match self {
+                Self::Transaction(transaction) => transaction.len_bytes(),
+                Self::Milestone(milestone) => milestone.len_bytes(),
+                Self::Indexation(indexation) => indexation.len_bytes(),
+            }
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        match self {
+            Self::Transaction(transaction) => {
+                0u32.write_bytes(buffer);
+                transaction.write_bytes(buffer);
+            }
+            Self::Milestone(milestone) => {
+                1u32.write_bytes(buffer);
+                milestone.write_bytes(buffer);
+            }
+            Self::Indexation(indexation) => {
+                2u32.write_bytes(buffer);
+                indexation.write_bytes(buffer);
+            }
+        }
+    }
 }

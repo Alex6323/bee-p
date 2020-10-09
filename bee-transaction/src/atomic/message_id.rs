@@ -11,6 +11,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::WriteBytes;
+
 pub const MESSAGE_ID_LENGTH: usize = 32;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -37,5 +39,15 @@ impl core::fmt::Display for MessageId {
 impl core::fmt::Debug for MessageId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "MessageId({})", self.to_string())
+    }
+}
+
+impl WriteBytes for MessageId {
+    fn len_bytes(&self) -> usize {
+        MESSAGE_ID_LENGTH
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        self.0.as_ref().write_bytes(buffer)
     }
 }

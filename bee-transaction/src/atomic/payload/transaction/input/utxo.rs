@@ -16,6 +16,8 @@ use crate::atomic::{
 
 use serde::{Deserialize, Serialize};
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct UTXOInput {
     id: TransactionId,
@@ -44,5 +46,16 @@ impl UTXOInput {
 impl core::fmt::Display for UTXOInput {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{}{}", self.id.to_string(), hex::encode(self.index.to_le_bytes()))
+    }
+}
+
+impl WriteBytes for UTXOInput {
+    fn len_bytes(&self) -> usize {
+        self.id.len_bytes() + self.index.len_bytes()
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        self.id.write_bytes(buffer);
+        self.index.write_bytes(buffer);
     }
 }

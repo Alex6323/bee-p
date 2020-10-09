@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 
 use core::num::NonZeroU64;
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SignatureLockedSingleOutput {
     address: Address,
@@ -32,5 +34,15 @@ impl SignatureLockedSingleOutput {
 
     pub fn amount(&self) -> NonZeroU64 {
         self.amount
+    }
+}
+
+impl WriteBytes for SignatureLockedSingleOutput {
+    fn len_bytes(&self) -> usize {
+        self.address.len_bytes() + u64::from(self.amount).len_bytes()
+    }
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        self.address.write_bytes(buffer);
+        u64::from(self.amount).write_bytes(buffer);
     }
 }

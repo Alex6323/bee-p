@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Milestone {
     index: u32,
@@ -30,6 +32,24 @@ impl Milestone {
             timestamp,
             merkle_proof,
             signatures,
+        }
+    }
+}
+
+impl WriteBytes for Milestone {
+    fn len_bytes(&self) -> usize {
+        self.index.len_bytes() + self.timestamp.len_bytes() + 64 + 64 * self.signatures.len()
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        self.index.write_bytes(buffer);
+
+        self.timestamp.write_bytes(buffer);
+
+        self.merkle_proof.as_ref().write_bytes(buffer);
+
+        for signature in &self.signatures {
+            signature.as_ref().write_bytes(buffer);
         }
     }
 }

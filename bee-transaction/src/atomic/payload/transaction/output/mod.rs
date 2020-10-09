@@ -17,6 +17,8 @@ pub use signature_locked_single::SignatureLockedSingleOutput;
 
 use serde::{Deserialize, Serialize};
 
+use super::super::WriteBytes;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Output {
     SignatureLockedSingle(SignatureLockedSingleOutput),
@@ -25,5 +27,21 @@ pub enum Output {
 impl From<SignatureLockedSingleOutput> for Output {
     fn from(output: SignatureLockedSingleOutput) -> Self {
         Self::SignatureLockedSingle(output)
+    }
+}
+
+impl WriteBytes for Output {
+    fn len_bytes(&self) -> usize {
+        match self {
+            Self::SignatureLockedSingle(output) => 0u8.len_bytes() + output.len_bytes(),
+        }
+    }
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        match self {
+            Self::SignatureLockedSingle(output) => {
+                0u8.write_bytes(buffer);
+                output.write_bytes(buffer);
+            }
+        }
     }
 }

@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 
 use alloc::{string::String, vec};
 
+use super::super::WriteBytes;
+
 const ADDRESS_LENGTH: usize = 32;
 
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
@@ -55,5 +57,14 @@ impl core::fmt::Display for Ed25519Address {
 impl core::fmt::Debug for Ed25519Address {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "Ed25519Address({})", self.to_string())
+    }
+}
+
+impl WriteBytes for Ed25519Address {
+    fn len_bytes(&self) -> usize {
+        ADDRESS_LENGTH
+    }
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        self.0.as_ref().write_bytes(buffer);
     }
 }

@@ -17,6 +17,8 @@ pub use wots::WotsSignature;
 
 use serde::{Deserialize, Serialize};
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum SignatureUnlock {
     Wots(WotsSignature),
@@ -32,5 +34,28 @@ impl From<WotsSignature> for SignatureUnlock {
 impl From<Ed25519Signature> for SignatureUnlock {
     fn from(signature: Ed25519Signature) -> Self {
         Self::Ed25519(signature)
+    }
+}
+
+impl WriteBytes for SignatureUnlock {
+    fn len_bytes(&self) -> usize {
+        0u8.len_bytes()
+            + match self {
+                Self::Wots(signature) => signature.len_bytes(),
+                Self::Ed25519(signature) => signature.len_bytes(),
+            }
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        match self {
+            Self::Wots(signature) => {
+                0u8.write_bytes(buffer);
+                signature.write_bytes(buffer);
+            }
+            Self::Ed25519(signature) => {
+                1u8.write_bytes(buffer);
+                signature.write_bytes(buffer);
+            }
+        }
     }
 }

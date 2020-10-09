@@ -17,6 +17,8 @@ pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
 use serde::{Deserialize, Serialize};
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum UnlockBlock {
     Reference(ReferenceUnlock),
@@ -32,5 +34,27 @@ impl From<ReferenceUnlock> for UnlockBlock {
 impl From<SignatureUnlock> for UnlockBlock {
     fn from(signature: SignatureUnlock) -> Self {
         Self::Signature(signature)
+    }
+}
+
+impl WriteBytes for UnlockBlock {
+    fn len_bytes(&self) -> usize {
+        0u8.len_bytes()
+            + match self {
+                Self::Reference(reference) => reference.len_bytes(),
+                Self::Signature(signature) => signature.len_bytes(),
+            }
+    }
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        match self {
+            Self::Reference(reference) => {
+                0u8.write_bytes(buffer);
+                reference.write_bytes(buffer);
+            }
+            Self::Signature(signature) => {
+                0u8.write_bytes(buffer);
+                signature.write_bytes(buffer);
+            }
+        }
     }
 }

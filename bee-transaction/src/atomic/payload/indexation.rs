@@ -11,6 +11,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::WriteBytes;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Indexation {
     index: String,
@@ -20,5 +22,19 @@ pub struct Indexation {
 impl Indexation {
     pub fn new(index: String, data: Box<[u8]>) -> Self {
         Self { index, data }
+    }
+}
+
+impl WriteBytes for Indexation {
+    fn len_bytes(&self) -> usize {
+        0u32.len_bytes() + self.index.as_bytes().len() + 0u32.len_bytes() + self.data.len()
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        (self.index.as_bytes().len() as u32).write_bytes(buffer);
+        self.index.as_bytes().write_bytes(buffer);
+
+        (self.data.len() as u32).write_bytes(buffer);
+        self.data.as_ref().write_bytes(buffer);
     }
 }

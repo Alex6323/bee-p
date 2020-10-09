@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 
 use alloc::vec::Vec;
 
+use super::super::WriteBytes;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Signature {
     public_key: [u8; 32],
@@ -30,5 +32,16 @@ impl Ed25519Signature {
 
     pub fn signature(&self) -> &Vec<u8> {
         &self.signature
+    }
+}
+
+impl WriteBytes for Ed25519Signature {
+    fn len_bytes(&self) -> usize {
+        32 + 64
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        self.public_key.as_ref().write_bytes(buffer);
+        self.signature.as_slice().write_bytes(buffer);
     }
 }

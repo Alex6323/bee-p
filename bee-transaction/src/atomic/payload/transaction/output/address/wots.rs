@@ -17,11 +17,14 @@ use bytemuck::cast_slice;
 
 use serde::{Deserialize, Serialize};
 
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
 use core::convert::{TryFrom, TryInto};
 
+use super::super::WriteBytes;
+
+// TODO length is 243, change to array when std::array::LengthAtMost32 disappears.
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
-pub struct WotsAddress(Vec<u8>);
+pub struct WotsAddress(Box<[u8]>);
 
 impl TryFrom<&TritBuf<T5B1Buf>> for WotsAddress {
     type Error = Error;
@@ -32,7 +35,7 @@ impl TryFrom<&TritBuf<T5B1Buf>> for WotsAddress {
             return Err(Error::InvalidAddress);
         }
 
-        Ok(Self(cast_slice(trits.as_i8_slice()).to_vec()))
+        Ok(Self(cast_slice(trits.as_i8_slice()).to_vec().into_boxed_slice()))
     }
 }
 
@@ -57,5 +60,15 @@ impl core::fmt::Display for WotsAddress {
 impl core::fmt::Debug for WotsAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "WotsAddress({})", self.to_string())
+    }
+}
+
+impl WriteBytes for WotsAddress {
+    fn len_bytes(&self) -> usize {
+        243
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        self.0.as_ref().write_bytes(buffer);
     }
 }

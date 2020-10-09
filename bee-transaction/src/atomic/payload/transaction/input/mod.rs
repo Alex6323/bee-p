@@ -15,9 +15,28 @@ pub use utxo::UTXOInput;
 
 use serde::{Deserialize, Serialize};
 
+use super::super::WriteBytes;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Input {
     UTXO(UTXOInput),
+}
+
+impl WriteBytes for Input {
+    fn len_bytes(&self) -> usize {
+        match self {
+            Self::UTXO(utxo_input) => 0u8.len_bytes() + utxo_input.len_bytes(),
+        }
+    }
+
+    fn write_bytes(&self, buffer: &mut Vec<u8>) {
+        match self {
+            Self::UTXO(utxo_input) => {
+                0u8.write_bytes(buffer);
+                utxo_input.write_bytes(buffer);
+            }
+        }
+    }
 }
 
 impl From<UTXOInput> for Input {
