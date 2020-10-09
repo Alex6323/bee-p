@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use alloc::{string::String, vec::Vec};
 use core::convert::{TryFrom, TryInto};
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct WotsAddress(Vec<u8>);
 
 impl TryFrom<&TritBuf<T5B1Buf>> for WotsAddress {
@@ -45,5 +45,17 @@ impl WotsAddress {
     pub fn to_bech32(&self) -> String {
         // TODO
         String::from("")
+    }
+}
+
+impl core::fmt::Display for WotsAddress {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}", self.to_bech32())
+    }
+}
+
+impl core::fmt::Debug for WotsAddress {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "WotsAddress({})", self.to_string())
     }
 }
