@@ -32,10 +32,10 @@ impl Packable for Indexation {
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         (self.index.as_bytes().len() as u32).pack(buf)?;
-        buf.write(self.index.as_bytes())?;
+        buf.write_all(self.index.as_bytes())?;
 
         (self.data.len() as u32).pack(buf)?;
-        buf.write(self.data.as_ref())?;
+        buf.write_all(self.data.as_ref())?;
 
         Ok(())
     }
@@ -46,13 +46,13 @@ impl Packable for Indexation {
     {
         let index_len = u32::unpack(buf)? as usize;
         let mut index_bytes = vec![0u8; index_len];
-        buf.read(&mut index_bytes)?;
+        buf.read_exact(&mut index_bytes)?;
         // TODO unwrap ?
         let index = String::from_utf8(index_bytes).unwrap();
 
         let data_len = u32::unpack(buf)? as usize;
         let mut data = Vec::with_capacity(data_len);
-        buf.read(&mut data)?;
+        buf.read_exact(&mut data)?;
 
         Ok(Self {
             index,

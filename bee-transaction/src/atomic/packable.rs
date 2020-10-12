@@ -37,14 +37,14 @@ macro_rules! impl_packable_for_num {
             }
 
             fn pack<W: Write>(&self, buf: &mut W) -> Result<(), Error> {
-                buf.write(self.to_le_bytes().as_ref())?;
+                buf.write_all(self.to_le_bytes().as_ref())?;
 
                 Ok(())
             }
 
             fn unpack<R: Read>(buf: &mut R) -> Result<Self, Error> {
                 let mut bytes = [0; std::mem::size_of::<$ty>()];
-                buf.read(&mut bytes)?;
+                buf.read_exact(&mut bytes)?;
                 Ok($ty::from_le_bytes(bytes))
             }
         }

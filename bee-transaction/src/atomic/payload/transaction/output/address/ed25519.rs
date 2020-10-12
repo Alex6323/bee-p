@@ -65,7 +65,7 @@ impl Packable for Ed25519Address {
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        buf.write(self.0.as_ref())?;
+        buf.write_all(self.0.as_ref())?;
 
         Ok(())
     }
@@ -75,7 +75,7 @@ impl Packable for Ed25519Address {
         Self: Sized,
     {
         let mut bytes = [0u8; ADDRESS_LENGTH];
-        buf.read(&mut bytes)?;
+        buf.read_exact(&mut bytes)?;
 
         Ok(Self(bytes))
     }

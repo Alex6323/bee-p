@@ -48,7 +48,7 @@ impl Packable for MessageId {
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        buf.write(&self.0)?;
+        buf.write_all(&self.0)?;
 
         Ok(())
     }
@@ -58,7 +58,7 @@ impl Packable for MessageId {
         Self: Sized,
     {
         let mut bytes = [0u8; MESSAGE_ID_LENGTH];
-        buf.read(&mut bytes)?;
+        buf.read_exact(&mut bytes)?;
 
         Ok(Self(bytes))
     }

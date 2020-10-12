@@ -40,8 +40,8 @@ impl Packable for Ed25519Signature {
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        buf.write(self.public_key.as_ref())?;
-        buf.write(self.signature.as_ref())?;
+        buf.write_all(self.public_key.as_ref())?;
+        buf.write_all(self.signature.as_ref())?;
 
         Ok(())
     }
@@ -51,10 +51,10 @@ impl Packable for Ed25519Signature {
         Self: Sized,
     {
         let mut public_key_bytes = [0u8; 32];
-        buf.read(&mut public_key_bytes)?;
+        buf.read_exact(&mut public_key_bytes)?;
 
         let mut signature_bytes = vec![0u8; 64];
-        buf.read(&mut signature_bytes)?;
+        buf.read_exact(&mut signature_bytes)?;
 
         Ok(Self {
             public_key: public_key_bytes,
