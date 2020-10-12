@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::atomic::{
-    packable::{Buf, BufMut, Packable},
+    packable::{Error as PackableError, Packable, Read, Write},
     payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE,
     Error,
 };
@@ -49,12 +49,18 @@ impl Packable for ReferenceUnlock {
         0u16.packed_len()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        self.0.pack(buf);
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.0.pack(buf)?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        let index = u16::unpack(buf);
-        Self(index)
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let index = u16::unpack(buf)?;
+
+        Ok(Self(index))
     }
 }

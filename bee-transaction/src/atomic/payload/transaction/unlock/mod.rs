@@ -15,7 +15,7 @@ mod signature;
 pub use reference::ReferenceUnlock;
 pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -46,24 +46,29 @@ impl Packable for UnlockBlock {
             }
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         match self {
             Self::Reference(reference) => {
-                0u8.pack(buf);
-                reference.pack(buf);
+                0u8.pack(buf)?;
+                reference.pack(buf)?;
             }
             Self::Signature(signature) => {
-                0u8.pack(buf);
-                signature.pack(buf);
+                0u8.pack(buf)?;
+                signature.pack(buf)?;
             }
         }
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        match u8::unpack(buf) {
-            0 => Self::Reference(ReferenceUnlock::unpack(buf)),
-            1 => Self::Signature(SignatureUnlock::unpack(buf)),
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u8::unpack(buf)? {
+            0 => Self::Reference(ReferenceUnlock::unpack(buf)?),
+            1 => Self::Signature(SignatureUnlock::unpack(buf)?),
             _ => unreachable!(),
-        }
+        })
     }
 }

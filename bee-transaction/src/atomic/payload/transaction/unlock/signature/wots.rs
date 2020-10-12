@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::atomic::{
-    packable::{Buf, BufMut, Packable},
+    packable::{Error as PackableError, Packable, Read, Write},
     Error,
 };
 
@@ -56,17 +56,22 @@ impl Packable for WotsSignature {
         0u32.packed_len() + self.0.len()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         let Self(bytes) = self;
-        (bytes.len() as u32).pack(buf);
-        buf.put_slice(bytes.as_slice());
+        (bytes.len() as u32).pack(buf)?;
+        buf.write(bytes.as_slice())?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        let bytes_len = u32::unpack(buf) as usize;
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let bytes_len = u32::unpack(buf)? as usize;
         let mut bytes = vec![0u8; bytes_len];
-        buf.copy_to_slice(&mut bytes);
+        buf.read(&mut bytes)?;
 
-        Self(bytes)
+        Ok(Self(bytes))
     }
 }

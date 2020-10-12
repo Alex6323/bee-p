@@ -15,9 +15,9 @@ mod signature_locked_single;
 pub use address::{Address, Ed25519Address, WotsAddress};
 pub use signature_locked_single::SignatureLockedSingleOutput;
 
-use serde::{Deserialize, Serialize};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Output {
@@ -37,19 +37,24 @@ impl Packable for Output {
         }
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         match self {
             Self::SignatureLockedSingle(output) => {
-                0u8.pack(buf);
-                output.pack(buf);
+                0u8.pack(buf)?;
+                output.pack(buf)?;
             }
         }
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        match u8::unpack(buf) {
-            0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack(buf)),
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u8::unpack(buf)? {
+            0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack(buf)?),
             _ => unreachable!(),
-        }
+        })
     }
 }

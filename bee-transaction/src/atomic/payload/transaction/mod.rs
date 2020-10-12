@@ -17,7 +17,7 @@ mod transaction_id;
 mod unlock;
 
 use crate::atomic::{
-    packable::{Buf, BufMut, Packable},
+    packable::{Error as PackableError, Packable, Read, Write},
     payload::Payload,
     Error,
 };
@@ -55,26 +55,31 @@ impl Packable for Transaction {
             + self.unlock_blocks.iter().map(|block| block.packed_len()).sum::<usize>()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        self.essence.pack(buf);
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.essence.pack(buf)?;
 
-        (self.unlock_blocks.len() as u16).pack(buf);
+        (self.unlock_blocks.len() as u16).pack(buf)?;
         for unlock_block in &self.unlock_blocks {
-            unlock_block.pack(buf);
+            unlock_block.pack(buf)?;
         }
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        let essence = TransactionEssence::unpack(buf);
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let essence = TransactionEssence::unpack(buf)?;
 
-        let unlock_blocks_len = u16::unpack(buf);
+        let unlock_blocks_len = u16::unpack(buf)?;
         let mut unlock_blocks = vec![];
         for _ in 0..unlock_blocks_len {
-            let unlock_block = UnlockBlock::unpack(buf);
+            let unlock_block = UnlockBlock::unpack(buf)?;
             unlock_blocks.push(unlock_block);
         }
 
-        Self { essence, unlock_blocks }
+        Ok(Self { essence, unlock_blocks })
     }
 }
 

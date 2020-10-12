@@ -15,7 +15,7 @@ mod wots;
 pub use ed25519::Ed25519Signature;
 pub use wots::WotsSignature;
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -46,24 +46,29 @@ impl Packable for SignatureUnlock {
             }
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         match self {
             Self::Wots(signature) => {
-                0u8.pack(buf);
-                signature.pack(buf);
+                0u8.pack(buf)?;
+                signature.pack(buf)?;
             }
             Self::Ed25519(signature) => {
-                1u8.pack(buf);
-                signature.pack(buf);
+                1u8.pack(buf)?;
+                signature.pack(buf)?;
             }
         }
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        match u8::unpack(buf) {
-            0 => Self::Wots(WotsSignature::unpack(buf)),
-            1 => Self::Ed25519(Ed25519Signature::unpack(buf)),
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u8::unpack(buf)? {
+            0 => Self::Wots(WotsSignature::unpack(buf)?),
+            1 => Self::Ed25519(Ed25519Signature::unpack(buf)?),
             _ => unreachable!(),
-        }
+        })
     }
 }

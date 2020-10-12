@@ -33,9 +33,9 @@ mod tests {
 
         let mut buf = vec![];
 
-        msg.pack(&mut buf);
+        msg.pack(&mut buf).unwrap();
 
-        let msg_unpacked = Message::unpack(&mut buf.as_slice());
+        let msg_unpacked = Message::unpack(&mut buf.as_slice()).unwrap();
 
         assert_eq!(msg.parent1(), msg_unpacked.parent1());
         assert_eq!(msg.parent2(), msg_unpacked.parent2());

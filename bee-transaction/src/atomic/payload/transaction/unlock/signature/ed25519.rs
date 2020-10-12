@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -39,21 +39,26 @@ impl Packable for Ed25519Signature {
         32 + 64
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        buf.put_slice(self.public_key.as_ref());
-        buf.put_slice(self.signature.as_ref());
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        buf.write(self.public_key.as_ref())?;
+        buf.write(self.signature.as_ref())?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
         let mut public_key_bytes = [0u8; 32];
-        buf.copy_to_slice(&mut public_key_bytes);
+        buf.read(&mut public_key_bytes)?;
 
         let mut signature_bytes = vec![0u8; 64];
-        buf.copy_to_slice(&mut signature_bytes);
+        buf.read(&mut signature_bytes)?;
 
-        Self {
+        Ok(Self {
             public_key: public_key_bytes,
             signature: signature_bytes.into_boxed_slice(),
-        }
+        })
     }
 }

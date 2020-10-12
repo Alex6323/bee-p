@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::atomic::{
-    packable::{Buf, BufMut, Packable},
+    packable::{Error as PackableError, Packable, Read, Write},
     payload::{
         transaction::{input::Input, output::Output},
         Payload,
@@ -59,47 +59,52 @@ impl Packable for TransactionEssence {
             + self.payload.iter().map(|payload| payload.packed_len()).sum::<usize>()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        0u8.pack(buf);
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        0u8.pack(buf)?;
 
-        (self.inputs.len() as u16).pack(buf);
+        (self.inputs.len() as u16).pack(buf)?;
         for input in self.inputs.as_ref() {
-            input.pack(buf);
+            input.pack(buf)?;
         }
 
-        (self.outputs.len() as u16).pack(buf);
+        (self.outputs.len() as u16).pack(buf)?;
         for output in self.outputs.as_ref() {
-            output.pack(buf);
+            output.pack(buf)?;
         }
 
         if let Some(payload) = &self.payload {
-            (payload.packed_len() as u32).pack(buf);
-            payload.pack(buf);
+            (payload.packed_len() as u32).pack(buf)?;
+            payload.pack(buf)?;
         } else {
-            0u32.pack(buf);
+            0u32.pack(buf)?;
         }
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        assert_eq!(0u8, u8::unpack(buf));
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        assert_eq!(0u8, u8::unpack(buf)?);
 
-        let inputs_len = u16::unpack(buf);
+        let inputs_len = u16::unpack(buf)?;
         let mut inputs = vec![];
         for _ in 0..inputs_len {
-            let input = Input::unpack(buf);
+            let input = Input::unpack(buf)?;
             inputs.push(input);
         }
 
-        let outputs_len = u16::unpack(buf);
+        let outputs_len = u16::unpack(buf)?;
         let mut outputs = vec![];
         for _ in 0..outputs_len {
-            let output = Output::unpack(buf);
+            let output = Output::unpack(buf)?;
             outputs.push(output);
         }
 
-        let payload_len = u32::unpack(buf) as usize;
+        let payload_len = u32::unpack(buf)? as usize;
         let payload = if payload_len > 0 {
-            let payload = Payload::unpack(buf);
+            let payload = Payload::unpack(buf)?;
             assert_eq!(payload_len, payload.packed_len());
 
             Some(payload)
@@ -107,11 +112,11 @@ impl Packable for TransactionEssence {
             None
         };
 
-        Self {
+        Ok(Self {
             inputs: inputs.into_boxed_slice(),
             outputs: outputs.into_boxed_slice(),
             payload,
-        }
+        })
     }
 }
 

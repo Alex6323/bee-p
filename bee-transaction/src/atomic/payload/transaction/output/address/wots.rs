@@ -10,14 +10,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::atomic::{
-    packable::{Buf, BufMut, Packable},
+    packable::{Error as PackableError, Packable, Read, Write},
     Error,
 };
 
 use bee_ternary::{T5B1Buf, TritBuf};
 
 use bytemuck::cast_slice;
-
 use serde::{Deserialize, Serialize};
 
 use alloc::string::String;
@@ -69,14 +68,19 @@ impl Packable for WotsAddress {
         243
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        buf.put_slice(self.0.as_ref());
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        buf.write(self.0.as_ref())?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
         let mut bytes = vec![0u8; 243];
-        buf.copy_to_slice(&mut bytes);
+        buf.read(&mut bytes)?;
 
-        Self(bytes.into_boxed_slice())
+        Ok(Self(bytes.into_boxed_slice()))
     }
 }

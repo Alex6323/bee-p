@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -41,43 +41,48 @@ impl Packable for Milestone {
         self.index.packed_len() + self.timestamp.packed_len() + 64 + 64 * self.signatures.len()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        self.index.pack(buf);
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.index.pack(buf)?;
 
-        self.timestamp.pack(buf);
+        self.timestamp.pack(buf)?;
 
-        buf.put_slice(self.merkle_proof.as_ref());
+        buf.write(self.merkle_proof.as_ref())?;
 
-        (self.signatures.len() as u32).pack(buf);
+        (self.signatures.len() as u32).pack(buf)?;
 
         for signature in &self.signatures {
-            buf.put_slice(signature.as_ref());
+            buf.write(signature.as_ref())?;
         }
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        let index = u32::unpack(buf);
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let index = u32::unpack(buf)?;
 
-        let timestamp = u64::unpack(buf);
+        let timestamp = u64::unpack(buf)?;
 
         let mut merkle_proof = [0u8; 64];
-        buf.copy_to_slice(&mut merkle_proof);
+        buf.read(&mut merkle_proof)?;
         let merkle_proof = Box::new(merkle_proof);
 
         let mut signatures = vec![];
-        let signatures_len = u32::unpack(buf);
+        let signatures_len = u32::unpack(buf)?;
 
         for _ in 0..signatures_len {
             let mut signature = vec![0u8; 64];
-            buf.copy_to_slice(&mut signature);
+            buf.read(&mut signature)?;
             signatures.push(signature.into_boxed_slice());
         }
 
-        Self {
+        Ok(Self {
             index,
             timestamp,
             merkle_proof,
             signatures,
-        }
+        })
     }
 }

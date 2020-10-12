@@ -9,14 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub use bytes::{Buf, BufMut};
+use thiserror::Error;
+
+pub use std::io::{Read, Write};
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("I/O error happened: {0}.")]
+    Io(#[from] std::io::Error),
+}
 
 pub trait Packable {
     fn packed_len(&self) -> usize;
 
-    fn pack<B: BufMut>(&self, buf: &mut B);
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), Error>;
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self;
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, Error>
+    where
+        Self: Sized;
 }
 
 macro_rules! impl_packable_for_num {
@@ -26,14 +36,16 @@ macro_rules! impl_packable_for_num {
                 std::mem::size_of::<$ty>()
             }
 
-            fn pack<B: BufMut>(&self, buf: &mut B) {
-                buf.put(self.to_le_bytes().as_ref());
+            fn pack<W: Write>(&self, buf: &mut W) -> Result<(), Error> {
+                buf.write(self.to_le_bytes().as_ref())?;
+
+                Ok(())
             }
 
-            fn unpack<B: Buf>(buf: &mut B) -> Self {
+            fn unpack<R: Read>(buf: &mut R) -> Result<Self, Error> {
                 let mut bytes = [0; std::mem::size_of::<$ty>()];
-                buf.copy_to_slice(&mut bytes);
-                $ty::from_le_bytes(bytes)
+                buf.read(&mut bytes)?;
+                Ok($ty::from_le_bytes(bytes))
             }
         }
     };
@@ -43,3 +55,4 @@ impl_packable_for_num!(u8);
 impl_packable_for_num!(u16);
 impl_packable_for_num!(u32);
 impl_packable_for_num!(u64);
+impl_packable_for_num!(u128);

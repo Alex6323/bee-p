@@ -13,13 +13,19 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Input {
     UTXO(UTXOInput),
+}
+
+impl From<UTXOInput> for Input {
+    fn from(input: UTXOInput) -> Self {
+        Self::UTXO(input)
+    }
 }
 
 impl Packable for Input {
@@ -29,25 +35,24 @@ impl Packable for Input {
         }
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         match self {
             Self::UTXO(utxo_input) => {
-                0u8.pack(buf);
-                utxo_input.pack(buf);
+                0u8.pack(buf)?;
+                utxo_input.pack(buf)?;
             }
         }
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        match u8::unpack(buf) {
-            0 => Self::UTXO(UTXOInput::unpack(buf)),
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u8::unpack(buf)? {
+            0 => Self::UTXO(UTXOInput::unpack(buf)?),
             _ => unreachable!(),
-        }
-    }
-}
-
-impl From<UTXOInput> for Input {
-    fn from(input: UTXOInput) -> Self {
-        Self::UTXO(input)
+        })
     }
 }

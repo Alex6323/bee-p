@@ -9,10 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use bech32::{self, ToBase32};
-
 use serde::{Deserialize, Serialize};
 
 use alloc::{string::String, vec};
@@ -65,14 +64,19 @@ impl Packable for Ed25519Address {
         ADDRESS_LENGTH
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        buf.put_slice(self.0.as_ref());
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        buf.write(self.0.as_ref())?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
         let mut bytes = [0u8; ADDRESS_LENGTH];
-        buf.copy_to_slice(&mut bytes);
+        buf.read(&mut bytes)?;
 
-        Self(bytes)
+        Ok(Self(bytes))
     }
 }

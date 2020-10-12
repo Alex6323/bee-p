@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::atomic::{
-    packable::{Buf, BufMut, Packable},
+    packable::{Error as PackableError, Packable, Read, Write},
     payload::transaction::Address,
 };
 
@@ -43,18 +43,23 @@ impl Packable for SignatureLockedSingleOutput {
         self.address.packed_len() + u64::from(self.amount).packed_len()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        self.address.pack(buf);
-        u64::from(self.amount).pack(buf);
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.address.pack(buf)?;
+        u64::from(self.amount).pack(buf)?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        let address = Address::unpack(buf);
-        let amount = u64::unpack(buf);
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let address = Address::unpack(buf)?;
+        let amount = u64::unpack(buf)?;
 
-        Self {
+        Ok(Self {
             address,
             amount: NonZeroU64::new(amount).unwrap(),
-        }
+        })
     }
 }

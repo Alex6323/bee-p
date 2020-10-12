@@ -11,7 +11,7 @@
 
 use crate::{
     atomic::{
-        packable::{Buf, BufMut, Packable},
+        packable::{Error as PackableError, Packable, Read, Write},
         payload::Payload,
         Error, MessageId,
     },
@@ -60,36 +60,41 @@ impl Packable for Message {
             + 0u64.packed_len()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        1u8.pack(buf);
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        1u8.pack(buf)?;
 
-        self.parent1.pack(buf);
-        self.parent2.pack(buf);
+        self.parent1.pack(buf)?;
+        self.parent2.pack(buf)?;
 
-        (self.payload.packed_len() as u32).pack(buf);
-        self.payload.pack(buf);
+        (self.payload.packed_len() as u32).pack(buf)?;
+        self.payload.pack(buf)?;
 
-        self.nonce.pack(buf);
+        self.nonce.pack(buf)?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        assert_eq!(1u8, u8::unpack(buf));
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        assert_eq!(1u8, u8::unpack(buf)?);
 
-        let parent1 = MessageId::unpack(buf);
-        let parent2 = MessageId::unpack(buf);
+        let parent1 = MessageId::unpack(buf)?;
+        let parent2 = MessageId::unpack(buf)?;
 
-        let payload_len = u32::unpack(buf) as usize;
-        let payload = Payload::unpack(buf);
+        let payload_len = u32::unpack(buf)? as usize;
+        let payload = Payload::unpack(buf)?;
         assert_eq!(payload_len, payload.packed_len());
 
-        let nonce = u64::unpack(buf);
+        let nonce = u64::unpack(buf)?;
 
-        Self {
+        Ok(Self {
             parent1,
             parent2,
             payload,
             nonce,
-        }
+        })
     }
 }
 

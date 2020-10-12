@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -47,14 +47,19 @@ impl Packable for MessageId {
         MESSAGE_ID_LENGTH
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        buf.put_slice(&self.0)
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        buf.write(&self.0)?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
         let mut bytes = [0u8; MESSAGE_ID_LENGTH];
-        buf.copy_to_slice(&mut bytes);
+        buf.read(&mut bytes)?;
 
-        Self(bytes)
+        Ok(Self(bytes))
     }
 }

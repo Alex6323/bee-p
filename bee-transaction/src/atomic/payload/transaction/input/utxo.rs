@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::atomic::{
-    packable::{Buf, BufMut, Packable},
+    packable::{Error as PackableError, Packable, Read, Write},
     payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, TransactionId},
     Error,
 };
@@ -53,14 +53,20 @@ impl Packable for UTXOInput {
         self.id.packed_len() + self.index.packed_len()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        self.id.pack(buf);
-        self.index.pack(buf);
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.id.pack(buf)?;
+        self.index.pack(buf)?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        let id = TransactionId::unpack(buf);
-        let index = u16::unpack(buf);
-        Self { id, index }
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let id = TransactionId::unpack(buf)?;
+        let index = u16::unpack(buf)?;
+
+        Ok(Self { id, index })
     }
 }

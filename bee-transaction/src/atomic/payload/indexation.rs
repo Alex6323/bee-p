@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -30,28 +30,33 @@ impl Packable for Indexation {
         0u32.packed_len() + self.index.as_bytes().len() + 0u32.packed_len() + self.data.len()
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
-        (self.index.as_bytes().len() as u32).pack(buf);
-        buf.put_slice(self.index.as_bytes());
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        (self.index.as_bytes().len() as u32).pack(buf)?;
+        buf.write(self.index.as_bytes())?;
 
-        (self.data.len() as u32).pack(buf);
-        buf.put_slice(self.data.as_ref());
+        (self.data.len() as u32).pack(buf)?;
+        buf.write(self.data.as_ref())?;
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        let index_len = u32::unpack(buf) as usize;
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let index_len = u32::unpack(buf)? as usize;
         let mut index_bytes = vec![0u8; index_len];
-        buf.copy_to_slice(&mut index_bytes);
+        buf.read(&mut index_bytes)?;
         // TODO unwrap ?
         let index = String::from_utf8(index_bytes).unwrap();
 
-        let data_len = u32::unpack(buf) as usize;
+        let data_len = u32::unpack(buf)? as usize;
         let mut data = Vec::with_capacity(data_len);
-        buf.copy_to_slice(&mut data);
+        buf.read(&mut data)?;
 
-        Self {
+        Ok(Self {
             index,
             data: data.into_boxed_slice(),
-        }
+        })
     }
 }

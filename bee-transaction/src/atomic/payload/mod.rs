@@ -18,7 +18,7 @@ pub use indexation::Indexation;
 pub use milestone::Milestone;
 pub use transaction::Transaction;
 
-use crate::atomic::packable::{Buf, BufMut, Packable};
+use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -41,29 +41,34 @@ impl Packable for Payload {
             }
     }
 
-    fn pack<B: BufMut>(&self, buf: &mut B) {
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         match self {
             Self::Transaction(transaction) => {
-                0u32.pack(buf);
-                transaction.pack(buf);
+                0u32.pack(buf)?;
+                transaction.pack(buf)?;
             }
             Self::Milestone(milestone) => {
-                1u32.pack(buf);
-                milestone.pack(buf);
+                1u32.pack(buf)?;
+                milestone.pack(buf)?;
             }
             Self::Indexation(indexation) => {
-                2u32.pack(buf);
-                indexation.pack(buf);
+                2u32.pack(buf)?;
+                indexation.pack(buf)?;
             }
         }
+
+        Ok(())
     }
 
-    fn unpack<B: Buf>(buf: &mut B) -> Self {
-        match u32::unpack(buf) {
-            0 => Self::Transaction(Box::new(Transaction::unpack(buf))),
-            1 => Self::Milestone(Box::new(Milestone::unpack(buf))),
-            2 => Self::Indexation(Box::new(Indexation::unpack(buf))),
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u32::unpack(buf)? {
+            0 => Self::Transaction(Box::new(Transaction::unpack(buf)?)),
+            1 => Self::Milestone(Box::new(Milestone::unpack(buf)?)),
+            2 => Self::Indexation(Box::new(Indexation::unpack(buf)?)),
             _ => unreachable!(),
-        }
+        })
     }
 }
