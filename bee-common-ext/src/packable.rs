@@ -23,6 +23,8 @@ pub enum Error {
     InvalidUtf8String,
     #[error("Invalid version read.")]
     InvalidVersion,
+    #[error("Invalid type read.")]
+    InvalidType,
     #[error("Invalid announced len.")]
     InvalidAnnouncedLen,
 }

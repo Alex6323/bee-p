@@ -21,14 +21,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum UnlockBlock {
-    Reference(ReferenceUnlock),
     Signature(SignatureUnlock),
-}
-
-impl From<ReferenceUnlock> for UnlockBlock {
-    fn from(reference: ReferenceUnlock) -> Self {
-        Self::Reference(reference)
-    }
+    Reference(ReferenceUnlock),
 }
 
 impl From<SignatureUnlock> for UnlockBlock {
@@ -37,24 +31,29 @@ impl From<SignatureUnlock> for UnlockBlock {
     }
 }
 
+impl From<ReferenceUnlock> for UnlockBlock {
+    fn from(reference: ReferenceUnlock) -> Self {
+        Self::Reference(reference)
+    }
+}
+
 impl Packable for UnlockBlock {
     fn packed_len(&self) -> usize {
-        0u8.packed_len()
-            + match self {
-                Self::Reference(reference) => reference.packed_len(),
-                Self::Signature(signature) => signature.packed_len(),
-            }
+        match self {
+            Self::Signature(unlock) => 0u8.packed_len() + unlock.packed_len(),
+            Self::Reference(unlock) => 1u8.packed_len() + unlock.packed_len(),
+        }
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         match self {
-            Self::Reference(reference) => {
+            Self::Signature(unlock) => {
                 0u8.pack(buf)?;
-                reference.pack(buf)?;
+                unlock.pack(buf)?;
             }
-            Self::Signature(signature) => {
-                0u8.pack(buf)?;
-                signature.pack(buf)?;
+            Self::Reference(unlock) => {
+                1u8.pack(buf)?;
+                unlock.pack(buf)?;
             }
         }
 
@@ -66,8 +65,8 @@ impl Packable for UnlockBlock {
         Self: Sized,
     {
         Ok(match u8::unpack(buf)? {
-            0 => Self::Reference(ReferenceUnlock::unpack(buf)?),
-            1 => Self::Signature(SignatureUnlock::unpack(buf)?),
+            0 => Self::Signature(SignatureUnlock::unpack(buf)?),
+            1 => Self::Reference(ReferenceUnlock::unpack(buf)?),
             _ => return Err(PackableError::InvalidVariant),
         })
     }

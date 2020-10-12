@@ -64,20 +64,21 @@ impl Packable for TransactionEssence {
         0u8.pack(buf)?;
 
         (self.inputs.len() as u16).pack(buf)?;
-        for input in self.inputs.as_ref() {
+        for input in self.inputs.iter() {
             input.pack(buf)?;
         }
 
         (self.outputs.len() as u16).pack(buf)?;
-        for output in self.outputs.as_ref() {
+        for output in self.outputs.iter() {
             output.pack(buf)?;
         }
 
-        if let Some(payload) = &self.payload {
-            (payload.packed_len() as u32).pack(buf)?;
-            payload.pack(buf)?;
-        } else {
-            0u32.pack(buf)?;
+        match self.payload {
+            Some(ref payload) => {
+                (payload.packed_len() as u32).pack(buf)?;
+                payload.pack(buf)?;
+            }
+            None => 0u32.pack(buf)?,
         }
 
         Ok(())
@@ -87,26 +88,28 @@ impl Packable for TransactionEssence {
     where
         Self: Sized,
     {
-        assert_eq!(0u8, u8::unpack(buf)?);
-
-        let inputs_len = u16::unpack(buf)?;
-        let mut inputs = vec![];
-        for _ in 0..inputs_len {
-            let input = Input::unpack(buf)?;
-            inputs.push(input);
+        if u8::unpack(buf)? != 0u8 {
+            return Err(PackableError::InvalidType);
         }
 
-        let outputs_len = u16::unpack(buf)?;
-        let mut outputs = vec![];
+        let inputs_len = u16::unpack(buf)? as usize;
+        let mut inputs = Vec::with_capacity(inputs_len);
+        for _ in 0..inputs_len {
+            inputs.push(Input::unpack(buf)?);
+        }
+
+        let outputs_len = u16::unpack(buf)? as usize;
+        let mut outputs = Vec::with_capacity(outputs_len);
         for _ in 0..outputs_len {
-            let output = Output::unpack(buf)?;
-            outputs.push(output);
+            outputs.push(Output::unpack(buf)?);
         }
 
         let payload_len = u32::unpack(buf)? as usize;
         let payload = if payload_len > 0 {
             let payload = Payload::unpack(buf)?;
-            assert_eq!(payload_len, payload.packed_len());
+            if payload_len != payload.packed_len() {
+                return Err(PackableError::InvalidAnnouncedLen);
+            }
 
             Some(payload)
         } else {

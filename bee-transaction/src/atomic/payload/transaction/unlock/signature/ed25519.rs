@@ -40,8 +40,8 @@ impl Packable for Ed25519Signature {
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        buf.write_all(self.public_key.as_ref())?;
-        buf.write_all(self.signature.as_ref())?;
+        buf.write_all(&self.public_key)?;
+        buf.write_all(&self.signature)?;
 
         Ok(())
     }

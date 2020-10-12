@@ -39,11 +39,10 @@ impl From<Ed25519Signature> for SignatureUnlock {
 
 impl Packable for SignatureUnlock {
     fn packed_len(&self) -> usize {
-        0u8.packed_len()
-            + match self {
-                Self::Wots(signature) => signature.packed_len(),
-                Self::Ed25519(signature) => signature.packed_len(),
-            }
+        match self {
+            Self::Wots(signature) => 0u8.packed_len() + signature.packed_len(),
+            Self::Ed25519(signature) => 1u8.packed_len() + signature.packed_len(),
+        }
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {

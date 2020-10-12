@@ -35,7 +35,7 @@ impl Packable for Indexation {
         buf.write_all(self.index.as_bytes())?;
 
         (self.data.len() as u32).pack(buf)?;
-        buf.write_all(self.data.as_ref())?;
+        buf.write_all(&self.data)?;
 
         Ok(())
     }
@@ -47,15 +47,14 @@ impl Packable for Indexation {
         let index_len = u32::unpack(buf)? as usize;
         let mut index_bytes = vec![0u8; index_len];
         buf.read_exact(&mut index_bytes)?;
-        let index = String::from_utf8(index_bytes).map_err(|_| PackableError::InvalidUtf8String)?;
 
         let data_len = u32::unpack(buf)? as usize;
-        let mut data = Vec::with_capacity(data_len);
-        buf.read_exact(&mut data)?;
+        let mut data_bytes = vec![0u8; data_len];
+        buf.read_exact(&mut data_bytes)?;
 
         Ok(Self {
-            index,
-            data: data.into_boxed_slice(),
+            index: String::from_utf8(index_bytes).map_err(|_| PackableError::InvalidUtf8String)?,
+            data: data_bytes.into_boxed_slice(),
         })
     }
 }

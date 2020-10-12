@@ -55,9 +55,8 @@ impl Packable for WotsSignature {
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        let Self(bytes) = self;
-        (bytes.len() as u32).pack(buf)?;
-        buf.write_all(bytes.as_slice())?;
+        (self.0.len() as u32).pack(buf)?;
+        buf.write_all(&self.0)?;
 
         Ok(())
     }

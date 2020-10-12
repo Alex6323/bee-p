@@ -41,6 +41,7 @@ use core::{cmp::Ordering, slice::Iter};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
     pub essence: TransactionEssence,
+    // TODO Box
     pub unlock_blocks: Vec<UnlockBlock>,
 }
 
@@ -68,11 +69,10 @@ impl Packable for Transaction {
     {
         let essence = TransactionEssence::unpack(buf)?;
 
-        let unlock_blocks_len = u16::unpack(buf)?;
-        let mut unlock_blocks = vec![];
+        let unlock_blocks_len = u16::unpack(buf)? as usize;
+        let mut unlock_blocks = Vec::with_capacity(unlock_blocks_len);
         for _ in 0..unlock_blocks_len {
-            let unlock_block = UnlockBlock::unpack(buf)?;
-            unlock_blocks.push(unlock_block);
+            unlock_blocks.push(UnlockBlock::unpack(buf)?);
         }
 
         Ok(Self { essence, unlock_blocks })

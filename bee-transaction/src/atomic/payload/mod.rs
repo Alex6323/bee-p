@@ -33,27 +33,26 @@ pub enum Payload {
 
 impl Packable for Payload {
     fn packed_len(&self) -> usize {
-        0u32.packed_len()
-            + match self {
-                Self::Transaction(transaction) => transaction.packed_len(),
-                Self::Milestone(milestone) => milestone.packed_len(),
-                Self::Indexation(indexation) => indexation.packed_len(),
-            }
+        match self {
+            Self::Transaction(payload) => 0u32.packed_len() + payload.packed_len(),
+            Self::Milestone(payload) => 1u32.packed_len() + payload.packed_len(),
+            Self::Indexation(payload) => 2u32.packed_len() + payload.packed_len(),
+        }
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         match self {
-            Self::Transaction(transaction) => {
+            Self::Transaction(payload) => {
                 0u32.pack(buf)?;
-                transaction.pack(buf)?;
+                payload.pack(buf)?;
             }
-            Self::Milestone(milestone) => {
+            Self::Milestone(payload) => {
                 1u32.pack(buf)?;
-                milestone.pack(buf)?;
+                payload.pack(buf)?;
             }
-            Self::Indexation(indexation) => {
+            Self::Indexation(payload) => {
                 2u32.pack(buf)?;
-                indexation.pack(buf)?;
+                payload.pack(buf)?;
             }
         }
 

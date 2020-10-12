@@ -46,12 +46,12 @@ impl Packable for Milestone {
 
         self.timestamp.pack(buf)?;
 
-        buf.write_all(self.merkle_proof.as_ref())?;
+        buf.write_all(&self.merkle_proof)?;
 
-        (self.signatures.len() as u32).pack(buf)?;
+        (self.signatures.len() as u8).pack(buf)?;
 
         for signature in &self.signatures {
-            buf.write_all(signature.as_ref())?;
+            buf.write_all(&signature)?;
         }
 
         Ok(())
@@ -67,10 +67,9 @@ impl Packable for Milestone {
 
         let mut merkle_proof = [0u8; 64];
         buf.read_exact(&mut merkle_proof)?;
-        let merkle_proof = Box::new(merkle_proof);
 
         let mut signatures = vec![];
-        let signatures_len = u32::unpack(buf)?;
+        let signatures_len = u8::unpack(buf)?;
 
         for _ in 0..signatures_len {
             let mut signature = vec![0u8; 64];
@@ -81,7 +80,7 @@ impl Packable for Milestone {
         Ok(Self {
             index,
             timestamp,
-            merkle_proof,
+            merkle_proof: Box::new(merkle_proof),
             signatures,
         })
     }

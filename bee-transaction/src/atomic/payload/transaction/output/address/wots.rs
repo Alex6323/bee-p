@@ -67,7 +67,7 @@ impl Packable for WotsAddress {
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        buf.write_all(self.0.as_ref())?;
+        buf.write_all(&self.0)?;
 
         Ok(())
     }
@@ -76,9 +76,9 @@ impl Packable for WotsAddress {
     where
         Self: Sized,
     {
-        let mut bytes = vec![0u8; 243];
+        let mut bytes = [0u8; 243];
         buf.read_exact(&mut bytes)?;
 
-        Ok(Self(bytes.into_boxed_slice()))
+        Ok(Self(Box::new(bytes)))
     }
 }
