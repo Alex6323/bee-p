@@ -15,7 +15,7 @@ mod wots;
 pub use ed25519::Ed25519Signature;
 pub use wots::WotsSignature;
 
-use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 

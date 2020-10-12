@@ -16,11 +16,7 @@ mod output;
 mod transaction_id;
 mod unlock;
 
-use crate::atomic::{
-    packable::{Error as PackableError, Packable, Read, Write},
-    payload::Payload,
-    Error,
-};
+use crate::atomic::{payload::Payload, Error};
 
 use constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
 
@@ -30,8 +26,8 @@ pub use output::{Address, Ed25519Address, Output, SignatureLockedSingleOutput, W
 pub use transaction_id::TransactionId;
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 pub use bee_signing_ext::Seed;
-
 use bee_signing_ext::{
     binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature as Ed25Signature},
     Signature as SignatureTrait, Signer, Verifier,

@@ -13,7 +13,7 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
-use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 

@@ -15,7 +15,7 @@ mod signature_locked_single;
 pub use address::{Address, Ed25519Address, WotsAddress};
 pub use signature_locked_single::SignatureLockedSingleOutput;
 
-use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 

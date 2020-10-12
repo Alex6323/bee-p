@@ -9,11 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::{
-    packable::{Error as PackableError, Packable, Read, Write},
-    payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE,
-    Error,
-};
+use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
+
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 

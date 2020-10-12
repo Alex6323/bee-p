@@ -130,6 +130,7 @@ dependencies = [
  "dashmap",
  "futures",
  "log",
+ "thiserror",
  "tokio",
 ]
 
@@ -387,6 +388,7 @@ name = "bee-transaction"
 version = "0.1.0-alpha"
 dependencies = [
  "bech32",
+ "bee-common-ext",
  "bee-crypto",
  "bee-signing",
  "bee-signing-ext",

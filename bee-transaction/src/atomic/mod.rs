@@ -11,13 +11,11 @@
 
 mod message;
 mod message_id;
-mod packable;
 
 pub mod payload;
 
 pub use message::{Message, MessageBuilder};
 pub use message_id::{MessageId, MESSAGE_ID_LENGTH};
-pub use packable::Packable;
 
 use core::fmt;
 

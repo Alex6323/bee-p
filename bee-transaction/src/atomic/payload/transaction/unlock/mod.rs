@@ -15,7 +15,7 @@ mod signature;
 pub use reference::ReferenceUnlock;
 pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
-use crate::atomic::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
