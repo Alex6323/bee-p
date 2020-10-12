@@ -37,7 +37,5 @@ tokio = { version = "0.2", features = ["sync", "time"] }
 twox-hash = "1.5"
 
 [dev-dependencies]
-bee-test = { path = "../bee-test" }
-
 rand = "0.7"
 tokio = { version = "0.2", features = ["macros"] }
