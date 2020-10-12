@@ -15,6 +15,8 @@ mod wots;
 pub use ed25519::Ed25519Address;
 pub use wots::WotsAddress;
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 use alloc::string::String;
@@ -43,5 +45,40 @@ impl Address {
             Address::Wots(address) => address.to_bech32(),
             Address::Ed25519(address) => address.to_bech32(),
         }
+    }
+}
+
+impl Packable for Address {
+    fn packed_len(&self) -> usize {
+        match self {
+            Self::Wots(address) => 0u8.packed_len() + address.packed_len(),
+            Self::Ed25519(address) => 1u8.packed_len() + address.packed_len(),
+        }
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        match self {
+            Self::Wots(address) => {
+                0u8.pack(buf)?;
+                address.pack(buf)?;
+            }
+            Self::Ed25519(address) => {
+                1u8.pack(buf)?;
+                address.pack(buf)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u8::unpack(buf)? {
+            0 => Self::Wots(WotsAddress::unpack(buf)?),
+            1 => Self::Ed25519(Ed25519Address::unpack(buf)?),
+            _ => return Err(PackableError::InvalidVariant),
+        })
     }
 }

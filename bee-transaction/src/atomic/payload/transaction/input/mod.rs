@@ -13,6 +13,8 @@ mod utxo;
 
 pub use utxo::UTXOInput;
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -23,5 +25,34 @@ pub enum Input {
 impl From<UTXOInput> for Input {
     fn from(input: UTXOInput) -> Self {
         Self::UTXO(input)
+    }
+}
+
+impl Packable for Input {
+    fn packed_len(&self) -> usize {
+        match self {
+            Self::UTXO(input) => 0u8.packed_len() + input.packed_len(),
+        }
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        match self {
+            Self::UTXO(input) => {
+                0u8.pack(buf)?;
+                input.pack(buf)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u8::unpack(buf)? {
+            0 => Self::UTXO(UTXOInput::unpack(buf)?),
+            _ => return Err(PackableError::InvalidVariant),
+        })
     }
 }

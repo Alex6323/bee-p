@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 pub const TRANSACTION_ID_LENGTH: usize = 32;
@@ -37,5 +39,27 @@ impl core::fmt::Display for TransactionId {
 impl core::fmt::Debug for TransactionId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "TransactionId({})", self.to_string())
+    }
+}
+
+impl Packable for TransactionId {
+    fn packed_len(&self) -> usize {
+        TRANSACTION_ID_LENGTH
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        buf.write_all(&self.0)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let mut bytes = [0u8; TRANSACTION_ID_LENGTH];
+        buf.read_exact(&mut bytes)?;
+
+        Ok(Self(bytes))
     }
 }

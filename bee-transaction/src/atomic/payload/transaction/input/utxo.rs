@@ -14,6 +14,8 @@ use crate::atomic::{
     Error,
 };
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -44,5 +46,28 @@ impl UTXOInput {
 impl core::fmt::Display for UTXOInput {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{}{}", self.id.to_string(), hex::encode(self.index.to_le_bytes()))
+    }
+}
+
+impl Packable for UTXOInput {
+    fn packed_len(&self) -> usize {
+        self.id.packed_len() + self.index.packed_len()
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.id.pack(buf)?;
+        self.index.pack(buf)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let id = TransactionId::unpack(buf)?;
+        let index = u16::unpack(buf)?;
+
+        Ok(Self { id, index })
     }
 }

@@ -11,6 +11,8 @@
 
 use crate::atomic::payload::transaction::Address;
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 use core::num::NonZeroU64;
@@ -32,5 +34,32 @@ impl SignatureLockedSingleOutput {
 
     pub fn amount(&self) -> NonZeroU64 {
         self.amount
+    }
+}
+
+impl Packable for SignatureLockedSingleOutput {
+    fn packed_len(&self) -> usize {
+        self.address.packed_len() + u64::from(self.amount).packed_len()
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.address.pack(buf)?;
+        u64::from(self.amount).pack(buf)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let address = Address::unpack(buf)?;
+        let amount = u64::unpack(buf)?;
+
+        // TODO unwrap
+        Ok(Self {
+            address,
+            amount: NonZeroU64::new(amount).unwrap(),
+        })
     }
 }

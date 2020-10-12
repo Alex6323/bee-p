@@ -15,12 +15,20 @@ mod signature;
 pub use reference::ReferenceUnlock;
 pub use signature::{Ed25519Signature, SignatureUnlock, WotsSignature};
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum UnlockBlock {
-    Reference(ReferenceUnlock),
     Signature(SignatureUnlock),
+    Reference(ReferenceUnlock),
+}
+
+impl From<SignatureUnlock> for UnlockBlock {
+    fn from(signature: SignatureUnlock) -> Self {
+        Self::Signature(signature)
+    }
 }
 
 impl From<ReferenceUnlock> for UnlockBlock {
@@ -29,8 +37,37 @@ impl From<ReferenceUnlock> for UnlockBlock {
     }
 }
 
-impl From<SignatureUnlock> for UnlockBlock {
-    fn from(signature: SignatureUnlock) -> Self {
-        Self::Signature(signature)
+impl Packable for UnlockBlock {
+    fn packed_len(&self) -> usize {
+        match self {
+            Self::Signature(unlock) => 0u8.packed_len() + unlock.packed_len(),
+            Self::Reference(unlock) => 1u8.packed_len() + unlock.packed_len(),
+        }
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        match self {
+            Self::Signature(unlock) => {
+                0u8.pack(buf)?;
+                unlock.pack(buf)?;
+            }
+            Self::Reference(unlock) => {
+                1u8.pack(buf)?;
+                unlock.pack(buf)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u8::unpack(buf)? {
+            0 => Self::Signature(SignatureUnlock::unpack(buf)?),
+            1 => Self::Reference(ReferenceUnlock::unpack(buf)?),
+            _ => return Err(PackableError::InvalidVariant),
+        })
     }
 }

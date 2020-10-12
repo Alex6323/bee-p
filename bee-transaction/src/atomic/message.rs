@@ -14,6 +14,8 @@ use crate::{
     Vertex,
 };
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -43,6 +45,59 @@ impl Message {
 
     pub fn nonce(&self) -> u64 {
         self.nonce
+    }
+}
+
+impl Packable for Message {
+    fn packed_len(&self) -> usize {
+        1u8.packed_len()
+            + self.parent1.packed_len()
+            + self.parent2.packed_len()
+            + 0u32.packed_len()
+            + self.payload.packed_len()
+            + 0u64.packed_len()
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        1u8.pack(buf)?;
+
+        self.parent1.pack(buf)?;
+        self.parent2.pack(buf)?;
+
+        (self.payload.packed_len() as u32).pack(buf)?;
+        self.payload.pack(buf)?;
+
+        self.nonce.pack(buf)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        if u8::unpack(buf)? != 1u8 {
+            return Err(PackableError::InvalidVersion);
+        }
+
+        let parent1 = MessageId::unpack(buf)?;
+        let parent2 = MessageId::unpack(buf)?;
+
+        let payload_len = u32::unpack(buf)? as usize;
+        let payload = Payload::unpack(buf)?;
+
+        if payload_len != payload.packed_len() {
+            return Err(PackableError::InvalidAnnouncedLen);
+        }
+
+        let nonce = u64::unpack(buf)?;
+
+        Ok(Self {
+            parent1,
+            parent2,
+            payload,
+            nonce,
+        })
     }
 }
 

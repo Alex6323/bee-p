@@ -9,18 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use serde::{Deserialize, Serialize};
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
-use alloc::vec::Vec;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Signature {
     public_key: [u8; 32],
-    signature: Vec<u8>,
+    // TODO size is 64, change with generic const.
+    signature: Box<[u8]>,
 }
 
 impl Ed25519Signature {
-    pub fn new(public_key: [u8; 32], signature: Vec<u8>) -> Self {
+    pub fn new(public_key: [u8; 32], signature: Box<[u8]>) -> Self {
         Self { public_key, signature }
     }
 
@@ -28,7 +29,36 @@ impl Ed25519Signature {
         &self.public_key
     }
 
-    pub fn signature(&self) -> &Vec<u8> {
+    pub fn signature(&self) -> &[u8] {
         &self.signature
+    }
+}
+
+impl Packable for Ed25519Signature {
+    fn packed_len(&self) -> usize {
+        32 + 64
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        buf.write_all(&self.public_key)?;
+        buf.write_all(&self.signature)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let mut public_key_bytes = [0u8; 32];
+        buf.read_exact(&mut public_key_bytes)?;
+
+        let mut signature_bytes = vec![0u8; 64];
+        buf.read_exact(&mut signature_bytes)?;
+
+        Ok(Self {
+            public_key: public_key_bytes,
+            signature: signature_bytes.into_boxed_slice(),
+        })
     }
 }

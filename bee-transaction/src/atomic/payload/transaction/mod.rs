@@ -26,8 +26,8 @@ pub use output::{Address, Ed25519Address, Output, SignatureLockedSingleOutput, W
 pub use transaction_id::TransactionId;
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 pub use bee_signing_ext::Seed;
-
 use bee_signing_ext::{
     binary::{BIP32Path, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature as Ed25Signature},
     Signature as SignatureTrait, Signer, Verifier,
@@ -41,7 +41,42 @@ use core::{cmp::Ordering, slice::Iter};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
     pub essence: TransactionEssence,
+    // TODO Box
     pub unlock_blocks: Vec<UnlockBlock>,
+}
+
+impl Packable for Transaction {
+    fn packed_len(&self) -> usize {
+        self.essence.packed_len()
+            + 0u16.packed_len()
+            + self.unlock_blocks.iter().map(|block| block.packed_len()).sum::<usize>()
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.essence.pack(buf)?;
+
+        (self.unlock_blocks.len() as u16).pack(buf)?;
+        for unlock_block in &self.unlock_blocks {
+            unlock_block.pack(buf)?;
+        }
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let essence = TransactionEssence::unpack(buf)?;
+
+        let unlock_blocks_len = u16::unpack(buf)? as usize;
+        let mut unlock_blocks = Vec::with_capacity(unlock_blocks_len);
+        for _ in 0..unlock_blocks_len {
+            unlock_blocks.push(UnlockBlock::unpack(buf)?);
+        }
+
+        Ok(Self { essence, unlock_blocks })
+    }
 }
 
 impl Transaction {
@@ -302,7 +337,7 @@ impl<'a> TransactionBuilder<'a> {
                     Seed::Ed25519(s) => {
                         let private_key = Ed25519PrivateKey::generate_from_seed(s, &path)?;
                         let public_key = private_key.generate_public_key().to_bytes();
-                        let signature = private_key.sign(&serialized_inputs).to_bytes().to_vec();
+                        let signature = Box::new(private_key.sign(&serialized_inputs).to_bytes());
                         unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock::Ed25519(Ed25519Signature::new(
                             public_key, signature,
                         ))));

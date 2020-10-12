@@ -11,6 +11,7 @@
 
 use crate::atomic::Error;
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 use bee_ternary::{T5B1Buf, TritBuf};
 
 use bytemuck::cast_slice;
@@ -45,5 +46,29 @@ impl TryFrom<&TritBuf<T5B1Buf>> for WotsSignature {
 impl WotsSignature {
     pub fn new(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {
         trits.try_into()
+    }
+}
+
+impl Packable for WotsSignature {
+    fn packed_len(&self) -> usize {
+        0u32.packed_len() + self.0.len()
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        (self.0.len() as u32).pack(buf)?;
+        buf.write_all(&self.0)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let bytes_len = u32::unpack(buf)? as usize;
+        let mut bytes = vec![0u8; bytes_len];
+        buf.read_exact(&mut bytes)?;
+
+        Ok(Self(bytes))
     }
 }

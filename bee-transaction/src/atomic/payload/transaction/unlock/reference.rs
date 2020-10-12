@@ -11,6 +11,8 @@
 
 use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 use core::convert::{TryFrom, TryInto};
@@ -37,5 +39,26 @@ impl ReferenceUnlock {
 
     pub fn index(&self) -> u16 {
         self.0
+    }
+}
+
+impl Packable for ReferenceUnlock {
+    fn packed_len(&self) -> usize {
+        0u16.packed_len()
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.0.pack(buf)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let index = u16::unpack(buf)?;
+
+        Ok(Self(index))
     }
 }

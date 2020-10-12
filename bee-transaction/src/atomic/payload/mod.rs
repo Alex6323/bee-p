@@ -18,6 +18,8 @@ pub use indexation::Indexation;
 pub use milestone::Milestone;
 pub use transaction::Transaction;
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+
 use serde::{Deserialize, Serialize};
 
 use alloc::boxed::Box;
@@ -27,4 +29,45 @@ pub enum Payload {
     Transaction(Box<Transaction>),
     Milestone(Box<Milestone>),
     Indexation(Box<Indexation>),
+}
+
+impl Packable for Payload {
+    fn packed_len(&self) -> usize {
+        match self {
+            Self::Transaction(payload) => 0u32.packed_len() + payload.packed_len(),
+            Self::Milestone(payload) => 1u32.packed_len() + payload.packed_len(),
+            Self::Indexation(payload) => 2u32.packed_len() + payload.packed_len(),
+        }
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        match self {
+            Self::Transaction(payload) => {
+                0u32.pack(buf)?;
+                payload.pack(buf)?;
+            }
+            Self::Milestone(payload) => {
+                1u32.pack(buf)?;
+                payload.pack(buf)?;
+            }
+            Self::Indexation(payload) => {
+                2u32.pack(buf)?;
+                payload.pack(buf)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(match u32::unpack(buf)? {
+            0 => Self::Transaction(Box::new(Transaction::unpack(buf)?)),
+            1 => Self::Milestone(Box::new(Milestone::unpack(buf)?)),
+            2 => Self::Indexation(Box::new(Indexation::unpack(buf)?)),
+            _ => return Err(PackableError::InvalidVariant),
+        })
+    }
 }

@@ -25,8 +25,8 @@ pub enum BundledTransactionFieldError {
 
 pub trait BundledTransactionField: Sized + BundledTransactionFieldType {
     type Inner: ToOwned + ?Sized;
-    fn try_from_inner(buffer: <Self::Inner as ToOwned>::Owned) -> Result<Self, BundledTransactionFieldError>;
-    fn from_inner_unchecked(buffer: <Self::Inner as ToOwned>::Owned) -> Self;
+    fn try_from_inner(buf: <Self::Inner as ToOwned>::Owned) -> Result<Self, BundledTransactionFieldError>;
+    fn from_inner_unchecked(buf: <Self::Inner as ToOwned>::Owned) -> Self;
 
     fn to_inner(&self) -> &Self::Inner;
 
