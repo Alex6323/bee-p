@@ -9,13 +9,20 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+#![allow(clippy::module_inception)]
+
+extern crate alloc;
+
 mod message;
 mod message_id;
+mod vertex;
 
 pub mod payload;
+pub mod prelude;
 
 pub use message::{Message, MessageBuilder};
 pub use message_id::{MessageId, MESSAGE_ID_LENGTH};
+pub use vertex::Vertex;
 
 use core::fmt;
 

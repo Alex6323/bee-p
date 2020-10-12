@@ -10,8 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    atomic::{payload::Payload, Error, MessageId},
     Vertex,
+    {payload::Payload, Error, MessageId},
 };
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};

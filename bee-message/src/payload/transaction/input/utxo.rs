@@ -9,46 +9,54 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::atomic::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
+use crate::{
+    payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, TransactionId},
+    Error,
+};
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use core::convert::{TryFrom, TryInto};
-
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct ReferenceUnlock(u16);
-
-impl TryFrom<u16> for ReferenceUnlock {
-    type Error = Error;
-
-    fn try_from(index: u16) -> Result<Self, Self::Error> {
-        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
-            return Err(Self::Error::InvalidIndex);
-        }
-
-        Ok(Self(index))
-    }
+pub struct UTXOInput {
+    id: TransactionId,
+    index: u16,
 }
 
-impl ReferenceUnlock {
-    pub fn new(index: u16) -> Result<Self, Error> {
-        index.try_into()
+// TODO builder ?
+impl UTXOInput {
+    pub fn new(id: TransactionId, index: u16) -> Result<Self, Error> {
+        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
+            return Err(Error::InvalidIndex);
+        }
+
+        Ok(Self { id, index })
+    }
+
+    pub fn id(&self) -> &TransactionId {
+        &self.id
     }
 
     pub fn index(&self) -> u16 {
-        self.0
+        self.index
     }
 }
 
-impl Packable for ReferenceUnlock {
+impl core::fmt::Display for UTXOInput {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}{}", self.id.to_string(), hex::encode(self.index.to_le_bytes()))
+    }
+}
+
+impl Packable for UTXOInput {
     fn packed_len(&self) -> usize {
-        0u16.packed_len()
+        self.id.packed_len() + self.index.packed_len()
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.0.pack(buf)?;
+        self.id.pack(buf)?;
+        self.index.pack(buf)?;
 
         Ok(())
     }
@@ -57,8 +65,9 @@ impl Packable for ReferenceUnlock {
     where
         Self: Sized,
     {
+        let id = TransactionId::unpack(buf)?;
         let index = u16::unpack(buf)?;
 
-        Ok(Self(index))
+        Ok(Self { id, index })
     }
 }

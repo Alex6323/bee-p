@@ -16,7 +16,7 @@ mod output;
 mod transaction_id;
 mod unlock;
 
-use crate::atomic::{payload::Payload, Error};
+use crate::{payload::Payload, Error};
 
 use constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
 

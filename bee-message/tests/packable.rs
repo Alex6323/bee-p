@@ -12,7 +12,7 @@
 #[cfg(test)]
 mod tests {
     use bee_common_ext::packable::Packable;
-    use bee_transaction::prelude::{Indexation, Message, MessageId, Payload};
+    use bee_message::prelude::{Indexation, Message, MessageId, Payload};
 
     #[test]
     fn it_works() {

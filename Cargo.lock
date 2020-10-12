@@ -172,6 +172,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "bee-message"
+version = "0.1.0-alpha"
+dependencies = [
+ "bech32",
+ "bee-common-ext",
+ "bee-crypto",
+ "bee-signing",
+ "bee-signing-ext",
+ "bee-ternary",
+ "bytemuck",
+ "hex",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "bee-network"
 version = "0.1.0-alpha"
 dependencies = [

@@ -9,14 +9,17 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub use crate::atomic::{
-    payload::{
-        transaction::{
-            Address, Ed25519Address, Ed25519Signature, Input, Output, ReferenceUnlock, Seed,
-            SignatureLockedSingleOutput, SignatureUnlock, TransactionBuilder, TransactionEssence, TransactionId,
-            UTXOInput, UnlockBlock, WotsAddress, WotsSignature,
-        },
-        Indexation, Milestone, Payload, Transaction,
-    },
-    Error, Message, MessageBuilder, MessageId,
-};
+use bee_message::prelude::{TransactionId, UTXOInput};
+
+#[test]
+fn to_string() {
+    let mut bytes = [0; 32];
+    let vec = hex::decode("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649").unwrap();
+    bytes.copy_from_slice(&vec);
+    let transaction_id = TransactionId::new(bytes);
+    let utxo_input = UTXOInput::new(transaction_id, 1).unwrap();
+    assert_eq!(
+        utxo_input.to_string(),
+        "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c6490100"
+    );
+}
