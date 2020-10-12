@@ -54,7 +54,7 @@ impl Packable for Output {
     {
         Ok(match u8::unpack(buf)? {
             0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack(buf)?),
-            _ => unreachable!(),
+            _ => return Err(PackableError::InvalidVariant),
         })
     }
 }

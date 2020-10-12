@@ -65,7 +65,7 @@ impl Packable for Ed25519Address {
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        buf.write_all(self.0.as_ref())?;
+        buf.write_all(&self.0)?;
 
         Ok(())
     }

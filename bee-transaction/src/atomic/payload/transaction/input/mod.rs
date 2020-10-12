@@ -31,15 +31,15 @@ impl From<UTXOInput> for Input {
 impl Packable for Input {
     fn packed_len(&self) -> usize {
         match self {
-            Self::UTXO(utxo_input) => 0u8.packed_len() + utxo_input.packed_len(),
+            Self::UTXO(input) => 0u8.packed_len() + input.packed_len(),
         }
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         match self {
-            Self::UTXO(utxo_input) => {
+            Self::UTXO(input) => {
                 0u8.pack(buf)?;
-                utxo_input.pack(buf)?;
+                input.pack(buf)?;
             }
         }
 
@@ -52,7 +52,7 @@ impl Packable for Input {
     {
         Ok(match u8::unpack(buf)? {
             0 => Self::UTXO(UTXOInput::unpack(buf)?),
-            _ => unreachable!(),
+            _ => return Err(PackableError::InvalidVariant),
         })
     }
 }

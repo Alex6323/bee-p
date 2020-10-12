@@ -68,7 +68,7 @@ impl Packable for Payload {
             0 => Self::Transaction(Box::new(Transaction::unpack(buf)?)),
             1 => Self::Milestone(Box::new(Milestone::unpack(buf)?)),
             2 => Self::Indexation(Box::new(Indexation::unpack(buf)?)),
-            _ => unreachable!(),
+            _ => return Err(PackableError::InvalidVariant),
         })
     }
 }

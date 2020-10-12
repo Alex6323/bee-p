@@ -47,8 +47,7 @@ impl Packable for Indexation {
         let index_len = u32::unpack(buf)? as usize;
         let mut index_bytes = vec![0u8; index_len];
         buf.read_exact(&mut index_bytes)?;
-        // TODO unwrap ?
-        let index = String::from_utf8(index_bytes).unwrap();
+        let index = String::from_utf8(index_bytes).map_err(|_| PackableError::InvalidUtf8String)?;
 
         let data_len = u32::unpack(buf)? as usize;
         let mut data = Vec::with_capacity(data_len);

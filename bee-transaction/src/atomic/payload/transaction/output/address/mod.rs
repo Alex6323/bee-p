@@ -78,7 +78,7 @@ impl Packable for Address {
         Ok(match u8::unpack(buf)? {
             0 => Self::Wots(WotsAddress::unpack(buf)?),
             1 => Self::Ed25519(Ed25519Address::unpack(buf)?),
-            _ => unreachable!(),
+            _ => return Err(PackableError::InvalidVariant),
         })
     }
 }

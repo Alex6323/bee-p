@@ -17,6 +17,10 @@ pub use std::io::{Read, Write};
 pub enum Error {
     #[error("I/O error happened: {0}.")]
     Io(#[from] std::io::Error),
+    #[error("Invalid variant read.")]
+    InvalidVariant,
+    #[error("Invalid Utf8 string read.")]
+    InvalidUtf8String,
 }
 
 pub trait Packable {

@@ -68,7 +68,7 @@ impl Packable for UnlockBlock {
         Ok(match u8::unpack(buf)? {
             0 => Self::Reference(ReferenceUnlock::unpack(buf)?),
             1 => Self::Signature(SignatureUnlock::unpack(buf)?),
-            _ => unreachable!(),
+            _ => return Err(PackableError::InvalidVariant),
         })
     }
 }
