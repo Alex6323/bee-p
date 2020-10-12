@@ -49,10 +49,10 @@ impl Address {
 }
 
 impl Packable for Address {
-    fn len_bytes(&self) -> usize {
+    fn packed_len(&self) -> usize {
         match self {
-            Self::Wots(address) => 0u8.len_bytes() + address.len_bytes(),
-            Self::Ed25519(address) => 1u8.len_bytes() + address.len_bytes(),
+            Self::Wots(address) => 0u8.packed_len() + address.packed_len(),
+            Self::Ed25519(address) => 1u8.packed_len() + address.packed_len(),
         }
     }
 

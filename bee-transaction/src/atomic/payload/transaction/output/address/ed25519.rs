@@ -61,7 +61,7 @@ impl core::fmt::Debug for Ed25519Address {
 }
 
 impl Packable for Ed25519Address {
-    fn len_bytes(&self) -> usize {
+    fn packed_len(&self) -> usize {
         ADDRESS_LENGTH
     }
 

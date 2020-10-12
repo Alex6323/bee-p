@@ -49,14 +49,14 @@ impl TransactionEssence {
 }
 
 impl Packable for TransactionEssence {
-    fn len_bytes(&self) -> usize {
-        0u8.len_bytes()
-            + 0u16.len_bytes()
-            + self.inputs.iter().map(|input| input.len_bytes()).sum::<usize>()
-            + 0u16.len_bytes()
-            + self.outputs.iter().map(|output| output.len_bytes()).sum::<usize>()
-            + 0u32.len_bytes()
-            + self.payload.iter().map(|payload| payload.len_bytes()).sum::<usize>()
+    fn packed_len(&self) -> usize {
+        0u8.packed_len()
+            + 0u16.packed_len()
+            + self.inputs.iter().map(|input| input.packed_len()).sum::<usize>()
+            + 0u16.packed_len()
+            + self.outputs.iter().map(|output| output.packed_len()).sum::<usize>()
+            + 0u32.packed_len()
+            + self.payload.iter().map(|payload| payload.packed_len()).sum::<usize>()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {
@@ -73,7 +73,7 @@ impl Packable for TransactionEssence {
         }
 
         if let Some(payload) = &self.payload {
-            (payload.len_bytes() as u32).pack(buffer);
+            (payload.packed_len() as u32).pack(buffer);
             payload.pack(buffer);
         } else {
             0u32.pack(buffer);
@@ -100,7 +100,7 @@ impl Packable for TransactionEssence {
         let payload_len = u32::unpack(buffer) as usize;
         let payload = if payload_len > 0 {
             let payload = Payload::unpack(buffer);
-            assert_eq!(payload_len, payload.len_bytes());
+            assert_eq!(payload_len, payload.packed_len());
 
             Some(payload)
         } else {

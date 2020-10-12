@@ -39,8 +39,8 @@ impl SignatureLockedSingleOutput {
 }
 
 impl Packable for SignatureLockedSingleOutput {
-    fn len_bytes(&self) -> usize {
-        self.address.len_bytes() + u64::from(self.amount).len_bytes()
+    fn packed_len(&self) -> usize {
+        self.address.packed_len() + u64::from(self.amount).packed_len()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {

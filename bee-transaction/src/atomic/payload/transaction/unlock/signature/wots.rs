@@ -52,8 +52,8 @@ impl WotsSignature {
 }
 
 impl Packable for WotsSignature {
-    fn len_bytes(&self) -> usize {
-        0u32.len_bytes() + self.0.len()
+    fn packed_len(&self) -> usize {
+        0u32.packed_len() + self.0.len()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {

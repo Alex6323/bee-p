@@ -43,7 +43,7 @@ impl core::fmt::Debug for MessageId {
 }
 
 impl Packable for MessageId {
-    fn len_bytes(&self) -> usize {
+    fn packed_len(&self) -> usize {
         MESSAGE_ID_LENGTH
     }
 

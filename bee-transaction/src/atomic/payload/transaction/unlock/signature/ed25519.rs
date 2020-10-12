@@ -36,7 +36,7 @@ impl Ed25519Signature {
 }
 
 impl Packable for Ed25519Signature {
-    fn len_bytes(&self) -> usize {
+    fn packed_len(&self) -> usize {
         32 + 64
     }
 

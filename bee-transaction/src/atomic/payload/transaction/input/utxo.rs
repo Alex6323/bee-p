@@ -49,8 +49,8 @@ impl core::fmt::Display for UTXOInput {
 }
 
 impl Packable for UTXOInput {
-    fn len_bytes(&self) -> usize {
-        self.id.len_bytes() + self.index.len_bytes()
+    fn packed_len(&self) -> usize {
+        self.id.packed_len() + self.index.packed_len()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {

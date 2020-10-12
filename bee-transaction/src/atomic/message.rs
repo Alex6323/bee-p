@@ -51,13 +51,13 @@ impl Message {
 }
 
 impl Packable for Message {
-    fn len_bytes(&self) -> usize {
-        0u8.len_bytes()
-            + self.parent1.len_bytes()
-            + self.parent2.len_bytes()
-            + 0u32.len_bytes()
-            + self.payload.len_bytes()
-            + 0u64.len_bytes()
+    fn packed_len(&self) -> usize {
+        0u8.packed_len()
+            + self.parent1.packed_len()
+            + self.parent2.packed_len()
+            + 0u32.packed_len()
+            + self.payload.packed_len()
+            + 0u64.packed_len()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {
@@ -66,7 +66,7 @@ impl Packable for Message {
         self.parent1.pack(buffer);
         self.parent2.pack(buffer);
 
-        (self.payload.len_bytes() as u32).pack(buffer);
+        (self.payload.packed_len() as u32).pack(buffer);
         self.payload.pack(buffer);
 
         self.nonce.pack(buffer);
@@ -80,7 +80,7 @@ impl Packable for Message {
 
         let payload_len = u32::unpack(buffer) as usize;
         let payload = Payload::unpack(buffer);
-        assert_eq!(payload_len, payload.len_bytes());
+        assert_eq!(payload_len, payload.packed_len());
 
         let nonce = u64::unpack(buffer);
 

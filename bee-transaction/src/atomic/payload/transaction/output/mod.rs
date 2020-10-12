@@ -31,9 +31,9 @@ impl From<SignatureLockedSingleOutput> for Output {
 }
 
 impl Packable for Output {
-    fn len_bytes(&self) -> usize {
+    fn packed_len(&self) -> usize {
         match self {
-            Self::SignatureLockedSingle(output) => 0u8.len_bytes() + output.len_bytes(),
+            Self::SignatureLockedSingle(output) => 0u8.packed_len() + output.packed_len(),
         }
     }
 

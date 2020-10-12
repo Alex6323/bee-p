@@ -26,8 +26,8 @@ impl Indexation {
 }
 
 impl Packable for Indexation {
-    fn len_bytes(&self) -> usize {
-        0u32.len_bytes() + self.index.as_bytes().len() + 0u32.len_bytes() + self.data.len()
+    fn packed_len(&self) -> usize {
+        0u32.packed_len() + self.index.as_bytes().len() + 0u32.packed_len() + self.data.len()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {

@@ -65,7 +65,7 @@ impl core::fmt::Debug for WotsAddress {
 }
 
 impl Packable for WotsAddress {
-    fn len_bytes(&self) -> usize {
+    fn packed_len(&self) -> usize {
         243
     }
 

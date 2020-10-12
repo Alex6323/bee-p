@@ -43,7 +43,7 @@ impl core::fmt::Debug for TransactionId {
 }
 
 impl Packable for TransactionId {
-    fn len_bytes(&self) -> usize {
+    fn packed_len(&self) -> usize {
         TRANSACTION_ID_LENGTH
     }
 

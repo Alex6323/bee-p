@@ -45,8 +45,8 @@ impl ReferenceUnlock {
 }
 
 impl Packable for ReferenceUnlock {
-    fn len_bytes(&self) -> usize {
-        0u16.len_bytes()
+    fn packed_len(&self) -> usize {
+        0u16.packed_len()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {

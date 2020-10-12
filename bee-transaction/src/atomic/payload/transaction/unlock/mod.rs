@@ -38,11 +38,11 @@ impl From<SignatureUnlock> for UnlockBlock {
 }
 
 impl Packable for UnlockBlock {
-    fn len_bytes(&self) -> usize {
-        0u8.len_bytes()
+    fn packed_len(&self) -> usize {
+        0u8.packed_len()
             + match self {
-                Self::Reference(reference) => reference.len_bytes(),
-                Self::Signature(signature) => signature.len_bytes(),
+                Self::Reference(reference) => reference.packed_len(),
+                Self::Signature(signature) => signature.packed_len(),
             }
     }
 

@@ -12,7 +12,7 @@
 pub use bytes::{Buf, BufMut};
 
 pub trait Packable {
-    fn len_bytes(&self) -> usize;
+    fn packed_len(&self) -> usize;
 
     fn pack<B: BufMut>(&self, buffer: &mut B);
 
@@ -39,7 +39,7 @@ pub trait Packable {
 macro_rules! impl_packable_for_num {
     ($ty:ident) => {
         impl Packable for $ty {
-            fn len_bytes(&self) -> usize {
+            fn packed_len(&self) -> usize {
                 std::mem::size_of::<$ty>()
             }
 

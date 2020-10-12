@@ -23,9 +23,9 @@ pub enum Input {
 }
 
 impl Packable for Input {
-    fn len_bytes(&self) -> usize {
+    fn packed_len(&self) -> usize {
         match self {
-            Self::UTXO(utxo_input) => 0u8.len_bytes() + utxo_input.len_bytes(),
+            Self::UTXO(utxo_input) => 0u8.packed_len() + utxo_input.packed_len(),
         }
     }
 

@@ -37,8 +37,8 @@ impl Milestone {
 }
 
 impl Packable for Milestone {
-    fn len_bytes(&self) -> usize {
-        self.index.len_bytes() + self.timestamp.len_bytes() + 64 + 64 * self.signatures.len()
+    fn packed_len(&self) -> usize {
+        self.index.packed_len() + self.timestamp.packed_len() + 64 + 64 * self.signatures.len()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {

@@ -32,12 +32,12 @@ pub enum Payload {
 }
 
 impl Packable for Payload {
-    fn len_bytes(&self) -> usize {
-        0u32.len_bytes()
+    fn packed_len(&self) -> usize {
+        0u32.packed_len()
             + match self {
-                Self::Transaction(transaction) => transaction.len_bytes(),
-                Self::Milestone(milestone) => milestone.len_bytes(),
-                Self::Indexation(indexation) => indexation.len_bytes(),
+                Self::Transaction(transaction) => transaction.packed_len(),
+                Self::Milestone(milestone) => milestone.packed_len(),
+                Self::Indexation(indexation) => indexation.packed_len(),
             }
     }
 

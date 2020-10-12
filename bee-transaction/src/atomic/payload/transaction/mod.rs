@@ -49,10 +49,10 @@ pub struct Transaction {
 }
 
 impl Packable for Transaction {
-    fn len_bytes(&self) -> usize {
-        self.essence.len_bytes()
-            + 0u16.len_bytes()
-            + self.unlock_blocks.iter().map(|block| block.len_bytes()).sum::<usize>()
+    fn packed_len(&self) -> usize {
+        self.essence.packed_len()
+            + 0u16.packed_len()
+            + self.unlock_blocks.iter().map(|block| block.packed_len()).sum::<usize>()
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {

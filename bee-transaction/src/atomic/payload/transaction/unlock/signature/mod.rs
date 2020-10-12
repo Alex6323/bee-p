@@ -38,11 +38,11 @@ impl From<Ed25519Signature> for SignatureUnlock {
 }
 
 impl Packable for SignatureUnlock {
-    fn len_bytes(&self) -> usize {
-        0u8.len_bytes()
+    fn packed_len(&self) -> usize {
+        0u8.packed_len()
             + match self {
-                Self::Wots(signature) => signature.len_bytes(),
-                Self::Ed25519(signature) => signature.len_bytes(),
+                Self::Wots(signature) => signature.packed_len(),
+                Self::Ed25519(signature) => signature.packed_len(),
             }
     }
 
