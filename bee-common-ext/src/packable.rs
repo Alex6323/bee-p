@@ -21,6 +21,10 @@ pub enum Error {
     InvalidVariant,
     #[error("Invalid Utf8 string read.")]
     InvalidUtf8String,
+    #[error("Invalid version read.")]
+    InvalidVersion,
+    #[error("Invalid announced len.")]
+    InvalidAnnouncedLen,
 }
 
 pub trait Packable {

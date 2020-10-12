@@ -50,7 +50,7 @@ impl Message {
 
 impl Packable for Message {
     fn packed_len(&self) -> usize {
-        0u8.packed_len()
+        1u8.packed_len()
             + self.parent1.packed_len()
             + self.parent2.packed_len()
             + 0u32.packed_len()
@@ -76,14 +76,19 @@ impl Packable for Message {
     where
         Self: Sized,
     {
-        assert_eq!(1u8, u8::unpack(buf)?);
+        if u8::unpack(buf)? != 1u8 {
+            return Err(PackableError::InvalidVersion);
+        }
 
         let parent1 = MessageId::unpack(buf)?;
         let parent2 = MessageId::unpack(buf)?;
 
         let payload_len = u32::unpack(buf)? as usize;
         let payload = Payload::unpack(buf)?;
-        assert_eq!(payload_len, payload.packed_len());
+
+        if payload_len != payload.packed_len() {
+            return Err(PackableError::InvalidAnnouncedLen);
+        }
 
         let nonce = u64::unpack(buf)?;
 
