@@ -39,17 +39,17 @@ impl Packable for Ed25519Signature {
         32 + 64
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
-        buffer.put_slice(self.public_key.as_ref());
-        buffer.put_slice(self.signature.as_ref());
+    fn pack<B: BufMut>(&self, buf: &mut B) {
+        buf.put_slice(self.public_key.as_ref());
+        buf.put_slice(self.signature.as_ref());
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
         let mut public_key_bytes = [0u8; 32];
-        buffer.copy_to_slice(&mut public_key_bytes);
+        buf.copy_to_slice(&mut public_key_bytes);
 
         let mut signature_bytes = vec![0u8; 64];
-        buffer.copy_to_slice(&mut signature_bytes);
+        buf.copy_to_slice(&mut signature_bytes);
 
         Self {
             public_key: public_key_bytes,

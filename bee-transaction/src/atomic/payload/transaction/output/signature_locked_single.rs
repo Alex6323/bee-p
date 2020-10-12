@@ -43,14 +43,14 @@ impl Packable for SignatureLockedSingleOutput {
         self.address.packed_len() + u64::from(self.amount).packed_len()
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
-        self.address.pack(buffer);
-        u64::from(self.amount).pack(buffer);
+    fn pack<B: BufMut>(&self, buf: &mut B) {
+        self.address.pack(buf);
+        u64::from(self.amount).pack(buf);
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        let address = Address::unpack(buffer);
-        let amount = u64::unpack(buffer);
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        let address = Address::unpack(buf);
+        let amount = u64::unpack(buf);
 
         Self {
             address,

@@ -56,9 +56,9 @@ impl Eq for BundledTransaction {}
 
 impl BundledTransaction {
     pub fn from_trits(
-        buffer: &Trits<impl RawEncoding<Trit = Btrit> + ?Sized>,
+        buf: &Trits<impl RawEncoding<Trit = Btrit> + ?Sized>,
     ) -> Result<Self, BundledTransactionError> {
-        let trits = buffer.encode::<T1B1Buf>();
+        let trits = buf.encode::<T1B1Buf>();
 
         let transaction = BundledTransactionBuilder::new()
             .with_payload(Payload(

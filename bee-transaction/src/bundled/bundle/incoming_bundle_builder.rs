@@ -135,7 +135,7 @@ where
             Err(_) => unreachable!(),
         };
 
-        // TODO Temporary buffer
+        // TODO Temporary buf
         match public_key.verify(&TritBuf::<T1B1Buf>::zeros(1), &signature) {
             Ok(valid) => {
                 if valid {

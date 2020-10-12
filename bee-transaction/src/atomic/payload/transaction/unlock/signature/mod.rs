@@ -46,23 +46,23 @@ impl Packable for SignatureUnlock {
             }
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
+    fn pack<B: BufMut>(&self, buf: &mut B) {
         match self {
             Self::Wots(signature) => {
-                0u8.pack(buffer);
-                signature.pack(buffer);
+                0u8.pack(buf);
+                signature.pack(buf);
             }
             Self::Ed25519(signature) => {
-                1u8.pack(buffer);
-                signature.pack(buffer);
+                1u8.pack(buf);
+                signature.pack(buf);
             }
         }
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        match u8::unpack(buffer) {
-            0 => Self::Wots(WotsSignature::unpack(buffer)),
-            1 => Self::Ed25519(Ed25519Signature::unpack(buffer)),
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        match u8::unpack(buf) {
+            0 => Self::Wots(WotsSignature::unpack(buf)),
+            1 => Self::Ed25519(Ed25519Signature::unpack(buf)),
             _ => unreachable!(),
         }
     }

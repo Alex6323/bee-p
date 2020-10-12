@@ -46,23 +46,23 @@ impl Packable for UnlockBlock {
             }
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
+    fn pack<B: BufMut>(&self, buf: &mut B) {
         match self {
             Self::Reference(reference) => {
-                0u8.pack(buffer);
-                reference.pack(buffer);
+                0u8.pack(buf);
+                reference.pack(buf);
             }
             Self::Signature(signature) => {
-                0u8.pack(buffer);
-                signature.pack(buffer);
+                0u8.pack(buf);
+                signature.pack(buf);
             }
         }
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        match u8::unpack(buffer) {
-            0 => Self::Reference(ReferenceUnlock::unpack(buffer)),
-            1 => Self::Signature(SignatureUnlock::unpack(buffer)),
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        match u8::unpack(buf) {
+            0 => Self::Reference(ReferenceUnlock::unpack(buf)),
+            1 => Self::Signature(SignatureUnlock::unpack(buf)),
             _ => unreachable!(),
         }
     }

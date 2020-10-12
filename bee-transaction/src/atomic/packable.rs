@@ -14,9 +14,9 @@ pub use bytes::{Buf, BufMut};
 pub trait Packable {
     fn packed_len(&self) -> usize;
 
-    fn pack<B: BufMut>(&self, buffer: &mut B);
+    fn pack<B: BufMut>(&self, buf: &mut B);
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self;
+    fn unpack<B: Buf>(buf: &mut B) -> Self;
 }
 
 macro_rules! impl_packable_for_num {
@@ -26,13 +26,13 @@ macro_rules! impl_packable_for_num {
                 std::mem::size_of::<$ty>()
             }
 
-            fn pack<B: BufMut>(&self, buffer: &mut B) {
-                buffer.put(self.to_le_bytes().as_ref());
+            fn pack<B: BufMut>(&self, buf: &mut B) {
+                buf.put(self.to_le_bytes().as_ref());
             }
 
-            fn unpack<B: Buf>(buffer: &mut B) -> Self {
+            fn unpack<B: Buf>(buf: &mut B) -> Self {
                 let mut bytes = [0; std::mem::size_of::<$ty>()];
-                buffer.copy_to_slice(&mut bytes);
+                buf.copy_to_slice(&mut bytes);
                 $ty::from_le_bytes(bytes)
             }
         }

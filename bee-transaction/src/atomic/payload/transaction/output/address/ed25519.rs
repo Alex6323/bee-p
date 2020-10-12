@@ -65,13 +65,13 @@ impl Packable for Ed25519Address {
         ADDRESS_LENGTH
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
-        buffer.put_slice(self.0.as_ref());
+    fn pack<B: BufMut>(&self, buf: &mut B) {
+        buf.put_slice(self.0.as_ref());
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
         let mut bytes = [0u8; ADDRESS_LENGTH];
-        buffer.copy_to_slice(&mut bytes);
+        buf.copy_to_slice(&mut bytes);
 
         Self(bytes)
     }

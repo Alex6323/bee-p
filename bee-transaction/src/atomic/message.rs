@@ -60,29 +60,29 @@ impl Packable for Message {
             + 0u64.packed_len()
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
-        1u8.pack(buffer);
+    fn pack<B: BufMut>(&self, buf: &mut B) {
+        1u8.pack(buf);
 
-        self.parent1.pack(buffer);
-        self.parent2.pack(buffer);
+        self.parent1.pack(buf);
+        self.parent2.pack(buf);
 
-        (self.payload.packed_len() as u32).pack(buffer);
-        self.payload.pack(buffer);
+        (self.payload.packed_len() as u32).pack(buf);
+        self.payload.pack(buf);
 
-        self.nonce.pack(buffer);
+        self.nonce.pack(buf);
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        assert_eq!(1u8, u8::unpack(buffer));
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        assert_eq!(1u8, u8::unpack(buf));
 
-        let parent1 = MessageId::unpack(buffer);
-        let parent2 = MessageId::unpack(buffer);
+        let parent1 = MessageId::unpack(buf);
+        let parent2 = MessageId::unpack(buf);
 
-        let payload_len = u32::unpack(buffer) as usize;
-        let payload = Payload::unpack(buffer);
+        let payload_len = u32::unpack(buf) as usize;
+        let payload = Payload::unpack(buf);
         assert_eq!(payload_len, payload.packed_len());
 
-        let nonce = u64::unpack(buffer);
+        let nonce = u64::unpack(buf);
 
         Self {
             parent1,

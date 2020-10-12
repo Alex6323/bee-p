@@ -31,11 +31,11 @@ mod tests {
             .build()
             .unwrap();
 
-        let mut buffer = vec![];
+        let mut buf = vec![];
 
-        msg.pack(&mut buffer);
+        msg.pack(&mut buf);
 
-        let msg_unpacked = Message::unpack(&mut buffer.as_slice());
+        let msg_unpacked = Message::unpack(&mut buf.as_slice());
 
         assert_eq!(msg.parent1(), msg_unpacked.parent1());
         assert_eq!(msg.parent2(), msg_unpacked.parent2());

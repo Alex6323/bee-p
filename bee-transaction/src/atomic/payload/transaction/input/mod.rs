@@ -29,18 +29,18 @@ impl Packable for Input {
         }
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
+    fn pack<B: BufMut>(&self, buf: &mut B) {
         match self {
             Self::UTXO(utxo_input) => {
-                0u8.pack(buffer);
-                utxo_input.pack(buffer);
+                0u8.pack(buf);
+                utxo_input.pack(buf);
             }
         }
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        match u8::unpack(buffer) {
-            0 => Self::UTXO(UTXOInput::unpack(buffer)),
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        match u8::unpack(buf) {
+            0 => Self::UTXO(UTXOInput::unpack(buf)),
             _ => unreachable!(),
         }
     }

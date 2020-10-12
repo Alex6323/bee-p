@@ -53,14 +53,14 @@ impl Packable for UTXOInput {
         self.id.packed_len() + self.index.packed_len()
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
-        self.id.pack(buffer);
-        self.index.pack(buffer);
+    fn pack<B: BufMut>(&self, buf: &mut B) {
+        self.id.pack(buf);
+        self.index.pack(buf);
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        let id = TransactionId::unpack(buffer);
-        let index = u16::unpack(buffer);
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        let id = TransactionId::unpack(buf);
+        let index = u16::unpack(buf);
         Self { id, index }
     }
 }

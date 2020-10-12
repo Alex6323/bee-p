@@ -30,24 +30,24 @@ impl Packable for Indexation {
         0u32.packed_len() + self.index.as_bytes().len() + 0u32.packed_len() + self.data.len()
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
-        (self.index.as_bytes().len() as u32).pack(buffer);
-        buffer.put_slice(self.index.as_bytes());
+    fn pack<B: BufMut>(&self, buf: &mut B) {
+        (self.index.as_bytes().len() as u32).pack(buf);
+        buf.put_slice(self.index.as_bytes());
 
-        (self.data.len() as u32).pack(buffer);
-        buffer.put_slice(self.data.as_ref());
+        (self.data.len() as u32).pack(buf);
+        buf.put_slice(self.data.as_ref());
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        let index_len = u32::unpack(buffer) as usize;
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        let index_len = u32::unpack(buf) as usize;
         let mut index_bytes = vec![0u8; index_len];
-        buffer.copy_to_slice(&mut index_bytes);
+        buf.copy_to_slice(&mut index_bytes);
         // TODO unwrap ?
         let index = String::from_utf8(index_bytes).unwrap();
 
-        let data_len = u32::unpack(buffer) as usize;
+        let data_len = u32::unpack(buf) as usize;
         let mut data = Vec::with_capacity(data_len);
-        buffer.copy_to_slice(&mut data);
+        buf.copy_to_slice(&mut data);
 
         Self {
             index,

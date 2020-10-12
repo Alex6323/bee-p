@@ -37,18 +37,18 @@ impl Packable for Output {
         }
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
+    fn pack<B: BufMut>(&self, buf: &mut B) {
         match self {
             Self::SignatureLockedSingle(output) => {
-                0u8.pack(buffer);
-                output.pack(buffer);
+                0u8.pack(buf);
+                output.pack(buf);
             }
         }
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        match u8::unpack(buffer) {
-            0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack(buffer)),
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        match u8::unpack(buf) {
+            0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack(buf)),
             _ => unreachable!(),
         }
     }

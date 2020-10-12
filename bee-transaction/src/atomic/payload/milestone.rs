@@ -41,35 +41,35 @@ impl Packable for Milestone {
         self.index.packed_len() + self.timestamp.packed_len() + 64 + 64 * self.signatures.len()
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
-        self.index.pack(buffer);
+    fn pack<B: BufMut>(&self, buf: &mut B) {
+        self.index.pack(buf);
 
-        self.timestamp.pack(buffer);
+        self.timestamp.pack(buf);
 
-        buffer.put_slice(self.merkle_proof.as_ref());
+        buf.put_slice(self.merkle_proof.as_ref());
 
-        (self.signatures.len() as u32).pack(buffer);
+        (self.signatures.len() as u32).pack(buf);
 
         for signature in &self.signatures {
-            buffer.put_slice(signature.as_ref());
+            buf.put_slice(signature.as_ref());
         }
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        let index = u32::unpack(buffer);
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
+        let index = u32::unpack(buf);
 
-        let timestamp = u64::unpack(buffer);
+        let timestamp = u64::unpack(buf);
 
         let mut merkle_proof = [0u8; 64];
-        buffer.copy_to_slice(&mut merkle_proof);
+        buf.copy_to_slice(&mut merkle_proof);
         let merkle_proof = Box::new(merkle_proof);
 
         let mut signatures = vec![];
-        let signatures_len = u32::unpack(buffer);
+        let signatures_len = u32::unpack(buf);
 
         for _ in 0..signatures_len {
             let mut signature = vec![0u8; 64];
-            buffer.copy_to_slice(&mut signature);
+            buf.copy_to_slice(&mut signature);
             signatures.push(signature.into_boxed_slice());
         }
 

@@ -47,13 +47,13 @@ impl Packable for MessageId {
         MESSAGE_ID_LENGTH
     }
 
-    fn pack<B: BufMut>(&self, buffer: &mut B) {
-        buffer.put_slice(&self.0)
+    fn pack<B: BufMut>(&self, buf: &mut B) {
+        buf.put_slice(&self.0)
     }
 
-    fn unpack<B: Buf>(buffer: &mut B) -> Self {
+    fn unpack<B: Buf>(buf: &mut B) -> Self {
         let mut bytes = [0u8; MESSAGE_ID_LENGTH];
-        buffer.copy_to_slice(&mut bytes);
+        buf.copy_to_slice(&mut bytes);
 
         Self(bytes)
     }
