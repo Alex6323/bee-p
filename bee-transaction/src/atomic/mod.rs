@@ -17,6 +17,7 @@ pub mod payload;
 
 pub use message::{Message, MessageBuilder};
 pub use message_id::{MessageId, MESSAGE_ID_LENGTH};
+pub use packable::Packable;
 
 use core::fmt;
 
@@ -69,41 +70,5 @@ impl From<bee_signing_ext::binary::Error> for Error {
 impl From<bee_signing_ext::SignatureError> for Error {
     fn from(error: bee_signing_ext::SignatureError) -> Self {
         Error::SignatureError(error)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use packable::Packable;
-
-    #[test]
-    fn it_works() {
-        let msg = Message::builder()
-            .parent1(MessageId::new([
-                0xF5, 0x32, 0xA5, 0x35, 0x45, 0x10, 0x32, 0x76, 0xB4, 0x68, 0x76, 0xC4, 0x73, 0x84, 0x6D, 0x98, 0x64,
-                0x8E, 0xE4, 0x18, 0x46, 0x8B, 0xCE, 0x76, 0xDF, 0x48, 0x68, 0x64, 0x8D, 0xD7, 0x3E, 0x5D,
-            ]))
-            .parent2(MessageId::new([
-                0x78, 0xD5, 0x46, 0xB4, 0x6A, 0xEC, 0x45, 0x57, 0x87, 0x21, 0x39, 0xA4, 0x8F, 0x66, 0xBC, 0x56, 0x76,
-                0x87, 0xE8, 0x41, 0x35, 0x78, 0xA1, 0x43, 0x23, 0x54, 0x87, 0x32, 0x35, 0x89, 0x14, 0xA2,
-            ]))
-            .payload(payload::Payload::Indexation(Box::new(payload::Indexation::new(
-                "0000".to_owned(),
-                Box::new([0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x49, 0x6f, 0x74, 0x61]),
-            ))))
-            .build()
-            .unwrap();
-
-        let mut buffer = vec![];
-
-        msg.pack(&mut buffer);
-
-        println!("{:x?}", buffer);
-
-        let msg_unpacked = Message::unpack(&mut buffer.as_slice());
-
-        println!("{:?}", msg);
-        println!("{:?}", msg_unpacked);
     }
 }

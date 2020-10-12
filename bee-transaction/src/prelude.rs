@@ -18,5 +18,5 @@ pub use crate::atomic::{
         },
         Indexation, Milestone, Payload, Transaction,
     },
-    Error, Message, MessageBuilder, MessageId,
+    Error, Message, MessageBuilder, MessageId, Packable,
 };
