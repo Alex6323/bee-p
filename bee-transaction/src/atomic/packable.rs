@@ -51,8 +51,13 @@ macro_rules! impl_packable_for_num {
     };
 }
 
+impl_packable_for_num!(i8);
 impl_packable_for_num!(u8);
+impl_packable_for_num!(i16);
 impl_packable_for_num!(u16);
+impl_packable_for_num!(i32);
 impl_packable_for_num!(u32);
+impl_packable_for_num!(i64);
 impl_packable_for_num!(u64);
+impl_packable_for_num!(i128);
 impl_packable_for_num!(u128);
