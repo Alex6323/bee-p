@@ -13,16 +13,15 @@ use crate::atomic::packable::{Buf, BufMut, Packable};
 
 use serde::{Deserialize, Serialize};
 
-use alloc::vec::Vec;
-
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Signature {
     public_key: [u8; 32],
-    signature: Vec<u8>,
+    // TODO size is 64, change with generic const.
+    signature: Box<[u8]>,
 }
 
 impl Ed25519Signature {
-    pub fn new(public_key: [u8; 32], signature: Vec<u8>) -> Self {
+    pub fn new(public_key: [u8; 32], signature: Box<[u8]>) -> Self {
         Self { public_key, signature }
     }
 
@@ -30,7 +29,7 @@ impl Ed25519Signature {
         &self.public_key
     }
 
-    pub fn signature(&self) -> &Vec<u8> {
+    pub fn signature(&self) -> &[u8] {
         &self.signature
     }
 }
@@ -41,16 +40,20 @@ impl Packable for Ed25519Signature {
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {
-        Self::pack_bytes(self.public_key.as_ref(), buffer);
-        Self::pack_bytes(self.signature.as_slice(), buffer);
+        buffer.put_slice(self.public_key.as_ref());
+        buffer.put_slice(self.signature.as_ref());
     }
 
     fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        let public_key_vec = Self::unpack_bytes(buffer, 32);
-        let public_key = unsafe { *(public_key_vec.as_slice() as *const [u8] as *const [u8; 32]) };
+        let mut public_key_bytes = [0u8; 32];
+        buffer.copy_to_slice(&mut public_key_bytes);
 
-        let signature = Self::unpack_bytes(buffer, 64);
+        let mut signature_bytes = vec![0u8; 64];
+        buffer.copy_to_slice(&mut signature_bytes);
 
-        Self { public_key, signature }
+        Self {
+            public_key: public_key_bytes,
+            signature: signature_bytes.into_boxed_slice(),
+        }
     }
 }

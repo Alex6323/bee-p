@@ -17,23 +17,6 @@ pub trait Packable {
     fn pack<B: BufMut>(&self, buffer: &mut B);
 
     fn unpack<B: Buf>(buffer: &mut B) -> Self;
-
-    fn pack_bytes<B: BufMut>(slice: &[u8], buffer: &mut B) {
-        for byte in slice {
-            byte.pack(buffer);
-        }
-    }
-
-    fn unpack_bytes<B: Buf>(buffer: &mut B, len: usize) -> Vec<u8> {
-        let mut vec = vec![];
-
-        for _ in 0..len {
-            let byte = u8::unpack(buffer);
-            vec.push(byte);
-        }
-
-        vec
-    }
 }
 
 macro_rules! impl_packable_for_num {

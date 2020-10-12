@@ -48,12 +48,13 @@ impl Packable for TransactionId {
     }
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {
-        Self::pack_bytes(&self.0, buffer);
+        buffer.put_slice(&self.0)
     }
 
     fn unpack<B: Buf>(buffer: &mut B) -> Self {
-        let vec = Self::unpack_bytes(buffer, TRANSACTION_ID_LENGTH);
-        let bytes = unsafe { *(vec.as_slice() as *const [u8] as *const [u8; TRANSACTION_ID_LENGTH]) };
+        let mut bytes = [0u8; TRANSACTION_ID_LENGTH];
+        buffer.copy_to_slice(&mut bytes);
+
         Self(bytes)
     }
 }

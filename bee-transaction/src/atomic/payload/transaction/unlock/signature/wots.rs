@@ -59,12 +59,14 @@ impl Packable for WotsSignature {
     fn pack<B: BufMut>(&self, buffer: &mut B) {
         let Self(bytes) = self;
         (bytes.len() as u32).pack(buffer);
-        Self::pack_bytes(bytes.as_slice(), buffer);
+        buffer.put_slice(bytes.as_slice());
     }
 
     fn unpack<B: Buf>(buffer: &mut B) -> Self {
         let bytes_len = u32::unpack(buffer) as usize;
-        let bytes = Self::unpack_bytes(buffer, bytes_len);
+        let mut bytes = vec![0u8; bytes_len];
+        buffer.copy_to_slice(&mut bytes);
+
         Self(bytes)
     }
 }

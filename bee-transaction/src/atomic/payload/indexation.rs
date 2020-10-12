@@ -32,20 +32,26 @@ impl Packable for Indexation {
 
     fn pack<B: BufMut>(&self, buffer: &mut B) {
         (self.index.as_bytes().len() as u32).pack(buffer);
-        Self::pack_bytes(self.index.as_bytes(), buffer);
+        buffer.put_slice(self.index.as_bytes());
 
         (self.data.len() as u32).pack(buffer);
-        Self::pack_bytes(self.data.as_ref(), buffer);
+        buffer.put_slice(self.data.as_ref());
     }
 
     fn unpack<B: Buf>(buffer: &mut B) -> Self {
         let index_len = u32::unpack(buffer) as usize;
-        let index_vec = Self::unpack_bytes(buffer, index_len);
-        let index = String::from_utf8(index_vec).unwrap();
+        let mut index_bytes = vec![0u8; index_len];
+        buffer.copy_to_slice(&mut index_bytes);
+        // TODO unwrap ?
+        let index = String::from_utf8(index_bytes).unwrap();
 
         let data_len = u32::unpack(buffer) as usize;
-        let data = Self::unpack_bytes(buffer, data_len).into_boxed_slice();
+        let mut data = Vec::with_capacity(data_len);
+        buffer.copy_to_slice(&mut data);
 
-        Self { index, data }
+        Self {
+            index,
+            data: data.into_boxed_slice(),
+        }
     }
 }
