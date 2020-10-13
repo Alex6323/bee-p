@@ -16,7 +16,7 @@ use crate::{
     tangle::{MsTangle, TransactionMetadata},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
-        PropagatorWorker, PropagatorWorkerEvent, TransactionRequesterWorker,TangleWorker
+        PropagatorWorker, PropagatorWorkerEvent, TangleWorker, TransactionRequesterWorker,
     },
 };
 

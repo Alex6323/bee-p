@@ -42,7 +42,7 @@ impl<N: Node> Worker<N> for TipPoolCleanerWorker {
             let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
             while receiver.next().await.is_some() {
-                tangle.reduce_tips()
+                tangle.reduce_tips().await
             }
 
             info!("Stopped.");

@@ -17,7 +17,7 @@ use crate::{
     tangle::{helper::find_tail_of_bundle, MsTangle},
     worker::{
         MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent, MilestoneSolidifierWorker,
-        MilestoneSolidifierWorkerEvent,TangleWorker
+        MilestoneSolidifierWorkerEvent, TangleWorker,
     },
 };
 

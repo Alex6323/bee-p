@@ -27,13 +27,14 @@ use bee_transaction::bundled::BundledTransaction as Tx;
 
 use async_trait::async_trait;
 use dashmap::DashMap;
+use tokio::sync::Mutex;
 
 use crate::tangle::wurts::WurtsTipPool;
 use std::{
     ops::Deref,
     sync::{
         atomic::{AtomicU32, Ordering},
-        Arc, Mutex,
+        Arc,
     },
 };
 
@@ -252,28 +253,19 @@ impl<B: Backend> MsTangle<B> {
     }
 
     pub async fn insert_tip(&self, tail: Hash, trunk: Hash, branch: Hash) {
-        if let Ok(mut pool) = self.tip_pool.lock() {
-            pool.insert(&self, tail, trunk, branch).await;
-        }
+        self.tip_pool.lock().await.insert(&self, tail, trunk, branch).await;
     }
 
     pub async fn update_tip_scores(&self) {
-        if let Ok(mut pool) = self.tip_pool.lock() {
-            pool.update_scores(&self).await;
-        }
+        self.tip_pool.lock().await.update_scores(&self).await;
     }
 
-    pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        match self.tip_pool.lock() {
-            Ok(pool) => pool.two_non_lazy_tips(),
-            Err(_) => None,
-        }
+    pub async fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
+        self.tip_pool.lock().await.two_non_lazy_tips()
     }
 
-    pub fn reduce_tips(&self) {
-        if let Ok(mut pool) = self.tip_pool.lock() {
-            pool.reduce_tips();
-        }
+    pub async fn reduce_tips(&self) {
+        self.tip_pool.lock().await.reduce_tips();
     }
 }
 
