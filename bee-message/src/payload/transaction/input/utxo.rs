@@ -18,6 +18,8 @@ use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
+use alloc::string::ToString;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct UTXOInput {
     id: TransactionId,

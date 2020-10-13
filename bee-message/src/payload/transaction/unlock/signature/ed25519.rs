@@ -13,6 +13,8 @@ use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
+use alloc::boxed::Box;
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Ed25519Signature {
     public_key: [u8; 32],

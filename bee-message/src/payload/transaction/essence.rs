@@ -21,7 +21,7 @@ use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 
 // TODO remove pub(crate)
 #[derive(Clone, Debug, Deserialize, Serialize)]

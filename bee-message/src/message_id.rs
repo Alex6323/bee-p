@@ -13,6 +13,8 @@ use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
+use alloc::string::ToString;
+
 pub const MESSAGE_ID_LENGTH: usize = 32;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]

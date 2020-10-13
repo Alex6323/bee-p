@@ -35,7 +35,7 @@ use bee_signing_ext::{
 
 use serde::{Deserialize, Serialize};
 
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use core::{cmp::Ordering, slice::Iter};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

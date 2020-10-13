@@ -14,7 +14,10 @@ use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 use bech32::{self, ToBase32};
 use serde::{Deserialize, Serialize};
 
-use alloc::{string::String, vec};
+use alloc::{
+    string::{String, ToString},
+    vec,
+};
 
 const ADDRESS_LENGTH: usize = 32;
 
