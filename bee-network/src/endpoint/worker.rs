@@ -43,7 +43,7 @@ pub struct EndpointWorker {
 }
 
 impl EndpointWorker {
-    pub async fn new(
+    pub fn new(
         command_receiver: CommandReceiver,
         event_sender: EventSender,
         internal_event_receiver: EventReceiver,

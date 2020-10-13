@@ -59,7 +59,7 @@ impl LocalSnapshotConfigBuilder {
     pub fn finish(self) -> LocalSnapshotConfig {
         LocalSnapshotConfig {
             path: self.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
-            download_urls: self.download_urls.unwrap_or_else(|| DEFAULT_DOWNLOAD_URLS),
+            download_urls: self.download_urls.unwrap_or(DEFAULT_DOWNLOAD_URLS),
             depth: self.depth.unwrap_or(DEFAULT_DEPTH),
             interval_synced: self.interval_synced.unwrap_or(DEFAULT_INTERVAL_SYNCED),
             interval_unsynced: self.interval_unsynced.unwrap_or(DEFAULT_INTERVAL_UNSYNCED),

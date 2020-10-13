@@ -13,8 +13,8 @@ use crate::{
     event::{LatestSolidMilestoneChanged, TransactionSolidified},
     milestone::Milestone,
     protocol::Protocol,
-    tangle::tangle,
-    worker::{BundleValidatorWorker, BundleValidatorWorkerEvent},
+    tangle::MsTangle,
+    worker::{BundleValidatorWorker, BundleValidatorWorkerEvent, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -47,13 +47,16 @@ impl<N: Node> Worker<N> for PropagatorWorker {
         Box::leak(Box::from(vec![
             TypeId::of::<BundleValidatorWorker>(),
             TypeId::of::<MilestoneConeUpdaterWorker>(),
+            TypeId::of::<TangleWorker>(),
         ]))
     }
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
         let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -64,11 +67,11 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                 let mut children = vec![hash];
 
                 while let Some(ref hash) = children.pop() {
-                    if tangle().is_solid_transaction(hash) {
+                    if tangle.is_solid_transaction(hash) {
                         continue;
                     }
 
-                    if let Some(tx) = tangle().get(&hash) {
+                    if let Some(tx) = tangle().get(&hash).await {
                         if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
                             // get otrsi and ytrsi from parents
                             let trunk_otsri = tangle().otrsi(tx.trunk());
@@ -96,7 +99,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                                 metadata.set_ytrsi(best_ytrsi);
                             });
 
-                            for child in tangle().get_children(&hash) {
+                            for child in tangle.get_children(&hash) {
                                 children.push(child);
                             }
 

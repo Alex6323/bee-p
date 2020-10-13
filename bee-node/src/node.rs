@@ -11,13 +11,18 @@
 
 #![warn(missing_docs)]
 
-use crate::{banner::print_banner_and_version, config::NodeConfig, plugin};
+use crate::{banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin};
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{bee_node::BeeNode, event::Bus, node::NodeBuilder as NodeBuilderB, shutdown_tokio::Shutdown};
+use bee_common_ext::{
+    event::Bus,
+    node::{Node as _, NodeBuilder as _},
+    shutdown_tokio::Shutdown,
+};
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
-use bee_protocol::{tangle, Protocol};
+use bee_protocol::Protocol;
+use bee_storage::storage::Backend;
 
 use futures::{
     channel::oneshot,
@@ -46,54 +51,51 @@ pub enum Error {
     ShutdownError(#[from] bee_common::shutdown::Error),
 }
 
-pub struct NodeBuilder {
-    config: NodeConfig,
+pub struct NodeBuilder<B: Backend> {
+    config: NodeConfig<B>,
 }
 
-impl NodeBuilder {
+impl<B: Backend> NodeBuilder<B> {
     /// Finishes the build process of a new node.
-    pub async fn finish(self) -> Result<Node, Error> {
+    pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
-        let node_builder = NodeBuilderB::<BeeNode>::new();
+        let node_builder = BeeNode::<B>::build();
 
         let mut shutdown = Shutdown::new();
 
         let bus = Arc::new(Bus::default());
 
-        info!("Initializing Tangle...");
-        tangle::init();
-
         // TODO temporary
-        let (mut node_builder, ledger_state, snapshot_index, snapshot_timestamp) =
-            bee_snapshot::init(&self.config.snapshot, node_builder)
+        let (mut node_builder, snapshot_state, snapshot_metadata) =
+            bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
                 .await
                 .map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
-        let (network, events) = bee_network::init(self.config.network, &mut shutdown).await;
+        let (network, events) = bee_network::init(self.config.network.clone(), &mut shutdown).await;
 
         info!("Starting manual peer manager...");
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
 
         info!("Initializing ledger...");
-        node_builder = bee_ledger::whiteflag::init(
-            *snapshot_index,
-            ledger_state,
+        node_builder = bee_ledger::whiteflag::init::<BeeNode<B>>(
+            snapshot_metadata.index(),
+            snapshot_state.into(),
             self.config.protocol.coordinator().clone(),
             node_builder,
             bus.clone(),
         );
 
         info!("Initializing protocol...");
-        node_builder = Protocol::init(
+        node_builder = Protocol::init::<BeeNode<B>>(
             self.config.protocol.clone(),
+            self.config.database.clone(),
             network.clone(),
-            snapshot_timestamp,
+            snapshot_metadata,
             node_builder,
             bus.clone(),
-        )
-        .await;
+        );
 
         info!("Initializing plugins...");
         plugin::init(bus.clone());
@@ -103,10 +105,11 @@ impl NodeBuilder {
         info!("Registering events...");
         bee_snapshot::events(&bee_node, bus.clone());
         bee_ledger::whiteflag::events(&bee_node, bus.clone());
-        Protocol::events(&bee_node, bus.clone());
+        Protocol::events(&bee_node, self.config.protocol.clone(), bus.clone());
 
         info!("Initialized.");
         Ok(Node {
+            config: self.config,
             tmp_node: bee_node,
             network,
             network_events: ShutdownStream::new(ctrl_c_listener(), events.into_stream()),
@@ -117,27 +120,20 @@ impl NodeBuilder {
 }
 
 /// The main node type.
-pub struct Node {
-    tmp_node: BeeNode,
+pub struct Node<B: Backend> {
+    tmp_node: BeeNode<B>,
     // TODO those 2 fields are related; consider bundling them
     network: Network,
     network_events: NetworkEventStream,
     #[allow(dead_code)]
     shutdown: Shutdown,
     peers: PeerList,
+    config: NodeConfig<B>,
 }
-
-impl Node {
+impl<B: Backend> Node<B> {
     #[allow(missing_docs)]
     pub async fn run(mut self) -> Result<(), Error> {
         info!("Running.");
-
-        // let Node {
-        //     mut network,
-        //     mut network_events,
-        //     mut peers,
-        //     ..
-        // } = self;
 
         while let Some(event) = self.network_events.next().await {
             trace!("Received event {}.", event);
@@ -147,7 +143,12 @@ impl Node {
 
         info!("Stopping...");
 
-        // shutdown.execute().await?;
+        for (_, (_, shutdown)) in self.peers.into_iter() {
+            // TODO: Should we handle this error?
+            let _ = shutdown.send(());
+        }
+
+        self.tmp_node.stop().await.expect("Failed to properly stop node");
 
         info!("Stopped.");
 
@@ -155,7 +156,7 @@ impl Node {
     }
 
     /// Returns a builder to create a node.
-    pub fn builder(config: NodeConfig) -> NodeBuilder {
+    pub fn builder(config: NodeConfig<B>) -> NodeBuilder<B> {
         NodeBuilder { config }
     }
 
@@ -195,7 +196,8 @@ impl Node {
 
     #[inline]
     fn endpoint_connected_handler(&mut self, epid: EndpointId, peer_address: SocketAddr, origin: Origin) {
-        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(&self.tmp_node, epid, peer_address, origin);
+        let (receiver_tx, receiver_shutdown_tx) =
+            Protocol::register(&self.tmp_node, &self.config.protocol, epid, peer_address, origin);
 
         self.peers.insert(epid, (receiver_tx, receiver_shutdown_tx));
     }

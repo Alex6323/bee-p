@@ -13,9 +13,7 @@
 
 extern crate alloc;
 
-pub mod atomic;
 pub mod bundled;
-pub mod prelude;
 
 mod vertex;
 

@@ -48,8 +48,6 @@ mod tests {
 
     use super::*;
 
-    use bee_test::slices::slice_eq;
-
     const TRANSACTION_BYTES: [u8; TRANSACTION_BYTE_LEN] = [
         65, 96, 90, 85, 12, 26, 72, 235, 46, 55, 188, 26, 78, 102, 37, 58, 8, 38, 115, 187, 46, 82, 85, 36, 70, 253,
         194, 151, 4, 26, 111, 105, 158, 151, 179, 24, 78, 87, 158, 178, 94, 40, 39, 96, 184, 28, 83, 6, 0, 0, 0, 0, 0,
@@ -107,6 +105,6 @@ mod tests {
         let uncompressed_bytes = uncompress_transaction_bytes(&compressed_bytes);
 
         assert_eq!(compressed_bytes.len(), 340);
-        assert!(slice_eq(&TRANSACTION_BYTES, &uncompressed_bytes));
+        assert!(TRANSACTION_BYTES.eq(&uncompressed_bytes));
     }
 }

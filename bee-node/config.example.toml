@@ -42,3 +42,5 @@ index = 1050000
 [snapshot.pruning]
 enabled = true
 delay   = 60480
+
+[database]

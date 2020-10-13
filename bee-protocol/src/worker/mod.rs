@@ -22,6 +22,8 @@ mod responder;
 mod solidifier;
 mod status;
 mod tip_pool_cleaner;
+mod storage;
+mod tangle;
 mod tps;
 mod transaction;
 
@@ -42,5 +44,7 @@ pub(crate) use responder::{
 pub(crate) use solidifier::{KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
 pub(crate) use status::StatusWorker;
 pub(crate) use tip_pool_cleaner::TipPoolCleanerWorker;
+pub use storage::StorageWorker;
+pub use tangle::TangleWorker;
 pub(crate) use tps::TpsWorker;
 pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};

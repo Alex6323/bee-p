@@ -12,9 +12,9 @@
 //! A crate that provides common functionalities shared across multiple crates within the Bee framework, and for
 //! applications built on-top.
 
-pub mod bee_node;
 pub mod event;
 pub mod node;
+pub mod packable;
 pub mod shutdown_tokio;
 pub mod wait_priority_queue;
 pub mod worker;

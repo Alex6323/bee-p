@@ -15,12 +15,13 @@ use crate::{
     },
     milestone::MilestoneIndex,
     protocol::Protocol,
-    tangle::tangle,
+    tangle::MsTangle,
     worker::{MilestoneRequesterWorkerEvent, TransactionRequesterWorkerEvent},
 };
 
 use bee_crypto::ternary::Hash;
 use bee_network::{Command::SendMessage, EndpointId};
+use bee_storage::storage::Backend;
 
 use log::warn;
 
@@ -61,34 +62,37 @@ impl Protocol {
 
     // MilestoneRequest
 
-    pub(crate) fn request_milestone(
+    pub(crate) fn request_milestone<B: Backend>(
+        tangle: &MsTangle<B>,
         transaction_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
         index: MilestoneIndex,
         to: Option<EndpointId>,
     ) {
-        if !Protocol::get().requested_milestones.contains_key(&index) && !tangle().contains_milestone(index) {
+        if !Protocol::get().requested_milestones.contains_key(&index) && !tangle.contains_milestone(index) {
             if let Err(e) = transaction_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
                 warn!("Requesting milestone failed: {}.", e);
             }
         }
     }
 
-    pub(crate) fn request_latest_milestone(
+    pub(crate) fn request_latest_milestone<B: Backend>(
+        tangle: &MsTangle<B>,
         transaction_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
         to: Option<EndpointId>,
     ) {
-        Protocol::request_milestone(transaction_requester, MilestoneIndex(0), to)
+        Protocol::request_milestone(tangle, transaction_requester, MilestoneIndex(0), to)
     }
 
     // TransactionRequest
 
-    pub(crate) fn request_transaction(
+    pub(crate) async fn request_transaction<B: Backend>(
+        tangle: &MsTangle<B>,
         transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
         hash: Hash,
         index: MilestoneIndex,
     ) {
-        if !tangle().contains(&hash)
-            && !tangle().is_solid_entry_point(&hash)
+        if !tangle.contains(&hash).await
+            && !tangle.is_solid_entry_point(&hash)
             && !Protocol::get().requested_transactions.contains_key(&hash)
         {
             if let Err(e) = transaction_requester.send(TransactionRequesterWorkerEvent(hash, index)) {

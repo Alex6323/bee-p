@@ -69,8 +69,6 @@ mod tests {
 
     use super::*;
 
-    use bee_test::slices::slice_eq;
-
     const HASH: [u8; HASH_SIZE] = [
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
         21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
@@ -102,6 +100,6 @@ mod tests {
         message_from.into_bytes(&mut bytes);
         let message_to = TransactionRequest::from_bytes(&bytes);
 
-        assert!(slice_eq(&message_to.hash, &HASH));
+        assert!(message_to.hash.eq(&HASH));
     }
 }

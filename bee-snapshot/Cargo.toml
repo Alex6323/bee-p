@@ -14,19 +14,18 @@ homepage = "https://www.iota.org"
 bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-common-ext = { path = "../bee-common-ext" }
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
-bee-ledger = { path = "../bee-ledger" }
-bee-protocol = { path = "../bee-protocol"}
-bee-tangle = { path = "../bee-tangle"}
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-transaction = { path = "../bee-transaction" }
+bee-storage = { path = "../bee-storage/bee-storage" }
+#bee-tangle = { path = "../bee-tangle"}
 
-async-trait = "0.1.40"
-bytemuck = "1.2.0"
-chrono = "0.4.11"
+async-trait = "0.1"
+bytemuck = "1.2"
+chrono = "0.4"
 dashmap = "3.10"
-flume = "0.9.1"
-futures = "0.3.5"
-log = "0.4.8"
-reqwest = { version = "0.10.7", features = ["stream"] }
-serde = { version = "1.0.114", features = ["derive" ] }
-tokio = "0.2.22"
+#flume = "0.9"
+futures = "0.3"
+log = "0.4"
+reqwest = { version = "0.10", features = ["stream"] }
+serde = { version = "1.0", features = ["derive" ] }
+tokio = "0.2"

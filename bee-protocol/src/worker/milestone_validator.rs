@@ -10,13 +10,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
+    config::ProtocolConfig,
     event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
-    tangle::{helper::find_tail_of_bundle, tangle},
+    tangle::{helper::find_tail_of_bundle, MsTangle},
     worker::{
         MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent, MilestoneSolidifierWorker,
-        MilestoneSolidifierWorkerEvent,
+        MilestoneSolidifierWorkerEvent,TangleWorker
     },
 };
 
@@ -27,6 +28,7 @@ use bee_crypto::ternary::{
     Hash,
 };
 use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, RecoverableSignature};
+use bee_storage::storage::Backend;
 use bee_transaction::Vertex;
 
 use async_trait::async_trait;
@@ -49,7 +51,11 @@ pub(crate) struct MilestoneValidatorWorker {
     pub(crate) tx: flume::Sender<MilestoneValidatorWorkerEvent>,
 }
 
-fn validate_milestone<N, M, P>(tail_hash: Hash) -> Result<Milestone, MilestoneValidatorWorkerError>
+async fn validate_milestone<N, M, P, B: Backend>(
+    tangle: &MsTangle<B>,
+    config: &ProtocolConfig,
+    tail_hash: Hash,
+) -> Result<Milestone, MilestoneValidatorWorkerError>
 where
     N: Node,
     M: Sponge + Default + Send + Sync + 'static,
@@ -58,8 +64,9 @@ where
 {
     // TODO also do an IncomingBundleBuilder check ?
     let mut builder = MilestoneBuilder::<Kerl, M, P>::new(tail_hash);
-    let mut transaction = tangle()
+    let mut transaction = tangle
         .get(&tail_hash)
+        .await
         .ok_or(MilestoneValidatorWorkerError::UnknownTail)?;
 
     // TODO consider using the metadata instead as it might be more efficient
@@ -70,16 +77,17 @@ where
     builder.push((*transaction).clone());
 
     // TODO use walker
-    for _ in 0..Protocol::get().config.coordinator.security_level {
-        transaction = tangle()
+    for _ in 0..config.coordinator.security_level {
+        transaction = tangle
             .get((*transaction).trunk())
+            .await
             .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 
         builder.push((*transaction).clone());
     }
 
     Ok(builder
-        .depth(Protocol::get().config.coordinator.depth)
+        .depth(config.coordinator.depth)
         .validate()
         .map_err(MilestoneValidatorWorkerError::InvalidMilestone)?
         .build())
@@ -90,26 +98,23 @@ impl<N> Worker<N> for MilestoneValidatorWorker
 where
     N: Node,
 {
-    type Config = SpongeKind;
+    type Config = ProtocolConfig;
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
         Box::leak(Box::from(vec![
             TypeId::of::<MilestoneSolidifierWorker>(),
             TypeId::of::<MilestoneConeUpdaterWorker>(),
+            TypeId::of::<TangleWorker>(),
         ]))
     }
 
-    async fn start(node: &N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
         let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
-        let validate = match config {
-            SpongeKind::Kerl => |hash| validate_milestone::<N, Kerl, WotsPublicKey<Kerl>>(hash),
-            SpongeKind::CurlP27 => |hash| validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>>(hash),
-            SpongeKind::CurlP81 => |hash| validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>>(hash),
-        };
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -117,22 +122,39 @@ where
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(MilestoneValidatorWorkerEvent(hash, is_tail)) = receiver.next().await {
-                let tail_hash = {
-                    if is_tail {
-                        Some(hash)
-                    } else {
-                        find_tail_of_bundle(tangle(), hash)
-                    }
+                let tail_hash = if is_tail {
+                    Some(hash)
+                } else {
+                    find_tail_of_bundle(&tangle, hash)
                 };
 
                 if let Some(tail_hash) = tail_hash {
-                    if let Some(meta) = tangle().get_metadata(&tail_hash) {
+                    if let Some(meta) = tangle.get_metadata(&tail_hash) {
                         if meta.flags().is_milestone() {
                             continue;
                         }
-                        match validate(tail_hash) {
+                        match match config.coordinator.sponge_type {
+                            SpongeKind::Kerl => {
+                                validate_milestone::<N, Kerl, WotsPublicKey<Kerl>, N::Backend>(
+                                    &tangle, &config, tail_hash,
+                                )
+                                .await
+                            }
+                            SpongeKind::CurlP27 => {
+                                validate_milestone::<N, CurlP27, WotsPublicKey<CurlP27>, N::Backend>(
+                                    &tangle, &config, tail_hash,
+                                )
+                                .await
+                            }
+                            SpongeKind::CurlP81 => {
+                                validate_milestone::<N, CurlP81, WotsPublicKey<CurlP81>, N::Backend>(
+                                    &tangle, &config, tail_hash,
+                                )
+                                .await
+                            }
+                        } {
                             Ok(milestone) => {
-                                tangle().add_milestone(milestone.index, milestone.hash);
+                                tangle.add_milestone(milestone.index, milestone.hash);
 
                                 // This is possibly not sufficient as there is no guarantee a milestone has been
                                 // solidified before being validated, we then also need
@@ -149,12 +171,12 @@ where
                                     }
                                 }
 
-                                if milestone.index > tangle().get_latest_milestone_index() {
+                                if milestone.index > tangle.get_latest_milestone_index() {
                                     Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                                 }
 
                                 if Protocol::get().requested_milestones.remove(&milestone.index).is_some() {
-                                    tangle()
+                                    tangle
                                         .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
 
                                     if let Err(e) =

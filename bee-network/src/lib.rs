@@ -56,8 +56,7 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
         internal_event_sender.clone(),
         endpoint_contacts.clone(),
         endpoint_worker_shutdown_receiver,
-    )
-    .await;
+    );
 
     let binding_address = config.socket_address();
     let tcp_server = TcpServer::new(

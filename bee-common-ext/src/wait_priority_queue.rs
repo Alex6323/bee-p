@@ -54,7 +54,7 @@ impl<T: Ord + Eq> WaitPriorityQueue<T> {
 
     /// Attempts to remove the item with the highest priority from the queue, returning [`None`] if
     /// there are no available items.
-    pub async fn try_pop(&self) -> Option<T> {
+    pub fn try_pop(&self) -> Option<T> {
         self.inner.lock().unwrap().0.pop()
     }
 

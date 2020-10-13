@@ -134,8 +134,6 @@ mod tests {
 
     use super::*;
 
-    use bee_test::slices::slice_eq;
-
     const PORT: u16 = 0xcd98;
     const COORDINATOR: [u8; COORDINATOR_SIZE] = [
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
@@ -176,8 +174,8 @@ mod tests {
 
         // TODO test timestamp
         assert_eq!(message_to.port, PORT);
-        assert!(slice_eq(&message_to.coordinator, &COORDINATOR));
+        assert!(message_to.coordinator.eq(&COORDINATOR));
         assert_eq!(message_to.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
-        assert!(slice_eq(&message_to.supported_versions, &SUPPORTED_VERSIONS));
+        assert!(message_to.supported_versions.eq(&SUPPORTED_VERSIONS));
     }
 }

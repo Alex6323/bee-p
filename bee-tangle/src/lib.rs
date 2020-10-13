@@ -19,7 +19,7 @@ pub mod traversal;
 mod tangle;
 mod vertex;
 
-pub use tangle::Tangle;
+pub use tangle::{Hooks, Tangle};
 
 use bee_transaction::bundled::BundledTransaction as Transaction;
 
