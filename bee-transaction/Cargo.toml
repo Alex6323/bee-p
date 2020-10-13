@@ -11,14 +11,9 @@ keywords = ["iota", "tangle", "bee", "framework", "transaction"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-bee-common-ext = { path = "../bee-common-ext" }
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
-bee-signing-ext = { git ="https://github.com/wusyong/bee-p", branch = "sign-ext" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev", features = ["serde1"] }
 
-bech32 = "0.7"
-bytemuck = "1.2"
-hex = "0.4"
 serde = "1.0"
 thiserror = "1.0"
