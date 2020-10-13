@@ -40,7 +40,7 @@ fn to_string() {
     bytes.copy_from_slice(&vec);
     let address = Ed25519Address::new(bytes);
     assert_eq!(
-        address.to_bech32(),
-        "iot1q9f0mlq8yxpx2nck8a0slxnzr4ef2ek8f5gqxlzd0wasgp73utryjtzcp98"
+        address.to_string(),
+        "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649"
     );
 }
