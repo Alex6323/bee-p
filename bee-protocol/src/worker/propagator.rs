@@ -71,20 +71,20 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                         continue;
                     }
 
-                    if let Some(tx) = tangle().get(&hash).await {
-                        if tangle().is_solid_transaction(tx.trunk()) && tangle().is_solid_transaction(tx.branch()) {
+                    if let Some(tx) = tangle.get(&hash).await {
+                        if tangle.is_solid_transaction(tx.trunk()) && tangle.is_solid_transaction(tx.branch()) {
                             // get otrsi and ytrsi from parents
-                            let trunk_otsri = tangle().otrsi(tx.trunk());
-                            let branch_otsri = tangle().otrsi(tx.branch());
-                            let trunk_ytrsi = tangle().ytrsi(tx.trunk());
-                            let branch_ytrsi = tangle().ytrsi(tx.branch());
+                            let trunk_otsri = tangle.otrsi(tx.trunk());
+                            let branch_otsri = tangle.otrsi(tx.branch());
+                            let trunk_ytrsi = tangle.ytrsi(tx.trunk());
+                            let branch_ytrsi = tangle.ytrsi(tx.branch());
 
                             let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
                             let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
 
                             let mut index = None;
 
-                            tangle().update_metadata(&hash, |metadata| {
+                            tangle.update_metadata(&hash, |metadata| {
                                 metadata.solidify();
 
                                 // This is possibly not sufficient as there is no guarantee a milestone has been
@@ -105,7 +105,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
 
                             Protocol::get().bus.dispatch(TransactionSolidified(*hash));
 
-                            if tangle().get_metadata(&hash).unwrap().flags().is_tail() {
+                            if tangle.get_metadata(&hash).unwrap().flags().is_tail() {
                                 if let Err(e) = bundle_validator.send(BundleValidatorWorkerEvent(*hash)) {
                                     warn!("Failed to send hash to bundle validator: {:?}.", e);
                                 }

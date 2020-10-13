@@ -31,9 +31,8 @@ use dashmap::DashMap;
 use crate::tangle::wurts::WurtsTipPool;
 use std::{
     ops::Deref,
-    ptr,
     sync::{
-        atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
+        atomic::{AtomicU32, Ordering},
         Arc, Mutex,
     },
 };
@@ -90,6 +89,7 @@ impl<B: Backend> MsTangle<B> {
             snapshot_index: Default::default(),
             pruning_index: Default::default(),
             entry_point_index: Default::default(),
+            tip_pool: Arc::new(Mutex::new(WurtsTipPool::default())),
         }
     }
 
@@ -251,20 +251,29 @@ impl<B: Backend> MsTangle<B> {
         }
     }
 
-    pub fn insert_tip(&self, tail: Hash, trunk: Hash, branch: Hash) {
-        self.tip_pool.lock().unwrap().insert(tail, trunk, branch);
+    pub async fn insert_tip(&self, tail: Hash, trunk: Hash, branch: Hash) {
+        if let Ok(mut pool) = self.tip_pool.lock() {
+            pool.insert(&self, tail, trunk, branch).await;
+        }
     }
 
-    pub fn update_tip_scores(&self) {
-        self.tip_pool.lock().unwrap().update_scores();
+    pub async fn update_tip_scores(&self) {
+        if let Ok(mut pool) = self.tip_pool.lock() {
+            pool.update_scores(&self).await;
+        }
     }
 
     pub fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
-        self.tip_pool.lock().unwrap().two_non_lazy_tips()
+        match self.tip_pool.lock() {
+            Ok(pool) => pool.two_non_lazy_tips(),
+            Err(_) => None,
+        }
     }
 
     pub fn reduce_tips(&self) {
-        self.tip_pool.lock().unwrap().reduce_tips();
+        if let Ok(mut pool) = self.tip_pool.lock() {
+            pool.reduce_tips();
+        }
     }
 }
 

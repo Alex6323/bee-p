@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{tangle::tangle, Milestone, MilestoneIndex};
+use crate::{tangle::MsTangle, worker::TangleWorker, Milestone, MilestoneIndex};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
@@ -21,6 +21,7 @@ use futures::stream::StreamExt;
 use log::info;
 
 use std::{
+    any::TypeId,
     cmp::{max, min},
     collections::HashSet,
 };
@@ -36,8 +37,14 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
     type Config = ();
     type Error = WorkerError;
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+    }
+
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
+
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -47,9 +54,9 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
             while let Some(MilestoneConeUpdaterWorkerEvent(milestone)) = receiver.next().await {
                 // When a new milestone gets solid, OTRSI and YTRSI of all transactions that belong to the given cone
                 // must be updated. Furthermore, updated values will be propagated to the future.
-                update_transactions_referenced_by_milestone(milestone.hash, milestone.index);
+                update_transactions_referenced_by_milestone::<N>(&tangle, milestone.hash, milestone.index).await;
                 // Update tip pool after all values got updated.
-                tangle().update_tip_scores();
+                tangle.update_tip_scores();
             }
 
             info!("Stopped.");
@@ -59,7 +66,11 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
     }
 }
 
-fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index: MilestoneIndex) {
+async fn update_transactions_referenced_by_milestone<N: Node>(
+    tangle: &MsTangle<N::Backend>,
+    tail_hash: Hash,
+    milestone_index: MilestoneIndex,
+) {
     let mut to_visit = vec![tail_hash];
     let mut visited = HashSet::new();
 
@@ -70,52 +81,52 @@ fn update_transactions_referenced_by_milestone(tail_hash: Hash, milestone_index:
             visited.insert(*hash);
         }
 
-        if tangle().is_solid_entry_point(&hash) {
+        if tangle.is_solid_entry_point(&hash) {
             continue;
         }
 
-        if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
+        if tangle.get_metadata(&hash).unwrap().cone_index().is_some() {
             continue;
         }
 
-        tangle().update_metadata(&hash, |metadata| {
+        tangle.update_metadata(&hash, |metadata| {
             metadata.set_cone_index(milestone_index);
             metadata.set_otrsi(milestone_index);
             metadata.set_ytrsi(milestone_index);
         });
 
-        for child in tangle().get_children(&hash) {
-            update_future_cone(child);
+        for child in tangle.get_children(&hash) {
+            update_future_cone::<N>(tangle, child).await;
         }
 
-        let tx_ref = tangle().get(&hash).unwrap();
+        let tx_ref = tangle.get(&hash).await.unwrap();
         to_visit.push(*tx_ref.trunk());
         to_visit.push(*tx_ref.branch());
     }
 }
 
-fn update_future_cone(child: Hash) {
+async fn update_future_cone<N: Node>(tangle: &MsTangle<N::Backend>, child: Hash) {
     let mut children = vec![child];
     while let Some(hash) = children.pop() {
         // in case the transaction is referenced by the milestone, OTRSI/YTRSI values are already up-to-date
-        if tangle().get_metadata(&hash).unwrap().cone_index().is_some() {
+        if tangle.get_metadata(&hash).unwrap().cone_index().is_some() {
             continue;
         }
 
         // get best OTRSI/YTRSI values from parents
-        let tx = tangle().get(&hash).unwrap();
-        let trunk_otsri = tangle().otrsi(tx.trunk());
-        let branch_otsri = tangle().otrsi(tx.branch());
-        let trunk_ytrsi = tangle().ytrsi(tx.trunk());
-        let branch_ytrsi = tangle().ytrsi(tx.branch());
+        let tx = tangle.get(&hash).await.unwrap();
+        let trunk_otsri = tangle.otrsi(tx.trunk());
+        let branch_otsri = tangle.otrsi(tx.branch());
+        let trunk_ytrsi = tangle.ytrsi(tx.trunk());
+        let branch_ytrsi = tangle.ytrsi(tx.branch());
 
         if trunk_otsri.is_none() || branch_otsri.is_none() || trunk_ytrsi.is_none() || branch_ytrsi.is_none() {
             continue;
         }
 
         // in case the transaction already inherited the best OTRSI/YTRSI values, continue
-        let current_otrsi = tangle().otrsi(&hash).unwrap();
-        let current_ytrsi = tangle().ytrsi(&hash).unwrap();
+        let current_otrsi = tangle.otrsi(&hash).unwrap();
+        let current_ytrsi = tangle.ytrsi(&hash).unwrap();
         let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
         let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
 
@@ -124,13 +135,13 @@ fn update_future_cone(child: Hash) {
         }
 
         // update outdated OTRSI/YTRSI values
-        tangle().update_metadata(&hash, |metadata| {
+        tangle.update_metadata(&hash, |metadata| {
             metadata.set_otrsi(best_otrsi);
             metadata.set_ytrsi(best_ytrsi);
         });
 
         // propagate to children
-        for child in tangle().get_children(&hash) {
+        for child in tangle.get_children(&hash) {
             children.push(child);
         }
     }

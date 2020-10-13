@@ -9,10 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::tangle::tangle;
+use crate::tangle::MsTangle;
+
 use bee_crypto::ternary::Hash;
+use bee_storage::storage::Backend;
+
 use log::info;
 use rand::seq::IteratorRandom;
+
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
     time::Instant,
@@ -62,8 +66,8 @@ pub(crate) struct WurtsTipPool {
 }
 
 impl WurtsTipPool {
-    pub(crate) fn insert(&mut self, tail: Hash, trunk: Hash, branch: Hash) {
-        if let Score::NonLazy = self.tip_score(&tail) {
+    pub(crate) async fn insert<B: Backend>(&mut self, tangle: &MsTangle<B>, tail: Hash, trunk: Hash, branch: Hash) {
+        if let Score::NonLazy = self.tip_score::<B>(tangle, &tail).await {
             self.non_lazy_tips.insert(tail);
             self.tips.insert(tail, TipMetadata::new());
             self.link_parents_with_child(&tail, &trunk, &branch);
@@ -125,11 +129,11 @@ impl WurtsTipPool {
         }
     }
 
-    pub(crate) fn update_scores(&mut self) {
+    pub(crate) async fn update_scores<B: Backend>(&mut self, tangle: &MsTangle<B>) {
         let mut to_remove = Vec::new();
 
         for tip in self.tips.keys() {
-            match self.tip_score(&tip) {
+            match self.tip_score::<B>(tangle, &tip).await {
                 Score::SemiLazy => {
                     to_remove.push(*tip);
                 }
@@ -148,15 +152,15 @@ impl WurtsTipPool {
         info!("non-lazy {}", self.non_lazy_tips.len());
     }
 
-    fn tip_score(&self, hash: &Hash) -> Score {
+    async fn tip_score<B: Backend>(&self, tangle: &MsTangle<B>, hash: &Hash) -> Score {
         // in case the tip was pruned by the node, consider tip as lazy
-        if !tangle().contains(hash) {
+        if !tangle.contains(hash).await {
             return Score::Lazy;
         }
 
-        let lsmi = *tangle().get_latest_solid_milestone_index();
-        let otrsi = *tangle().otrsi(&hash).unwrap();
-        let ytrsi = *tangle().ytrsi(&hash).unwrap();
+        let lsmi = *tangle.get_latest_solid_milestone_index();
+        let otrsi = *tangle.otrsi(&hash).unwrap();
+        let ytrsi = *tangle.ytrsi(&hash).unwrap();
 
         if (lsmi - ytrsi) > YTRSI_DELTA {
             return Score::Lazy;

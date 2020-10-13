@@ -19,12 +19,8 @@ use crate::{
     worker::{
         BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneConeUpdaterWorker,
         MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
-        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker,
-        TipPoolCleanerWorker, TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
-        BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneRequesterWorker,
-        MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker, StatusWorker, StorageWorker, TangleWorker,
-        TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
+        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker,
+        TangleWorker, TipPoolCleanerWorker, TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
     },
 };
 
@@ -98,6 +94,7 @@ impl Protocol {
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
             .with_worker::<MilestoneConeUpdaterWorker>()
             .with_worker::<TipPoolCleanerWorker>()
+            .with_worker::<StatusWorker>()
     }
 
     pub fn events<N: Node>(node: &N, config: ProtocolConfig, bus: Arc<Bus<'static>>) {

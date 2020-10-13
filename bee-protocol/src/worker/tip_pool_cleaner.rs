@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::tangle::tangle;
+use crate::{tangle::MsTangle, worker::TangleWorker};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
@@ -19,7 +19,7 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::time::Duration;
+use std::{any::TypeId, time::Duration};
 
 #[derive(Default)]
 pub(crate) struct TipPoolCleanerWorker {}
@@ -29,14 +29,20 @@ impl<N: Node> Worker<N> for TipPoolCleanerWorker {
     type Config = ();
     type Error = WorkerError;
 
-    async fn start(node: &N, _config: Self::Config) -> Result<Self, Self::Error> {
+    fn dependencies() -> &'static [TypeId] {
+        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+    }
+
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let tangle = node.resource::<MsTangle<N::Backend>>();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
             while receiver.next().await.is_some() {
-                tangle().reduce_tips()
+                tangle.reduce_tips()
             }
 
             info!("Stopped.");
