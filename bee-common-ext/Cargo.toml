@@ -22,3 +22,4 @@ thiserror = "1.0"
 tokio = { version = "0.2", features = ["rt-core"] }
 
 [dev-dependencies]
+tokio = { version = "0.2", features = ["macros"] }
