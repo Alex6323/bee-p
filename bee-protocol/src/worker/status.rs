@@ -59,7 +59,7 @@ impl<N: Node> Worker<N> for StatusWorker {
                         latest_solid_milestone_index,
                         latest_milestone_index,
                         progress,
-                        Protocol::get().requested_transactions.len()
+                        Protocol::get().requested_messages.len()
                     );
                 };
             }

@@ -10,16 +10,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{
-        tlv_into_bytes, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage, TransactionRequest,
-    },
     milestone::MilestoneIndex,
+    packet::{tlv_into_bytes, Heartbeat, Message as MessagePacket, MessageRequest, MilestoneRequest, Packet},
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{MilestoneRequesterWorkerEvent, TransactionRequesterWorkerEvent},
+    worker::{MessageRequesterWorkerEvent, MilestoneRequesterWorkerEvent},
 };
 
-use bee_crypto::ternary::Hash;
+use bee_message::prelude::MessageId;
 use bee_network::{Command::SendMessage, EndpointId};
 use bee_storage::storage::Backend;
 
@@ -27,17 +25,17 @@ use log::warn;
 
 use std::marker::PhantomData;
 
-pub(crate) struct Sender<M: Message> {
-    marker: PhantomData<M>,
+pub(crate) struct Sender<P: Packet> {
+    marker: PhantomData<P>,
 }
 
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl Sender<$type> {
-            pub(crate) fn send(epid: &EndpointId, message: $type) {
+            pub(crate) fn send(epid: &EndpointId, packet: $type) {
                 match Protocol::get().network.unbounded_send(SendMessage {
                     receiver_epid: *epid,
-                    message: tlv_into_bytes(message),
+                    message: tlv_into_bytes(packet),
                 }) {
                     Ok(_) => {
                         // self.peer.metrics.$incrementor();
@@ -53,8 +51,8 @@ macro_rules! implement_sender_worker {
 }
 
 implement_sender_worker!(MilestoneRequest, milestone_request, milestone_requests_sent_inc);
-implement_sender_worker!(TransactionMessage, transaction, transactions_sent_inc);
-implement_sender_worker!(TransactionRequest, transaction_request, transaction_requests_sent_inc);
+implement_sender_worker!(MessagePacket, message, messages_sent_inc);
+implement_sender_worker!(MessageRequest, message_request, message_requests_sent_inc);
 implement_sender_worker!(Heartbeat, heartbeat, heartbeats_sent_inc);
 
 impl Protocol {
@@ -87,16 +85,16 @@ impl Protocol {
 
     pub(crate) async fn request_transaction<B: Backend>(
         tangle: &MsTangle<B>,
-        transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
-        hash: Hash,
+        transaction_requester: &flume::Sender<MessageRequesterWorkerEvent>,
+        hash: MessageId,
         index: MilestoneIndex,
     ) {
         if !tangle.contains(&hash).await
             && !tangle.is_solid_entry_point(&hash)
-            && !Protocol::get().requested_transactions.contains_key(&hash)
+            && !Protocol::get().requested_messages.contains_key(&hash)
         {
-            if let Err(e) = transaction_requester.send(TransactionRequesterWorkerEvent(hash, index)) {
-                warn!("Requesting transaction failed: {}.", e);
+            if let Err(e) = transaction_requester.send(MessageRequesterWorkerEvent(hash, index)) {
+                warn!("Requesting message failed: {}.", e);
             }
         }
     }

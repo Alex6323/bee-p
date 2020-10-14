@@ -10,8 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::MilestoneRequest,
     milestone::MilestoneIndex,
+    packet::MilestoneRequest,
     protocol::{Protocol, Sender},
     tangle::MsTangle,
     worker::TangleWorker,

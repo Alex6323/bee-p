@@ -12,7 +12,7 @@
 #![allow(clippy::unit_arg)]
 
 mod broadcaster;
-mod bundle_validator;
+mod message_validator;
 mod milestone_cone_updater;
 mod milestone_validator;
 mod peer;
@@ -28,18 +28,18 @@ mod tps;
 mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
-pub(crate) use bundle_validator::{BundleValidatorWorker, BundleValidatorWorkerEvent};
+pub(crate) use message_validator::{MessageValidatorWorker, MessageValidatorWorkerEvent};
 pub(crate) use milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidatorWorkerEvent};
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use propagator::{PropagatorWorker, PropagatorWorkerEvent};
 pub(crate) use requester::{
-    MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, TransactionRequesterWorker,
-    TransactionRequesterWorkerEvent,
+    MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, MessageRequesterWorker,
+    MessageRequesterWorkerEvent,
 };
 pub(crate) use responder::{
-    MilestoneResponderWorker, MilestoneResponderWorkerEvent, TransactionResponderWorker,
-    TransactionResponderWorkerEvent,
+    MilestoneResponderWorker, MilestoneResponderWorkerEvent, MessageResponderWorker,
+    MessageResponderWorkerEvent,
 };
 pub(crate) use solidifier::{KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
 pub(crate) use status::StatusWorker;

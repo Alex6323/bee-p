@@ -9,9 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! Handshake message of the protocol version 0
+//! Handshake packet of the protocol version 0
 
-use crate::message::Message;
+use crate::packet::Packet;
 
 use std::{
     convert::TryInto,
@@ -27,14 +27,14 @@ const CONSTANT_SIZE: usize = PORT_SIZE + TIMESTAMP_SIZE + COORDINATOR_SIZE + MIN
 const VARIABLE_MIN_SIZE: usize = 1;
 const VARIABLE_MAX_SIZE: usize = 32;
 
-/// A message that allows two nodes to pair.
+/// A packet that allows two nodes to pair.
 ///
 /// Contains useful information to verify that the pairing node is operating on the same configuration.
 /// Any difference in configuration will end up in the connection being closed and the nodes not pairing.
 pub(crate) struct Handshake {
     /// Protocol port of the node.
     pub(crate) port: u16,
-    /// Timestamp - in ms - when the message was created by the node.
+    /// Timestamp - in ms - when the packet was created by the node.
     pub(crate) timestamp: u64,
     /// Public key of the coordinator being tracked by the node.
     pub(crate) coordinator: [u8; COORDINATOR_SIZE],
@@ -81,7 +81,7 @@ impl Default for Handshake {
     }
 }
 
-impl Message for Handshake {
+impl Packet for Handshake {
     const ID: u8 = 0x01;
 
     fn size_range() -> Range<usize> {
@@ -89,23 +89,23 @@ impl Message for Handshake {
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
-        let mut message = Self::default();
+        let mut packet = Self::default();
 
         let (bytes, next) = bytes.split_at(PORT_SIZE);
-        message.port = u16::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        packet.port = u16::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(TIMESTAMP_SIZE);
-        message.timestamp = u64::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        packet.timestamp = u64::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(COORDINATOR_SIZE);
-        message.coordinator.copy_from_slice(bytes);
+        packet.coordinator.copy_from_slice(bytes);
 
         let (bytes, next) = next.split_at(MINIMUM_WEIGHT_MAGNITUDE_SIZE);
-        message.minimum_weight_magnitude = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        packet.minimum_weight_magnitude = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
-        message.supported_versions = next.to_vec();
+        packet.supported_versions = next.to_vec();
 
-        message
+        packet
     }
 
     fn size(&self) -> usize {
@@ -160,22 +160,22 @@ mod tests {
 
     #[test]
     fn size() {
-        let message = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
+        let packet = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
 
-        assert_eq!(message.size(), CONSTANT_SIZE + 10);
+        assert_eq!(packet.size(), CONSTANT_SIZE + 10);
     }
 
     #[test]
     fn into_from() {
-        let message_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
-        let mut bytes = vec![0u8; message_from.size()];
-        message_from.into_bytes(&mut bytes);
-        let message_to = Handshake::from_bytes(&bytes);
+        let packet_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
+        let mut bytes = vec![0u8; packet_from.size()];
+        packet_from.into_bytes(&mut bytes);
+        let packet_to = Handshake::from_bytes(&bytes);
 
         // TODO test timestamp
-        assert_eq!(message_to.port, PORT);
-        assert!(message_to.coordinator.eq(&COORDINATOR));
-        assert_eq!(message_to.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
-        assert!(message_to.supported_versions.eq(&SUPPORTED_VERSIONS));
+        assert_eq!(packet_to.port, PORT);
+        assert!(packet_to.coordinator.eq(&COORDINATOR));
+        assert_eq!(packet_to.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
+        assert!(packet_to.supported_versions.eq(&SUPPORTED_VERSIONS));
     }
 }

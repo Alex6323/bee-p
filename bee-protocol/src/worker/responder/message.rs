@@ -10,37 +10,34 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{compress_transaction_bytes, Transaction as TransactionMessage, TransactionRequest},
+    packet::{Message as MessagePacket, MessageRequest},
     protocol::Sender,
     tangle::MsTangle,
     worker::TangleWorker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::Hash;
+use bee_common_ext::{node::Node, packable::Packable, worker::Worker};
+use bee_message::prelude::MessageId;
 use bee_network::EndpointId;
-use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf, Trits, T5B1};
-use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use async_trait::async_trait;
-use bytemuck::cast_slice;
 use futures::stream::StreamExt;
 use log::info;
 
 use std::any::TypeId;
 
-pub(crate) struct TransactionResponderWorkerEvent {
+pub(crate) struct MessageResponderWorkerEvent {
     pub(crate) epid: EndpointId,
-    pub(crate) request: TransactionRequest,
+    pub(crate) request: MessageRequest,
 }
 
-pub(crate) struct TransactionResponderWorker {
-    pub(crate) tx: flume::Sender<TransactionResponderWorkerEvent>,
+pub(crate) struct MessageResponderWorker {
+    pub(crate) tx: flume::Sender<MessageResponderWorkerEvent>,
 }
 
 #[async_trait]
-impl<N: Node> Worker<N> for TransactionResponderWorker {
+impl<N: Node> Worker<N> for MessageResponderWorker {
     type Config = ();
     type Error = WorkerError;
 
@@ -58,19 +55,13 @@ impl<N: Node> Worker<N> for TransactionResponderWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
-            while let Some(TransactionResponderWorkerEvent { epid, request }) = receiver.next().await {
-                if let Ok(hash) = Trits::<T5B1>::try_from_raw(cast_slice(&request.hash), Hash::trit_len()) {
-                    if let Some(transaction) = tangle.get(&Hash::from_inner_unchecked(hash.encode())).await {
-                        let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
+            while let Some(MessageResponderWorkerEvent { epid, request }) = receiver.next().await {
+                if let Some(message) = tangle.get(&MessageId::from(request.hash)).await {
+                    let mut bytes = Vec::new();
 
-                        transaction.as_trits_allocated(&mut trits);
-                        Sender::<TransactionMessage>::send(
-                            &epid,
-                            TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                                trits.encode::<T5B1Buf>().as_i8_slice(),
-                            ))),
-                        );
-                    }
+                    message.pack(&mut bytes);
+
+                    Sender::<MessagePacket>::send(&epid, MessagePacket::new(&bytes));
                 }
             }
 

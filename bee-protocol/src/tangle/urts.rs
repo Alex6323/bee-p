@@ -11,7 +11,7 @@
 
 use crate::tangle::MsTangle;
 
-use bee_crypto::ternary::Hash;
+use bee_message::prelude::MessageId;
 use bee_storage::storage::Backend;
 
 use log::info;
@@ -49,7 +49,7 @@ const MAX_NUM_CHILDREN: u8 = 2;
 
 #[derive(Default)]
 struct TipMetadata {
-    children: HashSet<Hash>,
+    children: HashSet<MessageId>,
     time_first_child: Option<Instant>,
 }
 
@@ -61,12 +61,18 @@ impl TipMetadata {
 
 #[derive(Default)]
 pub(crate) struct UrtsTipPool {
-    tips: HashMap<Hash, TipMetadata>,
-    non_lazy_tips: HashSet<Hash>,
+    tips: HashMap<MessageId, TipMetadata>,
+    non_lazy_tips: HashSet<MessageId>,
 }
 
 impl UrtsTipPool {
-    pub(crate) async fn insert<B: Backend>(&mut self, tangle: &MsTangle<B>, tail: Hash, parent1: Hash, parent2: Hash) {
+    pub(crate) async fn insert<B: Backend>(
+        &mut self,
+        tangle: &MsTangle<B>,
+        tail: MessageId,
+        parent1: MessageId,
+        parent2: MessageId,
+    ) {
         if let Score::NonLazy = self.tip_score::<B>(tangle, &tail).await {
             self.non_lazy_tips.insert(tail);
             self.tips.insert(tail, TipMetadata::new());
@@ -75,7 +81,7 @@ impl UrtsTipPool {
         }
     }
 
-    fn link_parents_with_child(&mut self, hash: &Hash, parent1: &Hash, parent2: &Hash) {
+    fn link_parents_with_child(&mut self, hash: &MessageId, parent1: &MessageId, parent2: &MessageId) {
         if parent1 == parent2 {
             self.add_child(*parent1, *hash);
         } else {
@@ -84,7 +90,7 @@ impl UrtsTipPool {
         }
     }
 
-    fn add_child(&mut self, parent: Hash, child: Hash) {
+    fn add_child(&mut self, parent: MessageId, child: MessageId) {
         match self.tips.entry(parent) {
             Entry::Occupied(mut entry) => {
                 let metadata = entry.get_mut();
@@ -102,7 +108,7 @@ impl UrtsTipPool {
         }
     }
 
-    fn check_retention_rules_for_parents(&mut self, parent1: &Hash, parent2: &Hash) {
+    fn check_retention_rules_for_parents(&mut self, parent1: &MessageId, parent2: &MessageId) {
         if parent1 == parent2 {
             self.check_retention_rules_for_parent(parent1);
         } else {
@@ -111,7 +117,7 @@ impl UrtsTipPool {
         }
     }
 
-    fn check_retention_rules_for_parent(&mut self, parent: &Hash) {
+    fn check_retention_rules_for_parent(&mut self, parent: &MessageId) {
         if self.non_lazy_tips.len() > MAX_LIMIT_NON_LAZY as usize
             || self.tips.get(parent).unwrap().children.len() as u8 > MAX_NUM_CHILDREN
             || self
@@ -149,7 +155,7 @@ impl UrtsTipPool {
         info!("non-lazy {}", self.non_lazy_tips.len());
     }
 
-    async fn tip_score<B: Backend>(&self, tangle: &MsTangle<B>, hash: &Hash) -> Score {
+    async fn tip_score<B: Backend>(&self, tangle: &MsTangle<B>, hash: &MessageId) -> Score {
         // in case the tip was pruned by the node, consider tip as lazy
         if !tangle.contains(hash).await {
             return Score::Lazy;
@@ -174,7 +180,7 @@ impl UrtsTipPool {
         Score::NonLazy
     }
 
-    pub fn two_non_lazy_tips(&self) -> Option<(Hash, Hash)> {
+    pub fn two_non_lazy_tips(&self) -> Option<(MessageId, MessageId)> {
         let non_lazy_tips = &self.non_lazy_tips;
         if non_lazy_tips.is_empty() {
             None

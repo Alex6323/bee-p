@@ -12,20 +12,16 @@
 #![allow(clippy::assertions_on_constants)]
 
 use crate::{
-    message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
+    packet::Message as MessagePacket,
     protocol::Protocol,
     worker::transaction::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::{
-    sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
-    Hash,
-};
+use bee_crypto::ternary::sponge::{BatchHasher, CurlPRounds, BATCH_SIZE};
 use bee_network::EndpointId;
 use bee_ternary::{T5B1Buf, TritBuf, Trits, T5B1};
-use bee_transaction::bundled::{BundledTransactionField, TRANSACTION_TRIT_LEN};
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
@@ -44,7 +40,7 @@ const BATCH_SIZE_THRESHOLD: usize = 3;
 
 pub(crate) struct HasherWorkerEvent {
     pub(crate) from: EndpointId,
-    pub(crate) transaction_message: TransactionMessage,
+    pub(crate) transaction_message: MessagePacket,
 }
 
 pub(crate) struct HasherWorker {
@@ -82,7 +78,7 @@ fn send_hashes(
         if let Err(e) = processor_worker.send(ProcessorWorkerEvent {
             hash: Hash::from_inner_unchecked(hash),
             from,
-            transaction_message,
+            message_packet: transaction_message,
         }) {
             warn!("Sending event to the processor worker failed: {}.", e);
         }
@@ -186,11 +182,11 @@ impl Stream for BatchStream {
                     }
                     // Given that the current batch has less than `BATCH_SIZE` transactions. We can
                     // add the transaction in the current event to the batch.
-                    let transaction_bytes = uncompress_transaction_bytes(&event.transaction_message.bytes);
 
-                    let trits = Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN)
-                        .unwrap()
-                        .to_buf::<T5B1Buf>();
+                    let trits =
+                        Trits::<T5B1>::try_from_raw(cast_slice(&event.transaction_message.bytes), TRANSACTION_TRIT_LEN)
+                            .unwrap()
+                            .to_buf::<T5B1Buf>();
 
                     hasher.add(trits);
                     events.push(event);

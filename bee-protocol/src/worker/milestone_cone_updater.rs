@@ -13,8 +13,7 @@ use crate::{tangle::MsTangle, worker::TangleWorker, Milestone, MilestoneIndex};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::Hash;
-use bee_transaction::Vertex;
+use bee_message::prelude::MessageId;
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
@@ -68,10 +67,10 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
 
 async fn update_transactions_referenced_by_milestone<N: Node>(
     tangle: &MsTangle<N::Backend>,
-    tail_hash: Hash,
+    message_id: MessageId,
     milestone_index: MilestoneIndex,
 ) {
-    let mut to_visit = vec![tail_hash];
+    let mut to_visit = vec![message_id];
     let mut visited = HashSet::new();
 
     while let Some(ref hash) = to_visit.pop() {
@@ -105,7 +104,7 @@ async fn update_transactions_referenced_by_milestone<N: Node>(
     }
 }
 
-async fn update_future_cone<N: Node>(tangle: &MsTangle<N::Backend>, child: Hash) {
+async fn update_future_cone<N: Node>(tangle: &MsTangle<N::Backend>, child: MessageId) {
     let mut children = vec![child];
     while let Some(hash) = children.pop() {
         // in case the transaction is referenced by the milestone, OTRSI/YTRSI values are already up-to-date

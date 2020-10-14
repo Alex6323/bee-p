@@ -38,7 +38,6 @@ impl<N: Node> Worker<N> for TpsWorker {
             let mut total_incoming = 0u64;
             let mut total_new = 0u64;
             let mut total_known = 0u64;
-            let mut total_stale = 0u64;
             let mut total_invalid = 0u64;
             let mut total_outgoing = 0u64;
 
@@ -46,7 +45,6 @@ impl<N: Node> Worker<N> for TpsWorker {
                 let incoming = Protocol::get().metrics.transactions_received();
                 let new = Protocol::get().metrics.new_transactions();
                 let known = Protocol::get().metrics.known_transactions();
-                let stale = Protocol::get().metrics.stale_transactions();
                 let invalid = Protocol::get().metrics.invalid_transactions();
                 let outgoing = Protocol::get().metrics.transactions_sent();
 
@@ -54,7 +52,6 @@ impl<N: Node> Worker<N> for TpsWorker {
                     incoming: incoming - total_incoming,
                     new: new - total_new,
                     known: known - total_known,
-                    stale: stale - total_stale,
                     invalid: invalid - total_invalid,
                     outgoing: outgoing - total_outgoing,
                 });
@@ -62,7 +59,6 @@ impl<N: Node> Worker<N> for TpsWorker {
                 total_incoming = incoming;
                 total_new = new;
                 total_known = known;
-                total_stale = stale;
                 total_invalid = invalid;
                 total_outgoing = outgoing;
             }

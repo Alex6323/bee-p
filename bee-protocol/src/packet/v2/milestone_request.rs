@@ -9,16 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! MilestoneRequest message of the protocol version 2
+//! MilestoneRequest packet of the protocol version 2
 
-use crate::message::Message;
+use crate::packet::Packet;
 
 use std::{convert::TryInto, ops::Range};
 
 const INDEX_SIZE: usize = 4;
 const CONSTANT_SIZE: usize = INDEX_SIZE;
 
-/// A message to request a milestone.
+/// A packet to request a milestone.
 #[derive(Default)]
 pub(crate) struct MilestoneRequest {
     /// Index of the requested milestone.
@@ -31,7 +31,7 @@ impl MilestoneRequest {
     }
 }
 
-impl Message for MilestoneRequest {
+impl Packet for MilestoneRequest {
     const ID: u8 = 0x03;
 
     fn size_range() -> Range<usize> {
@@ -39,11 +39,11 @@ impl Message for MilestoneRequest {
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
-        let mut message = Self::default();
+        let mut packet = Self::default();
 
-        message.index = u32::from_be_bytes(bytes[0..INDEX_SIZE].try_into().expect("Invalid buffer size"));
+        packet.index = u32::from_be_bytes(bytes[0..INDEX_SIZE].try_into().expect("Invalid buffer size"));
 
-        message
+        packet
     }
 
     fn size(&self) -> usize {
@@ -76,18 +76,18 @@ mod tests {
 
     #[test]
     fn size() {
-        let message = MilestoneRequest::new(INDEX);
+        let packet = MilestoneRequest::new(INDEX);
 
-        assert_eq!(message.size(), CONSTANT_SIZE);
+        assert_eq!(packet.size(), CONSTANT_SIZE);
     }
 
     #[test]
     fn into_from() {
-        let message_from = MilestoneRequest::new(INDEX);
-        let mut bytes = vec![0u8; message_from.size()];
-        message_from.into_bytes(&mut bytes);
-        let message_to = MilestoneRequest::from_bytes(&bytes);
+        let packet_from = MilestoneRequest::new(INDEX);
+        let mut bytes = vec![0u8; packet_from.size()];
+        packet_from.into_bytes(&mut bytes);
+        let packet_to = MilestoneRequest::from_bytes(&bytes);
 
-        assert_eq!(message_to.index, INDEX);
+        assert_eq!(packet_to.index, INDEX);
     }
 }

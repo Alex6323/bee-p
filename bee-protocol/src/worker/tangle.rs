@@ -49,8 +49,8 @@ impl<N: Node> Worker<N> for TangleWorker {
         tangle.update_snapshot_index(config.index().into());
         tangle.update_pruning_index(config.index().into());
 
-        for (hash, index) in config.solid_entry_points() {
-            tangle.add_solid_entry_point(*hash, MilestoneIndex(*index));
+        for (message_id, index) in config.solid_entry_points() {
+            tangle.add_solid_entry_point(*message_id, MilestoneIndex(*index));
         }
         for _seen_milestone in config.seen_milestones() {
             // TODO request ?

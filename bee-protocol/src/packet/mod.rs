@@ -9,23 +9,33 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! Message trait.
+// TODO document
+
+mod tlv;
+mod v0;
+mod v2;
+mod version;
+
+pub(crate) use tlv::{tlv_from_bytes, tlv_into_bytes, Header, HEADER_SIZE};
+pub(crate) use v0::Handshake;
+pub(crate) use v2::{Heartbeat, Message, MessageRequest, MilestoneRequest};
+pub(crate) use version::{packets_supported_version, PACKETS_VERSIONS};
 
 use std::ops::Range;
 
-/// A trait describing the behavior of a message.
+/// A trait describing the behavior of a packet.
 ///
 /// This trait is protocol agnostic and only provides serialization and deserialization to and from byte buffers.
 /// It should not be used as is but rather be paired with a higher layer - like a type-length-value encoding - and as
 /// such does not provide any bounds check on inputs/outputs buffers.
-pub(crate) trait Message {
-    /// The unique identifier of the message within the protocol.
+pub(crate) trait Packet {
+    /// The unique identifier of the packet within the protocol.
     const ID: u8;
 
-    /// Returns the size range of the message as it can be compressed.
+    /// Returns the size range of the packet as it can be compressed.
     fn size_range() -> Range<usize>;
 
-    /// Deserializes a byte buffer into a message.
+    /// Deserializes a byte buffer into a packet.
     ///
     /// # Arguments
     ///
@@ -37,10 +47,10 @@ pub(crate) trait Message {
     /// The size of the buffer should be within the range returned by the `size_range` method.
     fn from_bytes(bytes: &[u8]) -> Self;
 
-    /// Returns the size of the message.
+    /// Returns the size of the packet.
     fn size(&self) -> usize;
 
-    /// Serializes a message into a byte buffer.
+    /// Serializes a packet into a byte buffer.
     ///
     /// # Arguments
     ///

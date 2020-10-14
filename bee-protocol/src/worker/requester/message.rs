@@ -10,18 +10,16 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::TransactionRequest,
     milestone::MilestoneIndex,
+    packet::MessageRequest,
     protocol::{Protocol, Sender},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::Hash;
-use bee_ternary::T5B1Buf;
+use bee_common_ext::{node::Node, packable::Packable, worker::Worker};
+use bee_message::prelude::MessageId;
 
 use async_trait::async_trait;
-use bytemuck::cast_slice;
 use futures::{select, StreamExt};
 use log::{debug, info};
 use tokio::time::interval;
@@ -30,26 +28,24 @@ use std::time::{Duration, Instant};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-pub(crate) struct TransactionRequesterWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
+pub(crate) struct MessageRequesterWorkerEvent(pub(crate) MessageId, pub(crate) MilestoneIndex);
 
-pub(crate) struct TransactionRequesterWorker {
-    pub(crate) tx: flume::Sender<TransactionRequesterWorkerEvent>,
+pub(crate) struct MessageRequesterWorker {
+    pub(crate) tx: flume::Sender<MessageRequesterWorkerEvent>,
 }
 
-async fn process_request(hash: Hash, index: MilestoneIndex, counter: &mut usize) {
-    if Protocol::get().requested_transactions.contains_key(&hash) {
+async fn process_request(hash: MessageId, index: MilestoneIndex, counter: &mut usize) {
+    if Protocol::get().requested_messages.contains_key(&hash) {
         return;
     }
 
     if process_request_unchecked(hash, index, counter).await {
-        Protocol::get()
-            .requested_transactions
-            .insert(hash, (index, Instant::now()));
+        Protocol::get().requested_messages.insert(hash, (index, Instant::now()));
     }
 }
 
 /// Return `true` if the transaction was requested.
-async fn process_request_unchecked(hash: Hash, index: MilestoneIndex, counter: &mut usize) -> bool {
+async fn process_request_unchecked(hash: MessageId, index: MilestoneIndex, counter: &mut usize) -> bool {
     if Protocol::get().peer_manager.handshaked_peers.is_empty() {
         return false;
     }
@@ -63,8 +59,9 @@ async fn process_request_unchecked(hash: Hash, index: MilestoneIndex, counter: &
 
         if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
             if peer.has_data(index) {
-                let hash = hash.as_trits().encode::<T5B1Buf>();
-                Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice())));
+                let mut bytes = Vec::new();
+                hash.pack(&mut bytes);
+                Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
                 return true;
             }
         }
@@ -77,8 +74,9 @@ async fn process_request_unchecked(hash: Hash, index: MilestoneIndex, counter: &
 
         if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
             if peer.maybe_has_data(index) {
-                let hash = hash.as_trits().encode::<T5B1Buf>();
-                Sender::<TransactionRequest>::send(epid, TransactionRequest::new(cast_slice(hash.as_i8_slice())));
+                let mut bytes = Vec::new();
+                hash.pack(&mut bytes);
+                Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
                 return true;
             }
         }
@@ -90,7 +88,7 @@ async fn process_request_unchecked(hash: Hash, index: MilestoneIndex, counter: &
 async fn retry_requests(counter: &mut usize) {
     let mut retry_counts: usize = 0;
 
-    for mut transaction in Protocol::get().requested_transactions.iter_mut() {
+    for mut transaction in Protocol::get().requested_messages.iter_mut() {
         let (hash, (index, instant)) = transaction.pair_mut();
         let now = Instant::now();
         if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && process_request_unchecked(*hash, *index, counter).await {
@@ -105,7 +103,7 @@ async fn retry_requests(counter: &mut usize) {
 }
 
 #[async_trait]
-impl<N: Node> Worker<N> for TransactionRequesterWorker {
+impl<N: Node> Worker<N> for MessageRequesterWorker {
     type Config = ();
     type Error = WorkerError;
 
@@ -124,7 +122,7 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
                 select! {
                     _ = timeouts.next() => retry_requests(&mut counter).await,
                     entry = receiver.next() => match entry {
-                        Some(TransactionRequesterWorkerEvent(hash, index)) => process_request(hash, index, &mut counter).await,
+                        Some(MessageRequesterWorkerEvent(hash, index)) => process_request(hash, index, &mut counter).await,
                         None => break,
                     },
                 }

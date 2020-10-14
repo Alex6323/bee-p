@@ -14,7 +14,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 #[derive(Default)]
 pub struct ProtocolMetrics {
     invalid_transactions: AtomicU64,
-    stale_transactions: AtomicU64,
     new_transactions: AtomicU64,
     known_transactions: AtomicU64,
 
@@ -49,14 +48,6 @@ impl ProtocolMetrics {
 
     pub(crate) fn invalid_transactions_inc(&self) -> u64 {
         self.invalid_transactions.fetch_add(1, Ordering::SeqCst)
-    }
-
-    pub fn stale_transactions(&self) -> u64 {
-        self.stale_transactions.load(Ordering::Relaxed)
-    }
-
-    pub(crate) fn stale_transactions_inc(&self) -> u64 {
-        self.stale_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn new_transactions(&self) -> u64 {
@@ -197,17 +188,14 @@ mod tests {
         let metrics = ProtocolMetrics::default();
 
         assert_eq!(metrics.invalid_transactions(), 0);
-        assert_eq!(metrics.stale_transactions(), 0);
         assert_eq!(metrics.new_transactions(), 0);
         assert_eq!(metrics.known_transactions(), 0);
 
         metrics.invalid_transactions_inc();
-        metrics.stale_transactions_inc();
         metrics.new_transactions_inc();
         metrics.known_transactions_inc();
 
         assert_eq!(metrics.invalid_transactions(), 1);
-        assert_eq!(metrics.stale_transactions(), 1);
         assert_eq!(metrics.new_transactions(), 1);
         assert_eq!(metrics.known_transactions(), 1);
     }

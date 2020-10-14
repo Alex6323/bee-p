@@ -9,27 +9,27 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod flags;
-pub mod helper;
-
 mod metadata;
 mod urts;
 
+pub mod flags;
+
 pub use metadata::TransactionMetadata;
 
-use crate::{milestone::MilestoneIndex, tangle::flags::Flags};
+use crate::{
+    milestone::MilestoneIndex,
+    tangle::{flags::Flags, urts::UrtsTipPool},
+};
 
 use bee_common_ext::node::ResHandle;
-use bee_crypto::ternary::Hash;
+use bee_message::prelude::{Message, MessageId};
 use bee_storage::storage::Backend;
-use bee_tangle::{Hooks, Tangle, TransactionRef as TxRef};
-use bee_transaction::bundled::BundledTransaction as Tx;
+use bee_tangle::{Hooks, MessageRef, Tangle};
 
 use async_trait::async_trait;
 use dashmap::DashMap;
 use tokio::sync::Mutex;
 
-use crate::tangle::urts::UrtsTipPool;
 use std::{
     ops::Deref,
     sync::atomic::{AtomicU32, Ordering},
@@ -44,12 +44,12 @@ pub struct StorageHooks<B> {
 impl<B: Backend> Hooks<TransactionMetadata> for StorageHooks<B> {
     type Error = ();
 
-    async fn get(&self, _hash: &Hash) -> Result<(Tx, TransactionMetadata), Self::Error> {
+    async fn get(&self, _hash: &MessageId) -> Result<(Message, TransactionMetadata), Self::Error> {
         // println!("Attempted to fetch {:?} from storage", hash);
         Err(())
     }
 
-    async fn insert(&self, _hash: Hash, _tx: Tx, _metadata: TransactionMetadata) -> Result<(), Self::Error> {
+    async fn insert(&self, _hash: MessageId, _tx: Message, _metadata: TransactionMetadata) -> Result<(), Self::Error> {
         // println!("Attempted to insert {:?} into storage", hash);
         Ok(())
     }
@@ -58,8 +58,8 @@ impl<B: Backend> Hooks<TransactionMetadata> for StorageHooks<B> {
 /// Milestone-based Tangle.
 pub struct MsTangle<B> {
     pub(crate) inner: Tangle<TransactionMetadata, StorageHooks<B>>,
-    pub(crate) milestones: DashMap<MilestoneIndex, Hash>,
-    pub(crate) solid_entry_points: DashMap<Hash, MilestoneIndex>,
+    pub(crate) milestones: DashMap<MilestoneIndex, MessageId>,
+    pub(crate) solid_entry_points: DashMap<MessageId, MilestoneIndex>,
     latest_milestone_index: AtomicU32,
     latest_solid_milestone_index: AtomicU32,
     snapshot_index: AtomicU32,
@@ -95,7 +95,12 @@ impl<B: Backend> MsTangle<B> {
         // TODO: Write back changes by calling self.inner.shutdown().await
     }
 
-    pub async fn insert(&self, transaction: Tx, hash: Hash, metadata: TransactionMetadata) -> Option<TxRef> {
+    pub async fn insert(
+        &self,
+        transaction: Message,
+        hash: MessageId,
+        metadata: TransactionMetadata,
+    ) -> Option<MessageRef> {
         // TODO this has been temporarily moved to the processor.
         // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
         // When the tangle is made a worker, this should be put back on.
@@ -112,7 +117,7 @@ impl<B: Backend> MsTangle<B> {
         self.inner.insert(hash, transaction, metadata).await
     }
 
-    pub fn add_milestone(&self, index: MilestoneIndex, hash: Hash) {
+    pub fn add_milestone(&self, index: MilestoneIndex, hash: MessageId) {
         // TODO: only insert if vacant
         self.milestones.insert(index, hash);
         self.inner.update_metadata(&hash, |metadata| {
@@ -126,7 +131,7 @@ impl<B: Backend> MsTangle<B> {
     }
 
     // TODO: use combinator instead of match
-    pub async fn get_milestone(&self, index: MilestoneIndex) -> Option<TxRef> {
+    pub async fn get_milestone(&self, index: MilestoneIndex) -> Option<MessageRef> {
         match self.get_milestone_hash(index) {
             None => None,
             Some(ref hash) => self.get(hash).await,
@@ -134,7 +139,7 @@ impl<B: Backend> MsTangle<B> {
     }
 
     // TODO: use combinator instead of match
-    pub fn get_milestone_hash(&self, index: MilestoneIndex) -> Option<Hash> {
+    pub fn get_milestone_hash(&self, index: MilestoneIndex) -> Option<MessageId> {
         match self.milestones.get(&index) {
             None => None,
             Some(v) => Some(*v),
@@ -195,16 +200,16 @@ impl<B: Backend> MsTangle<B> {
         *self.get_latest_solid_milestone_index() >= (*self.get_latest_milestone_index() - threshold)
     }
 
-    pub fn get_solid_entry_point_index(&self, hash: &Hash) -> Option<MilestoneIndex> {
+    pub fn get_solid_entry_point_index(&self, hash: &MessageId) -> Option<MilestoneIndex> {
         self.solid_entry_points.get(hash).map(|i| *i)
     }
 
-    pub fn add_solid_entry_point(&self, hash: Hash, index: MilestoneIndex) {
+    pub fn add_solid_entry_point(&self, hash: MessageId, index: MilestoneIndex) {
         self.solid_entry_points.insert(hash, index);
     }
 
     /// Removes `hash` from the set of solid entry points.
-    pub fn remove_solid_entry_point(&self, hash: &Hash) {
+    pub fn remove_solid_entry_point(&self, hash: &MessageId) {
         self.solid_entry_points.remove(hash);
     }
 
@@ -213,12 +218,12 @@ impl<B: Backend> MsTangle<B> {
     }
 
     /// Returns whether the transaction associated with `hash` is a solid entry point.
-    pub fn is_solid_entry_point(&self, hash: &Hash) -> bool {
+    pub fn is_solid_entry_point(&self, hash: &MessageId) -> bool {
         self.solid_entry_points.contains_key(hash)
     }
 
     /// Returns whether the transaction associated with `hash` is deemed `solid`.
-    pub fn is_solid_transaction(&self, hash: &Hash) -> bool {
+    pub fn is_solid_transaction(&self, hash: &MessageId) -> bool {
         if self.is_solid_entry_point(hash) {
             true
         } else {
@@ -229,7 +234,7 @@ impl<B: Backend> MsTangle<B> {
         }
     }
 
-    pub fn otrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
+    pub fn otrsi(&self, hash: &MessageId) -> Option<MilestoneIndex> {
         match self.solid_entry_points.get(hash) {
             Some(sep) => Some(*sep.value()),
             None => match self.get_metadata(hash) {
@@ -239,7 +244,7 @@ impl<B: Backend> MsTangle<B> {
         }
     }
 
-    pub fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
+    pub fn ytrsi(&self, hash: &MessageId) -> Option<MilestoneIndex> {
         match self.solid_entry_points.get(hash) {
             Some(sep) => Some(*sep.value()),
             None => match self.get_metadata(hash) {
@@ -249,15 +254,19 @@ impl<B: Backend> MsTangle<B> {
         }
     }
 
-    pub async fn insert_tip(&self, tail: Hash, parent1: Hash, parent2: Hash) {
-        self.tip_pool.lock().await.insert(&self, tail, parent1, parent2).await;
+    pub async fn insert_tip(&self, message_id: MessageId, parent1: MessageId, parent2: MessageId) {
+        self.tip_pool
+            .lock()
+            .await
+            .insert(&self, message_id, parent1, parent2)
+            .await;
     }
 
     pub async fn update_tip_scores(&self) {
         self.tip_pool.lock().await.update_scores(&self).await;
     }
 
-    pub async fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
+    pub async fn get_transactions_to_approve(&self) -> Option<(MessageId, MessageId)> {
         self.tip_pool.lock().await.two_non_lazy_tips()
     }
 
@@ -281,12 +290,12 @@ impl<B: Backend> MsTangle<B> {
 //         let tangle = MsTangle::new();
 //
 //         // Creates solid entry points
-//         let sep1 = rand_trits_field::<Hash>();
-//         let sep2 = rand_trits_field::<Hash>();
-//         let sep3 = rand_trits_field::<Hash>();
-//         let sep4 = rand_trits_field::<Hash>();
-//         let sep5 = rand_trits_field::<Hash>();
-//         let sep6 = rand_trits_field::<Hash>();
+//         let sep1 = rand_trits_field::<MessageId>();
+//         let sep2 = rand_trits_field::<MessageId>();
+//         let sep3 = rand_trits_field::<MessageId>();
+//         let sep4 = rand_trits_field::<MessageId>();
+//         let sep5 = rand_trits_field::<MessageId>();
+//         let sep6 = rand_trits_field::<MessageId>();
 //
 //         // Adds solid entry points
 //         tangle.add_solid_entry_point(sep1, MilestoneIndex(0));
@@ -432,13 +441,13 @@ impl<B: Backend> MsTangle<B> {
 
 // use crate::{
 //     milestone::MilestoneIndex,
-//     vertex::{TransactionRef, Vertex},
+//     vertex::{MessageRef, Vertex},
 // };
 
-// use bee_bundle::{Hash, Transaction};
+// use bee_bundle::{MessageId, Transaction};
 
 // use std::{
-//     collections::HashSet,
+//     collections::MessageIdSet,
 //     sync::atomic::{AtomicU32, Ordering},
 // };
 
@@ -454,19 +463,19 @@ impl<B: Backend> MsTangle<B> {
 // /// A datastructure based on a directed acyclic graph (DAG).
 // pub struct Tangle<T> {
 //     /// A map between each vertex and the hash of the transaction the respective vertex represents.
-//     pub(crate) vertices: DashMap<Hash, Vertex<T>>,
+//     pub(crate) vertices: DashMap<MessageId, Vertex<T>>,
 
 //     /// A map between the hash of a transaction and the hashes of its approvers.
-//     pub(crate) approvers: DashMap<Hash, Vec<Hash>>,
+//     pub(crate) approvers: DashMap<MessageId, Vec<MessageId>>,
 
 //     /// A map between the milestone index and hash of the milestone transaction.
-//     milestones: DashMap<MilestoneIndex, Hash>,
+//     milestones: DashMap<MilestoneIndex, MessageId>,
 
 //     /// A set of hashes representing transactions deemed solid entry points.
-//     solid_entry_points: DashSet<Hash>,
+//     solid_entry_points: DashSet<MessageId>,
 
 //     /// The sender side of a channel between the Tangle and the (gossip) solidifier.
-//     solidifier_send: Sender<Option<Hash>>,
+//     solidifier_send: Sender<Option<MessageId>>,
 
 //     solid_milestone_index: AtomicU32,
 //     snapshot_index: AtomicU32,
@@ -477,7 +486,7 @@ impl<B: Backend> MsTangle<B> {
 
 // impl<T> Tangle<T> {
 //     /// Creates a new `Tangle`.
-//     pub(crate) fn new(solidifier_send: Sender<Option<Hash>>, drop_barrier: Arc<Barrier>) -> Self {
+//     pub(crate) fn new(solidifier_send: Sender<Option<MessageId>>, drop_barrier: Arc<Barrier>) -> Self {
 //         Self {
 //             vertices: DashMap::new(),
 //             approvers: DashMap::new(),
@@ -498,9 +507,9 @@ impl<B: Backend> MsTangle<B> {
 //     pub async fn insert_transaction(
 //         &'static self,
 //         transaction: Transaction,
-//         hash: Hash,
+//         hash: MessageId,
 //         meta: T,
-//     ) -> Option<TransactionRef> {
+//     ) -> Option<MessageRef> {
 //         match self.approvers.entry(*transaction.parent1()) {
 //             Entry::Occupied(mut entry) => {
 //                 let values = entry.get_mut();
@@ -547,12 +556,12 @@ impl<B: Backend> MsTangle<B> {
 //     }
 
 //     /// Returns a reference to a transaction, if it's available in the local Tangle.
-//     pub fn get_transaction(&'static self, hash: &Hash) -> Option<TransactionRef> {
+//     pub fn get_transaction(&'static self, hash: &MessageId) -> Option<MessageRef> {
 //         self.vertices.get(hash).map(|v| v.get_ref_to_inner())
 //     }
 
 //     /// Returns whether the transaction is stored in the Tangle.
-//     pub fn contains_transaction(&'static self, hash: &Hash) -> bool {
+//     pub fn contains_transaction(&'static self, hash: &MessageId) -> bool {
 //         self.vertices.contains_key(hash)
 //     }
 
@@ -561,7 +570,7 @@ impl<B: Backend> MsTangle<B> {
 //     /// Note: This function is _eventually consistent_ - if `true` is returned, solidification has
 //     /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
 //     /// or solidification information has not yet been fully propagated.
-//     pub fn is_solid_transaction(&'static self, hash: &Hash) -> bool {
+//     pub fn is_solid_transaction(&'static self, hash: &MessageId) -> bool {
 //         if self.is_solid_entry_point(hash) {
 //             true
 //         } else {
@@ -570,7 +579,7 @@ impl<B: Backend> MsTangle<B> {
 //     }
 
 //     /// Adds the `hash` of a milestone identified by its milestone `index`.
-//     pub fn add_milestone(&'static self, index: MilestoneIndex, hash: Hash) {
+//     pub fn add_milestone(&'static self, index: MilestoneIndex, hash: MessageId) {
 //         self.milestones.insert(index, hash);
 //         if let Some(mut vertex) = self.vertices.get_mut(&hash) {
 //             vertex.set_milestone();
@@ -583,7 +592,7 @@ impl<B: Backend> MsTangle<B> {
 //     }
 
 //     /// Returns the milestone transaction corresponding to the given milestone `index`.
-//     pub fn get_milestone(&'static self, index: MilestoneIndex) -> Option<TransactionRef> {
+//     pub fn get_milestone(&'static self, index: MilestoneIndex) -> Option<MessageRef> {
 //         match self.get_milestone_hash(index) {
 //             None => None,
 //             Some(hash) => self.get_transaction(&hash),
@@ -591,12 +600,12 @@ impl<B: Backend> MsTangle<B> {
 //     }
 
 //     /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
-//     pub fn get_latest_milestone(&'static self) -> Option<TransactionRef> {
+//     pub fn get_latest_milestone(&'static self) -> Option<MessageRef> {
 //         todo!("get the latest milestone index, get the transaction hash from it, and query the Tangle for it")
 //     }
 
 //     /// Returns the hash of a milestone.
-//     pub fn get_milestone_hash(&'static self, index: MilestoneIndex) -> Option<Hash> {
+//     pub fn get_milestone_hash(&'static self, index: MilestoneIndex) -> Option<MessageId> {
 //         match self.milestones.get(&index) {
 //             None => None,
 //             Some(v) => Some(*v),
@@ -639,17 +648,17 @@ impl<B: Backend> MsTangle<B> {
 //     }
 
 //     /// Adds `hash` to the set of solid entry points.
-//     pub fn add_solid_entry_point(&'static self, hash: Hash) {
+//     pub fn add_solid_entry_point(&'static self, hash: MessageId) {
 //         self.solid_entry_points.insert(hash);
 //     }
 
 //     /// Removes `hash` from the set of solid entry points.
-//     pub fn remove_solid_entry_point(&'static self, hash: Hash) {
+//     pub fn remove_solid_entry_point(&'static self, hash: MessageId) {
 //         self.solid_entry_points.remove(&hash);
 //     }
 
 //     /// Returns whether the transaction associated `hash` is a solid entry point.
-//     pub fn is_solid_entry_point(&'static self, hash: &Hash) -> bool {
+//     pub fn is_solid_entry_point(&'static self, hash: &MessageId) -> bool {
 //         self.solid_entry_points.contains(hash)
 //     }
 
@@ -668,9 +677,9 @@ impl<B: Backend> MsTangle<B> {
 //     ///
 //     /// Returns a list of descendents of `start`. It is ensured, that all elements of that list
 //     /// are connected through the parent1.
-//     pub fn parent1_walk_approvers<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
+//     pub fn parent1_walk_approvers<F>(&'static self, start: MessageId, filter: F) -> Vec<(MessageRef, MessageId)>
 //     where
-//         F: Fn(&TransactionRef) -> bool,
+//         F: Fn(&MessageRef) -> bool,
 //     {
 //         let mut approvees = vec![];
 //         let mut collected = vec![];
@@ -711,9 +720,9 @@ impl<B: Backend> MsTangle<B> {
 //     ///
 //     /// Returns a list of ancestors of `start`. It is ensured, that all elements of that list
 //     /// are connected through the parent1.
-//     pub fn parent1_walk_approvees<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
+//     pub fn parent1_walk_approvees<F>(&'static self, start: MessageId, filter: F) -> Vec<(MessageRef, MessageId)>
 //     where
-//         F: Fn(&TransactionRef) -> bool,
+//         F: Fn(&MessageRef) -> bool,
 //     {
 //         let mut approvers = vec![start];
 //         let mut collected = vec![];
@@ -738,17 +747,17 @@ impl<B: Backend> MsTangle<B> {
 //     /// Walks all approvers given a starting hash `root`.
 //     pub fn walk_approvees_depth_first<Mapping, Follow, Missing>(
 //         &'static self,
-//         root: Hash,
+//         root: MessageId,
 //         mut map: Mapping,
 //         should_follow: Follow,
 //         mut on_missing: Missing,
 //     ) where
-//         Mapping: FnMut(&TransactionRef),
+//         Mapping: FnMut(&MessageRef),
 //         Follow: Fn(&Vertex<T>) -> bool,
-//         Missing: FnMut(&Hash),
+//         Missing: FnMut(&MessageId),
 //     {
 //         let mut non_analyzed_hashes = Vec::new();
-//         let mut analyzed_hashes = HashSet::new();
+//         let mut analyzed_hashes = MessageIdSet::new();
 
 //         non_analyzed_hashes.push(root);
 
@@ -780,17 +789,17 @@ impl<B: Backend> MsTangle<B> {
 //     /// Walks all approvers in a post order DFS way through parent1 then parent2.
 //     pub fn walk_approvers_post_order_dfs<Mapping, Follow, Missing>(
 //         &'static self,
-//         root: Hash,
+//         root: MessageId,
 //         mut map: Mapping,
 //         should_follow: Follow,
 //         mut on_missing: Missing,
 //     ) where
-//         Mapping: FnMut(&Hash, &TransactionRef),
+//         Mapping: FnMut(&MessageId, &MessageRef),
 //         Follow: Fn(&Vertex<T>) -> bool,
-//         Missing: FnMut(&Hash),
+//         Missing: FnMut(&MessageId),
 //     {
 //         let mut non_analyzed_hashes = Vec::new();
-//         let mut analyzed_hashes = HashSet::new();
+//         let mut analyzed_hashes = MessageIdSet::new();
 
 //         non_analyzed_hashes.push(root);
 
@@ -825,7 +834,7 @@ impl<B: Backend> MsTangle<B> {
 //     }
 
 //     #[cfg(test)]
-//     fn num_approvers(&'static self, hash: &Hash) -> usize {
+//     fn num_approvers(&'static self, hash: &MessageId) -> usize {
 //         self.approvers.get(hash).map_or(0, |r| r.value().len())
 //     }
 // }
@@ -875,7 +884,7 @@ impl<B: Backend> MsTangle<B> {
 
 // pub use milestone::MilestoneIndex;
 // pub use tangle::Tangle;
-// pub use vertex::TransactionRef;
+// pub use vertex::MessageRef;
 
 // //mod milestone;
 // //mod solidifier;
@@ -889,7 +898,7 @@ impl<B: Backend> MsTangle<B> {
 //     task::spawn,
 // };
 
-// use bee_bundle::Hash;
+// use bee_bundle::MessageId;
 
 // use std::{
 //     ptr,
@@ -904,7 +913,7 @@ impl<B: Backend> MsTangle<B> {
 // /// Initializes the Tangle singleton.
 // pub fn init() {
 //     if !INITIALIZED.compare_and_swap(false, true, Ordering::Relaxed) {
-//         let (sender, receiver) = flume::bounded::<Option<Hash>>(SOLIDIFIER_CHAN_CAPACITY);
+//         let (sender, receiver) = flume::bounded::<Option<MessageId>>(SOLIDIFIER_CHAN_CAPACITY);
 
 //         let drop_barrier = async_std::sync::Arc::new(Barrier::new(2));
 

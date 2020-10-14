@@ -9,11 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! Heartbeat message of the protocol version 2
+//! Heartbeat packet of the protocol version 2
 
-// TODO comment/uncomment when Chrysalis Pt1 is released.
-
-use crate::message::Message;
+use crate::packet::Packet;
 
 use std::{convert::TryInto, ops::Range};
 
@@ -28,12 +26,12 @@ const CONSTANT_SIZE: usize = LATEST_SOLID_MILESTONE_INDEX_SIZE
     + CONNECTED_PEERS_SIZE
     + SYNCED_PEERS_SIZE;
 
-/// A message that informs about the part of the tangle currently being fully stored by a node.
-/// This message is sent when a node:
+/// A packet that informs about the part of the tangle currently being fully stored by a node.
+/// This packet is sent when a node:
 /// - just got paired to another node;
 /// - did a local snapshot and pruned away a part of the tangle;
 /// - solidified a new milestone;
-/// It also helps other nodes to know if they can ask it a specific transaction.
+/// It also helps other nodes to know if they can ask it a specific message.
 #[derive(Default)]
 pub(crate) struct Heartbeat {
     /// Index of the latest solid milestone.
@@ -66,7 +64,7 @@ impl Heartbeat {
     }
 }
 
-impl Message for Heartbeat {
+impl Packet for Heartbeat {
     const ID: u8 = 0x06;
 
     fn size_range() -> Range<usize> {
@@ -74,24 +72,24 @@ impl Message for Heartbeat {
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
-        let mut message = Self::default();
+        let mut packet = Self::default();
 
         let (bytes, next) = bytes.split_at(LATEST_SOLID_MILESTONE_INDEX_SIZE);
-        message.latest_solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        packet.latest_solid_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(PRUNED_INDEX_SIZE);
-        message.pruned_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        packet.pruned_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(LATEST_MILESTONE_INDEX_SIZE);
-        message.latest_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        packet.latest_milestone_index = u32::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, next) = next.split_at(CONNECTED_PEERS_SIZE);
-        message.connected_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        packet.connected_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         let (bytes, _) = next.split_at(SYNCED_PEERS_SIZE);
-        message.synced_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
+        packet.synced_peers = u8::from_be_bytes(bytes.try_into().expect("Invalid buffer size"));
 
-        message
+        packet
     }
 
     fn size(&self) -> usize {
@@ -137,7 +135,7 @@ mod tests {
 
     #[test]
     fn size() {
-        let message = Heartbeat::new(
+        let packet = Heartbeat::new(
             LATEST_SOLID_MILESTONE_INDEX,
             PRUNED_INDEX,
             LATEST_MILESTONE_INDEX,
@@ -145,26 +143,26 @@ mod tests {
             SYNCED_PEERS,
         );
 
-        assert_eq!(message.size(), CONSTANT_SIZE);
+        assert_eq!(packet.size(), CONSTANT_SIZE);
     }
 
     #[test]
     fn into_from() {
-        let message_from = Heartbeat::new(
+        let packet_from = Heartbeat::new(
             LATEST_SOLID_MILESTONE_INDEX,
             PRUNED_INDEX,
             LATEST_MILESTONE_INDEX,
             CONNECTED_PEERS,
             SYNCED_PEERS,
         );
-        let mut bytes = vec![0u8; message_from.size()];
-        message_from.into_bytes(&mut bytes);
-        let message_to = Heartbeat::from_bytes(&bytes);
+        let mut bytes = vec![0u8; packet_from.size()];
+        packet_from.into_bytes(&mut bytes);
+        let packet_to = Heartbeat::from_bytes(&bytes);
 
-        assert_eq!(message_to.latest_solid_milestone_index, LATEST_SOLID_MILESTONE_INDEX);
-        assert_eq!(message_to.pruned_index, PRUNED_INDEX);
-        assert_eq!(message_to.latest_milestone_index, LATEST_MILESTONE_INDEX);
-        assert_eq!(message_to.connected_peers, CONNECTED_PEERS);
-        assert_eq!(message_to.synced_peers, SYNCED_PEERS);
+        assert_eq!(packet_to.latest_solid_milestone_index, LATEST_SOLID_MILESTONE_INDEX);
+        assert_eq!(packet_to.pruned_index, PRUNED_INDEX);
+        assert_eq!(packet_to.latest_milestone_index, LATEST_MILESTONE_INDEX);
+        assert_eq!(packet_to.connected_peers, CONNECTED_PEERS);
+        assert_eq!(packet_to.synced_peers, SYNCED_PEERS);
     }
 }

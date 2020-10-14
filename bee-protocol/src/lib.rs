@@ -15,8 +15,8 @@ pub mod config;
 pub mod event;
 pub mod tangle;
 
-mod message;
 mod milestone;
+mod packet;
 mod peer;
 mod protocol;
 mod worker;

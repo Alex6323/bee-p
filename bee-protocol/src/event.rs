@@ -11,7 +11,7 @@
 
 use crate::Milestone;
 
-use bee_crypto::ternary::Hash;
+use bee_message::prelude::MessageId;
 use bee_network::EndpointId;
 
 use std::net::SocketAddr;
@@ -22,13 +22,12 @@ pub struct LatestMilestoneChanged(pub Milestone);
 
 pub struct LatestSolidMilestoneChanged(pub Milestone);
 
-pub struct TransactionSolidified(pub Hash);
+pub struct TransactionSolidified(pub MessageId);
 
 pub struct TpsMetricsUpdated {
     pub incoming: u64,
     pub new: u64,
     pub known: u64,
-    pub stale: u64,
     pub invalid: u64,
     pub outgoing: u64,
 }

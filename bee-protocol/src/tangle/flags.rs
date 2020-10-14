@@ -15,12 +15,11 @@ bitflags! {
     #[derive(Default)]
     pub struct Flags: u8 {
         const SOLID = 0b0000_0001;
-        const TAIL = 0b0000_0010;
-        const REQUESTED = 0b0000_0100;
-        const MILESTONE = 0b0000_1000;
-        const CONFIRMED = 0b0001_0000;
-        const CONFLICTING = 0b0010_0000;
-        const VALID = 0b0100_0000;
+        const REQUESTED = 0b0000_0010;
+        const MILESTONE = 0b0000_0100;
+        const CONFIRMED = 0b0000_1000;
+        const CONFLICTING = 0b0001_0000;
+        const VALID = 0b0010_0000;
     }
 }
 
@@ -31,14 +30,6 @@ impl Flags {
 
     pub fn set_solid(&mut self, is_solid: bool) {
         self.set(Flags::SOLID, is_solid);
-    }
-
-    pub fn is_tail(&self) -> bool {
-        self.contains(Flags::TAIL)
-    }
-
-    pub fn set_tail(&mut self, is_tail: bool) {
-        self.set(Flags::TAIL, is_tail);
     }
 
     pub fn is_requested(&self) -> bool {

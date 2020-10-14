@@ -9,14 +9,18 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! Messages of the protocol version 1
+//! Messages of the protocol version 2
 
+mod heartbeat;
+mod message;
+mod message_request;
+mod milestone_request;
+
+/// Version identifier of the packets version 2
 #[allow(dead_code)]
-mod legacy_gossip;
+pub(crate) const PACKETS_VERSION_2: u8 = 1 << 1;
 
-/// Version identifier of the messages version 1
-#[allow(dead_code)]
-pub(crate) const MESSAGES_VERSION_1: u8 = 1;
-
-#[allow(unused_imports)]
-pub(crate) use legacy_gossip::LegacyGossip;
+pub(crate) use heartbeat::Heartbeat;
+pub(crate) use message::Message;
+pub(crate) use message_request::MessageRequest;
+pub(crate) use milestone_request::MilestoneRequest;

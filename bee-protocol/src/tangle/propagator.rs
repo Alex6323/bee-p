@@ -11,8 +11,7 @@
 
 use crate::tangle;
 
-use bee_crypto::ternary::Hash;
-use bee_transaction::Vertex;
+use bee_message::prelude::MessageId;
 
 use std::collections::HashSet;
 
@@ -37,7 +36,7 @@ impl SolidifierState {
         }
     }
 
-    fn propagate(&self, hash: Hash) {
+    fn propagate(&self, hash: MessageId) {
         let mut stack = vec![hash];
         let mut already_solid = HashSet::new();
 

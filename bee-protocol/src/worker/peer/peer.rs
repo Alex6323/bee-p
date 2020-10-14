@@ -10,17 +10,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{
-        tlv_from_bytes, Header, Heartbeat, Message, MilestoneRequest, Transaction as TransactionMessage,
-        TransactionRequest,
-    },
     milestone::MilestoneIndex,
+    packet::{tlv_from_bytes, Header, Heartbeat, Message, MessageRequest, MilestoneRequest, Packet},
     peer::HandshakedPeer,
     protocol::Protocol,
     tangle::MsTangle,
     worker::{
-        peer::message_handler::MessageHandler, HasherWorkerEvent, MilestoneResponderWorkerEvent,
-        TransactionResponderWorkerEvent,
+        peer::message_handler::MessageHandler, HasherWorkerEvent, MessageResponderWorkerEvent,
+        MilestoneResponderWorkerEvent,
     },
 };
 
@@ -39,7 +36,7 @@ pub(crate) enum PeerWorkerError {
 pub struct PeerWorker {
     peer: Arc<HandshakedPeer>,
     hasher: flume::Sender<HasherWorkerEvent>,
-    transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
+    transaction_responder: flume::Sender<MessageResponderWorkerEvent>,
     milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
 }
 
@@ -47,7 +44,7 @@ impl PeerWorker {
     pub(crate) fn new(
         peer: Arc<HandshakedPeer>,
         hasher: flume::Sender<HasherWorkerEvent>,
-        transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
+        transaction_responder: flume::Sender<MessageResponderWorkerEvent>,
         milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
     ) -> Self {
         Self {
@@ -78,7 +75,7 @@ impl PeerWorker {
         header: &Header,
         bytes: &[u8],
     ) -> Result<(), PeerWorkerError> {
-        match header.message_type {
+        match header.packet_type {
             MilestoneRequest::ID => {
                 trace!("[{}] Reading MilestoneRequest...", self.peer.address);
                 match tlv_from_bytes::<MilestoneRequest>(&header, bytes) {
@@ -101,9 +98,9 @@ impl PeerWorker {
                     }
                 }
             }
-            TransactionMessage::ID => {
-                trace!("[{}] Reading TransactionMessage...", self.peer.address);
-                match tlv_from_bytes::<TransactionMessage>(&header, bytes) {
+            Message::ID => {
+                trace!("[{}] Reading Message...", self.peer.address);
+                match tlv_from_bytes::<Message>(&header, bytes) {
                     Ok(message) => {
                         self.hasher
                             .send(HasherWorkerEvent {
@@ -116,19 +113,19 @@ impl PeerWorker {
                         Protocol::get().metrics.transactions_received_inc();
                     }
                     Err(e) => {
-                        warn!("[{}] Reading TransactionMessage failed: {:?}.", self.peer.address, e);
+                        warn!("[{}] Reading Message failed: {:?}.", self.peer.address, e);
 
                         self.peer.metrics.invalid_messages_inc();
                         Protocol::get().metrics.invalid_messages_inc();
                     }
                 }
             }
-            TransactionRequest::ID => {
-                trace!("[{}] Reading TransactionRequest...", self.peer.address);
-                match tlv_from_bytes::<TransactionRequest>(&header, bytes) {
+            MessageRequest::ID => {
+                trace!("[{}] Reading MessageRequest...", self.peer.address);
+                match tlv_from_bytes::<MessageRequest>(&header, bytes) {
                     Ok(message) => {
                         self.transaction_responder
-                            .send(TransactionResponderWorkerEvent {
+                            .send(MessageResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
@@ -138,7 +135,7 @@ impl PeerWorker {
                         Protocol::get().metrics.transaction_requests_received_inc();
                     }
                     Err(e) => {
-                        warn!("[{}] Reading TransactionRequest failed: {:?}.", self.peer.address, e);
+                        warn!("[{}] Reading MessageRequest failed: {:?}.", self.peer.address, e);
 
                         self.peer.metrics.invalid_messages_inc();
                         Protocol::get().metrics.invalid_messages_inc();
@@ -182,7 +179,7 @@ impl PeerWorker {
             _ => {
                 warn!(
                     "[{}] Ignoring unsupported message type: {}.",
-                    self.peer.address, header.message_type
+                    self.peer.address, header.packet_type
                 );
 
                 self.peer.metrics.invalid_messages_inc();

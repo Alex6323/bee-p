@@ -9,19 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// TODO document
+//! Type-length-value encoding on top of the packets.
 
-mod compression;
-mod message;
+mod header;
 mod tlv;
-mod v0;
-mod v1;
-mod v2;
-mod version;
 
-pub(crate) use compression::{compress_transaction_bytes, uncompress_transaction_bytes};
-pub(crate) use message::Message;
-pub(crate) use tlv::{tlv_from_bytes, tlv_into_bytes, Header, HEADER_SIZE};
-pub(crate) use v0::Handshake;
-pub(crate) use v2::{Heartbeat, MilestoneRequest, Transaction, TransactionRequest};
-pub(crate) use version::{messages_supported_version, MESSAGES_VERSIONS};
+pub(crate) use header::{Header, HEADER_SIZE};
+pub(crate) use tlv::{tlv_from_bytes, tlv_into_bytes};

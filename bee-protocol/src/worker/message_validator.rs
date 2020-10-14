@@ -13,24 +13,22 @@ use crate::{tangle::MsTangle, worker::TangleWorker};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::Hash;
-use bee_tangle::helper::load_bundle_builder;
-use bee_transaction::Vertex;
+use bee_message::prelude::MessageId;
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use log::{info, warn};
+use log::info;
 
 use std::any::TypeId;
 
-pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
+pub(crate) struct MessageValidatorWorkerEvent(pub(crate) MessageId);
 
-pub(crate) struct BundleValidatorWorker {
-    pub(crate) tx: flume::Sender<BundleValidatorWorkerEvent>,
+pub(crate) struct MessageValidatorWorker {
+    pub(crate) tx: flume::Sender<MessageValidatorWorkerEvent>,
 }
 
 #[async_trait]
-impl<N: Node> Worker<N> for BundleValidatorWorker {
+impl<N: Node> Worker<N> for MessageValidatorWorker {
     type Config = ();
     type Error = WorkerError;
 
@@ -48,20 +46,13 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
-            while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
-                match load_bundle_builder(&*tangle, &hash) {
-                    Some(builder) => {
-                        if let Ok(bundle) = builder.validate() {
-                            tangle.update_metadata(&hash, |metadata| {
-                                metadata.flags_mut().set_valid(true);
-                            });
-                            tangle.insert_tip(hash, *bundle.parent1(), *bundle.parent2()).await;
-                        }
-                    }
-                    None => {
-                        warn!("Failed to validate bundle: tail not found.");
-                    }
-                }
+            while let Some(MessageValidatorWorkerEvent(hash)) = receiver.next().await {
+                // if let Ok(bundle) = builder.validate() {
+                //     tangle.update_metadata(&hash, |metadata| {
+                //         metadata.flags_mut().set_valid(true);
+                //     });
+                //     tangle.insert_tip(hash, *bundle.parent1(), *bundle.parent2()).await;
+                // }
             }
 
             info!("Stopped.");

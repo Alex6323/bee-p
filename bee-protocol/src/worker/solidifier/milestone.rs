@@ -13,7 +13,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{TangleWorker, TransactionRequesterWorker, TransactionRequesterWorkerEvent},
+    worker::{MessageRequesterWorker, MessageRequesterWorkerEvent, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -35,7 +35,7 @@ pub(crate) struct MilestoneSolidifierWorker {
 
 async fn trigger_solidification_unchecked<B: Backend>(
     tangle: &MsTangle<B>,
-    transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
+    transaction_requester: &flume::Sender<MessageRequesterWorkerEvent>,
     target_index: MilestoneIndex,
     next_ms_index: &mut MilestoneIndex,
 ) {
@@ -52,7 +52,7 @@ async fn trigger_solidification_unchecked<B: Backend>(
                 |hash, _, metadata| {
                     (!metadata.flags().is_requested() || *hash == target_hash)
                         && !metadata.flags().is_solid()
-                        && !Protocol::get().requested_transactions.contains_key(&hash)
+                        && !Protocol::get().requested_messages.contains_key(&hash)
                 },
                 |_, _, _| {},
                 |_, _, _| {},
@@ -81,12 +81,12 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        vec![TypeId::of::<TransactionRequesterWorker>(), TypeId::of::<TangleWorker>()].leak()
+        vec![TypeId::of::<MessageRequesterWorker>(), TypeId::of::<TangleWorker>()].leak()
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
-        let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
+        let transaction_requester = node.worker::<MessageRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
 

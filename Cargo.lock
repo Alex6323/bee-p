@@ -245,7 +245,6 @@ dependencies = [
  "bee-message",
  "bee-network",
  "bee-signing",
- "bee-snapshot",
  "bee-storage",
  "bee-tangle",
  "bee-ternary",

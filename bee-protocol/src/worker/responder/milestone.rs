@@ -10,21 +10,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{compress_transaction_bytes, MilestoneRequest, Transaction as TransactionMessage},
+    packet::{Message as MessagePacket, MilestoneRequest},
     protocol::Sender,
     tangle::MsTangle,
     worker::TangleWorker,
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common_ext::{node::Node, packable::Packable, worker::Worker};
+use bee_message::prelude::MessageId;
 use bee_network::EndpointId;
-use bee_tangle::helper::load_bundle_builder;
-use bee_ternary::{T1B1Buf, T5B1Buf, TritBuf};
-use bee_transaction::bundled::BundledTransaction as Transaction;
 
 use async_trait::async_trait;
-use bytemuck::cast_slice;
 use futures::stream::StreamExt;
 use log::info;
 
@@ -65,20 +62,12 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
                 };
 
                 if let Some(hash) = tangle.get_milestone_hash(index) {
-                    if let Some(builder) = load_bundle_builder(&tangle, &hash) {
-                        // This is safe because the bundle has already been validated.
-                        let bundle = unsafe { builder.build() };
-                        let mut trits = TritBuf::<T1B1Buf>::zeros(Transaction::trit_len());
+                    if let Some(message) = tangle.get(&MessageId::from(hash)).await {
+                        let mut bytes = Vec::new();
 
-                        for transaction in bundle {
-                            transaction.as_trits_allocated(&mut trits);
-                            Sender::<TransactionMessage>::send(
-                                &epid,
-                                TransactionMessage::new(&compress_transaction_bytes(cast_slice(
-                                    trits.encode::<T5B1Buf>().as_i8_slice(),
-                                ))),
-                            );
-                        }
+                        message.pack(&mut bytes);
+
+                        Sender::<MessagePacket>::send(&epid, MessagePacket::new(&bytes));
                     }
                 }
             }

@@ -8,7 +8,8 @@
 // Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
-use crate::message::{Header, HEADER_SIZE};
+
+use crate::packet::{Header, HEADER_SIZE};
 
 use futures::{
     channel::oneshot,
@@ -84,7 +85,7 @@ impl MessageHandler {
                     // We read the quantity of bytes stated by the header.
                     let bytes = self
                         .events
-                        .fetch_bytes_or_shutdown(&mut self.shutdown, header.message_length.into())
+                        .fetch_bytes_or_shutdown(&mut self.shutdown, header.packet_length.into())
                         .await?;
                     // FIXME: Avoid this clone
                     let header = header.clone();
@@ -219,8 +220,8 @@ mod tests {
             let expected_bytes = vec![0u8; msg_len];
             let expected_msg = (
                 Header {
-                    message_type: 0,
-                    message_length: msg_len as u16,
+                    packet_type: 0,
+                    packet_length: msg_len as u16,
                 },
                 expected_bytes.as_slice(),
             );
@@ -311,8 +312,8 @@ mod tests {
             let expected_bytes = vec![0u8; msg_len];
             let expected_msg = (
                 Header {
-                    message_type: 0,
-                    message_length: msg_len as u16,
+                    packet_type: 0,
+                    packet_length: msg_len as u16,
                 },
                 expected_bytes.as_slice(),
             );

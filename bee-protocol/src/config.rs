@@ -9,19 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::sponge::SpongeKind;
 use bee_ternary::{T1B1Buf, T5B1Buf, TryteBuf};
-use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use bytemuck::cast_slice;
 use serde::Deserialize;
 
 const DEFAULT_MWM: u8 = 14;
-const DEFAULT_COO_DEPTH: u8 = 25;
 const DEFAULT_COO_PUBLIC_KEY: &str =
     "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ";
-const DEFAULT_COO_SECURITY: u8 = 2;
-const DEFAULT_COO_SPONGE_TYPE: &str = "kerl";
 const DEFAULT_TRANSACTION_WORKER_CACHE: usize = 10000;
 const DEFAULT_STATUS_INTERVAL: u64 = 10;
 const DEFAULT_HANDSHAKE_WINDOW: u64 = 10;
@@ -29,10 +24,7 @@ const DEFAULT_MS_SYNC_COUNT: u32 = 1;
 
 #[derive(Default, Deserialize)]
 struct ProtocolCoordinatorConfigBuilder {
-    depth: Option<u8>,
     public_key: Option<String>,
-    security_level: Option<u8>,
-    sponge_type: Option<String>,
 }
 
 #[derive(Default, Deserialize)]
@@ -60,23 +52,8 @@ impl ProtocolConfigBuilder {
         self
     }
 
-    pub fn coo_depth(mut self, coo_depth: u8) -> Self {
-        self.coordinator.depth.replace(coo_depth);
-        self
-    }
-
     pub fn coo_public_key(mut self, coo_public_key: String) -> Self {
         self.coordinator.public_key.replace(coo_public_key);
-        self
-    }
-
-    pub fn coo_security_level(mut self, coo_security_level: u8) -> Self {
-        self.coordinator.security_level.replace(coo_security_level);
-        self
-    }
-
-    pub fn coo_sponge_type(mut self, coo_sponge_type: &str) -> Self {
-        self.coordinator.sponge_type.replace(coo_sponge_type.to_string());
         self
     }
 
@@ -101,18 +78,6 @@ impl ProtocolConfigBuilder {
     }
 
     pub fn finish(self) -> ProtocolConfig {
-        let coo_sponge_type = match self
-            .coordinator
-            .sponge_type
-            .unwrap_or_else(|| DEFAULT_COO_SPONGE_TYPE.to_owned())
-            .as_str()
-        {
-            "kerl" => SpongeKind::Kerl,
-            "curl27" => SpongeKind::CurlP27,
-            "curl81" => SpongeKind::CurlP81,
-            _ => SpongeKind::Kerl,
-        };
-
         let coo_public_key_default = Address::from_inner_unchecked(
             TryteBuf::try_from_str(DEFAULT_COO_PUBLIC_KEY)
                 .unwrap()
@@ -139,11 +104,8 @@ impl ProtocolConfigBuilder {
         ProtocolConfig {
             mwm: self.mwm.unwrap_or(DEFAULT_MWM),
             coordinator: ProtocolCoordinatorConfig {
-                depth: self.coordinator.depth.unwrap_or(DEFAULT_COO_DEPTH),
                 public_key: coo_public_key,
                 public_key_bytes,
-                security_level: self.coordinator.security_level.unwrap_or(DEFAULT_COO_SECURITY),
-                sponge_type: coo_sponge_type,
             },
             workers: ProtocolWorkersConfig {
                 transaction_worker_cache: self
@@ -160,17 +122,8 @@ impl ProtocolConfigBuilder {
 
 #[derive(Clone)]
 pub struct ProtocolCoordinatorConfig {
-    pub(crate) depth: u8,
     pub(crate) public_key: Address,
     pub(crate) public_key_bytes: [u8; 49],
-    pub(crate) security_level: u8,
-    pub(crate) sponge_type: SpongeKind,
-}
-
-impl ProtocolCoordinatorConfig {
-    pub fn depth(&self) -> u8 {
-        self.depth
-    }
 }
 
 #[derive(Clone)]

@@ -16,8 +16,6 @@ pub struct PeerMetrics {
     #[allow(dead_code)]
     invalid_transactions: AtomicU64,
     #[allow(dead_code)]
-    stale_transactions: AtomicU64,
-    #[allow(dead_code)]
     new_transactions: AtomicU64,
     #[allow(dead_code)]
     known_transactions: AtomicU64,
@@ -47,16 +45,6 @@ impl PeerMetrics {
     #[allow(dead_code)]
     pub(crate) fn invalid_transactions_inc(&self) -> u64 {
         self.invalid_transactions.fetch_add(1, Ordering::SeqCst)
-    }
-
-    #[allow(dead_code)]
-    pub fn stale_transactions(&self) -> u64 {
-        self.stale_transactions.load(Ordering::Relaxed)
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn stale_transactions_inc(&self) -> u64 {
-        self.stale_transactions.fetch_add(1, Ordering::SeqCst)
     }
 
     #[allow(dead_code)]
@@ -174,17 +162,14 @@ mod tests {
         let metrics = PeerMetrics::default();
 
         assert_eq!(metrics.invalid_transactions(), 0);
-        assert_eq!(metrics.stale_transactions(), 0);
         assert_eq!(metrics.new_transactions(), 0);
         assert_eq!(metrics.known_transactions(), 0);
 
         metrics.invalid_transactions_inc();
-        metrics.stale_transactions_inc();
         metrics.new_transactions_inc();
         metrics.known_transactions_inc();
 
         assert_eq!(metrics.invalid_transactions(), 1);
-        assert_eq!(metrics.stale_transactions(), 1);
         assert_eq!(metrics.new_transactions(), 1);
         assert_eq!(metrics.known_transactions(), 1);
     }

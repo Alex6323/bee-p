@@ -12,15 +12,13 @@
 use crate::{
     config::ProtocolConfig,
     event::HandshakeCompleted,
-    message::{
-        messages_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Message, MESSAGES_VERSIONS,
-    },
+    packet::{packets_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Packet, PACKETS_VERSIONS},
     peer::Peer,
     protocol::Protocol,
     tangle::MsTangle,
     worker::{
-        peer::message_handler::MessageHandler, HasherWorkerEvent, MilestoneRequesterWorkerEvent,
-        MilestoneResponderWorkerEvent, PeerWorker, TransactionResponderWorkerEvent,
+        peer::message_handler::MessageHandler, HasherWorkerEvent, MessageResponderWorkerEvent,
+        MilestoneRequesterWorkerEvent, MilestoneResponderWorkerEvent, PeerWorker,
     },
 };
 
@@ -63,7 +61,7 @@ pub struct PeerHandshakerWorker {
     peer: Arc<Peer>,
     status: HandshakeStatus,
     hasher: flume::Sender<HasherWorkerEvent>,
-    transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
+    transaction_responder: flume::Sender<MessageResponderWorkerEvent>,
     milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
     milestone_requester: flume::Sender<MilestoneRequesterWorkerEvent>,
 }
@@ -74,7 +72,7 @@ impl PeerHandshakerWorker {
         config: ProtocolConfig,
         peer: Arc<Peer>,
         hasher: flume::Sender<HasherWorkerEvent>,
-        transaction_responder: flume::Sender<TransactionResponderWorkerEvent>,
+        transaction_responder: flume::Sender<MessageResponderWorkerEvent>,
         milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
         milestone_requester: flume::Sender<MilestoneRequesterWorkerEvent>,
     ) -> Self {
@@ -110,7 +108,7 @@ impl PeerHandshakerWorker {
                 self.network.config().binding_port,
                 &self.config.coordinator.public_key_bytes,
                 self.config.mwm,
-                &MESSAGES_VERSIONS,
+                &PACKETS_VERSIONS,
             )),
         }) {
             // TODO then what ?
@@ -195,7 +193,7 @@ impl PeerHandshakerWorker {
             ));
         }
 
-        if let Err(version) = messages_supported_version(&handshake.supported_versions) {
+        if let Err(version) = packets_supported_version(&handshake.supported_versions) {
             return Err(HandshakeError::UnsupportedVersion(version));
         }
 
@@ -230,7 +228,7 @@ impl PeerHandshakerWorker {
         header: &Header,
         bytes: &[u8],
     ) -> Result<(), PeerHandshakerWorkerError> {
-        if let Handshake::ID = header.message_type {
+        if let Handshake::ID = header.packet_type {
             trace!("[{}] Reading Handshake...", self.peer.address);
             match tlv_from_bytes::<Handshake>(&header, bytes) {
                 Ok(handshake) => match self.validate_handshake(handshake) {

@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::Hash;
+use bee_message::prelude::MessageId;
 
 use std::ops::{Add, Deref};
 
@@ -41,16 +41,16 @@ impl Add for MilestoneIndex {
 
 #[derive(Clone)]
 pub struct Milestone {
-    pub(crate) hash: Hash,
+    pub(crate) hash: MessageId,
     pub(crate) index: MilestoneIndex,
 }
 
 impl Milestone {
-    pub fn new(hash: Hash, index: MilestoneIndex) -> Self {
+    pub fn new(hash: MessageId, index: MilestoneIndex) -> Self {
         Self { hash, index }
     }
 
-    pub fn hash(&self) -> &Hash {
+    pub fn hash(&self) -> &MessageId {
         &self.hash
     }
 

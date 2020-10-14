@@ -14,13 +14,12 @@ use crate::{
     milestone::Milestone,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{BundleValidatorWorker, BundleValidatorWorkerEvent, TangleWorker},
+    worker::{MessageValidatorWorker, MessageValidatorWorkerEvent, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::Hash;
-use bee_transaction::Vertex;
+use bee_message::prelude::MessageId;
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
@@ -32,7 +31,7 @@ use std::{
     cmp::{max, min},
 };
 
-pub(crate) struct PropagatorWorkerEvent(pub(crate) Hash);
+pub(crate) struct PropagatorWorkerEvent(pub(crate) MessageId);
 
 pub(crate) struct PropagatorWorker {
     pub(crate) tx: flume::Sender<PropagatorWorkerEvent>,
@@ -45,7 +44,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
 
     fn dependencies() -> &'static [TypeId] {
         vec![
-            TypeId::of::<BundleValidatorWorker>(),
+            TypeId::of::<MessageValidatorWorker>(),
             TypeId::of::<MilestoneConeUpdaterWorker>(),
             TypeId::of::<TangleWorker>(),
         ]
@@ -54,7 +53,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
-        let bundle_validator = node.worker::<BundleValidatorWorker>().unwrap().tx.clone();
+        let bundle_validator = node.worker::<MessageValidatorWorker>().unwrap().tx.clone();
         let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
@@ -106,10 +105,8 @@ impl<N: Node> Worker<N> for PropagatorWorker {
 
                             Protocol::get().bus.dispatch(TransactionSolidified(*hash));
 
-                            if tangle.get_metadata(&hash).unwrap().flags().is_tail() {
-                                if let Err(e) = bundle_validator.send(BundleValidatorWorkerEvent(*hash)) {
-                                    warn!("Failed to send hash to bundle validator: {:?}.", e);
-                                }
+                            if let Err(e) = bundle_validator.send(MessageValidatorWorkerEvent(*hash)) {
+                                warn!("Failed to send hash to message validator: {:?}.", e);
                             }
 
                             if let Some(index) = index {

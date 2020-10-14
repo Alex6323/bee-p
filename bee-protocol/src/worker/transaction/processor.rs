@@ -11,62 +11,34 @@
 
 use crate::{
     config::ProtocolConfig,
-    message::{uncompress_transaction_bytes, Transaction as TransactionMessage},
+    packet::Message as MessagePacket,
     protocol::Protocol,
     tangle::{MsTangle, TransactionMetadata},
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
-        PropagatorWorker, PropagatorWorkerEvent, TangleWorker, TransactionRequesterWorker,
+        BroadcasterWorker, BroadcasterWorkerEvent, MessageRequesterWorker, MilestoneValidatorWorker,
+        MilestoneValidatorWorkerEvent, PropagatorWorker, PropagatorWorkerEvent, TangleWorker,
     },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::Hash;
+use bee_common_ext::{node::Node, packable::Packable, worker::Worker};
+use bee_message::prelude::{Message, MessageId, Payload};
 use bee_network::EndpointId;
-use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
-use bee_transaction::{
-    bundled::{BundledTransaction as Transaction, TRANSACTION_TRIT_LEN},
-    Vertex,
-};
 
 use async_trait::async_trait;
-use bytemuck::cast_slice;
 use futures::stream::StreamExt;
 use log::{error, info, trace, warn};
 
-use std::{
-    any::TypeId,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::any::TypeId;
 
 pub(crate) struct ProcessorWorkerEvent {
-    pub(crate) hash: Hash,
+    pub(crate) hash: MessageId,
     pub(crate) from: EndpointId,
-    pub(crate) transaction_message: TransactionMessage,
+    pub(crate) message_packet: MessagePacket,
 }
 
 pub(crate) struct ProcessorWorker {
     pub(crate) tx: flume::Sender<ProcessorWorkerEvent>,
-}
-
-/// Timeframe to allow past or future transactions, 10 minutes in seconds.
-const ALLOWED_TIMESTAMP_WINDOW_SECS: u64 = 10 * 60;
-
-fn validate_timestamp(transaction: &Transaction) -> (bool, bool) {
-    let timestamp = transaction.get_timestamp();
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Clock may have gone backwards")
-        .as_secs() as u64;
-    let past = now - ALLOWED_TIMESTAMP_WINDOW_SECS;
-    let future = now + ALLOWED_TIMESTAMP_WINDOW_SECS;
-
-    // (is_timestamp_valid, should_broadcast)
-    (
-        timestamp >= Protocol::get().snapshot_timestamp && timestamp < future,
-        timestamp >= past,
-    )
 }
 
 #[async_trait]
@@ -80,7 +52,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
             TypeId::of::<MilestoneValidatorWorker>(),
             TypeId::of::<PropagatorWorker>(),
             TypeId::of::<BroadcasterWorker>(),
-            TypeId::of::<TransactionRequesterWorker>(),
+            TypeId::of::<MessageRequesterWorker>(),
         ]
         .leak()
     }
@@ -90,7 +62,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
         let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
         let broadcaster = node.worker::<BroadcasterWorker>().unwrap().tx.clone();
-        let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
+        let transaction_requester = node.worker::<MessageRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
 
@@ -102,55 +74,38 @@ impl<N: Node> Worker<N> for ProcessorWorker {
             while let Some(ProcessorWorkerEvent {
                 hash,
                 from,
-                transaction_message,
+                message_packet,
             }) = receiver.next().await
             {
                 trace!("Processing received transaction...");
 
-                let transaction_bytes = uncompress_transaction_bytes(&transaction_message.bytes);
-                let transaction =
-                    match Trits::<T5B1>::try_from_raw(cast_slice(&transaction_bytes), TRANSACTION_TRIT_LEN) {
-                        Ok(transaction_trits) => {
-                            let transaction_buf = transaction_trits.to_buf::<T5B1Buf>().encode::<T1B1Buf>();
-                            match Transaction::from_trits(&transaction_buf) {
-                                Ok(transaction) => transaction,
-                                Err(e) => {
-                                    trace!("Invalid transaction: {:?}.", e);
-                                    Protocol::get().metrics.invalid_transactions_inc();
-                                    return;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            trace!("Invalid transaction: {:?}.", e);
-                            Protocol::get().metrics.invalid_transactions_inc();
-                            return;
-                        }
-                    };
+                let message = match Message::unpack(&mut &message_packet.bytes[..]) {
+                    Ok(transaction) => {
+                        // TODO validation
+                        transaction
+                    }
+                    Err(e) => {
+                        trace!("Invalid transaction: {:?}.", e);
+                        Protocol::get().metrics.invalid_transactions_inc();
+                        return;
+                    }
+                };
 
-                let requested = Protocol::get().requested_transactions.contains_key(&hash);
+                let requested = Protocol::get().requested_messages.contains_key(&hash);
 
-                if !requested && hash.weight() < config.mwm {
-                    trace!("Insufficient weight magnitude: {}.", hash.weight());
-                    Protocol::get().metrics.invalid_transactions_inc();
-                    return;
-                }
-
-                let (is_timestamp_valid, should_broadcast) = validate_timestamp(&transaction);
-
-                if !requested && !is_timestamp_valid {
-                    trace!("Stale transaction, invalid timestamp.");
-                    Protocol::get().metrics.stale_transactions_inc();
-                    return;
-                }
+                // TODO when PoW
+                // if !requested && hash.weight() < config.mwm {
+                //     trace!("Insufficient weight magnitude: {}.", hash.weight());
+                //     Protocol::get().metrics.invalid_transactions_inc();
+                //     return;
+                // }
 
                 let mut metadata = TransactionMetadata::arrived();
 
-                metadata.flags_mut().set_tail(transaction.is_tail());
                 metadata.flags_mut().set_requested(requested);
 
                 // store transaction
-                if let Some(transaction) = tangle.insert(transaction, hash, metadata).await {
+                if let Some(message) = tangle.insert(message, hash, metadata).await {
                     // TODO this was temporarily moved from the tangle.
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
@@ -161,10 +116,10 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                     Protocol::get().metrics.new_transactions_inc();
 
-                    match Protocol::get().requested_transactions.remove(&hash) {
+                    match Protocol::get().requested_messages.remove(&hash) {
                         Some((_, (index, _))) => {
-                            let parent1 = transaction.parent1();
-                            let parent2 = transaction.parent2();
+                            let parent1 = message.parent1();
+                            let parent2 = message.parent2();
 
                             Protocol::request_transaction(&tangle, &transaction_requester, *parent1, index).await;
 
@@ -173,21 +128,17 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                             }
                         }
                         None => {
-                            if should_broadcast {
-                                if let Err(e) = broadcaster.send(BroadcasterWorkerEvent {
-                                    source: Some(from),
-                                    transaction: transaction_message,
-                                }) {
-                                    warn!("Broadcasting transaction failed: {}.", e);
-                                }
+                            if let Err(e) = broadcaster.send(BroadcasterWorkerEvent {
+                                source: Some(from),
+                                message: message_packet,
+                            }) {
+                                warn!("Broadcasting transaction failed: {}.", e);
                             }
                         }
                     };
 
-                    if transaction.address().eq(&config.coordinator.public_key) {
-                        if let Err(e) =
-                            milestone_validator.send(MilestoneValidatorWorkerEvent(hash, transaction.is_tail()))
-                        {
+                    if let Payload::Milestone(ref ms) = message.payload() {
+                        if let Err(e) = milestone_validator.send(MilestoneValidatorWorkerEvent(hash)) {
                             error!("Sending tail to milestone validation failed: {:?}.", e);
                         }
                     }

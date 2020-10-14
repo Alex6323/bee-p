@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    message::{tlv_into_bytes, Transaction as TransactionMessage},
+    packet::{tlv_into_bytes, Message},
     protocol::Protocol,
 };
 
@@ -24,7 +24,7 @@ use log::{info, warn};
 
 pub(crate) struct BroadcasterWorkerEvent {
     pub(crate) source: Option<EndpointId>,
-    pub(crate) transaction: TransactionMessage,
+    pub(crate) message: Message,
 }
 
 pub(crate) struct BroadcasterWorker {
@@ -44,8 +44,8 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
-            while let Some(BroadcasterWorkerEvent { source, transaction }) = receiver.next().await {
-                let bytes = tlv_into_bytes(transaction);
+            while let Some(BroadcasterWorkerEvent { source, message }) = receiver.next().await {
+                let bytes = tlv_into_bytes(message);
 
                 for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
                     if match source {

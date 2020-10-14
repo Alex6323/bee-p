@@ -17,10 +17,10 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::MsTangle,
     worker::{
-        BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneConeUpdaterWorker,
-        MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
-        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker,
-        TangleWorker, TipPoolCleanerWorker, TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
+        BroadcasterWorker, HasherWorker, KickstartWorker, MessageRequesterWorker, MessageResponderWorker,
+        MessageValidatorWorker, MilestoneConeUpdaterWorker, MilestoneRequesterWorker, MilestoneResponderWorker,
+        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
+        ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker, TangleWorker, TipPoolCleanerWorker, TpsWorker,
     },
 };
 
@@ -28,7 +28,7 @@ use bee_common_ext::{
     event::Bus,
     node::{Node, NodeBuilder},
 };
-use bee_crypto::ternary::Hash;
+use bee_message::prelude::MessageId;
 use bee_network::{EndpointId, Network, Origin};
 use bee_snapshot::metadata::SnapshotMetadata;
 use bee_storage::storage::Backend;
@@ -49,7 +49,7 @@ pub struct Protocol {
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) peer_manager: PeerManager,
-    pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
+    pub(crate) requested_messages: DashMap<MessageId, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
 }
 
@@ -68,7 +68,7 @@ impl Protocol {
             bus,
             metrics: ProtocolMetrics::new(),
             peer_manager: PeerManager::new(),
-            requested_transactions: Default::default(),
+            requested_messages: Default::default(),
             requested_milestones: Default::default(),
         };
 
@@ -81,13 +81,13 @@ impl Protocol {
             .with_worker_cfg::<TangleWorker>(snapshot_metadata)
             .with_worker_cfg::<HasherWorker>(config.workers.transaction_worker_cache)
             .with_worker_cfg::<ProcessorWorker>(config.clone())
-            .with_worker::<TransactionResponderWorker>()
+            .with_worker::<MessageResponderWorker>()
             .with_worker::<MilestoneResponderWorker>()
-            .with_worker::<TransactionRequesterWorker>()
+            .with_worker::<MessageRequesterWorker>()
             .with_worker::<MilestoneRequesterWorker>()
             .with_worker_cfg::<MilestoneValidatorWorker>(config.clone())
             .with_worker_cfg::<BroadcasterWorker>(network)
-            .with_worker::<BundleValidatorWorker>()
+            .with_worker::<MessageValidatorWorker>()
             .with_worker::<PropagatorWorker>()
             .with_worker::<TpsWorker>()
             .with_worker_cfg::<KickstartWorker>((ms_send, config.workers.ms_sync_count))
@@ -103,12 +103,7 @@ impl Protocol {
             info!(
                 "New milestone {} {}.",
                 *latest_milestone.0.index,
-                latest_milestone
-                    .0
-                    .hash()
-                    .iter_trytes()
-                    .map(char::from)
-                    .collect::<String>()
+                latest_milestone.0.hash()
             );
             tangle.update_latest_milestone_index(latest_milestone.0.index);
 
@@ -182,7 +177,7 @@ impl Protocol {
                 config.clone(),
                 peer,
                 node.worker::<HasherWorker>().unwrap().tx.clone(),
-                node.worker::<TransactionResponderWorker>().unwrap().tx.clone(),
+                node.worker::<MessageResponderWorker>().unwrap().tx.clone(),
                 node.worker::<MilestoneResponderWorker>().unwrap().tx.clone(),
                 node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
             )
