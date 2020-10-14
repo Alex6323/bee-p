@@ -69,14 +69,14 @@ impl UrtsTipPool {
     pub(crate) async fn insert<B: Backend>(
         &mut self,
         tangle: &MsTangle<B>,
-        tail: MessageId,
+        message_id: MessageId,
         parent1: MessageId,
         parent2: MessageId,
     ) {
-        if let Score::NonLazy = self.tip_score::<B>(tangle, &tail).await {
-            self.non_lazy_tips.insert(tail);
-            self.tips.insert(tail, TipMetadata::new());
-            self.link_parents_with_child(&tail, &parent1, &parent2);
+        if let Score::NonLazy = self.tip_score::<B>(tangle, &message_id).await {
+            self.non_lazy_tips.insert(message_id);
+            self.tips.insert(message_id, TipMetadata::new());
+            self.link_parents_with_child(&message_id, &parent1, &parent2);
             self.check_retention_rules_for_parents(&parent1, &parent2);
         }
     }

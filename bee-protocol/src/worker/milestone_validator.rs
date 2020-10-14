@@ -111,7 +111,7 @@ where
                                 if let Err(e) =
                                     milestone_cone_updater.send(MilestoneConeUpdaterWorkerEvent(milestone.clone()))
                                 {
-                                    error!("Sending tail to milestone validation failed: {:?}.", e);
+                                    error!("Sending message id to milestone validation failed: {:?}.", e);
                                 }
                             }
 

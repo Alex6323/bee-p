@@ -139,7 +139,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                     if let Payload::Milestone(ref ms) = message.payload() {
                         if let Err(e) = milestone_validator.send(MilestoneValidatorWorkerEvent(hash)) {
-                            error!("Sending tail to milestone validation failed: {:?}.", e);
+                            error!("Sending message id to milestone validation failed: {:?}.", e);
                         }
                     }
                 } else {
