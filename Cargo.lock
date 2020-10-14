@@ -254,6 +254,7 @@ dependencies = [
  "flume",
  "futures",
  "futures-util",
+ "hex",
  "log",
  "pin-project",
  "rand",

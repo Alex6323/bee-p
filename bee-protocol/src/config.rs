@@ -9,9 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_ternary::{T1B1Buf, T5B1Buf, TryteBuf};
-
-use bytemuck::cast_slice;
 use serde::Deserialize;
 
 const DEFAULT_MWM: u8 = 14;
@@ -78,34 +75,24 @@ impl ProtocolConfigBuilder {
     }
 
     pub fn finish(self) -> ProtocolConfig {
-        let coo_public_key_default = Address::from_inner_unchecked(
-            TryteBuf::try_from_str(DEFAULT_COO_PUBLIC_KEY)
-                .unwrap()
-                .as_trits()
-                .encode::<T1B1Buf>(),
-        );
-
-        let coo_public_key = match TryteBuf::try_from_str(
+        // TODO handle unwrap by having default value
+        let coo_public_key = hex::decode(
             &self
                 .coordinator
                 .public_key
                 .unwrap_or_else(|| DEFAULT_COO_PUBLIC_KEY.to_owned()),
-        ) {
-            Ok(trytes) => match Address::try_from_inner(trytes.as_trits().encode::<T1B1Buf>()) {
-                Ok(coo_public_key) => coo_public_key,
-                Err(_) => coo_public_key_default,
-            },
-            Err(_) => coo_public_key_default,
-        };
+        )
+        .unwrap();
 
-        let mut public_key_bytes = [0u8; 49];
-        public_key_bytes.copy_from_slice(cast_slice(coo_public_key.to_inner().encode::<T5B1Buf>().as_i8_slice()));
+        // TODO check length of public_key against 32
+
+        let mut public_key_bytes = [0u8; 32];
+        public_key_bytes.copy_from_slice(&coo_public_key);
 
         ProtocolConfig {
             mwm: self.mwm.unwrap_or(DEFAULT_MWM),
             coordinator: ProtocolCoordinatorConfig {
-                public_key: coo_public_key,
-                public_key_bytes,
+                public_key: public_key_bytes,
             },
             workers: ProtocolWorkersConfig {
                 transaction_worker_cache: self
@@ -122,8 +109,8 @@ impl ProtocolConfigBuilder {
 
 #[derive(Clone)]
 pub struct ProtocolCoordinatorConfig {
-    pub(crate) public_key: Address,
-    pub(crate) public_key_bytes: [u8; 49],
+    // TODO real PK type ?
+    pub(crate) public_key: [u8; 32],
 }
 
 #[derive(Clone)]
