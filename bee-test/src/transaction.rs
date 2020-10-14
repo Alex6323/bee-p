@@ -32,8 +32,8 @@ pub fn clone_tx(tx: &Transaction) -> Transaction {
         .with_tag(tx.tag().clone())
         .with_attachment_ts(tx.attachment_ts().clone())
         .with_bundle(*tx.bundle())
-        .with_trunk(*tx.trunk())
-        .with_branch(*tx.branch())
+        .with_parent1(*tx.parent1())
+        .with_parent2(*tx.parent2())
         .with_attachment_lbts(tx.attachment_lbts().clone())
         .with_attachment_ubts(tx.attachment_ubts().clone())
         .with_nonce(tx.nonce().clone());
@@ -53,8 +53,8 @@ pub fn create_random_tx() -> (Hash, Transaction) {
         .with_tag(rand_trits_field::<Tag>())
         .with_attachment_ts(Timestamp::from_inner_unchecked(0))
         .with_bundle(rand_trits_field::<Hash>())
-        .with_trunk(rand_trits_field::<Hash>())
-        .with_branch(rand_trits_field::<Hash>())
+        .with_parent1(rand_trits_field::<Hash>())
+        .with_parent2(rand_trits_field::<Hash>())
         .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
         .with_attachment_ubts(Timestamp::from_inner_unchecked(0))
         .with_nonce(rand_trits_field::<Nonce>());
@@ -62,7 +62,7 @@ pub fn create_random_tx() -> (Hash, Transaction) {
     (rand_trits_field::<Hash>(), builder.build().unwrap())
 }
 
-pub fn create_random_attached_tx(branch: Hash, trunk: Hash) -> (Hash, Transaction) {
+pub fn create_random_attached_tx(parent2: Hash, parent1: Hash) -> (Hash, Transaction) {
     let builder = TransactionBuilder::new()
         .with_payload(rand_trits_field::<Payload>())
         .with_address(rand_trits_field::<Address>())
@@ -74,8 +74,8 @@ pub fn create_random_attached_tx(branch: Hash, trunk: Hash) -> (Hash, Transactio
         .with_tag(rand_trits_field::<Tag>())
         .with_attachment_ts(Timestamp::from_inner_unchecked(0))
         .with_bundle(rand_trits_field::<Hash>())
-        .with_trunk(trunk)
-        .with_branch(branch)
+        .with_parent1(parent1)
+        .with_parent2(parent2)
         .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
         .with_attachment_ubts(Timestamp::from_inner_unchecked(0))
         .with_nonce(rand_trits_field::<Nonce>());

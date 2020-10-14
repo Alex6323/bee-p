@@ -100,8 +100,8 @@ async fn update_transactions_referenced_by_milestone<N: Node>(
         }
 
         let tx_ref = tangle.get(&hash).await.unwrap();
-        to_visit.push(*tx_ref.trunk());
-        to_visit.push(*tx_ref.branch());
+        to_visit.push(*tx_ref.parent1());
+        to_visit.push(*tx_ref.parent2());
     }
 }
 
@@ -115,20 +115,20 @@ async fn update_future_cone<N: Node>(tangle: &MsTangle<N::Backend>, child: Hash)
 
         // get best OTRSI/YTRSI values from parents
         let tx = tangle.get(&hash).await.unwrap();
-        let trunk_otsri = tangle.otrsi(tx.trunk());
-        let branch_otsri = tangle.otrsi(tx.branch());
-        let trunk_ytrsi = tangle.ytrsi(tx.trunk());
-        let branch_ytrsi = tangle.ytrsi(tx.branch());
+        let parent1_otsri = tangle.otrsi(tx.parent1());
+        let parent2_otsri = tangle.otrsi(tx.parent2());
+        let parent1_ytrsi = tangle.ytrsi(tx.parent1());
+        let parent2_ytrsi = tangle.ytrsi(tx.parent2());
 
-        if trunk_otsri.is_none() || branch_otsri.is_none() || trunk_ytrsi.is_none() || branch_ytrsi.is_none() {
+        if parent1_otsri.is_none() || parent2_otsri.is_none() || parent1_ytrsi.is_none() || parent2_ytrsi.is_none() {
             continue;
         }
 
         // in case the transaction already inherited the best OTRSI/YTRSI values, continue
         let current_otrsi = tangle.otrsi(&hash).unwrap();
         let current_ytrsi = tangle.ytrsi(&hash).unwrap();
-        let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
-        let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
+        let best_otrsi = max(parent1_otsri.unwrap(), parent2_otsri.unwrap());
+        let best_ytrsi = min(parent1_ytrsi.unwrap(), parent2_ytrsi.unwrap());
 
         if current_otrsi == best_otrsi && current_ytrsi == best_ytrsi {
             continue;

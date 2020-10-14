@@ -73,15 +73,15 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                     }
 
                     if let Some(tx) = tangle.get(&hash).await {
-                        if tangle.is_solid_transaction(tx.trunk()) && tangle.is_solid_transaction(tx.branch()) {
+                        if tangle.is_solid_transaction(tx.parent1()) && tangle.is_solid_transaction(tx.parent2()) {
                             // get otrsi and ytrsi from parents
-                            let trunk_otsri = tangle.otrsi(tx.trunk());
-                            let branch_otsri = tangle.otrsi(tx.branch());
-                            let trunk_ytrsi = tangle.ytrsi(tx.trunk());
-                            let branch_ytrsi = tangle.ytrsi(tx.branch());
+                            let parent1_otsri = tangle.otrsi(tx.parent1());
+                            let parent2_otsri = tangle.otrsi(tx.parent2());
+                            let parent1_ytrsi = tangle.ytrsi(tx.parent1());
+                            let parent2_ytrsi = tangle.ytrsi(tx.parent2());
 
-                            let best_otrsi = max(trunk_otsri.unwrap(), branch_otsri.unwrap());
-                            let best_ytrsi = min(trunk_ytrsi.unwrap(), branch_ytrsi.unwrap());
+                            let best_otrsi = max(parent1_otsri.unwrap(), parent2_otsri.unwrap());
+                            let best_ytrsi = min(parent1_ytrsi.unwrap(), parent2_ytrsi.unwrap());
 
                             let mut index = None;
 

@@ -12,7 +12,7 @@
 
 use crate::{
     tangle::{Hooks, Tangle},
-    traversal::visit_parents_follow_trunk,
+    traversal::visit_parents_follow_parent1,
 };
 
 use bee_crypto::ternary::Hash;
@@ -28,7 +28,7 @@ where
     let mut bundle_builder = IncomingBundleBuilder::default();
     let mut done = false;
 
-    visit_parents_follow_trunk(
+    visit_parents_follow_parent1(
         tangle,
         *hash,
         |transaction, _| {

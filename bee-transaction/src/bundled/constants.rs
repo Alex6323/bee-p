@@ -77,9 +77,9 @@ pub(crate) const TIMESTAMP: Field = offsets_from_previous_field!(OBSOLETE_TAG, T
 pub(crate) const INDEX: Field = offsets_from_previous_field!(TIMESTAMP, INDEX_TRIT_LEN);
 pub(crate) const LAST_INDEX: Field = offsets_from_previous_field!(INDEX, INDEX_TRIT_LEN);
 pub(crate) const BUNDLE: Field = offsets_from_previous_field!(LAST_INDEX, HASH_TRIT_LEN);
-pub(crate) const TRUNK: Field = offsets_from_previous_field!(BUNDLE, HASH_TRIT_LEN);
-pub(crate) const BRANCH: Field = offsets_from_previous_field!(TRUNK, HASH_TRIT_LEN);
-pub(crate) const TAG: Field = offsets_from_previous_field!(BRANCH, TAG_TRIT_LEN);
+pub(crate) const PARENT1: Field = offsets_from_previous_field!(BUNDLE, HASH_TRIT_LEN);
+pub(crate) const PARENT2: Field = offsets_from_previous_field!(PARENT1, HASH_TRIT_LEN);
+pub(crate) const TAG: Field = offsets_from_previous_field!(PARENT2, TAG_TRIT_LEN);
 pub(crate) const ATTACHMENT_TS: Field = offsets_from_previous_field!(TAG, TIMESTAMP_TRIT_LEN);
 pub(crate) const ATTACHMENT_LBTS: Field = offsets_from_previous_field!(ATTACHMENT_TS, TIMESTAMP_TRIT_LEN);
 pub(crate) const ATTACHMENT_UBTS: Field = offsets_from_previous_field!(ATTACHMENT_LBTS, TIMESTAMP_TRIT_LEN);
@@ -100,8 +100,8 @@ mod tests {
             + INDEX.trit_offset.length
             + LAST_INDEX.trit_offset.length
             + BUNDLE.trit_offset.length
-            + TRUNK.trit_offset.length
-            + BRANCH.trit_offset.length
+            + PARENT1.trit_offset.length
+            + PARENT2.trit_offset.length
             + TAG.trit_offset.length
             + ATTACHMENT_TS.trit_offset.length
             + ATTACHMENT_LBTS.trit_offset.length
@@ -121,8 +121,8 @@ mod tests {
             + INDEX.tryte_offset.length
             + LAST_INDEX.tryte_offset.length
             + BUNDLE.tryte_offset.length
-            + TRUNK.tryte_offset.length
-            + BRANCH.tryte_offset.length
+            + PARENT1.tryte_offset.length
+            + PARENT2.tryte_offset.length
             + TAG.tryte_offset.length
             + ATTACHMENT_TS.tryte_offset.length
             + ATTACHMENT_LBTS.tryte_offset.length

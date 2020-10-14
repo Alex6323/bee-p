@@ -120,8 +120,8 @@ where
         let r = match self.vertices.entry(hash) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
-                self.add_child(*transaction.trunk(), hash);
-                self.add_child(*transaction.branch(), hash);
+                self.add_child(*transaction.parent1(), hash);
+                self.add_child(*transaction.parent2(), hash);
                 let vtx = Vertex::new(transaction, metadata);
                 let tx = vtx.transaction().clone();
                 entry.insert(vtx);

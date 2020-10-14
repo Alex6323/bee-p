@@ -249,8 +249,8 @@ impl<B: Backend> MsTangle<B> {
         }
     }
 
-    pub async fn insert_tip(&self, tail: Hash, trunk: Hash, branch: Hash) {
-        self.tip_pool.lock().await.insert(&self, tail, trunk, branch).await;
+    pub async fn insert_tip(&self, tail: Hash, parent1: Hash, parent2: Hash) {
+        self.tip_pool.lock().await.insert(&self, tail, parent1, parent2).await;
     }
 
     pub async fn update_tip_scores(&self) {
@@ -501,7 +501,7 @@ impl<B: Backend> MsTangle<B> {
 //         hash: Hash,
 //         meta: T,
 //     ) -> Option<TransactionRef> {
-//         match self.approvers.entry(*transaction.trunk()) {
+//         match self.approvers.entry(*transaction.parent1()) {
 //             Entry::Occupied(mut entry) => {
 //                 let values = entry.get_mut();
 //                 values.push(hash);
@@ -511,8 +511,8 @@ impl<B: Backend> MsTangle<B> {
 //             }
 //         }
 
-//         if transaction.trunk() != transaction.branch() {
-//             match self.approvers.entry(*transaction.branch()) {
+//         if transaction.parent1() != transaction.parent2() {
+//             match self.approvers.entry(*transaction.parent2()) {
 //                 Entry::Occupied(mut entry) => {
 //                     let values = entry.get_mut();
 //                     values.push(hash);
@@ -667,8 +667,8 @@ impl<B: Backend> MsTangle<B> {
 //     /// traversing its children/approvers for as long as those satisfy a given `filter`.
 //     ///
 //     /// Returns a list of descendents of `start`. It is ensured, that all elements of that list
-//     /// are connected through the trunk.
-//     pub fn trunk_walk_approvers<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
+//     /// are connected through the parent1.
+//     pub fn parent1_walk_approvers<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
 //     where
 //         F: Fn(&TransactionRef) -> bool,
 //     {
@@ -689,7 +689,7 @@ impl<B: Backend> MsTangle<B> {
 //                             if let Some(approver_ref) = self.vertices.get(approver_hash) {
 //                                 let approver = approver_ref.value().get_ref_to_inner();
 
-//                                 if *approver.trunk() == approvee_hash && filter(&approver) {
+//                                 if *approver.parent1() == approvee_hash && filter(&approver) {
 //                                     approvees.push(*approver_hash);
 //                                     collected.push((approver, approver_ref.value().get_id()));
 //                                     // NOTE: For simplicity reasons we break here, and assume, that there can't be
@@ -710,8 +710,8 @@ impl<B: Backend> MsTangle<B> {
 //     /// traversing its ancestors/approvees for as long as those satisfy a given `filter`.
 //     ///
 //     /// Returns a list of ancestors of `start`. It is ensured, that all elements of that list
-//     /// are connected through the trunk.
-//     pub fn trunk_walk_approvees<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
+//     /// are connected through the parent1.
+//     pub fn parent1_walk_approvees<F>(&'static self, start: Hash, filter: F) -> Vec<(TransactionRef, Hash)>
 //     where
 //         F: Fn(&TransactionRef) -> bool,
 //     {
@@ -726,7 +726,7 @@ impl<B: Backend> MsTangle<B> {
 //                 if !filter(&approver) {
 //                     break;
 //                 } else {
-//                     approvers.push(approver.trunk().clone());
+//                     approvers.push(approver.parent1().clone());
 //                     collected.push((approver, approver_vtx.get_id()));
 //                 }
 //             }
@@ -762,8 +762,8 @@ impl<B: Backend> MsTangle<B> {
 //                         map(&transaction);
 
 //                         if should_follow(vertex) {
-//                             non_analyzed_hashes.push(*transaction.branch());
-//                             non_analyzed_hashes.push(*transaction.trunk());
+//                             non_analyzed_hashes.push(*transaction.parent2());
+//                             non_analyzed_hashes.push(*transaction.parent1());
 //                         }
 //                     }
 //                     None => {
@@ -777,7 +777,7 @@ impl<B: Backend> MsTangle<B> {
 //         }
 //     }
 
-//     /// Walks all approvers in a post order DFS way through trunk then branch.
+//     /// Walks all approvers in a post order DFS way through parent1 then parent2.
 //     pub fn walk_approvers_post_order_dfs<Mapping, Follow, Missing>(
 //         &'static self,
 //         root: Hash,
@@ -801,16 +801,16 @@ impl<B: Backend> MsTangle<B> {
 //                     let transaction = vertex.get_ref_to_inner();
 
 //                     // TODO add follow
-//                     if analyzed_hashes.contains(transaction.trunk()) &&
-// analyzed_hashes.contains(transaction.branch()) {                         map(hash, &transaction);
+//                     if analyzed_hashes.contains(transaction.parent1()) &&
+// analyzed_hashes.contains(transaction.parent2()) {                         map(hash, &transaction);
 //                         analyzed_hashes.insert(hash.clone());
 //                         non_analyzed_hashes.pop();
 //                     // TODO add follow
-//                     } else if !analyzed_hashes.contains(transaction.trunk()) {
-//                         non_analyzed_hashes.push(*transaction.trunk());
+//                     } else if !analyzed_hashes.contains(transaction.parent1()) {
+//                         non_analyzed_hashes.push(*transaction.parent1());
 //                     // TODO add follow
-//                     } else if !analyzed_hashes.contains(transaction.branch()) {
-//                         non_analyzed_hashes.push(*transaction.branch());
+//                     } else if !analyzed_hashes.contains(transaction.parent2()) {
+//                         non_analyzed_hashes.push(*transaction.parent2());
 //                     }
 //                 }
 //                 None => {

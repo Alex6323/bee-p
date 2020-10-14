@@ -115,10 +115,10 @@ pub(crate) fn visit_bundles_dfs<B: Backend>(
         // TODO pass match to avoid repetitions
         match load_bundle_builder(tangle, hash) {
             Some(builder) => {
-                let trunk = builder.trunk();
-                let branch = builder.branch();
+                let parent1 = builder.parent1();
+                let parent2 = builder.parent2();
 
-                if visited.contains(trunk) && visited.contains(branch) {
+                if visited.contains(parent1) && visited.contains(parent2) {
                     // TODO check valid and strict semantic
                     let bundle = if meta.flags().is_valid() {
                         // We know the bundle is valid so we can safely skip validation rules.
@@ -135,10 +135,10 @@ pub(crate) fn visit_bundles_dfs<B: Backend>(
                     on_bundle(tangle, state, hash, &bundle, metadata);
                     visited.insert(*hash);
                     hashes.pop();
-                } else if !visited.contains(trunk) {
-                    hashes.push(*trunk);
-                } else if !visited.contains(branch) {
-                    hashes.push(*branch);
+                } else if !visited.contains(parent1) {
+                    hashes.push(*parent1);
+                } else if !visited.contains(parent2) {
+                    hashes.push(*parent2);
                 }
             }
             None => {

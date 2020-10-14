@@ -66,21 +66,21 @@ pub(crate) struct UrtsTipPool {
 }
 
 impl UrtsTipPool {
-    pub(crate) async fn insert<B: Backend>(&mut self, tangle: &MsTangle<B>, tail: Hash, trunk: Hash, branch: Hash) {
+    pub(crate) async fn insert<B: Backend>(&mut self, tangle: &MsTangle<B>, tail: Hash, parent1: Hash, parent2: Hash) {
         if let Score::NonLazy = self.tip_score::<B>(tangle, &tail).await {
             self.non_lazy_tips.insert(tail);
             self.tips.insert(tail, TipMetadata::new());
-            self.link_parents_with_child(&tail, &trunk, &branch);
-            self.check_retention_rules_for_parents(&trunk, &branch);
+            self.link_parents_with_child(&tail, &parent1, &parent2);
+            self.check_retention_rules_for_parents(&parent1, &parent2);
         }
     }
 
-    fn link_parents_with_child(&mut self, hash: &Hash, trunk: &Hash, branch: &Hash) {
-        if trunk == branch {
-            self.add_child(*trunk, *hash);
+    fn link_parents_with_child(&mut self, hash: &Hash, parent1: &Hash, parent2: &Hash) {
+        if parent1 == parent2 {
+            self.add_child(*parent1, *hash);
         } else {
-            self.add_child(*trunk, *hash);
-            self.add_child(*branch, *hash);
+            self.add_child(*parent1, *hash);
+            self.add_child(*parent2, *hash);
         }
     }
 
@@ -102,12 +102,12 @@ impl UrtsTipPool {
         }
     }
 
-    fn check_retention_rules_for_parents(&mut self, trunk: &Hash, branch: &Hash) {
-        if trunk == branch {
-            self.check_retention_rules_for_parent(trunk);
+    fn check_retention_rules_for_parents(&mut self, parent1: &Hash, parent2: &Hash) {
+        if parent1 == parent2 {
+            self.check_retention_rules_for_parent(parent1);
         } else {
-            self.check_retention_rules_for_parent(trunk);
-            self.check_retention_rules_for_parent(branch);
+            self.check_retention_rules_for_parent(parent1);
+            self.check_retention_rules_for_parent(parent2);
         }
     }
 

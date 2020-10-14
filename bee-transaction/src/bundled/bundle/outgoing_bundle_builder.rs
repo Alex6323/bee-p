@@ -224,8 +224,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
     // TODO TEST
     pub fn attach_local(
         self,
-        trunk: Hash,
-        branch: Hash,
+        parent1: Hash,
+        parent2: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // Checking that no transaction actually needs to be signed (no inputs)
         self.has_no_input()?;
@@ -234,14 +234,14 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
             builders: self.builders,
             marker: PhantomData,
         }
-        .attach_local(trunk, branch)
+        .attach_local(parent1, parent2)
     }
 
     // TODO TEST
     pub fn attach_remote(
         self,
-        trunk: Hash,
-        branch: Hash,
+        parent1: Hash,
+        parent2: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // Checking that no transaction actually needs to be signed (no inputs)
         self.has_no_input()?;
@@ -250,7 +250,7 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSealed> {
             builders: self.builders,
             marker: PhantomData,
         }
-        .attach_remote(trunk, branch)
+        .attach_remote(parent1, parent2)
     }
 
     // TODO TEST
@@ -313,8 +313,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
     // TODO TEST
     pub fn attach_local(
         self,
-        _trunk: Hash,
-        _branch: Hash,
+        _parent1: Hash,
+        _parent2: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
@@ -326,8 +326,8 @@ impl<E: Sponge + Default> StagedOutgoingBundleBuilder<E, OutgoingSigned> {
     // TODO TEST
     pub fn attach_remote(
         self,
-        _trunk: Hash,
-        _branch: Hash,
+        _parent1: Hash,
+        _parent2: Hash,
     ) -> Result<StagedOutgoingBundleBuilder<E, OutgoingAttached>, OutgoingBundleBuilderError> {
         // TODO Impl
         Ok(StagedOutgoingBundleBuilder::<E, OutgoingAttached> {
@@ -376,8 +376,8 @@ mod tests {
             .with_tag(Tag::zeros())
             .with_attachment_ts(Timestamp::from_inner_unchecked(0))
             .with_bundle(Hash::zeros())
-            .with_trunk(Hash::zeros())
-            .with_branch(Hash::zeros())
+            .with_parent1(Hash::zeros())
+            .with_parent2(Hash::zeros())
             .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
             .with_attachment_ubts(Timestamp::from_inner_unchecked(0))
             .with_nonce(Nonce::zeros())

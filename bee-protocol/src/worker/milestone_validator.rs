@@ -79,7 +79,7 @@ where
     // TODO use walker
     for _ in 0..config.coordinator.security_level {
         transaction = tangle
-            .get((*transaction).trunk())
+            .get((*transaction).parent1())
             .await
             .ok_or(MilestoneValidatorWorkerError::IncompleteBundle)?;
 

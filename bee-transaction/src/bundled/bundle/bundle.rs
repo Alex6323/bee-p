@@ -77,13 +77,13 @@ impl Vertex for Bundle {
     type Id = Hash;
 
     // TODO TEST
-    fn trunk(&self) -> &Hash {
-        self.head().trunk()
+    fn parent1(&self) -> &Hash {
+        self.head().parent1()
     }
 
     // TODO TEST
-    fn branch(&self) -> &Hash {
-        self.head().branch()
+    fn parent2(&self) -> &Hash {
+        self.head().parent2()
     }
 }
 

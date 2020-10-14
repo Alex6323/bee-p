@@ -16,7 +16,7 @@ use self::helper::*;
 use bee_tangle::traversal::*;
 
 #[test]
-fn visit_children_follow_trunk_in_simple_graph() {
+fn visit_children_follow_parent1_in_simple_graph() {
     // a   b0
     // |\ /
     // | c1
@@ -29,7 +29,7 @@ fn visit_children_follow_trunk_in_simple_graph() {
 
     let mut txs = vec![];
 
-    visit_children_follow_trunk(&tangle, b_hash, |_, _| true, |_, tx, _| txs.push(tx.clone()));
+    visit_children_follow_parent1(&tangle, b_hash, |_, _| true, |_, tx, _| txs.push(tx.clone()));
 
     assert_eq!(4, txs.len());
 
@@ -40,7 +40,7 @@ fn visit_children_follow_trunk_in_simple_graph() {
 }
 
 #[test]
-fn visit_parents_follow_trunk_in_simple_graph() {
+fn visit_parents_follow_parent1_in_simple_graph() {
     // a   b2
     // |\ /
     // | c1
@@ -53,7 +53,7 @@ fn visit_parents_follow_trunk_in_simple_graph() {
 
     let mut txs = vec![];
 
-    visit_parents_follow_trunk(&tangle, e_hash, |_, _| true, |_, tx, _| txs.push(tx.clone()));
+    visit_parents_follow_parent1(&tangle, e_hash, |_, _| true, |_, tx, _| txs.push(tx.clone()));
 
     assert_eq!(3, txs.len());
 
@@ -70,7 +70,7 @@ fn visit_parents_follow_trunk_in_simple_graph() {
     // d0|
     //  \|
     //   e
-    visit_parents_follow_trunk(&tangle, d_hash, |_, _| true, |_, tx, _| txs.push(tx.clone()));
+    visit_parents_follow_parent1(&tangle, d_hash, |_, _| true, |_, tx, _| txs.push(tx.clone()));
 
     assert_eq!(d.address(), txs[0].address());
     assert_eq!(c.address(), txs[1].address());

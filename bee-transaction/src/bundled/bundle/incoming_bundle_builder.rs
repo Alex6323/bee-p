@@ -31,8 +31,8 @@ pub enum IncomingBundleBuilderError {
     InvalidValue(i64),
     InvalidSignature,
     InvalidBundleHash,
-    InvalidBranch,
-    InvalidTrunk,
+    InvalidParent1,
+    InvalidParent2,
 }
 
 pub trait IncomingBundleBuilderStage {}
@@ -74,12 +74,12 @@ where
 {
     type Id = Hash;
 
-    fn trunk(&self) -> &Hash {
-        self.transactions.0.last().unwrap().trunk()
+    fn parent1(&self) -> &Hash {
+        self.transactions.0.last().unwrap().parent1()
     }
 
-    fn branch(&self) -> &Hash {
-        self.transactions.0.last().unwrap().branch()
+    fn parent2(&self) -> &Hash {
+        self.transactions.0.last().unwrap().parent2()
     }
 }
 
@@ -162,9 +162,9 @@ where
         // TODO avoid using a vec
         let bundle_hash_calculated = self.calculate_hash().as_i8_slice().to_vec();
 
-        let first_branch = self.transactions.0[0].branch();
+        let first_parent2 = self.transactions.0[0].parent2();
 
-        // TODO - check trunk of the last transaction and branch is tail, the same tail
+        // TODO - check parent1 of the last transaction and parent2 is tail, the same tail
 
         for (index, transaction) in self.transactions.0.iter().enumerate() {
             if index != *transaction.index().to_inner() {
@@ -189,15 +189,15 @@ where
                 return Err(IncomingBundleBuilderError::InvalidBundleHash);
             }
 
-            if index > 0 && index < last_index && transaction.branch().ne(first_branch) {
-                return Err(IncomingBundleBuilderError::InvalidBranch);
+            if index > 0 && index < last_index && transaction.parent2().ne(first_parent2) {
+                return Err(IncomingBundleBuilderError::InvalidParent2);
             }
 
-            if last_index != 0 && index == last_index && transaction.trunk().ne(first_branch) {
-                return Err(IncomingBundleBuilderError::InvalidTrunk);
+            if last_index != 0 && index == last_index && transaction.parent1().ne(first_parent2) {
+                return Err(IncomingBundleBuilderError::InvalidParent1);
             }
 
-            // TODO - for each transaction's hash check that it is its prev trunk
+            // TODO - for each transaction's hash check that it is its prev parent1
         }
 
         if sum != 0 {
@@ -250,8 +250,8 @@ mod tests {
             .with_tag(Tag::zeros())
             .with_attachment_ts(Timestamp::from_inner_unchecked(0))
             .with_bundle(Hash::zeros())
-            .with_trunk(Hash::zeros())
-            .with_branch(Hash::zeros())
+            .with_parent1(Hash::zeros())
+            .with_parent2(Hash::zeros())
             .with_attachment_lbts(Timestamp::from_inner_unchecked(0))
             .with_attachment_ubts(Timestamp::from_inner_unchecked(0))
             .with_nonce(Nonce::zeros())

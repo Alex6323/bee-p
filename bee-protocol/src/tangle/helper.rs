@@ -22,7 +22,7 @@ pub(crate) fn find_tail_of_bundle<H: Hooks<TransactionMetadata>>(
     let mut tail = None;
     let mut bundle = None;
 
-    traversal::visit_children_follow_trunk(
+    traversal::visit_children_follow_parent1(
         tangle,
         root,
         |tx, _| {

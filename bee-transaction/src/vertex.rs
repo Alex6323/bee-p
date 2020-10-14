@@ -12,7 +12,7 @@
 pub trait Vertex {
     type Id;
 
-    fn trunk(&self) -> &Self::Id;
+    fn parent1(&self) -> &Self::Id;
 
-    fn branch(&self) -> &Self::Id;
+    fn parent2(&self) -> &Self::Id;
 }

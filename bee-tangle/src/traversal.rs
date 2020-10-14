@@ -23,10 +23,10 @@ use bee_crypto::ternary::Hash;
 use std::collections::HashSet;
 
 /// A Tangle walker that - given a starting vertex - visits all of its ancestors that are connected through
-/// the *trunk* edge. The walk continues as long as the visited vertices match a certain condition. For each
+/// the *parent1* edge. The walk continues as long as the visited vertices match a certain condition. For each
 /// visited vertex a customized logic can be applied. Each traversed vertex provides read access to its
 /// associated data and metadata.
-pub fn visit_parents_follow_trunk<Metadata, Match, Apply, H: Hooks<Metadata>>(
+pub fn visit_parents_follow_parent1<Metadata, Match, Apply, H: Hooks<Metadata>>(
     tangle: &Tangle<Metadata, H>,
     mut hash: Hash,
     mut matches: Match,
@@ -43,16 +43,16 @@ pub fn visit_parents_follow_trunk<Metadata, Match, Apply, H: Hooks<Metadata>>(
             break;
         } else {
             apply(&hash, vtx.transaction(), vtx.metadata());
-            hash = *vtx.trunk();
+            hash = *vtx.parent1();
         }
     }
 }
 
 /// A Tangle walker that - given a starting vertex - visits all of its children that are connected through
-/// the *trunk* edge. The walk continues as long as the visited vertices match a certain condition. For each
+/// the *parent1* edge. The walk continues as long as the visited vertices match a certain condition. For each
 /// visited vertex a customized logic can be applied. Each traversed vertex provides read access to its
 /// associated data and metadata.
-pub fn visit_children_follow_trunk<Metadata, Match, Apply, H: Hooks<Metadata>>(
+pub fn visit_children_follow_parent1<Metadata, Match, Apply, H: Hooks<Metadata>>(
     tangle: &Tangle<Metadata, H>,
     root: Hash,
     mut matches: Match,
@@ -62,7 +62,7 @@ pub fn visit_children_follow_trunk<Metadata, Match, Apply, H: Hooks<Metadata>>(
     Match: FnMut(&TxRef, &Metadata) -> bool,
     Apply: FnMut(&Hash, &TxRef, &Metadata),
 {
-    // TODO could be simplified like visit_parents_follow_trunk ? Meaning no vector ?
+    // TODO could be simplified like visit_parents_follow_parent1 ? Meaning no vector ?
     let mut children = vec![root];
 
     while let Some(ref parent_hash) = children.pop() {
@@ -73,7 +73,7 @@ pub fn visit_children_follow_trunk<Metadata, Match, Apply, H: Hooks<Metadata>>(
                 if let Some(parent_children) = tangle.children.get(parent_hash) {
                     for child_hash in parent_children.value() {
                         if let Some(child) = tangle.vertices.get(child_hash) {
-                            if child.value().trunk() == parent_hash {
+                            if child.value().parent1() == parent_hash {
                                 children.push(*child_hash);
                             }
                         }
@@ -85,7 +85,7 @@ pub fn visit_children_follow_trunk<Metadata, Match, Apply, H: Hooks<Metadata>>(
 }
 
 /// A Tangle walker that - given a starting vertex - visits all of its ancestors that are connected through
-/// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
+/// either the *parent1* or the *parent2* edge. The walk continues as long as the visited vertices match a certain
 /// condition. For each visited vertex customized logic can be applied depending on the availability of the
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply, H: Hooks<Metadata>>(
@@ -116,8 +116,8 @@ pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply
                     if matches(&hash, vtx.transaction(), vtx.metadata()) {
                         apply(&hash, vtx.transaction(), vtx.metadata());
 
-                        parents.push(*vtx.trunk());
-                        parents.push(*vtx.branch());
+                        parents.push(*vtx.parent1());
+                        parents.push(*vtx.parent2());
                     } else {
                         else_apply(&hash, vtx.transaction(), vtx.metadata());
                     }
@@ -133,7 +133,7 @@ pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply
 
 // TODO: test
 /// A Tangle walker that - given a starting vertex - visits all of its decendents that are connected through
-/// either the *trunk* or the *branch* edge. The walk continues as long as the visited vertices match a certain
+/// either the *parent1* or the *parent2* edge. The walk continues as long as the visited vertices match a certain
 /// condition. For each visited vertex customized logic can be applied depending on the availability of the
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_children_depth_first<Metadata, Match, Apply, ElseApply, H: Hooks<Metadata>>(
@@ -156,14 +156,14 @@ pub fn visit_children_depth_first<Metadata, Match, Apply, ElseApply, H: Hooks<Me
             Some(r) => {
                 let vtx = r.value();
 
-                if visited.contains(vtx.trunk()) && visited.contains(vtx.branch()) {
+                if visited.contains(vtx.parent1()) && visited.contains(vtx.parent2()) {
                     apply(hash, vtx.transaction(), vtx.metadata());
                     visited.insert(*hash);
                     children.pop();
-                } else if !visited.contains(vtx.trunk()) && matches(vtx.transaction(), vtx.metadata()) {
-                    children.push(*vtx.trunk());
-                } else if !visited.contains(vtx.branch()) && matches(vtx.transaction(), vtx.metadata()) {
-                    children.push(*vtx.branch());
+                } else if !visited.contains(vtx.parent1()) && matches(vtx.transaction(), vtx.metadata()) {
+                    children.push(*vtx.parent1());
+                } else if !visited.contains(vtx.parent2()) && matches(vtx.transaction(), vtx.metadata()) {
+                    children.push(*vtx.parent2());
                 }
             }
             None => {

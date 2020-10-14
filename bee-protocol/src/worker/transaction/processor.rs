@@ -163,13 +163,13 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                     match Protocol::get().requested_transactions.remove(&hash) {
                         Some((_, (index, _))) => {
-                            let trunk = transaction.trunk();
-                            let branch = transaction.branch();
+                            let parent1 = transaction.parent1();
+                            let parent2 = transaction.parent2();
 
-                            Protocol::request_transaction(&tangle, &transaction_requester, *trunk, index).await;
+                            Protocol::request_transaction(&tangle, &transaction_requester, *parent1, index).await;
 
-                            if trunk != branch {
-                                Protocol::request_transaction(&tangle, &transaction_requester, *branch, index).await;
+                            if parent1 != parent2 {
+                                Protocol::request_transaction(&tangle, &transaction_requester, *parent2, index).await;
                             }
                         }
                         None => {

@@ -49,12 +49,12 @@ pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
         let (d_hash, d) = create_random_attached_tx(a_hash, c_hash);
         let (e_hash, e) = create_random_attached_tx(d_hash, c_hash);
 
-        assert_eq!(*c.trunk(), b_hash);
-        assert_eq!(*c.branch(), a_hash);
-        assert_eq!(*d.trunk(), c_hash);
-        assert_eq!(*d.branch(), a_hash);
-        assert_eq!(*e.trunk(), c_hash);
-        assert_eq!(*e.branch(), d_hash);
+        assert_eq!(*c.parent1(), b_hash);
+        assert_eq!(*c.parent2(), a_hash);
+        assert_eq!(*d.parent1(), c_hash);
+        assert_eq!(*d.parent2(), a_hash);
+        assert_eq!(*e.parent1(), c_hash);
+        assert_eq!(*e.parent2(), d_hash);
 
         tangle.insert(a_hash, a.clone(), ()).await;
         tangle.insert(b_hash, b.clone(), ()).await;
@@ -62,12 +62,12 @@ pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
         tangle.insert(d_hash, d.clone(), ()).await;
         tangle.insert(e_hash, e.clone(), ()).await;
 
-        assert_eq!(*tangle.get(&c_hash).await.unwrap().trunk(), b_hash);
-        assert_eq!(*tangle.get(&c_hash).await.unwrap().branch(), a_hash);
-        assert_eq!(*tangle.get(&d_hash).await.unwrap().trunk(), c_hash);
-        assert_eq!(*tangle.get(&d_hash).await.unwrap().branch(), a_hash);
-        assert_eq!(*tangle.get(&e_hash).await.unwrap().trunk(), c_hash);
-        assert_eq!(*tangle.get(&e_hash).await.unwrap().branch(), d_hash);
+        assert_eq!(*tangle.get(&c_hash).await.unwrap().parent1(), b_hash);
+        assert_eq!(*tangle.get(&c_hash).await.unwrap().parent2(), a_hash);
+        assert_eq!(*tangle.get(&d_hash).await.unwrap().parent1(), c_hash);
+        assert_eq!(*tangle.get(&d_hash).await.unwrap().parent2(), a_hash);
+        assert_eq!(*tangle.get(&e_hash).await.unwrap().parent1(), c_hash);
+        assert_eq!(*tangle.get(&e_hash).await.unwrap().parent2(), d_hash);
 
         // TODO ensure children reference their parents correctly
 

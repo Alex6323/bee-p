@@ -111,10 +111,10 @@ where
             .transactions
             .get(self.transactions.len() - 2)
             .unwrap()
-            .trunk()
+            .parent1()
             .to_inner();
 
-        // Safe to unwrap because we know `hash` has a valid size since it comes from `trunk`.
+        // Safe to unwrap because we know `hash` has a valid size since it comes from `parent1`.
         match public_key.verify(&normalize(hash).unwrap(), &signature) {
             Ok(valid) => {
                 if valid {

@@ -44,7 +44,7 @@ pub use config::{PruningConfig, PruningConfigBuilder};
 //         return Err(Error::MetadataNotFound(Box::new(*hash)));
 //     }
 //     let mut is_solid = false;
-//     traversal::visit_children_follow_trunk(
+//     traversal::visit_children_follow_parent1(
 //         tangle,
 //         *hash,
 //         |_, metadata| {

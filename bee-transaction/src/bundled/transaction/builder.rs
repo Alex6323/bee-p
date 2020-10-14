@@ -28,8 +28,8 @@ pub struct BundledTransactionBuilder {
     pub(crate) index: Option<Index>,
     pub(crate) last_index: Option<Index>,
     pub(crate) bundle: Option<Hash>,
-    pub(crate) trunk: Option<Hash>,
-    pub(crate) branch: Option<Hash>,
+    pub(crate) parent1: Option<Hash>,
+    pub(crate) parent2: Option<Hash>,
     pub(crate) tag: Option<Tag>,
     pub(crate) attachment_ts: Option<Timestamp>,
     pub(crate) attachment_lbts: Option<Timestamp>,
@@ -129,13 +129,13 @@ impl BundledTransactionBuilder {
         self
     }
 
-    pub fn with_trunk(mut self, trunk: Hash) -> Self {
-        self.trunk.replace(trunk);
+    pub fn with_parent1(mut self, parent1: Hash) -> Self {
+        self.parent1.replace(parent1);
         self
     }
 
-    pub fn with_branch(mut self, branch: Hash) -> Self {
-        self.branch.replace(branch);
+    pub fn with_parent2(mut self, parent2: Hash) -> Self {
+        self.parent2.replace(parent2);
         self
     }
 
@@ -186,8 +186,8 @@ impl BundledTransactionBuilder {
                 .ok_or(BundledTransactionError::MissingField("last_index"))?,
             tag: self.tag.ok_or(BundledTransactionError::MissingField("tag"))?,
             bundle: self.bundle.ok_or(BundledTransactionError::MissingField("bundle"))?,
-            trunk: self.trunk.ok_or(BundledTransactionError::MissingField("trunk"))?,
-            branch: self.branch.ok_or(BundledTransactionError::MissingField("branch"))?,
+            parent1: self.parent1.ok_or(BundledTransactionError::MissingField("parent1"))?,
+            parent2: self.parent2.ok_or(BundledTransactionError::MissingField("parent2"))?,
             attachment_ts: self
                 .attachment_ts
                 .ok_or(BundledTransactionError::MissingField("attachment_ts"))?,
@@ -240,8 +240,8 @@ mod tests {
             .with_tag(Tag::zeros())
             .with_attachment_ts(Timestamp(0))
             .with_bundle(Hash::zeros())
-            .with_trunk(Hash::zeros())
-            .with_branch(Hash::zeros())
+            .with_parent1(Hash::zeros())
+            .with_parent2(Hash::zeros())
             .with_attachment_lbts(Timestamp(0))
             .with_attachment_ubts(Timestamp(0))
             .with_nonce(Nonce::zeros())
@@ -262,8 +262,8 @@ mod tests {
             .with_tag(Tag::zeros())
             .with_attachment_ts(Timestamp(0))
             .with_bundle(Hash::zeros())
-            .with_trunk(Hash::zeros())
-            .with_branch(Hash::zeros())
+            .with_parent1(Hash::zeros())
+            .with_parent2(Hash::zeros())
             .with_attachment_lbts(Timestamp(0))
             .with_attachment_ubts(Timestamp(0))
             .with_nonce(Nonce::zeros())
@@ -286,8 +286,8 @@ mod tests {
         assert_eq!(tx.tag, tx2.tag);
         assert_eq!(tx.attachment_ts, tx2.attachment_ts);
         assert_eq!(tx.bundle, tx2.bundle);
-        assert_eq!(tx.trunk, tx2.trunk);
-        assert_eq!(tx.branch, tx2.branch);
+        assert_eq!(tx.parent1, tx2.parent1);
+        assert_eq!(tx.parent2, tx2.parent2);
         assert_eq!(tx.attachment_lbts, tx2.attachment_lbts);
         assert_eq!(tx.attachment_ubts, tx2.attachment_ubts);
         assert_eq!(tx.nonce, tx2.nonce);

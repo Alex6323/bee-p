@@ -36,12 +36,12 @@ where
         }
     }
 
-    pub fn trunk(&self) -> &Hash {
-        self.transaction.trunk()
+    pub fn parent1(&self) -> &Hash {
+        self.transaction.parent1()
     }
 
-    pub fn branch(&self) -> &Hash {
-        self.transaction.branch()
+    pub fn parent2(&self) -> &Hash {
+        self.transaction.parent2()
     }
 
     pub fn transaction(&self) -> &TxRef {
@@ -69,8 +69,8 @@ mod tests {
 
         let vtx = Vertex::new(tx.clone(), metadata);
 
-        assert_eq!(tx.trunk(), vtx.trunk());
-        assert_eq!(tx.branch(), vtx.branch());
+        assert_eq!(tx.parent1(), vtx.parent1());
+        assert_eq!(tx.parent2(), vtx.parent2());
         assert_eq!(tx, **vtx.transaction());
         assert_eq!(metadata, *vtx.metadata());
     }

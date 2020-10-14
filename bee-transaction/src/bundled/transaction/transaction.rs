@@ -12,8 +12,8 @@
 use crate::{
     bundled::{
         constants::{
-            Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BRANCH, BUNDLE, ESSENCE_TRIT_LEN, INDEX,
-            LAST_INDEX, NONCE, OBSOLETE_TAG, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, TRUNK, VALUE,
+            Field, ADDRESS, ATTACHMENT_LBTS, ATTACHMENT_TS, ATTACHMENT_UBTS, BUNDLE, ESSENCE_TRIT_LEN, INDEX,
+            LAST_INDEX, NONCE, OBSOLETE_TAG, PARENT1, PARENT2, PAYLOAD, TAG, TIMESTAMP, TRANSACTION_TRIT_LEN, VALUE,
         },
         Address, BundledTransactionBuilder, BundledTransactionField, Index, Nonce, Payload, Tag, Timestamp, Value,
     },
@@ -43,8 +43,8 @@ pub struct BundledTransaction {
     pub(crate) index: Index,
     pub(crate) last_index: Index,
     pub(crate) bundle: Hash,
-    pub(crate) trunk: Hash,
-    pub(crate) branch: Hash,
+    pub(crate) parent1: Hash,
+    pub(crate) parent2: Hash,
     pub(crate) tag: Tag,
     pub(crate) attachment_ts: Timestamp,
     pub(crate) attachment_lbts: Timestamp,
@@ -101,11 +101,11 @@ impl BundledTransaction {
             .with_bundle(Hash::from_inner_unchecked(
                 trits[BUNDLE.trit_offset.start..BUNDLE.trit_offset.start + BUNDLE.trit_offset.length].to_buf(),
             ))
-            .with_trunk(Hash::from_inner_unchecked(
-                trits[TRUNK.trit_offset.start..TRUNK.trit_offset.start + TRUNK.trit_offset.length].to_buf(),
+            .with_parent1(Hash::from_inner_unchecked(
+                trits[PARENT1.trit_offset.start..PARENT1.trit_offset.start + PARENT1.trit_offset.length].to_buf(),
             ))
-            .with_branch(Hash::from_inner_unchecked(
-                trits[BRANCH.trit_offset.start..BRANCH.trit_offset.start + BRANCH.trit_offset.length].to_buf(),
+            .with_parent2(Hash::from_inner_unchecked(
+                trits[PARENT2.trit_offset.start..PARENT2.trit_offset.start + PARENT2.trit_offset.length].to_buf(),
             ))
             .with_attachment_lbts(Timestamp::from_inner_unchecked(
                 i128::try_from(
@@ -140,8 +140,8 @@ impl BundledTransaction {
         copy_field(ADDRESS, self.address().to_inner());
         copy_field(OBSOLETE_TAG, self.obsolete_tag().to_inner());
         copy_field(BUNDLE, self.bundle().to_inner());
-        copy_field(BRANCH, self.branch().to_inner());
-        copy_field(TRUNK, self.trunk().to_inner());
+        copy_field(PARENT2, self.parent2().to_inner());
+        copy_field(PARENT1, self.parent1().to_inner());
         copy_field(TAG, self.tag().to_inner());
         copy_field(NONCE, self.nonce().to_inner());
 
@@ -285,12 +285,12 @@ impl BundledTransaction {
 impl Vertex for BundledTransaction {
     type Id = Hash;
 
-    fn trunk(&self) -> &Self::Id {
-        &self.trunk
+    fn parent1(&self) -> &Self::Id {
+        &self.parent1
     }
 
-    fn branch(&self) -> &Self::Id {
-        &self.branch
+    fn parent2(&self) -> &Self::Id {
+        &self.parent2
     }
 }
 
