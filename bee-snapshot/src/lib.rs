@@ -15,13 +15,10 @@ pub(crate) mod pruning;
 
 pub mod config;
 pub mod event;
-pub mod global;
 pub mod header;
 pub mod local;
 pub mod metadata;
 
-use global::GlobalSnapshot;
-use header::SnapshotHeader;
 use local::LocalSnapshot;
 use metadata::SnapshotMetadata;
 
@@ -35,7 +32,6 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 #[derive(Debug)]
 pub enum Error {
-    Global(global::FileError),
     Local(local::FileError),
     Download(local::DownloadError),
 }
@@ -47,65 +43,28 @@ pub async fn init<N: Node>(
     config: &config::SnapshotConfig,
     node_builder: N::Builder,
 ) -> Result<(N::Builder, HashMap<Address, u64>, SnapshotMetadata), Error> {
-    let (state, mut metadata) = match config.load_type() {
-        config::LoadType::Global => {
-            info!("Loading global snapshot file {}...", config.global().path());
+    if !Path::new(config.local().path()).exists() {
+        local::download_local_snapshot(config.local())
+            .await
+            .map_err(Error::Download)?;
+    }
+    info!("Loading local snapshot file {}...", config.local().path());
 
-            let snapshot = global::GlobalSnapshot::from_file(config.global().path(), *config.global().index())
-                .map_err(Error::Global)?;
+    let LocalSnapshot { metadata, state } =
+        local::LocalSnapshot::from_file(config.local().path()).map_err(Error::Local)?;
 
-            info!(
-                "Loaded global snapshot file from with index {} and {} balances.",
-                *config.global().index(),
-                snapshot.state().len()
-            );
-
-            let GlobalSnapshot { state, index } = snapshot;
-
-            let metadata = SnapshotMetadata {
-                header: SnapshotHeader {
-                    coordinator: Hash::zeros(),
-                    hash: Hash::zeros(),
-                    snapshot_index: index,
-                    entry_point_index: index,
-                    pruning_index: index,
-                    // TODO from conf ?
-                    timestamp: 0,
-                },
-                solid_entry_points: HashMap::new(),
-                seen_milestones: HashMap::new(),
-            };
-
-            (state, metadata)
-        }
-        config::LoadType::Local => {
-            if !Path::new(config.local().path()).exists() {
-                local::download_local_snapshot(config.local())
-                    .await
-                    .map_err(Error::Download)?;
-            }
-            info!("Loading local snapshot file {}...", config.local().path());
-
-            let snapshot = local::LocalSnapshot::from_file(config.local().path()).map_err(Error::Local)?;
-
-            info!(
-                "Loaded local snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
+    info!(
+        "Loaded local snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
                 {} balances.",
-                Utc.timestamp(snapshot.metadata().timestamp() as i64, 0).to_rfc2822(),
-                snapshot.metadata().index(),
-                snapshot.metadata().solid_entry_points().len(),
-                snapshot.metadata().seen_milestones().len(),
-                snapshot.state.len()
-            );
+        Utc.timestamp(metadata.timestamp() as i64, 0).to_rfc2822(),
+        metadata.index(),
+        metadata.solid_entry_points().len(),
+        metadata.seen_milestones().len(),
+        state.len()
+    );
 
-            let LocalSnapshot { metadata, state } = snapshot;
-
-            (state, metadata)
-        }
-    };
-
-    // The genesis transaction must be marked as SEP with snapshot index during loading a global snapshot
-    // because coordinator bootstraps the network by referencing the genesis tx.
+    // The genesis transaction must be marked as SEP with snapshot index during loading a snapshot because coordinator
+    // bootstraps the network by referencing the genesis tx.
     metadata.solid_entry_points.insert(Hash::zeros(), metadata.index());
 
     // node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());

@@ -23,7 +23,6 @@ public_key      = "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHH
 status_interval = 10
 
 [snapshot]
-load_type = "local"
 [snapshot.local]
 path              = "./snapshots/mainnet/export.bin"
 download_urls     = [
@@ -33,9 +32,6 @@ download_urls     = [
 depth             = 50
 interval_synced   = 50
 interval_unsynced = 1000
-[snapshot.global]
-path  = "./snapshots/mainnet/snapshot.txt"
-index = 1050000
 [snapshot.pruning]
 enabled = true
 delay   = 60480
