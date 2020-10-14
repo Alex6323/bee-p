@@ -44,11 +44,12 @@ impl<N: Node> Worker<N> for PropagatorWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![
+        vec![
             TypeId::of::<BundleValidatorWorker>(),
             TypeId::of::<MilestoneConeUpdaterWorker>(),
             TypeId::of::<TangleWorker>(),
-        ]))
+        ]
+        .leak()
     }
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {

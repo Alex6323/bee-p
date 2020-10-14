@@ -35,7 +35,7 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<TangleWorker>()]))
+        vec![TypeId::of::<TangleWorker>()].leak()
     }
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {

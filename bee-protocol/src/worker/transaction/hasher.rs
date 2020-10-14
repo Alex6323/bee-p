@@ -95,7 +95,7 @@ impl<N: Node> Worker<N> for HasherWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![TypeId::of::<ProcessorWorker>()]))
+        vec![TypeId::of::<ProcessorWorker>()].leak()
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {

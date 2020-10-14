@@ -75,13 +75,14 @@ impl<N: Node> Worker<N> for ProcessorWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        Box::leak(Box::from(vec![
+        vec![
             TypeId::of::<TangleWorker>(),
             TypeId::of::<MilestoneValidatorWorker>(),
             TypeId::of::<PropagatorWorker>(),
             TypeId::of::<BroadcasterWorker>(),
             TypeId::of::<TransactionRequesterWorker>(),
-        ]))
+        ]
+        .leak()
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
