@@ -15,8 +15,6 @@ mod file;
 pub use config::{GlobalSnapshotConfig, GlobalSnapshotConfigBuilder};
 pub use file::Error as FileError;
 
-use bee_transaction::bundled::Address;
-
 use std::collections::HashMap;
 
 pub struct GlobalSnapshot {

@@ -20,9 +20,6 @@ pub use file::Error as FileError;
 
 use crate::{header::SnapshotHeader, metadata::SnapshotMetadata};
 
-use bee_crypto::ternary::Hash;
-use bee_transaction::bundled::Address;
-
 use log::{error, info};
 
 use std::collections::HashMap;

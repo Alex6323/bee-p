@@ -26,8 +26,6 @@ use local::LocalSnapshot;
 use metadata::SnapshotMetadata;
 
 use bee_common_ext::{event::Bus, node::Node};
-use bee_crypto::ternary::Hash;
-use bee_transaction::bundled::Address;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};

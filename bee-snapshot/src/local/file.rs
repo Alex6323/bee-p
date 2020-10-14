@@ -11,10 +11,6 @@
 
 use crate::{constants::IOTA_SUPPLY, header::SnapshotHeader, local::LocalSnapshot, metadata::SnapshotMetadata};
 
-use bee_crypto::ternary::{Hash, HASH_LENGTH};
-use bee_ternary::{T1B1Buf, T5B1Buf, Trits, T5B1};
-use bee_transaction::bundled::{Address, BundledTransactionField};
-
 use bytemuck::cast_slice;
 use log::debug;
 

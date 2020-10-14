@@ -11,8 +11,6 @@
 
 use crate::header::SnapshotHeader;
 
-use bee_crypto::ternary::Hash;
-
 use std::collections::HashMap;
 
 pub struct SnapshotMetadata {

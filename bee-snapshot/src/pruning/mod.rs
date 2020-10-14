@@ -15,7 +15,6 @@ pub use config::{PruningConfig, PruningConfigBuilder};
 
 // use crate::constants::{ADDITIONAL_PRUNING_THRESHOLD, SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST};
 
-// use bee_crypto::ternary::Hash;
 // use bee_protocol::{
 //     tangle::{helper, MsTangle},
 //     MilestoneIndex,

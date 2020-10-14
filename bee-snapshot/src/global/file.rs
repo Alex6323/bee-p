@@ -11,9 +11,6 @@
 
 use crate::{constants::IOTA_SUPPLY, global::GlobalSnapshot};
 
-use bee_ternary::{T1B1Buf, TryteBuf};
-use bee_transaction::bundled::{Address, BundledTransactionField};
-
 use std::{
     collections::HashMap,
     fs::File,
