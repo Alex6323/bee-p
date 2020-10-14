@@ -16,7 +16,7 @@ use std::convert::TryFrom;
 const TRITS_PER_TRYTE: usize = 3;
 const TRITS_PER_BYTE: usize = 6;
 
-pub(crate) fn decode(src: &Trits) -> Vec<u8> {
+pub fn decode(src: &Trits) -> Vec<u8> {
     if src.len() % TRITS_PER_BYTE != 0 {
         // TODO do something
         panic!();

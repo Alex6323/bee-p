@@ -112,6 +112,7 @@ dependencies = [
  "async-trait",
  "bee-common",
  "bee-storage",
+ "bee-ternary",
  "dashmap",
  "futures",
  "log",
