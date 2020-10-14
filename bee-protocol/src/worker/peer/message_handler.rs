@@ -187,7 +187,7 @@ mod tests {
         let mut msgs = vec![0u8; msg_size * n_msg];
         // We need 3 bytes for the header. Thus the message length stored in the header should be 3
         // bytes shorter.
-        let msg_len = ((msg_size - 3) as u16).to_be_bytes();
+        let msg_len = ((msg_size - 3) as u16).to_le_bytes();
         // We write the bytes that correspond to the message length in the header.
         for i in (0..n_msg).map(|i| i * msg_size + 1) {
             msgs[i] = msg_len[0];

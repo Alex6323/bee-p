@@ -27,16 +27,17 @@ pub(crate) struct Header {
 }
 
 impl Header {
+    // TODO impl try_from
     pub(crate) fn from_bytes(bytes: &[u8]) -> Self {
         Self {
             packet_type: bytes[0],
             // TODO propagate error
-            packet_length: u16::from_be_bytes(bytes[HEADER_TYPE_SIZE..HEADER_SIZE].try_into().unwrap()),
+            packet_length: u16::from_le_bytes(bytes[HEADER_TYPE_SIZE..HEADER_SIZE].try_into().unwrap()),
         }
     }
 
     pub(crate) fn to_bytes(&self, bytes: &mut [u8]) {
         bytes[0] = self.packet_type;
-        bytes[1..].copy_from_slice(&self.packet_length.to_be_bytes());
+        bytes[1..].copy_from_slice(&self.packet_length.to_le_bytes());
     }
 }

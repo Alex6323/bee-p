@@ -156,7 +156,7 @@ mod tests {
             let bytes_to = tlv_into_bytes(packet);
 
             assert_eq!(bytes_to[0], P::ID);
-            assert_eq!(u16::from_be_bytes(bytes_to[1..3].try_into().unwrap()), length as u16);
+            assert_eq!(u16::from_le_bytes(bytes_to[1..3].try_into().unwrap()), length as u16);
             assert!(bytes_from.eq(&bytes_to[3..].to_vec()));
         }
     }
