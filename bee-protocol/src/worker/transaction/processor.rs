@@ -16,7 +16,7 @@ use crate::{
     tangle::{MsTangle, TransactionMetadata},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
-        SolidPropagatorWorker, SolidPropagatorWorkerEvent, TangleWorker, TransactionRequesterWorker,
+        PropagatorWorker, PropagatorWorkerEvent, TangleWorker, TransactionRequesterWorker,
     },
 };
 
@@ -78,7 +78,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         Box::leak(Box::from(vec![
             TypeId::of::<TangleWorker>(),
             TypeId::of::<MilestoneValidatorWorker>(),
-            TypeId::of::<SolidPropagatorWorker>(),
+            TypeId::of::<PropagatorWorker>(),
             TypeId::of::<BroadcasterWorker>(),
             TypeId::of::<TransactionRequesterWorker>(),
         ]))
@@ -87,7 +87,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
-        let solid_propagator = node.worker::<SolidPropagatorWorker>().unwrap().tx.clone();
+        let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
         let broadcaster = node.worker::<BroadcasterWorker>().unwrap().tx.clone();
         let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
 
@@ -153,8 +153,9 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     // TODO this was temporarily moved from the tangle.
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
-                    if let Err(e) = solid_propagator.send(SolidPropagatorWorkerEvent(hash)) {
-                        error!("Failed to send hash to solid propagator: {:?}.", e);
+
+                    if let Err(e) = propagator.send(PropagatorWorkerEvent(hash)) {
+                        error!("Failed to send hash to propagator: {:?}.", e);
                     }
 
                     Protocol::get().metrics.new_transactions_inc();

@@ -24,7 +24,7 @@ impl Delete<Hash, TransactionMetadata> for Storage {
         let db = &self.inner;
         let hash_to_metadata = db.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
         let mut hash_buf = Vec::new();
-        hash.encode_persistable::<Self>(&mut hash_buf);
+        hash.write_to(&mut hash_buf);
         db.delete_cf(&hash_to_metadata, hash_buf.as_slice())?;
         Ok(())
     }
@@ -37,7 +37,7 @@ impl Delete<MilestoneIndex, LedgerDiff> for Storage {
         let db = &self.inner;
         let ms_index_to_ledger_diff = db.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
         let mut index_buf = Vec::new();
-        milestone_index.encode_persistable::<Self>(&mut index_buf);
+        milestone_index.write_to(&mut index_buf);
         db.delete_cf(&ms_index_to_ledger_diff, index_buf.as_slice())?;
         Ok(())
     }
@@ -50,7 +50,7 @@ impl Delete<MilestoneIndex, LedgerState> for Storage {
         let db = &self.inner;
         let ms_index_to_ledger_state = db.cf_handle(MILESTONE_INDEX_TO_LEDGER_STATE).unwrap();
         let mut index_buf = Vec::new();
-        milestone_index.encode_persistable::<Self>(&mut index_buf);
+        milestone_index.write_to(&mut index_buf);
         db.delete_cf(&ms_index_to_ledger_state, index_buf.as_slice())?;
         Ok(())
     }
@@ -63,7 +63,7 @@ impl Delete<Hash, BundledTransaction> for Storage {
         let db = &self.inner;
         let hash_to_tx = db.cf_handle(TRANSACTION_HASH_TO_TRANSACTION).unwrap();
         let mut hash_buf = Vec::new();
-        hash.encode_persistable::<Self>(&mut hash_buf);
+        hash.write_to(&mut hash_buf);
         db.delete_cf(&hash_to_tx, hash_buf.as_slice())?;
         Ok(())
     }
@@ -76,7 +76,7 @@ impl Delete<Hash, MilestoneIndex> for Storage {
         let db = &self.inner;
         let ms_hash_to_ms_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
         let mut hash_buf = Vec::new();
-        hash.encode_persistable::<Self>(&mut hash_buf);
+        hash.write_to(&mut hash_buf);
         db.delete_cf(&ms_hash_to_ms_index, hash_buf.as_slice())?;
         Ok(())
     }

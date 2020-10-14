@@ -21,6 +21,10 @@ pub struct TransactionMetadata {
     arrival_timestamp: u64,
     solidification_timestamp: u64,
     confirmation_timestamp: u64,
+    cone_index: Option<MilestoneIndex>, /* maybe merge milestone_index and cone_index; keep it like that for now to
+                                         * avoid conflicts; */
+    otrsi: Option<MilestoneIndex>,
+    ytrsi: Option<MilestoneIndex>,
 }
 
 impl TransactionMetadata {
@@ -30,6 +34,9 @@ impl TransactionMetadata {
         arrival_timestamp: u64,
         solidification_timestamp: u64,
         confirmation_timestamp: u64,
+        cone_index: Option<MilestoneIndex>,
+        otrsi: Option<MilestoneIndex>,
+        ytrsi: Option<MilestoneIndex>,
     ) -> Self {
         Self {
             flags,
@@ -37,6 +44,9 @@ impl TransactionMetadata {
             arrival_timestamp,
             solidification_timestamp,
             confirmation_timestamp,
+            cone_index,
+            otrsi,
+            ytrsi,
         }
     }
 
@@ -76,6 +86,30 @@ impl TransactionMetadata {
 
     pub fn set_solidification_timestamp(&mut self, timestamp: u64) {
         self.solidification_timestamp = timestamp;
+    }
+
+    pub fn cone_index(&self) -> Option<MilestoneIndex> {
+        self.cone_index
+    }
+
+    pub fn set_cone_index(&mut self, cone_index: MilestoneIndex) {
+        self.cone_index = Some(cone_index);
+    }
+
+    pub fn otrsi(&self) -> Option<MilestoneIndex> {
+        self.otrsi
+    }
+
+    pub fn set_otrsi(&mut self, otrsi: MilestoneIndex) {
+        self.otrsi = Some(otrsi);
+    }
+
+    pub fn ytrsi(&self) -> Option<MilestoneIndex> {
+        self.ytrsi
+    }
+
+    pub fn set_ytrsi(&mut self, ytrsi: MilestoneIndex) {
+        self.ytrsi = Some(ytrsi);
     }
 
     pub fn confirmation_timestamp(&self) -> u64 {

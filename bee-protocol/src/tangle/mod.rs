@@ -13,6 +13,7 @@ pub mod flags;
 pub mod helper;
 
 mod metadata;
+mod wurts;
 
 pub use metadata::TransactionMetadata;
 
@@ -26,10 +27,15 @@ use bee_transaction::bundled::BundledTransaction as Tx;
 
 use async_trait::async_trait;
 use dashmap::DashMap;
+use tokio::sync::Mutex;
 
+use crate::tangle::wurts::WurtsTipPool;
 use std::{
     ops::Deref,
-    sync::atomic::{AtomicU32, Ordering},
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
+    },
 };
 
 pub struct StorageHooks<B> {
@@ -62,6 +68,7 @@ pub struct MsTangle<B> {
     snapshot_index: AtomicU32,
     pruning_index: AtomicU32,
     entry_point_index: AtomicU32,
+    tip_pool: Arc<Mutex<WurtsTipPool>>,
 }
 
 impl<B> Deref for MsTangle<B> {
@@ -83,6 +90,7 @@ impl<B: Backend> MsTangle<B> {
             snapshot_index: Default::default(),
             pruning_index: Default::default(),
             entry_point_index: Default::default(),
+            tip_pool: Arc::new(Mutex::new(WurtsTipPool::default())),
         }
     }
 
@@ -96,10 +104,10 @@ impl<B: Backend> MsTangle<B> {
         // When the tangle is made a worker, this should be put back on.
         // if opt.is_some() {
         //     if let Err(e) = Protocol::get()
-        //         .solid_propagator_worker
-        //         .unbounded_send(SolidPropagatorWorkerEvent(hash))
+        //         .propagator_worker
+        //         .unbounded_send(PropagatorWorkerEvent(hash))
         //     {
-        //         error!("Failed to send hash to solid propagator: {:?}.", e);
+        //         error!("Failed to send hash to propagator: {:?}.", e);
         //     }
         // }
         //
@@ -222,6 +230,42 @@ impl<B: Backend> MsTangle<B> {
                 .map(|metadata| metadata.flags().is_solid())
                 .unwrap_or(false)
         }
+    }
+
+    pub fn otrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
+        match self.solid_entry_points.get(hash) {
+            Some(sep) => Some(*sep.value()),
+            None => match self.get_metadata(hash) {
+                Some(metadata) => metadata.otrsi(),
+                None => None,
+            },
+        }
+    }
+
+    pub fn ytrsi(&self, hash: &Hash) -> Option<MilestoneIndex> {
+        match self.solid_entry_points.get(hash) {
+            Some(sep) => Some(*sep.value()),
+            None => match self.get_metadata(hash) {
+                Some(metadata) => metadata.ytrsi(),
+                None => None,
+            },
+        }
+    }
+
+    pub async fn insert_tip(&self, tail: Hash, trunk: Hash, branch: Hash) {
+        self.tip_pool.lock().await.insert(&self, tail, trunk, branch).await;
+    }
+
+    pub async fn update_tip_scores(&self) {
+        self.tip_pool.lock().await.update_scores(&self).await;
+    }
+
+    pub async fn get_transactions_to_approve(&self) -> Option<(Hash, Hash)> {
+        self.tip_pool.lock().await.two_non_lazy_tips()
+    }
+
+    pub async fn reduce_tips(&self) {
+        self.tip_pool.lock().await.reduce_tips();
     }
 }
 

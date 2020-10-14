@@ -13,24 +13,19 @@ use crate::{tangle::MsTangle, worker::TangleWorker};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::Hash;
-use bee_tangle::helper::load_bundle_builder;
-use bee_transaction::Vertex;
 
 use async_trait::async_trait;
-use futures::stream::StreamExt;
-use log::{info, warn};
+use futures::StreamExt;
+use log::info;
+use tokio::time::interval;
 
-use std::any::TypeId;
+use std::{any::TypeId, time::Duration};
 
-pub(crate) struct BundleValidatorWorkerEvent(pub(crate) Hash);
-
-pub(crate) struct BundleValidatorWorker {
-    pub(crate) tx: flume::Sender<BundleValidatorWorkerEvent>,
-}
+#[derive(Default)]
+pub(crate) struct TipPoolCleanerWorker {}
 
 #[async_trait]
-impl<N: Node> Worker<N> for BundleValidatorWorker {
+impl<N: Node> Worker<N> for TipPoolCleanerWorker {
     type Config = ();
     type Error = WorkerError;
 
@@ -39,34 +34,20 @@ impl<N: Node> Worker<N> for BundleValidatorWorker {
     }
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = flume::unbounded();
-
         let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
+            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
-            while let Some(BundleValidatorWorkerEvent(hash)) = receiver.next().await {
-                match load_bundle_builder(&*tangle, &hash) {
-                    Some(builder) => {
-                        if let Ok(bundle) = builder.validate() {
-                            tangle.update_metadata(&hash, |metadata| {
-                                metadata.flags_mut().set_valid(true);
-                            });
-                            tangle.insert_tip(hash, *bundle.trunk(), *bundle.branch()).await;
-                        }
-                    }
-                    None => {
-                        warn!("Failed to validate bundle: tail not found.");
-                    }
-                }
+            while receiver.next().await.is_some() {
+                tangle.reduce_tips().await
             }
 
             info!("Stopped.");
         });
 
-        Ok(Self { tx })
+        Ok(Self::default())
     }
 }

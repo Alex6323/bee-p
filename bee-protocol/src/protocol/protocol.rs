@@ -17,10 +17,10 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::MsTangle,
     worker::{
-        BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneRequesterWorker,
-        MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        PeerHandshakerWorker, ProcessorWorker, SolidPropagatorWorker, StatusWorker, StorageWorker, TangleWorker,
-        TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
+        BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneConeUpdaterWorker,
+        MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
+        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker,
+        TangleWorker, TipPoolCleanerWorker, TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
     },
 };
 
@@ -88,11 +88,13 @@ impl Protocol {
             .with_worker_cfg::<MilestoneValidatorWorker>(config.clone())
             .with_worker_cfg::<BroadcasterWorker>(network)
             .with_worker::<BundleValidatorWorker>()
-            .with_worker::<SolidPropagatorWorker>()
-            .with_worker_cfg::<StatusWorker>(config.workers.status_interval)
+            .with_worker::<PropagatorWorker>()
             .with_worker::<TpsWorker>()
             .with_worker_cfg::<KickstartWorker>((ms_send, config.workers.ms_sync_count))
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
+            .with_worker::<MilestoneConeUpdaterWorker>()
+            .with_worker::<TipPoolCleanerWorker>()
+            .with_worker::<StatusWorker>()
     }
 
     pub fn events<N: Node>(node: &N, config: ProtocolConfig, bus: Arc<Bus<'static>>) {

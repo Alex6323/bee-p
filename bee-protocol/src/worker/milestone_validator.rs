@@ -15,7 +15,10 @@ use crate::{
     milestone::{Milestone, MilestoneBuilder, MilestoneBuilderError},
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, MsTangle},
-    worker::{MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, TangleWorker},
+    worker::{
+        MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent, MilestoneSolidifierWorker,
+        MilestoneSolidifierWorkerEvent, TangleWorker,
+    },
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -101,6 +104,7 @@ where
     fn dependencies() -> &'static [TypeId] {
         Box::leak(Box::from(vec![
             TypeId::of::<MilestoneSolidifierWorker>(),
+            TypeId::of::<MilestoneConeUpdaterWorker>(),
             TypeId::of::<TangleWorker>(),
         ]))
     }
@@ -108,6 +112,7 @@ where
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
+        let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
 
@@ -159,6 +164,11 @@ where
                                     Protocol::get()
                                         .bus
                                         .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
+                                    if let Err(e) =
+                                        milestone_cone_updater.send(MilestoneConeUpdaterWorkerEvent(milestone.clone()))
+                                    {
+                                        error!("Sending tail to milestone validation failed: {:?}.", e);
+                                    }
                                 }
 
                                 if milestone.index > tangle.get_latest_milestone_index() {
