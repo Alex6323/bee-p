@@ -14,5 +14,4 @@ members = [
 	"bee-storage/bee-storage-rocksdb",
 	"bee-tangle",
 	"bee-test",
-	"bee-transaction",
 ]

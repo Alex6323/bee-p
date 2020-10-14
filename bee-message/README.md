@@ -1,1 +1,1 @@
-# bee-transaction
+# bee-message

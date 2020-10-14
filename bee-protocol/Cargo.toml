@@ -14,13 +14,13 @@ homepage = "https://www.iota.org"
 bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-common-ext = { path = "../bee-common-ext" }
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-message = { path = "../bee-message" }
 bee-network = { path = "../bee-network" }
 bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-snapshot = { path = "../bee-snapshot" }
 bee-storage = { path = "../bee-storage/bee-storage" }
 bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
-bee-transaction = { path = "../bee-transaction" }
 
 async-trait = "0.1"
 bitflags = "1.2"
