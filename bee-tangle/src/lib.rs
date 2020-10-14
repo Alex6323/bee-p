@@ -13,24 +13,23 @@
 
 #![warn(missing_docs)]
 
-pub mod helper;
-pub mod traversal;
-
 mod tangle;
 mod vertex;
 
+pub mod traversal;
+
 pub use tangle::{Hooks, Tangle};
 
-use bee_transaction::bundled::BundledTransaction as Transaction;
+use bee_message::prelude::Message;
 
 use std::{ops::Deref, sync::Arc};
 
-/// A thread-safe reference to a `bee_transaction:BundledTransaction`.
+/// A thread-safe reference to a `Message`.
 #[derive(Clone)]
-pub struct TransactionRef(pub(crate) Arc<Transaction>);
+pub struct MessageRef(pub(crate) Arc<Message>);
 
-impl Deref for TransactionRef {
-    type Target = Transaction;
+impl Deref for MessageRef {
+    type Target = Message;
 
     fn deref(&self) -> &Self::Target {
         &*self.0

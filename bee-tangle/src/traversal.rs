@@ -15,10 +15,10 @@
 
 use crate::{
     tangle::{Hooks, Tangle},
-    TransactionRef as TxRef,
+    MessageRef,
 };
 
-use bee_crypto::ternary::Hash;
+use bee_message::prelude::MessageId;
 
 use std::collections::HashSet;
 
@@ -28,22 +28,22 @@ use std::collections::HashSet;
 /// associated data and metadata.
 pub fn visit_parents_follow_parent1<Metadata, Match, Apply, H: Hooks<Metadata>>(
     tangle: &Tangle<Metadata, H>,
-    mut hash: Hash,
+    mut message_id: MessageId,
     mut matches: Match,
     mut apply: Apply,
 ) where
     Metadata: Clone + Copy,
-    Match: FnMut(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&Hash, &TxRef, &Metadata),
+    Match: FnMut(&MessageRef, &Metadata) -> bool,
+    Apply: FnMut(&MessageId, &MessageRef, &Metadata),
 {
-    while let Some(vtx) = tangle.vertices.get(&hash) {
+    while let Some(vtx) = tangle.vertices.get(&message_id) {
         let vtx = vtx.value();
 
-        if !matches(vtx.transaction(), vtx.metadata()) {
+        if !matches(vtx.message(), vtx.metadata()) {
             break;
         } else {
-            apply(&hash, vtx.transaction(), vtx.metadata());
-            hash = *vtx.parent1();
+            apply(&message_id, vtx.message(), vtx.metadata());
+            message_id = *vtx.parent1();
         }
     }
 }
@@ -54,27 +54,27 @@ pub fn visit_parents_follow_parent1<Metadata, Match, Apply, H: Hooks<Metadata>>(
 /// associated data and metadata.
 pub fn visit_children_follow_parent1<Metadata, Match, Apply, H: Hooks<Metadata>>(
     tangle: &Tangle<Metadata, H>,
-    root: Hash,
+    root: MessageId,
     mut matches: Match,
     mut apply: Apply,
 ) where
     Metadata: Clone + Copy,
-    Match: FnMut(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&Hash, &TxRef, &Metadata),
+    Match: FnMut(&MessageRef, &Metadata) -> bool,
+    Apply: FnMut(&MessageId, &MessageRef, &Metadata),
 {
     // TODO could be simplified like visit_parents_follow_parent1 ? Meaning no vector ?
     let mut children = vec![root];
 
-    while let Some(ref parent_hash) = children.pop() {
-        if let Some(parent) = tangle.vertices.get(parent_hash) {
-            if matches(parent.value().transaction(), parent.value().metadata()) {
-                apply(parent_hash, parent.value().transaction(), parent.value().metadata());
+    while let Some(ref parent_id) = children.pop() {
+        if let Some(parent) = tangle.vertices.get(parent_id) {
+            if matches(parent.value().message(), parent.value().metadata()) {
+                apply(parent_id, parent.value().message(), parent.value().metadata());
 
-                if let Some(parent_children) = tangle.children.get(parent_hash) {
-                    for child_hash in parent_children.value() {
-                        if let Some(child) = tangle.vertices.get(child_hash) {
-                            if child.value().parent1() == parent_hash {
-                                children.push(*child_hash);
+                if let Some(parent_children) = tangle.children.get(parent_id) {
+                    for child_id in parent_children.value() {
+                        if let Some(child) = tangle.vertices.get(child_id) {
+                            if child.value().parent1() == parent_id {
+                                children.push(*child_id);
                             }
                         }
                     }
@@ -90,43 +90,43 @@ pub fn visit_children_follow_parent1<Metadata, Match, Apply, H: Hooks<Metadata>>
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply, H: Hooks<Metadata>>(
     tangle: &Tangle<Metadata, H>,
-    root: Hash,
+    root: MessageId,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
     mut missing_apply: MissingApply,
 ) where
     Metadata: Clone + Copy,
-    Match: Fn(&Hash, &TxRef, &Metadata) -> bool,
-    Apply: FnMut(&Hash, &TxRef, &Metadata),
-    ElseApply: FnMut(&Hash, &TxRef, &Metadata),
-    MissingApply: FnMut(&Hash),
+    Match: Fn(&MessageId, &MessageRef, &Metadata) -> bool,
+    Apply: FnMut(&MessageId, &MessageRef, &Metadata),
+    ElseApply: FnMut(&MessageId, &MessageRef, &Metadata),
+    MissingApply: FnMut(&MessageId),
 {
     let mut parents = Vec::new();
     let mut visited = HashSet::new();
 
     parents.push(root);
 
-    while let Some(hash) = parents.pop() {
-        if !visited.contains(&hash) {
-            match tangle.vertices.get(&hash) {
+    while let Some(message_id) = parents.pop() {
+        if !visited.contains(&message_id) {
+            match tangle.vertices.get(&message_id) {
                 Some(vtx) => {
                     let vtx = vtx.value();
 
-                    if matches(&hash, vtx.transaction(), vtx.metadata()) {
-                        apply(&hash, vtx.transaction(), vtx.metadata());
+                    if matches(&message_id, vtx.message(), vtx.metadata()) {
+                        apply(&message_id, vtx.message(), vtx.metadata());
 
                         parents.push(*vtx.parent1());
                         parents.push(*vtx.parent2());
                     } else {
-                        else_apply(&hash, vtx.transaction(), vtx.metadata());
+                        else_apply(&message_id, vtx.message(), vtx.metadata());
                     }
                 }
                 None => {
-                    missing_apply(&hash);
+                    missing_apply(&message_id);
                 }
             }
-            visited.insert(hash);
+            visited.insert(message_id);
         }
     }
 }
@@ -138,37 +138,37 @@ pub fn visit_parents_depth_first<Metadata, Match, Apply, ElseApply, MissingApply
 /// vertex. Each traversed vertex provides read access to its associated data and metadata.
 pub fn visit_children_depth_first<Metadata, Match, Apply, ElseApply, H: Hooks<Metadata>>(
     tangle: &Tangle<Metadata, H>,
-    root: Hash,
+    root: MessageId,
     matches: Match,
     mut apply: Apply,
     mut else_apply: ElseApply,
 ) where
     Metadata: Clone + Copy,
-    Match: Fn(&TxRef, &Metadata) -> bool,
-    Apply: FnMut(&Hash, &TxRef, &Metadata),
-    ElseApply: FnMut(&Hash),
+    Match: Fn(&MessageRef, &Metadata) -> bool,
+    Apply: FnMut(&MessageId, &MessageRef, &Metadata),
+    ElseApply: FnMut(&MessageId),
 {
     let mut children = vec![root];
     let mut visited = HashSet::new();
 
-    while let Some(hash) = children.last() {
-        match tangle.vertices.get(hash) {
+    while let Some(message_id) = children.last() {
+        match tangle.vertices.get(message_id) {
             Some(r) => {
                 let vtx = r.value();
 
                 if visited.contains(vtx.parent1()) && visited.contains(vtx.parent2()) {
-                    apply(hash, vtx.transaction(), vtx.metadata());
-                    visited.insert(*hash);
+                    apply(message_id, vtx.message(), vtx.metadata());
+                    visited.insert(*message_id);
                     children.pop();
-                } else if !visited.contains(vtx.parent1()) && matches(vtx.transaction(), vtx.metadata()) {
+                } else if !visited.contains(vtx.parent1()) && matches(vtx.message(), vtx.metadata()) {
                     children.push(*vtx.parent1());
-                } else if !visited.contains(vtx.parent2()) && matches(vtx.transaction(), vtx.metadata()) {
+                } else if !visited.contains(vtx.parent2()) && matches(vtx.message(), vtx.metadata()) {
                     children.push(*vtx.parent2());
                 }
             }
             None => {
-                else_apply(hash);
-                visited.insert(*hash);
+                else_apply(message_id);
+                visited.insert(*message_id);
                 children.pop();
             }
         }

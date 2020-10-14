@@ -9,10 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::TransactionRef as TxRef;
+use crate::MessageRef;
 
-use bee_crypto::ternary::Hash;
-use bee_transaction::{bundled::BundledTransaction as Tx, Vertex as MessageVertex};
+use bee_message::prelude::{Message, MessageId};
 
 use std::sync::Arc;
 
@@ -21,7 +20,7 @@ pub(crate) struct Vertex<T>
 where
     T: Clone,
 {
-    transaction: TxRef,
+    message: MessageRef,
     metadata: T,
 }
 
@@ -29,23 +28,23 @@ impl<T> Vertex<T>
 where
     T: Clone,
 {
-    pub fn new(transaction: Tx, metadata: T) -> Self {
+    pub fn new(message: Message, metadata: T) -> Self {
         Self {
-            transaction: TxRef(Arc::new(transaction)),
+            message: MessageRef(Arc::new(message)),
             metadata,
         }
     }
 
-    pub fn parent1(&self) -> &Hash {
-        self.transaction.parent1()
+    pub fn parent1(&self) -> &MessageId {
+        self.message.parent1()
     }
 
-    pub fn parent2(&self) -> &Hash {
-        self.transaction.parent2()
+    pub fn parent2(&self) -> &MessageId {
+        self.message.parent2()
     }
 
-    pub fn transaction(&self) -> &TxRef {
-        &self.transaction
+    pub fn message(&self) -> &MessageRef {
+        &self.message
     }
 
     pub fn metadata(&self) -> &T {
@@ -71,7 +70,7 @@ mod tests {
 
         assert_eq!(tx.parent1(), vtx.parent1());
         assert_eq!(tx.parent2(), vtx.parent2());
-        assert_eq!(tx, **vtx.transaction());
+        assert_eq!(tx, **vtx.message());
         assert_eq!(metadata, *vtx.metadata());
     }
 

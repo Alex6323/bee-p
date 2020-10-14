@@ -25,7 +25,3 @@ bee-test = { path = "../bee-test" }
 
 criterion = "0.3"
 pollster = "0.2"
-
-[[bench]]
-name = "bench"
-harness = false

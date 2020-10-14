@@ -9,29 +9,28 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::Hash;
+use bee_message::prelude::{Message, MessageId};
 use bee_tangle::Tangle;
 use bee_test::transaction::{create_random_attached_tx, create_random_tx};
-use bee_transaction::{bundled::BundledTransaction as Tx, Vertex};
 
-pub struct Transactions {
-    pub a: Tx,
-    pub b: Tx,
-    pub c: Tx,
-    pub d: Tx,
-    pub e: Tx,
+pub struct Messages {
+    pub a: Message,
+    pub b: Message,
+    pub c: Message,
+    pub d: Message,
+    pub e: Message,
 }
 
-pub struct Hashes {
-    pub a_hash: Hash,
-    pub b_hash: Hash,
-    pub c_hash: Hash,
-    pub d_hash: Hash,
-    pub e_hash: Hash,
+pub struct MessageIds {
+    pub a_hash: MessageId,
+    pub b_hash: MessageId,
+    pub c_hash: MessageId,
+    pub d_hash: MessageId,
+    pub e_hash: MessageId,
 }
 
 #[allow(clippy::many_single_char_names)]
-pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
+pub fn create_test_tangle() -> (Tangle<()>, Messages, MessageIds) {
     // a   b
     // |\ /
     // | c
@@ -80,8 +79,8 @@ pub fn create_test_tangle() -> (Tangle<()>, Transactions, Hashes) {
 
         (
             tangle,
-            Transactions { a, b, c, d, e },
-            Hashes {
+            Messages { a, b, c, d, e },
+            MessageIds {
                 a_hash,
                 b_hash,
                 c_hash,
