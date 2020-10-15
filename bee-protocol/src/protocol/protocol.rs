@@ -44,8 +44,6 @@ static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(Non
 
 pub struct Protocol {
     pub(crate) network: Network,
-    // TODO temporary
-    pub(crate) snapshot_timestamp: u64,
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) peer_manager: PeerManager,
@@ -64,7 +62,6 @@ impl Protocol {
     ) -> N::Builder {
         let protocol = Protocol {
             network: network.clone(),
-            snapshot_timestamp: snapshot_metadata.timestamp(),
             bus,
             metrics: ProtocolMetrics::new(),
             peer_manager: PeerManager::new(),

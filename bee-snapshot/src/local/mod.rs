@@ -20,22 +20,19 @@ pub use file::Error as FileError;
 
 use crate::{header::SnapshotHeader, metadata::SnapshotMetadata};
 
+use bee_message::prelude::MessageId;
+
 use log::{error, info};
 
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub struct LocalSnapshot {
     pub(crate) metadata: SnapshotMetadata,
-    pub(crate) state: HashMap<Address, u64>,
 }
 
 impl LocalSnapshot {
     pub fn metadata(&self) -> &SnapshotMetadata {
         &self.metadata
-    }
-
-    pub fn state(&self) -> &HashMap<Address, u64> {
-        &self.state
     }
 }
 
@@ -49,16 +46,15 @@ pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
     let ls = LocalSnapshot {
         metadata: SnapshotMetadata {
             header: SnapshotHeader {
-                coordinator: Hash::zeros(),
-                hash: Hash::zeros(),
-                snapshot_index: index,
-                entry_point_index: index,
-                pruning_index: index,
                 timestamp: 0,
+                coordinator: [0; 32],
+                sep_index: 0,
+                sep_id: MessageId::null(),
+                ledger_index: 0,
+                ledger_id: MessageId::null(),
             },
-            solid_entry_points: HashMap::new(),
+            solid_entry_points: HashSet::new(),
         },
-        state: HashMap::new(),
     };
 
     let file = path.to_string() + "_tmp";

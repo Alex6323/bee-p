@@ -44,16 +44,14 @@ impl<N: Node> Worker<N> for TangleWorker {
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
 
-        tangle.update_latest_solid_milestone_index(config.index().into());
-        tangle.update_latest_milestone_index(config.index().into());
-        tangle.update_snapshot_index(config.index().into());
-        tangle.update_pruning_index(config.index().into());
+        // tangle.update_latest_solid_milestone_index(config.index().into());
+        // tangle.update_latest_milestone_index(config.index().into());
+        // tangle.update_snapshot_index(config.index().into());
+        // tangle.update_pruning_index(config.index().into());
 
-        for (message_id, index) in config.solid_entry_points() {
-            tangle.add_solid_entry_point(*message_id, MilestoneIndex(*index));
-        }
-        for _seen_milestone in config.seen_milestones() {
-            // TODO request ?
+        for message_id in config.solid_entry_points() {
+            // TODO no more indices ? What about TRSI ?
+            tangle.add_solid_entry_point(*message_id, MilestoneIndex(0));
         }
 
         node.spawn::<Self, _, _>(|shutdown| async move {

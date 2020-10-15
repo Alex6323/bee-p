@@ -23,12 +23,13 @@ use local::LocalSnapshot;
 use metadata::SnapshotMetadata;
 
 use bee_common_ext::{event::Bus, node::Node};
+use bee_message::prelude::MessageId;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};
 use log::info;
 
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
 
 #[derive(Debug)]
 pub enum Error {
@@ -42,7 +43,7 @@ pub async fn init<N: Node>(
     // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
     node_builder: N::Builder,
-) -> Result<(N::Builder, HashMap<Address, u64>, SnapshotMetadata), Error> {
+) -> Result<(N::Builder, SnapshotMetadata), Error> {
     if !Path::new(config.local().path()).exists() {
         local::download_local_snapshot(config.local())
             .await
@@ -50,24 +51,22 @@ pub async fn init<N: Node>(
     }
     info!("Loading local snapshot file {}...", config.local().path());
 
-    let LocalSnapshot { metadata, state } =
+    let LocalSnapshot { mut metadata } =
         local::LocalSnapshot::from_file(config.local().path()).map_err(Error::Local)?;
 
     info!(
-        "Loaded local snapshot file from {} with index {}, {} solid entry points, and {} balances.",
-        Utc.timestamp(metadata.timestamp() as i64, 0).to_rfc2822(),
-        metadata.index(),
+        "Loaded local snapshot file from {} with {} solid entry points.",
+        Utc.timestamp(metadata.header().timestamp() as i64, 0).to_rfc2822(),
         metadata.solid_entry_points().len(),
-        state.len()
     );
 
     // The genesis transaction must be marked as SEP with snapshot index during loading a snapshot because coordinator
     // bootstraps the network by referencing the genesis tx.
-    metadata.solid_entry_points.insert(Hash::zeros(), metadata.index());
+    metadata.solid_entry_points.insert(MessageId::null());
 
     // node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
 
-    Ok((node_builder, state, metadata))
+    Ok((node_builder, metadata))
 }
 
 pub fn events<N: Node>(_node: &N, _bus: Arc<Bus<'static>>) {

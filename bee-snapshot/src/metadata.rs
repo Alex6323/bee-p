@@ -11,27 +11,21 @@
 
 use crate::header::SnapshotHeader;
 
-use std::collections::HashMap;
+use bee_message::prelude::MessageId;
+
+use std::collections::HashSet;
 
 pub struct SnapshotMetadata {
     pub(crate) header: SnapshotHeader,
-    pub(crate) solid_entry_points: HashMap<Hash, u32>,
+    pub(crate) solid_entry_points: HashSet<MessageId>,
 }
 
 impl SnapshotMetadata {
-    pub fn hash(&self) -> &Hash {
-        &self.header.hash
+    pub fn header(&self) -> &SnapshotHeader {
+        &self.header
     }
 
-    pub fn index(&self) -> u32 {
-        self.header.snapshot_index
-    }
-
-    pub fn timestamp(&self) -> u64 {
-        self.header.timestamp
-    }
-
-    pub fn solid_entry_points(&self) -> &HashMap<Hash, u32> {
+    pub fn solid_entry_points(&self) -> &HashSet<MessageId> {
         &self.solid_entry_points
     }
 }
