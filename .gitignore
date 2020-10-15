@@ -11,6 +11,8 @@ target/
 
 # bee-node
 bee-node/config.toml
+bee-node/database/*
+!bee-node/database/.gitkeep
 bee-node/snapshots/comnet/*
 !bee-node/snapshots/comnet/.gitkeep
 bee-node/snapshots/mainnet/*
