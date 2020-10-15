@@ -20,8 +20,8 @@ use std::{convert::Infallible, sync::Arc};
 
 fn tps(metrics: &TpsMetricsUpdated) {
     info!(
-        "incoming {} new {} known {} stale {} invalid {} outgoing {}",
-        metrics.incoming, metrics.new, metrics.known, metrics.stale, metrics.invalid, metrics.outgoing
+        "incoming {} new {} known {} invalid {} outgoing {}",
+        metrics.incoming, metrics.new, metrics.known, metrics.invalid, metrics.outgoing
     );
 }
 

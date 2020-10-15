@@ -66,8 +66,7 @@ impl<B: Backend> NodeBuilder<B> {
 
         let bus = Arc::new(Bus::default());
 
-        // TODO temporary
-        let (mut node_builder, snapshot_state, snapshot_metadata) =
+        let (mut node_builder, snapshot_metadata) =
             bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
                 .await
                 .map_err(Error::SnapshotError)?;
@@ -78,14 +77,14 @@ impl<B: Backend> NodeBuilder<B> {
         info!("Starting manual peer manager...");
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());
 
-        info!("Initializing ledger...");
-        node_builder = bee_ledger::whiteflag::init::<BeeNode<B>>(
-            snapshot_metadata.index(),
-            snapshot_state.into(),
-            self.config.protocol.coordinator().clone(),
-            node_builder,
-            bus.clone(),
-        );
+        // info!("Initializing ledger...");
+        // node_builder = bee_ledger::whiteflag::init::<BeeNode<B>>(
+        //     snapshot_metadata.index(),
+        //     snapshot_state.into(),
+        //     self.config.protocol.coordinator().clone(),
+        //     node_builder,
+        //     bus.clone(),
+        // );
 
         info!("Initializing protocol...");
         node_builder = Protocol::init::<BeeNode<B>>(
@@ -104,7 +103,7 @@ impl<B: Backend> NodeBuilder<B> {
 
         info!("Registering events...");
         bee_snapshot::events(&bee_node, bus.clone());
-        bee_ledger::whiteflag::events(&bee_node, bus.clone());
+        // bee_ledger::whiteflag::events(&bee_node, bus.clone());
         Protocol::events(&bee_node, self.config.protocol.clone(), bus.clone());
 
         info!("Initialized.");
