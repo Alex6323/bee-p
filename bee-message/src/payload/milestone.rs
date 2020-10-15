@@ -34,6 +34,22 @@ impl Milestone {
             signatures,
         }
     }
+
+    pub fn index(&self) -> u32 {
+        self.index
+    }
+
+    pub fn timestamp(&self) -> u64 {
+        self.timestamp
+    }
+
+    pub fn merkle_proof(&self) -> &[u8] {
+        &self.merkle_proof
+    }
+
+    pub fn signatures(&self) -> &Vec<Box<[u8]>> {
+        &self.signatures
+    }
 }
 
 impl Packable for Milestone {
