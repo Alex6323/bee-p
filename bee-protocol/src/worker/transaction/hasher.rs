@@ -188,7 +188,7 @@ impl Stream for BatchStream {
                     blake2b.update(&event.message_packet.bytes[..event.message_packet.bytes.len() - 8]);
                     let pow_digest = blake2b.finalize_reset();
                     // TODO with_capacity is private atm
-                    let pow_input = TritBuf::new();
+                    let mut pow_input = TritBuf::new();
                     b1t6::encode(&pow_digest).iter().for_each(|t| pow_input.push(t));
                     b1t6::encode(&event.message_packet.bytes[event.message_packet.bytes.len() - 8..])
                         .iter()
