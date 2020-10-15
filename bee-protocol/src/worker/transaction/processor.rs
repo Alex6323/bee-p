@@ -26,13 +26,14 @@ use bee_message::prelude::{Message, MessageId, Payload};
 use bee_network::EndpointId;
 
 use async_trait::async_trait;
+use blake2::{Blake2b, Digest};
 use futures::stream::StreamExt;
 use log::{error, info, trace, warn};
 
 use std::any::TypeId;
 
 pub(crate) struct ProcessorWorkerEvent {
-    pub(crate) hash: MessageId,
+    pub(crate) pow_score: f64,
     pub(crate) from: EndpointId,
     pub(crate) message_packet: MessagePacket,
 }
@@ -70,9 +71,10 @@ impl<N: Node> Worker<N> for ProcessorWorker {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
+            let mut blake2b = Blake2b::default();
 
             while let Some(ProcessorWorkerEvent {
-                hash,
+                pow_score,
                 from,
                 message_packet,
             }) = receiver.next().await
@@ -90,6 +92,12 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         return;
                     }
                 };
+
+                blake2b.update(&message_packet.bytes);
+                // TODO Do we have to copy ?
+                let mut bytes = [0u8; 32];
+                bytes.copy_from_slice(&blake2b.finalize_reset());
+                let hash = MessageId::from(bytes);
 
                 let requested = Protocol::get().requested_messages.contains_key(&hash);
 

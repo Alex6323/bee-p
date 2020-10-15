@@ -18,13 +18,16 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
-use bee_crypto::ternary::sponge::{BatchHasher, CurlPRounds, BATCH_SIZE};
+use bee_common_ext::{b1t6, node::Node, worker::Worker};
+use bee_crypto::ternary::{
+    sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
+    HASH_LENGTH,
+};
 use bee_network::EndpointId;
-use bee_ternary::{T5B1Buf, TritBuf, Trits, T5B1};
+use bee_ternary::{Btrit, T5B1Buf, TritBuf};
 
 use async_trait::async_trait;
-use bytemuck::cast_slice;
+use blake2::{Blake2b, Digest};
 use futures::{
     stream::{Fuse, Stream, StreamExt},
     task::{Context, Poll},
@@ -34,13 +37,12 @@ use pin_project::pin_project;
 
 use std::{any::TypeId, pin::Pin};
 
-// If a batch has less than this number of transactions, the regular CurlP hasher is used instead
-// of the batched one.
+// If a batch has less than this number of messages, the regular CurlP hasher is used instead of the batched one.
 const BATCH_SIZE_THRESHOLD: usize = 3;
 
 pub(crate) struct HasherWorkerEvent {
     pub(crate) from: EndpointId,
-    pub(crate) transaction_message: MessagePacket,
+    pub(crate) message_packet: MessagePacket,
 }
 
 pub(crate) struct HasherWorker {
@@ -53,11 +55,9 @@ fn trigger_hashing(
     processor_worker: &mut flume::Sender<ProcessorWorkerEvent>,
 ) {
     if batch_size < BATCH_SIZE_THRESHOLD {
-        let hashes = receiver.hasher.hash_unbatched();
-        send_hashes(hashes, &mut receiver.events, processor_worker);
+        send_hashes(receiver.hasher.hash_unbatched(), &mut receiver.events, processor_worker);
     } else {
-        let hashes = receiver.hasher.hash_batched();
-        send_hashes(hashes, &mut receiver.events, processor_worker);
+        send_hashes(receiver.hasher.hash_batched(), &mut receiver.events, processor_worker);
     }
     // FIXME: we could store the fraction of times we use the batched hasher
 }
@@ -67,18 +67,15 @@ fn send_hashes(
     events: &mut Vec<HasherWorkerEvent>,
     processor_worker: &mut flume::Sender<ProcessorWorkerEvent>,
 ) {
-    for (
-        HasherWorkerEvent {
-            from,
-            transaction_message,
-        },
-        hash,
-    ) in events.drain(..).zip(hashes)
-    {
+    for (HasherWorkerEvent { from, message_packet }, hash) in events.drain(..).zip(hashes) {
+        let zeros = hash.iter().rev().take_while(|t| *t == Btrit::Zero).count() as u32;
+        let pow_score = 3u128.pow(zeros) as f64 / message_packet.bytes.len() as f64;
+        // TODO check score
+
         if let Err(e) = processor_worker.send(ProcessorWorkerEvent {
-            hash: Hash::from_inner_unchecked(hash),
+            pow_score,
             from,
-            message_packet: transaction_message,
+            message_packet,
         }) {
             warn!("Sending event to the processor worker failed: {}.", e);
         }
@@ -121,6 +118,7 @@ pub(crate) struct BatchStream {
     cache: HashCache,
     hasher: BatchHasher<T5B1Buf>,
     events: Vec<HasherWorkerEvent>,
+    blake2b: Blake2b,
 }
 
 impl BatchStream {
@@ -132,8 +130,9 @@ impl BatchStream {
         Self {
             receiver,
             cache: HashCache::new(cache_size),
-            hasher: BatchHasher::new(TRANSACTION_TRIT_LEN, CurlPRounds::Rounds81),
+            hasher: BatchHasher::new(HASH_LENGTH, CurlPRounds::Rounds81),
             events: Vec::with_capacity(BATCH_SIZE),
+            blake2b: Blake2b::default(),
         }
     }
 }
@@ -145,53 +144,66 @@ impl Stream for BatchStream {
         // We need to do this because `receiver` needs to be pinned to be polled.
         let BatchStreamProj {
             mut receiver,
+            cache,
             hasher,
             events,
-            cache,
+            blake2b,
             ..
         } = self.project();
 
-        // We loop until we have `BATCH_SIZE` transactions or `stream.poll_next(cx)` returns
-        // pending.
+        // We loop until we have `BATCH_SIZE` messages or `stream.poll_next(cx)` returns pending.
         loop {
             let batch_size = hasher.len();
-            // If we already have `BATCH_SIZE` transactions, we are ready.
+            // If we already have `BATCH_SIZE` messages, we are ready.
             if batch_size == BATCH_SIZE {
                 return Poll::Ready(Some(BATCH_SIZE));
             }
-            // Otherwise we need to check if there are transactions inside the `receiver` stream
-            // that we could include in the current batch.
+            // Otherwise we need to check if there are messages inside the `receiver` stream that we could include in
+            // the current batch.
             match receiver.as_mut().poll_next(cx) {
                 Poll::Pending => {
                     return if batch_size == 0 {
-                        // If the stream is not ready yet and the current batch is empty we have to
-                        // wait. Otherwise, we would end up hashing an empty batch.
+                        // If the stream is not ready yet and the current batch is empty we have to wait.
+                        // Otherwise, we would end up hashing an empty batch.
                         Poll::Pending
                     } else {
-                        // If the stream is not ready yet, but we have transactions in the batch,
-                        // we can process them instead of waiting.
+                        // If the stream is not ready yet, but we have messages in the batch, we can process them
+                        // instead of waiting.
                         Poll::Ready(Some(batch_size))
                     };
                 }
                 Poll::Ready(Some(event)) => {
-                    // If the transaction was already received, we skip it and poll again.
-                    if !cache.insert(&event.transaction_message.bytes) {
+                    // If the message was already received, we skip it and poll again.
+                    if !cache.insert(&event.message_packet.bytes) {
                         trace!("Transaction already received.");
                         Protocol::get().metrics.known_transactions_inc();
                         continue;
                     }
-                    // Given that the current batch has less than `BATCH_SIZE` transactions. We can
-                    // add the transaction in the current event to the batch.
 
-                    let trits =
-                        Trits::<T5B1>::try_from_raw(cast_slice(&event.transaction_message.bytes), TRANSACTION_TRIT_LEN)
-                            .unwrap()
-                            .to_buf::<T5B1Buf>();
+                    // Given that the current batch has less than `BATCH_SIZE` transactions, we can add the message in
+                    // the current event to the batch.
 
-                    hasher.add(trits);
+                    // TODO const
+                    // TODO check
+                    blake2b.update(&event.message_packet.bytes[..event.message_packet.bytes.len() - 8]);
+                    let pow_digest = blake2b.finalize_reset();
+                    // TODO with_capacity is private atm
+                    let pow_input = TritBuf::new();
+                    b1t6::encode(&pow_digest).iter().for_each(|t| pow_input.push(t));
+                    b1t6::encode(&event.message_packet.bytes[event.message_packet.bytes.len() - 8..])
+                        .iter()
+                        .for_each(|t| pow_input.push(t));
+                    // Pad to 243 trits.
+                    pow_input.push(Btrit::Zero);
+                    pow_input.push(Btrit::Zero);
+                    pow_input.push(Btrit::Zero);
+
+                    // TODO check that size == 243
+
+                    hasher.add(pow_input);
                     events.push(event);
-                    // If after adding the transaction to the batch its size is `BATCH_SIZE` we are
-                    // ready to hash.
+
+                    // If after adding the transaction to the batch its size is `BATCH_SIZE` we are ready to hash.
                     if batch_size == BATCH_SIZE - 1 {
                         return Poll::Ready(Some(BATCH_SIZE));
                     }

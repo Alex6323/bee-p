@@ -24,7 +24,7 @@ bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 
 async-trait = "0.1"
 bitflags = "1.2"
-bytemuck = "1.2"
+blake2 = "0.9"
 dashmap = "3.11"
 flume = "0.9"
 futures = "0.3"

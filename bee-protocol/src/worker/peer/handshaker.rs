@@ -106,7 +106,7 @@ impl PeerHandshakerWorker {
             receiver_epid: self.peer.epid,
             message: tlv_into_bytes(Handshake::new(
                 self.network.config().binding_port,
-                &self.config.coordinator.public_key_bytes,
+                &self.config.coordinator.public_key,
                 self.config.mwm,
                 &PACKETS_VERSIONS,
             )),
@@ -182,7 +182,7 @@ impl PeerHandshakerWorker {
             ));
         }
 
-        if !self.config.coordinator.public_key_bytes.eq(&handshake.coordinator) {
+        if !self.config.coordinator.public_key.eq(&handshake.coordinator) {
             return Err(HandshakeError::CoordinatorMismatch);
         }
 

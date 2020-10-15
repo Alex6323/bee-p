@@ -105,7 +105,7 @@ impl PeerWorker {
                         self.hasher
                             .send(HasherWorkerEvent {
                                 from: self.peer.epid,
-                                transaction_message: message,
+                                message_packet: message,
                             })
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 

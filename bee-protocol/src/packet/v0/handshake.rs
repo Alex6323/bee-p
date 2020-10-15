@@ -21,7 +21,7 @@ use std::{
 
 const PORT_SIZE: usize = 2;
 const TIMESTAMP_SIZE: usize = 8;
-const COORDINATOR_SIZE: usize = 49;
+const COORDINATOR_SIZE: usize = 32;
 const MINIMUM_WEIGHT_MAGNITUDE_SIZE: usize = 1;
 const CONSTANT_SIZE: usize = PORT_SIZE + TIMESTAMP_SIZE + COORDINATOR_SIZE + MINIMUM_WEIGHT_MAGNITUDE_SIZE;
 const VARIABLE_MIN_SIZE: usize = 1;
@@ -137,7 +137,7 @@ mod tests {
     const PORT: u16 = 0xcd98;
     const COORDINATOR: [u8; COORDINATOR_SIZE] = [
         160, 3, 36, 228, 202, 18, 56, 37, 229, 28, 240, 65, 225, 238, 64, 55, 244, 83, 155, 232, 31, 255, 208, 9, 126,
-        21, 82, 57, 180, 237, 182, 101, 242, 57, 202, 28, 118, 203, 67, 93, 74, 238, 57, 39, 51, 169, 193, 124, 254,
+        21, 82, 57, 180, 237, 182, 101,
     ];
     const MINIMUM_WEIGHT_MAGNITUDE: u8 = 0x6e;
     const SUPPORTED_VERSIONS: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
