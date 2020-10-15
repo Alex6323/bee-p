@@ -48,7 +48,7 @@ impl Packable for Ed25519Signature {
         Ok(())
     }
 
-    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {

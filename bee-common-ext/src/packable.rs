@@ -34,7 +34,7 @@ pub trait Packable {
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), Error>;
 
-    fn unpack<R: Read>(buf: &mut R) -> Result<Self, Error>
+    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, Error>
     where
         Self: Sized;
 }
@@ -52,7 +52,7 @@ macro_rules! impl_packable_for_num {
                 Ok(())
             }
 
-            fn unpack<R: Read>(buf: &mut R) -> Result<Self, Error> {
+            fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, Error> {
                 let mut bytes = [0; std::mem::size_of::<$ty>()];
                 buf.read_exact(&mut bytes)?;
                 Ok($ty::from_le_bytes(bytes))

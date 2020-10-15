@@ -75,7 +75,7 @@ impl Packable for WotsAddress {
         Ok(())
     }
 
-    fn unpack<R: Read>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
