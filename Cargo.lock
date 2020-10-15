@@ -115,6 +115,7 @@ dependencies = [
  "bee-ternary",
  "dashmap",
  "futures",
+ "hex",
  "log",
  "thiserror",
  "tokio",
