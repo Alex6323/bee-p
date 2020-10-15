@@ -34,12 +34,10 @@ pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidato
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use propagator::{PropagatorWorker, PropagatorWorkerEvent};
 pub(crate) use requester::{
-    MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, MessageRequesterWorker,
-    MessageRequesterWorkerEvent,
+    MessageRequesterWorker, MessageRequesterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEvent,
 };
 pub(crate) use responder::{
-    MilestoneResponderWorker, MilestoneResponderWorkerEvent, MessageResponderWorker,
-    MessageResponderWorkerEvent,
+    MessageResponderWorker, MessageResponderWorkerEvent, MilestoneResponderWorker, MilestoneResponderWorkerEvent,
 };
 pub(crate) use solidifier::{KickstartWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent};
 pub(crate) use status::StatusWorker;
