@@ -11,14 +11,22 @@
 
 // TODO document
 
+mod handshake;
+mod header;
+mod heartbeat;
+mod message;
+mod message_request;
+mod milestone_request;
 mod tlv;
-mod v0;
-mod v2;
 mod version;
 
-pub(crate) use tlv::{tlv_from_bytes, tlv_into_bytes, Header, HEADER_SIZE};
-pub(crate) use v0::Handshake;
-pub(crate) use v2::{Heartbeat, Message, MessageRequest, MilestoneRequest};
+pub(crate) use handshake::Handshake;
+pub(crate) use header::{Header, HEADER_SIZE};
+pub(crate) use heartbeat::Heartbeat;
+pub(crate) use message::Message;
+pub(crate) use message_request::MessageRequest;
+pub(crate) use milestone_request::MilestoneRequest;
+pub(crate) use tlv::{tlv_from_bytes, tlv_into_bytes};
 pub(crate) use version::{packets_supported_version, PACKETS_VERSIONS};
 
 use std::ops::Range;

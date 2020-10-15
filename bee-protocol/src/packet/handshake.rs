@@ -149,13 +149,13 @@ mod tests {
 
     #[test]
     fn size_range() {
-        assert_eq!(Handshake::size_range().contains(&60), false);
-        assert_eq!(Handshake::size_range().contains(&61), true);
-        assert_eq!(Handshake::size_range().contains(&62), true);
+        assert_eq!(Handshake::size_range().contains(&43), false);
+        assert_eq!(Handshake::size_range().contains(&44), true);
+        assert_eq!(Handshake::size_range().contains(&45), true);
 
-        assert_eq!(Handshake::size_range().contains(&91), true);
-        assert_eq!(Handshake::size_range().contains(&92), true);
-        assert_eq!(Handshake::size_range().contains(&93), false);
+        assert_eq!(Handshake::size_range().contains(&74), true);
+        assert_eq!(Handshake::size_range().contains(&75), true);
+        assert_eq!(Handshake::size_range().contains(&76), false);
     }
 
     #[test]
