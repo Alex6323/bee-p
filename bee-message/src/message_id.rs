@@ -37,6 +37,10 @@ impl MessageId {
     pub fn new(bytes: [u8; MESSAGE_ID_LENGTH]) -> Self {
         bytes.into()
     }
+
+    pub fn null() -> Self {
+        Self([0u8; MESSAGE_ID_LENGTH])
+    }
 }
 
 impl core::fmt::Display for MessageId {
