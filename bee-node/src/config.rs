@@ -23,10 +23,10 @@ use std::{fs, path::Path};
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Reading the specified config file failed.")]
+    #[error("Reading the specified config file failed: {0}.")]
     ConfigFileReadFailure(#[from] std::io::Error),
 
-    #[error("Deserializing the node config builder failed.")]
+    #[error("Deserializing the node config builder failed: {0}.")]
     NodeConfigBuilderCreationFailure(#[from] toml::de::Error),
 }
 
