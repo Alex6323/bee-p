@@ -16,7 +16,6 @@ use std::collections::HashMap;
 pub struct SnapshotMetadata {
     pub(crate) header: SnapshotHeader,
     pub(crate) solid_entry_points: HashMap<Hash, u32>,
-    pub(crate) seen_milestones: HashMap<Hash, u32>,
 }
 
 impl SnapshotMetadata {
@@ -34,9 +33,5 @@ impl SnapshotMetadata {
 
     pub fn solid_entry_points(&self) -> &HashMap<Hash, u32> {
         &self.solid_entry_points
-    }
-
-    pub fn seen_milestones(&self) -> &HashMap<Hash, u32> {
-        &self.seen_milestones
     }
 }

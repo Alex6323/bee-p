@@ -54,12 +54,10 @@ pub async fn init<N: Node>(
         local::LocalSnapshot::from_file(config.local().path()).map_err(Error::Local)?;
 
     info!(
-        "Loaded local snapshot file from {} with index {}, {} solid entry points, {} seen milestones and \
-                {} balances.",
+        "Loaded local snapshot file from {} with index {}, {} solid entry points, and {} balances.",
         Utc.timestamp(metadata.timestamp() as i64, 0).to_rfc2822(),
         metadata.index(),
         metadata.solid_entry_points().len(),
-        metadata.seen_milestones().len(),
         state.len()
     );
 

@@ -29,7 +29,6 @@ pub enum Error {
     InvalidVersion(u8, u8),
     InvalidMilestoneHash,
     InvalidSolidEntryPointHash,
-    InvalidSeenMilestoneHash,
     InvalidAddress,
     InvalidSupply(u64, u64),
 }
@@ -94,16 +93,6 @@ impl LocalSnapshot {
 
         debug!("Solid entry points: {}.", solid_entry_points_num);
 
-        // Number of seen milestones
-
-        let mut buf = [0u8; std::mem::size_of::<u32>()];
-        let seen_milestones_num = match reader.read_exact(&mut buf) {
-            Ok(_) => u32::from_le_bytes(buf),
-            Err(e) => return Err(Error::IOError(e)),
-        };
-
-        debug!("Seen milestones: {}.", seen_milestones_num);
-
         // Number of balances
 
         let mut buf = [0u8; std::mem::size_of::<u32>()];
@@ -144,28 +133,6 @@ impl LocalSnapshot {
                 Err(e) => return Err(Error::IOError(e)),
             };
             solid_entry_points.insert(hash, index);
-        }
-
-        // Seen milestones
-
-        let mut buf_hash = [0u8; 49];
-        let mut buf_index = [0u8; std::mem::size_of::<u32>()];
-        let mut seen_milestones = HashMap::with_capacity(seen_milestones_num as usize);
-        for _ in 0..seen_milestones_num {
-            let seen_milestone = match reader.read_exact(&mut buf_hash) {
-                Ok(_) => match Trits::<T5B1>::try_from_raw(cast_slice(&buf_hash), HASH_LENGTH) {
-                    Ok(trits) => {
-                        Hash::try_from_inner(trits.encode::<T1B1Buf>()).map_err(|_| Error::InvalidSeenMilestoneHash)
-                    }
-                    Err(_) => Err(Error::InvalidSeenMilestoneHash),
-                },
-                Err(e) => Err(Error::IOError(e)),
-            }?;
-            let index = match reader.read_exact(&mut buf_index) {
-                Ok(_) => u32::from_le_bytes(buf_index),
-                Err(e) => return Err(Error::IOError(e)),
-            };
-            seen_milestones.insert(seen_milestone, index);
         }
 
         // Balances
@@ -217,7 +184,6 @@ impl LocalSnapshot {
                     timestamp,
                 },
                 solid_entry_points,
-                seen_milestones,
             },
             state,
         })
@@ -265,12 +231,6 @@ impl LocalSnapshot {
             return Err(Error::IOError(e));
         }
 
-        // Number of seen milestones
-
-        if let Err(e) = writer.write_all(&(self.metadata.seen_milestones.len() as u32).to_le_bytes()) {
-            return Err(Error::IOError(e));
-        }
-
         // Number of balances
 
         if let Err(e) = writer.write_all(&(self.state.len() as u32).to_le_bytes()) {
@@ -286,17 +246,6 @@ impl LocalSnapshot {
         // Solid entry points
 
         for (hash, index) in self.metadata.solid_entry_points.iter() {
-            if let Err(e) = writer.write_all(&cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())) {
-                return Err(Error::IOError(e));
-            }
-            if let Err(e) = writer.write_all(&index.to_le_bytes()) {
-                return Err(Error::IOError(e));
-            }
-        }
-
-        // Seen milestones
-
-        for (hash, index) in self.metadata.seen_milestones.iter() {
             if let Err(e) = writer.write_all(&cast_slice(hash.as_trits().encode::<T5B1Buf>().as_i8_slice())) {
                 return Err(Error::IOError(e));
             }

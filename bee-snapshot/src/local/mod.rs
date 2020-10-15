@@ -57,7 +57,6 @@ pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
                 timestamp: 0,
             },
             solid_entry_points: HashMap::new(),
-            seen_milestones: HashMap::new(),
         },
         state: HashMap::new(),
     };
