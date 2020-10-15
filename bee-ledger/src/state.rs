@@ -11,8 +11,6 @@
 
 use crate::diff::LedgerDiff;
 
-use bee_transaction::bundled::Address;
-
 use std::{collections::HashMap, convert::From};
 
 #[derive(Default)]

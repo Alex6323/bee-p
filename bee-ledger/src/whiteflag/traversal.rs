@@ -14,22 +14,13 @@ use crate::{state::LedgerState, whiteflag::metadata::WhiteFlagMetadata};
 use bee_crypto::ternary::Hash;
 use bee_protocol::tangle::MsTangle;
 use bee_storage::storage::Backend;
-use bee_tangle::helper::load_bundle_builder;
-use bee_transaction::{
-    bundled::{Bundle, IncomingBundleBuilderError},
-    Vertex,
-};
 
 use std::collections::HashSet;
 
 const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 #[derive(Debug)]
-pub(crate) enum Error {
-    MissingBundle,
-    NotATail,
-    InvalidBundle(IncomingBundleBuilderError),
-}
+pub(crate) enum Error {}
 
 #[inline]
 fn on_bundle<B: Backend>(

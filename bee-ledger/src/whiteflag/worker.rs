@@ -13,7 +13,6 @@ use crate::{
     event::MilestoneConfirmed,
     state::LedgerState,
     whiteflag::{
-        b1t6::decode,
         merkle_hasher::MerkleHasher,
         metadata::WhiteFlagMetadata,
         traversal::{visit_bundles_dfs, Error as TraversalError},
@@ -22,11 +21,9 @@ use crate::{
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{event::Bus, node::Node, worker::Worker};
-use bee_crypto::ternary::{Hash, HASH_LENGTH};
+use bee_message::prelude::{Message, Payload};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, Milestone, MilestoneIndex, TangleWorker};
 use bee_storage::storage::Backend;
-use bee_tangle::helper::load_bundle_builder;
-use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use async_trait::async_trait;
 use blake2::Blake2b;
@@ -42,6 +39,7 @@ enum Error {
     MerkleProofMismatch,
     InvalidTailsCount,
     InvalidConfirmationSet(TraversalError),
+    NotMilestone,
 }
 
 pub enum LedgerWorkerEvent {
@@ -53,44 +51,35 @@ pub(crate) struct LedgerWorker {
     pub(crate) tx: flume::Sender<LedgerWorkerEvent>,
 }
 
-fn milestone_info<B: Backend>(
-    tangle: &MsTangle<B>,
-    hash: &Hash,
-    coo_config: &ProtocolCoordinatorConfig,
-) -> (Vec<u8>, u64) {
-    // TODO handle error of both unwrap
-    let ms = load_bundle_builder(tangle, hash).unwrap();
-    let timestamp = ms.get(0).unwrap().get_timestamp();
-    let proof = decode(ms.get(2).unwrap().payload().to_inner().subslice(
-        (coo_config.depth() as usize * HASH_LENGTH)..(coo_config.depth() as usize * HASH_LENGTH + MERKLE_PROOF_LENGTH),
-    ));
-
-    (proof, timestamp)
-}
-
 fn confirm<B: Backend>(
     tangle: &MsTangle<B>,
-    milestone: Milestone,
+    message: Message,
     index: &mut MilestoneIndex,
     state: &mut LedgerState,
     coo_config: &ProtocolCoordinatorConfig,
     bus: &Arc<Bus<'static>>,
 ) -> Result<(), Error> {
+    let milestone = match message.payload() {
+        Payload::Milestone(milestone) => milestone,
+        _ => return Err(Error::NotMilestone),
+    };
+
     if milestone.index() != MilestoneIndex(index.0 + 1) {
         error!("Tried to confirm {} on top of {}.", milestone.index().0, index.0);
         return Err(Error::NonContiguousMilestone);
     }
 
-    let (merkle_proof, timestamp) = milestone_info(tangle, milestone.hash(), coo_config);
-
-    let mut confirmation = WhiteFlagMetadata::new(milestone.index(), timestamp);
+    let mut confirmation = WhiteFlagMetadata::new(MilestoneIndex(milestone.index()), milestone.timestamp());
 
     match visit_bundles_dfs(tangle, state, *milestone.hash(), &mut confirmation) {
         Ok(_) => {
-            if !merkle_proof.eq(&MerkleHasher::<Blake2b>::new().digest(&confirmation.tails_included)) {
+            if !MerkleHasher::<Blake2b>::new()
+                .digest(&confirmation.tails_included)
+                .eq(&milestone.merkle_proof())
+            {
                 error!(
                     "The computed merkle proof on milestone {} does not match the one provided by the coordinator.",
-                    milestone.index().0,
+                    milestone.index(),
                 );
                 return Err(Error::MerkleProofMismatch);
             }
@@ -111,7 +100,7 @@ fn confirm<B: Backend>(
                 return Err(Error::InvalidTailsCount);
             }
 
-            *index = milestone.index();
+            *index = MilestoneIndex(milestone.index());
 
             info!(
                 "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
@@ -124,7 +113,7 @@ fn confirm<B: Backend>(
 
             bus.dispatch(MilestoneConfirmed {
                 milestone,
-                timestamp,
+                timestamp: milestone.timestamp(),
                 tails_referenced: confirmation.num_tails_referenced,
                 tails_zero_value: confirmation.num_tails_zero_value,
                 tails_conflicting: confirmation.num_tails_conflicting,

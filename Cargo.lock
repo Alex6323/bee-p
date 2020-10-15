@@ -134,31 +134,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bee-ledger"
-version = "0.1.0-alpha"
-dependencies = [
- "async-trait",
- "bee-common",
- "bee-common-ext",
- "bee-crypto",
- "bee-message",
- "bee-protocol",
- "bee-storage",
- "bee-tangle",
- "bee-ternary",
- "bee-test",
- "blake2",
- "bytemuck",
- "digest",
- "flume",
- "futures",
- "hex",
- "log",
- "rand",
- "tokio",
-]
-
-[[package]]
 name = "bee-message"
 version = "0.1.0-alpha"
 dependencies = [
@@ -199,7 +174,6 @@ dependencies = [
  "bee-common",
  "bee-common-ext",
  "bee-crypto",
- "bee-ledger",
  "bee-message",
  "bee-network",
  "bee-peering",
@@ -314,7 +288,6 @@ version = "0.1.0-alpha"
 dependencies = [
  "async-trait",
  "bee-crypto",
- "bee-ledger",
  "bee-message",
  "bee-protocol",
  "bee-storage",
@@ -352,7 +325,6 @@ name = "bee-test"
 version = "0.1.0-alpha"
 dependencies = [
  "bee-crypto",
- "bee-ledger",
  "bee-message",
  "bee-protocol",
  "bee-storage",
