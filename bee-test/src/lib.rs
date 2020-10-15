@@ -12,6 +12,6 @@
 // TODO private mod + export
 
 pub mod field;
+pub mod message;
 pub mod milestone;
 pub mod storage;
-pub mod transaction;

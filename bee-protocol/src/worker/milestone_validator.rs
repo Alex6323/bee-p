@@ -44,13 +44,13 @@ pub(crate) struct MilestoneValidatorWorker {
 
 async fn validate<N: Node>(
     tangle: &MsTangle<N::Backend>,
-    config: &ProtocolConfig,
+    _config: &ProtocolConfig,
     message_id: MessageId,
 ) -> Result<Milestone, MilestoneValidatorWorkerError>
 where
     N: Node,
 {
-    let message = tangle
+    let _message = tangle
         .get(&message_id)
         .await
         .ok_or(MilestoneValidatorWorkerError::UnknownMessage)?;

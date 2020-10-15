@@ -60,9 +60,11 @@ async fn process_request_unchecked(hash: MessageId, index: MilestoneIndex, count
         if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
             if peer.has_data(index) {
                 let mut bytes = Vec::new();
-                hash.pack(&mut bytes);
-                Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
-                return true;
+                if hash.pack(&mut bytes).is_ok() {
+                    Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
+                    return true;
+                }
+                return false;
             }
         }
     }
@@ -75,9 +77,11 @@ async fn process_request_unchecked(hash: MessageId, index: MilestoneIndex, count
         if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
             if peer.maybe_has_data(index) {
                 let mut bytes = Vec::new();
-                hash.pack(&mut bytes);
-                Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
-                return true;
+                if hash.pack(&mut bytes).is_ok() {
+                    Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
+                    return true;
+                }
+                return false;
             }
         }
     }

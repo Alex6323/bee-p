@@ -59,9 +59,9 @@ impl<N: Node> Worker<N> for MessageResponderWorker {
                 if let Some(message) = tangle.get(&MessageId::from(request.hash)).await {
                     let mut bytes = Vec::new();
 
-                    message.pack(&mut bytes);
-
-                    Sender::<MessagePacket>::send(&epid, MessagePacket::new(&bytes));
+                    if message.pack(&mut bytes).is_ok() {
+                        Sender::<MessagePacket>::send(&epid, MessagePacket::new(&bytes));
+                    }
                 }
             }
 

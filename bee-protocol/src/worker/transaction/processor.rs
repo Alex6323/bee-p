@@ -58,7 +58,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         .leak()
     }
 
-    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
         let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
@@ -74,7 +74,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
             let mut blake2b = Blake2b::default();
 
             while let Some(ProcessorWorkerEvent {
-                pow_score,
+                pow_score: _pow_score,
                 from,
                 message_packet,
             }) = receiver.next().await
@@ -145,7 +145,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         }
                     };
 
-                    if let Payload::Milestone(ref ms) = message.payload() {
+                    if let Payload::Milestone(_) = message.payload() {
                         if let Err(e) = milestone_validator.send(MilestoneValidatorWorkerEvent(hash)) {
                             error!("Sending message id to milestone validation failed: {:?}.", e);
                         }

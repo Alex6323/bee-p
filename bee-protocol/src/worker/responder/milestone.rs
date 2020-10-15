@@ -65,9 +65,9 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
                     if let Some(message) = tangle.get(&MessageId::from(hash)).await {
                         let mut bytes = Vec::new();
 
-                        message.pack(&mut bytes);
-
-                        Sender::<MessagePacket>::send(&epid, MessagePacket::new(&bytes));
+                        if message.pack(&mut bytes).is_ok() {
+                            Sender::<MessagePacket>::send(&epid, MessagePacket::new(&bytes));
+                        }
                     }
                 }
             }

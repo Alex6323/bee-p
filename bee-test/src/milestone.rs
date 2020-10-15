@@ -9,15 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::field::rand_trits_field;
-
-use bee_crypto::ternary::Hash;
-use bee_protocol::{Milestone, MilestoneIndex};
-
-pub fn clone_ms(ms: &Milestone) -> Milestone {
-    Milestone::new(*ms.hash(), ms.index())
-}
-
-pub fn create_random_milestone(index: MilestoneIndex) -> Milestone {
-    Milestone::new(rand_trits_field::<Hash>(), index)
-}
+// use crate::field::rand_trits_field;
+//
+// use bee_crypto::ternary::Hash;
+// use bee_protocol::{Milestone, MilestoneIndex};
+//
+// pub fn clone_ms(ms: &Milestone) -> Milestone {
+//     Milestone::new(*ms.hash(), ms.index())
+// }
+//
+// pub fn create_random_milestone(index: MilestoneIndex) -> Milestone {
+//     Milestone::new(rand_trits_field::<Hash>(), index)
+// }
