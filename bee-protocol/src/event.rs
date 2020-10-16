@@ -22,7 +22,7 @@ pub struct LatestMilestoneChanged(pub Milestone);
 
 pub struct LatestSolidMilestoneChanged(pub Milestone);
 
-pub struct TransactionSolidified(pub MessageId);
+pub struct MessageSolidified(pub MessageId);
 
 pub struct TpsMetricsUpdated {
     pub incoming: u64,

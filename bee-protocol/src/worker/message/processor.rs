@@ -13,7 +13,7 @@ use crate::{
     config::ProtocolConfig,
     packet::Message as MessagePacket,
     protocol::Protocol,
-    tangle::{MsTangle, TransactionMetadata},
+    tangle::{MessageMetadata, MsTangle},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MessageRequesterWorker, MilestoneValidatorWorker,
         MilestoneValidatorWorkerEvent, PropagatorWorker, PropagatorWorkerEvent, TangleWorker,
@@ -63,7 +63,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
         let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
         let broadcaster = node.worker::<BroadcasterWorker>().unwrap().tx.clone();
-        let transaction_requester = node.worker::<MessageRequesterWorker>().unwrap().tx.clone();
+        let message_requester = node.worker::<MessageRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
 
@@ -79,16 +79,16 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 message_packet,
             }) = receiver.next().await
             {
-                trace!("Processing received transaction...");
+                trace!("Processing received message...");
 
                 let message = match Message::unpack(&mut &message_packet.bytes[..]) {
-                    Ok(transaction) => {
+                    Ok(message) => {
                         // TODO validation
-                        transaction
+                        message
                     }
                     Err(e) => {
-                        trace!("Invalid transaction: {:?}.", e);
-                        Protocol::get().metrics.invalid_transactions_inc();
+                        trace!("Invalid message: {:?}.", e);
+                        Protocol::get().metrics.invalid_messages_inc();
                         return;
                     }
                 };
@@ -104,15 +104,15 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 // TODO when PoW
                 // if !requested && hash.weight() < config.mwm {
                 //     trace!("Insufficient weight magnitude: {}.", hash.weight());
-                //     Protocol::get().metrics.invalid_transactions_inc();
+                //     Protocol::get().metrics.invalid_messages_inc();
                 //     return;
                 // }
 
-                let mut metadata = TransactionMetadata::arrived();
+                let mut metadata = MessageMetadata::arrived();
 
                 metadata.flags_mut().set_requested(requested);
 
-                // store transaction
+                // store message
                 if let Some(message) = tangle.insert(message, hash, metadata).await {
                     // TODO this was temporarily moved from the tangle.
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
@@ -122,17 +122,17 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         error!("Failed to send hash to propagator: {:?}.", e);
                     }
 
-                    Protocol::get().metrics.new_transactions_inc();
+                    Protocol::get().metrics.new_messages_inc();
 
                     match Protocol::get().requested_messages.remove(&hash) {
                         Some((_, (index, _))) => {
                             let parent1 = message.parent1();
                             let parent2 = message.parent2();
 
-                            Protocol::request_transaction(&tangle, &transaction_requester, *parent1, index).await;
+                            Protocol::request_message(&tangle, &message_requester, *parent1, index).await;
 
                             if parent1 != parent2 {
-                                Protocol::request_transaction(&tangle, &transaction_requester, *parent2, index).await;
+                                Protocol::request_message(&tangle, &message_requester, *parent2, index).await;
                             }
                         }
                         None => {
@@ -140,7 +140,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                                 source: Some(from),
                                 message: message_packet,
                             }) {
-                                warn!("Broadcasting transaction failed: {}.", e);
+                                warn!("Broadcasting message failed: {}.", e);
                             }
                         }
                     };
@@ -151,7 +151,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         }
                     }
                 } else {
-                    Protocol::get().metrics.known_transactions_inc();
+                    Protocol::get().metrics.known_messages_inc();
                 }
             }
 

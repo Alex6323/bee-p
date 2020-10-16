@@ -14,7 +14,7 @@
 use crate::{
     packet::Message as MessagePacket,
     protocol::Protocol,
-    worker::transaction::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
+    worker::message::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -175,12 +175,12 @@ impl Stream for BatchStream {
                 Poll::Ready(Some(event)) => {
                     // If the message was already received, we skip it and poll again.
                     if !cache.insert(&event.message_packet.bytes) {
-                        trace!("Transaction already received.");
-                        Protocol::get().metrics.known_transactions_inc();
+                        trace!("Message already received.");
+                        Protocol::get().metrics.known_messages_inc();
                         continue;
                     }
 
-                    // Given that the current batch has less than `BATCH_SIZE` transactions, we can add the message in
+                    // Given that the current batch has less than `BATCH_SIZE` messages, we can add the message in
                     // the current event to the batch.
 
                     // TODO const
@@ -203,7 +203,7 @@ impl Stream for BatchStream {
                     hasher.add(pow_input);
                     events.push(event);
 
-                    // If after adding the transaction to the batch its size is `BATCH_SIZE` we are ready to hash.
+                    // If after adding the message to the batch its size is `BATCH_SIZE` we are ready to hash.
                     if batch_size == BATCH_SIZE - 1 {
                         return Poll::Ready(Some(BATCH_SIZE));
                     }

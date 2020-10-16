@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    event::{LatestSolidMilestoneChanged, TransactionSolidified},
+    event::{LatestSolidMilestoneChanged, MessageSolidified},
     milestone::Milestone,
     protocol::Protocol,
     tangle::MsTangle,
@@ -67,17 +67,17 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                 let mut children = vec![hash];
 
                 while let Some(ref hash) = children.pop() {
-                    if tangle.is_solid_transaction(hash) {
+                    if tangle.is_solid_message(hash) {
                         continue;
                     }
 
-                    if let Some(tx) = tangle.get(&hash).await {
-                        if tangle.is_solid_transaction(tx.parent1()) && tangle.is_solid_transaction(tx.parent2()) {
+                    if let Some(message) = tangle.get(&hash).await {
+                        if tangle.is_solid_message(message.parent1()) && tangle.is_solid_message(message.parent2()) {
                             // get otrsi and ytrsi from parents
-                            let parent1_otsri = tangle.otrsi(tx.parent1());
-                            let parent2_otsri = tangle.otrsi(tx.parent2());
-                            let parent1_ytrsi = tangle.ytrsi(tx.parent1());
-                            let parent2_ytrsi = tangle.ytrsi(tx.parent2());
+                            let parent1_otsri = tangle.otrsi(message.parent1());
+                            let parent2_otsri = tangle.otrsi(message.parent2());
+                            let parent1_ytrsi = tangle.ytrsi(message.parent1());
+                            let parent2_ytrsi = tangle.ytrsi(message.parent2());
 
                             let best_otrsi = max(parent1_otsri.unwrap(), parent2_otsri.unwrap());
                             let best_ytrsi = min(parent1_ytrsi.unwrap(), parent2_ytrsi.unwrap());
@@ -103,7 +103,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                                 children.push(child);
                             }
 
-                            Protocol::get().bus.dispatch(TransactionSolidified(*hash));
+                            Protocol::get().bus.dispatch(MessageSolidified(*hash));
 
                             if let Err(e) = bundle_validator.send(MessageValidatorWorkerEvent(*hash)) {
                                 warn!("Failed to send hash to message validator: {:?}.", e);

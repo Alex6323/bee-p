@@ -22,10 +22,10 @@ use tokio::time::interval;
 use std::time::Duration;
 
 #[derive(Default)]
-pub(crate) struct TpsWorker {}
+pub(crate) struct MpsWorker {}
 
 #[async_trait]
-impl<N: Node> Worker<N> for TpsWorker {
+impl<N: Node> Worker<N> for MpsWorker {
     type Config = ();
     type Error = WorkerError;
 
@@ -42,11 +42,11 @@ impl<N: Node> Worker<N> for TpsWorker {
             let mut total_outgoing = 0u64;
 
             while receiver.next().await.is_some() {
-                let incoming = Protocol::get().metrics.transactions_received();
-                let new = Protocol::get().metrics.new_transactions();
-                let known = Protocol::get().metrics.known_transactions();
-                let invalid = Protocol::get().metrics.invalid_transactions();
-                let outgoing = Protocol::get().metrics.transactions_sent();
+                let incoming = Protocol::get().metrics.messages_received();
+                let new = Protocol::get().metrics.new_messages();
+                let known = Protocol::get().metrics.known_messages();
+                let invalid = Protocol::get().metrics.invalid_messages();
+                let outgoing = Protocol::get().metrics.messages_sent();
 
                 Protocol::get().bus.dispatch(TpsMetricsUpdated {
                     incoming: incoming - total_incoming,

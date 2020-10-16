@@ -11,15 +11,15 @@
 
 use bee_crypto::ternary::Hash;
 // use bee_ledger::{diff::LedgerDiff, state::LedgerState};
-use bee_protocol::{tangle::TransactionMetadata, MilestoneIndex};
+use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Fetch, persistable::Persistable};
 
 use crate::{access::OpError, storage::*};
 
 #[async_trait::async_trait]
-impl Fetch<Hash, TransactionMetadata> for Storage {
+impl Fetch<Hash, MessageMetadata> for Storage {
     type Error = OpError;
-    async fn fetch(&self, hash: &Hash) -> Result<Option<TransactionMetadata>, OpError>
+    async fn fetch(&self, hash: &Hash) -> Result<Option<MessageMetadata>, OpError>
     where
         Self: Sized,
     {
@@ -27,7 +27,7 @@ impl Fetch<Hash, TransactionMetadata> for Storage {
         let mut hash_buf: Vec<u8> = Vec::new();
         hash.write_to(&mut hash_buf);
         if let Some(res) = self.inner.get_cf(&hash_to_metadata, hash_buf.as_slice())? {
-            let transaction_metadata: TransactionMetadata = TransactionMetadata::read_from(res.as_slice());
+            let transaction_metadata: MessageMetadata = MessageMetadata::read_from(res.as_slice());
             Ok(Some(transaction_metadata))
         } else {
             Ok(None)

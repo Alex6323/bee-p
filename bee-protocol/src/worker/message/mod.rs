@@ -22,7 +22,7 @@ pub(crate) use processor::{ProcessorWorker, ProcessorWorkerEvent};
 //     use super::*;
 //     use crate::{
 //         config::ProtocolConfig,
-//         message::Transaction as TransactionMessage,
+//         message::Message as MessagePacket,
 //         protocol::Protocol,
 //         tangle::{self, tangle},
 //     };
@@ -38,7 +38,7 @@ pub(crate) use processor::{ProcessorWorker, ProcessorWorkerEvent};
 //     use std::{sync::Arc, time::Duration};
 //
 //     #[tokio::test]
-//     async fn test_tx_workers_with_compressed_buffer() {
+//     async fn test_message_workers_with_compressed_buffer() {
 //         let bee_node = Arc::new(BeeNode::new());
 //         let bus = Arc::new(Bus::default());
 //
@@ -73,12 +73,12 @@ pub(crate) use processor::{ProcessorWorker, ProcessorWorkerEvent};
 //         let processor_handle = Worker::<BeeNode>::start(processor, processor_worker_receiver, bee_node.clone(), ());
 //
 //         spawn(async move {
-//             let tx: [u8; 1024] = [0; 1024];
-//             let message = TransactionMessage::new(&tx);
+//             let message: [u8; 1024] = [0; 1024];
+//             let message = MessagePacket::new(&message);
 //             let epid = EndpointId::new();
 //             let event = HasherWorkerEvent {
 //                 from: epid,
-//                 transaction_message: message,
+//                 message_packet: message,
 //             };
 //             hasher_worker_sender.unbounded_send(event).unwrap();
 //             delay_for(Duration::from_secs(5)).await;

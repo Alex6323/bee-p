@@ -36,7 +36,7 @@ pub(crate) enum PeerWorkerError {
 pub struct PeerWorker {
     peer: Arc<HandshakedPeer>,
     hasher: flume::Sender<HasherWorkerEvent>,
-    transaction_responder: flume::Sender<MessageResponderWorkerEvent>,
+    message_responder: flume::Sender<MessageResponderWorkerEvent>,
     milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
 }
 
@@ -44,13 +44,13 @@ impl PeerWorker {
     pub(crate) fn new(
         peer: Arc<HandshakedPeer>,
         hasher: flume::Sender<HasherWorkerEvent>,
-        transaction_responder: flume::Sender<MessageResponderWorkerEvent>,
+        message_responder: flume::Sender<MessageResponderWorkerEvent>,
         milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
     ) -> Self {
         Self {
             peer,
             hasher,
-            transaction_responder,
+            message_responder,
             milestone_responder,
         }
     }
@@ -109,8 +109,8 @@ impl PeerWorker {
                             })
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.transactions_received_inc();
-                        Protocol::get().metrics.transactions_received_inc();
+                        self.peer.metrics.messages_received_inc();
+                        Protocol::get().metrics.messages_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading Message failed: {:?}.", self.peer.address, e);
@@ -124,15 +124,15 @@ impl PeerWorker {
                 trace!("[{}] Reading MessageRequest...", self.peer.address);
                 match tlv_from_bytes::<MessageRequest>(&header, bytes) {
                     Ok(message) => {
-                        self.transaction_responder
+                        self.message_responder
                             .send(MessageResponderWorkerEvent {
                                 epid: self.peer.epid,
                                 request: message,
                             })
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 
-                        self.peer.metrics.transaction_requests_received_inc();
-                        Protocol::get().metrics.transaction_requests_received_inc();
+                        self.peer.metrics.message_requests_received_inc();
+                        Protocol::get().metrics.message_requests_received_inc();
                     }
                     Err(e) => {
                         warn!("[{}] Reading MessageRequest failed: {:?}.", self.peer.address, e);

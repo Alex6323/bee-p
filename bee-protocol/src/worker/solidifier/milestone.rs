@@ -35,12 +35,12 @@ pub(crate) struct MilestoneSolidifierWorker {
 
 async fn trigger_solidification_unchecked<B: Backend>(
     tangle: &MsTangle<B>,
-    transaction_requester: &flume::Sender<MessageRequesterWorkerEvent>,
+    message_requester: &flume::Sender<MessageRequesterWorkerEvent>,
     target_index: MilestoneIndex,
     next_ms_index: &mut MilestoneIndex,
 ) {
     if let Some(target_hash) = tangle.get_milestone_hash(target_index) {
-        if !tangle.is_solid_transaction(&target_hash) {
+        if !tangle.is_solid_message(&target_hash) {
             debug!("Triggered solidification for milestone {}.", *target_index);
 
             // TODO: This wouldn't be necessary if the traversal code wasn't closure-driven
@@ -60,7 +60,7 @@ async fn trigger_solidification_unchecked<B: Backend>(
             );
 
             for missing_hash in missing {
-                Protocol::request_transaction(tangle, transaction_requester, missing_hash, target_index).await;
+                Protocol::request_message(tangle, message_requester, missing_hash, target_index).await;
             }
 
             *next_ms_index = target_index + MilestoneIndex(1);
@@ -86,7 +86,7 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
-        let transaction_requester = node.worker::<MessageRequesterWorker>().unwrap().tx.clone();
+        let message_requester = node.worker::<MessageRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
 
@@ -102,8 +102,7 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
                 save_index(index, &mut queue);
                 while let Some(index) = queue.pop() {
                     if index == next_ms_index {
-                        trigger_solidification_unchecked(&tangle, &transaction_requester, index, &mut next_ms_index)
-                            .await;
+                        trigger_solidification_unchecked(&tangle, &message_requester, index, &mut next_ms_index).await;
                     } else {
                         queue.push(index);
                         break;

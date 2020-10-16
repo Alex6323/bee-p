@@ -62,12 +62,12 @@ impl Protocol {
 
     pub(crate) fn request_milestone<B: Backend>(
         tangle: &MsTangle<B>,
-        transaction_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        message_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
         index: MilestoneIndex,
         to: Option<EndpointId>,
     ) {
         if !Protocol::get().requested_milestones.contains_key(&index) && !tangle.contains_milestone(index) {
-            if let Err(e) = transaction_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
+            if let Err(e) = message_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
                 warn!("Requesting milestone failed: {}.", e);
             }
         }
@@ -75,17 +75,17 @@ impl Protocol {
 
     pub(crate) fn request_latest_milestone<B: Backend>(
         tangle: &MsTangle<B>,
-        transaction_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        message_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
         to: Option<EndpointId>,
     ) {
-        Protocol::request_milestone(tangle, transaction_requester, MilestoneIndex(0), to)
+        Protocol::request_milestone(tangle, message_requester, MilestoneIndex(0), to)
     }
 
-    // TransactionRequest
+    // MessageRequest
 
-    pub(crate) async fn request_transaction<B: Backend>(
+    pub(crate) async fn request_message<B: Backend>(
         tangle: &MsTangle<B>,
-        transaction_requester: &flume::Sender<MessageRequesterWorkerEvent>,
+        message_requester: &flume::Sender<MessageRequesterWorkerEvent>,
         hash: MessageId,
         index: MilestoneIndex,
     ) {
@@ -93,7 +93,7 @@ impl Protocol {
             && !tangle.is_solid_entry_point(&hash)
             && !Protocol::get().requested_messages.contains_key(&hash)
         {
-            if let Err(e) = transaction_requester.send(MessageRequesterWorkerEvent(hash, index)) {
+            if let Err(e) = message_requester.send(MessageRequesterWorkerEvent(hash, index)) {
                 warn!("Requesting message failed: {}.", e);
             }
         }

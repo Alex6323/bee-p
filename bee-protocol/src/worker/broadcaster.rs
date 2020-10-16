@@ -59,11 +59,11 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
                             message: bytes.clone(),
                         }) {
                             Ok(_) => {
-                                (*peer.value()).metrics.transactions_sent_inc();
-                                Protocol::get().metrics.transactions_sent_inc();
+                                (*peer.value()).metrics.messages_sent_inc();
+                                Protocol::get().metrics.messages_sent_inc();
                             }
                             Err(e) => {
-                                warn!("Broadcasting transaction to {:?} failed: {:?}.", *peer.key(), e);
+                                warn!("Broadcasting message to {:?} failed: {:?}.", *peer.key(), e);
                             }
                         };
                     }

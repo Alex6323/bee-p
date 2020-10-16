@@ -61,7 +61,7 @@ pub struct PeerHandshakerWorker {
     peer: Arc<Peer>,
     status: HandshakeStatus,
     hasher: flume::Sender<HasherWorkerEvent>,
-    transaction_responder: flume::Sender<MessageResponderWorkerEvent>,
+    message_responder: flume::Sender<MessageResponderWorkerEvent>,
     milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
     milestone_requester: flume::Sender<MilestoneRequesterWorkerEvent>,
 }
@@ -72,7 +72,7 @@ impl PeerHandshakerWorker {
         config: ProtocolConfig,
         peer: Arc<Peer>,
         hasher: flume::Sender<HasherWorkerEvent>,
-        transaction_responder: flume::Sender<MessageResponderWorkerEvent>,
+        message_responder: flume::Sender<MessageResponderWorkerEvent>,
         milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
         milestone_requester: flume::Sender<MilestoneRequesterWorkerEvent>,
     ) -> Self {
@@ -82,7 +82,7 @@ impl PeerHandshakerWorker {
             peer,
             status: HandshakeStatus::Awaiting,
             hasher,
-            transaction_responder,
+            message_responder,
             milestone_responder,
             milestone_requester,
         }
@@ -138,7 +138,7 @@ impl PeerHandshakerWorker {
                             .value()
                             .clone(),
                         self.hasher,
-                        self.transaction_responder,
+                        self.message_responder,
                         self.milestone_responder,
                     )
                     .run(tangle.clone(), message_handler),

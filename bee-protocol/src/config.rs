@@ -13,9 +13,8 @@ use serde::Deserialize;
 
 const DEFAULT_MWM: u8 = 14;
 // TODO change
-const DEFAULT_COO_PUBLIC_KEY: &str =
-    "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649";
-const DEFAULT_TRANSACTION_WORKER_CACHE: usize = 10000;
+const DEFAULT_COO_PUBLIC_KEY: &str = "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649";
+const DEFAULT_MESSAGE_WORKER_CACHE: usize = 10000;
 const DEFAULT_STATUS_INTERVAL: u64 = 10;
 const DEFAULT_HANDSHAKE_WINDOW: u64 = 10;
 const DEFAULT_MS_SYNC_COUNT: u32 = 1;
@@ -27,7 +26,7 @@ struct ProtocolCoordinatorConfigBuilder {
 
 #[derive(Default, Deserialize)]
 struct ProtocolWorkersConfigBuilder {
-    transaction_worker_cache: Option<usize>,
+    message_worker_cache: Option<usize>,
     status_interval: Option<u64>,
     ms_sync_count: Option<u32>,
 }
@@ -55,8 +54,8 @@ impl ProtocolConfigBuilder {
         self
     }
 
-    pub fn transaction_worker_cache(mut self, transaction_worker_cache: usize) -> Self {
-        self.workers.transaction_worker_cache.replace(transaction_worker_cache);
+    pub fn message_worker_cache(mut self, message_worker_cache: usize) -> Self {
+        self.workers.message_worker_cache.replace(message_worker_cache);
         self
     }
 
@@ -96,10 +95,10 @@ impl ProtocolConfigBuilder {
                 public_key: public_key_bytes,
             },
             workers: ProtocolWorkersConfig {
-                transaction_worker_cache: self
+                message_worker_cache: self
                     .workers
-                    .transaction_worker_cache
-                    .unwrap_or(DEFAULT_TRANSACTION_WORKER_CACHE),
+                    .message_worker_cache
+                    .unwrap_or(DEFAULT_MESSAGE_WORKER_CACHE),
                 status_interval: self.workers.status_interval.unwrap_or(DEFAULT_STATUS_INTERVAL),
                 ms_sync_count: self.workers.ms_sync_count.unwrap_or(DEFAULT_MS_SYNC_COUNT),
             },
@@ -116,7 +115,7 @@ pub struct ProtocolCoordinatorConfig {
 
 #[derive(Clone)]
 pub struct ProtocolWorkersConfig {
-    pub(crate) transaction_worker_cache: usize,
+    pub(crate) message_worker_cache: usize,
     pub(crate) status_interval: u64,
     pub(crate) ms_sync_count: u32,
 }

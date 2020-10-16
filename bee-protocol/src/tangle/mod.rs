@@ -14,7 +14,7 @@ mod urts;
 
 pub mod flags;
 
-pub use metadata::TransactionMetadata;
+pub use metadata::MessageMetadata;
 
 use crate::{
     milestone::MilestoneIndex,
@@ -41,15 +41,15 @@ pub struct StorageHooks<B> {
 }
 
 #[async_trait]
-impl<B: Backend> Hooks<TransactionMetadata> for StorageHooks<B> {
+impl<B: Backend> Hooks<MessageMetadata> for StorageHooks<B> {
     type Error = ();
 
-    async fn get(&self, _hash: &MessageId) -> Result<(Message, TransactionMetadata), Self::Error> {
+    async fn get(&self, _hash: &MessageId) -> Result<(Message, MessageMetadata), Self::Error> {
         // println!("Attempted to fetch {:?} from storage", hash);
         Err(())
     }
 
-    async fn insert(&self, _hash: MessageId, _tx: Message, _metadata: TransactionMetadata) -> Result<(), Self::Error> {
+    async fn insert(&self, _hash: MessageId, _tx: Message, _metadata: MessageMetadata) -> Result<(), Self::Error> {
         // println!("Attempted to insert {:?} into storage", hash);
         Ok(())
     }
@@ -57,7 +57,7 @@ impl<B: Backend> Hooks<TransactionMetadata> for StorageHooks<B> {
 
 /// Milestone-based Tangle.
 pub struct MsTangle<B> {
-    pub(crate) inner: Tangle<TransactionMetadata, StorageHooks<B>>,
+    pub(crate) inner: Tangle<MessageMetadata, StorageHooks<B>>,
     pub(crate) milestones: DashMap<MilestoneIndex, MessageId>,
     pub(crate) solid_entry_points: DashMap<MessageId, MilestoneIndex>,
     latest_milestone_index: AtomicU32,
@@ -69,7 +69,7 @@ pub struct MsTangle<B> {
 }
 
 impl<B> Deref for MsTangle<B> {
-    type Target = Tangle<TransactionMetadata, StorageHooks<B>>;
+    type Target = Tangle<MessageMetadata, StorageHooks<B>>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -95,12 +95,7 @@ impl<B: Backend> MsTangle<B> {
         // TODO: Write back changes by calling self.inner.shutdown().await
     }
 
-    pub async fn insert(
-        &self,
-        transaction: Message,
-        hash: MessageId,
-        metadata: TransactionMetadata,
-    ) -> Option<MessageRef> {
+    pub async fn insert(&self, message: Message, hash: MessageId, metadata: MessageMetadata) -> Option<MessageRef> {
         // TODO this has been temporarily moved to the processor.
         // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
         // When the tangle is made a worker, this should be put back on.
@@ -114,7 +109,7 @@ impl<B: Backend> MsTangle<B> {
         // }
         //
         // opt
-        self.inner.insert(hash, transaction, metadata).await
+        self.inner.insert(hash, message, metadata).await
     }
 
     pub fn add_milestone(&self, index: MilestoneIndex, hash: MessageId) {
@@ -217,13 +212,13 @@ impl<B: Backend> MsTangle<B> {
         self.solid_entry_points.clear();
     }
 
-    /// Returns whether the transaction associated with `hash` is a solid entry point.
+    /// Returns whether the message associated with `hash` is a solid entry point.
     pub fn is_solid_entry_point(&self, hash: &MessageId) -> bool {
         self.solid_entry_points.contains_key(hash)
     }
 
-    /// Returns whether the transaction associated with `hash` is deemed `solid`.
-    pub fn is_solid_transaction(&self, hash: &MessageId) -> bool {
+    /// Returns whether the message associated with `hash` is deemed `solid`.
+    pub fn is_solid_message(&self, hash: &MessageId) -> bool {
         if self.is_solid_entry_point(hash) {
             true
         } else {
@@ -266,7 +261,7 @@ impl<B: Backend> MsTangle<B> {
         self.tip_pool.lock().await.update_scores(&self).await;
     }
 
-    pub async fn get_transactions_to_approve(&self) -> Option<(MessageId, MessageId)> {
+    pub async fn get_messages_to_approve(&self) -> Option<(MessageId, MessageId)> {
         self.tip_pool.lock().await.two_non_lazy_tips()
     }
 
@@ -278,13 +273,13 @@ impl<B: Backend> MsTangle<B> {
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
-//     use crate::{tangle::TransactionMetadata, MilestoneIndex};
+//     use crate::{tangle::MessageMetadata, MilestoneIndex};
 //
 //     use bee_tangle::traversal;
-//     use bee_test::{field::rand_trits_field, transaction::create_random_attached_tx};
+//     use bee_test::{field::rand_trits_field, message::create_random_attached_tx};
 //
 //     #[test]
-//     fn confirm_transaction() {
+//     fn confirm_message() {
 //         // Example from https://github.com/iotaledger/protocol-rfcs/blob/master/text/0005-white-flag/0005-white-flag.md
 //
 //         let tangle = MsTangle::new();
@@ -305,7 +300,7 @@ impl<B: Backend> MsTangle<B> {
 //         tangle.add_solid_entry_point(sep5, MilestoneIndex(4));
 //         tangle.add_solid_entry_point(sep6, MilestoneIndex(5));
 //
-//         // Links transactions
+//         // Links messages
 //         let (a_hash, a) = create_random_attached_tx(sep1, sep2);
 //         let (b_hash, b) = create_random_attached_tx(sep3, sep4);
 //         let (c_hash, c) = create_random_attached_tx(sep5, sep6);
@@ -333,62 +328,62 @@ impl<B: Backend> MsTangle<B> {
 //         let (y_hash, y) = create_random_attached_tx(v_hash, u_hash);
 //         let (z_hash, z) = create_random_attached_tx(s_hash, v_hash);
 //
-//         // Confirms transactions
+//         // Confirms messages
 //         // TODO uncomment when confirmation index
-//         // tangle.confirm_transaction(a_hash, 1);
-//         // tangle.confirm_transaction(b_hash, 1);
-//         // tangle.confirm_transaction(c_hash, 1);
-//         // tangle.confirm_transaction(d_hash, 2);
-//         // tangle.confirm_transaction(e_hash, 1);
-//         // tangle.confirm_transaction(f_hash, 1);
-//         // tangle.confirm_transaction(g_hash, 2);
-//         // tangle.confirm_transaction(h_hash, 1);
-//         // tangle.confirm_transaction(i_hash, 2);
-//         // tangle.confirm_transaction(j_hash, 2);
-//         // tangle.confirm_transaction(k_hash, 2);
-//         // tangle.confirm_transaction(l_hash, 2);
-//         // tangle.confirm_transaction(m_hash, 2);
-//         // tangle.confirm_transaction(n_hash, 2);
-//         // tangle.confirm_transaction(o_hash, 2);
-//         // tangle.confirm_transaction(p_hash, 3);
-//         // tangle.confirm_transaction(q_hash, 3);
-//         // tangle.confirm_transaction(r_hash, 2);
-//         // tangle.confirm_transaction(s_hash, 2);
-//         // tangle.confirm_transaction(t_hash, 3);
-//         // tangle.confirm_transaction(u_hash, 3);
-//         // tangle.confirm_transaction(v_hash, 2);
-//         // tangle.confirm_transaction(w_hash, 3);
-//         // tangle.confirm_transaction(x_hash, 3);
-//         // tangle.confirm_transaction(y_hash, 3);
-//         // tangle.confirm_transaction(z_hash, 3);
+//         // tangle.confirm_message(a_hash, 1);
+//         // tangle.confirm_message(b_hash, 1);
+//         // tangle.confirm_message(c_hash, 1);
+//         // tangle.confirm_message(d_hash, 2);
+//         // tangle.confirm_message(e_hash, 1);
+//         // tangle.confirm_message(f_hash, 1);
+//         // tangle.confirm_message(g_hash, 2);
+//         // tangle.confirm_message(h_hash, 1);
+//         // tangle.confirm_message(i_hash, 2);
+//         // tangle.confirm_message(j_hash, 2);
+//         // tangle.confirm_message(k_hash, 2);
+//         // tangle.confirm_message(l_hash, 2);
+//         // tangle.confirm_message(m_hash, 2);
+//         // tangle.confirm_message(n_hash, 2);
+//         // tangle.confirm_message(o_hash, 2);
+//         // tangle.confirm_message(p_hash, 3);
+//         // tangle.confirm_message(q_hash, 3);
+//         // tangle.confirm_message(r_hash, 2);
+//         // tangle.confirm_message(s_hash, 2);
+//         // tangle.confirm_message(t_hash, 3);
+//         // tangle.confirm_message(u_hash, 3);
+//         // tangle.confirm_message(v_hash, 2);
+//         // tangle.confirm_message(w_hash, 3);
+//         // tangle.confirm_message(x_hash, 3);
+//         // tangle.confirm_message(y_hash, 3);
+//         // tangle.confirm_message(z_hash, 3);
 //
 //         // Constructs the graph
-//         tangle.insert(a, a_hash, TransactionMetadata::new());
-//         tangle.insert(b, b_hash, TransactionMetadata::new());
-//         tangle.insert(c, c_hash, TransactionMetadata::new());
-//         tangle.insert(d, d_hash, TransactionMetadata::new());
-//         tangle.insert(e, e_hash, TransactionMetadata::new());
-//         tangle.insert(f, f_hash, TransactionMetadata::new());
-//         tangle.insert(g, g_hash, TransactionMetadata::new());
-//         tangle.insert(h, h_hash, TransactionMetadata::new());
-//         tangle.insert(i, i_hash, TransactionMetadata::new());
-//         tangle.insert(j, j_hash, TransactionMetadata::new());
-//         tangle.insert(k, k_hash, TransactionMetadata::new());
-//         tangle.insert(l, l_hash, TransactionMetadata::new());
-//         tangle.insert(m, m_hash, TransactionMetadata::new());
-//         tangle.insert(n, n_hash, TransactionMetadata::new());
-//         tangle.insert(o, o_hash, TransactionMetadata::new());
-//         tangle.insert(p, p_hash, TransactionMetadata::new());
-//         tangle.insert(q, q_hash, TransactionMetadata::new());
-//         tangle.insert(r, r_hash, TransactionMetadata::new());
-//         tangle.insert(s, s_hash, TransactionMetadata::new());
-//         tangle.insert(t, t_hash, TransactionMetadata::new());
-//         tangle.insert(u, u_hash, TransactionMetadata::new());
-//         tangle.insert(v, v_hash, TransactionMetadata::new());
-//         tangle.insert(w, w_hash, TransactionMetadata::new());
-//         tangle.insert(x, x_hash, TransactionMetadata::new());
-//         tangle.insert(y, y_hash, TransactionMetadata::new());
-//         tangle.insert(z, z_hash, TransactionMetadata::new());
+//         tangle.insert(a, a_hash, MessageMetadata::new());
+//         tangle.insert(b, b_hash, MessageMetadata::new());
+//         tangle.insert(c, c_hash, MessageMetadata::new());
+//         tangle.insert(d, d_hash, MessageMetadata::new());
+//         tangle.insert(e, e_hash, MessageMetadata::new());
+//         tangle.insert(f, f_hash, MessageMetadata::new());
+//         tangle.insert(g, g_hash, MessageMetadata::new());
+//         tangle.insert(h, h_hash, MessageMetadata::new());
+//         tangle.insert(i, i_hash, MessageMetadata::new());
+//         tangle.insert(j, j_hash, MessageMetadata::new());
+//         tangle.insert(k, k_hash, MessageMetadata::new());
+//         tangle.insert(l, l_hash, MessageMetadata::new());
+//         tangle.insert(m, m_hash, MessageMetadata::new());
+//         tangle.insert(n, n_hash, MessageMetadata::new());
+//         tangle.insert(o, o_hash, MessageMetadata::new());
+//         tangle.insert(p, p_hash, MessageMetadata::new());
+//         tangle.insert(q, q_hash, MessageMetadata::new());
+//         tangle.insert(r, r_hash, MessageMetadata::new());
+//         tangle.insert(s, s_hash, MessageMetadata::new());
+//         tangle.insert(t, t_hash, MessageMetadata::new());
+//         tangle.insert(u, u_hash, MessageMetadata::new());
+//         tangle.insert(v, v_hash, MessageMetadata::new());
+//         tangle.insert(w, w_hash, MessageMetadata::new());
+//         tangle.insert(x, x_hash, MessageMetadata::new());
+//         tangle.insert(y, y_hash, MessageMetadata::new());
+//         tangle.insert(z, z_hash, MessageMetadata::new());
 //
 //         let mut hashes = Vec::new();
 //
@@ -444,7 +439,7 @@ impl<B: Backend> MsTangle<B> {
 //     vertex::{MessageRef, Vertex},
 // };
 
-// use bee_bundle::{MessageId, Transaction};
+// use bee_bundle::{MessageId, Message};
 
 // use std::{
 //     collections::MessageIdSet,
@@ -462,16 +457,16 @@ impl<B: Backend> MsTangle<B> {
 
 // /// A datastructure based on a directed acyclic graph (DAG).
 // pub struct Tangle<T> {
-//     /// A map between each vertex and the hash of the transaction the respective vertex represents.
+//     /// A map between each vertex and the hash of the message the respective vertex represents.
 //     pub(crate) vertices: DashMap<MessageId, Vertex<T>>,
 
-//     /// A map between the hash of a transaction and the hashes of its approvers.
+//     /// A map between the hash of a message and the hashes of its approvers.
 //     pub(crate) approvers: DashMap<MessageId, Vec<MessageId>>,
 
-//     /// A map between the milestone index and hash of the milestone transaction.
+//     /// A map between the milestone index and hash of the milestone message.
 //     milestones: DashMap<MilestoneIndex, MessageId>,
 
-//     /// A set of hashes representing transactions deemed solid entry points.
+//     /// A set of hashes representing messages deemed solid entry points.
 //     solid_entry_points: DashSet<MessageId>,
 
 //     /// The sender side of a channel between the Tangle and the (gossip) solidifier.
@@ -500,17 +495,17 @@ impl<B: Backend> MsTangle<B> {
 //         }
 //     }
 
-//     /// Inserts a transaction.
+//     /// Inserts a message.
 //     ///
-//     /// Note: The method assumes that `hash` -> `transaction` is injective, otherwise unexpected behavior could
+//     /// Note: The method assumes that `hash` -> `message` is injective, otherwise unexpected behavior could
 //     /// occur.
-//     pub async fn insert_transaction(
+//     pub async fn insert_message(
 //         &'static self,
-//         transaction: Transaction,
+//         message: Message,
 //         hash: MessageId,
 //         meta: T,
 //     ) -> Option<MessageRef> {
-//         match self.approvers.entry(*transaction.parent1()) {
+//         match self.approvers.entry(*message.parent1()) {
 //             Entry::Occupied(mut entry) => {
 //                 let values = entry.get_mut();
 //                 values.push(hash);
@@ -520,8 +515,8 @@ impl<B: Backend> MsTangle<B> {
 //             }
 //         }
 
-//         if transaction.parent1() != transaction.parent2() {
-//             match self.approvers.entry(*transaction.parent2()) {
+//         if message.parent1() != message.parent2() {
+//             match self.approvers.entry(*message.parent2()) {
 //                 Entry::Occupied(mut entry) => {
 //                     let values = entry.get_mut();
 //                     values.push(hash);
@@ -532,7 +527,7 @@ impl<B: Backend> MsTangle<B> {
 //             }
 //         }
 
-//         let vertex = Vertex::from(transaction, hash, meta);
+//         let vertex = Vertex::from(message, hash, meta);
 
 //         let tx_ref = vertex.get_ref_to_inner();
 
@@ -555,22 +550,22 @@ impl<B: Backend> MsTangle<B> {
 //         block_on(self.drop_barrier.wait());
 //     }
 
-//     /// Returns a reference to a transaction, if it's available in the local Tangle.
-//     pub fn get_transaction(&'static self, hash: &MessageId) -> Option<MessageRef> {
+//     /// Returns a reference to a message, if it's available in the local Tangle.
+//     pub fn get_message(&'static self, hash: &MessageId) -> Option<MessageRef> {
 //         self.vertices.get(hash).map(|v| v.get_ref_to_inner())
 //     }
 
-//     /// Returns whether the transaction is stored in the Tangle.
-//     pub fn contains_transaction(&'static self, hash: &MessageId) -> bool {
+//     /// Returns whether the message is stored in the Tangle.
+//     pub fn contains_message(&'static self, hash: &MessageId) -> bool {
 //         self.vertices.contains_key(hash)
 //     }
 
-//     /// Returns whether the transaction associated with `hash` is solid.
+//     /// Returns whether the message associated with `hash` is solid.
 //     ///
 //     /// Note: This function is _eventually consistent_ - if `true` is returned, solidification has
 //     /// definitely occurred. If `false` is returned, then solidification has probably not occurred,
 //     /// or solidification information has not yet been fully propagated.
-//     pub fn is_solid_transaction(&'static self, hash: &MessageId) -> bool {
+//     pub fn is_solid_message(&'static self, hash: &MessageId) -> bool {
 //         if self.is_solid_entry_point(hash) {
 //             true
 //         } else {
@@ -591,17 +586,17 @@ impl<B: Backend> MsTangle<B> {
 //         self.milestones.remove(&index);
 //     }
 
-//     /// Returns the milestone transaction corresponding to the given milestone `index`.
+//     /// Returns the milestone message corresponding to the given milestone `index`.
 //     pub fn get_milestone(&'static self, index: MilestoneIndex) -> Option<MessageRef> {
 //         match self.get_milestone_hash(index) {
 //             None => None,
-//             Some(hash) => self.get_transaction(&hash),
+//             Some(hash) => self.get_message(&hash),
 //         }
 //     }
 
 //     /// Returns a [`VertexRef`] linked to the specified milestone, if it's available in the local Tangle.
 //     pub fn get_latest_milestone(&'static self) -> Option<MessageRef> {
-//         todo!("get the latest milestone index, get the transaction hash from it, and query the Tangle for it")
+//         todo!("get the latest milestone index, get the message hash from it, and query the Tangle for it")
 //     }
 
 //     /// Returns the hash of a milestone.
@@ -657,7 +652,7 @@ impl<B: Backend> MsTangle<B> {
 //         self.solid_entry_points.remove(&hash);
 //     }
 
-//     /// Returns whether the transaction associated `hash` is a solid entry point.
+//     /// Returns whether the message associated `hash` is a solid entry point.
 //     pub fn is_solid_entry_point(&'static self, hash: &MessageId) -> bool {
 //         self.solid_entry_points.contains(hash)
 //     }
@@ -672,7 +667,7 @@ impl<B: Backend> MsTangle<B> {
 //         self.vertices.len()
 //     }
 
-//     /// Starts a walk beginning at a `start` vertex identified by its associated transaction hash
+//     /// Starts a walk beginning at a `start` vertex identified by its associated message hash
 //     /// traversing its children/approvers for as long as those satisfy a given `filter`.
 //     ///
 //     /// Returns a list of descendents of `start`. It is ensured, that all elements of that list
@@ -715,7 +710,7 @@ impl<B: Backend> MsTangle<B> {
 //         collected
 //     }
 
-//     /// Starts a walk beginning at a `start` vertex identified by its associated transaction hash
+//     /// Starts a walk beginning at a `start` vertex identified by its associated message hash
 //     /// traversing its ancestors/approvees for as long as those satisfy a given `filter`.
 //     ///
 //     /// Returns a list of ancestors of `start`. It is ensured, that all elements of that list
@@ -766,13 +761,13 @@ impl<B: Backend> MsTangle<B> {
 //                 match self.vertices.get(&hash) {
 //                     Some(vertex) => {
 //                         let vertex = vertex.value();
-//                         let transaction = vertex.get_ref_to_inner();
+//                         let message = vertex.get_ref_to_inner();
 
-//                         map(&transaction);
+//                         map(&message);
 
 //                         if should_follow(vertex) {
-//                             non_analyzed_hashes.push(*transaction.parent2());
-//                             non_analyzed_hashes.push(*transaction.parent1());
+//                             non_analyzed_hashes.push(*message.parent2());
+//                             non_analyzed_hashes.push(*message.parent1());
 //                         }
 //                     }
 //                     None => {
@@ -807,19 +802,19 @@ impl<B: Backend> MsTangle<B> {
 //             match self.vertices.get(hash) {
 //                 Some(vertex) => {
 //                     let vertex = vertex.value();
-//                     let transaction = vertex.get_ref_to_inner();
+//                     let message = vertex.get_ref_to_inner();
 
 //                     // TODO add follow
-//                     if analyzed_hashes.contains(transaction.parent1()) &&
-// analyzed_hashes.contains(transaction.parent2()) {                         map(hash, &transaction);
+//                     if analyzed_hashes.contains(message.parent1()) &&
+// analyzed_hashes.contains(message.parent2()) {                         map(hash, &message);
 //                         analyzed_hashes.insert(hash.clone());
 //                         non_analyzed_hashes.pop();
 //                     // TODO add follow
-//                     } else if !analyzed_hashes.contains(transaction.parent1()) {
-//                         non_analyzed_hashes.push(*transaction.parent1());
+//                     } else if !analyzed_hashes.contains(message.parent1()) {
+//                         non_analyzed_hashes.push(*message.parent1());
 //                     // TODO add follow
-//                     } else if !analyzed_hashes.contains(transaction.parent2()) {
-//                         non_analyzed_hashes.push(*transaction.parent2());
+//                     } else if !analyzed_hashes.contains(message.parent2()) {
+//                         non_analyzed_hashes.push(*message.parent2());
 //                     }
 //                 }
 //                 None => {

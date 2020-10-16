@@ -44,7 +44,7 @@ async fn process_request(hash: MessageId, index: MilestoneIndex, counter: &mut u
     }
 }
 
-/// Return `true` if the transaction was requested.
+/// Return `true` if the message was requested.
 async fn process_request_unchecked(hash: MessageId, index: MilestoneIndex, counter: &mut usize) -> bool {
     if Protocol::get().peer_manager.handshaked_peers.is_empty() {
         return false;
@@ -92,8 +92,8 @@ async fn process_request_unchecked(hash: MessageId, index: MilestoneIndex, count
 async fn retry_requests(counter: &mut usize) {
     let mut retry_counts: usize = 0;
 
-    for mut transaction in Protocol::get().requested_messages.iter_mut() {
-        let (hash, (index, instant)) = transaction.pair_mut();
+    for mut message in Protocol::get().requested_messages.iter_mut() {
+        let (hash, (index, instant)) = message.pair_mut();
         let now = Instant::now();
         if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && process_request_unchecked(*hash, *index, counter).await {
             *instant = now;
@@ -102,7 +102,7 @@ async fn retry_requests(counter: &mut usize) {
     }
 
     if retry_counts > 0 {
-        debug!("Retried {} transactions.", retry_counts);
+        debug!("Retried {} messages.", retry_counts);
     }
 }
 

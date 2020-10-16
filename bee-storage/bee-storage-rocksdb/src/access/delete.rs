@@ -11,13 +11,13 @@
 
 use bee_crypto::ternary::Hash;
 // use bee_ledger::{diff::LedgerDiff, state::LedgerState};
-use bee_protocol::{tangle::TransactionMetadata, MilestoneIndex};
+use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Delete, persistable::Persistable};
 
 use crate::{access::OpError, storage::*};
 
 #[async_trait::async_trait]
-impl Delete<Hash, TransactionMetadata> for Storage {
+impl Delete<Hash, MessageMetadata> for Storage {
     type Error = OpError;
     async fn delete(&self, hash: &Hash) -> Result<(), Self::Error> {
         let db = &self.inner;

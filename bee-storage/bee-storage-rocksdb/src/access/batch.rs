@@ -11,7 +11,7 @@
 
 use bee_crypto::ternary::Hash;
 // use bee_ledger::{diff::LedgerDiff, state::LedgerState};
-use bee_protocol::{tangle::TransactionMetadata, MilestoneIndex};
+use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{
     access::{ApplyBatch, Batch, BatchBuilder},
     persistable::Persistable,
@@ -50,13 +50,9 @@ impl<'a> Batch<'a> for Storage {
     }
 }
 
-impl<'a> BatchBuilder<'a, Storage, Hash, TransactionMetadata> for StorageBatch<'a> {
+impl<'a> BatchBuilder<'a, Storage, Hash, MessageMetadata> for StorageBatch<'a> {
     type Error = OpError;
-    fn try_insert(
-        mut self,
-        hash: &Hash,
-        transaction_metadata: &TransactionMetadata,
-    ) -> Result<Self, (Self, Self::Error)> {
+    fn try_insert(mut self, hash: &Hash, transaction_metadata: &MessageMetadata) -> Result<Self, (Self, Self::Error)> {
         let hash_to_metadata = self.storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
         self.key_buf.clear();
         self.value_buf.clear();

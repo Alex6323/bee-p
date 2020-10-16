@@ -28,13 +28,13 @@ enum Score {
     Lazy,
 }
 
-// C1: the maximum allowed delta value for the YTRSI of a given transaction in relation to the current LSMI before it
+// C1: the maximum allowed delta value for the YTRSI of a given message in relation to the current LSMI before it
 // gets lazy.
 const YTRSI_DELTA: u32 = 8;
-// C2: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
+// C2: the maximum allowed delta value between OTRSI of a given message in relation to the current LSMI before it
 // gets semi-lazy.
 const OTRSI_DELTA: u32 = 13;
-// M: the maximum allowed delta value between OTRSI of a given transaction in relation to the current LSMI before it
+// M: the maximum allowed delta value between OTRSI of a given message in relation to the current LSMI before it
 // gets lazy.
 const BELOW_MAX_DEPTH: u32 = 15;
 // If the amount of non-lazy tips exceed this limit, remove the parent(s) of the inserted tip to compensate for the

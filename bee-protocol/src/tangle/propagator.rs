@@ -43,7 +43,7 @@ impl SolidifierState {
         while let Some(hash) = stack.pop() {
             if !already_solid.contains(&hash) {
                 if let Some(v) = tangle().vertices.get(&hash).map(|r| r.value().get_ref_to_inner()) {
-                    if tangle().is_solid_transaction(v.parent1()) && tangle().is_solid_transaction(v.parent2()) {
+                    if tangle().is_solid_message(v.parent1()) && tangle().is_solid_message(v.parent2()) {
                         // NOTE: unwrap should be safe since we just added it to the Tangle
                         tangle().vertices.get_mut(&hash).unwrap().set_solid();
                         already_solid.insert(hash);

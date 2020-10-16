@@ -12,9 +12,11 @@
 #![allow(clippy::unit_arg)]
 
 mod broadcaster;
+mod message;
 mod message_validator;
 mod milestone_cone_updater;
 mod milestone_validator;
+mod mps;
 mod peer;
 mod propagator;
 mod requester;
@@ -24,13 +26,13 @@ mod status;
 mod storage;
 mod tangle;
 mod tip_pool_cleaner;
-mod tps;
-mod transaction;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
+pub(crate) use message::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
 pub(crate) use message_validator::{MessageValidatorWorker, MessageValidatorWorkerEvent};
 pub(crate) use milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidatorWorkerEvent};
+pub(crate) use mps::MpsWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use propagator::{PropagatorWorker, PropagatorWorkerEvent};
 pub(crate) use requester::{
@@ -44,5 +46,3 @@ pub(crate) use status::StatusWorker;
 pub use storage::StorageWorker;
 pub use tangle::TangleWorker;
 pub(crate) use tip_pool_cleaner::TipPoolCleanerWorker;
-pub(crate) use tps::TpsWorker;
-pub(crate) use transaction::{HasherWorker, HasherWorkerEvent, ProcessorWorker};

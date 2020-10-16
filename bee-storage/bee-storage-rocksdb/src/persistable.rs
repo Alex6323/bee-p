@@ -16,7 +16,7 @@ use crate::storage::Storage;
 use bee_crypto::ternary::Hash;
 // use bee_ledger::{diff::LedgerDiff, state::LedgerState};
 use bee_protocol::{
-    tangle::{flags::Flags, TransactionMetadata},
+    tangle::{flags::Flags, MessageMetadata},
     MilestoneIndex,
 };
 
@@ -120,7 +120,7 @@ where
     }
 }
 
-impl Persistable<Storage> for TransactionMetadata {
+impl Persistable<Storage> for MessageMetadata {
     fn write_to(&self, buffer: &mut Vec<u8>) {
         // encode struct in order
         // 1- encode flags

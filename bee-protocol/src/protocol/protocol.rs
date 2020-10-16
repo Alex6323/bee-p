@@ -19,8 +19,9 @@ use crate::{
     worker::{
         BroadcasterWorker, HasherWorker, KickstartWorker, MessageRequesterWorker, MessageResponderWorker,
         MessageValidatorWorker, MilestoneConeUpdaterWorker, MilestoneRequesterWorker, MilestoneResponderWorker,
-        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, PeerHandshakerWorker,
-        ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker, TangleWorker, TipPoolCleanerWorker, TpsWorker,
+        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, MpsWorker,
+        PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker, TangleWorker,
+        TipPoolCleanerWorker,
     },
 };
 
@@ -76,7 +77,7 @@ impl Protocol {
         node_builder
             .with_worker_cfg::<StorageWorker>(database_config)
             .with_worker_cfg::<TangleWorker>(snapshot_metadata)
-            .with_worker_cfg::<HasherWorker>(config.workers.transaction_worker_cache)
+            .with_worker_cfg::<HasherWorker>(config.workers.message_worker_cache)
             .with_worker_cfg::<ProcessorWorker>(config.clone())
             .with_worker::<MessageResponderWorker>()
             .with_worker::<MilestoneResponderWorker>()
@@ -86,7 +87,7 @@ impl Protocol {
             .with_worker_cfg::<BroadcasterWorker>(network)
             .with_worker::<MessageValidatorWorker>()
             .with_worker::<PropagatorWorker>()
-            .with_worker::<TpsWorker>()
+            .with_worker::<MpsWorker>()
             .with_worker_cfg::<KickstartWorker>((ms_send, config.workers.ms_sync_count))
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
             .with_worker::<MilestoneConeUpdaterWorker>()

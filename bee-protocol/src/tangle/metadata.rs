@@ -15,7 +15,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 // TODO Should it really be copy ?
 #[derive(Copy, Clone, Default)]
-pub struct TransactionMetadata {
+pub struct MessageMetadata {
     flags: Flags,
     milestone_index: MilestoneIndex,
     arrival_timestamp: u64,
@@ -27,7 +27,7 @@ pub struct TransactionMetadata {
     ytrsi: Option<MilestoneIndex>,
 }
 
-impl TransactionMetadata {
+impl MessageMetadata {
     pub fn new(
         flags: Flags,
         milestone_index: MilestoneIndex,
