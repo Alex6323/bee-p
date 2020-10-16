@@ -12,7 +12,7 @@
 use crate::{
     config::ProtocolConfig,
     event::HandshakeCompleted,
-    packet::{tlv_from_bytes, tlv_into_bytes, Header, Packet, PACKETS_VERSION},
+    packet::{tlv_from_bytes, tlv_into_bytes, Header, Packet, MINIMUM_VERSION},
     peer::Peer,
     protocol::Protocol,
     tangle::MsTangle,
@@ -108,7 +108,7 @@ impl PeerHandshakerWorker {
         //         self.network.config().binding_port,
         //         &self.config.coordinator.public_key,
         //         self.config.mwm,
-        //         PACKETS_VERSION,
+        //         MINIMUM_VERSION,
         //     )),
         // }) {
         //     // TODO then what ?
@@ -193,7 +193,7 @@ impl PeerHandshakerWorker {
     //         ));
     //     }
     //
-    //     if handshake.version < PACKETS_VERSION {
+    //     if handshake.version < MINIMUM_VERSION {
     //         return Err(HandshakeError::UnsupportedVersion(handshake.version));
     //     }
     //

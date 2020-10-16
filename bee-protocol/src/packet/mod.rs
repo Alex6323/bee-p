@@ -25,7 +25,7 @@ pub(crate) use message_request::MessageRequest;
 pub(crate) use milestone_request::MilestoneRequest;
 pub(crate) use tlv::{tlv_from_bytes, tlv_into_bytes};
 
-pub(crate) const PACKETS_VERSION: u16 = 1;
+pub(crate) const MINIMUM_VERSION: u16 = 1;
 
 use std::ops::Range;
 
