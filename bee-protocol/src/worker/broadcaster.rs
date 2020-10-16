@@ -39,6 +39,8 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
+        let network = config;
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
@@ -52,7 +54,7 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
                         Some(source) => source != *peer.key(),
                         None => true,
                     } {
-                        match config.unbounded_send(SendMessage {
+                        match network.unbounded_send(SendMessage {
                             receiver_epid: *peer.key(),
                             message: bytes.clone(),
                         }) {
