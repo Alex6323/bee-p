@@ -12,7 +12,7 @@
 use crate::{
     config::ProtocolConfig,
     event::HandshakeCompleted,
-    packet::{tlv_from_bytes, tlv_into_bytes, Handshake, Header, Packet, PACKETS_VERSION},
+    packet::{tlv_from_bytes, tlv_into_bytes, Header, Packet, PACKETS_VERSION},
     peer::Peer,
     protocol::Protocol,
     tangle::MsTangle,
@@ -101,19 +101,19 @@ impl PeerHandshakerWorker {
         let receiver_fused = receiver.into_stream();
         let shutdown_fused = shutdown.fuse();
 
-        // This is the only message not using a Sender because they are not running yet (awaiting handshake)
-        if let Err(e) = self.network.unbounded_send(SendMessage {
-            receiver_epid: self.peer.epid,
-            message: tlv_into_bytes(Handshake::new(
-                self.network.config().binding_port,
-                &self.config.coordinator.public_key,
-                self.config.mwm,
-                PACKETS_VERSION,
-            )),
-        }) {
-            // TODO then what ?
-            warn!("[{}] Failed to send handshake: {:?}.", self.peer.address, e);
-        }
+        // // This is the only message not using a Sender because they are not running yet (awaiting handshake)
+        // if let Err(e) = self.network.unbounded_send(SendMessage {
+        //     receiver_epid: self.peer.epid,
+        //     message: tlv_into_bytes(Handshake::new(
+        //         self.network.config().binding_port,
+        //         &self.config.coordinator.public_key,
+        //         self.config.mwm,
+        //         PACKETS_VERSION,
+        //     )),
+        // }) {
+        //     // TODO then what ?
+        //     warn!("[{}] Failed to send handshake: {:?}.", self.peer.address, e);
+        // }
 
         let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address);
 
@@ -170,57 +170,57 @@ impl PeerHandshakerWorker {
         info!("[{}] Stopped.", self.peer.address);
     }
 
-    pub(crate) fn validate_handshake(&mut self, handshake: Handshake) -> Result<SocketAddr, HandshakeError> {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Clock may have gone backwards")
-            .as_millis() as u64;
-
-        if ((timestamp - handshake.timestamp) as i64).abs() as u64 > self.config.handshake_window * 1000 {
-            return Err(HandshakeError::InvalidTimestampDiff(
-                ((timestamp - handshake.timestamp) as i64).abs(),
-            ));
-        }
-
-        if !self.config.coordinator.public_key.eq(&handshake.coordinator) {
-            return Err(HandshakeError::CoordinatorMismatch);
-        }
-
-        if self.config.mwm != handshake.minimum_weight_magnitude {
-            return Err(HandshakeError::MwmMismatch(
-                self.config.mwm,
-                handshake.minimum_weight_magnitude,
-            ));
-        }
-
-        if handshake.version < PACKETS_VERSION {
-            return Err(HandshakeError::UnsupportedVersion(handshake.version));
-        }
-
-        let address = match self.peer.origin {
-            Origin::Outbound => {
-                if self.peer.address.port() != handshake.port {
-                    return Err(HandshakeError::PortMismatch(self.peer.address.port(), handshake.port));
-                }
-
-                self.peer.address
-            }
-            Origin::Inbound => {
-                // TODO check if whitelisted
-
-                SocketAddr::new(self.peer.address.ip(), handshake.port)
-            }
-        };
-
-        for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
-            if peer.address == address {
-                self.status = HandshakeStatus::Duplicate;
-                return Err(HandshakeError::AlreadyHandshaked);
-            }
-        }
-
-        Ok(address)
-    }
+    // pub(crate) fn validate_handshake(&mut self, handshake: Handshake) -> Result<SocketAddr, HandshakeError> {
+    //     let timestamp = SystemTime::now()
+    //         .duration_since(UNIX_EPOCH)
+    //         .expect("Clock may have gone backwards")
+    //         .as_millis() as u64;
+    //
+    //     if ((timestamp - handshake.timestamp) as i64).abs() as u64 > self.config.handshake_window * 1000 {
+    //         return Err(HandshakeError::InvalidTimestampDiff(
+    //             ((timestamp - handshake.timestamp) as i64).abs(),
+    //         ));
+    //     }
+    //
+    //     if !self.config.coordinator.public_key.eq(&handshake.coordinator) {
+    //         return Err(HandshakeError::CoordinatorMismatch);
+    //     }
+    //
+    //     if self.config.mwm != handshake.minimum_weight_magnitude {
+    //         return Err(HandshakeError::MwmMismatch(
+    //             self.config.mwm,
+    //             handshake.minimum_weight_magnitude,
+    //         ));
+    //     }
+    //
+    //     if handshake.version < PACKETS_VERSION {
+    //         return Err(HandshakeError::UnsupportedVersion(handshake.version));
+    //     }
+    //
+    //     let address = match self.peer.origin {
+    //         Origin::Outbound => {
+    //             if self.peer.address.port() != handshake.port {
+    //                 return Err(HandshakeError::PortMismatch(self.peer.address.port(), handshake.port));
+    //             }
+    //
+    //             self.peer.address
+    //         }
+    //         Origin::Inbound => {
+    //             // TODO check if whitelisted
+    //
+    //             SocketAddr::new(self.peer.address.ip(), handshake.port)
+    //         }
+    //     };
+    //
+    //     for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
+    //         if peer.address == address {
+    //             self.status = HandshakeStatus::Duplicate;
+    //             return Err(HandshakeError::AlreadyHandshaked);
+    //         }
+    //     }
+    //
+    //     Ok(address)
+    // }
 
     async fn process_message<B: Backend>(
         &mut self,
@@ -228,45 +228,45 @@ impl PeerHandshakerWorker {
         header: &Header,
         bytes: &[u8],
     ) -> Result<(), PeerHandshakerWorkerError> {
-        if let Handshake::ID = header.packet_type {
-            trace!("[{}] Reading Handshake...", self.peer.address);
-            match tlv_from_bytes::<Handshake>(&header, bytes) {
-                Ok(handshake) => match self.validate_handshake(handshake) {
-                    Ok(address) => {
-                        info!("[{}] Handshake completed.", self.peer.address);
-
-                        Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
-
-                        Protocol::get()
-                            .bus
-                            .dispatch(HandshakeCompleted(self.peer.epid, address));
-
-                        Protocol::send_heartbeat(
-                            self.peer.epid,
-                            tangle.get_latest_solid_milestone_index(),
-                            tangle.get_pruning_index(),
-                            tangle.get_latest_milestone_index(),
-                        );
-
-                        Protocol::request_latest_milestone(tangle, &self.milestone_requester, Some(self.peer.epid));
-
-                        self.status = HandshakeStatus::Done;
-                    }
-                    Err(e) => {
-                        warn!("[{}] Handshaking failed: {:?}.", self.peer.address, e);
-                    }
-                },
-                Err(e) => {
-                    warn!("[{}] Reading Handshake failed: {:?}.", self.peer.address, e);
-
-                    Protocol::get().metrics.invalid_messages_inc();
-                }
-            }
-        } else {
-            warn!("[{}] Ignoring messages until fully handshaked.", self.peer.address);
-
-            Protocol::get().metrics.invalid_messages_inc();
-        }
+        // if let Handshake::ID = header.packet_type {
+        //     trace!("[{}] Reading Handshake...", self.peer.address);
+        //     match tlv_from_bytes::<Handshake>(&header, bytes) {
+        //         Ok(handshake) => match self.validate_handshake(handshake) {
+        //             Ok(address) => {
+        //                 info!("[{}] Handshake completed.", self.peer.address);
+        //
+        //                 Protocol::get().peer_manager.handshake(&self.peer.epid, address).await;
+        //
+        //                 Protocol::get()
+        //                     .bus
+        //                     .dispatch(HandshakeCompleted(self.peer.epid, address));
+        //
+        //                 Protocol::send_heartbeat(
+        //                     self.peer.epid,
+        //                     tangle.get_latest_solid_milestone_index(),
+        //                     tangle.get_pruning_index(),
+        //                     tangle.get_latest_milestone_index(),
+        //                 );
+        //
+        //                 Protocol::request_latest_milestone(tangle, &self.milestone_requester, Some(self.peer.epid));
+        //
+        //                 self.status = HandshakeStatus::Done;
+        //             }
+        //             Err(e) => {
+        //                 warn!("[{}] Handshaking failed: {:?}.", self.peer.address, e);
+        //             }
+        //         },
+        //         Err(e) => {
+        //             warn!("[{}] Reading Handshake failed: {:?}.", self.peer.address, e);
+        //
+        //             Protocol::get().metrics.invalid_messages_inc();
+        //         }
+        //     }
+        // } else {
+        //     warn!("[{}] Ignoring messages until fully handshaked.", self.peer.address);
+        //
+        //     Protocol::get().metrics.invalid_messages_inc();
+        // }
 
         Ok(())
     }

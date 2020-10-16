@@ -77,7 +77,7 @@ mod tests {
 
     use super::*;
 
-    use crate::packet::{Handshake, Heartbeat, Message as MessagePacket, MessageRequest, MilestoneRequest, Packet};
+    use crate::packet::{Heartbeat, Message as MessagePacket, MessageRequest, MilestoneRequest, Packet};
 
     use rand::Rng;
 
@@ -184,14 +184,6 @@ mod tests {
             }
         };
     }
-
-    implement_tlv_tests!(
-        Handshake,
-        invalid_advertised_type_handshake,
-        invalid_advertised_length_handshake,
-        length_out_of_range_handshake,
-        fuzz_handshake
-    );
 
     implement_tlv_tests!(
         MilestoneRequest,

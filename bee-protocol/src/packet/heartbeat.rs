@@ -65,7 +65,7 @@ impl Heartbeat {
 }
 
 impl Packet for Heartbeat {
-    const ID: u8 = 0x06;
+    const ID: u8 = 0x04;
 
     fn size_range() -> Range<usize> {
         (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn id() {
-        assert_eq!(Heartbeat::ID, 6);
+        assert_eq!(Heartbeat::ID, 4);
     }
 
     #[test]

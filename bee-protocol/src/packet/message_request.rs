@@ -41,7 +41,7 @@ impl Default for MessageRequest {
 }
 
 impl Packet for MessageRequest {
-    const ID: u8 = 0x05;
+    const ID: u8 = 0x03;
 
     fn size_range() -> Range<usize> {
         (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn id() {
-        assert_eq!(MessageRequest::ID, 5);
+        assert_eq!(MessageRequest::ID, 3);
     }
 
     #[test]

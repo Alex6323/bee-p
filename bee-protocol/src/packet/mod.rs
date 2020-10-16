@@ -11,7 +11,6 @@
 
 // TODO document
 
-mod handshake;
 mod header;
 mod heartbeat;
 mod message;
@@ -19,7 +18,6 @@ mod message_request;
 mod milestone_request;
 mod tlv;
 
-pub(crate) use handshake::Handshake;
 pub(crate) use header::{Header, HEADER_SIZE};
 pub(crate) use heartbeat::Heartbeat;
 pub(crate) use message::Message;

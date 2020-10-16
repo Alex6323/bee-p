@@ -32,7 +32,7 @@ impl MilestoneRequest {
 }
 
 impl Packet for MilestoneRequest {
-    const ID: u8 = 0x03;
+    const ID: u8 = 0x01;
 
     fn size_range() -> Range<usize> {
         (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn id() {
-        assert_eq!(MilestoneRequest::ID, 3);
+        assert_eq!(MilestoneRequest::ID, 1);
     }
 
     #[test]

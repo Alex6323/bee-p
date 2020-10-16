@@ -34,7 +34,7 @@ impl Message {
 }
 
 impl Packet for Message {
-    const ID: u8 = 0x04;
+    const ID: u8 = 0x02;
 
     fn size_range() -> Range<usize> {
         (VARIABLE_MIN_SIZE)..(VARIABLE_MAX_SIZE + 1)
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn id() {
-        assert_eq!(Message::ID, 4);
+        assert_eq!(Message::ID, 2);
     }
 
     #[test]
