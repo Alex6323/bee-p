@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! Handshake packet of the protocol version 0
+//! Handshake packet of the protocol.
 
 use crate::packet::Packet;
 
@@ -23,9 +23,9 @@ const PORT_SIZE: usize = 2;
 const TIMESTAMP_SIZE: usize = 8;
 const COORDINATOR_SIZE: usize = 32;
 const MINIMUM_WEIGHT_MAGNITUDE_SIZE: usize = 1;
-const CONSTANT_SIZE: usize = PORT_SIZE + TIMESTAMP_SIZE + COORDINATOR_SIZE + MINIMUM_WEIGHT_MAGNITUDE_SIZE;
-const VARIABLE_MIN_SIZE: usize = 1;
-const VARIABLE_MAX_SIZE: usize = 32;
+const VERSION_SIZE: usize = 2;
+const CONSTANT_SIZE: usize =
+    PORT_SIZE + TIMESTAMP_SIZE + COORDINATOR_SIZE + MINIMUM_WEIGHT_MAGNITUDE_SIZE + VERSION_SIZE;
 
 /// A packet that allows two nodes to pair.
 ///
@@ -40,8 +40,8 @@ pub(crate) struct Handshake {
     pub(crate) coordinator: [u8; COORDINATOR_SIZE],
     /// Minimum Weight Magnitude of the node.
     pub(crate) minimum_weight_magnitude: u8,
-    /// Protocol versions supported by the node.
-    pub(crate) supported_versions: Vec<u8>,
+    /// Protocol version supported by the node.
+    pub(crate) version: u16,
 }
 
 impl Handshake {
@@ -49,7 +49,7 @@ impl Handshake {
         port: u16,
         coordinator: &[u8; COORDINATOR_SIZE],
         minimum_weight_magnitude: u8,
-        supported_versions: &[u8],
+        version: u16,
     ) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -64,7 +64,7 @@ impl Handshake {
             timestamp,
             coordinator: self_coordinator,
             minimum_weight_magnitude,
-            supported_versions: supported_versions.to_vec(),
+            version,
         }
     }
 }
@@ -76,7 +76,7 @@ impl Default for Handshake {
             timestamp: 0,
             coordinator: [0; COORDINATOR_SIZE],
             minimum_weight_magnitude: 0,
-            supported_versions: Default::default(),
+            version: 0,
         }
     }
 }
@@ -85,7 +85,7 @@ impl Packet for Handshake {
     const ID: u8 = 0x01;
 
     fn size_range() -> Range<usize> {
-        (CONSTANT_SIZE + VARIABLE_MIN_SIZE)..(CONSTANT_SIZE + VARIABLE_MAX_SIZE + 1)
+        (CONSTANT_SIZE)..(CONSTANT_SIZE + 1)
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
@@ -103,13 +103,14 @@ impl Packet for Handshake {
         let (bytes, next) = next.split_at(MINIMUM_WEIGHT_MAGNITUDE_SIZE);
         packet.minimum_weight_magnitude = u8::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
-        packet.supported_versions = next.to_vec();
+        let (bytes, _) = next.split_at(VERSION_SIZE);
+        packet.version = u16::from_le_bytes(bytes.try_into().expect("Invalid buffer size"));
 
         packet
     }
 
     fn size(&self) -> usize {
-        CONSTANT_SIZE + self.supported_versions.len()
+        CONSTANT_SIZE
     }
 
     fn into_bytes(self, bytes: &mut [u8]) {
@@ -125,7 +126,8 @@ impl Packet for Handshake {
         let (bytes, next) = next.split_at_mut(MINIMUM_WEIGHT_MAGNITUDE_SIZE);
         bytes.copy_from_slice(&self.minimum_weight_magnitude.to_le_bytes());
 
-        next.copy_from_slice(&self.supported_versions);
+        let (bytes, _) = next.split_at_mut(VERSION_SIZE);
+        bytes.copy_from_slice(&self.version.to_le_bytes());
     }
 }
 
@@ -140,7 +142,7 @@ mod tests {
         21, 82, 57, 180, 237, 182, 101,
     ];
     const MINIMUM_WEIGHT_MAGNITUDE: u8 = 0x6e;
-    const SUPPORTED_VERSIONS: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const VERSION: u16 = 1;
 
     #[test]
     fn id() {
@@ -149,25 +151,21 @@ mod tests {
 
     #[test]
     fn size_range() {
-        assert_eq!(Handshake::size_range().contains(&43), false);
-        assert_eq!(Handshake::size_range().contains(&44), true);
+        assert_eq!(Handshake::size_range().contains(&44), false);
         assert_eq!(Handshake::size_range().contains(&45), true);
-
-        assert_eq!(Handshake::size_range().contains(&74), true);
-        assert_eq!(Handshake::size_range().contains(&75), true);
-        assert_eq!(Handshake::size_range().contains(&76), false);
+        assert_eq!(Handshake::size_range().contains(&46), false);
     }
 
     #[test]
     fn size() {
-        let packet = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
+        let packet = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, VERSION);
 
-        assert_eq!(packet.size(), CONSTANT_SIZE + 10);
+        assert_eq!(packet.size(), CONSTANT_SIZE);
     }
 
     #[test]
     fn into_from() {
-        let packet_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, &SUPPORTED_VERSIONS);
+        let packet_from = Handshake::new(PORT, &COORDINATOR, MINIMUM_WEIGHT_MAGNITUDE, VERSION);
         let mut bytes = vec![0u8; packet_from.size()];
         packet_from.into_bytes(&mut bytes);
         let packet_to = Handshake::from_bytes(&bytes);
@@ -176,6 +174,6 @@ mod tests {
         assert_eq!(packet_to.port, PORT);
         assert!(packet_to.coordinator.eq(&COORDINATOR));
         assert_eq!(packet_to.minimum_weight_magnitude, MINIMUM_WEIGHT_MAGNITUDE);
-        assert!(packet_to.supported_versions.eq(&SUPPORTED_VERSIONS));
+        assert_eq!(packet_to.version, VERSION);
     }
 }

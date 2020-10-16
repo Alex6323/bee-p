@@ -12,7 +12,7 @@
 use crate::{
     config::ProtocolConfig,
     event::HandshakeCompleted,
-    packet::{packets_supported_version, tlv_from_bytes, tlv_into_bytes, Handshake, Header, Packet, PACKETS_VERSIONS},
+    packet::{tlv_from_bytes, tlv_into_bytes, Handshake, Header, Packet, PACKETS_VERSION},
     peer::Peer,
     protocol::Protocol,
     tangle::MsTangle,
@@ -41,7 +41,7 @@ pub(crate) enum HandshakeError {
     InvalidTimestampDiff(i64),
     CoordinatorMismatch,
     MwmMismatch(u8, u8),
-    UnsupportedVersion(u8),
+    UnsupportedVersion(u16),
     PortMismatch(u16, u16),
     AlreadyHandshaked,
 }
@@ -108,7 +108,7 @@ impl PeerHandshakerWorker {
                 self.network.config().binding_port,
                 &self.config.coordinator.public_key,
                 self.config.mwm,
-                &PACKETS_VERSIONS,
+                PACKETS_VERSION,
             )),
         }) {
             // TODO then what ?
@@ -193,8 +193,8 @@ impl PeerHandshakerWorker {
             ));
         }
 
-        if let Err(version) = packets_supported_version(&handshake.supported_versions) {
-            return Err(HandshakeError::UnsupportedVersion(version));
+        if handshake.version < PACKETS_VERSION {
+            return Err(HandshakeError::UnsupportedVersion(handshake.version));
         }
 
         let address = match self.peer.origin {

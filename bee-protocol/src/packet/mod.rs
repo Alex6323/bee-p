@@ -18,7 +18,6 @@ mod message;
 mod message_request;
 mod milestone_request;
 mod tlv;
-mod version;
 
 pub(crate) use handshake::Handshake;
 pub(crate) use header::{Header, HEADER_SIZE};
@@ -27,7 +26,8 @@ pub(crate) use message::Message;
 pub(crate) use message_request::MessageRequest;
 pub(crate) use milestone_request::MilestoneRequest;
 pub(crate) use tlv::{tlv_from_bytes, tlv_into_bytes};
-pub(crate) use version::{packets_supported_version, PACKETS_VERSIONS};
+
+pub(crate) const PACKETS_VERSION: u16 = 1;
 
 use std::ops::Range;
 
