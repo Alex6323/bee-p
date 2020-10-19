@@ -44,44 +44,15 @@ pub struct Transaction {
     unlock_blocks: Box<[UnlockBlock]>,
 }
 
-impl Packable for Transaction {
-    fn packed_len(&self) -> usize {
-        self.essence.packed_len()
-            + 0u16.packed_len()
-            + self.unlock_blocks.iter().map(|block| block.packed_len()).sum::<usize>()
-    }
-
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.essence.pack(buf)?;
-
-        (self.unlock_blocks.len() as u16).pack(buf)?;
-        for unlock_block in self.unlock_blocks.as_ref() {
-            unlock_block.pack(buf)?;
-        }
-
-        Ok(())
-    }
-
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
-    where
-        Self: Sized,
-    {
-        let essence = TransactionEssence::unpack(buf)?;
-
-        let unlock_blocks_len = u16::unpack(buf)? as usize;
-        let mut unlock_blocks = Vec::with_capacity(unlock_blocks_len);
-        for _ in 0..unlock_blocks_len {
-            unlock_blocks.push(UnlockBlock::unpack(buf)?);
-        }
-
-        Ok(Self {
-            essence,
-            unlock_blocks: unlock_blocks.into_boxed_slice(),
-        })
-    }
-}
-
 impl Transaction {
+    pub fn essence(&self) -> &TransactionEssence {
+        &self.essence
+    }
+
+    pub fn unlock_blocks(&self) -> &[UnlockBlock] {
+        &self.unlock_blocks
+    }
+
     pub fn builder(seed: &Seed) -> TransactionBuilder {
         TransactionBuilder::new(seed)
     }
@@ -254,6 +225,43 @@ impl Transaction {
         // TODO The transaction is spending the entirety of the funds of the referenced UTXOs to the outputs.
 
         Ok(())
+    }
+}
+
+impl Packable for Transaction {
+    fn packed_len(&self) -> usize {
+        self.essence.packed_len()
+            + 0u16.packed_len()
+            + self.unlock_blocks.iter().map(|block| block.packed_len()).sum::<usize>()
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.essence.pack(buf)?;
+
+        (self.unlock_blocks.len() as u16).pack(buf)?;
+        for unlock_block in self.unlock_blocks.as_ref() {
+            unlock_block.pack(buf)?;
+        }
+
+        Ok(())
+    }
+
+    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        let essence = TransactionEssence::unpack(buf)?;
+
+        let unlock_blocks_len = u16::unpack(buf)? as usize;
+        let mut unlock_blocks = Vec::with_capacity(unlock_blocks_len);
+        for _ in 0..unlock_blocks_len {
+            unlock_blocks.push(UnlockBlock::unpack(buf)?);
+        }
+
+        Ok(Self {
+            essence,
+            unlock_blocks: unlock_blocks.into_boxed_slice(),
+        })
     }
 }
 
