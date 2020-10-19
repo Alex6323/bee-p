@@ -40,9 +40,9 @@ use core::{cmp::Ordering, slice::Iter};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
-    pub essence: TransactionEssence,
+    essence: TransactionEssence,
     // TODO Box
-    pub unlock_blocks: Vec<UnlockBlock>,
+    unlock_blocks: Vec<UnlockBlock>,
 }
 
 impl Packable for Transaction {
