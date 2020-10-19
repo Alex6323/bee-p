@@ -66,7 +66,6 @@ async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex,
                     Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
                     return true;
                 }
-                return false;
             }
         }
     }
@@ -83,7 +82,6 @@ async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex,
                     Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
                     return true;
                 }
-                return false;
             }
         }
     }
@@ -136,7 +134,8 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
                 }
             }
 
-            info!("Stopped."); });
+            info!("Stopped.");
+        });
 
         Ok(Self { tx })
     }
