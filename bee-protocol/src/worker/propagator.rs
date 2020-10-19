@@ -53,7 +53,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
-        let bundle_validator = node.worker::<MessageValidatorWorker>().unwrap().tx.clone();
+        let message_validator = node.worker::<MessageValidatorWorker>().unwrap().tx.clone();
         let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
@@ -105,7 +105,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
 
                             Protocol::get().bus.dispatch(MessageSolidified(*hash));
 
-                            if let Err(e) = bundle_validator.send(MessageValidatorWorkerEvent(*hash)) {
+                            if let Err(e) = message_validator.send(MessageValidatorWorkerEvent(*hash)) {
                                 warn!("Failed to send hash to message validator: {:?}.", e);
                             }
 

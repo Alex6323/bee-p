@@ -129,7 +129,7 @@ where
                                 }
                             }
                         }
-                        Err(e) => debug!("Invalid milestone bundle: {:?}.", e),
+                        Err(e) => debug!("Invalid milestone message: {:?}.", e),
                     }
                 }
             }
