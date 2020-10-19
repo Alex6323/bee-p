@@ -60,12 +60,12 @@ impl TipMetadata {
 }
 
 #[derive(Default)]
-pub(crate) struct WurtsTipPool {
+pub(crate) struct UrtsTipPool {
     tips: HashMap<Hash, TipMetadata>,
     non_lazy_tips: HashSet<Hash>,
 }
 
-impl WurtsTipPool {
+impl UrtsTipPool {
     pub(crate) async fn insert<B: Backend>(&mut self, tangle: &MsTangle<B>, tail: Hash, trunk: Hash, branch: Hash) {
         if let Score::NonLazy = self.tip_score::<B>(tangle, &tail).await {
             self.non_lazy_tips.insert(tail);
@@ -134,13 +134,10 @@ impl WurtsTipPool {
 
         for tip in self.tips.keys() {
             match self.tip_score::<B>(tangle, &tip).await {
-                Score::SemiLazy => {
+                Score::SemiLazy | Score::Lazy => {
                     to_remove.push(*tip);
                 }
-                Score::Lazy => {
-                    to_remove.push(*tip);
-                }
-                _ => {}
+                _ => continue
             }
         }
 

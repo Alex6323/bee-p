@@ -13,7 +13,7 @@ pub mod flags;
 pub mod helper;
 
 mod metadata;
-mod wurts;
+mod urts;
 
 pub use metadata::TransactionMetadata;
 
@@ -29,13 +29,10 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use tokio::sync::Mutex;
 
-use crate::tangle::wurts::WurtsTipPool;
+use crate::tangle::urts::UrtsTipPool;
 use std::{
     ops::Deref,
-    sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc,
-    },
+    sync::atomic::{AtomicU32, Ordering},
 };
 
 pub struct StorageHooks<B> {
@@ -68,7 +65,7 @@ pub struct MsTangle<B> {
     snapshot_index: AtomicU32,
     pruning_index: AtomicU32,
     entry_point_index: AtomicU32,
-    tip_pool: Arc<Mutex<WurtsTipPool>>,
+    tip_pool: Mutex<UrtsTipPool>,
 }
 
 impl<B> Deref for MsTangle<B> {
@@ -90,7 +87,7 @@ impl<B: Backend> MsTangle<B> {
             snapshot_index: Default::default(),
             pruning_index: Default::default(),
             entry_point_index: Default::default(),
-            tip_pool: Arc::new(Mutex::new(WurtsTipPool::default())),
+            tip_pool: Mutex::new(UrtsTipPool::default()),
         }
     }
 
