@@ -31,7 +31,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const RETRY_INTERVAL_SECS: u64 = 5;
+const RETRY_INTERVAL_SEC: u64 = 5;
 
 pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
@@ -89,7 +89,7 @@ async fn retry_requests(counter: &mut usize) {
     for mut milestone in Protocol::get().requested_milestones.iter_mut() {
         let (index, instant) = milestone.pair_mut();
         let now = Instant::now();
-        if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && process_request_unchecked(*index, None, counter).await {
+        if (now - *instant).as_secs() > RETRY_INTERVAL_SEC && process_request_unchecked(*index, None, counter).await {
             *instant = now;
             retry_counts += 1;
         };
@@ -120,7 +120,7 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut counter: usize = 0;
-            let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse();
+            let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SEC)).fuse();
 
             loop {
                 select! {

@@ -21,6 +21,8 @@ use tokio::time::interval;
 
 use std::{any::TypeId, time::Duration};
 
+const TIP_POOL_CLEANER_INTERVAL_SEC: u64 = 1;
+
 #[derive(Default)]
 pub(crate) struct TipPoolCleanerWorker {}
 
@@ -39,7 +41,8 @@ impl<N: Node> Worker<N> for TipPoolCleanerWorker {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
+            let mut receiver =
+                ShutdownStream::new(shutdown, interval(Duration::from_secs(TIP_POOL_CLEANER_INTERVAL_SEC)));
 
             while receiver.next().await.is_some() {
                 tangle.reduce_tips().await

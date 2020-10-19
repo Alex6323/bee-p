@@ -26,6 +26,8 @@ use tokio::time::interval;
 
 use std::{any::TypeId, time::Duration};
 
+const KICKSTART_INTERVAL_SEC: u64 = 1;
+
 #[derive(Default)]
 pub(crate) struct KickstartWorker {}
 
@@ -46,7 +48,7 @@ impl<N: Node> Worker<N> for KickstartWorker {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
+            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(KICKSTART_INTERVAL_SEC)));
 
             while receiver.next().await.is_some() {
                 let next_ms = *tangle.get_latest_solid_milestone_index() + 1;

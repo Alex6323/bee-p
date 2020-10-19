@@ -92,7 +92,7 @@ impl Protocol {
             .with_worker_cfg::<MilestoneSolidifierWorker>(ms_recv)
             .with_worker::<MilestoneConeUpdaterWorker>()
             .with_worker::<TipPoolCleanerWorker>()
-            .with_worker::<StatusWorker>()
+            .with_worker_cfg::<StatusWorker>(config.workers.status_interval)
             .with_worker::<HeartbeaterWorker>()
     }
 

@@ -21,6 +21,8 @@ use tokio::time::interval;
 
 use std::time::Duration;
 
+const MPS_INTERVAL_SEC: u64 = 1;
+
 #[derive(Default)]
 pub(crate) struct MpsWorker {}
 
@@ -33,7 +35,7 @@ impl<N: Node> Worker<N> for MpsWorker {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
+            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(MPS_INTERVAL_SEC)));
 
             let mut total_incoming = 0u64;
             let mut total_new = 0u64;

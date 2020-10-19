@@ -26,7 +26,7 @@ use tokio::time::interval;
 
 use std::time::{Duration, Instant};
 
-const RETRY_INTERVAL_SECS: u64 = 5;
+const RETRY_INTERVAL_SEC: u64 = 5;
 
 pub(crate) struct MessageRequesterWorkerEvent(pub(crate) MessageId, pub(crate) MilestoneIndex);
 
@@ -95,7 +95,7 @@ async fn retry_requests(counter: &mut usize) {
     for mut message in Protocol::get().requested_messages.iter_mut() {
         let (message_id, (index, instant)) = message.pair_mut();
         let now = Instant::now();
-        if (now - *instant).as_secs() > RETRY_INTERVAL_SECS
+        if (now - *instant).as_secs() > RETRY_INTERVAL_SEC
             && process_request_unchecked(*message_id, *index, counter).await
         {
             *instant = now;
@@ -122,7 +122,7 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut counter: usize = 0;
-            let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SECS)).fuse();
+            let mut timeouts = interval(Duration::from_secs(RETRY_INTERVAL_SEC)).fuse();
 
             loop {
                 select! {
