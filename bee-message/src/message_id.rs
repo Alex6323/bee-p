@@ -26,6 +26,13 @@ impl From<[u8; MESSAGE_ID_LENGTH]> for MessageId {
     }
 }
 
+impl AsRef<[u8]> for MessageId {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl MessageId {
     pub fn new(bytes: [u8; MESSAGE_ID_LENGTH]) -> Self {
         bytes.into()

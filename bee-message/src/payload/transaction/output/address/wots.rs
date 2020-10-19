@@ -40,6 +40,13 @@ impl TryFrom<&TritBuf<T5B1Buf>> for WotsAddress {
     }
 }
 
+impl AsRef<[u8]> for WotsAddress {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 // TODO builder ?
 impl WotsAddress {
     pub fn new(trits: &TritBuf<T5B1Buf>) -> Result<Self, Error> {

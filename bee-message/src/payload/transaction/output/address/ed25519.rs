@@ -30,6 +30,13 @@ impl From<[u8; ADDRESS_LENGTH]> for Ed25519Address {
     }
 }
 
+impl AsRef<[u8]> for Ed25519Address {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl Ed25519Address {
     pub fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
         address.into()

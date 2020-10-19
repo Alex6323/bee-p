@@ -26,6 +26,13 @@ impl From<[u8; TRANSACTION_ID_LENGTH]> for TransactionId {
     }
 }
 
+impl AsRef<[u8]> for TransactionId {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl TransactionId {
     pub fn new(bytes: [u8; TRANSACTION_ID_LENGTH]) -> Self {
         bytes.into()

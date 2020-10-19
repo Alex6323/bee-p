@@ -39,6 +39,16 @@ impl From<Ed25519Address> for Address {
     }
 }
 
+impl AsRef<[u8]> for Address {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Self::Wots(address) => address.as_ref(),
+            Self::Ed25519(address) => address.as_ref(),
+        }
+    }
+}
+
 impl Address {
     pub fn to_bech32(&self) -> String {
         match self {
