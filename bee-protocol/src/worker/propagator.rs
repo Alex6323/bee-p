@@ -110,11 +110,15 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                             }
 
                             if let Some(index) = index {
-                                Protocol::get()
-                                    .bus
-                                    .dispatch(LatestSolidMilestoneChanged(Milestone { hash: *hash, index }));
-                                if let Err(e) = milestone_cone_updater
-                                    .send(MilestoneConeUpdaterWorkerEvent(Milestone { hash: *hash, index }))
+                                Protocol::get().bus.dispatch(LatestSolidMilestoneChanged(Milestone {
+                                    message_id: *hash,
+                                    index,
+                                }));
+                                if let Err(e) =
+                                    milestone_cone_updater.send(MilestoneConeUpdaterWorkerEvent(Milestone {
+                                        message_id: *hash,
+                                        index,
+                                    }))
                                 {
                                     error!("Sending hash to `MilestoneConeUpdater` failed: {:?}.", e);
                                 }

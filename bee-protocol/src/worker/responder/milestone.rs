@@ -61,8 +61,8 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
                     _ => request.index.into(),
                 };
 
-                if let Some(hash) = tangle.get_milestone_hash(index) {
-                    if let Some(message) = tangle.get(&MessageId::from(hash)).await {
+                if let Some(message_id) = tangle.get_milestone_message_id(index) {
+                    if let Some(message) = tangle.get(&MessageId::from(message_id)).await {
                         let mut bytes = Vec::new();
 
                         if message.pack(&mut bytes).is_ok() {

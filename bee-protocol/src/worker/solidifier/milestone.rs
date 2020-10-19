@@ -39,7 +39,7 @@ async fn trigger_solidification_unchecked<B: Backend>(
     target_index: MilestoneIndex,
     next_ms_index: &mut MilestoneIndex,
 ) {
-    if let Some(target_hash) = tangle.get_milestone_hash(target_index) {
+    if let Some(target_hash) = tangle.get_milestone_message_id(target_index) {
         if !tangle.is_solid_message(&target_hash) {
             debug!("Triggered solidification for milestone {}.", *target_index);
 

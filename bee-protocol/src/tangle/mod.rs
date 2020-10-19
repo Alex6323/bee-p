@@ -127,14 +127,14 @@ impl<B: Backend> MsTangle<B> {
 
     // TODO: use combinator instead of match
     pub async fn get_milestone(&self, index: MilestoneIndex) -> Option<MessageRef> {
-        match self.get_milestone_hash(index) {
+        match self.get_milestone_message_id(index) {
             None => None,
             Some(ref hash) => self.get(hash).await,
         }
     }
 
     // TODO: use combinator instead of match
-    pub fn get_milestone_hash(&self, index: MilestoneIndex) -> Option<MessageId> {
+    pub fn get_milestone_message_id(&self, index: MilestoneIndex) -> Option<MessageId> {
         match self.milestones.get(&index) {
             None => None,
             Some(v) => Some(*v),
@@ -588,7 +588,7 @@ impl<B: Backend> MsTangle<B> {
 
 //     /// Returns the milestone message corresponding to the given milestone `index`.
 //     pub fn get_milestone(&'static self, index: MilestoneIndex) -> Option<MessageRef> {
-//         match self.get_milestone_hash(index) {
+//         match self.get_milestone_message_id(index) {
 //             None => None,
 //             Some(hash) => self.get_message(&hash),
 //         }
@@ -600,7 +600,7 @@ impl<B: Backend> MsTangle<B> {
 //     }
 
 //     /// Returns the hash of a milestone.
-//     pub fn get_milestone_hash(&'static self, index: MilestoneIndex) -> Option<MessageId> {
+//     pub fn get_milestone_message_id(&'static self, index: MilestoneIndex) -> Option<MessageId> {
 //         match self.milestones.get(&index) {
 //             None => None,
 //             Some(v) => Some(*v),

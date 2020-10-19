@@ -97,13 +97,13 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 // TODO Do we have to copy ?
                 let mut bytes = [0u8; 32];
                 bytes.copy_from_slice(&blake2b.finalize_reset());
-                let hash = MessageId::from(bytes);
+                let message_id = MessageId::from(bytes);
 
-                let requested = Protocol::get().requested_messages.contains_key(&hash);
+                let requested = Protocol::get().requested_messages.contains_key(&message_id);
 
                 // TODO when PoW
-                // if !requested && hash.weight() < config.mwm {
-                //     trace!("Insufficient weight magnitude: {}.", hash.weight());
+                // if !requested && message_id.weight() < config.mwm {
+                //     trace!("Insufficient weight magnitude: {}.", message_id.weight());
                 //     Protocol::get().metrics.invalid_messages_inc();
                 //     return;
                 // }
@@ -113,18 +113,18 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 metadata.flags_mut().set_requested(requested);
 
                 // store message
-                if let Some(message) = tangle.insert(message, hash, metadata).await {
+                if let Some(message) = tangle.insert(message, message_id, metadata).await {
                     // TODO this was temporarily moved from the tangle.
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
 
-                    if let Err(e) = propagator.send(PropagatorWorkerEvent(hash)) {
-                        error!("Failed to send hash to propagator: {:?}.", e);
+                    if let Err(e) = propagator.send(PropagatorWorkerEvent(message_id)) {
+                        error!("Failed to send message id {} to propagator: {:?}.", message_id, e);
                     }
 
                     Protocol::get().metrics.new_messages_inc();
 
-                    match Protocol::get().requested_messages.remove(&hash) {
+                    match Protocol::get().requested_messages.remove(&message_id) {
                         Some((_, (index, _))) => {
                             let parent1 = message.parent1();
                             let parent2 = message.parent2();
@@ -146,8 +146,11 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     };
 
                     if let Payload::Milestone(_) = message.payload() {
-                        if let Err(e) = milestone_validator.send(MilestoneValidatorWorkerEvent(hash)) {
-                            error!("Sending message id to milestone validation failed: {:?}.", e);
+                        if let Err(e) = milestone_validator.send(MilestoneValidatorWorkerEvent(message_id)) {
+                            error!(
+                                "Sending message id {} to milestone validation failed: {:?}.",
+                                message_id, e
+                            );
                         }
                     }
                 } else {

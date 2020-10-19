@@ -41,17 +41,17 @@ impl Add for MilestoneIndex {
 
 #[derive(Clone)]
 pub struct Milestone {
-    pub(crate) hash: MessageId,
+    pub(crate) message_id: MessageId,
     pub(crate) index: MilestoneIndex,
 }
 
 impl Milestone {
-    pub fn new(hash: MessageId, index: MilestoneIndex) -> Self {
-        Self { hash, index }
+    pub fn new(message_id: MessageId, index: MilestoneIndex) -> Self {
+        Self { message_id, index }
     }
 
-    pub fn hash(&self) -> &MessageId {
-        &self.hash
+    pub fn message_id(&self) -> &MessageId {
+        &self.message_id
     }
 
     pub fn index(&self) -> MilestoneIndex {

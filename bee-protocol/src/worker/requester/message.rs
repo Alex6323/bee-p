@@ -34,18 +34,20 @@ pub(crate) struct MessageRequesterWorker {
     pub(crate) tx: flume::Sender<MessageRequesterWorkerEvent>,
 }
 
-async fn process_request(hash: MessageId, index: MilestoneIndex, counter: &mut usize) {
-    if Protocol::get().requested_messages.contains_key(&hash) {
+async fn process_request(message_id: MessageId, index: MilestoneIndex, counter: &mut usize) {
+    if Protocol::get().requested_messages.contains_key(&message_id) {
         return;
     }
 
-    if process_request_unchecked(hash, index, counter).await {
-        Protocol::get().requested_messages.insert(hash, (index, Instant::now()));
+    if process_request_unchecked(message_id, index, counter).await {
+        Protocol::get()
+            .requested_messages
+            .insert(message_id, (index, Instant::now()));
     }
 }
 
 /// Return `true` if the message was requested.
-async fn process_request_unchecked(hash: MessageId, index: MilestoneIndex, counter: &mut usize) -> bool {
+async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex, counter: &mut usize) -> bool {
     if Protocol::get().peer_manager.handshaked_peers.is_empty() {
         return false;
     }
@@ -60,7 +62,7 @@ async fn process_request_unchecked(hash: MessageId, index: MilestoneIndex, count
         if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
             if peer.has_data(index) {
                 let mut bytes = Vec::new();
-                if hash.pack(&mut bytes).is_ok() {
+                if message_id.pack(&mut bytes).is_ok() {
                     Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
                     return true;
                 }
@@ -77,7 +79,7 @@ async fn process_request_unchecked(hash: MessageId, index: MilestoneIndex, count
         if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
             if peer.maybe_has_data(index) {
                 let mut bytes = Vec::new();
-                if hash.pack(&mut bytes).is_ok() {
+                if message_id.pack(&mut bytes).is_ok() {
                     Sender::<MessageRequest>::send(epid, MessageRequest::new(&bytes));
                     return true;
                 }
@@ -93,9 +95,11 @@ async fn retry_requests(counter: &mut usize) {
     let mut retry_counts: usize = 0;
 
     for mut message in Protocol::get().requested_messages.iter_mut() {
-        let (hash, (index, instant)) = message.pair_mut();
+        let (message_id, (index, instant)) = message.pair_mut();
         let now = Instant::now();
-        if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && process_request_unchecked(*hash, *index, counter).await {
+        if (now - *instant).as_secs() > RETRY_INTERVAL_SECS
+            && process_request_unchecked(*message_id, *index, counter).await
+        {
             *instant = now;
             retry_counts += 1;
         }
@@ -126,7 +130,7 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
                 select! {
                     _ = timeouts.next() => retry_requests(&mut counter).await,
                     entry = receiver.next() => match entry {
-                        Some(MessageRequesterWorkerEvent(hash, index)) => process_request(hash, index, &mut counter).await,
+                        Some(MessageRequesterWorkerEvent(message_id, index)) => process_request(message_id, index, &mut counter).await,
                         None => break,
                     },
                 }

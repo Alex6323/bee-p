@@ -101,7 +101,7 @@ impl Protocol {
             info!(
                 "New milestone {} {}.",
                 *latest_milestone.0.index,
-                latest_milestone.0.hash()
+                latest_milestone.0.message_id
             );
             tangle.update_latest_milestone_index(latest_milestone.0.index);
 

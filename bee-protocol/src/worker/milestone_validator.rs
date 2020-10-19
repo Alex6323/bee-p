@@ -57,7 +57,7 @@ where
 
     // TODO complete
     Ok(Milestone {
-        hash: message_id,
+        message_id,
         index: MilestoneIndex(0),
     })
 }
@@ -91,14 +91,14 @@ where
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
-            while let Some(MilestoneValidatorWorkerEvent(hash)) = receiver.next().await {
-                if let Some(meta) = tangle.get_metadata(&hash) {
+            while let Some(MilestoneValidatorWorkerEvent(message_id)) = receiver.next().await {
+                if let Some(meta) = tangle.get_metadata(&message_id) {
                     if meta.flags().is_milestone() {
                         continue;
                     }
-                    match validate::<N>(&tangle, &config, hash).await {
+                    match validate::<N>(&tangle, &config, message_id).await {
                         Ok(milestone) => {
-                            tangle.add_milestone(milestone.index, milestone.hash);
+                            tangle.add_milestone(milestone.index, milestone.message_id);
 
                             // This is possibly not sufficient as there is no guarantee a milestone has been
                             // solidified before being validated, we then also need
@@ -120,7 +120,9 @@ where
                             }
 
                             if Protocol::get().requested_milestones.remove(&milestone.index).is_some() {
-                                tangle.update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
+                                tangle.update_metadata(&milestone.message_id, |meta| {
+                                    meta.flags_mut().set_requested(true)
+                                });
 
                                 if let Err(e) =
                                     milestone_solidifier.send(MilestoneSolidifierWorkerEvent(milestone.index))

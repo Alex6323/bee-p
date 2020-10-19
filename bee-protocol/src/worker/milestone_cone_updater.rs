@@ -53,7 +53,7 @@ impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
             while let Some(MilestoneConeUpdaterWorkerEvent(milestone)) = receiver.next().await {
                 // When a new milestone gets solid, OTRSI and YTRSI of all messages that belong to the given cone
                 // must be updated. Furthermore, updated values will be propagated to the future.
-                update_messages_referenced_by_milestone::<N>(&tangle, milestone.hash, milestone.index).await;
+                update_messages_referenced_by_milestone::<N>(&tangle, milestone.message_id, milestone.index).await;
                 // Update tip pool after all values got updated.
                 tangle.update_tip_scores().await;
             }

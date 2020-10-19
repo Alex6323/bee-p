@@ -86,14 +86,14 @@ impl Protocol {
     pub(crate) async fn request_message<B: Backend>(
         tangle: &MsTangle<B>,
         message_requester: &flume::Sender<MessageRequesterWorkerEvent>,
-        hash: MessageId,
+        message_id: MessageId,
         index: MilestoneIndex,
     ) {
-        if !tangle.contains(&hash).await
-            && !tangle.is_solid_entry_point(&hash)
-            && !Protocol::get().requested_messages.contains_key(&hash)
+        if !tangle.contains(&message_id).await
+            && !tangle.is_solid_entry_point(&message_id)
+            && !Protocol::get().requested_messages.contains_key(&message_id)
         {
-            if let Err(e) = message_requester.send(MessageRequesterWorkerEvent(hash, index)) {
+            if let Err(e) = message_requester.send(MessageRequesterWorkerEvent(message_id, index)) {
                 warn!("Requesting message failed: {}.", e);
             }
         }

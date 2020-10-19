@@ -56,7 +56,7 @@ impl<N: Node> Worker<N> for MessageResponderWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             while let Some(MessageResponderWorkerEvent { epid, request }) = receiver.next().await {
-                if let Some(message) = tangle.get(&MessageId::from(request.hash)).await {
+                if let Some(message) = tangle.get(&MessageId::from(request.message_id)).await {
                     let mut bytes = Vec::new();
 
                     if message.pack(&mut bytes).is_ok() {
