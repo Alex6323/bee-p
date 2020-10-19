@@ -126,16 +126,17 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                     match Protocol::get().requested_messages.remove(&message_id) {
                         Some((_, (index, _))) => {
+                            // Message was requested.
                             let parent1 = message.parent1();
                             let parent2 = message.parent2();
 
                             Protocol::request_message(&tangle, &message_requester, *parent1, index).await;
-
                             if parent1 != parent2 {
                                 Protocol::request_message(&tangle, &message_requester, *parent2, index).await;
                             }
                         }
                         None => {
+                            // Message was not requested.
                             if let Err(e) = broadcaster.send(BroadcasterWorkerEvent {
                                 source: Some(from),
                                 message: message_packet,
