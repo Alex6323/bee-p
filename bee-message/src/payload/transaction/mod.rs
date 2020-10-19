@@ -41,8 +41,7 @@ use core::{cmp::Ordering, slice::Iter};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
     essence: TransactionEssence,
-    // TODO Box
-    unlock_blocks: Vec<UnlockBlock>,
+    unlock_blocks: Box<[UnlockBlock]>,
 }
 
 impl Packable for Transaction {
@@ -56,7 +55,7 @@ impl Packable for Transaction {
         self.essence.pack(buf)?;
 
         (self.unlock_blocks.len() as u16).pack(buf)?;
-        for unlock_block in &self.unlock_blocks {
+        for unlock_block in self.unlock_blocks.as_ref() {
             unlock_block.pack(buf)?;
         }
 
@@ -75,7 +74,10 @@ impl Packable for Transaction {
             unlock_blocks.push(UnlockBlock::unpack(buf)?);
         }
 
-        Ok(Self { essence, unlock_blocks })
+        Ok(Self {
+            essence,
+            unlock_blocks: unlock_blocks.into_boxed_slice(),
+        })
     }
 }
 
@@ -370,7 +372,7 @@ impl<'a> TransactionBuilder<'a> {
                 outputs: outputs.into_boxed_slice(),
                 payload: self.payload,
             },
-            unlock_blocks,
+            unlock_blocks: unlock_blocks.into_boxed_slice(),
         })
     }
 }
