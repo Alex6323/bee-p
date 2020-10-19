@@ -17,10 +17,10 @@ use crate::{
     protocol::ProtocolMetrics,
     tangle::MsTangle,
     worker::{
-        BroadcasterWorker, HasherWorker, KickstartWorker, MessageRequesterWorker, MessageResponderWorker,
-        MessageValidatorWorker, MilestoneConeUpdaterWorker, MilestoneRequesterWorker, MilestoneResponderWorker,
-        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker, MpsWorker,
-        PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker, TangleWorker,
+        BroadcasterWorker, HasherWorker, HeartbeaterWorker, KickstartWorker, MessageRequesterWorker,
+        MessageResponderWorker, MessageValidatorWorker, MilestoneConeUpdaterWorker, MilestoneRequesterWorker,
+        MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
+        MpsWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker, TangleWorker,
         TipPoolCleanerWorker,
     },
 };
@@ -93,6 +93,7 @@ impl Protocol {
             .with_worker::<MilestoneConeUpdaterWorker>()
             .with_worker::<TipPoolCleanerWorker>()
             .with_worker::<StatusWorker>()
+            .with_worker::<HeartbeaterWorker>()
     }
 
     pub fn events<N: Node>(node: &N, config: ProtocolConfig, bus: Arc<Bus<'static>>) {
@@ -100,8 +101,7 @@ impl Protocol {
         bus.add_listener(move |latest_milestone: &LatestMilestoneChanged| {
             info!(
                 "New milestone {} {}.",
-                *latest_milestone.0.index,
-                latest_milestone.0.message_id
+                *latest_milestone.0.index, latest_milestone.0.message_id
             );
             tangle.update_latest_milestone_index(latest_milestone.0.index);
 

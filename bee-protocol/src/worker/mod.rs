@@ -12,6 +12,7 @@
 #![allow(clippy::unit_arg)]
 
 mod broadcaster;
+mod heartbeater;
 mod message;
 mod message_validator;
 mod milestone_cone_updater;
@@ -28,6 +29,7 @@ mod tangle;
 mod tip_pool_cleaner;
 
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
+pub(crate) use heartbeater::HeartbeaterWorker;
 pub(crate) use message::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
 pub(crate) use message_validator::{MessageValidatorWorker, MessageValidatorWorkerEvent};
 pub(crate) use milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
