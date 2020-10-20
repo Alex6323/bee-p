@@ -23,12 +23,11 @@ use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
 
-// TODO remove pub(crate)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TransactionEssence {
-    pub(crate) inputs: Box<[Input]>,
-    pub(crate) outputs: Box<[Output]>,
-    pub(crate) payload: Option<Payload>,
+    inputs: Box<[Input]>,
+    outputs: Box<[Output]>,
+    payload: Option<Payload>,
 }
 
 impl TransactionEssence {
@@ -126,9 +125,9 @@ impl Packable for TransactionEssence {
 
 #[derive(Debug, Default)]
 pub struct TransactionEssenceBuilder {
-    inputs: Vec<Input>,
-    outputs: Vec<Output>,
-    payload: Option<Payload>,
+    pub(crate) inputs: Vec<Input>,
+    pub(crate) outputs: Vec<Output>,
+    pub(crate) payload: Option<Payload>,
 }
 
 impl TransactionEssenceBuilder {
