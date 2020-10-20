@@ -26,7 +26,6 @@ pub struct UTXOInput {
     index: u16,
 }
 
-// TODO builder ?
 impl UTXOInput {
     pub fn new(id: TransactionId, index: u16) -> Result<Self, Error> {
         if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
@@ -70,6 +69,6 @@ impl Packable for UTXOInput {
         let id = TransactionId::unpack(buf)?;
         let index = u16::unpack(buf)?;
 
-        Ok(Self { id, index })
+        Ok(Self::new(id, index).map_err(|_| PackableError::InvalidSyntax)?)
     }
 }
