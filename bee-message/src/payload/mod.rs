@@ -9,14 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod indexation;
-mod milestone;
-
+pub mod indexation;
+pub mod milestone;
 pub mod transaction;
 
-pub use indexation::Indexation;
-pub use milestone::Milestone;
-pub use transaction::Transaction;
+use indexation::Indexation;
+use milestone::Milestone;
+use transaction::Transaction;
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
