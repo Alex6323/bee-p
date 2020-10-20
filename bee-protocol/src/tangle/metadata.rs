@@ -28,6 +28,7 @@ pub struct TransactionMetadata {
 }
 
 impl TransactionMetadata {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         flags: Flags,
         milestone_index: MilestoneIndex,
