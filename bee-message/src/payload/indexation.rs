@@ -25,6 +25,14 @@ impl Indexation {
     pub fn new(index: String, data: Box<[u8]>) -> Self {
         Self { index, data }
     }
+
+    pub fn index(&self) -> &String {
+        &self.index
+    }
+
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
 }
 
 impl Packable for Indexation {
