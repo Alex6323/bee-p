@@ -14,9 +14,9 @@ pub use crate::{
         transaction::{
             Address, Ed25519Address, Ed25519Signature, Input, Output, ReferenceUnlock, SignatureLockedSingleOutput,
             SignatureUnlock, TransactionBuilder, TransactionEssence, TransactionEssenceBuilder, TransactionId,
-            UTXOInput, UnlockBlock, WotsAddress, WotsSignature,
+            UTXOInput, UnlockBlock, WotsAddress, WotsSignature, TRANSACTION_ID_LENGTH,
         },
         Indexation, Milestone, Payload, Transaction,
     },
-    Error, Message, MessageBuilder, MessageId, Vertex,
+    Error, Message, MessageBuilder, MessageId, Vertex, MESSAGE_ID_LENGTH,
 };

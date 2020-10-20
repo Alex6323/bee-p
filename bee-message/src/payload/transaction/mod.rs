@@ -23,7 +23,7 @@ use constants::INPUT_OUTPUT_COUNT_RANGE;
 pub use essence::{TransactionEssence, TransactionEssenceBuilder};
 pub use input::{Input, UTXOInput};
 pub use output::{Address, Ed25519Address, Output, SignatureLockedSingleOutput, WotsAddress};
-pub use transaction_id::TransactionId;
+pub use transaction_id::{TransactionId, TRANSACTION_ID_LENGTH};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
