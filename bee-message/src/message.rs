@@ -122,17 +122,17 @@ impl MessageBuilder {
         Default::default()
     }
 
-    pub fn parent1(mut self, parent1: MessageId) -> Self {
+    pub fn with_parent1(mut self, parent1: MessageId) -> Self {
         self.parent1 = Some(parent1);
         self
     }
 
-    pub fn parent2(mut self, parent2: MessageId) -> Self {
+    pub fn with_parent2(mut self, parent2: MessageId) -> Self {
         self.parent2 = Some(parent2);
         self
     }
 
-    pub fn payload(mut self, payload: Payload) -> Self {
+    pub fn with_payload(mut self, payload: Payload) -> Self {
         self.payload = Some(payload);
         self
     }
