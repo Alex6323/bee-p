@@ -54,12 +54,9 @@ impl Packable for SignatureLockedSingleOutput {
         Self: Sized,
     {
         let address = Address::unpack(buf)?;
-        let amount = u64::unpack(buf)?;
-
         // TODO unwrap
-        Ok(Self {
-            address,
-            amount: NonZeroU64::new(amount).unwrap(),
-        })
+        let amount = NonZeroU64::new(u64::unpack(buf)?).unwrap();
+
+        Ok(Self { address, amount })
     }
 }

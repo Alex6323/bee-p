@@ -22,11 +22,11 @@ pub enum Error {
     #[error("Invalid Utf8 string read.")]
     InvalidUtf8String,
     #[error("Invalid version read.")]
-    InvalidVersion,
+    InvalidVersion(u8, u8),
     #[error("Invalid type read.")]
-    InvalidType,
-    #[error("Invalid announced len.")]
-    InvalidAnnouncedLen,
+    InvalidType(u8, u8),
+    #[error("Invalid announced length.")]
+    InvalidAnnouncedLength(usize, usize),
 }
 
 pub trait Packable {

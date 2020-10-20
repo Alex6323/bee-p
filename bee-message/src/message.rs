@@ -73,8 +73,10 @@ impl Packable for Message {
     where
         Self: Sized,
     {
-        if u8::unpack(buf)? != 1u8 {
-            return Err(PackableError::InvalidVersion);
+        let version = u8::unpack(buf)?;
+
+        if version != 1u8 {
+            return Err(PackableError::InvalidVersion(1, version));
         }
 
         let parent1 = MessageId::unpack(buf)?;
@@ -84,7 +86,7 @@ impl Packable for Message {
         let payload = Payload::unpack(buf)?;
 
         if payload_len != payload.packed_len() {
-            return Err(PackableError::InvalidAnnouncedLen);
+            return Err(PackableError::InvalidAnnouncedLength(payload_len, payload.packed_len()));
         }
 
         let nonce = u64::unpack(buf)?;

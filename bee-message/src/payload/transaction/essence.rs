@@ -91,8 +91,10 @@ impl Packable for TransactionEssence {
     where
         Self: Sized,
     {
-        if u8::unpack(buf)? != 0u8 {
-            return Err(PackableError::InvalidType);
+        let essence_type = u8::unpack(buf)?;
+
+        if essence_type != 0u8 {
+            return Err(PackableError::InvalidType(0, essence_type));
         }
 
         let inputs_len = u16::unpack(buf)? as usize;
@@ -111,7 +113,7 @@ impl Packable for TransactionEssence {
         let payload = if payload_len > 0 {
             let payload = Payload::unpack(buf)?;
             if payload_len != payload.packed_len() {
-                return Err(PackableError::InvalidAnnouncedLen);
+                return Err(PackableError::InvalidAnnouncedLength(payload_len, payload.packed_len()));
             }
 
             Some(payload)
