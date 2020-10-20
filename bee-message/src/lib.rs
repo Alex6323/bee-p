@@ -43,8 +43,6 @@ pub enum Error {
     HashError,
     PathError,
     MissingField(&'static str),
-    SigningError(bee_signing_ext::binary::Error),
-    SignatureError(bee_signing_ext::SignatureError),
 }
 
 impl fmt::Display for Error {
@@ -62,20 +60,6 @@ impl fmt::Display for Error {
             Error::HashError => write!(f, "The format of provided hash is not correct."),
             Error::PathError => write!(f, "The format of provided BIP32 path is not correct."),
             Error::MissingField(s) => write!(f, "Missing required field: {}.", s),
-            Error::SigningError(e) => write!(f, "{}", e),
-            Error::SignatureError(e) => write!(f, "{}", e),
         }
-    }
-}
-
-impl From<bee_signing_ext::binary::Error> for Error {
-    fn from(error: bee_signing_ext::binary::Error) -> Self {
-        Error::SigningError(error)
-    }
-}
-
-impl From<bee_signing_ext::SignatureError> for Error {
-    fn from(error: bee_signing_ext::SignatureError) -> Self {
-        Error::SignatureError(error)
     }
 }

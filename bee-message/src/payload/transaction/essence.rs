@@ -11,7 +11,11 @@
 
 use crate::{
     payload::{
-        transaction::{input::Input, output::Output},
+        transaction::{
+            constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE},
+            input::Input,
+            output::Output,
+        },
         Payload,
     },
     Error,
@@ -23,12 +27,11 @@ use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
 
-// TODO remove pub(crate)
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TransactionEssence {
-    pub(crate) inputs: Box<[Input]>,
-    pub(crate) outputs: Box<[Output]>,
-    pub(crate) payload: Option<Payload>,
+    inputs: Box<[Input]>,
+    outputs: Box<[Output]>,
+    payload: Option<Payload>,
 }
 
 impl TransactionEssence {
@@ -126,9 +129,9 @@ impl Packable for TransactionEssence {
 
 #[derive(Debug, Default)]
 pub struct TransactionEssenceBuilder {
-    inputs: Vec<Input>,
-    outputs: Vec<Output>,
-    payload: Option<Payload>,
+    pub(crate) inputs: Vec<Input>,
+    pub(crate) outputs: Vec<Output>,
+    pub(crate) payload: Option<Payload>,
 }
 
 impl TransactionEssenceBuilder {
@@ -152,13 +155,87 @@ impl TransactionEssenceBuilder {
     }
 
     pub fn finish(self) -> Result<TransactionEssence, Error> {
-        if self.inputs.is_empty() {
-            return Err(Error::NoInput);
+        // Inputs validation
+
+        if !INPUT_OUTPUT_COUNT_RANGE.contains(&self.inputs.len()) {
+            return Err(Error::CountError);
         }
 
-        if self.outputs.is_empty() {
-            return Err(Error::NoOutput);
+        for i in self.inputs.iter() {
+            // Input Type value must be 0, denoting an UTXO Input.
+            match i {
+                Input::UTXO(u) => {
+                    // Transaction Output Index must be 0 ≤ x < 127
+                    if !INPUT_OUTPUT_INDEX_RANGE.contains(&u.index()) {
+                        return Err(Error::CountError);
+                    }
+
+                    // Every combination of Transaction ID + Transaction Output Index must be unique in the inputs set.
+                    if self.inputs.iter().filter(|j| *j == i).count() > 1 {
+                        return Err(Error::DuplicateError);
+                    }
+                }
+            }
         }
+
+        // Inputs must be in lexicographical order of their serialized form.
+        // TODO
+        // if !is_sorted(transaction.inputs.iter()) {
+        //     return Err(Error::OrderError);
+        // }
+
+        // Output validation
+
+        if !INPUT_OUTPUT_COUNT_RANGE.contains(&self.outputs.len()) {
+            return Err(Error::CountError);
+        }
+
+        let mut total = 0;
+        for i in self.outputs.iter() {
+            // Output Type must be 0, denoting a SignatureLockedSingle.
+            match i {
+                Output::SignatureLockedSingle(u) => {
+                    // Address Type must either be 0 or 1, denoting a WOTS- or Ed25519 address.
+
+                    // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
+
+                    // The Address must be unique in the set of SigLockedSingleDeposits
+                    if self
+                        .outputs
+                        .iter()
+                        .filter(|j| match *j {
+                            Output::SignatureLockedSingle(s) => s.address() == u.address(),
+                        })
+                        .count()
+                        > 1
+                    {
+                        return Err(Error::DuplicateError);
+                    }
+
+                    // Amount must be > 0
+                    let amount = u.amount().get();
+                    if amount == 0 {
+                        return Err(Error::AmountError);
+                    }
+
+                    total += amount;
+                }
+            }
+        }
+
+        // Outputs must be in lexicographical order by their serialized form
+        // TODO
+        // if !is_sorted(transaction.outputs.iter()) {
+        //     return Err(Error::OrderError);
+        // }
+
+        // Accumulated output balance must not exceed the total supply of tokens 2'779'530'283'277'761
+        if total > 2779530283277761 {
+            return Err(Error::AmountError);
+        }
+
+        // Payload Length must be 0 (to indicate that there's no payload) or be valid for the specified payload type.
+        // Payload Type must be one of the supported payload types if Payload Length is not 0.
 
         Ok(TransactionEssence {
             inputs: self.inputs.into_boxed_slice(),

@@ -137,7 +137,7 @@ impl UrtsTipPool {
                 Score::SemiLazy | Score::Lazy => {
                     to_remove.push(*tip);
                 }
-                _ => continue
+                _ => continue,
             }
         }
 

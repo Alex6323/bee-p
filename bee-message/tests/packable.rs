@@ -29,7 +29,7 @@ mod tests {
                 "0000".to_owned(),
                 Box::new([0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x49, 0x6f, 0x74, 0x61]),
             ))))
-            .build()
+            .finish()
             .unwrap();
 
         let mut buf = vec![];
