@@ -112,6 +112,7 @@ impl Vertex for Message {
     }
 }
 
+// TODO generic over PoW provider
 #[derive(Default)]
 pub struct MessageBuilder {
     parent1: Option<MessageId>,
@@ -144,7 +145,6 @@ impl MessageBuilder {
             parent1: self.parent1.ok_or(Error::MissingField("parent1"))?,
             parent2: self.parent2.ok_or(Error::MissingField("parent2"))?,
             payload: self.payload.ok_or(Error::MissingField("payload"))?,
-            // TODO PoW
             nonce: 0,
         })
     }
