@@ -16,7 +16,7 @@ use crate::{
     tangle::{MsTangle, TransactionMetadata},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MilestoneValidatorWorker, MilestoneValidatorWorkerEvent,
-        PropagatorWorker, PropagatorWorkerEvent, TangleWorker, TransactionRequesterWorker,
+        PropagatorWorker, PropagatorWorkerEvent, RequestedTransactions, TangleWorker, TransactionRequesterWorker,
     },
 };
 
@@ -93,6 +93,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         let transaction_requester = node.worker::<TransactionRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_transactions = node.resource::<RequestedTransactions>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -128,7 +129,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         }
                     };
 
-                let requested = Protocol::get().requested_transactions.contains_key(&hash);
+                let requested = requested_transactions.contains_key(&hash);
 
                 if !requested && hash.weight() < config.mwm {
                     trace!("Insufficient weight magnitude: {}.", hash.weight());
@@ -161,15 +162,29 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                     Protocol::get().metrics.new_transactions_inc();
 
-                    match Protocol::get().requested_transactions.remove(&hash) {
+                    match requested_transactions.remove(&hash) {
                         Some((_, (index, _))) => {
                             let trunk = transaction.trunk();
                             let branch = transaction.branch();
 
-                            Protocol::request_transaction(&tangle, &transaction_requester, *trunk, index).await;
+                            Protocol::request_transaction(
+                                &tangle,
+                                &transaction_requester,
+                                &*requested_transactions,
+                                *trunk,
+                                index,
+                            )
+                            .await;
 
                             if trunk != branch {
-                                Protocol::request_transaction(&tangle, &transaction_requester, *branch, index).await;
+                                Protocol::request_transaction(
+                                    &tangle,
+                                    &transaction_requester,
+                                    &*requested_transactions,
+                                    *branch,
+                                    index,
+                                )
+                                .await;
                             }
                         }
                         None => {

@@ -28,7 +28,6 @@ use bee_common_ext::{
     event::Bus,
     node::{Node, NodeBuilder},
 };
-use bee_crypto::ternary::Hash;
 use bee_network::{EndpointId, Network, Origin};
 use bee_snapshot::metadata::SnapshotMetadata;
 use bee_storage::storage::Backend;
@@ -49,7 +48,6 @@ pub struct Protocol {
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) peer_manager: PeerManager,
-    pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
     pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
 }
 
@@ -68,7 +66,6 @@ impl Protocol {
             bus,
             metrics: ProtocolMetrics::new(),
             peer_manager: PeerManager::new(),
-            requested_transactions: Default::default(),
             requested_milestones: Default::default(),
         };
 

@@ -16,7 +16,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{MilestoneRequesterWorkerEvent, TransactionRequesterWorkerEvent},
+    worker::{MilestoneRequesterWorkerEvent, RequestedTransactions, TransactionRequesterWorkerEvent},
 };
 
 use bee_crypto::ternary::Hash;
@@ -88,12 +88,13 @@ impl Protocol {
     pub(crate) async fn request_transaction<B: Backend>(
         tangle: &MsTangle<B>,
         transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
+        requested_transactions: &RequestedTransactions,
         hash: Hash,
         index: MilestoneIndex,
     ) {
         if !tangle.contains(&hash).await
             && !tangle.is_solid_entry_point(&hash)
-            && !Protocol::get().requested_transactions.contains_key(&hash)
+            && !requested_transactions.contains_key(&hash)
         {
             if let Err(e) = transaction_requester.send(TransactionRequesterWorkerEvent(hash, index)) {
                 warn!("Requesting transaction failed: {}.", e);
