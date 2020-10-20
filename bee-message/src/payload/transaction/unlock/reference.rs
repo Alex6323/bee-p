@@ -57,8 +57,6 @@ impl Packable for ReferenceUnlock {
     where
         Self: Sized,
     {
-        let index = u16::unpack(buf)?;
-
-        Ok(Self(index))
+        Ok(Self::new(u16::unpack(buf)?).map_err(|_| PackableError::InvalidSyntax)?)
     }
 }

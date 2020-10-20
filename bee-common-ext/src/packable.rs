@@ -27,6 +27,8 @@ pub enum Error {
     InvalidType(u8, u8),
     #[error("Invalid announced length.")]
     InvalidAnnouncedLength(usize, usize),
+    #[error("Syntax validation failed.")]
+    InvalidSyntax,
 }
 
 pub trait Packable {
