@@ -9,12 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::Hash;
-use bee_ternary::T5B1Buf;
+use bee_message::prelude::MessageId;
 
 use std::marker::PhantomData;
 
-use bytemuck::cast_slice;
 use digest::{Digest, Output};
 
 /// Leaf domain separation prefix.
@@ -47,18 +45,18 @@ impl<D: Default + Digest> MerkleHasher<D> {
     }
 
     /// Returns the digest of a Merkle leaf.
-    fn leaf(&mut self, hash: Hash) -> Output<D> {
+    fn leaf(&mut self, message_id: MessageId) -> Output<D> {
         let mut hasher = D::default();
 
         hasher.update([LEAF_HASH_PREFIX]);
-        hasher.update(cast_slice(hash.encode::<T5B1Buf>().as_i8_slice()));
+        hasher.update(&message_id);
         hasher.finalize_reset()
     }
 
     /// Returns the digest of a Merkle node.
-    fn node(&mut self, hashes: &[Hash]) -> Output<D> {
+    fn node(&mut self, message_ids: &[MessageId]) -> Output<D> {
         let mut hasher = D::default();
-        let (left, right) = hashes.split_at(self.largest_power_of_two(hashes.len() as u32 - 1));
+        let (left, right) = message_ids.split_at(self.largest_power_of_two(message_ids.len() as u32 - 1));
 
         hasher.update([NODE_HASH_PREFIX]);
         hasher.update(self.digest_inner(left));
@@ -67,17 +65,17 @@ impl<D: Default + Digest> MerkleHasher<D> {
     }
 
     /// Returns the digest of a list of hashes as an `Output<D>`.
-    fn digest_inner(&mut self, hashes: &[Hash]) -> Output<D> {
-        match hashes.len() {
+    fn digest_inner(&mut self, message_ids: &[MessageId]) -> Output<D> {
+        match message_ids.len() {
             0 => self.empty(),
-            1 => self.leaf(hashes[0]),
-            _ => self.node(hashes),
+            1 => self.leaf(message_ids[0]),
+            _ => self.node(message_ids),
         }
     }
 
     /// Returns the digest of a list of hashes as a `Vec<u8>`.
-    pub(crate) fn digest(&mut self, hashes: &[Hash]) -> Vec<u8> {
-        self.digest_inner(hashes).to_vec()
+    pub(crate) fn digest(&mut self, message_ids: &[MessageId]) -> Vec<u8> {
+        self.digest_inner(message_ids).to_vec()
     }
 }
 
@@ -87,7 +85,6 @@ mod tests {
     use super::*;
 
     use bee_ternary::{T1B1Buf, TryteBuf};
-    use bee_transaction::bundled::BundledTransactionField;
 
     use blake2::Blake2b;
 
