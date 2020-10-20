@@ -24,7 +24,7 @@ tokio = { version = "0.3", features = ["time", "net", "io-util", "stream"] }
 url = "2.1"
 
 [dev-dependencies]
-env_logger = "0.7"
+env_logger = "0.8"
 pretty_env_logger = "0.4"
 structopt = "0.3"
 tokio = { version = "0.3", features = ["net", "macros", "signal"] }

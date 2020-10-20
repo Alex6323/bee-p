@@ -176,7 +176,7 @@ dependencies = [
  "bee-common",
  "bee-common-ext",
  "dashmap",
- "env_logger",
+ "env_logger 0.8.1",
  "flume",
  "futures",
  "log",
@@ -256,7 +256,7 @@ dependencies = [
  "futures",
  "futures-util",
  "log",
- "pin-project",
+ "pin-project 1.0.1",
  "rand",
  "serde",
  "spin",
@@ -386,7 +386,7 @@ dependencies = [
  "cfg-if 0.1.10",
  "clang-sys",
  "clap",
- "env_logger",
+ "env_logger 0.7.1",
  "lazy_static",
  "lazycell",
  "log",
@@ -847,7 +847,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
 dependencies = [
  "atty",
- "humantime",
+ "humantime 1.3.0",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54532e3223c5af90a6a757c90b5c5521564b07e5e7a958681bcd2afad421cdcd"
+dependencies = [
+ "atty",
+ "humantime 2.0.1",
  "log",
  "regex",
  "termcolor",
@@ -1000,7 +1013,7 @@ dependencies = [
  "futures-sink",
  "futures-task",
  "memchr",
- "pin-project",
+ "pin-project 0.4.27",
  "pin-utils",
  "proc-macro-hack",
  "proc-macro-nested",
@@ -1153,6 +1166,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "humantime"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c1ad908cc71012b7bea4d0c53ba96a8cba9962f048fa68d143376143d863b7a"
+
+[[package]]
 name = "hyper"
 version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1168,7 +1187,7 @@ dependencies = [
  "httparse",
  "httpdate",
  "itoa",
- "pin-project",
+ "pin-project 0.4.27",
  "socket2",
  "tokio 0.2.22",
  "tower-service",
@@ -1406,9 +1425,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e53a6ea5f38c0a48ca42159868c6d8e1bd56c0451238856cc08d58563643bdc3"
+checksum = "f8f1c83949125de4a582aa2da15ae6324d91cf6a58a70ea407643941ff98f558"
 dependencies = [
  "libc",
  "log",
@@ -1591,7 +1610,16 @@ version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2ffbc8e94b38ea3d2d8ba92aea2983b503cd75d0888d75b86bb37970b5698e15"
 dependencies = [
- "pin-project-internal",
+ "pin-project-internal 0.4.27",
+]
+
+[[package]]
+name = "pin-project"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee41d838744f60d959d7074e3afb6b35c7456d0f61cad38a24e35e6553f73841"
+dependencies = [
+ "pin-project-internal 1.0.1",
 ]
 
 [[package]]
@@ -1599,6 +1627,17 @@ name = "pin-project-internal"
 version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65ad2ae56b6abe3a1ee25f15ee605bacadb9a764edaba9c2bf4103800d4a1895"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "pin-project-internal"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81a4ffa594b66bff340084d4081df649a7dc049ac8d7fc458d8e628bfbbb2f86"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1653,7 +1692,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
 dependencies = [
- "env_logger",
+ "env_logger 0.7.1",
  "log",
 ]
 
@@ -2055,9 +2094,9 @@ dependencies = [
 
 [[package]]
 name = "spin"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef7b840d5ef62f81f50649ade37112748461256c64a70bccefeabb4d02c515c5"
+checksum = "652ac3743312871a5fb703f0337e68ffa3cdc28c863efad0b8dc858fa10c991b"
 
 [[package]]
 name = "spinning_top"
@@ -2247,7 +2286,8 @@ dependencies = [
  "lazy_static",
  "libc",
  "memchr",
- "mio 0.7.3",
+ "mio 0.7.4",
+ "num_cpus",
  "pin-project-lite",
  "signal-hook-registry",
  "slab",
