@@ -137,7 +137,7 @@ impl MessageBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Message, Error> {
+    pub fn finish(self) -> Result<Message, Error> {
         Ok(Message {
             parent1: self.parent1.ok_or(Error::MissingField("parent1"))?,
             parent2: self.parent2.ok_or(Error::MissingField("parent2"))?,

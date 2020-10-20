@@ -18,7 +18,7 @@ mod unlock;
 
 use crate::Error;
 
-use constants::{INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
+use constants::INPUT_OUTPUT_COUNT_RANGE;
 
 pub use essence::{TransactionEssence, TransactionEssenceBuilder};
 pub use input::{Input, UTXOInput};
@@ -110,7 +110,7 @@ fn is_sorted<T: Ord>(iterator: Iter<T>) -> bool {
 
 #[derive(Debug, Default)]
 pub struct TransactionBuilder {
-    essence: TransactionEssenceBuilder,
+    essence: Option<TransactionEssence>,
     unlock_blocks: Vec<UnlockBlock>,
 }
 
@@ -119,8 +119,8 @@ impl TransactionBuilder {
         Self::default()
     }
 
-    pub fn with_essence(mut self, essence: TransactionEssenceBuilder) -> Self {
-        self.essence = essence;
+    pub fn with_essence(mut self, essence: TransactionEssence) -> Self {
+        self.essence = Some(essence);
 
         self
     }
@@ -131,101 +131,12 @@ impl TransactionBuilder {
         self
     }
 
-    fn validate(&self) -> Result<(), Error> {
-        // Should we add this field? -> Transaction Type value must be 0, denoting an Unsigned Transaction
-
-        // Inputs validation
-        let essence = &self.essence;
-        // Inputs Count must be 0 < x <= 127
-        if !INPUT_OUTPUT_COUNT_RANGE.contains(&essence.inputs.len()) {
-            return Err(Error::CountError);
-        }
-
-        // At least one input must be specified
-        if essence.inputs.is_empty() {
-            return Err(Error::NoInput);
-        }
-
-        for i in essence.inputs.iter() {
-            // Input Type value must be 0, denoting an UTXO Input.
-            match i {
-                Input::UTXO(u) => {
-                    // Transaction Output Index must be 0 ≤ x < 127
-                    if !INPUT_OUTPUT_INDEX_RANGE.contains(&u.index()) {
-                        return Err(Error::CountError);
-                    }
-
-                    // Every combination of Transaction ID + Transaction Output Index must be unique in the inputs set.
-                    if essence.inputs.iter().filter(|j| *j == i).count() > 1 {
-                        return Err(Error::DuplicateError);
-                    }
-                }
-            }
-        }
-
-        // Inputs must be in lexicographical order of their serialized form.
+    pub fn finish(self) -> Result<Transaction, Error> {
         // TODO
-        // if !is_sorted(transaction.inputs.iter()) {
-        //     return Err(Error::OrderError);
-        // }
+        // inputs.sort();
+        // outputs.sort();
 
-        // Output validation
-        // Outputs Count must be 0 < x <= 127
-        if !INPUT_OUTPUT_COUNT_RANGE.contains(&essence.outputs.len()) {
-            return Err(Error::CountError);
-        }
-
-        // At least one output must be specified
-        if essence.outputs.is_empty() {
-            return Err(Error::NoOutput);
-        }
-
-        let mut total = 0;
-        for i in essence.outputs.iter() {
-            // Output Type must be 0, denoting a SignatureLockedSingle.
-            match i {
-                output::Output::SignatureLockedSingle(u) => {
-                    // Address Type must either be 0 or 1, denoting a WOTS- or Ed25519 address.
-
-                    // If Address is of type WOTS address, its bytes must be valid T5B1 bytes.
-
-                    // The Address must be unique in the set of SigLockedSingleDeposits
-                    if essence
-                        .outputs
-                        .iter()
-                        .filter(|j| match *j {
-                            output::Output::SignatureLockedSingle(s) => s.address() == u.address(),
-                        })
-                        .count()
-                        > 1
-                    {
-                        return Err(Error::DuplicateError);
-                    }
-
-                    // Amount must be > 0
-                    let amount = u.amount().get();
-                    if amount == 0 {
-                        return Err(Error::AmountError);
-                    }
-
-                    total += amount;
-                }
-            }
-        }
-
-        // Outputs must be in lexicographical order by their serialized form
-        // TODO
-        // if !is_sorted(transaction.outputs.iter()) {
-        //     return Err(Error::OrderError);
-        // }
-
-        // Accumulated output balance must not exceed the total supply of tokens 2'779'530'283'277'761
-        if total > 2779530283277761 {
-            return Err(Error::AmountError);
-        }
-
-        // Payload Length must be 0 (to indicate that there's no payload) or be valid for the specified payload type.
-        // Payload Type must be one of the supported payload types if Payload Length is not 0.
+        let essence = self.essence.ok_or(Error::MissingField("essence"))?;
 
         // Unlock Blocks validation
         // Unlock Blocks Count must match the amount of inputs. Must be 0 < x < 127.
@@ -241,8 +152,8 @@ impl TransactionBuilder {
                     // Unlock Block. Since it's not the first input it unlocks, it must have
                     // differente transaction id from previous one
                     if i != 0 {
-                        match &essence.inputs[i] {
-                            Input::UTXO(u) => match &essence.inputs[i - 1] {
+                        match &essence.inputs()[i] {
+                            Input::UTXO(u) => match &essence.inputs()[i - 1] {
                                 Input::UTXO(v) => {
                                     if u.id() != v.id() {
                                         return Err(Error::InvalidIndex);
@@ -266,8 +177,8 @@ impl TransactionBuilder {
 
                     // Since it's first input it unlocks, it must have differente transaction id from previous one
                     if i != 0 {
-                        match &essence.inputs[i] {
-                            Input::UTXO(u) => match &essence.inputs[i - 1] {
+                        match &essence.inputs()[i] {
+                            Input::UTXO(u) => match &essence.inputs()[i - 1] {
                                 Input::UTXO(v) => {
                                     if u.id() == v.id() {
                                         return Err(Error::InvalidIndex);
@@ -280,18 +191,8 @@ impl TransactionBuilder {
             }
         }
 
-        Ok(())
-    }
-
-    pub fn build(self) -> Result<Transaction, Error> {
-        // TODO
-        // inputs.sort();
-        // outputs.sort();
-
-        self.validate()?;
-
         Ok(Transaction {
-            essence: self.essence.finish()?,
+            essence,
             unlock_blocks: self.unlock_blocks.into_boxed_slice(),
         })
     }
