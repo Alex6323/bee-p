@@ -19,16 +19,13 @@ pub(crate) mod pruning;
 pub mod config;
 pub mod event;
 pub mod header;
-pub mod metadata;
 pub mod snapshot;
 
 pub(crate) use download::{download_local_snapshot, Error as DownloadError};
 
-use metadata::SnapshotMetadata;
 use snapshot::{Error as FileError, LocalSnapshot};
 
 use bee_common_ext::{event::Bus, node::Node};
-use bee_message::prelude::MessageId;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};
@@ -48,27 +45,27 @@ pub async fn init<N: Node>(
     // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
     node_builder: N::Builder,
-) -> Result<(N::Builder, SnapshotMetadata), Error> {
+) -> Result<(N::Builder, LocalSnapshot), Error> {
     if !Path::new(config.path()).exists() {
         download_local_snapshot(config).await.map_err(Error::Download)?;
     }
     info!("Loading local snapshot file {}...", config.path());
 
-    let LocalSnapshot { mut metadata } = LocalSnapshot::from_file(config.path()).map_err(Error::Local)?;
+    let snapshot = LocalSnapshot::from_file(config.path()).map_err(Error::Local)?;
 
     info!(
         "Loaded local snapshot file from {} with {} solid entry points.",
-        Utc.timestamp(metadata.header().timestamp() as i64, 0).to_rfc2822(),
-        metadata.solid_entry_points().len(),
+        Utc.timestamp(snapshot.header().timestamp() as i64, 0).to_rfc2822(),
+        snapshot.solid_entry_points().len(),
     );
 
     // The genesis transaction must be marked as SEP with snapshot index during loading a snapshot because coordinator
     // bootstraps the network by referencing the genesis tx.
-    metadata.solid_entry_points.insert(MessageId::null());
+    // snapshot.solid_entry_points().insert(MessageId::null());
 
     // node_builder = node_builder.with_worker_cfg::<worker::SnapshotWorker>(config.clone());
 
-    Ok((node_builder, metadata))
+    Ok((node_builder, snapshot))
 }
 
 pub fn events<N: Node>(_node: &N, _bus: Arc<Bus<'static>>) {

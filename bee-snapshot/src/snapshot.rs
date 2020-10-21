@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{header::SnapshotHeader, kind::Kind, metadata::SnapshotMetadata};
+use crate::{header::SnapshotHeader, kind::Kind};
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 use bee_message::prelude::MessageId;
@@ -29,12 +29,17 @@ pub enum Error {
 }
 
 pub struct LocalSnapshot {
-    pub(crate) metadata: SnapshotMetadata,
+    pub(crate) header: SnapshotHeader,
+    pub(crate) solid_entry_points: HashSet<MessageId>,
 }
 
 impl LocalSnapshot {
-    pub fn metadata(&self) -> &SnapshotMetadata {
-        &self.metadata
+    pub fn header(&self) -> &SnapshotHeader {
+        &self.header
+    }
+
+    pub fn solid_entry_points(&self) -> &HashSet<MessageId> {
+        &self.solid_entry_points
     }
 
     pub fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
@@ -63,11 +68,13 @@ impl LocalSnapshot {
 
 impl Packable for LocalSnapshot {
     fn packed_len(&self) -> usize {
-        self.metadata.packed_len()
+        self.header.packed_len()
+        // + TODO SEP
     }
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.metadata.pack(buf)?;
+        self.header.pack(buf)?;
+        // + TODO SEP
 
         Ok(())
     }
@@ -76,8 +83,10 @@ impl Packable for LocalSnapshot {
     where
         Self: Sized,
     {
+        // TODO SEP
         Ok(Self {
-            metadata: SnapshotMetadata::unpack(buf)?,
+            header: SnapshotHeader::unpack(buf)?,
+            solid_entry_points: HashSet::new(),
         })
     }
 }
@@ -87,18 +96,16 @@ pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
     info!("Creating local snapshot at index {}...", index);
 
     let ls = LocalSnapshot {
-        metadata: SnapshotMetadata {
-            header: SnapshotHeader {
-                kind: Kind::Full,
-                timestamp: 0,
-                coordinator: [0; 32],
-                sep_index: 0,
-                sep_id: MessageId::null(),
-                ledger_index: 0,
-                ledger_id: MessageId::null(),
-            },
-            solid_entry_points: HashSet::new(),
+        header: SnapshotHeader {
+            kind: Kind::Full,
+            timestamp: 0,
+            coordinator: [0; 32],
+            sep_index: 0,
+            sep_id: MessageId::null(),
+            ledger_index: 0,
+            ledger_id: MessageId::null(),
         },
+        solid_entry_points: HashSet::new(),
     };
 
     let file = path.to_string() + "_tmp";
