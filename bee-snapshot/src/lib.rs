@@ -12,7 +12,6 @@
 mod download;
 
 pub(crate) mod constants;
-pub(crate) mod file;
 pub(crate) mod kind;
 pub(crate) mod pruning;
 // pub(crate) mod worker;
@@ -24,10 +23,9 @@ pub mod metadata;
 pub mod snapshot;
 
 pub(crate) use download::{download_local_snapshot, Error as DownloadError};
-pub(crate) use file::Error as FileError;
 
 use metadata::SnapshotMetadata;
-use snapshot::LocalSnapshot;
+use snapshot::{Error as FileError, LocalSnapshot};
 
 use bee_common_ext::{event::Bus, node::Node};
 use bee_message::prelude::MessageId;

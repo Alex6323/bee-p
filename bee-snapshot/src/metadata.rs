@@ -11,6 +11,7 @@
 
 use crate::header::SnapshotHeader;
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 use bee_message::prelude::MessageId;
 
 use std::collections::HashSet;
@@ -27,5 +28,29 @@ impl SnapshotMetadata {
 
     pub fn solid_entry_points(&self) -> &HashSet<MessageId> {
         &self.solid_entry_points
+    }
+}
+
+impl Packable for SnapshotMetadata {
+    fn packed_len(&self) -> usize {
+        self.header.packed_len()
+        // + TODO SEP
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.header.pack(buf)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        // TODO SEP
+        Ok(Self {
+            header: SnapshotHeader::unpack(buf)?,
+            solid_entry_points: HashSet::new(),
+        })
     }
 }

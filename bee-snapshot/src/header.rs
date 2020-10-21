@@ -28,6 +28,10 @@ pub struct SnapshotHeader {
 }
 
 impl SnapshotHeader {
+    pub fn kind(&self) -> Kind {
+        self.kind
+    }
+
     pub fn timestamp(&self) -> u64 {
         self.timestamp
     }
@@ -58,7 +62,7 @@ impl Packable for SnapshotHeader {
         SNAPSHOT_VERSION.packed_len()
             + self.kind.packed_len()
             + self.timestamp.packed_len()
-            // TODO impl packable for byte slices
+            // TODO impl packable for byte slices or ED25 packable
         +32+self.sep_index.packed_len()+self.sep_id.packed_len()+self.ledger_index.packed_len()+self.ledger_id.packed_len()
     }
 
@@ -81,8 +85,12 @@ impl Packable for SnapshotHeader {
     where
         Self: Sized,
     {
-        let _version = u8::unpack(buf)?;
-        // TODO check version
+        let version = u8::unpack(buf)?;
+
+        if version != SNAPSHOT_VERSION {
+            return Err(PackableError::InvalidVersion(SNAPSHOT_VERSION, version));
+        }
+
         let kind = Kind::unpack(buf)?;
         let timestamp = u64::unpack(buf)?;
         // TODO pk type
