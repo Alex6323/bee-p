@@ -23,7 +23,6 @@ public_key      = "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c
 status_interval = 10
 
 [snapshot]
-[snapshot.local]
 path              = "./snapshots/mainnet/export.bin"
 download_urls     = [
   "https://x-vps.com/export.bin",

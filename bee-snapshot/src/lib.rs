@@ -44,15 +44,15 @@ pub async fn init<N: Node>(
     config: &config::SnapshotConfig,
     node_builder: N::Builder,
 ) -> Result<(N::Builder, SnapshotMetadata), Error> {
-    if !Path::new(config.local().path()).exists() {
-        local::download_local_snapshot(config.local())
+    if !Path::new(config.path()).exists() {
+        local::download_local_snapshot(config)
             .await
             .map_err(Error::Download)?;
     }
-    info!("Loading local snapshot file {}...", config.local().path());
+    info!("Loading local snapshot file {}...", config.path());
 
     let LocalSnapshot { mut metadata } =
-        local::LocalSnapshot::from_file(config.local().path()).map_err(Error::Local)?;
+        local::LocalSnapshot::from_file(config.path()).map_err(Error::Local)?;
 
     info!(
         "Loaded local snapshot file from {} with {} solid entry points.",
