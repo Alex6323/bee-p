@@ -11,7 +11,6 @@
 
 use crate::{
     event::MilestoneConfirmed,
-    state::LedgerState,
     whiteflag::{
         merkle_hasher::MerkleHasher,
         metadata::WhiteFlagMetadata,
@@ -55,7 +54,7 @@ fn confirm<B: Backend>(
     tangle: &MsTangle<B>,
     message: Message,
     index: &mut MilestoneIndex,
-    state: &mut LedgerState,
+    // state: &mut LedgerState,
     coo_config: &ProtocolCoordinatorConfig,
     bus: &Arc<Bus<'static>>,
 ) -> Result<(), Error> {
@@ -133,17 +132,16 @@ fn confirm<B: Backend>(
     }
 }
 
-fn get_balance(state: &LedgerState, address: Address, sender: oneshot::Sender<u64>) {
-    if let Err(e) = sender.send(state.get_or_zero(&address)) {
-        warn!("Failed to send balance: {:?}.", e);
-    }
-}
+// fn get_balance(state: &LedgerState, address: Address, sender: oneshot::Sender<u64>) {
+//     if let Err(e) = sender.send(state.get_or_zero(&address)) {
+//         warn!("Failed to send balance: {:?}.", e);
+//     }
+// }
 
 #[async_trait]
 impl<N: Node> Worker<N> for LedgerWorker {
     type Config = (
         MilestoneIndex,
-        LedgerState,
         ProtocolCoordinatorConfig,
         Arc<Bus<'static>>,
     );
@@ -164,18 +162,17 @@ impl<N: Node> Worker<N> for LedgerWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut index = config.0;
-            let mut state = config.1;
-            let coo_config = config.2;
-            let bus = config.3;
+            let coo_config = config.1;
+            let bus = config.2;
 
             while let Some(event) = receiver.next().await {
                 match event {
                     LedgerWorkerEvent::Confirm(milestone) => {
-                        if confirm(&tangle, milestone, &mut index, &mut state, &coo_config, &bus).is_err() {
+                        if confirm(&tangle, milestone, &mut index, &coo_config, &bus).is_err() {
                             panic!("Error while confirming milestone, aborting.");
                         }
                     }
-                    LedgerWorkerEvent::GetBalance(address, sender) => get_balance(&state, address, sender),
+                    // LedgerWorkerEvent::GetBalance(address, sender) => get_balance(&state, address, sender),
                 }
             }
 
