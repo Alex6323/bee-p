@@ -9,13 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::kind::Kind;
+
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 use bee_message::prelude::MessageId;
 
 const SNAPSHOT_VERSION: u8 = 1;
-const SNAPSHOT_TYPE: u8 = 0;
 
 pub struct SnapshotHeader {
+    pub(crate) kind: Kind,
     pub(crate) timestamp: u64,
     // TODO replace with ED25 pk
     pub(crate) coordinator: [u8; 32],
@@ -54,7 +56,7 @@ impl SnapshotHeader {
 impl Packable for SnapshotHeader {
     fn packed_len(&self) -> usize {
         SNAPSHOT_VERSION.packed_len()
-            + SNAPSHOT_TYPE.packed_len()
+            + self.kind.packed_len()
             + self.timestamp.packed_len()
             // TODO impl packable for byte slices
         +32+self.sep_index.packed_len()+self.sep_id.packed_len()+self.ledger_index.packed_len()+self.ledger_id.packed_len()
@@ -62,7 +64,7 @@ impl Packable for SnapshotHeader {
 
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         SNAPSHOT_VERSION.pack(buf)?;
-        SNAPSHOT_TYPE.pack(buf)?;
+        self.kind.pack(buf)?;
         self.timestamp.pack(buf)?;
         // TODO packable on bytes
         buf.write_all(&self.coordinator)?;
@@ -79,9 +81,9 @@ impl Packable for SnapshotHeader {
     where
         Self: Sized,
     {
-        let _snapshot_version = u8::unpack(buf)?;
-        let _snapshot_type = u8::unpack(buf)?;
-        // TODO check version and type
+        let _version = u8::unpack(buf)?;
+        // TODO check version
+        let kind = Kind::unpack(buf)?;
         let timestamp = u64::unpack(buf)?;
         // TODO pk type
         let mut coordinator = [0u8; 32];
@@ -92,6 +94,7 @@ impl Packable for SnapshotHeader {
         let ledger_id = MessageId::unpack(buf)?;
 
         Ok(Self {
+            kind,
             timestamp,
             coordinator,
             sep_index,

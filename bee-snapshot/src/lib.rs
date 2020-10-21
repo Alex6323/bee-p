@@ -13,6 +13,7 @@ mod download;
 
 pub(crate) mod constants;
 pub(crate) mod file;
+pub(crate) mod kind;
 pub(crate) mod pruning;
 // pub(crate) mod worker;
 
