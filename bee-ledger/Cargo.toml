@@ -27,7 +27,7 @@ digest = "0.9"
 flume = "0.9"
 futures = "0.3"
 log = "0.4"
-tokio = { version = "0.2", features = ["time", "io-util", "stream"] }
+tokio = { version = "0.3", features = ["time", "io-util", "stream"] }
 
 [dev-dependencies]
 bee-test = { path = "../bee-test" }

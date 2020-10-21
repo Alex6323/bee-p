@@ -16,17 +16,32 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, packable::Packable, worker::Worker};
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::prelude::MessageId;
 
 use async_trait::async_trait;
+use dashmap::DashMap;
 use futures::{select, StreamExt};
 use log::{debug, info};
 use tokio::time::interval;
 
-use std::time::{Duration, Instant};
+use std::{
+    ops::Deref,
+    time::{Duration, Instant},
+};
 
 const RETRY_INTERVAL_SEC: u64 = 5;
+
+#[derive(Default)]
+pub(crate) struct RequestedMessages(DashMap<MessageId, (MilestoneIndex, Instant)>);
+
+impl Deref for RequestedMessages {
+    type Target = DashMap<MessageId, (MilestoneIndex, Instant)>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub(crate) struct MessageRequesterWorkerEvent(pub(crate) MessageId, pub(crate) MilestoneIndex);
 
@@ -34,15 +49,18 @@ pub(crate) struct MessageRequesterWorker {
     pub(crate) tx: flume::Sender<MessageRequesterWorkerEvent>,
 }
 
-async fn process_request(message_id: MessageId, index: MilestoneIndex, counter: &mut usize) {
-    if Protocol::get().requested_messages.contains_key(&message_id) {
+async fn process_request(
+    requested_messages: &RequestedMessages,
+    message_id: MessageId,
+    index: MilestoneIndex,
+    counter: &mut usize,
+) {
+    if requested_messages.contains_key(&message_id) {
         return;
     }
 
     if process_request_unchecked(message_id, index, counter).await {
-        Protocol::get()
-            .requested_messages
-            .insert(message_id, (index, Instant::now()));
+        requested_messages.insert(message_id, (index, Instant::now()));
     }
 }
 
@@ -83,10 +101,10 @@ async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex,
     false
 }
 
-async fn retry_requests(counter: &mut usize) {
+async fn retry_requests(requested_messages: &RequestedMessages, counter: &mut usize) {
     let mut retry_counts: usize = 0;
 
-    for mut message in Protocol::get().requested_messages.iter_mut() {
+    for mut message in requested_messages.iter_mut() {
         let (message_id, (index, instant)) = message.pair_mut();
         let now = Instant::now();
         if (now - *instant).as_secs() > RETRY_INTERVAL_SEC
@@ -110,6 +128,10 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
+        let requested_messages: RequestedMessages = Default::default();
+        node.register_resource(requested_messages);
+        let requested_messages = node.resource::<RequestedMessages>();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
@@ -120,9 +142,10 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
 
             loop {
                 select! {
-                    _ = timeouts.next() => retry_requests(&mut counter).await,
+                    _ = timeouts.next() => retry_requests(&*requested_messages,&mut counter).await,
                     entry = receiver.next() => match entry {
-                        Some(MessageRequesterWorkerEvent(message_id, index)) => process_request(message_id, index, &mut counter).await,
+                        Some(MessageRequesterWorkerEvent(message_id, index)) =>
+                            process_request(&*requested_messages, message_id, index, &mut counter).await,
                         None => break,
                     },
                 }
@@ -133,4 +156,6 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
 
         Ok(Self { tx })
     }
+
+    // TODO stop + remove_resource
 }

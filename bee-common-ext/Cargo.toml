@@ -20,7 +20,7 @@ dashmap = "3.11"
 futures = "0.3"
 log = "0.4"
 thiserror = "1.0"
-tokio = { version = "0.2", features = ["rt-core"] }
+tokio = { version = "0.3", features = ["rt"] }
 
 [dev-dependencies]
 hex = "0.4"

@@ -18,7 +18,7 @@ use crate::{
     tangle::MsTangle,
     worker::{
         peer::message_handler::MessageHandler, HasherWorkerEvent, MessageResponderWorkerEvent,
-        MilestoneRequesterWorkerEvent, MilestoneResponderWorkerEvent, PeerWorker,
+        MilestoneRequesterWorkerEvent, MilestoneResponderWorkerEvent, PeerWorker, RequestedMilestones,
     },
 };
 
@@ -91,6 +91,7 @@ impl PeerHandshakerWorker {
     pub async fn run<B: Backend>(
         mut self,
         tangle: ResHandle<MsTangle<B>>,
+        requested_milestones: ResHandle<RequestedMilestones>,
         receiver: flume::Receiver<Vec<u8>>,
         shutdown: oneshot::Receiver<()>,
     ) {
@@ -118,7 +119,10 @@ impl PeerHandshakerWorker {
         let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address);
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
-            if let Err(e) = self.process_message(&tangle, &header, bytes).await {
+            if let Err(e) = self
+                .process_message(&tangle, &requested_milestones, &header, bytes)
+                .await
+            {
                 error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
             if let HandshakeStatus::Done | HandshakeStatus::Duplicate = self.status {
@@ -225,6 +229,7 @@ impl PeerHandshakerWorker {
     async fn process_message<B: Backend>(
         &mut self,
         tangle: &MsTangle<B>,
+        requested_milestones: &RequestedMilestones,
         header: &Header,
         bytes: &[u8],
     ) -> Result<(), PeerHandshakerWorkerError> {
@@ -248,7 +253,7 @@ impl PeerHandshakerWorker {
         //                     tangle.get_latest_milestone_index(),
         //                 );
         //
-        //                 Protocol::request_latest_milestone(tangle, &self.milestone_requester, Some(self.peer.epid));
+        //                 Protocol::request_latest_milestone(tangle, &self.milestone_requester, &*requested_milestones,Some(self.peer.epid));
         //
         //                 self.status = HandshakeStatus::Done;
         //             }

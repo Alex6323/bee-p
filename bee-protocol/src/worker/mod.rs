@@ -38,7 +38,8 @@ pub(crate) use mps::MpsWorker;
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use propagator::{PropagatorWorker, PropagatorWorkerEvent};
 pub(crate) use requester::{
-    MessageRequesterWorker, MessageRequesterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEvent,
+    MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, RequestedMilestones, RequestedMessages,
+    MessageRequesterWorker, MessageRequesterWorkerEvent,
 };
 pub(crate) use responder::{
     MessageResponderWorker, MessageResponderWorkerEvent, MilestoneResponderWorker, MilestoneResponderWorkerEvent,

@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{protocol::Protocol, tangle::MsTangle, worker::TangleWorker};
+use crate::{
+    tangle::MsTangle,
+    worker::{RequestedMessages, TangleWorker, MessageRequesterWorker},
+};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
@@ -30,11 +33,12 @@ impl<N: Node> Worker<N> for StatusWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        vec![TypeId::of::<TangleWorker>()].leak()
+        vec![TypeId::of::<TangleWorker>(), TypeId::of::<MessageRequesterWorker>()].leak()
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_messages = node.resource::<RequestedMessages>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -59,7 +63,7 @@ impl<N: Node> Worker<N> for StatusWorker {
                         latest_solid_milestone_index,
                         latest_milestone_index,
                         progress,
-                        Protocol::get().requested_messages.len()
+                        requested_messages.len()
                     );
                 };
             }
