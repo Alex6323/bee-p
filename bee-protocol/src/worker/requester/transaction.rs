@@ -22,13 +22,28 @@ use bee_ternary::T5B1Buf;
 
 use async_trait::async_trait;
 use bytemuck::cast_slice;
+use dashmap::DashMap;
 use futures::{select, StreamExt};
 use log::{debug, info};
 use tokio::time::interval;
 
-use std::time::{Duration, Instant};
+use std::{
+    ops::Deref,
+    time::{Duration, Instant},
+};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
+
+#[derive(Default)]
+pub(crate) struct RequestedTransactions(DashMap<Hash, (MilestoneIndex, Instant)>);
+
+impl Deref for RequestedTransactions {
+    type Target = DashMap<Hash, (MilestoneIndex, Instant)>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub(crate) struct TransactionRequesterWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 
@@ -36,15 +51,18 @@ pub(crate) struct TransactionRequesterWorker {
     pub(crate) tx: flume::Sender<TransactionRequesterWorkerEvent>,
 }
 
-async fn process_request(hash: Hash, index: MilestoneIndex, counter: &mut usize) {
-    if Protocol::get().requested_transactions.contains_key(&hash) {
+async fn process_request(
+    requested_transactions: &RequestedTransactions,
+    hash: Hash,
+    index: MilestoneIndex,
+    counter: &mut usize,
+) {
+    if requested_transactions.contains_key(&hash) {
         return;
     }
 
     if process_request_unchecked(hash, index, counter).await {
-        Protocol::get()
-            .requested_transactions
-            .insert(hash, (index, Instant::now()));
+        requested_transactions.insert(hash, (index, Instant::now()));
     }
 }
 
@@ -87,10 +105,10 @@ async fn process_request_unchecked(hash: Hash, index: MilestoneIndex, counter: &
     false
 }
 
-async fn retry_requests(counter: &mut usize) {
+async fn retry_requests(requested_transactions: &RequestedTransactions, counter: &mut usize) {
     let mut retry_counts: usize = 0;
 
-    for mut transaction in Protocol::get().requested_transactions.iter_mut() {
+    for mut transaction in requested_transactions.iter_mut() {
         let (hash, (index, instant)) = transaction.pair_mut();
         let now = Instant::now();
         if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && process_request_unchecked(*hash, *index, counter).await {
@@ -112,6 +130,10 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
+        let requested_transactions: RequestedTransactions = Default::default();
+        node.register_resource(requested_transactions);
+        let requested_transactions = node.resource::<RequestedTransactions>();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
@@ -122,16 +144,20 @@ impl<N: Node> Worker<N> for TransactionRequesterWorker {
 
             loop {
                 select! {
-                    _ = timeouts.next() => retry_requests(&mut counter).await,
+                    _ = timeouts.next() => retry_requests(&*requested_transactions,&mut counter).await,
                     entry = receiver.next() => match entry {
-                        Some(TransactionRequesterWorkerEvent(hash, index)) => process_request(hash, index, &mut counter).await,
+                        Some(TransactionRequesterWorkerEvent(hash, index)) =>
+                            process_request(&*requested_transactions,hash, index, &mut counter).await,
                         None => break,
                     },
                 }
             }
 
-            info!("Stopped."); });
+            info!("Stopped.");
+        });
 
         Ok(Self { tx })
     }
+
+    // TODO stop + remove_resource
 }

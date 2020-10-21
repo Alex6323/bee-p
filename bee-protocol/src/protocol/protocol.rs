@@ -19,8 +19,9 @@ use crate::{
     worker::{
         BroadcasterWorker, BundleValidatorWorker, HasherWorker, KickstartWorker, MilestoneConeUpdaterWorker,
         MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
-        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, StatusWorker, StorageWorker,
-        TangleWorker, TipPoolCleanerWorker, TpsWorker, TransactionRequesterWorker, TransactionResponderWorker,
+        MilestoneValidatorWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones,
+        StatusWorker, StorageWorker, TangleWorker, TipPoolCleanerWorker, TpsWorker, TransactionRequesterWorker,
+        TransactionResponderWorker,
     },
 };
 
@@ -28,17 +29,15 @@ use bee_common_ext::{
     event::Bus,
     node::{Node, NodeBuilder},
 };
-use bee_crypto::ternary::Hash;
 use bee_network::{EndpointId, Network, Origin};
 use bee_snapshot::metadata::SnapshotMetadata;
 use bee_storage::storage::Backend;
 
-use dashmap::DashMap;
 use futures::channel::oneshot;
 use log::{debug, error, info};
 use tokio::spawn;
 
-use std::{net::SocketAddr, sync::Arc, time::Instant};
+use std::{net::SocketAddr, sync::Arc};
 
 static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);
 
@@ -49,8 +48,6 @@ pub struct Protocol {
     pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) peer_manager: PeerManager,
-    pub(crate) requested_transactions: DashMap<Hash, (MilestoneIndex, Instant)>,
-    pub(crate) requested_milestones: DashMap<MilestoneIndex, Instant>,
 }
 
 impl Protocol {
@@ -68,8 +65,6 @@ impl Protocol {
             bus,
             metrics: ProtocolMetrics::new(),
             peer_manager: PeerManager::new(),
-            requested_transactions: Default::default(),
-            requested_milestones: Default::default(),
         };
 
         *PROTOCOL.write() = Some(Box::leak(Box::new(protocol)));
@@ -99,6 +94,7 @@ impl Protocol {
 
     pub fn events<N: Node>(node: &N, config: ProtocolConfig, bus: Arc<Bus<'static>>) {
         let tangle = node.resource::<MsTangle<N::Backend>>();
+
         bus.add_listener(move |latest_milestone: &LatestMilestoneChanged| {
             info!(
                 "New milestone {} {}.",
@@ -132,6 +128,8 @@ impl Protocol {
         let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_milestones = node.resource::<RequestedMilestones>();
+
         bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
             debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
             tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
@@ -144,7 +142,7 @@ impl Protocol {
                     error!("Sending solidification event failed: {}", e);
                 }
             } else {
-                Protocol::request_milestone(&tangle, &milestone_requester, next_ms, None);
+                Protocol::request_milestone(&tangle, &milestone_requester, &*requested_milestones, next_ms, None);
             }
 
             Protocol::broadcast_heartbeat(
@@ -176,6 +174,8 @@ impl Protocol {
         Protocol::get().peer_manager.add(peer.clone());
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_milestones = node.resource::<RequestedMilestones>();
+
         spawn(
             PeerHandshakerWorker::new(
                 Protocol::get().network.clone(),
@@ -186,7 +186,7 @@ impl Protocol {
                 node.worker::<MilestoneResponderWorker>().unwrap().tx.clone(),
                 node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
             )
-            .run(tangle, receiver_rx, receiver_shutdown_rx),
+            .run(tangle, requested_milestones, receiver_rx, receiver_shutdown_rx),
         );
 
         (receiver_tx, receiver_shutdown_tx)

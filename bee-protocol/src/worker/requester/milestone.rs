@@ -22,16 +22,30 @@ use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::EndpointId;
 
 use async_trait::async_trait;
+use dashmap::DashMap;
 use futures::{select, StreamExt};
 use log::{debug, info};
 use tokio::time::interval;
 
 use std::{
     any::TypeId,
+    ops::Deref,
     time::{Duration, Instant},
 };
 
 const RETRY_INTERVAL_SECS: u64 = 5;
+
+// TODO pub ?
+#[derive(Default)]
+pub struct RequestedMilestones(DashMap<MilestoneIndex, Instant>);
+
+impl Deref for RequestedMilestones {
+    type Target = DashMap<MilestoneIndex, Instant>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
@@ -39,15 +53,20 @@ pub(crate) struct MilestoneRequesterWorker {
     pub(crate) tx: flume::Sender<MilestoneRequesterWorkerEvent>,
 }
 
-async fn process_request(index: MilestoneIndex, epid: Option<EndpointId>, counter: &mut usize) {
-    if Protocol::get().requested_milestones.contains_key(&index) {
+async fn process_request(
+    requested_milestones: &RequestedMilestones,
+    index: MilestoneIndex,
+    epid: Option<EndpointId>,
+    counter: &mut usize,
+) {
+    if requested_milestones.contains_key(&index) {
         return;
     }
 
     process_request_unchecked(index, epid, counter).await;
 
     if index.0 != 0 {
-        Protocol::get().requested_milestones.insert(index, Instant::now());
+        requested_milestones.insert(index, Instant::now());
     }
 }
 
@@ -83,10 +102,10 @@ async fn process_request_unchecked(index: MilestoneIndex, epid: Option<EndpointI
     }
 }
 
-async fn retry_requests(counter: &mut usize) {
+async fn retry_requests(requested_milestones: &RequestedMilestones, counter: &mut usize) {
     let mut retry_counts: usize = 0;
 
-    for mut milestone in Protocol::get().requested_milestones.iter_mut() {
+    for mut milestone in requested_milestones.iter_mut() {
         let (index, instant) = milestone.pair_mut();
         let now = Instant::now();
         if (now - *instant).as_secs() > RETRY_INTERVAL_SECS && process_request_unchecked(*index, None, counter).await {
@@ -113,6 +132,9 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
         let (tx, rx) = flume::unbounded();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_milestones: RequestedMilestones = Default::default();
+        node.register_resource(requested_milestones);
+        let requested_milestones = node.resource::<RequestedMilestones>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -124,11 +146,11 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
 
             loop {
                 select! {
-                    _ = timeouts.next() => retry_requests(&mut counter).await,
+                    _ = timeouts.next() => retry_requests(&*requested_milestones, &mut counter).await,
                     entry = receiver.next() => match entry {
                         Some(MilestoneRequesterWorkerEvent(index, epid)) => {
                             if !tangle.contains_milestone(index.into()) {
-                                process_request(index, epid, &mut counter).await;
+                                process_request(&*requested_milestones, index, epid, &mut counter).await;
                             }
                         },
                         None => break,
@@ -141,4 +163,6 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
 
         Ok(Self { tx })
     }
+
+    // TODO stop + remove_resource
 }

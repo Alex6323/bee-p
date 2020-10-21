@@ -16,7 +16,9 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{MilestoneRequesterWorkerEvent, TransactionRequesterWorkerEvent},
+    worker::{
+        MilestoneRequesterWorkerEvent, RequestedMilestones, RequestedTransactions, TransactionRequesterWorkerEvent,
+    },
 };
 
 use bee_crypto::ternary::Hash;
@@ -64,12 +66,13 @@ impl Protocol {
 
     pub(crate) fn request_milestone<B: Backend>(
         tangle: &MsTangle<B>,
-        transaction_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        milestone_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        requested_milestones: &RequestedMilestones,
         index: MilestoneIndex,
         to: Option<EndpointId>,
     ) {
-        if !Protocol::get().requested_milestones.contains_key(&index) && !tangle.contains_milestone(index) {
-            if let Err(e) = transaction_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
+        if !requested_milestones.contains_key(&index) && !tangle.contains_milestone(index) {
+            if let Err(e) = milestone_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
                 warn!("Requesting milestone failed: {}.", e);
             }
         }
@@ -77,10 +80,11 @@ impl Protocol {
 
     pub(crate) fn request_latest_milestone<B: Backend>(
         tangle: &MsTangle<B>,
-        transaction_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        milestone_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        requested_milestones: &RequestedMilestones,
         to: Option<EndpointId>,
     ) {
-        Protocol::request_milestone(tangle, transaction_requester, MilestoneIndex(0), to)
+        Protocol::request_milestone(tangle, milestone_requester, requested_milestones, MilestoneIndex(0), to)
     }
 
     // TransactionRequest
@@ -88,12 +92,13 @@ impl Protocol {
     pub(crate) async fn request_transaction<B: Backend>(
         tangle: &MsTangle<B>,
         transaction_requester: &flume::Sender<TransactionRequesterWorkerEvent>,
+        requested_transactions: &RequestedTransactions,
         hash: Hash,
         index: MilestoneIndex,
     ) {
         if !tangle.contains(&hash).await
             && !tangle.is_solid_entry_point(&hash)
-            && !Protocol::get().requested_transactions.contains_key(&hash)
+            && !requested_transactions.contains_key(&hash)
         {
             if let Err(e) = transaction_requester.send(TransactionRequesterWorkerEvent(hash, index)) {
                 warn!("Requesting transaction failed: {}.", e);
