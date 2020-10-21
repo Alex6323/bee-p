@@ -27,11 +27,23 @@ use futures::{select, StreamExt};
 use log::{debug, info};
 use tokio::time::interval;
 
-use std::time::{Duration, Instant};
+use std::{
+    ops::Deref,
+    time::{Duration, Instant},
+};
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-pub(crate) type RequestedTransactions = DashMap<Hash, (MilestoneIndex, Instant)>;
+#[derive(Default)]
+pub(crate) struct RequestedTransactions(DashMap<Hash, (MilestoneIndex, Instant)>);
+
+impl Deref for RequestedTransactions {
+    type Target = DashMap<Hash, (MilestoneIndex, Instant)>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub(crate) struct TransactionRequesterWorkerEvent(pub(crate) Hash, pub(crate) MilestoneIndex);
 

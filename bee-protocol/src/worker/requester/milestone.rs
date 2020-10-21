@@ -29,12 +29,23 @@ use tokio::time::interval;
 
 use std::{
     any::TypeId,
+    ops::Deref,
     time::{Duration, Instant},
 };
 
 const RETRY_INTERVAL_SECS: u64 = 5;
 
-pub(crate) type RequestedMilestones = DashMap<MilestoneIndex, Instant>;
+// TODO pub ?
+#[derive(Default)]
+pub struct RequestedMilestones(DashMap<MilestoneIndex, Instant>);
+
+impl Deref for RequestedMilestones {
+    type Target = DashMap<MilestoneIndex, Instant>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
 
