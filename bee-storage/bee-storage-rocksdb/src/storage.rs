@@ -22,6 +22,8 @@ pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
 pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
 pub const MILESTONE_INDEX_TO_LEDGER_DIFF: &str = "milestone_hash_to_ledger_diff";
 pub const MILESTONE_INDEX_TO_LEDGER_STATE: &str = "milestone_hash_to_ledger_state";
+pub const MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
+pub const PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
 
 pub struct Storage {
     pub inner: ::rocksdb::DB,
@@ -38,6 +40,9 @@ impl Storage {
             ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_DIFF, Options::default());
         let milestone_index_to_ledger_state =
             ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_STATE, Options::default());
+        let message_id_to_message = ColumnFamilyDescriptor::new(MESSAGE_ID_TO_MESSAGE, Options::default());
+        // FIXME: set options to do prefix queries.
+        let payload_index_to_message_id = ColumnFamilyDescriptor::new(PAYLOAD_INDEX_TO_MESSAGE_ID, Options::default());
 
         let mut opts = Options::default();
 
@@ -68,6 +73,8 @@ impl Storage {
             milestone_hash_to_index,
             milestone_index_to_ledger_diff,
             milestone_index_to_ledger_state,
+            message_id_to_message,
+            payload_index_to_message_id,
         ];
         let db = DB::open_cf_descriptors(&opts, config.path, column_familes)?;
 

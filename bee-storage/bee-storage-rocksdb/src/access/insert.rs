@@ -9,7 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
+use bee_message::{payload::Payload, Message, MessageId};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Insert, persistable::Persistable};
 
@@ -41,6 +43,33 @@ impl Insert<Hash, MilestoneIndex> for Storage {
         milestone_index.write_to(&mut index_buf);
         self.inner
             .put_cf(&ms_hash_to_ms_index, hash_buf.as_slice(), index_buf.as_slice())?;
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Insert<MessageId, Message> for Storage {
+    type Error = OpError;
+    async fn insert(&self, message_id: &MessageId, message: &Message) -> Result<(), Self::Error> {
+        let message_id_to_message = self.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        let mut message_buf = Vec::new();
+        message.pack(&mut message_buf).unwrap();
+
+        self.inner
+            .put_cf(&message_id_to_message, message_id.as_ref(), message_buf.as_slice())?;
+
+        if let Payload::Indexation(indexation) = message.payload() {
+            let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+
+            // FIXME: hash the index.
+            let mut indexation_buf = indexation.index().as_bytes().to_vec();
+            indexation_buf.extend_from_slice(message_id.as_ref());
+
+            self.inner
+                .put_cf(&payload_index_to_message_id, indexation_buf.as_slice(), &[])?;
+        }
+
         Ok(())
     }
 }

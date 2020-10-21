@@ -9,7 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
+use bee_message::{Message, MessageId};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Fetch, persistable::Persistable};
 
@@ -47,6 +49,25 @@ impl Fetch<Hash, MilestoneIndex> for Storage {
         if let Some(res) = self.inner.get_cf(&ms_hash_to_ms_index, hash_buf.as_slice())? {
             let ms_index: MilestoneIndex = MilestoneIndex::read_from(res.as_slice());
             Ok(Some(ms_index))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl Fetch<MessageId, Message> for Storage {
+    type Error = OpError;
+    async fn fetch(&self, message_id: &MessageId) -> Result<Option<Message>, Self::Error>
+    where
+        Self: Sized,
+    {
+        let message_id_to_message = self.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        if let Some(res) = self.inner.get_cf(&message_id_to_message, message_id.as_ref())? {
+            let message = Message::unpack(&mut res.as_slice()).unwrap();
+
+            Ok(Some(message))
         } else {
             Ok(None)
         }
