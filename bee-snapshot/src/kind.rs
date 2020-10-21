@@ -12,7 +12,7 @@
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 
 #[repr(u8)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Kind {
     /// Full is a local snapshot which contains the full ledger entry for a given milestone plus the milestone diffs
     /// which subtracted to the ledger milestone reduce to the snapshot milestone ledger.

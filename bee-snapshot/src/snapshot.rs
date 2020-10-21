@@ -83,10 +83,32 @@ impl Packable for LocalSnapshot {
     where
         Self: Sized,
     {
+        let header = SnapshotHeader::unpack(buf)?;
+
+        let sep_count = u64::unpack(buf)? as usize;
+        let output_count = if header.kind() == Kind::Full {
+            u64::unpack(buf)? as usize
+        } else {
+            0
+        };
+        let milestone_diff_count = u64::unpack(buf)? as usize;
+
+        // TODO stream ?
+        let mut solid_entry_points = HashSet::with_capacity(sep_count);
+        for _ in 0..sep_count {
+            solid_entry_points.insert(MessageId::unpack(buf)?);
+        }
+
+        if header.kind() == Kind::Full {
+            for _ in 0..output_count {}
+        }
+
+        for _ in 0..milestone_diff_count {}
+
         // TODO SEP
         Ok(Self {
-            header: SnapshotHeader::unpack(buf)?,
-            solid_entry_points: HashSet::new(),
+            header,
+            solid_entry_points,
         })
     }
 }
