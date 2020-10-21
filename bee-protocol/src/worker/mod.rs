@@ -34,8 +34,8 @@ pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidato
 pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
 pub(crate) use propagator::{PropagatorWorker, PropagatorWorkerEvent};
 pub(crate) use requester::{
-    MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, RequestedTransactions, TransactionRequesterWorker,
-    TransactionRequesterWorkerEvent,
+    MilestoneRequesterWorker, MilestoneRequesterWorkerEvent, RequestedMilestones, RequestedTransactions,
+    TransactionRequesterWorker, TransactionRequesterWorkerEvent,
 };
 pub(crate) use responder::{
     MilestoneResponderWorker, MilestoneResponderWorkerEvent, TransactionResponderWorker,

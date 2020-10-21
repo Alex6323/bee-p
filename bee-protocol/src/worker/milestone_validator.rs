@@ -16,8 +16,8 @@ use crate::{
     protocol::Protocol,
     tangle::{helper::find_tail_of_bundle, MsTangle},
     worker::{
-        MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent, MilestoneSolidifierWorker,
-        MilestoneSolidifierWorkerEvent, TangleWorker,
+        MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent, MilestoneRequesterWorker,
+        MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, RequestedMilestones, TangleWorker,
     },
 };
 
@@ -106,6 +106,7 @@ where
             TypeId::of::<MilestoneSolidifierWorker>(),
             TypeId::of::<MilestoneConeUpdaterWorker>(),
             TypeId::of::<TangleWorker>(),
+            TypeId::of::<MilestoneRequesterWorker>(),
         ]
         .leak()
     }
@@ -116,6 +117,7 @@ where
         let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_milestones = node.resource::<RequestedMilestones>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -176,7 +178,7 @@ where
                                     Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                                 }
 
-                                if Protocol::get().requested_milestones.remove(&milestone.index).is_some() {
+                                if requested_milestones.remove(&milestone.index).is_some() {
                                     tangle
                                         .update_metadata(&milestone.hash, |meta| meta.flags_mut().set_requested(true));
 
