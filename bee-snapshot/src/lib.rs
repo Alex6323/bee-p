@@ -9,18 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+mod download;
+
 pub(crate) mod constants;
+pub(crate) mod file;
 pub(crate) mod pruning;
 // pub(crate) mod worker;
 
 pub mod config;
 pub mod event;
 pub mod header;
-pub mod local;
 pub mod metadata;
+pub mod snapshot;
 
-use local::LocalSnapshot;
+pub(crate) use download::{download_local_snapshot, Error as DownloadError};
+pub(crate) use file::Error as FileError;
+
 use metadata::SnapshotMetadata;
+use snapshot::LocalSnapshot;
 
 use bee_common_ext::{event::Bus, node::Node};
 use bee_message::prelude::MessageId;
@@ -33,8 +39,8 @@ use std::{path::Path, sync::Arc};
 
 #[derive(Debug)]
 pub enum Error {
-    Local(local::FileError),
-    Download(local::DownloadError),
+    Local(FileError),
+    Download(DownloadError),
 }
 
 // TODO change return type
@@ -45,14 +51,11 @@ pub async fn init<N: Node>(
     node_builder: N::Builder,
 ) -> Result<(N::Builder, SnapshotMetadata), Error> {
     if !Path::new(config.path()).exists() {
-        local::download_local_snapshot(config)
-            .await
-            .map_err(Error::Download)?;
+        download_local_snapshot(config).await.map_err(Error::Download)?;
     }
     info!("Loading local snapshot file {}...", config.path());
 
-    let LocalSnapshot { mut metadata } =
-        local::LocalSnapshot::from_file(config.path()).map_err(Error::Local)?;
+    let LocalSnapshot { mut metadata } = LocalSnapshot::from_file(config.path()).map_err(Error::Local)?;
 
     info!(
         "Loaded local snapshot file from {} with {} solid entry points.",

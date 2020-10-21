@@ -9,13 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod download;
-mod file;
-
-pub(crate) use download::{download_local_snapshot, Error as DownloadError};
-
-pub use file::Error as FileError;
-
 use crate::{header::SnapshotHeader, metadata::SnapshotMetadata};
 
 use bee_message::prelude::MessageId;
