@@ -21,6 +21,7 @@ pub mod event;
 pub mod header;
 pub mod output;
 pub mod snapshot;
+pub mod spent;
 
 pub(crate) use download::{download_local_snapshot, Error as DownloadError};
 
