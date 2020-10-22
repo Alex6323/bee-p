@@ -19,6 +19,7 @@ pub(crate) mod pruning;
 pub mod config;
 pub mod event;
 pub mod header;
+pub mod output;
 pub mod snapshot;
 
 pub(crate) use download::{download_local_snapshot, Error as DownloadError};
