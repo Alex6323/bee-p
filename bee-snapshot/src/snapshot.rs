@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{header::SnapshotHeader, kind::Kind, output::Output};
+use crate::{header::SnapshotHeader, kind::Kind, milestone_diff::MilestoneDiff, output::Output};
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 use bee_message::prelude::MessageId;
@@ -32,6 +32,7 @@ pub struct LocalSnapshot {
     pub(crate) header: SnapshotHeader,
     pub(crate) solid_entry_points: HashSet<MessageId>,
     pub(crate) outputs: Vec<Output>,
+    pub(crate) milestone_diffs: Vec<MilestoneDiff>,
 }
 
 impl LocalSnapshot {
@@ -107,13 +108,16 @@ impl Packable for LocalSnapshot {
             }
         }
 
-        for _ in 0..milestone_diff_count {}
+        let mut milestone_diffs = Vec::with_capacity(milestone_diff_count);
+        for _ in 0..milestone_diff_count {
+            milestone_diffs.push(MilestoneDiff::unpack(buf)?);
+        }
 
-        // TODO SEP
         Ok(Self {
             header,
             solid_entry_points,
             outputs,
+            milestone_diffs,
         })
     }
 }
@@ -134,6 +138,7 @@ pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
         },
         solid_entry_points: HashSet::new(),
         outputs: Vec::new(),
+        milestone_diffs: Vec::new(),
     };
 
     let file = path.to_string() + "_tmp";

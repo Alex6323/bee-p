@@ -19,6 +19,7 @@ pub(crate) mod pruning;
 pub mod config;
 pub mod event;
 pub mod header;
+pub mod milestone_diff;
 pub mod output;
 pub mod snapshot;
 pub mod spent;
