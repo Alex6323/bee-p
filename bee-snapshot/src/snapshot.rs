@@ -70,13 +70,44 @@ impl LocalSnapshot {
 
 impl Packable for LocalSnapshot {
     fn packed_len(&self) -> usize {
-        self.header.packed_len()
-        // + TODO SEP
+        let mut len = self.header.packed_len();
+        len += (self.solid_entry_points.len() as u64).packed_len();
+        for s in self.solid_entry_points.iter() {
+            len += s.packed_len();
+        }
+        len += (self.outputs.len() as u64).packed_len();
+        for o in self.outputs.iter() {
+            len += o.packed_len();
+        }
+        len += (self.milestone_diffs.len() as u64).packed_len();
+        for m in self.milestone_diffs.iter() {
+            len += m.packed_len();
+        }
+
+        len
     }
 
+    // TODO stream ?
     fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
         self.header.pack(buf)?;
-        // + TODO SEP
+
+        (self.solid_entry_points.len() as u64).pack(buf)?;
+        if self.header.kind() == Kind::Full {
+            (self.outputs.len() as u64).pack(buf)?;
+        }
+        (self.milestone_diffs.len() as u64).pack(buf)?;
+
+        for s in self.solid_entry_points.iter() {
+            s.pack(buf)?;
+        }
+        if self.header.kind() == Kind::Full {
+            for o in self.outputs.iter() {
+                o.pack(buf)?;
+            }
+        }
+        for m in self.milestone_diffs.iter() {
+            m.pack(buf)?;
+        }
 
         Ok(())
     }
