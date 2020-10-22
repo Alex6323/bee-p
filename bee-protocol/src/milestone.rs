@@ -9,6 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
 use bee_message::prelude::MessageId;
 
 use std::ops::{Add, Deref};
@@ -36,6 +37,25 @@ impl Add for MilestoneIndex {
 
     fn add(self, other: Self) -> Self {
         Self(*self + *other)
+    }
+}
+
+impl Packable for MilestoneIndex {
+    fn packed_len(&self) -> usize {
+        self.0.packed_len()
+    }
+
+    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+        self.0.pack(buf)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    where
+        Self: Sized,
+    {
+        Ok(Self(u32::unpack(buf)?))
     }
 }
 
