@@ -253,7 +253,8 @@ impl PeerHandshakerWorker {
         //                     tangle.get_latest_milestone_index(),
         //                 );
         //
-        //                 Protocol::request_latest_milestone(tangle, &self.milestone_requester, &*requested_milestones,Some(self.peer.epid));
+        //                 Protocol::request_latest_milestone(tangle, &self.milestone_requester,
+        // &*requested_milestones,Some(self.peer.epid));
         //
         //                 self.status = HandshakeStatus::Done;
         //             }

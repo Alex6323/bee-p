@@ -11,7 +11,7 @@
 
 use crate::{
     tangle::MsTangle,
-    worker::{RequestedMessages, TangleWorker, MessageRequesterWorker},
+    worker::{MessageRequesterWorker, RequestedMessages, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
