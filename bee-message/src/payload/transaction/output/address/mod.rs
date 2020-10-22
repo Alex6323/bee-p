@@ -66,28 +66,28 @@ impl Packable for Address {
         }
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
         match self {
             Self::Wots(address) => {
-                0u8.pack(buf)?;
-                address.pack(buf)?;
+                0u8.pack(writer)?;
+                address.pack(writer)?;
             }
             Self::Ed25519(address) => {
-                1u8.pack(buf)?;
-                address.pack(buf)?;
+                1u8.pack(writer)?;
+                address.pack(writer)?;
             }
         }
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        Ok(match u8::unpack(buf)? {
-            0 => Self::Wots(WotsAddress::unpack(buf)?),
-            1 => Self::Ed25519(Ed25519Address::unpack(buf)?),
+        Ok(match u8::unpack(reader)? {
+            0 => Self::Wots(WotsAddress::unpack(reader)?),
+            1 => Self::Ed25519(Ed25519Address::unpack(reader)?),
             _ => return Err(PackableError::InvalidVariant),
         })
     }

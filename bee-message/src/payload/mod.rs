@@ -39,33 +39,33 @@ impl Packable for Payload {
         }
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
         match self {
             Self::Transaction(payload) => {
-                0u32.pack(buf)?;
-                payload.pack(buf)?;
+                0u32.pack(writer)?;
+                payload.pack(writer)?;
             }
             Self::Milestone(payload) => {
-                1u32.pack(buf)?;
-                payload.pack(buf)?;
+                1u32.pack(writer)?;
+                payload.pack(writer)?;
             }
             Self::Indexation(payload) => {
-                2u32.pack(buf)?;
-                payload.pack(buf)?;
+                2u32.pack(writer)?;
+                payload.pack(writer)?;
             }
         }
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        Ok(match u32::unpack(buf)? {
-            0 => Self::Transaction(Box::new(Transaction::unpack(buf)?)),
-            1 => Self::Milestone(Box::new(Milestone::unpack(buf)?)),
-            2 => Self::Indexation(Box::new(Indexation::unpack(buf)?)),
+        Ok(match u32::unpack(reader)? {
+            0 => Self::Transaction(Box::new(Transaction::unpack(reader)?)),
+            1 => Self::Milestone(Box::new(Milestone::unpack(reader)?)),
+            2 => Self::Indexation(Box::new(Indexation::unpack(reader)?)),
             _ => return Err(PackableError::InvalidVariant),
         })
     }

@@ -45,17 +45,17 @@ impl Packable for MilestoneIndex {
         self.0.packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.0.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.0.pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        Ok(Self(u32::unpack(buf)?))
+        Ok(Self(u32::unpack(reader)?))
     }
 }
 

@@ -60,27 +60,27 @@ impl Packable for Transaction {
             + self.unlock_blocks.iter().map(|block| block.packed_len()).sum::<usize>()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.essence.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.essence.pack(writer)?;
 
-        (self.unlock_blocks.len() as u16).pack(buf)?;
+        (self.unlock_blocks.len() as u16).pack(writer)?;
         for unlock_block in self.unlock_blocks.as_ref() {
-            unlock_block.pack(buf)?;
+            unlock_block.pack(writer)?;
         }
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let essence = TransactionEssence::unpack(buf)?;
+        let essence = TransactionEssence::unpack(reader)?;
 
-        let unlock_blocks_len = u16::unpack(buf)? as usize;
+        let unlock_blocks_len = u16::unpack(reader)? as usize;
         let mut unlock_blocks = Vec::with_capacity(unlock_blocks_len);
         for _ in 0..unlock_blocks_len {
-            unlock_blocks.push(UnlockBlock::unpack(buf)?);
+            unlock_blocks.push(UnlockBlock::unpack(reader)?);
         }
 
         Ok(Self {

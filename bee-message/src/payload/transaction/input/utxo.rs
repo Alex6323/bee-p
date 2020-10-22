@@ -55,19 +55,19 @@ impl Packable for UTXOInput {
         self.id.packed_len() + self.index.packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.id.pack(buf)?;
-        self.index.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.id.pack(writer)?;
+        self.index.pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let id = TransactionId::unpack(buf)?;
-        let index = u16::unpack(buf)?;
+        let id = TransactionId::unpack(reader)?;
+        let index = u16::unpack(reader)?;
 
         Ok(Self::new(id, index).map_err(|_| PackableError::InvalidSyntax)?)
     }

@@ -45,28 +45,28 @@ impl Packable for UnlockBlock {
         }
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
         match self {
             Self::Signature(unlock) => {
-                0u8.pack(buf)?;
-                unlock.pack(buf)?;
+                0u8.pack(writer)?;
+                unlock.pack(writer)?;
             }
             Self::Reference(unlock) => {
-                1u8.pack(buf)?;
-                unlock.pack(buf)?;
+                1u8.pack(writer)?;
+                unlock.pack(writer)?;
             }
         }
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        Ok(match u8::unpack(buf)? {
-            0 => Self::Signature(SignatureUnlock::unpack(buf)?),
-            1 => Self::Reference(ReferenceUnlock::unpack(buf)?),
+        Ok(match u8::unpack(reader)? {
+            0 => Self::Signature(SignatureUnlock::unpack(reader)?),
+            1 => Self::Reference(ReferenceUnlock::unpack(reader)?),
             _ => return Err(PackableError::InvalidVariant),
         })
     }

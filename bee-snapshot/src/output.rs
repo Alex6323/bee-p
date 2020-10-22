@@ -26,22 +26,22 @@ impl Packable for Output {
         self.message_id.packed_len() + self.output_id.packed_len() + self.output.packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.message_id.pack(buf)?;
-        self.output_id.pack(buf)?;
-        self.output.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.message_id.pack(writer)?;
+        self.output_id.pack(writer)?;
+        self.output.pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
         Ok(Self {
-            message_id: MessageId::unpack(buf)?,
-            output_id: UTXOInput::unpack(buf)?,
-            output: SignatureLockedSingleOutput::unpack(buf)?,
+            message_id: MessageId::unpack(reader)?,
+            output_id: UTXOInput::unpack(reader)?,
+            output: SignatureLockedSingleOutput::unpack(reader)?,
         })
     }
 }

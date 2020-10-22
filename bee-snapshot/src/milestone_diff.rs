@@ -25,34 +25,34 @@ impl Packable for MilestoneDiff {
         self.index.packed_len() + 0u64.packed_len() + 0u64.packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.index.pack(buf)?;
-        (self.created.len() as u64).pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.index.pack(writer)?;
+        (self.created.len() as u64).pack(writer)?;
         for output in self.created.iter() {
-            output.pack(buf)?;
+            output.pack(writer)?;
         }
-        (self.consumed.len() as u64).pack(buf)?;
+        (self.consumed.len() as u64).pack(writer)?;
         for spent in self.consumed.iter() {
-            spent.pack(buf)?;
+            spent.pack(writer)?;
         }
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let index = u32::unpack(buf)?;
-        let created_count = u64::unpack(buf)? as usize;
+        let index = u32::unpack(reader)?;
+        let created_count = u64::unpack(reader)? as usize;
         let mut created = Vec::with_capacity(created_count);
         for _ in 0..created_count {
-            created.push(Output::unpack(buf)?);
+            created.push(Output::unpack(reader)?);
         }
-        let consumed_count = u64::unpack(buf)? as usize;
+        let consumed_count = u64::unpack(reader)? as usize;
         let mut consumed = Vec::with_capacity(consumed_count);
         for _ in 0..consumed_count {
-            consumed.push(Spent::unpack(buf)?);
+            consumed.push(Spent::unpack(reader)?);
         }
 
         Ok(Self {

@@ -63,55 +63,55 @@ impl Packable for TransactionEssence {
             + self.payload.iter().map(|payload| payload.packed_len()).sum::<usize>()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        0u8.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        0u8.pack(writer)?;
 
-        (self.inputs.len() as u16).pack(buf)?;
+        (self.inputs.len() as u16).pack(writer)?;
         for input in self.inputs.iter() {
-            input.pack(buf)?;
+            input.pack(writer)?;
         }
 
-        (self.outputs.len() as u16).pack(buf)?;
+        (self.outputs.len() as u16).pack(writer)?;
         for output in self.outputs.iter() {
-            output.pack(buf)?;
+            output.pack(writer)?;
         }
 
         match self.payload {
             Some(ref payload) => {
-                (payload.packed_len() as u32).pack(buf)?;
-                payload.pack(buf)?;
+                (payload.packed_len() as u32).pack(writer)?;
+                payload.pack(writer)?;
             }
-            None => 0u32.pack(buf)?,
+            None => 0u32.pack(writer)?,
         }
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let essence_type = u8::unpack(buf)?;
+        let essence_type = u8::unpack(reader)?;
 
         if essence_type != 0u8 {
             return Err(PackableError::InvalidType(0, essence_type));
         }
 
-        let inputs_len = u16::unpack(buf)? as usize;
+        let inputs_len = u16::unpack(reader)? as usize;
         let mut inputs = Vec::with_capacity(inputs_len);
         for _ in 0..inputs_len {
-            inputs.push(Input::unpack(buf)?);
+            inputs.push(Input::unpack(reader)?);
         }
 
-        let outputs_len = u16::unpack(buf)? as usize;
+        let outputs_len = u16::unpack(reader)? as usize;
         let mut outputs = Vec::with_capacity(outputs_len);
         for _ in 0..outputs_len {
-            outputs.push(Output::unpack(buf)?);
+            outputs.push(Output::unpack(reader)?);
         }
 
-        let payload_len = u32::unpack(buf)? as usize;
+        let payload_len = u32::unpack(reader)? as usize;
         let payload = if payload_len > 0 {
-            let payload = Payload::unpack(buf)?;
+            let payload = Payload::unpack(reader)?;
             if payload_len != payload.packed_len() {
                 return Err(PackableError::InvalidAnnouncedLength(payload_len, payload.packed_len()));
             }

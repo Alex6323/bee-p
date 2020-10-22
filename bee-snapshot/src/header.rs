@@ -66,40 +66,40 @@ impl Packable for SnapshotHeader {
         +32+self.sep_index.packed_len()+self.sep_id.packed_len()+self.ledger_index.packed_len()+self.ledger_id.packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        SNAPSHOT_VERSION.pack(buf)?;
-        self.kind.pack(buf)?;
-        self.timestamp.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        SNAPSHOT_VERSION.pack(writer)?;
+        self.kind.pack(writer)?;
+        self.timestamp.pack(writer)?;
         // TODO packable on bytes
-        buf.write_all(&self.coordinator)?;
-        // self.coordinator.pack(buf)?;
-        self.sep_index.pack(buf)?;
-        self.sep_id.pack(buf)?;
-        self.ledger_index.pack(buf)?;
-        self.ledger_id.pack(buf)?;
+        writer.write_all(&self.coordinator)?;
+        // self.coordinator.pack(writer)?;
+        self.sep_index.pack(writer)?;
+        self.sep_id.pack(writer)?;
+        self.ledger_index.pack(writer)?;
+        self.ledger_id.pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let version = u8::unpack(buf)?;
+        let version = u8::unpack(reader)?;
 
         if version != SNAPSHOT_VERSION {
             return Err(PackableError::InvalidVersion(SNAPSHOT_VERSION, version));
         }
 
-        let kind = Kind::unpack(buf)?;
-        let timestamp = u64::unpack(buf)?;
+        let kind = Kind::unpack(reader)?;
+        let timestamp = u64::unpack(reader)?;
         // TODO pk type
         let mut coordinator = [0u8; 32];
-        buf.read_exact(&mut coordinator)?;
-        let sep_index = u32::unpack(buf)?;
-        let sep_id = MessageId::unpack(buf)?;
-        let ledger_index = u32::unpack(buf)?;
-        let ledger_id = MessageId::unpack(buf)?;
+        reader.read_exact(&mut coordinator)?;
+        let sep_index = u32::unpack(reader)?;
+        let sep_id = MessageId::unpack(reader)?;
+        let ledger_index = u32::unpack(reader)?;
+        let ledger_id = MessageId::unpack(reader)?;
 
         Ok(Self {
             kind,

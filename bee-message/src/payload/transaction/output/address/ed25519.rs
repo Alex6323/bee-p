@@ -74,18 +74,18 @@ impl Packable for Ed25519Address {
         ADDRESS_LENGTH
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        buf.write_all(&self.0)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        writer.write_all(&self.0)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
         let mut bytes = [0u8; ADDRESS_LENGTH];
-        buf.read_exact(&mut bytes)?;
+        reader.read_exact(&mut bytes)?;
 
         Ok(Self(bytes))
     }

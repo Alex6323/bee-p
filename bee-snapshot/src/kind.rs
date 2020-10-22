@@ -27,17 +27,17 @@ impl Packable for Kind {
         0u8.packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        (*self as u8).pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        (*self as u8).pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        Ok(match u8::unpack(buf)? {
+        Ok(match u8::unpack(reader)? {
             0 => Kind::Full,
             1 => Kind::Delta,
             _ => return Err(PackableError::InvalidVariant),

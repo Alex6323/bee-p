@@ -55,41 +55,41 @@ impl Packable for Message {
             + 0u64.packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        1u8.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        1u8.pack(writer)?;
 
-        self.parent1.pack(buf)?;
-        self.parent2.pack(buf)?;
+        self.parent1.pack(writer)?;
+        self.parent2.pack(writer)?;
 
-        (self.payload.packed_len() as u32).pack(buf)?;
-        self.payload.pack(buf)?;
+        (self.payload.packed_len() as u32).pack(writer)?;
+        self.payload.pack(writer)?;
 
-        self.nonce.pack(buf)?;
+        self.nonce.pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let version = u8::unpack(buf)?;
+        let version = u8::unpack(reader)?;
 
         if version != 1u8 {
             return Err(PackableError::InvalidVersion(1, version));
         }
 
-        let parent1 = MessageId::unpack(buf)?;
-        let parent2 = MessageId::unpack(buf)?;
+        let parent1 = MessageId::unpack(reader)?;
+        let parent2 = MessageId::unpack(reader)?;
 
-        let payload_len = u32::unpack(buf)? as usize;
-        let payload = Payload::unpack(buf)?;
+        let payload_len = u32::unpack(reader)? as usize;
+        let payload = Payload::unpack(reader)?;
 
         if payload_len != payload.packed_len() {
             return Err(PackableError::InvalidAnnouncedLength(payload_len, payload.packed_len()));
         }
 
-        let nonce = u64::unpack(buf)?;
+        let nonce = u64::unpack(reader)?;
 
         Ok(Self {
             parent1,

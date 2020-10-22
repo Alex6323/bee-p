@@ -88,60 +88,60 @@ impl Packable for LocalSnapshot {
     }
 
     // TODO stream ?
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.header.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.header.pack(writer)?;
 
-        (self.solid_entry_points.len() as u64).pack(buf)?;
+        (self.solid_entry_points.len() as u64).pack(writer)?;
         if self.header.kind() == Kind::Full {
-            (self.outputs.len() as u64).pack(buf)?;
+            (self.outputs.len() as u64).pack(writer)?;
         }
-        (self.milestone_diffs.len() as u64).pack(buf)?;
+        (self.milestone_diffs.len() as u64).pack(writer)?;
 
         for s in self.solid_entry_points.iter() {
-            s.pack(buf)?;
+            s.pack(writer)?;
         }
         if self.header.kind() == Kind::Full {
             for o in self.outputs.iter() {
-                o.pack(buf)?;
+                o.pack(writer)?;
             }
         }
         for m in self.milestone_diffs.iter() {
-            m.pack(buf)?;
+            m.pack(writer)?;
         }
 
         Ok(())
     }
 
     // TODO stream ?
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let header = SnapshotHeader::unpack(buf)?;
+        let header = SnapshotHeader::unpack(reader)?;
 
-        let sep_count = u64::unpack(buf)? as usize;
+        let sep_count = u64::unpack(reader)? as usize;
         let output_count = if header.kind() == Kind::Full {
-            u64::unpack(buf)? as usize
+            u64::unpack(reader)? as usize
         } else {
             0
         };
-        let milestone_diff_count = u64::unpack(buf)? as usize;
+        let milestone_diff_count = u64::unpack(reader)? as usize;
 
         let mut solid_entry_points = HashSet::with_capacity(sep_count);
         for _ in 0..sep_count {
-            solid_entry_points.insert(MessageId::unpack(buf)?);
+            solid_entry_points.insert(MessageId::unpack(reader)?);
         }
 
         let mut outputs = Vec::with_capacity(output_count);
         if header.kind() == Kind::Full {
             for _ in 0..output_count {
-                outputs.push(Output::unpack(buf)?);
+                outputs.push(Output::unpack(reader)?);
             }
         }
 
         let mut milestone_diffs = Vec::with_capacity(milestone_diff_count);
         for _ in 0..milestone_diff_count {
-            milestone_diffs.push(MilestoneDiff::unpack(buf)?);
+            milestone_diffs.push(MilestoneDiff::unpack(reader)?);
         }
 
         Ok(Self {

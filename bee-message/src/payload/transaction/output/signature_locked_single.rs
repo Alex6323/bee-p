@@ -42,20 +42,20 @@ impl Packable for SignatureLockedSingleOutput {
         self.address.packed_len() + u64::from(self.amount).packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.address.pack(buf)?;
-        u64::from(self.amount).pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.address.pack(writer)?;
+        u64::from(self.amount).pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let address = Address::unpack(buf)?;
+        let address = Address::unpack(reader)?;
         // TODO unwrap
-        let amount = NonZeroU64::new(u64::unpack(buf)?).unwrap();
+        let amount = NonZeroU64::new(u64::unpack(reader)?).unwrap();
 
         Ok(Self { address, amount })
     }

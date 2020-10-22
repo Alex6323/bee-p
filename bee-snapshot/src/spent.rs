@@ -24,20 +24,20 @@ impl Packable for Spent {
         self.output.packed_len() + self.transaction_id.packed_len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.output.pack(buf)?;
-        self.transaction_id.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.output.pack(writer)?;
+        self.transaction_id.pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
         Ok(Self {
-            output: Output::unpack(buf)?,
-            transaction_id: TransactionId::unpack(buf)?,
+            output: Output::unpack(reader)?,
+            transaction_id: TransactionId::unpack(reader)?,
         })
     }
 }
