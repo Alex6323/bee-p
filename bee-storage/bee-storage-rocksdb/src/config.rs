@@ -16,26 +16,23 @@ use crate::{compaction::CompactionStyle, compression::CompressionType};
 
 use serde::Deserialize;
 
-const DEFAULT_PATH: &str = "";
+const DEFAULT_PATH: &str = "../bee-storage/dbfolder";
 const DEFAULT_CREATE_IF_MISSING: bool = true;
 const DEFAULT_CREATE_MISSING_COLUMN_FAMILIES: bool = true;
 const DEFAULT_ENABLE_STATISTICS: bool = true;
-const DEFAULT_INCREASE_PARALLELISM: i32 = 0;
 const DEFAULT_OPTIMIZE_FOR_POINT_LOOKUP: u64 = 0;
 const DEFAULT_OPTIMIZE_LEVEL_STYLE_COMPACTION: usize = 0;
 const DEFAULT_OPTIMIZE_UNIVERSAL_STYLE_COMPACTION: usize = 0;
 const DEFAULT_SET_ADVISE_RANDOM_ON_OPEN: bool = true;
 const DEFAULT_SET_ALLOW_CONCURRENT_MEMTABLE_WRITE: bool = true;
-const DEFAULT_SET_ALLOW_MMAP_READS: bool = true;
-const DEFAULT_SET_ALLOW_MMAP_WRITES: bool = true;
+const DEFAULT_SET_ALLOW_MMAP_READS: bool = false;
+const DEFAULT_SET_ALLOW_MMAP_WRITES: bool = false;
 const DEFAULT_SET_ATOMIC_FLUSH: bool = true;
 const DEFAULT_SET_BYTES_PER_SYNC: u64 = 0;
 const DEFAULT_SET_COMPACTION_READAHEAD_SIZE: usize = 0;
 const DEFAULT_SET_COMPACTION_STYLE: CompactionStyle = CompactionStyle::Level;
-const DEFAULT_SET_MAX_WRITE_BUFFER_NUMBER: i32 = 0;
-const DEFAULT_SET_MAX_BACKGROUND_COMPACTIONS: i32 = 0;
-const DEFAULT_SET_MAX_BACKGROUND_FLUSHES: i32 = 0;
-const DEFAULT_SET_DISABLE_AUTO_COMPACTIONS: bool = true;
+const DEFAULT_SET_MAX_WRITE_BUFFER_NUMBER: i32 = 2;
+const DEFAULT_SET_DISABLE_AUTO_COMPACTIONS: bool = false;
 const DEFAULT_SET_COMPRESSION_TYPE: CompressionType = CompressionType::None;
 
 #[derive(Default, Deserialize)]
@@ -57,8 +54,6 @@ pub struct RocksDBConfigBuilder {
     set_compaction_readahead_size: Option<usize>,
     set_compaction_style: Option<CompactionStyle>,
     set_max_write_buffer_number: Option<i32>,
-    set_max_background_compactions: Option<i32>,
-    set_max_background_flushes: Option<i32>,
     set_disable_auto_compactions: Option<bool>,
     set_compression_type: Option<CompressionType>,
 }
@@ -82,7 +77,7 @@ impl From<RocksDBConfigBuilder> for RocksDBConfig {
                 .create_missing_column_families
                 .unwrap_or(DEFAULT_CREATE_MISSING_COLUMN_FAMILIES),
             enable_statistics: builder.enable_statistics.unwrap_or(DEFAULT_ENABLE_STATISTICS),
-            increase_parallelism: builder.increase_parallelism.unwrap_or(DEFAULT_INCREASE_PARALLELISM),
+            increase_parallelism: builder.increase_parallelism.unwrap_or(num_cpus::get() as i32),
             optimize_for_point_lookup: builder
                 .optimize_for_point_lookup
                 .unwrap_or(DEFAULT_OPTIMIZE_FOR_POINT_LOOKUP),
@@ -109,12 +104,6 @@ impl From<RocksDBConfigBuilder> for RocksDBConfig {
             set_max_write_buffer_number: builder
                 .set_max_write_buffer_number
                 .unwrap_or(DEFAULT_SET_MAX_WRITE_BUFFER_NUMBER),
-            set_max_background_compactions: builder
-                .set_max_background_compactions
-                .unwrap_or(DEFAULT_SET_MAX_BACKGROUND_COMPACTIONS),
-            set_max_background_flushes: builder
-                .set_max_background_flushes
-                .unwrap_or(DEFAULT_SET_MAX_BACKGROUND_FLUSHES),
             set_disable_auto_compactions: builder
                 .set_disable_auto_compactions
                 .unwrap_or(DEFAULT_SET_DISABLE_AUTO_COMPACTIONS),
@@ -142,8 +131,6 @@ pub struct RocksDBConfig {
     pub(crate) set_compaction_readahead_size: usize,
     pub(crate) set_compaction_style: CompactionStyle,
     pub(crate) set_max_write_buffer_number: i32,
-    pub(crate) set_max_background_compactions: i32,
-    pub(crate) set_max_background_flushes: i32,
     pub(crate) set_disable_auto_compactions: bool,
     pub(crate) set_compression_type: CompressionType,
 }

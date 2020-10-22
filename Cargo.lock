@@ -292,6 +292,7 @@ dependencies = [
  "bee-protocol",
  "bee-storage",
  "bee-ternary",
+ "num_cpus",
  "rocksdb",
  "serde",
 ]
