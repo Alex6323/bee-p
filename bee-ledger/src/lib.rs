@@ -15,10 +15,7 @@ pub mod event;
 mod merkle_hasher;
 mod metadata;
 mod traversal;
-pub mod whiteflag;
 mod worker;
-
-use crate::state::LedgerState;
 
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
@@ -35,12 +32,11 @@ use std::sync::Arc;
 
 pub fn init<N: Node>(
     index: u32,
-    state: LedgerState,
     coo_config: ProtocolCoordinatorConfig,
     node_builder: N::Builder,
     bus: Arc<Bus<'static>>,
 ) -> N::Builder {
-    node_builder.with_worker_cfg::<LedgerWorker>((MilestoneIndex(index), state, coo_config, bus.clone()))
+    node_builder.with_worker_cfg::<LedgerWorker>((MilestoneIndex(index), coo_config, bus.clone()))
 }
 
 pub fn events<N: Node>(node: &N, bus: Arc<Bus<'static>>) {

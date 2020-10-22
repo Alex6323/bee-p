@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::Hash;
+use bee_message::MessageId;
 use bee_protocol::MilestoneIndex;
 
 /// White flag metadata of a milestone confirmation.
@@ -27,7 +27,7 @@ pub(crate) struct WhiteFlagMetadata {
     /// The number of tails which were excluded as they were conflicting with the ledger state.
     pub(crate) num_tails_conflicting: usize,
     /// The tails of bundles which mutate the ledger in the order in which they were applied.
-    pub(crate) tails_included: Vec<Hash>,
+    pub(crate) tails_included: Vec<MessageId>,
 }
 
 impl WhiteFlagMetadata {

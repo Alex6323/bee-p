@@ -11,16 +11,14 @@
 
 use crate::{
     event::MilestoneConfirmed,
-    whiteflag::{
-        merkle_hasher::MerkleHasher,
-        metadata::WhiteFlagMetadata,
-        traversal::{visit_bundles_dfs, Error as TraversalError},
-    },
+    merkle_hasher::MerkleHasher,
+    metadata::WhiteFlagMetadata,
+    traversal::{visit_dfs, Error as TraversalError},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{event::Bus, node::Node, worker::Worker};
-use bee_message::prelude::{Message, Payload};
+use bee_message::prelude::{Address, Message, Payload};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, Milestone, MilestoneIndex, TangleWorker};
 use bee_storage::storage::Backend;
 
@@ -54,7 +52,6 @@ fn confirm<B: Backend>(
     tangle: &MsTangle<B>,
     message: Message,
     index: &mut MilestoneIndex,
-    // state: &mut LedgerState,
     coo_config: &ProtocolCoordinatorConfig,
     bus: &Arc<Bus<'static>>,
 ) -> Result<(), Error> {
@@ -70,7 +67,7 @@ fn confirm<B: Backend>(
 
     let mut confirmation = WhiteFlagMetadata::new(MilestoneIndex(milestone.index()), milestone.timestamp());
 
-    match visit_bundles_dfs(tangle, state, *milestone.hash(), &mut confirmation) {
+    match visit_dfs(tangle, *milestone.hash(), &mut confirmation) {
         Ok(_) => {
             if !MerkleHasher::<Blake2b>::new()
                 .digest(&confirmation.tails_included)
@@ -140,11 +137,7 @@ fn confirm<B: Backend>(
 
 #[async_trait]
 impl<N: Node> Worker<N> for LedgerWorker {
-    type Config = (
-        MilestoneIndex,
-        ProtocolCoordinatorConfig,
-        Arc<Bus<'static>>,
-    );
+    type Config = (MilestoneIndex, ProtocolCoordinatorConfig, Arc<Bus<'static>>);
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
@@ -171,8 +164,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
                         if confirm(&tangle, milestone, &mut index, &coo_config, &bus).is_err() {
                             panic!("Error while confirming milestone, aborting.");
                         }
-                    }
-                    // LedgerWorkerEvent::GetBalance(address, sender) => get_balance(&state, address, sender),
+                    } // LedgerWorkerEvent::GetBalance(address, sender) => get_balance(&state, address, sender),
                 }
             }
 

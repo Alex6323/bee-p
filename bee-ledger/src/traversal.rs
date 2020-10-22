@@ -9,9 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{state::LedgerState, whiteflag::metadata::WhiteFlagMetadata};
+use crate::metadata::WhiteFlagMetadata;
 
-use bee_crypto::ternary::Hash;
+use bee_message::{Message, MessageId};
 use bee_protocol::tangle::MsTangle;
 use bee_storage::storage::Backend;
 
@@ -20,124 +20,108 @@ use std::collections::HashSet;
 const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 #[derive(Debug)]
-pub(crate) enum Error {}
-
-#[inline]
-fn on_bundle<B: Backend>(
-    tangle: &MsTangle<B>,
-    state: &mut LedgerState,
-    hash: &Hash,
-    bundle: &Bundle,
-    metadata: &mut WhiteFlagMetadata,
-) {
-    let mut conflicting = false;
-    let (mutates, mutations) = bundle.ledger_mutations();
-
-    if !mutates {
-        metadata.num_tails_zero_value += 1;
-    } else {
-        // First pass to look for conflicts.
-        for (address, diff) in mutations.iter() {
-            let balance = state.get_or_zero(&address) as i64 + diff;
-
-            if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
-                metadata.num_tails_conflicting += 1;
-                conflicting = true;
-                break;
-            }
-        }
-
-        if !conflicting {
-            // Second pass to mutate the state.
-            for (address, diff) in mutations {
-                state.apply_single_diff(address.clone(), diff);
-                metadata.diff.apply_single_diff(address, diff);
-            }
-
-            metadata.tails_included.push(*hash);
-        }
-    }
-
-    metadata.num_tails_referenced += 1;
-
-    // TODO this only actually confirm tails
-    tangle.update_metadata(&hash, |meta| {
-        meta.flags_mut().set_conflicting(conflicting);
-        meta.confirm();
-        meta.set_milestone_index(metadata.index);
-        // TODO Set OTRSI, ...
-        // TODO increment metrics confirmed, zero, value and conflict.
-    });
+pub(crate) enum Error {
+    MissingMessage,
 }
 
-pub(crate) fn visit_bundles_dfs<B: Backend>(
+#[inline]
+fn on_message<B: Backend>(
     tangle: &MsTangle<B>,
-    state: &mut LedgerState,
-    root: Hash,
+    message_id: &MessageId,
+    message: &Message,
+    metadata: &mut WhiteFlagMetadata,
+) {
+    // let mut conflicting = false;
+    // let (mutates, mutations) = bundle.ledger_mutations();
+    //
+    // if !mutates {
+    //     metadata.num_tails_zero_value += 1;
+    // } else {
+    //     // First pass to look for conflicts.
+    //     for (address, diff) in mutations.iter() {
+    //         let balance = state.get_or_zero(&address) as i64 + diff;
+    //
+    //         if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
+    //             metadata.num_tails_conflicting += 1;
+    //             conflicting = true;
+    //             break;
+    //         }
+    //     }
+    //
+    //     if !conflicting {
+    //         // Second pass to mutate the state.
+    //         for (address, diff) in mutations {
+    //             state.apply_single_diff(address.clone(), diff);
+    //             metadata.diff.apply_single_diff(address, diff);
+    //         }
+    //
+    //         metadata.tails_included.push(*message_id);
+    //     }
+    // }
+    //
+    // metadata.num_tails_referenced += 1;
+    //
+    // // TODO this only actually confirm tails
+    // tangle.update_metadata(&message_id, |meta| {
+    //     meta.flags_mut().set_conflicting(conflicting);
+    //     meta.confirm();
+    //     meta.set_milestone_index(metadata.index);
+    //     // TODO Set OTRSI, ...
+    //     // TODO increment metrics confirmed, zero, value and conflict.
+    // });
+}
+
+pub(crate) async fn visit_dfs<B: Backend>(
+    tangle: &MsTangle<B>,
+    root: MessageId,
     metadata: &mut WhiteFlagMetadata,
 ) -> Result<(), Error> {
-    let mut hashes = vec![root];
+    let mut messages_ids = vec![root];
     let mut visited = HashSet::new();
 
-    while let Some(hash) = hashes.last() {
-        let meta = match tangle.get_metadata(hash) {
+    while let Some(message_id) = messages_ids.last() {
+        let meta = match tangle.get_metadata(message_id) {
             Some(meta) => meta,
             None => {
-                if !tangle.is_solid_entry_point(hash) {
-                    return Err(Error::MissingBundle);
+                if !tangle.is_solid_entry_point(message_id) {
+                    return Err(Error::MissingMessage);
                 } else {
-                    visited.insert(*hash);
-                    hashes.pop();
+                    visited.insert(*message_id);
+                    messages_ids.pop();
                     continue;
                 }
             }
         };
 
-        if !meta.flags().is_tail() {
-            return Err(Error::NotATail);
-        }
-
         if meta.flags().is_confirmed() {
-            visited.insert(*hash);
-            hashes.pop();
+            visited.insert(*message_id);
+            messages_ids.pop();
             continue;
         }
 
         // TODO pass match to avoid repetitions
-        match load_bundle_builder(tangle, hash) {
-            Some(builder) => {
-                let parent1 = builder.parent1();
-                let parent2 = builder.parent2();
+        match tangle.get(message_id).await {
+            Some(message) => {
+                let parent1 = message.parent1();
+                let parent2 = message.parent2();
 
                 if visited.contains(parent1) && visited.contains(parent2) {
                     // TODO check valid and strict semantic
-                    let bundle = if meta.flags().is_valid() {
-                        // We know the bundle is valid so we can safely skip validation rules.
-                        unsafe { builder.build() }
-                    } else {
-                        match builder.validate() {
-                            Ok(builder) => {
-                                tangle.update_metadata(&hash, |meta| meta.flags_mut().set_valid(true));
-                                builder.build()
-                            }
-                            Err(e) => return Err(Error::InvalidBundle(e)),
-                        }
-                    };
-                    on_bundle(tangle, state, hash, &bundle, metadata);
-                    visited.insert(*hash);
-                    hashes.pop();
+                    on_message(tangle, message_id, &message, metadata);
+                    visited.insert(*message_id);
+                    messages_ids.pop();
                 } else if !visited.contains(parent1) {
-                    hashes.push(*parent1);
+                    messages_ids.push(*parent1);
                 } else if !visited.contains(parent2) {
-                    hashes.push(*parent2);
+                    messages_ids.push(*parent2);
                 }
             }
             None => {
-                if !tangle.is_solid_entry_point(hash) {
-                    return Err(Error::MissingBundle);
+                if !tangle.is_solid_entry_point(message_id) {
+                    return Err(Error::MissingMessage);
                 } else {
-                    visited.insert(*hash);
-                    hashes.pop();
+                    visited.insert(*message_id);
+                    messages_ids.pop();
                 }
             }
         }
