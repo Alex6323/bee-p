@@ -9,21 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::{worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
+use async_trait::async_trait;
 
-mod web_service;
-mod worker;
-pub mod config;
+#[async_trait]
+pub trait WebService {
+    type Input;
+    type Output;
 
-use log::{info, error, warn};
-use crate::config::{ApiConfig, ApiConfigBuilder};
-use bee_common_ext::node::NodeBuilder;
-use bee_common::worker::Error;
-
-pub async fn init<N: Node>(
-    config: ApiConfig,
-    mut node_builder: N::Builder,
-) -> N::Builder {
-    node_builder.with_worker_cfg::<worker::ApiWorker>(config)
+    async fn message_by_hash(input: Self::Input) -> Self::Output;
 }

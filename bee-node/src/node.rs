@@ -13,6 +13,7 @@
 
 use crate::{banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin};
 
+use bee_api::config::ApiConfig;
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{
     event::Bus,
@@ -95,6 +96,9 @@ impl<B: Backend> NodeBuilder<B> {
             node_builder,
             bus.clone(),
         );
+
+        info!("Initializing REST API...");
+        node_builder = bee_api::init::<BeeNode<B>>(ApiConfig::build().finish(), node_builder).await;
 
         info!("Initializing plugins...");
         plugin::init(bus.clone());

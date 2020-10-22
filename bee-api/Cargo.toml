@@ -11,3 +11,20 @@ keywords = ["iota", "tangle", "bee", "framework", "api"]
 homepage = "https://www.iota.org"
 
 [dependencies]
+
+bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
+bee-common-ext = { path = "../bee-common-ext" }
+bee-message = { path = "../bee-message" }
+bee-protocol = { path = "../bee-protocol" }
+bee-tangle = { path = "../bee-tangle" }
+
+async-trait = "0.1"
+flume = "0.9"
+futures = "0.3"
+futures-util = "0.3"
+hex = "0.4"
+log = "0.4"
+serde = { version = "1.0", features = ["derive" ] }
+serde_json = "1.0.55"
+tokio = { version = "0.2", features = ["full"] }
+warp = "0.2.5"
