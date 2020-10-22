@@ -14,7 +14,7 @@ use crate::{
     packet::{tlv_into_bytes, Heartbeat, Message as MessagePacket, MessageRequest, MilestoneRequest, Packet},
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{MessageRequesterWorkerEvent, MilestoneRequesterWorkerEvent},
+    worker::{MessageRequesterWorkerEvent, MilestoneRequesterWorkerEvent, RequestedMessages, RequestedMilestones},
 };
 
 use bee_message::prelude::MessageId;
@@ -62,12 +62,13 @@ impl Protocol {
 
     pub(crate) fn request_milestone<B: Backend>(
         tangle: &MsTangle<B>,
-        message_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        milestone_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        requested_milestones: &RequestedMilestones,
         index: MilestoneIndex,
         to: Option<EndpointId>,
     ) {
-        if !Protocol::get().requested_milestones.contains_key(&index) && !tangle.contains_milestone(index) {
-            if let Err(e) = message_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
+        if !requested_milestones.contains_key(&index) && !tangle.contains_milestone(index) {
+            if let Err(e) = milestone_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
                 warn!("Requesting milestone failed: {}.", e);
             }
         }
@@ -75,10 +76,11 @@ impl Protocol {
 
     pub(crate) fn request_latest_milestone<B: Backend>(
         tangle: &MsTangle<B>,
-        message_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        milestone_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
+        requested_milestones: &RequestedMilestones,
         to: Option<EndpointId>,
     ) {
-        Protocol::request_milestone(tangle, message_requester, MilestoneIndex(0), to)
+        Protocol::request_milestone(tangle, milestone_requester, requested_milestones, MilestoneIndex(0), to)
     }
 
     // MessageRequest
@@ -86,12 +88,13 @@ impl Protocol {
     pub(crate) async fn request_message<B: Backend>(
         tangle: &MsTangle<B>,
         message_requester: &flume::Sender<MessageRequesterWorkerEvent>,
+        requested_messages: &RequestedMessages,
         message_id: MessageId,
         index: MilestoneIndex,
     ) {
         if !tangle.contains(&message_id).await
             && !tangle.is_solid_entry_point(&message_id)
-            && !Protocol::get().requested_messages.contains_key(&message_id)
+            && !requested_messages.contains_key(&message_id)
         {
             if let Err(e) = message_requester.send(MessageRequesterWorkerEvent(message_id, index)) {
                 warn!("Requesting message failed: {}.", e);

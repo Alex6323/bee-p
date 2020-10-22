@@ -13,7 +13,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{MessageRequesterWorker, MessageRequesterWorkerEvent, TangleWorker},
+    worker::{MessageRequesterWorker, MessageRequesterWorkerEvent, RequestedMessages, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -36,6 +36,7 @@ pub(crate) struct MilestoneSolidifierWorker {
 async fn trigger_solidification_unchecked<B: Backend>(
     tangle: &MsTangle<B>,
     message_requester: &flume::Sender<MessageRequesterWorkerEvent>,
+    requested_messages: &RequestedMessages,
     target_index: MilestoneIndex,
     next_ms_index: &mut MilestoneIndex,
 ) {
@@ -52,7 +53,7 @@ async fn trigger_solidification_unchecked<B: Backend>(
                 |hash, _, metadata| {
                     (!metadata.flags().is_requested() || *hash == target_hash)
                         && !metadata.flags().is_solid()
-                        && !Protocol::get().requested_messages.contains_key(&hash)
+                        && !requested_messages.contains_key(&hash)
                 },
                 |_, _, _| {},
                 |_, _, _| {},
@@ -60,7 +61,14 @@ async fn trigger_solidification_unchecked<B: Backend>(
             );
 
             for missing_hash in missing {
-                Protocol::request_message(tangle, message_requester, missing_hash, target_index).await;
+                Protocol::request_message(
+                    tangle,
+                    message_requester,
+                    requested_messages,
+                    missing_hash,
+                    target_index,
+                )
+                .await;
             }
 
             *next_ms_index = target_index + MilestoneIndex(1);
@@ -89,6 +97,7 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
         let message_requester = node.worker::<MessageRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_messages = node.resource::<RequestedMessages>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -102,7 +111,14 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
                 save_index(index, &mut queue);
                 while let Some(index) = queue.pop() {
                     if index == next_ms_index {
-                        trigger_solidification_unchecked(&tangle, &message_requester, index, &mut next_ms_index).await;
+                        trigger_solidification_unchecked(
+                            &tangle,
+                            &message_requester,
+                            &*requested_messages,
+                            index,
+                            &mut next_ms_index,
+                        )
+                        .await;
                     } else {
                         queue.push(index);
                         break;

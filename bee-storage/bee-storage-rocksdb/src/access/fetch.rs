@@ -10,7 +10,6 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_crypto::ternary::Hash;
-// use bee_ledger::{diff::LedgerDiff, state::LedgerState};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Fetch, persistable::Persistable};
 
@@ -34,52 +33,6 @@ impl Fetch<Hash, MessageMetadata> for Storage {
         }
     }
 }
-
-// #[async_trait::async_trait]
-// impl Fetch<MilestoneIndex, LedgerDiff> for Storage {
-//     type Error = OpError;
-//     async fn fetch(&self, milestone_index: &MilestoneIndex) -> Result<Option<LedgerDiff>, OpError>
-//     where
-//         Self: Sized,
-//     {
-//         let ms_index_to_ledger_diff = self.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
-//         let mut index_buf: Vec<u8> = Vec::new();
-//         milestone_index.write_to(&mut index_buf);
-//         if let Some(res) = self
-//             .inner
-//             .get_cf(&ms_index_to_ledger_diff, index_buf.as_slice())
-//             .unwrap()
-//         {
-//             let ledger_diff: LedgerDiff = LedgerDiff::read_from(res.as_slice());
-//             Ok(Some(ledger_diff))
-//         } else {
-//             Ok(None)
-//         }
-//     }
-// }
-//
-// #[async_trait::async_trait]
-// impl Fetch<MilestoneIndex, LedgerState> for Storage {
-//     type Error = OpError;
-//     async fn fetch(&self, milestone_index: &MilestoneIndex) -> Result<Option<LedgerState>, OpError>
-//     where
-//         Self: Sized,
-//     {
-//         let ms_index_to_ledger_state = self.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_STATE).unwrap();
-//         let mut index_buf: Vec<u8> = Vec::new();
-//         milestone_index.write_to(&mut index_buf);
-//         if let Some(res) = self
-//             .inner
-//             .get_cf(&ms_index_to_ledger_state, index_buf.as_slice())
-//             .unwrap()
-//         {
-//             let ledger_state: LedgerState = LedgerState::read_from(res.as_slice());
-//             Ok(Some(ledger_state))
-//         } else {
-//             Ok(None)
-//         }
-//     }
-// }
 
 #[async_trait::async_trait]
 impl Fetch<Hash, MilestoneIndex> for Storage {

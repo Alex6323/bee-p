@@ -10,7 +10,6 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_crypto::ternary::Hash;
-// use bee_ledger::{diff::LedgerDiff, state::LedgerState};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{
     access::{ApplyBatch, Batch, BatchBuilder},
@@ -70,60 +69,6 @@ impl<'a> BatchBuilder<'a, Storage, Hash, MessageMetadata> for StorageBatch<'a> {
         Ok(self)
     }
 }
-
-// impl<'a> BatchBuilder<'a, Storage, MilestoneIndex, LedgerDiff> for StorageBatch<'a> {
-//     type Error = OpError;
-//     fn try_insert(mut self, ms_index: &MilestoneIndex, ledger_diff: &LedgerDiff) -> Result<Self, (Self, Self::Error)> {
-//         let ms_index_to_ledger_diff = self.storage.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
-//         self.key_buf.clear();
-//         self.value_buf.clear();
-//         ms_index.write_to(&mut self.key_buf);
-//         ledger_diff.write_to(&mut self.value_buf);
-//         self.batch.put_cf(
-//             &ms_index_to_ledger_diff,
-//             self.key_buf.as_slice(),
-//             self.value_buf.as_slice(),
-//         );
-//         Ok(self)
-//     }
-//
-//     fn try_delete(mut self, ms_index: &MilestoneIndex) -> Result<Self, (Self, Self::Error)> {
-//         let ms_index_to_ledger_diff = self.storage.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_DIFF).unwrap();
-//         self.key_buf.clear();
-//         ms_index.write_to(&mut self.key_buf);
-//         self.batch.delete_cf(&ms_index_to_ledger_diff, self.key_buf.as_slice());
-//         Ok(self)
-//     }
-// }
-//
-// impl<'a> BatchBuilder<'a, Storage, MilestoneIndex, LedgerState> for StorageBatch<'a> {
-//     type Error = OpError;
-//     fn try_insert(
-//         mut self,
-//         ms_index: &MilestoneIndex,
-//         ledger_state: &LedgerState,
-//     ) -> Result<Self, (Self, Self::Error)> {
-//         let ms_index_to_ledger_state = self.storage.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_STATE).unwrap();
-//         self.key_buf.clear();
-//         self.value_buf.clear();
-//         ms_index.write_to(&mut self.key_buf);
-//         ledger_state.write_to(&mut self.value_buf);
-//         self.batch.put_cf(
-//             &ms_index_to_ledger_state,
-//             self.key_buf.as_slice(),
-//             self.value_buf.as_slice(),
-//         );
-//         Ok(self)
-//     }
-//
-//     fn try_delete(mut self, ms_index: &MilestoneIndex) -> Result<Self, (Self, Self::Error)> {
-//         let ms_index_to_ledger_state = self.storage.inner.cf_handle(MILESTONE_INDEX_TO_LEDGER_STATE).unwrap();
-//         self.key_buf.clear();
-//         ms_index.write_to(&mut self.key_buf);
-//         self.batch.delete_cf(&ms_index_to_ledger_state, self.key_buf.as_slice());
-//         Ok(self)
-//     }
-// }
 
 impl<'a> BatchBuilder<'a, Storage, Hash, MilestoneIndex> for StorageBatch<'a> {
     type Error = OpError;

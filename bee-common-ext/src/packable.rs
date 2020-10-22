@@ -34,9 +34,9 @@ pub enum Error {
 pub trait Packable {
     fn packed_len(&self) -> usize;
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), Error>;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Error>;
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, Error>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Error>
     where
         Self: Sized;
 }
@@ -48,15 +48,15 @@ macro_rules! impl_packable_for_num {
                 std::mem::size_of::<$ty>()
             }
 
-            fn pack<W: Write>(&self, buf: &mut W) -> Result<(), Error> {
-                buf.write_all(self.to_le_bytes().as_ref())?;
+            fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Error> {
+                writer.write_all(self.to_le_bytes().as_ref())?;
 
                 Ok(())
             }
 
-            fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, Error> {
+            fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Error> {
                 let mut bytes = [0; std::mem::size_of::<$ty>()];
-                buf.read_exact(&mut bytes)?;
+                reader.read_exact(&mut bytes)?;
                 Ok($ty::from_le_bytes(bytes))
             }
         }

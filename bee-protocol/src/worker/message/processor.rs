@@ -16,7 +16,7 @@ use crate::{
     tangle::{MessageMetadata, MsTangle},
     worker::{
         BroadcasterWorker, BroadcasterWorkerEvent, MessageRequesterWorker, MilestoneValidatorWorker,
-        MilestoneValidatorWorkerEvent, PropagatorWorker, PropagatorWorkerEvent, TangleWorker,
+        MilestoneValidatorWorkerEvent, PropagatorWorker, PropagatorWorkerEvent, RequestedMessages, TangleWorker,
     },
 };
 
@@ -66,6 +66,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         let message_requester = node.worker::<MessageRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_messages = node.resource::<RequestedMessages>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -99,7 +100,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 bytes.copy_from_slice(&blake2b.finalize_reset());
                 let message_id = MessageId::from(bytes);
 
-                let requested = Protocol::get().requested_messages.contains_key(&message_id);
+                let requested = requested_messages.contains_key(&message_id);
 
                 // TODO when PoW
                 // if !requested && message_id.weight() < config.mwm {
@@ -124,15 +125,29 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                     Protocol::get().metrics.new_messages_inc();
 
-                    match Protocol::get().requested_messages.remove(&message_id) {
+                    match requested_messages.remove(&message_id) {
                         Some((_, (index, _))) => {
                             // Message was requested.
                             let parent1 = message.parent1();
                             let parent2 = message.parent2();
 
-                            Protocol::request_message(&tangle, &message_requester, *parent1, index).await;
+                            Protocol::request_message(
+                                &tangle,
+                                &message_requester,
+                                &*requested_messages,
+                                *parent1,
+                                index,
+                            )
+                            .await;
                             if parent1 != parent2 {
-                                Protocol::request_message(&tangle, &message_requester, *parent2, index).await;
+                                Protocol::request_message(
+                                    &tangle,
+                                    &message_requester,
+                                    &*requested_messages,
+                                    *parent2,
+                                    index,
+                                )
+                                .await;
                             }
                         }
                         None => {

@@ -9,42 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::payload::transaction::Address;
+use crate::output::Output;
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_message::payload::transaction::TransactionId;
 
-use serde::{Deserialize, Serialize};
-
-use core::num::NonZeroU64;
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct SignatureLockedSingleOutput {
-    address: Address,
-    amount: NonZeroU64,
+pub(crate) struct Spent {
+    output: Output,
+    transaction_id: TransactionId,
 }
 
-impl SignatureLockedSingleOutput {
-    pub fn new(address: Address, amount: NonZeroU64) -> Self {
-        Self { address, amount }
-    }
-
-    pub fn address(&self) -> &Address {
-        &self.address
-    }
-
-    pub fn amount(&self) -> NonZeroU64 {
-        self.amount
-    }
-}
-
-impl Packable for SignatureLockedSingleOutput {
+impl Packable for Spent {
     fn packed_len(&self) -> usize {
-        self.address.packed_len() + u64::from(self.amount).packed_len()
+        self.output.packed_len() + self.transaction_id.packed_len()
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
-        self.address.pack(writer)?;
-        u64::from(self.amount).pack(writer)?;
+        self.output.pack(writer)?;
+        self.transaction_id.pack(writer)?;
 
         Ok(())
     }
@@ -53,10 +35,9 @@ impl Packable for SignatureLockedSingleOutput {
     where
         Self: Sized,
     {
-        let address = Address::unpack(reader)?;
-        // TODO unwrap
-        let amount = NonZeroU64::new(u64::unpack(reader)?).unwrap();
-
-        Ok(Self { address, amount })
+        Ok(Self {
+            output: Output::unpack(reader)?,
+            transaction_id: TransactionId::unpack(reader)?,
+        })
     }
 }

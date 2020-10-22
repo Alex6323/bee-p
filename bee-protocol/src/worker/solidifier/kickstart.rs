@@ -13,7 +13,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{MilestoneRequesterWorker, TangleWorker},
+    worker::{MilestoneRequesterWorker, RequestedMilestones, TangleWorker},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
@@ -44,6 +44,7 @@ impl<N: Node> Worker<N> for KickstartWorker {
         let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let requested_milestones = node.resource::<RequestedMilestones>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -55,13 +56,25 @@ impl<N: Node> Worker<N> for KickstartWorker {
                 let latest_ms = *tangle.get_latest_milestone_index();
 
                 if !Protocol::get().peer_manager.handshaked_peers.is_empty() && next_ms + config.1 < latest_ms {
-                    Protocol::request_milestone(&tangle, &milestone_requester, MilestoneIndex(next_ms), None);
+                    Protocol::request_milestone(
+                        &tangle,
+                        &milestone_requester,
+                        &*requested_milestones,
+                        MilestoneIndex(next_ms),
+                        None,
+                    );
                     if config.0.send(MilestoneIndex(next_ms)).is_err() {
                         error!("Could not set first non-solid milestone");
                     }
 
                     for index in next_ms..(next_ms + config.1) {
-                        Protocol::request_milestone(&tangle, &milestone_requester, MilestoneIndex(index), None);
+                        Protocol::request_milestone(
+                            &tangle,
+                            &milestone_requester,
+                            &*requested_milestones,
+                            MilestoneIndex(index),
+                            None,
+                        );
                     }
                     break;
                 }

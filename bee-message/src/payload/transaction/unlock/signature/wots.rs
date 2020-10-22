@@ -54,20 +54,20 @@ impl Packable for WotsSignature {
         0u32.packed_len() + self.0.len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        (self.0.len() as u32).pack(buf)?;
-        buf.write_all(&self.0)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        (self.0.len() as u32).pack(writer)?;
+        writer.write_all(&self.0)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let bytes_len = u32::unpack(buf)? as usize;
+        let bytes_len = u32::unpack(reader)? as usize;
         let mut bytes = vec![0u8; bytes_len];
-        buf.read_exact(&mut bytes)?;
+        reader.read_exact(&mut bytes)?;
 
         Ok(Self(bytes))
     }

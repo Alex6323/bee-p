@@ -37,23 +37,23 @@ impl Packable for Output {
         }
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
         match self {
             Self::SignatureLockedSingle(output) => {
-                0u8.pack(buf)?;
-                output.pack(buf)?;
+                0u8.pack(writer)?;
+                output.pack(writer)?;
             }
         }
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        Ok(match u8::unpack(buf)? {
-            0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack(buf)?),
+        Ok(match u8::unpack(reader)? {
+            0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack(reader)?),
             _ => return Err(PackableError::InvalidVariant),
         })
     }

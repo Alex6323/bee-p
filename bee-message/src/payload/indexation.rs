@@ -40,27 +40,27 @@ impl Packable for Indexation {
         0u32.packed_len() + self.index.as_bytes().len() + 0u32.packed_len() + self.data.len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        (self.index.as_bytes().len() as u32).pack(buf)?;
-        buf.write_all(self.index.as_bytes())?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        (self.index.as_bytes().len() as u32).pack(writer)?;
+        writer.write_all(self.index.as_bytes())?;
 
-        (self.data.len() as u32).pack(buf)?;
-        buf.write_all(&self.data)?;
+        (self.data.len() as u32).pack(writer)?;
+        writer.write_all(&self.data)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let index_len = u32::unpack(buf)? as usize;
+        let index_len = u32::unpack(reader)? as usize;
         let mut index_bytes = vec![0u8; index_len];
-        buf.read_exact(&mut index_bytes)?;
+        reader.read_exact(&mut index_bytes)?;
 
-        let data_len = u32::unpack(buf)? as usize;
+        let data_len = u32::unpack(reader)? as usize;
         let mut data_bytes = vec![0u8; data_len];
-        buf.read_exact(&mut data_bytes)?;
+        reader.read_exact(&mut data_bytes)?;
 
         Ok(Self {
             index: String::from_utf8(index_bytes).map_err(|_| PackableError::InvalidUtf8String)?,

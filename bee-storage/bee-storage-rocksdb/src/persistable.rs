@@ -14,7 +14,6 @@ use bee_storage::persistable::Persistable;
 use crate::storage::Storage;
 
 use bee_crypto::ternary::Hash;
-// use bee_ledger::{diff::LedgerDiff, state::LedgerState};
 use bee_protocol::{
     tangle::{flags::Flags, MessageMetadata},
     MilestoneIndex,
@@ -181,24 +180,6 @@ impl Persistable<Storage> for MessageMetadata {
         )
     }
 }
-
-// impl Persistable<Storage> for LedgerDiff {
-//     fn write_to(&self, buffer: &mut Vec<u8>) {
-//         self.inner().write_to(buffer)
-//     }
-//     fn read_from(slice: &[u8]) -> Self {
-//         LedgerDiff::from(HashMap::read_from(slice))
-//     }
-// }
-//
-// impl Persistable<Storage> for LedgerState {
-//     fn write_to(&self, buffer: &mut Vec<u8>) {
-//         self.inner().write_to(buffer)
-//     }
-//     fn read_from(slice: &[u8]) -> Self {
-//         Self::from(HashMap::read_from(slice))
-//     }
-// }
 
 impl Persistable<Storage> for MilestoneIndex {
     fn write_to(&self, buffer: &mut Vec<u8>) {

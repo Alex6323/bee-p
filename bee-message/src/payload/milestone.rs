@@ -57,39 +57,39 @@ impl Packable for Milestone {
         self.index.packed_len() + self.timestamp.packed_len() + 64 + 64 * self.signatures.len()
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        self.index.pack(buf)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        self.index.pack(writer)?;
 
-        self.timestamp.pack(buf)?;
+        self.timestamp.pack(writer)?;
 
-        buf.write_all(&self.merkle_proof)?;
+        writer.write_all(&self.merkle_proof)?;
 
-        (self.signatures.len() as u8).pack(buf)?;
+        (self.signatures.len() as u8).pack(writer)?;
 
         for signature in &self.signatures {
-            buf.write_all(&signature)?;
+            writer.write_all(&signature)?;
         }
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
-        let index = u32::unpack(buf)?;
+        let index = u32::unpack(reader)?;
 
-        let timestamp = u64::unpack(buf)?;
+        let timestamp = u64::unpack(reader)?;
 
         let mut merkle_proof = [0u8; 64];
-        buf.read_exact(&mut merkle_proof)?;
+        reader.read_exact(&mut merkle_proof)?;
 
         let mut signatures = vec![];
-        let signatures_len = u8::unpack(buf)?;
+        let signatures_len = u8::unpack(reader)?;
 
         for _ in 0..signatures_len {
             let mut signature = vec![0u8; 64];
-            buf.read_exact(&mut signature)?;
+            reader.read_exact(&mut signature)?;
             signatures.push(signature.into_boxed_slice());
         }
 

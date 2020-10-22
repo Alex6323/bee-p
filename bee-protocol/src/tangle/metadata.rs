@@ -28,6 +28,7 @@ pub struct MessageMetadata {
 }
 
 impl MessageMetadata {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         flags: Flags,
         milestone_index: MilestoneIndex,

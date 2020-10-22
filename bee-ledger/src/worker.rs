@@ -11,17 +11,14 @@
 
 use crate::{
     event::MilestoneConfirmed,
-    state::LedgerState,
-    whiteflag::{
-        merkle_hasher::MerkleHasher,
-        metadata::WhiteFlagMetadata,
-        traversal::{visit_bundles_dfs, Error as TraversalError},
-    },
+    merkle_hasher::MerkleHasher,
+    metadata::WhiteFlagMetadata,
+    traversal::{visit_dfs, Error as TraversalError},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{event::Bus, node::Node, worker::Worker};
-use bee_message::prelude::{Message, Payload};
+use bee_message::prelude::{Address, Message, Payload};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, Milestone, MilestoneIndex, TangleWorker};
 use bee_storage::storage::Backend;
 
@@ -55,7 +52,6 @@ fn confirm<B: Backend>(
     tangle: &MsTangle<B>,
     message: Message,
     index: &mut MilestoneIndex,
-    state: &mut LedgerState,
     coo_config: &ProtocolCoordinatorConfig,
     bus: &Arc<Bus<'static>>,
 ) -> Result<(), Error> {
@@ -71,7 +67,7 @@ fn confirm<B: Backend>(
 
     let mut confirmation = WhiteFlagMetadata::new(MilestoneIndex(milestone.index()), milestone.timestamp());
 
-    match visit_bundles_dfs(tangle, state, *milestone.hash(), &mut confirmation) {
+    match visit_dfs(tangle, *milestone.hash(), &mut confirmation) {
         Ok(_) => {
             if !MerkleHasher::<Blake2b>::new()
                 .digest(&confirmation.tails_included)
@@ -133,20 +129,15 @@ fn confirm<B: Backend>(
     }
 }
 
-fn get_balance(state: &LedgerState, address: Address, sender: oneshot::Sender<u64>) {
-    if let Err(e) = sender.send(state.get_or_zero(&address)) {
-        warn!("Failed to send balance: {:?}.", e);
-    }
-}
+// fn get_balance(state: &LedgerState, address: Address, sender: oneshot::Sender<u64>) {
+//     if let Err(e) = sender.send(state.get_or_zero(&address)) {
+//         warn!("Failed to send balance: {:?}.", e);
+//     }
+// }
 
 #[async_trait]
 impl<N: Node> Worker<N> for LedgerWorker {
-    type Config = (
-        MilestoneIndex,
-        LedgerState,
-        ProtocolCoordinatorConfig,
-        Arc<Bus<'static>>,
-    );
+    type Config = (MilestoneIndex, ProtocolCoordinatorConfig, Arc<Bus<'static>>);
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
@@ -164,18 +155,16 @@ impl<N: Node> Worker<N> for LedgerWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut index = config.0;
-            let mut state = config.1;
-            let coo_config = config.2;
-            let bus = config.3;
+            let coo_config = config.1;
+            let bus = config.2;
 
             while let Some(event) = receiver.next().await {
                 match event {
                     LedgerWorkerEvent::Confirm(milestone) => {
-                        if confirm(&tangle, milestone, &mut index, &mut state, &coo_config, &bus).is_err() {
+                        if confirm(&tangle, milestone, &mut index, &coo_config, &bus).is_err() {
                             panic!("Error while confirming milestone, aborting.");
                         }
-                    }
-                    LedgerWorkerEvent::GetBalance(address, sender) => get_balance(&state, address, sender),
+                    } // LedgerWorkerEvent::GetBalance(address, sender) => get_balance(&state, address, sender),
                 }
             }
 

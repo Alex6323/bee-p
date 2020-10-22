@@ -13,7 +13,6 @@ use crate::{tangle::MsTangle, worker::storage::StorageWorker, MilestoneIndex};
 
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_snapshot::metadata::SnapshotMetadata;
 
 use async_trait::async_trait;
 use log::{error, warn};
@@ -29,30 +28,30 @@ pub struct TangleWorker;
 
 #[async_trait]
 impl<N: Node> Worker<N> for TangleWorker {
-    type Config = SnapshotMetadata;
+    type Config = ();
     type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<StorageWorker>()].leak()
     }
 
-    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let storage = node.storage();
         let tangle = MsTangle::<N::Backend>::new(storage);
 
         node.register_resource(tangle);
 
-        let tangle = node.resource::<MsTangle<N::Backend>>();
+        let _tangle = node.resource::<MsTangle<N::Backend>>();
 
         // tangle.update_latest_solid_milestone_index(config.index().into());
         // tangle.update_latest_milestone_index(config.index().into());
         // tangle.update_snapshot_index(config.index().into());
         // tangle.update_pruning_index(config.index().into());
 
-        for message_id in config.solid_entry_points() {
-            // TODO no more indices ? What about TRSI ?
-            tangle.add_solid_entry_point(*message_id, MilestoneIndex(0));
-        }
+        // for message_id in config.solid_entry_points() {
+        //     // TODO no more indices ? What about TRSI ?
+        //     tangle.add_solid_entry_point(*message_id, MilestoneIndex(0));
+        // }
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             use futures::StreamExt;

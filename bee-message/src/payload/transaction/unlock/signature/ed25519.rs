@@ -44,22 +44,22 @@ impl Packable for Ed25519Signature {
         ED25519_PUBLIC_KEY_LENGTH + ED25519_SIGNATURE_LENGTH
     }
 
-    fn pack<W: Write>(&self, buf: &mut W) -> Result<(), PackableError> {
-        buf.write_all(&self.public_key)?;
-        buf.write_all(&self.signature)?;
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+        writer.write_all(&self.public_key)?;
+        writer.write_all(&self.signature)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(buf: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
     where
         Self: Sized,
     {
         let mut public_key_bytes = [0u8; ED25519_PUBLIC_KEY_LENGTH];
-        buf.read_exact(&mut public_key_bytes)?;
+        reader.read_exact(&mut public_key_bytes)?;
 
         let mut signature_bytes = vec![0u8; ED25519_SIGNATURE_LENGTH];
-        buf.read_exact(&mut signature_bytes)?;
+        reader.read_exact(&mut signature_bytes)?;
 
         Ok(Self {
             public_key: public_key_bytes,
