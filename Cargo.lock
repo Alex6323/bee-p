@@ -165,6 +165,7 @@ dependencies = [
  "bech32",
  "bee-common-ext",
  "bee-ternary",
+ "blake2",
  "bytemuck",
  "hex",
  "serde",
