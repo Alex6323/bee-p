@@ -67,10 +67,10 @@ impl<B: Backend> NodeBuilder<B> {
 
         let bus = Arc::new(Bus::default());
 
-        //let (mut node_builder, snapshot_metadata) =
-        //    bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
-        //        .await
-        //        .map_err(Error::SnapshotError)?;
+        let (mut node_builder, snapshot_metadata) =
+            bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
+                .await
+                .map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network.clone(), &mut shutdown).await;
