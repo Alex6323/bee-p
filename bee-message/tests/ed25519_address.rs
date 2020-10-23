@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_message::prelude::{Address, Ed25519Address};
+use bee_message::prelude::*;
 
 #[test]
 fn generate_address() {

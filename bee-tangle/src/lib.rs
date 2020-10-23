@@ -20,7 +20,7 @@ pub mod traversal;
 
 pub use tangle::{Hooks, Tangle};
 
-use bee_message::prelude::Message;
+use bee_message::Message;
 
 use std::{ops::Deref, sync::Arc};
 

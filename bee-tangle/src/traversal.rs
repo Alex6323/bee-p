@@ -18,7 +18,7 @@ use crate::{
     MessageRef,
 };
 
-use bee_message::prelude::MessageId;
+use bee_message::MessageId;
 
 use std::collections::HashSet;
 

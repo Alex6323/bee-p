@@ -11,7 +11,7 @@
 
 use crate::{vertex::Vertex, MessageRef};
 
-use bee_message::prelude::{Message, MessageId};
+use bee_message::{Message, MessageId};
 
 use async_trait::async_trait;
 use dashmap::{mapref::entry::Entry, DashMap};

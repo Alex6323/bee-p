@@ -12,7 +12,7 @@
 use crate::{header::SnapshotHeader, kind::Kind, milestone_diff::MilestoneDiff, output::Output};
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
-use bee_message::prelude::MessageId;
+use bee_message::MessageId;
 
 use log::{error, info};
 

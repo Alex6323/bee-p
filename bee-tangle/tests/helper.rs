@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_message::prelude::{Message, MessageId};
+use bee_message::{Message, MessageId};
 use bee_tangle::Tangle;
 use bee_test::transaction::{create_random_attached_tx, create_random_tx};
 

@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
-use bee_message::prelude::MessageId;
+use bee_message::MessageId;
 
 use std::ops::{Add, Deref};
 

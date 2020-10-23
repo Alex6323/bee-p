@@ -12,7 +12,7 @@
 use crate::kind::Kind;
 
 use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
-use bee_message::prelude::MessageId;
+use bee_message::MessageId;
 
 const SNAPSHOT_VERSION: u8 = 1;
 

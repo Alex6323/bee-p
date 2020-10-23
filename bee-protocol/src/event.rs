@@ -11,7 +11,7 @@
 
 use crate::Milestone;
 
-use bee_message::prelude::MessageId;
+use bee_message::MessageId;
 use bee_network::EndpointId;
 
 use std::net::SocketAddr;

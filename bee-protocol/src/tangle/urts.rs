@@ -11,7 +11,7 @@
 
 use crate::tangle::MsTangle;
 
-use bee_message::prelude::MessageId;
+use bee_message::MessageId;
 use bee_storage::storage::Backend;
 
 use log::info;
