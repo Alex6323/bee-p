@@ -11,7 +11,7 @@
 
 use crate::metadata::WhiteFlagMetadata;
 
-use bee_message::{Message, MessageId};
+use bee_message::{payload::Payload, Message, MessageId};
 use bee_protocol::tangle::MsTangle;
 use bee_storage::storage::Backend;
 
@@ -31,6 +31,11 @@ fn on_message<B: Backend>(
     message: &Message,
     metadata: &mut WhiteFlagMetadata,
 ) {
+    if let Payload::Transaction(transaction) = message.payload() {
+    } else {
+        metadata.num_messages_excluded_no_transaction += 1;
+    }
+
     // let mut conflicting = false;
     // let (mutates, mutations) = bundle.ledger_mutations();
     //
@@ -58,9 +63,9 @@ fn on_message<B: Backend>(
     //         metadata.tails_included.push(*message_id);
     //     }
     // }
-    //
-    // metadata.num_tails_referenced += 1;
-    //
+
+    metadata.num_messages_referenced += 1;
+
     // // TODO this only actually confirm tails
     // tangle.update_metadata(&message_id, |meta| {
     //     meta.flags_mut().set_conflicting(conflicting);
@@ -78,6 +83,8 @@ pub(crate) async fn visit_dfs<B: Backend>(
 ) -> Result<(), Error> {
     let mut messages_ids = vec![root];
     let mut visited = HashSet::new();
+
+    // TODO Tangle get message AND meta at the same time
 
     while let Some(message_id) = messages_ids.last() {
         let meta = match tangle.get_metadata(message_id) {
@@ -99,7 +106,6 @@ pub(crate) async fn visit_dfs<B: Backend>(
             continue;
         }
 
-        // TODO pass match to avoid repetitions
         match tangle.get(message_id).await {
             Some(message) => {
                 let parent1 = message.parent1();
