@@ -34,7 +34,7 @@ const MERKLE_PROOF_LENGTH: usize = 384;
 enum Error {
     NonContiguousMilestone,
     MerkleProofMismatch,
-    InvalidTailsCount,
+    InvalidMessagesCount,
     InvalidConfirmationSet(TraversalError),
     NotMilestone,
 }
@@ -70,7 +70,7 @@ fn confirm<B: Backend>(
     match visit_dfs(tangle, *milestone.hash(), &mut confirmation) {
         Ok(_) => {
             if !MerkleHasher::<Blake2b>::new()
-                .digest(&confirmation.tails_included)
+                .digest(&confirmation.messages_included)
                 .eq(&milestone.merkle_proof())
             {
                 error!(
@@ -80,20 +80,20 @@ fn confirm<B: Backend>(
                 return Err(Error::MerkleProofMismatch);
             }
 
-            if confirmation.num_tails_referenced
-                != confirmation.num_tails_zero_value
-                    + confirmation.num_tails_conflicting
-                    + confirmation.tails_included.len()
+            if confirmation.num_messages_referenced
+                != confirmation.num_messages_excluded_no_transaction
+                    + confirmation.num_messages_excluded_conflicting
+                    + confirmation.messages_included.len()
             {
                 error!(
-                    "Invalid tails count at {}: referenced ({}) != zero ({}) + conflicting ({}) + included ({}).",
+                    "Invalid messages count at {}: referenced ({}) != no transaction ({}) + conflicting ({}) + included ({}).",
                     milestone.index().0,
-                    confirmation.num_tails_referenced,
-                    confirmation.num_tails_zero_value,
-                    confirmation.num_tails_conflicting,
-                    confirmation.tails_included.len()
+                    confirmation.num_messages_referenced,
+                    confirmation.num_messages_excluded_no_transaction,
+                    confirmation.num_messages_excluded_conflicting,
+                    confirmation.messages_included.len()
                 );
-                return Err(Error::InvalidTailsCount);
+                return Err(Error::InvalidMessagesCount);
             }
 
             *index = MilestoneIndex(milestone.index());
@@ -101,19 +101,19 @@ fn confirm<B: Backend>(
             info!(
                 "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
                 *milestone.index(),
-                confirmation.num_tails_referenced,
-                confirmation.num_tails_zero_value,
-                confirmation.num_tails_conflicting,
-                confirmation.tails_included.len()
+                confirmation.num_messages_referenced,
+                confirmation.num_messages_excluded_no_transaction,
+                confirmation.num_messages_excluded_conflicting,
+                confirmation.messages_included.len()
             );
 
             bus.dispatch(MilestoneConfirmed {
                 milestone,
                 timestamp: milestone.timestamp(),
-                tails_referenced: confirmation.num_tails_referenced,
-                tails_zero_value: confirmation.num_tails_zero_value,
-                tails_conflicting: confirmation.num_tails_conflicting,
-                tails_included: confirmation.tails_included.len(),
+                messages_referenced: confirmation.num_messages_referenced,
+                messages_excluded_no_transaction: confirmation.num_messages_excluded_no_transaction,
+                messages_excluded_conflicting: confirmation.num_messages_excluded_conflicting,
+                messages_included: confirmation.messages_included.len(),
             });
 
             Ok(())

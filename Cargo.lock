@@ -134,6 +134,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bee-ledger"
+version = "0.1.0-alpha"
+dependencies = [
+ "async-trait",
+ "bee-common",
+ "bee-common-ext",
+ "bee-crypto",
+ "bee-message",
+ "bee-protocol",
+ "bee-storage",
+ "bee-tangle",
+ "bee-ternary",
+ "bee-test",
+ "blake2",
+ "bytemuck",
+ "digest",
+ "flume",
+ "futures",
+ "hex",
+ "log",
+ "rand",
+ "tokio 0.3.1",
+]
+
+[[package]]
 name = "bee-message"
 version = "0.1.0-alpha"
 dependencies = [

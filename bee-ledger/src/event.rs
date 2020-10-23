@@ -14,8 +14,8 @@ use bee_protocol::Milestone;
 pub struct MilestoneConfirmed {
     pub milestone: Milestone,
     pub timestamp: u64,
-    pub tails_referenced: usize,
-    pub tails_zero_value: usize,
-    pub tails_conflicting: usize,
-    pub tails_included: usize,
+    pub messages_referenced: usize,
+    pub messages_excluded_no_transaction: usize,
+    pub messages_excluded_conflicting: usize,
+    pub messages_included: usize,
 }
