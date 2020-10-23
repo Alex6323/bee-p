@@ -61,7 +61,7 @@ impl<B: Backend> NodeBuilder<B> {
     pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
-        let mut node_builder = BeeNode::<B>::build();
+        let node_builder = BeeNode::<B>::build();
 
         let mut shutdown = Shutdown::new();
 

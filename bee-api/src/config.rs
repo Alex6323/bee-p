@@ -13,14 +13,14 @@ use serde::Deserialize;
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-pub(crate) const DEFAULT_REST_BINDING_PORT: u16 = 3030;
-pub(crate) const DEFAULT_REST_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+pub(crate) const DEFAULT_BINDING_PORT: u16 = 3030;
+pub(crate) const DEFAULT_BINDING_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
 /// API configuration builder.
 #[derive(Default, Deserialize)]
 pub struct ApiConfigBuilder {
-    rest_binding_port: Option<u16>,
-    rest_binding_addr: Option<IpAddr>,
+    binding_port: Option<u16>,
+    binding_ip: Option<IpAddr>,
 }
 
 impl ApiConfigBuilder {
@@ -29,37 +29,37 @@ impl ApiConfigBuilder {
         Self::default()
     }
 
-    /// Sets the binding port for the REST service.
-    pub fn rest_binding_port(mut self, port: u16) -> Self {
-        self.rest_binding_port.replace(port);
+    /// Sets the binding port for the REST API.
+    pub fn binding_port(mut self, port: u16) -> Self {
+        self.binding_port.replace(port);
         self
     }
 
-    /// Sets the binding address for the REST service.
-    pub fn rest_binding_addr(mut self, addr: &str) -> Self {
+    /// Sets the binding IP address for the REST API.
+    pub fn binding_ip(mut self, addr: &str) -> Self {
         match addr.parse() {
             Ok(addr) => {
-                self.rest_binding_addr.replace(addr);
+                self.binding_ip.replace(addr);
             }
-            Err(e) => panic!("Error parsing address: {:?}", e),
+            Err(e) => panic!("Error parsing IP address: {:?}", e),
         }
         self
     }
 
     /// Builds the API config.
     pub fn finish(self) -> ApiConfig {
-        ApiConfig {
-            rest_binding_port: self.rest_binding_port.unwrap_or(DEFAULT_REST_BINDING_PORT),
-            rest_binding_addr: self.rest_binding_addr.unwrap_or(DEFAULT_REST_BINDING_ADDR),
-        }
+        let binding_address = match self.binding_ip.unwrap_or(DEFAULT_BINDING_IP) {
+            IpAddr::V4(ip) => SocketAddr::new(IpAddr::V4(ip), self.binding_port.unwrap_or(DEFAULT_BINDING_PORT)),
+            IpAddr::V6(ip) => SocketAddr::new(IpAddr::V6(ip), self.binding_port.unwrap_or(DEFAULT_BINDING_PORT)),
+        };
+        ApiConfig { binding_address }
     }
 }
 
 /// API configuration.
 #[derive(Clone, Copy, Debug)]
 pub struct ApiConfig {
-    pub(crate) rest_binding_port: u16,
-    pub(crate) rest_binding_addr: IpAddr,
+    pub(crate) binding_address: SocketAddr,
 }
 
 impl ApiConfig {
@@ -67,22 +67,8 @@ impl ApiConfig {
     pub fn build() -> ApiConfigBuilder {
         ApiConfigBuilder::new()
     }
-
-    /// Returns the listening address.
-    pub fn rest_socket_addr(&self) -> SocketAddr {
-        match self.rest_binding_addr {
-            IpAddr::V4(addr) => SocketAddr::new(IpAddr::V4(addr), self.rest_binding_port),
-            IpAddr::V6(addr) => SocketAddr::new(IpAddr::V6(addr), self.rest_binding_port),
-        }
-    }
-
-    /// Returns the port of the listening address.
-    pub fn rest_binding_port(&self) -> u16 {
-        self.rest_binding_port
-    }
-
-    /// Returns the listening IP address.
-    pub fn rest_binding_addr(&self) -> IpAddr {
-        self.rest_binding_addr
+    /// Returns the binding address.
+    pub fn binding_address(&self) -> SocketAddr {
+        self.binding_address
     }
 }

@@ -17,9 +17,8 @@ pub mod config;
 
 use async_trait::async_trait;
 use log::{info, error, warn};
-use crate::config::{ApiConfig, ApiConfigBuilder};
+use crate::config::{ApiConfig};
 use bee_common_ext::node::NodeBuilder;
-use bee_common::worker::Error;
 use bee_protocol::TangleWorker;
 use std::any::TypeId;
 use bee_protocol::tangle::MsTangle;
@@ -30,7 +29,7 @@ use warp::Filter;
 
 pub async fn init<N: Node> (
     config: ApiConfig,
-    mut node_builder: N::Builder,
+    node_builder: N::Builder,
 ) -> N::Builder {
     node_builder.with_worker_cfg::<ApiWorker>(config)
 }
@@ -65,7 +64,7 @@ impl<N: Node> Worker<N> for ApiWorker {
 
             let routes = info;
 
-            let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.rest_socket_addr(), async {
+            let _ = warp::serve(routes).bind_with_graceful_shutdown(config.binding_address(), async {
                 shutdown.await.ok();
             });
 
