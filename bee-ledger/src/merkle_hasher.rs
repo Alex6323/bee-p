@@ -20,11 +20,19 @@ const LEAF_HASH_PREFIX: u8 = 0x00;
 /// Node domain separation prefix.
 const NODE_HASH_PREFIX: u8 = 0x01;
 
+// TODO hasher re-creation or finalize_reset + hasher field ?
+
+/// Computes the largest power of two inferior to `n`.
+#[inline]
+fn largest_power_of_two(n: u32) -> usize {
+    1 << (32 - n.leading_zeros() - 1)
+}
+
 /// A Merkle hasher based on a digest function.
 #[derive(Default)]
 pub(crate) struct MerkleHasher<D: Default + Digest> {
     /// Type marker for the digest function.
-    hasher: PhantomData<D>,
+    marker: PhantomData<D>,
 }
 
 impl<D: Default + Digest> MerkleHasher<D> {
@@ -33,15 +41,9 @@ impl<D: Default + Digest> MerkleHasher<D> {
         Self::default()
     }
 
-    /// Computes the largest power of two inferior to `n`.
-    #[inline]
-    fn largest_power_of_two(&self, n: u32) -> usize {
-        1 << (32 - n.leading_zeros() - 1)
-    }
-
     /// Returns the digest of the empty hash.
     fn empty(&mut self) -> Output<D> {
-        D::digest(b"")
+        D::digest(&[])
     }
 
     /// Returns the digest of a Merkle leaf.
@@ -49,19 +51,19 @@ impl<D: Default + Digest> MerkleHasher<D> {
         let mut hasher = D::default();
 
         hasher.update([LEAF_HASH_PREFIX]);
-        hasher.update(&message_id);
-        hasher.finalize_reset()
+        hasher.update(message_id);
+        hasher.finalize()
     }
 
     /// Returns the digest of a Merkle node.
     fn node(&mut self, message_ids: &[MessageId]) -> Output<D> {
         let mut hasher = D::default();
-        let (left, right) = message_ids.split_at(self.largest_power_of_two(message_ids.len() as u32 - 1));
+        let (left, right) = message_ids.split_at(largest_power_of_two(message_ids.len() as u32 - 1));
 
         hasher.update([NODE_HASH_PREFIX]);
         hasher.update(self.digest_inner(left));
         hasher.update(self.digest_inner(right));
-        hasher.finalize_reset()
+        hasher.finalize()
     }
 
     /// Returns the digest of a list of hashes as an `Output<D>`.
