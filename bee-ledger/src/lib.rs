@@ -14,7 +14,7 @@
 pub mod event;
 mod merkle_hasher;
 mod metadata;
-mod traversal;
+mod white_flag;
 mod worker;
 
 use worker::LedgerWorker;
