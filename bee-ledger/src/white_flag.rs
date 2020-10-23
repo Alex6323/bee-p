@@ -31,49 +31,27 @@ fn on_message<B: Backend>(
     message: &Message,
     metadata: &mut WhiteFlagMetadata,
 ) {
-    if let Payload::Transaction(transaction) = message.payload() {
+    let conflicting = if let Payload::Transaction(transaction) = message.payload() {
+        let transaction_id = transaction.id();
+        let essence = transaction.essence();
+        let inputs = essence.inputs();
+
+        for input in inputs {}
+        false
     } else {
         metadata.num_messages_excluded_no_transaction += 1;
-    }
-
-    // let mut conflicting = false;
-    // let (mutates, mutations) = bundle.ledger_mutations();
-    //
-    // if !mutates {
-    //     metadata.num_tails_zero_value += 1;
-    // } else {
-    //     // First pass to look for conflicts.
-    //     for (address, diff) in mutations.iter() {
-    //         let balance = state.get_or_zero(&address) as i64 + diff;
-    //
-    //         if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
-    //             metadata.num_tails_conflicting += 1;
-    //             conflicting = true;
-    //             break;
-    //         }
-    //     }
-    //
-    //     if !conflicting {
-    //         // Second pass to mutate the state.
-    //         for (address, diff) in mutations {
-    //             state.apply_single_diff(address.clone(), diff);
-    //             metadata.diff.apply_single_diff(address, diff);
-    //         }
-    //
-    //         metadata.tails_included.push(*message_id);
-    //     }
-    // }
+        false
+    };
 
     metadata.num_messages_referenced += 1;
 
-    // // TODO this only actually confirm tails
-    // tangle.update_metadata(&message_id, |meta| {
-    //     meta.flags_mut().set_conflicting(conflicting);
-    //     meta.confirm();
-    //     meta.set_milestone_index(metadata.index);
-    //     // TODO Set OTRSI, ...
-    //     // TODO increment metrics confirmed, zero, value and conflict.
-    // });
+    tangle.update_metadata(&message_id, |meta| {
+        meta.flags_mut().set_conflicting(conflicting);
+        meta.confirm();
+        meta.set_milestone_index(metadata.index);
+        // TODO Set OTRSI, ...
+        // TODO increment metrics confirmed, zero, value and conflict.
+    });
 }
 
 pub(crate) async fn visit_dfs<B: Backend>(
