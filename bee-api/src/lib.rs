@@ -48,7 +48,8 @@ impl<N: Node> Worker<N> for ApiWorker {
             info!("Running.");
 
             let info = warp::get()
-                .and(warp::path("api/v1"))
+                .and(warp::path("api"))
+                .and(warp::path("v1"))
                 .and(warp::path("info"))
                 .and(warp::path::end())
                 .and_then(move || {
