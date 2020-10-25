@@ -59,9 +59,11 @@ impl<N: Node> Worker<N> for ApiWorker {
 
             let routes = info;
 
-            let _ = warp::serve(routes).bind_with_graceful_shutdown(config.binding_address(), async {
+            let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.binding_address(), async {
                 shutdown.await.ok();
             });
+
+            server.await;
 
             info!("Stopped.");
         });
