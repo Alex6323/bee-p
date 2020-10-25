@@ -9,28 +9,25 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::{worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
-
-mod routes;
 pub mod config;
+mod routes;
+mod types;
 
+use crate::config::ApiConfig;
 use async_trait::async_trait;
-use log::{info, error, warn};
-use crate::config::{ApiConfig};
-use bee_common_ext::node::NodeBuilder;
-use bee_protocol::TangleWorker;
-use std::any::TypeId;
-use bee_protocol::tangle::MsTangle;
+use bee_common::worker::Error as WorkerError;
+use bee_common_ext::{
+    node::{Node, NodeBuilder},
+    worker::Worker,
+};
+use bee_protocol::{tangle::MsTangle, TangleWorker};
 use futures::FutureExt;
+use log::{error, info, warn};
 use serde_json::Value as JsonValue;
+use std::any::TypeId;
 use warp::Filter;
 
-
-pub async fn init<N: Node> (
-    config: ApiConfig,
-    node_builder: N::Builder,
-) -> N::Builder {
+pub async fn init<N: Node>(config: ApiConfig, node_builder: N::Builder) -> N::Builder {
     node_builder.with_worker_cfg::<ApiWorker>(config)
 }
 
@@ -45,7 +42,6 @@ impl<N: Node> Worker<N> for ApiWorker {
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
-
         let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
@@ -57,9 +53,7 @@ impl<N: Node> Worker<N> for ApiWorker {
                 .and(warp::path::end())
                 .and_then(move || {
                     let tangle = tangle.clone();
-                    async move {
-                        routes::info(tangle.clone()).await
-                    }
+                    async move { routes::info(tangle.clone()).await }
                 });
 
             let routes = info;
@@ -73,6 +67,4 @@ impl<N: Node> Worker<N> for ApiWorker {
 
         Ok(Self)
     }
-
 }
-
