@@ -49,6 +49,15 @@ impl Transaction {
         &self.unlock_blocks
     }
 
+    pub fn unlock_block(&self, index: usize) -> &UnlockBlock {
+        let unlock_block = &self.unlock_blocks[index];
+        if let UnlockBlock::Reference(reference) = unlock_block {
+            &self.unlock_blocks[reference.index() as usize]
+        } else {
+            unlock_block
+        }
+    }
+
     pub fn builder() -> TransactionBuilder {
         TransactionBuilder::default()
     }
