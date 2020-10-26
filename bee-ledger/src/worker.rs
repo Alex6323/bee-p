@@ -63,17 +63,24 @@ async fn confirm<B: Backend>(
         _ => return Err(Error::NoMilestonePayload),
     };
 
-    if milestone.index() != index.0 + 1 {
-        error!("Tried to confirm {} on top of {}.", milestone.index(), index.0);
+    if milestone.essence().index() != index.0 + 1 {
+        error!(
+            "Tried to confirm {} on top of {}.",
+            milestone.essence().index(),
+            index.0
+        );
         return Err(Error::NonContiguousMilestone);
     }
 
-    let mut metadata = WhiteFlagMetadata::new(MilestoneIndex(milestone.index()), milestone.timestamp());
+    let mut metadata = WhiteFlagMetadata::new(
+        MilestoneIndex(milestone.essence().index()),
+        milestone.essence().timestamp(),
+    );
 
     if let Err(e) = visit_dfs(tangle, message_id, &mut metadata).await {
         error!(
             "Error occured while traversing to confirm {}: {:?}.",
-            milestone.index(),
+            milestone.essence().index(),
             e
         );
         return Err(Error::InvalidConfirmationSet(e));
@@ -81,12 +88,12 @@ async fn confirm<B: Backend>(
 
     let merkle_proof = MerkleHasher::<Blake2b>::new().digest(&metadata.messages_included);
 
-    if !merkle_proof.eq(&milestone.merkle_proof()) {
+    if !merkle_proof.eq(&milestone.essence().merkle_proof()) {
         error!(
             "The computed merkle proof on milestone {}, {}, does not match the one provided by the coordinator, {}.",
             hex::encode(merkle_proof),
-            milestone.index(),
-            hex::encode(milestone.merkle_proof())
+            milestone.essence().index(),
+            hex::encode(milestone.essence().merkle_proof())
         );
         return Err(Error::MerkleProofMismatch);
     }
@@ -98,7 +105,7 @@ async fn confirm<B: Backend>(
     {
         error!(
             "Invalid messages count at {}: referenced ({}) != no transaction ({}) + conflicting ({}) + included ({}).",
-            milestone.index(),
+            milestone.essence().index(),
             metadata.num_messages_referenced,
             metadata.num_messages_excluded_no_transaction,
             metadata.num_messages_excluded_conflicting,
@@ -107,11 +114,11 @@ async fn confirm<B: Backend>(
         return Err(Error::InvalidMessagesCount);
     }
 
-    *index = MilestoneIndex(milestone.index());
+    *index = MilestoneIndex(milestone.essence().index());
 
     info!(
         "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
-        milestone.index(),
+        milestone.essence().index(),
         metadata.num_messages_referenced,
         metadata.num_messages_excluded_no_transaction,
         metadata.num_messages_excluded_conflicting,
@@ -120,7 +127,7 @@ async fn confirm<B: Backend>(
 
     bus.dispatch(MilestoneConfirmed {
         milestone,
-        timestamp: milestone.timestamp(),
+        timestamp: milestone.essence().timestamp(),
         messages_referenced: metadata.num_messages_referenced,
         messages_excluded_no_transaction: metadata.num_messages_excluded_no_transaction,
         messages_excluded_conflicting: metadata.num_messages_excluded_conflicting,
