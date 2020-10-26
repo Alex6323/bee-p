@@ -9,16 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::config::SnapshotConfig;
+use crate::{config::SnapshotConfig, Error};
 
 use log::{error, info, warn};
 
 use std::{fs::File, io::copy, path::Path};
-
-#[derive(Debug)]
-pub enum Error {
-    NoWorkingDownloadSource,
-}
 
 // TODO copy is not really streaming ?
 // TODO temporary file until fully downloaded ?
@@ -47,6 +42,6 @@ pub async fn download_local_snapshot(config: &SnapshotConfig) -> Result<(), Erro
         Ok(())
     } else {
         error!("No working download source available.");
-        Err(Error::NoWorkingDownloadSource)
+        Err(Error::Download)
     }
 }

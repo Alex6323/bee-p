@@ -9,9 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{output::Output, spent::Spent};
+use crate::{output::Output, spent::Spent, Error};
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 
 pub(crate) struct MilestoneDiff {
     index: u32,
@@ -20,12 +20,14 @@ pub(crate) struct MilestoneDiff {
 }
 
 impl Packable for MilestoneDiff {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         // TODO finish
         self.index.packed_len() + 0u64.packed_len() + 0u64.packed_len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.index.pack(writer)?;
         (self.created.len() as u64).pack(writer)?;
         for output in self.created.iter() {
@@ -39,7 +41,7 @@ impl Packable for MilestoneDiff {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

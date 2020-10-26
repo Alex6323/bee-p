@@ -26,7 +26,7 @@ pub use output::{Address, Ed25519Address, Output, SignatureLockedSingleOutput, W
 pub use transaction_id::{TransactionId, TRANSACTION_ID_LENGTH};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use blake2::{Blake2b, Digest};
 use serde::{Deserialize, Serialize};
@@ -67,13 +67,15 @@ impl Transaction {
 }
 
 impl Packable for Transaction {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         self.essence.packed_len()
             + 0u16.packed_len()
             + self.unlock_blocks.iter().map(|block| block.packed_len()).sum::<usize>()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.essence.pack(writer)?;
 
         (self.unlock_blocks.len() as u16).pack(writer)?;
@@ -84,7 +86,7 @@ impl Packable for Transaction {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

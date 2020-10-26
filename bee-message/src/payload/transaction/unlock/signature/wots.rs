@@ -11,7 +11,7 @@
 
 use crate::Error;
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 use bee_ternary::{T5B1Buf, TritBuf};
 
 use bytemuck::cast_slice;
@@ -50,18 +50,20 @@ impl WotsSignature {
 }
 
 impl Packable for WotsSignature {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         0u32.packed_len() + self.0.len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         (self.0.len() as u32).pack(writer)?;
         writer.write_all(&self.0)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

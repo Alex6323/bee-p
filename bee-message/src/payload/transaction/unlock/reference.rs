@@ -11,7 +11,7 @@
 
 use crate::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -43,20 +43,22 @@ impl ReferenceUnlock {
 }
 
 impl Packable for ReferenceUnlock {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         0u16.packed_len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.0.pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
-        Ok(Self::new(u16::unpack(reader)?).map_err(|_| PackableError::InvalidSyntax)?)
+        Ok(Self::new(u16::unpack(reader)?).map_err(|_| Self::Error::InvalidSyntax)?)
     }
 }

@@ -21,7 +21,7 @@ use crate::{
     Error,
 };
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -53,6 +53,8 @@ impl TransactionEssence {
 }
 
 impl Packable for TransactionEssence {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         0u8.packed_len()
             + 0u16.packed_len()
@@ -63,7 +65,7 @@ impl Packable for TransactionEssence {
             + self.payload.iter().map(|payload| payload.packed_len()).sum::<usize>()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         0u8.pack(writer)?;
 
         (self.inputs.len() as u16).pack(writer)?;
@@ -87,14 +89,14 @@ impl Packable for TransactionEssence {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
         let essence_type = u8::unpack(reader)?;
 
         if essence_type != 0u8 {
-            return Err(PackableError::InvalidType(0, essence_type));
+            return Err(Self::Error::InvalidType(0, essence_type));
         }
 
         let inputs_len = u16::unpack(reader)? as usize;
@@ -113,7 +115,7 @@ impl Packable for TransactionEssence {
         let payload = if payload_len > 0 {
             let payload = Payload::unpack(reader)?;
             if payload_len != payload.packed_len() {
-                return Err(PackableError::InvalidAnnouncedLength(payload_len, payload.packed_len()));
+                return Err(Self::Error::InvalidAnnouncedLength(payload_len, payload.packed_len()));
             }
 
             Some(payload)

@@ -9,7 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use crate::Error;
+
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -36,11 +38,13 @@ impl Indexation {
 }
 
 impl Packable for Indexation {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         0u32.packed_len() + self.index.as_bytes().len() + 0u32.packed_len() + self.data.len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         (self.index.as_bytes().len() as u32).pack(writer)?;
         writer.write_all(self.index.as_bytes())?;
 
@@ -50,7 +54,7 @@ impl Packable for Indexation {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
@@ -63,7 +67,7 @@ impl Packable for Indexation {
         reader.read_exact(&mut data_bytes)?;
 
         Ok(Self {
-            index: String::from_utf8(index_bytes).map_err(|_| PackableError::InvalidUtf8String)?,
+            index: String::from_utf8(index_bytes).map_err(|_| Self::Error::InvalidUtf8String)?,
             data: data_bytes.into_boxed_slice(),
         })
     }

@@ -15,7 +15,9 @@ mod signature_locked_single;
 pub use address::{Address, Ed25519Address, WotsAddress};
 pub use signature_locked_single::SignatureLockedSingleOutput;
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use crate::Error;
+
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -31,13 +33,15 @@ impl From<SignatureLockedSingleOutput> for Output {
 }
 
 impl Packable for Output {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         match self {
             Self::SignatureLockedSingle(output) => 0u8.packed_len() + output.packed_len(),
         }
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         match self {
             Self::SignatureLockedSingle(output) => {
                 0u8.pack(writer)?;
@@ -48,13 +52,13 @@ impl Packable for Output {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
         Ok(match u8::unpack(reader)? {
             0 => Self::SignatureLockedSingle(SignatureLockedSingleOutput::unpack(reader)?),
-            _ => return Err(PackableError::InvalidVariant),
+            _ => return Err(Self::Error::InvalidVariant),
         })
     }
 }

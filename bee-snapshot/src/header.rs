@@ -9,9 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::kind::Kind;
+use crate::{kind::Kind, Error};
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 use bee_message::MessageId;
 
 const SNAPSHOT_VERSION: u8 = 1;
@@ -58,6 +58,8 @@ impl SnapshotHeader {
 }
 
 impl Packable for SnapshotHeader {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         SNAPSHOT_VERSION.packed_len()
             + self.kind.packed_len()
@@ -66,7 +68,7 @@ impl Packable for SnapshotHeader {
         +32+self.sep_index.packed_len()+self.sep_id.packed_len()+self.ledger_index.packed_len()+self.ledger_id.packed_len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         SNAPSHOT_VERSION.pack(writer)?;
         self.kind.pack(writer)?;
         self.timestamp.pack(writer)?;
@@ -81,14 +83,14 @@ impl Packable for SnapshotHeader {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
         let version = u8::unpack(reader)?;
 
         if version != SNAPSHOT_VERSION {
-            return Err(PackableError::InvalidVersion(SNAPSHOT_VERSION, version));
+            return Err(Self::Error::InvalidVersion(SNAPSHOT_VERSION, version));
         }
 
         let kind = Kind::unpack(reader)?;

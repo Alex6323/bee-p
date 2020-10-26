@@ -14,7 +14,7 @@ use crate::{
     Error,
 };
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -51,24 +51,26 @@ impl core::fmt::Display for UTXOInput {
 }
 
 impl Packable for UTXOInput {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         self.id.packed_len() + self.index.packed_len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.id.pack(writer)?;
         self.index.pack(writer)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
         let id = TransactionId::unpack(reader)?;
         let index = u16::unpack(reader)?;
 
-        Ok(Self::new(id, index).map_err(|_| PackableError::InvalidSyntax)?)
+        Ok(Self::new(id, index).map_err(|_| Self::Error::InvalidSyntax)?)
     }
 }

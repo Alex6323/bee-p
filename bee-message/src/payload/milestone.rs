@@ -9,9 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::MessageId;
+use crate::{Error, MessageId};
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -39,11 +39,13 @@ impl Milestone {
 }
 
 impl Packable for Milestone {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         self.essence.packed_len() + 64 * self.signatures.len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.essence.pack(writer)?;
 
         (self.signatures.len() as u8).pack(writer)?;
@@ -54,7 +56,7 @@ impl Packable for Milestone {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
@@ -128,6 +130,8 @@ impl MilestoneEssence {
 }
 
 impl Packable for MilestoneEssence {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         self.index.packed_len()
             + self.timestamp.packed_len()
@@ -137,7 +141,7 @@ impl Packable for MilestoneEssence {
             + 32 * self.public_keys.len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.index.pack(writer)?;
 
         self.timestamp.pack(writer)?;
@@ -156,7 +160,7 @@ impl Packable for MilestoneEssence {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

@@ -15,7 +15,9 @@ mod wots;
 pub use ed25519::Ed25519Signature;
 pub use wots::WotsSignature;
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use crate::Error;
+
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -38,6 +40,8 @@ impl From<Ed25519Signature> for SignatureUnlock {
 }
 
 impl Packable for SignatureUnlock {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         match self {
             Self::Wots(signature) => 0u8.packed_len() + signature.packed_len(),
@@ -45,7 +49,7 @@ impl Packable for SignatureUnlock {
         }
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         match self {
             Self::Wots(signature) => {
                 0u8.pack(writer)?;
@@ -60,14 +64,14 @@ impl Packable for SignatureUnlock {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
         Ok(match u8::unpack(reader)? {
             0 => Self::Wots(WotsSignature::unpack(reader)?),
             1 => Self::Ed25519(Ed25519Signature::unpack(reader)?),
-            _ => return Err(PackableError::InvalidVariant),
+            _ => return Err(Self::Error::InvalidVariant),
         })
     }
 }
