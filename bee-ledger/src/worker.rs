@@ -17,9 +17,13 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{event::Bus, node::Node, worker::Worker};
+use bee_common_ext::{
+    event::Bus,
+    node::{Node, ResHandle},
+    worker::Worker,
+};
 use bee_message::{payload::Payload, MessageId};
-use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, MilestoneIndex, TangleWorker};
+use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, MilestoneIndex, StorageWorker, TangleWorker};
 use bee_storage::storage::Backend;
 
 use async_trait::async_trait;
@@ -51,6 +55,7 @@ pub(crate) struct LedgerWorker {
 
 async fn confirm<B: Backend>(
     tangle: &MsTangle<B>,
+    storage: &ResHandle<B>,
     message_id: MessageId,
     index: &mut MilestoneIndex,
     coo_config: &ProtocolCoordinatorConfig,
@@ -77,7 +82,7 @@ async fn confirm<B: Backend>(
         milestone.essence().timestamp(),
     );
 
-    if let Err(e) = visit_dfs(tangle, message_id, &mut metadata).await {
+    if let Err(e) = visit_dfs(tangle, storage, message_id, &mut metadata).await {
         error!(
             "Error occured while traversing to confirm {}: {:?}.",
             milestone.essence().index(),
@@ -149,13 +154,14 @@ impl<N: Node> Worker<N> for LedgerWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        vec![TypeId::of::<TangleWorker>()].leak()
+        vec![TypeId::of::<TangleWorker>(), TypeId::of::<StorageWorker>()].leak()
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let storage = node.storage();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -169,7 +175,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
             while let Some(event) = receiver.next().await {
                 match event {
                     LedgerWorkerEvent::Confirm(message_id) => {
-                        if confirm(&tangle, message_id, &mut index, &coo_config, &bus)
+                        if confirm(&tangle, storage, message_id, &mut index, &coo_config, &bus)
                             .await
                             .is_err()
                         {

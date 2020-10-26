@@ -11,7 +11,8 @@
 
 use crate::metadata::WhiteFlagMetadata;
 
-use bee_message::{payload::Payload, Message, MessageId};
+use bee_common_ext::node::ResHandle;
+use bee_message::{Message, MessageId};
 use bee_protocol::tangle::MsTangle;
 use bee_storage::storage::Backend;
 
@@ -27,35 +28,16 @@ pub(crate) enum Error {
 #[inline]
 fn on_message<B: Backend>(
     tangle: &MsTangle<B>,
+    storage: &ResHandle<B>,
     message_id: &MessageId,
     message: &Message,
     metadata: &mut WhiteFlagMetadata,
 ) {
-    let conflicting = if let Payload::Transaction(transaction) = message.payload() {
-        let transaction_id = transaction.id();
-        let essence = transaction.essence();
-        let inputs = essence.inputs();
-
-        for input in inputs {}
-        false
-    } else {
-        metadata.num_messages_excluded_no_transaction += 1;
-        false
-    };
-
-    metadata.num_messages_referenced += 1;
-
-    tangle.update_metadata(&message_id, |meta| {
-        meta.flags_mut().set_conflicting(conflicting);
-        meta.confirm();
-        meta.set_milestone_index(metadata.index);
-        // TODO Set OTRSI, ...
-        // TODO increment metrics confirmed, zero, value and conflict.
-    });
 }
 
 pub(crate) async fn visit_dfs<B: Backend>(
     tangle: &MsTangle<B>,
+    storage: &ResHandle<B>,
     root: MessageId,
     metadata: &mut WhiteFlagMetadata,
 ) -> Result<(), Error> {
@@ -91,7 +73,7 @@ pub(crate) async fn visit_dfs<B: Backend>(
 
                 if visited.contains(parent1) && visited.contains(parent2) {
                     // TODO check valid and strict semantic
-                    on_message(tangle, message_id, &message, metadata);
+                    on_message(tangle, storage, message_id, &message, metadata);
                     visited.insert(*message_id);
                     messages_ids.pop();
                 } else if !visited.contains(parent1) {
