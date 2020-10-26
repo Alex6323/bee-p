@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, output::OutputId, TransactionId},
+    payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, TransactionId},
     Error,
 };
 
@@ -21,53 +21,45 @@ use serde::{Deserialize, Serialize};
 use alloc::string::ToString;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct UTXOInput(OutputId);
-
-impl From<OutputId> for UTXOInput {
-    fn from(id: OutputId) -> Self {
-        UTXOInput(id)
-    }
+pub struct OutputId {
+    id: TransactionId,
+    index: u16,
 }
 
-impl UTXOInput {
+impl OutputId {
     pub fn new(id: TransactionId, index: u16) -> Result<Self, Error> {
         if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
             return Err(Error::InvalidIndex);
         }
 
-        Ok(Self(OutputId::new(id, index)?))
+        Ok(Self { id, index })
     }
 
     pub fn id(&self) -> &TransactionId {
-        &self.0.id()
+        &self.id
     }
 
     pub fn index(&self) -> u16 {
-        self.0.index()
+        self.index
     }
 }
 
-impl core::fmt::Display for UTXOInput {
+impl core::fmt::Display for OutputId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(
-            f,
-            "{}{}",
-            self.id().to_string(),
-            hex::encode(self.index().to_le_bytes())
-        )
+        write!(f, "{}{}", self.id.to_string(), hex::encode(self.index.to_le_bytes()))
     }
 }
 
-impl Packable for UTXOInput {
+impl Packable for OutputId {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        self.id().packed_len() + self.index().packed_len()
+        self.id.packed_len() + self.index.packed_len()
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-        self.id().pack(writer)?;
-        self.index().pack(writer)?;
+        self.id.pack(writer)?;
+        self.index.pack(writer)?;
 
         Ok(())
     }

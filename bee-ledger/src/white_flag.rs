@@ -12,7 +12,7 @@
 use crate::metadata::WhiteFlagMetadata;
 
 use bee_common_ext::node::ResHandle;
-use bee_message::{Message, MessageId};
+use bee_message::{payload::Payload, Message, MessageId};
 use bee_protocol::tangle::MsTangle;
 use bee_storage::storage::Backend;
 
@@ -33,6 +33,26 @@ fn on_message<B: Backend>(
     message: &Message,
     metadata: &mut WhiteFlagMetadata,
 ) {
+    let mut conflicting = false;
+
+    if let Payload::Transaction(transaction) = message.payload() {
+        let transaction_id = transaction.id();
+        let essence = transaction.essence();
+        let inputs = essence.inputs();
+        let outputs = essence.outputs();
+
+        for input in inputs {}
+
+        for output in outputs {}
+    } else {
+        metadata.num_messages_excluded_no_transaction += 1;
+    }
+
+    tangle.update_metadata(message_id, |message_metadata| {
+        message_metadata.flags_mut().set_conflicting(conflicting);
+        message_metadata.set_milestone_index(metadata.index);
+        message_metadata.confirm();
+    });
 }
 
 pub(crate) async fn visit_dfs<B: Backend>(

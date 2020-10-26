@@ -10,9 +10,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod address;
+mod output_id;
 mod signature_locked_single;
 
 pub use address::{Address, Ed25519Address, WotsAddress};
+pub use output_id::OutputId;
 pub use signature_locked_single::SignatureLockedSingleOutput;
 
 use crate::Error;

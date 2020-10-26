@@ -14,9 +14,10 @@ pub use crate::{
         indexation::Indexation,
         milestone::Milestone,
         transaction::{
-            Address, Ed25519Address, Ed25519Signature, Input, Output, ReferenceUnlock, SignatureLockedSingleOutput,
-            SignatureUnlock, Transaction, TransactionBuilder, TransactionEssence, TransactionEssenceBuilder,
-            TransactionId, UTXOInput, UnlockBlock, WotsAddress, WotsSignature, TRANSACTION_ID_LENGTH,
+            Address, Ed25519Address, Ed25519Signature, Input, Output, OutputId, ReferenceUnlock,
+            SignatureLockedSingleOutput, SignatureUnlock, Transaction, TransactionBuilder, TransactionEssence,
+            TransactionEssenceBuilder, TransactionId, UTXOInput, UnlockBlock, WotsAddress, WotsSignature,
+            TRANSACTION_ID_LENGTH,
         },
         Payload,
     },
