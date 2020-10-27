@@ -14,6 +14,7 @@
 use super::config::*;
 use async_trait::async_trait;
 pub use bee_storage::storage::Backend;
+use blake2::{Blake2b, Digest};
 pub use rocksdb::*;
 use std::error::Error;
 
@@ -41,8 +42,11 @@ impl Storage {
         let milestone_index_to_ledger_state =
             ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_STATE, Options::default());
         let message_id_to_message = ColumnFamilyDescriptor::new(MESSAGE_ID_TO_MESSAGE, Options::default());
-        // FIXME: set options to do prefix queries.
-        let payload_index_to_message_id = ColumnFamilyDescriptor::new(PAYLOAD_INDEX_TO_MESSAGE_ID, Options::default());
+
+        let prefix_extractor = SliceTransform::create_fixed_prefix(<Blake2b as Digest>::output_size());
+        let mut options = Options::default();
+        options.set_prefix_extractor(prefix_extractor);
+        let payload_index_to_message_id = ColumnFamilyDescriptor::new(PAYLOAD_INDEX_TO_MESSAGE_ID, options);
 
         let mut opts = Options::default();
 

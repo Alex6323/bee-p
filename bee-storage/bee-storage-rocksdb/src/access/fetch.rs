@@ -95,7 +95,7 @@ impl Fetch<String, Vec<MessageId>> for Storage {
             self.inner
                 .prefix_iterator_cf(&payload_index_to_message_id, indexation_buf.as_slice())
                 .map(|(key, _value)| {
-                    let (_hash, message_id) = key.split_at(indexation_buf.len());
+                    let (_hash, message_id) = key.split_at(<Blake2b as Digest>::output_size());
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
                     MessageId::from(message_id)
                 })

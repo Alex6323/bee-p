@@ -10,12 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_crypto::ternary::Hash;
-use bee_message::{payload::Payload, Message, MessageId};
+use bee_message::{Message, MessageId};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
-use bee_storage::{
-    access::{Delete, Fetch},
-    persistable::Persistable,
-};
+use bee_storage::{access::Delete, persistable::Persistable};
 
 use crate::{access::OpError, storage::*};
 
