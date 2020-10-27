@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, output::OutputId, TransactionId},
+    payload::transaction::{output::OutputId, TransactionId},
     Error,
 };
 
@@ -18,9 +18,7 @@ use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use alloc::string::ToString;
-
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
 pub struct UTXOInput(OutputId);
 
 impl From<OutputId> for UTXOInput {
@@ -31,30 +29,17 @@ impl From<OutputId> for UTXOInput {
 
 impl UTXOInput {
     pub fn new(id: TransactionId, index: u16) -> Result<Self, Error> {
-        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
-            return Err(Error::InvalidIndex);
-        }
-
         Ok(Self(OutputId::new(id, index)?))
     }
 
-    pub fn id(&self) -> &TransactionId {
-        &self.0.id()
-    }
-
-    pub fn index(&self) -> u16 {
-        self.0.index()
+    pub fn output_id(&self) -> &OutputId {
+        &self.0
     }
 }
 
 impl core::fmt::Display for UTXOInput {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(
-            f,
-            "{}{}",
-            self.id().to_string(),
-            hex::encode(self.index().to_le_bytes())
-        )
+        write!(f, "{}", self.0)
     }
 }
 
@@ -62,12 +47,11 @@ impl Packable for UTXOInput {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        self.id().packed_len() + self.index().packed_len()
+        self.0.packed_len()
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-        self.id().pack(writer)?;
-        self.index().pack(writer)?;
+        self.0.pack(writer)?;
 
         Ok(())
     }
@@ -76,9 +60,6 @@ impl Packable for UTXOInput {
     where
         Self: Sized,
     {
-        let id = TransactionId::unpack(reader)?;
-        let index = u16::unpack(reader)?;
-
-        Ok(Self::new(id, index).map_err(|_| Self::Error::InvalidSyntax)?)
+        Ok(Self(OutputId::unpack(reader)?))
     }
 }

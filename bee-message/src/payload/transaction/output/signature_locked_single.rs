@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use core::num::NonZeroU64;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Ord, PartialOrd)]
 pub struct SignatureLockedSingleOutput {
     address: Address,
     amount: NonZeroU64,

@@ -179,7 +179,7 @@ impl TransactionBuilder {
                         match &essence.inputs()[i] {
                             Input::UTXO(u) => match &essence.inputs()[i - 1] {
                                 Input::UTXO(v) => {
-                                    if u.id() != v.id() {
+                                    if u.output_id().transaction_id() != v.output_id().transaction_id() {
                                         return Err(Error::InvalidIndex);
                                     }
                                 }
@@ -204,7 +204,7 @@ impl TransactionBuilder {
                         match &essence.inputs()[i] {
                             Input::UTXO(u) => match &essence.inputs()[i - 1] {
                                 Input::UTXO(v) => {
-                                    if u.id() == v.id() {
+                                    if u.output_id().transaction_id() == v.output_id().transaction_id() {
                                         return Err(Error::InvalidIndex);
                                     }
                                 }

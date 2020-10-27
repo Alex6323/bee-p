@@ -28,7 +28,8 @@ pub mod spent;
 pub(crate) use download::download_local_snapshot;
 
 pub use error::Error;
-use snapshot::LocalSnapshot;
+pub use header::SnapshotHeader;
+pub use snapshot::LocalSnapshot;
 
 use bee_common_ext::{event::Bus, node::Node};
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};

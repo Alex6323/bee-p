@@ -30,6 +30,7 @@ use bee_common_ext::{
     node::{Node, NodeBuilder},
 };
 use bee_network::{EndpointId, Network, Origin};
+use bee_snapshot::LocalSnapshot;
 use bee_storage::storage::Backend;
 
 use futures::channel::oneshot;
@@ -52,6 +53,7 @@ impl Protocol {
         config: ProtocolConfig,
         database_config: <N::Backend as Backend>::Config,
         network: Network,
+        snapshot: &LocalSnapshot,
         node_builder: N::Builder,
         bus: Arc<Bus<'static>>,
     ) -> N::Builder {
@@ -68,7 +70,7 @@ impl Protocol {
 
         node_builder
             .with_worker_cfg::<StorageWorker>(database_config)
-            .with_worker::<TangleWorker>()
+            .with_worker_cfg::<TangleWorker>(snapshot.header().clone())
             .with_worker_cfg::<HasherWorker>(config.workers.message_worker_cache)
             .with_worker_cfg::<ProcessorWorker>(config.clone())
             .with_worker::<MessageResponderWorker>()
