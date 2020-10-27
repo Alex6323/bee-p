@@ -18,6 +18,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use warp::reply::json;
+use bee_message::MessageId;
 
 pub async fn info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp::reply::Json, Infallible> {
     let name = String::from("Bee");
@@ -54,15 +55,12 @@ pub async fn info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp::re
         ret
     };
     let coordinator_public_key = String::from("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649"); // TODO: access protocol config
-    let latest_milestone_message_id = tangle
-        .get_milestone_message_id(tangle.get_latest_milestone_index())
-        .unwrap();
+
+    //let latest_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap();
     let latest_milestone_index = tangle.get_latest_milestone_index();
-    let solid_milestone_message_id = tangle
-        .get_milestone_message_id(tangle.get_latest_milestone_index())
-        .unwrap();
+    //let solid_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap();
     let solid_milestone_index = tangle.get_latest_milestone_index();
-    let pruning_index = tangle.get_latest_milestone_index();
+    let pruning_index = tangle.get_pruning_index();
     let features = Vec::new(); // TODO: check enabled features
 
     Ok(warp::reply::json(&InfoResponse {
@@ -70,9 +68,9 @@ pub async fn info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp::re
         version,
         is_healthy,
         coordinator_public_key,
-        latest_milestone_message_id,
+        latest_milestone_message_id: MessageId::from([0; 32]),
         latest_milestone_index,
-        solid_milestone_message_id,
+        solid_milestone_message_id: MessageId::from([0; 32]),
         solid_milestone_index,
         pruning_index,
         features,

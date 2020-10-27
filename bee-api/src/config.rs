@@ -13,7 +13,7 @@ use serde::Deserialize;
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-pub(crate) const DEFAULT_BINDING_PORT: u16 = 3030;
+pub(crate) const DEFAULT_BINDING_PORT: u16 = 14265;
 pub(crate) const DEFAULT_BINDING_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
 /// API configuration builder.
