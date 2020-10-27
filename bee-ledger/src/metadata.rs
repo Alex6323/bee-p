@@ -20,14 +20,14 @@ pub(crate) struct WhiteFlagMetadata {
     /// Timestamp of the confirming milestone.
     #[allow(dead_code)]
     pub(crate) timestamp: u64,
-    /// The number of tails which were referenced by the confirming milestone.
-    pub(crate) num_tails_referenced: usize,
-    /// The number of tails which were excluded because they were part of a zero or spam value transfer.
-    pub(crate) num_tails_zero_value: usize,
-    /// The number of tails which were excluded as they were conflicting with the ledger state.
-    pub(crate) num_tails_conflicting: usize,
-    /// The tails of bundles which mutate the ledger in the order in which they were applied.
-    pub(crate) tails_included: Vec<MessageId>,
+    /// The number of messages which were referenced by the confirming milestone.
+    pub(crate) num_messages_referenced: usize,
+    /// The number of messages which were excluded because they did not include a value transaction.
+    pub(crate) num_messages_excluded_no_transaction: usize,
+    /// The number of messages which were excluded as they were conflicting with the ledger state.
+    pub(crate) num_messages_excluded_conflicting: usize,
+    // The messages which mutate the ledger in the order in which they were applied.
+    pub(crate) messages_included: Vec<MessageId>,
 }
 
 impl WhiteFlagMetadata {

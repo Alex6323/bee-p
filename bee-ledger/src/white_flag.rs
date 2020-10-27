@@ -11,7 +11,8 @@
 
 use crate::metadata::WhiteFlagMetadata;
 
-use bee_message::{Message, MessageId};
+use bee_common_ext::node::ResHandle;
+use bee_message::{payload::Payload, Message, MessageId};
 use bee_protocol::tangle::MsTangle;
 use bee_storage::storage::Backend;
 
@@ -27,57 +28,43 @@ pub(crate) enum Error {
 #[inline]
 fn on_message<B: Backend>(
     tangle: &MsTangle<B>,
+    storage: &ResHandle<B>,
     message_id: &MessageId,
     message: &Message,
     metadata: &mut WhiteFlagMetadata,
 ) {
-    // let mut conflicting = false;
-    // let (mutates, mutations) = bundle.ledger_mutations();
-    //
-    // if !mutates {
-    //     metadata.num_tails_zero_value += 1;
-    // } else {
-    //     // First pass to look for conflicts.
-    //     for (address, diff) in mutations.iter() {
-    //         let balance = state.get_or_zero(&address) as i64 + diff;
-    //
-    //         if balance < 0 || balance.abs() as u64 > IOTA_SUPPLY {
-    //             metadata.num_tails_conflicting += 1;
-    //             conflicting = true;
-    //             break;
-    //         }
-    //     }
-    //
-    //     if !conflicting {
-    //         // Second pass to mutate the state.
-    //         for (address, diff) in mutations {
-    //             state.apply_single_diff(address.clone(), diff);
-    //             metadata.diff.apply_single_diff(address, diff);
-    //         }
-    //
-    //         metadata.tails_included.push(*message_id);
-    //     }
-    // }
-    //
-    // metadata.num_tails_referenced += 1;
-    //
-    // // TODO this only actually confirm tails
-    // tangle.update_metadata(&message_id, |meta| {
-    //     meta.flags_mut().set_conflicting(conflicting);
-    //     meta.confirm();
-    //     meta.set_milestone_index(metadata.index);
-    //     // TODO Set OTRSI, ...
-    //     // TODO increment metrics confirmed, zero, value and conflict.
-    // });
+    let mut conflicting = false;
+
+    if let Payload::Transaction(transaction) = message.payload() {
+        let transaction_id = transaction.id();
+        let essence = transaction.essence();
+        let inputs = essence.inputs();
+        let outputs = essence.outputs();
+
+        for input in inputs {}
+
+        for output in outputs {}
+    } else {
+        metadata.num_messages_excluded_no_transaction += 1;
+    }
+
+    tangle.update_metadata(message_id, |message_metadata| {
+        message_metadata.flags_mut().set_conflicting(conflicting);
+        message_metadata.set_milestone_index(metadata.index);
+        message_metadata.confirm();
+    });
 }
 
 pub(crate) async fn visit_dfs<B: Backend>(
     tangle: &MsTangle<B>,
+    storage: &ResHandle<B>,
     root: MessageId,
     metadata: &mut WhiteFlagMetadata,
 ) -> Result<(), Error> {
     let mut messages_ids = vec![root];
     let mut visited = HashSet::new();
+
+    // TODO Tangle get message AND meta at the same time
 
     while let Some(message_id) = messages_ids.last() {
         let meta = match tangle.get_metadata(message_id) {
@@ -99,7 +86,6 @@ pub(crate) async fn visit_dfs<B: Backend>(
             continue;
         }
 
-        // TODO pass match to avoid repetitions
         match tangle.get(message_id).await {
             Some(message) => {
                 let parent1 = message.parent1();
@@ -107,7 +93,7 @@ pub(crate) async fn visit_dfs<B: Backend>(
 
                 if visited.contains(parent1) && visited.contains(parent2) {
                     // TODO check valid and strict semantic
-                    on_message(tangle, message_id, &message, metadata);
+                    on_message(tangle, storage, message_id, &message, metadata);
                     visited.insert(*message_id);
                     messages_ids.pop();
                 } else if !visited.contains(parent1) {

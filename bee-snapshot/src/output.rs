@@ -9,7 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use crate::Error;
+
+use bee_common_ext::packable::{Packable, Read, Write};
 use bee_message::{
     payload::transaction::{SignatureLockedSingleOutput, UTXOInput},
     MessageId,
@@ -22,11 +24,13 @@ pub(crate) struct Output {
 }
 
 impl Packable for Output {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         self.message_id.packed_len() + self.output_id.packed_len() + self.output.packed_len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.message_id.pack(writer)?;
         self.output_id.pack(writer)?;
         self.output.pack(writer)?;
@@ -34,7 +38,7 @@ impl Packable for Output {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

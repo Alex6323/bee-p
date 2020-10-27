@@ -11,7 +11,7 @@
 
 use crate::Error;
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 use bee_ternary::{T5B1Buf, TritBuf};
 
 use bytemuck::cast_slice;
@@ -72,17 +72,19 @@ impl core::fmt::Debug for WotsAddress {
 }
 
 impl Packable for WotsAddress {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         243
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         writer.write_all(&self.0)?;
 
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

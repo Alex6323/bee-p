@@ -11,7 +11,7 @@
 
 use crate::MessageRef;
 
-use bee_message::prelude::{Message, MessageId};
+use bee_message::{Message, MessageId};
 
 use std::sync::Arc;
 

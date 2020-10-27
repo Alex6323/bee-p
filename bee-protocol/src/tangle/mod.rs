@@ -22,7 +22,7 @@ use crate::{
 };
 
 use bee_common_ext::node::ResHandle;
-use bee_message::prelude::{Message, MessageId};
+use bee_message::{Message, MessageId};
 use bee_storage::storage::Backend;
 use bee_tangle::{Hooks, MessageRef, Tangle};
 

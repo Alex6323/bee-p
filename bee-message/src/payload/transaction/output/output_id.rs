@@ -9,48 +9,57 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{payload::transaction::constants::INPUT_OUTPUT_INDEX_RANGE, Error};
+use crate::{
+    payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, TransactionId},
+    Error,
+};
 
 use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use core::convert::{TryFrom, TryInto};
+use alloc::string::ToString;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct ReferenceUnlock(u16);
-
-impl TryFrom<u16> for ReferenceUnlock {
-    type Error = Error;
-
-    fn try_from(index: u16) -> Result<Self, Self::Error> {
-        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
-            return Err(Self::Error::InvalidIndex);
-        }
-
-        Ok(Self(index))
-    }
+pub struct OutputId {
+    id: TransactionId,
+    index: u16,
 }
 
-impl ReferenceUnlock {
-    pub fn new(index: u16) -> Result<Self, Error> {
-        index.try_into()
+impl OutputId {
+    pub fn new(id: TransactionId, index: u16) -> Result<Self, Error> {
+        if !INPUT_OUTPUT_INDEX_RANGE.contains(&index) {
+            return Err(Error::InvalidIndex);
+        }
+
+        Ok(Self { id, index })
+    }
+
+    pub fn id(&self) -> &TransactionId {
+        &self.id
     }
 
     pub fn index(&self) -> u16 {
-        self.0
+        self.index
     }
 }
 
-impl Packable for ReferenceUnlock {
+impl core::fmt::Display for OutputId {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}{}", self.id.to_string(), hex::encode(self.index.to_le_bytes()))
+    }
+}
+
+impl Packable for OutputId {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        0u16.packed_len()
+        self.id.packed_len() + self.index.packed_len()
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-        self.0.pack(writer)?;
+        self.id.pack(writer)?;
+        self.index.pack(writer)?;
 
         Ok(())
     }
@@ -59,6 +68,9 @@ impl Packable for ReferenceUnlock {
     where
         Self: Sized,
     {
-        Ok(Self::new(u16::unpack(reader)?).map_err(|_| Self::Error::InvalidSyntax)?)
+        let id = TransactionId::unpack(reader)?;
+        let index = u16::unpack(reader)?;
+
+        Ok(Self::new(id, index).map_err(|_| Self::Error::InvalidSyntax)?)
     }
 }

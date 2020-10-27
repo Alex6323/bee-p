@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-#![no_std]
+// #![no_std]
 
 #[macro_use]
 extern crate alloc;
@@ -42,6 +42,13 @@ pub enum Error {
     HashError,
     PathError,
     MissingField(&'static str),
+    Io(std::io::Error),
+    InvalidVariant,
+    InvalidUtf8String,
+    InvalidVersion(u8, u8),
+    InvalidType(u8, u8),
+    InvalidAnnouncedLength(usize, usize),
+    InvalidSyntax,
 }
 
 impl fmt::Display for Error {
@@ -59,6 +66,21 @@ impl fmt::Display for Error {
             Error::HashError => write!(f, "The format of provided hash is not correct."),
             Error::PathError => write!(f, "The format of provided BIP32 path is not correct."),
             Error::MissingField(s) => write!(f, "Missing required field: {}.", s),
+            Error::Io(e) => write!(f, "I/O error happened: {}.", e),
+            Error::InvalidVariant => write!(f, "Invalid variant read."),
+            Error::InvalidUtf8String => write!(f, "Invalid Utf8 string read."),
+            Error::InvalidVersion(expected, actual) => write!(f, "Invalid version read: {}, {}.", expected, actual),
+            Error::InvalidType(expected, actual) => write!(f, "Invalid type read: {}, {}.", expected, actual),
+            Error::InvalidAnnouncedLength(expected, actual) => {
+                write!(f, "Invalid announced length: {}, {}.", expected, actual)
+            }
+            Error::InvalidSyntax => write!(f, "Syntax validation failed."),
         }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::Io(error)
     }
 }

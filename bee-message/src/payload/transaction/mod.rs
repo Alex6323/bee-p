@@ -22,16 +22,17 @@ use constants::INPUT_OUTPUT_COUNT_RANGE;
 
 pub use essence::{TransactionEssence, TransactionEssenceBuilder};
 pub use input::{Input, UTXOInput};
-pub use output::{Address, Ed25519Address, Output, SignatureLockedSingleOutput, WotsAddress};
+pub use output::{Address, Ed25519Address, Output, OutputId, SignatureLockedSingleOutput, WotsAddress};
 pub use transaction_id::{TransactionId, TRANSACTION_ID_LENGTH};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 
+use blake2::{Blake2b, Digest};
 use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
-use core::{cmp::Ordering, slice::Iter};
+use core::{cmp::Ordering, convert::TryInto, slice::Iter};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
@@ -48,19 +49,42 @@ impl Transaction {
         &self.unlock_blocks
     }
 
+    pub fn unlock_block(&self, index: usize) -> &UnlockBlock {
+        let unlock_block = &self.unlock_blocks[index];
+        if let UnlockBlock::Reference(reference) = unlock_block {
+            &self.unlock_blocks[reference.index() as usize]
+        } else {
+            unlock_block
+        }
+    }
+
     pub fn builder() -> TransactionBuilder {
         TransactionBuilder::default()
+    }
+
+    pub fn id(&self) -> TransactionId {
+        let mut bytes = Vec::with_capacity(self.packed_len());
+        let mut hasher = Blake2b::new();
+
+        // Packing to bytes can't fail.
+        self.pack(&mut bytes).unwrap();
+        hasher.update(&bytes);
+
+        // We know for sure the bytes have the right size.
+        TransactionId::new(hasher.finalize()[0..TRANSACTION_ID_LENGTH].try_into().unwrap())
     }
 }
 
 impl Packable for Transaction {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         self.essence.packed_len()
             + 0u16.packed_len()
             + self.unlock_blocks.iter().map(|block| block.packed_len()).sum::<usize>()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.essence.pack(writer)?;
 
         (self.unlock_blocks.len() as u16).pack(writer)?;
@@ -71,7 +95,7 @@ impl Packable for Transaction {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {

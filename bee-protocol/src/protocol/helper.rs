@@ -17,7 +17,7 @@ use crate::{
     worker::{MessageRequesterWorkerEvent, MilestoneRequesterWorkerEvent, RequestedMessages, RequestedMilestones},
 };
 
-use bee_message::prelude::MessageId;
+use bee_message::MessageId;
 use bee_network::{Command::SendMessage, EndpointId};
 use bee_storage::storage::Backend;
 

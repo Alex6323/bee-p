@@ -11,7 +11,7 @@
 
 use crate::{payload::Payload, Error, MessageId, Vertex};
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
+use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -46,6 +46,8 @@ impl Message {
 }
 
 impl Packable for Message {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         1u8.packed_len()
             + self.parent1.packed_len()
@@ -55,7 +57,7 @@ impl Packable for Message {
             + 0u64.packed_len()
     }
 
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         1u8.pack(writer)?;
 
         self.parent1.pack(writer)?;
@@ -69,14 +71,14 @@ impl Packable for Message {
         Ok(())
     }
 
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
         let version = u8::unpack(reader)?;
 
         if version != 1u8 {
-            return Err(PackableError::InvalidVersion(1, version));
+            return Err(Self::Error::InvalidVersion(1, version));
         }
 
         let parent1 = MessageId::unpack(reader)?;
@@ -86,7 +88,7 @@ impl Packable for Message {
         let payload = Payload::unpack(reader)?;
 
         if payload_len != payload.packed_len() {
-            return Err(PackableError::InvalidAnnouncedLength(payload_len, payload.packed_len()));
+            return Err(Self::Error::InvalidAnnouncedLength(payload_len, payload.packed_len()));
         }
 
         let nonce = u64::unpack(reader)?;

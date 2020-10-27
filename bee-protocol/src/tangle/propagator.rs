@@ -11,7 +11,7 @@
 
 use crate::tangle;
 
-use bee_message::prelude::MessageId;
+use bee_message::MessageId;
 
 use std::collections::HashSet;
 

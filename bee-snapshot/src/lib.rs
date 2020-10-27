@@ -17,6 +17,7 @@ pub(crate) mod pruning;
 // pub(crate) mod worker;
 
 pub mod config;
+pub mod error;
 pub mod event;
 pub mod header;
 pub mod milestone_diff;
@@ -24,9 +25,10 @@ pub mod output;
 pub mod snapshot;
 pub mod spent;
 
-pub(crate) use download::{download_local_snapshot, Error as DownloadError};
+pub(crate) use download::download_local_snapshot;
 
-use snapshot::{Error as FileError, LocalSnapshot};
+pub use error::Error;
+use snapshot::LocalSnapshot;
 
 use bee_common_ext::{event::Bus, node::Node};
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
@@ -36,12 +38,6 @@ use log::info;
 
 use std::{path::Path, sync::Arc};
 
-#[derive(Debug)]
-pub enum Error {
-    Local(FileError),
-    Download(DownloadError),
-}
-
 // TODO change return type
 
 pub async fn init<N: Node>(
@@ -50,11 +46,11 @@ pub async fn init<N: Node>(
     node_builder: N::Builder,
 ) -> Result<(N::Builder, LocalSnapshot), Error> {
     if !Path::new(config.path()).exists() {
-        download_local_snapshot(config).await.map_err(Error::Download)?;
+        download_local_snapshot(config).await?;
     }
     info!("Loading local snapshot file {}...", config.path());
 
-    let snapshot = LocalSnapshot::from_file(config.path()).map_err(Error::Local)?;
+    let snapshot = LocalSnapshot::from_file(config.path())?;
 
     info!(
         "Loaded local snapshot file from {} with {} solid entry points.",

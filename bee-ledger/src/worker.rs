@@ -13,120 +13,133 @@ use crate::{
     event::MilestoneConfirmed,
     merkle_hasher::MerkleHasher,
     metadata::WhiteFlagMetadata,
-    traversal::{visit_dfs, Error as TraversalError},
+    white_flag::{visit_dfs, Error as TraversalError},
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{event::Bus, node::Node, worker::Worker};
-use bee_message::prelude::{Address, Message, Payload};
-use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, Milestone, MilestoneIndex, TangleWorker};
+use bee_common_ext::{
+    event::Bus,
+    node::{Node, ResHandle},
+    worker::Worker,
+};
+use bee_message::{payload::Payload, MessageId};
+use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, MilestoneIndex, StorageWorker, TangleWorker};
 use bee_storage::storage::Backend;
 
 use async_trait::async_trait;
 use blake2::Blake2b;
-use futures::{channel::oneshot, stream::StreamExt};
-use log::{error, info, warn};
+use futures::stream::StreamExt;
+use log::{error, info};
 
 use std::{any::TypeId, sync::Arc};
 
 const MERKLE_PROOF_LENGTH: usize = 384;
 
 enum Error {
+    MilestoneMessageNotFound,
+    NoMilestonePayload,
     NonContiguousMilestone,
-    MerkleProofMismatch,
-    InvalidTailsCount,
     InvalidConfirmationSet(TraversalError),
-    NotMilestone,
+    MerkleProofMismatch,
+    InvalidMessagesCount,
 }
 
 pub enum LedgerWorkerEvent {
-    Confirm(Milestone),
-    GetBalance(Address, oneshot::Sender<u64>),
+    Confirm(MessageId),
+    // GetBalance(Address, oneshot::Sender<u64>),
 }
 
 pub(crate) struct LedgerWorker {
     pub(crate) tx: flume::Sender<LedgerWorkerEvent>,
 }
 
-fn confirm<B: Backend>(
+async fn confirm<B: Backend>(
     tangle: &MsTangle<B>,
-    message: Message,
+    storage: &ResHandle<B>,
+    message_id: MessageId,
     index: &mut MilestoneIndex,
     coo_config: &ProtocolCoordinatorConfig,
     bus: &Arc<Bus<'static>>,
 ) -> Result<(), Error> {
+    let message = tangle.get(&message_id).await.ok_or(Error::MilestoneMessageNotFound)?;
+
     let milestone = match message.payload() {
         Payload::Milestone(milestone) => milestone,
-        _ => return Err(Error::NotMilestone),
+        _ => return Err(Error::NoMilestonePayload),
     };
 
-    if milestone.index() != MilestoneIndex(index.0 + 1) {
-        error!("Tried to confirm {} on top of {}.", milestone.index().0, index.0);
+    if milestone.essence().index() != index.0 + 1 {
+        error!(
+            "Tried to confirm {} on top of {}.",
+            milestone.essence().index(),
+            index.0
+        );
         return Err(Error::NonContiguousMilestone);
     }
 
-    let mut confirmation = WhiteFlagMetadata::new(MilestoneIndex(milestone.index()), milestone.timestamp());
+    let mut metadata = WhiteFlagMetadata::new(
+        MilestoneIndex(milestone.essence().index()),
+        milestone.essence().timestamp(),
+    );
 
-    match visit_dfs(tangle, *milestone.hash(), &mut confirmation) {
-        Ok(_) => {
-            if !MerkleHasher::<Blake2b>::new()
-                .digest(&confirmation.tails_included)
-                .eq(&milestone.merkle_proof())
-            {
-                error!(
-                    "The computed merkle proof on milestone {} does not match the one provided by the coordinator.",
-                    milestone.index(),
-                );
-                return Err(Error::MerkleProofMismatch);
-            }
+    if let Err(e) = visit_dfs(tangle, storage, message_id, &mut metadata).await {
+        error!(
+            "Error occured while traversing to confirm {}: {:?}.",
+            milestone.essence().index(),
+            e
+        );
+        return Err(Error::InvalidConfirmationSet(e));
+    };
 
-            if confirmation.num_tails_referenced
-                != confirmation.num_tails_zero_value
-                    + confirmation.num_tails_conflicting
-                    + confirmation.tails_included.len()
-            {
-                error!(
-                    "Invalid tails count at {}: referenced ({}) != zero ({}) + conflicting ({}) + included ({}).",
-                    milestone.index().0,
-                    confirmation.num_tails_referenced,
-                    confirmation.num_tails_zero_value,
-                    confirmation.num_tails_conflicting,
-                    confirmation.tails_included.len()
-                );
-                return Err(Error::InvalidTailsCount);
-            }
+    let merkle_proof = MerkleHasher::<Blake2b>::new().digest(&metadata.messages_included);
 
-            *index = MilestoneIndex(milestone.index());
-
-            info!(
-                "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
-                *milestone.index(),
-                confirmation.num_tails_referenced,
-                confirmation.num_tails_zero_value,
-                confirmation.num_tails_conflicting,
-                confirmation.tails_included.len()
-            );
-
-            bus.dispatch(MilestoneConfirmed {
-                milestone,
-                timestamp: milestone.timestamp(),
-                tails_referenced: confirmation.num_tails_referenced,
-                tails_zero_value: confirmation.num_tails_zero_value,
-                tails_conflicting: confirmation.num_tails_conflicting,
-                tails_included: confirmation.tails_included.len(),
-            });
-
-            Ok(())
-        }
-        Err(e) => {
-            error!(
-                "Error occured while traversing to confirm {}: {:?}.",
-                milestone.index().0,
-                e
-            );
-            Err(Error::InvalidConfirmationSet(e))
-        }
+    if !merkle_proof.eq(&milestone.essence().merkle_proof()) {
+        error!(
+            "The computed merkle proof on milestone {}, {}, does not match the one provided by the coordinator, {}.",
+            hex::encode(merkle_proof),
+            milestone.essence().index(),
+            hex::encode(milestone.essence().merkle_proof())
+        );
+        return Err(Error::MerkleProofMismatch);
     }
+
+    if metadata.num_messages_referenced
+        != metadata.num_messages_excluded_no_transaction
+            + metadata.num_messages_excluded_conflicting
+            + metadata.messages_included.len()
+    {
+        error!(
+            "Invalid messages count at {}: referenced ({}) != no transaction ({}) + conflicting ({}) + included ({}).",
+            milestone.essence().index(),
+            metadata.num_messages_referenced,
+            metadata.num_messages_excluded_no_transaction,
+            metadata.num_messages_excluded_conflicting,
+            metadata.messages_included.len()
+        );
+        return Err(Error::InvalidMessagesCount);
+    }
+
+    *index = MilestoneIndex(milestone.essence().index());
+
+    info!(
+        "Confirmed milestone {}: referenced {}, zero value {}, conflicting {}, included {}.",
+        milestone.essence().index(),
+        metadata.num_messages_referenced,
+        metadata.num_messages_excluded_no_transaction,
+        metadata.num_messages_excluded_conflicting,
+        metadata.messages_included.len()
+    );
+
+    bus.dispatch(MilestoneConfirmed {
+        milestone,
+        timestamp: milestone.essence().timestamp(),
+        messages_referenced: metadata.num_messages_referenced,
+        messages_excluded_no_transaction: metadata.num_messages_excluded_no_transaction,
+        messages_excluded_conflicting: metadata.num_messages_excluded_conflicting,
+        messages_included: metadata.messages_included.len(),
+    });
+
+    Ok(())
 }
 
 // fn get_balance(state: &LedgerState, address: Address, sender: oneshot::Sender<u64>) {
@@ -141,13 +154,14 @@ impl<N: Node> Worker<N> for LedgerWorker {
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        vec![TypeId::of::<TangleWorker>()].leak()
+        vec![TypeId::of::<TangleWorker>(), TypeId::of::<StorageWorker>()].leak()
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let storage = node.storage();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -160,9 +174,15 @@ impl<N: Node> Worker<N> for LedgerWorker {
 
             while let Some(event) = receiver.next().await {
                 match event {
-                    LedgerWorkerEvent::Confirm(milestone) => {
-                        if confirm(&tangle, milestone, &mut index, &coo_config, &bus).is_err() {
-                            panic!("Error while confirming milestone, aborting.");
+                    LedgerWorkerEvent::Confirm(message_id) => {
+                        if confirm(&tangle, storage, message_id, &mut index, &coo_config, &bus)
+                            .await
+                            .is_err()
+                        {
+                            panic!(
+                                "Error while confirming milestone from message {}, aborting.",
+                                message_id
+                            );
                         }
                     } // LedgerWorkerEvent::GetBalance(address, sender) => get_balance(&state, address, sender),
                 }

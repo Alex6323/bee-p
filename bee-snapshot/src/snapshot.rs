@@ -9,10 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{header::SnapshotHeader, kind::Kind, milestone_diff::MilestoneDiff, output::Output};
+use crate::{header::SnapshotHeader, kind::Kind, milestone_diff::MilestoneDiff, output::Output, Error};
 
-use bee_common_ext::packable::{Error as PackableError, Packable, Read, Write};
-use bee_message::prelude::MessageId;
+use bee_common_ext::packable::{Packable, Read, Write};
+use bee_message::MessageId;
 
 use log::{error, info};
 
@@ -21,12 +21,6 @@ use std::{
     fs::OpenOptions,
     io::{BufReader, BufWriter},
 };
-
-// TODO remove ?
-#[derive(Debug)]
-pub enum Error {
-    IOError(std::io::Error),
-}
 
 pub struct LocalSnapshot {
     pub(crate) header: SnapshotHeader,
@@ -45,7 +39,7 @@ impl LocalSnapshot {
     }
 
     pub fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
-        let mut reader = BufReader::new(OpenOptions::new().read(true).open(path).map_err(Error::IOError)?);
+        let mut reader = BufReader::new(OpenOptions::new().read(true).open(path).map_err(Error::Io)?);
 
         // TODO unwrap
         Ok(LocalSnapshot::unpack(&mut reader).unwrap())
@@ -58,7 +52,7 @@ impl LocalSnapshot {
                 .truncate(true)
                 .create(true)
                 .open(path)
-                .map_err(Error::IOError)?,
+                .map_err(Error::Io)?,
         );
 
         // TODO unwrap
@@ -69,6 +63,8 @@ impl LocalSnapshot {
 }
 
 impl Packable for LocalSnapshot {
+    type Error = Error;
+
     fn packed_len(&self) -> usize {
         let mut len = self.header.packed_len();
         len += (self.solid_entry_points.len() as u64).packed_len();
@@ -88,7 +84,7 @@ impl Packable for LocalSnapshot {
     }
 
     // TODO stream ?
-    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), PackableError> {
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         self.header.pack(writer)?;
 
         (self.solid_entry_points.len() as u64).pack(writer)?;
@@ -113,7 +109,7 @@ impl Packable for LocalSnapshot {
     }
 
     // TODO stream ?
-    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, PackableError>
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
