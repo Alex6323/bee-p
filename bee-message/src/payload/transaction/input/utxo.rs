@@ -18,7 +18,7 @@ use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
 pub struct UTXOInput(OutputId);
 
 impl From<OutputId> for UTXOInput {
@@ -40,6 +40,12 @@ impl UTXOInput {
 impl core::fmt::Display for UTXOInput {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl core::fmt::Debug for UTXOInput {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "UTXOInput({})", self.0)
     }
 }
 

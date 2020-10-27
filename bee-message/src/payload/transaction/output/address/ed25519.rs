@@ -16,10 +16,7 @@ use bee_common_ext::packable::{Packable, Read, Write};
 use bech32::{self, ToBase32};
 use serde::{Deserialize, Serialize};
 
-use alloc::{
-    string::{String, ToString},
-    vec,
-};
+use alloc::{string::String, vec};
 
 const ADDRESS_LENGTH: usize = 32;
 
@@ -67,7 +64,7 @@ impl core::fmt::Display for Ed25519Address {
 
 impl core::fmt::Debug for Ed25519Address {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "Ed25519Address({})", self.to_string())
+        write!(f, "Ed25519Address({})", self)
     }
 }
 

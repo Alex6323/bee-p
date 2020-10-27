@@ -18,9 +18,7 @@ use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use alloc::string::ToString;
-
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
 pub struct OutputId {
     transaction_id: TransactionId,
     index: u16,
@@ -46,12 +44,13 @@ impl OutputId {
 
 impl core::fmt::Display for OutputId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(
-            f,
-            "{}{}",
-            self.transaction_id.to_string(),
-            hex::encode(self.index.to_le_bytes())
-        )
+        write!(f, "{}{}", self.transaction_id, hex::encode(self.index.to_le_bytes()))
+    }
+}
+
+impl core::fmt::Debug for OutputId {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "OutputId({})", self)
     }
 }
 

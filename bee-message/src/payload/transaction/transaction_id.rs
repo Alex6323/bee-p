@@ -15,8 +15,6 @@ use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use alloc::string::ToString;
-
 pub const TRANSACTION_ID_LENGTH: usize = 32;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Ord, PartialOrd)]
@@ -49,7 +47,7 @@ impl core::fmt::Display for TransactionId {
 
 impl core::fmt::Debug for TransactionId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "TransactionId({})", self.to_string())
+        write!(f, "TransactionId({})", self)
     }
 }
 

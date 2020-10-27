@@ -15,8 +15,6 @@ use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use alloc::string::ToString;
-
 pub const MESSAGE_ID_LENGTH: usize = 32;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -53,7 +51,7 @@ impl core::fmt::Display for MessageId {
 
 impl core::fmt::Debug for MessageId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "MessageId({})", self.to_string())
+        write!(f, "MessageId({})", self)
     }
 }
 

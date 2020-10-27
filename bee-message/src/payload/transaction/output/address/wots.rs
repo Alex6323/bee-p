@@ -17,10 +17,7 @@ use bee_ternary::{T5B1Buf, TritBuf};
 use bytemuck::cast_slice;
 use serde::{Deserialize, Serialize};
 
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-};
+use alloc::{boxed::Box, string::String};
 use core::convert::{TryFrom, TryInto};
 
 // TODO length is 243, change to array when std::array::LengthAtMost32 disappears.
@@ -67,7 +64,7 @@ impl core::fmt::Display for WotsAddress {
 
 impl core::fmt::Debug for WotsAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "WotsAddress({})", self.to_string())
+        write!(f, "WotsAddress({})", self)
     }
 }
 
