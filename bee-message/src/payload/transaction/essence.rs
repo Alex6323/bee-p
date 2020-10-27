@@ -221,12 +221,6 @@ impl TransactionEssenceBuilder {
             }
         }
 
-        // Outputs must be in lexicographical order by their serialized form
-        // TODO
-        // if !is_sorted(transaction.outputs.iter()) {
-        //     return Err(Error::OrderError);
-        // }
-
         // Accumulated output balance must not exceed the total supply of tokens 2'779'530'283'277'761
         if total > 2779530283277761 {
             return Err(Error::AmountError);
