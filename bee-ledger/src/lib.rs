@@ -40,15 +40,15 @@ pub fn init<N: Node>(
 }
 
 pub fn events<N: Node>(node: &N, bus: Arc<Bus<'static>>) {
-    let ledger_worker = node.worker::<LedgerWorker>().unwrap().tx.clone();
-
-    bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-        if let Err(e) = ledger_worker.send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
-            warn!(
-                "Sending solid milestone {:?} to confirmation failed: {:?}.",
-                latest_solid_milestone.0.index(),
-                e
-            );
-        }
-    });
+    // let ledger_worker = node.worker::<LedgerWorker>().unwrap().tx.clone();
+    //
+    // bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
+    //     if let Err(e) = ledger_worker.send(LedgerWorkerEvent::Confirm(latest_solid_milestone.0.clone())) {
+    //         warn!(
+    //             "Sending solid milestone {:?} to confirmation failed: {:?}.",
+    //             latest_solid_milestone.0.index(),
+    //             e
+    //         );
+    //     }
+    // });
 }

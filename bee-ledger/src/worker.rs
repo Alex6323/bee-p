@@ -130,14 +130,14 @@ async fn confirm<B: Backend>(
         metadata.messages_included.len()
     );
 
-    bus.dispatch(MilestoneConfirmed {
-        milestone,
-        timestamp: milestone.essence().timestamp(),
-        messages_referenced: metadata.num_messages_referenced,
-        messages_excluded_no_transaction: metadata.num_messages_excluded_no_transaction,
-        messages_excluded_conflicting: metadata.num_messages_excluded_conflicting,
-        messages_included: metadata.messages_included.len(),
-    });
+    // bus.dispatch(MilestoneConfirmed {
+    //     milestone,
+    //     timestamp: milestone.essence().timestamp(),
+    //     messages_referenced: metadata.num_messages_referenced,
+    //     messages_excluded_no_transaction: metadata.num_messages_excluded_no_transaction,
+    //     messages_excluded_conflicting: metadata.num_messages_excluded_conflicting,
+    //     messages_included: metadata.messages_included.len(),
+    // });
 
     Ok(())
 }
@@ -175,7 +175,7 @@ impl<N: Node> Worker<N> for LedgerWorker {
             while let Some(event) = receiver.next().await {
                 match event {
                     LedgerWorkerEvent::Confirm(message_id) => {
-                        if confirm(&tangle, storage, message_id, &mut index, &coo_config, &bus)
+                        if confirm(&tangle, &storage, message_id, &mut index, &coo_config, &bus)
                             .await
                             .is_err()
                         {
