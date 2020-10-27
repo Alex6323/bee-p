@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use alloc::string::ToString;
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
 pub struct OutputId {
     transaction_id: TransactionId,
     index: u16,

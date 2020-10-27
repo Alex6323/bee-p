@@ -158,7 +158,7 @@ impl TransactionEssenceBuilder {
         self
     }
 
-    pub fn finish(self) -> Result<TransactionEssence, Error> {
+    pub fn finish(mut self) -> Result<TransactionEssence, Error> {
         // Inputs validation
 
         if !INPUT_OUTPUT_COUNT_RANGE.contains(&self.inputs.len()) {
@@ -181,12 +181,6 @@ impl TransactionEssenceBuilder {
                 }
             }
         }
-
-        // Inputs must be in lexicographical order of their serialized form.
-        // TODO
-        // if !is_sorted(transaction.inputs.iter()) {
-        //     return Err(Error::OrderError);
-        // }
 
         // Output validation
 
@@ -240,6 +234,9 @@ impl TransactionEssenceBuilder {
 
         // Payload Length must be 0 (to indicate that there's no payload) or be valid for the specified payload type.
         // Payload Type must be one of the supported payload types if Payload Length is not 0.
+
+        self.inputs.sort();
+        self.outputs.sort();
 
         Ok(TransactionEssence {
             inputs: self.inputs.into_boxed_slice(),

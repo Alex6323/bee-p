@@ -19,7 +19,7 @@ use alloc::string::ToString;
 
 pub const TRANSACTION_ID_LENGTH: usize = 32;
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Ord, PartialOrd)]
 pub struct TransactionId([u8; TRANSACTION_ID_LENGTH]);
 
 impl From<[u8; TRANSACTION_ID_LENGTH]> for TransactionId {

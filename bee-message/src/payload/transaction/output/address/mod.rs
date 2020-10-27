@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use alloc::string::String;
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Ord, PartialOrd)]
 pub enum Address {
     Wots(WotsAddress),
     Ed25519(Ed25519Address),

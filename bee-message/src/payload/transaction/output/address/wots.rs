@@ -24,7 +24,7 @@ use alloc::{
 use core::convert::{TryFrom, TryInto};
 
 // TODO length is 243, change to array when std::array::LengthAtMost32 disappears.
-#[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Ord, PartialOrd)]
 pub struct WotsAddress(Box<[u8]>);
 
 impl TryFrom<&TritBuf<T5B1Buf>> for WotsAddress {
