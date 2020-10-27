@@ -22,5 +22,5 @@ bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 futures = "0.3"
 num_cpus = "1.12"
 rand = "0.7"
-tokio = { version = "0.3", features = ["macros"] }
+tokio = { version = "0.2", features = ["macros"] }
 toml = "0.5"

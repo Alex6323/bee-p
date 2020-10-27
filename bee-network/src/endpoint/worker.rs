@@ -365,7 +365,7 @@ fn disconnect_endpoint(epid: EndpointId, connected_endpoints: &mut ConnectedEndp
 
 #[inline]
 async fn send_event_after_delay(event: Event, internal_event_sender: EventSender) -> Result<(), WorkerError> {
-    tokio::time::sleep(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
+    tokio::time::delay_for(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
 
     Ok(internal_event_sender
         .send_async(event)

@@ -28,7 +28,7 @@ use bee_storage::storage::Backend;
 
 use futures::{channel::oneshot, future::FutureExt};
 use log::{error, info, trace, warn};
-use tokio::spawn;
+use tokio::task::spawn;
 
 use std::{
     net::SocketAddr,

@@ -34,7 +34,7 @@ use bee_storage::storage::Backend;
 
 use futures::channel::oneshot;
 use log::{debug, error, info};
-use tokio::spawn;
+use tokio::task::spawn;
 
 use std::{net::SocketAddr, sync::Arc};
 
