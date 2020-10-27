@@ -3,9 +3,47 @@ use bee_protocol::MilestoneIndex;
 use hex::{FromHex, ToHex};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-/// Response of GET /api/v1/info endpoint
+/// Marker traits.
+pub trait DataBody {}
+pub trait ErrorBody {}
+
+/// Data response.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct InfoResponse {
+pub struct DataResponse<T: DataBody> {
+    data: T,
+}
+
+/// Error response.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ErrorResponse<T: ErrorBody> {
+    error: T,
+}
+
+impl<T: DataBody> DataResponse<T> {
+    /// Create a new data response.
+    pub(crate) fn new(data: T) -> Self {
+        Self { data }
+    }
+    /// Get data of the response.
+    pub(crate) fn data(&self) -> &T {
+        &self.data
+    }
+}
+
+impl<T: ErrorBody> ErrorResponse<T> {
+    /// Create a new data response.
+    pub(crate) fn new(error: T) -> Self {
+        Self { error }
+    }
+    /// Get data of the response.
+    pub(crate) fn error(&self) -> &T {
+        &self.error
+    }
+}
+
+/// Data response of GET /api/v1/info endpoint
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GetInfoResponse {
     /// name of the node
     pub name: String,
     /// version of the node
@@ -54,6 +92,8 @@ pub struct InfoResponse {
     /// features
     pub features: Vec<String>,
 }
+
+impl DataBody for GetInfoResponse {}
 
 fn message_id_to_hex<S>(message: &MessageId, s: S) -> Result<S::Ok, S::Error>
 where

@@ -9,8 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::types::InfoResponse;
+use crate::types::{DataResponse, GetInfoResponse};
 use bee_common_ext::node::ResHandle;
+use bee_message::MessageId;
 use bee_protocol::tangle::MsTangle;
 use bee_storage::storage::Backend;
 use std::{
@@ -18,7 +19,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use warp::reply::json;
-use bee_message::MessageId;
 
 pub async fn info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp::reply::Json, Infallible> {
     let name = String::from("Bee");
@@ -56,14 +56,14 @@ pub async fn info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp::re
     };
     let coordinator_public_key = String::from("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649"); // TODO: access protocol config
 
-    //let latest_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap();
+    // let latest_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap();
     let latest_milestone_index = tangle.get_latest_milestone_index();
-    //let solid_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap();
+    // let solid_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap();
     let solid_milestone_index = tangle.get_latest_milestone_index();
     let pruning_index = tangle.get_pruning_index();
     let features = Vec::new(); // TODO: check enabled features
 
-    Ok(warp::reply::json(&InfoResponse {
+    Ok(warp::reply::json(&DataResponse::new(GetInfoResponse {
         name,
         version,
         is_healthy,
@@ -74,5 +74,5 @@ pub async fn info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp::re
         solid_milestone_index,
         pruning_index,
         features,
-    }))
+    })))
 }
