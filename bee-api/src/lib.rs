@@ -20,12 +20,13 @@ use bee_common_ext::{
     node::{Node, NodeBuilder},
     worker::Worker,
 };
-use bee_protocol::{tangle::MsTangle, TangleWorker};
+use bee_protocol::{tangle::MsTangle, TangleWorker, MilestoneIndex};
 use futures::FutureExt;
 use log::{error, info, warn};
 use serde_json::Value as JsonValue;
 use std::any::TypeId;
-use warp::Filter;
+use warp::{Filter, Rejection};
+use serde::de::DeserializeOwned;
 
 pub async fn init<N: Node>(config: ApiConfig, node_builder: N::Builder) -> N::Builder {
     node_builder.with_worker_cfg::<ApiWorker>(config)
@@ -47,17 +48,17 @@ impl<N: Node> Worker<N> for ApiWorker {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let info = warp::get()
+            let get_info = warp::get()
                 .and(warp::path("api"))
                 .and(warp::path("v1"))
                 .and(warp::path("info"))
                 .and(warp::path::end())
                 .and_then(move || {
                     let tangle = tangle.clone();
-                    async move { routes::info(tangle.clone()).await }
+                    async move { routes::get_info(tangle.clone()).await }
                 });
 
-            let routes = info;
+            let routes = get_info.with(warp::cors().allow_any_origin());
 
             let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.binding_address(), async {
                 shutdown.await.ok();
@@ -70,4 +71,8 @@ impl<N: Node> Worker<N> for ApiWorker {
 
         Ok(Self)
     }
+}
+
+fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
+    warp::body::content_length_limit(1024 * 32).and(warp::body::json())
 }

@@ -43,7 +43,7 @@ impl<T: ErrorBody> ErrorResponse<T> {
 
 /// Data response of GET /api/v1/info endpoint
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GetInfoResponse {
+pub struct GetInfoBody {
     /// name of the node
     pub name: String,
     /// version of the node
@@ -93,7 +93,7 @@ pub struct GetInfoResponse {
     pub features: Vec<String>,
 }
 
-impl DataBody for GetInfoResponse {}
+impl DataBody for GetInfoBody {}
 
 fn message_id_to_hex<S>(message: &MessageId, s: S) -> Result<S::Ok, S::Error>
 where
