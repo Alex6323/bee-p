@@ -16,6 +16,7 @@ use bee_message::MessageId;
 
 const SNAPSHOT_VERSION: u8 = 1;
 
+#[derive(Clone)]
 pub struct SnapshotHeader {
     pub(crate) kind: Kind,
     pub(crate) timestamp: u64,
