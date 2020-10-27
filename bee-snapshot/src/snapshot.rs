@@ -157,7 +157,7 @@ pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
         header: SnapshotHeader {
             kind: Kind::Full,
             timestamp: 0,
-            coordinator: [0; 32],
+            network_id: 0,
             sep_index: 0,
             sep_id: MessageId::null(),
             ledger_index: 0,

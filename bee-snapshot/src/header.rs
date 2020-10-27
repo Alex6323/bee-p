@@ -20,8 +20,7 @@ const SNAPSHOT_VERSION: u8 = 1;
 pub struct SnapshotHeader {
     pub(crate) kind: Kind,
     pub(crate) timestamp: u64,
-    // TODO replace with ED25 pk
-    pub(crate) coordinator: [u8; 32],
+    pub(crate) network_id: u8,
     pub(crate) sep_index: u32,
     pub(crate) sep_id: MessageId,
     pub(crate) ledger_index: u32,
@@ -37,8 +36,8 @@ impl SnapshotHeader {
         self.timestamp
     }
 
-    pub fn coordinator(&self) -> &[u8; 32] {
-        &self.coordinator
+    pub fn network_id(&self) -> u8 {
+        self.network_id
     }
 
     pub fn sep_index(&self) -> u32 {
@@ -65,17 +64,18 @@ impl Packable for SnapshotHeader {
         SNAPSHOT_VERSION.packed_len()
             + self.kind.packed_len()
             + self.timestamp.packed_len()
-            // TODO impl packable for byte slices or ED25 packable
-        +32+self.sep_index.packed_len()+self.sep_id.packed_len()+self.ledger_index.packed_len()+self.ledger_id.packed_len()
+            + self.network_id.packed_len()
+            + self.sep_index.packed_len()
+            + self.sep_id.packed_len()
+            + self.ledger_index.packed_len()
+            + self.ledger_id.packed_len()
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         SNAPSHOT_VERSION.pack(writer)?;
         self.kind.pack(writer)?;
         self.timestamp.pack(writer)?;
-        // TODO packable on bytes
-        writer.write_all(&self.coordinator)?;
-        // self.coordinator.pack(writer)?;
+        self.network_id.pack(writer)?;
         self.sep_index.pack(writer)?;
         self.sep_id.pack(writer)?;
         self.ledger_index.pack(writer)?;
@@ -96,9 +96,7 @@ impl Packable for SnapshotHeader {
 
         let kind = Kind::unpack(reader)?;
         let timestamp = u64::unpack(reader)?;
-        // TODO pk type
-        let mut coordinator = [0u8; 32];
-        reader.read_exact(&mut coordinator)?;
+        let network_id = u8::unpack(reader)?;
         let sep_index = u32::unpack(reader)?;
         let sep_id = MessageId::unpack(reader)?;
         let ledger_index = u32::unpack(reader)?;
@@ -107,7 +105,7 @@ impl Packable for SnapshotHeader {
         Ok(Self {
             kind,
             timestamp,
-            coordinator,
+            network_id,
             sep_index,
             sep_id,
             ledger_index,
