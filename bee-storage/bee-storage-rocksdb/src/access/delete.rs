@@ -12,9 +12,14 @@
 use bee_crypto::ternary::Hash;
 use bee_message::{payload::Payload, Message, MessageId};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
-use bee_storage::{access::{Fetch, Delete}, persistable::Persistable};
+use bee_storage::{
+    access::{Delete, Fetch},
+    persistable::Persistable,
+};
 
 use crate::{access::OpError, storage::*};
+
+use blake2::{Blake2b, Digest};
 
 #[async_trait::async_trait]
 impl Delete<Hash, MessageMetadata> for Storage {
@@ -46,24 +51,31 @@ impl Delete<Hash, MilestoneIndex> for Storage {
 impl Delete<MessageId, Message> for Storage {
     type Error = OpError;
     async fn delete(&self, message_id: &MessageId) -> Result<(), Self::Error> {
-        // FIXME: Maybe this should be done atomically?
-        if let Some(message) = self.fetch(message_id).await? {
-            let db = &self.inner;
+        let db = &self.inner;
 
-            let message_id_to_message = db.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+        let message_id_to_message = db.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
 
-            db.delete_cf(&message_id_to_message, message_id.as_ref())?;
+        db.delete_cf(&message_id_to_message, message_id.as_ref())?;
 
-            if let Payload::Indexation(indexation) = message.payload() {
-                let payload_index_to_message_id = db.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        Ok(())
+    }
+}
 
-                // FIXME: hash the index.
-                let mut indexation_buf = indexation.index().as_bytes().to_vec();
-                indexation_buf.extend_from_slice(message_id.as_ref());
+#[async_trait::async_trait]
+impl Delete<(String, MessageId), ()> for Storage {
+    type Error = OpError;
+    async fn delete(&self, (index, message_id): &(String, MessageId)) -> Result<(), Self::Error> {
+        let db = &self.inner;
 
-                db.delete_cf(&payload_index_to_message_id, indexation_buf.as_slice())?;
-            }
-        }
+        let payload_index_to_message_id = db.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+
+        let mut hasher = Blake2b::new();
+        hasher.update(index.as_bytes());
+        let mut indexation_buf = hasher.finalize().to_vec();
+
+        indexation_buf.extend_from_slice(message_id.as_ref());
+
+        db.delete_cf(&payload_index_to_message_id, indexation_buf.as_slice())?;
 
         Ok(())
     }

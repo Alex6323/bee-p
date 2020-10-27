@@ -11,11 +11,15 @@
 
 use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
-use bee_message::{Message, MessageId};
+use bee_message::{Message, MessageId, MESSAGE_ID_LENGTH};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Fetch, persistable::Persistable};
 
 use crate::{access::OpError, storage::*};
+
+use blake2::{Blake2b, Digest};
+
+use std::convert::TryInto;
 
 #[async_trait::async_trait]
 impl Fetch<Hash, MessageMetadata> for Storage {
@@ -71,5 +75,31 @@ impl Fetch<MessageId, Message> for Storage {
         } else {
             Ok(None)
         }
+    }
+}
+
+#[async_trait::async_trait]
+impl Fetch<String, Vec<MessageId>> for Storage {
+    type Error = OpError;
+    async fn fetch(&self, index: &String) -> Result<Option<Vec<MessageId>>, Self::Error>
+    where
+        Self: Sized,
+    {
+        let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+
+        let mut hasher = Blake2b::new();
+        hasher.update(index.as_bytes());
+        let indexation_buf = hasher.finalize();
+
+        Ok(Some(
+            self.inner
+                .prefix_iterator_cf(&payload_index_to_message_id, indexation_buf.as_slice())
+                .map(|(key, _value)| {
+                    let (_hash, message_id) = key.split_at(indexation_buf.len());
+                    let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
+                    MessageId::from(message_id)
+                })
+                .collect(),
+        ))
     }
 }
