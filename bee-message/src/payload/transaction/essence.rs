@@ -170,7 +170,7 @@ impl TransactionEssenceBuilder {
             match i {
                 Input::UTXO(u) => {
                     // Transaction Output Index must be 0 ≤ x < 127
-                    if !INPUT_OUTPUT_INDEX_RANGE.contains(&u.index()) {
+                    if !INPUT_OUTPUT_INDEX_RANGE.contains(&u.output_id().index()) {
                         return Err(Error::CountError);
                     }
 
