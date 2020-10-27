@@ -48,6 +48,7 @@ impl<N: Node> Worker<N> for TangleWorker {
         tangle.update_latest_milestone_index(config.sep_index().into());
         tangle.update_snapshot_index(config.sep_index().into());
         tangle.update_pruning_index(config.sep_index().into());
+        tangle.add_milestone(config.sep_index().into(), *config.sep_id());
 
         // for message_id in config.solid_entry_points() {
         //     // TODO no more indices ? What about TRSI ?
