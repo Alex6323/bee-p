@@ -11,7 +11,7 @@
 
 use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
-use bee_message::{payload::indexation::IndexHash, Message, MessageId, MESSAGE_ID_LENGTH};
+use bee_message::{payload::indexation::HashedIndex, Message, MessageId, MESSAGE_ID_LENGTH};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Fetch, persistable::Persistable};
 
@@ -79,9 +79,9 @@ impl Fetch<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Fetch<IndexHash<Blake2b>, Vec<MessageId>> for Storage {
+impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     type Error = OpError;
-    async fn fetch(&self, index: &IndexHash<Blake2b>) -> Result<Option<Vec<MessageId>>, Self::Error>
+    async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<MessageId>>, Self::Error>
     where
         Self: Sized,
     {

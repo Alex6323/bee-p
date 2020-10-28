@@ -37,9 +37,9 @@ impl Indexation {
         &self.data
     }
 
-    pub fn hash<D: Digest>(&self, digest: &mut D) -> IndexHash<D> {
+    pub fn hash<D: Digest>(&self, digest: &mut D) -> HashedIndex<D> {
         digest.update(self.index.as_bytes());
-        IndexHash(digest.finalize_reset())
+        HashedIndex(digest.finalize_reset())
     }
 }
 
@@ -79,9 +79,9 @@ impl Packable for Indexation {
     }
 }
 
-pub struct IndexHash<D: Digest>(GenericArray<u8, <D as Digest>::OutputSize>);
+pub struct HashedIndex<D: Digest>(GenericArray<u8, <D as Digest>::OutputSize>);
 
-impl<D: Digest> AsRef<[u8]> for IndexHash<D> {
+impl<D: Digest> AsRef<[u8]> for HashedIndex<D> {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
     }

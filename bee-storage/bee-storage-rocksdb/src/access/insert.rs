@@ -11,7 +11,7 @@
 
 use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
-use bee_message::{payload::indexation::IndexHash, Message, MessageId};
+use bee_message::{payload::indexation::HashedIndex, Message, MessageId};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Insert, persistable::Persistable};
 
@@ -66,9 +66,13 @@ impl Insert<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Insert<(IndexHash<Blake2b>, MessageId), ()> for Storage {
+impl Insert<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
-    async fn insert(&self, (index, message_id): &(IndexHash<Blake2b>, MessageId), (): &()) -> Result<(), Self::Error> {
+    async fn insert(
+        &self,
+        (index, message_id): &(HashedIndex<Blake2b>, MessageId),
+        (): &(),
+    ) -> Result<(), Self::Error> {
         let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut entry_buf = index.as_ref().to_vec();
