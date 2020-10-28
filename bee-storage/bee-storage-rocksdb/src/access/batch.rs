@@ -101,7 +101,7 @@ impl<'a> BatchBuilder<'a, Storage, MessageId, Message> for StorageBatch<'a> {
     fn try_insert(mut self, message_id: &MessageId, message: &Message) -> Result<Self, (Self, Self::Error)> {
         let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        let mut message_buf = Vec::new();
+        let mut message_buf = Vec::with_capacity(message.packed_len());
         message.pack(&mut message_buf).unwrap();
 
         self.batch
