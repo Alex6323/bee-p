@@ -13,9 +13,12 @@ use bee_message::prelude::*;
 
 use core::convert::TryFrom;
 
-const UTXO_INPUT: &str = "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c6492a00";
+const TRANSACTION_ID: &str = "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649";
 
 #[test]
 fn from_to_str() {
-    assert_eq!(UTXO_INPUT, UTXOInput::try_from(UTXO_INPUT).unwrap().to_string());
+    assert_eq!(
+        TRANSACTION_ID,
+        TransactionId::try_from(TRANSACTION_ID).unwrap().to_string()
+    );
 }
