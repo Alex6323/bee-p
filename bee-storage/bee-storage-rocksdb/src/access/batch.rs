@@ -9,7 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
+use bee_message::{payload::indexation::IndexHash, Message, MessageId};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{
     access::{ApplyBatch, Batch, BatchBuilder},
@@ -17,6 +19,8 @@ use bee_storage::{
 };
 
 use crate::{access::OpError, storage::*};
+
+use blake2::Blake2b;
 
 pub struct StorageBatch<'a> {
     storage: &'a Storage,
@@ -88,6 +92,62 @@ impl<'a> BatchBuilder<'a, Storage, Hash, MilestoneIndex> for StorageBatch<'a> {
         self.key_buf.clear();
         hash.write_to(&mut self.key_buf);
         self.batch.delete_cf(&ms_hash_to_ms_index, self.key_buf.as_slice());
+        Ok(self)
+    }
+}
+
+impl<'a> BatchBuilder<'a, Storage, MessageId, Message> for StorageBatch<'a> {
+    type Error = OpError;
+    fn try_insert(mut self, message_id: &MessageId, message: &Message) -> Result<Self, (Self, Self::Error)> {
+        let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        let mut message_buf = Vec::new();
+        message.pack(&mut message_buf).unwrap();
+
+        self.batch
+            .put_cf(&message_id_to_message, message_id.as_ref(), message_buf.as_slice());
+
+        Ok(self)
+    }
+
+    fn try_delete(mut self, message_id: &MessageId) -> Result<Self, (Self, Self::Error)> {
+        let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        self.batch.delete_cf(&message_id_to_message, message_id.as_ref());
+
+        Ok(self)
+    }
+}
+
+impl<'a> BatchBuilder<'a, Storage, (IndexHash<Blake2b>, MessageId), ()> for StorageBatch<'a> {
+    type Error = OpError;
+    fn try_insert(
+        mut self,
+        (index, message_id): &(IndexHash<Blake2b>, MessageId),
+        (): &(),
+    ) -> Result<Self, (Self, Self::Error)> {
+        let payload_index_to_message_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+
+        let mut entry_buf = index.as_ref().to_vec();
+        entry_buf.extend_from_slice(message_id.as_ref());
+
+        self.batch
+            .put_cf(&payload_index_to_message_id, entry_buf.as_slice(), &[]);
+
+        Ok(self)
+    }
+
+    fn try_delete(
+        mut self,
+        (index, message_id): &(IndexHash<Blake2b>, MessageId),
+    ) -> Result<Self, (Self, Self::Error)> {
+        let payload_index_to_message_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+
+        let mut entry_buf = index.as_ref().to_vec();
+        entry_buf.extend_from_slice(message_id.as_ref());
+
+        self.batch.delete_cf(&payload_index_to_message_id, entry_buf.as_slice());
+
         Ok(self)
     }
 }

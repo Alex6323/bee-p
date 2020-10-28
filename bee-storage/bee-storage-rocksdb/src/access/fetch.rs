@@ -17,7 +17,7 @@ use bee_storage::{access::Fetch, persistable::Persistable};
 
 use crate::{access::OpError, storage::*};
 
-use digest::Digest;
+use blake2::{Blake2b, Digest};
 
 use std::convert::TryInto;
 
@@ -79,9 +79,9 @@ impl Fetch<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl<D: Digest> Fetch<IndexHash<D>, Vec<MessageId>> for Storage {
+impl Fetch<IndexHash<Blake2b>, Vec<MessageId>> for Storage {
     type Error = OpError;
-    async fn fetch(&self, index: &IndexHash<D>) -> Result<Option<Vec<MessageId>>, Self::Error>
+    async fn fetch(&self, index: &IndexHash<Blake2b>) -> Result<Option<Vec<MessageId>>, Self::Error>
     where
         Self: Sized,
     {
@@ -91,7 +91,7 @@ impl<D: Digest> Fetch<IndexHash<D>, Vec<MessageId>> for Storage {
             self.inner
                 .prefix_iterator_cf(&payload_index_to_message_id, index.as_ref())
                 .map(|(key, _value)| {
-                    let (_hash, message_id) = key.split_at(D::output_size());
+                    let (_hash, message_id) = key.split_at(Blake2b::output_size());
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
                     MessageId::from(message_id)
                 })

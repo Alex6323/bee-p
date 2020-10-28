@@ -16,7 +16,7 @@ use bee_storage::{access::Delete, persistable::Persistable};
 
 use crate::{access::OpError, storage::*};
 
-use digest::Digest;
+use blake2::Blake2b;
 
 #[async_trait::async_trait]
 impl Delete<Hash, MessageMetadata> for Storage {
@@ -59,9 +59,9 @@ impl Delete<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl<D: Digest> Delete<(IndexHash<D>, MessageId), ()> for Storage {
+impl Delete<(IndexHash<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
-    async fn delete(&self, (index, message_id): &(IndexHash<D>, MessageId)) -> Result<(), Self::Error> {
+    async fn delete(&self, (index, message_id): &(IndexHash<Blake2b>, MessageId)) -> Result<(), Self::Error> {
         let db = &self.inner;
 
         let payload_index_to_message_id = db.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();

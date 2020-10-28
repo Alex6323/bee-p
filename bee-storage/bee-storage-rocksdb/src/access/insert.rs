@@ -17,7 +17,7 @@ use bee_storage::{access::Insert, persistable::Persistable};
 
 use crate::{access::OpError, storage::*};
 
-use digest::Digest;
+use blake2::Blake2b;
 
 #[async_trait::async_trait]
 impl Insert<Hash, MessageMetadata> for Storage {
@@ -66,9 +66,9 @@ impl Insert<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl<D: Digest> Insert<IndexHash<D>, MessageId> for Storage {
+impl Insert<(IndexHash<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
-    async fn insert(&self, index: &IndexHash<D>, message_id: &MessageId) -> Result<(), Self::Error> {
+    async fn insert(&self, (index, message_id): &(IndexHash<Blake2b>, MessageId), (): &()) -> Result<(), Self::Error> {
         let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut entry_buf = index.as_ref().to_vec();
