@@ -11,7 +11,13 @@
 
 use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
-use bee_message::{payload::indexation::HashedIndex, Message, MessageId, MESSAGE_ID_LENGTH};
+use bee_message::{
+    payload::{
+        indexation::HashedIndex,
+        transaction::{TransactionId, TRANSACTION_ID_LENGTH},
+    },
+    Message, MessageId, MESSAGE_ID_LENGTH,
+};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Fetch, persistable::Persistable};
 
@@ -94,6 +100,28 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
                     let (_hash, message_id) = key.split_at(Blake2b::output_size());
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
                     MessageId::from(message_id)
+                })
+                .collect(),
+        ))
+    }
+}
+
+#[async_trait::async_trait]
+impl Fetch<HashedIndex<Blake2b>, Vec<TransactionId>> for Storage {
+    type Error = OpError;
+    async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<TransactionId>>, Self::Error>
+    where
+        Self: Sized,
+    {
+        let payload_index_to_transaction_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_TRANSACTION_ID).unwrap();
+
+        Ok(Some(
+            self.inner
+                .prefix_iterator_cf(&payload_index_to_transaction_id, index.as_ref())
+                .map(|(key, _value)| {
+                    let (_hash, transaction_id) = key.split_at(Blake2b::output_size());
+                    let transaction_id: [u8; TRANSACTION_ID_LENGTH] = transaction_id.try_into().unwrap();
+                    TransactionId::from(transaction_id)
                 })
                 .collect(),
         ))

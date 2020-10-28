@@ -23,6 +23,7 @@ pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
 pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
 pub const MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
 pub const PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
+pub const PAYLOAD_INDEX_TO_TRANSACTION_ID: &str = "payload_index_to_transaction_id";
 
 pub struct Storage {
     pub inner: ::rocksdb::DB,
@@ -40,7 +41,8 @@ impl Storage {
         let prefix_extractor = SliceTransform::create_fixed_prefix(<Blake2b as Digest>::output_size());
         let mut options = Options::default();
         options.set_prefix_extractor(prefix_extractor);
-        let payload_index_to_message_id = ColumnFamilyDescriptor::new(PAYLOAD_INDEX_TO_MESSAGE_ID, options);
+        let payload_index_to_message_id = ColumnFamilyDescriptor::new(PAYLOAD_INDEX_TO_MESSAGE_ID, options.clone());
+        let payload_index_to_transaction_id = ColumnFamilyDescriptor::new(PAYLOAD_INDEX_TO_TRANSACTION_ID, options);
 
         let mut opts = Options::default();
 
@@ -71,6 +73,7 @@ impl Storage {
             milestone_hash_to_index,
             message_id_to_message,
             payload_index_to_message_id,
+            payload_index_to_transaction_id,
         ];
         let db = DB::open_cf_descriptors(&opts, config.path, column_familes)?;
 

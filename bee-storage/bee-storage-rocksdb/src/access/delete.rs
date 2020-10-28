@@ -10,7 +10,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_crypto::ternary::Hash;
-use bee_message::{payload::indexation::HashedIndex, Message, MessageId};
+use bee_message::{
+    payload::{indexation::HashedIndex, transaction::TransactionId},
+    Message, MessageId,
+};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Delete, persistable::Persistable};
 
@@ -70,6 +73,23 @@ impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         entry_buf.extend_from_slice(message_id.as_ref());
 
         db.delete_cf(&payload_index_to_message_id, entry_buf.as_slice())?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Delete<(HashedIndex<Blake2b>, TransactionId), ()> for Storage {
+    type Error = OpError;
+    async fn delete(&self, (index, transaction_id): &(HashedIndex<Blake2b>, TransactionId)) -> Result<(), Self::Error> {
+        let db = &self.inner;
+
+        let payload_index_to_transaction_id = db.cf_handle(PAYLOAD_INDEX_TO_TRANSACTION_ID).unwrap();
+
+        let mut entry_buf = index.as_ref().to_vec();
+        entry_buf.extend_from_slice(transaction_id.as_ref());
+
+        db.delete_cf(&payload_index_to_transaction_id, entry_buf.as_slice())?;
 
         Ok(())
     }

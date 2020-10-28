@@ -11,7 +11,10 @@
 
 use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
-use bee_message::{payload::indexation::HashedIndex, Message, MessageId};
+use bee_message::{
+    payload::{indexation::HashedIndex, transaction::TransactionId},
+    Message, MessageId,
+};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{
     access::{ApplyBatch, Batch, BatchBuilder},
@@ -147,6 +150,40 @@ impl<'a> BatchBuilder<'a, Storage, (HashedIndex<Blake2b>, MessageId), ()> for St
         entry_buf.extend_from_slice(message_id.as_ref());
 
         self.batch.delete_cf(&payload_index_to_message_id, entry_buf.as_slice());
+
+        Ok(self)
+    }
+}
+
+impl<'a> BatchBuilder<'a, Storage, (HashedIndex<Blake2b>, TransactionId), ()> for StorageBatch<'a> {
+    type Error = OpError;
+    fn try_insert(
+        mut self,
+        (index, transaction_id): &(HashedIndex<Blake2b>, TransactionId),
+        (): &(),
+    ) -> Result<Self, (Self, Self::Error)> {
+        let payload_index_to_transaction_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_TRANSACTION_ID).unwrap();
+
+        let mut entry_buf = index.as_ref().to_vec();
+        entry_buf.extend_from_slice(transaction_id.as_ref());
+
+        self.batch
+            .put_cf(&payload_index_to_transaction_id, entry_buf.as_slice(), &[]);
+
+        Ok(self)
+    }
+
+    fn try_delete(
+        mut self,
+        (index, transaction_id): &(HashedIndex<Blake2b>, TransactionId),
+    ) -> Result<Self, (Self, Self::Error)> {
+        let payload_index_to_transaction_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_TRANSACTION_ID).unwrap();
+
+        let mut entry_buf = index.as_ref().to_vec();
+        entry_buf.extend_from_slice(transaction_id.as_ref());
+
+        self.batch
+            .delete_cf(&payload_index_to_transaction_id, entry_buf.as_slice());
 
         Ok(self)
     }
