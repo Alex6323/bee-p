@@ -43,9 +43,9 @@ impl<N: Node> Worker<N> for StatusWorker {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(config)));
+            let mut ticker = ShutdownStream::new(shutdown, interval(Duration::from_secs(config)));
 
-            while receiver.next().await.is_some() {
+            while ticker.next().await.is_some() {
                 let snapshot_index = *tangle.get_snapshot_index();
                 let latest_solid_milestone_index = *tangle.get_latest_solid_milestone_index();
                 let latest_milestone_index = *tangle.get_latest_milestone_index();

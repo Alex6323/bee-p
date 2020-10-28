@@ -60,9 +60,9 @@ impl<N: Node> Worker<N> for TangleWorker {
             use std::time::Duration;
             use tokio::time::interval;
 
-            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
+            let mut ticker = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
-            while receiver.next().await.is_some() {
+            while ticker.next().await.is_some() {
                 // println!("Tangle len = {}", tangle.len());
             }
         });

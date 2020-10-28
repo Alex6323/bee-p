@@ -9,8 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{tangle::MsTangle, worker::TangleWorker};
-
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
@@ -19,33 +17,26 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::{any::TypeId, time::Duration};
+use std::time::Duration;
 
-const TIP_POOL_CLEANER_INTERVAL_SEC: u64 = 1;
+const CHECK_INTERVAL_SEC: u64 = 3600;
 
 #[derive(Default)]
-pub(crate) struct TipPoolCleanerWorker {}
+pub(crate) struct VersionCheckerWorker {}
 
 #[async_trait]
-impl<N: Node> Worker<N> for TipPoolCleanerWorker {
+impl<N: Node> Worker<N> for VersionCheckerWorker {
     type Config = ();
     type Error = WorkerError;
 
-    fn dependencies() -> &'static [TypeId] {
-        vec![TypeId::of::<TangleWorker>()].leak()
-    }
-
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
-        let tangle = node.resource::<MsTangle<N::Backend>>();
-
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut ticker =
-                ShutdownStream::new(shutdown, interval(Duration::from_secs(TIP_POOL_CLEANER_INTERVAL_SEC)));
+            let mut ticker = ShutdownStream::new(shutdown, interval(Duration::from_secs(CHECK_INTERVAL_SEC)));
 
             while ticker.next().await.is_some() {
-                tangle.reduce_tips().await
+                // TODO
             }
 
             info!("Stopped.");

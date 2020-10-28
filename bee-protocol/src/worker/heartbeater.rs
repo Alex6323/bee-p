@@ -35,10 +35,10 @@ impl<N: Node> Worker<N> for HeartbeaterWorker {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver =
+            let mut ticker =
                 ShutdownStream::new(shutdown, interval(Duration::from_secs(CHECK_HEARTBEATS_INTERVAL_SEC)));
 
-            while receiver.next().await.is_some() {
+            while ticker.next().await.is_some() {
                 // TODO impl
             }
 
