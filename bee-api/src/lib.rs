@@ -34,6 +34,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use crate::dto::{ErrorResponseBody, ErrorResponse};
+use warp::filters::body::{BodyDeserializeError};
+
 
 pub async fn init<N: Node>(config: ApiConfig, node_builder: N::Builder) -> N::Builder {
     node_builder.with_worker_cfg::<ApiWorker>(config)
@@ -73,7 +75,7 @@ impl<N: Node> Worker<N> for ApiWorker {
                 .and(warp::path("milestones"))
                 .and(warp::path::param())
                 .and(warp::path::end())
-                .and_then(move | milestone_index: u32| {
+                .and_then(move | milestone_index: u32 | {
                     let tangle = tangle_clone.clone();
                     async move { routes::get_milestones(tangle, milestone_index).await }
                 });
@@ -97,25 +99,13 @@ fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error 
     warp::body::content_length_limit(1024 * 32).and(warp::body::json())
 }
 
-#[derive(Debug)]
-pub struct InvalidDataProvided;
-impl reject::Reject for InvalidDataProvided {}
-
-#[derive(Debug)]
-pub struct DataNotFound;
-impl reject::Reject for DataNotFound {}
-
 async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
 
     let http_code;
     let message_code;
     let message_text;
 
-    if let Some(InvalidDataProvided) = err.find() {
-        http_code = StatusCode::BAD_REQUEST;
-        message_code = String::from("invalid_data");
-        message_text = String::from("invalid data provided");
-    }  else if let Some(DataNotFound) = err.find() {
+    if err.is_not_found() {
         http_code = StatusCode::NOT_FOUND;
         message_code = String::from("not_found");
         message_text = String::from("could not find data");

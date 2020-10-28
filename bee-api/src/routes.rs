@@ -25,7 +25,6 @@ use bee_tangle::MessageRef;
 use crate::dto::get_milestones::GetMilestonesResponseBody;
 use std::sync::Arc;
 use warp::{Rejection, reject, Reply};
-use crate::{InvalidDataProvided, DataNotFound};
 
 pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Infallible> {
     let name = String::from("Bee");
@@ -97,9 +96,9 @@ pub async fn get_milestones<B: Backend>(tangle: ResHandle<MsTangle<B>>, mileston
                         timestamp
                     })))
                 }
-                None => Err(reject::custom(DataNotFound))
+                None => Err(reject::reject())
             }
         }
-        None => Err(reject::custom(DataNotFound))
+        None => Err(reject::reject())
     }
 }
