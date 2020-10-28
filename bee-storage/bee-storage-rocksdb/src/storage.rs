@@ -21,8 +21,6 @@ use std::error::Error;
 pub const TRANSACTION_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
 pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
 pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
-pub const MILESTONE_INDEX_TO_LEDGER_DIFF: &str = "milestone_hash_to_ledger_diff";
-pub const MILESTONE_INDEX_TO_LEDGER_STATE: &str = "milestone_hash_to_ledger_state";
 pub const MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
 pub const PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
 
@@ -37,10 +35,6 @@ impl Storage {
         let transaction_hash_to_transaction_metadata =
             ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_METADATA, Options::default());
         let milestone_hash_to_index = ColumnFamilyDescriptor::new(MILESTONE_HASH_TO_INDEX, Options::default());
-        let milestone_index_to_ledger_diff =
-            ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_DIFF, Options::default());
-        let milestone_index_to_ledger_state =
-            ColumnFamilyDescriptor::new(MILESTONE_INDEX_TO_LEDGER_STATE, Options::default());
         let message_id_to_message = ColumnFamilyDescriptor::new(MESSAGE_ID_TO_MESSAGE, Options::default());
 
         let prefix_extractor = SliceTransform::create_fixed_prefix(<Blake2b as Digest>::output_size());
@@ -75,8 +69,6 @@ impl Storage {
             transaction_hash_to_transaction,
             transaction_hash_to_transaction_metadata,
             milestone_hash_to_index,
-            milestone_index_to_ledger_diff,
-            milestone_index_to_ledger_state,
             message_id_to_message,
             payload_index_to_message_id,
         ];
