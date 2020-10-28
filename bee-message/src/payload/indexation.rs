@@ -13,6 +13,7 @@ use crate::Error;
 
 use bee_common_ext::packable::{Packable, Read, Write};
 
+use digest::{generic_array::GenericArray, Digest};
 use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, string::String};
@@ -34,6 +35,11 @@ impl Indexation {
 
     pub fn data(&self) -> &[u8] {
         &self.data
+    }
+
+    pub fn hash<D: Digest>(&self, digest: &mut D) -> IndexHash<D> {
+        digest.update(self.index.as_bytes());
+        IndexHash(digest.finalize_reset())
     }
 }
 
@@ -70,5 +76,13 @@ impl Packable for Indexation {
             index: String::from_utf8(index_bytes).map_err(|_| Self::Error::InvalidUtf8String)?,
             data: data_bytes.into_boxed_slice(),
         })
+    }
+}
+
+pub struct IndexHash<D: Digest>(GenericArray<u8, <D as Digest>::OutputSize>);
+
+impl<D: Digest> AsRef<[u8]> for IndexHash<D> {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
     }
 }

@@ -11,13 +11,13 @@
 
 use bee_common_ext::packable::Packable;
 use bee_crypto::ternary::Hash;
-use bee_message::{Message, MessageId};
+use bee_message::{payload::indexation::IndexHash, Message, MessageId};
 use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
 use bee_storage::{access::Insert, persistable::Persistable};
 
 use crate::{access::OpError, storage::*};
 
-use blake2::{Blake2b, Digest};
+use digest::Digest;
 
 #[async_trait::async_trait]
 impl Insert<Hash, MessageMetadata> for Storage {
@@ -66,22 +66,16 @@ impl Insert<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Insert<String, MessageId> for Storage {
+impl<D: Digest> Insert<IndexHash<D>, MessageId> for Storage {
     type Error = OpError;
-    async fn insert(&self, index: &String, message_id: &MessageId) -> Result<(), Self::Error> {
+    async fn insert(&self, index: &IndexHash<D>, message_id: &MessageId) -> Result<(), Self::Error> {
         let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut hasher = Blake2b::new();
-        hasher.update(index.as_bytes());
-        let mut indexation_buf = hasher.finalize().to_vec();
+        let mut entry_buf = index.as_ref().to_vec();
+        entry_buf.extend_from_slice(message_id.as_ref());
 
-        indexation_buf.extend_from_slice(message_id.as_ref());
-
-        self.inner.put_cf(
-            &payload_index_to_message_id,
-            message_id.as_ref(),
-            indexation_buf.as_slice(),
-        )?;
+        self.inner
+            .put_cf(&payload_index_to_message_id, entry_buf.as_slice(), &[])?;
 
         Ok(())
     }
