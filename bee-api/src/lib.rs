@@ -10,8 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 pub mod config;
+pub mod dto;
 mod routes;
-mod types;
 
 use crate::config::ApiConfig;
 use async_trait::async_trait;

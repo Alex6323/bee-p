@@ -9,7 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::types::{DataResponse, GetInfoBody};
 use bee_common_ext::node::ResHandle;
 use bee_message::MessageId;
 use bee_protocol::tangle::MsTangle;
@@ -20,6 +19,8 @@ use std::{
 };
 use warp::reply::json;
 use bee_protocol::MilestoneIndex;
+use crate::dto::DataResponse;
+use crate::dto::get_info::GetInfoResponseBody;
 
 pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp::reply::Json, Infallible> {
     let name = String::from("Bee");
@@ -57,15 +58,15 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp
     };
     // TODO: get public key of coordinator from protocol config
     let coordinator_public_key = String::from("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649");
-    let latest_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap();
-    let latest_milestone_index = tangle.get_latest_milestone_index();
-    let solid_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap();
-    let solid_milestone_index = tangle.get_latest_milestone_index();
-    let pruning_index = tangle.get_pruning_index();
+    let latest_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap().to_string();
+    let latest_milestone_index = *tangle.get_latest_milestone_index();
+    let solid_milestone_message_id = tangle.get_milestone_message_id(tangle.get_latest_milestone_index()).unwrap().to_string();
+    let solid_milestone_index = *tangle.get_latest_milestone_index();
+    let pruning_index = *tangle.get_pruning_index();
     // TODO: check enabled features
     let features = Vec::new();
 
-    Ok(warp::reply::json(&DataResponse::new(GetInfoBody {
+    Ok(warp::reply::json(&DataResponse::new(GetInfoResponseBody {
         name,
         version,
         is_healthy,
