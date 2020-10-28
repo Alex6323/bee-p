@@ -41,6 +41,22 @@ pub struct Transaction {
 }
 
 impl Transaction {
+    pub fn builder() -> TransactionBuilder {
+        TransactionBuilder::default()
+    }
+
+    pub fn id(&self) -> TransactionId {
+        let mut bytes = Vec::with_capacity(self.packed_len());
+        let mut hasher = Blake2b::new();
+
+        // Packing to bytes can't fail.
+        self.pack(&mut bytes).unwrap();
+        hasher.update(&bytes);
+
+        // We know for sure the bytes have the right size.
+        TransactionId::new(hasher.finalize()[0..TRANSACTION_ID_LENGTH].try_into().unwrap())
+    }
+
     pub fn essence(&self) -> &TransactionEssence {
         &self.essence
     }
@@ -56,22 +72,6 @@ impl Transaction {
         } else {
             unlock_block
         }
-    }
-
-    pub fn builder() -> TransactionBuilder {
-        TransactionBuilder::default()
-    }
-
-    pub fn id(&self) -> TransactionId {
-        let mut bytes = Vec::with_capacity(self.packed_len());
-        let mut hasher = Blake2b::new();
-
-        // Packing to bytes can't fail.
-        self.pack(&mut bytes).unwrap();
-        hasher.update(&bytes);
-
-        // We know for sure the bytes have the right size.
-        TransactionId::new(hasher.finalize()[0..TRANSACTION_ID_LENGTH].try_into().unwrap())
     }
 }
 

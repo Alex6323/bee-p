@@ -123,6 +123,8 @@ impl Packable for TransactionEssence {
             None
         };
 
+        // TODO check payload type
+
         Ok(Self {
             inputs: inputs.into_boxed_slice(),
             outputs: outputs.into_boxed_slice(),
@@ -228,6 +230,7 @@ impl TransactionEssenceBuilder {
 
         // Payload Length must be 0 (to indicate that there's no payload) or be valid for the specified payload type.
         // Payload Type must be one of the supported payload types if Payload Length is not 0.
+        // TODO check payload type
 
         self.inputs.sort();
         self.outputs.sort();
