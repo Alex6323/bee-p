@@ -4,6 +4,7 @@ use bee_protocol::MilestoneIndex;
 use serde::{Serialize, Deserialize};
 
 pub mod get_info;
+pub mod get_milestones;
 
 /// Marker traits.
 pub trait DataBody {}
@@ -42,3 +43,12 @@ impl<T: ErrorBody> ErrorResponse<T> {
         &self.error
     }
 }
+
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ErrorResponseBody {
+    pub code: String,
+    pub message: String,
+}
+
+impl ErrorBody for ErrorResponseBody {}

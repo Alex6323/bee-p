@@ -21,8 +21,13 @@ use warp::reply::json;
 use bee_protocol::MilestoneIndex;
 use crate::dto::DataResponse;
 use crate::dto::get_info::GetInfoResponseBody;
+use bee_tangle::MessageRef;
+use crate::dto::get_milestones::GetMilestonesResponseBody;
+use std::sync::Arc;
+use warp::{Rejection, reject, Reply};
+use crate::{InvalidDataProvided, DataNotFound};
 
-pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp::reply::Json, Infallible> {
+pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Infallible> {
     let name = String::from("Bee");
     let version = String::from(env!("CARGO_PKG_VERSION"));
     let is_healthy = {
@@ -78,4 +83,23 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<warp
         pruning_index,
         features,
     })))
+}
+
+pub async fn get_milestones<B: Backend>(tangle: ResHandle<MsTangle<B>>, milestone_index: u32) -> Result<impl Reply, Rejection> {
+    match tangle.get_milestone_message_id(MilestoneIndex(milestone_index)) {
+        Some(message_id) => {
+            match tangle.get_metadata(&message_id) {
+                Some(metadata) => {
+                    let timestamp = metadata.arrival_timestamp();
+                    Ok(warp::reply::json(&DataResponse::new(GetMilestonesResponseBody {
+                        milestone_index,
+                        message_id: message_id.to_string(),
+                        timestamp
+                    })))
+                }
+                None => Err(reject::custom(DataNotFound))
+            }
+        }
+        None => Err(reject::custom(DataNotFound))
+    }
 }
