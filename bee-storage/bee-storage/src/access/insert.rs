@@ -12,6 +12,7 @@
 #[async_trait::async_trait]
 pub trait Insert<K, V> {
     type Error;
+
     async fn insert(&self, key: &K, value: &V) -> Result<(), Self::Error>
     where
         Self: Sized;

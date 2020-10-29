@@ -18,12 +18,22 @@ use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
+use core::convert::{From, TryFrom};
+
+#[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
 pub struct UTXOInput(OutputId);
 
 impl From<OutputId> for UTXOInput {
     fn from(id: OutputId) -> Self {
         UTXOInput(id)
+    }
+}
+
+impl TryFrom<&str> for UTXOInput {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(UTXOInput(OutputId::try_from(value)?))
     }
 }
 
@@ -40,6 +50,12 @@ impl UTXOInput {
 impl core::fmt::Display for UTXOInput {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl core::fmt::Debug for UTXOInput {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "UTXOInput({})", self.0)
     }
 }
 

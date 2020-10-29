@@ -28,6 +28,7 @@ impl Persistable<Storage> for u32 {
     fn write_to(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&u32::to_le_bytes(*self));
     }
+
     fn read_from(slice: &[u8]) -> Self {
         Self::from_le_bytes(slice[..4].try_into().unwrap())
     }
@@ -37,6 +38,7 @@ impl Persistable<Storage> for i64 {
     fn write_to(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&i64::to_le_bytes(*self));
     }
+
     fn read_from(slice: &[u8]) -> Self {
         Self::from_le_bytes(slice[..8].try_into().unwrap())
     }
@@ -46,6 +48,7 @@ impl Persistable<Storage> for u64 {
     fn write_to(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&u64::to_le_bytes(*self));
     }
+
     fn read_from(slice: &[u8]) -> Self {
         Self::from_le_bytes(slice[..8].try_into().unwrap())
     }
@@ -55,6 +58,7 @@ impl Persistable<Storage> for u8 {
     fn write_to(&self, buffer: &mut Vec<u8>) {
         buffer.extend(&u8::to_le_bytes(*self));
     }
+
     fn read_from(slice: &[u8]) -> Self {
         Self::from_le_bytes(slice[..1].try_into().unwrap())
     }
@@ -139,6 +143,7 @@ impl Persistable<Storage> for MessageMetadata {
         // 8- encode ytrsi
         self.ytrsi().write_to(buffer);
     }
+
     fn read_from(slice: &[u8]) -> Self {
         // decode struct in order
         // 1- decode flags
@@ -185,6 +190,7 @@ impl Persistable<Storage> for MilestoneIndex {
     fn write_to(&self, buffer: &mut Vec<u8>) {
         self.0.write_to(buffer)
     }
+
     fn read_from(slice: &[u8]) -> Self {
         MilestoneIndex(u32::read_from(slice))
     }
@@ -202,6 +208,7 @@ impl Persistable<Storage> for Option<MilestoneIndex> {
             buffer.extend(&i16::to_le_bytes(-1));
         }
     }
+
     fn read_from(slice: &[u8]) -> Self {
         // decode short[n]
         let length = i16::from_le_bytes(slice[0..2].try_into().unwrap());
@@ -218,6 +225,7 @@ impl Persistable<Storage> for Hash {
     fn write_to(&self, _buffer: &mut Vec<u8>) {
         todo!()
     }
+
     fn read_from(_slice: &[u8]) -> Self {
         todo!()
     }

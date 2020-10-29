@@ -9,11 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{payload::Payload, Error, MessageId, Vertex};
+use crate::{payload::Payload, Error, MessageId, Vertex, MESSAGE_ID_LENGTH};
 
 use bee_common_ext::packable::{Packable, Read, Write};
 
+use blake2::{Blake2b, Digest};
 use serde::{Deserialize, Serialize};
+
+use core::convert::TryInto;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
@@ -26,6 +29,18 @@ pub struct Message {
 impl Message {
     pub fn builder() -> MessageBuilder {
         MessageBuilder::new()
+    }
+
+    pub fn id(&self) -> MessageId {
+        let mut bytes = Vec::with_capacity(self.packed_len());
+        let mut hasher = Blake2b::new();
+
+        // Packing to bytes can't fail.
+        self.pack(&mut bytes).unwrap();
+        hasher.update(&bytes);
+
+        // We know for sure the bytes have the right size.
+        MessageId::new(hasher.finalize()[0..MESSAGE_ID_LENGTH].try_into().unwrap())
     }
 
     pub fn parent1(&self) -> &MessageId {

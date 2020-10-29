@@ -49,6 +49,7 @@ pub enum Error {
     InvalidType(u8, u8),
     InvalidAnnouncedLength(usize, usize),
     InvalidSyntax,
+    InvalidHex,
 }
 
 impl fmt::Display for Error {
@@ -75,6 +76,7 @@ impl fmt::Display for Error {
                 write!(f, "Invalid announced length: {}, {}.", expected, actual)
             }
             Error::InvalidSyntax => write!(f, "Syntax validation failed."),
+            Error::InvalidHex => write!(f, "Invalid hexadecimal conversion.",),
         }
     }
 }

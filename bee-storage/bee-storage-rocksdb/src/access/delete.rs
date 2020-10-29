@@ -9,34 +9,38 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::Hash;
-use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
-use bee_storage::{access::Delete, persistable::Persistable};
-
 use crate::{access::OpError, storage::*};
 
+use bee_message::{payload::indexation::HashedIndex, Message, MessageId};
+use bee_storage::access::Delete;
+
+use blake2::Blake2b;
+
 #[async_trait::async_trait]
-impl Delete<Hash, MessageMetadata> for Storage {
+impl Delete<MessageId, Message> for Storage {
     type Error = OpError;
-    async fn delete(&self, hash: &Hash) -> Result<(), Self::Error> {
-        let db = &self.inner;
-        let hash_to_metadata = db.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-        let mut hash_buf = Vec::new();
-        hash.write_to(&mut hash_buf);
-        db.delete_cf(&hash_to_metadata, hash_buf.as_slice())?;
+
+    async fn delete(&self, message_id: &MessageId) -> Result<(), Self::Error> {
+        let message_id_to_message = self.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        self.inner.delete_cf(&message_id_to_message, message_id)?;
+
         Ok(())
     }
 }
 
 #[async_trait::async_trait]
-impl Delete<Hash, MilestoneIndex> for Storage {
+impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
-    async fn delete(&self, hash: &Hash) -> Result<(), Self::Error> {
-        let db = &self.inner;
-        let ms_hash_to_ms_index = db.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-        let mut hash_buf = Vec::new();
-        hash.write_to(&mut hash_buf);
-        db.delete_cf(&ms_hash_to_ms_index, hash_buf.as_slice())?;
+
+    async fn delete(&self, (index, message_id): &(HashedIndex<Blake2b>, MessageId)) -> Result<(), Self::Error> {
+        let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+
+        let mut key = index.as_ref().to_vec();
+        key.extend_from_slice(message_id.as_ref());
+
+        self.inner.delete_cf(&payload_index_to_message_id, key)?;
+
         Ok(())
     }
 }

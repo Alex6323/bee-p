@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, TransactionId},
+    payload::transaction::{constants::INPUT_OUTPUT_INDEX_RANGE, TransactionId, TRANSACTION_ID_LENGTH},
     Error,
 };
 
@@ -18,12 +18,31 @@ use bee_common_ext::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use alloc::string::ToString;
+use core::convert::{From, TryFrom, TryInto};
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
 pub struct OutputId {
     transaction_id: TransactionId,
     index: u16,
+}
+
+impl TryFrom<&str> for OutputId {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let bytes = hex::decode(value).map_err(|_| Self::Error::InvalidHex)?;
+        let transaction_id_bytes: [u8; TRANSACTION_ID_LENGTH] = bytes[..TRANSACTION_ID_LENGTH]
+            .try_into()
+            .map_err(|_| Self::Error::InvalidHex)?;
+        let transaction_id = TransactionId::from(transaction_id_bytes);
+        let index = u16::from_le_bytes(
+            bytes[TRANSACTION_ID_LENGTH..]
+                .try_into()
+                .map_err(|_| Self::Error::InvalidHex)?,
+        );
+
+        OutputId::new(transaction_id, index)
+    }
 }
 
 impl OutputId {
@@ -46,12 +65,13 @@ impl OutputId {
 
 impl core::fmt::Display for OutputId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(
-            f,
-            "{}{}",
-            self.transaction_id.to_string(),
-            hex::encode(self.index.to_le_bytes())
-        )
+        write!(f, "{}{}", self.transaction_id, hex::encode(self.index.to_le_bytes()))
+    }
+}
+
+impl core::fmt::Debug for OutputId {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "OutputId({})", self)
     }
 }
 

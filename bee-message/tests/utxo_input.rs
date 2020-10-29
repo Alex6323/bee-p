@@ -11,15 +11,11 @@
 
 use bee_message::prelude::*;
 
+use core::convert::TryFrom;
+
+const UTXO_INPUT: &str = "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c6492a00";
+
 #[test]
-fn to_string() {
-    let mut bytes = [0; 32];
-    let vec = hex::decode("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649").unwrap();
-    bytes.copy_from_slice(&vec);
-    let transaction_id = TransactionId::new(bytes);
-    let utxo_input = UTXOInput::new(transaction_id, 1).unwrap();
-    assert_eq!(
-        utxo_input.to_string(),
-        "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c6490100"
-    );
+fn from_to_str() {
+    assert_eq!(UTXO_INPUT, UTXOInput::try_from(UTXO_INPUT).unwrap().to_string());
 }

@@ -12,6 +12,7 @@
 #[async_trait::async_trait]
 pub trait Delete<K, V> {
     type Error;
+
     async fn delete(&self, key: &K) -> Result<(), Self::Error>
     where
         Self: Sized;

@@ -35,7 +35,7 @@ impl<N: Node> Worker<N> for MpsWorker {
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let mut receiver = ShutdownStream::new(shutdown, interval(Duration::from_secs(MPS_INTERVAL_SEC)));
+            let mut ticker = ShutdownStream::new(shutdown, interval(Duration::from_secs(MPS_INTERVAL_SEC)));
 
             let mut total_incoming = 0u64;
             let mut total_new = 0u64;
@@ -43,7 +43,7 @@ impl<N: Node> Worker<N> for MpsWorker {
             let mut total_invalid = 0u64;
             let mut total_outgoing = 0u64;
 
-            while receiver.next().await.is_some() {
+            while ticker.next().await.is_some() {
                 let incoming = Protocol::get().metrics.messages_received();
                 let new = Protocol::get().metrics.new_messages();
                 let known = Protocol::get().metrics.known_messages();

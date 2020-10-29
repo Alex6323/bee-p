@@ -11,7 +11,9 @@
 
 #![warn(missing_docs)]
 
-use crate::{banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin};
+use crate::{
+    banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin, version_checker::VersionCheckerWorker,
+};
 
 use bee_api::config::ApiConfig;
 use bee_common::shutdown_stream::ShutdownStream;
@@ -101,6 +103,8 @@ impl<B: Backend> NodeBuilder<B> {
 
         info!("Initializing plugins...");
         plugin::init(bus.clone());
+
+        node_builder = node_builder.with_worker::<VersionCheckerWorker>();
 
         let bee_node = node_builder.finish().await;
 

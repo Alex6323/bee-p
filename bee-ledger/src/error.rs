@@ -9,16 +9,22 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod banner;
-mod cli;
-mod config;
-mod constants;
-mod inner;
-mod node;
-mod plugin;
-mod version_checker;
+use bee_message::Error as MessageError;
 
-pub use banner::print_banner_and_version;
-pub use cli::CliArgs;
-pub use config::NodeConfigBuilder;
-pub use node::{Error, Node};
+#[derive(Debug)]
+pub enum Error {
+    Io(std::io::Error),
+    Message(MessageError),
+}
+
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::Io(error)
+    }
+}
+
+impl From<MessageError> for Error {
+    fn from(error: MessageError) -> Self {
+        Error::Message(error)
+    }
+}

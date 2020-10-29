@@ -12,6 +12,7 @@
 #[async_trait::async_trait]
 pub trait Fetch<K, V> {
     type Error;
+
     async fn fetch(&self, key: &K) -> Result<Option<V>, Self::Error>
     where
         Self: Sized;

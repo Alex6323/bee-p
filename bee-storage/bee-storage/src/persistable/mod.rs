@@ -12,8 +12,9 @@
 use crate::storage::Backend;
 
 pub trait Persistable<S: Backend>: Sized {
-    /// This encode method will extend the provided buffer and return ();
+    /// This encode method will extend the provided buffer and return `()``.
     fn write_to(&self, buffer: &mut Vec<u8>);
-    /// Decode `slice` and return Self.
+
+    /// Decode `slice` and return `Self`.
     fn read_from(slice: &[u8]) -> Self;
 }

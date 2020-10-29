@@ -33,7 +33,7 @@ macro_rules! impl_packable_for_num {
             }
 
             fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-                writer.write_all(self.to_le_bytes().as_ref())?;
+                writer.write_all(&self.to_le_bytes())?;
 
                 Ok(())
             }
@@ -41,6 +41,7 @@ macro_rules! impl_packable_for_num {
             fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error> {
                 let mut bytes = [0; std::mem::size_of::<$ty>()];
                 reader.read_exact(&mut bytes)?;
+
                 Ok($ty::from_le_bytes(bytes))
             }
         }

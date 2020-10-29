@@ -9,38 +9,42 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_crypto::ternary::Hash;
-use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
-use bee_storage::{
-    access::{ApplyBatch, Batch, BatchBuilder},
-    persistable::Persistable,
-};
-
 use crate::{access::OpError, storage::*};
+
+use bee_common_ext::packable::Packable;
+use bee_message::{payload::indexation::HashedIndex, Message, MessageId};
+use bee_storage::access::{Batch, BatchBuilder, CommitBatch};
+
+use blake2::Blake2b;
+use rocksdb::{WriteBatch, WriteOptions};
 
 pub struct StorageBatch<'a> {
     storage: &'a Storage,
     batch: WriteBatch,
+    // TODO use them to avoid allocating during a same batch
     key_buf: Vec<u8>,
     value_buf: Vec<u8>,
 }
 
 #[async_trait::async_trait]
-impl<'a> ApplyBatch for StorageBatch<'a> {
-    type E = OpError;
-    async fn apply(self, durability: bool) -> Result<(), Self::E> {
+impl<'a> CommitBatch for StorageBatch<'a> {
+    type Error = OpError;
+
+    async fn commit_batch(self, durability: bool) -> Result<(), Self::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
         write_options.disable_wal(!durability);
         self.storage.inner.write_opt(self.batch, &write_options)?;
+
         Ok(())
     }
 }
 
 impl<'a> Batch<'a> for Storage {
     type BatchBuilder = StorageBatch<'a>;
-    fn create_batch(&'a self) -> Self::BatchBuilder {
-        StorageBatch {
+
+    fn begin_batch(&'a self) -> Self::BatchBuilder {
+        Self::BatchBuilder {
             storage: self,
             batch: WriteBatch::default(),
             key_buf: Vec::new(),
@@ -49,45 +53,55 @@ impl<'a> Batch<'a> for Storage {
     }
 }
 
-impl<'a> BatchBuilder<'a, Storage, Hash, MessageMetadata> for StorageBatch<'a> {
+impl<'a> BatchBuilder<'a, Storage, MessageId, Message> for StorageBatch<'a> {
     type Error = OpError;
-    fn try_insert(mut self, hash: &Hash, transaction_metadata: &MessageMetadata) -> Result<Self, (Self, Self::Error)> {
-        let hash_to_metadata = self.storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-        self.key_buf.clear();
-        self.value_buf.clear();
-        hash.write_to(&mut self.key_buf);
-        transaction_metadata.write_to(&mut self.value_buf);
-        self.batch
-            .put_cf(&hash_to_metadata, self.key_buf.as_slice(), self.value_buf.as_slice());
-        Ok(self)
+
+    fn try_insert(&mut self, message_id: &MessageId, message: &Message) -> Result<(), Self::Error> {
+        let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        let mut message_buf = Vec::with_capacity(message.packed_len());
+        message.pack(&mut message_buf).unwrap();
+
+        self.batch.put_cf(&message_id_to_message, message_id, message_buf);
+
+        Ok(())
     }
-    fn try_delete(mut self, hash: &Hash) -> Result<Self, (Self, Self::Error)> {
-        let hash_to_metadata = self.storage.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-        self.key_buf.clear();
-        hash.write_to(&mut self.key_buf);
-        self.batch.delete_cf(&hash_to_metadata, self.key_buf.as_slice());
-        Ok(self)
+
+    fn try_delete(&mut self, message_id: &MessageId) -> Result<(), Self::Error> {
+        let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        self.batch.delete_cf(&message_id_to_message, message_id);
+
+        Ok(())
     }
 }
 
-impl<'a> BatchBuilder<'a, Storage, Hash, MilestoneIndex> for StorageBatch<'a> {
+impl<'a> BatchBuilder<'a, Storage, (HashedIndex<Blake2b>, MessageId), ()> for StorageBatch<'a> {
     type Error = OpError;
-    fn try_insert(mut self, hash: &Hash, milestone_index: &MilestoneIndex) -> Result<Self, (Self, Self::Error)> {
-        let ms_hash_to_ms_index = self.storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-        self.key_buf.clear();
-        self.value_buf.clear();
-        hash.write_to(&mut self.key_buf);
-        milestone_index.write_to(&mut self.value_buf);
-        self.batch
-            .put_cf(&ms_hash_to_ms_index, self.key_buf.as_slice(), self.value_buf.as_slice());
-        Ok(self)
+
+    fn try_insert(
+        &mut self,
+        (index, message_id): &(HashedIndex<Blake2b>, MessageId),
+        (): &(),
+    ) -> Result<(), Self::Error> {
+        let payload_index_to_message_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+
+        let mut key = index.as_ref().to_vec();
+        key.extend_from_slice(message_id.as_ref());
+
+        self.batch.put_cf(&payload_index_to_message_id, key, []);
+
+        Ok(())
     }
 
-    fn try_delete(mut self, hash: &Hash) -> Result<Self, (Self, Self::Error)> {
-        let ms_hash_to_ms_index = self.storage.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-        self.key_buf.clear();
-        hash.write_to(&mut self.key_buf);
-        self.batch.delete_cf(&ms_hash_to_ms_index, self.key_buf.as_slice());
-        Ok(self)
+    fn try_delete(&mut self, (index, message_id): &(HashedIndex<Blake2b>, MessageId)) -> Result<(), Self::Error> {
+        let payload_index_to_message_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+
+        let mut key = index.as_ref().to_vec();
+        key.extend_from_slice(message_id.as_ref());
+
+        self.batch.delete_cf(&payload_index_to_message_id, key);
+
+        Ok(())
     }
 }
