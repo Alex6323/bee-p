@@ -22,7 +22,9 @@ use constants::INPUT_OUTPUT_COUNT_RANGE;
 
 pub use essence::{TransactionEssence, TransactionEssenceBuilder};
 pub use input::{Input, UTXOInput};
-pub use output::{Address, Ed25519Address, Output, OutputId, SignatureLockedSingleOutput, WotsAddress};
+pub use output::{
+    Address, Ed25519Address, Output, OutputId, SignatureLockedSingleOutput, WotsAddress, OUTPUT_ID_LENGTH,
+};
 pub use transaction_id::{TransactionId, TRANSACTION_ID_LENGTH};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
 

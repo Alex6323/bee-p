@@ -13,6 +13,8 @@ use super::config::*;
 
 pub use bee_storage::storage::Backend;
 
+use bee_message::payload::transaction::OUTPUT_ID_LENGTH;
+
 use async_trait::async_trait;
 use blake2::{Blake2b, Digest};
 use rocksdb::{ColumnFamilyDescriptor, DBCompactionStyle, DBCompressionType, Options, SliceTransform, DB};
@@ -21,6 +23,7 @@ use std::error::Error;
 
 pub(crate) const MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
 pub(crate) const PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
+pub(crate) const OUTPUT_ID_TO_SPENT: &str = "output_id_to_spent";
 
 pub struct Storage {
     pub(crate) inner: DB,
@@ -29,10 +32,16 @@ pub struct Storage {
 impl Storage {
     pub fn try_new(config: RocksDBConfig) -> Result<DB, Box<dyn Error>> {
         let message_id_to_message = ColumnFamilyDescriptor::new(MESSAGE_ID_TO_MESSAGE, Options::default());
+
         let prefix_extractor = SliceTransform::create_fixed_prefix(<Blake2b as Digest>::output_size());
         let mut options = Options::default();
         options.set_prefix_extractor(prefix_extractor);
-        let payload_index_to_message_id = ColumnFamilyDescriptor::new(PAYLOAD_INDEX_TO_MESSAGE_ID, options.clone());
+        let payload_index_to_message_id = ColumnFamilyDescriptor::new(PAYLOAD_INDEX_TO_MESSAGE_ID, options);
+
+        let prefix_extractor = SliceTransform::create_fixed_prefix(OUTPUT_ID_LENGTH);
+        let mut options = Options::default();
+        options.set_prefix_extractor(prefix_extractor);
+        let output_id_to_spent = ColumnFamilyDescriptor::new(OUTPUT_ID_TO_SPENT, options);
 
         let mut opts = Options::default();
 
@@ -57,7 +66,7 @@ impl Storage {
         opts.set_disable_auto_compactions(config.set_disable_auto_compactions);
         opts.set_compression_type(DBCompressionType::from(config.set_compression_type));
 
-        let column_familes = vec![message_id_to_message, payload_index_to_message_id];
+        let column_familes = vec![message_id_to_message, payload_index_to_message_id, output_id_to_spent];
 
         Ok(DB::open_cf_descriptors(&opts, config.path, column_familes)?)
     }
