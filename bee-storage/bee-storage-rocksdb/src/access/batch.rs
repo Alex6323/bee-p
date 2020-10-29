@@ -56,7 +56,7 @@ impl<'a> Batch<'a> for Storage {
 impl<'a> BatchBuilder<'a, Storage, MessageId, Message> for StorageBatch<'a> {
     type Error = OpError;
 
-    fn try_insert(mut self, message_id: &MessageId, message: &Message) -> Result<Self, (Self, Self::Error)> {
+    fn try_insert(&mut self, message_id: &MessageId, message: &Message) -> Result<(), Self::Error> {
         let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
 
         let mut message_buf = Vec::with_capacity(message.packed_len());
@@ -64,15 +64,15 @@ impl<'a> BatchBuilder<'a, Storage, MessageId, Message> for StorageBatch<'a> {
 
         self.batch.put_cf(&message_id_to_message, message_id, message_buf);
 
-        Ok(self)
+        Ok(())
     }
 
-    fn try_delete(mut self, message_id: &MessageId) -> Result<Self, (Self, Self::Error)> {
+    fn try_delete(&mut self, message_id: &MessageId) -> Result<(), Self::Error> {
         let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
 
         self.batch.delete_cf(&message_id_to_message, message_id);
 
-        Ok(self)
+        Ok(())
     }
 }
 
@@ -80,10 +80,10 @@ impl<'a> BatchBuilder<'a, Storage, (HashedIndex<Blake2b>, MessageId), ()> for St
     type Error = OpError;
 
     fn try_insert(
-        mut self,
+        &mut self,
         (index, message_id): &(HashedIndex<Blake2b>, MessageId),
         (): &(),
-    ) -> Result<Self, (Self, Self::Error)> {
+    ) -> Result<(), Self::Error> {
         let payload_index_to_message_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut key = index.as_ref().to_vec();
@@ -91,13 +91,10 @@ impl<'a> BatchBuilder<'a, Storage, (HashedIndex<Blake2b>, MessageId), ()> for St
 
         self.batch.put_cf(&payload_index_to_message_id, key, []);
 
-        Ok(self)
+        Ok(())
     }
 
-    fn try_delete(
-        mut self,
-        (index, message_id): &(HashedIndex<Blake2b>, MessageId),
-    ) -> Result<Self, (Self, Self::Error)> {
+    fn try_delete(&mut self, (index, message_id): &(HashedIndex<Blake2b>, MessageId)) -> Result<(), Self::Error> {
         let payload_index_to_message_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut key = index.as_ref().to_vec();
@@ -105,6 +102,6 @@ impl<'a> BatchBuilder<'a, Storage, (HashedIndex<Blake2b>, MessageId), ()> for St
 
         self.batch.delete_cf(&payload_index_to_message_id, key);
 
-        Ok(self)
+        Ok(())
     }
 }
