@@ -45,11 +45,12 @@ impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     {
         let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
-        Ok(self
-            .inner
-            .prefix_iterator_cf(&payload_index_to_message_id, index)
-            .next()
-            .is_some())
+        let mut iterator = self.inner.prefix_iterator_cf(&payload_index_to_message_id, index);
+
+        match iterator.status() {
+            Ok(_) => Ok(iterator.next().is_some()),
+            Err(e) => Err(e)?,
+        }
     }
 }
 
