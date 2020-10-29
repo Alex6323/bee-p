@@ -17,10 +17,24 @@ use serde::de::DeserializeOwned;
 use std::str::FromStr;
 use warp::{reject, Filter, Rejection};
 
+#[derive(Debug)]
+pub struct BadRequest;
+impl reject::Reject for BadRequest {}
+
 pub fn all<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    get_info(tangle.clone()).or(get_milestones(tangle.clone()))
+    get_health(tangle.clone()).or(get_info(tangle.clone()).or(get_milestones(tangle.clone())))
+}
+
+fn get_health<B: Backend>(
+    tangle: ResHandle<MsTangle<B>>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::get()
+        .and(warp::path("health"))
+        .and(warp::path::end())
+        .and(with_tangle(tangle))
+        .and_then(handlers::get_health)
 }
 
 fn get_info<B: Backend>(
@@ -42,14 +56,14 @@ fn get_milestones<B: Backend>(
         .and(warp::path("api"))
         .and(warp::path("v1"))
         .and(warp::path("milestones"))
-        .and(custom_param::<u32>())
+        .and(try_path_param::<u32>())
         .and(warp::path::end())
         .and(with_tangle(tangle))
         .and_then(handlers::get_milestones)
 }
 
 /// Extract a denominator from a "div-by" header, or reject with DivideByZero.
-fn custom_param<T: FromStr>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
+fn try_path_param<T: FromStr>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
     warp::path::param().and_then(|value: String| async move {
         match value.parse::<T>() {
             Ok(x) => Ok(x),
@@ -57,10 +71,6 @@ fn custom_param<T: FromStr>() -> impl Filter<Extract = (T,), Error = Rejection> 
         }
     })
 }
-
-#[derive(Debug)]
-pub struct BadRequest;
-impl reject::Reject for BadRequest {}
 
 fn with_tangle<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,

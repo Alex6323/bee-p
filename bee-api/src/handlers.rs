@@ -17,39 +17,51 @@ use std::{
     convert::Infallible,
     time::{SystemTime, UNIX_EPOCH},
 };
-use warp::{reject, Rejection, Reply};
+use warp::{http::StatusCode, reject, Rejection, Reply};
+
+async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
+    let mut is_healthy = true;
+
+    if !tangle.is_synced() {
+        is_healthy = false;
+    }
+
+    // TODO: check if number of peers != 0
+
+    match tangle.get_milestone_message_id(tangle.get_latest_milestone_index()) {
+        Some(milestone_message_id) => match tangle.get_metadata(&milestone_message_id) {
+            Some(metadata) => {
+                let current_time = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Clock may have gone backwards")
+                    .as_millis() as u64;
+                let latest_milestone_arrival_timestamp = metadata.arrival_timestamp();
+                if current_time - latest_milestone_arrival_timestamp > 5 * 60 * 60000 {
+                    is_healthy = false;
+                }
+            }
+            None => is_healthy = false,
+        },
+        None => is_healthy = false,
+    }
+
+    is_healthy
+}
+
+pub async fn get_health<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Infallible> {
+    if is_healthy(tangle.clone()).await {
+        Ok(StatusCode::OK)
+    } else {
+        Ok(StatusCode::SERVICE_UNAVAILABLE)
+    }
+}
 
 pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Infallible> {
     let name = String::from("Bee");
     let version = String::from(env!("CARGO_PKG_VERSION"));
-    let is_healthy = {
-        let mut ret = true;
 
-        if !tangle.is_synced() {
-            ret = false;
-        }
+    let is_healthy = is_healthy(tangle.clone()).await;
 
-        // TODO: check if number of peers != 0
-
-        match tangle.get_milestone_message_id(tangle.get_latest_milestone_index()) {
-            Some(milestone_message_id) => match tangle.get_metadata(&milestone_message_id) {
-                Some(metadata) => {
-                    let current_time = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .expect("Clock may have gone backwards")
-                        .as_millis() as u64;
-                    let latest_milestone_arrival_timestamp = metadata.arrival_timestamp();
-                    if current_time - latest_milestone_arrival_timestamp > 5 * 60 * 60000 {
-                        ret = false;
-                    }
-                }
-                None => ret = false,
-            },
-            None => ret = false,
-        }
-
-        ret
-    };
     // TODO: get public key of coordinator from protocol config
     let coordinator_public_key = String::from("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649");
     let latest_milestone_message_id = tangle
