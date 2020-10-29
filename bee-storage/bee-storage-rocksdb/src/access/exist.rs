@@ -15,61 +15,49 @@ use bee_common_ext::packable::Packable;
 use bee_ledger::spent::Spent;
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
-    Message, MessageId, MESSAGE_ID_LENGTH,
+    Message, MessageId,
 };
-use bee_storage::access::Fetch;
+use bee_storage::access::Exist;
 
-use blake2::{Blake2b, Digest};
-
-use std::convert::TryInto;
+use blake2::Blake2b;
 
 #[async_trait::async_trait]
-impl Fetch<MessageId, Message> for Storage {
+impl Exist<MessageId, Message> for Storage {
     type Error = OpError;
 
-    async fn fetch(&self, message_id: &MessageId) -> Result<Option<Message>, Self::Error>
+    async fn exist(&self, message_id: &MessageId) -> Result<bool, Self::Error>
     where
         Self: Sized,
     {
         let message_id_to_message = self.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        if let Some(res) = self.inner.get_cf(&message_id_to_message, message_id)? {
-            Ok(Some(Message::unpack(&mut res.as_slice()).unwrap()))
-        } else {
-            Ok(None)
-        }
+        Ok(self.inner.get_cf(&message_id_to_message, message_id)?.is_some())
     }
 }
 
 #[async_trait::async_trait]
-impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
+impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     type Error = OpError;
 
-    async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<MessageId>>, Self::Error>
+    async fn exist(&self, index: &HashedIndex<Blake2b>) -> Result<bool, Self::Error>
     where
         Self: Sized,
     {
         let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
-        // TODO limit to a certain number of results
 
-        Ok(Some(
-            self.inner
-                .prefix_iterator_cf(&payload_index_to_message_id, index)
-                .map(|(key, _)| {
-                    let (_, message_id) = key.split_at(Blake2b::output_size());
-                    let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
-                    MessageId::from(message_id)
-                })
-                .collect(),
-        ))
+        Ok(self
+            .inner
+            .prefix_iterator_cf(&payload_index_to_message_id, index)
+            .next()
+            .is_some())
     }
 }
 
 #[async_trait::async_trait]
-impl Fetch<OutputId, Spent> for Storage {
+impl Exist<OutputId, Spent> for Storage {
     type Error = OpError;
 
-    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Spent>, Self::Error>
+    async fn exist(&self, output_id: &OutputId) -> Result<bool, Self::Error>
     where
         Self: Sized,
     {
@@ -79,10 +67,6 @@ impl Fetch<OutputId, Spent> for Storage {
         // Packing to bytes can't fail.
         output_id.pack(&mut output_id_buf).unwrap();
 
-        if let Some(res) = self.inner.get_cf(&output_id_to_spent, output_id_buf)? {
-            Ok(Some(Spent::unpack(&mut res.as_slice()).unwrap()))
-        } else {
-            Ok(None)
-        }
+        Ok(self.inner.get_cf(&output_id_to_spent, output_id_buf)?.is_some())
     }
 }
