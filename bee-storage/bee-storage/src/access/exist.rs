@@ -9,22 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod batch;
-pub mod delete;
-pub mod exist;
-pub mod fetch;
-pub mod insert;
+#[async_trait::async_trait]
+pub trait Exist<K, V> {
+    type Error;
 
-pub use batch::{Batch, BatchBuilder, CommitBatch};
-pub use delete::Delete;
-pub use exist::Exist;
-pub use fetch::Fetch;
-pub use insert::Insert;
-
-pub trait Error: std::fmt::Debug {
-    fn is_retryable(&self) -> bool;
-
-    fn is_still_valid(&self) -> bool;
-
-    fn error_msg(&self) -> Option<String>;
+    async fn exist(&self, key: &K) -> Result<bool, Self::Error>
+    where
+        Self: Sized;
 }
