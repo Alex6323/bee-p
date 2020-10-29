@@ -46,6 +46,7 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
         Self: Sized,
     {
         let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        // TODO limit to a certain number of results
 
         Ok(Some(
             self.inner

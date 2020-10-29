@@ -11,12 +11,15 @@
 
 //#![warn(missing_docs)]
 
+mod error;
 pub mod event;
 mod merkle_hasher;
 mod metadata;
+mod spent;
 mod white_flag;
 mod worker;
 
+pub use error::Error;
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
