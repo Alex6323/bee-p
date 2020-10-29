@@ -12,13 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common_ext::packable::Packable;
-use bee_message::{
-    payload::{
-        indexation::HashedIndex,
-        transaction::{Transaction, TransactionId},
-    },
-    Message, MessageId,
-};
+use bee_message::{payload::indexation::HashedIndex, Message, MessageId};
 use bee_storage::access::Insert;
 
 use blake2::Blake2b;
@@ -41,24 +35,6 @@ impl Insert<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Insert<TransactionId, Transaction> for Storage {
-    type Error = OpError;
-
-    async fn insert(&self, transaction_id: &TransactionId, transaction: &Transaction) -> Result<(), Self::Error> {
-        let transaction_id_to_transaction = self.inner.cf_handle(TRANSACTION_ID_TO_TRANSACTION).unwrap();
-
-        let mut transaction_buf = Vec::with_capacity(transaction.packed_len());
-        // Packing to bytes can't fail.
-        transaction.pack(&mut transaction_buf).unwrap();
-
-        self.inner
-            .put_cf(&transaction_id_to_transaction, transaction_id, transaction_buf)?;
-
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
 impl Insert<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
 
@@ -73,26 +49,6 @@ impl Insert<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         key.extend_from_slice(message_id.as_ref());
 
         self.inner.put_cf(&payload_index_to_message_id, key, [])?;
-
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl Insert<(HashedIndex<Blake2b>, TransactionId), ()> for Storage {
-    type Error = OpError;
-
-    async fn insert(
-        &self,
-        (index, transaction_id): &(HashedIndex<Blake2b>, TransactionId),
-        (): &(),
-    ) -> Result<(), Self::Error> {
-        let payload_index_to_transaction_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_TRANSACTION_ID).unwrap();
-
-        let mut key = index.as_ref().to_vec();
-        key.extend_from_slice(transaction_id.as_ref());
-
-        self.inner.put_cf(&payload_index_to_transaction_id, key, [])?;
 
         Ok(())
     }

@@ -12,13 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common_ext::packable::Packable;
-use bee_message::{
-    payload::{
-        indexation::HashedIndex,
-        transaction::{Transaction, TransactionId, TRANSACTION_ID_LENGTH},
-    },
-    Message, MessageId, MESSAGE_ID_LENGTH,
-};
+use bee_message::{payload::indexation::HashedIndex, Message, MessageId, MESSAGE_ID_LENGTH};
 use bee_storage::access::Fetch;
 
 use blake2::{Blake2b, Digest};
@@ -44,24 +38,6 @@ impl Fetch<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Fetch<TransactionId, Transaction> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, transaction_id: &TransactionId) -> Result<Option<Transaction>, Self::Error>
-    where
-        Self: Sized,
-    {
-        let transaction_id_to_transaction = self.inner.cf_handle(TRANSACTION_ID_TO_TRANSACTION).unwrap();
-
-        if let Some(res) = self.inner.get_cf(&transaction_id_to_transaction, transaction_id)? {
-            Ok(Some(Transaction::unpack(&mut res.as_slice()).unwrap()))
-        } else {
-            Ok(None)
-        }
-    }
-}
-
-#[async_trait::async_trait]
 impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     type Error = OpError;
 
@@ -78,29 +54,6 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
                     let (_, message_id) = key.split_at(Blake2b::output_size());
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
                     MessageId::from(message_id)
-                })
-                .collect(),
-        ))
-    }
-}
-
-#[async_trait::async_trait]
-impl Fetch<HashedIndex<Blake2b>, Vec<TransactionId>> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<TransactionId>>, Self::Error>
-    where
-        Self: Sized,
-    {
-        let payload_index_to_transaction_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_TRANSACTION_ID).unwrap();
-
-        Ok(Some(
-            self.inner
-                .prefix_iterator_cf(&payload_index_to_transaction_id, index)
-                .map(|(key, _)| {
-                    let (_, transaction_id) = key.split_at(Blake2b::output_size());
-                    let transaction_id: [u8; TRANSACTION_ID_LENGTH] = transaction_id.try_into().unwrap();
-                    TransactionId::from(transaction_id)
                 })
                 .collect(),
         ))

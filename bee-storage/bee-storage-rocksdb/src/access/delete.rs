@@ -11,13 +11,7 @@
 
 use crate::{access::OpError, storage::*};
 
-use bee_message::{
-    payload::{
-        indexation::HashedIndex,
-        transaction::{Transaction, TransactionId},
-    },
-    Message, MessageId,
-};
+use bee_message::{payload::indexation::HashedIndex, Message, MessageId};
 use bee_storage::access::Delete;
 
 use blake2::Blake2b;
@@ -36,19 +30,6 @@ impl Delete<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Delete<TransactionId, Transaction> for Storage {
-    type Error = OpError;
-
-    async fn delete(&self, transaction_id: &TransactionId) -> Result<(), Self::Error> {
-        let transaction_id_to_transaction = self.inner.cf_handle(TRANSACTION_ID_TO_TRANSACTION).unwrap();
-
-        self.inner.delete_cf(&transaction_id_to_transaction, transaction_id)?;
-
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
 impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
 
@@ -59,22 +40,6 @@ impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         key.extend_from_slice(message_id.as_ref());
 
         self.inner.delete_cf(&payload_index_to_message_id, key)?;
-
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl Delete<(HashedIndex<Blake2b>, TransactionId), ()> for Storage {
-    type Error = OpError;
-
-    async fn delete(&self, (index, transaction_id): &(HashedIndex<Blake2b>, TransactionId)) -> Result<(), Self::Error> {
-        let payload_index_to_transaction_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_TRANSACTION_ID).unwrap();
-
-        let mut key = index.as_ref().to_vec();
-        key.extend_from_slice(transaction_id.as_ref());
-
-        self.inner.delete_cf(&payload_index_to_transaction_id, key)?;
 
         Ok(())
     }
