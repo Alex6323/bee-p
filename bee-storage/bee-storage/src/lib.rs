@@ -9,8 +9,6 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A crate that contains foundational building blocks for the IOTA Tangle.
-
 pub mod access;
 pub mod persistable;
 pub mod storage;

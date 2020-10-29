@@ -27,16 +27,18 @@ impl Error for OpError {
     fn is_retryable(&self) -> bool {
         self.is_retryable
     }
+
     fn is_still_valid(&self) -> bool {
         self.is_still_valid
     }
+
     fn error_msg(&self) -> Option<String> {
         self.error_msg.clone()
     }
 }
 
 impl From<::rocksdb::Error> for OpError {
-    fn from(err: ::rocksdb::Error) -> Self {
+    fn from(err: rocksdb::Error) -> Self {
         Self {
             is_retryable: false,
             is_still_valid: false,

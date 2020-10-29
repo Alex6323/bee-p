@@ -9,34 +9,30 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//! A crate that contains foundational building blocks for the IOTA Tangle.
-
 use super::config::*;
-use async_trait::async_trait;
+
 pub use bee_storage::storage::Backend;
+
+use async_trait::async_trait;
 use blake2::{Blake2b, Digest};
-pub use rocksdb::*;
+use rocksdb::{ColumnFamilyDescriptor, DBCompactionStyle, DBCompressionType, Options, SliceTransform, DB};
+
 use std::error::Error;
 
-pub const TRANSACTION_HASH_TO_TRANSACTION: &str = "transaction_hash_to_transaction";
-pub const TRANSACTION_HASH_TO_METADATA: &str = "transaction_hash_to_metadata";
-pub const MILESTONE_HASH_TO_INDEX: &str = "milestone_hash_to_index";
-pub const MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
-pub const PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
-pub const PAYLOAD_INDEX_TO_TRANSACTION_ID: &str = "payload_index_to_transaction_id";
+pub(crate) const MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
+pub(crate) const TRANSACTION_ID_TO_TRANSACTION: &str = "transaction_id_to_transaction";
+pub(crate) const PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
+pub(crate) const PAYLOAD_INDEX_TO_TRANSACTION_ID: &str = "payload_index_to_transaction_id";
 
 pub struct Storage {
-    pub inner: ::rocksdb::DB,
+    pub(crate) inner: DB,
 }
 
 impl Storage {
     pub fn try_new(config: RocksDBConfig) -> Result<DB, Box<dyn Error>> {
-        let transaction_hash_to_transaction =
-            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_TRANSACTION, Options::default());
-        let transaction_hash_to_transaction_metadata =
-            ColumnFamilyDescriptor::new(TRANSACTION_HASH_TO_METADATA, Options::default());
-        let milestone_hash_to_index = ColumnFamilyDescriptor::new(MILESTONE_HASH_TO_INDEX, Options::default());
         let message_id_to_message = ColumnFamilyDescriptor::new(MESSAGE_ID_TO_MESSAGE, Options::default());
+        let transaction_id_to_transaction =
+            ColumnFamilyDescriptor::new(TRANSACTION_ID_TO_TRANSACTION, Options::default());
 
         let prefix_extractor = SliceTransform::create_fixed_prefix(<Blake2b as Digest>::output_size());
         let mut options = Options::default();
@@ -68,31 +64,30 @@ impl Storage {
         opts.set_compression_type(DBCompressionType::from(config.set_compression_type));
 
         let column_familes = vec![
-            transaction_hash_to_transaction,
-            transaction_hash_to_transaction_metadata,
-            milestone_hash_to_index,
             message_id_to_message,
+            transaction_id_to_transaction,
             payload_index_to_message_id,
             payload_index_to_transaction_id,
         ];
-        let db = DB::open_cf_descriptors(&opts, config.path, column_familes)?;
 
-        Ok(db)
+        Ok(DB::open_cf_descriptors(&opts, config.path, column_familes)?)
     }
 }
+
 #[async_trait]
 impl Backend for Storage {
     type ConfigBuilder = RocksDBConfigBuilder;
     type Config = RocksDBConfig;
 
-    /// It starts RocksDB instance and then initialize the required column familes
+    /// It starts RocksDB instance and then initializes the required column familes.
     async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>> {
         Ok(Storage {
             inner: Self::try_new(config)?,
         })
     }
-    /// It shutdown RocksDB instance,
-    /// Note: the shutdown is done through flush method and then droping the storage object
+
+    /// It shutdown RocksDB instance.
+    /// Note: the shutdown is done through flush method and then droping the storage object.
     async fn shutdown(self) -> Result<(), Box<dyn Error>> {
         if let Err(e) = self.inner.flush() {
             return Err(Box::new(e));

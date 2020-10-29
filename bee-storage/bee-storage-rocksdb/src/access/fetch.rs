@@ -9,75 +9,52 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::{access::OpError, storage::*};
+
 use bee_common_ext::packable::Packable;
-use bee_crypto::ternary::Hash;
 use bee_message::{
     payload::{
         indexation::HashedIndex,
-        transaction::{TransactionId, TRANSACTION_ID_LENGTH},
+        transaction::{Transaction, TransactionId, TRANSACTION_ID_LENGTH},
     },
     Message, MessageId, MESSAGE_ID_LENGTH,
 };
-use bee_protocol::{tangle::MessageMetadata, MilestoneIndex};
-use bee_storage::{access::Fetch, persistable::Persistable};
-
-use crate::{access::OpError, storage::*};
+use bee_storage::access::Fetch;
 
 use blake2::{Blake2b, Digest};
 
 use std::convert::TryInto;
 
 #[async_trait::async_trait]
-impl Fetch<Hash, MessageMetadata> for Storage {
-    type Error = OpError;
-    async fn fetch(&self, hash: &Hash) -> Result<Option<MessageMetadata>, OpError>
-    where
-        Self: Sized,
-    {
-        let hash_to_metadata = self.inner.cf_handle(TRANSACTION_HASH_TO_METADATA).unwrap();
-        let mut hash_buf: Vec<u8> = Vec::new();
-        hash.write_to(&mut hash_buf);
-        if let Some(res) = self.inner.get_cf(&hash_to_metadata, hash_buf.as_slice())? {
-            let transaction_metadata: MessageMetadata = MessageMetadata::read_from(res.as_slice());
-            Ok(Some(transaction_metadata))
-        } else {
-            Ok(None)
-        }
-    }
-}
-
-#[async_trait::async_trait]
-impl Fetch<Hash, MilestoneIndex> for Storage {
-    type Error = OpError;
-    async fn fetch(&self, hash: &Hash) -> Result<Option<MilestoneIndex>, Self::Error>
-    where
-        Self: Sized,
-    {
-        let ms_hash_to_ms_index = self.inner.cf_handle(MILESTONE_HASH_TO_INDEX).unwrap();
-        let mut hash_buf: Vec<u8> = Vec::new();
-        hash.write_to(&mut hash_buf);
-        if let Some(res) = self.inner.get_cf(&ms_hash_to_ms_index, hash_buf.as_slice())? {
-            let ms_index: MilestoneIndex = MilestoneIndex::read_from(res.as_slice());
-            Ok(Some(ms_index))
-        } else {
-            Ok(None)
-        }
-    }
-}
-
-#[async_trait::async_trait]
 impl Fetch<MessageId, Message> for Storage {
     type Error = OpError;
+
     async fn fetch(&self, message_id: &MessageId) -> Result<Option<Message>, Self::Error>
     where
         Self: Sized,
     {
         let message_id_to_message = self.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        if let Some(res) = self.inner.get_cf(&message_id_to_message, message_id.as_ref())? {
-            let message = Message::unpack(&mut res.as_slice()).unwrap();
+        if let Some(res) = self.inner.get_cf(&message_id_to_message, message_id)? {
+            Ok(Some(Message::unpack(&mut res.as_slice()).unwrap()))
+        } else {
+            Ok(None)
+        }
+    }
+}
 
-            Ok(Some(message))
+#[async_trait::async_trait]
+impl Fetch<TransactionId, Transaction> for Storage {
+    type Error = OpError;
+
+    async fn fetch(&self, transaction_id: &TransactionId) -> Result<Option<Transaction>, Self::Error>
+    where
+        Self: Sized,
+    {
+        let transaction_id_to_transaction = self.inner.cf_handle(TRANSACTION_ID_TO_TRANSACTION).unwrap();
+
+        if let Some(res) = self.inner.get_cf(&transaction_id_to_transaction, transaction_id)? {
+            Ok(Some(Transaction::unpack(&mut res.as_slice()).unwrap()))
         } else {
             Ok(None)
         }
@@ -87,6 +64,7 @@ impl Fetch<MessageId, Message> for Storage {
 #[async_trait::async_trait]
 impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     type Error = OpError;
+
     async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<MessageId>>, Self::Error>
     where
         Self: Sized,
@@ -95,9 +73,9 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
 
         Ok(Some(
             self.inner
-                .prefix_iterator_cf(&payload_index_to_message_id, index.as_ref())
-                .map(|(key, _value)| {
-                    let (_hash, message_id) = key.split_at(Blake2b::output_size());
+                .prefix_iterator_cf(&payload_index_to_message_id, index)
+                .map(|(key, _)| {
+                    let (_, message_id) = key.split_at(Blake2b::output_size());
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
                     MessageId::from(message_id)
                 })
@@ -109,6 +87,7 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
 #[async_trait::async_trait]
 impl Fetch<HashedIndex<Blake2b>, Vec<TransactionId>> for Storage {
     type Error = OpError;
+
     async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<TransactionId>>, Self::Error>
     where
         Self: Sized,
@@ -117,9 +96,9 @@ impl Fetch<HashedIndex<Blake2b>, Vec<TransactionId>> for Storage {
 
         Ok(Some(
             self.inner
-                .prefix_iterator_cf(&payload_index_to_transaction_id, index.as_ref())
-                .map(|(key, _value)| {
-                    let (_hash, transaction_id) = key.split_at(Blake2b::output_size());
+                .prefix_iterator_cf(&payload_index_to_transaction_id, index)
+                .map(|(key, _)| {
+                    let (_, transaction_id) = key.split_at(Blake2b::output_size());
                     let transaction_id: [u8; TRANSACTION_ID_LENGTH] = transaction_id.try_into().unwrap();
                     TransactionId::from(transaction_id)
                 })

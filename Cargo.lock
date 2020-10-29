@@ -316,6 +316,7 @@ dependencies = [
  "async-trait",
  "bee-common-ext",
  "bee-crypto",
+ "bee-ledger",
  "bee-message",
  "bee-protocol",
  "bee-storage",

@@ -14,23 +14,29 @@ use crate::storage::Backend;
 #[async_trait::async_trait]
 pub trait BatchBuilder<'a, S: Backend, K, V>: Sized {
     type Error: std::fmt::Debug;
+
     fn try_insert(self, key: &K, value: &V) -> Result<Self, (Self, Self::Error)>;
+
     fn try_delete(self, key: &K) -> Result<Self, (Self, Self::Error)>;
+
     fn insert(self, key: &K, value: &V) -> Self {
         self.try_insert(key, value).map_err(|(_, e)| e).unwrap()
     }
+
     fn delete(self, key: &K) -> Self {
         self.try_delete(key).map_err(|(_, e)| e).unwrap()
     }
 }
 
 #[async_trait::async_trait]
-pub trait ApplyBatch {
-    type E;
-    async fn apply(self, durability: bool) -> Result<(), Self::E>;
+pub trait CommitBatch {
+    type Error;
+
+    async fn commit_batch(self, durability: bool) -> Result<(), Self::Error>;
 }
 
 pub trait Batch<'a>: Backend + Sized {
     type BatchBuilder;
-    fn create_batch(&'a self) -> Self::BatchBuilder;
+
+    fn begin_batch(&'a self) -> Self::BatchBuilder;
 }
