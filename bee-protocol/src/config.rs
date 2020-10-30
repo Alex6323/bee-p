@@ -14,6 +14,7 @@ use crate::milestone::{key_range::KeyRange, MilestoneIndex};
 use serde::Deserialize;
 
 const DEFAULT_MWM: u8 = 14;
+const DEFAULT_COO_PUBLIC_KEY_COUNT: usize = 2;
 const DEFAULT_COO_PUBLIC_KEY_RANGES: [(&str, MilestoneIndex, MilestoneIndex); 2] = [
     (
         "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
@@ -33,6 +34,7 @@ const DEFAULT_MS_SYNC_COUNT: u32 = 1;
 
 #[derive(Default, Deserialize)]
 struct ProtocolCoordinatorConfigBuilder {
+    public_key_count: Option<usize>,
     public_key_ranges: Option<Vec<KeyRange>>,
 }
 
@@ -90,6 +92,10 @@ impl ProtocolConfigBuilder {
         ProtocolConfig {
             mwm: self.mwm.unwrap_or(DEFAULT_MWM),
             coordinator: ProtocolCoordinatorConfig {
+                public_key_count: self
+                    .coordinator
+                    .public_key_count
+                    .unwrap_or(DEFAULT_COO_PUBLIC_KEY_COUNT),
                 public_key_ranges: self.coordinator.public_key_ranges.unwrap_or_else(|| {
                     DEFAULT_COO_PUBLIC_KEY_RANGES
                         .iter()
@@ -112,6 +118,7 @@ impl ProtocolConfigBuilder {
 
 #[derive(Clone)]
 pub struct ProtocolCoordinatorConfig {
+    pub(crate) public_key_count: usize,
     pub(crate) public_key_ranges: Vec<KeyRange>,
 }
 

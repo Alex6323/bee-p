@@ -18,6 +18,7 @@ peers     = [ ]
 [protocol]
 mwm = 14
 [protocol.coordinator]
+public_key_count  = 2
 [[protocol.coordinator.public_key_ranges]]
 public_key  = "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
 start       = 0
