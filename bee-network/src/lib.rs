@@ -24,23 +24,37 @@ mod config;
 mod endpoint;
 mod event;
 mod network;
+mod p2p;
 mod tcp;
 mod util;
 
 use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use endpoint::{EndpointContactList, EndpointWorker};
+use p2p::P2pService;
 use tcp::TcpServer;
 
 use bee_common_ext::shutdown_tokio::Shutdown;
 
 use futures::channel::oneshot;
+use libp2p::{identity, noise};
 
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::{
+    fs::File,
+    sync::atomic::{AtomicU64, AtomicUsize, Ordering},
+};
 
 pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
 pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
 
+#[doc(inline)]
+pub use libp2p::PeerId;
+
 pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
+    // TODO: restore keys from fs
+    let local_keys = identity::Keypair::generate_ed25519();
+
+    let p2p_service = P2pService::new(local_keys).expect("Error creating peering service");
+
     let (command_sender, command_receiver) = command::channel();
     let (event_sender, event_receiver) = event::channel();
     let (internal_event_sender, internal_event_receiver) = event::channel();
@@ -77,4 +91,25 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
     RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
 
     (Network::new(config, command_sender), event_receiver)
+}
+
+const ID_KEYS_FILEPATH: &str = "./node_id.txt";
+
+fn load_or_create_identity() -> PeerId {
+    //
+    if let Err(e) = File::open(ID_KEYS_FILEPATH) {
+        create_new_identity()
+    } else {
+        load_identity()
+    }
+}
+
+fn create_new_identity() -> PeerId {
+    todo!();
+}
+
+fn load_identity() -> PeerId {
+    // let mut file = File::create("node_id.txt")?;
+    // file.write_all(b"Hello, world!")?;
+    todo!()
 }
