@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::types::{DataResponse, GetInfoResponseBody, GetMilestonesResponseBody};
+use crate::{
+    filters::ServiceUnavailable,
+    types::{DataResponse, GetInfoResponseBody, GetMilestonesResponseBody, GetTipsResponseBody},
+};
 use bee_common_ext::node::ResHandle;
 use bee_protocol::{tangle::MsTangle, MilestoneIndex};
 use bee_storage::storage::Backend;
@@ -49,7 +52,7 @@ async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
 }
 
 pub async fn get_health<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Infallible> {
-    if is_healthy(tangle.clone()).await {
+    if is_healthy(tangle).await {
         Ok(StatusCode::OK)
     } else {
         Ok(StatusCode::SERVICE_UNAVAILABLE)
@@ -106,8 +109,18 @@ pub async fn get_milestones<B: Backend>(
                     timestamp,
                 })))
             }
-            None => Err(reject::reject()),
+            None => Err(reject::not_found()),
         },
-        None => Err(reject::reject()),
+        None => Err(reject::not_found()),
+    }
+}
+
+pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Rejection> {
+    match tangle.get_messages_to_approve().await {
+        Some(tips) => Ok(warp::reply::json(&DataResponse::new(GetTipsResponseBody {
+            tip_1_message_id: tips.0.to_string(),
+            tip_2_message_id: tips.1.to_string(),
+        }))),
+        None => Err(reject::custom(ServiceUnavailable)),
     }
 }

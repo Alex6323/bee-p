@@ -25,7 +25,7 @@ use bee_common_ext::{
     worker::Worker,
 };
 use bee_protocol::{tangle::MsTangle, TangleWorker};
-use filters::BadRequest;
+use filters::{BadRequest, ServiceUnavailable};
 use log::info;
 use std::{any::TypeId, convert::Infallible};
 use warp::{http::StatusCode, Filter, Rejection, Reply};
@@ -78,6 +78,10 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
         http_code = StatusCode::BAD_REQUEST;
         message_code = String::from("invalid_data");
         message_text = String::from("invalid data provided");
+    } else if let Some(ServiceUnavailable) = err.find() {
+        http_code = StatusCode::SERVICE_UNAVAILABLE;
+        message_code = String::from("service_unavailable");
+        message_text = String::from("service unavailable");
     } else {
         http_code = StatusCode::INTERNAL_SERVER_ERROR;
         message_code = String::from("internal_server_error");

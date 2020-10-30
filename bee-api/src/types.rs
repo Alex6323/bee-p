@@ -94,3 +94,16 @@ pub struct GetMilestonesResponseBody {
 }
 
 impl DataBody for GetMilestonesResponseBody {}
+
+/// Response body of GET /api/v1/tips endpoint
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GetTipsResponseBody {
+    /// index of the milestone
+    #[serde(rename = "tip1MessageId")]
+    pub tip_1_message_id: String,
+    /// message id of the milestone
+    #[serde(rename = "tip2MessageId")]
+    pub tip_2_message_id: String,
+}
+
+impl DataBody for GetTipsResponseBody {}
