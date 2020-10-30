@@ -16,7 +16,7 @@ mod types;
 
 use crate::{
     config::ApiConfig,
-    types::{ErrorResponse, ErrorResponseBody},
+    types::{ErrorBody, ErrorResponse},
 };
 use async_trait::async_trait;
 use bee_common::worker::Error as WorkerError;
@@ -90,7 +90,7 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
     }
 
     Ok(warp::reply::with_status(
-        warp::reply::json(&ErrorResponse::new(ErrorResponseBody {
+        warp::reply::json(&ErrorResponse::new(ErrorBody {
             code: message_code,
             message: message_text,
         })),

@@ -11,9 +11,10 @@
 
 use crate::{
     filters::ServiceUnavailable,
-    types::{DataResponse, GetInfoResponseBody, GetMilestonesResponseBody, GetTipsResponseBody},
+    types::{DataResponse, GetInfoResponseBody, GetMilestoneByIndexResponseBody, GetTipsResponseBody},
 };
 use bee_common_ext::node::ResHandle;
+use bee_message::prelude::*;
 use bee_protocol::{tangle::MsTangle, MilestoneIndex};
 use bee_storage::storage::Backend;
 use std::{
@@ -95,26 +96,6 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     })))
 }
 
-pub async fn get_milestones<B: Backend>(
-    milestone_index: u32,
-    tangle: ResHandle<MsTangle<B>>,
-) -> Result<impl Reply, Rejection> {
-    match tangle.get_milestone_message_id(MilestoneIndex(milestone_index)) {
-        Some(message_id) => match tangle.get_metadata(&message_id) {
-            Some(metadata) => {
-                let timestamp = metadata.arrival_timestamp();
-                Ok(warp::reply::json(&DataResponse::new(GetMilestonesResponseBody {
-                    milestone_index,
-                    message_id: message_id.to_string(),
-                    timestamp,
-                })))
-            }
-            None => Err(reject::not_found()),
-        },
-        None => Err(reject::not_found()),
-    }
-}
-
 pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Rejection> {
     match tangle.get_messages_to_approve().await {
         Some(tips) => Ok(warp::reply::json(&DataResponse::new(GetTipsResponseBody {
@@ -122,5 +103,32 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
             tip_2_message_id: tips.1.to_string(),
         }))),
         None => Err(reject::custom(ServiceUnavailable)),
+    }
+}
+
+pub async fn get_message_by_id<B: Backend>(
+    message_id: MessageId,
+    tangle: ResHandle<MsTangle<B>>,
+) -> Result<impl Reply, Rejection> {
+    Ok(StatusCode::OK)
+}
+
+pub async fn get_milestone_by_index<B: Backend>(
+    milestone_index: MilestoneIndex,
+    tangle: ResHandle<MsTangle<B>>,
+) -> Result<impl Reply, Rejection> {
+    match tangle.get_milestone_message_id(milestone_index) {
+        Some(message_id) => match tangle.get_metadata(&message_id) {
+            Some(metadata) => {
+                let timestamp = metadata.arrival_timestamp();
+                Ok(warp::reply::json(&DataResponse::new(GetMilestoneByIndexResponseBody {
+                    milestone_index: *milestone_index,
+                    message_id: message_id.to_string(),
+                    timestamp,
+                })))
+            }
+            None => Err(reject::not_found()),
+        },
+        None => Err(reject::not_found()),
     }
 }

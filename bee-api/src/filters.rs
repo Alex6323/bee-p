@@ -11,10 +11,11 @@
 
 use crate::handlers;
 use bee_common_ext::node::ResHandle;
-use bee_protocol::tangle::MsTangle;
+use bee_message::MessageId;
+use bee_protocol::{tangle::MsTangle, MilestoneIndex};
 use bee_storage::storage::Backend;
 use serde::de::DeserializeOwned;
-use std::str::FromStr;
+use std::convert::TryFrom;
 use warp::{reject, Filter, Rejection};
 
 #[derive(Debug)]
@@ -29,8 +30,9 @@ pub fn all<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     get_health(tangle.clone())
-        .or(get_info(tangle.clone()).or(get_milestones(tangle.clone())))
+        .or(get_info(tangle.clone()).or(get_milestone_by_index(tangle.clone())))
         .or(get_tips(tangle.clone()))
+    //.or(get_message_by_id(tangle.clone()))
 }
 
 fn get_health<B: Backend>(
@@ -55,19 +57,6 @@ fn get_info<B: Backend>(
         .and_then(handlers::get_info)
 }
 
-fn get_milestones<B: Backend>(
-    tangle: ResHandle<MsTangle<B>>,
-) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    warp::get()
-        .and(warp::path("api"))
-        .and(warp::path("v1"))
-        .and(warp::path("milestones"))
-        .and(try_path_param::<u32>())
-        .and(warp::path::end())
-        .and(with_tangle(tangle))
-        .and_then(handlers::get_milestones)
-}
-
 fn get_tips<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -80,10 +69,45 @@ fn get_tips<B: Backend>(
         .and_then(handlers::get_tips)
 }
 
-fn try_path_param<T: FromStr>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
+fn get_message_by_id<B: Backend>(
+    tangle: ResHandle<MsTangle<B>>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::get()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("messages"))
+        .and(message_id())
+        .and(warp::path::end())
+        .and(with_tangle(tangle))
+        .and_then(handlers::get_message_by_id)
+}
+
+fn get_milestone_by_index<B: Backend>(
+    tangle: ResHandle<MsTangle<B>>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::get()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("milestones"))
+        .and(milestone_index())
+        .and(warp::path::end())
+        .and(with_tangle(tangle))
+        .and_then(handlers::get_milestone_by_index)
+}
+
+fn message_id() -> impl Filter<Extract = (MessageId,), Error = Rejection> + Copy {
     warp::path::param().and_then(|value: String| async move {
-        match value.parse::<T>() {
+        match MessageId::try_from(value.as_str()) {
             Ok(x) => Ok(x),
+            Err(_) => Err(reject::custom(BadRequest)),
+        }
+    })
+}
+
+fn milestone_index() -> impl Filter<Extract = (MilestoneIndex,), Error = Rejection> + Copy {
+    warp::path::param().and_then(|value: String| async move {
+        match value.parse::<u32>() {
+            Ok(x) => Ok(MilestoneIndex(x)),
             Err(_) => Err(reject::custom(BadRequest)),
         }
     })
