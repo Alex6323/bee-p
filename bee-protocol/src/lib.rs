@@ -14,8 +14,8 @@
 pub mod config;
 pub mod event;
 pub mod tangle;
+pub mod milestone;
 
-mod milestone;
 mod packet;
 mod peer;
 mod protocol;

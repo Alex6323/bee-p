@@ -47,6 +47,7 @@ impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
 
         let mut iterator = self.inner.prefix_iterator_cf(&payload_index_to_message_id, index);
         let exist = iterator.next().is_some();
+
         match iterator.status() {
             Ok(_) => Ok(exist),
             Err(e) => Err(e)?,
