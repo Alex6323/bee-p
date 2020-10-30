@@ -31,9 +31,9 @@ impl Fetch<MessageId, Message> for Storage {
     where
         Self: Sized,
     {
-        let message_id_to_message = self.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        if let Some(res) = self.inner.get_cf(&message_id_to_message, message_id)? {
+        if let Some(res) = self.inner.get_cf(&cf_message_id_to_message, message_id)? {
             Ok(Some(Message::unpack(&mut res.as_slice()).unwrap()))
         } else {
             Ok(None)
@@ -49,12 +49,12 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     where
         Self: Sized,
     {
-        let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
         // TODO limit to a certain number of results
 
         Ok(Some(
             self.inner
-                .prefix_iterator_cf(&payload_index_to_message_id, index)
+                .prefix_iterator_cf(&cf_payload_index_to_message_id, index)
                 .map(|(key, _)| {
                     let (_, message_id) = key.split_at(Blake2b::output_size());
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
@@ -73,13 +73,13 @@ impl Fetch<OutputId, Spent> for Storage {
     where
         Self: Sized,
     {
-        let output_id_to_spent = self.inner.cf_handle(OUTPUT_ID_TO_SPENT).unwrap();
+        let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
         output_id.pack(&mut output_id_buf).unwrap();
 
-        if let Some(res) = self.inner.get_cf(&output_id_to_spent, output_id_buf)? {
+        if let Some(res) = self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)? {
             Ok(Some(Spent::unpack(&mut res.as_slice()).unwrap()))
         } else {
             Ok(None)

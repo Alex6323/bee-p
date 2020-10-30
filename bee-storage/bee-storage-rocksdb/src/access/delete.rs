@@ -26,9 +26,9 @@ impl Delete<MessageId, Message> for Storage {
     type Error = OpError;
 
     async fn delete(&self, message_id: &MessageId) -> Result<(), Self::Error> {
-        let message_id_to_message = self.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        self.inner.delete_cf(&message_id_to_message, message_id)?;
+        self.inner.delete_cf(&cf_message_id_to_message, message_id)?;
 
         Ok(())
     }
@@ -39,12 +39,12 @@ impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
 
     async fn delete(&self, (index, message_id): &(HashedIndex<Blake2b>, MessageId)) -> Result<(), Self::Error> {
-        let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut key = index.as_ref().to_vec();
         key.extend_from_slice(message_id.as_ref());
 
-        self.inner.delete_cf(&payload_index_to_message_id, key)?;
+        self.inner.delete_cf(&cf_payload_index_to_message_id, key)?;
 
         Ok(())
     }
@@ -55,13 +55,13 @@ impl Delete<OutputId, Spent> for Storage {
     type Error = OpError;
 
     async fn delete(&self, output_id: &OutputId) -> Result<(), Self::Error> {
-        let output_id_to_spent = self.inner.cf_handle(OUTPUT_ID_TO_SPENT).unwrap();
+        let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
         output_id.pack(&mut output_id_buf).unwrap();
 
-        self.inner.delete_cf(&output_id_to_spent, output_id_buf)?;
+        self.inner.delete_cf(&cf_output_id_to_spent, output_id_buf)?;
 
         Ok(())
     }

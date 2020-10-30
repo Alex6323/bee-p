@@ -29,9 +29,9 @@ impl Exist<MessageId, Message> for Storage {
     where
         Self: Sized,
     {
-        let message_id_to_message = self.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        Ok(self.inner.get_cf(&message_id_to_message, message_id)?.is_some())
+        Ok(self.inner.get_cf(&cf_message_id_to_message, message_id)?.is_some())
     }
 }
 
@@ -43,9 +43,9 @@ impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     where
         Self: Sized,
     {
-        let payload_index_to_message_id = self.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut iterator = self.inner.prefix_iterator_cf(&payload_index_to_message_id, index);
+        let mut iterator = self.inner.prefix_iterator_cf(&cf_payload_index_to_message_id, index);
         let exist = iterator.next().is_some();
 
         match iterator.status() {
@@ -63,12 +63,12 @@ impl Exist<OutputId, Spent> for Storage {
     where
         Self: Sized,
     {
-        let output_id_to_spent = self.inner.cf_handle(OUTPUT_ID_TO_SPENT).unwrap();
+        let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
         output_id.pack(&mut output_id_buf).unwrap();
 
-        Ok(self.inner.get_cf(&output_id_to_spent, output_id_buf)?.is_some())
+        Ok(self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)?.is_some())
     }
 }
