@@ -11,6 +11,7 @@
 
 pub mod batch;
 pub mod delete;
+pub mod exist;
 pub mod fetch;
 pub mod insert;
 

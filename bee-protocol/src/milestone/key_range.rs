@@ -9,22 +9,32 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod batch;
-pub mod delete;
-pub mod exist;
-pub mod fetch;
-pub mod insert;
+use crate::milestone::MilestoneIndex;
 
-pub use batch::{Batch, BatchBuilder, CommitBatch};
-pub use delete::Delete;
-pub use exist::Exist;
-pub use fetch::Fetch;
-pub use insert::Insert;
+use serde::Deserialize;
 
-pub trait Error: std::fmt::Debug {
-    fn is_retryable(&self) -> bool;
+#[derive(Clone, Deserialize)]
+pub struct KeyRange {
+    // TODO ED25 pk
+    public_key: String,
+    start: MilestoneIndex,
+    end: MilestoneIndex,
+}
 
-    fn is_still_valid(&self) -> bool;
+impl KeyRange {
+    pub fn new(public_key: String, start: MilestoneIndex, end: MilestoneIndex) -> Self {
+        Self { public_key, start, end }
+    }
 
-    fn error_msg(&self) -> Option<String>;
+    pub fn public_key(&self) -> &String {
+        &self.public_key
+    }
+
+    pub fn start(&self) -> MilestoneIndex {
+        self.start
+    }
+
+    pub fn end(&self) -> MilestoneIndex {
+        self.end
+    }
 }

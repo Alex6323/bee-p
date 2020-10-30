@@ -12,7 +12,7 @@
 use crate::{
     config::ProtocolConfig,
     event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
-    milestone::{Milestone, MilestoneIndex},
+    milestone::{key_manager::KeyManager, Milestone, MilestoneIndex},
     protocol::Protocol,
     tangle::MsTangle,
     worker::{
@@ -22,8 +22,8 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
-use bee_message::MessageId;
+use bee_common_ext::{node::Node, packable::Packable, worker::Worker};
+use bee_message::{payload::Payload, MessageId};
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
@@ -32,8 +32,17 @@ use log::{debug, error, info};
 use std::any::TypeId;
 
 #[derive(Debug)]
-pub(crate) enum MilestoneValidatorWorkerError {
+pub(crate) enum Error {
     UnknownMessage,
+    NoMilestonePayload,
+    Parent1Mismatch(MessageId, MessageId),
+    Parent2Mismatch(MessageId, MessageId),
+    InvalidMinThreshold,
+    TooFewSignatures(usize, usize),
+    SignaturesPublicKeysCountMismatch(usize, usize),
+    InsufficientPublicKeysCount(usize, usize),
+    // TODO include PK
+    UnknownPublicKey,
 }
 
 pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) MessageId);
@@ -44,22 +53,70 @@ pub(crate) struct MilestoneValidatorWorker {
 
 async fn validate<N: Node>(
     tangle: &MsTangle<N::Backend>,
-    _config: &ProtocolConfig,
+    key_manager: &KeyManager,
     message_id: MessageId,
-) -> Result<Milestone, MilestoneValidatorWorkerError>
+) -> Result<Milestone, Error>
 where
     N: Node,
 {
-    let _message = tangle
-        .get(&message_id)
-        .await
-        .ok_or(MilestoneValidatorWorkerError::UnknownMessage)?;
+    let message = tangle.get(&message_id).await.ok_or(Error::UnknownMessage)?;
 
-    // TODO complete
-    Ok(Milestone {
-        message_id,
-        index: MilestoneIndex(0),
-    })
+    if let Payload::Milestone(milestone) = message.payload() {
+        if message.parent1() != milestone.essence().parent1() {
+            return Err(Error::Parent1Mismatch(
+                *message.parent1(),
+                *milestone.essence().parent1(),
+            ));
+        }
+        if message.parent2() != milestone.essence().parent2() {
+            return Err(Error::Parent2Mismatch(
+                *message.parent2(),
+                *milestone.essence().parent2(),
+            ));
+        }
+        if key_manager.min_threshold() == 0 {
+            return Err(Error::InvalidMinThreshold);
+        }
+        if milestone.signatures().is_empty() || milestone.signatures().len() < key_manager.min_threshold() {
+            return Err(Error::TooFewSignatures(
+                key_manager.min_threshold(),
+                milestone.signatures().len(),
+            ));
+        }
+        if milestone.signatures().len() != milestone.essence().public_keys().len() {
+            return Err(Error::SignaturesPublicKeysCountMismatch(
+                milestone.signatures().len(),
+                milestone.essence().public_keys().len(),
+            ));
+        }
+
+        let public_keys = key_manager.get_public_keys(milestone.essence().index().into());
+
+        if public_keys.len() < key_manager.min_threshold() {
+            return Err(Error::InsufficientPublicKeysCount(
+                key_manager.min_threshold(),
+                public_keys.len(),
+            ));
+        }
+
+        let mut essence_bytes = Vec::with_capacity(milestone.essence().packed_len());
+        milestone.essence().pack(&mut essence_bytes).unwrap();
+
+        for (index, public_key) in milestone.essence().public_keys().iter().enumerate() {
+            // if !public_keys.contains(public_key) {
+            //     return Err(Error::UnknownPublicKey);
+            // }
+
+            // TODO ED25 signature validation
+        }
+
+        Ok(Milestone {
+            message_id,
+            index: MilestoneIndex(milestone.essence().index()),
+        })
+    } else {
+        Err(Error::NoMilestonePayload)
+    }
 }
 
 #[async_trait]
@@ -87,6 +144,10 @@ where
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
         let requested_milestones = node.resource::<RequestedMilestones>();
+        let key_manager = KeyManager::new(
+            config.coordinator.public_key_count,
+            config.coordinator.public_key_ranges.into_boxed_slice(),
+        );
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -98,7 +159,7 @@ where
                     if meta.flags().is_milestone() {
                         continue;
                     }
-                    match validate::<N>(&tangle, &config, message_id).await {
+                    match validate::<N>(&tangle, &key_manager, message_id).await {
                         Ok(milestone) => {
                             tangle.add_milestone(milestone.index, milestone.message_id);
 

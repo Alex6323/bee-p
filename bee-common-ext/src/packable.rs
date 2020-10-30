@@ -18,6 +18,13 @@ pub trait Packable {
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error>;
 
+    fn pack_new(&self) -> Result<Vec<u8>, Self::Error> {
+        let mut bytes = Vec::with_capacity(self.packed_len());
+        self.pack(&mut bytes)?;
+
+        Ok(bytes)
+    }
+
     fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
     where
         Self: Sized;

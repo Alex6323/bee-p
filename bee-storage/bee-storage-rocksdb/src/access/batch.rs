@@ -12,7 +12,11 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common_ext::packable::Packable;
-use bee_message::{payload::indexation::HashedIndex, Message, MessageId};
+use bee_ledger::spent::Spent;
+use bee_message::{
+    payload::{indexation::HashedIndex, transaction::OutputId},
+    Message, MessageId,
+};
 use bee_storage::access::{Batch, BatchBuilder, CommitBatch};
 
 use blake2::Blake2b;
@@ -53,24 +57,50 @@ impl<'a> Batch<'a> for Storage {
     }
 }
 
+impl<'a> BatchBuilder<'a, Storage, (MessageId, MessageId), ()> for StorageBatch<'a> {
+    type Error = OpError;
+
+    fn try_insert(&mut self, (parent, child): &(MessageId, MessageId), (): &()) -> Result<(), Self::Error> {
+        let cf_message_id_to_message_id = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+
+        let mut key = parent.as_ref().to_vec();
+        key.extend_from_slice(child.as_ref());
+
+        self.batch.put_cf(&cf_message_id_to_message_id, key, []);
+
+        Ok(())
+    }
+
+    fn try_delete(&mut self, (parent, child): &(MessageId, MessageId)) -> Result<(), Self::Error> {
+        let cf_message_id_to_message_id = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+
+        let mut key = parent.as_ref().to_vec();
+        key.extend_from_slice(child.as_ref());
+
+        self.batch.delete_cf(&cf_message_id_to_message_id, key);
+
+        Ok(())
+    }
+}
+
 impl<'a> BatchBuilder<'a, Storage, MessageId, Message> for StorageBatch<'a> {
     type Error = OpError;
 
     fn try_insert(&mut self, message_id: &MessageId, message: &Message) -> Result<(), Self::Error> {
-        let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+        let cf_message_id_to_message = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
         let mut message_buf = Vec::with_capacity(message.packed_len());
         message.pack(&mut message_buf).unwrap();
 
-        self.batch.put_cf(&message_id_to_message, message_id, message_buf);
+        self.batch.put_cf(&cf_message_id_to_message, message_id, message_buf);
 
         Ok(())
     }
 
     fn try_delete(&mut self, message_id: &MessageId) -> Result<(), Self::Error> {
-        let message_id_to_message = self.storage.inner.cf_handle(MESSAGE_ID_TO_MESSAGE).unwrap();
+        let cf_message_id_to_message = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        self.batch.delete_cf(&message_id_to_message, message_id);
+        self.batch.delete_cf(&cf_message_id_to_message, message_id);
 
         Ok(())
     }
@@ -84,23 +114,54 @@ impl<'a> BatchBuilder<'a, Storage, (HashedIndex<Blake2b>, MessageId), ()> for St
         (index, message_id): &(HashedIndex<Blake2b>, MessageId),
         (): &(),
     ) -> Result<(), Self::Error> {
-        let payload_index_to_message_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_payload_index_to_message_id = self.storage.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut key = index.as_ref().to_vec();
         key.extend_from_slice(message_id.as_ref());
 
-        self.batch.put_cf(&payload_index_to_message_id, key, []);
+        self.batch.put_cf(&cf_payload_index_to_message_id, key, []);
 
         Ok(())
     }
 
     fn try_delete(&mut self, (index, message_id): &(HashedIndex<Blake2b>, MessageId)) -> Result<(), Self::Error> {
-        let payload_index_to_message_id = self.storage.inner.cf_handle(PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_payload_index_to_message_id = self.storage.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut key = index.as_ref().to_vec();
         key.extend_from_slice(message_id.as_ref());
 
-        self.batch.delete_cf(&payload_index_to_message_id, key);
+        self.batch.delete_cf(&cf_payload_index_to_message_id, key);
+
+        Ok(())
+    }
+}
+
+impl<'a> BatchBuilder<'a, Storage, OutputId, Spent> for StorageBatch<'a> {
+    type Error = OpError;
+
+    fn try_insert(&mut self, output_id: &OutputId, spent: &Spent) -> Result<(), Self::Error> {
+        let cf_output_id_to_spent = self.storage.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
+
+        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        // Packing to bytes can't fail.
+        output_id.pack(&mut output_id_buf).unwrap();
+        let mut spent_buf = Vec::with_capacity(spent.packed_len());
+        // Packing to bytes can't fail.
+        spent.pack(&mut spent_buf).unwrap();
+
+        self.batch.put_cf(&cf_output_id_to_spent, output_id_buf, spent_buf);
+
+        Ok(())
+    }
+
+    fn try_delete(&mut self, output_id: &OutputId) -> Result<(), Self::Error> {
+        let cf_output_id_to_spent = self.storage.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
+
+        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        // Packing to bytes can't fail.
+        output_id.pack(&mut output_id_buf).unwrap();
+
+        self.batch.delete_cf(&cf_output_id_to_spent, output_id_buf);
 
         Ok(())
     }

@@ -17,68 +17,78 @@ use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
-use bee_storage::access::Delete;
+use bee_storage::access::Exist;
 
 use blake2::Blake2b;
 
 #[async_trait::async_trait]
-impl Delete<MessageId, Message> for Storage {
+impl Exist<MessageId, Message> for Storage {
     type Error = OpError;
 
-    async fn delete(&self, message_id: &MessageId) -> Result<(), Self::Error> {
+    async fn exist(&self, message_id: &MessageId) -> Result<bool, Self::Error>
+    where
+        Self: Sized,
+    {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        self.inner.delete_cf(&cf_message_id_to_message, message_id)?;
-
-        Ok(())
+        Ok(self.inner.get_cf(&cf_message_id_to_message, message_id)?.is_some())
     }
 }
 
 #[async_trait::async_trait]
-impl Delete<(MessageId, MessageId), ()> for Storage {
+impl Exist<MessageId, Vec<MessageId>> for Storage {
     type Error = OpError;
 
-    async fn delete(&self, (parent, child): &(MessageId, MessageId)) -> Result<(), Self::Error> {
+    async fn exist(&self, parent: &MessageId) -> Result<bool, Self::Error>
+    where
+        Self: Sized,
+    {
         let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
 
-        let mut key = parent.as_ref().to_vec();
-        key.extend_from_slice(child.as_ref());
+        let mut iterator = self.inner.prefix_iterator_cf(&cf_message_id_to_message_id, parent);
+        let exist = iterator.next().is_some();
 
-        self.inner.delete_cf(&cf_message_id_to_message_id, key)?;
-
-        Ok(())
+        match iterator.status() {
+            Ok(_) => Ok(exist),
+            Err(e) => Err(e)?,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
+impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     type Error = OpError;
 
-    async fn delete(&self, (index, message_id): &(HashedIndex<Blake2b>, MessageId)) -> Result<(), Self::Error> {
+    async fn exist(&self, index: &HashedIndex<Blake2b>) -> Result<bool, Self::Error>
+    where
+        Self: Sized,
+    {
         let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut key = index.as_ref().to_vec();
-        key.extend_from_slice(message_id.as_ref());
+        let mut iterator = self.inner.prefix_iterator_cf(&cf_payload_index_to_message_id, index);
+        let exist = iterator.next().is_some();
 
-        self.inner.delete_cf(&cf_payload_index_to_message_id, key)?;
-
-        Ok(())
+        match iterator.status() {
+            Ok(_) => Ok(exist),
+            Err(e) => Err(e)?,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl Delete<OutputId, Spent> for Storage {
+impl Exist<OutputId, Spent> for Storage {
     type Error = OpError;
 
-    async fn delete(&self, output_id: &OutputId) -> Result<(), Self::Error> {
+    async fn exist(&self, output_id: &OutputId) -> Result<bool, Self::Error>
+    where
+        Self: Sized,
+    {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
         output_id.pack(&mut output_id_buf).unwrap();
 
-        self.inner.delete_cf(&cf_output_id_to_spent, output_id_buf)?;
-
-        Ok(())
+        Ok(self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)?.is_some())
     }
 }

@@ -9,11 +9,24 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::milestone::{key_range::KeyRange, MilestoneIndex};
+
 use serde::Deserialize;
 
 const DEFAULT_MWM: u8 = 14;
-// TODO change
-const DEFAULT_COO_PUBLIC_KEY: &str = "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649";
+const DEFAULT_COO_PUBLIC_KEY_COUNT: usize = 2;
+const DEFAULT_COO_PUBLIC_KEY_RANGES: [(&str, MilestoneIndex, MilestoneIndex); 2] = [
+    (
+        "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+        MilestoneIndex(0),
+        MilestoneIndex(0),
+    ),
+    (
+        "f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
+        MilestoneIndex(0),
+        MilestoneIndex(0),
+    ),
+];
 const DEFAULT_MESSAGE_WORKER_CACHE: usize = 10000;
 const DEFAULT_STATUS_INTERVAL: u64 = 10;
 const DEFAULT_HANDSHAKE_WINDOW: u64 = 10;
@@ -21,7 +34,8 @@ const DEFAULT_MS_SYNC_COUNT: u32 = 1;
 
 #[derive(Default, Deserialize)]
 struct ProtocolCoordinatorConfigBuilder {
-    public_key: Option<String>,
+    public_key_count: Option<usize>,
+    public_key_ranges: Option<Vec<KeyRange>>,
 }
 
 #[derive(Default, Deserialize)]
@@ -49,8 +63,8 @@ impl ProtocolConfigBuilder {
         self
     }
 
-    pub fn coo_public_key(mut self, coo_public_key: String) -> Self {
-        self.coordinator.public_key.replace(coo_public_key);
+    pub fn coo_public_key_ranges(mut self, coo_public_key_ranges: Vec<KeyRange>) -> Self {
+        self.coordinator.public_key_ranges.replace(coo_public_key_ranges);
         self
     }
 
@@ -75,24 +89,19 @@ impl ProtocolConfigBuilder {
     }
 
     pub fn finish(self) -> ProtocolConfig {
-        // TODO handle unwrap by having default value
-        let coo_public_key = hex::decode(
-            &self
-                .coordinator
-                .public_key
-                .unwrap_or_else(|| DEFAULT_COO_PUBLIC_KEY.to_owned()),
-        )
-        .unwrap();
-
-        // TODO check length of public_key against 32
-
-        let mut public_key_bytes = [0u8; 32];
-        public_key_bytes.copy_from_slice(&coo_public_key);
-
         ProtocolConfig {
             mwm: self.mwm.unwrap_or(DEFAULT_MWM),
             coordinator: ProtocolCoordinatorConfig {
-                public_key: public_key_bytes,
+                public_key_count: self
+                    .coordinator
+                    .public_key_count
+                    .unwrap_or(DEFAULT_COO_PUBLIC_KEY_COUNT),
+                public_key_ranges: self.coordinator.public_key_ranges.unwrap_or_else(|| {
+                    DEFAULT_COO_PUBLIC_KEY_RANGES
+                        .iter()
+                        .map(|(public_key, start, end)| KeyRange::new(public_key.to_string(), *start, *end))
+                        .collect()
+                }),
             },
             workers: ProtocolWorkersConfig {
                 message_worker_cache: self
@@ -109,8 +118,8 @@ impl ProtocolConfigBuilder {
 
 #[derive(Clone)]
 pub struct ProtocolCoordinatorConfig {
-    // TODO real PK type ?
-    pub(crate) public_key: [u8; 32],
+    pub(crate) public_key_count: usize,
+    pub(crate) public_key_ranges: Vec<KeyRange>,
 }
 
 #[derive(Clone)]

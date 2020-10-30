@@ -20,6 +20,8 @@ use serde::{Deserialize, Serialize};
 
 use core::convert::{From, TryFrom, TryInto};
 
+pub const OUTPUT_ID_LENGTH: usize = TRANSACTION_ID_LENGTH + std::mem::size_of::<u16>();
+
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
 pub struct OutputId {
     transaction_id: TransactionId,
