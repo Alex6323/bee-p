@@ -25,4 +25,16 @@ impl KeyRange {
     pub fn new(public_key: String, start: MilestoneIndex, end: MilestoneIndex) -> Self {
         Self { public_key, start, end }
     }
+
+    pub fn public_key(&self) -> &String {
+        &self.public_key
+    }
+
+    pub fn start(&self) -> MilestoneIndex {
+        self.start
+    }
+
+    pub fn end(&self) -> MilestoneIndex {
+        self.end
+    }
 }
