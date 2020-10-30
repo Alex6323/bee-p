@@ -12,7 +12,7 @@
 use crate::{
     config::ProtocolConfig,
     event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
-    milestone::{Milestone, MilestoneIndex},
+    milestone::{key_manager::KeyManager, Milestone, MilestoneIndex},
     protocol::Protocol,
     tangle::MsTangle,
     worker::{
@@ -87,6 +87,7 @@ where
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
         let requested_milestones = node.resource::<RequestedMilestones>();
+        let _key_manager = KeyManager::new(config.clone().coordinator.public_key_ranges.into_boxed_slice());
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
