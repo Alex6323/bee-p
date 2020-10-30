@@ -35,6 +35,22 @@ impl Delete<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
+impl Delete<(MessageId, MessageId), ()> for Storage {
+    type Error = OpError;
+
+    async fn delete(&self, (parent, child): &(MessageId, MessageId)) -> Result<(), Self::Error> {
+        let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+
+        let mut key = parent.as_ref().to_vec();
+        key.extend_from_slice(child.as_ref());
+
+        self.inner.delete_cf(&cf_message_id_to_message_id, key)?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
 impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
 

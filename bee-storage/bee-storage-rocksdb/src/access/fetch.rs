@@ -42,6 +42,30 @@ impl Fetch<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
+impl Fetch<MessageId, Vec<MessageId>> for Storage {
+    type Error = OpError;
+
+    async fn fetch(&self, parent: &MessageId) -> Result<Option<Vec<MessageId>>, Self::Error>
+    where
+        Self: Sized,
+    {
+        let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+        // TODO limit to a certain number of results
+
+        Ok(Some(
+            self.inner
+                .prefix_iterator_cf(&cf_message_id_to_message_id, parent)
+                .map(|(key, _)| {
+                    let (_, child) = key.split_at(Blake2b::output_size());
+                    let child: [u8; MESSAGE_ID_LENGTH] = child.try_into().unwrap();
+                    MessageId::from(child)
+                })
+                .collect(),
+        ))
+    }
+}
+
+#[async_trait::async_trait]
 impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     type Error = OpError;
 

@@ -39,6 +39,22 @@ impl Insert<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
+impl Insert<(MessageId, MessageId), ()> for Storage {
+    type Error = OpError;
+
+    async fn insert(&self, (parent, child): &(MessageId, MessageId), (): &()) -> Result<(), Self::Error> {
+        let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+
+        let mut key = parent.as_ref().to_vec();
+        key.extend_from_slice(child.as_ref());
+
+        self.inner.put_cf(&cf_message_id_to_message_id, key, [])?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
 impl Insert<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type Error = OpError;
 

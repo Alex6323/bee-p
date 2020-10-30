@@ -36,6 +36,26 @@ impl Exist<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
+impl Exist<MessageId, Vec<MessageId>> for Storage {
+    type Error = OpError;
+
+    async fn exist(&self, parent: &MessageId) -> Result<bool, Self::Error>
+    where
+        Self: Sized,
+    {
+        let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+
+        let mut iterator = self.inner.prefix_iterator_cf(&cf_message_id_to_message_id, parent);
+        let exist = iterator.next().is_some();
+
+        match iterator.status() {
+            Ok(_) => Ok(exist),
+            Err(e) => Err(e)?,
+        }
+    }
+}
+
+#[async_trait::async_trait]
 impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
     type Error = OpError;
 

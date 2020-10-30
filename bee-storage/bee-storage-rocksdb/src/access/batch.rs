@@ -57,6 +57,32 @@ impl<'a> Batch<'a> for Storage {
     }
 }
 
+impl<'a> BatchBuilder<'a, Storage, (MessageId, MessageId), ()> for StorageBatch<'a> {
+    type Error = OpError;
+
+    fn try_insert(&mut self, (parent, child): &(MessageId, MessageId), (): &()) -> Result<(), Self::Error> {
+        let cf_message_id_to_message_id = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+
+        let mut key = parent.as_ref().to_vec();
+        key.extend_from_slice(child.as_ref());
+
+        self.batch.put_cf(&cf_message_id_to_message_id, key, []);
+
+        Ok(())
+    }
+
+    fn try_delete(&mut self, (parent, child): &(MessageId, MessageId)) -> Result<(), Self::Error> {
+        let cf_message_id_to_message_id = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+
+        let mut key = parent.as_ref().to_vec();
+        key.extend_from_slice(child.as_ref());
+
+        self.batch.delete_cf(&cf_message_id_to_message_id, key);
+
+        Ok(())
+    }
+}
+
 impl<'a> BatchBuilder<'a, Storage, MessageId, Message> for StorageBatch<'a> {
     type Error = OpError;
 
