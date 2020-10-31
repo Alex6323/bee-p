@@ -32,7 +32,7 @@ pub fn all<B: Backend>(
     get_health(tangle.clone())
         .or(get_info(tangle.clone()).or(get_milestone_by_index(tangle.clone())))
         .or(get_tips(tangle.clone()))
-    //.or(get_message_by_id(tangle.clone()))
+        .or(get_message_by_id(tangle.clone()))
 }
 
 fn get_health<B: Backend>(

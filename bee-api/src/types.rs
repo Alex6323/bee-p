@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// Marker trait for data bodies.
 pub trait DataBody {}
 
 /// Data response.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct DataResponse<T: DataBody> {
     pub data: T,
 }
@@ -20,14 +20,14 @@ impl<T: DataBody> DataResponse<T> {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct ErrorBody {
     pub code: String,
     pub message: String,
 }
 
 /// Error response.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct ErrorResponse {
     pub error: ErrorBody,
 }
@@ -44,7 +44,7 @@ impl ErrorResponse {
 }
 
 /// Response body of GET /api/v1/info
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct GetInfoResponseBody {
     /// name of the node
     pub name: String,
@@ -78,7 +78,7 @@ pub struct GetInfoResponseBody {
 impl DataBody for GetInfoResponseBody {}
 
 /// Response body of GET /api/v1/tips
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct GetTipsResponseBody {
     /// index of the milestone
     #[serde(rename = "tip1MessageId")]
@@ -91,7 +91,7 @@ pub struct GetTipsResponseBody {
 impl DataBody for GetTipsResponseBody {}
 
 /// Response body of GET /api/v1/milestone/{milestone_index}
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct GetMilestoneByIndexResponseBody {
     /// index of the milestone
     #[serde(rename = "milestoneIndex")]
@@ -106,111 +106,117 @@ pub struct GetMilestoneByIndexResponseBody {
 impl DataBody for GetMilestoneByIndexResponseBody {}
 
 /// Response body of GET /api/v1/messages/{message_id}
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GetMessageByIdResponseBody<T: Payload>(pub Message<T>);
+#[derive(Clone, Debug, Serialize)]
+pub struct GetMessageByIdResponseBody(pub MessageDto);
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Message<T: Payload> {
+impl DataBody for GetMessageByIdResponseBody {}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct MessageDto {
     pub version: u32,
     #[serde(rename = "parent1MessageId")]
     pub parent_1_message_id: String,
     #[serde(rename = "parent2MessageId")]
     pub parent_2_message_id: String,
-    pub payload: T,
+    pub payload: PayloadDto,
     pub nonce: u64,
 }
 
-pub trait Payload {}
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum PayloadDto {
+    Indexation(IndexationPayloadDto),
+    Milestone(MilestonePayloadDto),
+    Transaction(TransactionPayloadDto),
+}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct IndexationPayload {
+#[derive(Clone, Debug, Serialize)]
+pub struct IndexationPayloadDto {
     #[serde(rename = "type")]
     pub kind: u32,
     pub index: String,
     pub data: String,
 }
-impl Payload for IndexationPayload {}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MilestonePayload {
+#[derive(Clone, Debug, Serialize)]
+pub struct MilestonePayloadDto {
     #[serde(rename = "type")]
     pub kind: u32,
     pub index: u32,
     pub timestamp: u64,
+    #[serde(rename = "inclusionMerkleProof")]
     pub inclusion_merkle_proof: String,
-    pub signature: String,
+    pub signatures: Vec<String>,
 }
-impl Payload for MilestonePayload {}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TransactionPayload<T: UnlockBlock> {
+#[derive(Clone, Debug, Serialize)]
+pub struct TransactionPayloadDto {
     #[serde(rename = "type")]
     pub kind: u32,
-    pub essence: TransactionEssence,
+    pub essence: TransactionEssenceDto,
     #[serde(rename = "unlockBlocks")]
-    pub unlock_blocks: Vec<T>,
+    pub unlock_blocks: Vec<UnlockBlockDto>,
 }
-impl<T: UnlockBlock> Payload for TransactionPayload<T> {}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TransactionEssence {
+#[derive(Clone, Debug, Serialize)]
+pub struct TransactionEssenceDto {
     #[serde(rename = "type")]
     pub kind: u32,
-    pub inputs: Vec<UtxoInput>,
-    pub outputs: Vec<SigLockedSingleOutput>,
-    pub payload: Option<IndexationPayload>,
+    pub inputs: Vec<UtxoInputDto>,
+    pub outputs: Vec<SigLockedSingleOutputDto>,
+    pub payload: Option<IndexationPayloadDto>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UtxoInput {
+#[derive(Clone, Debug, Serialize)]
+pub struct UtxoInputDto {
     #[serde(rename = "type")]
     pub kind: u32,
     #[serde(rename = "transactionId")]
     pub transaction_id: String,
     #[serde(rename = "transactionOutputIndex")]
-    pub transaction_output_index: u32,
+    pub transaction_output_index: u16,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SigLockedSingleOutput {
+#[derive(Clone, Debug, Serialize)]
+pub struct SigLockedSingleOutputDto {
     #[serde(rename = "type")]
     pub kind: u32,
-    pub address: Ed25519Address,
+    pub address: Ed25519AddressDto,
     pub amount: u32,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Ed25519Address {
+#[derive(Clone, Debug, Serialize)]
+pub struct Ed25519AddressDto {
     #[serde(rename = "type")]
     pub kind: u32,
     pub address: String,
 }
 
-pub trait UnlockBlock {}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SignatureUnlockBlock {
-    #[serde(rename = "type")]
-    pub kind: u32,
-    pub signature: Ed25519Signature,
+#[derive(Clone, Debug, Serialize)]
+pub enum UnlockBlockDto {
+    Signature(SignatureUnlockBlockDto),
+    Reference(ReferenceUnlockBlockDto),
 }
 
-impl UnlockBlock for SignatureUnlockBlock {}
+#[derive(Clone, Debug, Serialize)]
+pub struct SignatureUnlockBlockDto {
+    #[serde(rename = "type")]
+    pub kind: u32,
+    pub signature: Ed25519SignatureDto,
+}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Ed25519Signature {
+#[derive(Clone, Debug, Serialize)]
+pub struct Ed25519SignatureDto {
     #[serde(rename = "type")]
     pub kind: u32,
     #[serde(rename = "publicKey")]
     pub public_key: String,
-    pub address: String,
+    pub signature: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ReferenceUnlockBlock {
+#[derive(Clone, Debug, Serialize)]
+pub struct ReferenceUnlockBlockDto {
     #[serde(rename = "type")]
     pub kind: u32,
-    pub reference: u32,
+    pub reference: u16,
 }
-
-impl UnlockBlock for ReferenceUnlockBlock {}
