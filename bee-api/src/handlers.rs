@@ -30,7 +30,7 @@ async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
         is_healthy = false;
     }
 
-    // TODO: check if number of peers != 0
+    // TODO: check if number of peers != 0 else return false
 
     match tangle.get_milestone_message_id(tangle.get_latest_milestone_index()) {
         Some(milestone_message_id) => match tangle.get_metadata(&milestone_message_id) {
@@ -64,14 +64,14 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     let name = String::from("Bee");
     let version = String::from(env!("CARGO_PKG_VERSION"));
     let is_healthy = is_healthy(tangle.clone()).await;
-    // TODO: get public key of coordinator from protocol config
-    let coordinator_public_key = String::from("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649");
-    let latest_milestone_message_id = tangle
+    // TODO: get network_id from protocol config
+    let network_id = 1;
+    let latest_milestone_id = tangle
         .get_milestone_message_id(tangle.get_latest_milestone_index())
         .unwrap()
         .to_string();
     let latest_milestone_index = *tangle.get_latest_milestone_index();
-    let solid_milestone_message_id = tangle
+    let solid_milestone_id = tangle
         .get_milestone_message_id(tangle.get_latest_milestone_index())
         .unwrap()
         .to_string();
@@ -84,10 +84,10 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
         name,
         version,
         is_healthy,
-        coordinator_public_key,
-        latest_milestone_message_id,
+        network_id,
+        latest_milestone_id,
         latest_milestone_index,
-        solid_milestone_message_id,
+        solid_milestone_id,
         solid_milestone_index,
         pruning_index,
         features,

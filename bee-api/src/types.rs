@@ -54,17 +54,17 @@ pub struct GetInfoResponseBody {
     #[serde(rename = "isHealthy")]
     pub is_healthy: bool,
     /// coordinator public key
-    #[serde(rename = "coordinatorPublicKey")]
-    pub coordinator_public_key: String,
+    #[serde(rename = "networkId")]
+    pub network_id: u8,
     /// latest milestone message id
-    #[serde(rename = "latestMilestoneMessageId")]
-    pub latest_milestone_message_id: String,
+    #[serde(rename = "latestMilestoneId")]
+    pub latest_milestone_id: String,
     /// latest milestone index
     #[serde(rename = "latestMilestoneIndex")]
     pub latest_milestone_index: u32,
     /// latest milestone message id
-    #[serde(rename = "solidMilestoneMessageId")]
-    pub solid_milestone_message_id: String,
+    #[serde(rename = "solidMilestoneId")]
+    pub solid_milestone_id: String,
     /// solid milestone index
     #[serde(rename = "solidMilestoneIndex")]
     pub solid_milestone_index: u32,
