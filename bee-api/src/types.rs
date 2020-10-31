@@ -193,6 +193,7 @@ pub struct Ed25519AddressDto {
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
 pub enum UnlockBlockDto {
     Signature(SignatureUnlockBlockDto),
     Reference(ReferenceUnlockBlockDto),
