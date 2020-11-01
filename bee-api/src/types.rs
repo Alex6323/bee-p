@@ -1,3 +1,14 @@
+// Copyright 2020 IOTA Stiftung
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and limitations under the License.
+
 use serde::Serialize;
 
 /// Marker trait for data bodies.
@@ -43,9 +54,9 @@ impl ErrorResponse {
     }
 }
 
-/// Response body of GET /api/v1/info
+/// Response of GET /api/v1/info
 #[derive(Clone, Debug, Serialize)]
-pub struct GetInfoResponseBody {
+pub struct GetInfoResponse {
     /// name of the node
     pub name: String,
     /// version of the node
@@ -75,11 +86,11 @@ pub struct GetInfoResponseBody {
     pub features: Vec<String>,
 }
 
-impl DataBody for GetInfoResponseBody {}
+impl DataBody for GetInfoResponse {}
 
-/// Response body of GET /api/v1/tips
+/// Response of GET /api/v1/tips
 #[derive(Clone, Debug, Serialize)]
-pub struct GetTipsResponseBody {
+pub struct GetTipsResponse {
     /// index of the milestone
     #[serde(rename = "tip1MessageId")]
     pub tip_1_message_id: String,
@@ -88,11 +99,11 @@ pub struct GetTipsResponseBody {
     pub tip_2_message_id: String,
 }
 
-impl DataBody for GetTipsResponseBody {}
+impl DataBody for GetTipsResponse {}
 
-/// Response body of GET /api/v1/milestone/{milestone_index}
+/// Response of GET /api/v1/milestone/{milestone_index}
 #[derive(Clone, Debug, Serialize)]
-pub struct GetMilestoneByIndexResponseBody {
+pub struct GetMilestoneByIndexResponse {
     /// index of the milestone
     #[serde(rename = "milestoneIndex")]
     pub milestone_index: u32,
@@ -103,13 +114,13 @@ pub struct GetMilestoneByIndexResponseBody {
     pub timestamp: u64,
 }
 
-impl DataBody for GetMilestoneByIndexResponseBody {}
+impl DataBody for GetMilestoneByIndexResponse {}
 
-/// Response body of GET /api/v1/messages/{message_id}
+/// Response of GET /api/v1/messages/{message_id}
 #[derive(Clone, Debug, Serialize)]
-pub struct GetMessageByIdResponseBody(pub MessageDto);
+pub struct GetMessageByIdResponse(pub MessageDto);
 
-impl DataBody for GetMessageByIdResponseBody {}
+impl DataBody for GetMessageByIdResponse {}
 
 #[derive(Clone, Debug, Serialize)]
 pub struct MessageDto {
@@ -118,35 +129,16 @@ pub struct MessageDto {
     pub parent_1_message_id: String,
     #[serde(rename = "parent2MessageId")]
     pub parent_2_message_id: String,
-    pub payload: PayloadDto,
+    pub payload: Option<PayloadDto>,
     pub nonce: u64,
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum PayloadDto {
+    Transaction(TransactionPayloadDto),
     Indexation(IndexationPayloadDto),
     Milestone(MilestonePayloadDto),
-    Transaction(TransactionPayloadDto),
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct IndexationPayloadDto {
-    #[serde(rename = "type")]
-    pub kind: u32,
-    pub index: String,
-    pub data: String,
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct MilestonePayloadDto {
-    #[serde(rename = "type")]
-    pub kind: u32,
-    pub index: u32,
-    pub timestamp: u64,
-    #[serde(rename = "inclusionMerkleProof")]
-    pub inclusion_merkle_proof: String,
-    pub signatures: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -220,4 +212,23 @@ pub struct ReferenceUnlockBlockDto {
     #[serde(rename = "type")]
     pub kind: u32,
     pub reference: u16,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct IndexationPayloadDto {
+    #[serde(rename = "type")]
+    pub kind: u32,
+    pub index: String,
+    pub data: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct MilestonePayloadDto {
+    #[serde(rename = "type")]
+    pub kind: u32,
+    pub index: u32,
+    pub timestamp: u64,
+    #[serde(rename = "inclusionMerkleProof")]
+    pub inclusion_merkle_proof: String,
+    pub signatures: Vec<String>,
 }

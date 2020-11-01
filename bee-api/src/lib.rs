@@ -52,7 +52,7 @@ impl<N: Node> Worker<N> for ApiWorker {
 
             let routes = filters::all(tangle).recover(handle_rejection);
 
-            let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.binding_address(), async {
+            let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.binding_socket_addr(), async {
                 shutdown.await.ok();
             });
 

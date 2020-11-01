@@ -11,7 +11,7 @@
 
 use crate::{
     filters::ServiceUnavailable,
-    types::{DataResponse, GetInfoResponseBody, GetMilestoneByIndexResponseBody, GetTipsResponseBody, *},
+    types::{DataResponse, GetInfoResponse, GetMilestoneByIndexResponse, GetTipsResponse, *},
 };
 use bee_common_ext::node::ResHandle;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
@@ -80,7 +80,7 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     // TODO: check enabled features
     let features = Vec::new();
 
-    Ok(warp::reply::json(&DataResponse::new(GetInfoResponseBody {
+    Ok(warp::reply::json(&DataResponse::new(GetInfoResponse {
         name,
         version,
         is_healthy,
@@ -96,7 +96,7 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
 
 pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Rejection> {
     match tangle.get_messages_to_approve().await {
-        Some(tips) => Ok(warp::reply::json(&DataResponse::new(GetTipsResponseBody {
+        Some(tips) => Ok(warp::reply::json(&DataResponse::new(GetTipsResponse {
             tip_1_message_id: tips.0.to_string(),
             tip_2_message_id: tips.1.to_string(),
         }))),
@@ -199,12 +199,12 @@ pub async fn get_message_by_id<B: Backend>(
             };
             let nonce = message.nonce();
 
-            Ok(warp::reply::json(&DataResponse::new(GetMessageByIdResponseBody(
+            Ok(warp::reply::json(&DataResponse::new(GetMessageByIdResponse(
                 MessageDto {
                     version,
                     parent_1_message_id,
                     parent_2_message_id,
-                    payload,
+                    payload: Some(payload),
                     nonce,
                 },
             ))))
@@ -221,7 +221,7 @@ pub async fn get_milestone_by_index<B: Backend>(
         Some(message_id) => match tangle.get_metadata(&message_id) {
             Some(metadata) => {
                 let timestamp = metadata.arrival_timestamp();
-                Ok(warp::reply::json(&DataResponse::new(GetMilestoneByIndexResponseBody {
+                Ok(warp::reply::json(&DataResponse::new(GetMilestoneByIndexResponse {
                     milestone_index: *milestone_index,
                     message_id: message_id.to_string(),
                     timestamp,
