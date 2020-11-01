@@ -33,6 +33,7 @@ pub fn all<B: Backend>(
         .or(get_info(tangle.clone()).or(get_milestone_by_index(tangle.clone())))
         .or(get_tips(tangle.clone()))
         .or(get_message_by_id(tangle.clone()))
+        .or(get_children(tangle.clone()))
 }
 
 fn get_health<B: Backend>(
@@ -80,6 +81,20 @@ fn get_message_by_id<B: Backend>(
         .and(warp::path::end())
         .and(with_tangle(tangle))
         .and_then(handlers::get_message_by_id)
+}
+
+fn get_children<B: Backend>(
+    tangle: ResHandle<MsTangle<B>>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::get()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("messages"))
+        .and(message_id())
+        .and(warp::path("children"))
+        .and(warp::path::end())
+        .and(with_tangle(tangle))
+        .and_then(handlers::get_children)
 }
 
 fn get_milestone_by_index<B: Backend>(

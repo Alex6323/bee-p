@@ -19,6 +19,7 @@ use bee_protocol::{tangle::MsTangle, MilestoneIndex};
 use bee_storage::storage::Backend;
 use std::{
     convert::Infallible,
+    iter::FromIterator,
     time::{SystemTime, UNIX_EPOCH},
 };
 use warp::{http::StatusCode, reject, Rejection, Reply};
@@ -210,6 +211,26 @@ pub async fn get_message_by_id<B: Backend>(
             ))))
         }
         None => Err(reject::not_found()),
+    }
+}
+
+pub async fn get_children<B: Backend>(
+    message_id: MessageId,
+    tangle: ResHandle<MsTangle<B>>,
+) -> Result<impl Reply, Rejection> {
+    if tangle.contains(&message_id).await {
+        let max_results = 1000;
+        let mut children = Vec::from_iter(tangle.get_children(&message_id));
+        let count = children.len();
+        children.truncate(max_results);
+        Ok(warp::reply::json(&DataResponse::new(GetChildrenResponse {
+            message_id: message_id.to_string(),
+            max_results,
+            count,
+            children_message_ids: children.iter().map(|id| id.to_string()).collect(),
+        })))
+    } else {
+        Err(reject::not_found())
     }
 }
 
