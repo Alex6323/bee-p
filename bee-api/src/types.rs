@@ -89,23 +89,11 @@ pub struct GetTipsResponse {
 
 impl DataBody for GetTipsResponse {}
 
-/// Response of GET /api/v1/milestone/{milestone_index}
-#[derive(Clone, Debug, Serialize)]
-pub struct GetMilestoneByIndexResponse {
-    #[serde(rename = "milestoneIndex")]
-    pub milestone_index: u32,
-    #[serde(rename = "messageId")]
-    pub message_id: String,
-    pub timestamp: u64,
-}
-
-impl DataBody for GetMilestoneByIndexResponse {}
-
 /// Response of GET /api/v1/messages/{message_id}
 #[derive(Clone, Debug, Serialize)]
-pub struct GetMessageByIdResponse(pub MessageDto);
+pub struct GetMessageResponse(pub MessageDto);
 
-impl DataBody for GetMessageByIdResponse {}
+impl DataBody for GetMessageResponse {}
 
 #[derive(Clone, Debug, Serialize)]
 pub struct MessageDto {
@@ -231,3 +219,15 @@ pub struct GetChildrenResponse {
 }
 
 impl DataBody for GetChildrenResponse {}
+
+/// Response of GET /api/v1/milestone/{milestone_index}
+#[derive(Clone, Debug, Serialize)]
+pub struct GetMilestoneResponse {
+    #[serde(rename = "milestoneIndex")]
+    pub milestone_index: u32,
+    #[serde(rename = "messageId")]
+    pub message_id: String,
+    pub timestamp: u64,
+}
+
+impl DataBody for GetMilestoneResponse {}

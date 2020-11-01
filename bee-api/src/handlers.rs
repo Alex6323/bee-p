@@ -11,7 +11,7 @@
 
 use crate::{
     filters::ServiceUnavailable,
-    types::{DataResponse, GetInfoResponse, GetMilestoneByIndexResponse, GetTipsResponse, *},
+    types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
 };
 use bee_common_ext::node::ResHandle;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
@@ -105,7 +105,7 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     }
 }
 
-pub async fn get_message_by_id<B: Backend>(
+pub async fn get_message<B: Backend>(
     message_id: MessageId,
     tangle: ResHandle<MsTangle<B>>,
 ) -> Result<impl Reply, Rejection> {
@@ -200,7 +200,7 @@ pub async fn get_message_by_id<B: Backend>(
             };
             let nonce = message.nonce();
 
-            Ok(warp::reply::json(&DataResponse::new(GetMessageByIdResponse(
+            Ok(warp::reply::json(&DataResponse::new(GetMessageResponse(
                 MessageDto {
                     version,
                     parent_1_message_id,
@@ -234,7 +234,7 @@ pub async fn get_children<B: Backend>(
     }
 }
 
-pub async fn get_milestone_by_index<B: Backend>(
+pub async fn get_milestone<B: Backend>(
     milestone_index: MilestoneIndex,
     tangle: ResHandle<MsTangle<B>>,
 ) -> Result<impl Reply, Rejection> {
@@ -242,7 +242,7 @@ pub async fn get_milestone_by_index<B: Backend>(
         Some(message_id) => match tangle.get_metadata(&message_id) {
             Some(metadata) => {
                 let timestamp = metadata.arrival_timestamp();
-                Ok(warp::reply::json(&DataResponse::new(GetMilestoneByIndexResponse {
+                Ok(warp::reply::json(&DataResponse::new(GetMilestoneResponse {
                     milestone_index: *milestone_index,
                     message_id: message_id.to_string(),
                     timestamp,

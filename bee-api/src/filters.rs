@@ -30,9 +30,9 @@ pub fn all<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     get_health(tangle.clone())
-        .or(get_info(tangle.clone()).or(get_milestone_by_index(tangle.clone())))
+        .or(get_info(tangle.clone()).or(get_milestone(tangle.clone())))
         .or(get_tips(tangle.clone()))
-        .or(get_message_by_id(tangle.clone()))
+        .or(get_message(tangle.clone()))
         .or(get_children(tangle.clone()))
 }
 
@@ -70,7 +70,7 @@ fn get_tips<B: Backend>(
         .and_then(handlers::get_tips)
 }
 
-fn get_message_by_id<B: Backend>(
+fn get_message<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::get()
@@ -80,7 +80,7 @@ fn get_message_by_id<B: Backend>(
         .and(message_id())
         .and(warp::path::end())
         .and(with_tangle(tangle))
-        .and_then(handlers::get_message_by_id)
+        .and_then(handlers::get_message)
 }
 
 fn get_children<B: Backend>(
@@ -97,7 +97,7 @@ fn get_children<B: Backend>(
         .and_then(handlers::get_children)
 }
 
-fn get_milestone_by_index<B: Backend>(
+fn get_milestone<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::get()
@@ -107,7 +107,7 @@ fn get_milestone_by_index<B: Backend>(
         .and(milestone_index())
         .and(warp::path::end())
         .and(with_tangle(tangle))
-        .and_then(handlers::get_milestone_by_index)
+        .and_then(handlers::get_milestone)
 }
 
 fn message_id() -> impl Filter<Extract = (MessageId,), Error = Rejection> + Copy {
