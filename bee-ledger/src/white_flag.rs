@@ -35,7 +35,9 @@ fn on_message<B: Backend>(
 ) {
     let mut conflicting = false;
 
-    if let Payload::Transaction(transaction) = message.payload() {
+    metadata.num_messages_referenced += 1;
+
+    if let Some(Payload::Transaction(transaction)) = message.payload() {
         let transaction_id = transaction.id();
         let essence = transaction.essence();
         let inputs = essence.inputs();

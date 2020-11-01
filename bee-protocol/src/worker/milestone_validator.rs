@@ -61,7 +61,7 @@ where
 {
     let message = tangle.get(&message_id).await.ok_or(Error::UnknownMessage)?;
 
-    if let Payload::Milestone(milestone) = message.payload() {
+    if let Some(Payload::Milestone(milestone)) = message.payload() {
         if message.parent1() != milestone.essence().parent1() {
             return Err(Error::Parent1Mismatch(
                 *message.parent1(),

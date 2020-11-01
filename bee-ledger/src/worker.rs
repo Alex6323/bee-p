@@ -64,7 +64,7 @@ async fn confirm<B: Backend>(
     let message = tangle.get(&message_id).await.ok_or(Error::MilestoneMessageNotFound)?;
 
     let milestone = match message.payload() {
-        Payload::Milestone(milestone) => milestone,
+        Some(Payload::Milestone(milestone)) => milestone,
         _ => return Err(Error::NoMilestonePayload),
     };
 

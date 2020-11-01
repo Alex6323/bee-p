@@ -161,7 +161,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         }
                     };
 
-                    if let Payload::Milestone(_) = message.payload() {
+                    if let Some(Payload::Milestone(_)) = message.payload() {
                         if let Err(e) = milestone_validator.send(MilestoneValidatorWorkerEvent(message_id)) {
                             error!(
                                 "Sending message id {} to milestone validation failed: {:?}.",
