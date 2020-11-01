@@ -116,7 +116,7 @@ pub async fn get_message<B: Backend>(
             let parent_2_message_id = message.parent2().to_string();
             let payload = {
                 match message.payload() {
-                    Payload::Transaction(t) => PayloadDto::Transaction(TransactionPayloadDto {
+                    Some(Payload::Transaction(t)) => Some(PayloadDto::Transaction(TransactionPayloadDto {
                         kind: 0,
                         essence: TransactionEssenceDto {
                             kind: 0,
@@ -183,19 +183,20 @@ pub async fn get_message<B: Backend>(
                                 }),
                             })
                             .collect(),
-                    }),
-                    Payload::Milestone(m) => PayloadDto::Milestone(MilestonePayloadDto {
+                    })),
+                    Some(Payload::Milestone(m)) => Some(PayloadDto::Milestone(MilestonePayloadDto {
                         kind: 1,
                         index: m.essence().index(),
                         timestamp: m.essence().timestamp(),
                         inclusion_merkle_proof: hex::encode(m.essence().merkle_proof()),
                         signatures: m.signatures().iter().map(|sig| hex::encode(sig)).collect(),
-                    }),
-                    Payload::Indexation(i) => PayloadDto::Indexation(IndexationPayloadDto {
+                    })),
+                    Some(Payload::Indexation(i)) => Some(PayloadDto::Indexation(IndexationPayloadDto {
                         kind: 2,
                         index: i.index().to_owned(),
                         data: hex::encode(i.data()),
-                    }),
+                    })),
+                    None => None
                 }
             };
             let nonce = message.nonce();
@@ -205,7 +206,7 @@ pub async fn get_message<B: Backend>(
                     version,
                     parent_1_message_id,
                     parent_2_message_id,
-                    payload: Some(payload),
+                    payload,
                     nonce,
                 },
             ))))
