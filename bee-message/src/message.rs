@@ -22,7 +22,7 @@ use core::convert::TryInto;
 pub struct Message {
     parent1: MessageId,
     parent2: MessageId,
-    payload: Payload,
+    payload: Option<Payload>,
     nonce: u64,
 }
 
@@ -51,7 +51,7 @@ impl Message {
         &self.parent2
     }
 
-    pub fn payload(&self) -> &Payload {
+    pub fn payload(&self) -> &Option<Payload> {
         &self.payload
     }
 
@@ -68,7 +68,11 @@ impl Packable for Message {
             + self.parent1.packed_len()
             + self.parent2.packed_len()
             + 0u32.packed_len()
-            + self.payload.packed_len()
+            + if let Some(ref payload) = self.payload {
+                payload.packed_len()
+            } else {
+                0
+            }
             + 0u64.packed_len()
     }
 
@@ -78,8 +82,12 @@ impl Packable for Message {
         self.parent1.pack(writer)?;
         self.parent2.pack(writer)?;
 
-        (self.payload.packed_len() as u32).pack(writer)?;
-        self.payload.pack(writer)?;
+        if let Some(ref payload) = self.payload {
+            (payload.packed_len() as u32).pack(writer)?;
+            payload.pack(writer)?;
+        } else {
+            0u32.pack(writer)?;
+        }
 
         self.nonce.pack(writer)?;
 
@@ -100,11 +108,15 @@ impl Packable for Message {
         let parent2 = MessageId::unpack(reader)?;
 
         let payload_len = u32::unpack(reader)? as usize;
-        let payload = Payload::unpack(reader)?;
-
-        if payload_len != payload.packed_len() {
-            return Err(Self::Error::InvalidAnnouncedLength(payload_len, payload.packed_len()));
-        }
+        let payload = if payload_len != 0 {
+            let payload = Payload::unpack(reader)?;
+            if payload_len != payload.packed_len() {
+                return Err(Self::Error::InvalidAnnouncedLength(payload_len, payload.packed_len()));
+            }
+            Some(payload)
+        } else {
+            None
+        };
 
         let nonce = u64::unpack(reader)?;
 
@@ -161,7 +173,7 @@ impl MessageBuilder {
         Ok(Message {
             parent1: self.parent1.ok_or(Error::MissingField("parent1"))?,
             parent2: self.parent2.ok_or(Error::MissingField("parent2"))?,
-            payload: self.payload.ok_or(Error::MissingField("payload"))?,
+            payload: self.payload,
             nonce: 0,
         })
     }
