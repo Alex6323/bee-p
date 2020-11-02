@@ -11,7 +11,7 @@
 
 use crate::{output::Output, spent::Spent, Error};
 
-use bee_common_ext::packable::{Packable, Read, Write};
+use bee_common::packable::{Packable, Read, Write};
 
 pub(crate) struct MilestoneDiff {
     index: u32,

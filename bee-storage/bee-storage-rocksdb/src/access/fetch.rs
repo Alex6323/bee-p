@@ -11,7 +11,7 @@
 
 use crate::{access::OpError, storage::*};
 
-use bee_common_ext::packable::Packable;
+use bee_common::packable::Packable;
 use bee_ledger::spent::Spent;
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},

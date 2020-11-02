@@ -17,7 +17,7 @@ pub use wots::WotsAddress;
 
 use crate::Error;
 
-use bee_common_ext::packable::{Packable, Read, Write};
+use bee_common::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 

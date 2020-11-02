@@ -12,7 +12,7 @@
 pub(crate) mod key_range;
 pub(crate) mod key_manager;
 
-use bee_common_ext::packable::{Packable, Read, Write};
+use bee_common::packable::{Packable, Read, Write};
 use bee_message::MessageId;
 
 use serde::Deserialize;
