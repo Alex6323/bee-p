@@ -28,15 +28,15 @@ pub trait BatchBuilder<'a, S: Backend, K, V>: Sized {
     }
 }
 
+pub trait BeginBatch<'a>: Backend + Sized {
+    type BatchBuilder;
+
+    fn begin_batch(&'a self) -> Self::BatchBuilder;
+}
+
 #[async_trait::async_trait]
 pub trait CommitBatch {
     type Error;
 
     async fn commit_batch(self, durability: bool) -> Result<(), Self::Error>;
-}
-
-pub trait Batch<'a>: Backend + Sized {
-    type BatchBuilder;
-
-    fn begin_batch(&'a self) -> Self::BatchBuilder;
 }

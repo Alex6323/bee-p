@@ -17,7 +17,7 @@ use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
-use bee_storage::access::{Batch, BatchBuilder, CommitBatch};
+use bee_storage::access::{BatchBuilder, BeginBatch, CommitBatch};
 
 use blake2::Blake2b;
 use rocksdb::{WriteBatch, WriteOptions};
@@ -28,6 +28,19 @@ pub struct StorageBatch<'a> {
     // TODO use them to avoid allocating during a same batch
     key_buf: Vec<u8>,
     value_buf: Vec<u8>,
+}
+
+impl<'a> BeginBatch<'a> for Storage {
+    type BatchBuilder = StorageBatch<'a>;
+
+    fn begin_batch(&'a self) -> Self::BatchBuilder {
+        Self::BatchBuilder {
+            storage: self,
+            batch: WriteBatch::default(),
+            key_buf: Vec::new(),
+            value_buf: Vec::new(),
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -41,19 +54,6 @@ impl<'a> CommitBatch for StorageBatch<'a> {
         self.storage.inner.write_opt(self.batch, &write_options)?;
 
         Ok(())
-    }
-}
-
-impl<'a> Batch<'a> for Storage {
-    type BatchBuilder = StorageBatch<'a>;
-
-    fn begin_batch(&'a self) -> Self::BatchBuilder {
-        Self::BatchBuilder {
-            storage: self,
-            batch: WriteBatch::default(),
-            key_buf: Vec::new(),
-            value_buf: Vec::new(),
-        }
     }
 }
 
