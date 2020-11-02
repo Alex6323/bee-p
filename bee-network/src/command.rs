@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::endpoint::EndpointId;
+use libp2p::{Multiaddr, PeerId};
 
 use std::fmt;
 
@@ -22,44 +22,33 @@ pub fn channel() -> (CommandSender, CommandReceiver) {
 
 #[derive(Debug)]
 pub enum Command {
-    AddEndpoint {
-        url: String,
-    },
-    RemoveEndpoint {
-        epid: EndpointId,
-    },
-    ConnectEndpoint {
-        epid: EndpointId,
-    },
-    DisconnectEndpoint {
-        epid: EndpointId,
-    },
-    SendMessage {
-        receiver_epid: EndpointId,
-        message: Vec<u8>,
-    },
-    MarkDuplicate {
-        duplicate_epid: EndpointId,
-        original_epid: EndpointId,
-    },
+    AddPeer { peer_address: Multiaddr },
+    RemovePeer { peer_address: Multiaddr },
+    ConnectPeer { peer_address: Multiaddr },
+    DisconnectPeer { peer_id: PeerId },
+    SendMessage { peer_id: PeerId, message: Vec<u8> },
+    /* MarkDuplicate {
+     *     duplicate_epid: EndpointId,
+     *     original_epid: EndpointId,
+     * }, */
 }
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Command::AddEndpoint { url, .. } => write!(f, "Command::AddEndpoint {{ {} }}", url),
-            Command::RemoveEndpoint { epid, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", epid),
-            Command::ConnectEndpoint { epid, .. } => write!(f, "Command::ConnectEndpoint {{ {} }}", epid),
-            Command::DisconnectEndpoint { epid, .. } => write!(f, "Command::DisconnectEndpoint {{ {} }}", epid),
-            Command::SendMessage { receiver_epid, .. } => write!(f, "Command::SendMessage {{ {} }}", receiver_epid),
-            Command::MarkDuplicate {
-                duplicate_epid,
-                original_epid,
-            } => write!(
-                f,
-                "Command::MarkDuplicate {{ {} == {} }}",
-                duplicate_epid, original_epid
-            ),
+            Command::AddPeer { peer_address, .. } => write!(f, "Command::AddPeer {{ {} }}", peer_address),
+            Command::RemovePeer { peer_address, .. } => write!(f, "Command::RemovePeer {{ {} }}", peer_address),
+            Command::ConnectPeer { peer_address, .. } => write!(f, "Command::ConnectPeer {{ {} }}", peer_address),
+            Command::DisconnectPeer { peer_id, .. } => write!(f, "Command::DisconnectPeer {{ {} }}", peer_id),
+            Command::SendMessage { peer_id, .. } => write!(f, "Command::SendMessage {{ {} }}", peer_id),
+            /* Command::MarkDuplicate {
+             *     duplicate_epid,
+             *     original_epid,
+             * } => write!(
+             *     f,
+             *     "Command::MarkDuplicate {{ {} == {} }}",
+             *     duplicate_epid, original_epid
+             * ), */
         }
     }
 }

@@ -17,22 +17,22 @@ use std::fmt;
 
 // #[derive(Clone)]
 pub struct Connection {
-    pub remote_id: PeerId,
-    pub remote_addr: Multiaddr,
+    pub peer_id: PeerId,
+    pub peer_address: Multiaddr,
     pub stream: StreamMuxerBox,
     pub origin: Origin,
 }
 
 impl Connection {
     pub fn new(
-        remote_id: PeerId,
-        remote_addr: Multiaddr,
+        peer_id: PeerId,
+        peer_address: Multiaddr,
         stream: StreamMuxerBox,
         origin: Origin,
     ) -> Result<Self, Error> {
         Ok(Self {
-            remote_id,
-            remote_addr,
+            peer_id,
+            peer_address,
             stream,
             origin,
         })
@@ -42,7 +42,7 @@ impl Connection {
 impl Eq for Connection {}
 impl PartialEq for Connection {
     fn eq(&self, other: &Self) -> bool {
-        self.remote_id == other.remote_id
+        self.peer_id == other.peer_id
     }
 }
 

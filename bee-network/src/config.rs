@@ -9,24 +9,21 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::util::Port;
-
+use libp2p::Multiaddr;
 use serde::Deserialize;
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::str::FromStr;
 
-const DEFAULT_BINDING_PORT: Port = 15600;
-const DEFAULT_BINDING_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+const DEFAULT_BIND_ADDRESS: &str = "/ip4/0.0.0.0/tcp/15600";
 
-pub const DEFAULT_MAX_TCP_BUFFER_SIZE: usize = 1654;
+pub const DEFAULT_MAX_BUFFER_SIZE: usize = 10000;
 pub const DEFAULT_RECONNECT_INTERVAL: u64 = 60;
 
 /// Network configuration builder.
 #[derive(Default, Deserialize)]
 pub struct NetworkConfigBuilder {
-    binding_port: Option<u16>,
-    binding_address: Option<IpAddr>,
-    max_tcp_buffer_size: Option<usize>,
+    bind_address: Option<Multiaddr>,
+    max_buffer_size: Option<usize>,
     reconnect_interval: Option<u64>,
 }
 
@@ -35,18 +32,9 @@ impl NetworkConfigBuilder {
         Self::default()
     }
 
-    pub fn binding_port(mut self, port: Port) -> Self {
-        self.binding_port.replace(port);
-        self
-    }
-
-    pub fn binding_address(mut self, binding_address: &str) -> Self {
-        match binding_address.parse() {
-            Ok(binding_address) => {
-                self.binding_address.replace(binding_address);
-            }
-            Err(e) => panic!("Error parsing address: {:?}", e),
-        }
+    pub fn bind_address(mut self, bind_address: &str) -> Self {
+        self.bind_address
+            .replace(Multiaddr::from_str(bind_address).unwrap_or_else(|e| panic!("Error parsing address: {:?}", e)));
         self
     }
 
@@ -55,17 +43,18 @@ impl NetworkConfigBuilder {
         self
     }
 
-    pub fn max_tcp_buffer_size(mut self, max_tcp_buffer_size: usize) -> Self {
-        self.max_tcp_buffer_size.replace(max_tcp_buffer_size);
+    pub fn max_buffer_size(mut self, max_buffer_size: usize) -> Self {
+        self.max_buffer_size.replace(max_buffer_size);
         self
     }
 
     /// Builds the network config.
     pub fn finish(self) -> NetworkConfig {
         NetworkConfig {
-            binding_port: self.binding_port.unwrap_or(DEFAULT_BINDING_PORT),
-            binding_address: self.binding_address.unwrap_or(DEFAULT_BINDING_ADDR),
-            max_tcp_buffer_size: self.max_tcp_buffer_size.unwrap_or(DEFAULT_MAX_TCP_BUFFER_SIZE),
+            bind_address: self
+                .bind_address
+                .unwrap_or(Multiaddr::from_str(DEFAULT_BIND_ADDRESS).unwrap()),
+            max_buffer_size: self.max_buffer_size.unwrap_or(DEFAULT_MAX_BUFFER_SIZE),
             reconnect_interval: self.reconnect_interval.unwrap_or(DEFAULT_RECONNECT_INTERVAL),
         }
     }
@@ -73,21 +62,13 @@ impl NetworkConfigBuilder {
 
 #[derive(Clone, Debug)]
 pub struct NetworkConfig {
-    pub binding_port: Port,
-    pub binding_address: IpAddr,
-    pub max_tcp_buffer_size: usize,
+    pub bind_address: Multiaddr,
+    pub max_buffer_size: usize,
     pub reconnect_interval: u64,
 }
 
 impl NetworkConfig {
     pub fn builder() -> NetworkConfigBuilder {
         NetworkConfigBuilder::new()
-    }
-
-    pub fn socket_address(&self) -> SocketAddr {
-        match self.binding_address {
-            IpAddr::V4(address) => SocketAddr::new(IpAddr::V4(address), self.binding_port),
-            IpAddr::V6(address) => SocketAddr::new(IpAddr::V6(address), self.binding_port),
-        }
     }
 }

@@ -13,81 +13,76 @@
 
 pub use command::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
-pub use endpoint::EndpointId;
 pub use event::{Event, EventReceiver};
-pub use tcp::Origin;
 
+#[doc(inline)]
+pub use libp2p::{Multiaddr, PeerId};
 pub use network::Network;
 
 mod command;
 mod config;
-mod endpoint;
+mod conns;
 mod event;
 mod network;
-mod p2p;
-mod tcp;
-mod util;
+mod peers;
+// mod tcp;
+// mod util;
 
-use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
-use endpoint::{EndpointContactList, EndpointWorker};
-use p2p::P2pService;
-use tcp::TcpServer;
+use config::{DEFAULT_MAX_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
+use conns::ConnectionManager;
+use peers::{KnownPeerList, PeerManager};
 
 use bee_common_ext::shutdown_tokio::Shutdown;
 
 use futures::channel::oneshot;
-use libp2p::{identity, noise};
+use libp2p::identity;
 
 use std::{
     fs::File,
     sync::atomic::{AtomicU64, AtomicUsize, Ordering},
 };
 
-pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
+pub(crate) static MAX_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_BUFFER_SIZE);
 pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
 
-#[doc(inline)]
-pub use libp2p::PeerId;
-
 pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
-    // TODO: restore keys from fs
+    // TODO: Restore keys from fs.
     let local_keys = identity::Keypair::generate_ed25519();
-
-    let p2p_service = P2pService::new(local_keys).expect("Error creating peering service");
 
     let (command_sender, command_receiver) = command::channel();
     let (event_sender, event_receiver) = event::channel();
     let (internal_event_sender, internal_event_receiver) = event::channel();
-    let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
-    let (tcp_server_shutdown_sender, tcp_server_shutdown_receiver) = oneshot::channel();
 
-    let endpoint_contacts = EndpointContactList::new();
+    let (peer_manager_shutdown_sender, peer_manager_shutdown_receiver) = oneshot::channel();
+    let (conn_manager_shutdown_sender, conn_manager_shutdown_receiver) = oneshot::channel();
 
-    let endpoint_worker = EndpointWorker::new(
+    let known_peers = KnownPeerList::new();
+
+    let peer_manager = PeerManager::new(
+        local_keys.clone(),
         command_receiver,
         event_sender,
         internal_event_receiver,
         internal_event_sender.clone(),
-        endpoint_contacts.clone(),
-        endpoint_worker_shutdown_receiver,
+        known_peers.clone(),
+        peer_manager_shutdown_receiver,
     );
 
-    let binding_address = config.socket_address();
-    let tcp_server = TcpServer::new(
-        binding_address,
+    let conn_manager = ConnectionManager::new(
+        local_keys,
+        config.bind_address.clone(),
         internal_event_sender,
-        tcp_server_shutdown_receiver,
-        endpoint_contacts,
-    )
-    .await;
+        conn_manager_shutdown_receiver,
+        known_peers,
+    );
 
-    let endpoint_worker = tokio::spawn(endpoint_worker.run());
-    let tcp_server = tokio::spawn(tcp_server.run());
+    let peer_manager_task = tokio::spawn(peer_manager.run());
+    let conn_manager_task = tokio::spawn(conn_manager.run());
 
-    shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, endpoint_worker);
-    shutdown.add_worker_shutdown(tcp_server_shutdown_sender, tcp_server);
+    shutdown.add_worker_shutdown(peer_manager_shutdown_sender, peer_manager_task);
+    shutdown.add_worker_shutdown(conn_manager_shutdown_sender, conn_manager_task);
 
-    MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
+    MAX_BUFFER_SIZE.swap(config.max_buffer_size, Ordering::Relaxed);
     RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
 
     (Network::new(config, command_sender), event_receiver)

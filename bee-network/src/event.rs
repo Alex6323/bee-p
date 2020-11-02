@@ -9,12 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    endpoint::{DataSender, EndpointId},
-    tcp::Origin,
-};
+use crate::{conns::Origin, peers::DataSender};
 
-use std::{fmt, net::SocketAddr};
+use libp2p::{Multiaddr, PeerId};
+use std::fmt;
 
 pub type EventSender = flume::Sender<Event>;
 pub type EventReceiver = flume::Receiver<Event>;
@@ -23,76 +21,86 @@ pub fn channel() -> (EventSender, EventReceiver) {
     flume::unbounded()
 }
 
+// TODO: add InternalEvent for the Connection... events
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Event {
-    EndpointAdded {
-        epid: EndpointId,
+    PeerAdded {
+        peer_address: Multiaddr,
     },
 
-    EndpointRemoved {
-        epid: EndpointId,
+    PeerRemoved {
+        peer_address: Multiaddr,
+        peer_id: Option<PeerId>,
     },
 
     ConnectionEstablished {
-        epid: EndpointId,
-        peer_address: SocketAddr,
+        peer_address: Multiaddr,
+        peer_id: PeerId,
         origin: Origin,
         data_sender: DataSender,
     },
 
     ConnectionDropped {
-        epid: EndpointId,
+        peer_address: Multiaddr,
+        peer_id: PeerId,
     },
 
-    EndpointConnected {
-        epid: EndpointId,
-        peer_address: SocketAddr,
+    PeerConnected {
+        peer_address: Multiaddr,
+        peer_id: PeerId,
         origin: Origin,
     },
 
-    EndpointDisconnected {
-        epid: EndpointId,
+    PeerDisconnected {
+        peer_id: PeerId,
     },
 
     MessageReceived {
-        epid: EndpointId,
+        peer_id: PeerId,
         message: Vec<u8>,
     },
 
     ReconnectTimerElapsed {
-        epid: EndpointId,
+        peer_address: Multiaddr,
     },
 }
 
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Event::EndpointAdded { epid } => write!(f, "Event::EndpointAdded {{ {} }}", epid),
+            Event::PeerAdded { peer_address } => write!(f, "Event::PeerAdded {{ {} }}", peer_address),
 
-            Event::EndpointRemoved { epid } => write!(f, "Event::EndpointRemoved {{ {} }}", epid),
+            Event::PeerRemoved { peer_address, .. } => write!(f, "Event::PeerRemoved {{ {} }}", peer_address),
 
-            Event::ConnectionEstablished { epid, .. } => write!(f, "Event::ConnectionEstablished {{ {} }}", epid),
+            Event::ConnectionEstablished {
+                peer_id, peer_address, ..
+            } => write!(f, "Event::ConnectionEstablished {{ {} ({}) }}", peer_address, peer_id),
 
-            Event::ConnectionDropped { epid, .. } => write!(f, "Event::ConnectionDropped {{ {} }}", epid),
+            Event::ConnectionDropped {
+                peer_id, peer_address, ..
+            } => write!(f, "Event::ConnectionDropped {{ {} ({}) }}", peer_address, peer_id),
 
-            Event::EndpointConnected {
-                epid,
+            Event::PeerConnected {
+                peer_id,
                 peer_address,
                 origin,
             } => write!(
                 f,
-                "Event::EndpointConnected {{ {}, peer_address: {}, origin: {} }}",
-                epid, peer_address, origin
+                "Event::PeerConnected {{ {}, peer_address: {}, origin: {} }}",
+                peer_id, peer_address, origin
             ),
 
-            Event::EndpointDisconnected { epid } => write!(f, "Event::EndpointDisconnected {{ {} }}", epid),
+            Event::PeerDisconnected { peer_id } => write!(f, "Event::PeerDisconnected {{ {} }}", peer_id),
 
-            Event::MessageReceived { epid, message } => {
-                write!(f, "Event::MessageReceived {{ {}, num_bytes: {} }}", epid, message.len())
+            Event::MessageReceived { peer_id, message } => {
+                write!(f, "Event::MessageReceived {{ {}, length: {} }}", peer_id, message.len())
             }
 
-            Event::ReconnectTimerElapsed { epid, .. } => write!(f, "Event::ReconnectTimerElapsed {{ {} }}", epid),
+            Event::ReconnectTimerElapsed { peer_address, .. } => {
+                write!(f, "Event::ReconnectTimerElapsed {{ {} }}", peer_address)
+            }
         }
     }
 }
