@@ -112,8 +112,8 @@ where
         }
 
         Ok(Milestone {
-            message_id,
             index: MilestoneIndex(milestone.essence().index()),
+            message_id,
         })
     } else {
         Err(Error::NoMilestonePayload)
