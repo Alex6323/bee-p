@@ -99,9 +99,8 @@ impl Fetch<OutputId, Output> for Storage {
     {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
+        let output_id_buf = output_id.pack_new().unwrap();
 
         if let Some(res) = self.inner.get_cf(&cf_output_id_to_output, output_id_buf)? {
             Ok(Some(Output::unpack(&mut res.as_slice()).unwrap()))
@@ -121,9 +120,8 @@ impl Fetch<OutputId, Spent> for Storage {
     {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
+        let output_id_buf = output_id.pack_new().unwrap();
 
         if let Some(res) = self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)? {
             Ok(Some(Spent::unpack(&mut res.as_slice()).unwrap()))

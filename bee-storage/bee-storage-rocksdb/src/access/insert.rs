@@ -28,9 +28,8 @@ impl Insert<MessageId, Message> for Storage {
     async fn insert(&self, message_id: &MessageId, message: &Message) -> Result<(), Self::Error> {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        let mut message_buf = Vec::with_capacity(message.packed_len());
         // Packing to bytes can't fail.
-        message.pack(&mut message_buf).unwrap();
+        let message_buf = message.pack_new().unwrap();
 
         self.inner.put_cf(&cf_message_id_to_message, message_id, message_buf)?;
 
@@ -81,12 +80,10 @@ impl Insert<OutputId, Output> for Storage {
     async fn insert(&self, output_id: &OutputId, output: &Output) -> Result<(), Self::Error> {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
-        let mut output_buf = Vec::with_capacity(output.packed_len());
+        let output_id_buf = output_id.pack_new().unwrap();
         // Packing to bytes can't fail.
-        output.pack(&mut output_buf).unwrap();
+        let output_buf = output.pack_new().unwrap();
 
         self.inner.put_cf(&cf_output_id_to_output, output_id_buf, output_buf)?;
 
@@ -101,12 +98,10 @@ impl Insert<OutputId, Spent> for Storage {
     async fn insert(&self, output_id: &OutputId, spent: &Spent) -> Result<(), Self::Error> {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
-        let mut spent_buf = Vec::with_capacity(spent.packed_len());
+        let output_id_buf = output_id.pack_new().unwrap();
         // Packing to bytes can't fail.
-        spent.pack(&mut spent_buf).unwrap();
+        let spent_buf = spent.pack_new().unwrap();
 
         self.inner.put_cf(&cf_output_id_to_spent, output_id_buf, spent_buf)?;
 

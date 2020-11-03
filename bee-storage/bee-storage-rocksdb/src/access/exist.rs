@@ -85,9 +85,8 @@ impl Exist<OutputId, Output> for Storage {
     {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
+        let output_id_buf = output_id.pack_new().unwrap();
 
         Ok(self.inner.get_cf(&cf_output_id_to_output, output_id_buf)?.is_some())
     }
@@ -103,9 +102,8 @@ impl Exist<OutputId, Spent> for Storage {
     {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
+        let output_id_buf = output_id.pack_new().unwrap();
 
         Ok(self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)?.is_some())
     }
