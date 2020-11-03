@@ -63,6 +63,10 @@ impl OutputId {
     pub fn index(&self) -> u16 {
         self.index
     }
+
+    pub fn split(self) -> (TransactionId, u16) {
+        (self.transaction_id, self.index)
+    }
 }
 
 impl core::fmt::Display for OutputId {
