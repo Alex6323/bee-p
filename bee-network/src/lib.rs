@@ -11,16 +11,17 @@
 
 //#![warn(missing_docs)]
 
-pub use command::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
-pub use event::{Event, EventReceiver};
+pub use interaction::{
+    commands::{self, Command},
+    events::{self, Event, EventReceiver},
+};
 
 pub use network::Network;
 
-mod command;
 mod config;
 mod conns;
-mod event;
+mod interaction;
 mod network;
 mod peers;
 mod transport;
@@ -51,9 +52,9 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
     let local_peer = PeerId::from_public_key(local_keys.public());
     trace!("local peer id = {}", local_peer);
 
-    let (command_sender, command_receiver) = command::channel();
-    let (event_sender, event_receiver) = event::channel();
-    let (internal_event_sender, internal_event_receiver) = event::channel();
+    let (command_sender, command_receiver) = commands::channel();
+    let (event_sender, event_receiver) = events::channel();
+    let (internal_event_sender, internal_event_receiver) = events::channel();
 
     let (peer_manager_shutdown_sender, peer_manager_shutdown_receiver) = oneshot::channel();
     let (conn_manager_shutdown_sender, conn_manager_shutdown_receiver) = oneshot::channel();

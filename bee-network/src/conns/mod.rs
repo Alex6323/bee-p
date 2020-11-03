@@ -14,7 +14,7 @@ mod dial;
 mod manager;
 
 use crate::{
-    event::{Event, EventSender},
+    interaction::events::{Event, EventSender},
     peers::{self, DataReceiver},
     MAX_BUFFER_SIZE,
 };

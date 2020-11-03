@@ -10,7 +10,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use super::{ConnectedPeerList, KnownPeerList};
-use crate::{command::Command, conns::dial_peer, event::Event, RECONNECT_INTERVAL};
+use crate::{
+    conns::dial_peer,
+    interaction::{commands::Command, events::Event},
+    RECONNECT_INTERVAL,
+};
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 

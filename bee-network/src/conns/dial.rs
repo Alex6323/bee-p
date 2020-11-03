@@ -13,7 +13,7 @@ use super::{
     connection::{Connection, Origin},
     Error,
 };
-use crate::{event::EventSender, transport::build_transport};
+use crate::{interaction::events::EventSender, transport::build_transport};
 
 use log::*;
 
