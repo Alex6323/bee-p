@@ -105,7 +105,11 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut queue = vec![];
-            let mut next_ms_index = config.await.unwrap();
+            let mut next_ms_index = if let Ok(idx) = config.await {
+                idx
+            } else {
+                return;
+            };
 
             while let Some(MilestoneSolidifierWorkerEvent(index)) = receiver.next().await {
                 save_index(index, &mut queue);

@@ -25,7 +25,7 @@ use std::{
     panic::Location,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
+        Arc, Weak, Mutex,
     },
 };
 
@@ -74,6 +74,8 @@ pub trait NodeBuilder<N: Node>: Default {
 
     fn with_worker_cfg<W: Worker<N> + 'static>(self, config: W::Config) -> Self;
 
+    fn with_resource<R: Any + Send + Sync>(self, res: R) -> Self;
+
     async fn finish(self) -> N;
 }
 
@@ -92,11 +94,19 @@ impl<R> ResHandle<R> {
         }
     }
 
+    pub fn into_weak(self) -> WeakHandle<R> {
+        let inner = Arc::downgrade(&self.inner);
+        drop(self);
+        WeakHandle { inner }
+    }
+
     pub fn try_unwrap(self) -> Option<R>
     where
         R: Any,
     {
-        match Arc::try_unwrap(self.inner.clone()) {
+        let inner = self.inner.clone();
+        drop(self);
+        match Arc::try_unwrap(inner) {
             Ok((res, _)) => Some(res),
             Err(inner) => {
                 let usages = inner
@@ -141,5 +151,28 @@ impl<R> Drop for ResHandle<R> {
         if let Some(id) = self.id {
             self.inner.1.lock().unwrap().remove(&id);
         }
+    }
+}
+
+pub struct WeakHandle<R> {
+    inner: Weak<(R, Mutex<HashMap<usize, &'static Location<'static>>>)>,
+}
+
+impl<R> WeakHandle<R> {
+    #[track_caller]
+    pub fn upgrade(&self) -> Option<ResHandle<R>> {
+        let new_id = RES_ID.fetch_add(1, Ordering::Relaxed);
+        let inner = self.inner.upgrade()?;
+        inner.1.lock().unwrap().insert(new_id, Location::caller());
+        Some(ResHandle {
+            id: Some(new_id),
+            inner,
+        })
+    }
+}
+
+impl<R> Clone for WeakHandle<R> {
+    fn clone(&self) -> Self {
+        Self { inner: self.inner.clone() }
     }
 }

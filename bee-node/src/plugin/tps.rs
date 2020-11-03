@@ -41,7 +41,7 @@ impl Plugin for TpsPlugin {
     }
 
     fn init(&mut self, bus: Arc<Bus>) -> Result<(), Self::Error> {
-        bus.add_listener(tps);
+        bus.add_listener::<(), _, _>(tps);
         Ok(())
     }
 

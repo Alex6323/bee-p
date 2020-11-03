@@ -15,6 +15,7 @@ use bee_common::shutdown;
 use bee_common_ext::{
     node::{Node, NodeBuilder, ResHandle},
     worker::Worker,
+    event::Bus,
 };
 
 use anymap::{any::Any as AnyMapAny, Map};
@@ -32,6 +33,7 @@ use std::{
 
 type WorkerStart<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
 type WorkerStop<N> = dyn for<'a> FnOnce(&'a mut N) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> + Send;
+type ResourceRegister<N> = dyn for<'a> FnOnce(&'a mut N);
 
 #[allow(clippy::type_complexity)]
 pub struct BeeNode<B> {
@@ -71,13 +73,14 @@ impl<B: Backend> Node for BeeNode<B> {
     where
         Self: Sized,
     {
-        for id in self.worker_order.clone().into_iter().rev() {
-            for (shutdown, task_fut) in self.tasks.remove(&id).unwrap_or_default() {
+        for worker_id in self.worker_order.clone().into_iter().rev() {
+            for (shutdown, task_fut) in self.tasks.remove(&worker_id).unwrap_or_default() {
                 let _ = shutdown.send(());
                 // TODO: Should we handle this error?
                 let _ = task_fut.await; //.map_err(|e| shutdown::Error::from(worker::Error(Box::new(e))))?;
             }
-            self.worker_stops.remove(&id).unwrap()(&mut self).await;
+            self.worker_stops.remove(&worker_id).unwrap()(&mut self).await;
+            self.resource::<std::sync::Arc<Bus>>().purge_worker_listeners(worker_id);
         }
 
         Ok(())
@@ -127,6 +130,7 @@ pub struct BeeNodeBuilder<B: Backend> {
     deps: HashMap<TypeId, &'static [TypeId]>,
     worker_starts: HashMap<TypeId, Box<WorkerStart<BeeNode<B>>>>,
     worker_stops: HashMap<TypeId, Box<WorkerStop<BeeNode<B>>>>,
+    resource_registers: Vec<Box<ResourceRegister<BeeNode<B>>>>,
 }
 
 impl<B: Backend> Default for BeeNodeBuilder<B> {
@@ -135,6 +139,7 @@ impl<B: Backend> Default for BeeNodeBuilder<B> {
             deps: HashMap::default(),
             worker_starts: HashMap::default(),
             worker_stops: HashMap::default(),
+            resource_registers: Vec::default(),
         }
     }
 }
@@ -177,6 +182,13 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
         self
     }
 
+    fn with_resource<R: Any + Send + Sync>(mut self, res: R) -> Self {
+        self.resource_registers.push(Box::new(move |node| {
+            node.register_resource(res);
+        }));
+        self
+    }
+
     async fn finish(mut self) -> BeeNode<B> {
         let mut node = BeeNode {
             workers: Map::new(),
@@ -186,6 +198,10 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
             worker_stops: self.worker_stops,
             worker_order: TopologicalOrder::sort(self.deps),
         };
+
+        for f in self.resource_registers {
+            f(&mut node);
+        }
 
         for id in node.worker_order.clone() {
             self.worker_starts.remove(&id).unwrap()(&mut node).await;

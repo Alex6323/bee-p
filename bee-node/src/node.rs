@@ -62,11 +62,12 @@ impl<B: Backend> NodeBuilder<B> {
     pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
-        let node_builder = BeeNode::<B>::build();
+        let bus = Arc::new(Bus::default());
+
+        let node_builder = BeeNode::<B>::build()
+            .with_resource(bus.clone());
 
         let mut shutdown = Shutdown::new();
-
-        let bus = Arc::new(Bus::default());
 
         let (mut node_builder, snapshot) = bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
             .await

@@ -91,20 +91,22 @@ impl Protocol {
     }
 
     pub fn events<N: Node>(node: &N, config: ProtocolConfig, bus: Arc<Bus<'static>>) {
-        let tangle = node.resource::<MsTangle<N::Backend>>();
+        let tangle = node.resource::<MsTangle<N::Backend>>().into_weak();
 
-        bus.add_listener(move |latest_milestone: &LatestMilestoneChanged| {
+        bus.add_listener::<(), _, _>(move |latest_milestone: &LatestMilestoneChanged| {
             info!(
                 "New milestone {} {}.",
                 *latest_milestone.0.index, latest_milestone.0.message_id
             );
-            tangle.update_latest_milestone_index(latest_milestone.0.index);
+            tangle.upgrade().map(|tangle| {
+                tangle.update_latest_milestone_index(latest_milestone.0.index);
 
-            Protocol::broadcast_heartbeat(
-                tangle.get_latest_solid_milestone_index(),
-                tangle.get_pruning_index(),
-                latest_milestone.0.index,
-            );
+                Protocol::broadcast_heartbeat(
+                    tangle.get_latest_solid_milestone_index(),
+                    tangle.get_pruning_index(),
+                    latest_milestone.0.index,
+                );
+            });
         });
 
         // bus.add_listener(|latest_solid_milestone: &LatestSolidMilestoneChanged| {
@@ -119,29 +121,31 @@ impl Protocol {
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
         let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>();
+        let tangle = node.resource::<MsTangle<N::Backend>>().into_weak();
         let requested_milestones = node.resource::<RequestedMilestones>();
 
-        bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-            debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
-            tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
+        bus.add_listener::<(), _, _>(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
+            tangle.upgrade().map(|tangle| {
+                debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
+                tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
-            let ms_sync_count = config.workers.ms_sync_count;
-            let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
+                let ms_sync_count = config.workers.ms_sync_count;
+                let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
 
-            if tangle.contains_milestone(next_ms) {
-                if let Err(e) = milestone_solidifier.send(MilestoneSolidifierWorkerEvent(next_ms)) {
-                    error!("Sending solidification event failed: {}", e);
+                if tangle.contains_milestone(next_ms) {
+                    if let Err(e) = milestone_solidifier.send(MilestoneSolidifierWorkerEvent(next_ms)) {
+                        error!("Sending solidification event failed: {}", e);
+                    }
+                } else {
+                    Protocol::request_milestone(&tangle, &milestone_requester, &*requested_milestones, next_ms, None);
                 }
-            } else {
-                Protocol::request_milestone(&tangle, &milestone_requester, &*requested_milestones, next_ms, None);
-            }
 
-            Protocol::broadcast_heartbeat(
-                latest_solid_milestone.0.index,
-                tangle.get_pruning_index(),
-                tangle.get_latest_milestone_index(),
-            );
+                Protocol::broadcast_heartbeat(
+                    latest_solid_milestone.0.index,
+                    tangle.get_pruning_index(),
+                    tangle.get_latest_milestone_index(),
+                );
+            });
         });
     }
 
