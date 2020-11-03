@@ -15,8 +15,6 @@ pub use command::Command;
 pub use config::{NetworkConfig, NetworkConfigBuilder};
 pub use event::{Event, EventReceiver};
 
-#[doc(inline)]
-pub use libp2p::{Multiaddr, PeerId};
 pub use network::Network;
 
 mod command;
@@ -25,8 +23,7 @@ mod conns;
 mod event;
 mod network;
 mod peers;
-// mod tcp;
-// mod util;
+mod transport;
 
 use config::{DEFAULT_MAX_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use conns::ConnectionManager;
@@ -36,6 +33,9 @@ use bee_common_ext::shutdown_tokio::Shutdown;
 
 use futures::channel::oneshot;
 use libp2p::identity;
+#[doc(inline)]
+pub use libp2p::{Multiaddr, PeerId};
+use log::*;
 
 use std::{
     fs::File,
@@ -48,6 +48,8 @@ pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNE
 pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
     // TODO: Restore keys from fs.
     let local_keys = identity::Keypair::generate_ed25519();
+    let local_peer = PeerId::from_public_key(local_keys.public());
+    trace!("local peer id = {}", local_peer);
 
     let (command_sender, command_receiver) = command::channel();
     let (event_sender, event_receiver) = event::channel();

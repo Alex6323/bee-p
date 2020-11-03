@@ -13,41 +13,24 @@ use super::{
     connection::{Connection, Origin},
     Error,
 };
-use crate::event::EventSender;
+use crate::{event::EventSender, transport::build_transport};
 
 use log::*;
 
-use libp2p::{
-    core::{muxing::StreamMuxerBox, upgrade},
-    identity, noise, tcp, yamux, Multiaddr, Transport,
-};
-
-use std::io;
+use libp2p::{identity, Multiaddr, Transport};
 
 pub async fn dial_peer(
     local_keys: &identity::Keypair,
     peer_address: Multiaddr,
     internal_event_sender: EventSender,
 ) -> Result<(), Error> {
-    let noise_keys = noise::Keypair::<noise::X25519Spec>::new()
-        .into_authentic(local_keys)
-        .expect("error creating noise keys");
-
-    // TODO: use build_tcp_ws_....
-
-    let transport = tcp::TokioTcpConfig::default()
-        .upgrade(upgrade::Version::V1)
-        .authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
-        .multiplex(yamux::Config::default())
-        .map(|(peer, muxer), _| (peer, StreamMuxerBox::new(muxer)))
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-        .boxed();
+    let transport = build_transport(local_keys)?;
 
     trace!("Trying to connect to {}...", peer_address);
 
     match transport.dial(peer_address.clone()).unwrap().await {
-        Ok((remote_id, stream)) => {
-            let connection = match Connection::new(remote_id, peer_address, stream, Origin::Outbound) {
+        Ok((peer_id, stream)) => {
+            let connection = match Connection::new(peer_id, peer_address, stream, Origin::Outbound) {
                 Ok(conn) => conn,
                 Err(e) => {
                     warn!["Error creating connection: {:?}.", e];

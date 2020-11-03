@@ -77,22 +77,25 @@ impl PeerManager {
         loop {
             select! {
                 _ = fused_shutdown_listener => {
+                    trace!("Breaking Peer Manager. Cause: shutdown listener");
                     break;
                 },
                 command = command_receiver.next() => {
                     if !process_command(command, &local_keys, &mut known_peers, &mut connected_peers, &mut event_sender, &mut internal_event_sender).await? {
+                        trace!("Breaking Peer Manager. Cause: process_command returned false");
                         break;
                     }
                 },
                 event = internal_event_receiver.next() => {
                     if !process_event(event, &local_keys, &mut known_peers, &mut connected_peers, &mut event_sender, &mut internal_event_sender).await? {
+                        trace!("Breaking Peer Manager. Cause: process_event returned false");
                         break;
                     }
                 },
             }
         }
 
-        trace!("Stopped Peer Manager.");
+        trace!("Peer Manager stopped.");
         Ok(())
     }
 }
@@ -373,7 +376,8 @@ fn disconnect_peer(peer_id: &PeerId, connected_peers: &mut ConnectedPeerList) ->
 
 #[inline]
 async fn send_event_after_delay(event: Event, internal_event_sender: EventSender) -> Result<(), WorkerError> {
-    tokio::time::sleep(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
+    // tokio::time::sleep(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
+    tokio::time::delay_for(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
 
     Ok(internal_event_sender
         .send_async(event)

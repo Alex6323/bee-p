@@ -81,6 +81,7 @@ struct Node {
     events: flume::r#async::RecvStream<'static, Event>,
     peers: HashSet<PeerId>,
     handshakes: HashMap<String, Vec<PeerId>>,
+    shutdown: Shutdown,
 }
 
 impl Node {
@@ -91,7 +92,7 @@ impl Node {
             mut events,
             mut peers,
             mut handshakes,
-            ..
+            shutdown,
         } = self;
 
         info!("[pingpong] Node running.");
@@ -114,6 +115,8 @@ impl Node {
         }
 
         info!("[pingpong] Stopping node...");
+        shutdown.execute().await.expect("shutdown error");
+
         info!("[pingpong] Shutdown complete.");
     }
 
@@ -134,10 +137,10 @@ async fn process_event(
         Event::PeerAdded { peer_address } => {
             info!("[pingpong] Added peer {}.", peer_address);
 
-            // network
-            //     .send(ConnectPeer { peer_address })
-            //     .await
-            //     .expect("error sending Connect command");
+            network
+                .send(ConnectPeer { peer_address })
+                .await
+                .expect("error sending Connect command");
         }
 
         Event::PeerRemoved {
@@ -167,11 +170,6 @@ async fn process_event(
 
         Event::PeerDisconnected { peer_id } => {
             info!("[pingpong] Disconnected peer {}.", peer_id);
-
-            // endpoints.remove(&epid);
-
-            // // TODO: remove epid from self.handshakes
-            // // handshakes.remove(???);
         }
 
         Event::MessageReceived { peer_id, message, .. } => {
@@ -275,6 +273,7 @@ impl NodeBuilder {
             events: events.into_stream(),
             peers: HashSet::new(),
             handshakes: HashMap::new(),
+            shutdown,
         }
     }
 }

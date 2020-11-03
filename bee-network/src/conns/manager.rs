@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{event::EventSender, peers::KnownPeerList};
+use crate::{event::EventSender, peers::KnownPeerList, transport::build_transport};
 
 use super::{
     connection::{Connection, Origin},
@@ -20,11 +20,8 @@ use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
 use futures::{prelude::*, select};
 use libp2p::{
-    core::{
-        muxing::StreamMuxerBox,
-        transport::{upgrade, ListenerEvent},
-    },
-    identity, noise, tcp, yamux, Multiaddr, PeerId, Transport,
+    core::{muxing::StreamMuxerBox, transport::ListenerEvent},
+    identity, Multiaddr, PeerId, Transport,
 };
 use log::*;
 
@@ -37,7 +34,7 @@ pub struct ConnectionManager {
     #[allow(dead_code)]
     listener_address: Multiaddr,
     internal_event_sender: EventSender,
-    endpoint_contacts: KnownPeerList,
+    known_peers: KnownPeerList,
     listener: Listener,
     shutdown_listener: ShutdownListener,
 }
@@ -48,26 +45,17 @@ impl ConnectionManager {
         bind_address: Multiaddr,
         internal_event_sender: EventSender,
         shutdown_listener: ShutdownListener,
-        endpoint_contacts: KnownPeerList,
+        known_peers: KnownPeerList,
     ) -> Self {
         trace!("Starting Connection Manager...");
 
-        let noise_keys = noise::Keypair::<noise::X25519Spec>::new()
-            .into_authentic(&local_keys)
-            .expect("error creating noise keys");
-
-        let transport = tcp::TokioTcpConfig::default()
-            .upgrade(upgrade::Version::V1)
-            .authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
-            .multiplex(yamux::Config::default())
-            .map(|(peer, muxer), _| (peer, StreamMuxerBox::new(muxer)))
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-            .boxed();
+        let transport = build_transport(&local_keys).expect("error building transport");
 
         let mut listener = transport.listen_on(bind_address).expect("Error binding Peer Listener.");
 
         let listener_address =
             if let Some(Some(Ok(ListenerEvent::NewAddress(address)))) = listener.next().now_or_never() {
+                trace!("listening address = {}", address);
                 address
             } else {
                 panic!("Not listening on an address!");
@@ -78,7 +66,7 @@ impl ConnectionManager {
         Self {
             listener_address,
             internal_event_sender,
-            endpoint_contacts,
+            known_peers,
             listener,
             shutdown_listener,
         }
@@ -89,7 +77,7 @@ impl ConnectionManager {
 
         let ConnectionManager {
             internal_event_sender,
-            endpoint_contacts,
+            known_peers,
             listener,
             shutdown_listener,
             ..
@@ -101,19 +89,35 @@ impl ConnectionManager {
         loop {
             select! {
                 _ = fused_shutdown_listener => {
+                    trace!("Breaking Connection Manager. Cause: shutdown listener");
                     break;
                 },
                 listener_event = fused_incoming_streams.next() => {
                     if let Some(listener_event) = listener_event {
-                        let (upgrade, remote_addr) = listener_event.unwrap().into_upgrade().unwrap();
-                        let (remote_id, stream) = upgrade.await.unwrap();
-                        if !process_stream(stream, remote_id, remote_addr, &endpoint_contacts, &internal_event_sender).await? {
-                            continue;
+                        // handle_listener_event(
+                        //     listener_event.expect("listener event error"),
+                        //     &known_peers,
+                        //     &internal_event_sender).await
+                        let listener_event = listener_event.expect("listener event error");
+                        if let Some((upgrade, remote_addr)) = listener_event.into_upgrade() {
+                            let (peer_id, stream) = upgrade.await.expect("upgrade failed");
+
+                            if !process_stream(stream, peer_id, remote_addr, &known_peers, &internal_event_sender)
+                                .await
+                                .expect("error")
+                            {
+                                // trace!("Continuing Conn Manager. Cause: process_stream returned false");
+                                // continue;
+                            } else {
+                                // trace!("Breaking Conn Manager. Cause: process_stream returned true");
+                                // break;
+                            }
                         } else {
-                            break;
+                            trace!("Not an upgrade event");
                         }
                     } else {
-                        todo!();
+                        trace!("Breaking Connection Manager. Cause: listener_event stream closed.");
+                        break;
                     }
                 },
             }
@@ -123,6 +127,51 @@ impl ConnectionManager {
         Ok(())
     }
 }
+
+// #[inline]
+// async fn handle_listener_event(
+//     listener_event: ListenerEvent<ListenerUpgrade, io::Error>,
+//     known_peers: &KnownPeerList,
+//     internal_event_sender: &EventSender,
+// ) {
+//     // match listener_event {
+//     //     ListenerEvent::NewAddress(address) => {
+//     //         trace!("new address = {}", address);
+//     //         return Ok(true);
+//     //     }
+//     //     ListenerEvent::AddressExpired(address) => {
+//     //         trace!("address expired = {}", address);
+//     //         return Ok(true);
+//     //     }
+//     //     ListenerEvent::Upgrade {
+//     //         upgrade,
+//     //         local_addr,
+//     //         remote_addr,
+//     //     } => {
+//     //         trace!("upgrade");
+//     //     }
+//     //     ListenerEvent::Error(e) => {
+//     //         trace!("error: {:?}", e);
+//     //         return Err(io::Error::new(io::ErrorKind::InvalidInput, "error").into());
+//     //     }
+//     // }
+//     if let Some((upgrade, remote_addr)) = listener_event.into_upgrade() {
+//         let (peer_id, stream) = upgrade.await.expect("upgrade failed");
+
+//         if !process_stream(stream, peer_id, remote_addr, known_peers, internal_event_sender)
+//             .await
+//             .expect("error")
+//         {
+//             // trace!("Continuing Conn Manager. Cause: process_stream returned false");
+//             // continue;
+//         } else {
+//             // trace!("Breaking Conn Manager. Cause: process_stream returned true");
+//             // break;
+//         }
+//     } else {
+//         trace!("Not an upgrade event");
+//     }
+// }
 
 #[inline]
 async fn process_stream(
@@ -141,13 +190,13 @@ async fn process_stream(
         }
     };
 
-    // TODO: refresh IPs in certain intervals
-    if !known_peers.contains_address(&connection.peer_address) {
-        warn!("Contacted by unknown address '{}'.", &connection.peer_address);
-        warn!("Connection dropped.");
+    // TODO: check if this can be removed
+    // if !known_peers.contains_address(&connection.peer_address) {
+    //     warn!("Contacted by unknown address '{}'.", &connection.peer_address);
+    //     warn!("Connection dropped.");
 
-        return Ok(false);
-    }
+    //     return Ok(false);
+    // }
 
     trace!(
         "Sucessfully established inbound connection to {} ({}).",
