@@ -11,7 +11,7 @@
 
 #[cfg(test)]
 mod tests {
-    use bee_common_ext::packable::Packable;
+    use bee_common::packable::Packable;
     use bee_message::prelude::*;
 
     #[test]
