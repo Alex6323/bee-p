@@ -66,14 +66,14 @@ impl TcpServer {
         trace!("TCP server running...");
 
         let TcpServer {
-            tcp_listener,
+            mut tcp_listener,
             internal_event_sender,
             endpoint_contacts,
             shutdown_listener,
             ..
         } = self;
 
-        let mut fused_incoming_streams = tcp_listener.fuse();
+        let mut fused_incoming_streams = tcp_listener.incoming().fuse();
         let mut fused_shutdown_listener = shutdown_listener.fuse();
 
         loop {
