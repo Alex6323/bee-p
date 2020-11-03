@@ -23,6 +23,7 @@ use bee_common::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Ord, PartialOrd)]
 pub enum Output {
     SignatureLockedSingle(SignatureLockedSingleOutput),

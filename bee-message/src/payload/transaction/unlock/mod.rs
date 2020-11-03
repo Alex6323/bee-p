@@ -21,6 +21,7 @@ use bee_common::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum UnlockBlock {
     Signature(SignatureUnlock),
