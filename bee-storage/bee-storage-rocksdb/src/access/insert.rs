@@ -12,7 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common::packable::Packable;
-use bee_ledger::spent::Spent;
+use bee_ledger::{output::Output, spent::Spent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
@@ -69,6 +69,26 @@ impl Insert<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         key.extend_from_slice(message_id.as_ref());
 
         self.inner.put_cf(&cf_payload_index_to_message_id, key, [])?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Insert<OutputId, Output> for Storage {
+    type Error = OpError;
+
+    async fn insert(&self, output_id: &OutputId, output: &Output) -> Result<(), Self::Error> {
+        let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
+
+        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        // Packing to bytes can't fail.
+        output_id.pack(&mut output_id_buf).unwrap();
+        let mut output_buf = Vec::with_capacity(output.packed_len());
+        // Packing to bytes can't fail.
+        output.pack(&mut output_buf).unwrap();
+
+        self.inner.put_cf(&cf_output_id_to_output, output_id_buf, output_buf)?;
 
         Ok(())
     }

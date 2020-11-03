@@ -12,7 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common::packable::Packable;
-use bee_ledger::spent::Spent;
+use bee_ledger::{output::Output, spent::Spent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
@@ -61,6 +61,23 @@ impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         key.extend_from_slice(message_id.as_ref());
 
         self.inner.delete_cf(&cf_payload_index_to_message_id, key)?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Delete<OutputId, Output> for Storage {
+    type Error = OpError;
+
+    async fn delete(&self, output_id: &OutputId) -> Result<(), Self::Error> {
+        let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
+
+        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        // Packing to bytes can't fail.
+        output_id.pack(&mut output_id_buf).unwrap();
+
+        self.inner.delete_cf(&cf_output_id_to_output, output_id_buf)?;
 
         Ok(())
     }

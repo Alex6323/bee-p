@@ -12,7 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common::packable::Packable;
-use bee_ledger::spent::Spent;
+use bee_ledger::{output::Output, spent::Spent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
@@ -72,6 +72,24 @@ impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
             Ok(_) => Ok(exist),
             Err(e) => Err(e)?,
         }
+    }
+}
+
+#[async_trait::async_trait]
+impl Exist<OutputId, Output> for Storage {
+    type Error = OpError;
+
+    async fn exist(&self, output_id: &OutputId) -> Result<bool, Self::Error>
+    where
+        Self: Sized,
+    {
+        let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
+
+        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        // Packing to bytes can't fail.
+        output_id.pack(&mut output_id_buf).unwrap();
+
+        Ok(self.inner.get_cf(&cf_output_id_to_output, output_id_buf)?.is_some())
     }
 }
 

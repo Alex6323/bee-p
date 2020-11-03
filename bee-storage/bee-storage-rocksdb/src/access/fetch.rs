@@ -12,7 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common::packable::Packable;
-use bee_ledger::spent::Spent;
+use bee_ledger::{output::Output, spent::Spent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId, MESSAGE_ID_LENGTH,
@@ -86,6 +86,28 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
                 })
                 .collect(),
         ))
+    }
+}
+
+#[async_trait::async_trait]
+impl Fetch<OutputId, Output> for Storage {
+    type Error = OpError;
+
+    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Output>, Self::Error>
+    where
+        Self: Sized,
+    {
+        let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
+
+        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        // Packing to bytes can't fail.
+        output_id.pack(&mut output_id_buf).unwrap();
+
+        if let Some(res) = self.inner.get_cf(&cf_output_id_to_output, output_id_buf)? {
+            Ok(Some(Output::unpack(&mut res.as_slice()).unwrap()))
+        } else {
+            Ok(None)
+        }
     }
 }
 
