@@ -17,8 +17,8 @@
 //! terminals and connect those instances by specifying commandline arguments.
 //!
 //! ```bash
-//! cargo r --example pingpong -- --bind 127.0.0.1:1337 --peers tcp://127.0.0.1:1338 --msg ping
-//! cargo r --example pingpong -- --bind 127.0.0.1:1338 --peers tcp://127.0.0.1:1337 --msg pong
+//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1337 --peers /ip4/127.0.0.1/tcp/1338 --msg ping
+//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1338 --peers /ip4/127.0.0.1/tcp/1337 --msg pong
 //! ```
 
 #![allow(dead_code, unused_imports)]
@@ -28,7 +28,7 @@ mod common;
 use common::*;
 
 use bee_common_ext::shutdown_tokio::Shutdown;
-use bee_network::{Command::*, EndpointId, Event, EventReceiver, Network, NetworkConfig, Origin};
+use bee_network::{Command::*, Event, EventReceiver, Multiaddr, Network, NetworkConfig, PeerId};
 
 use futures::{
     channel::oneshot,
@@ -50,9 +50,9 @@ const RECONNECT_INTERVAL: u64 = 5; // 5 seconds
 #[tokio::main]
 async fn main() {
     let args = Args::from_args();
-    let config = args.config();
+    let config = args.into_config();
 
-    logger::init(log::LevelFilter::Debug);
+    logger::init(log::LevelFilter::Trace);
 
     let node = Node::builder(config).finish().await;
 
@@ -60,8 +60,14 @@ async fn main() {
     let config = node.config.clone();
 
     info!("[pingpong] Adding static peers...");
-    for url in &config.peers {
-        network.send(AddEndpoint { url: url.clone() }).await.unwrap();
+
+    for peer_address in &config.peers {
+        network
+            .send(AddPeer {
+                peer_address: peer_address.clone(),
+            })
+            .await
+            .unwrap();
     }
 
     info!("[pingpong] ...finished.");
@@ -73,8 +79,8 @@ struct Node {
     config: Config,
     network: Network,
     events: flume::r#async::RecvStream<'static, Event>,
-    endpoints: HashSet<EndpointId>,
-    handshakes: HashMap<String, Vec<EndpointId>>,
+    peers: HashSet<PeerId>,
+    handshakes: HashMap<String, Vec<PeerId>>,
 }
 
 impl Node {
@@ -83,7 +89,7 @@ impl Node {
             config,
             mut network,
             mut events,
-            mut endpoints,
+            mut peers,
             mut handshakes,
             ..
         } = self;
@@ -101,14 +107,13 @@ impl Node {
                     if let Some(event) = event {
                         info!("Received {}.", event);
 
-                        process_event(event, &config.message, &mut network, &mut endpoints, &mut handshakes).await;
+                        process_event(event, &config.message, &mut network, &mut peers, &mut handshakes).await;
                     }
                 },
             }
         }
 
         info!("[pingpong] Stopping node...");
-
         info!("[pingpong] Shutdown complete.");
     }
 
@@ -122,84 +127,93 @@ async fn process_event(
     event: Event,
     message: &str,
     network: &mut Network,
-    endpoints: &mut HashSet<EndpointId>,
-    handshakes: &mut HashMap<String, Vec<EndpointId>>,
+    peers: &mut HashSet<PeerId>,
+    handshakes: &mut HashMap<String, Vec<PeerId>>,
 ) {
     match event {
-        Event::EndpointAdded { epid } => {
-            info!("[pingpong] Added endpoint {}.", epid);
+        Event::PeerAdded { peer_address } => {
+            info!("[pingpong] Added peer {}.", peer_address);
 
-            network
-                .send(ConnectEndpoint { epid })
-                .await
-                .expect("error sending Connect command");
+            // network
+            //     .send(ConnectPeer { peer_address })
+            //     .await
+            //     .expect("error sending Connect command");
         }
 
-        Event::EndpointRemoved { epid, .. } => {
-            info!("[pingpong] Removed endpoint {}.", epid);
+        Event::PeerRemoved {
+            peer_address, peer_id, ..
+        } => {
+            info!("[pingpong] Removed peer {} ({:?}).", peer_address, peer_id);
         }
 
-        Event::EndpointConnected { epid, origin, .. } => {
-            info!("[pingpong] Connected endpoint {} ({}).", epid, origin);
+        Event::PeerConnected {
+            peer_address,
+            peer_id,
+            origin,
+            ..
+        } => {
+            info!("[pingpong] Connected peer {} ({}) [{}].", peer_address, peer_id, origin);
 
-            let message = Utf8Message::new(message);
+            // let message = Utf8Message::new(message);
 
-            network
-                .send(SendMessage {
-                    receiver_epid: epid,
-                    message: message.as_bytes(),
-                })
-                .await
-                .expect("error sending message to peer");
+            // network
+            //     .send(SendMessage {
+            //         peer_id: epid,
+            //         message: message.as_bytes(),
+            //     })
+            //     .await
+            //     .expect("error sending message to peer");
         }
 
-        Event::MessageReceived { epid, message, .. } => {
-            if !endpoints.contains(&epid) {
-                // NOTE: first message is assumed to be the handshake message
-                let handshake = Utf8Message::from_bytes(&message);
-                info!("[pingpong] Received handshake '{}' ({})", handshake, epid);
+        Event::PeerDisconnected { peer_id } => {
+            info!("[pingpong] Disconnected peer {}.", peer_id);
 
-                let epids = handshakes.entry(handshake.to_string()).or_insert_with(Vec::new);
-                if !epids.contains(&epid) {
-                    epids.push(epid);
-                }
+            // endpoints.remove(&epid);
 
-                if epids.len() > 1 {
-                    info!(
-                        "[pingpong] '{0}' and '{1}' are duplicate connections. Dropping '{1}'...",
-                        epids[0], epids[1]
-                    );
-
-                    network
-                        .send(MarkDuplicate {
-                            duplicate_epid: epids[1],
-                            original_epid: epids[0],
-                        })
-                        .await
-                        .expect("error sending 'MarkDuplicate'");
-
-                    network
-                        .send(DisconnectEndpoint { epid: epids[1] })
-                        .await
-                        .expect("error sending 'DisconnectEndpoint' command");
-                }
-
-                endpoints.insert(epid);
-
-                spam_endpoint(network.clone(), epid);
-            } else {
-                let message = Utf8Message::from_bytes(&message);
-                info!("[pingpong] Received message '{}' ({})", message, epid);
-            }
+            // // TODO: remove epid from self.handshakes
+            // // handshakes.remove(???);
         }
 
-        Event::EndpointDisconnected { epid, .. } => {
-            info!("[pingpong] Disconnected endpoint {}.", epid);
+        Event::MessageReceived { peer_id, message, .. } => {
+            info!("[pingpong] Received message from {} (len={}).", peer_id, message.len());
 
-            endpoints.remove(&epid);
+            // if !endpoints.contains(&epid) {
+            //     // NOTE: first message is assumed to be the handshake message
+            //     let handshake = Utf8Message::from_bytes(&message);
+            //     info!("[pingpong] Received handshake '{}' ({})", handshake, epid);
 
-            // TODO: remove epid from self.handshakes
-            // handshakes.remove(???);
+            //     let epids = handshakes.entry(handshake.to_string()).or_insert_with(Vec::new);
+            //     if !epids.contains(&epid) {
+            //         epids.push(epid);
+            //     }
+
+            //     if epids.len() > 1 {
+            //         info!(
+            //             "[pingpong] '{0}' and '{1}' are duplicate connections. Dropping '{1}'...",
+            //             epids[0], epids[1]
+            //         );
+
+            //         network
+            //             .send(MarkDuplicate {
+            //                 duplicate_epid: epids[1],
+            //                 original_epid: epids[0],
+            //             })
+            //             .await
+            //             .expect("error sending 'MarkDuplicate'");
+
+            //         network
+            //             .send(DisconnectEndpoint { epid: epids[1] })
+            //             .await
+            //             .expect("error sending 'DisconnectEndpoint' command");
+            //     }
+
+            //     endpoints.insert(epid);
+
+            //     spam_endpoint(network.clone(), epid);
+            // } else {
+            //     let message = Utf8Message::from_bytes(&message);
+            //     info!("[pingpong] Received message '{}' ({})", message, epid);
+            // }
         }
 
         _ => warn!("Unsupported event {}.", event),
@@ -218,8 +232,8 @@ fn ctrl_c_listener() -> oneshot::Receiver<()> {
     receiver
 }
 
-fn spam_endpoint(mut network: Network, epid: EndpointId) {
-    info!("[pingpong] Now sending spam messages to {}", epid);
+fn spam_endpoint(mut network: Network, peer_id: PeerId) {
+    info!("[pingpong] Now sending spam messages to {}", peer_id);
 
     tokio::spawn(async move {
         for i in 0u64.. {
@@ -229,7 +243,7 @@ fn spam_endpoint(mut network: Network, epid: EndpointId) {
 
             network
                 .send(SendMessage {
-                    receiver_epid: epid,
+                    peer_id: peer_id.clone(),
                     message: message.as_bytes(),
                 })
                 .await
@@ -245,8 +259,7 @@ struct NodeBuilder {
 impl NodeBuilder {
     pub async fn finish(self) -> Node {
         let network_config = NetworkConfig::builder()
-            .binding_address(&self.config.binding_address.ip().to_string())
-            .binding_port(self.config.binding_address.port())
+            .bind_address(&self.config.bind_address.to_string())
             .reconnect_interval(RECONNECT_INTERVAL)
             .finish();
 
@@ -260,8 +273,8 @@ impl NodeBuilder {
             config: self.config,
             network,
             events: events.into_stream(),
+            peers: HashSet::new(),
             handshakes: HashMap::new(),
-            endpoints: HashSet::new(),
         }
     }
 }

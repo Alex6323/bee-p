@@ -11,28 +11,37 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use bee_network::Multiaddr;
+
+use std::str::FromStr;
+
+const DEFAULT_BIND_ADDRESS: &str = "/ip4/127.0.0.1/tcp/1337";
+const DEFAULT_MESSAGE: &str = "hello world";
+
 pub struct ConfigBuilder {
-    binding_address: Option<SocketAddr>,
-    peers: Vec<String>,
+    bind_address: Option<Multiaddr>,
+    peers: Vec<Multiaddr>,
     message: Option<String>,
 }
 
 impl ConfigBuilder {
     pub fn new() -> Self {
         Self {
-            binding_address: None,
+            bind_address: None,
             peers: vec![],
             message: None,
         }
     }
 
-    pub fn with_binding_address(mut self, binding_address: SocketAddr) -> Self {
-        self.binding_address.replace(binding_address);
+    pub fn with_bind_address(mut self, bind_address: String) -> Self {
+        self.bind_address
+            .replace(Multiaddr::from_str(&bind_address).expect("create Multiaddr instance"));
         self
     }
 
-    pub fn with_peer_url(mut self, peer_url: String) -> Self {
-        self.peers.push(peer_url);
+    pub fn with_peer_address(mut self, peer_address: String) -> Self {
+        self.peers
+            .push(Multiaddr::from_str(&peer_address).expect("create Multiaddr instance"));
         self
     }
 
@@ -43,19 +52,19 @@ impl ConfigBuilder {
 
     pub fn finish(self) -> Config {
         Config {
-            binding_address: self
-                .binding_address
-                .unwrap_or_else(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1337)),
+            bind_address: self
+                .bind_address
+                .unwrap_or_else(|| Multiaddr::from_str(DEFAULT_BIND_ADDRESS).unwrap()),
             peers: self.peers,
-            message: self.message.unwrap_or_else(|| "hello".into()),
+            message: self.message.unwrap_or_else(|| DEFAULT_MESSAGE.into()),
         }
     }
 }
 
 #[derive(Clone)]
 pub struct Config {
-    pub binding_address: SocketAddr,
-    pub peers: Vec<String>,
+    pub bind_address: Multiaddr,
+    pub peers: Vec<Multiaddr>,
     pub message: String,
 }
 

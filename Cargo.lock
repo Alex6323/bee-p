@@ -2989,8 +2989,14 @@ dependencies = [
  "lazy_static",
  "libc",
  "memchr",
+<<<<<<< db4c8e2be4e9cc2584c82bd1db5a0068dfc94ca4
  "mio",
  "mio-uds",
+=======
+ "mio 0.7.4",
+ "num_cpus",
+ "parking_lot",
+>>>>>>> Update bee-network example
  "pin-project-lite",
  "signal-hook-registry",
  "slab",
