@@ -32,6 +32,7 @@ pub struct StorageBatch {
 #[async_trait::async_trait]
 impl Batch<(MessageId, MessageId), ()> for Storage {
     type BatchBuilder = StorageBatch;
+
     fn begin_batch() -> Self::BatchBuilder {
         Self::BatchBuilder {
             batch: WriteBatch::default(),
@@ -39,6 +40,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
             value_buf: Vec::new(),
         }
     }
+
     fn batch_try_insert(
         &self,
         batch: &mut StorageBatch,
@@ -69,6 +71,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
 
         Ok(())
     }
+
     async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), <Self as Backend>::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
@@ -82,6 +85,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
 #[async_trait::async_trait]
 impl Batch<MessageId, Message> for Storage {
     type BatchBuilder = StorageBatch;
+
     fn begin_batch() -> Self::BatchBuilder {
         Self::BatchBuilder {
             batch: WriteBatch::default(),
@@ -89,6 +93,7 @@ impl Batch<MessageId, Message> for Storage {
             value_buf: Vec::new(),
         }
     }
+
     fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
@@ -129,6 +134,7 @@ impl Batch<MessageId, Message> for Storage {
 #[async_trait::async_trait]
 impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type BatchBuilder = StorageBatch;
+
     fn begin_batch() -> Self::BatchBuilder {
         Self::BatchBuilder {
             batch: WriteBatch::default(),
@@ -136,6 +142,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
             value_buf: Vec::new(),
         }
     }
+
     fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
@@ -166,6 +173,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
 
         Ok(())
     }
+
     async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), <Self as Backend>::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
@@ -179,6 +187,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
 #[async_trait::async_trait]
 impl Batch<OutputId, Output> for Storage {
     type BatchBuilder = StorageBatch;
+
     fn begin_batch() -> Self::BatchBuilder {
         Self::BatchBuilder {
             batch: WriteBatch::default(),
@@ -186,6 +195,7 @@ impl Batch<OutputId, Output> for Storage {
             value_buf: Vec::new(),
         }
     }
+
     fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
@@ -206,7 +216,11 @@ impl Batch<OutputId, Output> for Storage {
         Ok(())
     }
 
-    fn batch_try_delete(&self, batch: &mut Self::BatchBuilder, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
+    fn batch_try_delete(
+        &self,
+        batch: &mut Self::BatchBuilder,
+        output_id: &OutputId,
+    ) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
         let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
@@ -217,6 +231,7 @@ impl Batch<OutputId, Output> for Storage {
 
         Ok(())
     }
+
     async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), <Self as Backend>::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
@@ -229,6 +244,7 @@ impl Batch<OutputId, Output> for Storage {
 #[async_trait::async_trait]
 impl Batch<OutputId, Spent> for Storage {
     type BatchBuilder = StorageBatch;
+
     fn begin_batch() -> Self::BatchBuilder {
         Self::BatchBuilder {
             batch: WriteBatch::default(),
@@ -236,6 +252,7 @@ impl Batch<OutputId, Spent> for Storage {
             value_buf: Vec::new(),
         }
     }
+
     fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
@@ -256,7 +273,11 @@ impl Batch<OutputId, Spent> for Storage {
         Ok(())
     }
 
-    fn batch_try_delete(&self, batch: &mut Self::BatchBuilder, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
+    fn batch_try_delete(
+        &self,
+        batch: &mut Self::BatchBuilder,
+        output_id: &OutputId,
+    ) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
@@ -267,6 +288,7 @@ impl Batch<OutputId, Spent> for Storage {
 
         Ok(())
     }
+
     async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), <Self as Backend>::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
@@ -279,6 +301,7 @@ impl Batch<OutputId, Spent> for Storage {
 #[async_trait::async_trait]
 impl Batch<Unspent, ()> for Storage {
     type BatchBuilder = StorageBatch;
+
     fn begin_batch() -> Self::BatchBuilder {
         Self::BatchBuilder {
             batch: WriteBatch::default(),
@@ -286,6 +309,7 @@ impl Batch<Unspent, ()> for Storage {
             value_buf: Vec::new(),
         }
     }
+
     fn batch_try_insert(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
@@ -309,6 +333,7 @@ impl Batch<Unspent, ()> for Storage {
 
         Ok(())
     }
+
     async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), <Self as Backend>::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);

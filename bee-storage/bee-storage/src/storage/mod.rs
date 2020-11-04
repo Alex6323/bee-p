@@ -20,6 +20,7 @@ pub trait Backend: Sized + Send + Sync + 'static {
     type ConfigBuilder: Default + DeserializeOwned + Into<Self::Config>;
     type Config: Clone + Send;
     type Error: std::error::Error;
+
     /// Start method should impl how to start and initialize the corrsponding database.
     /// It takes config_path which define the database options, and returns Result<Self, Box<dyn Error>>.
     async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>>;
