@@ -90,6 +90,7 @@ impl Storage {
         Ok(DB::open_cf_descriptors(&opts, config.path, column_familes)?)
     }
 }
+
 #[async_trait]
 impl Backend for Storage {
     type ConfigBuilder = RocksDBConfigBuilder;
