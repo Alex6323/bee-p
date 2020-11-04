@@ -68,7 +68,7 @@ where
 
                 if let Some(output) = Fetch::<OutputId, Output>::fetch(storage.deref(), output_id)
                     .await
-                    .map_err(|_| Error::Storage)?
+                    .map_err(|e| Error::Storage(Box::new(e)))?
                 {
                     // TODO check if spent
                     outputs.insert(output_id, output);

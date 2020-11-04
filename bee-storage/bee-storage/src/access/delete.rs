@@ -9,9 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::access::Error;
+
 #[async_trait::async_trait]
 pub trait Delete<K, V> {
-    type Error;
+    type Error: Error;
 
     async fn delete(&self, key: &K) -> Result<(), Self::Error>
     where

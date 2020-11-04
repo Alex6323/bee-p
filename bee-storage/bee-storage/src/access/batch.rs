@@ -9,11 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::storage::Backend;
+use crate::{access::Error, storage::Backend};
 
 #[async_trait::async_trait]
 pub trait BatchBuilder<'a, S: Backend, K, V>: Sized {
-    type Error: std::fmt::Debug;
+    type Error: Error;
 
     fn try_insert(&mut self, key: &K, value: &V) -> Result<(), Self::Error>;
 
@@ -36,7 +36,7 @@ pub trait BeginBatch<'a>: Backend + Sized {
 
 #[async_trait::async_trait]
 pub trait CommitBatch {
-    type Error;
+    type Error: Error;
 
     async fn commit_batch(self, durability: bool) -> Result<(), Self::Error>;
 }

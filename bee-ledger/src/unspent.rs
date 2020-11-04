@@ -23,6 +23,10 @@ impl From<OutputId> for Unspent {
 }
 
 impl Unspent {
+    pub fn new(output_id: OutputId) -> Self {
+        output_id.into()
+    }
+
     pub fn id(&self) -> &OutputId {
         &self.0
     }

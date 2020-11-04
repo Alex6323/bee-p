@@ -21,7 +21,15 @@ use bee_storage::access::Error;
 pub struct OpError {
     is_retryable: bool,
     is_still_valid: bool,
-    error_msg: Option<String>,
+    error_msg: String,
+}
+
+impl std::error::Error for OpError {}
+
+impl std::fmt::Display for OpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.error_msg)
+    }
 }
 
 impl Error for OpError {
@@ -33,7 +41,7 @@ impl Error for OpError {
         self.is_still_valid
     }
 
-    fn error_msg(&self) -> Option<String> {
+    fn error_msg(&self) -> String {
         self.error_msg.clone()
     }
 }
@@ -43,7 +51,7 @@ impl From<::rocksdb::Error> for OpError {
         Self {
             is_retryable: false,
             is_still_valid: false,
-            error_msg: Some(err.into_string()),
+            error_msg: err.into_string(),
         }
     }
 }

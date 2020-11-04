@@ -21,10 +21,10 @@ pub use exist::Exist;
 pub use fetch::Fetch;
 pub use insert::Insert;
 
-pub trait Error: std::fmt::Debug {
+pub trait Error: std::error::Error {
     fn is_retryable(&self) -> bool;
 
     fn is_still_valid(&self) -> bool;
 
-    fn error_msg(&self) -> Option<String>;
+    fn error_msg(&self) -> String;
 }

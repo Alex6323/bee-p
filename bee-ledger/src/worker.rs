@@ -29,7 +29,7 @@ use blake2::Blake2b;
 use futures::stream::StreamExt;
 use log::{error, info};
 
-use std::{any::TypeId, sync::Arc};
+use std::{any::TypeId, ops::Deref, sync::Arc};
 
 const MERKLE_PROOF_LENGTH: usize = 384;
 
@@ -77,7 +77,7 @@ where
         milestone.essence().timestamp(),
     );
 
-    // TODO create batch
+    // let batch = storage.deref().begin_batch();
 
     if let Err(e) = visit_dfs::<N>(tangle, storage, message_id, &mut metadata).await {
         error!(
@@ -116,7 +116,7 @@ where
         return Err(Error::InvalidMessagesCount);
     }
 
-    // TODO commit batch
+    // batch.commit_batch(true);
 
     // TODO update meta only when sure everything is fine
 
