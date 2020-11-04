@@ -9,7 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{error::Error, metadata::WhiteFlagMetadata, output::Output, spent::Spent, storage::Backend};
+use crate::{
+    error::Error,
+    metadata::WhiteFlagMetadata,
+    output::Output,
+    spent::Spent,
+    storage::{self, Backend},
+};
 
 use bee_common_ext::node::{Node, ResHandle};
 use bee_message::{
@@ -66,15 +72,18 @@ where
                     continue;
                 }
 
-                if let Some(output) = Fetch::<OutputId, Output>::fetch(storage.deref(), output_id)
-                    .await
-                    .map_err(|e| Error::Storage(Box::new(e)))?
-                {
-                    // TODO check if spent
-                    outputs.insert(output_id, output);
-                } else {
-                    return Err(Error::OutputNotFound(*output_id));
-                }
+                // if let Some(output) = Fetch::<OutputId, Output>::fetch(storage.deref(), output_id)
+                //     .await
+                //     .map_err(|e| Error::Storage(Box::new(e)))?
+                // {
+                //     if !storage::is_output_unspent(storage.deref(), output_id).await? {
+                //         conflicting = true;
+                //         break;
+                //     }
+                //     outputs.insert(output_id, output);
+                // } else {
+                //     return Err(Error::OutputNotFound(*output_id));
+                // }
             } else {
                 return Err(Error::UnsupportedInputType);
             };
