@@ -11,7 +11,7 @@
 
 use crate::{output::Output, Error};
 
-use bee_common_ext::packable::{Packable, Read, Write};
+use bee_common::packable::{Packable, Read, Write};
 use bee_message::payload::transaction::TransactionId;
 
 pub(crate) struct Spent {

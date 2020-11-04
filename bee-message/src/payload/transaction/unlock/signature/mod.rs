@@ -17,10 +17,11 @@ pub use wots::WotsSignature;
 
 use crate::Error;
 
-use bee_common_ext::packable::{Packable, Read, Write};
+use bee_common::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum SignatureUnlock {
     Wots(WotsSignature),

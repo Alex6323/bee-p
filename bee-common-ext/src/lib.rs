@@ -15,7 +15,6 @@
 pub mod b1t6;
 pub mod event;
 pub mod node;
-pub mod packable;
 pub mod shutdown_tokio;
 pub mod wait_priority_queue;
 pub mod worker;

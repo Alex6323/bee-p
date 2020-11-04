@@ -21,8 +21,9 @@ use crate::{
     },
 };
 
+use bee_common::packable::Packable;
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, packable::Packable, worker::Worker};
+use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::{payload::Payload, MessageId};
 
 use async_trait::async_trait;
@@ -111,8 +112,8 @@ where
         }
 
         Ok(Milestone {
-            message_id,
             index: MilestoneIndex(milestone.essence().index()),
+            message_id,
         })
     } else {
         Err(Error::NoMilestonePayload)

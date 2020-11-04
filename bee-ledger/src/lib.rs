@@ -15,6 +15,7 @@ mod error;
 pub mod event;
 mod merkle_hasher;
 mod metadata;
+pub mod output;
 pub mod spent;
 mod white_flag;
 mod worker;

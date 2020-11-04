@@ -11,7 +11,7 @@
 
 use crate::{payload::Payload, Error, MessageId, Vertex, MESSAGE_ID_LENGTH};
 
-use bee_common_ext::packable::{Packable, Read, Write};
+use bee_common::packable::{Packable, Read, Write};
 
 use blake2::{Blake2b, Digest};
 use serde::{Deserialize, Serialize};

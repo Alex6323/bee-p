@@ -13,7 +13,7 @@ use super::config::*;
 
 pub use bee_storage::storage::Backend;
 
-use bee_message::{payload::transaction::OUTPUT_ID_LENGTH, MESSAGE_ID_LENGTH};
+use bee_message::MESSAGE_ID_LENGTH;
 
 use async_trait::async_trait;
 use blake2::{Blake2b, Digest};
@@ -24,6 +24,7 @@ use std::error::Error;
 pub(crate) const CF_MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
 pub(crate) const CF_MESSAGE_ID_TO_MESSAGE_ID: &str = "message_id_to_message_id";
 pub(crate) const CF_PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
+pub(crate) const CF_OUTPUT_ID_TO_OUTPUT: &str = "output_id_to_output";
 pub(crate) const CF_OUTPUT_ID_TO_SPENT: &str = "output_id_to_spent";
 
 pub struct Storage {
@@ -34,7 +35,7 @@ impl Storage {
     pub fn try_new(config: RocksDBConfig) -> Result<DB, Box<dyn Error>> {
         let cf_message_id_to_message = ColumnFamilyDescriptor::new(CF_MESSAGE_ID_TO_MESSAGE, Options::default());
 
-        let prefix_extractor = SliceTransform::create_fixed_prefix(OUTPUT_ID_LENGTH);
+        let prefix_extractor = SliceTransform::create_fixed_prefix(MESSAGE_ID_LENGTH);
         let mut options = Options::default();
         options.set_prefix_extractor(prefix_extractor);
         let cf_message_id_to_message_id = ColumnFamilyDescriptor::new(CF_MESSAGE_ID_TO_MESSAGE_ID, options);
@@ -44,10 +45,9 @@ impl Storage {
         options.set_prefix_extractor(prefix_extractor);
         let cf_payload_index_to_message_id = ColumnFamilyDescriptor::new(CF_PAYLOAD_INDEX_TO_MESSAGE_ID, options);
 
-        let prefix_extractor = SliceTransform::create_fixed_prefix(MESSAGE_ID_LENGTH);
-        let mut options = Options::default();
-        options.set_prefix_extractor(prefix_extractor);
-        let cf_output_id_to_spent = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_SPENT, options);
+        let cf_output_id_to_output = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_OUTPUT, Options::default());
+
+        let cf_output_id_to_spent = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_SPENT, Options::default());
 
         let mut opts = Options::default();
 
@@ -76,6 +76,7 @@ impl Storage {
             cf_message_id_to_message,
             cf_message_id_to_message_id,
             cf_payload_index_to_message_id,
+            cf_output_id_to_output,
             cf_output_id_to_spent,
         ];
 

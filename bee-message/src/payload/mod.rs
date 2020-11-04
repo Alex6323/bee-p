@@ -19,12 +19,13 @@ use transaction::Transaction;
 
 use crate::Error;
 
-use bee_common_ext::packable::{Packable, Read, Write};
+use bee_common::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
 use alloc::boxed::Box;
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Payload {
     Transaction(Box<Transaction>),

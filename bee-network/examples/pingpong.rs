@@ -223,7 +223,7 @@ fn spam_endpoint(mut network: Network, epid: EndpointId) {
 
     tokio::spawn(async move {
         for i in 0u64.. {
-            tokio::time::sleep(Duration::from_secs(5)).await;
+            tokio::time::delay_for(Duration::from_secs(5)).await;
 
             let message = Utf8Message::new(&i.to_string());
 

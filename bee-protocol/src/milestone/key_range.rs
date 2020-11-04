@@ -13,12 +13,26 @@ use crate::milestone::MilestoneIndex;
 
 use serde::Deserialize;
 
-#[derive(Clone, Deserialize)]
+use std::cmp::Ordering;
+
+#[derive(Clone, Deserialize, Eq, PartialEq)]
 pub struct KeyRange {
     // TODO ED25 pk
     public_key: String,
     start: MilestoneIndex,
     end: MilestoneIndex,
+}
+
+impl Ord for KeyRange {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.start.cmp(&other.start)
+    }
+}
+
+impl PartialOrd for KeyRange {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl KeyRange {
