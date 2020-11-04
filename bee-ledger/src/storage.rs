@@ -19,22 +19,19 @@ use bee_storage::{
 
 pub trait Backend:
     storage::Backend
-    // + for<'a> BeginBatch<'a>
     + Batch<OutputId, Output>
     + Batch<OutputId, Spent>
-    + Insert<OutputId, Output>
-    + Insert<OutputId, Spent>
-    + Insert<Unspent, ()>
-    + Fetch<OutputId, Output>
-    + Fetch<OutputId, Spent>
+    + Delete<OutputId, Output>
+    + Delete<OutputId, Spent>
+    + Delete<Unspent, ()>
     + Exist<OutputId, Output>
     + Exist<OutputId, Spent>
     + Exist<Unspent, ()>
-    + Delete<OutputId, Output>
-    + Delete<OutputId, Spent>
-    + Delete<Unspent,()>
-// where
-//     for<'a> <Self as BeginBatch<'a>>::BatchBuilder: CommitBatch,
+    + Fetch<OutputId, Output>
+    + Fetch<OutputId, Spent>
+    + Insert<OutputId, Output>
+    + Insert<OutputId, Spent>
+    + Insert<Unspent, ()>
 {
 }
 
@@ -42,17 +39,17 @@ impl<T> Backend for T where
     T: storage::Backend
         + Batch<OutputId, Output>
         + Batch<OutputId, Spent>
-        + Insert<OutputId, Output>
-        + Insert<OutputId, Spent>
-        + Insert<Unspent, ()>
-        + Fetch<OutputId, Output>
-        + Fetch<OutputId, Spent>
+        + Delete<OutputId, Output>
+        + Delete<OutputId, Spent>
+        + Delete<Unspent, ()>
         + Exist<OutputId, Output>
         + Exist<OutputId, Spent>
         + Exist<Unspent, ()>
-        + Delete<OutputId, Output>
-        + Delete<OutputId, Spent>
-        + Delete<Unspent, ()> // for<'a> <Self as BeginBatch<'a>>::BatchBuilder: CommitBatch,
+        + Fetch<OutputId, Output>
+        + Fetch<OutputId, Spent>
+        + Insert<OutputId, Output>
+        + Insert<OutputId, Spent>
+        + Insert<Unspent, ()>
 {
 }
 
