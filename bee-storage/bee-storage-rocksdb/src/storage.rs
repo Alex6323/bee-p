@@ -26,6 +26,7 @@ pub(crate) const CF_MESSAGE_ID_TO_MESSAGE_ID: &str = "message_id_to_message_id";
 pub(crate) const CF_PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
 pub(crate) const CF_OUTPUT_ID_TO_OUTPUT: &str = "output_id_to_output";
 pub(crate) const CF_OUTPUT_ID_TO_SPENT: &str = "output_id_to_spent";
+pub(crate) const CF_OUTPUT_ID_UNSPENT: &str = "output_id_unspent";
 
 pub struct Storage {
     pub(crate) inner: DB,
@@ -48,6 +49,8 @@ impl Storage {
         let cf_output_id_to_output = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_OUTPUT, Options::default());
 
         let cf_output_id_to_spent = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_SPENT, Options::default());
+
+        let cf_output_id_unspent = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_UNSPENT, Options::default());
 
         let mut opts = Options::default();
 
@@ -78,6 +81,7 @@ impl Storage {
             cf_payload_index_to_message_id,
             cf_output_id_to_output,
             cf_output_id_to_spent,
+            cf_output_id_unspent,
         ];
 
         Ok(DB::open_cf_descriptors(&opts, config.path, column_familes)?)

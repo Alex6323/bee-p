@@ -12,7 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common::packable::Packable;
-use bee_ledger::{output::Output, spent::Spent};
+use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
@@ -193,6 +193,34 @@ impl<'a> BatchBuilder<'a, Storage, OutputId, Spent> for StorageBatch<'a> {
         output_id.pack(&mut output_id_buf).unwrap();
 
         self.batch.delete_cf(&cf_output_id_to_spent, output_id_buf);
+
+        Ok(())
+    }
+}
+
+impl<'a> BatchBuilder<'a, Storage, Unspent, ()> for StorageBatch<'a> {
+    type Error = OpError;
+
+    fn try_insert(&mut self, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
+        let cf_output_id_unspent = self.storage.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        let mut unspent_buf = Vec::with_capacity(unspent.packed_len());
+        // Packing to bytes can't fail.
+        unspent.pack(&mut unspent_buf).unwrap();
+
+        self.batch.put_cf(&cf_output_id_unspent, unspent_buf, []);
+
+        Ok(())
+    }
+
+    fn try_delete(&mut self, unspent: &Unspent) -> Result<(), Self::Error> {
+        let cf_output_id_unspent = self.storage.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        let mut unspent_buf = Vec::with_capacity(unspent.packed_len());
+        // Packing to bytes can't fail.
+        unspent.pack(&mut unspent_buf).unwrap();
+
+        self.batch.delete_cf(&cf_output_id_unspent, unspent_buf);
 
         Ok(())
     }

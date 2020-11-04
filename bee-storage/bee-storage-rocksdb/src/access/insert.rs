@@ -12,7 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common::packable::Packable;
-use bee_ledger::{output::Output, spent::Spent};
+use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
@@ -29,9 +29,8 @@ impl Insert<MessageId, Message> for Storage {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
         // Packing to bytes can't fail.
-        let message_buf = message.pack_new().unwrap();
-
-        self.inner.put_cf(&cf_message_id_to_message, message_id, message_buf)?;
+        self.inner
+            .put_cf(&cf_message_id_to_message, message_id, message.pack_new().unwrap())?;
 
         Ok(())
     }
@@ -81,11 +80,11 @@ impl Insert<OutputId, Output> for Storage {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
         // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-        // Packing to bytes can't fail.
-        let output_buf = output.pack_new().unwrap();
-
-        self.inner.put_cf(&cf_output_id_to_output, output_id_buf, output_buf)?;
+        self.inner.put_cf(
+            &cf_output_id_to_output,
+            output_id.pack_new().unwrap(),
+            output.pack_new().unwrap(),
+        )?;
 
         Ok(())
     }
@@ -99,11 +98,26 @@ impl Insert<OutputId, Spent> for Storage {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-        // Packing to bytes can't fail.
-        let spent_buf = spent.pack_new().unwrap();
+        self.inner.put_cf(
+            &cf_output_id_to_spent,
+            output_id.pack_new().unwrap(),
+            spent.pack_new().unwrap(),
+        )?;
 
-        self.inner.put_cf(&cf_output_id_to_spent, output_id_buf, spent_buf)?;
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Insert<Unspent, ()> for Storage {
+    type Error = OpError;
+
+    async fn insert(&self, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
+        let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        // Packing to bytes can't fail.
+        self.inner
+            .put_cf(&cf_output_id_unspent, unspent.pack_new().unwrap(), [])?;
 
         Ok(())
     }

@@ -12,7 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common::packable::Packable;
-use bee_ledger::{output::Output, spent::Spent};
+use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
@@ -74,9 +74,8 @@ impl Delete<OutputId, Output> for Storage {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
         // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-
-        self.inner.delete_cf(&cf_output_id_to_output, output_id_buf)?;
+        self.inner
+            .delete_cf(&cf_output_id_to_output, output_id.pack_new().unwrap())?;
 
         Ok(())
     }
@@ -90,9 +89,23 @@ impl Delete<OutputId, Spent> for Storage {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
+        self.inner
+            .delete_cf(&cf_output_id_to_spent, output_id.pack_new().unwrap())?;
 
-        self.inner.delete_cf(&cf_output_id_to_spent, output_id_buf)?;
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Delete<Unspent, ()> for Storage {
+    type Error = OpError;
+
+    async fn delete(&self, unspent: &Unspent) -> Result<(), Self::Error> {
+        let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        // Packing to bytes can't fail.
+        self.inner
+            .delete_cf(&cf_output_id_unspent, unspent.pack_new().unwrap())?;
 
         Ok(())
     }

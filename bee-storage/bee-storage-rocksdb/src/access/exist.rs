@@ -12,7 +12,7 @@
 use crate::{access::OpError, storage::*};
 
 use bee_common::packable::Packable;
-use bee_ledger::{output::Output, spent::Spent};
+use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
@@ -86,9 +86,10 @@ impl Exist<OutputId, Output> for Storage {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
         // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-
-        Ok(self.inner.get_cf(&cf_output_id_to_output, output_id_buf)?.is_some())
+        Ok(self
+            .inner
+            .get_cf(&cf_output_id_to_output, output_id.pack_new().unwrap())?
+            .is_some())
     }
 }
 
@@ -103,8 +104,27 @@ impl Exist<OutputId, Spent> for Storage {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
+        Ok(self
+            .inner
+            .get_cf(&cf_output_id_to_spent, output_id.pack_new().unwrap())?
+            .is_some())
+    }
+}
 
-        Ok(self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)?.is_some())
+#[async_trait::async_trait]
+impl Exist<Unspent, ()> for Storage {
+    type Error = OpError;
+
+    async fn exist(&self, unspent: &Unspent) -> Result<bool, Self::Error>
+    where
+        Self: Sized,
+    {
+        let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        // Packing to bytes can't fail.
+        Ok(self
+            .inner
+            .get_cf(&cf_output_id_unspent, unspent.pack_new().unwrap())?
+            .is_some())
     }
 }

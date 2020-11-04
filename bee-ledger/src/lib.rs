@@ -18,6 +18,7 @@ mod metadata;
 pub mod output;
 pub mod spent;
 pub mod storage;
+pub mod unspent;
 mod white_flag;
 mod worker;
 

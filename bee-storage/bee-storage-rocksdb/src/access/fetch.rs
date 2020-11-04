@@ -100,9 +100,10 @@ impl Fetch<OutputId, Output> for Storage {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
         // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-
-        if let Some(res) = self.inner.get_cf(&cf_output_id_to_output, output_id_buf)? {
+        if let Some(res) = self
+            .inner
+            .get_cf(&cf_output_id_to_output, output_id.pack_new().unwrap())?
+        {
             Ok(Some(Output::unpack(&mut res.as_slice()).unwrap()))
         } else {
             Ok(None)
@@ -121,9 +122,10 @@ impl Fetch<OutputId, Spent> for Storage {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-
-        if let Some(res) = self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)? {
+        if let Some(res) = self
+            .inner
+            .get_cf(&cf_output_id_to_spent, output_id.pack_new().unwrap())?
+        {
             Ok(Some(Spent::unpack(&mut res.as_slice()).unwrap()))
         } else {
             Ok(None)
