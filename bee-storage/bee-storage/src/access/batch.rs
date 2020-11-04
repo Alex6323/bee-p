@@ -13,9 +13,11 @@ use crate::storage::Backend;
 
 #[async_trait::async_trait]
 pub trait Batch<K, V>: Sized + Backend {
-    type BatchBuilder: Send + Sized;
+    type BatchBuilder: Default + Send + Sized;
 
-    fn begin_batch() -> Self::BatchBuilder;
+    fn begin_batch() -> Self::BatchBuilder {
+        Self::BatchBuilder::default()
+    }
 
     fn batch_try_insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) -> Result<(), Self::Error>;
 

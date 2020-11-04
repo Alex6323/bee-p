@@ -22,6 +22,7 @@ use bee_storage::access::Batch;
 use blake2::Blake2b;
 use rocksdb::{WriteBatch, WriteOptions};
 
+#[derive(Default)]
 pub struct StorageBatch {
     batch: WriteBatch,
     // TODO use them to avoid allocating during a same batch
@@ -32,14 +33,6 @@ pub struct StorageBatch {
 #[async_trait::async_trait]
 impl Batch<(MessageId, MessageId), ()> for Storage {
     type BatchBuilder = StorageBatch;
-
-    fn begin_batch() -> Self::BatchBuilder {
-        Self::BatchBuilder {
-            batch: WriteBatch::default(),
-            key_buf: Vec::new(),
-            value_buf: Vec::new(),
-        }
-    }
 
     fn batch_try_insert(
         &self,
@@ -86,14 +79,6 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
 impl Batch<MessageId, Message> for Storage {
     type BatchBuilder = StorageBatch;
 
-    fn begin_batch() -> Self::BatchBuilder {
-        Self::BatchBuilder {
-            batch: WriteBatch::default(),
-            key_buf: Vec::new(),
-            value_buf: Vec::new(),
-        }
-    }
-
     fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
@@ -134,14 +119,6 @@ impl Batch<MessageId, Message> for Storage {
 #[async_trait::async_trait]
 impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type BatchBuilder = StorageBatch;
-
-    fn begin_batch() -> Self::BatchBuilder {
-        Self::BatchBuilder {
-            batch: WriteBatch::default(),
-            key_buf: Vec::new(),
-            value_buf: Vec::new(),
-        }
-    }
 
     fn batch_try_insert(
         &self,
@@ -187,14 +164,6 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
 #[async_trait::async_trait]
 impl Batch<OutputId, Output> for Storage {
     type BatchBuilder = StorageBatch;
-
-    fn begin_batch() -> Self::BatchBuilder {
-        Self::BatchBuilder {
-            batch: WriteBatch::default(),
-            key_buf: Vec::new(),
-            value_buf: Vec::new(),
-        }
-    }
 
     fn batch_try_insert(
         &self,
@@ -245,14 +214,6 @@ impl Batch<OutputId, Output> for Storage {
 impl Batch<OutputId, Spent> for Storage {
     type BatchBuilder = StorageBatch;
 
-    fn begin_batch() -> Self::BatchBuilder {
-        Self::BatchBuilder {
-            batch: WriteBatch::default(),
-            key_buf: Vec::new(),
-            value_buf: Vec::new(),
-        }
-    }
-
     fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
@@ -301,14 +262,6 @@ impl Batch<OutputId, Spent> for Storage {
 #[async_trait::async_trait]
 impl Batch<Unspent, ()> for Storage {
     type BatchBuilder = StorageBatch;
-
-    fn begin_batch() -> Self::BatchBuilder {
-        Self::BatchBuilder {
-            batch: WriteBatch::default(),
-            key_buf: Vec::new(),
-            value_buf: Vec::new(),
-        }
-    }
 
     fn batch_try_insert(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
