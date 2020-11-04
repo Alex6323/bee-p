@@ -16,16 +16,16 @@ pub trait Batch<K, V>: Sized + Backend {
 
     fn begin_batch() -> Self::BatchBuilder;
 
-    fn try_insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) -> Result<(), Self::Error>;
+    fn batch_try_insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) -> Result<(), Self::Error>;
 
-    fn try_delete(&self, batch: &mut Self::BatchBuilder, key: &K) -> Result<(), Self::Error>;
+    fn batch_try_delete(&self, batch: &mut Self::BatchBuilder, key: &K) -> Result<(), Self::Error>;
 
-    fn insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) {
-        self.try_insert(batch, key, value).unwrap()
+    fn batch_insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) {
+        self.batch_try_insert(batch, key, value).unwrap()
     }
 
-    fn delete(&self, batch: &mut Self::BatchBuilder, key: &K) {
-        self.try_delete(batch, key).unwrap()
+    fn batch_delete(&self, batch: &mut Self::BatchBuilder, key: &K) {
+        self.batch_try_delete(batch, key).unwrap()
     }
 
     async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), Self::Error>;

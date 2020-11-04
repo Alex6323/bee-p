@@ -39,7 +39,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
             value_buf: Vec::new(),
         }
     }
-    fn try_insert(
+    fn batch_try_insert(
         &self,
         batch: &mut StorageBatch,
         (parent, child): &(MessageId, MessageId),
@@ -55,7 +55,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
         Ok(())
     }
 
-    fn try_delete(
+    fn batch_try_delete(
         &self,
         batch: &mut StorageBatch,
         (parent, child): &(MessageId, MessageId),
@@ -89,7 +89,7 @@ impl Batch<MessageId, Message> for Storage {
             value_buf: Vec::new(),
         }
     }
-    fn try_insert(
+    fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
         message_id: &MessageId,
@@ -105,7 +105,7 @@ impl Batch<MessageId, Message> for Storage {
         Ok(())
     }
 
-    fn try_delete(
+    fn batch_try_delete(
         &self,
         batch: &mut Self::BatchBuilder,
         message_id: &MessageId,
@@ -136,7 +136,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
             value_buf: Vec::new(),
         }
     }
-    fn try_insert(
+    fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
         (index, message_id): &(HashedIndex<Blake2b>, MessageId),
@@ -152,7 +152,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         Ok(())
     }
 
-    fn try_delete(
+    fn batch_try_delete(
         &self,
         batch: &mut Self::BatchBuilder,
         (index, message_id): &(HashedIndex<Blake2b>, MessageId),
@@ -186,7 +186,7 @@ impl Batch<OutputId, Output> for Storage {
             value_buf: Vec::new(),
         }
     }
-    fn try_insert(
+    fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
         output_id: &OutputId,
@@ -206,7 +206,7 @@ impl Batch<OutputId, Output> for Storage {
         Ok(())
     }
 
-    fn try_delete(&self, batch: &mut Self::BatchBuilder, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
+    fn batch_try_delete(&self, batch: &mut Self::BatchBuilder, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
         let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
@@ -236,7 +236,7 @@ impl Batch<OutputId, Spent> for Storage {
             value_buf: Vec::new(),
         }
     }
-    fn try_insert(
+    fn batch_try_insert(
         &self,
         batch: &mut Self::BatchBuilder,
         output_id: &OutputId,
@@ -256,7 +256,7 @@ impl Batch<OutputId, Spent> for Storage {
         Ok(())
     }
 
-    fn try_delete(&self, batch: &mut Self::BatchBuilder, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
+    fn batch_try_delete(&self, batch: &mut Self::BatchBuilder, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
         let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
@@ -286,7 +286,7 @@ impl Batch<Unspent, ()> for Storage {
             value_buf: Vec::new(),
         }
     }
-    fn try_insert(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
+    fn batch_try_insert(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
         let mut unspent_buf = Vec::with_capacity(unspent.packed_len());
@@ -298,7 +298,7 @@ impl Batch<Unspent, ()> for Storage {
         Ok(())
     }
 
-    fn try_delete(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent) -> Result<(), Self::Error> {
+    fn batch_try_delete(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent) -> Result<(), Self::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
         let mut unspent_buf = Vec::with_capacity(unspent.packed_len());
