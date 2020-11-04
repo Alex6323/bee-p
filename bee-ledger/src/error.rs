@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_message::{Error as MessageError, MessageId};
+use bee_message::{payload::transaction::OutputId, Error as MessageError, MessageId};
 
 #[derive(Debug)]
 pub enum Error {
@@ -22,6 +22,8 @@ pub enum Error {
     NonContiguousMilestone,
     MerkleProofMismatch,
     InvalidMessagesCount,
+    OutputNotFound(OutputId),
+    Storage,
 }
 
 impl From<std::io::Error> for Error {

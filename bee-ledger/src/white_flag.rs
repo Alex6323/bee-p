@@ -9,22 +9,28 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{error::Error, metadata::WhiteFlagMetadata, spent::Spent, storage::Backend};
+use crate::{error::Error, metadata::WhiteFlagMetadata, output::Output, spent::Spent, storage::Backend};
 
 use bee_common_ext::node::{Node, ResHandle};
 use bee_message::{
-    payload::{transaction::Input, Payload},
+    payload::{
+        transaction::{Input, OutputId},
+        Payload,
+    },
     Message, MessageId,
 };
 use bee_protocol::tangle::MsTangle;
-use bee_storage::access::Insert;
+use bee_storage::access::Fetch;
 
-use std::{collections::HashSet, ops::Deref};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+};
 
 const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 #[inline]
-fn on_message<N: Node>(
+async fn on_message<N: Node>(
     tangle: &MsTangle<N::Backend>,
     storage: &ResHandle<N::Backend>,
     message_id: &MessageId,
@@ -39,14 +45,14 @@ where
     metadata.num_messages_referenced += 1;
 
     if let Some(Payload::Transaction(transaction)) = message.payload() {
-        // let transaction_id = transaction.id();
+        let transaction_id = transaction.id();
         let essence = transaction.essence();
-        let inputs = essence.inputs();
-        let outputs = essence.outputs();
+
+        let mut outputs = HashMap::with_capacity(essence.inputs().len());
 
         // TODO check transaction syntax here ?
 
-        for input in inputs {
+        for input in essence.inputs() {
             if let Input::UTXO(utxo_input) = input {
                 let output_id = utxo_input.output_id();
 
@@ -54,27 +60,50 @@ where
                     conflicting = true;
                     break;
                 }
+
+                if let Some(output) = metadata.created_outputs.get(output_id).cloned() {
+                    outputs.insert(output_id, output);
+                    continue;
+                }
+
+                if let Some(output) = Fetch::<OutputId, Output>::fetch(storage.deref(), output_id)
+                    .await
+                    .map_err(|_| Error::Storage)?
+                {
+                    // TODO check if spent
+                    outputs.insert(output_id, output);
+                } else {
+                    return Err(Error::OutputNotFound(*output_id));
+                }
             } else {
                 return Err(Error::UnsupportedInputType);
             };
         }
 
-        // If not conflicting
+        // TODO semantic validation
 
-        for output in outputs {}
+        if conflicting {
+            metadata.num_messages_excluded_conflicting += 1;
+        } else {
+            for (index, output) in essence.outputs().iter().enumerate() {
+                // Can't fail because we know the index is valid.
+                let output_id = OutputId::new(transaction_id, index as u16).unwrap();
+                metadata
+                    .created_outputs
+                    .insert(output_id, Output::new(*message_id, output.clone()));
+            }
+            for (output_id, _) in outputs {
+                metadata.created_outputs.remove(output_id);
+                metadata
+                    .spent_outputs
+                    .insert(*output_id, Spent::new(transaction_id, metadata.index));
+            }
+            metadata.messages_included.push(*message_id);
+            // metadata.spent_outputs.extend(spent_outputs.into_iter());
+        }
     } else {
         metadata.num_messages_excluded_no_transaction += 1;
     }
-
-    if conflicting {
-        metadata.num_messages_excluded_conflicting += 1;
-    } else {
-        metadata.messages_included.push(*message_id);
-    }
-
-    // metadata
-    //     .spent_outputs
-    //     .insert(*output_id, Spent::new(transaction_id, metadata.index));
 
     tangle.update_metadata(message_id, |message_metadata| {
         message_metadata.flags_mut().set_conflicting(conflicting);
@@ -126,7 +155,7 @@ where
                 let parent2 = message.parent2();
 
                 if visited.contains(parent1) && visited.contains(parent2) {
-                    on_message::<N>(tangle, storage, message_id, &message, metadata)?;
+                    on_message::<N>(tangle, storage, message_id, &message, metadata).await?;
                     visited.insert(*message_id);
                     messages_ids.pop();
                 } else if !visited.contains(parent1) {
