@@ -12,7 +12,8 @@
 #![warn(missing_docs)]
 
 use crate::{
-    banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin, version_checker::VersionCheckerWorker,
+    banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin, storage::Backend,
+    version_checker::VersionCheckerWorker,
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
@@ -24,7 +25,6 @@ use bee_common_ext::{
 use bee_network::{self, Command::ConnectEndpoint, EndpointId, Event, Network, Origin};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::Protocol;
-use bee_storage::storage::Backend;
 
 use futures::{
     channel::oneshot,

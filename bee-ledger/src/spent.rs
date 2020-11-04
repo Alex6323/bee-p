@@ -20,6 +20,12 @@ pub struct Spent {
     index: MilestoneIndex,
 }
 
+impl Spent {
+    pub fn new(target: TransactionId, index: MilestoneIndex) -> Self {
+        Self { target, index }
+    }
+}
+
 impl Packable for Spent {
     type Error = Error;
 

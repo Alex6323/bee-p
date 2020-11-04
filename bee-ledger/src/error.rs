@@ -9,12 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_message::Error as MessageError;
+use bee_message::{Error as MessageError, MessageId};
 
 #[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
     Message(MessageError),
+    MissingMessage(MessageId),
+    UnsupportedInputType,
+    MilestoneMessageNotFound,
+    NoMilestonePayload,
+    NonContiguousMilestone,
+    MerkleProofMismatch,
+    InvalidMessagesCount,
 }
 
 impl From<std::io::Error> for Error {

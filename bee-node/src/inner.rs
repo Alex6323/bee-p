@@ -9,12 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::storage::Backend;
+
 use bee_common::shutdown;
 use bee_common_ext::{
     node::{Node, NodeBuilder, ResHandle},
     worker::Worker,
 };
-use bee_storage::storage::Backend;
 
 use anymap::{any::Any as AnyMapAny, Map};
 use async_trait::async_trait;
