@@ -29,7 +29,7 @@ pub trait BatchBuilder<'a, S: Backend, K, V>: Sized {
 }
 
 pub trait BeginBatch<'a>: Backend + Sized {
-    type BatchBuilder;
+    type BatchBuilder: CommitBatch;
 
     fn begin_batch(&'a self) -> Self::BatchBuilder;
 }
