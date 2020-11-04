@@ -8,35 +8,25 @@
 // Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
-
-use crate::{access::Error, storage::Backend};
-
-#[async_trait::async_trait]
-pub trait BatchBuilder<'a, S: Backend, K, V>: Sized {
-    type Error: Error;
-
-    fn try_insert(&mut self, key: &K, value: &V) -> Result<(), Self::Error>;
-
-    fn try_delete(&mut self, key: &K) -> Result<(), Self::Error>;
-
-    fn insert(&mut self, key: &K, value: &V) {
-        self.try_insert(key, value).unwrap()
-    }
-
-    fn delete(&mut self, key: &K) {
-        self.try_delete(key).unwrap()
-    }
-}
-
-pub trait BeginBatch<'a>: Backend + Sized {
-    type BatchBuilder: CommitBatch;
-
-    fn begin_batch(&'a self) -> Self::BatchBuilder;
-}
+use crate::storage::Backend;
 
 #[async_trait::async_trait]
-pub trait CommitBatch {
-    type Error: Error;
+pub trait Batch<K, V>: Sized + Backend {
+    type BatchBuilder: Send + Sized;
+
+    fn begin_batch() -> Self::BatchBuilder;
+
+    fn try_insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) -> Result<(), Self::Error>;
+
+    fn try_delete(&self, batch: &mut Self::BatchBuilder, key: &K) -> Result<(), Self::Error>;
+
+    fn insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) {
+        self.try_insert(batch, key, value).unwrap()
+    }
+
+    fn delete(&self, batch: &mut Self::BatchBuilder, key: &K) {
+        self.try_delete(batch, key).unwrap()
+    }
 
     async fn commit_batch(self, durability: bool) -> Result<(), Self::Error>;
 }
