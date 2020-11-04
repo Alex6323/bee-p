@@ -14,7 +14,6 @@ use crate::access::Error;
 
 #[async_trait::async_trait]
 pub trait Delete<K, V>: Backend {
-
     async fn delete(&self, key: &K) -> Result<(), Self::Error>
     where
         Self: Sized;

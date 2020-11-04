@@ -14,7 +14,6 @@ use crate::access::Error;
 
 #[async_trait::async_trait]
 pub trait Fetch<K, V>: Backend {
-
     async fn fetch(&self, key: &K) -> Result<Option<V>, Self::Error>
     where
         Self: Sized;

@@ -28,5 +28,5 @@ pub trait Batch<K, V>: Sized + Backend {
         self.try_delete(batch, key).unwrap()
     }
 
-    async fn commit_batch(self, durability: bool) -> Result<(), Self::Error>;
+    async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), Self::Error>;
 }

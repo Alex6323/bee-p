@@ -14,7 +14,6 @@ use crate::access::Error;
 
 #[async_trait::async_trait]
 pub trait Insert<K, V>: Backend {
-
     async fn insert(&self, key: &K, value: &V) -> Result<(), Self::Error>
     where
         Self: Sized;

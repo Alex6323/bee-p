@@ -9,6 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use super::access::OpError;
 use super::config::*;
 
 pub use bee_storage::storage::Backend;
@@ -87,11 +88,11 @@ impl Storage {
         Ok(DB::open_cf_descriptors(&opts, config.path, column_familes)?)
     }
 }
-
 #[async_trait]
 impl Backend for Storage {
     type ConfigBuilder = RocksDBConfigBuilder;
     type Config = RocksDBConfig;
+    type Error = OpError;
 
     /// It starts RocksDB instance and then initializes the required column familes.
     async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>> {
