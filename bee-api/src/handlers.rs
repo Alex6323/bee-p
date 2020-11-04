@@ -130,6 +130,7 @@ pub async fn get_message<B: Backend>(
                                         transaction_id: input.output_id().transaction_id().to_string(),
                                         transaction_output_index: input.output_id().index(),
                                     },
+                                    _ => unimplemented!(),
                                 })
                                 .collect(),
                             outputs: t
@@ -144,10 +145,11 @@ pub async fn get_message<B: Backend>(
                                                 kind: 1,
                                                 address: ed.to_string(),
                                             },
-                                            Address::Wots(_) => unimplemented!(),
+                                            _ => unimplemented!(),
                                         },
                                         amount: 0,
                                     },
+                                    _ => unimplemented!(),
                                 })
                                 .collect(),
                             payload: match t.essence().payload() {
@@ -175,12 +177,13 @@ pub async fn get_message<B: Backend>(
                                             },
                                         })
                                     }
-                                    SignatureUnlock::Wots(_) => unimplemented!(),
+                                    _ => unimplemented!(),
                                 },
                                 UnlockBlock::Reference(r) => UnlockBlockDto::Reference(ReferenceUnlockBlockDto {
                                     kind: 1,
                                     reference: r.index(),
                                 }),
+                                _ => unimplemented!(),
                             })
                             .collect(),
                     })),
@@ -196,20 +199,19 @@ pub async fn get_message<B: Backend>(
                         index: i.index().to_owned(),
                         data: hex::encode(i.data()),
                     })),
-                    None => None
+                    Some(_) => unimplemented!(),
+                    None => None,
                 }
             };
             let nonce = message.nonce();
 
-            Ok(warp::reply::json(&DataResponse::new(GetMessageResponse(
-                MessageDto {
-                    version,
-                    parent_1_message_id,
-                    parent_2_message_id,
-                    payload,
-                    nonce,
-                },
-            ))))
+            Ok(warp::reply::json(&DataResponse::new(GetMessageResponse(MessageDto {
+                version,
+                parent_1_message_id,
+                parent_2_message_id,
+                payload,
+                nonce,
+            }))))
         }
         None => Err(reject::not_found()),
     }
