@@ -13,13 +13,15 @@ use crate::{error::Error, output::Output, spent::Spent, unspent::Unspent};
 
 use bee_message::payload::transaction::OutputId;
 use bee_storage::{
-    access::{BeginBatch, CommitBatch, Delete, Exist, Fetch, Insert},
+    access::{Batch, Delete, Exist, Fetch, Insert},
     storage,
 };
 
 pub trait Backend:
     storage::Backend
     // + for<'a> BeginBatch<'a>
+    + Batch<OutputId, Output>
+    + Batch<OutputId, Spent>
     + Insert<OutputId, Output>
     + Insert<OutputId, Spent>
     + Insert<Unspent, ()>
@@ -38,6 +40,8 @@ pub trait Backend:
 
 impl<T> Backend for T where
     T: storage::Backend
+        + Batch<OutputId, Output>
+        + Batch<OutputId, Spent>
         + Insert<OutputId, Output>
         + Insert<OutputId, Spent>
         + Insert<Unspent, ()>
