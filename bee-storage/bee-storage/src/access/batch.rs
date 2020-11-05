@@ -12,16 +12,18 @@
 use crate::storage::Backend;
 
 #[async_trait::async_trait]
-pub trait Batch<K, V>: Backend + Sized {
-    type BatchBuilder: Default + Send + Sized;
+pub trait BatchBuilder: Backend + Sized {
+    type Batch: Default + Send + Sized;
 
-    fn begin_batch() -> Self::BatchBuilder {
-        Self::BatchBuilder::default()
+    fn batch_begin() -> Self::Batch {
+        Self::Batch::default()
     }
 
-    fn batch_insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) -> Result<(), Self::Error>;
+    async fn batch_commit(&self, batch: Self::Batch, durability: bool) -> Result<(), Self::Error>;
+}
 
-    fn batch_delete(&self, batch: &mut Self::BatchBuilder, key: &K) -> Result<(), Self::Error>;
+pub trait Batch<K, V>: Backend + BatchBuilder + Sized {
+    fn batch_insert(&self, batch: &mut Self::Batch, key: &K, value: &V) -> Result<(), Self::Error>;
 
-    async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), Self::Error>;
+    fn batch_delete(&self, batch: &mut Self::Batch, key: &K) -> Result<(), Self::Error>;
 }

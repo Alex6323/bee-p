@@ -15,7 +15,7 @@ pub mod exist;
 pub mod fetch;
 pub mod insert;
 
-pub use batch::Batch;
+pub use batch::{Batch, BatchBuilder};
 pub use delete::Delete;
 pub use exist::Exist;
 pub use fetch::Fetch;

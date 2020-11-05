@@ -22,7 +22,7 @@ use bee_common_ext::{
 };
 use bee_message::{payload::Payload, MessageId};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, MilestoneIndex, StorageWorker, TangleWorker};
-use bee_storage::access::Batch;
+use bee_storage::access::{Batch, BatchBuilder};
 
 use async_trait::async_trait;
 use blake2::Blake2b;
@@ -77,7 +77,7 @@ where
         milestone.essence().timestamp(),
     );
 
-    // let batch = storage.deref().begin_batch();
+    let mut batch = N::Backend::batch_begin();
 
     if let Err(e) = visit_dfs::<N>(tangle, storage, message_id, &mut metadata).await {
         error!(
@@ -116,7 +116,7 @@ where
         return Err(Error::InvalidMessagesCount);
     }
 
-    // batch.commit_batch(true);
+    storage.batch_commit(batch, true);
 
     // TODO update meta only when sure everything is fine
 
