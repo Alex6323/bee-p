@@ -14,12 +14,13 @@ use crate::storage::*;
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent};
 use bee_message::{
-    payload::{indexation::HashedIndex, transaction::OutputId},
+    payload::{
+        indexation::{HashedIndex, HASHED_INDEX_SIZE},
+        transaction::OutputId,
+    },
     Message, MessageId, MESSAGE_ID_LENGTH,
 };
 use bee_storage::access::Fetch;
-
-use blake2::{Blake2b, Digest};
 
 use std::convert::TryInto;
 
@@ -52,7 +53,7 @@ impl Fetch<MessageId, Vec<MessageId>> for Storage {
             self.inner
                 .prefix_iterator_cf(&cf_message_id_to_message_id, parent)
                 .map(|(key, _)| {
-                    let (_, child) = key.split_at(Blake2b::output_size());
+                    let (_, child) = key.split_at(HASHED_INDEX_SIZE);
                     let child: [u8; MESSAGE_ID_LENGTH] = child.try_into().unwrap();
                     MessageId::from(child)
                 })
@@ -62,8 +63,8 @@ impl Fetch<MessageId, Vec<MessageId>> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
-    async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<MessageId>>, <Self as Backend>::Error>
+impl Fetch<HashedIndex, Vec<MessageId>> for Storage {
+    async fn fetch(&self, index: &HashedIndex) -> Result<Option<Vec<MessageId>>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -74,7 +75,7 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
             self.inner
                 .prefix_iterator_cf(&cf_payload_index_to_message_id, index)
                 .map(|(key, _)| {
-                    let (_, message_id) = key.split_at(Blake2b::output_size());
+                    let (_, message_id) = key.split_at(HASHED_INDEX_SIZE);
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
                     MessageId::from(message_id)
                 })

@@ -16,10 +16,9 @@ use super::{
 
 pub use bee_storage::storage::Backend;
 
-use bee_message::MESSAGE_ID_LENGTH;
+use bee_message::{payload::indexation::HASHED_INDEX_SIZE, MESSAGE_ID_LENGTH};
 
 use async_trait::async_trait;
-use blake2::{Blake2b, Digest};
 use rocksdb::{ColumnFamilyDescriptor, DBCompactionStyle, DBCompressionType, Options, SliceTransform, DB};
 
 use std::error::Error;
@@ -44,7 +43,7 @@ impl Storage {
         options.set_prefix_extractor(prefix_extractor);
         let cf_message_id_to_message_id = ColumnFamilyDescriptor::new(CF_MESSAGE_ID_TO_MESSAGE_ID, options);
 
-        let prefix_extractor = SliceTransform::create_fixed_prefix(<Blake2b as Digest>::output_size());
+        let prefix_extractor = SliceTransform::create_fixed_prefix(HASHED_INDEX_SIZE);
         let mut options = Options::default();
         options.set_prefix_extractor(prefix_extractor);
         let cf_payload_index_to_message_id = ColumnFamilyDescriptor::new(CF_PAYLOAD_INDEX_TO_MESSAGE_ID, options);

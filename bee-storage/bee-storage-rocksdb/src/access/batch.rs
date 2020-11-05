@@ -19,7 +19,6 @@ use bee_message::{
 };
 use bee_storage::access::Batch;
 
-use blake2::Blake2b;
 use rocksdb::{WriteBatch, WriteOptions};
 
 #[derive(Default)]
@@ -119,13 +118,13 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
+impl Batch<(HashedIndex, MessageId), ()> for Storage {
     type BatchBuilder = StorageBatch;
 
     fn batch_insert(
         &self,
         batch: &mut Self::BatchBuilder,
-        (index, message_id): &(HashedIndex<Blake2b>, MessageId),
+        (index, message_id): &(HashedIndex, MessageId),
         (): &(),
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
@@ -141,7 +140,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     fn batch_delete(
         &self,
         batch: &mut Self::BatchBuilder,
-        (index, message_id): &(HashedIndex<Blake2b>, MessageId),
+        (index, message_id): &(HashedIndex, MessageId),
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 

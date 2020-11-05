@@ -19,8 +19,6 @@ use bee_message::{
 };
 use bee_storage::access::Insert;
 
-use blake2::Blake2b;
-
 #[async_trait::async_trait]
 impl Insert<MessageId, Message> for Storage {
     async fn insert(&self, message_id: &MessageId, message: &Message) -> Result<(), <Self as Backend>::Error> {
@@ -49,10 +47,10 @@ impl Insert<(MessageId, MessageId), ()> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Insert<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
+impl Insert<(HashedIndex, MessageId), ()> for Storage {
     async fn insert(
         &self,
-        (index, message_id): &(HashedIndex<Blake2b>, MessageId),
+        (index, message_id): &(HashedIndex, MessageId),
         (): &(),
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();

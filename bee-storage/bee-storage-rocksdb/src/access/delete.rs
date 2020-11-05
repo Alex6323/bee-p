@@ -19,8 +19,6 @@ use bee_message::{
 };
 use bee_storage::access::Delete;
 
-use blake2::Blake2b;
-
 #[async_trait::async_trait]
 impl Delete<MessageId, Message> for Storage {
     async fn delete(&self, message_id: &MessageId) -> Result<(), <Self as Backend>::Error> {
@@ -47,11 +45,8 @@ impl Delete<(MessageId, MessageId), ()> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
-    async fn delete(
-        &self,
-        (index, message_id): &(HashedIndex<Blake2b>, MessageId),
-    ) -> Result<(), <Self as Backend>::Error> {
+impl Delete<(HashedIndex, MessageId), ()> for Storage {
+    async fn delete(&self, (index, message_id): &(HashedIndex, MessageId)) -> Result<(), <Self as Backend>::Error> {
         let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut key = index.as_ref().to_vec();

@@ -19,8 +19,6 @@ use bee_message::{
 };
 use bee_storage::access::Exist;
 
-use blake2::Blake2b;
-
 #[async_trait::async_trait]
 impl Exist<MessageId, Message> for Storage {
     async fn exist(&self, message_id: &MessageId) -> Result<bool, <Self as Backend>::Error>
@@ -52,8 +50,8 @@ impl Exist<MessageId, Vec<MessageId>> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
-    async fn exist(&self, index: &HashedIndex<Blake2b>) -> Result<bool, <Self as Backend>::Error>
+impl Exist<HashedIndex, Vec<MessageId>> for Storage {
+    async fn exist(&self, index: &HashedIndex) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {

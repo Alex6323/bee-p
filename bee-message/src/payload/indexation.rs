@@ -13,10 +13,15 @@ use crate::Error;
 
 use bee_common::packable::{Packable, Read, Write};
 
-use digest::{generic_array::GenericArray, Digest};
+use digest::Digest;
 use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, string::String};
+use blake2::Blake2s;
+
+use core::convert::TryInto;
+
+pub const HASHED_INDEX_SIZE: usize = 32;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Indexation {
@@ -25,8 +30,11 @@ pub struct Indexation {
 }
 
 impl Indexation {
-    pub fn new(index: String, data: Box<[u8]>) -> Self {
-        Self { index, data }
+    pub fn new(index: String, data: &[u8]) -> Self {
+        Self {
+            index,
+            data: data.into(),
+        }
     }
 
     pub fn index(&self) -> &String {
@@ -37,9 +45,10 @@ impl Indexation {
         &self.data
     }
 
-    pub fn hash<D: Digest>(&self, digest: &mut D) -> HashedIndex<D> {
-        digest.update(self.index.as_bytes());
-        HashedIndex(digest.finalize_reset())
+    pub fn hash(&self) -> HashedIndex {
+        let mut hasher = Blake2s::new();
+        hasher.update(self.index.as_bytes());
+        HashedIndex(hasher.finalize_reset().as_slice().try_into().unwrap())
     }
 }
 
@@ -79,9 +88,10 @@ impl Packable for Indexation {
     }
 }
 
-pub struct HashedIndex<D: Digest>(GenericArray<u8, <D as Digest>::OutputSize>);
+#[derive(Debug, Eq, PartialEq)]
+pub struct HashedIndex([u8; HASHED_INDEX_SIZE]);
 
-impl<D: Digest> AsRef<[u8]> for HashedIndex<D> {
+impl AsRef<[u8]> for HashedIndex {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
     }

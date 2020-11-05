@@ -11,7 +11,7 @@
 
 pub use crate::{
     payload::{
-        indexation::{HashedIndex, Indexation},
+        indexation::{HashedIndex, Indexation, HASHED_INDEX_SIZE},
         milestone::Milestone,
         transaction::{
             Address, Ed25519Address, Ed25519Signature, Input, Output, OutputId, ReferenceUnlock,
