@@ -35,6 +35,7 @@ pub struct PeerManager {
     internal_event_receiver: flume::r#async::RecvStream<'static, Event>,
     internal_event_sender: EventSender,
     known_peers: KnownPeerList,
+    connected_peers: ConnectedPeerList,
     shutdown_listener: ShutdownListener,
 }
 
@@ -46,6 +47,7 @@ impl PeerManager {
         internal_event_receiver: EventReceiver,
         internal_event_sender: EventSender,
         known_peers: KnownPeerList,
+        connected_peers: ConnectedPeerList,
         shutdown_listener: ShutdownListener,
     ) -> Self {
         trace!("Starting Peer Manager...");
@@ -57,6 +59,7 @@ impl PeerManager {
             internal_event_receiver: internal_event_receiver.into_stream(),
             internal_event_sender,
             known_peers,
+            connected_peers,
             shutdown_listener,
         }
     }
@@ -71,11 +74,11 @@ impl PeerManager {
             mut internal_event_receiver,
             mut internal_event_sender,
             mut known_peers,
+            mut connected_peers,
             shutdown_listener,
             ..
         } = self;
 
-        let mut connected_peers = ConnectedPeerList::new();
         let mut fused_shutdown_listener = shutdown_listener.fuse();
 
         loop {
@@ -158,7 +161,7 @@ async fn process_command(
         }
 
         Command::SendMessage { peer_id, message } => {
-            send_message(peer_id, message, &mut connected_peers).await?;
+            send_message(&peer_id, message, &mut connected_peers).await?;
         }
 
 
@@ -217,16 +220,21 @@ async fn process_event(
             origin,
             data_sender,
         } => {
-            connected_peers.insert(peer_id.clone(), data_sender);
-
-            event_sender
-                .send_async(Event::PeerConnected {
-                    peer_address,
-                    peer_id,
-                    origin,
-                })
-                .await
-                .map_err(|e| WorkerError(Box::new(e)))?
+            if connected_peers.insert(peer_id.clone(), data_sender) {
+                // new peer
+                event_sender
+                    .send_async(Event::PeerConnected {
+                        peer_address,
+                        peer_id,
+                        origin,
+                    })
+                    .await
+                    .map_err(|e| WorkerError(Box::new(e)))?
+            } else {
+                // already connected peer
+                // TODO: drop that connection if the dialer doesn't drop it on his behalf
+                log::info!("Dropping duplicate connection with: {}", peer_id);
+            }
         }
 
         Event::ConnectionDropped {
@@ -347,20 +355,24 @@ async fn remove_peer(
 async fn connect_peer(
     peer_address: Multiaddr,
     local_keys: &identity::Keypair,
-    known_peers: &mut KnownPeerList,
-    connected_peers: &mut ConnectedPeerList,
+    known_peers: &KnownPeerList,
+    connected_peers: &ConnectedPeerList,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    if let Some(peer_id) = known_peers.get_peer_id_from_address(&peer_address) {
-        if connected_peers.contains(peer_id) {
-            // NOTE: already connected
-            return Ok(false);
-        }
-    }
-    //
-    if dial_peer(local_keys, peer_address.clone(), internal_event_sender.clone())
-        .await
-        .is_ok()
+    // if let Some(peer_id) = known_peers.get_peer_id_from_address(&peer_address) {
+    //     if connected_peers.contains(&peer_id) {
+    //         // NOTE: already connected
+    //         return Ok(false);
+    //     }
+    // }
+    if dial_peer(
+        local_keys,
+        peer_address.clone(),
+        internal_event_sender.clone(),
+        connected_peers,
+    )
+    .await
+    .is_ok()
     {
         Ok(true)
     } else {
@@ -391,7 +403,7 @@ async fn send_event_after_delay(event: Event, internal_event_sender: EventSender
 
 #[inline]
 async fn send_message(
-    peer_id: PeerId,
+    peer_id: &PeerId,
     message: Vec<u8>,
     connected_peers: &mut ConnectedPeerList,
 ) -> Result<bool, WorkerError> {

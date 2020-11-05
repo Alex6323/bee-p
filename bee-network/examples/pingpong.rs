@@ -52,7 +52,7 @@ async fn main() {
     let args = Args::from_args();
     let config = args.into_config();
 
-    logger::init(log::LevelFilter::Trace);
+    logger::init(log::LevelFilter::Debug);
 
     let node = Node::builder(config).finish().await;
 
@@ -157,15 +157,16 @@ async fn process_event(
         } => {
             info!("[pingpong] Connected peer {} ({}) [{}].", peer_address, peer_id, origin);
 
-            // let message = Utf8Message::new(message);
+            info!("[pingpong] Sending message: \"{}\"", message);
+            network
+                .send(SendMessage {
+                    peer_id: peer_id.clone(),
+                    message: Utf8Message::new(message).as_bytes(),
+                })
+                .await
+                .expect("error sending message to peer");
 
-            // network
-            //     .send(SendMessage {
-            //         peer_id: epid,
-            //         message: message.as_bytes(),
-            //     })
-            //     .await
-            //     .expect("error sending message to peer");
+            spam_endpoint(network.clone(), peer_id);
         }
 
         Event::PeerDisconnected { peer_id } => {
@@ -173,7 +174,14 @@ async fn process_event(
         }
 
         Event::MessageReceived { peer_id, message, .. } => {
-            info!("[pingpong] Received message from {} (len={}).", peer_id, message.len());
+            info!(
+                "[pingpong] Received message from {} (length: {}).",
+                peer_id,
+                message.len()
+            );
+
+            let message = Utf8Message::from_bytes(&message);
+            info!("[pingpong] Received message \"{}\"", message);
 
             // if !endpoints.contains(&epid) {
             //     // NOTE: first message is assumed to be the handshake message

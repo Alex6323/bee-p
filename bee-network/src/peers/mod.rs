@@ -10,12 +10,12 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 mod connected;
+mod known;
 mod manager;
-mod peerlist;
 
 pub use connected::*;
+pub use known::*;
 pub use manager::*;
-pub use peerlist::*;
 
 use thiserror::Error;
 

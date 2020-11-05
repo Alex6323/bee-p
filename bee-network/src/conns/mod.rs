@@ -23,56 +23,57 @@ pub use connection::Origin;
 pub use dial::dial_peer;
 pub use manager::ConnectionManager;
 
-use connection::Connection;
+use connection::MuxedConnection;
 
-use bee_common::shutdown::{ShutdownListener, ShutdownNotifier};
-
-use futures::{channel::oneshot, prelude::*, select};
+use futures::{prelude::*, select, AsyncRead, AsyncWrite};
 use libp2p::{
-    core::muxing::{substream_from_ref, StreamMuxerBox},
+    core::muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap, StreamMuxerBox, SubstreamRef},
     Multiaddr, PeerId,
 };
 use log::*;
 use thiserror::Error as ErrorAttr;
 use tokio::task::JoinHandle;
 
-use std::{
-    io,
-    sync::{atomic::Ordering, Arc},
-};
+use std::sync::{atomic::Ordering, Arc};
 
-const SUBSTREAM_INDEX: usize = 0;
-
-pub(crate) async fn spawn_reader_writer(
-    connection: Connection,
+pub(crate) async fn spawn_connection_handler(
+    connection: MuxedConnection,
     internal_event_sender: EventSender,
 ) -> Result<(), Error> {
-    let Connection {
+    let MuxedConnection {
         peer_id,
         peer_address,
-        stream,
+        muxer,
         origin,
         ..
     } = connection;
 
-    let stream = Arc::new(stream);
-
+    let muxer = Arc::new(muxer);
     let (data_sender, data_receiver) = peers::channel();
-    let (shutdown_notifier, shutdown_listener) = oneshot::channel::<()>();
 
-    spawn_writer(
-        peer_id.clone(),
-        peer_address.clone(),
-        &stream,
+    let peer_id_clone = peer_id.clone();
+    let peer_address_clone = peer_address.clone();
+    let internal_event_sender_clone = internal_event_sender.clone();
+
+    let substream = match origin {
+        Origin::Outbound => outbound_from_ref_and_wrap(muxer).fuse().await.unwrap(),
+        Origin::Inbound => loop {
+            if let Some(substream) = event_from_ref_and_wrap(muxer.clone())
+                .await
+                .expect("error awaiting inbound substream")
+                .into_inbound_substream()
+            {
+                break substream;
+            }
+        },
+    };
+
+    spawn_substream_task(
+        peer_id_clone,
+        peer_address_clone,
+        substream,
         data_receiver,
-        shutdown_notifier,
-    );
-    spawn_reader(
-        peer_id.clone(),
-        peer_address.clone(),
-        &stream,
-        internal_event_sender.clone(),
-        shutdown_listener,
+        internal_event_sender_clone,
     );
 
     internal_event_sender
@@ -88,78 +89,39 @@ pub(crate) async fn spawn_reader_writer(
     Ok(())
 }
 
-fn spawn_writer(
+fn spawn_substream_task(
     peer_id: PeerId,
     peer_address: Multiaddr,
-    mut stream: &Arc<StreamMuxerBox>,
+    mut substream: SubstreamRef<Arc<StreamMuxerBox>>,
     data_receiver: DataReceiver,
-    shutdown_notifier: ShutdownNotifier,
-) -> JoinHandle<()> {
-    let mut stream = substream_from_ref(stream.clone(), SUBSTREAM_INDEX);
-    let mut fused_data_receiver = data_receiver.into_stream();
-
-    tokio::spawn(async move {
-        loop {
-            let message = fused_data_receiver.next().await;
-
-            if let Some(message) = message {
-                stream = match send_message(stream, &message).await {
-                    Ok(stream) => stream,
-                    Err(e) => {
-                        error!("Sending message failed: {:?}", e);
-                        break;
-                    }
-                }
-            } else {
-                // Data receiver closed => shutdown this task
-                break;
-            }
-        }
-
-        let _ = shutdown_notifier.send(());
-    })
-}
-
-fn spawn_reader(
-    peer_id: PeerId,
-    peer_address: Multiaddr,
-    mut stream: &Arc<StreamMuxerBox>,
     mut internal_event_sender: EventSender,
-    shutdown_listener: ShutdownListener,
 ) -> JoinHandle<()> {
-    let mut stream = substream_from_ref(stream.clone(), SUBSTREAM_INDEX);
-    let mut buffer = vec![0u8; MAX_BUFFER_SIZE.load(Ordering::Relaxed)];
-
     tokio::spawn(async move {
-        let mut fused_shutdown = &mut shutdown_listener.fuse();
+        let mut fused_data_receiver = data_receiver.into_stream();
+        let mut buffer = vec![0u8; MAX_BUFFER_SIZE.load(Ordering::Relaxed)];
 
         loop {
             select! {
-                _ = fused_shutdown => {
-                    break;
-                }
-                result = recv_message(stream, &mut buffer).fuse() => {
-                    match result {
-                        Ok((num_read, s)) => {
-                            stream = s;
-
-                            if !process_stream_read(
-                                peer_id.clone(),
-                                peer_address.clone(),
-                                num_read,
-                                &mut internal_event_sender,
-                                &buffer)
-                                .await
-                            {
-                                break;
-                            }
-
-                        }
-                        Err(e) => {
-                            error!("Receiving message failed: {:?}", e);
-                            break;
-                        }
+                num_read = recv_message(&mut substream, &mut buffer).fuse() => {
+                    if !process_read(
+                        peer_id.clone(),
+                        peer_address.clone(),
+                        num_read,
+                        &mut internal_event_sender,
+                        &buffer)
+                        .await
+                    {
+                        break;
                     }
+                }
+                message = fused_data_receiver.next() => {
+                    if let Some(message) = message {
+                        send_message(&mut substream, &message).await;
+                    } else {
+                        // Data receiver closed => shutdown this task
+                        break;
+                    }
+
                 }
             }
         }
@@ -167,7 +129,27 @@ fn spawn_reader(
 }
 
 #[inline]
-async fn process_stream_read(
+async fn send_message<S>(stream: &mut S, message: &[u8])
+where
+    S: AsyncWrite + Unpin,
+{
+    stream.write_all(message).await.expect("error write_all");
+    stream.flush().await.expect("error flush");
+    trace!("wrote {} bytes", message.len());
+}
+
+#[inline]
+async fn recv_message<S>(stream: &mut S, message: &mut [u8]) -> usize
+where
+    S: AsyncRead + Unpin,
+{
+    let num_read = stream.read(message).await.expect("error read");
+    trace!("read {} bytes", num_read);
+    num_read
+}
+
+#[inline]
+async fn process_read(
     peer_id: PeerId,
     peer_address: Multiaddr,
     num_read: usize,
@@ -206,23 +188,6 @@ async fn process_stream_read(
 
         true
     }
-}
-
-pub async fn send_message<S>(mut stream: S, message: &[u8]) -> io::Result<S>
-where
-    S: AsyncRead + AsyncWrite + Unpin,
-{
-    stream.write_all(message).await?;
-    stream.flush().await?;
-    Ok(stream)
-}
-
-pub async fn recv_message<S>(mut stream: S, message: &mut [u8]) -> io::Result<(usize, S)>
-where
-    S: AsyncRead + Unpin,
-{
-    let num_read = stream.read(message).await?;
-    Ok((num_read, stream))
 }
 
 #[derive(Debug, ErrorAttr)]

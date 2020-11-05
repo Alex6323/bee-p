@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 //#![warn(missing_docs)]
+#![recursion_limit = "256"]
 
 pub use config::{NetworkConfig, NetworkConfigBuilder};
 pub use interaction::{
@@ -28,7 +29,7 @@ mod transport;
 
 use config::{DEFAULT_MAX_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use conns::ConnectionManager;
-use peers::{KnownPeerList, PeerManager};
+use peers::{ConnectedPeerList, KnownPeerList, PeerManager};
 
 use bee_common_ext::shutdown_tokio::Shutdown;
 
@@ -60,6 +61,7 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
     let (conn_manager_shutdown_sender, conn_manager_shutdown_receiver) = oneshot::channel();
 
     let known_peers = KnownPeerList::new();
+    let connected_peers = ConnectedPeerList::new();
 
     let peer_manager = PeerManager::new(
         local_keys.clone(),
@@ -68,6 +70,7 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
         internal_event_receiver,
         internal_event_sender.clone(),
         known_peers.clone(),
+        connected_peers.clone(),
         peer_manager_shutdown_receiver,
     );
 
@@ -77,6 +80,7 @@ pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, E
         internal_event_sender,
         conn_manager_shutdown_receiver,
         known_peers,
+        connected_peers,
     );
 
     let peer_manager_task = tokio::spawn(peer_manager.run());

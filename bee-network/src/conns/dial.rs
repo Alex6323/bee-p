@@ -10,10 +10,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use super::{
-    connection::{Connection, Origin},
+    connection::{MuxedConnection, Origin},
     Error,
 };
-use crate::{interaction::events::EventSender, transport::build_transport};
+use crate::{interaction::events::EventSender, peers::ConnectedPeerList, transport::build_transport};
 
 use log::*;
 
@@ -23,29 +23,35 @@ pub async fn dial_peer(
     local_keys: &identity::Keypair,
     peer_address: Multiaddr,
     internal_event_sender: EventSender,
+    connected_peers: &ConnectedPeerList,
 ) -> Result<(), Error> {
     let transport = build_transport(local_keys)?;
 
     trace!("Trying to connect to {}...", peer_address);
 
-    match transport.dial(peer_address.clone()).unwrap().await {
-        Ok((peer_id, stream)) => {
-            let connection = match Connection::new(peer_id, peer_address, stream, Origin::Outbound) {
-                Ok(conn) => conn,
-                Err(e) => {
-                    warn!["Error creating connection: {:?}.", e];
+    // TODO: error handling
+    match transport.dial(peer_address.clone()).expect("dial").await {
+        Ok((peer_id, muxer)) => {
+            if !connected_peers.contains(&peer_id) {
+                let connection = match MuxedConnection::new(peer_id, peer_address, muxer, Origin::Outbound) {
+                    Ok(conn) => conn,
+                    Err(e) => {
+                        warn!["Error creating multiplexed connection: {:?}.", e];
 
-                    return Err(Error::ConnectionAttemptFailed);
-                }
-            };
+                        return Err(Error::ConnectionAttemptFailed);
+                    }
+                };
 
-            trace!(
-                "Sucessfully connected to {} ({}).",
-                connection.peer_address,
-                connection.peer_id,
-            );
+                trace!(
+                    "Sucessfully connected to {} ({}).",
+                    connection.peer_address,
+                    connection.peer_id,
+                );
 
-            super::spawn_reader_writer(connection, internal_event_sender).await?;
+                super::spawn_connection_handler(connection, internal_event_sender).await?;
+            } else {
+                trace!("Already connected to {}", peer_id);
+            }
 
             Ok(())
         }

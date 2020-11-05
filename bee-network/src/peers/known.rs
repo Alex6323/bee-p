@@ -89,18 +89,18 @@ impl KnownPeerList {
         found
     }
 
-    pub fn get_peer_id_from_address(&self, address: &Multiaddr) -> Option<PeerId> {
-        self.0
-            .get(address)
-            .map(|kv| {
-                if let Some(peer_id) = kv.value().as_ref() {
-                    Some(peer_id.clone())
-                } else {
-                    None
-                }
-            })
-            .flatten()
-    }
+    // pub fn get_peer_id_from_address(&self, address: &Multiaddr) -> Option<PeerId> {
+    //     self.0
+    //         .get(address)
+    //         .map(|kv| {
+    //             if let Some(peer_id) = kv.value().as_ref() {
+    //                 Some(peer_id.clone())
+    //             } else {
+    //                 None
+    //             }
+    //         })
+    //         .flatten()
+    // }
 
     pub fn get_address_from_peer_id(&self, peer_id: &PeerId) -> Option<Multiaddr> {
         self.0.iter().find_map(|kv| {

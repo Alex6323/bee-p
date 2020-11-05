@@ -13,25 +13,27 @@ use super::DataSender;
 
 use bee_common::worker::Error as WorkerError;
 
+use dashmap::{mapref::entry::Entry, DashMap};
 use libp2p::PeerId;
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::sync::Arc;
+
+const DEFAULT_CONNECTED_PEERLIST_CAPACITY: usize = 8;
 
 #[derive(Clone, Debug)]
 pub struct ConnectedPeer {
     data_sender: DataSender,
-    // duplicate_of: Option<PeerId>,
 }
-#[derive(Default)]
-pub struct ConnectedPeerList(HashMap<PeerId, ConnectedPeer>);
+#[derive(Clone, Debug, Default)]
+pub struct ConnectedPeerList(Arc<DashMap<PeerId, ConnectedPeer>>);
 
 impl ConnectedPeerList {
     pub fn new() -> Self {
-        Self::default()
+        Self(Arc::new(DashMap::with_capacity(DEFAULT_CONNECTED_PEERLIST_CAPACITY)))
     }
 
     pub fn insert(&mut self, peer_id: PeerId, data_sender: DataSender) -> bool {
-        match self.0.entry(peer_id) {
+        match self.0.entry(peer_id.clone()) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
                 entry.insert(ConnectedPeer {
@@ -43,8 +45,8 @@ impl ConnectedPeerList {
         }
     }
 
-    pub fn contains(&self, peer_id: PeerId) -> bool {
-        self.0.contains_key(&peer_id)
+    pub fn contains(&self, peer_id: &PeerId) -> bool {
+        self.0.contains_key(peer_id)
     }
 
     pub fn remove(&mut self, peer_id: &PeerId) -> bool {
@@ -76,9 +78,9 @@ impl ConnectedPeerList {
     //     self.0.get(&epid).map_or(false, |v| v.duplicate_of.is_some())
     // }
 
-    pub async fn send_message(&mut self, message: Vec<u8>, peer_id: PeerId) -> Result<bool, WorkerError> {
-        if let Some(connected_endpoint) = self.0.get_mut(&peer_id) {
-            connected_endpoint
+    pub async fn send_message(&mut self, message: Vec<u8>, peer_id: &PeerId) -> Result<bool, WorkerError> {
+        if let Some(connected_peer) = self.0.get_mut(peer_id) {
+            connected_peer
                 .data_sender
                 .send_async(message)
                 .await

@@ -15,32 +15,26 @@ use libp2p::{core::muxing::StreamMuxerBox, Multiaddr, PeerId};
 
 use std::fmt;
 
-// #[derive(Clone)]
-pub struct Connection {
+pub struct MuxedConnection {
     pub peer_id: PeerId,
     pub peer_address: Multiaddr,
-    pub stream: StreamMuxerBox,
+    pub muxer: StreamMuxerBox,
     pub origin: Origin,
 }
 
-impl Connection {
-    pub fn new(
-        peer_id: PeerId,
-        peer_address: Multiaddr,
-        stream: StreamMuxerBox,
-        origin: Origin,
-    ) -> Result<Self, Error> {
+impl MuxedConnection {
+    pub fn new(peer_id: PeerId, peer_address: Multiaddr, muxer: StreamMuxerBox, origin: Origin) -> Result<Self, Error> {
         Ok(Self {
             peer_id,
             peer_address,
-            stream,
+            muxer,
             origin,
         })
     }
 }
 
-impl Eq for Connection {}
-impl PartialEq for Connection {
+impl Eq for MuxedConnection {}
+impl PartialEq for MuxedConnection {
     fn eq(&self, other: &Self) -> bool {
         self.peer_id == other.peer_id
     }
