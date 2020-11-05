@@ -22,7 +22,7 @@ use crate::{
 };
 
 use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 use bee_message::{payload::Payload, MessageId};
 
 use async_trait::async_trait;
@@ -149,6 +149,8 @@ where
             config.coordinator.public_key_ranges.into_boxed_slice(),
         );
 
+        let bus = node.resource::<Bus>();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
@@ -168,9 +170,7 @@ where
                             // to check when a milestone gets solidified if it's
                             // already vadidated.
                             if meta.flags().is_solid() {
-                                Protocol::get()
-                                    .bus
-                                    .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
+                                bus.dispatch(LatestSolidMilestoneChanged(milestone.clone()));
                                 if let Err(e) =
                                     milestone_cone_updater.send(MilestoneConeUpdaterWorkerEvent(milestone.clone()))
                                 {
@@ -179,7 +179,7 @@ where
                             }
 
                             if milestone.index > tangle.get_latest_milestone_index() {
-                                Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
+                                bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                             }
 
                             if requested_milestones.remove(&milestone.index).is_some() {

@@ -13,9 +13,9 @@ use crate::storage::Backend;
 
 use bee_common::shutdown;
 use bee_common_ext::{
+    event::Bus,
     node::{Node, NodeBuilder, ResHandle},
     worker::Worker,
-    event::Bus,
 };
 
 use anymap::{any::Any as AnyMapAny, Map};
@@ -80,7 +80,7 @@ impl<B: Backend> Node for BeeNode<B> {
                 let _ = task_fut.await; //.map_err(|e| shutdown::Error::from(worker::Error(Box::new(e))))?;
             }
             self.worker_stops.remove(&worker_id).unwrap()(&mut self).await;
-            self.resource::<std::sync::Arc<Bus>>().purge_worker_listeners(worker_id);
+            self.resource::<Bus>().purge_worker_listeners(worker_id);
         }
 
         Ok(())
@@ -141,6 +141,7 @@ impl<B: Backend> Default for BeeNodeBuilder<B> {
             worker_stops: HashMap::default(),
             resource_registers: Vec::default(),
         }
+        .with_resource(Bus::default())
     }
 }
 

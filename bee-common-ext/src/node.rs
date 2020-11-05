@@ -25,7 +25,7 @@ use std::{
     panic::Location,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, Weak, Mutex,
+        Arc, Mutex, Weak,
     },
 };
 
@@ -173,6 +173,8 @@ impl<R> WeakHandle<R> {
 
 impl<R> Clone for WeakHandle<R> {
     fn clone(&self) -> Self {
-        Self { inner: self.inner.clone() }
+        Self {
+            inner: self.inner.clone(),
+        }
     }
 }

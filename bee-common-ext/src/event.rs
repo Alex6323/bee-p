@@ -30,12 +30,10 @@ impl<'a> Bus<'a> {
     }
 
     pub fn add_listener<W: Any, E: Any, F: Fn(&E) + Send + Sync + 'a>(&self, handler: F) {
-        self.listeners
-            .entry(TypeId::of::<E>())
-            .or_default()
-            .push((Box::new(move |event| {
-                handler(&event.downcast_ref().expect("Invalid event"))
-            }), TypeId::of::<W>()));
+        self.listeners.entry(TypeId::of::<E>()).or_default().push((
+            Box::new(move |event| handler(&event.downcast_ref().expect("Invalid event"))),
+            TypeId::of::<W>(),
+        ));
     }
 
     pub fn purge_worker_listeners(&self, worker_id: TypeId) {
