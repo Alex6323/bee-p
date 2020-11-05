@@ -34,7 +34,7 @@ pub struct StorageBatch {
 impl Batch<(MessageId, MessageId), ()> for Storage {
     type BatchBuilder = StorageBatch;
 
-    fn batch_try_insert(
+    fn batch_insert(
         &self,
         batch: &mut StorageBatch,
         (parent, child): &(MessageId, MessageId),
@@ -50,7 +50,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
         Ok(())
     }
 
-    fn batch_try_delete(
+    fn batch_delete(
         &self,
         batch: &mut StorageBatch,
         (parent, child): &(MessageId, MessageId),
@@ -79,7 +79,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
 impl Batch<MessageId, Message> for Storage {
     type BatchBuilder = StorageBatch;
 
-    fn batch_try_insert(
+    fn batch_insert(
         &self,
         batch: &mut Self::BatchBuilder,
         message_id: &MessageId,
@@ -95,7 +95,7 @@ impl Batch<MessageId, Message> for Storage {
         Ok(())
     }
 
-    fn batch_try_delete(
+    fn batch_delete(
         &self,
         batch: &mut Self::BatchBuilder,
         message_id: &MessageId,
@@ -106,6 +106,7 @@ impl Batch<MessageId, Message> for Storage {
 
         Ok(())
     }
+
     async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), <Self as Backend>::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
@@ -120,7 +121,7 @@ impl Batch<MessageId, Message> for Storage {
 impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
     type BatchBuilder = StorageBatch;
 
-    fn batch_try_insert(
+    fn batch_insert(
         &self,
         batch: &mut Self::BatchBuilder,
         (index, message_id): &(HashedIndex<Blake2b>, MessageId),
@@ -136,7 +137,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         Ok(())
     }
 
-    fn batch_try_delete(
+    fn batch_delete(
         &self,
         batch: &mut Self::BatchBuilder,
         (index, message_id): &(HashedIndex<Blake2b>, MessageId),
@@ -165,7 +166,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
 impl Batch<OutputId, Output> for Storage {
     type BatchBuilder = StorageBatch;
 
-    fn batch_try_insert(
+    fn batch_insert(
         &self,
         batch: &mut Self::BatchBuilder,
         output_id: &OutputId,
@@ -185,7 +186,7 @@ impl Batch<OutputId, Output> for Storage {
         Ok(())
     }
 
-    fn batch_try_delete(
+    fn batch_delete(
         &self,
         batch: &mut Self::BatchBuilder,
         output_id: &OutputId,
@@ -214,7 +215,7 @@ impl Batch<OutputId, Output> for Storage {
 impl Batch<OutputId, Spent> for Storage {
     type BatchBuilder = StorageBatch;
 
-    fn batch_try_insert(
+    fn batch_insert(
         &self,
         batch: &mut Self::BatchBuilder,
         output_id: &OutputId,
@@ -234,7 +235,7 @@ impl Batch<OutputId, Spent> for Storage {
         Ok(())
     }
 
-    fn batch_try_delete(
+    fn batch_delete(
         &self,
         batch: &mut Self::BatchBuilder,
         output_id: &OutputId,
@@ -263,7 +264,7 @@ impl Batch<OutputId, Spent> for Storage {
 impl Batch<Unspent, ()> for Storage {
     type BatchBuilder = StorageBatch;
 
-    fn batch_try_insert(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
+    fn batch_insert(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
         let mut unspent_buf = Vec::with_capacity(unspent.packed_len());
@@ -275,7 +276,7 @@ impl Batch<Unspent, ()> for Storage {
         Ok(())
     }
 
-    fn batch_try_delete(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent) -> Result<(), Self::Error> {
+    fn batch_delete(&self, batch: &mut Self::BatchBuilder, unspent: &Unspent) -> Result<(), Self::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
         let mut unspent_buf = Vec::with_capacity(unspent.packed_len());
