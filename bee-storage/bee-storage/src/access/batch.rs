@@ -12,7 +12,7 @@
 use crate::storage::Backend;
 
 #[async_trait::async_trait]
-pub trait Batch<K, V>: Sized + Backend {
+pub trait Batch<K, V>: Backend + Sized {
     type BatchBuilder: Default + Send + Sized;
 
     fn begin_batch() -> Self::BatchBuilder {
