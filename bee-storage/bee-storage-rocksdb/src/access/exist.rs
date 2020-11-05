@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{access::OpError, storage::*};
+use crate::storage::*;
 
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
@@ -23,9 +23,7 @@ use blake2::Blake2b;
 
 #[async_trait::async_trait]
 impl Exist<MessageId, Message> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, message_id: &MessageId) -> Result<bool, Self::Error>
+    async fn exist(&self, message_id: &MessageId) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -37,9 +35,7 @@ impl Exist<MessageId, Message> for Storage {
 
 #[async_trait::async_trait]
 impl Exist<MessageId, Vec<MessageId>> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, parent: &MessageId) -> Result<bool, Self::Error>
+    async fn exist(&self, parent: &MessageId) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -57,9 +53,7 @@ impl Exist<MessageId, Vec<MessageId>> for Storage {
 
 #[async_trait::async_trait]
 impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, index: &HashedIndex<Blake2b>) -> Result<bool, Self::Error>
+    async fn exist(&self, index: &HashedIndex<Blake2b>) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -77,9 +71,7 @@ impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
 
 #[async_trait::async_trait]
 impl Exist<OutputId, Output> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, output_id: &OutputId) -> Result<bool, Self::Error>
+    async fn exist(&self, output_id: &OutputId) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -95,9 +87,7 @@ impl Exist<OutputId, Output> for Storage {
 
 #[async_trait::async_trait]
 impl Exist<OutputId, Spent> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, output_id: &OutputId) -> Result<bool, Self::Error>
+    async fn exist(&self, output_id: &OutputId) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -113,9 +103,7 @@ impl Exist<OutputId, Spent> for Storage {
 
 #[async_trait::async_trait]
 impl Exist<Unspent, ()> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, unspent: &Unspent) -> Result<bool, Self::Error>
+    async fn exist(&self, unspent: &Unspent) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {

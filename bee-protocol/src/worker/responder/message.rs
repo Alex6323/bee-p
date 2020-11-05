@@ -16,8 +16,7 @@ use crate::{
     worker::TangleWorker,
 };
 
-use bee_common::packable::Packable;
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
 use bee_network::EndpointId;

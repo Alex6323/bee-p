@@ -13,42 +13,43 @@ use crate::{error::Error, output::Output, spent::Spent, unspent::Unspent};
 
 use bee_message::payload::transaction::OutputId;
 use bee_storage::{
-    access::{BeginBatch, CommitBatch, Delete, Exist, Fetch, Insert},
+    access::{Batch, Delete, Exist, Fetch, Insert},
     storage,
 };
 
 pub trait Backend:
     storage::Backend
-    // + for<'a> BeginBatch<'a>
-    + Insert<OutputId, Output>
-    + Insert<OutputId, Spent>
-    + Insert<Unspent, ()>
-    + Fetch<OutputId, Output>
-    + Fetch<OutputId, Spent>
+    + Batch<OutputId, Output>
+    + Batch<OutputId, Spent>
+    + Delete<OutputId, Output>
+    + Delete<OutputId, Spent>
+    + Delete<Unspent, ()>
     + Exist<OutputId, Output>
     + Exist<OutputId, Spent>
     + Exist<Unspent, ()>
-    + Delete<OutputId, Output>
-    + Delete<OutputId, Spent>
-    + Delete<Unspent,()>
-// where
-//     for<'a> <Self as BeginBatch<'a>>::BatchBuilder: CommitBatch,
+    + Fetch<OutputId, Output>
+    + Fetch<OutputId, Spent>
+    + Insert<OutputId, Output>
+    + Insert<OutputId, Spent>
+    + Insert<Unspent, ()>
 {
 }
 
 impl<T> Backend for T where
     T: storage::Backend
-        + Insert<OutputId, Output>
-        + Insert<OutputId, Spent>
-        + Insert<Unspent, ()>
-        + Fetch<OutputId, Output>
-        + Fetch<OutputId, Spent>
+        + Batch<OutputId, Output>
+        + Batch<OutputId, Spent>
+        + Delete<OutputId, Output>
+        + Delete<OutputId, Spent>
+        + Delete<Unspent, ()>
         + Exist<OutputId, Output>
         + Exist<OutputId, Spent>
         + Exist<Unspent, ()>
-        + Delete<OutputId, Output>
-        + Delete<OutputId, Spent>
-        + Delete<Unspent, ()> // for<'a> <Self as BeginBatch<'a>>::BatchBuilder: CommitBatch,
+        + Fetch<OutputId, Output>
+        + Fetch<OutputId, Spent>
+        + Insert<OutputId, Output>
+        + Insert<OutputId, Spent>
+        + Insert<Unspent, ()>
 {
 }
 

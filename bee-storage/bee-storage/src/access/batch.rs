@@ -9,34 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{access::Error, storage::Backend};
+use crate::storage::Backend;
 
 #[async_trait::async_trait]
-pub trait BatchBuilder<'a, S: Backend, K, V>: Sized {
-    type Error: Error;
+pub trait Batch<K, V>: Backend + Sized {
+    type BatchBuilder: Default + Send + Sized;
 
-    fn try_insert(&mut self, key: &K, value: &V) -> Result<(), Self::Error>;
-
-    fn try_delete(&mut self, key: &K) -> Result<(), Self::Error>;
-
-    fn insert(&mut self, key: &K, value: &V) {
-        self.try_insert(key, value).unwrap()
+    fn begin_batch() -> Self::BatchBuilder {
+        Self::BatchBuilder::default()
     }
 
-    fn delete(&mut self, key: &K) {
-        self.try_delete(key).unwrap()
-    }
-}
+    fn batch_insert(&self, batch: &mut Self::BatchBuilder, key: &K, value: &V) -> Result<(), Self::Error>;
 
-pub trait BeginBatch<'a>: Backend + Sized {
-    type BatchBuilder: CommitBatch;
+    fn batch_delete(&self, batch: &mut Self::BatchBuilder, key: &K) -> Result<(), Self::Error>;
 
-    fn begin_batch(&'a self) -> Self::BatchBuilder;
-}
-
-#[async_trait::async_trait]
-pub trait CommitBatch {
-    type Error: Error;
-
-    async fn commit_batch(self, durability: bool) -> Result<(), Self::Error>;
+    async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), Self::Error>;
 }

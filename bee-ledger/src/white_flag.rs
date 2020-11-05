@@ -72,18 +72,18 @@ where
                     continue;
                 }
 
-                // if let Some(output) = Fetch::<OutputId, Output>::fetch(storage.deref(), output_id)
-                //     .await
-                //     .map_err(|e| Error::Storage(Box::new(e)))?
-                // {
-                //     if !storage::is_output_unspent(storage.deref(), output_id).await? {
-                //         conflicting = true;
-                //         break;
-                //     }
-                //     outputs.insert(output_id, output);
-                // } else {
-                //     return Err(Error::OutputNotFound(*output_id));
-                // }
+            // if let Some(output) = Fetch::<OutputId, Output>::fetch(storage.deref(), output_id)
+            //     .await
+            //     .map_err(|e| Error::Storage(Box::new(e)))?
+            // {
+            //     if !storage::is_output_unspent(storage.deref(), output_id).await? {
+            //         conflicting = true;
+            //         break;
+            //     }
+            //     outputs.insert(output_id, output);
+            // } else {
+            //     return Err(Error::OutputNotFound(*output_id));
+            // }
             } else {
                 return Err(Error::UnsupportedInputType);
             };

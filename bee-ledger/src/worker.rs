@@ -22,7 +22,7 @@ use bee_common_ext::{
 };
 use bee_message::{payload::Payload, MessageId};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, MilestoneIndex, StorageWorker, TangleWorker};
-use bee_storage::access::{BeginBatch, CommitBatch};
+use bee_storage::access::Batch;
 
 use async_trait::async_trait;
 use blake2::Blake2b;

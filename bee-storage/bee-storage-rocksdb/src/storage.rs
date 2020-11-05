@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::config::*;
+use super::{
+    access::OpError,
+    config::{RocksDBConfig, RocksDBConfigBuilder},
+};
 
 pub use bee_storage::storage::Backend;
 
@@ -92,6 +95,7 @@ impl Storage {
 impl Backend for Storage {
     type ConfigBuilder = RocksDBConfigBuilder;
     type Config = RocksDBConfig;
+    type Error = OpError;
 
     /// It starts RocksDB instance and then initializes the required column familes.
     async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>> {

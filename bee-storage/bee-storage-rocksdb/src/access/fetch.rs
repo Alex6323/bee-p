@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{access::OpError, storage::*};
+use crate::storage::*;
 
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent};
@@ -25,9 +25,7 @@ use std::convert::TryInto;
 
 #[async_trait::async_trait]
 impl Fetch<MessageId, Message> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, message_id: &MessageId) -> Result<Option<Message>, Self::Error>
+    async fn fetch(&self, message_id: &MessageId) -> Result<Option<Message>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -43,9 +41,7 @@ impl Fetch<MessageId, Message> for Storage {
 
 #[async_trait::async_trait]
 impl Fetch<MessageId, Vec<MessageId>> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, parent: &MessageId) -> Result<Option<Vec<MessageId>>, Self::Error>
+    async fn fetch(&self, parent: &MessageId) -> Result<Option<Vec<MessageId>>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -67,9 +63,7 @@ impl Fetch<MessageId, Vec<MessageId>> for Storage {
 
 #[async_trait::async_trait]
 impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<MessageId>>, Self::Error>
+    async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<MessageId>>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -91,9 +85,7 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
 
 #[async_trait::async_trait]
 impl Fetch<OutputId, Output> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Output>, Self::Error>
+    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Output>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -113,9 +105,7 @@ impl Fetch<OutputId, Output> for Storage {
 
 #[async_trait::async_trait]
 impl Fetch<OutputId, Spent> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Spent>, Self::Error>
+    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Spent>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
