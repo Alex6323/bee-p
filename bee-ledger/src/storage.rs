@@ -21,6 +21,7 @@ pub trait Backend:
     storage::Backend
     + Batch<OutputId, Output>
     + Batch<OutputId, Spent>
+    + Batch<Unspent, ()>
     + Delete<OutputId, Output>
     + Delete<OutputId, Spent>
     + Delete<Unspent, ()>
@@ -39,6 +40,7 @@ impl<T> Backend for T where
     T: storage::Backend
         + Batch<OutputId, Output>
         + Batch<OutputId, Spent>
+        + Batch<Unspent, ()>
         + Delete<OutputId, Output>
         + Delete<OutputId, Spent>
         + Delete<Unspent, ()>
