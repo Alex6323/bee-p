@@ -24,10 +24,53 @@ use rocksdb::{WriteBatch, WriteOptions};
 
 #[derive(Default)]
 pub struct StorageBatch {
-    batch: WriteBatch,
+    inner: WriteBatch,
     // TODO use them to avoid allocating during a same batch
     key_buf: Vec<u8>,
     value_buf: Vec<u8>,
+}
+
+#[async_trait::async_trait]
+impl Batch<MessageId, Message> for Storage {
+    type BatchBuilder = StorageBatch;
+
+    fn batch_insert(
+        &self,
+        batch: &mut Self::BatchBuilder,
+        message_id: &MessageId,
+        message: &Message,
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        let mut message_buf = Vec::with_capacity(message.packed_len());
+        // Packing to bytes can't fail.
+        message.pack(&mut message_buf).unwrap();
+
+        batch.inner.put_cf(&cf_message_id_to_message, message_id, message_buf);
+
+        Ok(())
+    }
+
+    fn batch_delete(
+        &self,
+        batch: &mut Self::BatchBuilder,
+        message_id: &MessageId,
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
+
+        batch.inner.delete_cf(&cf_message_id_to_message, message_id);
+
+        Ok(())
+    }
+
+    async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), <Self as Backend>::Error> {
+        let mut write_options = WriteOptions::default();
+        write_options.set_sync(false);
+        write_options.disable_wal(!durability);
+        self.inner.write_opt(batch.inner, &write_options)?;
+
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -45,7 +88,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
         let mut key = parent.as_ref().to_vec();
         key.extend_from_slice(child.as_ref());
 
-        batch.batch.put_cf(&cf_message_id_to_message_id, key, []);
+        batch.inner.put_cf(&cf_message_id_to_message_id, key, []);
 
         Ok(())
     }
@@ -60,7 +103,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
         let mut key = parent.as_ref().to_vec();
         key.extend_from_slice(child.as_ref());
 
-        batch.batch.delete_cf(&cf_message_id_to_message_id, key);
+        batch.inner.delete_cf(&cf_message_id_to_message_id, key);
 
         Ok(())
     }
@@ -69,49 +112,7 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
         write_options.disable_wal(!durability);
-        self.inner.write_opt(batch.batch, &write_options)?;
-
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl Batch<MessageId, Message> for Storage {
-    type BatchBuilder = StorageBatch;
-
-    fn batch_insert(
-        &self,
-        batch: &mut Self::BatchBuilder,
-        message_id: &MessageId,
-        message: &Message,
-    ) -> Result<(), <Self as Backend>::Error> {
-        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
-
-        let mut message_buf = Vec::with_capacity(message.packed_len());
-        message.pack(&mut message_buf).unwrap();
-
-        batch.batch.put_cf(&cf_message_id_to_message, message_id, message_buf);
-
-        Ok(())
-    }
-
-    fn batch_delete(
-        &self,
-        batch: &mut Self::BatchBuilder,
-        message_id: &MessageId,
-    ) -> Result<(), <Self as Backend>::Error> {
-        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
-
-        batch.batch.delete_cf(&cf_message_id_to_message, message_id);
-
-        Ok(())
-    }
-
-    async fn commit_batch(&self, batch: Self::BatchBuilder, durability: bool) -> Result<(), <Self as Backend>::Error> {
-        let mut write_options = WriteOptions::default();
-        write_options.set_sync(false);
-        write_options.disable_wal(!durability);
-        self.inner.write_opt(batch.batch, &write_options)?;
+        self.inner.write_opt(batch.inner, &write_options)?;
 
         Ok(())
     }
@@ -132,7 +133,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         let mut key = index.as_ref().to_vec();
         key.extend_from_slice(message_id.as_ref());
 
-        batch.batch.put_cf(&cf_payload_index_to_message_id, key, []);
+        batch.inner.put_cf(&cf_payload_index_to_message_id, key, []);
 
         Ok(())
     }
@@ -147,7 +148,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         let mut key = index.as_ref().to_vec();
         key.extend_from_slice(message_id.as_ref());
 
-        batch.batch.delete_cf(&cf_payload_index_to_message_id, key);
+        batch.inner.delete_cf(&cf_payload_index_to_message_id, key);
 
         Ok(())
     }
@@ -156,7 +157,7 @@ impl Batch<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
         write_options.disable_wal(!durability);
-        self.inner.write_opt(batch.batch, &write_options)?;
+        self.inner.write_opt(batch.inner, &write_options)?;
 
         Ok(())
     }
@@ -181,7 +182,7 @@ impl Batch<OutputId, Output> for Storage {
         // Packing to bytes can't fail.
         output.pack(&mut output_buf).unwrap();
 
-        batch.batch.put_cf(&cf_output_id_to_output, output_id_buf, output_buf);
+        batch.inner.put_cf(&cf_output_id_to_output, output_id_buf, output_buf);
 
         Ok(())
     }
@@ -197,7 +198,7 @@ impl Batch<OutputId, Output> for Storage {
         // Packing to bytes can't fail.
         output_id.pack(&mut output_id_buf).unwrap();
 
-        batch.batch.delete_cf(&cf_output_id_to_output, output_id_buf);
+        batch.inner.delete_cf(&cf_output_id_to_output, output_id_buf);
 
         Ok(())
     }
@@ -206,11 +207,12 @@ impl Batch<OutputId, Output> for Storage {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
         write_options.disable_wal(!durability);
-        self.inner.write_opt(batch.batch, &write_options)?;
+        self.inner.write_opt(batch.inner, &write_options)?;
 
         Ok(())
     }
 }
+
 #[async_trait::async_trait]
 impl Batch<OutputId, Spent> for Storage {
     type BatchBuilder = StorageBatch;
@@ -230,7 +232,7 @@ impl Batch<OutputId, Spent> for Storage {
         // Packing to bytes can't fail.
         spent.pack(&mut spent_buf).unwrap();
 
-        batch.batch.put_cf(&cf_output_id_to_spent, output_id_buf, spent_buf);
+        batch.inner.put_cf(&cf_output_id_to_spent, output_id_buf, spent_buf);
 
         Ok(())
     }
@@ -246,7 +248,7 @@ impl Batch<OutputId, Spent> for Storage {
         // Packing to bytes can't fail.
         output_id.pack(&mut output_id_buf).unwrap();
 
-        batch.batch.delete_cf(&cf_output_id_to_spent, output_id_buf);
+        batch.inner.delete_cf(&cf_output_id_to_spent, output_id_buf);
 
         Ok(())
     }
@@ -255,11 +257,12 @@ impl Batch<OutputId, Spent> for Storage {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
         write_options.disable_wal(!durability);
-        self.inner.write_opt(batch.batch, &write_options)?;
+        self.inner.write_opt(batch.inner, &write_options)?;
 
         Ok(())
     }
 }
+
 #[async_trait::async_trait]
 impl Batch<Unspent, ()> for Storage {
     type BatchBuilder = StorageBatch;
@@ -271,7 +274,7 @@ impl Batch<Unspent, ()> for Storage {
         // Packing to bytes can't fail.
         unspent.pack(&mut unspent_buf).unwrap();
 
-        batch.batch.put_cf(&cf_output_id_unspent, unspent_buf, []);
+        batch.inner.put_cf(&cf_output_id_unspent, unspent_buf, []);
 
         Ok(())
     }
@@ -283,7 +286,7 @@ impl Batch<Unspent, ()> for Storage {
         // Packing to bytes can't fail.
         unspent.pack(&mut unspent_buf).unwrap();
 
-        batch.batch.delete_cf(&cf_output_id_unspent, unspent_buf);
+        batch.inner.delete_cf(&cf_output_id_unspent, unspent_buf);
 
         Ok(())
     }
@@ -292,7 +295,7 @@ impl Batch<Unspent, ()> for Storage {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
         write_options.disable_wal(!durability);
-        self.inner.write_opt(batch.batch, &write_options)?;
+        self.inner.write_opt(batch.inner, &write_options)?;
 
         Ok(())
     }
