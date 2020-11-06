@@ -218,11 +218,7 @@ dependencies = [
  "hex",
  "log",
  "thiserror",
-<<<<<<< 61d4d0ad0bd913e0eebb01e6d0222a353d239649
  "tokio",
-=======
- "tokio 0.2.22",
->>>>>>> transport module and refactoring
 ]
 
 [[package]]
@@ -293,11 +289,7 @@ dependencies = [
  "serde",
  "structopt",
  "thiserror",
-<<<<<<< 61d4d0ad0bd913e0eebb01e6d0222a353d239649
  "tokio",
-=======
- "tokio 0.2.22",
->>>>>>> transport module and refactoring
  "url",
 ]
 
@@ -1904,10 +1896,22 @@ dependencies = [
  "kernel32-sys",
  "libc",
  "log",
- "miow",
+ "miow 0.2.1",
  "net2",
  "slab",
  "winapi 0.2.8",
+]
+
+[[package]]
+name = "mio-named-pipes"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0840c1c50fd55e521b247f949c241c9997709f23bd7f023b9762cd561e935656"
+dependencies = [
+ "log",
+ "mio",
+ "miow 0.3.5",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -1922,29 +1926,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mio-named-pipes"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0840c1c50fd55e521b247f949c241c9997709f23bd7f023b9762cd561e935656"
-dependencies = [
- "log",
- "mio 0.6.22",
- "miow 0.3.5",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "mio-uds"
-version = "0.6.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afcb699eb26d4332647cc848492bbc15eafb26f08d0304550d5aa1f612e066f0"
-dependencies = [
- "iovec",
- "libc",
- "mio 0.6.22",
-]
-
-[[package]]
 name = "miow"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1954,6 +1935,16 @@ dependencies = [
  "net2",
  "winapi 0.2.8",
  "ws2_32-sys",
+]
+
+[[package]]
+name = "miow"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07b88fb9795d4d36d62a012dfbf49a8f5cf12751f36d31a9dbe66d528e58979e"
+dependencies = [
+ "socket2",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -3049,67 +3040,22 @@ dependencies = [
  "futures-core",
  "iovec",
  "lazy_static",
-<<<<<<< 61d4d0ad0bd913e0eebb01e6d0222a353d239649
  "libc",
  "memchr",
-<<<<<<< db4c8e2be4e9cc2584c82bd1db5a0068dfc94ca4
  "mio",
- "mio-uds",
-=======
- "mio 0.7.4",
- "num_cpus",
- "parking_lot",
->>>>>>> Update bee-network example
-=======
- "libc",
- "memchr",
- "mio 0.6.22",
  "mio-named-pipes",
  "mio-uds",
  "num_cpus",
  "pin-project-lite",
  "signal-hook-registry",
  "slab",
- "tokio-macros 0.2.5",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "tokio"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1911a203c5c240fd237e23a42e48846475f3d3b1e1dad3f17e6cc17a775b707c"
-dependencies = [
- "fnv",
- "lazy_static",
- "libc",
- "mio 0.7.4",
- "num_cpus",
->>>>>>> transport module and refactoring
- "pin-project-lite",
- "signal-hook-registry",
- "slab",
- "tokio-macros 0.3.0",
+ "tokio-macros",
  "winapi 0.3.9",
 ]
 
 [[package]]
 name = "tokio-macros"
 version = "0.2.5"
-<<<<<<< 61d4d0ad0bd913e0eebb01e6d0222a353d239649
-=======
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "tokio-macros"
-version = "0.3.0"
->>>>>>> transport module and refactoring
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
 dependencies = [
