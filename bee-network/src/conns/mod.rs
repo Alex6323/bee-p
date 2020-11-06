@@ -42,17 +42,15 @@ pub(crate) async fn spawn_connection_handler(
 ) -> Result<(), Error> {
     let MuxedConnection {
         peer_id,
-        peer_address,
+        endpoint_address,
         muxer,
         origin,
         ..
     } = connection;
 
     let muxer = Arc::new(muxer);
-    let (data_sender, data_receiver) = peers::channel();
+    let (message_sender, message_receiver) = peers::channel();
 
-    let peer_id_clone = peer_id.clone();
-    let peer_address_clone = peer_address.clone();
     let internal_event_sender_clone = internal_event_sender.clone();
 
     let substream = match origin {
@@ -69,19 +67,19 @@ pub(crate) async fn spawn_connection_handler(
     };
 
     spawn_substream_task(
-        peer_id_clone,
-        peer_address_clone,
+        peer_id.clone(),
+        endpoint_address.clone(),
         substream,
-        data_receiver,
+        message_receiver,
         internal_event_sender_clone,
     );
 
     internal_event_sender
         .send_async(Event::ConnectionEstablished {
             peer_id,
-            peer_address,
+            endpoint_address,
             origin,
-            data_sender,
+            message_sender,
         })
         .await
         .map_err(|_| Error::SendingEventFailed)?;
@@ -91,13 +89,13 @@ pub(crate) async fn spawn_connection_handler(
 
 fn spawn_substream_task(
     peer_id: PeerId,
-    peer_address: Multiaddr,
+    endpoint_address: Multiaddr,
     mut substream: SubstreamRef<Arc<StreamMuxerBox>>,
-    data_receiver: DataReceiver,
+    message_receiver: DataReceiver,
     mut internal_event_sender: EventSender,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        let mut fused_data_receiver = data_receiver.into_stream();
+        let mut fused_message_receiver = message_receiver.into_stream();
         let mut buffer = vec![0u8; MAX_BUFFER_SIZE.load(Ordering::Relaxed)];
 
         loop {
@@ -105,7 +103,7 @@ fn spawn_substream_task(
                 num_read = recv_message(&mut substream, &mut buffer).fuse() => {
                     if !process_read(
                         peer_id.clone(),
-                        peer_address.clone(),
+                        endpoint_address.clone(),
                         num_read,
                         &mut internal_event_sender,
                         &buffer)
@@ -114,7 +112,7 @@ fn spawn_substream_task(
                         break;
                     }
                 }
-                message = fused_data_receiver.next() => {
+                message = fused_message_receiver.next() => {
                     if let Some(message) = message {
                         send_message(&mut substream, &message).await;
                     } else {
@@ -151,7 +149,7 @@ where
 #[inline]
 async fn process_read(
     peer_id: PeerId,
-    peer_address: Multiaddr,
+    endpoint_address: Multiaddr,
     num_read: usize,
     internal_event_sender: &mut EventSender,
     buffer: &[u8],
@@ -162,7 +160,7 @@ async fn process_read(
         if internal_event_sender
             .send_async(Event::ConnectionDropped {
                 peer_id: peer_id.clone(),
-                peer_address: peer_address.clone(),
+                endpoint_address: endpoint_address.clone(),
             })
             .await
             .is_err()

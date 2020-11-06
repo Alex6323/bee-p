@@ -66,7 +66,7 @@ impl PeerWorker {
 
         info!("[{}] Stopped.", self.peer.address);
 
-        Protocol::get().peer_manager.remove(&self.peer.epid).await;
+        Protocol::get().peer_manager.remove(&self.peer.id).await;
     }
 
     fn process_message<B: Backend>(
@@ -82,7 +82,7 @@ impl PeerWorker {
                     Ok(message) => {
                         self.milestone_responder
                             .send(MilestoneResponderWorkerEvent {
-                                epid: self.peer.epid,
+                                peer_id: self.peer.id.clone(),
                                 request: message,
                             })
                             .map_err(|_| PeerWorkerError::FailedSend)?;
@@ -104,7 +104,7 @@ impl PeerWorker {
                     Ok(message) => {
                         self.hasher
                             .send(HasherWorkerEvent {
-                                from: self.peer.epid,
+                                from: self.peer.id.clone(),
                                 message_packet: message,
                             })
                             .map_err(|_| PeerWorkerError::FailedSend)?;
@@ -126,7 +126,7 @@ impl PeerWorker {
                     Ok(message) => {
                         self.message_responder
                             .send(MessageResponderWorkerEvent {
-                                epid: self.peer.epid,
+                                peer_id: self.peer.id.clone(),
                                 request: message,
                             })
                             .map_err(|_| PeerWorkerError::FailedSend)?;

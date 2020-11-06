@@ -17,16 +17,21 @@ use std::fmt;
 
 pub struct MuxedConnection {
     pub peer_id: PeerId,
-    pub peer_address: Multiaddr,
+    pub endpoint_address: Multiaddr,
     pub muxer: StreamMuxerBox,
     pub origin: Origin,
 }
 
 impl MuxedConnection {
-    pub fn new(peer_id: PeerId, peer_address: Multiaddr, muxer: StreamMuxerBox, origin: Origin) -> Result<Self, Error> {
+    pub fn new(
+        peer_id: PeerId,
+        endpoint_address: Multiaddr,
+        muxer: StreamMuxerBox,
+        origin: Origin,
+    ) -> Result<Self, Error> {
         Ok(Self {
             peer_id,
-            peer_address,
+            endpoint_address,
             muxer,
             origin,
         })

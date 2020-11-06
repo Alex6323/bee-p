@@ -26,35 +26,34 @@ pub fn channel() -> (EventSender, EventReceiver) {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Event {
-    PeerAdded {
-        peer_address: Multiaddr,
+    EndpointAdded {
+        address: Multiaddr,
     },
 
-    PeerRemoved {
-        peer_address: Multiaddr,
-        peer_id: Option<PeerId>,
+    EndpointRemoved {
+        address: Multiaddr,
     },
 
     ConnectionEstablished {
-        peer_address: Multiaddr,
         peer_id: PeerId,
+        endpoint_address: Multiaddr,
         origin: Origin,
-        data_sender: DataSender,
+        message_sender: DataSender,
     },
 
     ConnectionDropped {
-        peer_address: Multiaddr,
         peer_id: PeerId,
+        endpoint_address: Multiaddr,
     },
 
     PeerConnected {
-        peer_address: Multiaddr,
-        peer_id: PeerId,
+        id: PeerId,
+        endpoint_address: Multiaddr,
         origin: Origin,
     },
 
     PeerDisconnected {
-        peer_id: PeerId,
+        id: PeerId,
     },
 
     MessageReceived {
@@ -63,43 +62,51 @@ pub enum Event {
     },
 
     ReconnectTimerElapsed {
-        peer_address: Multiaddr,
+        endpoint_address: Multiaddr,
     },
 }
 
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Event::PeerAdded { peer_address } => write!(f, "Event::PeerAdded {{ {} }}", peer_address),
+            Event::EndpointAdded { address } => write!(f, "Event::EndpointAdded {{ {} }}", address),
 
-            Event::PeerRemoved { peer_address, .. } => write!(f, "Event::PeerRemoved {{ {} }}", peer_address),
+            Event::EndpointRemoved { address, .. } => write!(f, "Event::EndpointRemoved {{ {} }}", address),
 
             Event::ConnectionEstablished {
-                peer_id, peer_address, ..
-            } => write!(f, "Event::ConnectionEstablished {{ {} ({}) }}", peer_address, peer_id),
+                peer_id,
+                endpoint_address,
+                ..
+            } => write!(
+                f,
+                "Event::ConnectionEstablished {{ {} ({}) }}",
+                endpoint_address, peer_id
+            ),
 
             Event::ConnectionDropped {
-                peer_id, peer_address, ..
-            } => write!(f, "Event::ConnectionDropped {{ {} ({}) }}", peer_address, peer_id),
+                peer_id,
+                endpoint_address,
+                ..
+            } => write!(f, "Event::ConnectionDropped {{ {} ({}) }}", endpoint_address, peer_id),
 
             Event::PeerConnected {
-                peer_id,
-                peer_address,
+                id,
+                endpoint_address,
                 origin,
             } => write!(
                 f,
                 "Event::PeerConnected {{ {}, peer_address: {}, origin: {} }}",
-                peer_id, peer_address, origin
+                id, endpoint_address, origin
             ),
 
-            Event::PeerDisconnected { peer_id } => write!(f, "Event::PeerDisconnected {{ {} }}", peer_id),
+            Event::PeerDisconnected { id } => write!(f, "Event::PeerDisconnected {{ {} }}", id),
 
             Event::MessageReceived { peer_id, message } => {
                 write!(f, "Event::MessageReceived {{ {}, length: {} }}", peer_id, message.len())
             }
 
-            Event::ReconnectTimerElapsed { peer_address, .. } => {
-                write!(f, "Event::ReconnectTimerElapsed {{ {} }}", peer_address)
+            Event::ReconnectTimerElapsed { endpoint_address, .. } => {
+                write!(f, "Event::ReconnectTimerElapsed {{ {} }}", endpoint_address)
             }
         }
     }

@@ -19,7 +19,7 @@ use crate::{
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_network::EndpointId;
+use bee_network::PeerId;
 
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -47,7 +47,7 @@ impl Deref for RequestedMilestones {
     }
 }
 
-pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<EndpointId>);
+pub(crate) struct MilestoneRequesterWorkerEvent(pub(crate) MilestoneIndex, pub(crate) Option<PeerId>);
 
 pub(crate) struct MilestoneRequesterWorker {
     pub(crate) tx: flume::Sender<MilestoneRequesterWorkerEvent>,
@@ -56,14 +56,14 @@ pub(crate) struct MilestoneRequesterWorker {
 async fn process_request(
     requested_milestones: &RequestedMilestones,
     index: MilestoneIndex,
-    epid: Option<EndpointId>,
+    peer_id: Option<PeerId>,
     counter: &mut usize,
 ) {
     if requested_milestones.contains_key(&index) {
         return;
     }
 
-    process_request_unchecked(index, epid, counter).await;
+    process_request_unchecked(index, peer_id, counter).await;
 
     if index.0 != 0 {
         requested_milestones.insert(index, Instant::now());
@@ -71,14 +71,14 @@ async fn process_request(
 }
 
 /// Return `true` if the milestone was requested
-async fn process_request_unchecked(index: MilestoneIndex, epid: Option<EndpointId>, counter: &mut usize) -> bool {
+async fn process_request_unchecked(index: MilestoneIndex, peer_id: Option<PeerId>, counter: &mut usize) -> bool {
     if Protocol::get().peer_manager.handshaked_peers.is_empty() {
         return false;
     }
 
-    match epid {
-        Some(epid) => {
-            Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
+    match peer_id {
+        Some(peer_id) => {
+            Sender::<MilestoneRequest>::send(&peer_id, MilestoneRequest::new(*index));
             true
         }
         None => {

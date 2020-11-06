@@ -13,24 +13,11 @@ use libp2p::{
     core::{
         muxing::StreamMuxerBox,
         transport::{upgrade, Boxed},
-        upgrade::SelectUpgrade,
     },
-    dns, identity, mplex, noise, tcp, yamux, PeerId, Transport,
+    dns, identity, mplex, noise, tcp, PeerId, Transport,
 };
 
 use std::io;
-
-// let noise_keys = noise::Keypair::<noise::X25519Spec>::new()
-//     .into_authentic(local_keys)
-//     .expect("error creating noise keys");
-
-// let transport = tcp::TokioTcpConfig::default()
-//     .upgrade(upgrade::Version::V1)
-//     .authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
-//     .multiplex(yamux::Config::default())
-//     .map(|(peer, muxer), _| (peer, StreamMuxerBox::new(muxer)))
-//     .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-//     .boxed();
 
 pub fn build_transport(local_keys: &identity::Keypair) -> io::Result<Boxed<(PeerId, StreamMuxerBox)>> {
     let noise_keys = noise::Keypair::<noise::X25519Spec>::new()
@@ -43,11 +30,8 @@ pub fn build_transport(local_keys: &identity::Keypair) -> io::Result<Boxed<(Peer
     Ok(transport
         .upgrade(upgrade::Version::V1)
         .authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
-        // .multiplex(yamux::Config::default())
         .multiplex(mplex::MplexConfig::new())
         // .multiplex(SelectUpgrade::new(yamux::Config::default(), mplex::MplexConfig::new()))
         .timeout(std::time::Duration::from_secs(20))
-        // .map(|(peer, muxer), _| (peer, StreamMuxerBox::new(muxer)))
-        // .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
         .boxed())
 }

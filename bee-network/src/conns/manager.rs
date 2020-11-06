@@ -165,10 +165,9 @@ async fn process_muxer(
     //     return Ok(false);
     // }
 
-    // TEMP
-    log::error!(
+    trace!(
         "Successfully established inbound connection to {} ({}).",
-        connection.peer_address,
+        connection.endpoint_address,
         connection.peer_id,
     );
 

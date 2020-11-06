@@ -16,14 +16,14 @@ use crate::{
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_network::{Command::SendMessage, EndpointId, Network};
+use bee_network::{Command::SendMessage, Network, PeerId};
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::{info, warn};
 
 pub(crate) struct BroadcasterWorkerEvent {
-    pub(crate) source: Option<EndpointId>,
+    pub(crate) source: Option<PeerId>,
     pub(crate) message: Message,
 }
 
@@ -51,11 +51,11 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
 
                 for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
                     if match source {
-                        Some(source) => source != *peer.key(),
+                        Some(ref source) => source != peer.key(),
                         None => true,
                     } {
                         match network.unbounded_send(SendMessage {
-                            receiver_epid: *peer.key(),
+                            peer_id: peer.key().clone(),
                             message: bytes.clone(),
                         }) {
                             Ok(_) => {

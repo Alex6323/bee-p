@@ -20,20 +20,20 @@ use log::*;
 use libp2p::{identity, Multiaddr, Transport};
 
 pub async fn dial_peer(
+    endpoint_address: Multiaddr,
     local_keys: &identity::Keypair,
-    peer_address: Multiaddr,
     internal_event_sender: EventSender,
     connected_peers: &ConnectedPeerList,
 ) -> Result<(), Error> {
     let transport = build_transport(local_keys)?;
 
-    trace!("Trying to connect to {}...", peer_address);
+    trace!("Dialing {}...", endpoint_address);
 
     // TODO: error handling
-    match transport.dial(peer_address.clone()).expect("dial").await {
+    match transport.dial(endpoint_address.clone()).expect("dial").await {
         Ok((peer_id, muxer)) => {
             if !connected_peers.contains(&peer_id) {
-                let connection = match MuxedConnection::new(peer_id, peer_address, muxer, Origin::Outbound) {
+                let connection = match MuxedConnection::new(peer_id, endpoint_address, muxer, Origin::Outbound) {
                     Ok(conn) => conn,
                     Err(e) => {
                         warn!["Error creating multiplexed connection: {:?}.", e];
@@ -44,7 +44,7 @@ pub async fn dial_peer(
 
                 trace!(
                     "Sucessfully connected to {} ({}).",
-                    connection.peer_address,
+                    connection.endpoint_address,
                     connection.peer_id,
                 );
 
@@ -56,7 +56,7 @@ pub async fn dial_peer(
             Ok(())
         }
         Err(e) => {
-            warn!("Connecting to {} failed: {:?}.", peer_address, e);
+            warn!("Dialing {} failed: {:?}.", endpoint_address, e);
 
             Err(Error::ConnectionAttemptFailed)
         }

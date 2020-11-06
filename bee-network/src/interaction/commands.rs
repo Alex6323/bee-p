@@ -22,20 +22,21 @@ pub fn channel() -> (CommandSender, CommandReceiver) {
 
 #[derive(Debug)]
 pub enum Command {
-    AddPeer { peer_address: Multiaddr },
-    RemovePeer { peer_address: Multiaddr },
-    ConnectPeer { peer_address: Multiaddr },
-    DisconnectPeer { peer_id: PeerId },
+    AddEndpoint { address: Multiaddr },
+    RemoveEndpoint { address: Multiaddr },
+    DialPeer { endpoint_address: Multiaddr },
+    DisconnectPeer { id: PeerId },
+    // TODO: maybe swap both fields, and rename `peer_id` to `to`?
     SendMessage { peer_id: PeerId, message: Vec<u8> },
 }
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Command::AddPeer { peer_address, .. } => write!(f, "Command::AddPeer {{ {} }}", peer_address),
-            Command::RemovePeer { peer_address, .. } => write!(f, "Command::RemovePeer {{ {} }}", peer_address),
-            Command::ConnectPeer { peer_address, .. } => write!(f, "Command::ConnectPeer {{ {} }}", peer_address),
-            Command::DisconnectPeer { peer_id, .. } => write!(f, "Command::DisconnectPeer {{ {} }}", peer_id),
+            Command::AddEndpoint { address, .. } => write!(f, "Command::AddEndpoint {{ {} }}", address),
+            Command::RemoveEndpoint { address, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", address),
+            Command::DialPeer { endpoint_address, .. } => write!(f, "Command::DialPeer {{ {} }}", endpoint_address),
+            Command::DisconnectPeer { id, .. } => write!(f, "Command::DisconnectPeer {{ {} }}", id),
             Command::SendMessage { peer_id, .. } => write!(f, "Command::SendMessage {{ {} }}", peer_id),
         }
     }

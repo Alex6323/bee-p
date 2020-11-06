@@ -61,10 +61,10 @@ async fn main() {
 
     info!("[pingpong] Adding static peers...");
 
-    for peer_address in &config.peers {
+    for endpoint_address in &config.peers {
         network
-            .send(AddPeer {
-                peer_address: peer_address.clone(),
+            .send(AddEndpoint {
+                address: endpoint_address.clone(),
             })
             .await
             .unwrap();
@@ -134,43 +134,43 @@ async fn process_event(
     handshakes: &mut HashMap<String, Vec<PeerId>>,
 ) {
     match event {
-        Event::PeerAdded { peer_address } => {
-            info!("[pingpong] Added peer {}.", peer_address);
+        Event::EndpointAdded { address } => {
+            info!("[pingpong] Added endpoint {}.", address);
 
             network
-                .send(ConnectPeer { peer_address })
+                .send(DialPeer {
+                    endpoint_address: address,
+                })
                 .await
                 .expect("error sending Connect command");
         }
 
-        Event::PeerRemoved {
-            peer_address, peer_id, ..
-        } => {
-            info!("[pingpong] Removed peer {} ({:?}).", peer_address, peer_id);
+        Event::EndpointRemoved { address } => {
+            info!("[pingpong] Removed endpoint {}.", address);
         }
 
         Event::PeerConnected {
-            peer_address,
-            peer_id,
+            id,
+            endpoint_address,
             origin,
             ..
         } => {
-            info!("[pingpong] Connected peer {} ({}) [{}].", peer_address, peer_id, origin);
+            info!("[pingpong] Connected peer {} at {} [{}].", id, endpoint_address, origin);
 
             info!("[pingpong] Sending message: \"{}\"", message);
             network
                 .send(SendMessage {
-                    peer_id: peer_id.clone(),
+                    peer_id: id.clone(),
                     message: Utf8Message::new(message).as_bytes(),
                 })
                 .await
                 .expect("error sending message to peer");
 
-            spam_endpoint(network.clone(), peer_id);
+            spam_endpoint(network.clone(), id);
         }
 
-        Event::PeerDisconnected { peer_id } => {
-            info!("[pingpong] Disconnected peer {}.", peer_id);
+        Event::PeerDisconnected { id } => {
+            info!("[pingpong] Disconnected peer {}.", id);
         }
 
         Event::MessageReceived { peer_id, message, .. } => {
@@ -182,44 +182,6 @@ async fn process_event(
 
             let message = Utf8Message::from_bytes(&message);
             info!("[pingpong] Received message \"{}\"", message);
-
-            // if !endpoints.contains(&epid) {
-            //     // NOTE: first message is assumed to be the handshake message
-            //     let handshake = Utf8Message::from_bytes(&message);
-            //     info!("[pingpong] Received handshake '{}' ({})", handshake, epid);
-
-            //     let epids = handshakes.entry(handshake.to_string()).or_insert_with(Vec::new);
-            //     if !epids.contains(&epid) {
-            //         epids.push(epid);
-            //     }
-
-            //     if epids.len() > 1 {
-            //         info!(
-            //             "[pingpong] '{0}' and '{1}' are duplicate connections. Dropping '{1}'...",
-            //             epids[0], epids[1]
-            //         );
-
-            //         network
-            //             .send(MarkDuplicate {
-            //                 duplicate_epid: epids[1],
-            //                 original_epid: epids[0],
-            //             })
-            //             .await
-            //             .expect("error sending 'MarkDuplicate'");
-
-            //         network
-            //             .send(DisconnectEndpoint { epid: epids[1] })
-            //             .await
-            //             .expect("error sending 'DisconnectEndpoint' command");
-            //     }
-
-            //     endpoints.insert(epid);
-
-            //     spam_endpoint(network.clone(), epid);
-            // } else {
-            //     let message = Utf8Message::from_bytes(&message);
-            //     info!("[pingpong] Received message '{}' ({})", message, epid);
-            // }
         }
 
         _ => warn!("Unsupported event {}.", event),

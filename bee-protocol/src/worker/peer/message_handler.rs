@@ -11,6 +11,8 @@
 
 use crate::packet::{Header, HEADER_SIZE};
 
+use bee_network::Multiaddr;
+
 use futures::{
     channel::oneshot,
     future::{self, FutureExt},
@@ -19,8 +21,6 @@ use futures::{
 };
 
 use log::trace;
-
-use std::net::SocketAddr;
 
 type EventRecv = flume::r#async::RecvStream<'static, std::vec::Vec<u8>>;
 type ShutdownRecv = future::Fuse<oneshot::Receiver<()>>;
@@ -46,13 +46,13 @@ pub(super) struct MessageHandler {
     shutdown: ShutdownRecv,
     state: ReadState,
     /// The address of the peer. This field is only here for logging purposes.
-    address: SocketAddr,
+    address: Multiaddr,
 }
 
 impl MessageHandler {
     /// Create a new message handler from an event receiver, a shutdown receiver and the peer's
     /// address.
-    pub(super) fn new(receiver: EventRecv, shutdown: ShutdownRecv, address: SocketAddr) -> Self {
+    pub(super) fn new(receiver: EventRecv, shutdown: ShutdownRecv, address: Multiaddr) -> Self {
         Self {
             events: EventHandler::new(receiver),
             shutdown,

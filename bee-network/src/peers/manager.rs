@@ -11,7 +11,7 @@
 
 use super::{ConnectedPeerList, KnownPeerList};
 use crate::{
-    conns::dial_peer,
+    conns,
     interaction::{commands::Command, events::Event},
     RECONNECT_INTERVAL,
 };
@@ -126,13 +126,13 @@ async fn process_command(
     trace!("Received {}.", command);
 
     match command {
-        Command::AddPeer { peer_address } => {
-            add_peer(peer_address, &mut known_peers, &mut internal_event_sender).await?;
+        Command::AddEndpoint { address } => {
+            add_endpoint(address, &mut known_peers, &mut internal_event_sender).await?;
         }
 
-        Command::RemovePeer { peer_address } => {
-            remove_peer(
-                peer_address,
+        Command::RemoveEndpoint { address } => {
+            remove_endpoint(
+                address,
                 &mut known_peers,
                 &mut connected_peers,
                 &mut internal_event_sender,
@@ -140,9 +140,9 @@ async fn process_command(
             .await?;
         }
 
-        Command::ConnectPeer { peer_address } => {
-            connect_peer(
-                peer_address,
+        Command::DialPeer { endpoint_address } => {
+            dial_peer(
+                endpoint_address,
                 local_keys,
                 &mut known_peers,
                 &mut connected_peers,
@@ -151,10 +151,10 @@ async fn process_command(
             .await?;
         }
 
-        Command::DisconnectPeer { peer_id } => {
-            if disconnect_peer(&peer_id, &mut connected_peers)? {
+        Command::DisconnectPeer { id } => {
+            if disconnect_peer(&id, &mut connected_peers)? {
                 event_sender
-                    .send_async(Event::PeerDisconnected { peer_id })
+                    .send_async(Event::PeerDisconnected { id })
                     .await
                     .map_err(|e| WorkerError(Box::new(e)))?;
             }
@@ -200,32 +200,32 @@ async fn process_event(
     trace!("Received {}.", event);
 
     match event {
-        Event::PeerAdded { peer_address } => {
+        Event::EndpointAdded { address } => {
             event_sender
-                .send_async(Event::PeerAdded { peer_address })
+                .send_async(Event::EndpointAdded { address })
                 .await
                 .map_err(|e| WorkerError(Box::new(e)))?;
         }
 
-        Event::PeerRemoved { peer_address, peer_id } => {
+        Event::EndpointRemoved { address } => {
             event_sender
-                .send_async(Event::PeerRemoved { peer_address, peer_id })
+                .send_async(Event::EndpointRemoved { address })
                 .await
                 .map_err(|e| WorkerError(Box::new(e)))?;
         }
 
         Event::ConnectionEstablished {
-            peer_address,
             peer_id,
+            endpoint_address,
             origin,
-            data_sender,
+            message_sender,
         } => {
-            if connected_peers.insert(peer_id.clone(), data_sender) {
+            if connected_peers.insert(peer_id.clone(), message_sender) {
                 // new peer
                 event_sender
                     .send_async(Event::PeerConnected {
-                        peer_address,
-                        peer_id,
+                        id: peer_id,
+                        endpoint_address,
                         origin,
                     })
                     .await
@@ -238,39 +238,14 @@ async fn process_event(
         }
 
         Event::ConnectionDropped {
-            peer_address, peer_id, ..
+            peer_id,
+            endpoint_address,
+            ..
         } => {
-            // // NOTE: we allow duplicates to be disconnected (no reconnect)
-            // if connected_peers.is_duplicate(peer_id) {
-            //     if connected_peers.remove(peer_id) {
-            //         event_sender
-            //             .send_async(Event::PeerDisconnected { peer_id })
-            //             .await
-            //             .map_err(|e| WorkerError(Box::new(e)))?;
-            //     } else {
-            //         warn!("ConnectionDropped fired, but endpoint was already unregistered.");
-            //     }
-            //     return Ok(true);
-            // }
-
-            // // NOTE: we allow originals to be disconnected (no reconnect), if there's a duplicate
-            // if connected_peers.has_duplicate(peer_id).is_some() {
-            //     warn!("A connection was dropped that still has a connected duplicate."); // Should we also disconnect
-            // the duplicate?     if connected_peers.remove(peer_id) {
-            //         event_sender
-            //             .send_async(Event::PeerDisconnected { peer_id })
-            //             .await
-            //             .map_err(|e| WorkerError(Box::new(e)))?;
-            //     } else {
-            //         warn!("ConnectionDropped fired, but endpoint was already unregistered.");
-            //     }
-            //     return Ok(true);
-            // }
-
-            // TODO: check, if the contact belonging to the dropped connection is still a "wanted" peer
+            // TODO: check, if the contact belonging to the dropped connection is still a liked peer
             if known_peers.contains_peer_id(&peer_id) {
-                connect_peer(
-                    peer_address,
+                dial_peer(
+                    endpoint_address,
                     &local_keys,
                     known_peers,
                     connected_peers,
@@ -285,9 +260,9 @@ async fn process_event(
             .await
             .map_err(|e| WorkerError(Box::new(e)))?,
 
-        Event::ReconnectTimerElapsed { peer_address } => {
-            connect_peer(
-                peer_address,
+        Event::ReconnectTimerElapsed { endpoint_address } => {
+            dial_peer(
+                endpoint_address,
                 &local_keys,
                 known_peers,
                 connected_peers,
@@ -301,46 +276,15 @@ async fn process_event(
     Ok(true)
 }
 #[inline]
-async fn add_peer(
-    peer_address: Multiaddr,
+async fn add_endpoint(
+    endpoint_address: Multiaddr,
     known_peers: &mut KnownPeerList,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    if known_peers.insert_address(peer_address.clone()) {
+    if known_peers.insert_address(endpoint_address.clone()) {
         internal_event_sender
-            .send_async(Event::PeerAdded { peer_address })
-            .await
-            .map_err(|e| WorkerError(Box::new(e)))?;
-
-        Ok(true)
-    } else {
-        Ok(false)
-    }
-}
-
-#[inline]
-async fn remove_peer(
-    peer_address: Multiaddr,
-    known_peers: &mut KnownPeerList,
-    connected_peers: &mut ConnectedPeerList,
-    internal_event_sender: &mut EventSender,
-) -> Result<bool, WorkerError> {
-    if let Some(peer_id) = known_peers.remove_peer_by_address(&peer_address) {
-        if let Some(peer_id) = peer_id {
-            if connected_peers.remove(&peer_id) {
-                trace!("Removed and disconnected peer {} at {}.", peer_id, peer_address);
-            } else {
-                trace!("Removed peer {} at {}.", peer_id, peer_address);
-            }
-        } else {
-            trace!("Removed peer at {}.", peer_address);
-        }
-
-        // TODO: set proper peer_id if possible
-        internal_event_sender
-            .send_async(Event::PeerRemoved {
-                peer_address,
-                peer_id: None,
+            .send_async(Event::EndpointAdded {
+                address: endpoint_address,
             })
             .await
             .map_err(|e| WorkerError(Box::new(e)))?;
@@ -352,22 +296,48 @@ async fn remove_peer(
 }
 
 #[inline]
-async fn connect_peer(
-    peer_address: Multiaddr,
+async fn remove_endpoint(
+    endpoint_address: Multiaddr,
+    known_peers: &mut KnownPeerList,
+    connected_peers: &mut ConnectedPeerList,
+    internal_event_sender: &mut EventSender,
+) -> Result<bool, WorkerError> {
+    if let Some(peer_id) = known_peers.remove_peer_by_address(&endpoint_address) {
+        if let Some(peer_id) = peer_id {
+            if connected_peers.remove(&peer_id) {
+                trace!("Removed and disconnected peer {} at {}.", peer_id, endpoint_address);
+            } else {
+                trace!("Removed peer reached at {}.", endpoint_address);
+            }
+        } else {
+            trace!("Removed peer reached at {}.", endpoint_address);
+        }
+
+        // TODO: set proper peer_id if possible
+        internal_event_sender
+            .send_async(Event::EndpointRemoved {
+                address: endpoint_address,
+            })
+            .await
+            .map_err(|e| WorkerError(Box::new(e)))?;
+
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+#[inline]
+async fn dial_peer(
+    endpoint_address: Multiaddr,
     local_keys: &identity::Keypair,
     known_peers: &KnownPeerList,
     connected_peers: &ConnectedPeerList,
     internal_event_sender: &mut EventSender,
 ) -> Result<bool, WorkerError> {
-    // if let Some(peer_id) = known_peers.get_peer_id_from_address(&peer_address) {
-    //     if connected_peers.contains(&peer_id) {
-    //         // NOTE: already connected
-    //         return Ok(false);
-    //     }
-    // }
-    if dial_peer(
+    if conns::dial_peer(
+        endpoint_address.clone(),
         local_keys,
-        peer_address.clone(),
         internal_event_sender.clone(),
         connected_peers,
     )
@@ -377,7 +347,7 @@ async fn connect_peer(
         Ok(true)
     } else {
         tokio::spawn(send_event_after_delay(
-            Event::ReconnectTimerElapsed { peer_address },
+            Event::ReconnectTimerElapsed { endpoint_address },
             internal_event_sender.clone(),
         ));
         Ok(false)
@@ -392,7 +362,6 @@ fn disconnect_peer(peer_id: &PeerId, connected_peers: &mut ConnectedPeerList) ->
 
 #[inline]
 async fn send_event_after_delay(event: Event, internal_event_sender: EventSender) -> Result<(), WorkerError> {
-    // tokio::time::sleep(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
     tokio::time::delay_for(Duration::from_secs(RECONNECT_INTERVAL.load(Ordering::Relaxed))).await;
 
     Ok(internal_event_sender
@@ -409,13 +378,3 @@ async fn send_message(
 ) -> Result<bool, WorkerError> {
     Ok(connected_peers.send_message(message, peer_id).await?)
 }
-
-// #[inline]
-// fn mark_duplicate(
-//     duplicate_epid: PeerId,
-//     original_epid: PeerId,
-//     connected_peers: &mut ConnectedPeerList,
-//     _internal_event_sender: &mut EventSender,
-// ) -> Result<bool, WorkerError> {
-//     Ok(connected_peers.mark_duplicate(duplicate_epid, original_epid))
-// }

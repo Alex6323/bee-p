@@ -23,7 +23,7 @@ use crate::{
 use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::{payload::Payload, Message, MessageId};
-use bee_network::EndpointId;
+use bee_network::PeerId;
 
 use async_trait::async_trait;
 use blake2::{Blake2b, Digest};
@@ -34,7 +34,7 @@ use std::any::TypeId;
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) pow_score: f64,
-    pub(crate) from: EndpointId,
+    pub(crate) from: PeerId,
     pub(crate) message_packet: MessagePacket,
 }
 

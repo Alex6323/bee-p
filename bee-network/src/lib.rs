@@ -12,20 +12,23 @@
 //#![warn(missing_docs)]
 #![recursion_limit = "256"]
 
-pub use config::{NetworkConfig, NetworkConfigBuilder};
-pub use interaction::{
-    commands::{self, Command},
-    events::{self, Event, EventReceiver},
-};
-
-pub use network::Network;
-
 mod config;
 mod conns;
 mod interaction;
 mod network;
 mod peers;
 mod transport;
+
+// Exports
+pub use config::{NetworkConfig, NetworkConfigBuilder};
+pub use conns::Origin;
+pub use interaction::{
+    commands::{self, Command},
+    events::{self, Event, EventReceiver},
+};
+#[doc(inline)]
+pub use libp2p::{Multiaddr, PeerId};
+pub use network::Network;
 
 use config::{DEFAULT_MAX_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
 use conns::ConnectionManager;
@@ -35,8 +38,6 @@ use bee_common_ext::shutdown_tokio::Shutdown;
 
 use futures::channel::oneshot;
 use libp2p::identity;
-#[doc(inline)]
-pub use libp2p::{Multiaddr, PeerId};
 use log::*;
 
 use std::{
