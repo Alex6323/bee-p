@@ -9,12 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod handshaked_peer;
 mod manager;
 mod metrics;
 mod peer;
 
-pub(crate) use handshaked_peer::HandshakedPeer;
 pub(crate) use manager::PeerManager;
 pub(crate) use metrics::PeerMetrics;
 pub(crate) use peer::Peer;

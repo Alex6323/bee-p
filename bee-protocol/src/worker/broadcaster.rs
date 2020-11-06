@@ -49,7 +49,7 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
             while let Some(BroadcasterWorkerEvent { source, message }) = receiver.next().await {
                 let bytes = tlv_into_bytes(message);
 
-                for peer in Protocol::get().peer_manager.handshaked_peers.iter() {
+                for peer in Protocol::get().peer_manager.peers.iter() {
                     if match source {
                         Some(ref source) => source != peer.key(),
                         None => true,

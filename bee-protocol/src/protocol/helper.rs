@@ -127,7 +127,7 @@ impl Protocol {
         pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
     ) {
-        for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
+        for entry in Protocol::get().peer_manager.peers.iter() {
             Protocol::send_heartbeat(
                 entry.key().clone(),
                 latest_solid_milestone_index,

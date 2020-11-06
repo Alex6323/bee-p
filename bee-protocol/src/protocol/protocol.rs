@@ -20,8 +20,8 @@ use crate::{
         BroadcasterWorker, HasherWorker, HeartbeaterWorker, KickstartWorker, MessageRequesterWorker,
         MessageResponderWorker, MessageValidatorWorker, MilestoneConeUpdaterWorker, MilestoneRequesterWorker,
         MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        MpsWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones, StatusWorker,
-        StorageWorker, TangleWorker, TipPoolCleanerWorker,
+        MpsWorker, PeerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones, StatusWorker, StorageWorker,
+        TangleWorker, TipPoolCleanerWorker,
     },
 };
 
@@ -160,7 +160,7 @@ impl Protocol {
 
     pub fn register<N: Node>(
         node: &N,
-        config: &ProtocolConfig,
+        _config: &ProtocolConfig,
         id: PeerId,
         address: Multiaddr,
     ) -> (flume::Sender<Vec<u8>>, oneshot::Sender<()>) {
@@ -174,20 +174,30 @@ impl Protocol {
         Protocol::get().peer_manager.add(peer.clone());
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
-        let requested_milestones = node.resource::<RequestedMilestones>();
+        // let requested_milestones = node.resource::<RequestedMilestones>();
 
         spawn(
-            PeerHandshakerWorker::new(
-                Protocol::get().network.clone(),
-                config.clone(),
+            PeerWorker::new(
                 peer,
                 node.worker::<HasherWorker>().unwrap().tx.clone(),
                 node.worker::<MessageResponderWorker>().unwrap().tx.clone(),
                 node.worker::<MilestoneResponderWorker>().unwrap().tx.clone(),
-                node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
             )
-            .run(tangle, requested_milestones, receiver_rx, receiver_shutdown_rx),
+            .run(tangle.clone(), receiver_rx, receiver_shutdown_rx),
         );
+
+        // spawn(
+        //     PeerHandshakerWorker::new(
+        //         Protocol::get().network.clone(),
+        //         config.clone(),
+        //         peer,
+        //         ,
+        //         ,
+        //         ,
+        //         node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
+        //     )
+        //     .run(tangle, requested_milestones, ),
+        // );
 
         (receiver_tx, receiver_shutdown_tx)
     }

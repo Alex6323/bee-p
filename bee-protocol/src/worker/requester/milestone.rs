@@ -72,7 +72,7 @@ async fn process_request(
 
 /// Return `true` if the milestone was requested
 async fn process_request_unchecked(index: MilestoneIndex, peer_id: Option<PeerId>, counter: &mut usize) -> bool {
-    if Protocol::get().peer_manager.handshaked_peers.is_empty() {
+    if Protocol::get().peer_manager.peers.is_empty() {
         return false;
     }
 
@@ -82,14 +82,14 @@ async fn process_request_unchecked(index: MilestoneIndex, peer_id: Option<PeerId
             true
         }
         None => {
-            let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
+            let guard = Protocol::get().peer_manager.peers_keys.read().await;
 
             for _ in 0..guard.len() {
                 let epid = &guard[*counter % guard.len()];
 
                 *counter += 1;
 
-                if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+                if let Some(peer) = Protocol::get().peer_manager.peers.get(epid) {
                     if peer.maybe_has_data(index) {
                         Sender::<MilestoneRequest>::send(&epid, MilestoneRequest::new(*index));
                         return true;

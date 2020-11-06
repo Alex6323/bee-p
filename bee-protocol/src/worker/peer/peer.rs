@@ -12,7 +12,7 @@
 use crate::{
     milestone::MilestoneIndex,
     packet::{tlv_from_bytes, Header, Heartbeat, Message, MessageRequest, MilestoneRequest, Packet},
-    peer::HandshakedPeer,
+    peer::Peer,
     protocol::Protocol,
     tangle::MsTangle,
     worker::{
@@ -24,6 +24,7 @@ use crate::{
 use bee_common_ext::node::ResHandle;
 use bee_storage::storage::Backend;
 
+use futures::{channel::oneshot, future::FutureExt};
 use log::{error, info, trace, warn};
 
 use std::sync::Arc;
@@ -34,7 +35,7 @@ pub(crate) enum PeerWorkerError {
 }
 
 pub struct PeerWorker {
-    peer: Arc<HandshakedPeer>,
+    peer: Arc<Peer>,
     hasher: flume::Sender<HasherWorkerEvent>,
     message_responder: flume::Sender<MessageResponderWorkerEvent>,
     milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
@@ -42,7 +43,7 @@ pub struct PeerWorker {
 
 impl PeerWorker {
     pub(crate) fn new(
-        peer: Arc<HandshakedPeer>,
+        peer: Arc<Peer>,
         hasher: flume::Sender<HasherWorkerEvent>,
         message_responder: flume::Sender<MessageResponderWorkerEvent>,
         milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
@@ -55,8 +56,32 @@ impl PeerWorker {
         }
     }
 
-    pub(super) async fn run<B: Backend>(mut self, tangle: ResHandle<MsTangle<B>>, mut message_handler: MessageHandler) {
+    pub(crate) async fn run<B: Backend>(
+        mut self,
+        tangle: ResHandle<MsTangle<B>>,
+        receiver: flume::Receiver<Vec<u8>>,
+        shutdown: oneshot::Receiver<()>,
+    ) {
         info!("[{}] Running.", self.peer.address);
+
+        let receiver_fused = receiver.into_stream();
+        let shutdown_fused = shutdown.fuse();
+
+        let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address.clone());
+
+        //                 Protocol::get()
+        //                     .bus
+        //                     .dispatch(HandshakeCompleted(self.peer.epid, address));
+        //
+        //                 Protocol::send_heartbeat(
+        //                     self.peer.epid,
+        //                     tangle.get_latest_solid_milestone_index(),
+        //                     tangle.get_pruning_index(),
+        //                     tangle.get_latest_milestone_index(),
+        //                 );
+        //
+        //                 Protocol::request_latest_milestone(tangle, &self.milestone_requester,
+        // &*requested_milestones,Some(self.peer.epid));
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
             if let Err(e) = self.process_message(&tangle, &header, bytes) {
