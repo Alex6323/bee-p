@@ -36,7 +36,10 @@ fn unpack_invalid_index_len() {
     let mut bytes = indexation_1.pack_new().unwrap();
     bytes[0..4].copy_from_slice(&1000u32.to_le_bytes());
 
-    assert!(matches!(Indexation::unpack(&mut bytes.as_slice()).err(), Some(Error::Io{..})));
+    assert!(matches!(
+        Indexation::unpack(&mut bytes.as_slice()).err(),
+        Some(Error::Io { .. })
+    ));
 }
 
 #[test]
@@ -48,7 +51,10 @@ fn unpack_invalid_data_len() {
     let mut bytes = indexation_1.pack_new().unwrap();
     bytes[14..18].copy_from_slice(&1000u32.to_le_bytes());
 
-    assert!(matches!(Indexation::unpack(&mut bytes.as_slice()).err(), Some(Error::Io{..})));
+    assert!(matches!(
+        Indexation::unpack(&mut bytes.as_slice()).err(),
+        Some(Error::Io { .. })
+    ));
 }
 
 #[test]
@@ -57,7 +63,9 @@ fn unpack_non_utf8_index() {
         unsafe { String::from_utf8_unchecked(vec![0, 159, 146, 150]) },
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
     );
-    let  bytes = indexation_1.pack_new().unwrap();
+    let bytes = indexation_1.pack_new().unwrap();
 
-    assert!(matches!(Indexation::unpack(&mut bytes.as_slice()).err(), Some(Error::Utf8String(std::string::FromUtf8Error{..}))));
+    assert!(
+        matches!(Indexation::unpack(&mut bytes.as_slice()).err(), Some(Error::Utf8String(std::string::FromUtf8Error{..})))
+    );
 }
