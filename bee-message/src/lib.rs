@@ -44,7 +44,7 @@ pub enum Error {
     MissingField(&'static str),
     Io(std::io::Error),
     InvalidVariant,
-    InvalidUtf8String,
+    Utf8String(alloc::string::FromUtf8Error),
     InvalidVersion(u8, u8),
     InvalidType(u8, u8),
     InvalidAnnouncedLength(usize, usize),
@@ -69,7 +69,7 @@ impl fmt::Display for Error {
             Error::MissingField(s) => write!(f, "Missing required field: {}.", s),
             Error::Io(e) => write!(f, "I/O error happened: {}.", e),
             Error::InvalidVariant => write!(f, "Invalid variant read."),
-            Error::InvalidUtf8String => write!(f, "Invalid Utf8 string read."),
+            Error::Utf8String(e) => write!(f, "Invalid Utf8 string read: {}.", e),
             Error::InvalidVersion(expected, actual) => write!(f, "Invalid version read: {}, {}.", expected, actual),
             Error::InvalidType(expected, actual) => write!(f, "Invalid type read: {}, {}.", expected, actual),
             Error::InvalidAnnouncedLength(expected, actual) => {
@@ -84,5 +84,11 @@ impl fmt::Display for Error {
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Error::Io(error)
+    }
+}
+
+impl From<alloc::string::FromUtf8Error> for Error {
+    fn from(error: alloc::string::FromUtf8Error) -> Self {
+        Error::Utf8String(error)
     }
 }

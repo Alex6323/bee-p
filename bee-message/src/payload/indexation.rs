@@ -48,6 +48,7 @@ impl Indexation {
     pub fn hash(&self) -> HashedIndex {
         let mut hasher = Blake2s::new();
         hasher.update(self.index.as_bytes());
+        // `Blake2s` output is `HASHED_INDEX_SIZE` bytes long.
         HashedIndex(hasher.finalize_reset().as_slice().try_into().unwrap())
     }
 }
@@ -82,7 +83,7 @@ impl Packable for Indexation {
         reader.read_exact(&mut data_bytes)?;
 
         Ok(Self {
-            index: String::from_utf8(index_bytes).map_err(|_| Self::Error::InvalidUtf8String)?,
+            index: String::from_utf8(index_bytes)?,
             data: data_bytes.into_boxed_slice(),
         })
     }
