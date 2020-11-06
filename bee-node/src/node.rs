@@ -18,7 +18,6 @@ use crate::{
 
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{
-    event::Bus,
     node::{Node as _, NodeBuilder as _},
     shutdown_tokio::Shutdown,
 };
@@ -66,8 +65,6 @@ impl<B: Backend> NodeBuilder<B> {
 
         let mut shutdown = Shutdown::new();
 
-        let bus = Arc::new(Bus::default());
-
         let (mut node_builder, snapshot) = bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
             .await
             .map_err(Error::SnapshotError)?;
@@ -94,20 +91,19 @@ impl<B: Backend> NodeBuilder<B> {
             network.clone(),
             &snapshot,
             node_builder,
-            bus.clone(),
         );
 
         info!("Initializing plugins...");
-        plugin::init(bus.clone());
+        // plugin::init(bus.clone());
 
         node_builder = node_builder.with_worker::<VersionCheckerWorker>();
 
         let bee_node = node_builder.finish().await;
 
         info!("Registering events...");
-        bee_snapshot::events(&bee_node, bus.clone());
+        bee_snapshot::events(&bee_node);
         // bee_ledger::whiteflag::events(&bee_node, bus.clone());
-        Protocol::events(&bee_node, self.config.protocol.clone(), bus.clone());
+        Protocol::events(&bee_node, self.config.protocol.clone());
 
         info!("Initialized.");
         Ok(Node {

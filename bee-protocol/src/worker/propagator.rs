@@ -18,7 +18,7 @@ use crate::{
 };
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 use bee_message::MessageId;
 
 use async_trait::async_trait;
@@ -57,6 +57,7 @@ impl<N: Node> Worker<N> for PropagatorWorker {
         let milestone_cone_updater = node.worker::<MilestoneConeUpdaterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let bus = node.resource::<Bus>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -103,14 +104,14 @@ impl<N: Node> Worker<N> for PropagatorWorker {
                                 children.push(child);
                             }
 
-                            Protocol::get().bus.dispatch(MessageSolidified(*hash));
+                            bus.dispatch(MessageSolidified(*hash));
 
                             if let Err(e) = message_validator.send(MessageValidatorWorkerEvent(*hash)) {
                                 warn!("Failed to send hash to message validator: {:?}.", e);
                             }
 
                             if let Some(index) = index {
-                                Protocol::get().bus.dispatch(LatestSolidMilestoneChanged(Milestone {
+                                bus.dispatch(LatestSolidMilestoneChanged(Milestone {
                                     message_id: *hash,
                                     index,
                                 }));
