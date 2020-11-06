@@ -32,31 +32,38 @@ impl PeeringConfigBuilder {
     }
 
     pub fn finish(self) -> PeeringConfig {
-        let local_keypair = if let Some(local_keypair) = self.local_keypair {
-            if local_keypair.len() != 128 {
-                panic!("invalid keypair length");
+        let (keypair, kp_string, new) = if let Some(kp_string) = self.local_keypair {
+            if kp_string.len() == 128 {
+                let mut decoded = [0u8; 64];
+                hex::decode_to_slice(&kp_string[..], &mut decoded).expect("error decoding local keypair");
+                let keypair = Keypair::decode(&mut decoded).expect("error decoding local keypair");
+                (keypair, kp_string, false)
+            } else if kp_string.is_empty() {
+                generate_random_local_keypair()
+            } else {
+                panic!("invalid keypair string length");
             }
-            let mut decoded = [0u8; 64];
-            hex::decode_to_slice(local_keypair, &mut decoded).expect("error decoding local keypair");
-            Keypair::decode(&mut decoded).expect("error decoding local keypair")
         } else {
-            let keypair = Keypair::generate();
-            let encoded = keypair.encode();
-            let s = hex::encode(encoded);
-            log::info!("Generated new local keypair: {}", s);
-            keypair
+            generate_random_local_keypair()
         };
 
         PeeringConfig {
-            local_keypair,
+            local_keypair: (keypair, kp_string, new),
             manual: self.manual.finish(),
         }
     }
 }
 
+fn generate_random_local_keypair() -> (Keypair, String, bool) {
+    let keypair = Keypair::generate();
+    let encoded = keypair.encode();
+    let kp_text = hex::encode(encoded);
+    (keypair, kp_text, true)
+}
+
 #[derive(Clone)]
 pub struct PeeringConfig {
-    pub local_keypair: Keypair,
+    pub local_keypair: (Keypair, String, bool),
     pub manual: ManualPeeringConfig,
 }
 

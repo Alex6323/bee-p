@@ -61,6 +61,14 @@ impl<B: Backend> NodeBuilder<B> {
     pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
+        let generated_new_local_keypair = self.config.peering.local_keypair.2;
+        if generated_new_local_keypair {
+            info!("Generated new local keypair: {}", self.config.peering.local_keypair.1);
+            info!("Add this to your config, and restart the node.");
+        }
+        let local_keys = self.config.peering.local_keypair.0.clone();
+        // info!("Local PeerId: {:?}", PeerId::from_public_key(local_keys.public()));
+
         let node_builder = BeeNode::<B>::build();
 
         let mut shutdown = Shutdown::new();
@@ -70,7 +78,6 @@ impl<B: Backend> NodeBuilder<B> {
             .map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
-        let local_keys = self.config.peering.local_keypair.clone();
         let (network, events) = bee_network::init(self.config.network.clone(), local_keys, &mut shutdown).await;
 
         info!("Starting manual peer manager...");

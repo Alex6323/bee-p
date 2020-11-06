@@ -51,7 +51,7 @@ pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNE
 pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
     let local_keys = identity::Keypair::Ed25519(local_keys);
     let local_peer = PeerId::from_public_key(local_keys.public());
-    trace!("local peer id = {}", local_peer);
+    info!("Local Peer Id = {}", local_peer);
 
     let (command_sender, command_receiver) = commands::channel();
     let (event_sender, event_receiver) = events::channel();
@@ -93,25 +93,4 @@ pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shu
     RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
 
     (Network::new(config, command_sender), event_receiver)
-}
-
-const ID_KEYS_FILEPATH: &str = "./node_id.txt";
-
-fn load_or_create_identity() -> PeerId {
-    //
-    if let Err(e) = File::open(ID_KEYS_FILEPATH) {
-        create_new_identity()
-    } else {
-        load_identity()
-    }
-}
-
-fn create_new_identity() -> PeerId {
-    todo!();
-}
-
-fn load_identity() -> PeerId {
-    // let mut file = File::create("node_id.txt")?;
-    // file.write_all(b"Hello, world!")?;
-    todo!()
 }
