@@ -27,10 +27,6 @@ pub enum Command {
     ConnectPeer { peer_address: Multiaddr },
     DisconnectPeer { peer_id: PeerId },
     SendMessage { peer_id: PeerId, message: Vec<u8> },
-    /* MarkDuplicate {
-     *     duplicate_epid: EndpointId,
-     *     original_epid: EndpointId,
-     * }, */
 }
 
 impl fmt::Display for Command {
@@ -41,14 +37,6 @@ impl fmt::Display for Command {
             Command::ConnectPeer { peer_address, .. } => write!(f, "Command::ConnectPeer {{ {} }}", peer_address),
             Command::DisconnectPeer { peer_id, .. } => write!(f, "Command::DisconnectPeer {{ {} }}", peer_id),
             Command::SendMessage { peer_id, .. } => write!(f, "Command::SendMessage {{ {} }}", peer_id),
-            /* Command::MarkDuplicate {
-             *     duplicate_epid,
-             *     original_epid,
-             * } => write!(
-             *     f,
-             *     "Command::MarkDuplicate {{ {} == {} }}",
-             *     duplicate_epid, original_epid
-             * ), */
         }
     }
 }

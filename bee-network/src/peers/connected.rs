@@ -36,10 +36,7 @@ impl ConnectedPeerList {
         match self.0.entry(peer_id.clone()) {
             Entry::Occupied(_) => false,
             Entry::Vacant(entry) => {
-                entry.insert(ConnectedPeer {
-                    data_sender,
-                    // duplicate_of: None,
-                });
+                entry.insert(ConnectedPeer { data_sender });
                 true
             }
         }
@@ -50,33 +47,8 @@ impl ConnectedPeerList {
     }
 
     pub fn remove(&mut self, peer_id: &PeerId) -> bool {
-        // assert!(!(self.is_duplicate(peer_id) && self.has_duplicate(peer_id).is_some()));
-
-        // // NOTE: here we are removing the original before the duplicate. Should we deny that?
-        // if let Some(duplicate_epid) = self.has_duplicate(peer_id) {
-        //     self.0.get_mut(&duplicate_epid).map(|v| v.duplicate_of.take());
-        // }
-
         self.0.remove(peer_id).is_some()
     }
-
-    // pub fn mark_duplicate(&mut self, duplicate_epid: PeerId, original_epid: PeerId) -> bool {
-    //     self.0.get_mut(&duplicate_epid).map_or(false, |endpoint| {
-    //         endpoint.duplicate_of.replace(original_epid);
-    //         true
-    //     })
-    // }
-
-    // pub fn has_duplicate(&self, peer_id: PeerId) -> Option<PeerId> {
-    //     self.0
-    //         .iter()
-    //         .find(|(_, endpoint)| endpoint.duplicate_of.map_or(false, |other| other == epid))
-    //         .map(|(duplicate, _)| *duplicate)
-    // }
-
-    // pub fn is_duplicate(&self, epid: PeerId) -> bool {
-    //     self.0.get(&epid).map_or(false, |v| v.duplicate_of.is_some())
-    // }
 
     pub async fn send_message(&mut self, message: Vec<u8>, peer_id: &PeerId) -> Result<bool, WorkerError> {
         if let Some(connected_peer) = self.0.get_mut(peer_id) {
