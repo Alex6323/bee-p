@@ -174,7 +174,7 @@ impl Protocol {
         Protocol::get().peer_manager.add(peer.clone());
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
-        // let requested_milestones = node.resource::<RequestedMilestones>();
+        let requested_milestones = node.resource::<RequestedMilestones>();
 
         spawn(
             PeerWorker::new(
@@ -182,22 +182,10 @@ impl Protocol {
                 node.worker::<HasherWorker>().unwrap().tx.clone(),
                 node.worker::<MessageResponderWorker>().unwrap().tx.clone(),
                 node.worker::<MilestoneResponderWorker>().unwrap().tx.clone(),
+                node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
             )
-            .run(tangle.clone(), receiver_rx, receiver_shutdown_rx),
+            .run(tangle.clone(), requested_milestones, receiver_rx, receiver_shutdown_rx),
         );
-
-        // spawn(
-        //     PeerHandshakerWorker::new(
-        //         Protocol::get().network.clone(),
-        //         config.clone(),
-        //         peer,
-        //         ,
-        //         ,
-        //         ,
-        //         node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
-        //     )
-        //     .run(tangle, requested_milestones, ),
-        // );
 
         (receiver_tx, receiver_shutdown_tx)
     }

@@ -17,7 +17,7 @@ use crate::{
     tangle::MsTangle,
     worker::{
         peer::message_handler::MessageHandler, HasherWorkerEvent, MessageResponderWorkerEvent,
-        MilestoneResponderWorkerEvent,
+        MilestoneRequesterWorkerEvent, MilestoneResponderWorkerEvent, RequestedMilestones,
     },
 };
 
@@ -39,6 +39,7 @@ pub struct PeerWorker {
     hasher: flume::Sender<HasherWorkerEvent>,
     message_responder: flume::Sender<MessageResponderWorkerEvent>,
     milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
+    milestone_requester: flume::Sender<MilestoneRequesterWorkerEvent>,
 }
 
 impl PeerWorker {
@@ -47,18 +48,21 @@ impl PeerWorker {
         hasher: flume::Sender<HasherWorkerEvent>,
         message_responder: flume::Sender<MessageResponderWorkerEvent>,
         milestone_responder: flume::Sender<MilestoneResponderWorkerEvent>,
+        milestone_requester: flume::Sender<MilestoneRequesterWorkerEvent>,
     ) -> Self {
         Self {
             peer,
             hasher,
             message_responder,
             milestone_responder,
+            milestone_requester,
         }
     }
 
     pub(crate) async fn run<B: Backend>(
         mut self,
         tangle: ResHandle<MsTangle<B>>,
+        requested_milestones: ResHandle<RequestedMilestones>,
         receiver: flume::Receiver<Vec<u8>>,
         shutdown: oneshot::Receiver<()>,
     ) {
@@ -80,8 +84,14 @@ impl PeerWorker {
         //                     tangle.get_latest_milestone_index(),
         //                 );
         //
-        //                 Protocol::request_latest_milestone(tangle, &self.milestone_requester,
-        // &*requested_milestones,Some(self.peer.epid));
+
+        Protocol::request_latest_milestone(
+            &*tangle,
+            &self.milestone_requester,
+            &*requested_milestones,
+            // TODO should be copy ?
+            Some(self.peer.id.clone()),
+        );
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
             if let Err(e) = self.process_message(&tangle, &header, bytes) {
