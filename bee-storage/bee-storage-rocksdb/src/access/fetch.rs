@@ -68,12 +68,12 @@ impl Fetch<HashedIndex, Vec<MessageId>> for Storage {
     where
         Self: Sized,
     {
-        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
         // TODO limit to a certain number of results
 
         Ok(Some(
             self.inner
-                .prefix_iterator_cf(&cf_payload_index_to_message_id, index)
+                .prefix_iterator_cf(&cf_index_to_message_id, index)
                 .map(|(key, _)| {
                     let (_, message_id) = key.split_at(HASHED_INDEX_SIZE);
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();

@@ -53,12 +53,12 @@ impl Insert<(HashedIndex, MessageId), ()> for Storage {
         (index, message_id): &(HashedIndex, MessageId),
         (): &(),
     ) -> Result<(), <Self as Backend>::Error> {
-        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut key = index.as_ref().to_vec();
         key.extend_from_slice(message_id.as_ref());
 
-        self.inner.put_cf(&cf_payload_index_to_message_id, key, [])?;
+        self.inner.put_cf(&cf_index_to_message_id, key, [])?;
 
         Ok(())
     }

@@ -55,9 +55,9 @@ impl Exist<HashedIndex, Vec<MessageId>> for Storage {
     where
         Self: Sized,
     {
-        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut iterator = self.inner.prefix_iterator_cf(&cf_payload_index_to_message_id, index);
+        let mut iterator = self.inner.prefix_iterator_cf(&cf_index_to_message_id, index);
         let exist = iterator.next().is_some();
 
         match iterator.status() {

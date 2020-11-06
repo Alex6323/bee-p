@@ -25,7 +25,7 @@ use std::error::Error;
 
 pub(crate) const CF_MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
 pub(crate) const CF_MESSAGE_ID_TO_MESSAGE_ID: &str = "message_id_to_message_id";
-pub(crate) const CF_PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
+pub(crate) const CF_INDEX_TO_MESSAGE_ID: &str = "index_to_message_id";
 pub(crate) const CF_OUTPUT_ID_TO_OUTPUT: &str = "output_id_to_output";
 pub(crate) const CF_OUTPUT_ID_TO_SPENT: &str = "output_id_to_spent";
 pub(crate) const CF_OUTPUT_ID_UNSPENT: &str = "output_id_unspent";
@@ -46,7 +46,7 @@ impl Storage {
         let prefix_extractor = SliceTransform::create_fixed_prefix(HASHED_INDEX_SIZE);
         let mut options = Options::default();
         options.set_prefix_extractor(prefix_extractor);
-        let cf_payload_index_to_message_id = ColumnFamilyDescriptor::new(CF_PAYLOAD_INDEX_TO_MESSAGE_ID, options);
+        let cf_index_to_message_id = ColumnFamilyDescriptor::new(CF_INDEX_TO_MESSAGE_ID, options);
 
         let cf_output_id_to_output = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_OUTPUT, Options::default());
 
@@ -80,7 +80,7 @@ impl Storage {
         let column_familes = vec![
             cf_message_id_to_message,
             cf_message_id_to_message_id,
-            cf_payload_index_to_message_id,
+            cf_index_to_message_id,
             cf_output_id_to_output,
             cf_output_id_to_spent,
             cf_output_id_unspent,
