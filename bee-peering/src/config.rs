@@ -11,10 +11,13 @@
 
 use crate::manual::{ManualPeeringConfig, ManualPeeringConfigBuilder};
 
+use bee_network::Keypair;
+
 use serde::Deserialize;
 
 #[derive(Default, Deserialize)]
 pub struct PeeringConfigBuilder {
+    local_keypair: Option<String>,
     manual: ManualPeeringConfigBuilder,
 }
 
@@ -23,8 +26,22 @@ impl PeeringConfigBuilder {
         Self::default()
     }
 
+    pub fn local_keypair(mut self, local_keypair: String) -> Self {
+        self.local_keypair.replace(local_keypair);
+        self
+    }
+
     pub fn finish(self) -> PeeringConfig {
+        let local_keypair = if let Some(local_keypair) = self.local_keypair {
+            let mut kp = [0u8; 64];
+            hex::decode_to_slice(local_keypair, &mut kp).expect("error decoding local keypair");
+            Keypair::decode(&mut kp).expect("error decoding local keypair")
+        } else {
+            Keypair::generate()
+        };
+
         PeeringConfig {
+            local_keypair,
             manual: self.manual.finish(),
         }
     }
@@ -32,6 +49,7 @@ impl PeeringConfigBuilder {
 
 #[derive(Clone)]
 pub struct PeeringConfig {
+    pub local_keypair: Keypair,
     pub manual: ManualPeeringConfig,
 }
 

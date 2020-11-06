@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use libp2p::Multiaddr;
+use libp2p::{identity::Keypair, Multiaddr};
 use serde::Deserialize;
 
 use std::str::FromStr;
@@ -68,7 +68,7 @@ pub struct NetworkConfig {
 }
 
 impl NetworkConfig {
-    pub fn builder() -> NetworkConfigBuilder {
+    pub fn build() -> NetworkConfigBuilder {
         NetworkConfigBuilder::new()
     }
 }

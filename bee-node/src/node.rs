@@ -70,7 +70,8 @@ impl<B: Backend> NodeBuilder<B> {
             .map_err(Error::SnapshotError)?;
 
         info!("Initializing network...");
-        let (network, events) = bee_network::init(self.config.network.clone(), &mut shutdown).await;
+        let local_keys = self.config.peering.local_keypair.clone();
+        let (network, events) = bee_network::init(self.config.network.clone(), local_keys, &mut shutdown).await;
 
         info!("Starting manual peer manager...");
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());

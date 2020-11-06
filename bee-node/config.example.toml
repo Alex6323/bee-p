@@ -10,6 +10,9 @@ level = "info"
 bind_address        = "/ip4/0.0.0.0/tcp/15600"
 reconnect_interval  = 60
 
+[peering]
+# hex representation of an Ed25519 keypair
+local_keypair = ""
 [peering.manual]
 limit     = 5
 peers     = [ ]

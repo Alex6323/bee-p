@@ -27,7 +27,7 @@ pub use interaction::{
     events::{self, Event, EventReceiver},
 };
 #[doc(inline)]
-pub use libp2p::{Multiaddr, PeerId};
+pub use libp2p::{core::identity::ed25519::Keypair, Multiaddr, PeerId};
 pub use network::Network;
 
 use config::{DEFAULT_MAX_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
@@ -48,9 +48,8 @@ use std::{
 pub(crate) static MAX_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_BUFFER_SIZE);
 pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
 
-pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
-    // TODO: Restore keys from fs.
-    let local_keys = identity::Keypair::generate_ed25519();
+pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
+    let local_keys = identity::Keypair::Ed25519(local_keys);
     let local_peer = PeerId::from_public_key(local_keys.public());
     trace!("local peer id = {}", local_peer);
 
