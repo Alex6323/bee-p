@@ -33,8 +33,7 @@ status_interval = 10
 [snapshot]
 path              = "./snapshots/alphanet/export.bin"
 download_urls     = [
-  "https://x-vps.com/export.bin",
-  "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+  "https://dbfiles.iota.org/alphanet/hornet/export.bin"
 ]
 depth             = 50
 interval_synced   = 50
