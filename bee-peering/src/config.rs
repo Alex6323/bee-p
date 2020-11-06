@@ -33,11 +33,18 @@ impl PeeringConfigBuilder {
 
     pub fn finish(self) -> PeeringConfig {
         let local_keypair = if let Some(local_keypair) = self.local_keypair {
-            let mut kp = [0u8; 64];
-            hex::decode_to_slice(local_keypair, &mut kp).expect("error decoding local keypair");
-            Keypair::decode(&mut kp).expect("error decoding local keypair")
+            if local_keypair.len() != 128 {
+                panic!("invalid keypair length");
+            }
+            let mut decoded = [0u8; 64];
+            hex::decode_to_slice(local_keypair, &mut decoded).expect("error decoding local keypair");
+            Keypair::decode(&mut decoded).expect("error decoding local keypair")
         } else {
-            Keypair::generate()
+            let keypair = Keypair::generate();
+            let encoded = keypair.encode();
+            let s = hex::encode(encoded);
+            log::info!("Generated new local keypair: {}", s);
+            keypair
         };
 
         PeeringConfig {
