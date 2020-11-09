@@ -17,7 +17,7 @@ struct Foo;
 fn basic() {
     let bus = Bus::default();
 
-    bus.add_listener(|_: &Foo| println!("Received a foo!"));
+    bus.add_listener::<(), _, _>(|_: &Foo| println!("Received a foo!"));
 
     bus.dispatch(Foo);
 }
