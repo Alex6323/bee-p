@@ -359,7 +359,6 @@ dependencies = [
  "bee-message",
  "bee-protocol",
  "bee-storage",
- "bee-storage-rocksdb",
  "bee-ternary",
  "futures",
  "num_cpus",
