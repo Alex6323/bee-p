@@ -32,12 +32,10 @@ impl Message {
     }
 
     pub fn id(&self) -> MessageId {
-        let mut bytes = Vec::with_capacity(self.packed_len());
         let mut hasher = Blake2b::new();
 
         // Packing to bytes can't fail.
-        self.pack(&mut bytes).unwrap();
-        hasher.update(&bytes);
+        hasher.update(&self.pack_new().unwrap());
 
         // We know for sure the bytes have the right size.
         MessageId::new(hasher.finalize()[0..MESSAGE_ID_LENGTH].try_into().unwrap())
