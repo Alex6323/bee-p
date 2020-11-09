@@ -32,38 +32,32 @@ impl Exist<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Exist<MessageId, Vec<MessageId>> for Storage {
-    async fn exist(&self, parent: &MessageId) -> Result<bool, <Self as Backend>::Error>
+impl Exist<(MessageId, MessageId), ()> for Storage {
+    async fn exist(&self, (parent, child): &(MessageId, MessageId)) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
         let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
 
-        let mut iterator = self.inner.prefix_iterator_cf(&cf_message_id_to_message_id, parent);
-        let exist = iterator.next().is_some();
+        let mut key = parent.as_ref().to_vec();
+        key.extend_from_slice(child.as_ref());
 
-        match iterator.status() {
-            Ok(_) => Ok(exist),
-            Err(e) => Err(e)?,
-        }
+        Ok(self.inner.get_cf(&cf_message_id_to_message_id, key)?.is_some())
     }
 }
 
 #[async_trait::async_trait]
-impl Exist<HashedIndex, Vec<MessageId>> for Storage {
-    async fn exist(&self, index: &HashedIndex) -> Result<bool, <Self as Backend>::Error>
+impl Exist<(HashedIndex, MessageId), ()> for Storage {
+    async fn exist(&self, (index, message_id): &(HashedIndex, MessageId)) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
         let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut iterator = self.inner.prefix_iterator_cf(&cf_index_to_message_id, index);
-        let exist = iterator.next().is_some();
+        let mut key = index.as_ref().to_vec();
+        key.extend_from_slice(message_id.as_ref());
 
-        match iterator.status() {
-            Ok(_) => Ok(exist),
-            Err(e) => Err(e)?,
-        }
+        Ok(self.inner.get_cf(&cf_index_to_message_id, key)?.is_some())
     }
 }
 
