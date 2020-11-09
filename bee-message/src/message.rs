@@ -145,6 +145,7 @@ pub struct MessageBuilder {
     parent1: Option<MessageId>,
     parent2: Option<MessageId>,
     payload: Option<Payload>,
+    nonce: Option<u64>,
 }
 
 impl MessageBuilder {
@@ -167,12 +168,17 @@ impl MessageBuilder {
         self
     }
 
+    pub fn with_nonce(mut self, nonce: u64) -> Self {
+        self.nonce = Some(nonce);
+        self
+    }
+
     pub fn finish(self) -> Result<Message, Error> {
         Ok(Message {
             parent1: self.parent1.ok_or(Error::MissingField("parent1"))?,
             parent2: self.parent2.ok_or(Error::MissingField("parent2"))?,
             payload: self.payload,
-            nonce: 0,
+            nonce: self.nonce.unwrap_or(0),
         })
     }
 }
