@@ -16,7 +16,7 @@ use serde::Deserialize;
 const DEFAULT_FETCH_EDGE_LIMIT: usize = 1000;
 const DEFAULT_FETCH_INDEX_LIMIT: usize = 1000;
 
-const DEFAULT_PATH: &str = "../bee-storage/dbfolder";
+const DEFAULT_PATH: &str = "./database";
 const DEFAULT_CREATE_IF_MISSING: bool = true;
 const DEFAULT_CREATE_MISSING_COLUMN_FAMILIES: bool = true;
 const DEFAULT_ENABLE_STATISTICS: bool = true;
