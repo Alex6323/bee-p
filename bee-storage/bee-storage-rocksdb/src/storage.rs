@@ -10,8 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use super::{
-    access::OpError,
     config::{RocksDBConfig, RocksDBConfigBuilder},
+    error::OpError,
 };
 
 pub use bee_storage::storage::Backend;

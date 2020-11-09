@@ -9,9 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod access;
-pub mod compaction;
-pub mod compression;
-pub mod config;
-pub mod error;
-pub mod storage;
+pub trait Error: std::error::Error + Send {
+    fn is_retryable(&self) -> bool;
+
+    fn is_still_valid(&self) -> bool;
+
+    fn error_msg(&self) -> String;
+}

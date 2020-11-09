@@ -20,11 +20,3 @@ pub use delete::Delete;
 pub use exist::Exist;
 pub use fetch::Fetch;
 pub use insert::Insert;
-
-pub trait Error: std::error::Error + Send {
-    fn is_retryable(&self) -> bool;
-
-    fn is_still_valid(&self) -> bool;
-
-    fn error_msg(&self) -> String;
-}
