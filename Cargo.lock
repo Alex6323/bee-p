@@ -322,9 +322,11 @@ dependencies = [
  "bee-protocol",
  "bee-storage",
  "bee-ternary",
+ "bee-test",
  "num_cpus",
  "rocksdb",
  "serde",
+ "tokio",
 ]
 
 [[package]]
