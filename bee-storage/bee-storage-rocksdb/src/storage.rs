@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use super::{
-    config::{RocksDBConfig, RocksDBConfigBuilder},
+    config::{RocksDBConfig, RocksDBConfigBuilder, StorageConfig},
     error::OpError,
 };
 
@@ -31,6 +31,7 @@ pub(crate) const CF_OUTPUT_ID_TO_SPENT: &str = "output_id_to_spent";
 pub(crate) const CF_OUTPUT_ID_UNSPENT: &str = "output_id_unspent";
 
 pub struct Storage {
+    pub(crate) config: StorageConfig,
     pub(crate) inner: DB,
 }
 
@@ -99,6 +100,7 @@ impl Backend for Storage {
     /// It starts RocksDB instance and then initializes the required column familes.
     async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>> {
         Ok(Storage {
+            config: config.storage.clone(),
             inner: Self::try_new(config)?,
         })
     }

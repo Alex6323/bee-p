@@ -13,6 +13,9 @@ use crate::{compaction::CompactionStyle, compression::CompressionType};
 
 use serde::Deserialize;
 
+const DEFAULT_FETCH_EDGE_LIMIT: usize = 1000;
+const DEFAULT_FETCH_INDEX_LIMIT: usize = 1000;
+
 const DEFAULT_PATH: &str = "../bee-storage/dbfolder";
 const DEFAULT_CREATE_IF_MISSING: bool = true;
 const DEFAULT_CREATE_MISSING_COLUMN_FAMILIES: bool = true;
@@ -33,7 +36,27 @@ const DEFAULT_SET_DISABLE_AUTO_COMPACTIONS: bool = false;
 const DEFAULT_SET_COMPRESSION_TYPE: CompressionType = CompressionType::None;
 
 #[derive(Default, Deserialize)]
+pub struct StorageConfigBuilder {
+    fetch_edge_limit: Option<usize>,
+    fetch_index_limit: Option<usize>,
+}
+
+impl StorageConfigBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn finish(self) -> StorageConfig {
+        StorageConfig {
+            fetch_edge_limit: self.fetch_edge_limit.unwrap_or(DEFAULT_FETCH_EDGE_LIMIT),
+            fetch_index_limit: self.fetch_index_limit.unwrap_or(DEFAULT_FETCH_INDEX_LIMIT),
+        }
+    }
+}
+
+#[derive(Default, Deserialize)]
 pub struct RocksDBConfigBuilder {
+    storage: StorageConfigBuilder,
     path: Option<String>,
     create_if_missing: Option<bool>,
     create_missing_column_families: Option<bool>,
@@ -68,6 +91,7 @@ impl RocksDBConfigBuilder {
 impl From<RocksDBConfigBuilder> for RocksDBConfig {
     fn from(builder: RocksDBConfigBuilder) -> Self {
         RocksDBConfig {
+            storage: builder.storage.finish(),
             path: builder.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
             create_if_missing: builder.create_if_missing.unwrap_or(DEFAULT_CREATE_IF_MISSING),
             create_missing_column_families: builder
@@ -110,7 +134,14 @@ impl From<RocksDBConfigBuilder> for RocksDBConfig {
 }
 
 #[derive(Clone)]
+pub struct StorageConfig {
+    pub(crate) fetch_edge_limit: usize,
+    pub(crate) fetch_index_limit: usize,
+}
+
+#[derive(Clone)]
 pub struct RocksDBConfig {
+    pub(crate) storage: StorageConfig,
     pub(crate) path: String,
     pub(crate) create_if_missing: bool,
     pub(crate) create_missing_column_families: bool,

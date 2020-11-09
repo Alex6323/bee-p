@@ -47,7 +47,6 @@ impl Fetch<MessageId, Vec<MessageId>> for Storage {
         Self: Sized,
     {
         let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
-        // TODO limit to a certain number of results
 
         Ok(Some(
             self.inner
@@ -57,6 +56,7 @@ impl Fetch<MessageId, Vec<MessageId>> for Storage {
                     let child: [u8; MESSAGE_ID_LENGTH] = child.try_into().unwrap();
                     MessageId::from(child)
                 })
+                .take(self.config.fetch_edge_limit)
                 .collect(),
         ))
     }
@@ -69,7 +69,6 @@ impl Fetch<HashedIndex, Vec<MessageId>> for Storage {
         Self: Sized,
     {
         let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
-        // TODO limit to a certain number of results
 
         Ok(Some(
             self.inner
@@ -79,6 +78,7 @@ impl Fetch<HashedIndex, Vec<MessageId>> for Storage {
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
                     MessageId::from(message_id)
                 })
+                .take(self.config.fetch_index_limit)
                 .collect(),
         ))
     }
