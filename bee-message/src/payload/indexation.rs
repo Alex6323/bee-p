@@ -61,11 +61,11 @@ impl Packable for Indexation {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        0u32.packed_len() + self.index.as_bytes().len() + 0u32.packed_len() + self.data.len()
+        0u16.packed_len() + self.index.as_bytes().len() + 0u32.packed_len() + self.data.len()
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-        (self.index.as_bytes().len() as u32).pack(writer)?;
+        (self.index.as_bytes().len() as u16).pack(writer)?;
         writer.write_all(self.index.as_bytes())?;
 
         (self.data.len() as u32).pack(writer)?;
@@ -78,7 +78,7 @@ impl Packable for Indexation {
     where
         Self: Sized,
     {
-        let index_len = u32::unpack(reader)? as usize;
+        let index_len = u16::unpack(reader)? as usize;
         let mut index_bytes = vec![0u8; index_len];
         reader.read_exact(&mut index_bytes)?;
 
