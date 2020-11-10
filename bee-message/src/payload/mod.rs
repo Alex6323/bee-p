@@ -33,6 +33,24 @@ pub enum Payload {
     Indexation(Box<Indexation>),
 }
 
+impl From<Transaction> for Payload {
+    fn from(payload: Transaction) -> Self {
+        Self::Transaction(Box::new(payload))
+    }
+}
+
+impl From<Milestone> for Payload {
+    fn from(payload: Milestone) -> Self {
+        Self::Milestone(Box::new(payload))
+    }
+}
+
+impl From<Indexation> for Payload {
+    fn from(payload: Indexation) -> Self {
+        Self::Indexation(Box::new(payload))
+    }
+}
+
 impl Packable for Payload {
     type Error = Error;
 
