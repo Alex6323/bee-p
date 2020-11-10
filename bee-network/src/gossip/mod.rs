@@ -1,3 +1,3 @@
 mod protocol;
 
-pub use protocol::GossipProtocol;
+pub use protocol::{GossipProtocol, NegotiatedSubstream};

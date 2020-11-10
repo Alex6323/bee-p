@@ -14,7 +14,7 @@ mod dial;
 mod manager;
 
 use crate::{
-    gossip::GossipProtocol,
+    gossip::{GossipProtocol, NegotiatedSubstream},
     interaction::events::{EventSender, InternalEvent, InternalEventSender},
     peers::{self, DataReceiver},
     MSG_BUFFER_SIZE,
@@ -62,10 +62,10 @@ pub(crate) async fn spawn_connection_handler(
             // FIXME: unwrap
             let outbound = outbound_from_ref_and_wrap(muxer).fuse().await.unwrap();
             // FIXME
-            // upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1)
-            //     .await
-            //     .unwrap()
-            outbound
+            upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1)
+                .await
+                .unwrap()
+            // outbound
         }
         Origin::Inbound => {
             let inbound = loop {
@@ -78,8 +78,8 @@ pub(crate) async fn spawn_connection_handler(
                 }
             };
 
-            // upgrade::apply_inbound(inbound, GossipProtocol).await.unwrap()
-            inbound
+            upgrade::apply_inbound(inbound, GossipProtocol).await.unwrap()
+            // inbound
         }
     };
 
@@ -107,7 +107,7 @@ pub(crate) async fn spawn_connection_handler(
 fn spawn_substream_task(
     peer_id: PeerId,
     peer_address: Multiaddr,
-    mut substream: SubstreamRef<Arc<StreamMuxerBox>>,
+    mut substream: NegotiatedSubstream,
     message_receiver: DataReceiver,
     mut internal_event_sender: InternalEventSender,
 ) -> JoinHandle<()> {

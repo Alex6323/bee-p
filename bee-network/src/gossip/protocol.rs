@@ -1,12 +1,12 @@
 use futures::prelude::*;
 use libp2p::core::{
     muxing::{StreamMuxerBox, SubstreamRef},
-    InboundUpgrade, OutboundUpgrade, UpgradeInfo,
+    InboundUpgrade, Negotiated, OutboundUpgrade, UpgradeInfo,
 };
 
 use std::{io, iter, sync::Arc};
 
-type NegotiatedSubstream = SubstreamRef<Arc<StreamMuxerBox>>;
+pub type NegotiatedSubstream = Negotiated<SubstreamRef<Arc<StreamMuxerBox>>>;
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct GossipProtocol;
@@ -25,7 +25,7 @@ impl InboundUpgrade<NegotiatedSubstream> for GossipProtocol {
     type Error = (); // Void;
     type Future = future::Ready<Result<Self::Output, Self::Error>>;
 
-    fn upgrade_inbound(self, stream: SubstreamRef<Arc<StreamMuxerBox>>, _: Self::Info) -> Self::Future {
+    fn upgrade_inbound(self, stream: NegotiatedSubstream, _: Self::Info) -> Self::Future {
         future::ok(stream)
     }
 }
