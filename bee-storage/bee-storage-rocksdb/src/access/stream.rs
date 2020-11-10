@@ -71,7 +71,7 @@ impl<'a> futures::stream::Stream for StorageStream<'a, MessageId, Message> {
 
         if counter == budget {
             *counter = 0;
-            cx.waker().clone().wake();
+            cx.waker().wake_by_ref();
             return Poll::Pending;
         }
 
