@@ -9,6 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use rand::Rng;
+
 pub fn random_bytes(len: usize) -> Vec<u8> {
     (0..len).map(|_| rand::random::<u8>()).collect::<Vec<u8>>()
+}
+
+pub fn random_bytes_32() -> [u8; 32] {
+    rand::thread_rng().gen::<[u8; 32]>()
 }

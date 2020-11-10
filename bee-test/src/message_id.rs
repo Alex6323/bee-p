@@ -9,12 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::bytes::random_bytes;
+use crate::bytes::random_bytes_32;
 
-use bee_message::{MessageId, MESSAGE_ID_LENGTH};
-
-use std::convert::TryInto;
+use bee_message::MessageId;
 
 pub fn random_message_id() -> MessageId {
-    MessageId::new(random_bytes(MESSAGE_ID_LENGTH)[..].try_into().unwrap())
+    MessageId::new(random_bytes_32())
 }
