@@ -11,12 +11,10 @@
 
 use crate::{manual::config::ManualPeeringConfig, PeerManager};
 
-use bee_network::{Command::AddEndpoint, Multiaddr, Network};
+use bee_network::{Command::ConnectPeer, Multiaddr, Network, PeerId};
 
 use async_trait::async_trait;
 use log::warn;
-
-use std::str::FromStr;
 
 // Manages a peer list and watches a config file for changes
 // Sends changes (peer added/removed) to the network
@@ -31,11 +29,9 @@ impl ManualPeerManager {
         Self { config, network }
     }
 
-    fn add_endpoint(&mut self, address: &str) {
-        if let Err(e) = self.network.unbounded_send(AddEndpoint {
-            address: Multiaddr::from_str(address).expect("error parsing Multiaddr"),
-        }) {
-            warn!("Failed to add peer \"{}\": {}", address, e);
+    fn connect_peer(&mut self, address: Multiaddr, id: PeerId) {
+        if let Err(e) = self.network.unbounded_send(ConnectPeer { address, id }) {
+            warn!("Failed to add peer: {}", e);
         }
     }
 }
@@ -45,8 +41,8 @@ impl PeerManager for ManualPeerManager {
     async fn run(mut self) {
         // TODO config file watcher
         // TODO use limit
-        for endpoint_address in self.config.peers.clone() {
-            self.add_endpoint(&endpoint_address);
+        for (address, id) in self.config.peers.clone() {
+            self.connect_peer(address, id);
         }
     }
 }

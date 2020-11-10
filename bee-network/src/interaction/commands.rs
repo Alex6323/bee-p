@@ -26,6 +26,7 @@ pub enum Command {
     ConnectUnknownPeer { address: Multiaddr },
     DisconnectPeer { id: PeerId },
     BanPeer { id: PeerId },
+    // TODO: maybe rename to `BanAddr` and use `Multiaddr` instead
     BanIp { ip: IpAddr },
     SendMessage { message: Vec<u8>, to: PeerId },
 }
