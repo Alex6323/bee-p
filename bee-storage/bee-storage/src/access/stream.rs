@@ -12,10 +12,10 @@
 use crate::storage::Backend;
 
 #[async_trait::async_trait]
-pub trait Iter<'a, K, V>: Backend {
-    type Iterator: Iterator;
+pub trait Stream<'a, K, V>: Backend {
+    type Stream: futures::stream::Stream;
 
-    async fn iter(&'a self) -> Result<Self::Iterator, Self::Error>
+    async fn stream(&'a self) -> Result<Self::Stream, Self::Error>
     where
         Self: Sized;
 }

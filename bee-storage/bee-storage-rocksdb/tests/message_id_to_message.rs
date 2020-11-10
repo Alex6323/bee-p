@@ -12,11 +12,13 @@
 use bee_common::packable::Packable;
 use bee_message::{Message, MessageId};
 use bee_storage::{
-    access::{Batch, BatchBuilder, Delete, Exist, Fetch, Insert, Iter},
+    access::{Batch, BatchBuilder, Delete, Exist, Fetch, Insert, Stream},
     storage::Backend,
 };
 use bee_storage_rocksdb::{config::RocksDBConfigBuilder, storage::Storage};
 use bee_test::rand::message::{random_message, random_message_id};
+
+use futures::stream::StreamExt;
 
 #[tokio::test]
 async fn access() {
@@ -82,6 +84,9 @@ async fn access() {
         }
     }
 
-    for (_key, _value) in storage.iter().await.unwrap() {
+    let mut stream = storage.stream().await.unwrap();
+
+    while let Some((key, value)) = stream.next().await {
+        println!("{:?} {:?}", key, value);
     }
 }

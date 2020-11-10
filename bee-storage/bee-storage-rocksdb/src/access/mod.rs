@@ -14,4 +14,4 @@ pub mod delete;
 pub mod exist;
 pub mod fetch;
 pub mod insert;
-pub mod iter;
+pub mod stream;

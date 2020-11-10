@@ -14,11 +14,11 @@ pub mod delete;
 pub mod exist;
 pub mod fetch;
 pub mod insert;
-pub mod iter;
+pub mod stream;
 
 pub use batch::{Batch, BatchBuilder};
 pub use delete::Delete;
 pub use exist::Exist;
 pub use fetch::Fetch;
 pub use insert::Insert;
-pub use iter::Iter;
+pub use stream::Stream;

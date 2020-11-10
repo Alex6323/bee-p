@@ -409,6 +409,7 @@ name = "bee-storage"
 version = "0.1.0-alpha"
 dependencies = [
  "async-trait",
+ "futures",
  "serde",
 ]
 
@@ -425,7 +426,9 @@ dependencies = [
  "bee-storage",
  "bee-ternary",
  "bee-test",
+ "futures",
  "num_cpus",
+ "pin-project 1.0.1",
  "rocksdb",
  "serde",
  "tokio",

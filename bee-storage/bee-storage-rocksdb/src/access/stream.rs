@@ -13,20 +13,24 @@ use crate::storage::*;
 
 use bee_common::packable::Packable;
 use bee_message::{Message, MessageId};
-use bee_storage::access::Iter;
+use bee_storage::access::Stream;
 
+use futures::task::{Context, Poll};
+use pin_project::pin_project;
 use rocksdb::{DBIterator, IteratorMode};
 
-use std::{marker::PhantomData, ops::Deref};
+use std::{marker::PhantomData, ops::Deref, pin::Pin};
 
-pub struct StorageIterator<'a, K, V> {
+#[pin_project(project = StorageStreamProj)]
+pub struct StorageStream<'a, K, V> {
+    #[pin]
     inner: DBIterator<'a>,
     marker: PhantomData<(K, V)>,
 }
 
-impl<'a, K, V> From<DBIterator<'a>> for StorageIterator<'a, K, V> {
+impl<'a, K, V> From<DBIterator<'a>> for StorageStream<'a, K, V> {
     fn from(inner: DBIterator<'a>) -> Self {
-        StorageIterator::<K, V> {
+        StorageStream::<K, V> {
             inner,
             marker: PhantomData,
         }
@@ -34,10 +38,10 @@ impl<'a, K, V> From<DBIterator<'a>> for StorageIterator<'a, K, V> {
 }
 
 #[async_trait::async_trait]
-impl<'a> Iter<'a, MessageId, Message> for Storage {
-    type Iterator = StorageIterator<'a, MessageId, Message>;
+impl<'a> Stream<'a, MessageId, Message> for Storage {
+    type Stream = StorageStream<'a, MessageId, Message>;
 
-    async fn iter(&'a self) -> Result<Self::Iterator, <Self as Backend>::Error>
+    async fn stream(&'a self) -> Result<Self::Stream, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -50,15 +54,22 @@ impl<'a> Iter<'a, MessageId, Message> for Storage {
     }
 }
 
-impl<'a> Iterator for StorageIterator<'a, MessageId, Message> {
+impl<'a> futures::stream::Stream for StorageStream<'a, MessageId, Message> {
     type Item = (MessageId, Message);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|(message_id, message)| {
+    fn poll_next(self: Pin<&mut Self>, _: &mut Context) -> Poll<Option<Self::Item>> {
+        let StorageStreamProj { mut inner, .. } = self.project();
+
+        let item = inner.next().map(|(message_id, message)| {
             (
                 MessageId::unpack(&mut message_id.deref()).unwrap(),
                 Message::unpack(&mut message.deref()).unwrap(),
             )
-        })
+        });
+        if inner.valid() {
+            Poll::Ready(item)
+        } else {
+            Poll::Ready(None)
+        }
     }
 }
