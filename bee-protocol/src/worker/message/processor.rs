@@ -90,7 +90,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     Err(e) => {
                         trace!("Invalid message: {:?}.", e);
                         Protocol::get().metrics.invalid_messages_inc();
-                        return;
+                        continue;
                     }
                 };
 
@@ -106,7 +106,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 // if !requested && message_id.weight() < config.mwm {
                 //     trace!("Insufficient weight magnitude: {}.", message_id.weight());
                 //     Protocol::get().metrics.invalid_messages_inc();
-                //     return;
+                //     continue;
                 // }
 
                 let mut metadata = MessageMetadata::arrived();
