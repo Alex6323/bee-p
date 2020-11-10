@@ -20,7 +20,7 @@ const DEFAULT_MESSAGE: &str = "hello world";
 
 pub struct ConfigBuilder {
     bind_address: Option<Multiaddr>,
-    peers: Vec<(Multiaddr, PeerId)>,
+    peers: Vec<String>,
     message: Option<String>,
 }
 
@@ -39,12 +39,12 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn with_peer_address(mut self, peer_address_id: String) -> Self {
-        self.peers.push(
-            MultiaddrPeerId::from_str(&peer_address_id)
-                .expect("create MultiaddrPeerId instance")
-                .split(),
-        );
+    pub fn with_peer_address(mut self, peer_address: String) -> Self {
+        self.peers.push(peer_address);
+        // MultiaddrPeerId::from_str(&peer_address_id)
+        //     .expect("create MultiaddrPeerId instance")
+        //     .split(),
+        // );
         self
     }
 
@@ -54,11 +54,22 @@ impl ConfigBuilder {
     }
 
     pub fn finish(self) -> Config {
+        let peers = self
+            .peers
+            .iter()
+            .map(|s| {
+                // MultiaddrPeerId::from_str(s)
+                //     .expect("error parsing MultiaddrPeerId")
+                //     .split()
+                Multiaddr::from_str(s).expect("error parsing Multiaddr")
+            })
+            .collect();
+
         Config {
             bind_address: self
                 .bind_address
                 .unwrap_or_else(|| Multiaddr::from_str(DEFAULT_BIND_ADDRESS).unwrap()),
-            peers: self.peers,
+            peers,
             message: self.message.unwrap_or_else(|| DEFAULT_MESSAGE.into()),
         }
     }
@@ -67,7 +78,8 @@ impl ConfigBuilder {
 #[derive(Clone)]
 pub struct Config {
     pub bind_address: Multiaddr,
-    pub peers: Vec<(MultiAddr, PeerId)>,
+    // pub peers: Vec<(MultiAddr, PeerId)>,
+    pub peers: Vec<Multiaddr>,
     pub message: String,
 }
 

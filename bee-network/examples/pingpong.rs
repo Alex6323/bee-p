@@ -17,8 +17,8 @@
 //! terminals and connect those instances by specifying commandline arguments.
 //!
 //! ```bash
-//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1337 --peers /ip4/127.0.0.1/tcp/1338/ABC --msg ping
-//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1338 --peers /ip4/127.0.0.1/tcp/1337/XYZ --msg pong
+//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1337 --peers /ip4/127.0.0.1/tcp/1338 --msg ping
+//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1338 --peers /ip4/127.0.0.1/tcp/1337 --msg pong
 //! ```
 
 #![allow(dead_code, unused_imports)]
@@ -28,7 +28,7 @@ mod common;
 use common::*;
 
 use bee_common_ext::shutdown_tokio::Shutdown;
-use bee_network::{Command::*, Event, EventReceiver, Multiaddr, Network, NetworkConfig, PeerId};
+use bee_network::{Command::*, Event, EventReceiver, Keypair, Multiaddr, Network, NetworkConfig, PeerId};
 
 use futures::{
     channel::oneshot,
@@ -52,26 +52,26 @@ async fn main() {
     let args = Args::from_args();
     let config = args.into_config();
 
-    logger::init(log::LevelFilter::Debug);
+    logger::init(log::LevelFilter::Trace);
 
     let node = Node::builder(config).finish().await;
 
     let mut network = node.network.clone();
     let config = node.config.clone();
 
-    info!("[pingpong] Adding static peers...");
+    info!("[EXAMPLE] Adding static peers...");
 
-    for (peer_address, peer_id) in &config.peers {
+    // for (peer_address, peer_id) in &config.peers {
+    for peer_address in &config.peers {
         network
-            .send(ConnectPeer {
+            .send(ConnectUnknownPeer {
                 address: peer_address.clone(),
-                id: peer_id.clone(),
             })
             .await
             .unwrap();
     }
 
-    info!("[pingpong] ...finished.");
+    info!("[EXAMPLE] ...finished.");
 
     node.run().await;
 }
@@ -96,7 +96,7 @@ impl Node {
             shutdown,
         } = self;
 
-        info!("[pingpong] Node running.");
+        info!("[EXAMPLE] Node running.");
 
         let mut ctrl_c = ctrl_c_listener().fuse();
 
@@ -107,7 +107,7 @@ impl Node {
                 },
                 event = events.next() => {
                     if let Some(event) = event {
-                        info!("Received {}.", event);
+                        info!("Received {:?}.", event);
 
                         process_event(event, &config.message, &mut network, &mut peers, &mut handshakes).await;
                     }
@@ -115,10 +115,10 @@ impl Node {
             }
         }
 
-        info!("[pingpong] Stopping node...");
+        info!("[EXAMPLE] Stopping node...");
         shutdown.execute().await.expect("shutdown error");
 
-        info!("[pingpong] Shutdown complete.");
+        info!("[EXAMPLE] Shutdown complete.");
     }
 
     pub fn builder(config: Config) -> NodeBuilder {
@@ -135,30 +135,15 @@ async fn process_event(
     handshakes: &mut HashMap<String, Vec<PeerId>>,
 ) {
     match event {
-        Event::EndpointAdded { address } => {
-            info!("[pingpong] Added endpoint {}.", address);
-
-            network
-                .send(DialPeer {
-                    endpoint_address: address,
-                })
-                .await
-                .expect("error sending Connect command");
-        }
-
-        Event::EndpointRemoved { address } => {
-            info!("[pingpong] Removed endpoint {}.", address);
-        }
-
         Event::PeerConnected {
-            id,
-            endpoint_address,
-            origin,
-            ..
+            id, address, origin, ..
         } => {
-            info!("[pingpong] Connected peer {} at {} [{}].", id, endpoint_address, origin);
+            info!(
+                "[EXAMPLE] Connected peer '{}' with address '{}' [{}].",
+                id, address, origin
+            );
 
-            info!("[pingpong] Sending message: \"{}\"", message);
+            info!("[EXAMPLE] Sending message: \"{}\"", message);
             network
                 .send(SendMessage {
                     message: Utf8Message::new(message).as_bytes(),
@@ -171,21 +156,17 @@ async fn process_event(
         }
 
         Event::PeerDisconnected { id } => {
-            info!("[pingpong] Disconnected peer {}.", id);
+            info!("[EXAMPLE] Disconnected peer {}.", id);
         }
 
-        Event::MessageReceived { peer_id, message, .. } => {
-            info!(
-                "[pingpong] Received message from {} (length: {}).",
-                peer_id,
-                message.len()
-            );
+        Event::MessageReceived { message, from } => {
+            info!("[EXAMPLE] Received message from {} (length: {}).", from, message.len());
 
             let message = Utf8Message::from_bytes(&message);
-            info!("[pingpong] Received message \"{}\"", message);
+            info!("[EXAMPLE] Received message \"{}\"", message);
         }
 
-        _ => warn!("Unsupported event {}.", event),
+        _ => warn!("Unsupported event {:?}.", event),
     }
 }
 
@@ -202,7 +183,7 @@ fn ctrl_c_listener() -> oneshot::Receiver<()> {
 }
 
 fn spam_endpoint(mut network: Network, peer_id: PeerId) {
-    info!("[pingpong] Now sending spam messages to {}", peer_id);
+    info!("[EXAMPLE] Now sending spam messages to {}", peer_id);
 
     tokio::spawn(async move {
         for i in 0u64.. {
@@ -227,17 +208,18 @@ struct NodeBuilder {
 
 impl NodeBuilder {
     pub async fn finish(self) -> Node {
-        let network_config = NetworkConfig::builder()
+        let network_config = NetworkConfig::build()
             .bind_address(&self.config.bind_address.to_string())
-            .reconnect_interval(RECONNECT_INTERVAL)
+            .reconnect_millis(RECONNECT_MILLIS)
             .finish();
 
         let mut shutdown = Shutdown::new();
 
-        info!("[pingpong] Initializing network...");
-        let (network, events) = bee_network::init(network_config, &mut shutdown).await;
+        info!("[EXAMPLE] Initializing network...");
+        let local_keys = Keypair::generate();
+        let (network, events) = bee_network::init(network_config, local_keys, &mut shutdown).await;
 
-        info!("[pingpong] Node initialized.");
+        info!("[EXAMPLE] Node initialized.");
         Node {
             config: self.config,
             network,
