@@ -142,6 +142,7 @@ impl Packable for MilestoneEssence {
             + self.parent1.packed_len()
             + self.parent2.packed_len()
             + MILESTONE_MERKLE_PROOF_LENGTH
+            + 0u8.packed_len()
             + self.public_keys.len() * MILESTONE_PUBLIC_KEY_LENGTH
     }
 
