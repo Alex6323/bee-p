@@ -13,11 +13,20 @@ use bee_common::packable::Packable;
 use bee_message::prelude::*;
 
 #[test]
+fn empty_index() {
+    assert!(matches!(
+        Indexation::new("".to_string(), &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2]).err(),
+        Some(Error::EmptyIndex)
+    ));
+}
+
+#[test]
 fn pack_unpack() {
     let indexation_1 = Indexation::new(
         "indexation".to_string(),
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
-    );
+    )
+    .unwrap();
     let bytes = indexation_1.pack_new().unwrap();
     let indexation_2 = Indexation::unpack(&mut bytes.as_slice()).unwrap();
 
@@ -32,7 +41,8 @@ fn unpack_invalid_index_len() {
     let indexation_1 = Indexation::new(
         "indexation".to_string(),
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
-    );
+    )
+    .unwrap();
     let mut bytes = indexation_1.pack_new().unwrap();
     bytes[0..4].copy_from_slice(&1000u32.to_le_bytes());
 
@@ -47,7 +57,8 @@ fn unpack_invalid_data_len() {
     let indexation_1 = Indexation::new(
         "indexation".to_string(),
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
-    );
+    )
+    .unwrap();
     let mut bytes = indexation_1.pack_new().unwrap();
     bytes[14..18].copy_from_slice(&1000u32.to_le_bytes());
 
@@ -62,7 +73,8 @@ fn unpack_non_utf8_index() {
     let indexation_1 = Indexation::new(
         unsafe { String::from_utf8_unchecked(vec![0, 159, 146, 150]) },
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
-    );
+    )
+    .unwrap();
     let bytes = indexation_1.pack_new().unwrap();
 
     assert!(

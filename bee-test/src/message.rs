@@ -26,7 +26,7 @@ pub fn random_message_id() -> MessageId {
 }
 
 pub fn random_indexation() -> Payload {
-    Indexation::new(random_string(32), &random_bytes(64)).into()
+    Indexation::new(random_string(32), &random_bytes(64)).unwrap().into()
 }
 
 pub fn random_payload() -> Payload {

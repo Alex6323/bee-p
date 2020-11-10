@@ -34,6 +34,7 @@ pub enum Error {
     InvalidAnnouncedLength(usize, usize),
     InvalidSyntax,
     InvalidHex,
+    EmptyIndex,
 }
 
 impl fmt::Display for Error {
@@ -60,7 +61,8 @@ impl fmt::Display for Error {
                 write!(f, "Invalid announced length: {}, {}.", expected, actual)
             }
             Error::InvalidSyntax => write!(f, "Syntax validation failed."),
-            Error::InvalidHex => write!(f, "Invalid hexadecimal conversion.",),
+            Error::InvalidHex => write!(f, "Invalid hexadecimal conversion."),
+            Error::EmptyIndex => write!(f, "Empty index payload."),
         }
     }
 }

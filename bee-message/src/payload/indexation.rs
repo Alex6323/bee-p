@@ -30,11 +30,15 @@ pub struct Indexation {
 }
 
 impl Indexation {
-    pub fn new(index: String, data: &[u8]) -> Self {
-        Self {
+    pub fn new(index: String, data: &[u8]) -> Result<Self, Error> {
+        if index.is_empty() {
+            return Err(Error::EmptyIndex);
+        }
+
+        Ok(Self {
             index,
             data: data.into(),
-        }
+        })
     }
 
     pub fn index(&self) -> &String {
