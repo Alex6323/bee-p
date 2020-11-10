@@ -9,11 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::message_id::random_message_id;
+use crate::bytes::random_bytes_32;
 
-use bee_message::Message;
+use bee_message::{Message, MessageId};
 
 use rand::Rng;
+
+pub fn random_message_id() -> MessageId {
+    MessageId::new(random_bytes_32())
+}
 
 pub fn random_message() -> Message {
     let mut rng = rand::thread_rng();

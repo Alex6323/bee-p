@@ -11,6 +11,5 @@
 
 pub mod bytes;
 pub mod message;
-pub mod message_id;
 pub mod milestone;
 pub mod string;
