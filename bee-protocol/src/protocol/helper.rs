@@ -34,8 +34,8 @@ macro_rules! implement_sender_worker {
         impl Sender<$type> {
             pub(crate) fn send(id: &PeerId, packet: $type) {
                 match Protocol::get().network.unbounded_send(SendMessage {
-                    peer_id: id.clone(),
                     message: tlv_into_bytes(packet),
+                    to: id.clone(),
                 }) {
                     Ok(_) => {
                         // self.peer.metrics.$incrementor();

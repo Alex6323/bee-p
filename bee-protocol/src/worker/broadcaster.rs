@@ -55,8 +55,8 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
                         None => true,
                     } {
                         match network.unbounded_send(SendMessage {
-                            peer_id: peer.key().clone(),
                             message: bytes.clone(),
+                            to: peer.key().clone(),
                         }) {
                             Ok(_) => {
                                 (*peer.value()).metrics.messages_sent_inc();
