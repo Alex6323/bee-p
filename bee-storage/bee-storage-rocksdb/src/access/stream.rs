@@ -25,13 +25,17 @@ use std::{marker::PhantomData, ops::Deref, pin::Pin};
 pub struct StorageStream<'a, K, V> {
     #[pin]
     inner: DBIterator<'a>,
+    budget: usize,
+    counter: usize,
     marker: PhantomData<(K, V)>,
 }
 
-impl<'a, K, V> From<DBIterator<'a>> for StorageStream<'a, K, V> {
-    fn from(inner: DBIterator<'a>) -> Self {
+impl<'a, K, V> StorageStream<'a, K, V> {
+    fn new(inner: DBIterator<'a>, budget: usize) -> Self {
         StorageStream::<K, V> {
             inner,
+            budget,
+            counter: 0,
             marker: PhantomData,
         }
     }
@@ -47,18 +51,31 @@ impl<'a> Stream<'a, MessageId, Message> for Storage {
     {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        Ok(self
-            .inner
-            .iterator_cf(cf_message_id_to_message, IteratorMode::Start)
-            .into())
+        Ok(StorageStream::new(
+            self.inner.iterator_cf(cf_message_id_to_message, IteratorMode::Start),
+            self.config.iteration_budget,
+        ))
     }
 }
 
 impl<'a> futures::stream::Stream for StorageStream<'a, MessageId, Message> {
     type Item = (MessageId, Message);
 
-    fn poll_next(self: Pin<&mut Self>, _: &mut Context) -> Poll<Option<Self::Item>> {
-        let StorageStreamProj { mut inner, .. } = self.project();
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let StorageStreamProj {
+            mut inner,
+            budget,
+            counter,
+            ..
+        } = self.project();
+
+        if counter == budget {
+            *counter = 0;
+            cx.waker().clone().wake();
+            return Poll::Pending;
+        }
+
+        *counter += 1;
 
         let item = inner.next().map(|(message_id, message)| {
             (
@@ -66,6 +83,7 @@ impl<'a> futures::stream::Stream for StorageStream<'a, MessageId, Message> {
                 Message::unpack(&mut message.deref()).unwrap(),
             )
         });
+
         if inner.valid() {
             Poll::Ready(item)
         } else {
