@@ -9,9 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod batch;
-pub mod delete;
-pub mod exist;
-pub mod fetch;
-pub mod insert;
-pub mod iter;
+use crate::storage::Backend;
+
+#[async_trait::async_trait]
+pub trait Iter<'a, K, V>: Backend {
+    type Iterator: Iterator;
+
+    async fn iter(&'a self) -> Result<Self::Iterator, Self::Error>
+    where
+        Self: Sized;
+}

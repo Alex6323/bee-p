@@ -12,7 +12,7 @@
 use bee_common::packable::Packable;
 use bee_message::{Message, MessageId};
 use bee_storage::{
-    access::{Batch, BatchBuilder, Delete, Exist, Fetch, Insert},
+    access::{Batch, BatchBuilder, Delete, Exist, Fetch, Insert, Iter},
     storage::Backend,
 };
 use bee_storage_rocksdb::{config::RocksDBConfigBuilder, storage::Storage};
@@ -80,5 +80,8 @@ async fn access() {
         } else {
             assert!(Exist::<MessageId, Message>::exist(&storage, message_id).await.unwrap());
         }
+    }
+
+    for (_key, _value) in storage.iter().await.unwrap() {
     }
 }
