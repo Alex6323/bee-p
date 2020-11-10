@@ -158,6 +158,7 @@ async fn process_command(
             )
             .await?;
         }
+        Command::ConnectUnknownPeer { address: _ } => todo!("connect unkown peer"),
         Command::DisconnectPeer { id } => {
             if disconnect_peer(&id, peers)? {
                 event_sender

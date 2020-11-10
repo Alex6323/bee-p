@@ -17,8 +17,8 @@
 //! terminals and connect those instances by specifying commandline arguments.
 //!
 //! ```bash
-//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1337 --peers /ip4/127.0.0.1/tcp/1338 --msg ping
-//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1338 --peers /ip4/127.0.0.1/tcp/1337 --msg pong
+//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1337 --peers /ip4/127.0.0.1/tcp/1338/ABC --msg ping
+//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1338 --peers /ip4/127.0.0.1/tcp/1337/XYZ --msg pong
 //! ```
 
 #![allow(dead_code, unused_imports)]
@@ -45,7 +45,7 @@ use std::{
     time::Duration,
 };
 
-const RECONNECT_INTERVAL: u64 = 5; // 5 seconds
+const RECONNECT_MILLIS: u64 = 5000;
 
 #[tokio::main]
 async fn main() {
@@ -61,10 +61,11 @@ async fn main() {
 
     info!("[pingpong] Adding static peers...");
 
-    for endpoint_address in &config.peers {
+    for (peer_address, peer_id) in &config.peers {
         network
-            .send(AddEndpoint {
-                address: endpoint_address.clone(),
+            .send(ConnectPeer {
+                address: peer_address.clone(),
+                id: peer_id.clone(),
             })
             .await
             .unwrap();
@@ -160,8 +161,8 @@ async fn process_event(
             info!("[pingpong] Sending message: \"{}\"", message);
             network
                 .send(SendMessage {
-                    peer_id: id.clone(),
                     message: Utf8Message::new(message).as_bytes(),
+                    to: id.clone(),
                 })
                 .await
                 .expect("error sending message to peer");
@@ -211,8 +212,8 @@ fn spam_endpoint(mut network: Network, peer_id: PeerId) {
 
             network
                 .send(SendMessage {
-                    peer_id: peer_id.clone(),
                     message: message.as_bytes(),
+                    to: peer_id.clone(),
                 })
                 .await
                 .expect("error sending number");

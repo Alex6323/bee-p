@@ -23,6 +23,7 @@ pub fn channel() -> (CommandSender, CommandReceiver) {
 #[derive(Debug)]
 pub enum Command {
     ConnectPeer { address: Multiaddr, id: PeerId },
+    ConnectUnknownPeer { address: Multiaddr },
     DisconnectPeer { id: PeerId },
     BanPeer { id: PeerId },
     BanIp { ip: IpAddr },

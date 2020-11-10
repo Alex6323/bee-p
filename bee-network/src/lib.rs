@@ -16,6 +16,7 @@ mod config;
 mod conns;
 mod gossip;
 mod interaction;
+mod multiaddr_ext;
 mod network;
 mod peers;
 mod transport;
@@ -29,6 +30,7 @@ pub use interaction::{
 };
 #[doc(inline)]
 pub use libp2p::{core::identity::ed25519::Keypair, Multiaddr, PeerId};
+pub use multiaddr_ext::MultiaddrPeerId;
 pub use network::Network;
 
 pub type EventReceiver = flume::Receiver<Event>;
