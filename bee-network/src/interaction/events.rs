@@ -42,7 +42,7 @@ pub enum InternalEvent {
     },
     MessageReceived {
         message: Vec<u8>,
-        sender: PeerId,
+        from: PeerId,
     },
 }
 
@@ -61,12 +61,12 @@ pub enum Event {
 
     MessageReceived {
         message: Vec<u8>,
-        sender: PeerId,
+        from: PeerId,
     },
     PeerBanned {
         id: PeerId,
     },
-    IpBanned {
+    AddrBanned {
         ip: IpAddr,
     },
 }

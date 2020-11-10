@@ -21,7 +21,7 @@ use bee_common_ext::{
     node::{Node as _, NodeBuilder as _},
     shutdown_tokio::Shutdown,
 };
-use bee_network::{self, Command::DialPeer, Event, Multiaddr, Network, Origin, PeerId};
+use bee_network::{self, Command::ConnectPeer, Event, Multiaddr, Network, Origin, PeerId};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::Protocol;
 
@@ -142,7 +142,7 @@ impl<B: Backend> Node<B> {
         info!("Running.");
 
         while let Some(event) = self.network_events.next().await {
-            trace!("Received event {}.", event);
+            trace!("Received event {:?}.", event);
 
             self.process_event(event);
         }
@@ -166,51 +166,21 @@ impl<B: Backend> Node<B> {
         NodeBuilder { config }
     }
 
-    #[inline]
     fn process_event(&mut self, event: Event) {
         match event {
-            Event::EndpointAdded { address } => self.endpoint_added_handler(address),
-
-            Event::EndpointRemoved { address } => self.endpoint_removed_handler(address),
-
-            Event::PeerConnected {
-                id,
-                endpoint_address,
-                origin,
-            } => self.peer_connected_handler(id, endpoint_address, origin),
-
+            Event::PeerConnected { id, address, origin } => self.peer_connected_handler(id, address, origin),
             Event::PeerDisconnected { id } => self.peer_disconnected_handler(id),
-
-            Event::MessageReceived { peer_id, message, .. } => self.peer_message_received_handler(peer_id, message),
-            _ => warn!("Unsupported event {}.", event),
+            Event::MessageReceived { message, from } => self.peer_message_received_handler(message, from),
+            Event::PeerBanned { id } => (),
+            Event::AddrBanned { ip } => (),
+            _ => warn!("Unsupported event {:?}.", event),
         }
     }
 
     #[inline]
-    fn endpoint_added_handler(&self, address: Multiaddr) {
-        info!("Endpoint {} has been added.", address);
-
-        if let Err(e) = self.network.unbounded_send(DialPeer {
-            endpoint_address: address.clone(),
-        }) {
-            warn!("Sending Command::DialPeer for {} failed: {}.", address, e);
-        }
-    }
-
-    #[inline]
-    fn endpoint_removed_handler(&self, address: Multiaddr) {
-        info!("Endpoint {} has been removed.", address);
-    }
-
-    #[inline]
-    fn peer_connected_handler(&mut self, id: PeerId, endpoint_address: Multiaddr, origin: Origin) {
-        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(
-            &self.tmp_node,
-            &self.config.protocol,
-            id.clone(),
-            endpoint_address,
-            origin,
-        );
+    fn peer_connected_handler(&mut self, id: PeerId, address: Multiaddr, origin: Origin) {
+        let (receiver_tx, receiver_shutdown_tx) =
+            Protocol::register(&self.tmp_node, &self.config.protocol, id.clone(), address, origin);
 
         self.peers.insert(id, (receiver_tx, receiver_shutdown_tx));
     }
@@ -226,10 +196,10 @@ impl<B: Backend> Node<B> {
     }
 
     #[inline]
-    fn peer_message_received_handler(&mut self, peer_id: PeerId, message: Vec<u8>) {
-        if let Some(peer) = self.peers.get_mut(&peer_id) {
+    fn peer_message_received_handler(&mut self, message: Vec<u8>, from: PeerId) {
+        if let Some(peer) = self.peers.get_mut(&from) {
             if let Err(e) = peer.0.send(message) {
-                warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", peer_id, e);
+                warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", from, e);
             }
         }
     }

@@ -233,8 +233,8 @@ async fn process_internal_event(
             }
         }
 
-        InternalEvent::MessageReceived { message, sender } => event_sender
-            .send_async(Event::MessageReceived { message, sender })
+        InternalEvent::MessageReceived { message, from } => event_sender
+            .send_async(Event::MessageReceived { message, from })
             .await
             .map_err(|e| WorkerError(Box::new(e)))?,
 

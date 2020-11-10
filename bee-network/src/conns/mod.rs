@@ -193,7 +193,7 @@ async fn process_read(
         if internal_event_sender
             .send_async(InternalEvent::MessageReceived {
                 message,
-                sender: peer_id.clone(),
+                from: peer_id.clone(),
             })
             .await
             .is_err()
